@@ -1,0 +1,20 @@
+warning: unused import: `anyhow::Result`
+ --> crates\core\src\state.rs:2:5
+  |
+2 | use anyhow::Result;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `deve_core` (lib) generated 1 warning (run `cargo fix --lib -p deve_core` to apply 1 suggestion)
+   Compiling deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
+warning: unused import: `leptos::prelude::*`
+  --> apps\web\src\editor.rs:16:17
+   |
+16 |             use leptos::prelude::*;// ensure traits are in scope
+   |                 ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `deve_web` (bin "deve_web") generated 1 warning (run `cargo fix --bin "deve_web" -p deve_web` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.32s

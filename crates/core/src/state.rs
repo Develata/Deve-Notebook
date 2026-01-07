@@ -1,5 +1,5 @@
 use crate::models::{Op, LedgerEntry};
-use anyhow::Result;
+// use anyhow::Result; // Not used currently
 
 pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
     let mut content = String::new();

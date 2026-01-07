@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deve-Note</title>
+    <link data-trunk rel="css" href="style/tailwind.css" />
+    <script>
+      // 1. Define the bridge function IMMEDIATELY so Rust never hits "undefined"
+      window._editor_queue = [];
+      window._cm_loaded = false;
+
+      window.setupCodeMirror = function(element, onUpdate) {
+        if (window._cm_loaded && window._realInit) {
+           window._realInit(element, onUpdate);
+        } else {
+           window._editor_queue.push({ element, onUpdate });
+        }
+      }
+    </script>
+
+    <script type="module">
+      import {EditorView, basicSetup} from "https://esm.sh/codemirror@6.0.1"
+      import {markdown} from "https://esm.sh/@codemirror/lang-markdown@6.0.0"
+
+      // 2. Define the real initialization logic
+      window._realInit = (element, onUpdate) => {
+        if (!element) return;
+        try {
+            let extensions = [basicSetup, markdown()];
+            if (onUpdate) {
+                extensions.push(EditorView.updateListener.of((v) => {
+                    if (v.docChanged) {
+                        onUpdate(v.state.doc.toString());
+                    }
+                }));
+            }
+
+            new EditorView({
+              doc: "# Hello from CodeMirror\n\nStart typing...",
+              extensions: extensions,
+              parent: element
+            });
+        } catch (e) {
+            console.error("CodeMirror crash:", e);
+        }
+      };
+
+      // 3. Process any requests that came in while we were loading
+      window._cm_loaded = true;
+      while (window._editor_queue.length > 0) {
+        let req = window._editor_queue.shift();
+        // Handle both old format (element only) and new format (object)
+        if (req.element) {
+             window._realInit(req.element, req.onUpdate);
+        } else {
+             window._realInit(req);
+        }
+      }
+    </script>
+  </head>
+  <body></body>
+</html>

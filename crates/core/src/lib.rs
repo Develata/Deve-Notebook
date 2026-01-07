@@ -1,5 +1,9 @@
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;
 pub mod models;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod vfs;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod watcher;
 pub mod state;
+pub mod protocol;

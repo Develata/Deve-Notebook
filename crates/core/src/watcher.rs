@@ -5,13 +5,15 @@ use crate::ledger::Ledger;
 use crate::vfs::Vfs;
 use tracing::{info, warn, error};
 
+use std::sync::Arc;
+
 pub struct Watcher {
-    ledger: Ledger, // Shared? Or clone? Redb is thread-safe (Arc internal). Simple struct wrap is fine if cheap.
+    ledger: Arc<Ledger>, // Shared
     vfs: Vfs,
 }
 
 impl Watcher {
-    pub fn new(ledger: Ledger, vfs: Vfs) -> Self {
+    pub fn new(ledger: Arc<Ledger>, vfs: Vfs) -> Self {
         Self { ledger, vfs }
     }
 

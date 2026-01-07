@@ -3,6 +3,9 @@ use deve_core::ledger::Ledger;
 use deve_core::vfs::Vfs;
 use std::path::PathBuf;
 
+mod server;
+use std::sync::Arc;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -25,6 +28,11 @@ enum Commands {
     Dump {
         #[arg(short, long)]
         path: String,
+    },
+    /// Start the backend server
+    Serve {
+        #[arg(short, long, default_value_t = 3001)]
+        port: u16,
     },
 }
 
@@ -54,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
             println!("Scanned. Registered {} new documents.", count);
         }
         Some(Commands::Watch) => {
-            let ledger = Ledger::init(&ledger_path)?;
+            let ledger = Arc::new(Ledger::init(&ledger_path)?);
             let vfs = Vfs::new(&vault_path);
             let watcher = deve_core::watcher::Watcher::new(ledger, vfs);
             println!("Starting watcher on {:?}... Press Ctrl+C to stop.", vault_path);
@@ -75,6 +83,10 @@ async fn main() -> anyhow::Result<()> {
             } else {
                 println!("Path not found in Ledger.");
             }
+        }
+        Some(Commands::Serve { port }) => {
+            let ledger = Ledger::init(&ledger_path)?;
+            server::start_server(ledger, port).await?;
         }
         None => {
             println!("Please provide a subcommand. Try --help.");
