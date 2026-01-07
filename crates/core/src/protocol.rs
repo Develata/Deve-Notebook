@@ -9,7 +9,10 @@ pub enum ClientMessage {
         op: Op,
         client_id: u64,
     },
-    // Future: Subscribe / Unsubscribe
+    /// Request full operation history for a document.
+    RequestHistory {
+        doc_id: DocId,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +34,11 @@ pub enum ServerMessage {
         doc_id: DocId,
         content: String,
         version: u64,
+    },
+    /// Server sends the full history of operations (for Playback).
+    History {
+        doc_id: DocId,
+        ops: Vec<(u64, Op)>,
     },
     /// Error message
     Error(String),

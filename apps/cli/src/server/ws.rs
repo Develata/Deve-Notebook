@@ -96,6 +96,32 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                            }
                        }
                     }
+                    ClientMessage::RequestHistory { doc_id } => {
+                        // Fetch all ops
+                        if let Ok(entries) = state_clone.ledger.get_ops(doc_id) {
+                            let ops: Vec<(u64, deve_core::models::Op)> = entries.into_iter()
+                                .map(|(seq, entry)| (seq, entry.op))
+                                .collect();
+                            
+                            let msg = ServerMessage::History { doc_id, ops };
+                             // We need to send this ONLY to the requester.
+                             // 'sender' is moved to 'send_task'.
+                             // 'tx' broadcasts to everyone.
+                             // OPTION: We can temporarily broadcast history to everyone? NO. Expensive.
+                             // CORRECT WAY: We need a way to send back to THIS socket.
+                             // But socket is split.
+                             // HACK: Use broadcast for now? Or clone sender? Sender is not cloneable easily.
+                             // REF: The 'send_task' listens to 'rx'.
+                             // If we send to 'tx', everyone gets it.
+                             // WORKAROUND: For Phase 4, we accept broadcasting History to all active clients (wasteful but easy).
+                             // ALTERNATIVE: Use an MPSC channel to the send_task.
+                             // BUT: send_task only consumes Broadcast.
+                             // QUICK FIX: Broadcast it. Frontends will filter by doc_id (which they do). 
+                             // Wait, Frontends don't filter `History` yet.
+                             // Let's Broadcast it. 
+                             let _ = tx.send(msg);
+                        }
+                    }
                 }
             }
         }

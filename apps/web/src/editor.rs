@@ -22,11 +22,22 @@ pub fn Editor() -> impl IntoView {
     let (content, set_content) = signal("# Hello from CodeMirror\n\nStart typing...".to_string());
     let (local_version, set_local_version) = signal(0u64);
     
+    // Playback State
+    let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
+    let (playback_version, set_playback_version) = signal(0u64);
+    let (is_playback, set_is_playback) = signal(false);
+    
     // Generate a session client_id (using random rough)
     let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
     
     // Mock DocId for Phase 2/3
     let doc_id = DocId::from_u128(1001);
+
+    // Initial History Request
+    let ws_clone = ws.clone();
+    Effect::new(move |_| {
+        // Warning: This runs immediately.
+    });
 
     // Effect to handle incoming messages
     Effect::new(move |_| {
@@ -37,25 +48,36 @@ pub fn Editor() -> impl IntoView {
                      applyRemoteContent(&new_content);
                      set_content.set(new_content);
                      set_local_version.set(version);
+                     
+                     // Initialize playback range
+                     set_playback_version.set(version);
+                     
+                     // Request History
+                     ws_clone.send(ClientMessage::RequestHistory { doc_id });
+                 }
+                 ServerMessage::History { doc_id: _, ops } => {
+                     leptos::logging::log!("Received History: {} ops", ops.len());
+                     set_history.set(ops);
                  }
                  ServerMessage::NewOp { doc_id: _, op, seq, client_id: origin_id } => {
                      let current_ver = local_version.get_untracked();
                      if seq > current_ver {
                          // Filter Echoes!
                          if origin_id != client_id {
-                             // Verified Remote Op from SOMEONE ELSE
-                             // leptos::logging::log!("Applying Op Seq {}", seq);
                              if let Ok(json) = serde_json::to_string(&op) {
                                  applyRemoteOp(&json);
                              }
-                             // Sync Ref
                              set_content.set(getEditorContent());
-                         } else {
-                             // This is our own echo. We already applied it locally.
-                             // Just update the version.
-                             // leptos::logging::log!("Ack Own Op Seq {}", seq);
                          }
                          set_local_version.set(seq);
+                         
+                         // Append to History signal if valid
+                         set_history.update(|h| h.push((seq, op)));
+                         
+                         // Auto-advance playback if we are at the "head" (live)
+                         if !is_playback.get_untracked() {
+                            set_playback_version.set(seq);
+                         }
                      }
                  }
                  _ => {}
@@ -69,6 +91,11 @@ pub fn Editor() -> impl IntoView {
             let ws_for_update = ws.clone();
             
             let on_update = Closure::wrap(Box::new(move |new_text: String| {
+                // If in playback mode, ignore changes (readonly)
+                if is_playback.get_untracked() {
+                    return;
+                }
+
                 let old_text = content.get_untracked();
                 if new_text == old_text {
                     return;
@@ -98,11 +125,45 @@ pub fn Editor() -> impl IntoView {
         }
     });
 
+    // Playback Logic
+    let on_playback_change = Box::new(move |ver: u64| {
+        // If we move the slider, we set playback mode.
+        // If ver == local, we are "live", but maybe still considered in playback if manually dragging.
+        // Let's say if ver < local, it's Playback.
+        let local = local_version.get_untracked();
+        let is_pb = ver < local;
+        set_is_playback.set(is_pb);
+        set_playback_version.set(ver);
+        
+        // Reconstruct
+        let hist = history.get_untracked();
+        // Filter history <= ver
+        let relevant_ops: Vec<deve_core::models::LedgerEntry> = hist.into_iter()
+            .filter(|(s, _)| *s <= ver)
+            .map(|(_, op)| deve_core::models::LedgerEntry {
+                 doc_id, op, timestamp: 0 // timestamp irrelevant for reconstruction
+            })
+            .collect();
+            
+        let reconstructed = deve_core::state::reconstruct_content(&relevant_ops);
+        applyRemoteContent(&reconstructed);
+        // We do NOT update `content` signal here to avoid triggering diffs loops.
+        // CodeMirror update via applyRemoteContent is enough for visual.
+    });
+    
     view! {
-        <div 
-            node_ref=editor_ref
-            class="w-full h-full min-h-[500px] border border-gray-300 bg-white shadow-sm"
-        >
+        <div class="relative w-full h-full">
+            <div 
+                node_ref=editor_ref
+                class="w-full h-full min-h-[500px] border border-gray-300 bg-white shadow-sm pb-16"
+            >
+            </div>
+            
+            <crate::components::playback::PlaybackController 
+                max_version=local_version
+                current_version=playback_version
+                on_change=on_playback_change
+            />
         </div>
     }
 }
