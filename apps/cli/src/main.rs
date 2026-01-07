@@ -74,11 +74,12 @@ async fn main() -> anyhow::Result<()> {
                 println!("DocId: {}", doc_id);
                 let ops = ledger.get_ops(doc_id)?;
                 println!("Found {} ops:", ops.len());
-                for (i, entry) in ops.iter().enumerate() {
-                    println!("[{}] {} {:?}", i, entry.timestamp, entry.op);
+                for (i, (seq, entry)) in ops.iter().enumerate() {
+                    println!("[{}] Seq:{} {} {:?}", i, seq, entry.timestamp, entry.op);
                 }
                 
-                let content = deve_core::state::reconstruct_content(&ops);
+                let ops_vec: Vec<deve_core::models::LedgerEntry> = ops.iter().map(|(_, e)| e.clone()).collect();
+                let content = deve_core::state::reconstruct_content(&ops_vec);
                 println!("\nReconstructed Content:\n---\n{}\n---", content);
             } else {
                 println!("Path not found in Ledger.");

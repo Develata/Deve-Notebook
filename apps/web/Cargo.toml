@@ -22,3 +22,4 @@ serde_json.workspace = true
 # Use core models/types if needed, but for now we might mock or depend on core.
 # Ideally web depends on core for types.
 deve_core.workspace = true 
+js-sys = "0.3.83"

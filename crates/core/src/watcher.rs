@@ -72,7 +72,8 @@ impl Watcher {
                         info!("Content update at {}", path_str);
                         
                         let new_content = std::fs::read_to_string(&self.vfs.root.join(path_str))?;
-                        let ops = self.ledger.get_ops(doc_id)?;
+                        let ops_with_seq = self.ledger.get_ops(doc_id)?;
+                        let ops: Vec<crate::models::LedgerEntry> = ops_with_seq.iter().map(|(_, e)| e.clone()).collect();
                         let old_content = crate::state::reconstruct_content(&ops);
                         
                         if new_content != old_content {

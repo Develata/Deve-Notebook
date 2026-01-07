@@ -1,0 +1,14 @@
+   Compiling deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
+error[E0433]: failed to resolve: use of undeclared type `DocId`
+  --> apps\web\src\editor.rs:24:18
+   |
+24 |     let doc_id = DocId::from_u128(1001);
+   |                  ^^^^^ use of undeclared type `DocId`
+   |
+help: consider importing this struct
+   |
+ 1 + use deve_core::models::DocId;
+   |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `deve_web` (bin "deve_web") due to 1 previous error

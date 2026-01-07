@@ -30,21 +30,73 @@
             let extensions = [basicSetup, markdown()];
             if (onUpdate) {
                 extensions.push(EditorView.updateListener.of((v) => {
+                    // Filter out remote updates
+                    if (window._isRemote) return;
+                    
                     if (v.docChanged) {
                         onUpdate(v.state.doc.toString());
                     }
                 }));
             }
 
-            new EditorView({
+            const view = new EditorView({
               doc: "# Hello from CodeMirror\n\nStart typing...",
               extensions: extensions,
               parent: element
             });
+            
+            // Store view for remote updates
+            window._editor_view = view;
+            
         } catch (e) {
             console.error("CodeMirror crash:", e);
         }
       };
+      
+      window.applyRemoteContent = (text) => {
+          if (window._editor_view) {
+              window._isRemote = true;
+              try {
+                  window._editor_view.dispatch({
+                      changes: {from: 0, to: window._editor_view.state.doc.length, insert: text}
+                  });
+              } finally {
+                  window._isRemote = false;
+              }
+          }
+      }
+      
+      window.getEditorContent = () => {
+          if (window._editor_view) {
+              return window._editor_view.state.doc.toString();
+          }
+          return "";
+      }
+
+      window.applyRemoteOp = (op_json) => {
+          if (window._editor_view) {
+              window._isRemote = true;
+              try {
+                  const op = JSON.parse(op_json);
+                  // Op is { Insert: { pos, content } } or { Delete: { pos, len } }
+                  if (op.Insert) {
+                      const { pos, content } = op.Insert;
+                      window._editor_view.dispatch({
+                          changes: {from: pos, insert: content}
+                      });
+                  } else if (op.Delete) {
+                       const { pos, len } = op.Delete;
+                       window._editor_view.dispatch({
+                          changes: {from: pos, to: pos + len, insert: ""}
+                      });
+                  }
+              } catch (e) {
+                  console.error("ApplyOp Failed:", e);
+              } finally {
+                  window._isRemote = false;
+              }
+          }
+      }
 
       // 3. Process any requests that came in while we were loading
       window._cm_loaded = true;
@@ -58,11 +110,11 @@
         }
       }
     </script>
-  <link rel="modulepreload" href="/deve_web-358b7e81fa0afbae.js" crossorigin="anonymous" integrity="sha384-ft4HProuvM3KEVQRFYhDEAOuIJQt9EcPwCakoqILfO7u2aW3Q0pxj23Ynw4PWujl"><link rel="preload" href="/deve_web-358b7e81fa0afbae_bg.wasm" crossorigin="anonymous" integrity="sha384-dlw3n5MUkktXe9woFUhYqxUHgj2e65AnVXHWz4zM0zLGcFnlnlWVtbnU4xVeWKsc" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/deve_web-9e722ff073049d2a.js" crossorigin="anonymous" integrity="sha384-0WouupalWvwAWZCnqXWXrb7AQ/dci8vPfXyTbqhcQ7wnRHlcrilkDAJSMG/gqXJS"><link rel="preload" href="/deve_web-9e722ff073049d2a_bg.wasm" crossorigin="anonymous" integrity="sha384-7X+W7G52hrDLE8wKTWO5tDkDURizOPsVPSGRLp/IMqhDe4jWNOm35pozcfxD5mIR" as="fetch" type="application/wasm"></head>
   <body>
 <script type="module">
-import init, * as bindings from '/deve_web-358b7e81fa0afbae.js';
-const wasm = await init({ module_or_path: '/deve_web-358b7e81fa0afbae_bg.wasm' });
+import init, * as bindings from '/deve_web-9e722ff073049d2a.js';
+const wasm = await init({ module_or_path: '/deve_web-9e722ff073049d2a_bg.wasm' });
 
 
 window.wasmBindings = bindings;

@@ -1,0 +1,127 @@
+warning: unused import: `file_id::FileId`
+ --> crates\core\src\vfs.rs:6:5
+  |
+6 | use file_id::FileId;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `deve_core` (lib) generated 1 warning (run `cargo fix --lib -p deve_core` to apply 1 suggestion)
+   Compiling deve_cli v0.0.1 (E:\gitclone\Deve-Note\apps\cli)
+error[E0255]: the name `AppState` is defined multiple times
+  --> apps\cli\src\server\ws.rs:21:5
+   |
+ 8 | pub struct AppState {
+   | ------------------- previous definition of the type `AppState` here
+...
+21 | use crate::server::AppState;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^ `AppState` reimported here
+   |
+   = note: `AppState` must be defined only once in the type namespace of this module
+help: you can use `as` to change the binding name of the import
+   |
+21 | use crate::server::AppState as OtherAppState;
+   |                             ++++++++++++++++
+
+warning: unused import: `tokio::net::TcpListener`
+ --> apps\cli\src\server\mod.rs:3:5
+  |
+3 | use tokio::net::TcpListener;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `crate::server::AppState`
+  --> apps\cli\src\server\ws.rs:21:5
+   |
+21 | use crate::server::AppState;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0609]: no field `tx` on type `Arc<server::ws::AppState>`
+  --> apps\cli\src\server\ws.rs:39:24
+   |
+39 |     let mut rx = state.tx.subscribe();
+   |                        ^^ unknown field
+   |
+   = note: available field is: `ledger`
+
+error[E0599]: no method named `split` found for struct `WebSocket` in the current scope
+    --> apps\cli\src\server\ws.rs:42:45
+     |
+  42 |     let (mut sender, mut receiver) = socket.split();
+     |                                             ^^^^^ method not found in `WebSocket`
+     |
+    ::: C:\Users\QQ\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-util-0.3.31\src\stream\stream\mod.rs:1582:8
+     |
+1582 |     fn split<Item>(self) -> (SplitSink<Self, Item>, SplitStream<Self>)
+     |        ----- the method is available for `WebSocket` here
+     |
+     = help: items from traits can only be used if the trait is in scope
+help: trait `StreamExt` which provides `split` is implemented but not in scope; perhaps you want to import it
+     |
+   1 + use futures_util::stream::stream::StreamExt;
+     |
+
+error[E0282]: type annotations needed
+  --> apps\cli\src\server\ws.rs:55:20
+   |
+55 |                 if sender.send(Message::Text(json)).await.is_err() {
+   |                    ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> apps\cli\src\server\ws.rs:55:20
+   |
+55 |                 if sender.send(Message::Text(json)).await.is_err() {
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0609]: no field `tx` on type `Arc<server::ws::AppState>`
+  --> apps\cli\src\server\ws.rs:64:20
+   |
+64 |     let tx = state.tx.clone();
+   |                    ^^ unknown field
+   |
+   = note: available field is: `ledger`
+
+error[E0282]: type annotations needed
+  --> apps\cli\src\server\ws.rs:66:27
+   |
+66 |     while let Some(msg) = receiver.recv().await {
+   |                           ^^^^^^^^ cannot infer type
+
+error[E0308]: mismatched types
+   --> apps\cli\src\server\mod.rs:28:21
+    |
+ 28 |         .with_state(app_state)
+    |          ---------- ^^^^^^^^^ expected `server::ws::AppState`, found `server::AppState`
+    |          |
+    |          arguments to this method are incorrect
+    |
+    = note: `server::AppState` and `server::ws::AppState` have similar names, but are actually distinct types
+note: `server::AppState` is defined in module `crate::server` of the current crate
+   --> apps\cli\src\server\mod.rs:12:1
+    |
+ 12 | pub struct AppState {
+    | ^^^^^^^^^^^^^^^^^^^
+note: `server::ws::AppState` is defined in module `crate::server::ws` of the current crate
+   --> apps\cli\src\server\ws.rs:8:1
+    |
+  8 | pub struct AppState {
+    | ^^^^^^^^^^^^^^^^^^^
+note: method defined here
+   --> C:\Users\QQ\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\axum-0.7.9\src\routing\mod.rs:370:12
+    |
+370 |     pub fn with_state<S2>(self, state: S) -> Router<S2> {
+    |            ^^^^^^^^^^
+
+warning: unused variable: `path`
+  --> apps\cli\src\main.rs:51:31
+   |
+51 |         Some(Commands::Init { path }) => {
+   |                               ^^^^ help: try ignoring the field: `path: _`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+Some errors have detailed explanations: E0255, E0282, E0308, E0599, E0609.
+For more information about an error, try `rustc --explain E0255`.
+warning: `deve_cli` (bin "deve_cli") generated 3 warnings
+error: could not compile `deve_cli` (bin "deve_cli") due to 8 previous errors; 3 warnings emitted

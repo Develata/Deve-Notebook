@@ -7,6 +7,7 @@ pub enum ClientMessage {
     Edit {
         doc_id: DocId,
         op: Op,
+        client_id: u64,
     },
     // Future: Subscribe / Unsubscribe
 }
@@ -18,10 +19,18 @@ pub enum ServerMessage {
         doc_id: DocId,
         seq: u64,
     },
-    /// Server broadcasts new Ops from other clients.
-    NewOps {
+    /// Server broadcasts a new Op from another client.
+    NewOp {
         doc_id: DocId,
-        ops: Vec<Op>,
+        op: Op,
+        seq: u64,
+        client_id: u64,
+    },
+    /// Server sends the full content of the document (Initial Load).
+    Snapshot {
+        doc_id: DocId,
+        content: String,
+        version: u64,
     },
     /// Error message
     Error(String),

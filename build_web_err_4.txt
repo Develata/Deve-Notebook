@@ -1,0 +1,20 @@
+   Compiling deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `js_sys`
+  --> apps\web\src\editor.rs:26:22
+   |
+26 |     let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
+   |                      ^^^^^^ use of unresolved module or unlinked crate `js_sys`
+   |
+   = help: if you wanted to use a crate named `js_sys`, use `cargo add js_sys` to add it to your `Cargo.toml`
+help: consider importing this struct
+   |
+ 1 + use leptos::math::Math;
+   |
+help: if you import `Math`, refer to it directly
+   |
+26 -     let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
+26 +     let client_id = (Math::random() * 1_000_000.0) as u64;
+   |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `deve_web` (bin "deve_web") due to 1 previous error

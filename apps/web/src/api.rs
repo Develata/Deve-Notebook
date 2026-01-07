@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use gloo_net::websocket::{futures::WebSocket, Message};
 use futures::{StreamExt, SinkExt};
 use futures::channel::mpsc::{unbounded, UnboundedSender};
-use deve_core::protocol::ClientMessage;
+use deve_core::protocol::{ClientMessage, ServerMessage};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConnectionStatus {
@@ -15,12 +15,14 @@ pub enum ConnectionStatus {
 #[derive(Clone)]
 pub struct WsService {
     pub status: ReadSignal<ConnectionStatus>,
+    pub msg: ReadSignal<Option<ServerMessage>>,
     tx: UnboundedSender<ClientMessage>,
 }
 
 impl WsService {
     pub fn new() -> Self {
         let (status, set_status) = signal(ConnectionStatus::Disconnected);
+        let (msg, set_msg) = signal(None);
         let (tx, mut rx) = unbounded::<ClientMessage>();
         
         spawn_local(async move {
@@ -44,11 +46,14 @@ impl WsService {
                         }
                     });
                     
-                    // Task 2: Reader (WS -> Log)
+                    // Task 2: Reader (WS -> Signal)
                     while let Some(msg) = read.next().await {
                         match msg {
                              Ok(Message::Text(txt)) => {
-                                 leptos::logging::log!("WS Recv: {}", txt);
+                                 // leptos::logging::log!("WS Recv: {}", txt);
+                                 if let Ok(server_msg) = serde_json::from_str::<ServerMessage>(&txt) {
+                                     set_msg.set(Some(server_msg));
+                                 }
                              }
                              _ => {}
                         }
@@ -62,7 +67,7 @@ impl WsService {
             }
         });
         
-        Self { status, tx }
+        Self { status, msg, tx }
     }
 
     pub fn send(&self, msg: ClientMessage) {

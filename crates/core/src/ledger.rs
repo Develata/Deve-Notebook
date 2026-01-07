@@ -139,7 +139,7 @@ impl Ledger {
         Ok(seq)
     }
 
-    pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<LedgerEntry>> {
+    pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         let read_txn = self.db.begin_read()?;
         let ops_table = read_txn.open_table(LEDGER_OPS)?;
         let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
@@ -151,12 +151,13 @@ impl Ledger {
             let seq_val = seq?.value();
             if let Some(bytes) = ops_table.get(seq_val)? {
                  let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
-                 entries.push(entry);
+                 entries.push((seq_val, entry));
             }
         }
         
-        // Sort by timestamp or just trust insertion order (Sequence)?
-        // Sequence is monotonic.
+        // Sort by sequence number
+        entries.sort_by_key(|k| k.0);
+        
         Ok(entries)
     }
 }
