@@ -1,0 +1,33 @@
+[workspace]
+members = [
+    "apps/cli",
+    "crates/core",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+authors = ["Deve-Note Contributors"]
+license = "MIT"
+repository = "https://github.com/develeta/deve-note"
+
+[workspace.dependencies]
+# Intra-workspace dependencies
+deve_core = { path = "crates/core" }
+
+# Common dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Storage & CRDT
+redb = "2.0"
+# loro = "1.0" # TBD: Add Loro when we start implementing CRDT
+

@@ -1,0 +1,11 @@
+   Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
+warning: unused import: `file_id::FileId`
+ --> crates\core\src\vfs.rs:6:5
+  |
+6 | use file_id::FileId;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `deve_core` (lib) generated 1 warning (run `cargo fix --lib -p deve_core` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.24s

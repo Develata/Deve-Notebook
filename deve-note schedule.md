@@ -1,34 +1,76 @@
-# Deve-Note 计划排期（0.0.1）
+# Deve-Note 开发计划表
 
-## Phase 1: Ledger/Projection 基座
-- 搭建 Cargo workspace；实现 append-only 账本写读、分段日志与 Snapshot 序列化。
-- 建立 DocId 基础类型、LedgerEntry、CapabilityManifest 结构；持久化 Redb/Sled 索引。
-- One-way 投影管线雏形：Ledger -> Markdown（可延迟写）。
-- 基础安全：Argon2 + JWT；Tower 中间件限流/超时/熔断。
+**预计总时长**: 8-12 周
+**开始日期**: 待定
 
-## Phase 2: VFS 与同步协议
-- 建立 `DocId <-> Path` 双向映射；重命名/移动仅改映射。
-- WebSocket 握手与同步模式：轻微落后重放 Ops，严重落后直拉 Snapshot。
-- 本地存储抽象：桌面 sqlite/Redb，移动 sqlite/IndexedDB，Web IndexedDB。
-- 投影任务后台化，支持按需/延迟写。
+## 阶段 0: 钢铁核心 (Headless Prototype)
+**时长**: 第 1-2 周 (关键路径)
+**目标**: 在没有任何 UI 的情况下，验证 "Ledger -> Vault" 和 "Vault -> Ledger" 的双向同步闭环。**必须**在开始 UI 工作前完成。
 
-## Phase 3: 编辑器与 MD/数学基线
-- Leptos + Milkdown 集成；实现 Loro <-> Prosemirror 绑定。
-- Markdown 基线能力与快捷键、粘贴清洗；图片/粘贴入库生成 DocId 引用。
-- 数学体验：行内/块级模式切换、错误高亮、导出 SVG/PNG、离线 KaTeX 资源。
+- [ ] **核心逻辑**: 搭建 Rust Workspace, 实现 `Ledger` 结构体 (Redb + CRDT/Loro)。
+- [ ] **VFS 层**: 实现 `DocId` 分配与路径映射 (Path Mapping) 逻辑。
+- [ ] **和解引擎 (Reconciliation Engine)**:
+    - [ ] 实现 `notify` 文件监听器。
+    - [ ] **关键**: 实现 Inode 追踪与防抖 (Debounce) 逻辑。
+    - [ ] **关键**: 实现 "Diff-to-Ops" 逻辑 (Dissimilar)。
+- [ ] **CLI 工具**: 构建 `deve-note init`, `deve-note watch`, `deve-note append` 命令。
+- [ ] **验证及其验收**:
+    - [ ] 测试: `VS Code` 修改文件 -> `Ledger` 正确记录 Op。
+    - [ ] 测试: `Ledger` 接收 Op -> `Vault` 文件更新 (且不破坏用户光标/不造成冲突)。
+    - [ ] 测试: 在 OS 中重命名文件 -> `Ledger` 保持 `DocId` 不变 (不误判为删除+新建)。
 
-## Phase 4: 插件运行时与资产模型
-- 定义插件 ABI、生命周期、事件总线；Host Functions + Capability 校验。
-- 资源配额/隔离、崩溃恢复；命令注册与 UI 插槽扩展通道。
-- 资产模型：asset://<uuid> 引用、去重/分片、产物写回流程。
+## 阶段 1: 最小可行驾驶舱 (MVC)
+**时长**: 第 3-5 周
+**目标**: 一个可用的本地 Markdown 编辑器，具备基本导航功能。
 
-## Phase 5: AI 与计算扩展
-- AiClient/ModelRegistry 抽象，云端与本地模型并存；流式输出、函数调用、速率限制。
-- 工具注册与能力绑定；长任务队列（超时/取消/重试），产物落地 DocId。
-- 隐私/遥测默认关闭，显式 opt-in。
+- [ ] **前端基础设施**:
+    - [ ] 初始化 Leptos v0.7 + Tailwind CSS 项目。
+    - [ ] 实现 "Resizable Slots" (可缩放插槽) 布局引擎。
+- [ ] **编辑器集成**:
+    - [ ] 将 CodeMirror 6 封装为 Leptos 组件。
+    - [ ] 将 CodeMirror 变更绑定到 Loro CRDT (Wasm)。
+    - [ ] 实现基础 Markdown 样式渲染与数学公式 (KaTeX/MathJax) 支持。
+- [ ] **服务端通信**:
+    - [ ] 实现具备断线重连逻辑的 WebSocket 客户端。
+    - [ ] 实现 "文件树" 侧边栏 (虚拟列表)。
 
-## Phase 6: 多端发布与打包
-- 单内核多外壳：Tauri Desktop、PWA/Web、Tauri Mobile/WebView。
-- Storage/Net adapter 实现；CI matrix 覆盖桌面/wasm/mobile，产出 bundle/PWA/APK/AAB/TestFlight。
-- 开源配套：许可证、贡献指南、发布说明/Changelog、Docker 镜像与 SBOM。
-# 开发实施路线图
+## 阶段 2: 鲁棒性强化 ("512MB 挑战")
+**时长**: 第 6-7 周
+**目标**: 针对低配服务器进行优化，并确保数据安全。
+
+- [ ] **性能优化**:
+    - [ ] 实现 `DEVE_PROFILE` 配置加载逻辑。
+    - [ ] 为 `low-spec` 模式实现仅 CSR (客户端渲染) 模式。
+    - [ ] 内存分析与优化 (设置缓存上限)。
+- [ ] **数据安全**:
+    - [ ] 实现定期快照 (Snapshotting) 与裁剪 (Pruning) 策略 (低配模式保留 10 个快照)。
+    - [ ] 实现 `deve-note export-ledger` (导出 JSONL) 灾备功能。
+    - [ ] 压力测试: 测试网络断开和服务器强制杀进程场景下的数据完整性。
+
+## 阶段 3: 插件与高级能力
+**时长**: 第 8-10 周
+**目标**: 启用扩展性与丰富功能 (搜索, 图谱)。
+
+- [ ] **插件系统**:
+    - [ ] 集成 `Rhai` 或 `Extism` 运行时。
+    - [ ] 实现 `Capability` (能力清单) 解析器与执行器。
+- [ ] **宿主函数 (Host Functions)**:
+    - [ ] 暴露 `read_note`, `write_note` (受控 API)。
+    - [ ] 实现 `Plugin RPC Bridge` (前端 <-> 后端通信桥梁)。
+- [ ] **高级特性** (仅 Standard Profile):
+    - [ ] 集成 `Tantivy` 实现全文检索。
+    - [ ] 实现后台图谱分析与可视化功能。
+
+## 阶段 4: 打磨与发布
+**时长**: 第 11-12 周
+**目标**: 准备公开发布。
+
+- [ ] **CI/CD**:
+    - [ ] 配置 GitHub Actions 进行交叉编译 (生成 Windows/Linux/macOS 二进制)。
+    - [ ] 构建 Docker 镜像 (支持 Standard & Low-Spec profiles)。
+- [ ] **移动端**:
+    - [ ] 为移动端外壳构建简化的 "阅读模式 (Reader Mode)" UI。
+- [ ] **文档**:
+    - [ ] 编写 `README.md` 和用户指南 (User Guide)。
+    - [ ] 编写插件 API 文档。
+- [ ] **发布**: 发布 v0.1.0 Beta 版本。
