@@ -1,9 +1,0 @@
-   Compiling deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
-error[E0425]: cannot find value `raw_element` in this scope
-  --> apps\web\src\editor.rs:53:29
-   |
-53 |             setupCodeMirror(raw_element, &on_update);
-   |                             ^^^^^^^^^^^ not found in this scope
-
-For more information about this error, try `rustc --explain E0425`.
-error: could not compile `deve_web` (bin "deve_web") due to 1 previous error

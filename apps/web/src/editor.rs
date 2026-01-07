@@ -14,12 +14,14 @@ extern "C" {
 }
 
 #[component]
-pub fn Editor() -> impl IntoView {
+pub fn Editor(
+    doc_id: DocId,
+) -> impl IntoView {
     let editor_ref = NodeRef::<Div>::new();
     let ws = use_context::<WsService>().expect("WsService should be provided");
     
     // Local state of the document to compute diffs against
-    let (content, set_content) = signal("# Hello from CodeMirror\n\nStart typing...".to_string());
+    let (content, set_content) = signal("".to_string()); // Start empty
     let (local_version, set_local_version) = signal(0u64);
     
     // Playback State
@@ -30,20 +32,28 @@ pub fn Editor() -> impl IntoView {
     // Generate a session client_id (using random rough)
     let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
     
-    // Mock DocId for Phase 2/3
-    let doc_id = DocId::from_u128(1001);
-
-    // Initial History Request
+    // Initial Request: Open Document
+    // We send OpenDoc on mount AND when doc_id changes.
+    // NOTE: Effect runs on prop change.
     let ws_clone = ws.clone();
     Effect::new(move |_| {
-        // Warning: This runs immediately.
+         // Reset state when doc changes
+         set_content.set("Loading...".to_string());
+         set_local_version.set(0);
+         set_history.set(Vec::new());
+         
+         ws_clone.send(ClientMessage::OpenDoc { doc_id });
     });
 
     // Effect to handle incoming messages
+    let ws_clone_2 = ws.clone();
     Effect::new(move |_| {
-         if let Some(msg) = ws.msg.get() {
+         if let Some(msg) = ws_clone_2.msg.get() {
              match msg {
-                 ServerMessage::Snapshot { doc_id: _, content: new_content, version } => {
+                 ServerMessage::Snapshot { doc_id: msg_doc_id, content: new_content, version } => {
+                     // Filter by DocId
+                     if msg_doc_id != doc_id { return; }
+                     
                      leptos::logging::log!("Received Snapshot: {} chars, Ver: {}", new_content.len(), version);
                      applyRemoteContent(&new_content);
                      set_content.set(new_content);
@@ -53,13 +63,16 @@ pub fn Editor() -> impl IntoView {
                      set_playback_version.set(version);
                      
                      // Request History
-                     ws_clone.send(ClientMessage::RequestHistory { doc_id });
+                     ws_clone_2.send(ClientMessage::RequestHistory { doc_id });
                  }
-                 ServerMessage::History { doc_id: _, ops } => {
+                 ServerMessage::History { doc_id: msg_doc_id, ops } => {
+                     if msg_doc_id != doc_id { return; }
                      leptos::logging::log!("Received History: {} ops", ops.len());
                      set_history.set(ops);
                  }
-                 ServerMessage::NewOp { doc_id: _, op, seq, client_id: origin_id } => {
+                 ServerMessage::NewOp { doc_id: msg_doc_id, op, seq, client_id: origin_id } => {
+                     if msg_doc_id != doc_id { return; }
+                     
                      let current_ver = local_version.get_untracked();
                      if seq > current_ver {
                          // Filter Echoes!

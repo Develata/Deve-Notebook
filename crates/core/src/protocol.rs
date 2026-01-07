@@ -13,6 +13,12 @@ pub enum ClientMessage {
     RequestHistory {
         doc_id: DocId,
     },
+    /// Request a list of all known documents.
+    ListDocs,
+    /// Request to open a specific document (get Snapshot).
+    OpenDoc {
+        doc_id: DocId,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +45,10 @@ pub enum ServerMessage {
     History {
         doc_id: DocId,
         ops: Vec<(u64, Op)>,
+    },
+    /// Server sends list of documents.
+    DocList {
+        docs: Vec<(DocId, String)>,
     },
     /// Error message
     Error(String),

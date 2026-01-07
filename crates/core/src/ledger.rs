@@ -160,4 +160,15 @@ impl Ledger {
         
         Ok(entries)
     }
+
+    pub fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(DOCID_TO_PATH)?;
+        let mut docs = Vec::new();
+        for item in table.iter()? {
+            let (id, path) = item?;
+            docs.push((DocId::from_u128(id.value()), path.value().to_string()));
+        }
+        Ok(docs)
+    }
 }
