@@ -35,6 +35,24 @@ pub mod t {
                 Locale::Zh => "设置",
             }
         }
+        pub fn home(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Home",
+                Locale::Zh => "首页",
+            }
+        }
+        pub fn open(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Open Index",
+                Locale::Zh => "打开目录",
+            }
+        }
+        pub fn command(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Command Palette",
+                Locale::Zh => "命令面板",
+            }
+        }
     }
 
     pub mod sidebar {
@@ -167,8 +185,8 @@ pub mod t {
         }
         pub fn open_settings(locale: Locale) -> &'static str {
             match locale {
-                Locale::En => "Open Settings",
-                Locale::Zh => "打开设置",
+                Locale::En => "Open Settings (config)",
+                Locale::Zh => "打开设置 (config)",
             }
         }
         pub fn toggle_language(locale: Locale) -> &'static str {
@@ -178,4 +196,5 @@ pub mod t {
             }
         }
     }
+
 }

@@ -1,8 +1,5 @@
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
-use web_sys::KeyboardEvent;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
 
 #[derive(Clone, Debug)]
 pub struct Command {

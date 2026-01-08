@@ -77,16 +77,27 @@ fn AppContent() -> impl IntoView {
         }
     };
 
+    // Header Callbacks
+    let on_command = Callback::new(move |_| {
+        set_show_cmd.update(|s| *s = !*s);
+    });
+    
+    let on_home = Callback::new(move |_| {
+        // For now, Home deselects current doc (Show Welcome)
+        set_current_doc.set(None);
+    });
+
+    let on_open = Callback::new(move |_| {
+         // Logic to find "index" or similar.
+         let list = docs.get_untracked();
+         if let Some((id, _)) = list.iter().find(|(_, name)| name == "index" || name == "index.md" || name == "Home") {
+             set_current_doc.set(Some(*id));
+         } else {
+             // Fallback: Just open the first one or do nothing?
+         }
+    });
+
     view! {
-        // We attach global key listener to the root div which covers the screen
-        // "tabindex" is needed for div to receive key events if not focused? 
-        // Actually, key events bubble. But focus must be within the div.
-        // We set tabindex="-1" and autofocus to ensure it captures keys?
-        // Better: use window_event_listener if possible. 
-        // But since that failed, we try this. 
-        // Re-focusing might be an issue.
-        // Let's try attaching to window via leptos::window_event_listener if possible? No.
-        // We'll stick to the plan: if this div wraps everything, events bubble to it.
         <div 
             class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
             on:keydown=handle_keydown
@@ -97,7 +108,12 @@ fn AppContent() -> impl IntoView {
                 set_show=set_show_cmd
                 on_settings=on_settings 
             />
-            <crate::components::header::Header status_text=status_text on_settings=on_settings />
+            <crate::components::header::Header 
+                status_text=status_text 
+                on_home=on_home
+                on_open=on_open
+                on_command=on_command
+            />
             
             <crate::components::settings::SettingsModal 
                 show=show_settings 
