@@ -97,11 +97,38 @@ fn AppContent() -> impl IntoView {
          }
     });
 
+    // Layout State
+    let (sidebar_width, set_sidebar_width) = signal(250); // Default width
+    let (is_resizing, set_is_resizing) = signal(false);
+    
+    let start_resize = Callback::new(move |ev: web_sys::MouseEvent| {
+        ev.prevent_default();
+        set_is_resizing.set(true);
+    });
+    
+    let stop_resize = Callback::new(move |_| {
+        set_is_resizing.set(false);
+    });
+    
+    let do_resize = Callback::new(move |ev: web_sys::MouseEvent| {
+        if is_resizing.get_untracked() {
+            let new_width = ev.client_x();
+            // Clamp width (min 150, max 600)
+            if new_width > 150 && new_width < 600 {
+                set_sidebar_width.set(new_width);
+            }
+        }
+    });
+
     view! {
         <div 
             class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
             on:keydown=handle_keydown
+            on:mousemove=move |ev| do_resize.run(ev)
+            on:mouseup=move |_| stop_resize.run(())
+            on:mouseleave=move |_| stop_resize.run(())
             tabindex="-1" 
+            style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
         >
             <crate::components::command_palette::CommandPalette 
                 show=show_cmd 
@@ -120,18 +147,30 @@ fn AppContent() -> impl IntoView {
                 set_show=set_show_settings
             />
 
-            <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex gap-4 overflow-hidden">
+            <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
                  // Left Sidebar
-                 <aside class="w-64 flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                 <aside 
+                    class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    style=move || format!("width: {}px", sidebar_width.get())
+                 >
                      <crate::components::sidebar::Sidebar 
                         docs=docs
                         current_doc=current_doc
                         on_select=on_doc_select
                      />
                  </aside>
+                 
+                 // Drag Handle
+                 <div 
+                    class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
+                    on:mousedown=move |ev| start_resize.run(ev)
+                 >
+                    // Visual indicator (thin line)
+                    <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
+                 </div>
 
                  // Main Editor
-                 <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col">
+                 <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
                     {move || match current_doc.get() {
                         Some(id) => view! { 
                             // Keyed by ID to force re-mount on change
