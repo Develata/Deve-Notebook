@@ -50,7 +50,6 @@ impl WsService {
                     while let Some(msg) = read.next().await {
                         match msg {
                              Ok(Message::Text(txt)) => {
-                                 // leptos::logging::log!("WS Recv: {}", txt);
                                  if let Ok(server_msg) = serde_json::from_str::<ServerMessage>(&txt) {
                                      set_msg.set(Some(server_msg));
                                  }
@@ -69,7 +68,7 @@ impl WsService {
         
         Self { status, msg, tx }
     }
-
+    
     pub fn send(&self, msg: ClientMessage) {
         if let Err(e) = self.tx.unbounded_send(msg) {
             leptos::logging::error!("Failed to enqueue message: {:?}", e);

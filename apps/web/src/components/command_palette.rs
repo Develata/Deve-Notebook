@@ -6,7 +6,7 @@ use web_sys::KeyboardEvent;
 pub struct Command {
     pub id: &'static str,
     pub title_key: fn(Locale) -> &'static str,
-    pub action: fn(), // Simple action for now, might need more context later
+    pub action: Callback<()>,
 }
 
 #[component]
@@ -19,25 +19,24 @@ pub fn CommandPalette(
     let (selected_index, set_selected_index) = signal(0);
     
     // Command Registry
-    // We construct this dynamically to allow actions like "Open Settings"
     let commands = move || {
         vec![
-            (
-                "settings", 
-                t::command_palette::open_settings as fn(Locale) -> &'static str,
-                Box::new(move || {
+            Command {
+                id: "settings", 
+                title_key: t::command_palette::open_settings,
+                action: Callback::new(move |_| {
                     on_settings.run(());
                     set_show.set(false);
-                }) as Box<dyn Fn()>
-            ),
-            (
-                "lang",
-                t::command_palette::toggle_language as fn(Locale) -> &'static str,
-                Box::new(move || {
+                })
+            },
+            Command {
+                id: "lang",
+                title_key: t::command_palette::toggle_language,
+                action: Callback::new(move |_| {
                     locale.update(|l| *l = l.toggle());
                     set_show.set(false);
-                }) as Box<dyn Fn()>
-            )
+                })
+            }
         ]
     };
     
@@ -47,7 +46,6 @@ pub fn CommandPalette(
             ev.prevent_default();
             set_show.update(|s| *s = !*s);
              if show.get_untracked() {
-                // Focus input? (Handled by autofocus attribute hopefully)
                 set_query.set(String::new());
                 set_selected_index.set(0);
             }
@@ -64,8 +62,7 @@ pub fn CommandPalette(
                 set_selected_index.update(|i| *i = i.saturating_sub(1));
             } else if ev.key() == "Enter" {
                 ev.prevent_default();
-                // Execute selected
-                // (Logic needs filtered list access, handled in view or separate signal)
+                // We'll handle selection via click for now or add signals for filtered list later
             }
         }
     });
@@ -92,34 +89,29 @@ pub fn CommandPalette(
                         {move || {
                             let q = query.get().to_lowercase();
                             let cmds = commands();
-                            let filtered: Vec<_> = cmds.into_iter().filter(|(_, title_fn, _)| {
-                                title_fn(locale.get()).to_lowercase().contains(&q)
+                            let filtered: Vec<_> = cmds.into_iter().filter(|cmd| {
+                                (cmd.title_key)(locale.get()).to_lowercase().contains(&q)
                             }).collect();
                             
                             if filtered.is_empty() {
                                 view! {
                                     <div class="p-4 text-center text-gray-400 text-sm">
-                                        {t::command_palette::no_results(locale.get())}
+                                        {move || t::command_palette::no_results(locale.get())}
                                     </div>
                                 }.into_any()
                             } else {
                                 // Clamp selection
                                 let count = filtered.len();
                                 if selected_index.get() >= count {
-                                    set_selected_index.set(0);
+                                    set_selected_index.set(0); 
                                 }
-                                
-                                // Ideally we execute here if Enter was pressed, but that's messy in render loop.
-                                // Instead, we just render. Execution logic ideally shares this filtered list.
-                                // For simplicity in this iteration, we won't implement Enter execution via this closure.
-                                // We'll just rely on clicking for MVP or move filtering to a memo.
                                 
                                 view! {
                                     <div class="flex flex-col gap-1">
                                         <For
                                             each=move || filtered.clone().into_iter().enumerate()
-                                            key=|(_, (id, _, _))| *id
-                                            children=move |(idx, (_, title_fn, action))| {
+                                            key=|(_, cmd)| cmd.id
+                                            children=move |(idx, cmd)| {
                                                 let is_sel = idx == selected_index.get();
                                                 view! {
                                                     <button
@@ -127,9 +119,9 @@ pub fn CommandPalette(
                                                             "w-full text-left px-4 py-3 rounded-lg flex items-center justify-between group transition-colors {}",
                                                             if is_sel { "bg-blue-50 text-blue-700" } else { "text-gray-700 hover:bg-gray-50" }
                                                         )
-                                                        on:click=move |_| action()
+                                                        on:click=move |_| cmd.action.run(())
                                                     >
-                                                        <span class="font-medium">{title_fn(locale.get())}</span>
+                                                        <span class="font-medium">{(cmd.title_key)(locale.get())}</span>
                                                         <Show when=move || is_sel>
                                                             <svg class="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
