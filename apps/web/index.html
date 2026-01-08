@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deve-Note</title>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
     <style>
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -105,7 +109,7 @@
       import { syntaxTree, defaultHighlightStyle, syntaxHighlighting, bracketMatching } from "@codemirror/language";
       import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
       // import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"; // Removed to avoid map error
-      import { Decoration, ViewPlugin } from "@codemirror/view";
+      import { Decoration, ViewPlugin, WidgetType } from "@codemirror/view";
 
       console.log("Modules Loaded via ImportMap");
 
@@ -139,8 +143,96 @@
         .cm-content .cm-heading-2 { font-size: 1.5em; font-weight: bold; margin-top: 0.5em; }
         .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; padding: 2rem; max-width: 800px; margin: 0 auto; }
         .cm-syntax-hidden { display: none !important; }
+        .cm-math-widget { display: inline-block; background: #eee; padding: 0 4px; border-radius: 4px; cursor: pointer; }
+        .cm-math-widget.cm-block-math { display: block; text-align: center; margin: 1em 0; }
       `;
       document.head.appendChild(style);
+
+      // --- Math Widget ---
+      class MathWidget extends WidgetType {
+        constructor(content, isBlock) {
+          super();
+          this.content = content;
+          this.isBlock = isBlock;
+        }
+        toDOM(view) {
+          let span = document.createElement("span");
+          span.className = "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
+          try {
+            if (window.katex) {
+                window.katex.render(this.content, span, { 
+                    throwOnError: false, 
+                    displayMode: this.isBlock 
+                });
+            } else {
+                span.innerText = (this.isBlock ? "$$" : "$") + this.content + (this.isBlock ? "$$" : "$"); // Fallback
+            }
+          } catch(e) { span.innerText = "Error"; }
+          return span;
+        }
+      }
+
+      // --- Math Plugin (Regex-based) ---
+      const mathPlugin = ViewPlugin.fromClass(class {
+        constructor(view) { this.decorations = this.compute(view); }
+        update(update) { 
+            if (update.docChanged || update.viewportChanged || update.selectionSet) {
+                this.decorations = this.compute(update.view); 
+            }
+        }
+        compute(view) {
+            let widgets = [];
+            let doc = view.state.doc.sliceString(0, view.state.doc.length); // Get all text (optimize for large docs later if needed)
+            let selection = view.state.selection.main;
+            
+            // Regex for Block $$...$$ and Inline $...$ (Basic)
+            // Note: JS Regex stateful loops
+            const regexBlock = /\$\$([\s\S]*?)\$\$/g;
+            const regexInline = /\$([^$\n]+?)\$/g;
+
+            // Helper to check cursor collision
+            const isCursorIn = (from, to) => selection.head >= from && selection.head <= to;
+
+            // 1. Find Block Math
+            let match;
+            while ((match = regexBlock.exec(doc)) !== null) {
+                let from = match.index;
+                let to = match.index + match[0].length;
+                let content = match[1];
+                
+                if (!isCursorIn(from, to)) {
+                    widgets.push(Decoration.replace({ widget: new MathWidget(content, true) }).range(from, to));
+                }
+            }
+
+            // 2. Find Inline Math (simple, non-nested)
+            // Reset lastIndex not needed because we use new regex or string match logic logic? 
+            // Actually reusing regex object requires reset if we break loop, but here we run to finish.
+            // CAUTION: regexInline might match inside code blocks or other things. 
+            // Ideally we check syntaxTree for existing "Code" nodes to skip, but for now simple Regex is "Phase 1" enough.
+            while ((match = regexInline.exec(doc)) !== null) {
+                let from = match.index;
+                let to = match.index + match[0].length;
+                let content = match[1];
+                
+                // Avoid overlap with already found block math (simple collision check)
+                // Actually regexInline won't match $$ because it excludes $ inside group 1, wait.
+                // $...$ regex might match parts of $$...$$ if not careful.
+                // Simple fix: If it's already covered by a widget, skip?
+                // But replacing logic handles it. 
+                // Let's assume user doesn't nest weirdly for now.
+                
+                if (!isCursorIn(from, to)) {
+                    widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
+                }
+            }
+            
+            // Sort widgets just in case
+            widgets.sort((a, b) => a.from - b.from);
+            
+            return Decoration.set(widgets);
+        }
+      }, { decorations: v => v.decorations });
 
       // Hybrid Plugin
       const hybridPlugin = ViewPlugin.fromClass(class {
@@ -180,6 +272,7 @@
 
       // Real Init
       window._realInit = (element, onUpdate) => {
+        console.log("Initializing Editor");
         if (!element) return;
         element.innerHTML = '';
         
@@ -190,6 +283,7 @@
                 ...manualBasicSetup,
                 markdown(),
                 hybridPlugin,
+                mathPlugin,
                 EditorView.updateListener.of((v) => {
                     if (window._isRemote) return;
                     if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());

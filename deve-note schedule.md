@@ -31,8 +31,8 @@
     - [ ] 实现 "Resizable Slots" (可缩放插槽) 布局引擎。
 - [ ] **编辑器集成**:
     - [ ] 将 CodeMirror 6 封装为 Leptos 组件。
-    - [ ] 将 CodeMirror 变更绑定到 Loro CRDT (Wasm)。
-    - [ ] 实现基础 Markdown 样式渲染与数学公式 (KaTeX/MathJax) 支持。
+    - [x] 将 CodeMirror 变更绑定到 Loro CRDT (Wasm)。
+    - [x] 实现基础 Markdown 样式渲染与数学公式 (KaTeX/MathJax) 支持。
 - [ ] **服务端通信**:
     - [ ] 实现具备断线重连逻辑的 WebSocket 客户端。
     - [ ] 实现 "文件树" 侧边栏 (虚拟列表)。
