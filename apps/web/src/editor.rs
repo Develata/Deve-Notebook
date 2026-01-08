@@ -13,9 +13,17 @@ extern "C" {
     fn getEditorContent() -> String;
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EditorStats {
+    pub chars: usize,
+    pub words: usize,
+    pub lines: usize,
+}
+
 #[component]
 pub fn Editor(
     doc_id: DocId,
+    #[prop(optional)] on_stats: Option<Callback<EditorStats>>,
 ) -> impl IntoView {
     let editor_ref = NodeRef::<Div>::new();
     let ws = use_context::<WsService>().expect("WsService should be provided");
@@ -55,6 +63,14 @@ pub fn Editor(
                      if msg_doc_id != doc_id { return; }
                      
                      leptos::logging::log!("Received Snapshot: {} chars, Ver: {}", new_content.len(), version);
+                     
+                     // Compute initial stats
+                     if let Some(cb) = on_stats {
+                         let lines = new_content.lines().count();
+                         let words = new_content.split_whitespace().count();
+                         cb.run(EditorStats { chars: new_content.len(), words, lines });
+                     }
+
                      applyRemoteContent(&new_content);
                      set_content.set(new_content);
                      set_local_version.set(version);
@@ -80,7 +96,14 @@ pub fn Editor(
                              if let Ok(json) = serde_json::to_string(&op) {
                                  applyRemoteOp(&json);
                              }
-                             set_content.set(getEditorContent());
+                             // Update local content signal and stats
+                             let txt = getEditorContent();
+                             if let Some(cb) = on_stats {
+                                 let lines = txt.lines().count();
+                                 let words = txt.split_whitespace().count();
+                                 cb.run(EditorStats { chars: txt.len(), words, lines });
+                             }
+                             set_content.set(txt);
                          }
                          set_local_version.set(seq);
                          
@@ -112,6 +135,13 @@ pub fn Editor(
                 let old_text = content.get_untracked();
                 if new_text == old_text {
                     return;
+                }
+
+                // Compute Stats
+                if let Some(cb) = on_stats {
+                     let lines = new_text.lines().count();
+                     let words = new_text.split_whitespace().count();
+                     cb.run(EditorStats { chars: new_text.len(), words, lines });
                 }
                 
                 // Compute Diff

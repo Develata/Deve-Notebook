@@ -99,4 +99,83 @@ pub mod t {
             }
         }
     }
+
+    pub mod bottom_bar {
+        use super::Locale;
+        
+        pub fn words(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Words",
+                Locale::Zh => "字数",
+            }
+        }
+        pub fn lines(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Lines",
+                Locale::Zh => "行数",
+            }
+        }
+        pub fn col(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Col",
+                Locale::Zh => "列",
+            }
+        }
+        pub fn ready(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Ready",
+                Locale::Zh => "就绪",
+            }
+        }
+        pub fn syncing(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Syncing...",
+                Locale::Zh => "同步中...",
+            }
+        }
+        pub fn offline(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Offline",
+                Locale::Zh => "离线",
+            }
+        }
+    }
+
+    pub mod playback {
+        use super::Locale;
+        pub fn label(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "PLAYBACK",
+                Locale::Zh => "回放控制",
+            }
+        }
+    }
+
+    pub mod command_palette {
+        use super::Locale;
+        pub fn placeholder(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Type a command...",
+                Locale::Zh => "输入命令...",
+            }
+        }
+        pub fn no_results(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "No results found.",
+                Locale::Zh => "未找到结果。",
+            }
+        }
+        pub fn open_settings(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Open Settings",
+                Locale::Zh => "打开设置",
+            }
+        }
+        pub fn toggle_language(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Toggle Language",
+                Locale::Zh => "切换语言",
+            }
+        }
+    }
 }

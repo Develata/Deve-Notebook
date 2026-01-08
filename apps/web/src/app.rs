@@ -57,8 +57,13 @@ fn AppContent() -> impl IntoView {
     let (show_settings, set_show_settings) = signal(false);
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
 
+    // Stats State
+    let (stats, set_stats) = signal(crate::editor::EditorStats::default());
+    let on_stats = Callback::new(move |s| set_stats.set(s));
+
     view! {
         <div class="h-screen w-screen flex flex-col bg-gray-50">
+            <crate::components::command_palette::CommandPalette on_settings=on_settings />
             <crate::components::header::Header status_text=status_text on_settings=on_settings />
             
             <crate::components::settings::SettingsModal 
@@ -81,7 +86,7 @@ fn AppContent() -> impl IntoView {
                     {move || match current_doc.get() {
                         Some(id) => view! { 
                             // Keyed by ID to force re-mount on change
-                             <Editor doc_id=id /> 
+                             <Editor doc_id=id on_stats=on_stats /> 
                         }.into_any(),
                         None => view! { 
                             <div class="flex items-center justify-center h-full text-gray-400">
@@ -91,6 +96,8 @@ fn AppContent() -> impl IntoView {
                     }}
                  </div>
             </main>
+            
+            <crate::components::bottom_bar::BottomBar status=ws.status stats=stats />
         </div>
     }
 }

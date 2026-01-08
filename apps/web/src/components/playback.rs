@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use crate::i18n::{Locale, t};
 
 #[component]
 pub fn PlaybackController(
@@ -6,14 +7,16 @@ pub fn PlaybackController(
     current_version: ReadSignal<u64>,
     on_change: Box<dyn Fn(u64) + Send + Sync>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+
     let on_input = move |ev: leptos::web_sys::Event| {
         let value = event_target_value(&ev).parse::<u64>().unwrap_or(0);
         on_change(value);
     };
 
     view! {
-        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg flex items-center gap-4 z-50">
-            <span class="text-xs font-mono text-gray-500">PLAYBACK</span>
+        <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg flex items-center gap-4 z-40">
+            <span class="text-xs font-mono text-gray-500">{move || t::playback::label(locale.get())}</span>
             
             <input 
                 type="range" 
