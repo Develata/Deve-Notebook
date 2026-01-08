@@ -97,6 +97,13 @@ fn AppContent() -> impl IntoView {
          }
     });
 
+    // Create Doc Callback
+    let ws_for_create = ws.clone();
+    let on_doc_create = Callback::new(move |name: String| {
+        leptos::logging::log!("App: Sending CreateDoc for {}", name);
+        ws_for_create.send(ClientMessage::CreateDoc { name });
+    });
+
     // Layout State
     let (sidebar_width, set_sidebar_width) = signal(250); // Default width
     let (is_resizing, set_is_resizing) = signal(false);
@@ -157,6 +164,7 @@ fn AppContent() -> impl IntoView {
                         docs=docs
                         current_doc=current_doc
                         on_select=on_doc_select
+                        on_create=on_doc_create
                      />
                  </aside>
                  

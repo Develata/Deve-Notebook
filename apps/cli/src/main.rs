@@ -87,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Some(Commands::Serve { port }) => {
             let ledger = Ledger::init(&ledger_path)?;
-            server::start_server(ledger, port).await?;
+            server::start_server(ledger, vault_path, port).await?;
         }
         None => {
             println!("Please provide a subcommand. Try --help.");

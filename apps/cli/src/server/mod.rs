@@ -12,15 +12,17 @@ pub mod ws;
 pub struct AppState {
     pub ledger: Arc<Ledger>,
     pub tx: broadcast::Sender<ServerMessage>,
+    pub vault_path: std::path::PathBuf,
 }
 
-pub async fn start_server(ledger: Ledger, port: u16) -> anyhow::Result<()> {
+pub async fn start_server(ledger: Ledger, vault_path: std::path::PathBuf, port: u16) -> anyhow::Result<()> {
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
     
     let app_state = Arc::new(AppState { 
         ledger: Arc::new(ledger),
         tx,
+        vault_path,
     });
 
     let app = Router::new()

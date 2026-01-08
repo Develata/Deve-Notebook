@@ -19,6 +19,10 @@ pub enum ClientMessage {
     OpenDoc {
         doc_id: DocId,
     },
+    /// Request to create a new document.
+    CreateDoc {
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -7,13 +7,37 @@ pub fn Sidebar(
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     #[prop(into)] on_select: Callback<DocId>,
+    #[prop(into)] on_create: Callback<String>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
+    let create_action = move |_| {
+        if let Some(name) = window().prompt_with_message("Enter new file name:")
+            .ok()
+            .flatten() 
+        {
+            if !name.trim().is_empty() {
+                leptos::logging::log!("Sidebar: User requested create: {}", name);
+                on_create.run(name);
+            }
+        }
+    };
+
     view! {
         <div class="h-full w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
-            <div class="p-4 font-bold text-gray-500 text-xs tracking-wider">
-                "EXPLORER"
+            <div class="p-4 flex items-center justify-between">
+                <div class="font-bold text-gray-500 text-xs tracking-wider">
+                    "EXPLORER"
+                </div>
+                <button 
+                    class="text-gray-400 hover:text-gray-700 p-1 rounded hover:bg-gray-200 transition-colors"
+                    title="New File"
+                    on:click=create_action
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </button>
             </div>
             
             <div class="flex-1 overflow-y-auto">
