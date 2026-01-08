@@ -54,15 +54,23 @@ pub fn CommandPalette(
 
     view! {
         <Show when=move || show.get()>
-            <div class="fixed inset-0 z-[60] flex items-start justify-center pt-[20vh] bg-black/20 backdrop-blur-sm">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[50vh]">
-                    <div class="p-4 border-b border-gray-100 flex items-center gap-3">
-                        <svg class="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            // Transparent overlay for click-outside dismissal
+            <div 
+                class="fixed inset-0 z-[60]"
+                on:click=move |_| set_show.set(false)
+            >
+                // The Palette Box - Top Center Floating
+                <div 
+                    class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
+                    on:click=move |ev| ev.stop_propagation() // Prevent closing when clicking inside
+                >
+                    <div class="p-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
+                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input 
                             type="text"
-                            class="flex-1 outline-none text-lg text-gray-800 placeholder:text-gray-400"
+                            class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
                             placeholder=move || t::command_palette::placeholder(locale.get())
                             prop:value=move || query.get()
                             on:input=move |ev| set_query.set(event_target_value(&ev))
