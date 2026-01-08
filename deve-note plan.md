@@ -104,6 +104,7 @@
 
 * **Ledger is Truth（真源不变量）**：
 	* 权威状态 MUST 仅由 Ledger 表达（Ops Log + Snapshot）。
+	* **Patch Semantics**：外部编辑器对 Vault 的修改被视为一次 **"Patch"**（补丁）。核心 **MUST** 将其通过 Diff 算法转化为 Ops 合并入 Ledger，而 **MUST NOT** 简单地以文件内容覆盖账本。
 	* Vault/Markdown MUST 可由 Ledger 重建；不得存在“仅在 Vault 才存在、且无法由 Ledger 推导”的用户可见事实。
 
 * **ID-Based VFS（标识不变量）**：
@@ -113,6 +114,7 @@
 
 * **Capability-Based Security（权限不变量）**：
 	* 脚本/插件 MUST 声明能力清单（网络域名、FS 路径、env 变量白名单）。
+	* **Manifest Enforcement**：若插件未在 manifest 中声明某权限，运行时请求该权限 **MUST** 直接拒绝（Panic/Error），不予弹窗询问。
 	* Host Functions MUST 执行最小权限校验与审计（default deny）。
 
 ### 5. 体验取舍与兼容性 (Inspiration & Compatibility)
@@ -136,6 +138,7 @@
 * **Main Slot**: 多标签页 (Tabs) 编辑器 / 分屏 (Split View)。
 * **Right Slot**: 大纲 (TOC) / 属性面板 (Metadata) / 插件面板。
 * **Bottom Slot**: 日志输出（核心）/ 终端面板 (Terminal, 插件可选)。
+* **Internationalization (i18n)**: 核心 UI 文本 **MUST** 使用 `leptos_i18n` 进行管理，支持编译时类型检查；默认提供 En/Zh-CN，根据浏览器自动协商。
 * **特性**：所有面板状态（宽度、折叠）持久化存储在 Redb 的 `ui_state` 表中，重启后完全恢复；侧边栏分组/层级可配置，风格靠近 VitePress 的导航结构。
 
 ### 2. 编辑器内核 (The Editor Kernel)
@@ -225,7 +228,8 @@
 	* **输出**：对应 Ops（追加写入 Ledger）+ 广播“外部修改已合并”。
 	* **约束**：
 		* MUST 幂等（同一改动不重复吸收）；MUST 防死循环（Sentinel Lock）。
-		* **MUST 识别重命名**：利用 **Inode 追踪 (Linux/macOS)** 或 **File ID (Windows)** 识别文件移动/重命名，防止 DocId 历史断裂。
+		* **MUST 识别重命名**：利用 **Inode 追踪 (Linux/macOS)** 或 **File ID (Windows)** 识别文件移动/重命名。
+		* **MUST Fallback Identity**：当 Inode 失效（如 Git Pull 导致重建）时，**MUST** 检查 Frontmatter 中的 `uuid` 字段或计算内容 Hash 来重新关联 DocId，防止“重命名风暴”导致的历史丢失。
 		* **MUST 防抖 (Debounce)**：外部写入后应有静默期（如 200ms），等待文件写入稳定（防 Editor 临时文件/原子保存干扰）。
 	* **失败语义**：无法解析/冲突不可合并时 MUST 明确提示并保留原内容（不静默丢失）。
 
@@ -237,7 +241,10 @@
 
 ### 认证与登录 (Auth & Login)
 
-* **单用户配置**：无注册页面，账号/密码放在服务器配置文件或环境变量中，密码仅存 Argon2 哈希；支持管理 token（如 personal access token）以便脚本或 CLI 使用。
+* **12-Factor Auth (环境驱动安全)**：
+    * **No Init UI**：严禁提供“首次启动管理员设置”界面。所有敏感配置（管理员密码/Secret Key）**MUST** 通过环境变量 (`DEVE_NOTE_PASSWORD_HASH`) 或 `.env` 文件注入。
+    * **无状态**：服务 **MUST** 符合 12-Factor App 原则，不依赖本地状态存储凭据。
+* **单用户配置**：支持管理 token（如 personal access token）以便脚本或 CLI 使用。
 * **2FA 可选**：支持 TOTP（本地生成）或 Passkey；可在配置中开启/关闭；本地部署默认关闭但预留入口。
 * **安全基线**：强制 HTTPS；登录表单抗 CSRF；错误提示不暴露账号存在性；限制暴力尝试（速率限制、锁定或简单验证码可选）。
 * **会话管理**：短期访问令牌 + 长期刷新令牌；可选“记住本机”延长会话；支持一键失效所有会话。
@@ -301,6 +308,7 @@
 | **语言** | Rust (2024) | 全栈统一。 |
 | **前端框架** | **Leptos v0.7** | 信号驱动，性能极致，无 Virtual DOM 开销。（*注：需优先验证与 CodeMirror 的集成流畅度*） |
 | **UI 组件** | **Tailwind CSS** | 原子化 CSS，配合 Shadcn-UI (Leptos port) 实现一致性设计。 |
+| **国际化** | **leptos_i18n** | 编译时校验的 i18n 方案，零运行时开销。 |
 | **编辑器** | **CodeMirror 6（默认）/ Milkdown（可选）** | 轻核心保证性能与导出稳定；重编辑器按需启用。（*注：Leptos 绑定层需自行封装或原型验证*） |
 | **图标库** | **Lucide Icons** | 统一、现代的 SVG 图标集。 |
 | **图谱渲染（可选）** | **Pixi.js** 或 **Cosmic-Graph (Rust)** | WebGL 加速的图可视化。 |

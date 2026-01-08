@@ -18,6 +18,8 @@
     - [ ] 测试: `VS Code` 修改文件 -> `Ledger` 正确记录 Op。
     - [ ] 测试: `Ledger` 接收 Op -> `Vault` 文件更新 (且不破坏用户光标/不造成冲突)。
     - [ ] 测试: 在 OS 中重命名文件 -> `Ledger` 保持 `DocId` 不变 (不误判为删除+新建)。
+    - [ ] **增强**: 实现 UUID/Hash Fallback 机制，确保 Inode 失效时仍能找回 DocId。
+    - [ ] **安全**: 验证 12-Factor Auth，确保无 `init` UI，仅通过 Env 启动。
 
 ## 阶段 1: 最小可行驾驶舱 (MVC)
 **时长**: 第 3-5 周
@@ -25,6 +27,7 @@
 
 - [ ] **前端基础设施**:
     - [ ] 初始化 Leptos v0.7 + Tailwind CSS 项目。
+    - [ ] 集成 `leptos_i18n` 实现多语言支持 (En/Zh)。
     - [ ] 实现 "Resizable Slots" (可缩放插槽) 布局引擎。
 - [ ] **编辑器集成**:
     - [ ] 将 CodeMirror 6 封装为 Leptos 组件。
@@ -53,7 +56,7 @@
 
 - [ ] **插件系统**:
     - [ ] 集成 `Rhai` 或 `Extism` 运行时。
-    - [ ] 实现 `Capability` (能力清单) 解析器与执行器。
+    - [ ] 实现 `Capability` (能力清单) 解析器，并强制执行 "Manifest Enforcement" (未声明即 Panic)。
 - [ ] **宿主函数 (Host Functions)**:
     - [ ] 暴露 `read_note`, `write_note` (受控 API)。
     - [ ] 实现 `Plugin RPC Bridge` (前端 <-> 后端通信桥梁)。
