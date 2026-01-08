@@ -3,8 +3,8 @@ use crate::api::WsService;
 use leptos::prelude::*;
 use deve_core::models::DocId;
 use deve_core::protocol::{ClientMessage, ServerMessage};
-
 use crate::i18n::Locale;
+use web_sys::KeyboardEvent;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -61,9 +61,42 @@ fn AppContent() -> impl IntoView {
     let (stats, set_stats) = signal(crate::editor::EditorStats::default());
     let on_stats = Callback::new(move |s| set_stats.set(s));
 
+    // Command Palette State
+    let (show_cmd, set_show_cmd) = signal(false);
+    
+    // Global Key Handler
+    let handle_keydown = move |ev: KeyboardEvent| {
+        if (ev.meta_key() || ev.ctrl_key()) && ev.key() == "k" {
+            ev.prevent_default();
+            ev.stop_propagation(); // Important to stop browser default
+            set_show_cmd.update(|s| *s = !*s);
+        }
+        
+        if show_cmd.get_untracked() && ev.key() == "Escape" {
+             set_show_cmd.set(false);
+        }
+    };
+
     view! {
-        <div class="h-screen w-screen flex flex-col bg-gray-50">
-            <crate::components::command_palette::CommandPalette on_settings=on_settings />
+        // We attach global key listener to the root div which covers the screen
+        // "tabindex" is needed for div to receive key events if not focused? 
+        // Actually, key events bubble. But focus must be within the div.
+        // We set tabindex="-1" and autofocus to ensure it captures keys?
+        // Better: use window_event_listener if possible. 
+        // But since that failed, we try this. 
+        // Re-focusing might be an issue.
+        // Let's try attaching to window via leptos::window_event_listener if possible? No.
+        // We'll stick to the plan: if this div wraps everything, events bubble to it.
+        <div 
+            class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
+            on:keydown=handle_keydown
+            tabindex="-1" 
+        >
+            <crate::components::command_palette::CommandPalette 
+                show=show_cmd 
+                set_show=set_show_cmd
+                on_settings=on_settings 
+            />
             <crate::components::header::Header status_text=status_text on_settings=on_settings />
             
             <crate::components::settings::SettingsModal 

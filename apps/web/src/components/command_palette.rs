@@ -1,6 +1,8 @@
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
 use web_sys::KeyboardEvent;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 
 #[derive(Clone, Debug)]
 pub struct Command {
@@ -11,10 +13,12 @@ pub struct Command {
 
 #[component]
 pub fn CommandPalette(
+    #[prop(into)] show: Signal<bool>,
+    #[prop(into)] set_show: WriteSignal<bool>,
     on_settings: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let (show, set_show) = signal(false);
+    // Removed internal show signal
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
     
@@ -39,31 +43,12 @@ pub fn CommandPalette(
             }
         ]
     };
-    
-    // Global Keyboard Listener
-    let _handle = window_event_listener(leptos::ev::keydown, move |ev: KeyboardEvent| {
-        if (ev.meta_key() || ev.ctrl_key()) && ev.key() == "k" {
-            ev.prevent_default();
-            set_show.update(|s| *s = !*s);
-             if show.get_untracked() {
-                set_query.set(String::new());
-                set_selected_index.set(0);
-            }
-        }
-        
+
+    // Reset selection when shown
+    Effect::new(move |_| {
         if show.get() {
-            if ev.key() == "Escape" {
-                set_show.set(false);
-            } else if ev.key() == "ArrowDown" {
-                ev.prevent_default();
-                set_selected_index.update(|i| *i += 1);
-            } else if ev.key() == "ArrowUp" {
-                ev.prevent_default();
-                set_selected_index.update(|i| *i = i.saturating_sub(1));
-            } else if ev.key() == "Enter" {
-                ev.prevent_default();
-                // We'll handle selection via click for now or add signals for filtered list later
-            }
+            set_query.set(String::new());
+            set_selected_index.set(0);
         }
     });
 
@@ -100,7 +85,6 @@ pub fn CommandPalette(
                                     </div>
                                 }.into_any()
                             } else {
-                                // Clamp selection
                                 let count = filtered.len();
                                 if selected_index.get() >= count {
                                     set_selected_index.set(0); 
@@ -136,10 +120,9 @@ pub fn CommandPalette(
                             }
                         }}
                     </div>
-                    
-                    <div class="bg-gray-50 px-4 py-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                     <div class="bg-gray-50 px-4 py-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
                         <div class="flex gap-4">
-                            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">↑↓</kbd> to navigate</span>
+                            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Up/Down</kbd> to navigate</span>
                             <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Enter</kbd> to select</span>
                         </div>
                         <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Esc</kbd> to close</span>

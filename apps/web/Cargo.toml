@@ -14,7 +14,7 @@ tracing.workspace = true
 tracing-wasm.workspace = true
 
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["HtmlElement", "Window"] }
+web-sys = { version = "0.3", features = ["HtmlElement", "Window", "KeyboardEvent", "Event", "EventTarget", "HtmlInputElement"] }
 gloo-net = "0.6"
 futures = "0.3"
 serde.workspace = true
