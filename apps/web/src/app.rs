@@ -40,10 +40,19 @@ pub fn App() -> impl IntoView {
         set_current_doc.set(Some(id));
     });
 
+    // Settings State
+    let (show_settings, set_show_settings) = signal(false);
+    let on_settings = Callback::new(move |_| set_show_settings.set(true));
+
     view! {
         <div class="h-screen w-screen flex flex-col bg-gray-50">
-            <crate::components::header::Header status_text=status_text />
+            <crate::components::header::Header status_text=status_text on_settings=on_settings />
             
+            <crate::components::settings::SettingsModal 
+                show=show_settings 
+                set_show=set_show_settings
+            />
+
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex gap-4 overflow-hidden">
                  // Left Sidebar
                  <aside class="w-64 flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

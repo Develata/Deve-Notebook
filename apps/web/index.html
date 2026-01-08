@@ -4,99 +4,117 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deve-Note</title>
-    <link data-trunk rel="css" href="style/tailwind.css" />
+    <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
     <script>
       // 1. Define the bridge function IMMEDIATELY so Rust never hits "undefined"
       window._editor_queue = [];
       window._cm_loaded = false;
 
-      window.setupCodeMirror = function(element, onUpdate) {
+      window.setupCodeMirror = function (element, onUpdate) {
         if (window._cm_loaded && window._realInit) {
-           window._realInit(element, onUpdate);
+          window._realInit(element, onUpdate);
         } else {
-           window._editor_queue.push({ element, onUpdate });
+          window._editor_queue.push({ element, onUpdate });
         }
-      }
+      };
     </script>
 
     <script type="module">
-      import {EditorView, basicSetup} from "https://esm.sh/codemirror@6.0.1"
-      import {markdown} from "https://esm.sh/@codemirror/lang-markdown@6.0.0"
+      import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
+      import { markdown } from "https://esm.sh/@codemirror/lang-markdown@6.0.0";
+      import { syntaxHighlighting, defaultHighlightStyle } from "https://esm.sh/@codemirror/language@6.0.0";
+      
+      // Force higher specificity styles
+      const style = document.createElement('style');
+      style.textContent = `
+        .cm-content .cm-heading-1 { font-size: 2.0em; font-weight: bold; display: block; }
+        .cm-content .cm-heading-2 { font-size: 1.5em; font-weight: bold; display: block; }
+        .cm-content .cm-heading-3 { font-size: 1.25em; font-weight: bold; display: block; }
+        .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; }
+      `;
+      document.head.appendChild(style);
 
       // 2. Define the real initialization logic
       window._realInit = (element, onUpdate) => {
         if (!element) return;
+        // Prevent duplicate mounts
+        element.innerHTML = '';
         try {
-            let extensions = [basicSetup, markdown()];
-            if (onUpdate) {
-                extensions.push(EditorView.updateListener.of((v) => {
-                    // Filter out remote updates
-                    if (window._isRemote) return;
-                    
-                    if (v.docChanged) {
-                        onUpdate(v.state.doc.toString());
-                    }
-                }));
-            }
+          let extensions = [basicSetup, markdown()];
+          if (onUpdate) {
+            extensions.push(
+              EditorView.updateListener.of((v) => {
+                // Filter out remote updates
+                if (window._isRemote) return;
 
-            const view = new EditorView({
-              doc: "# Hello from CodeMirror\n\nStart typing...",
-              extensions: extensions,
-              parent: element
-            });
-            
-            // Store view for remote updates
-            window._editor_view = view;
-            
+                if (v.docChanged) {
+                  onUpdate(v.state.doc.toString());
+                }
+              })
+            );
+          }
+
+          const view = new EditorView({
+            doc: "# Loading...",
+            extensions: extensions,
+            parent: element,
+          });
+
+          // Store view for remote updates
+          window._editor_view = view;
         } catch (e) {
-            console.error("CodeMirror crash:", e);
+          console.error("CodeMirror crash:", e);
         }
       };
-      
+
       window.applyRemoteContent = (text) => {
-          if (window._editor_view) {
-              window._isRemote = true;
-              try {
-                  window._editor_view.dispatch({
-                      changes: {from: 0, to: window._editor_view.state.doc.length, insert: text}
-                  });
-              } finally {
-                  window._isRemote = false;
-              }
+        if (window._editor_view) {
+          window._isRemote = true;
+          try {
+            window._editor_view.dispatch({
+              changes: {
+                from: 0,
+                to: window._editor_view.state.doc.length,
+                insert: text,
+              },
+            });
+          } finally {
+            window._isRemote = false;
           }
-      }
-      
+        }
+      };
+
       window.getEditorContent = () => {
-          if (window._editor_view) {
-              return window._editor_view.state.doc.toString();
-          }
-          return "";
-      }
+        if (window._editor_view) {
+          return window._editor_view.state.doc.toString();
+        }
+        return "";
+      };
 
       window.applyRemoteOp = (op_json) => {
-          if (window._editor_view) {
-              window._isRemote = true;
-              try {
-                  const op = JSON.parse(op_json);
-                  // Op is { Insert: { pos, content } } or { Delete: { pos, len } }
-                  if (op.Insert) {
-                      const { pos, content } = op.Insert;
-                      window._editor_view.dispatch({
-                          changes: {from: pos, insert: content}
-                      });
-                  } else if (op.Delete) {
-                       const { pos, len } = op.Delete;
-                       window._editor_view.dispatch({
-                          changes: {from: pos, to: pos + len, insert: ""}
-                      });
-                  }
-              } catch (e) {
-                  console.error("ApplyOp Failed:", e);
-              } finally {
-                  window._isRemote = false;
-              }
+        if (window._editor_view) {
+          window._isRemote = true;
+          try {
+            const op = JSON.parse(op_json);
+            // Op is { Insert: { pos, content } } or { Delete: { pos, len } }
+            if (op.Insert) {
+              const { pos, content } = op.Insert;
+              window._editor_view.dispatch({
+                changes: { from: pos, insert: content },
+              });
+            } else if (op.Delete) {
+              const { pos, len } = op.Delete;
+              window._editor_view.dispatch({
+                changes: { from: pos, to: pos + len, insert: "" },
+              });
+            }
+          } catch (e) {
+            console.error("ApplyOp Failed:", e);
+          } finally {
+            window._isRemote = false;
           }
-      }
+        }
+      };
 
       // 3. Process any requests that came in while we were loading
       window._cm_loaded = true;
@@ -104,9 +122,9 @@
         let req = window._editor_queue.shift();
         // Handle both old format (element only) and new format (object)
         if (req.element) {
-             window._realInit(req.element, req.onUpdate);
+          window._realInit(req.element, req.onUpdate);
         } else {
-             window._realInit(req);
+          window._realInit(req);
         }
       }
     </script>

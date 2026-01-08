@@ -3,6 +3,7 @@ use leptos::prelude::*;
 #[component]
 pub fn Header(
     #[prop(into)] status_text: Signal<String>,
+    on_settings: Callback<()>,
 ) -> impl IntoView {
     view! {
         <header class="w-full h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-50">
@@ -15,6 +16,7 @@ pub fn Header(
                 <button 
                     class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
                     title="Settings"
+                    on:click=move |_| on_settings.run(())
                 >
                     // Simple Gear Icon SVG
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
