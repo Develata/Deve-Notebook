@@ -1,16 +1,19 @@
 use leptos::prelude::*;
+use crate::i18n::{Locale, t};
 
 #[component]
 pub fn SettingsModal(
     show: ReadSignal<bool>,
     set_show: WriteSignal<bool>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    
     view! {
         <Show when=move || show.get()>
             <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100">
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-xl font-bold text-gray-800">"Settings"</h2>
+                        <h2 class="text-xl font-bold text-gray-800">{move || t::settings::title(locale.get())}</h2>
                         <button 
                             class="p-1 hover:bg-gray-100 rounded-full text-gray-500"
                             on:click=move |_| set_show.set(false)
@@ -22,10 +25,41 @@ pub fn SettingsModal(
                     <div class="space-y-6">
                         // Version Info
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">"About"</h3>
+                            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{move || t::settings::about(locale.get())}</h3>
                             <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">"Version"</span>
+                                <span class="text-gray-600">{move || t::settings::version(locale.get())}</span>
                                 <span class="font-mono text-gray-800">"0.5.0-alpha"</span>
+                            </div>
+                        </div>
+                        
+                        // Language Settings
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex justify-between items-center">
+                            <span class="font-medium text-gray-700">{move || t::settings::language(locale.get())}</span>
+                            <div class="flex gap-2">
+                                <button 
+                                    class=move || {
+                                        if locale.get() == Locale::En {
+                                            "px-3 py-1 text-xs font-bold bg-blue-500 text-white rounded transition-colors"
+                                        } else {
+                                            "px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 rounded transition-colors"
+                                        }
+                                    }
+                                    on:click=move |_| locale.set(Locale::En)
+                                >
+                                    "English"
+                                </button>
+                                <button 
+                                    class=move || {
+                                        if locale.get() == Locale::Zh {
+                                            "px-3 py-1 text-xs font-bold bg-blue-500 text-white rounded transition-colors"
+                                        } else {
+                                            "px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 rounded transition-colors"
+                                        }
+                                    }
+                                    on:click=move |_| locale.set(Locale::Zh)
+                                >
+                                    "中文"
+                                </button>
                             </div>
                         </div>
                         
@@ -33,14 +67,14 @@ pub fn SettingsModal(
                         <div class="opacity-50 pointer-events-none grayscale">
                              <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="font-medium text-gray-800">"Hybrid Editing"</h3>
-                                    <p class="text-sm text-gray-500">"Hide Markdown syntax while reading"</p>
+                                    <h3 class="font-medium text-gray-800">{move || t::settings::hybrid_mode(locale.get())}</h3>
+                                    <p class="text-sm text-gray-500">{move || t::settings::hybrid_desc(locale.get())}</p>
                                 </div>
                                 <div class="w-11 h-6 bg-gray-200 rounded-full relative">
                                     <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow"></div>
                                 </div>
                              </div>
-                             <p class="text-xs text-blue-500 mt-2">"Coming in Phase 6"</p>
+                             <p class="text-xs text-blue-500 mt-2">{move || t::settings::coming_soon(locale.get())}</p>
                         </div>
                     </div>
                     
@@ -49,7 +83,7 @@ pub fn SettingsModal(
                             class="w-full py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
                             on:click=move |_| set_show.set(false)
                         >
-                            "Close"
+                            {move || t::settings::close(locale.get())}
                         </button>
                     </div>
                 </div>

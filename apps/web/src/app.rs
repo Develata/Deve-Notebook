@@ -4,8 +4,21 @@ use leptos::prelude::*;
 use deve_core::models::DocId;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 
+use crate::i18n::Locale;
+
 #[component]
 pub fn App() -> impl IntoView {
+    // Global Locale State
+    let locale = RwSignal::new(Locale::default());
+    provide_context(locale);
+
+    view! {
+        <AppContent/>
+    }
+}
+
+#[component]
+fn AppContent() -> impl IntoView {
     let ws = WsService::new();
     provide_context(ws.clone());
     let status_text = Signal::derive(move || format!("{:?}", ws.status.get()));

@@ -1,3 +1,4 @@
+
 This file is a merged representation of the entire codebase, combined into a single document by Repomix.
 
 <file_summary>
@@ -43,30 +44,3482 @@ The content is organized as follows:
 .gitignore
 apps/cli/Cargo.toml
 apps/cli/src/main.rs
-build_core_2.txt
-build_core_3.txt
-build_core_4.txt
-build_core_5.txt
-build_watcher.txt
+apps/cli/src/server/mod.rs
+apps/cli/src/server/ws.rs
+apps/web/Cargo.toml
+apps/web/dist/.stage/tailwind-b0c07661d4116643.css
+apps/web/dist/deve_web-41f608c28aea52a8_bg.wasm
+apps/web/dist/deve_web-41f608c28aea52a8.js
+apps/web/dist/index.html
+apps/web/dist/tailwind-b0c07661d4116643.css
+apps/web/index.html
+apps/web/locales/en.json
+apps/web/locales/zh.json
+apps/web/src/api.rs
+apps/web/src/app.rs
+apps/web/src/components/header.rs
+apps/web/src/components/mod.rs
+apps/web/src/components/playback.rs
+apps/web/src/components/settings.rs
+apps/web/src/components/sidebar.rs
+apps/web/src/editor.rs
+apps/web/src/i18n.rs
+apps/web/src/main.rs
+apps/web/style/tailwind.css
+apps/web/tailwind.config.js
+apps/web/Trunk.toml
 Cargo.toml
 crates/core/Cargo.toml
 crates/core/src/ledger.rs
 crates/core/src/lib.rs
 crates/core/src/models.rs
+crates/core/src/protocol.rs
 crates/core/src/state.rs
 crates/core/src/vfs.rs
 crates/core/src/watcher.rs
 deve-note plan.md
 deve-note schedule.md
-dump_hello.txt
-dump.txt
-scan.txt
-verify_debug.txt
-verify_final.txt
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="apps/web/dist/.stage/tailwind-b0c07661d4116643.css">
+/*
+! tailwindcss v3.3.5 | MIT License | https://tailwindcss.com
+*/
+
+/*
+1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
+*/
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+  /* 1 */
+  border-width: 0;
+  /* 2 */
+  border-style: solid;
+  /* 2 */
+  border-color: #e5e7eb;
+  /* 2 */
+}
+
+::before,
+::after {
+  --tw-content: '';
+}
+
+/*
+1. Use a consistent sensible line-height in all browsers.
+2. Prevent adjustments of font size after orientation changes in iOS.
+3. Use a more readable tab size.
+4. Use the user's configured `sans` font-family by default.
+5. Use the user's configured `sans` font-feature-settings by default.
+6. Use the user's configured `sans` font-variation-settings by default.
+*/
+
+html {
+  line-height: 1.5;
+  /* 1 */
+  -webkit-text-size-adjust: 100%;
+  /* 2 */
+  -moz-tab-size: 4;
+  /* 3 */
+  -o-tab-size: 4;
+     tab-size: 4;
+  /* 3 */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* 4 */
+  font-feature-settings: normal;
+  /* 5 */
+  font-variation-settings: normal;
+  /* 6 */
+}
+
+/*
+1. Remove the margin in all browsers.
+2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
+*/
+
+body {
+  margin: 0;
+  /* 1 */
+  line-height: inherit;
+  /* 2 */
+}
+
+/*
+1. Add the correct height in Firefox.
+2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
+3. Ensure horizontal rules are visible by default.
+*/
+
+hr {
+  height: 0;
+  /* 1 */
+  color: inherit;
+  /* 2 */
+  border-top-width: 1px;
+  /* 3 */
+}
+
+/*
+Add the correct text decoration in Chrome, Edge, and Safari.
+*/
+
+abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+          text-decoration: underline dotted;
+}
+
+/*
+Remove the default font size and weight for headings.
+*/
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/*
+Reset links to optimize for opt-in styling instead of opt-out.
+*/
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/*
+Add the correct font weight in Edge and Safari.
+*/
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+/*
+1. Use the user's configured `mono` font family by default.
+2. Correct the odd `em` font sizing in all browsers.
+*/
+
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* 1 */
+  font-size: 1em;
+  /* 2 */
+}
+
+/*
+Add the correct font size in all browsers.
+*/
+
+small {
+  font-size: 80%;
+}
+
+/*
+Prevent `sub` and `sup` elements from affecting the line height in all browsers.
+*/
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+/*
+1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
+2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
+3. Remove gaps between table borders by default.
+*/
+
+table {
+  text-indent: 0;
+  /* 1 */
+  border-color: inherit;
+  /* 2 */
+  border-collapse: collapse;
+  /* 3 */
+}
+
+/*
+1. Change the font styles in all browsers.
+2. Remove the margin in Firefox and Safari.
+3. Remove default padding in all browsers.
+*/
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  /* 1 */
+  font-feature-settings: inherit;
+  /* 1 */
+  font-variation-settings: inherit;
+  /* 1 */
+  font-size: 100%;
+  /* 1 */
+  font-weight: inherit;
+  /* 1 */
+  line-height: inherit;
+  /* 1 */
+  color: inherit;
+  /* 1 */
+  margin: 0;
+  /* 2 */
+  padding: 0;
+  /* 3 */
+}
+
+/*
+Remove the inheritance of text transform in Edge and Firefox.
+*/
+
+button,
+select {
+  text-transform: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Remove default button styles.
+*/
+
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  -webkit-appearance: button;
+  /* 1 */
+  background-color: transparent;
+  /* 2 */
+  background-image: none;
+  /* 2 */
+}
+
+/*
+Use the modern Firefox focus style for all focusable elements.
+*/
+
+:-moz-focusring {
+  outline: auto;
+}
+
+/*
+Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
+*/
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/*
+Add the correct vertical alignment in Chrome and Firefox.
+*/
+
+progress {
+  vertical-align: baseline;
+}
+
+/*
+Correct the cursor style of increment and decrement buttons in Safari.
+*/
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+/*
+1. Correct the odd appearance in Chrome and Safari.
+2. Correct the outline style in Safari.
+*/
+
+[type='search'] {
+  -webkit-appearance: textfield;
+  /* 1 */
+  outline-offset: -2px;
+  /* 2 */
+}
+
+/*
+Remove the inner padding in Chrome and Safari on macOS.
+*/
+
+::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Change font properties to `inherit` in Safari.
+*/
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  /* 1 */
+  font: inherit;
+  /* 2 */
+}
+
+/*
+Add the correct display in Chrome and Safari.
+*/
+
+summary {
+  display: list-item;
+}
+
+/*
+Removes the default spacing and border for appropriate elements.
+*/
+
+blockquote,
+dl,
+dd,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+hr,
+figure,
+p,
+pre {
+  margin: 0;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  padding: 0;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+Reset default styling for dialogs.
+*/
+
+dialog {
+  padding: 0;
+}
+
+/*
+Prevent resizing textareas horizontally by default.
+*/
+
+textarea {
+  resize: vertical;
+}
+
+/*
+1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
+2. Set the default placeholder color to the user's configured gray 400 color.
+*/
+
+input::-moz-placeholder, textarea::-moz-placeholder {
+  opacity: 1;
+  /* 1 */
+  color: #9ca3af;
+  /* 2 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1;
+  /* 1 */
+  color: #9ca3af;
+  /* 2 */
+}
+
+/*
+Set the default cursor for buttons.
+*/
+
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/*
+Make sure disabled buttons don't get the pointer cursor.
+*/
+
+:disabled {
+  cursor: default;
+}
+
+/*
+1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+   This can trigger a poorly considered lint error in some tools but is included by design.
+*/
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block;
+  /* 1 */
+  vertical-align: middle;
+  /* 2 */
+}
+
+/*
+Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
+*/
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Make elements with the HTML hidden attribute stay hidden by default */
+
+[hidden] {
+  display: none;
+}
+
+*, ::before, ::after {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+}
+
+::backdrop {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.relative {
+  position: relative;
+}
+
+.inset-0 {
+  inset: 0px;
+}
+
+.bottom-0 {
+  bottom: 0px;
+}
+
+.left-0 {
+  left: 0px;
+}
+
+.left-1 {
+  left: 0.25rem;
+}
+
+.right-0 {
+  right: 0px;
+}
+
+.top-1 {
+  top: 0.25rem;
+}
+
+.z-50 {
+  z-index: 50;
+}
+
+.z-\[100\] {
+  z-index: 100;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-8 {
+  margin-top: 2rem;
+}
+
+.block {
+  display: block;
+}
+
+.flex {
+  display: flex;
+}
+
+.h-12 {
+  height: 3rem;
+}
+
+.h-2 {
+  height: 0.5rem;
+}
+
+.h-4 {
+  height: 1rem;
+}
+
+.h-6 {
+  height: 1.5rem;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.min-h-\[500px\] {
+  min-height: 500px;
+}
+
+.w-11 {
+  width: 2.75rem;
+}
+
+.w-4 {
+  width: 1rem;
+}
+
+.w-64 {
+  width: 16rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.w-screen {
+  width: 100vw;
+}
+
+.min-w-\[3rem\] {
+  min-width: 3rem;
+}
+
+.max-w-\[1400px\] {
+  max-width: 1400px;
+}
+
+.max-w-md {
+  max-width: 28rem;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.flex-none {
+  flex: none;
+}
+
+.scale-100 {
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.transform {
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.appearance-none {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+
+.border {
+  border-width: 1px;
+}
+
+.border-b {
+  border-bottom-width: 1px;
+}
+
+.border-l-2 {
+  border-left-width: 2px;
+}
+
+.border-r {
+  border-right-width: 1px;
+}
+
+.border-t {
+  border-top-width: 1px;
+}
+
+.border-blue-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(59 130 246 / var(--tw-border-opacity));
+}
+
+.border-gray-100 {
+  --tw-border-opacity: 1;
+  border-color: rgb(243 244 246 / var(--tw-border-opacity));
+}
+
+.border-gray-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-border-opacity));
+}
+
+.border-gray-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(209 213 219 / var(--tw-border-opacity));
+}
+
+.border-transparent {
+  border-color: transparent;
+}
+
+.bg-black\/50 {
+  background-color: rgb(0 0 0 / 0.5);
+}
+
+.bg-gray-200 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity));
+}
+
+.bg-gray-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(249 250 251 / var(--tw-bg-opacity));
+}
+
+.bg-gray-900 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(17 24 39 / var(--tw-bg-opacity));
+}
+
+.bg-white {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+}
+
+.p-1 {
+  padding: 0.25rem;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.pb-16 {
+  padding-bottom: 4rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.tracking-wider {
+  letter-spacing: 0.05em;
+}
+
+.text-blue-500 {
+  --tw-text-opacity: 1;
+  color: rgb(59 130 246 / var(--tw-text-opacity));
+}
+
+.text-blue-600 {
+  --tw-text-opacity: 1;
+  color: rgb(37 99 235 / var(--tw-text-opacity));
+}
+
+.text-gray-400 {
+  --tw-text-opacity: 1;
+  color: rgb(156 163 175 / var(--tw-text-opacity));
+}
+
+.text-gray-500 {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity));
+}
+
+.text-gray-600 {
+  --tw-text-opacity: 1;
+  color: rgb(75 85 99 / var(--tw-text-opacity));
+}
+
+.text-gray-800 {
+  --tw-text-opacity: 1;
+  color: rgb(31 41 55 / var(--tw-text-opacity));
+}
+
+.text-white {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity));
+}
+
+.opacity-100 {
+  opacity: 1;
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.shadow {
+  --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-2xl {
+  --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-lg {
+  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-sm {
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.grayscale {
+  --tw-grayscale: grayscale(100%);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
+.filter {
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
+.backdrop-blur-sm {
+  --tw-backdrop-blur: blur(4px);
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+          backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.hover\:bg-gray-100:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-gray-800:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity));
+}
+</file>
+
+<file path="apps/web/locales/en.json">
+{
+    "app_title": "Deve-Note",
+    "header": {
+        "settings": "Settings",
+        "status": {
+            "connected": "Connected",
+            "disconnected": "Disconnected"
+        }
+    },
+    "sidebar": {
+        "loading": "Loading...",
+        "no_docs": "No documents found"
+    },
+    "settings": {
+        "title": "Settings",
+        "close": "Close",
+        "about": "About",
+        "version": "Version",
+        "hybrid_mode": "Hybrid Editing",
+        "hybrid_desc": "Hide Markdown syntax while reading",
+        "coming_soon": "Coming in Phase 6"
+    }
+}
+</file>
+
+<file path="apps/web/locales/zh.json">
+{
+    "app_title": "Deve-Note",
+    "header": {
+        "settings": "设置",
+        "status": {
+            "connected": "已连接",
+            "disconnected": "未连接"
+        }
+    },
+    "sidebar": {
+        "loading": "加载中...",
+        "no_docs": "暂无文档"
+    },
+    "settings": {
+        "title": "设置",
+        "close": "关闭",
+        "about": "关于",
+        "version": "版本",
+        "hybrid_mode": "混合编辑",
+        "hybrid_desc": "阅读时隐藏 Markdown 语法",
+        "coming_soon": "将在 Phase 6 推出"
+    }
+}
+</file>
+
+<file path="apps/web/src/i18n.rs">
+leptos_i18n::load_locales!();
+</file>
+
+<file path="apps/web/dist/deve_web-41f608c28aea52a8.js">
+let wasm;
+
+function addToExternrefTable0(obj) {
+    const idx = wasm.__externref_table_alloc();
+    wasm.__wbindgen_externrefs.set(idx, obj);
+    return idx;
+}
+
+const CLOSURE_DTORS = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(state => state.dtor(state.a, state.b));
+
+function debugString(val) {
+    // primitive types
+    const type = typeof val;
+    if (type == 'number' || type == 'boolean' || val == null) {
+        return  `${val}`;
+    }
+    if (type == 'string') {
+        return `"${val}"`;
+    }
+    if (type == 'symbol') {
+        const description = val.description;
+        if (description == null) {
+            return 'Symbol';
+        } else {
+            return `Symbol(${description})`;
+        }
+    }
+    if (type == 'function') {
+        const name = val.name;
+        if (typeof name == 'string' && name.length > 0) {
+            return `Function(${name})`;
+        } else {
+            return 'Function';
+        }
+    }
+    // objects
+    if (Array.isArray(val)) {
+        const length = val.length;
+        let debug = '[';
+        if (length > 0) {
+            debug += debugString(val[0]);
+        }
+        for(let i = 1; i < length; i++) {
+            debug += ', ' + debugString(val[i]);
+        }
+        debug += ']';
+        return debug;
+    }
+    // Test for built-in
+    const builtInMatches = /\[object ([^\]]+)\]/.exec(toString.call(val));
+    let className;
+    if (builtInMatches && builtInMatches.length > 1) {
+        className = builtInMatches[1];
+    } else {
+        // Failed to match the standard '[object ClassName]'
+        return toString.call(val);
+    }
+    if (className == 'Object') {
+        // we're a user defined class or Object
+        // JSON.stringify avoids problems with cycles, and is generally much
+        // easier than looping through ownProperties of `val`.
+        try {
+            return 'Object(' + JSON.stringify(val) + ')';
+        } catch (_) {
+            return 'Object';
+        }
+    }
+    // errors
+    if (val instanceof Error) {
+        return `${val.name}: ${val.message}\n${val.stack}`;
+    }
+    // TODO we could test for more things here, like `Set`s and `Map`s.
+    return className;
+}
+
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
+let cachedDataViewMemory0 = null;
+function getDataViewMemory0() {
+    if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
+        cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+    }
+    return cachedDataViewMemory0;
+}
+
+function getStringFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return decodeText(ptr, len);
+}
+
+let cachedUint8ArrayMemory0 = null;
+function getUint8ArrayMemory0() {
+    if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+        cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
+    }
+    return cachedUint8ArrayMemory0;
+}
+
+function handleError(f, args) {
+    try {
+        return f.apply(this, args);
+    } catch (e) {
+        const idx = addToExternrefTable0(e);
+        wasm.__wbindgen_exn_store(idx);
+    }
+}
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
+}
+
+function makeMutClosure(arg0, arg1, dtor, f) {
+    const state = { a: arg0, b: arg1, cnt: 1, dtor };
+    const real = (...args) => {
+
+        // First up with a closure we increment the internal reference
+        // count. This ensures that the Rust closure environment won't
+        // be deallocated while we're invoking it.
+        state.cnt++;
+        const a = state.a;
+        state.a = 0;
+        try {
+            return f(a, state.b, ...args);
+        } finally {
+            state.a = a;
+            real._wbg_cb_unref();
+        }
+    };
+    real._wbg_cb_unref = () => {
+        if (--state.cnt === 0) {
+            state.dtor(state.a, state.b);
+            state.a = 0;
+            CLOSURE_DTORS.unregister(state);
+        }
+    };
+    CLOSURE_DTORS.register(real, state, state);
+    return real;
+}
+
+function passStringToWasm0(arg, malloc, realloc) {
+    if (realloc === undefined) {
+        const buf = cachedTextEncoder.encode(arg);
+        const ptr = malloc(buf.length, 1) >>> 0;
+        getUint8ArrayMemory0().subarray(ptr, ptr + buf.length).set(buf);
+        WASM_VECTOR_LEN = buf.length;
+        return ptr;
+    }
+
+    let len = arg.length;
+    let ptr = malloc(len, 1) >>> 0;
+
+    const mem = getUint8ArrayMemory0();
+
+    let offset = 0;
+
+    for (; offset < len; offset++) {
+        const code = arg.charCodeAt(offset);
+        if (code > 0x7F) break;
+        mem[ptr + offset] = code;
+    }
+    if (offset !== len) {
+        if (offset !== 0) {
+            arg = arg.slice(offset);
+        }
+        ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+        const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+        const ret = cachedTextEncoder.encodeInto(arg, view);
+
+        offset += ret.written;
+        ptr = realloc(ptr, len, offset, 1) >>> 0;
+    }
+
+    WASM_VECTOR_LEN = offset;
+    return ptr;
+}
+
+let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+cachedTextDecoder.decode();
+const MAX_SAFARI_DECODE_BYTES = 2146435072;
+let numBytesDecoded = 0;
+function decodeText(ptr, len) {
+    numBytesDecoded += len;
+    if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
+        cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+        cachedTextDecoder.decode();
+        numBytesDecoded = len;
+    }
+    return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+
+const cachedTextEncoder = new TextEncoder();
+
+if (!('encodeInto' in cachedTextEncoder)) {
+    cachedTextEncoder.encodeInto = function (arg, view) {
+        const buf = cachedTextEncoder.encode(arg);
+        view.set(buf);
+        return {
+            read: arg.length,
+            written: buf.length
+        };
+    }
+}
+
+let WASM_VECTOR_LEN = 0;
+
+function wasm_bindgen__convert__closures_____invoke__h05d1bc05e4b13c1c(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h05d1bc05e4b13c1c(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h4eb4387e5980f83e(arg0, arg1) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h4eb4387e5980f83e(arg0, arg1);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h3f52868d8e154715(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h3f52868d8e154715(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__hfd322f78657a0ae4(arg0, arg1, arg2) {
+    const ptr0 = passStringToWasm0(arg2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    wasm.wasm_bindgen__convert__closures_____invoke__hfd322f78657a0ae4(arg0, arg1, ptr0, len0);
+}
+
+function wasm_bindgen__convert__closures_____invoke__ha649e08bc246b0a2(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__ha649e08bc246b0a2(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h5978e0ab91824502(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h5978e0ab91824502(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h69c730e789d0d030(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h69c730e789d0d030(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h75feaa007886a216(arg0, arg1) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h75feaa007886a216(arg0, arg1);
+    return ret !== 0;
+}
+
+function wasm_bindgen__convert__closures_____invoke__hf295d5ece2e5a146(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hf295d5ece2e5a146(arg0, arg1, arg2, arg3);
+}
+
+const __wbindgen_enum_BinaryType = ["blob", "arraybuffer"];
+
+const __wbindgen_enum_ReadableStreamType = ["bytes"];
+
+const IntoUnderlyingByteSourceFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_intounderlyingbytesource_free(ptr >>> 0, 1));
+
+const IntoUnderlyingSinkFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_intounderlyingsink_free(ptr >>> 0, 1));
+
+const IntoUnderlyingSourceFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_intounderlyingsource_free(ptr >>> 0, 1));
+
+export class IntoUnderlyingByteSource {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IntoUnderlyingByteSourceFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_intounderlyingbytesource_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get autoAllocateChunkSize() {
+        const ret = wasm.intounderlyingbytesource_autoAllocateChunkSize(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @param {ReadableByteStreamController} controller
+     * @returns {Promise<any>}
+     */
+    pull(controller) {
+        const ret = wasm.intounderlyingbytesource_pull(this.__wbg_ptr, controller);
+        return ret;
+    }
+    /**
+     * @param {ReadableByteStreamController} controller
+     */
+    start(controller) {
+        wasm.intounderlyingbytesource_start(this.__wbg_ptr, controller);
+    }
+    /**
+     * @returns {ReadableStreamType}
+     */
+    get type() {
+        const ret = wasm.intounderlyingbytesource_type(this.__wbg_ptr);
+        return __wbindgen_enum_ReadableStreamType[ret];
+    }
+    cancel() {
+        const ptr = this.__destroy_into_raw();
+        wasm.intounderlyingbytesource_cancel(ptr);
+    }
+}
+if (Symbol.dispose) IntoUnderlyingByteSource.prototype[Symbol.dispose] = IntoUnderlyingByteSource.prototype.free;
+
+export class IntoUnderlyingSink {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IntoUnderlyingSinkFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_intounderlyingsink_free(ptr, 0);
+    }
+    /**
+     * @param {any} reason
+     * @returns {Promise<any>}
+     */
+    abort(reason) {
+        const ptr = this.__destroy_into_raw();
+        const ret = wasm.intounderlyingsink_abort(ptr, reason);
+        return ret;
+    }
+    /**
+     * @returns {Promise<any>}
+     */
+    close() {
+        const ptr = this.__destroy_into_raw();
+        const ret = wasm.intounderlyingsink_close(ptr);
+        return ret;
+    }
+    /**
+     * @param {any} chunk
+     * @returns {Promise<any>}
+     */
+    write(chunk) {
+        const ret = wasm.intounderlyingsink_write(this.__wbg_ptr, chunk);
+        return ret;
+    }
+}
+if (Symbol.dispose) IntoUnderlyingSink.prototype[Symbol.dispose] = IntoUnderlyingSink.prototype.free;
+
+export class IntoUnderlyingSource {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IntoUnderlyingSourceFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_intounderlyingsource_free(ptr, 0);
+    }
+    /**
+     * @param {ReadableStreamDefaultController} controller
+     * @returns {Promise<any>}
+     */
+    pull(controller) {
+        const ret = wasm.intounderlyingsource_pull(this.__wbg_ptr, controller);
+        return ret;
+    }
+    cancel() {
+        const ptr = this.__destroy_into_raw();
+        wasm.intounderlyingsource_cancel(ptr);
+    }
+}
+if (Symbol.dispose) IntoUnderlyingSource.prototype[Symbol.dispose] = IntoUnderlyingSource.prototype.free;
+
+const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
+
+async function __wbg_load(module, imports) {
+    if (typeof Response === 'function' && module instanceof Response) {
+        if (typeof WebAssembly.instantiateStreaming === 'function') {
+            try {
+                return await WebAssembly.instantiateStreaming(module, imports);
+            } catch (e) {
+                const validResponse = module.ok && EXPECTED_RESPONSE_TYPES.has(module.type);
+
+                if (validResponse && module.headers.get('Content-Type') !== 'application/wasm') {
+                    console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);
+
+                } else {
+                    throw e;
+                }
+            }
+        }
+
+        const bytes = await module.arrayBuffer();
+        return await WebAssembly.instantiate(bytes, imports);
+    } else {
+        const instance = await WebAssembly.instantiate(module, imports);
+
+        if (instance instanceof WebAssembly.Instance) {
+            return { instance, module };
+        } else {
+            return instance;
+        }
+    }
+}
+
+function __wbg_get_imports() {
+    const imports = {};
+    imports.wbg = {};
+    imports.wbg.__wbg___wbindgen_debug_string_adfb662ae34724b6 = function(arg0, arg1) {
+        const ret = debugString(arg1);
+        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
+    imports.wbg.__wbg___wbindgen_is_falsy_7b9692021c137978 = function(arg0) {
+        const ret = !arg0;
+        return ret;
+    };
+    imports.wbg.__wbg___wbindgen_is_function_8d400b8b1af978cd = function(arg0) {
+        const ret = typeof(arg0) === 'function';
+        return ret;
+    };
+    imports.wbg.__wbg___wbindgen_is_null_dfda7d66506c95b5 = function(arg0) {
+        const ret = arg0 === null;
+        return ret;
+    };
+    imports.wbg.__wbg___wbindgen_is_string_704ef9c8fc131030 = function(arg0) {
+        const ret = typeof(arg0) === 'string';
+        return ret;
+    };
+    imports.wbg.__wbg___wbindgen_is_undefined_f6b95eab589e0269 = function(arg0) {
+        const ret = arg0 === undefined;
+        return ret;
+    };
+    imports.wbg.__wbg___wbindgen_string_get_a2a31e16edf96e42 = function(arg0, arg1) {
+        const obj = arg1;
+        const ret = typeof(obj) === 'string' ? obj : undefined;
+        var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
+    imports.wbg.__wbg___wbindgen_throw_dd24417ed36fc46e = function(arg0, arg1) {
+        throw new Error(getStringFromWasm0(arg0, arg1));
+    };
+    imports.wbg.__wbg__wbg_cb_unref_87dfb5aaa0cbcea7 = function(arg0) {
+        arg0._wbg_cb_unref();
+    };
+    imports.wbg.__wbg_addEventListener_6a82629b3d430a48 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        arg0.addEventListener(getStringFromWasm0(arg1, arg2), arg3);
+    }, arguments) };
+    imports.wbg.__wbg_addEventListener_82cddc614107eb45 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        arg0.addEventListener(getStringFromWasm0(arg1, arg2), arg3, arg4);
+    }, arguments) };
+    imports.wbg.__wbg_applyRemoteContent_00e2fb8c9b9fe31f = function(arg0, arg1) {
+        applyRemoteContent(getStringFromWasm0(arg0, arg1));
+    };
+    imports.wbg.__wbg_applyRemoteOp_14f5e4ede9252365 = function(arg0, arg1) {
+        applyRemoteOp(getStringFromWasm0(arg0, arg1));
+    };
+    imports.wbg.__wbg_body_544738f8b03aef13 = function(arg0) {
+        const ret = arg0.body;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_buffer_6cb2fecb1f253d71 = function(arg0) {
+        const ret = arg0.buffer;
+        return ret;
+    };
+    imports.wbg.__wbg_byobRequest_f8e3517f5f8ad284 = function(arg0) {
+        const ret = arg0.byobRequest;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_byteLength_faa9938885bdeee6 = function(arg0) {
+        const ret = arg0.byteLength;
+        return ret;
+    };
+    imports.wbg.__wbg_byteOffset_3868b6a19ba01dea = function(arg0) {
+        const ret = arg0.byteOffset;
+        return ret;
+    };
+    imports.wbg.__wbg_call_3020136f7a2d6e44 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = arg0.call(arg1, arg2);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_call_abb4ff46ce38be40 = function() { return handleError(function (arg0, arg1) {
+        const ret = arg0.call(arg1);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_cancelBubble_3ab876913f65579a = function(arg0) {
+        const ret = arg0.cancelBubble;
+        return ret;
+    };
+    imports.wbg.__wbg_cloneNode_34a31a9eb445b6ad = function() { return handleError(function (arg0, arg1) {
+        const ret = arg0.cloneNode(arg1 !== 0);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_cloneNode_c9c45b24b171a776 = function() { return handleError(function (arg0) {
+        const ret = arg0.cloneNode();
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_close_0af5661bf3d335f2 = function() { return handleError(function (arg0) {
+        arg0.close();
+    }, arguments) };
+    imports.wbg.__wbg_close_1db3952de1b5b1cf = function() { return handleError(function (arg0) {
+        arg0.close();
+    }, arguments) };
+    imports.wbg.__wbg_close_3ec111e7b23d94d8 = function() { return handleError(function (arg0) {
+        arg0.close();
+    }, arguments) };
+    imports.wbg.__wbg_code_85a811fe6ca962be = function(arg0) {
+        const ret = arg0.code;
+        return ret;
+    };
+    imports.wbg.__wbg_composedPath_c6de3259e6ae48ad = function(arg0) {
+        const ret = arg0.composedPath();
+        return ret;
+    };
+    imports.wbg.__wbg_content_ad90fa08b8c037c5 = function(arg0) {
+        const ret = arg0.content;
+        return ret;
+    };
+    imports.wbg.__wbg_createComment_89db599aa930ef8a = function(arg0, arg1, arg2) {
+        const ret = arg0.createComment(getStringFromWasm0(arg1, arg2));
+        return ret;
+    };
+    imports.wbg.__wbg_createElementNS_e7c12bbd579529e2 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        const ret = arg0.createElementNS(arg1 === 0 ? undefined : getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_createElement_da4ed2b219560fc6 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = arg0.createElement(getStringFromWasm0(arg1, arg2));
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_createTask_432d6d38dc688bee = function() { return handleError(function (arg0, arg1) {
+        const ret = console.createTask(getStringFromWasm0(arg0, arg1));
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_createTextNode_0cf8168f7646a5d2 = function(arg0, arg1, arg2) {
+        const ret = arg0.createTextNode(getStringFromWasm0(arg1, arg2));
+        return ret;
+    };
+    imports.wbg.__wbg_data_8bf4ae669a78a688 = function(arg0) {
+        const ret = arg0.data;
+        return ret;
+    };
+    imports.wbg.__wbg_deleteProperty_da180bf2624d16d6 = function() { return handleError(function (arg0, arg1) {
+        const ret = Reflect.deleteProperty(arg0, arg1);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_dispatchEvent_50a40ea5c664f9f4 = function() { return handleError(function (arg0, arg1) {
+        const ret = arg0.dispatchEvent(arg1);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_document_5b745e82ba551ca5 = function(arg0) {
+        const ret = arg0.document;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_enqueue_a7e6b1ee87963aad = function() { return handleError(function (arg0, arg1) {
+        arg0.enqueue(arg1);
+    }, arguments) };
+    imports.wbg.__wbg_error_7534b8e9a36f1ab4 = function(arg0, arg1) {
+        let deferred0_0;
+        let deferred0_1;
+        try {
+            deferred0_0 = arg0;
+            deferred0_1 = arg1;
+            console.error(getStringFromWasm0(arg0, arg1));
+        } finally {
+            wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
+        }
+    };
+    imports.wbg.__wbg_error_7bc7d576a6aaf855 = function(arg0) {
+        console.error(arg0);
+    };
+    imports.wbg.__wbg_firstElementChild_e207b33aaa4a86df = function(arg0) {
+        const ret = arg0.firstElementChild;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_getEditorContent_ef230312bbbbc7b6 = function(arg0) {
+        const ret = getEditorContent();
+        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
+    imports.wbg.__wbg_get_6b7bd52aca3f9671 = function(arg0, arg1) {
+        const ret = arg0[arg1 >>> 0];
+        return ret;
+    };
+    imports.wbg.__wbg_get_af9dab7e9603ea93 = function() { return handleError(function (arg0, arg1) {
+        const ret = Reflect.get(arg0, arg1);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_host_3f3d16f21f257e93 = function(arg0) {
+        const ret = arg0.host;
+        return ret;
+    };
+    imports.wbg.__wbg_insertBefore_93e77c32aeae9657 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = arg0.insertBefore(arg1, arg2);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_instanceof_ArrayBuffer_f3320d2419cd0355 = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof ArrayBuffer;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_instanceof_Element_6f7ba982258cfc0f = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof Element;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_instanceof_Error_3443650560328fa9 = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof Error;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_instanceof_ShadowRoot_acbbcc2231ef8a7b = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof ShadowRoot;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_instanceof_Window_b5cf7783caa68180 = function(arg0) {
+        let result;
+        try {
+            result = arg0 instanceof Window;
+        } catch (_) {
+            result = false;
+        }
+        const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_length_22ac23eaec9d8053 = function(arg0) {
+        const ret = arg0.length;
+        return ret;
+    };
+    imports.wbg.__wbg_log_0cc1b7768397bcfe = function(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+        let deferred0_0;
+        let deferred0_1;
+        try {
+            deferred0_0 = arg0;
+            deferred0_1 = arg1;
+            console.log(getStringFromWasm0(arg0, arg1), getStringFromWasm0(arg2, arg3), getStringFromWasm0(arg4, arg5), getStringFromWasm0(arg6, arg7));
+        } finally {
+            wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
+        }
+    };
+    imports.wbg.__wbg_log_1d990106d99dacb7 = function(arg0) {
+        console.log(arg0);
+    };
+    imports.wbg.__wbg_log_cb9e190acc5753fb = function(arg0, arg1) {
+        let deferred0_0;
+        let deferred0_1;
+        try {
+            deferred0_0 = arg0;
+            deferred0_1 = arg1;
+            console.log(getStringFromWasm0(arg0, arg1));
+        } finally {
+            wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
+        }
+    };
+    imports.wbg.__wbg_mark_7438147ce31e9d4b = function(arg0, arg1) {
+        performance.mark(getStringFromWasm0(arg0, arg1));
+    };
+    imports.wbg.__wbg_measure_fb7825c11612c823 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        let deferred0_0;
+        let deferred0_1;
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            deferred0_0 = arg0;
+            deferred0_1 = arg1;
+            deferred1_0 = arg2;
+            deferred1_1 = arg3;
+            performance.measure(getStringFromWasm0(arg0, arg1), getStringFromWasm0(arg2, arg3));
+        } finally {
+            wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }, arguments) };
+    imports.wbg.__wbg_message_0305fa7903f4b3d9 = function(arg0) {
+        const ret = arg0.message;
+        return ret;
+    };
+    imports.wbg.__wbg_name_f33243968228ce95 = function(arg0) {
+        const ret = arg0.name;
+        return ret;
+    };
+    imports.wbg.__wbg_new_1ba21ce319a06297 = function() {
+        const ret = new Object();
+        return ret;
+    };
+    imports.wbg.__wbg_new_6421f6084cc5bc5a = function(arg0) {
+        const ret = new Uint8Array(arg0);
+        return ret;
+    };
+    imports.wbg.__wbg_new_7c30d1f874652e62 = function() { return handleError(function (arg0, arg1) {
+        const ret = new WebSocket(getStringFromWasm0(arg0, arg1));
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_new_8a6f238a6ece86ea = function() {
+        const ret = new Error();
+        return ret;
+    };
+    imports.wbg.__wbg_new_df1173567d5ff028 = function(arg0, arg1) {
+        const ret = new Error(getStringFromWasm0(arg0, arg1));
+        return ret;
+    };
+    imports.wbg.__wbg_new_ff12d2b041fb48f1 = function(arg0, arg1) {
+        try {
+            var state0 = {a: arg0, b: arg1};
+            var cb0 = (arg0, arg1) => {
+                const a = state0.a;
+                state0.a = 0;
+                try {
+                    return wasm_bindgen__convert__closures_____invoke__hf295d5ece2e5a146(a, state0.b, arg0, arg1);
+                } finally {
+                    state0.a = a;
+                }
+            };
+            const ret = new Promise(cb0);
+            return ret;
+        } finally {
+            state0.a = state0.b = 0;
+        }
+    };
+    imports.wbg.__wbg_new_no_args_cb138f77cf6151ee = function(arg0, arg1) {
+        const ret = new Function(getStringFromWasm0(arg0, arg1));
+        return ret;
+    };
+    imports.wbg.__wbg_new_with_byte_offset_and_length_d85c3da1fd8df149 = function(arg0, arg1, arg2) {
+        const ret = new Uint8Array(arg0, arg1 >>> 0, arg2 >>> 0);
+        return ret;
+    };
+    imports.wbg.__wbg_new_with_event_init_dict_8ce3ab55b0239ca3 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = new CloseEvent(getStringFromWasm0(arg0, arg1), arg2);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_parentNode_6caea653ea9f3e23 = function(arg0) {
+        const ret = arg0.parentNode;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_prototypesetcall_dfe9b766cdc1f1fd = function(arg0, arg1, arg2) {
+        Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), arg2);
+    };
+    imports.wbg.__wbg_queueMicrotask_9b549dfce8865860 = function(arg0) {
+        const ret = arg0.queueMicrotask;
+        return ret;
+    };
+    imports.wbg.__wbg_queueMicrotask_fca69f5bfad613a5 = function(arg0) {
+        queueMicrotask(arg0);
+    };
+    imports.wbg.__wbg_random_cc1f9237d866d212 = function() {
+        const ret = Math.random();
+        return ret;
+    };
+    imports.wbg.__wbg_readyState_9d0976dcad561aa9 = function(arg0) {
+        const ret = arg0.readyState;
+        return ret;
+    };
+    imports.wbg.__wbg_reason_d4eb9e40592438c2 = function(arg0, arg1) {
+        const ret = arg1.reason;
+        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
+    imports.wbg.__wbg_removeEventListener_565e273024b68b75 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        arg0.removeEventListener(getStringFromWasm0(arg1, arg2), arg3);
+    }, arguments) };
+    imports.wbg.__wbg_remove_32f69ffabcbc4072 = function(arg0) {
+        arg0.remove();
+    };
+    imports.wbg.__wbg_remove_e0441e385f51d1e9 = function(arg0) {
+        arg0.remove();
+    };
+    imports.wbg.__wbg_resolve_fd5bfbaa4ce36e1e = function(arg0) {
+        const ret = Promise.resolve(arg0);
+        return ret;
+    };
+    imports.wbg.__wbg_respond_9f7fc54636c4a3af = function() { return handleError(function (arg0, arg1) {
+        arg0.respond(arg1 >>> 0);
+    }, arguments) };
+    imports.wbg.__wbg_run_51bf644e39739ca6 = function(arg0, arg1, arg2) {
+        try {
+            var state0 = {a: arg1, b: arg2};
+            var cb0 = () => {
+                const a = state0.a;
+                state0.a = 0;
+                try {
+                    return wasm_bindgen__convert__closures_____invoke__h75feaa007886a216(a, state0.b, );
+                } finally {
+                    state0.a = a;
+                }
+            };
+            const ret = arg0.run(cb0);
+            return ret;
+        } finally {
+            state0.a = state0.b = 0;
+        }
+    };
+    imports.wbg.__wbg_send_7cc36bb628044281 = function() { return handleError(function (arg0, arg1, arg2) {
+        arg0.send(getStringFromWasm0(arg1, arg2));
+    }, arguments) };
+    imports.wbg.__wbg_send_ea59e150ab5ebe08 = function() { return handleError(function (arg0, arg1, arg2) {
+        arg0.send(getArrayU8FromWasm0(arg1, arg2));
+    }, arguments) };
+    imports.wbg.__wbg_setAttribute_34747dd193f45828 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        arg0.setAttribute(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+    }, arguments) };
+    imports.wbg.__wbg_set_169e13b608078b7b = function(arg0, arg1, arg2) {
+        arg0.set(getArrayU8FromWasm0(arg1, arg2));
+    };
+    imports.wbg.__wbg_set_781438a03c0c3c81 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = Reflect.set(arg0, arg1, arg2);
+        return ret;
+    }, arguments) };
+    imports.wbg.__wbg_set_binaryType_73e8c75df97825f8 = function(arg0, arg1) {
+        arg0.binaryType = __wbindgen_enum_BinaryType[arg1];
+    };
+    imports.wbg.__wbg_set_code_2f1b419c1a6169a3 = function(arg0, arg1) {
+        arg0.code = arg1;
+    };
+    imports.wbg.__wbg_set_innerHTML_f1d03f780518a596 = function(arg0, arg1, arg2) {
+        arg0.innerHTML = getStringFromWasm0(arg1, arg2);
+    };
+    imports.wbg.__wbg_set_nodeValue_997d7696f2c5d4bd = function(arg0, arg1, arg2) {
+        arg0.nodeValue = arg1 === 0 ? undefined : getStringFromWasm0(arg1, arg2);
+    };
+    imports.wbg.__wbg_set_once_cb88c6a887803dfa = function(arg0, arg1) {
+        arg0.once = arg1 !== 0;
+    };
+    imports.wbg.__wbg_set_reason_6cb672258b901b3a = function(arg0, arg1, arg2) {
+        arg0.reason = getStringFromWasm0(arg1, arg2);
+    };
+    imports.wbg.__wbg_setupCodeMirror_ba12e21eb8ff238f = function(arg0, arg1) {
+        setupCodeMirror(arg0, arg1);
+    };
+    imports.wbg.__wbg_stack_0ed75d68575b0f3c = function(arg0, arg1) {
+        const ret = arg1.stack;
+        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
+    imports.wbg.__wbg_static_accessor_GLOBAL_769e6b65d6557335 = function() {
+        const ret = typeof global === 'undefined' ? null : global;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_static_accessor_GLOBAL_THIS_60cf02db4de8e1c1 = function() {
+        const ret = typeof globalThis === 'undefined' ? null : globalThis;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_static_accessor_SELF_08f5a74c69739274 = function() {
+        const ret = typeof self === 'undefined' ? null : self;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_static_accessor_WINDOW_a8924b26aa92d024 = function() {
+        const ret = typeof window === 'undefined' ? null : window;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_target_0e3e05a6263c37a0 = function(arg0) {
+        const ret = arg0.target;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_then_4f95312d68691235 = function(arg0, arg1) {
+        const ret = arg0.then(arg1);
+        return ret;
+    };
+    imports.wbg.__wbg_toString_14b47ee7542a49ef = function(arg0) {
+        const ret = arg0.toString();
+        return ret;
+    };
+    imports.wbg.__wbg_value_2c75ca481407d038 = function(arg0, arg1) {
+        const ret = arg1.value;
+        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    };
+    imports.wbg.__wbg_view_788aaf149deefd2f = function(arg0) {
+        const ret = arg0.view;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    };
+    imports.wbg.__wbg_warn_6e567d0d926ff881 = function(arg0) {
+        console.warn(arg0);
+    };
+    imports.wbg.__wbg_warn_989bed09a6035762 = function(arg0, arg1, arg2) {
+        console.warn(arg0, arg1, arg2);
+    };
+    imports.wbg.__wbg_wasClean_4154a2d59fdb4dd7 = function(arg0) {
+        const ret = arg0.wasClean;
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_2241b6af4c4b2941 = function(arg0, arg1) {
+        // Cast intrinsic for `Ref(String) -> Externref`.
+        const ret = getStringFromWasm0(arg0, arg1);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_3f0fa5f4938462c5 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 453, function: Function { arguments: [NamedExternref("CloseEvent")], shim_idx: 454, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hccdcceddebaa240f, wasm_bindgen__convert__closures_____invoke__h69c730e789d0d030);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_756f3408d3b53544 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 558, function: Function { arguments: [Externref], shim_idx: 559, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h1b4796cc89588cbe, wasm_bindgen__convert__closures_____invoke__h5978e0ab91824502);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_9d4b90c4ec68e4a2 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 469, function: Function { arguments: [NamedExternref("Event")], shim_idx: 470, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hd1357ac9f55cdd3e, wasm_bindgen__convert__closures_____invoke__h05d1bc05e4b13c1c);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_c4295aab0dd7c9aa = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 449, function: Function { arguments: [NamedExternref("MessageEvent")], shim_idx: 450, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h81745994b4c086eb, wasm_bindgen__convert__closures_____invoke__h3f52868d8e154715);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_ccb87850ad28cf7e = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 455, function: Function { arguments: [NamedExternref("Event")], shim_idx: 456, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h5d774e31887a10f7, wasm_bindgen__convert__closures_____invoke__ha649e08bc246b0a2);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_db908320277c3e4f = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 150, function: Function { arguments: [String], shim_idx: 33, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h7464ccd209231ec4, wasm_bindgen__convert__closures_____invoke__hfd322f78657a0ae4);
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_fafb391372914419 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 451, function: Function { arguments: [], shim_idx: 452, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hc55957ec12a5b3e2, wasm_bindgen__convert__closures_____invoke__h4eb4387e5980f83e);
+        return ret;
+    };
+    imports.wbg.__wbindgen_init_externref_table = function() {
+        const table = wasm.__wbindgen_externrefs;
+        const offset = table.grow(4);
+        table.set(0, undefined);
+        table.set(offset + 0, undefined);
+        table.set(offset + 1, null);
+        table.set(offset + 2, true);
+        table.set(offset + 3, false);
+    };
+
+    return imports;
+}
+
+function __wbg_finalize_init(instance, module) {
+    wasm = instance.exports;
+    __wbg_init.__wbindgen_wasm_module = module;
+    cachedDataViewMemory0 = null;
+    cachedUint8ArrayMemory0 = null;
+
+
+    wasm.__wbindgen_start();
+    return wasm;
+}
+
+function initSync(module) {
+    if (wasm !== undefined) return wasm;
+
+
+    if (typeof module !== 'undefined') {
+        if (Object.getPrototypeOf(module) === Object.prototype) {
+            ({module} = module)
+        } else {
+            console.warn('using deprecated parameters for `initSync()`; pass a single object instead')
+        }
+    }
+
+    const imports = __wbg_get_imports();
+    if (!(module instanceof WebAssembly.Module)) {
+        module = new WebAssembly.Module(module);
+    }
+    const instance = new WebAssembly.Instance(module, imports);
+    return __wbg_finalize_init(instance, module);
+}
+
+async function __wbg_init(module_or_path) {
+    if (wasm !== undefined) return wasm;
+
+
+    if (typeof module_or_path !== 'undefined') {
+        if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
+            ({module_or_path} = module_or_path)
+        } else {
+            console.warn('using deprecated parameters for the initialization function; pass a single object instead')
+        }
+    }
+
+    if (typeof module_or_path === 'undefined') {
+        module_or_path = new URL('deve_web_bg.wasm', import.meta.url);
+    }
+    const imports = __wbg_get_imports();
+
+    if (typeof module_or_path === 'string' || (typeof Request === 'function' && module_or_path instanceof Request) || (typeof URL === 'function' && module_or_path instanceof URL)) {
+        module_or_path = fetch(module_or_path);
+    }
+
+    const { instance, module } = await __wbg_load(await module_or_path, imports);
+
+    return __wbg_finalize_init(instance, module);
+}
+
+export { initSync };
+export default __wbg_init;
+</file>
+
+<file path="apps/web/dist/tailwind-b0c07661d4116643.css">
+/*
+! tailwindcss v3.3.5 | MIT License | https://tailwindcss.com
+*/
+
+/*
+1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
+*/
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+  /* 1 */
+  border-width: 0;
+  /* 2 */
+  border-style: solid;
+  /* 2 */
+  border-color: #e5e7eb;
+  /* 2 */
+}
+
+::before,
+::after {
+  --tw-content: '';
+}
+
+/*
+1. Use a consistent sensible line-height in all browsers.
+2. Prevent adjustments of font size after orientation changes in iOS.
+3. Use a more readable tab size.
+4. Use the user's configured `sans` font-family by default.
+5. Use the user's configured `sans` font-feature-settings by default.
+6. Use the user's configured `sans` font-variation-settings by default.
+*/
+
+html {
+  line-height: 1.5;
+  /* 1 */
+  -webkit-text-size-adjust: 100%;
+  /* 2 */
+  -moz-tab-size: 4;
+  /* 3 */
+  -o-tab-size: 4;
+     tab-size: 4;
+  /* 3 */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* 4 */
+  font-feature-settings: normal;
+  /* 5 */
+  font-variation-settings: normal;
+  /* 6 */
+}
+
+/*
+1. Remove the margin in all browsers.
+2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
+*/
+
+body {
+  margin: 0;
+  /* 1 */
+  line-height: inherit;
+  /* 2 */
+}
+
+/*
+1. Add the correct height in Firefox.
+2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
+3. Ensure horizontal rules are visible by default.
+*/
+
+hr {
+  height: 0;
+  /* 1 */
+  color: inherit;
+  /* 2 */
+  border-top-width: 1px;
+  /* 3 */
+}
+
+/*
+Add the correct text decoration in Chrome, Edge, and Safari.
+*/
+
+abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+          text-decoration: underline dotted;
+}
+
+/*
+Remove the default font size and weight for headings.
+*/
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/*
+Reset links to optimize for opt-in styling instead of opt-out.
+*/
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/*
+Add the correct font weight in Edge and Safari.
+*/
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+/*
+1. Use the user's configured `mono` font family by default.
+2. Correct the odd `em` font sizing in all browsers.
+*/
+
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* 1 */
+  font-size: 1em;
+  /* 2 */
+}
+
+/*
+Add the correct font size in all browsers.
+*/
+
+small {
+  font-size: 80%;
+}
+
+/*
+Prevent `sub` and `sup` elements from affecting the line height in all browsers.
+*/
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+/*
+1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
+2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
+3. Remove gaps between table borders by default.
+*/
+
+table {
+  text-indent: 0;
+  /* 1 */
+  border-color: inherit;
+  /* 2 */
+  border-collapse: collapse;
+  /* 3 */
+}
+
+/*
+1. Change the font styles in all browsers.
+2. Remove the margin in Firefox and Safari.
+3. Remove default padding in all browsers.
+*/
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  /* 1 */
+  font-feature-settings: inherit;
+  /* 1 */
+  font-variation-settings: inherit;
+  /* 1 */
+  font-size: 100%;
+  /* 1 */
+  font-weight: inherit;
+  /* 1 */
+  line-height: inherit;
+  /* 1 */
+  color: inherit;
+  /* 1 */
+  margin: 0;
+  /* 2 */
+  padding: 0;
+  /* 3 */
+}
+
+/*
+Remove the inheritance of text transform in Edge and Firefox.
+*/
+
+button,
+select {
+  text-transform: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Remove default button styles.
+*/
+
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  -webkit-appearance: button;
+  /* 1 */
+  background-color: transparent;
+  /* 2 */
+  background-image: none;
+  /* 2 */
+}
+
+/*
+Use the modern Firefox focus style for all focusable elements.
+*/
+
+:-moz-focusring {
+  outline: auto;
+}
+
+/*
+Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
+*/
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/*
+Add the correct vertical alignment in Chrome and Firefox.
+*/
+
+progress {
+  vertical-align: baseline;
+}
+
+/*
+Correct the cursor style of increment and decrement buttons in Safari.
+*/
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+/*
+1. Correct the odd appearance in Chrome and Safari.
+2. Correct the outline style in Safari.
+*/
+
+[type='search'] {
+  -webkit-appearance: textfield;
+  /* 1 */
+  outline-offset: -2px;
+  /* 2 */
+}
+
+/*
+Remove the inner padding in Chrome and Safari on macOS.
+*/
+
+::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Change font properties to `inherit` in Safari.
+*/
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  /* 1 */
+  font: inherit;
+  /* 2 */
+}
+
+/*
+Add the correct display in Chrome and Safari.
+*/
+
+summary {
+  display: list-item;
+}
+
+/*
+Removes the default spacing and border for appropriate elements.
+*/
+
+blockquote,
+dl,
+dd,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+hr,
+figure,
+p,
+pre {
+  margin: 0;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  padding: 0;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+Reset default styling for dialogs.
+*/
+
+dialog {
+  padding: 0;
+}
+
+/*
+Prevent resizing textareas horizontally by default.
+*/
+
+textarea {
+  resize: vertical;
+}
+
+/*
+1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
+2. Set the default placeholder color to the user's configured gray 400 color.
+*/
+
+input::-moz-placeholder, textarea::-moz-placeholder {
+  opacity: 1;
+  /* 1 */
+  color: #9ca3af;
+  /* 2 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1;
+  /* 1 */
+  color: #9ca3af;
+  /* 2 */
+}
+
+/*
+Set the default cursor for buttons.
+*/
+
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/*
+Make sure disabled buttons don't get the pointer cursor.
+*/
+
+:disabled {
+  cursor: default;
+}
+
+/*
+1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+   This can trigger a poorly considered lint error in some tools but is included by design.
+*/
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block;
+  /* 1 */
+  vertical-align: middle;
+  /* 2 */
+}
+
+/*
+Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
+*/
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Make elements with the HTML hidden attribute stay hidden by default */
+
+[hidden] {
+  display: none;
+}
+
+*, ::before, ::after {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+}
+
+::backdrop {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.relative {
+  position: relative;
+}
+
+.inset-0 {
+  inset: 0px;
+}
+
+.bottom-0 {
+  bottom: 0px;
+}
+
+.left-0 {
+  left: 0px;
+}
+
+.left-1 {
+  left: 0.25rem;
+}
+
+.right-0 {
+  right: 0px;
+}
+
+.top-1 {
+  top: 0.25rem;
+}
+
+.z-50 {
+  z-index: 50;
+}
+
+.z-\[100\] {
+  z-index: 100;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-8 {
+  margin-top: 2rem;
+}
+
+.block {
+  display: block;
+}
+
+.flex {
+  display: flex;
+}
+
+.h-12 {
+  height: 3rem;
+}
+
+.h-2 {
+  height: 0.5rem;
+}
+
+.h-4 {
+  height: 1rem;
+}
+
+.h-6 {
+  height: 1.5rem;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.min-h-\[500px\] {
+  min-height: 500px;
+}
+
+.w-11 {
+  width: 2.75rem;
+}
+
+.w-4 {
+  width: 1rem;
+}
+
+.w-64 {
+  width: 16rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.w-screen {
+  width: 100vw;
+}
+
+.min-w-\[3rem\] {
+  min-width: 3rem;
+}
+
+.max-w-\[1400px\] {
+  max-width: 1400px;
+}
+
+.max-w-md {
+  max-width: 28rem;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.flex-none {
+  flex: none;
+}
+
+.scale-100 {
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.transform {
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.appearance-none {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+
+.border {
+  border-width: 1px;
+}
+
+.border-b {
+  border-bottom-width: 1px;
+}
+
+.border-l-2 {
+  border-left-width: 2px;
+}
+
+.border-r {
+  border-right-width: 1px;
+}
+
+.border-t {
+  border-top-width: 1px;
+}
+
+.border-blue-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(59 130 246 / var(--tw-border-opacity));
+}
+
+.border-gray-100 {
+  --tw-border-opacity: 1;
+  border-color: rgb(243 244 246 / var(--tw-border-opacity));
+}
+
+.border-gray-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-border-opacity));
+}
+
+.border-gray-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(209 213 219 / var(--tw-border-opacity));
+}
+
+.border-transparent {
+  border-color: transparent;
+}
+
+.bg-black\/50 {
+  background-color: rgb(0 0 0 / 0.5);
+}
+
+.bg-gray-200 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity));
+}
+
+.bg-gray-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(249 250 251 / var(--tw-bg-opacity));
+}
+
+.bg-gray-900 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(17 24 39 / var(--tw-bg-opacity));
+}
+
+.bg-white {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+}
+
+.p-1 {
+  padding: 0.25rem;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.pb-16 {
+  padding-bottom: 4rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.tracking-wider {
+  letter-spacing: 0.05em;
+}
+
+.text-blue-500 {
+  --tw-text-opacity: 1;
+  color: rgb(59 130 246 / var(--tw-text-opacity));
+}
+
+.text-blue-600 {
+  --tw-text-opacity: 1;
+  color: rgb(37 99 235 / var(--tw-text-opacity));
+}
+
+.text-gray-400 {
+  --tw-text-opacity: 1;
+  color: rgb(156 163 175 / var(--tw-text-opacity));
+}
+
+.text-gray-500 {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity));
+}
+
+.text-gray-600 {
+  --tw-text-opacity: 1;
+  color: rgb(75 85 99 / var(--tw-text-opacity));
+}
+
+.text-gray-800 {
+  --tw-text-opacity: 1;
+  color: rgb(31 41 55 / var(--tw-text-opacity));
+}
+
+.text-white {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity));
+}
+
+.opacity-100 {
+  opacity: 1;
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.shadow {
+  --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-2xl {
+  --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-lg {
+  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-sm {
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.grayscale {
+  --tw-grayscale: grayscale(100%);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
+.filter {
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
+.backdrop-blur-sm {
+  --tw-backdrop-blur: blur(4px);
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+          backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.hover\:bg-gray-100:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-gray-800:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity));
+}
+</file>
+
+<file path="apps/web/src/components/settings.rs">
+use crate::i18n::*;
+
+#[component]
+pub fn SettingsModal(
+    show: ReadSignal<bool>,
+    set_show: WriteSignal<bool>,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    
+    view! {
+        <Show when=move || show.get()>
+            <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-gray-800">{t!(i18n, settings.title)}</h2>
+                        <button 
+                            class="p-1 hover:bg-gray-100 rounded-full text-gray-500"
+                            on:click=move |_| set_show.set(false)
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        // Version Info
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{t!(i18n, settings.about)}</h3>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">{t!(i18n, settings.version)}</span>
+                                <span class="font-mono text-gray-800">"0.5.0-alpha"</span>
+                            </div>
+                        </div>
+                        
+                        // Placeholder for Hybrid Mode
+                        <div class="opacity-50 pointer-events-none grayscale">
+                             <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-medium text-gray-800">{t!(i18n, settings.hybrid_mode)}</h3>
+                                    <p class="text-sm text-gray-500">{t!(i18n, settings.hybrid_desc)}</p>
+                                </div>
+                                <div class="w-11 h-6 bg-gray-200 rounded-full relative">
+                                    <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow"></div>
+                                </div>
+                             </div>
+                             <p class="text-xs text-blue-500 mt-2">{t!(i18n, settings.coming_soon)}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-4 border-t border-gray-100 text-center">
+                        <button 
+                            class="w-full py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                            on:click=move |_| set_show.set(false)
+                        >
+                            {t!(i18n, settings.close)}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Show>
+    }
+}
+</file>
+
+<file path="apps/web/src/components/sidebar.rs">
+use leptos::prelude::*;
+use deve_core::models::DocId;
+
+#[component]
+pub fn Sidebar(
+    docs: ReadSignal<Vec<(DocId, String)>>,
+    current_doc: ReadSignal<Option<DocId>>,
+    on_select: Callback<DocId>,
+) -> impl IntoView {
+    view! {
+        <div class="h-full w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
+            <div class="p-4 font-bold text-gray-500 text-xs tracking-wider">
+                "EXPLORER"
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <For
+                    each=move || docs.get()
+                    key=|doc| doc.0
+                    children=move |(id, name)| {
+                        // Is selected?
+                        let is_selected = move || current_doc.get() == Some(id);
+                        
+                        view! {
+                            <button
+                                class=move || {
+                                    let base = "w-full text-left px-4 py-2 text-sm transition-colors";
+                                    if is_selected() {
+                                        format!("{} bg-white border-l-2 border-blue-500 text-blue-600 font-medium", base)
+                                    } else {
+                                        format!("{} text-gray-600 hover:bg-gray-100 border-l-2 border-transparent", base)
+                                    }
+                                }
+                                on:click=move |_| on_select.run(id)
+                            >
+                                {name}
+                            </button>
+                        }
+                    }
+                />
+            </div>
+        </div>
+    }
+}
+</file>
+
+<file path="apps/web/style/tailwind.css">
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+</file>
+
+<file path="apps/web/tailwind.config.js">
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: {
+    files: ["*.html", "./src/**/*.rs"],
+  },
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+</file>
+
+<file path="apps/web/Trunk.toml">
+[build]
+target = "index.html"
+
+[serve]
+address = "0.0.0.0"
+port = 8080
+open = true
+ws_protocol = "ws"
+</file>
+
+<file path="crates/core/src/models.rs">
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DocId(pub Uuid);
+
+impl DocId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+
+    pub fn from_u128(v: u128) -> Self {
+        Self(Uuid::from_u128(v))
+    }
+
+    pub fn as_u128(&self) -> u128 {
+        self.0.as_u128()
+    }
+}
+
+impl fmt::Display for DocId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Op {
+    Insert { pos: usize, content: String },
+    Delete { pos: usize, len: usize },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LedgerEntry {
+    pub doc_id: DocId, // We need to know which doc this Op belongs to!
+    pub op: Op,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct FileNodeId {
+    // Windows: (volume_serial_number as u64) << 64 | file_index
+    // Linux/Unix: (device_id as u64) << 64 | inode
+    // We combine them into a single u128 for easy storage
+    pub id: u128,
+}
+</file>
+
+<file path="crates/core/src/vfs.rs">
+use anyhow::Result;
+use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
+use crate::ledger::Ledger;
+use crate::models::FileNodeId;
+use file_id::FileId;
+
+pub struct Vfs {
+    pub root: PathBuf,
+}
+
+impl Vfs {
+    pub fn new(root: impl AsRef<Path>) -> Self {
+        let root = root.as_ref();
+        let abs_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+        Self {
+            root: abs_root,
+        }
+    }
+
+    pub fn get_inode(&self, rel_path: &str) -> Result<Option<FileNodeId>> {
+        let full_path = self.root.join(rel_path);
+        if !full_path.exists() {
+            return Ok(None);
+        }
+        
+        let file_id = file_id::get_file_id(&full_path)?;
+        
+        // Hash the FileId to get a stable u128 for Redb
+        // This is a simplification. Ideally we should serialize FileId.
+        // For Phase 0, we use a simple hash.
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        let mut hasher = DefaultHasher::new();
+        file_id.hash(&mut hasher);
+        let hash = hasher.finish(); 
+        // FileId hash is u64. We can use it. FileNodeId wraps u128.
+        
+        Ok(Some(FileNodeId { id: hash as u128 }))
+    }
+
+    /// Scan the vault directory and ensure every markdown file has a DocId in the Ledger.
+    pub fn scan(&self, ledger: &Ledger) -> Result<usize> {
+        let mut count = 0;
+        for entry in WalkDir::new(&self.root).into_iter().filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+                // Relativize path
+                if let Ok(rel_path) = path.strip_prefix(&self.root) {
+                    let path_str = rel_path.to_string_lossy();
+                    
+                    // 1. Ensure DocId exists
+                    let doc_id = if let Some(id) = ledger.get_docid(&path_str)? {
+                        id
+                    } else {
+                        let id = ledger.create_docid(&path_str)?;
+                        count += 1;
+                        id
+                    };
+
+                    // 2. Bind Inode (Vital for Rename detection)
+                    if let Ok(Some(inode)) = self.get_inode(&path_str) {
+                         // We always update the inode mapping to the latest
+                         let _ = ledger.bind_inode(&inode, doc_id);
+                    }
+                }
+            }
+        }
+        Ok(count)
+    }
+}
+</file>
+
+<file path=".gitignore">
+# Rust
+/target
+/debug
+/release
+**/*.rs.bk
+Cargo.lock
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project Specific
+deve.db
+vault/
+*.log
+</file>
 
 <file path="apps/cli/Cargo.toml">
 [package]
@@ -83,6 +3536,378 @@ anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 clap = { version = "4.4", features = ["derive"] }
+axum = { version = "0.7", features = ["ws"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["cors", "fs", "trace"] }
+futures = "0.3"
+serde.workspace = true
+serde_json.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+</file>
+
+<file path="apps/cli/src/server/mod.rs">
+use axum::{routing::get, Router};
+use std::sync::Arc;
+use tokio::net::TcpListener;
+use deve_core::ledger::Ledger;
+use tower_http::cors::{Any, CorsLayer};
+use tokio::sync::broadcast;
+use deve_core::protocol::ServerMessage;
+use std::net::SocketAddr;
+
+pub mod ws;
+
+pub struct AppState {
+    pub ledger: Arc<Ledger>,
+    pub tx: broadcast::Sender<ServerMessage>,
+}
+
+pub async fn start_server(ledger: Ledger, port: u16) -> anyhow::Result<()> {
+    // Create broadcast channel for WS server
+    let (tx, _rx) = broadcast::channel(100);
+    
+    let app_state = Arc::new(AppState { 
+        ledger: Arc::new(ledger),
+        tx,
+    });
+
+    let app = Router::new()
+        .route("/ws", get(ws::ws_handler))
+        .with_state(app_state)
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        );
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    println!("Server running on ws://{}", addr);
+
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
+    Ok(())
+}
+</file>
+
+<file path="apps/web/src/api.rs">
+use leptos::task::spawn_local;
+use leptos::prelude::*;
+use gloo_net::websocket::{futures::WebSocket, Message};
+use futures::{StreamExt, SinkExt};
+use futures::channel::mpsc::{unbounded, UnboundedSender};
+use deve_core::protocol::{ClientMessage, ServerMessage};
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ConnectionStatus {
+    Disconnected,
+    Connecting,
+    Connected,
+}
+
+#[derive(Clone)]
+pub struct WsService {
+    pub status: ReadSignal<ConnectionStatus>,
+    pub msg: ReadSignal<Option<ServerMessage>>,
+    tx: UnboundedSender<ClientMessage>,
+}
+
+impl WsService {
+    pub fn new() -> Self {
+        let (status, set_status) = signal(ConnectionStatus::Disconnected);
+        let (msg, set_msg) = signal(None);
+        let (tx, mut rx) = unbounded::<ClientMessage>();
+        
+        spawn_local(async move {
+            set_status.set(ConnectionStatus::Connecting);
+            let url = "ws://localhost:3001/ws";
+            match WebSocket::open(url) {
+                Ok(ws) => {
+                    leptos::logging::log!("WS Connected!");
+                    set_status.set(ConnectionStatus::Connected);
+                    let (mut write, mut read) = ws.split();
+                    
+                    // Task 1: Writer (Channel -> WS)
+                    spawn_local(async move {
+                        while let Some(msg) = rx.next().await {
+                            if let Ok(json) = serde_json::to_string(&msg) {
+                                if let Err(e) = write.send(Message::Text(json)).await {
+                                    leptos::logging::error!("WS Write Error: {:?}", e);
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Task 2: Reader (WS -> Signal)
+                    while let Some(msg) = read.next().await {
+                        match msg {
+                             Ok(Message::Text(txt)) => {
+                                 // leptos::logging::log!("WS Recv: {}", txt);
+                                 if let Ok(server_msg) = serde_json::from_str::<ServerMessage>(&txt) {
+                                     set_msg.set(Some(server_msg));
+                                 }
+                             }
+                             _ => {}
+                        }
+                    }
+                    set_status.set(ConnectionStatus::Disconnected);
+                }
+                Err(e) => {
+                    leptos::logging::error!("WS Error: {:?}", e);
+                    set_status.set(ConnectionStatus::Disconnected);
+                }
+            }
+        });
+        
+        Self { status, msg, tx }
+    }
+
+    pub fn send(&self, msg: ClientMessage) {
+        if let Err(e) = self.tx.unbounded_send(msg) {
+            leptos::logging::error!("Failed to enqueue message: {:?}", e);
+        }
+    }
+}
+</file>
+
+<file path="apps/web/src/components/header.rs">
+use crate::i18n::*;
+
+#[component]
+pub fn Header(
+    #[prop(into)] status_text: Signal<String>,
+    on_settings: Callback<()>,
+) -> impl IntoView {
+    let i18n = use_i18n();
+
+    view! {
+        <header class="w-full h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-50">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-gray-800 text-lg">{t!(i18n, app_title)}</span>
+                <span class="text-xs text-gray-400 border border-gray-200 rounded px-1">{move || status_text.get()}</span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button 
+                    class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                    title=move || t!(i18n, header.settings)
+                    on:click=move |_| on_settings.run(())
+                >
+                    // Simple Gear Icon SVG
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </header>
+    }
+}
+</file>
+
+<file path="apps/web/src/components/playback.rs">
+use leptos::prelude::*;
+
+#[component]
+pub fn PlaybackController(
+    max_version: ReadSignal<u64>,
+    current_version: ReadSignal<u64>,
+    on_change: Box<dyn Fn(u64) + Send + Sync>,
+) -> impl IntoView {
+    let on_input = move |ev: leptos::web_sys::Event| {
+        let value = event_target_value(&ev).parse::<u64>().unwrap_or(0);
+        on_change(value);
+    };
+
+    view! {
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg flex items-center gap-4 z-50">
+            <span class="text-xs font-mono text-gray-500">PLAYBACK</span>
+            
+            <input 
+                type="range" 
+                min="0" 
+                max=move || max_version.get().to_string()
+                value=move || current_version.get().to_string()
+                on:input=on_input
+                class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+            
+            <div class="font-mono text-sm min-w-[3rem] text-right">
+                {move || current_version.get()} <span class="text-gray-400">/ {move || max_version.get()}</span>
+            </div>
+        </div>
+    }
+}
+</file>
+
+<file path="apps/web/src/main.rs">
+mod app;
+mod editor;
+mod api;
+mod components;
+mod i18n;
+use app::App;
+use leptos::prelude::*;
+
+pub fn main() {
+    console_error_panic_hook::set_once();
+    tracing_wasm::set_as_global_default();
+    
+    mount_to_body(|| {
+        view! { <App/> }
+    })
+}
+</file>
+
+<file path="Cargo.toml">
+[workspace]
+members = [
+    "apps/cli",
+    "apps/web",
+    "crates/core",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+authors = ["Deve-Note Contributors"]
+license = "MIT"
+repository = "https://github.com/develeta/deve-note"
+
+[workspace.dependencies]
+# Intra-workspace dependencies
+deve_core = { path = "crates/core" }
+
+# Common dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde", "js"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Storage & CRDT
+redb = "2.0"
+# loro = "1.0" # TBD: Add Loro when we start implementing CRDT
+
+# Frontend
+leptos = { version = "0.7", features = ["csr"] }
+leptos_meta = { version = "0.7" }
+leptos_router = { version = "0.7" }
+console_error_panic_hook = "0.1"
+tracing-wasm = "0.2"
+</file>
+
+<file path="crates/core/Cargo.toml">
+[package]
+name = "deve_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+regex = "1.10"
+chrono.workspace = true
+dissimilar = "1.0.10"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bincode = "1.3"
+redb.workspace = true
+walkdir = "2.5.0"
+notify = "8.2.0"
+file-id = "0.2.3"
+crossbeam-channel = "0.5.15"
+notify-debouncer-mini = "0.7.0"
+</file>
+
+<file path="crates/core/src/lib.rs">
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ledger;
+pub mod models;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod vfs;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod watcher;
+pub mod state;
+pub mod protocol;
+</file>
+
+<file path="crates/core/src/state.rs">
+use crate::models::{Op, LedgerEntry};
+// use anyhow::Result; // Not used currently
+
+pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
+    let mut content = String::new();
+    
+    // Sort logic? We assume ops are in sequence order from get_ops
+    // But Ops themselves might be concurrent in a real CRDT.
+    // For Phase 0, we assume linear history from a single device (mostly).
+    // If we use Loro later, it handles this.
+    // For now, naive string manipulation.
+    
+    for entry in ops {
+        match &entry.op {
+            Op::Insert { pos, content: text } => {
+                if *pos >= content.len() {
+                    content.push_str(text);
+                } else {
+                    content.insert_str(*pos, text);
+                }
+            }
+            Op::Delete { pos, len } => {
+                if *pos < content.len() {
+                    let end = std::cmp::min(pos + len, content.len());
+                    content.drain(*pos..end);
+                }
+            }
+        }
+    }
+    
+    content
+}
+
+pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
+    use dissimilar::Chunk;
+    let chunks = dissimilar::diff(old, new);
+    let mut ops = Vec::new();
+    let mut pos = 0;
+    
+    for chunk in chunks {
+        match chunk {
+            Chunk::Equal(text) => {
+                pos += text.len();
+            }
+            Chunk::Insert(text) => {
+                ops.push(Op::Insert {
+                    pos,
+                    content: text.to_string(),
+                });
+                pos += text.len();
+            }
+            Chunk::Delete(text) => {
+                ops.push(Op::Delete {
+                    pos,
+                    len: text.len(),
+                });
+                // Do not advance pos, because we deleted content so the "next" character
+                // shifts left to the current pos.
+            }
+        }
+    }
+    ops
+}
 </file>
 
 <file path="apps/cli/src/main.rs">
@@ -90,6 +3915,9 @@ use clap::{Parser, Subcommand};
 use deve_core::ledger::Ledger;
 use deve_core::vfs::Vfs;
 use std::path::PathBuf;
+
+mod server;
+use std::sync::Arc;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -113,6 +3941,11 @@ enum Commands {
     Dump {
         #[arg(short, long)]
         path: String,
+    },
+    /// Start the backend server
+    Serve {
+        #[arg(short, long, default_value_t = 3001)]
+        port: u16,
     },
 }
 
@@ -142,7 +3975,7 @@ async fn main() -> anyhow::Result<()> {
             println!("Scanned. Registered {} new documents.", count);
         }
         Some(Commands::Watch) => {
-            let ledger = Ledger::init(&ledger_path)?;
+            let ledger = Arc::new(Ledger::init(&ledger_path)?);
             let vfs = Vfs::new(&vault_path);
             let watcher = deve_core::watcher::Watcher::new(ledger, vfs);
             println!("Starting watcher on {:?}... Press Ctrl+C to stop.", vault_path);
@@ -154,15 +3987,20 @@ async fn main() -> anyhow::Result<()> {
                 println!("DocId: {}", doc_id);
                 let ops = ledger.get_ops(doc_id)?;
                 println!("Found {} ops:", ops.len());
-                for (i, entry) in ops.iter().enumerate() {
-                    println!("[{}] {} {:?}", i, entry.timestamp, entry.op);
+                for (i, (seq, entry)) in ops.iter().enumerate() {
+                    println!("[{}] Seq:{} {} {:?}", i, seq, entry.timestamp, entry.op);
                 }
                 
-                let content = deve_core::state::reconstruct_content(&ops);
+                let ops_vec: Vec<deve_core::models::LedgerEntry> = ops.iter().map(|(_, e)| e.clone()).collect();
+                let content = deve_core::state::reconstruct_content(&ops_vec);
                 println!("\nReconstructed Content:\n---\n{}\n---", content);
             } else {
                 println!("Path not found in Ledger.");
             }
+        }
+        Some(Commands::Serve { port }) => {
+            let ledger = Ledger::init(&ledger_path)?;
+            server::start_server(ledger, port).await?;
         }
         None => {
             println!("Please provide a subcommand. Try --help.");
@@ -173,283 +4011,270 @@ async fn main() -> anyhow::Result<()> {
 }
 </file>
 
-<file path="build_core_2.txt">
-Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-error[E0599]: no variant or associated item named `new` found for enum `FileId` in the current scope
-   --> crates\core\src\vfs.rs:25:31
-    |
- 25 |         let file_id = FileId::new(&full_path)?;
-    |                               ^^^ variant or associated item not found in `FileId`
-    |
-note: if you're trying to build a new `FileId` consider using one of the following associated functions:
-      FileId::new_inode
-      FileId::new_low_res
-      FileId::new_high_res
-   --> C:\Users\QQ\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\file-id-0.2.3\src\lib.rs:87:5
-    |
- 87 |     pub fn new_inode(device_id: u64, inode_number: u64) -> Self {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-...
- 94 |     pub fn new_low_res(volume_serial_number: u32, file_index: u64) -> Self {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-...
-101 |     pub fn new_high_res(volume_serial_number: u64, file_id: u128) -> Self {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-help: there is a method `ne` with a similar name
-    |
- 25 -         let file_id = FileId::new(&full_path)?;
- 25 +         let file_id = FileId::ne(&full_path)?;
-    |
-
-warning: unused variable: `doc_id`
-  --> crates\core\src\watcher.rs:88:25
-   |
-88 |             if let Some(doc_id) = self.ledger.get_docid(path_str)? {
-   |                         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_doc_id`
-   |
-   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-For more information about this error, try `rustc --explain E0599`.
-warning: `deve_core` (lib) generated 1 warning
-error: could not compile `deve_core` (lib) due to 1 previous error; 1 warning emitted
-</file>
-
-<file path="build_core_3.txt">
-Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-error[E0599]: no variant or associated item named `from_path` found for enum `FileId` in the current scope
-   --> crates\core\src\vfs.rs:25:31
-    |
- 25 |         let file_id = FileId::from_path(&full_path)?;
-    |                               ^^^^^^^^^ variant or associated item not found in `FileId`
-    |
-note: if you're trying to build a new `FileId` consider using one of the following associated functions:
-      FileId::new_inode
-      FileId::new_low_res
-      FileId::new_high_res
-   --> C:\Users\QQ\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\file-id-0.2.3\src\lib.rs:87:5
-    |
- 87 |     pub fn new_inode(device_id: u64, inode_number: u64) -> Self {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-...
- 94 |     pub fn new_low_res(volume_serial_number: u32, file_index: u64) -> Self {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-...
-101 |     pub fn new_high_res(volume_serial_number: u64, file_id: u128) -> Self {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For more information about this error, try `rustc --explain E0599`.
-error: could not compile `deve_core` (lib) due to 1 previous error
-</file>
-
-<file path="build_core_4.txt">
-Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-warning: unused import: `file_id::FileId`
- --> crates\core\src\vfs.rs:6:5
-  |
-6 | use file_id::FileId;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: `deve_core` (lib) generated 1 warning (run `cargo fix --lib -p deve_core` to apply 1 suggestion)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.24s
-</file>
-
-<file path="build_core_5.txt">
-Compiling dissimilar v1.0.10
-   Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-warning: unused import: `file_id::FileId`
- --> crates\core\src\vfs.rs:6:5
-  |
-6 | use file_id::FileId;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `anyhow::Result`
- --> crates\core\src\state.rs:2:5
-  |
-2 | use anyhow::Result;
-  |     ^^^^^^^^^^^^^^
-
-error[E0599]: no method named `value` found for enum `Result<T, E>` in the current scope
-   --> crates\core\src\ledger.rs:151:31
-    |
-151 |             let seq_val = seq.value();
-    |                               ^^^^^ method not found in `Result<AccessGuard<'_, u64>, StorageError>`
-    |
-note: the method `value` exists on the type `AccessGuard<'_, u64>`
-   --> C:\Users\QQ\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\redb-2.6.3\src\tree_store\btree_base.rs:227:5
-    |
-227 |     pub fn value(&self) -> V::SelfType<'_> {
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-help: use the `?` operator to extract the `AccessGuard<'_, u64>` value, propagating a `Result::Err` value to the caller
-    |
-151 |             let seq_val = seq?.value();
-    |                              +
-
-error[E0308]: mismatched types
-  --> crates\core\src\state.rs:25:40
-   |
-25 |                     content.drain(pos..end);
-   |                                        ^^^ expected `&usize`, found `usize`
-   |
-help: consider borrowing here
-   |
-25 |                     content.drain(pos..&end);
-   |                                        +
-
-Some errors have detailed explanations: E0308, E0599.
-For more information about an error, try `rustc --explain E0308`.
-warning: `deve_core` (lib) generated 2 warnings
-error: could not compile `deve_core` (lib) due to 2 previous errors; 2 warnings emitted
-</file>
-
-<file path="build_watcher.txt">
-Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-warning: unused import: `anyhow`
- --> crates\core\src\watcher.rs:1:22
-  |
-1 | use anyhow::{Result, anyhow};
-  |                      ^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `DebounceEventResult`
- --> crates\core\src\watcher.rs:2:67
-  |
-2 | use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode, DebounceEventResult};
-  |                                                                   ^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `std::path::Path`
- --> crates\core\src\watcher.rs:3:5
-  |
-3 | use std::path::Path;
-  |     ^^^^^^^^^^^^^^^
-
-error[E0658]: use of unstable library feature `windows_by_handle`
-  --> crates\core\src\vfs.rs:26:28
-   |
-26 |         let id_val = (meta.volume_serial_number() as u128) << 64 | (meta.file_index() as u128);
-   |                            ^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: see issue #63010 <https://github.com/rust-lang/rust/issues/63010> for more information
-
-error[E0658]: use of unstable library feature `windows_by_handle`
-  --> crates\core\src\vfs.rs:26:74
-   |
-26 |         let id_val = (meta.volume_serial_number() as u128) << 64 | (meta.file_index() as u128);
-   |                                                                          ^^^^^^^^^^
-   |
-   = note: see issue #63010 <https://github.com/rust-lang/rust/issues/63010> for more information
-
-error[E0605]: non-primitive cast: `std::option::Option<u32>` as `u128`
-  --> crates\core\src\vfs.rs:26:22
-   |
-26 |         let id_val = (meta.volume_serial_number() as u128) << 64 | (meta.file_index() as u128);
-   |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ an `as` expression can be used to convert enum types to numeric types only if the enum type is unit-only or field-less
-   |
-   = note: see https://doc.rust-lang.org/reference/items/enumerations.html#casting for more information
-
-error[E0605]: non-primitive cast: `std::option::Option<u64>` as `u128`
-  --> crates\core\src\vfs.rs:26:68
-   |
-26 |         let id_val = (meta.volume_serial_number() as u128) << 64 | (meta.file_index() as u128);
-   |                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^ an `as` expression can be used to convert enum types to numeric types only if the enum type is unit-only or field-less
-   |
-   = note: see https://doc.rust-lang.org/reference/items/enumerations.html#casting for more information
-
-error[E0616]: field `root` of struct `Vfs` is private
-  --> crates\core\src\watcher.rs:27:30
-   |
-27 |             .watch(&self.vfs.root, RecursiveMode::Recursive)?;
-   |                              ^^^^ private field
-
-error[E0616]: field `root` of struct `Vfs` is private
-  --> crates\core\src\watcher.rs:29:51
-   |
-29 |         info!("Watcher started on {:?}", self.vfs.root);
-   |                                                   ^^^^ private field
-
-error[E0616]: field `root` of struct `Vfs` is private
-  --> crates\core\src\watcher.rs:37:69
-   |
-37 |                        if let Ok(rel) = path.strip_prefix(&self.vfs.root) {
-   |                                                                     ^^^^ private field
-
-warning: unused variable: `doc_id`
-  --> crates\core\src\watcher.rs:89:25
-   |
-89 |             if let Some(doc_id) = self.ledger.get_docid(path_str)? {
-   |                         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_doc_id`
-   |
-   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-Some errors have detailed explanations: E0605, E0616, E0658.
-For more information about an error, try `rustc --explain E0605`.
-warning: `deve_core` (lib) generated 4 warnings
-error: could not compile `deve_core` (lib) due to 7 previous errors; 4 warnings emitted
-</file>
-
-<file path="Cargo.toml">
-[workspace]
-members = [
-    "apps/cli",
-    "crates/core",
-]
-resolver = "2"
-
-[workspace.package]
-version = "0.0.1"
-edition = "2024"
-authors = ["Deve-Note Contributors"]
-license = "MIT"
-repository = "https://github.com/develeta/deve-note"
-
-[workspace.dependencies]
-# Intra-workspace dependencies
-deve_core = { path = "crates/core" }
-
-# Common dependencies
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0"
-anyhow = "1.0"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-tokio = { version = "1.0", features = ["full"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-
-# Storage & CRDT
-redb = "2.0"
-# loro = "1.0" # TBD: Add Loro when we start implementing CRDT
-</file>
-
-<file path="crates/core/Cargo.toml">
+<file path="apps/web/Cargo.toml">
 [package]
-name = "deve_core"
+name = "deve_web"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
+leptos.workspace = true
+leptos_meta.workspace = true
+leptos_router.workspace = true
+console_error_panic_hook.workspace = true
+tracing.workspace = true
+tracing-wasm.workspace = true
+leptos_i18n = "0.4"
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["HtmlElement", "Window"] }
+gloo-net = "0.6"
+futures = "0.3"
 serde.workspace = true
 serde_json.workspace = true
-thiserror.workspace = true
-anyhow.workspace = true
-tracing.workspace = true
-uuid.workspace = true
-chrono.workspace = true
-redb.workspace = true
-bincode = "1.3"
-walkdir = "2.5.0"
-notify = "8.2.0"
-file-id = "0.2.3"
-crossbeam-channel = "0.5.15"
-notify-debouncer-mini = "0.7.0"
-dissimilar = "1.0.10"
+
+# Use core models/types if needed, but for now we might mock or depend on core.
+# Ideally web depends on core for types.
+deve_core.workspace = true 
+js-sys = "0.3.83"
+
+[package.metadata.leptos-i18n]
+default = "en"
+locales = ["en", "zh"]
+</file>
+
+<file path="apps/web/index.html">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deve-Note</title>
+    <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
+    <script>
+      // 1. Define the bridge function IMMEDIATELY so Rust never hits "undefined"
+      window._editor_queue = [];
+      window._cm_loaded = false;
+
+      window.setupCodeMirror = function (element, onUpdate) {
+        if (window._cm_loaded && window._realInit) {
+          window._realInit(element, onUpdate);
+        } else {
+          window._editor_queue.push({ element, onUpdate });
+        }
+      };
+    </script>
+
+    <script type="module">
+      import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
+      import { markdown } from "https://esm.sh/@codemirror/lang-markdown@6.0.0";
+      import { syntaxHighlighting, defaultHighlightStyle } from "https://esm.sh/@codemirror/language@6.0.0";
+      
+      // Force higher specificity styles
+      const style = document.createElement('style');
+      style.textContent = `
+        .cm-content .cm-heading-1 { font-size: 2.0em; font-weight: bold; display: block; }
+        .cm-content .cm-heading-2 { font-size: 1.5em; font-weight: bold; display: block; }
+        .cm-content .cm-heading-3 { font-size: 1.25em; font-weight: bold; display: block; }
+        .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; }
+      `;
+      document.head.appendChild(style);
+
+      // 2. Define the real initialization logic
+      window._realInit = (element, onUpdate) => {
+        if (!element) return;
+        // Prevent duplicate mounts
+        element.innerHTML = '';
+        try {
+          let extensions = [basicSetup, markdown()];
+          if (onUpdate) {
+            extensions.push(
+              EditorView.updateListener.of((v) => {
+                // Filter out remote updates
+                if (window._isRemote) return;
+
+                if (v.docChanged) {
+                  onUpdate(v.state.doc.toString());
+                }
+              })
+            );
+          }
+
+          const view = new EditorView({
+            doc: "# Loading...",
+            extensions: extensions,
+            parent: element,
+          });
+
+          // Store view for remote updates
+          window._editor_view = view;
+        } catch (e) {
+          console.error("CodeMirror crash:", e);
+        }
+      };
+
+      window.applyRemoteContent = (text) => {
+        if (window._editor_view) {
+          window._isRemote = true;
+          try {
+            window._editor_view.dispatch({
+              changes: {
+                from: 0,
+                to: window._editor_view.state.doc.length,
+                insert: text,
+              },
+            });
+          } finally {
+            window._isRemote = false;
+          }
+        }
+      };
+
+      window.getEditorContent = () => {
+        if (window._editor_view) {
+          return window._editor_view.state.doc.toString();
+        }
+        return "";
+      };
+
+      window.applyRemoteOp = (op_json) => {
+        if (window._editor_view) {
+          window._isRemote = true;
+          try {
+            const op = JSON.parse(op_json);
+            // Op is { Insert: { pos, content } } or { Delete: { pos, len } }
+            if (op.Insert) {
+              const { pos, content } = op.Insert;
+              window._editor_view.dispatch({
+                changes: { from: pos, insert: content },
+              });
+            } else if (op.Delete) {
+              const { pos, len } = op.Delete;
+              window._editor_view.dispatch({
+                changes: { from: pos, to: pos + len, insert: "" },
+              });
+            }
+          } catch (e) {
+            console.error("ApplyOp Failed:", e);
+          } finally {
+            window._isRemote = false;
+          }
+        }
+      };
+
+      // 3. Process any requests that came in while we were loading
+      window._cm_loaded = true;
+      while (window._editor_queue.length > 0) {
+        let req = window._editor_queue.shift();
+        // Handle both old format (element only) and new format (object)
+        if (req.element) {
+          window._realInit(req.element, req.onUpdate);
+        } else {
+          window._realInit(req);
+        }
+      }
+    </script>
+  </head>
+  <body></body>
+</html>
+</file>
+
+<file path="apps/web/src/app.rs">
+use crate::editor::Editor;
+use crate::api::WsService;
+use leptos::prelude::*;
+use deve_core::models::DocId;
+use deve_core::protocol::{ClientMessage, ServerMessage};
+
+use crate::i18n::*;
+
+#[component]
+pub fn App() -> impl IntoView {
+    leptos_i18n::provide_i18n_context();
+    
+    let ws = WsService::new();
+    provide_context(ws.clone());
+    let status_text = Signal::derive(move || format!("{:?}", ws.status.get()));
+
+    // Global State
+    let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());
+    let (current_doc, set_current_doc) = signal(None::<DocId>);
+
+    // Initial List Request
+    let ws_clone = ws.clone();
+    Effect::new(move |_| {
+         ws_clone.send(ClientMessage::ListDocs);
+    });
+
+    // Handle Messages
+    Effect::new(move |_| {
+        if let Some(msg) = ws.msg.get() {
+            if let ServerMessage::DocList { docs: list } = msg {
+                set_docs.set(list.clone());
+                // Auto-select first if none selected
+                if current_doc.get_untracked().is_none() {
+                    if let Some(first) = list.first() {
+                        set_current_doc.set(Some(first.0));
+                    }
+                }
+            }
+        }
+    });
+
+    // Callback for Sidebar
+    let on_doc_select = Callback::new(move |id: DocId| {
+        set_current_doc.set(Some(id));
+    });
+
+    // Settings State
+    let (show_settings, set_show_settings) = signal(false);
+    let on_settings = Callback::new(move |_| set_show_settings.set(true));
+
+    view! {
+        <div class="h-screen w-screen flex flex-col bg-gray-50">
+            <crate::components::header::Header status_text=status_text on_settings=on_settings />
+            
+            <crate::components::settings::SettingsModal 
+                show=show_settings 
+                set_show=set_show_settings
+            />
+
+            <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex gap-4 overflow-hidden">
+                 // Left Sidebar
+                 <aside class="w-64 flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                     <crate::components::sidebar::Sidebar 
+                        docs=docs
+                        current_doc=current_doc
+                        on_select=on_doc_select
+                     />
+                 </aside>
+
+                 // Main Editor
+                 <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col">
+                    {move || match current_doc.get() {
+                        Some(id) => view! { 
+                            // Keyed by ID to force re-mount on change
+                             <Editor doc_id=id /> 
+                        }.into_any(),
+                        None => view! { 
+                            <div class="flex items-center justify-center h-full text-gray-400">
+                                "Select a document to edit"
+                            </div> 
+                        }.into_any()
+                    }}
+                 </div>
+            </main>
+        </div>
+    }
+}
+</file>
+
+<file path="apps/web/src/components/mod.rs">
+pub mod playback;
+pub mod header;
+pub mod sidebar;
+pub mod settings;
 </file>
 
 <file path="crates/core/src/ledger.rs">
@@ -594,7 +4419,7 @@ impl Ledger {
         Ok(seq)
     }
 
-    pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<LedgerEntry>> {
+    pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         let read_txn = self.db.begin_read()?;
         let ops_table = read_txn.open_table(LEDGER_OPS)?;
         let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
@@ -606,212 +4431,25 @@ impl Ledger {
             let seq_val = seq?.value();
             if let Some(bytes) = ops_table.get(seq_val)? {
                  let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
-                 entries.push(entry);
+                 entries.push((seq_val, entry));
             }
         }
         
-        // Sort by timestamp or just trust insertion order (Sequence)?
-        // Sequence is monotonic.
+        // Sort by sequence number
+        entries.sort_by_key(|k| k.0);
+        
         Ok(entries)
     }
-}
-</file>
 
-<file path="crates/core/src/lib.rs">
-pub mod ledger;
-pub mod models;
-pub mod vfs;
-pub mod watcher;
-pub mod state;
-</file>
-
-<file path="crates/core/src/models.rs">
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::fmt;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct DocId(pub Uuid);
-
-impl DocId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-
-    pub fn from_u128(v: u128) -> Self {
-        Self(Uuid::from_u128(v))
-    }
-
-    pub fn as_u128(&self) -> u128 {
-        self.0.as_u128()
-    }
-}
-
-impl fmt::Display for DocId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Op {
-    Insert { pos: usize, content: String },
-    Delete { pos: usize, len: usize },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LedgerEntry {
-    pub doc_id: DocId, // We need to know which doc this Op belongs to!
-    pub op: Op,
-    pub timestamp: i64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct FileNodeId {
-    // Windows: (volume_serial_number as u64) << 64 | file_index
-    // Linux/Unix: (device_id as u64) << 64 | inode
-    // We combine them into a single u128 for easy storage
-    pub id: u128,
-}
-</file>
-
-<file path="crates/core/src/state.rs">
-use crate::models::{Op, LedgerEntry};
-use anyhow::Result;
-
-pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
-    let mut content = String::new();
-    
-    // Sort logic? We assume ops are in sequence order from get_ops
-    // But Ops themselves might be concurrent in a real CRDT.
-    // For Phase 0, we assume linear history from a single device (mostly).
-    // If we use Loro later, it handles this.
-    // For now, naive string manipulation.
-    
-    for entry in ops {
-        match &entry.op {
-            Op::Insert { pos, content: text } => {
-                if *pos >= content.len() {
-                    content.push_str(text);
-                } else {
-                    content.insert_str(*pos, text);
-                }
-            }
-            Op::Delete { pos, len } => {
-                if *pos < content.len() {
-                    let end = std::cmp::min(pos + len, content.len());
-                    content.drain(*pos..end);
-                }
-            }
+    pub fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(DOCID_TO_PATH)?;
+        let mut docs = Vec::new();
+        for item in table.iter()? {
+            let (id, path) = item?;
+            docs.push((DocId::from_u128(id.value()), path.value().to_string()));
         }
-    }
-    
-    content
-}
-
-pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
-    use dissimilar::Chunk;
-    let chunks = dissimilar::diff(old, new);
-    let mut ops = Vec::new();
-    let mut pos = 0;
-    
-    for chunk in chunks {
-        match chunk {
-            Chunk::Equal(text) => {
-                pos += text.len();
-            }
-            Chunk::Insert(text) => {
-                ops.push(Op::Insert {
-                    pos,
-                    content: text.to_string(),
-                });
-                pos += text.len();
-            }
-            Chunk::Delete(text) => {
-                ops.push(Op::Delete {
-                    pos,
-                    len: text.len(),
-                });
-                // Do not advance pos, because we deleted content so the "next" character
-                // shifts left to the current pos.
-            }
-        }
-    }
-    ops
-}
-</file>
-
-<file path="crates/core/src/vfs.rs">
-use anyhow::Result;
-use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
-use crate::ledger::Ledger;
-use crate::models::FileNodeId;
-use file_id::FileId;
-
-pub struct Vfs {
-    pub root: PathBuf,
-}
-
-impl Vfs {
-    pub fn new(root: impl AsRef<Path>) -> Self {
-        let root = root.as_ref();
-        let abs_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
-        Self {
-            root: abs_root,
-        }
-    }
-
-    pub fn get_inode(&self, rel_path: &str) -> Result<Option<FileNodeId>> {
-        let full_path = self.root.join(rel_path);
-        if !full_path.exists() {
-            return Ok(None);
-        }
-        
-        let file_id = file_id::get_file_id(&full_path)?;
-        
-        // Hash the FileId to get a stable u128 for Redb
-        // This is a simplification. Ideally we should serialize FileId.
-        // For Phase 0, we use a simple hash.
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-        
-        let mut hasher = DefaultHasher::new();
-        file_id.hash(&mut hasher);
-        let hash = hasher.finish(); 
-        // FileId hash is u64. We can use it. FileNodeId wraps u128.
-        
-        Ok(Some(FileNodeId { id: hash as u128 }))
-    }
-
-    /// Scan the vault directory and ensure every markdown file has a DocId in the Ledger.
-    pub fn scan(&self, ledger: &Ledger) -> Result<usize> {
-        let mut count = 0;
-        for entry in WalkDir::new(&self.root).into_iter().filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
-                // Relativize path
-                if let Ok(rel_path) = path.strip_prefix(&self.root) {
-                    let path_str = rel_path.to_string_lossy();
-                    
-                    // 1. Ensure DocId exists
-                    let doc_id = if let Some(id) = ledger.get_docid(&path_str)? {
-                        id
-                    } else {
-                        let id = ledger.create_docid(&path_str)?;
-                        count += 1;
-                        id
-                    };
-
-                    // 2. Bind Inode (Vital for Rename detection)
-                    if let Ok(Some(inode)) = self.get_inode(&path_str) {
-                         // We always update the inode mapping to the latest
-                         let _ = ledger.bind_inode(&inode, doc_id);
-                    }
-                }
-            }
-        }
-        Ok(count)
+        Ok(docs)
     }
 }
 </file>
@@ -823,14 +4461,18 @@ use std::time::Duration;
 use crate::ledger::Ledger;
 use crate::vfs::Vfs;
 use tracing::{info, warn, error};
+use regex::Regex;
+
+use std::sync::Arc;
+use crate::models::DocId;
 
 pub struct Watcher {
-    ledger: Ledger, // Shared? Or clone? Redb is thread-safe (Arc internal). Simple struct wrap is fine if cheap.
+    ledger: Arc<Ledger>, // Shared
     vfs: Vfs,
 }
 
 impl Watcher {
-    pub fn new(ledger: Ledger, vfs: Vfs) -> Self {
+    pub fn new(ledger: Arc<Ledger>, vfs: Vfs) -> Self {
         Self { ledger, vfs }
     }
 
@@ -850,7 +4492,6 @@ impl Watcher {
             match result {
                 Ok(events) => {
                     for event in events {
-                       println!("DEBUG: Event: {:?}", event);
                        let path = event.path;
                        // Convert to relative string
                        if let Ok(rel) = path.strip_prefix(&self.vfs.root) {
@@ -871,9 +4512,7 @@ impl Watcher {
     }
 
     fn handle_event(&self, path_str: &str) -> Result<()> {
-        println!("DEBUG: Handling event for {}", path_str);
         if let Some(inode) = self.vfs.get_inode(path_str)? {
-            println!("DEBUG: Inode found: {:?}", inode);
             // File EXISTS. 
             // Check if we know this Inode.
             if let Some(doc_id) = self.ledger.get_docid_by_inode(&inode)? {
@@ -892,7 +4531,8 @@ impl Watcher {
                         info!("Content update at {}", path_str);
                         
                         let new_content = std::fs::read_to_string(&self.vfs.root.join(path_str))?;
-                        let ops = self.ledger.get_ops(doc_id)?;
+                        let ops_with_seq = self.ledger.get_ops(doc_id)?;
+                        let ops: Vec<crate::models::LedgerEntry> = ops_with_seq.iter().map(|(_, e)| e.clone()).collect();
                         let old_content = crate::state::reconstruct_content(&ops);
                         
                         if new_content != old_content {
@@ -913,23 +4553,109 @@ impl Watcher {
                     }
                 }
             } else {
-                // UTTERLY NEW INODE -> New File (or copied from outside).
-                info!("New file detected: {}", path_str);
-                let doc_id = self.ledger.create_docid(path_str)?;
-                self.ledger.bind_inode(&inode, doc_id)?;
-                
-                // Ingest initial content
-                let content = std::fs::read_to_string(&self.vfs.root.join(path_str))?;
-                if !content.is_empty() {
-                    let now = chrono::Utc::now().timestamp_millis();
-                    let op = crate::models::Op::Insert { pos: 0, content };
-                    let entry = crate::models::LedgerEntry {
-                        doc_id,
-                        op,
-                        timestamp: now,
-                    };
-                    self.ledger.append_op(&entry)?;
-                    info!("Ingested initial content for {}", path_str);
+                // UTTERLY NEW INODE.
+                // Fallback 1: Path-based Recovery (Atomic Save / Inode Recycle)
+                if let Some(existing_id) = self.ledger.get_docid(path_str)? {
+                     // Path is known! This means the Inode changed (e.g. vim atomic save).
+                     // We should REBIND the new Inode to the old DocId.
+                     info!("Inode change detected (Atomic Save?) for {}. Rebinding {:?} -> {:?}", path_str, inode, existing_id);
+                     self.ledger.bind_inode(&inode, existing_id)?;
+                     
+                     // Now process content diff
+                     let new_content = std::fs::read_to_string(&self.vfs.root.join(path_str))?;
+                     let ops_with_seq = self.ledger.get_ops(existing_id)?;
+                     let ops: Vec<crate::models::LedgerEntry> = ops_with_seq.iter().map(|(_, e)| e.clone()).collect();
+                     let old_content = crate::state::reconstruct_content(&ops);
+                     
+                     if new_content != old_content {
+                         let diff_ops = crate::state::compute_diff(&old_content, &new_content);
+                         if !diff_ops.is_empty() {
+                             info!("Detected {} changes during rebind. Appending.", diff_ops.len());
+                             let now = chrono::Utc::now().timestamp_millis();
+                             for op in diff_ops {
+                                 let entry = crate::models::LedgerEntry {
+                                     doc_id: existing_id,
+                                     op,
+                                     timestamp: now,
+                                 };
+                                 self.ledger.append_op(&entry)?;
+                             }
+                         }
+                     }
+                } else {
+                    // Fallback 2: UUID/Frontmatter Recovery
+                    // Check if file has `uuid: <uuid>` in frontmatter
+                    let content = std::fs::read_to_string(&self.vfs.root.join(path_str)).unwrap_or_default();
+                    let mut recovered_id = None;
+                    
+                    // Quick Regex for "uuid: <uuid>"
+                    // Assuming YAML Frontmatter
+                    let re = Regex::new(r"(?m)^uuid:\s*([a-fA-F0-9-]{36})").unwrap();
+                    if let Some(caps) = re.captures(&content) {
+                        if let Some(uuid_str) = caps.get(1) {
+                             if let Ok(uuid_val) = uuid::Uuid::parse_str(uuid_str.as_str()) {
+                                 let potential_id = DocId::from_u128(uuid_val.as_u128());
+                                 
+                                 // Check if this ID exists in Ledger
+                                 if let Ok(Some(old_path)) = self.ledger.get_path_by_docid(potential_id) {
+                                     info!("UUID Fallback Success! Found DocId {:?} (previously at {}) now at {}. Resurrecting...", potential_id, old_path, path_str);
+                                     
+                                     // 1. Rename logic (Old Path -> New Path)
+                                     // Only if Old Path != New Path (which it likely is, or Path Fallback would have caught it?)
+                                     // Wait, Path Fallback catches "Same Path, New Inode".
+                                     // This catches "Different Path, New Inode" (Move + Git Pull) OR "Same Path, New Inode" (redundant but safe).
+                                     if old_path != path_str {
+                                          self.ledger.rename_doc(&old_path, path_str)?;
+                                     }
+                                     
+                                     // 2. Bind Inode
+                                     self.ledger.bind_inode(&inode, potential_id)?;
+                                     recovered_id = Some(potential_id);
+                                 }
+                             }
+                        }
+                    }
+
+                    if let Some(existing_id) = recovered_id {
+                         // Compute Diff (same as above) - DRY this later
+                         let ops_with_seq = self.ledger.get_ops(existing_id)?;
+                         let ops: Vec<crate::models::LedgerEntry> = ops_with_seq.iter().map(|(_, e)| e.clone()).collect();
+                         let old_content = crate::state::reconstruct_content(&ops);
+                         
+                         if content != old_content {
+                             let diff_ops = crate::state::compute_diff(&old_content, &content);
+                             if !diff_ops.is_empty() {
+                                 info!("Detected {} changes during UUID recovery. Appending.", diff_ops.len());
+                                 let now = chrono::Utc::now().timestamp_millis();
+                                 for op in diff_ops {
+                                     let entry = crate::models::LedgerEntry {
+                                         doc_id: existing_id,
+                                         op,
+                                         timestamp: now,
+                                     };
+                                     self.ledger.append_op(&entry)?;
+                                 }
+                             }
+                         }
+                    } else {
+                        // True New File
+                        info!("New file detected: {}", path_str);
+                        let doc_id = self.ledger.create_docid(path_str)?;
+                        self.ledger.bind_inode(&inode, doc_id)?;
+                        
+                        // Ingest initial content
+                        if !content.is_empty() {
+                            let now = chrono::Utc::now().timestamp_millis();
+                            let op = crate::models::Op::Insert { pos: 0, content };
+                            let entry = crate::models::LedgerEntry {
+                                doc_id,
+                                op,
+                                timestamp: now,
+                            };
+                            self.ledger.append_op(&entry)?;
+                            info!("Ingested initial content for {}", path_str);
+                        }
+                    }
                 }
             }
         } else {
@@ -953,170 +4679,6 @@ impl Watcher {
         Ok(())
     }
 }
-</file>
-
-<file path="dump_hello.txt">
-warning: unused import: `file_id::FileId`
- --> crates\core\src\vfs.rs:6:5
-  |
-6 | use file_id::FileId;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `anyhow::Result`
- --> crates\core\src\state.rs:2:5
-  |
-2 | use anyhow::Result;
-  |     ^^^^^^^^^^^^^^
-
-warning: `deve_core` (lib) generated 2 warnings (run `cargo fix --lib -p deve_core` to apply 2 suggestions)
-warning: unused variable: `path`
-  --> apps\cli\src\main.rs:43:31
-   |
-43 | ... { path }) ...
-   |       ^^^^ help: try ignoring the field: `path: _`
-   |
-   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: `deve_cli` (bin "deve_cli") generated 1 warning (run `cargo fix --bin "deve_cli" -p deve_cli` to apply 1 suggestion)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.27s
-     Running `target\debug\deve_cli.exe dump --path hello.md`
-DocId: 89be5b7d-fa27-4298-832f-c640611e60dd
-Found 0 ops:
-
-Reconstructed Content:
----
-
----
-</file>
-
-<file path="dump.txt">
-warning: unused import: `file_id::FileId`
- --> crates\core\src\vfs.rs:6:5
-  |
-6 | use file_id::FileId;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `anyhow::Result`
- --> crates\core\src\state.rs:2:5
-  |
-2 | use anyhow::Result;
-  |     ^^^^^^^^^^^^^^
-
-warning: `deve_core` (lib) generated 2 warnings (run `cargo fix --lib -p deve_core` to apply 2 suggestions)
-warning: unused variable: `path`
-  --> apps\cli\src\main.rs:43:31
-   |
-43 | ... { path }) ...
-   |       ^^^^ help: try ignoring the field: `path: _`
-   |
-   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: `deve_cli` (bin "deve_cli") generated 1 warning (run `cargo fix --bin "deve_cli" -p deve_cli` to apply 1 suggestion)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.27s
-     Running `target\debug\deve_cli.exe dump --path test_diff.md`
-DocId: 63d80ad0-0586-4608-97c6-d1696fe37f23
-Found 0 ops:
-
-Reconstructed Content:
----
-
----
-</file>
-
-<file path="scan.txt">
-warning: unused import: `file_id::FileId`
- --> crates\core\src\vfs.rs:6:5
-  |
-6 | use file_id::FileId;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `anyhow::Result`
- --> crates\core\src\state.rs:2:5
-  |
-2 | use anyhow::Result;
-  |     ^^^^^^^^^^^^^^
-
-warning: `deve_core` (lib) generated 2 warnings (run `cargo fix --lib -p deve_core` to apply 2 suggestions)
-warning: unused variable: `path`
-  --> apps\cli\src\main.rs:43:31
-   |
-43 | ... { path }) ...
-   |       ^^^^ help: try ignoring the field: `path: _`
-   |
-   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: `deve_cli` (bin "deve_cli") generated 1 warning (run `cargo fix --bin "deve_cli" -p deve_cli` to apply 1 suggestion)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s
-     Running `target\debug\deve_cli.exe scan`
-Scanning vault at "vault"...
-Scanned. Registered 1 new documents.
-</file>
-
-<file path="verify_debug.txt">
-Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-warning: unused import: `file_id::FileId`
- --> crates\core\src\vfs.rs:6:5
-  |
-6 | use file_id::FileId;
-  |     ^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `anyhow::Result`
- --> crates\core\src\state.rs:2:5
-  |
-2 | use anyhow::Result;
-  |     ^^^^^^^^^^^^^^
-
-warning: `deve_core` (lib) generated 2 warnings (run `cargo fix --lib -p deve_core` to apply 2 suggestions)
-   Compiling deve_cli v0.0.1 (E:\gitclone\Deve-Note\apps\cli)
-warning: unused variable: `path`
-  --> apps\cli\src\main.rs:43:31
-   |
-43 |         Some(Commands::Init { path }) => {
-   |                               ^^^^ help: try ignoring the field: `path: _`
-   |
-   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: `deve_cli` (bin "deve_cli") generated 1 warning (run `cargo fix --bin "deve_cli" -p deve_cli` to apply 1 suggestion)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.45s
-     Running `target\debug\deve_cli.exe watch`
-Starting watcher on "vault"... Press Ctrl+C to stop.
-[2m2026-01-07T06:44:20.773673Z[0m [32m INFO[0m [2mdeve_core::watcher[0m[2m:[0m Watcher started on "vault"
-DEBUG: Event: DebouncedEvent { path: "E:\\gitclone\\Deve-Note\\vault\\hello.md", kind: Any }
-</file>
-
-<file path="verify_final.txt">
-Compiling deve_core v0.0.1 (E:\gitclone\Deve-Note\crates\core)
-</file>
-
-<file path=".gitignore">
-# Rust
-/target
-/debug
-/release
-**/*.rs.bk
-Cargo.lock
-
-# IDEs
-.vscode/
-.idea/
-*.iml
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Project Specific
-deve.db
-vault/
-*.log
 </file>
 
 <file path="deve-note plan.md">
@@ -1226,6 +4788,7 @@ vault/
 
 * **Ledger is Truth（真源不变量）**：
 	* 权威状态 MUST 仅由 Ledger 表达（Ops Log + Snapshot）。
+	* **Patch Semantics**：外部编辑器对 Vault 的修改被视为一次 **"Patch"**（补丁）。核心 **MUST** 将其通过 Diff 算法转化为 Ops 合并入 Ledger，而 **MUST NOT** 简单地以文件内容覆盖账本。
 	* Vault/Markdown MUST 可由 Ledger 重建；不得存在“仅在 Vault 才存在、且无法由 Ledger 推导”的用户可见事实。
 
 * **ID-Based VFS（标识不变量）**：
@@ -1235,6 +4798,7 @@ vault/
 
 * **Capability-Based Security（权限不变量）**：
 	* 脚本/插件 MUST 声明能力清单（网络域名、FS 路径、env 变量白名单）。
+	* **Manifest Enforcement**：若插件未在 manifest 中声明某权限，运行时请求该权限 **MUST** 直接拒绝（Panic/Error），不予弹窗询问。
 	* Host Functions MUST 执行最小权限校验与审计（default deny）。
 
 ### 5. 体验取舍与兼容性 (Inspiration & Compatibility)
@@ -1258,6 +4822,7 @@ vault/
 * **Main Slot**: 多标签页 (Tabs) 编辑器 / 分屏 (Split View)。
 * **Right Slot**: 大纲 (TOC) / 属性面板 (Metadata) / 插件面板。
 * **Bottom Slot**: 日志输出（核心）/ 终端面板 (Terminal, 插件可选)。
+* **Internationalization (i18n)**: 核心 UI 文本 **MUST** 使用 `leptos_i18n` 进行管理，支持编译时类型检查；默认提供 En/Zh-CN，根据浏览器自动协商。
 * **特性**：所有面板状态（宽度、折叠）持久化存储在 Redb 的 `ui_state` 表中，重启后完全恢复；侧边栏分组/层级可配置，风格靠近 VitePress 的导航结构。
 
 ### 2. 编辑器内核 (The Editor Kernel)
@@ -1347,7 +4912,8 @@ vault/
 	* **输出**：对应 Ops（追加写入 Ledger）+ 广播“外部修改已合并”。
 	* **约束**：
 		* MUST 幂等（同一改动不重复吸收）；MUST 防死循环（Sentinel Lock）。
-		* **MUST 识别重命名**：利用 **Inode 追踪 (Linux/macOS)** 或 **File ID (Windows)** 识别文件移动/重命名，防止 DocId 历史断裂。
+		* **MUST 识别重命名**：利用 **Inode 追踪 (Linux/macOS)** 或 **File ID (Windows)** 识别文件移动/重命名。
+		* **MUST Fallback Identity**：当 Inode 失效（如 Git Pull 导致重建）时，**MUST** 检查 Frontmatter 中的 `uuid` 字段或计算内容 Hash 来重新关联 DocId，防止“重命名风暴”导致的历史丢失。
 		* **MUST 防抖 (Debounce)**：外部写入后应有静默期（如 200ms），等待文件写入稳定（防 Editor 临时文件/原子保存干扰）。
 	* **失败语义**：无法解析/冲突不可合并时 MUST 明确提示并保留原内容（不静默丢失）。
 
@@ -1359,7 +4925,10 @@ vault/
 
 ### 认证与登录 (Auth & Login)
 
-* **单用户配置**：无注册页面，账号/密码放在服务器配置文件或环境变量中，密码仅存 Argon2 哈希；支持管理 token（如 personal access token）以便脚本或 CLI 使用。
+* **12-Factor Auth (环境驱动安全)**：
+    * **No Init UI**：严禁提供“首次启动管理员设置”界面。所有敏感配置（管理员密码/Secret Key）**MUST** 通过环境变量 (`DEVE_NOTE_PASSWORD_HASH`) 或 `.env` 文件注入。
+    * **无状态**：服务 **MUST** 符合 12-Factor App 原则，不依赖本地状态存储凭据。
+* **单用户配置**：支持管理 token（如 personal access token）以便脚本或 CLI 使用。
 * **2FA 可选**：支持 TOTP（本地生成）或 Passkey；可在配置中开启/关闭；本地部署默认关闭但预留入口。
 * **安全基线**：强制 HTTPS；登录表单抗 CSRF；错误提示不暴露账号存在性；限制暴力尝试（速率限制、锁定或简单验证码可选）。
 * **会话管理**：短期访问令牌 + 长期刷新令牌；可选“记住本机”延长会话；支持一键失效所有会话。
@@ -1423,6 +4992,7 @@ vault/
 | **语言** | Rust (2024) | 全栈统一。 |
 | **前端框架** | **Leptos v0.7** | 信号驱动，性能极致，无 Virtual DOM 开销。（*注：需优先验证与 CodeMirror 的集成流畅度*） |
 | **UI 组件** | **Tailwind CSS** | 原子化 CSS，配合 Shadcn-UI (Leptos port) 实现一致性设计。 |
+| **国际化** | **leptos_i18n** | 编译时校验的 i18n 方案，零运行时开销。 |
 | **编辑器** | **CodeMirror 6（默认）/ Milkdown（可选）** | 轻核心保证性能与导出稳定；重编辑器按需启用。（*注：Leptos 绑定层需自行封装或原型验证*） |
 | **图标库** | **Lucide Icons** | 统一、现代的 SVG 图标集。 |
 | **图谱渲染（可选）** | **Pixi.js** 或 **Cosmic-Graph (Rust)** | WebGL 加速的图可视化。 |
@@ -1645,6 +5215,373 @@ allow_env = ["GITHUB_TOKEN"]
 	* 插件安装与更新 MUST 不改变核心数据语义：插件只能通过 Host Functions + Capability 受控地读写 Ledger/Vault/资产。
 </file>
 
+<file path="apps/cli/src/server/ws.rs">
+use axum::{
+    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State},
+    response::IntoResponse,
+};
+use std::sync::Arc;
+use futures::{StreamExt, SinkExt}; 
+
+use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::models::{LedgerEntry, DocId};
+use crate::server::AppState;
+
+pub async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    ws.on_upgrade(|socket| handle_socket(socket, state))
+}
+
+async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
+    tracing::info!("Client connected");
+    
+    // 1. Initial Load Removed (Client must OpenDoc)
+    // 2. Subscribe to Broadcast
+    let mut rx = state.tx.subscribe();
+    
+    // Split socket
+    let (mut sender, mut receiver) = socket.split();
+    
+    // Task: Receive from Broadcast -> Send to Client
+    let mut send_task = tokio::spawn(async move {
+        while let Ok(msg) = rx.recv().await {
+            // Filter: Don't echo back edits to the sender? 
+            // Ideally we need ClientId. For now, we trust frontend diffing to handle echoes 
+            // or we accept "re-applying" same state is no-op.
+            // Actually, if we broadcast NewOps, the client will apply it.
+            // If the client *just* sent it, it already applied it.
+            // We need to differentiate.
+            // Simplified: Verification first.
+            if let Ok(json) = serde_json::to_string(&msg) {
+                if sender.send(Message::Text(json)).await.is_err() {
+                    break;
+                }
+            }
+        }
+    });
+
+    // Task: Receive from Client -> Persist -> Broadcast
+    let state_clone = state.clone();
+    let tx = state.tx.clone();
+    
+    while let Some(msg) = receiver.next().await {
+        let msg = if let Ok(msg) = msg {
+            msg
+        } else {
+            return;
+        };
+
+        if let Message::Text(text) = msg {
+            if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
+                match client_msg {
+                    ClientMessage::Edit { doc_id, op, client_id } => {
+                       // tracing::info!("Received Edit for Doc {}: {:?}", doc_id, op);
+                       
+                       let entry = LedgerEntry {
+                           doc_id,
+                           op: op.clone(),
+                           timestamp: chrono::Utc::now().timestamp_millis(),
+                       };
+                       
+                       match state_clone.ledger.append_op(&entry) {
+                           Ok(seq) => {
+                               // Broadcast to ALL with Sequence and ClientId
+                               let _ = tx.send(ServerMessage::NewOp { 
+                                   doc_id, 
+                                   op, 
+                                   seq,
+                                   client_id 
+                               });
+                           }
+                           Err(e) => {
+                               tracing::error!("Failed to persist op: {:?}", e);
+                           }
+                       }
+                    }
+                    ClientMessage::RequestHistory { doc_id } => {
+                        // Fetch all ops
+                        if let Ok(entries) = state_clone.ledger.get_ops(doc_id) {
+                            let ops: Vec<(u64, deve_core::models::Op)> = entries.into_iter()
+                                .map(|(seq, entry)| (seq, entry.op))
+                                .collect();
+                            
+                            let msg = ServerMessage::History { doc_id, ops };
+                            let _ = tx.send(msg);
+                        }
+                    }
+                    ClientMessage::ListDocs => {
+                         if let Ok(docs) = state_clone.ledger.list_docs() {
+                             let msg = ServerMessage::DocList { docs };
+                             // TODO: Optimization: Use split sender to reply only to the requester.
+                             // Currently broadcasting to all clients (inefficient + privacy leak).
+                             let _ = tx.send(msg);
+                         }
+                    }
+                    ClientMessage::OpenDoc { doc_id } => {
+                         if let Ok(entries_with_seq) = state_clone.ledger.get_ops(doc_id) {
+                            let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
+                            let content = deve_core::state::reconstruct_content(&ops);
+                            let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                            
+                            let snapshot = ServerMessage::Snapshot { doc_id, content, version };
+                            let _ = tx.send(snapshot);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    send_task.abort();
+    tracing::info!("Client disconnected");
+}
+</file>
+
+<file path="apps/web/src/editor.rs">
+use leptos::prelude::*;
+use leptos::html::Div;
+use wasm_bindgen::prelude::*;
+use crate::api::WsService;
+use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::models::DocId;
+
+#[wasm_bindgen]
+extern "C" {
+    fn setupCodeMirror(element: &web_sys::HtmlElement, on_update: &Closure<dyn FnMut(String)>);
+    fn applyRemoteContent(text: &str);
+    fn applyRemoteOp(op_json: &str);
+    fn getEditorContent() -> String;
+}
+
+#[component]
+pub fn Editor(
+    doc_id: DocId,
+) -> impl IntoView {
+    let editor_ref = NodeRef::<Div>::new();
+    let ws = use_context::<WsService>().expect("WsService should be provided");
+    
+    // Local state of the document to compute diffs against
+    let (content, set_content) = signal("".to_string()); // Start empty
+    let (local_version, set_local_version) = signal(0u64);
+    
+    // Playback State
+    let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
+    let (playback_version, set_playback_version) = signal(0u64);
+    let (is_playback, set_is_playback) = signal(false);
+    
+    // Generate a session client_id (using random rough)
+    let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
+    
+    // Initial Request: Open Document
+    // We send OpenDoc on mount AND when doc_id changes.
+    // NOTE: Effect runs on prop change.
+    let ws_clone = ws.clone();
+    Effect::new(move |_| {
+         // Reset state when doc changes
+         set_content.set("Loading...".to_string());
+         set_local_version.set(0);
+         set_history.set(Vec::new());
+         
+         ws_clone.send(ClientMessage::OpenDoc { doc_id });
+    });
+
+    // Effect to handle incoming messages
+    let ws_clone_2 = ws.clone();
+    Effect::new(move |_| {
+         if let Some(msg) = ws_clone_2.msg.get() {
+             match msg {
+                 ServerMessage::Snapshot { doc_id: msg_doc_id, content: new_content, version } => {
+                     // Filter by DocId
+                     if msg_doc_id != doc_id { return; }
+                     
+                     leptos::logging::log!("Received Snapshot: {} chars, Ver: {}", new_content.len(), version);
+                     applyRemoteContent(&new_content);
+                     set_content.set(new_content);
+                     set_local_version.set(version);
+                     
+                     // Initialize playback range
+                     set_playback_version.set(version);
+                     
+                     // Request History
+                     ws_clone_2.send(ClientMessage::RequestHistory { doc_id });
+                 }
+                 ServerMessage::History { doc_id: msg_doc_id, ops } => {
+                     if msg_doc_id != doc_id { return; }
+                     leptos::logging::log!("Received History: {} ops", ops.len());
+                     set_history.set(ops);
+                 }
+                 ServerMessage::NewOp { doc_id: msg_doc_id, op, seq, client_id: origin_id } => {
+                     if msg_doc_id != doc_id { return; }
+                     
+                     let current_ver = local_version.get_untracked();
+                     if seq > current_ver {
+                         // Filter Echoes!
+                         if origin_id != client_id {
+                             if let Ok(json) = serde_json::to_string(&op) {
+                                 applyRemoteOp(&json);
+                             }
+                             set_content.set(getEditorContent());
+                         }
+                         set_local_version.set(seq);
+                         
+                         // Append to History signal if valid
+                         set_history.update(|h| h.push((seq, op)));
+                         
+                         // Auto-advance playback if we are at the "head" (live)
+                         if !is_playback.get_untracked() {
+                            set_playback_version.set(seq);
+                         }
+                     }
+                 }
+                 _ => {}
+             }
+         }
+    });
+
+    Effect::new(move |_| {
+        if let Some(element) = editor_ref.get() {
+            let raw_element: &web_sys::HtmlElement = &element;
+            let ws_for_update = ws.clone();
+            
+            let on_update = Closure::wrap(Box::new(move |new_text: String| {
+                // If in playback mode, ignore changes (readonly)
+                if is_playback.get_untracked() {
+                    return;
+                }
+
+                let old_text = content.get_untracked();
+                if new_text == old_text {
+                    return;
+                }
+                
+                // Compute Diff
+                let ops = deve_core::state::compute_diff(&old_text, &new_text);
+                
+                // Send Ops
+                if !ops.is_empty() {
+                    for op in ops {
+                        ws_for_update.send(ClientMessage::Edit { 
+                            doc_id, 
+                            op: op.clone(),
+                            client_id 
+                        });
+                    }
+                }
+                
+                // Update local state
+                set_content.set(new_text);
+                
+            }) as Box<dyn FnMut(String)>);
+
+            setupCodeMirror(raw_element, &on_update);
+            on_update.forget(); 
+        }
+    });
+
+    // Playback Logic
+    let on_playback_change = Box::new(move |ver: u64| {
+        // If we move the slider, we set playback mode.
+        // If ver == local, we are "live", but maybe still considered in playback if manually dragging.
+        // Let's say if ver < local, it's Playback.
+        let local = local_version.get_untracked();
+        let is_pb = ver < local;
+        set_is_playback.set(is_pb);
+        set_playback_version.set(ver);
+        
+        // Reconstruct
+        let hist = history.get_untracked();
+        // Filter history <= ver
+        let relevant_ops: Vec<deve_core::models::LedgerEntry> = hist.into_iter()
+            .filter(|(s, _)| *s <= ver)
+            .map(|(_, op)| deve_core::models::LedgerEntry {
+                 doc_id, op, timestamp: 0 // timestamp irrelevant for reconstruction
+            })
+            .collect();
+            
+        let reconstructed = deve_core::state::reconstruct_content(&relevant_ops);
+        applyRemoteContent(&reconstructed);
+        // We do NOT update `content` signal here to avoid triggering diffs loops.
+        // CodeMirror update via applyRemoteContent is enough for visual.
+    });
+    
+    view! {
+        <div class="relative w-full h-full">
+            <div 
+                node_ref=editor_ref
+                class="w-full h-full min-h-[500px] border border-gray-300 bg-white shadow-sm pb-16"
+            >
+            </div>
+            
+            <crate::components::playback::PlaybackController 
+                max_version=local_version
+                current_version=playback_version
+                on_change=on_playback_change
+            />
+        </div>
+    }
+}
+</file>
+
+<file path="crates/core/src/protocol.rs">
+use serde::{Serialize, Deserialize};
+use crate::models::{DocId, Op};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ClientMessage {
+    /// Client sends an edit operation for a specific document.
+    Edit {
+        doc_id: DocId,
+        op: Op,
+        client_id: u64,
+    },
+    /// Request full operation history for a document.
+    RequestHistory {
+        doc_id: DocId,
+    },
+    /// Request a list of all known documents.
+    ListDocs,
+    /// Request to open a specific document (get Snapshot).
+    OpenDoc {
+        doc_id: DocId,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerMessage {
+    /// Server acknowledges that an Op has been persisted with a specific Sequence Number.
+    Ack {
+        doc_id: DocId,
+        seq: u64,
+    },
+    /// Server broadcasts a new Op from another client.
+    NewOp {
+        doc_id: DocId,
+        op: Op,
+        seq: u64,
+        client_id: u64,
+    },
+    /// Server sends the full content of the document (Initial Load).
+    Snapshot {
+        doc_id: DocId,
+        content: String,
+        version: u64,
+    },
+    /// Server sends the full history of operations (for Playback).
+    History {
+        doc_id: DocId,
+        ops: Vec<(u64, Op)>,
+    },
+    /// Server sends list of documents.
+    DocList {
+        docs: Vec<(DocId, String)>,
+    },
+    /// Error message
+    Error(String),
+}
+</file>
+
 <file path="deve-note schedule.md">
 # Deve-Note 开发计划表
 
@@ -1666,6 +5603,8 @@ allow_env = ["GITHUB_TOKEN"]
     - [ ] 测试: `VS Code` 修改文件 -> `Ledger` 正确记录 Op。
     - [ ] 测试: `Ledger` 接收 Op -> `Vault` 文件更新 (且不破坏用户光标/不造成冲突)。
     - [ ] 测试: 在 OS 中重命名文件 -> `Ledger` 保持 `DocId` 不变 (不误判为删除+新建)。
+    - [ ] **增强**: 实现 UUID/Hash Fallback 机制，确保 Inode 失效时仍能找回 DocId。
+    - [ ] **安全**: 验证 12-Factor Auth，确保无 `init` UI，仅通过 Env 启动。
 
 ## 阶段 1: 最小可行驾驶舱 (MVC)
 **时长**: 第 3-5 周
@@ -1673,6 +5612,7 @@ allow_env = ["GITHUB_TOKEN"]
 
 - [ ] **前端基础设施**:
     - [ ] 初始化 Leptos v0.7 + Tailwind CSS 项目。
+    - [ ] 集成 `leptos_i18n` 实现多语言支持 (En/Zh)。
     - [ ] 实现 "Resizable Slots" (可缩放插槽) 布局引擎。
 - [ ] **编辑器集成**:
     - [ ] 将 CodeMirror 6 封装为 Leptos 组件。
@@ -1701,7 +5641,7 @@ allow_env = ["GITHUB_TOKEN"]
 
 - [ ] **插件系统**:
     - [ ] 集成 `Rhai` 或 `Extism` 运行时。
-    - [ ] 实现 `Capability` (能力清单) 解析器与执行器。
+    - [ ] 实现 `Capability` (能力清单) 解析器，并强制执行 "Manifest Enforcement" (未声明即 Panic)。
 - [ ] **宿主函数 (Host Functions)**:
     - [ ] 暴露 `read_note`, `write_note` (受控 API)。
     - [ ] 实现 `Plugin RPC Bridge` (前端 <-> 后端通信桥梁)。
@@ -1722,6 +5662,282 @@ allow_env = ["GITHUB_TOKEN"]
     - [ ] 编写 `README.md` 和用户指南 (User Guide)。
     - [ ] 编写插件 API 文档。
 - [ ] **发布**: 发布 v0.1.0 Beta 版本。
+</file>
+
+<file path="apps/web/dist/index.html">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deve-Note</title>
+    <link rel="stylesheet" href="/tailwind-b0c07661d4116643.css" integrity="sha384-l+3VhkIR/YnOKV7hK5i1Ov6jSqkCBF/OUVDko7kujr+MHbS8aa2XMYKllZgoSHNB"/>
+    <script>
+      // 1. Define the bridge function IMMEDIATELY so Rust never hits "undefined"
+      window._editor_queue = [];
+      window._cm_loaded = false;
+
+      window.setupCodeMirror = function (element, onUpdate) {
+        if (window._cm_loaded && window._realInit) {
+          window._realInit(element, onUpdate);
+        } else {
+          window._editor_queue.push({ element, onUpdate });
+        }
+      };
+    </script>
+
+    <script type="module">
+      import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.1";
+      import { markdown } from "https://esm.sh/@codemirror/lang-markdown@6.0.0";
+      import { syntaxHighlighting, defaultHighlightStyle } from "https://esm.sh/@codemirror/language@6.0.0";
+      
+      // Force higher specificity styles
+      const style = document.createElement('style');
+      style.textContent = `
+        .cm-content .cm-heading-1 { font-size: 2.0em; font-weight: bold; display: block; }
+        .cm-content .cm-heading-2 { font-size: 1.5em; font-weight: bold; display: block; }
+        .cm-content .cm-heading-3 { font-size: 1.25em; font-weight: bold; display: block; }
+        .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; }
+      `;
+      document.head.appendChild(style);
+
+      // 2. Define the real initialization logic
+      window._realInit = (element, onUpdate) => {
+        if (!element) return;
+        // Prevent duplicate mounts
+        element.innerHTML = '';
+        try {
+          let extensions = [basicSetup, markdown()];
+          if (onUpdate) {
+            extensions.push(
+              EditorView.updateListener.of((v) => {
+                // Filter out remote updates
+                if (window._isRemote) return;
+
+                if (v.docChanged) {
+                  onUpdate(v.state.doc.toString());
+                }
+              })
+            );
+          }
+
+          const view = new EditorView({
+            doc: "# Loading...",
+            extensions: extensions,
+            parent: element,
+          });
+
+          // Store view for remote updates
+          window._editor_view = view;
+        } catch (e) {
+          console.error("CodeMirror crash:", e);
+        }
+      };
+
+      window.applyRemoteContent = (text) => {
+        if (window._editor_view) {
+          window._isRemote = true;
+          try {
+            window._editor_view.dispatch({
+              changes: {
+                from: 0,
+                to: window._editor_view.state.doc.length,
+                insert: text,
+              },
+            });
+          } finally {
+            window._isRemote = false;
+          }
+        }
+      };
+
+      window.getEditorContent = () => {
+        if (window._editor_view) {
+          return window._editor_view.state.doc.toString();
+        }
+        return "";
+      };
+
+      window.applyRemoteOp = (op_json) => {
+        if (window._editor_view) {
+          window._isRemote = true;
+          try {
+            const op = JSON.parse(op_json);
+            // Op is { Insert: { pos, content } } or { Delete: { pos, len } }
+            if (op.Insert) {
+              const { pos, content } = op.Insert;
+              window._editor_view.dispatch({
+                changes: { from: pos, insert: content },
+              });
+            } else if (op.Delete) {
+              const { pos, len } = op.Delete;
+              window._editor_view.dispatch({
+                changes: { from: pos, to: pos + len, insert: "" },
+              });
+            }
+          } catch (e) {
+            console.error("ApplyOp Failed:", e);
+          } finally {
+            window._isRemote = false;
+          }
+        }
+      };
+
+      // 3. Process any requests that came in while we were loading
+      window._cm_loaded = true;
+      while (window._editor_queue.length > 0) {
+        let req = window._editor_queue.shift();
+        // Handle both old format (element only) and new format (object)
+        if (req.element) {
+          window._realInit(req.element, req.onUpdate);
+        } else {
+          window._realInit(req);
+        }
+      }
+    </script>
+  <link rel="modulepreload" href="/deve_web-41f608c28aea52a8.js" crossorigin="anonymous" integrity="sha384-8CuWVekA0BHBAxGRC8B+ByAOCCNG2hM2O+wJvX+x5DBHDYOBdRdB3B/KwR7Fzow5"><link rel="preload" href="/deve_web-41f608c28aea52a8_bg.wasm" crossorigin="anonymous" integrity="sha384-+kIiIYLUzwjY+Mh5JdbXq2GZtWmcUJ5MeQR1X63VMsvbt/cSbcNdaj8Bhn6hHxTV" as="fetch" type="application/wasm"></head>
+  <body>
+<script type="module">
+import init, * as bindings from '/deve_web-41f608c28aea52a8.js';
+const wasm = await init({ module_or_path: '/deve_web-41f608c28aea52a8_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script><script>"use strict";
+
+(function () {
+
+    const address = '{{__TRUNK_ADDRESS__}}';
+    const base = '{{__TRUNK_WS_BASE__}}';
+    let protocol = 'ws';
+    protocol =
+        protocol
+            ? protocol
+            : window.location.protocol === 'https:'
+                ? 'wss'
+                : 'ws';
+    const url = protocol + '://' + address + base + '.well-known/trunk/ws';
+
+    class Overlay {
+        constructor() {
+            // create an overlay
+            this._overlay = document.createElement("div");
+            const style = this._overlay.style;
+            style.height = "100vh";
+            style.width = "100vw";
+            style.position = "fixed";
+            style.top = "0";
+            style.left = "0";
+            style.backgroundColor = "rgba(222, 222, 222, 0.5)";
+            style.fontFamily = "sans-serif";
+            // not sure that's the right approach
+            style.zIndex = "1000000";
+            style.backdropFilter = "blur(1rem)";
+
+            const container = document.createElement("div");
+            // center it
+            container.style.position = "absolute";
+            container.style.top = "30%";
+            container.style.left = "15%";
+            container.style.maxWidth = "85%";
+
+            this._title = document.createElement("div");
+            this._title.innerText = "Build failure";
+            this._title.style.paddingBottom = "2rem";
+            this._title.style.fontSize = "2.5rem";
+
+            this._message = document.createElement("div");
+            this._message.style.whiteSpace = "pre-wrap";
+
+            const icon= document.createElement("div");
+            icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#dc3545" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>';
+            this._title.prepend(icon);
+
+            container.append(this._title, this._message);
+            this._overlay.append(container);
+
+            this._inject();
+            window.setInterval(() => {
+                this._inject();
+            }, 250);
+        }
+
+        set reason(reason) {
+            this._message.textContent = reason;
+        }
+
+        _inject() {
+            if (!this._overlay.isConnected) {
+                // prepend it
+                document.body?.prepend(this._overlay);
+            }
+        }
+
+    }
+
+    class Client {
+        constructor(url) {
+            this.url = url;
+            this.poll_interval = 5000;
+            this._overlay = null;
+        }
+
+        start() {
+            const ws = new WebSocket(this.url);
+            ws.onmessage = (ev) => {
+                const msg = JSON.parse(ev.data);
+                switch (msg.type) {
+                    case "reload":
+                        this.reload();
+                        break;
+                    case "buildFailure":
+                        this.buildFailure(msg.data)
+                        break;
+                }
+            };
+            ws.onclose = () => this.onclose();
+        }
+
+        onclose() {
+            window.setTimeout(
+                () => {
+                    // when we successfully reconnect, we'll force a
+                    // reload (since we presumably lost connection to
+                    // trunk due to it being killed, so it will have
+                    // rebuilt on restart)
+                    const ws = new WebSocket(this.url);
+                    ws.onopen = () => window.location.reload();
+                    ws.onclose = () => this.onclose();
+                },
+                this.poll_interval);
+        }
+
+        reload() {
+            window.location.reload();
+        }
+
+        buildFailure({reason}) {
+            // also log the console
+            console.error("Build failed:", reason);
+
+            console.debug("Overlay", this._overlay);
+
+            if (!this._overlay) {
+                this._overlay = new Overlay();
+            }
+            this._overlay.reason = reason;
+        }
+    }
+
+    new Client(url).start();
+
+})()
+</script></body>
+</html>
 </file>
 
 </files>

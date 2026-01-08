@@ -12,6 +12,7 @@ leptos_router.workspace = true
 console_error_panic_hook.workspace = true
 tracing.workspace = true
 tracing-wasm.workspace = true
+
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["HtmlElement", "Window"] }
 gloo-net = "0.6"

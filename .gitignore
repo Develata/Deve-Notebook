@@ -18,3 +18,8 @@ Thumbs.db
 deve.db
 vault/
 *.log
+
+# Web
+dist
+
+repomix-output.xml

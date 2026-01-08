@@ -1,21 +1,24 @@
 use leptos::prelude::*;
+use crate::i18n::{Locale, t};
 
 #[component]
 pub fn Header(
     #[prop(into)] status_text: Signal<String>,
     on_settings: Callback<()>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+
     view! {
         <header class="w-full h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-50">
             <div class="flex items-center gap-2">
-                <span class="font-bold text-gray-800 text-lg">"Deve-Note"</span>
+                <span class="font-bold text-gray-800 text-lg">{move || t::app_title(locale.get())}</span>
                 <span class="text-xs text-gray-400 border border-gray-200 rounded px-1">{move || status_text.get()}</span>
             </div>
             
             <div class="flex items-center gap-2">
                 <button 
                     class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
-                    title="Settings"
+                    title=move || t::header::settings(locale.get())
                     on:click=move |_| on_settings.run(())
                 >
                     // Simple Gear Icon SVG

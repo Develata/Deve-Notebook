@@ -1,12 +1,15 @@
 use leptos::prelude::*;
 use deve_core::models::DocId;
+use crate::i18n::{Locale, t};
 
 #[component]
 pub fn Sidebar(
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
-    on_select: Callback<DocId>,
+    #[prop(into)] on_select: Callback<DocId>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+
     view! {
         <div class="h-full w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
             <div class="p-4 font-bold text-gray-500 text-xs tracking-wider">
@@ -38,6 +41,11 @@ pub fn Sidebar(
                         }
                     }
                 />
+                <Show when=move || docs.get().is_empty()>
+                    <div class="text-center text-sm text-gray-400 py-8">
+                        {move || t::sidebar::no_docs(locale.get())}
+                    </div>
+                </Show>
             </div>
         </div>
     }
