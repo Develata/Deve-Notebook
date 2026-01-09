@@ -137,6 +137,7 @@
 * **Left Slot**: 文件树（核心）/ 双向链接图谱 (Mini Graph, 插件可选)。
 * **Main Slot**: 多标签页 (Tabs) 编辑器 / 分屏 (Split View)。
 * **Right Slot**: 大纲 (TOC) / 属性面板 (Metadata) / 插件面板。
+  * **[Implemented] Table of Contents**: 自动解析 Markdown 标题，支持层级缩进与点击跳转（Scroll Sync）。
 * **Bottom Slot**: 日志输出（核心）/ 终端面板 (Terminal, 插件可选)。
 * **Internationalization (i18n)**: 核心 UI 文本 **MUST** 使用 `leptos_i18n` 进行管理，支持编译时类型检查；默认提供 En/Zh-CN，根据浏览器自动协商。
 * **特性**：所有面板状态（宽度、折叠）持久化存储在 Redb 的 `ui_state` 表中，重启后完全恢复；侧边栏分组/层级可配置，风格靠近 VitePress 的导航结构。
@@ -186,6 +187,7 @@
 	* UI 底部的一条交互式热力图。
 	* 颜色深浅代表修改频率。
 	* 拖动滑块，编辑器内容按需回放（基于 Loro 历史；需要分段加载/降级以避免卡顿与内存峰值）。
+	* **[Implemented Strategy]**: 原型阶段已验证基于 `local_version` 与 `playback_version` 的双指针回放机制，前端仅通过 FFI 接收 Snapshot 重建内容，不进行全量 Diff 运算，保证性能。
 
 
 
@@ -232,6 +234,13 @@
 		* **MUST Fallback Identity**：当 Inode 失效（如 Git Pull 导致重建）时，**MUST** 检查 Frontmatter 中的 `uuid` 字段或计算内容 Hash 来重新关联 DocId，防止“重命名风暴”导致的历史丢失。
 		* **MUST 防抖 (Debounce)**：外部写入后应有静默期（如 200ms），等待文件写入稳定（防 Editor 临时文件/原子保存干扰）。
 	* **失败语义**：无法解析/冲突不可合并时 MUST 明确提示并保留原内容（不静默丢失）。
+
+* **SyncManager (同步管理器) - [Implemented]**：
+    * 作为系统核心总线，统一调度 `Watcher`（磁盘事件）、`WebSocket`（网络事件）与 `Ledger`（核心状态）。
+    * **职责**：
+        1.  **启动扫描**：应用启动时全量扫描 Vault，对比 Ledger Hash，检测离线修改。
+        2.  **事件去重**：维护 `processing_paths` 集合，防止 `Watcher` 事件与 `Ledger` 写入事件形成死循环。
+        3.  **防抖控制**：对高频磁盘写入（如 `vim` 原子保存）实施 300ms 级防抖。
 
 * **运行时安全（插件/脚本）**：
 	* **输入**：插件包（Rhai/Extism）+ 能力清单 + 命令/事件触发。
@@ -303,21 +312,21 @@
 
 ## 第六章：技术栈清单 (The Full Stack)
 
-| 层次 | 核心技术 | 选型理由 |
-| --- | --- | --- |
-| **语言** | Rust (2024) | 全栈统一。 |
-| **前端框架** | **Leptos v0.7** | 信号驱动，性能极致，无 Virtual DOM 开销。（*注：需优先验证与 CodeMirror 的集成流畅度*） |
-| **UI 组件** | **Tailwind CSS** | 原子化 CSS，配合 Shadcn-UI (Leptos port) 实现一致性设计。 |
-| **国际化** | **leptos_i18n** | 编译时校验的 i18n 方案，零运行时开销。 |
-| **编辑器** | **CodeMirror 6（默认）/ Milkdown（可选）** | 轻核心保证性能与导出稳定；重编辑器按需启用。（*注：Leptos 绑定层需自行封装或原型验证*） |
-| **图标库** | **Lucide Icons** | 统一、现代的 SVG 图标集。 |
-| **图谱渲染（可选）** | **Pixi.js** 或 **Cosmic-Graph (Rust)** | WebGL 加速的图可视化。 |
-| **存储** | **Redb/Sled** | 纯 Rust 嵌入式 DB，索引 Ledger/Path 映射。 |
-| **搜索（可选）** | **Tantivy** | 全文检索引擎（默认不进入核心必选路径）。 |
-| **同步/流控** | **Axum + Tower** | 背压、限流、超时、熔断。 |
-| **和解** | **Notify + Dissimilar** | 文件监听与 Diff。 |
-| **构建** | **Tauri v2** | 跨平台外壳。 |
-| **插件** | **Rhai + Extism** | Wasm/脚本引擎，能力受控。 |
+| 层次                 | 核心技术                                   | 选型理由                                                                                |
+| -------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **语言**             | Rust (2024)                                | 全栈统一。                                                                              |
+| **前端框架**         | **Leptos v0.7**                            | 信号驱动，性能极致，无 Virtual DOM 开销。（*注：需优先验证与 CodeMirror 的集成流畅度*） |
+| **UI 组件**          | **Tailwind CSS**                           | 原子化 CSS，配合 Shadcn-UI (Leptos port) 实现一致性设计。                               |
+| **国际化**           | **leptos_i18n**                            | 编译时校验的 i18n 方案，零运行时开销。                                                  |
+| **编辑器**           | **CodeMirror 6（默认）/ Milkdown（可选）** | 轻核心保证性能与导出稳定；重编辑器按需启用。（*注：Leptos 绑定层需自行封装或原型验证*） |
+| **图标库**           | **Lucide Icons**                           | 统一、现代的 SVG 图标集。                                                               |
+| **图谱渲染（可选）** | **Pixi.js** 或 **Cosmic-Graph (Rust)**     | WebGL 加速的图可视化。                                                                  |
+| **存储**             | **Redb/Sled**                              | 纯 Rust 嵌入式 DB，索引 Ledger/Path 映射。                                              |
+| **搜索（可选）**     | **Tantivy**                                | 全文检索引擎（默认不进入核心必选路径）。                                                |
+| **同步/流控**        | **Axum + Tower**                           | 背压、限流、超时、熔断。                                                                |
+| **和解**             | **Notify + Dissimilar**                    | 文件监听与 Diff。                                                                       |
+| **构建**             | **Tauri v2**                               | 跨平台外壳。                                                                            |
+| **插件**             | **Rhai + Extism**                          | Wasm/脚本引擎，能力受控。                                                               |
 
 **核心数据结构**：
 
@@ -366,15 +375,15 @@ allow_env = ["GITHUB_TOKEN"]
 
 系统提供精细的配置开关，以适配从树莓派 (Low-Spec) 到高性能服务器 (Standard) 的不同环境。
 
-| 环境变量 / 配置项 | 默认值 (Standard) | 512MB 推荐值 (Low-Spec) | 功能影响说明 |
-| :--- | :--- | :--- | :--- |
-| `DEVE_PROFILE` | `standard` | `low-spec` | **一键预设**。设置为 `low-spec` 时，会自动覆盖下表的默认值为推荐值。 |
-| `FEATURE_SSR` | `true` | `false` | **服务端渲染**。`false` = 仅下发 HTML 骨架，浏览器加载 WASM 后渲染。极大降低服务器内存峰值，但首屏加载稍慢。 |
-| `FEATURE_SEARCH` | `true` | `false` | **全文搜索 (Tantivy)**。`false` = 仅支持文件名搜索。禁用 Tantivy 引擎可节省 50-150MB 堆内存与 CPU 突发占用。 |
-| `FEATURE_GRAPH` | `true` | `false` | **全域图谱后台分析**。`false` = 服务器不构建引用图谱数据，前端图谱可视化功能将不可用。 |
-| `MEM_CACHE_MB` | `128` | `32` | **内存缓存上限**。用于图片缩略图、LaTeX 渲染结果的 LRU 缓存大小。 |
-| `CONCURRENCY` | `4` | `1` | **后台并发度**。控制索引构建、压缩、导入等重任务的最大并发线程数。 |
-| `SNAPSHOT_DEPTH` | `100` | `10` | **快照保留深度**。保留最近多少个版本的快照。减少数量可显著降低 Redb 索引大小。 |
+| 环境变量 / 配置项 | 默认值 (Standard) | 512MB 推荐值 (Low-Spec) | 功能影响说明                                                                                                 |
+| :---------------- | :---------------- | :---------------------- | :----------------------------------------------------------------------------------------------------------- |
+| `DEVE_PROFILE`    | `standard`        | `low-spec`              | **一键预设**。设置为 `low-spec` 时，会自动覆盖下表的默认值为推荐值。                                         |
+| `FEATURE_SSR`     | `true`            | `false`                 | **服务端渲染**。`false` = 仅下发 HTML 骨架，浏览器加载 WASM 后渲染。极大降低服务器内存峰值，但首屏加载稍慢。 |
+| `FEATURE_SEARCH`  | `true`            | `false`                 | **全文搜索 (Tantivy)**。`false` = 仅支持文件名搜索。禁用 Tantivy 引擎可节省 50-150MB 堆内存与 CPU 突发占用。 |
+| `FEATURE_GRAPH`   | `true`            | `false`                 | **全域图谱后台分析**。`false` = 服务器不构建引用图谱数据，前端图谱可视化功能将不可用。                       |
+| `MEM_CACHE_MB`    | `128`             | `32`                    | **内存缓存上限**。用于图片缩略图、LaTeX 渲染结果的 LRU 缓存大小。                                            |
+| `CONCURRENCY`     | `4`               | `1`                     | **后台并发度**。控制索引构建、压缩、导入等重任务的最大并发线程数。                                           |
+| `SNAPSHOT_DEPTH`  | `100`             | `10`                    | **快照保留深度**。保留最近多少个版本的快照。减少数量可显著降低 Redb 索引大小。                               |
 
 * **Ledger 与资产 I/O**：读写必须流式（streaming），避免整文件载入内存；Snapshot/日志段可选 zstd 压缩（以段为单位），不破坏 append-only 语义。
 * **插件/AI 资源限制**：插件与 AI 作业统一进入作业队列，具备超时/取消；默认并发低且可配置；任何扩展不得阻塞编辑主线程。
