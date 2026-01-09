@@ -102,14 +102,71 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                          }
                     }
                     ClientMessage::OpenDoc { doc_id } => {
-                         if let Ok(entries_with_seq) = state_clone.ledger.get_ops(doc_id) {
-                            let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
-                            let content = deve_core::state::reconstruct_content(&ops);
-                            let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-                            
-                            let snapshot = ServerMessage::Snapshot { doc_id, content, version };
-                            let _ = tx.send(snapshot);
-                        }
+                         tracing::info!("OpenDoc Request for DocID: {}", doc_id);
+                         let mut entries_with_seq = state_clone.ledger.get_ops(doc_id).unwrap_or_default();
+                         tracing::info!("Ledger Ops Count: {}", entries_with_seq.len());
+                         
+                         // Reconstruct current content to check if it's empty
+                         let ops_check: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
+                         let current_content = deve_core::state::reconstruct_content(&ops_check);
+                         tracing::info!("Current Reconstructed Content Length: {}", current_content.len());
+
+                         // Sync from Disk if App Content is empty BUT Disk Content exists (Manual Edit / Desync)
+                         if current_content.trim().is_empty() {
+                             tracing::info!("Content empty, attempting disk sync...");
+                             match state_clone.ledger.get_path_by_docid(doc_id) {
+                                 Ok(Some(path_str)) => {
+                                     tracing::info!("Found Path for DocID: {}", path_str);
+                                     let file_path = state_clone.vault_path.join(&path_str);
+                                     tracing::info!("Checking File Path: {:?}", file_path);
+                                     
+                                     if file_path.exists() && file_path.is_file() {
+                                          match std::fs::read_to_string(&file_path) {
+                                              Ok(disk_content) => {
+                                                  tracing::info!("Disk Content Length: {}", disk_content.len());
+                                                  if !disk_content.trim().is_empty() {
+                                                      tracing::info!("Importing content from disk for doc {} ({} bytes)", doc_id, disk_content.len());
+                                                      // Create Initial Op
+                                                      use deve_core::models::Op;
+                                                      let op = Op::Insert { pos: 0, content: disk_content };
+                                                      let entry = LedgerEntry {
+                                                          doc_id,
+                                                          op: op.clone(),
+                                                          timestamp: chrono::Utc::now().timestamp_millis(),
+                                                      };
+                                                      
+                                                      // Append to Ledger
+                                                      match state_clone.ledger.append_op(&entry) {
+                                                          Ok(seq) => {
+                                                              tracing::info!("Successfully appended Op seq: {}", seq);
+                                                              entries_with_seq.push((seq, entry));
+                                                          },
+                                                          Err(e) => tracing::error!("Failed to append op: {:?}", e),
+                                                      }
+                                                  } else {
+                                                      tracing::info!("Disk content is also empty.");
+                                                  }
+                                              },
+                                              Err(e) => tracing::error!("Failed to read file: {:?}", e),
+                                          }
+                                     } else {
+                                         tracing::warn!("File does not exist or is not a file: {:?}", file_path);
+                                     }
+                                 },
+                                 Ok(None) => tracing::warn!("No path found for DocID: {}", doc_id),
+                                 Err(e) => tracing::error!("Ledger error getting path: {:?}", e),
+                             }
+                         } else {
+                             tracing::info!("Content not empty, skipping disk sync.");
+                         }
+
+                         let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
+                         let content = deve_core::state::reconstruct_content(&ops);
+                         let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                         
+                         tracing::info!("Sending Snapshot: Content Len {}, Version {}", content.len(), version);
+                         let snapshot = ServerMessage::Snapshot { doc_id, content, version };
+                         let _ = tx.send(snapshot);
                     }
                     ClientMessage::CreateDoc { name } => {
                         let mut filename = name.clone();

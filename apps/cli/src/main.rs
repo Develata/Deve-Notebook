@@ -87,6 +87,15 @@ async fn main() -> anyhow::Result<()> {
         }
         Some(Commands::Serve { port }) => {
             let ledger = Ledger::init(&ledger_path)?;
+            
+            // Auto-scan on startup to pick up external changes or fresh DB
+            let vfs = Vfs::new(&vault_path);
+            println!("Performing startup scan of {:?}...", vault_path);
+            match vfs.scan(&ledger) {
+                Ok(count) => println!("Startup scan complete. Registered/Updated {} documents.", count),
+                Err(e) => eprintln!("Startup scan warning: {:?}", e),
+            }
+
             server::start_server(ledger, vault_path, port).await?;
         }
         None => {

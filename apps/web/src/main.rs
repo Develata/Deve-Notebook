@@ -10,6 +10,13 @@ pub fn main() {
     console_error_panic_hook::set_once();
     tracing_wasm::set_as_global_default();
     
+    // Hide overlay manually on mount to prevent hanging if no doc selected
+    let window = web_sys::window().unwrap();
+    let doc = window.document().unwrap();
+    if let Some(el) = doc.get_element_by_id("loading-overlay") {
+        let _ = el.class_list().add_1("hidden");
+    }
+
     mount_to_body(|| {
         view! { <App/> }
     })

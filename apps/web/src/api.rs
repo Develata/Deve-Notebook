@@ -38,14 +38,15 @@ impl WsService {
         
         // Task 1: Connection Manager (The "Eye")
         spawn_local(async move {
-            let url = "ws://localhost:3001/ws";
+            let hostname = web_sys::window().unwrap().location().hostname().unwrap_or("localhost".to_string());
+            let url = format!("ws://{}:3001/ws", hostname);
             let mut backoff = 1000u32;
             
             loop {
                 set_status.set(ConnectionStatus::Connecting);
-                leptos::logging::log!("WS: Connecting...");
+                leptos::logging::log!("WS: Connecting to {}...", url);
                 
-                match WebSocket::open(url) {
+                match WebSocket::open(&url) {
                     Ok(ws) => {
                         leptos::logging::log!("WS: Connected!");
                         set_status.set(ConnectionStatus::Connected);
