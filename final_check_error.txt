@@ -1,0 +1,34 @@
+    Checking deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
+warning: unused import: `leptos::prelude::*`
+ --> apps\web\src\i18n.rs:1:5
+  |
+1 | use leptos::prelude::*;
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `is_playback` is never read
+  --> apps\web\src\editor\hook.rs:12:9
+   |
+10 | pub struct EditorState {
+   |            ----------- field in this struct
+11 |     pub content: ReadSignal<String>,
+12 |     pub is_playback: ReadSignal<bool>,
+   |         ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `settings` is never used
+  --> apps\web\src\i18n.rs:32:16
+   |
+32 |         pub fn settings(locale: Locale) -> &'static str {
+   |                ^^^^^^^^
+
+warning: function `no_docs` is never used
+  --> apps\web\src\i18n.rs:60:16
+   |
+60 |         pub fn no_docs(locale: Locale) -> &'static str {
+   |                ^^^^^^^
+
+warning: `deve_web` (bin "deve_web") generated 4 warnings (run `cargo fix --bin "deve_web" -p deve_web` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.60s

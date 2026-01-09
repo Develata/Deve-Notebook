@@ -8,6 +8,7 @@ use super::ffi::{setupCodeMirror, applyRemoteContent, applyRemoteOp, getEditorCo
 use super::EditorStats;
 
 pub struct EditorState {
+    pub content: ReadSignal<String>,
     pub is_playback: ReadSignal<bool>,
     pub playback_version: ReadSignal<u64>,
     pub local_version: ReadSignal<u64>, // Acts as max_version
@@ -114,6 +115,9 @@ pub fn use_editor(
          }
     });
 
+    // View Ref - wrap in SendJsValue
+    // REMOVED
+    
     Effect::new(move |_| {
         if let Some(element) = editor_ref.get() {
             let raw_element: &web_sys::HtmlElement = &element;
@@ -188,6 +192,7 @@ pub fn use_editor(
     });
 
     EditorState {
+        content: content,
         is_playback: is_playback,
         playback_version: playback_version,
         local_version: local_version,

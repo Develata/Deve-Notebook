@@ -1,0 +1,84 @@
+use leptos::prelude::*;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct HeaderNode {
+    pub level: usize,
+    pub text: String,
+    pub line: usize, // 1-based line number
+}
+
+// Simple parser for Markdown headers
+// Returns a flat list. We can render indentation via padding.
+pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
+    let mut headers = Vec::new();
+    
+    for (i, line) in content.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') {
+            let mut level = 0;
+            for c in trimmed.chars() {
+                if c == '#' {
+                    level += 1;
+                } else {
+                    break;
+                }
+            }
+            
+            // Only convert if followed by space and level <= 6
+            if level > 0 && level <= 6 {
+                // Check if next char is space content
+                let rest = &trimmed[level..];
+                if rest.starts_with(' ') {
+                    headers.push(HeaderNode {
+                        level,
+                        text: rest.trim().to_string(),
+                        line: i + 1,
+                    });
+                }
+            }
+        }
+    }
+    
+    headers
+}
+
+#[component]
+pub fn Outline(
+    content: ReadSignal<String>,
+    on_scroll: Callback<usize>,
+) -> impl IntoView {
+    let headers = Memo::new(move |_| {
+        parse_headers(&content.get())
+    });
+
+    view! {
+        <div class="h-full overflow-y-auto py-4 px-2 select-none">
+            <div class="font-bold text-gray-500 mb-2 px-2 text-sm uppercase tracking-wider">
+                "Outline"
+            </div>
+            <For
+                each=move || headers.get()
+                key=|h| (h.line, h.text.clone())
+                children=move |header| {
+                    let on_click = on_scroll.clone();
+                    let line = header.line;
+                    
+                    let text = header.text.clone();
+                    let title_text = text.clone();
+                    let padding = format!("padding-left: {}px", (header.level - 1) * 12 + 8);
+                    
+                    view! {
+                        <div 
+                            class="py-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer rounded transition-colors truncate"
+                            style={padding}
+                            on:click=move |_| on_click.run(line)
+                            title={title_text}
+                        >
+                            {text}
+                        </div>
+                    }
+                }
+            />
+        </div>
+    }
+}

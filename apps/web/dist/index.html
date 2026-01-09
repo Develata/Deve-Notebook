@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deve-Note</title>
-    <link rel="stylesheet" href="/tailwind-3373d023c6641de5.css" integrity="sha384-6xtDa9kx3FHIA6a0eN7vSE4nE1RJAfao40/j1b0NsV0FCjAibq6wJ3+5x5pnkHxz"/>
+    <link rel="stylesheet" href="/tailwind-180a208724b5637f.css" integrity="sha384-y5ynaPI5zTQyTAP7oXQ3d9Wge99y0rDS9wEcIRK79n/Cst6snIwokNgj1h1vhArO"/>
     <link rel="stylesheet" href="/codemirror-747437e657642378.css" integrity="sha384-tqV7Y2LtR9iZwdnKtF9xAtHxp/OQsucagqNbTnI2JYpQ1kzehcHI4WQGaTqTcovR"/>
     <!-- Copy the adapter file directly to root -->
     
@@ -103,6 +103,14 @@
           }
         }
       };
+
+      window.scrollGlobal = function(line) {
+          if (window.scrollToLine && window._editor_view) {
+              window.scrollToLine(window._editor_view, line);
+          } else {
+              console.warn("scrollGlobal: View or Function not ready");
+          }
+      };
     </script>
 
     <!-- 2. IMPORT MAP -->
@@ -141,6 +149,7 @@
       try {
         const module = await import('./editor_adapter.js');
         const initCodeMirror = module.initCodeMirror;
+        window.scrollToLine = module.scrollToLine;
         
         if (typeof initCodeMirror !== 'function') {
            throw new Error("initCodeMirror is not a function in exported module!");
@@ -180,15 +189,15 @@
         if (e.stack) window.logToOverlay(e.stack, true);
       }
     </script>
-  <link rel="modulepreload" href="/deve_web-4842a2961c3a2757.js" crossorigin="anonymous" integrity="sha384-p7RWdwD6ipW1LUFJ+ZCYjFNitz0Yjwxs/TdwDlq03lcWAYblijUT87EPXBfxCQH8"><link rel="preload" href="/deve_web-4842a2961c3a2757_bg.wasm" crossorigin="anonymous" integrity="sha384-Ks4I3wFsJEFlR4JWrfd2cWVXCvVEq5s7RhfJswKubPPtCaRKldDPuujRKdTC9aEk" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/deve_web-ec35fe476f205f05.js" crossorigin="anonymous" integrity="sha384-07HRWq3aSt3c8SmZ5MDbX/UWMA1qasUAD0dhLmAIapMaULwlpAN2Tp1whXsWXahr"><link rel="preload" href="/deve_web-ec35fe476f205f05_bg.wasm" crossorigin="anonymous" integrity="sha384-N1fLn/5dL5YoYJSUdirYG1E/XG4mKL60Q1edmsI4C9sv7Z1qIfsLKxy4OTCjS+RM" as="fetch" type="application/wasm"></head>
   <body>
     <div id="loading-overlay" style="display: flex; flex-direction: column; padding: 20px;">
         <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">Initializing Hybrid Components...</div>
     </div>
   
 <script type="module">
-import init, * as bindings from '/deve_web-4842a2961c3a2757.js';
-const wasm = await init({ module_or_path: '/deve_web-4842a2961c3a2757_bg.wasm' });
+import init, * as bindings from '/deve_web-ec35fe476f205f05.js';
+const wasm = await init({ module_or_path: '/deve_web-ec35fe476f205f05_bg.wasm' });
 
 
 window.wasmBindings = bindings;

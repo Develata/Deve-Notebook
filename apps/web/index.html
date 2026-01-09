@@ -103,6 +103,14 @@
           }
         }
       };
+
+      window.scrollGlobal = function(line) {
+          if (window.scrollToLine && window._editor_view) {
+              window.scrollToLine(window._editor_view, line);
+          } else {
+              console.warn("scrollGlobal: View or Function not ready");
+          }
+      };
     </script>
 
     <!-- 2. IMPORT MAP -->
@@ -141,6 +149,7 @@
       try {
         const module = await import('./editor_adapter.js');
         const initCodeMirror = module.initCodeMirror;
+        window.scrollToLine = module.scrollToLine;
         
         if (typeof initCodeMirror !== 'function') {
            throw new Error("initCodeMirror is not a function in exported module!");

@@ -393,3 +393,22 @@ export function initCodeMirror(element, onUpdate) {
     throw e;
   }
 }
+
+export function scrollToLine(view, lineNumber) {
+    if (!view || !view.state) return;
+    // Ensure line number is within bounds
+    const doc = view.state.doc;
+    const lines = doc.lines;
+    if (lineNumber < 1) lineNumber = 1;
+    if (lineNumber > lines) lineNumber = lines;
+
+    const line = doc.line(lineNumber);
+    
+    view.dispatch({
+        effects: [
+            EditorView.scrollIntoView(line.from, { y: "start", yMargin: 20 })
+        ],
+        selection: { anchor: line.from }
+    });
+    view.focus();
+}

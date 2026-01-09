@@ -1,0 +1,51 @@
+    Checking deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
+error[E0432]: unresolved import `leptos::prelude::storage`
+ --> apps\web\src\editor\hook.rs:9:22
+  |
+9 | use leptos::prelude::storage::LocalStorage;
+  |                      ^^^^^^^ could not find `storage` in `prelude`
+
+warning: unused import: `init_code_mirror`
+ --> apps\web\src\editor\hook.rs:7:18
+  |
+7 | use super::ffi::{init_code_mirror, applyRemoteContent, applyRemoteOp, getEditorContent};
+  |                  ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `leptos::prelude::*`
+ --> apps\web\src\i18n.rs:1:5
+  |
+1 | use leptos::prelude::*;
+  |     ^^^^^^^^^^^^^^^^^^
+
+error[E0382]: borrow of moved value: `header.text`
+   --> apps\web\src\components\outline.rs:73:36
+    |
+ 68 | / ...   view! {
+ 69 | | ...       <div 
+ 70 | | ...           class="py-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer rounded transition-colors trunc...
+ 71 | | ...           style={padding}
+ 72 | | ...           on:click=move |_| on_click.run(line)
+ 73 | | ...           title={header.text.clone()}
+    | |                      ^^^^^^^^^^^ value borrowed here after move
+...   |
+ 76 | | ...       </div>
+ 77 | | ...   }
+    | |_______- `header.text` moved due to this method call
+    |
+note: `into_render` takes ownership of the receiver `self`, which moves `header.text`
+   --> C:\Users\QQ\scoop\persist\rustup\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tachys-0.1.9\src\view\mod.rs:438:20
+    |
+438 |     fn into_render(self) -> Self::Output;
+    |                    ^^^^
+    = note: move occurs because `header.text` has type `std::string::String`, which does not implement the `Copy` trait
+help: you can `clone` the value and consume it, but this might not be your desired behavior
+    |
+ 75 |                             {header.text.clone()}
+    |                                         ++++++++
+
+Some errors have detailed explanations: E0382, E0432.
+For more information about an error, try `rustc --explain E0382`.
+warning: `deve_web` (bin "deve_web") generated 2 warnings
+error: could not compile `deve_web` (bin "deve_web") due to 2 previous errors; 2 warnings emitted

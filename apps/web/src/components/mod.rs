@@ -6,3 +6,4 @@ pub mod bottom_bar;
 pub mod command_palette;
 pub mod input_modal;
 pub mod sidebar_menu;
+pub mod outline;
