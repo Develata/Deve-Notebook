@@ -258,19 +258,9 @@
         let doc = state.doc.toString();
         let selection = state.selection.main;
         
-        // Match ANY dollar or pair of dollars.
-        // We match ALL $ or $$ occurrences and check context manually.
-        // But looping via regex is easier if we just match "$" or "$$".
-        // Let's use a simpler regex that finds any dollar sequence.
+        console.log("Computing Math Docs. Len:", doc.length);
+
         const regexAnyDollar = /\$+/g;
-        
-        // We keep track of potential "open" delimiters.
-        // Stack for inline: [pos]
-        // Stack for block: [pos]
-        // But actually, we just scan linearly.
-        
-        let match;
-        let lastClose = -1;
         
         // Helper to check if escaped
         const isEscaped = (index) => {
@@ -283,59 +273,41 @@
             return backslashes % 2 === 1;
         };
 
-        // We collect all potential delimiters first
+        let match;
         let tokens = []; // { type: '$'|'$$', index, len }
         
         while ((match = regexAnyDollar.exec(doc)) !== null) {
              const val = match[0];
              const index = match.index;
              
-             // Check escape
              if (isEscaped(index)) {
-                 // It IS escaped. e.g. \$ or \\\$
-                 // We should render it as just the dollar(s) text, hiding the last backslash.
-                 // The backslash is at index-1.
-                 // We add a decoration to replace "backslash + text" with "text".
-                 // BUT: We match "$+". If val is "$", repl range is [index-1, index+1], insert "$".
-                 
-                 // If cursor is NOT in range.
+                 // Handle escape decoration logic
+                 // Keeping escape hiding logic:
                  const end = index + val.length;
-                 // Range of replacement: including the ONE escaping backslash.
                  const escapeStart = index - 1;
-                 
-                 // Check if valid range
                  if (escapeStart >= 0) {
-                     // Check cursor
-                     const isCursorTouching = selection.head >= escapeStart && selection.head <= end;
-                     if (!isCursorTouching) {
-                         // Replace `\$` with `$` Widget (text).
-                         // We construct a simple text replacement.
-                         // Or better: Replace range [index-1, index] (the backslash) with empty? 
-                         // No, Decoration.replace behavior deletes content.
-                         // If we replace [index-1, index] with "", the $ remains. Correct.
-                         widgets.push(Decoration.replace({}).range(escapeStart, index));
-                     }
+                      // Only hide if cursor is NOT touching
+                      const isCursorTouching = selection.head >= escapeStart && selection.head <= end;
+                      if (!isCursorTouching) {
+                          widgets.push(Decoration.replace({}).range(escapeStart, index));
+                      }
                  }
-                 continue; // Not a delimiter
+                 continue;
              }
              
-             // If not escaped, it's a candidate
              if (val === '$$' || val === '$') {
                  tokens.push({ type: val, index });
              }
         }
         
-        // Now Pair them
-        // Greedy pairing? 
-        // $$ ... $$ (Block)
-        // $ ... $ (Inline)
-        // Simple state machine:
-        // Mode: NONE, INLINE, BLOCK
+        console.log("Math Tokens Found:", tokens.length);
         
-        let mode = 'NONE'; // 'NONE', 'INLINE', 'BLOCK'
+        let mode = 'NONE';
         let startToken = null;
         
-        for (let t of tokens) {
+        for (let i = 0; i < tokens.length; i++) {
+            let t = tokens[i];
+            
             if (mode === 'NONE') {
                 if (t.type === '$$') {
                     mode = 'BLOCK';
@@ -349,9 +321,8 @@
                     // Close Block
                     let from = startToken.index;
                     let to = t.index + 2;
-                    let content = doc.slice(from + 2, t.index); // inner
+                    let content = doc.slice(from + 2, t.index);
                     
-                    // Add Widget
                     const isCursorIn = selection.head >= from && selection.head <= to;
                     if (!isCursorIn) {
                         widgets.push(Decoration.replace({ widget: new MathWidget(content, true) }).range(from, to));
@@ -359,51 +330,43 @@
                     mode = 'NONE';
                     startToken = null;
                 }
-                // Ignore '$' inside block
             } else if (mode === 'INLINE') {
+                // Check for paragraph break validity immediately
+                // If the distance covers a \n\n, we abort immediately and reprocess this token as if mode was NONE.
+                let contentSoFar = doc.slice(startToken.index + 1, t.index);
+                if (contentSoFar.includes('\n\n')) {
+                    mode = 'NONE';
+                    startToken = null;
+                    i--; // Reprocess this token
+                    continue;
+                }
+
                 if (t.type === '$') {
                     // Close Inline
                     let from = startToken.index;
                     let to = t.index + 1;
-                    let content = doc.slice(from + 1, t.index);
+                    let content = contentSoFar; // Optimized
                     
-                    // Reject empty inline math $$, treated as empty math? Or just nothing?
-                    // Typically $ $ is valid empty math.
-                    // But we must check for newlines? Usually inline math doesn't span double newlines.
-                    if (content.includes('\n\n')) {
-                        // Invalid. Reset. 
-                        // Actually GFM behavior: the first $ was just a dollar.
-                        // We strictly should backtrack, but for this simple plugin, we might just invalid the pair.
-                        // Let's assume valid for now or reset mode?
-                        // If we reset, we lose the first $. Correct.
-                        mode = 'NONE';
-                        startToken = null;
-                        // Better: Re-process THIS token as potential start? 
-                        // e.g. $ foo \n\n $ bar.
-                        // First $ open. \n\n invalidates. This $ might be open for next?
-                        // Complexity high. Let's ignore newline check for MVP.
-                    } else {
-                        const isCursorIn = selection.head >= from && selection.head <= to;
-                        if (!isCursorIn) {
-                            widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
-                        }
-                        mode = 'NONE';
-                        startToken = null;
+                    const isCursorIn = selection.head >= from && selection.head <= to;
+                    if (!isCursorIn) {
+                        widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
                     }
-                } else if (t.type === '$$') {
-                    // Encountered $$ inside inline? 
-                    // Usually $..$$..$ -> The $$ is two dollars inside.
-                    // But wait, $$ token consumes the dollars.
-                    // If we see $$, it means we have $ ... $$
-                    // This is likely interpreted as $ ... $ $
-                    // So we close with first char of $$? 
-                    // Let's simplified: $$ breaks inline mode (invalidates it) or counts as closer?
-                    // Common mark: "A $ will NOT close if followed by digit" etc.
-                    // Let's keep it simple: $$ closes inline? No.
-                    // Let's ignore $$ inside inline for now, treat as content.
-                    // But we captured it as token.
-                    // If token is $$, maybe it's just two $'s content?
-                    // We skip it.
+                    mode = 'NONE';
+                    startToken = null;
+                } 
+                // If it is $$, we usually ignore it in inline, BUT
+                // if we are here, it means we didn't have \n\n.
+                // So it's something like $ .. $$ .. $
+                // This is weird syntax. 
+                // If we assume $$ cannot appear in inline math:
+                // Then finding $$ means our Inline start was invalid (or we scan passed a close?).
+                // Let's assume strict: Inline math cannot contain $$.
+                // So if we find $$, we Abort Inline and Reprocess.
+                else if (t.type === '$$') {
+                    mode = 'NONE';
+                    startToken = null;
+                    i--; // Reprocess
+                    continue;
                 }
             }
         }
@@ -478,11 +441,71 @@
             }
           }
           computeDecorations(view) {
-            const widgets = [];
+            let widgets = [];
             const { from, to } = view.viewport;
             const selection = view.state.selection.main;
+            const doc = view.state.doc.toString();
             const isCursorIn = (nodeFrom, nodeTo) =>
               selection.head >= nodeFrom && selection.head <= nodeTo;
+
+            // 1. Compute Math Ranges to Ignore
+            const mathRanges = [];
+            const regexAnyDollar = /\$+/g;
+            let match;
+            
+             // Helper to check if escaped (Same logic as mathStateField)
+            const isEscaped = (index) => {
+                let backslashes = 0;
+                let i = index - 1;
+                while (i >= 0 && doc[i] === '\\') {
+                    backslashes++;
+                    i--;
+                }
+                return backslashes % 2 === 1;
+            };
+
+            let tokens = []; 
+            while ((match = regexAnyDollar.exec(doc)) !== null) {
+                 const val = match[0];
+                 const index = match.index;
+                 if (isEscaped(index)) continue;
+                 if (val === '$$' || val === '$') {
+                     tokens.push({ type: val, index });
+                 }
+            }
+            
+            let mode = 'NONE';
+            let startToken = null;
+            for (let t of tokens) {
+                if (mode === 'NONE') {
+                    if (t.type === '$$') {
+                        mode = 'BLOCK';
+                        startToken = t;
+                    } else if (t.type === '$') {
+                        mode = 'INLINE';
+                        startToken = t;
+                    }
+                } else if (mode === 'BLOCK') {
+                    if (t.type === '$$') {
+                        mathRanges.push({ from: startToken.index, to: t.index + 2 });
+                        mode = 'NONE';
+                        startToken = null;
+                    }
+                } else if (mode === 'INLINE') {
+                    if (t.type === '$') {
+                        mathRanges.push({ from: startToken.index, to: t.index + 1 });
+                        mode = 'NONE';
+                        startToken = null;
+                    }
+                }
+            }
+
+            const isInsideMath = (nodeFrom, nodeTo) => {
+                for (let r of mathRanges) {
+                    if (nodeFrom >= r.from && nodeTo <= r.to) return true;
+                }
+                return false;
+            };
 
             try {
               let tree = syntaxTree(view.state);
@@ -491,6 +514,8 @@
                 from,
                 to,
                 enter: (node) => {
+                  if (isInsideMath(node.from, node.to)) return;
+
                   // 1. Hide Header/Emphasis Marks
                   if (
                     node.name === "HeaderMark" ||
@@ -506,22 +531,10 @@
 
                   // 2. Checkboxes for Tasks
                   if (node.name === "TaskMarker") {
-                    // Node content is `[ ]` or `[x]`
-                    // We check if cursor is inside the Task (parent of marker)
-                    // If invalid parent, fallback to self.
                     const parent = node.node.parent;
-                    // For checkboxes, we usually SHOW the widget even if cursor is there,
-                    // BUT standard hybrid hides markup only when not active.
-                    // Let's hide the `[ ]` and show widget unless cursor is *exactly* on it?
-                    // Actually Typora shows checkbox always.
-                    // Let's replace providing we can edit.
-
-                    // Check content
                     const slice = view.state.sliceDoc(node.from, node.to);
-                    const isChecked =
-                      slice.includes("x") || slice.includes("X");
+                    const isChecked = slice.includes("x") || slice.includes("X");
 
-                    // If cursor is overlapping the marker, show text?
                     if (isCursorIn(node.from, node.to)) {
                       // Show text
                     } else {
@@ -535,7 +548,6 @@
 
                   // 3. Frontmatter Styling
                   if (node.name === "Frontmatter") {
-                    // Add a class to dim it
                     widgets.push(
                       Decoration.mark({ class: "cm-frontmatter" }).range(
                         node.from,
