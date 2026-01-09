@@ -23,6 +23,13 @@ pub enum ClientMessage {
     CreateDoc {
         name: String,
     },
+    RenameDoc {
+        old_path: String,
+        new_path: String,
+    },
+    DeleteDoc {
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

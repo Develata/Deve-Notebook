@@ -119,6 +119,65 @@ impl Ledger {
         Ok(())
     }
 
+    pub fn delete_doc(&self, path: &str) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+
+            // Get ID
+            let id_opt = p2d.get(path)?.map(|v| v.value());
+
+            if let Some(id) = id_opt {
+                p2d.remove(path)?;
+                d2p.remove(id)?;
+            }
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    pub fn rename_folder(&self, old_prefix: &str, new_prefix: &str) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+            
+            // 1. Collect all affected paths first (to avoid borrowing issues while writing)
+            let mut updates = Vec::new();
+            
+            // Scan through all paths (Inefficient for huge DB, but OK for MVP)
+            // Ideally use range query if paths were keys, but p2d key is string.
+            // Range scan? old_prefix..old_prefix+1? String range scan is possible in redb.
+            // But let's just iter for now or use range.
+            // p2d.range(old_prefix..)?
+            
+            for item in p2d.iter()? {
+                let (path_guard, id_guard) = item?;
+                let path = path_guard.value();
+                let id = id_guard.value();
+                
+                // Check if path is exactly old_prefix (if it was a file, but handled elsewhere)
+                // or starts with old_prefix + / or \
+                if path == old_prefix || path.starts_with(&format!("{}/", old_prefix)) || path.starts_with(&format!("{}\\", old_prefix)) {
+                     // Calculate new path
+                     let suffix = &path[old_prefix.len()..];
+                     let new_path = format!("{}{}", new_prefix, suffix);
+                     updates.push((path.to_string(), new_path, id));
+                }
+            }
+            
+            // 2. Apply updates
+            for (old, new, id) in updates {
+                p2d.remove(&*old)?;
+                p2d.insert(&*new, id)?;
+                d2p.insert(id, &*new)?;
+            }
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
     pub fn append_op(&self, entry: &LedgerEntry) -> Result<u64> {
         let write_txn = self.db.begin_write()?;
         let seq = {

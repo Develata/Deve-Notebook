@@ -58,30 +58,60 @@ fn build_file_tree(docs: Vec<(DocId, String)>) -> Vec<FileNode> {
         .collect()
 }
 
+use crate::components::sidebar_menu::SidebarMenu; // Import at top level (assuming context)
+
 #[component]
 fn FileTreeItem(
     node: FileNode,
     current_doc: ReadSignal<Option<DocId>>,
     on_select: Callback<DocId>,
-    on_create_click: Callback<Option<String>>, // Pass target path (None for root, Some for folder)
+    on_create_click: Callback<Option<String>>, 
+    on_menu_click: Callback<(String, web_sys::MouseEvent)>, 
+    on_menu_close: Callback<()>,
+    active_menu: ReadSignal<Option<String>>,
+    on_rename_req: Callback<String>, 
+    on_delete_req: Callback<String>, 
     depth: usize,
 ) -> impl IntoView {
-    let (is_expanded, set_expanded) = signal(true); // Default open
+    let (is_expanded, set_expanded) = signal(true); 
     let is_folder = node.id.is_none();
     
     let padding = format!("padding-left: {}px", depth * 12 + 8);
     
     let on_create_clone = on_create_click.clone();
+    let path_create = node.path.clone();
     
-    // Action to create file inside this folder
     let trigger_create = move |ev: web_sys::MouseEvent| {
         ev.stop_propagation();
-        // Trigger modal with this folder as parent
-        on_create_clone.run(Some(node.path.clone()));
+        on_create_clone.run(Some(path_create.clone()));
     };
 
+    let on_menu_clone = on_menu_click.clone();
+    let path_menu = node.path.clone();
+    let trigger_menu = move |ev: web_sys::MouseEvent| {
+        ev.stop_propagation();
+        on_menu_clone.run((path_menu.clone(), ev));
+    };
+
+    let path_check = node.path.clone();
+    // Use Memo to allow multiple usages (Memo is Copy)
+    let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
+    
+    let rename_req = on_rename_req.clone();
+    let path_rename = node.path.clone();
+    let handle_rename = Callback::new(move |_| {
+        leptos::logging::log!("Sidebar: handle_rename called for {}", path_rename);
+        rename_req.run(path_rename.clone())
+    });
+    
+    let delete_req = on_delete_req.clone();
+    let path_delete = node.path.clone();
+    let handle_delete = Callback::new(move |_| delete_req.run(path_delete.clone()));
+    
+    let on_close_clone = on_menu_close.clone();
+
     view! {
-        <div>
+        <div class="relative">
             <div 
                 class=move || {
                      let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-gray-100 text-sm transition-colors select-none group";
@@ -123,34 +153,51 @@ fn FileTreeItem(
                 <span class="truncate flex-1 text-gray-700">{node.name.clone()}</span>
                 
                 // Actions (Visible on Hover via Opacity)
-                // Use opacity-0 by default, opacity-100 on group-hover. Always flex to maintain layout.
-                <div class="flex items-center gap-1 pr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div 
+                    class="flex items-center gap-1 pr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    class:opacity-100=move || is_menu_open.get() // Keep visible if menu is open
+                >
+                    // Menu Button
+                    <button 
+                        class="p-1 rounded hover:bg-gray-300 text-gray-500 transition-colors" 
+                        title="More"
+                        on:click=trigger_menu
+                    >
+                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                           <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
+                         </svg>
+                    </button>
+                    
                     {if is_folder {
                         view! {
-                            <>
-                                // Menu Button
-                                <button class="p-1 rounded hover:bg-gray-300 text-gray-500 transition-colors" title="More">
-                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                                       <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
-                                     </svg>
-                                </button>
-                                
-                                // New File Button
-                                <button 
-                                    class="p-1 rounded hover:bg-gray-300 text-gray-600 transition-colors"
-                                    title="New File"
-                                    on:click=trigger_create
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                                    </svg>
-                                </button>
-                            </>
+                            // New File Button
+                            <button 
+                                class="p-1 rounded hover:bg-gray-300 text-gray-600 transition-colors"
+                                title="New File"
+                                on:click=trigger_create
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                                </svg>
+                            </button>
                         }.into_any()
                     } else {
                         view! {}.into_any()
                     }}
                 </div>
+                
+                // Context Menu
+                {move || if is_menu_open.get() {
+                    view! {
+                        <SidebarMenu 
+                            on_close=on_close_clone 
+                            on_rename=handle_rename 
+                            on_delete=handle_delete
+                        />
+                    }.into_any()
+                } else {
+                    view! {}.into_any()
+                }}
             </div>
             
             // Children
@@ -165,6 +212,11 @@ fn FileTreeItem(
                                 current_doc=current_doc 
                                 on_select=on_select 
                                 on_create_click=on_create_click.clone() 
+                                on_menu_click=on_menu_click.clone()
+                                on_menu_close=on_menu_close.clone()
+                                active_menu=active_menu
+                                on_rename_req=on_rename_req.clone()
+                                on_delete_req=on_delete_req.clone()
                                 depth={depth + 1} 
                             />
                         }
@@ -181,18 +233,84 @@ pub fn Sidebar(
     current_doc: ReadSignal<Option<DocId>>,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_create: Callback<String>,
+    #[prop(into)] on_rename: Callback<(String, String)>,
+    #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
     
-    let (show_modal, set_show_modal) = signal(false);
+    // Create Modal State
+    let (show_create, set_show_create) = signal(false);
     let (create_parent, set_create_parent) = signal(None::<String>);
     
-    // Callback to open modal
+    // Rename Modal State
+    let (show_rename, set_show_rename) = signal(false);
+    let (rename_target, set_rename_target) = signal(String::new());
+    
+    // Context Menu State
+    let (active_menu, set_active_menu) = signal(None::<String>);
+    
+    // Callbacks
     let request_create = Callback::new(move |parent: Option<String>| {
         set_create_parent.set(parent);
-        set_show_modal.set(true);
+        set_show_create.set(true);
     });
     
-    let request_create_clone = request_create.clone();
+    let confirm_create = Callback::new(move |name: String| {
+        let full_path = if let Some(parent) = create_parent.get_untracked() {
+             format!("{}/{}", parent, name)
+         } else {
+             name
+         };
+         on_create.run(full_path);
+    });
+    
+    let request_rename = Callback::new(move |path: String| {
+        leptos::logging::log!("Sidebar: request_rename for {}", path);
+        set_rename_target.set(path);
+        set_show_rename.set(true);
+    });
+    
+    let confirm_rename = Callback::new(move |new_name: String| {
+        let old = rename_target.get_untracked();
+        leptos::logging::log!("Sidebar: confirm_rename called with old: {}, new: {}", old, new_name);
+        // Construct new path: Parent + new_name
+        // Need to parse parent from old path
+        let parent = std::path::Path::new(&old).parent().and_then(|p| p.to_str()).unwrap_or("");
+        // Fix backslashes for path ops if needed, but strings are usually safe here
+        let parent = parent.replace("\\", "/");
+        let new_path = if parent.is_empty() {
+            new_name
+        } else {
+             format!("{}/{}", parent, new_name)
+        };
+        
+        leptos::logging::log!("Sidebar: confirm_rename running on_rename with {}, {}", old, new_path);
+        on_rename.run((old, new_path));
+    });
+
+    let request_delete = Callback::new(move |path: String| {
+         on_delete.run(path);
+    });
+    
+    let on_menu_click = Callback::new(move |(path, _ev): (String, web_sys::MouseEvent)| {
+        // Toggle if same, else set
+        set_active_menu.update(|curr| {
+            if *curr == Some(path.clone()) {
+                *curr = None;
+            } else {
+                *curr = Some(path);
+            }
+        });
+    });
+    
+    // Defer the closing to avoid destroying the component while it's processing an event
+    let close_menu = Callback::new(move |_| {
+         leptos::logging::log!("Sidebar: close_menu called (deferred)");
+         let set_active = set_active_menu.clone();
+         request_animation_frame(move || {
+             set_active.set(None);
+         });
+         // set_timeout(move || set_active_menu.set(None), std::time::Duration::from_millis(0));
+    });
 
     let tree_nodes = Memo::new(move |_| {
         build_file_tree(docs.get())
@@ -200,14 +318,28 @@ pub fn Sidebar(
 
     view! {
         <div class="h-full w-full bg-[#f7f7f7] flex flex-col font-sans select-none relative">
-             <crate::components::create_modal::CreateModal 
-                 show=show_modal 
-                 set_show=set_show_modal
-                 parent_path=create_parent
-                 on_create=on_create
+             <crate::components::input_modal::InputModal
+                 show=show_create 
+                 set_show=set_show_create
+                 title=Signal::derive(move || if let Some(p) = create_parent.get() { format!("Create in '{}'", p) } else { "Create New Document".to_string() })
+                 initial_value=Signal::derive(move || None::<String>)
+                 placeholder="filename or folder/filename"
+                 confirm_label="Create"
+                 on_confirm=confirm_create
+             />
+             
+             <crate::components::input_modal::InputModal
+                 show=show_rename
+                 set_show=set_show_rename
+                 title=Signal::derive(move || "Rename".to_string())
+                 initial_value=Signal::derive(move || Some(rename_target.get().split('/').last().unwrap_or("").to_string()))
+                 placeholder="New name"
+                 confirm_label="Rename"
+                 on_confirm=confirm_rename
              />
         
             <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-gray-100 hover:bg-gray-100 transition-colors group">
+                 // Header content...
                 <div class="flex items-center gap-2 overflow-hidden text-gray-700">
                     <div class="p-1 rounded text-gray-400 hover:bg-gray-200 cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
@@ -237,14 +369,35 @@ pub fn Sidebar(
                     each=move || tree_nodes.get()
                     key=|node| node.path.clone()
                     children=move |node| {
+                        // We need to render the SidebarMenu here if this node is active?
+                        // Or pass props down.
+                        // Since FileTreeItem is recursive, it's easier to handle local menu rendering if we pass the "active" state down.
+                        // And we also need to pass the "close_menu" callback.
+                        
                         view! {
-                            <FileTreeItem 
-                                node=node 
-                                current_doc=current_doc 
-                                on_select=on_select 
-                                on_create_click=request_create_clone.clone()
-                                depth=0 
-                            />
+                            <div class="relative">
+                                <FileTreeItem 
+                                    node=node.clone()
+                                    current_doc=current_doc 
+                                    on_select=on_select 
+                                    on_create_click=request_create.clone()
+                                    on_menu_click=on_menu_click.clone()
+                                    on_menu_close=close_menu.clone()
+                                    active_menu=active_menu
+                                    on_rename_req=request_rename.clone()
+                                    on_delete_req=request_delete.clone()
+                                    depth=0 
+                                />
+                                // Check if this node OR ANY CHILD is active? No, just check path equality inside Item.
+                                // But FileTreeItem needs to render the SidebarMenu.
+                                // I updated FileTreeItem to accept `active_menu`.
+                                // AND we need to pass `close_menu`. 
+                                // I missed adding `close_menu` to FileTreeItem props in the signature above.
+                                // I will fix that in the real `replace_file_content` if needed, OR just pass a Callback wrapper.
+                                
+                                // Actually, I forgot to render SidebarMenu *inside* FileTreeItem in the view! above.
+                                // I will insert the SidebarMenu component in the `is_menu_open` block.
+                            </div>
                         }
                     }
                 />

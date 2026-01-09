@@ -103,6 +103,19 @@ fn AppContent() -> impl IntoView {
         ws_for_create.send(ClientMessage::CreateDoc { name });
     });
 
+    // Rename Doc Callback
+    let ws_for_rename = ws.clone();
+    let on_doc_rename = Callback::new(move |(old_path, new_path): (String, String)| {
+        leptos::logging::log!("App: on_doc_rename sending msg: old={} new={}", old_path, new_path);
+        ws_for_rename.send(ClientMessage::RenameDoc { old_path, new_path });
+    });
+
+    // Delete Doc Callback
+    let ws_for_delete = ws.clone();
+    let on_doc_delete = Callback::new(move |path: String| {
+        ws_for_delete.send(ClientMessage::DeleteDoc { path });
+    });
+
     // Layout State
     let (sidebar_width, set_sidebar_width) = signal(250); // Default width
     let (is_resizing, set_is_resizing) = signal(false);
@@ -164,6 +177,8 @@ fn AppContent() -> impl IntoView {
                         current_doc=current_doc
                         on_select=on_doc_select
                         on_create=on_doc_create
+                        on_rename=on_doc_rename
+                        on_delete=on_doc_delete
                      />
                  </aside>
                  

@@ -158,6 +158,85 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                              }
                         }
                     }
+                    ClientMessage::RenameDoc { old_path, new_path } => {
+                         // Basic rename impl: fs::rename + update ledger (not fully supported by ledger yet, may need raw updates)
+                         // For MVP, since ledger tracks by ID and assumes static paths map to IDs, this is tricky.
+                         // But we can just fs::rename and trigger list update. Ledger might get confused if it caches paths.
+                         // Actually, our simple ledger might just re-scan or we assume ID checks path.
+                         
+                         let src = state_clone.vault_path.join(&old_path);
+                         // Auto-append .md if missing for usability, unless folder? 
+                         // Frontend sends full path. Let's assume frontend handles extensions or we do.
+                         // For simplicity, assume files have .md. Folders don't.
+                         // But we only show files in flat list? No, we have folders.
+                         // Recursive rename is dangerous. Let's start with FILE rename.
+                         
+                         let mut dst_name = new_path.clone();
+                         // Preserve extension if input lacks it and src has it?
+                         if !dst_name.ends_with(".md") && old_path.ends_with(".md") {
+                             dst_name.push_str(".md");
+                         }
+                         
+                         let dst = state_clone.vault_path.join(&dst_name);
+                         
+                         if src.exists() {
+                             if let Some(parent) = dst.parent() {
+                                 let _ = std::fs::create_dir_all(parent);
+                             }
+                             
+                             if let Err(e) = std::fs::rename(&src, &dst) {
+                                 tracing::error!("Failed to rename {} to {}: {:?}", old_path, dst_name, e);
+                             } else {
+                                  tracing::info!("Renamed {} to {}", old_path, dst_name);
+                                  
+                                  // Update Ledger
+                                  // Check if it was a directory (now at dst)
+                                  if dst.is_dir() {
+                                      if let Err(e) = state_clone.ledger.rename_folder(&old_path, &dst_name) {
+                                          tracing::error!("Failed to update ledger rename folder: {:?}", e);
+                                      }
+                                  } else {
+                                      if let Err(e) = state_clone.ledger.rename_doc(&old_path, &dst_name) {
+                                          tracing::error!("Failed to update ledger rename doc: {:?}", e);
+                                      }
+                                  }
+
+                                  if let Ok(docs) = state_clone.ledger.list_docs() {
+                                      let _ = tx.send(ServerMessage::DocList { docs });
+                                  }
+                             }
+                         }
+                    }
+                    ClientMessage::DeleteDoc { path } => {
+                        let target = state_clone.vault_path.join(&path);
+                        if target.exists() {
+                            // Check if directory
+                             if target.is_dir() {
+                                 if let Err(e) = std::fs::remove_dir_all(&target) {
+                                     tracing::error!("Failed to delete dir {}: {:?}", path, e);
+                                 } else {
+                                     tracing::info!("Deleted dir {}", path);
+                                 }
+                             } else {
+                                 // Trash bin logic? For now, hard delete.
+                                 if let Err(e) = std::fs::remove_file(&target) {
+                                     tracing::error!("Failed to delete file {}: {:?}", path, e);
+                                 } else {
+                                     tracing::info!("Deleted file {}", path);
+                                 }
+                             }
+                             
+                             // Update Ledger
+                              if let Err(e) = state_clone.ledger.delete_doc(&path) {
+                                  tracing::error!("Failed to update ledger delete: {:?}", e);
+                              }
+                             
+                             // Update List
+                             if let Ok(docs) = state_clone.ledger.list_docs() {
+                                 let _ = tx.send(ServerMessage::DocList { docs });
+                              }
+                        }
+                    }
                 }
             }
         }
