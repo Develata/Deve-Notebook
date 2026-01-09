@@ -100,7 +100,6 @@ fn AppContent() -> impl IntoView {
     // Create Doc Callback
     let ws_for_create = ws.clone();
     let on_doc_create = Callback::new(move |name: String| {
-        leptos::logging::log!("App: Sending CreateDoc for {}", name);
         ws_for_create.send(ClientMessage::CreateDoc { name });
     });
 

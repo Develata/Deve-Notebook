@@ -116,22 +116,30 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                         if !filename.ends_with(".md") {
                             filename.push_str(".md");
                         }
-                        // Basic Sanitization (prevent directory traversal)
-                        let filename = std::path::Path::new(&filename)
-                            .file_name()
-                            .map(|f| f.to_string_lossy().to_string())
-                            .unwrap_or_else(|| "untitled.md".to_string());
+                        
+                        // Prevent directory traversal (basic check)
+                        if filename.contains("..") || filename.starts_with('/') || filename.contains('\\') {
+                             tracing::error!("Invalid filename: {}", filename);
+                             return; 
+                        }
                             
                         let path = state_clone.vault_path.join(&filename);
                         
+                        // Ensure parent directory exists
+                        if let Some(parent) = path.parent() {
+                            if let Err(e) = std::fs::create_dir_all(parent) {
+                                tracing::error!("Failed to create directories: {:?}", e);
+                                return;
+                            }
+                        }
+
                         if path.exists() {
                              // Already exists? Just register/get ID
-                             if let Ok(doc_id) = state_clone.ledger.create_docid(&filename) {
+                             if let Ok(_doc_id) = state_clone.ledger.create_docid(&filename) {
                                   // Send updated list
                                   if let Ok(docs) = state_clone.ledger.list_docs() {
                                       let _ = tx.send(ServerMessage::DocList { docs });
                                   }
-                                  // Optionally open it? Frontend can request OpenDoc.
                              }
                         } else {
                              // New file: Write headers or empty

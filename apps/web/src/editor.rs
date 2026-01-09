@@ -195,18 +195,30 @@ pub fn Editor(
     });
     
     view! {
-        <div class="relative w-full h-full">
+        // Main container: Relative for positioning playback, 100% size
+        <div class="relative w-full h-full flex flex-col overflow-hidden">
+            // Editor Area: Flex-1 to take available space, Overflow-auto handled by CodeMirror? 
+            // Actually, for CodeMirror to scroll internally, we usually give it height: 100%.
+            // But we want the Playback to be an overlay at bottom.
+            
             <div 
                 node_ref=editor_ref
-                class="w-full h-full min-h-[500px] border border-gray-300 bg-white shadow-sm pb-16"
+                class="w-full flex-1 border border-gray-300 bg-white shadow-sm overflow-hidden"
+                // CodeMirror will attach here. We need styles to ensure it fills this.
             >
             </div>
             
-            <crate::components::playback::PlaybackController 
-                max_version=local_version
-                current_version=playback_version
-                on_change=on_playback_change
-            />
+            // Playback: Absolute bottom, or just flex item?
+            // User complained it "scrolls with page". Fixed position is safer for "always visible".
+            // But absolute bottom of "h-full" container works if container doesn't scroll.
+            
+            <div class="absolute bottom-4 left-4 right-4 z-10">
+                <crate::components::playback::PlaybackController 
+                    max_version=local_version
+                    current_version=playback_version
+                    on_change=on_playback_change
+                />
+            </div>
         </div>
     }
 }

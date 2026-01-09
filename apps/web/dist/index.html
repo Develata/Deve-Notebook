@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deve-Note</title>
-    <link rel="stylesheet" href="/tailwind-4dde9f84fb3ad203.css" integrity="sha384-rcssCdqc7TPfrty2+d2AhxNDyXB34+DoiyZtDaLCDNFcF0xgHHUbqBY61M5tc7Bm"/>
+    <link rel="stylesheet" href="/tailwind-d7d789398e86acd7.css" integrity="sha384-0obhF7xkL5oCLqRLbxfNthqinufmbQU18Z+TnPqcUTXVy4mQW7fbOJ9IUIuGGTB3"/>
     <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -103,7 +103,7 @@
     <script type="module">
       // 3. Import from Bare Specifiers
       import { EditorView } from "@codemirror/view";
-      import { EditorState } from "@codemirror/state";
+      import { EditorState, StateField } from "@codemirror/state";
       import { keymap, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor, lineNumbers, highlightActiveLineGutter } from "@codemirror/view";
       import { markdown } from "@codemirror/lang-markdown";
       import { syntaxTree, defaultHighlightStyle, syntaxHighlighting, bracketMatching } from "@codemirror/language";
@@ -139,9 +139,11 @@
 
       const style = document.createElement('style');
       style.textContent = `
+        .cm-editor { height: 100%; } 
+        .cm-scroller { overflow: auto; }
         .cm-content .cm-heading-1 { font-size: 2.0em; font-weight: bold; margin-top: 0.5em; }
         .cm-content .cm-heading-2 { font-size: 1.5em; font-weight: bold; margin-top: 0.5em; }
-        .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; padding: 2rem; max-width: 800px; margin: 0 auto; }
+        .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; padding: 2rem; max-width: 800px; margin: 0 auto; padding-bottom: 5rem; } /* Padding for playback */
         .cm-syntax-hidden { display: none !important; }
         .cm-math-widget { display: inline-block; background: #eee; padding: 0 4px; border-radius: 4px; cursor: pointer; }
         .cm-math-widget.cm-block-math { display: block; text-align: center; margin: 1em 0; }
@@ -172,67 +174,51 @@
         }
       }
 
-      // --- Math Plugin (Regex-based) ---
-      const mathPlugin = ViewPlugin.fromClass(class {
-        constructor(view) { this.decorations = this.compute(view); }
-        update(update) { 
-            if (update.docChanged || update.viewportChanged || update.selectionSet) {
-                this.decorations = this.compute(update.view); 
+      // --- Math Plugin (StateField-based to allow multi-line replacement) ---
+      const mathStateField = StateField.define({
+        create(state) {
+            return computeMathDecorations(state);
+        },
+        update(decorations, transaction) {
+            if (transaction.docChanged || transaction.selection) {
+                return computeMathDecorations(transaction.state);
             }
-        }
-        compute(view) {
+            return decorations;
+        },
+        provide: f => EditorView.decorations.from(f)
+      });
+
+      function computeMathDecorations(state) {
             let widgets = [];
-            let doc = view.state.doc.sliceString(0, view.state.doc.length); // Get all text (optimize for large docs later if needed)
-            let selection = view.state.selection.main;
+            let doc = state.doc.toString();
+            let selection = state.selection.main;
             
-            // Regex for Block $$...$$ and Inline $...$ (Basic)
-            // Note: JS Regex stateful loops
             const regexBlock = /\$\$([\s\S]*?)\$\$/g;
             const regexInline = /\$([^$\n]+?)\$/g;
-
-            // Helper to check cursor collision
             const isCursorIn = (from, to) => selection.head >= from && selection.head <= to;
 
-            // 1. Find Block Math
             let match;
+            // 1. Block Math
             while ((match = regexBlock.exec(doc)) !== null) {
                 let from = match.index;
                 let to = match.index + match[0].length;
                 let content = match[1];
-                
                 if (!isCursorIn(from, to)) {
                     widgets.push(Decoration.replace({ widget: new MathWidget(content, true) }).range(from, to));
                 }
             }
-
-            // 2. Find Inline Math (simple, non-nested)
-            // Reset lastIndex not needed because we use new regex or string match logic logic? 
-            // Actually reusing regex object requires reset if we break loop, but here we run to finish.
-            // CAUTION: regexInline might match inside code blocks or other things. 
-            // Ideally we check syntaxTree for existing "Code" nodes to skip, but for now simple Regex is "Phase 1" enough.
+            // 2. Inline Math
             while ((match = regexInline.exec(doc)) !== null) {
                 let from = match.index;
                 let to = match.index + match[0].length;
                 let content = match[1];
-                
-                // Avoid overlap with already found block math (simple collision check)
-                // Actually regexInline won't match $$ because it excludes $ inside group 1, wait.
-                // $...$ regex might match parts of $$...$$ if not careful.
-                // Simple fix: If it's already covered by a widget, skip?
-                // But replacing logic handles it. 
-                // Let's assume user doesn't nest weirdly for now.
-                
                 if (!isCursorIn(from, to)) {
                     widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
                 }
             }
-            
-            // Sort widgets just in case
             widgets.sort((a, b) => a.from - b.from);
-            
             return Decoration.set(widgets);
-        }
-      }, { decorations: v => v.decorations });
+      }
 
       // Hybrid Plugin
       const hybridPlugin = ViewPlugin.fromClass(class {
@@ -283,7 +269,7 @@
                 ...manualBasicSetup,
                 markdown(),
                 hybridPlugin,
-                mathPlugin,
+                mathStateField,
                 EditorView.updateListener.of((v) => {
                     if (window._isRemote) return;
                     if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
@@ -309,13 +295,13 @@
         if (req.element) window._realInit(req.element, req.onUpdate);
       }
     </script>
-  <link rel="modulepreload" href="/deve_web-e0b9a35bb76c7d79.js" crossorigin="anonymous" integrity="sha384-R3QmoEQJhj46+QWB06zoc3e4efVjRwLHmkpOzRvxGbLUCb3YLlxUcllKFcLyUknL"><link rel="preload" href="/deve_web-e0b9a35bb76c7d79_bg.wasm" crossorigin="anonymous" integrity="sha384-3Uwl09TPgnRwUB/DIEU+ds8/ZcXHg/Ohgu2nbGRar25/6dcc61jeT2nS8iB3TH6X" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/deve_web-8a9c0975dac6f543.js" crossorigin="anonymous" integrity="sha384-jcUboz1M0likU9UiksBzlezD6cYse5PauTGm6bwsP2JFU2jSsvLAKXGUTNWWcxQl"><link rel="preload" href="/deve_web-8a9c0975dac6f543_bg.wasm" crossorigin="anonymous" integrity="sha384-f59DdhyQyqYIzx3Rhtf6s7hqGvc2agM9mkvRO916id3ukhr9K+sEEvSAhmS2X39K" as="fetch" type="application/wasm"></head>
   <body>
     <div id="loading-overlay">Initializing Hybrid Components...</div>
   
 <script type="module">
-import init, * as bindings from '/deve_web-e0b9a35bb76c7d79.js';
-const wasm = await init({ module_or_path: '/deve_web-e0b9a35bb76c7d79_bg.wasm' });
+import init, * as bindings from '/deve_web-8a9c0975dac6f543.js';
+const wasm = await init({ module_or_path: '/deve_web-8a9c0975dac6f543_bg.wasm' });
 
 
 window.wasmBindings = bindings;
