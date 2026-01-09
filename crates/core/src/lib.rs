@@ -5,5 +5,7 @@ pub mod models;
 pub mod vfs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod watcher;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sync;
 pub mod state;
 pub mod protocol;

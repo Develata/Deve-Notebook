@@ -11,16 +11,20 @@ pub mod ws;
 
 pub struct AppState {
     pub ledger: Arc<Ledger>,
+    pub sync_manager: Arc<deve_core::sync::SyncManager>,
     pub tx: broadcast::Sender<ServerMessage>,
     pub vault_path: std::path::PathBuf,
 }
 
-pub async fn start_server(ledger: Ledger, vault_path: std::path::PathBuf, port: u16) -> anyhow::Result<()> {
+pub async fn start_server(ledger: Arc<Ledger>, vault_path: std::path::PathBuf, port: u16) -> anyhow::Result<()> {
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
     
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(ledger.clone(), vault_path.clone()));
+
     let app_state = Arc::new(AppState { 
-        ledger: Arc::new(ledger),
+        ledger: ledger.clone(), // Clone the Arc
+        sync_manager,
         tx,
         vault_path,
     });

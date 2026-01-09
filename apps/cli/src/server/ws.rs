@@ -58,9 +58,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
         if let Message::Text(text) = msg {
             if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
                 match client_msg {
-                    ClientMessage::Edit { doc_id, op, client_id } => {
-                       // tracing::info!("Received Edit for Doc {}: {:?}", doc_id, op);
-                       
+                     ClientMessage::Edit { doc_id, op, client_id } => {
                        let entry = LedgerEntry {
                            doc_id,
                            op: op.clone(),
@@ -77,30 +75,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                                    client_id 
                                });
                                
-                               // [Critical Fix] Persistence: Write to Disk
-                               // Since this is the Source of Truth for *edits* originating from the Client,
-                               // we must flush to disk so the file system reflects the change.
-                               // 1. Get Path
-                               if let Ok(Some(path_str)) = state_clone.ledger.get_path_by_docid(doc_id) {
-                                   let file_path = state_clone.vault_path.join(&path_str);
-                                   
-                                   // 2. Get Full History & Reconstruct
-                                   // Optimization: In a real system, we'd apply the Op to a cached snapshot.
-                                   // Here, we reconstruct from scratch for correctness.
-                                   if let Ok(ops) = state_clone.ledger.get_ops(doc_id) {
-                                       let ledger_ops: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
-                                       let content = deve_core::state::reconstruct_content(&ledger_ops);
-                                       
-                                       // 3. Write Atomic (or simple write)
-                                       // We use simple write. The Watcher might see this and trigger an event.
-                                       // We rely on the Debounce/Checksum logic in the Watcher to ignore it 
-                                       // if the content matches what we just wrote.
-                                       if let Err(e) = std::fs::write(&file_path, content) {
-                                            tracing::error!("Failed to persist to disk: {:?}", e);
-                                       } else {
-                                            tracing::info!("Persisted doc {} to {:?}", doc_id, file_path);
-                                       }
-                                   }
+                               // [Persistence via SyncManager]
+                               if let Err(e) = state_clone.sync_manager.persist_doc(doc_id) {
+                                   tracing::error!("SyncManager failed to persist doc {}: {:?}", doc_id, e);
                                }
                            }
                            Err(e) => {
@@ -122,78 +99,26 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                     ClientMessage::ListDocs => {
                          if let Ok(docs) = state_clone.ledger.list_docs() {
                              let msg = ServerMessage::DocList { docs };
-                             // TODO: Optimization: Use split sender to reply only to the requester.
-                             // Currently broadcasting to all clients (inefficient + privacy leak).
                              let _ = tx.send(msg);
                          }
                     }
-                    ClientMessage::OpenDoc { doc_id } => {
-                         tracing::info!("OpenDoc Request for DocID: {}", doc_id);
-                         let mut entries_with_seq = state_clone.ledger.get_ops(doc_id).unwrap_or_default();
-                         tracing::info!("Ledger Ops Count: {}", entries_with_seq.len());
-                         
-                         // Reconstruct current content to check if it's empty
-                         let ops_check: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
-                         let current_content = deve_core::state::reconstruct_content(&ops_check);
-                         tracing::info!("Current Reconstructed Content Length: {}", current_content.len());
+                     ClientMessage::OpenDoc { doc_id } => {
+                          tracing::info!("OpenDoc Request for DocID: {}", doc_id);
+                          
+                          // [Reconciliation via SyncManager]
+                          if let Err(e) = state_clone.sync_manager.reconcile_doc(doc_id) {
+                              tracing::error!("SyncManager reconcile failed: {:?}", e);
+                          }
 
-                         // Sync from Disk if App Content is empty BUT Disk Content exists (Manual Edit / Desync)
-                         if current_content.trim().is_empty() {
-                             tracing::info!("Content empty, attempting disk sync...");
-                             match state_clone.ledger.get_path_by_docid(doc_id) {
-                                 Ok(Some(path_str)) => {
-                                     tracing::info!("Found Path for DocID: {}", path_str);
-                                     let file_path = state_clone.vault_path.join(&path_str);
-                                     tracing::info!("Checking File Path: {:?}", file_path);
-                                     
-                                     if file_path.exists() && file_path.is_file() {
-                                          match std::fs::read_to_string(&file_path) {
-                                              Ok(disk_content) => {
-                                                  tracing::info!("Disk Content Length: {}", disk_content.len());
-                                                  if !disk_content.trim().is_empty() {
-                                                      tracing::info!("Importing content from disk for doc {} ({} bytes)", doc_id, disk_content.len());
-                                                      // Create Initial Op
-                                                      use deve_core::models::Op;
-                                                      let op = Op::Insert { pos: 0, content: disk_content };
-                                                      let entry = LedgerEntry {
-                                                          doc_id,
-                                                          op: op.clone(),
-                                                          timestamp: chrono::Utc::now().timestamp_millis(),
-                                                      };
-                                                      
-                                                      // Append to Ledger
-                                                      match state_clone.ledger.append_op(&entry) {
-                                                          Ok(seq) => {
-                                                              tracing::info!("Successfully appended Op seq: {}", seq);
-                                                              entries_with_seq.push((seq, entry));
-                                                          },
-                                                          Err(e) => tracing::error!("Failed to append op: {:?}", e),
-                                                      }
-                                                  } else {
-                                                      tracing::info!("Disk content is also empty.");
-                                                  }
-                                              },
-                                              Err(e) => tracing::error!("Failed to read file: {:?}", e),
-                                          }
-                                     } else {
-                                         tracing::warn!("File does not exist or is not a file: {:?}", file_path);
-                                     }
-                                 },
-                                 Ok(None) => tracing::warn!("No path found for DocID: {}", doc_id),
-                                 Err(e) => tracing::error!("Ledger error getting path: {:?}", e),
-                             }
-                         } else {
-                             tracing::info!("Content not empty, skipping disk sync.");
-                         }
-
-                         let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
-                         let content = deve_core::state::reconstruct_content(&ops);
-                         let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-                         
-                         tracing::info!("Sending Snapshot: Content Len {}, Version {}", content.len(), version);
-                         let snapshot = ServerMessage::Snapshot { doc_id, content, version };
-                         let _ = tx.send(snapshot);
-                    }
+                          // Return Snapshot from Ledger (Truth)
+                          let entries_with_seq = state_clone.ledger.get_ops(doc_id).unwrap_or_default();
+                          let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
+                          let final_content = deve_core::state::reconstruct_content(&ops);
+                          let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                          
+                          let snapshot = ServerMessage::Snapshot { doc_id, content: final_content, version };
+                          let _ = tx.send(snapshot);
+                     }
                     ClientMessage::CreateDoc { name } => {
                         let mut filename = name.clone();
                         if !filename.ends_with(".md") {
@@ -288,6 +213,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                                       let _ = tx.send(ServerMessage::DocList { docs });
                                   }
                              }
+                         } else {
+                             tracing::warn!("Rename failed: Source does not exist: {:?}", src);
                          }
                     }
                     ClientMessage::DeleteDoc { path } => {
@@ -308,16 +235,18 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                                      tracing::info!("Deleted file {}", path);
                                  }
                              }
+                        } else {
+                            tracing::warn!("File to delete not found: {:?}, removing from ledger anyway.", target);
+                        }
                              
-                             // Update Ledger
-                              if let Err(e) = state_clone.ledger.delete_doc(&path) {
-                                  tracing::error!("Failed to update ledger delete: {:?}", e);
-                              }
-                             
-                             // Update List
-                             if let Ok(docs) = state_clone.ledger.list_docs() {
-                                 let _ = tx.send(ServerMessage::DocList { docs });
-                              }
+                        // Update Ledger ALWAYS
+                        if let Err(e) = state_clone.ledger.delete_doc(&path) {
+                            tracing::error!("Failed to update ledger delete: {:?}", e);
+                        }
+                        
+                        // Update List
+                        if let Ok(docs) = state_clone.ledger.list_docs() {
+                            let _ = tx.send(ServerMessage::DocList { docs });
                         }
                     }
                 }

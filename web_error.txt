@@ -1,0 +1,39 @@
+    Checking deve_web v0.0.1 (E:\gitclone\Deve-Note\apps\web)
+warning: unused import: `leptos::prelude::*`
+ --> apps\web\src\i18n.rs:1:5
+  |
+1 | use leptos::prelude::*;
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0308]: mismatched types
+  --> apps\web\src\editor\mod.rs:44:33
+   |
+44 |                     max_version=local_version
+   |                                 ^^^^^^^^^^^^^ expected `ReadSignal<u64>`, found `Signal<u64>`
+   |
+   = note: expected struct `leptos::prelude::ReadSignal<u64>`
+              found struct `leptos::prelude::Signal<u64>`
+
+error[E0308]: mismatched types
+  --> apps\web\src\editor\mod.rs:45:37
+   |
+45 |                     current_version=playback_version
+   |                                     ^^^^^^^^^^^^^^^^ expected `ReadSignal<u64>`, found `Signal<u64>`
+   |
+   = note: expected struct `leptos::prelude::ReadSignal<u64>`
+              found struct `leptos::prelude::Signal<u64>`
+
+error[E0308]: mismatched types
+  --> apps\web\src\editor\mod.rs:46:31
+   |
+46 |                     on_change=on_playback_change
+   |                               ^^^^^^^^^^^^^^^^^^ expected trait `Fn(u64) + std::marker::Send + std::marker::Sync`, found trait `Fn(u64)`
+   |
+   = note: expected struct `Box<(dyn Fn(u64) + std::marker::Send + std::marker::Sync + 'static)>`
+              found struct `Box<dyn Fn(u64)>`
+
+For more information about this error, try `rustc --explain E0308`.
+warning: `deve_web` (bin "deve_web") generated 1 warning
+error: could not compile `deve_web` (bin "deve_web") due to 3 previous errors; 1 warning emitted

@@ -103,7 +103,6 @@ impl Ledger {
             let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
 
             // Get ID
-            // Get ID and drop the guard immediately
             let id_opt = p2d.get(old_path)?.map(|v| v.value());
 
             if let Some(id) = id_opt {
@@ -113,6 +112,8 @@ impl Ledger {
                 p2d.insert(new_path, id)?;
                 // Update reverse mapping
                 d2p.insert(id, new_path)?;
+            } else {
+                return Err(anyhow::anyhow!("Document not found in ledger: {}", old_path));
             }
         }
         write_txn.commit()?;

@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deve-Note</title>
-    <link rel="stylesheet" href="/tailwind-b149e4b12ff01a21.css" integrity="sha384-hBJHzO2sjbU32WU2MayDR4yM3Xj0mGigbFALuDlyH1usqKKR8tt80IxDKnewK8+9"/>
+    <link rel="stylesheet" href="/tailwind-3373d023c6641de5.css" integrity="sha384-6xtDa9kx3FHIA6a0eN7vSE4nE1RJAfao40/j1b0NsV0FCjAibq6wJ3+5x5pnkHxz"/>
+    <link rel="stylesheet" href="/codemirror-747437e657642378.css" integrity="sha384-tqV7Y2LtR9iZwdnKtF9xAtHxp/OQsucagqNbTnI2JYpQ1kzehcHI4WQGaTqTcovR"/>
+    <!-- Copy the adapter file directly to root -->
+    
     <!-- KaTeX -->
     <link
       rel="stylesheet"
@@ -12,35 +15,28 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
-    <style>
-      #loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #f8fafc;
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: sans-serif;
-        color: #64748b;
-      }
-      .hidden {
-        display: none !important;
-      }
-    </style>
     <script>
       // 0. Global Error Handler
-      window.onerror = function (msg, url, line, col, error) {
-        console.error("Global Error:", msg, url, line, col, error);
-        const div = document.getElementById("loading-overlay");
-        if (div) {
-          div.innerHTML = `<span style="color:red">JS Error: ${msg}</span>`;
-          div.classList.remove("hidden");
+      window.logToOverlay = (msg, isError = false) => {
+        const el = document.getElementById('loading-overlay');
+        if (el) {
+           // Append simple line
+           const line = document.createElement('div');
+           if (isError) line.style.color = 'red';
+           line.innerText = msg;
+           el.appendChild(line);
         }
+        console.log("[Overlay]", msg);
       };
+
+      window.onerror = function (msg, url, line, col, error) {
+        window.logToOverlay(`Global Error: ${msg} @ ${line}:${col}`, true);
+        return false;
+      };
+      
+      window.addEventListener("unhandledrejection", function(event) {
+        window.logToOverlay(`Unhandled Rejection: ${event.reason}`, true);
+      });
 
       // 1. Synchronous Bridge
       window._editor_queue = [];
@@ -49,6 +45,7 @@
       window._cm_loaded = false;
 
       window.setupCodeMirror = function (element, onUpdate) {
+        window.logToOverlay("Rust called setupCodeMirror");
         if (window._cm_loaded && window._realInit) {
           window._realInit(element, onUpdate);
         } else {
@@ -108,7 +105,7 @@
       };
     </script>
 
-    <!-- 2. IMPORT MAP: The Holy Grail for Version Resolution -->
+    <!-- 2. IMPORT MAP -->
     <script type="importmap">
       {
         "imports": {
@@ -137,482 +134,61 @@
       }
     </script>
 
+    <!-- 3. Module Initialization -->
     <script type="module">
-      // 3. Import from Bare Specifiers
-      import { EditorView } from "@codemirror/view";
-      import { EditorState, StateField } from "@codemirror/state";
-      import {
-        keymap,
-        highlightSpecialChars,
-        drawSelection,
-        dropCursor,
-        rectangularSelection,
-        crosshairCursor,
-        lineNumbers,
-        highlightActiveLineGutter,
-      } from "@codemirror/view";
-      import { markdown } from "@codemirror/lang-markdown";
-      import {
-        syntaxTree,
-        defaultHighlightStyle,
-        syntaxHighlighting,
-        bracketMatching,
-      } from "@codemirror/language";
-      import {
-        defaultKeymap,
-        history,
-        historyKeymap,
-      } from "@codemirror/commands";
-      // import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"; // Removed to avoid map error
-      import { Decoration, ViewPlugin, WidgetType } from "@codemirror/view";
+      window.logToOverlay("Module Script Started. Importing adapter...");
 
-      console.log("Modules Loaded via ImportMap");
-
-      // Custom Basic Setup since we are importing manually
-      const manualBasicSetup = [
-        lineNumbers(),
-        highlightActiveLineGutter(),
-        highlightSpecialChars(),
-        history(),
-        drawSelection(),
-        dropCursor(),
-        EditorState.allowMultipleSelections.of(true),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        bracketMatching(),
-        closeBrackets(), // Not mapped
-        rectangularSelection(),
-        crosshairCursor(),
-        keymap.of([
-          ...defaultKeymap,
-          ...historyKeymap,
-          // ...foldKeymap
-        ]),
-      ];
-
-      // Simplify for now to avoid missing imports
-      function closeBrackets() {
-        return [];
-      }
-
-      const style = document.createElement("style");
-      style.textContent = `
-        .cm-editor { height: 100%; } 
-        .cm-scroller { overflow: auto; }
-        .cm-content .cm-heading-1 { font-size: 2.0em; font-weight: bold; margin-top: 0.5em; }
-        .cm-content .cm-heading-2 { font-size: 1.5em; font-weight: bold; margin-top: 0.5em; }
-        .cm-content { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; padding: 2rem; max-width: 800px; margin: 0 auto; padding-bottom: 5rem; } /* Padding for playback */
-        .cm-syntax-hidden { display: none !important; }
-        .cm-math-widget { display: inline-block; background: #eee; padding: 0 4px; border-radius: 4px; cursor: pointer; }
-        .cm-math-widget.cm-block-math { display: block; text-align: center; margin: 1em 0; }
-        .cm-frontmatter { color: #94a3b8; font-family: monospace; font-size: 0.85em; display: block; background: #f8fafc; padding: 0.5rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem; }
-        .cm-checkbox-widget { margin-right: 0.5em; vertical-align: middle; }
-      `;
-      document.head.appendChild(style);
-
-      // --- Math Widget ---
-      class MathWidget extends WidgetType {
-        constructor(content, isBlock) {
-          super();
-          this.content = content;
-          this.isBlock = isBlock;
+      try {
+        const module = await import('./editor_adapter.js');
+        const initCodeMirror = module.initCodeMirror;
+        
+        if (typeof initCodeMirror !== 'function') {
+           throw new Error("initCodeMirror is not a function in exported module!");
         }
-        toDOM(view) {
-          let span = document.createElement("span");
-          span.className =
-            "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
+
+        window.logToOverlay("Adapter imported successfully.");
+
+        window._realInit = (element, onUpdate) => {
+          window.logToOverlay("Initializing Editor View");
+          // Hide overlay when editor actually initializes
+          const overlay = document.getElementById("loading-overlay");
+          if (overlay) overlay.classList.add("hidden");
+          
           try {
-            if (window.katex) {
-              window.katex.render(this.content, span, {
-                throwOnError: false,
-                displayMode: this.isBlock,
-              });
-            } else {
-              span.innerText =
-                (this.isBlock ? "$$" : "$") +
-                this.content +
-                (this.isBlock ? "$$" : "$"); // Fallback
-            }
-          } catch (e) {
-            span.innerText = "Error";
+             // Store the view globally for FFI
+             window._editor_view = initCodeMirror(element, onUpdate);
+          } catch(e) {
+             window.logToOverlay("Init call failed: " + e.message, true);
+             throw e;
           }
-          return span;
-        }
-      }
-
-      // --- Math Plugin (StateField-based to allow multi-line replacement) ---
-      const mathStateField = StateField.define({
-        create(state) {
-          return computeMathDecorations(state);
-        },
-        update(decorations, transaction) {
-          if (transaction.docChanged || transaction.selection) {
-            return computeMathDecorations(transaction.state);
-          }
-          return decorations;
-        },
-        provide: (f) => EditorView.decorations.from(f),
-      });
-
-      function computeMathDecorations(state) {
-        let widgets = [];
-        let doc = state.doc.toString();
-        let selection = state.selection.main;
-        
-        console.log("Computing Math Docs. Len:", doc.length);
-
-        const regexAnyDollar = /\$+/g;
-        
-        // Helper to check if escaped
-        const isEscaped = (index) => {
-            let backslashes = 0;
-            let i = index - 1;
-            while (i >= 0 && doc[i] === '\\') {
-                backslashes++;
-                i--;
-            }
-            return backslashes % 2 === 1;
         };
-
-        let match;
-        let tokens = []; // { type: '$'|'$$', index, len }
         
-        while ((match = regexAnyDollar.exec(doc)) !== null) {
-             const val = match[0];
-             const index = match.index;
-             
-             if (isEscaped(index)) {
-                 // Handle escape decoration logic
-                 // Keeping escape hiding logic:
-                 const end = index + val.length;
-                 const escapeStart = index - 1;
-                 if (escapeStart >= 0) {
-                      // Only hide if cursor is NOT touching
-                      const isCursorTouching = selection.head >= escapeStart && selection.head <= end;
-                      if (!isCursorTouching) {
-                          widgets.push(Decoration.replace({}).range(escapeStart, index));
-                      }
-                 }
-                 continue;
-             }
-             
-             if (val === '$$' || val === '$') {
-                 tokens.push({ type: val, index });
-             }
-        }
+        window._cm_loaded = true;
         
-        console.log("Math Tokens Found:", tokens.length);
-        
-        let mode = 'NONE';
-        let startToken = null;
-        
-        for (let i = 0; i < tokens.length; i++) {
-            let t = tokens[i];
-            
-            if (mode === 'NONE') {
-                if (t.type === '$$') {
-                    mode = 'BLOCK';
-                    startToken = t;
-                } else if (t.type === '$') {
-                    mode = 'INLINE';
-                    startToken = t;
-                }
-            } else if (mode === 'BLOCK') {
-                if (t.type === '$$') {
-                    // Close Block
-                    let from = startToken.index;
-                    let to = t.index + 2;
-                    let content = doc.slice(from + 2, t.index);
-                    
-                    const isCursorIn = selection.head >= from && selection.head <= to;
-                    if (!isCursorIn) {
-                        widgets.push(Decoration.replace({ widget: new MathWidget(content, true) }).range(from, to));
-                    }
-                    mode = 'NONE';
-                    startToken = null;
-                }
-            } else if (mode === 'INLINE') {
-                // Check for paragraph break validity immediately
-                // If the distance covers a \n\n, we abort immediately and reprocess this token as if mode was NONE.
-                let contentSoFar = doc.slice(startToken.index + 1, t.index);
-                if (contentSoFar.includes('\n\n')) {
-                    mode = 'NONE';
-                    startToken = null;
-                    i--; // Reprocess this token
-                    continue;
-                }
-
-                if (t.type === '$') {
-                    // Close Inline
-                    let from = startToken.index;
-                    let to = t.index + 1;
-                    let content = contentSoFar; // Optimized
-                    
-                    const isCursorIn = selection.head >= from && selection.head <= to;
-                    if (!isCursorIn) {
-                        widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
-                    }
-                    mode = 'NONE';
-                    startToken = null;
-                } 
-                // If it is $$, we usually ignore it in inline, BUT
-                // if we are here, it means we didn't have \n\n.
-                // So it's something like $ .. $$ .. $
-                // This is weird syntax. 
-                // If we assume $$ cannot appear in inline math:
-                // Then finding $$ means our Inline start was invalid (or we scan passed a close?).
-                // Let's assume strict: Inline math cannot contain $$.
-                // So if we find $$, we Abort Inline and Reprocess.
-                else if (t.type === '$$') {
-                    mode = 'NONE';
-                    startToken = null;
-                    i--; // Reprocess
-                    continue;
-                }
-            }
-        }
-        
-        widgets.sort((a, b) => a.from - b.from);
-        return Decoration.set(widgets);
-      }
-
-      // --- Checkbox Widget ---
-      class CheckboxWidget extends WidgetType {
-        constructor(checked, pos) {
-          super();
-          this.checked = checked;
-          this.pos = pos;
-        }
-        toDOM(view) {
-          let wrap = document.createElement("span");
-          wrap.className = "cm-checkbox-widget";
-          let input = document.createElement("input");
-          input.type = "checkbox";
-          input.checked = this.checked;
-          input.className = "cursor-pointer";
-
-          input.onclick = (e) => {
-            e.preventDefault(); // Prevent default double-toggle issues with CM
-            // Toggle logic: find position, replace '[ ]' with '[x]' or vice versa.
-            // Note: We need a way to send this back to CM.
-            // Simple heuristic: If we click, we toggle the char at pos+1.
-            // [ ] -> pos=start. '[ ' is pos, pos+1, ']' is pos+2.
-            // Actually TaskMarker is usually `[ ]` or `[x]`.
-            // Let's assume standard GFM: `[ ]` is 3 chars.
-
-            // We dispatch a transaction to toggle.
-            const valid = this.checked ? " " : "x";
-            // We need to find exactly where within the brackets the char is.
-            // The widget replaces the MARKER.
-            // If marker is `[ ]`, the char is at offset 1.
-            // So change at this.pos + 1.
-
-            // WARNING: This is a hacky direct dispatch. Ideally we use a command.
-            // But since we are in a widget, view is accessible via closure if we passed it?
-            // `toDOM` gives us `view`? No, only `view` is passed by CM if we use `ignoreEvent`.
-            // But `toDOM(view)` signature exists in recent CM6?
-            // Actually toDOM signature is `toDOM(view: EditorView): HTMLElement`. Yes.
-
-            view.dispatch({
-              changes: { from: this.pos + 1, to: this.pos + 2, insert: valid },
-            });
-          };
-          wrap.appendChild(input);
-          return wrap;
+        // Flush Queue
+        if (window._editor_queue.length > 0) {
+           window.logToOverlay(`Flushing ${window._editor_queue.length} queued items...`);
+           window._editor_queue.forEach(item => {
+              window._realInit(item.element, item.onUpdate);
+           });
+           window._editor_queue = [];
         }
 
-        ignoreEvent() {
-          return false;
-        } // Let input handle clicks? No, we needed onclick above.
-      }
-
-      // Hybrid Plugin
-      const hybridPlugin = ViewPlugin.fromClass(
-        class {
-          constructor(view) {
-            this.decorations = this.computeDecorations(view);
-          }
-          update(update) {
-            if (
-              update.docChanged ||
-              update.viewportChanged ||
-              update.selectionSet
-            ) {
-              this.decorations = this.computeDecorations(update.view);
-            }
-          }
-          computeDecorations(view) {
-            let widgets = [];
-            const { from, to } = view.viewport;
-            const selection = view.state.selection.main;
-            const doc = view.state.doc.toString();
-            const isCursorIn = (nodeFrom, nodeTo) =>
-              selection.head >= nodeFrom && selection.head <= nodeTo;
-
-            // 1. Compute Math Ranges to Ignore
-            const mathRanges = [];
-            const regexAnyDollar = /\$+/g;
-            let match;
-            
-             // Helper to check if escaped (Same logic as mathStateField)
-            const isEscaped = (index) => {
-                let backslashes = 0;
-                let i = index - 1;
-                while (i >= 0 && doc[i] === '\\') {
-                    backslashes++;
-                    i--;
-                }
-                return backslashes % 2 === 1;
-            };
-
-            let tokens = []; 
-            while ((match = regexAnyDollar.exec(doc)) !== null) {
-                 const val = match[0];
-                 const index = match.index;
-                 if (isEscaped(index)) continue;
-                 if (val === '$$' || val === '$') {
-                     tokens.push({ type: val, index });
-                 }
-            }
-            
-            let mode = 'NONE';
-            let startToken = null;
-            for (let t of tokens) {
-                if (mode === 'NONE') {
-                    if (t.type === '$$') {
-                        mode = 'BLOCK';
-                        startToken = t;
-                    } else if (t.type === '$') {
-                        mode = 'INLINE';
-                        startToken = t;
-                    }
-                } else if (mode === 'BLOCK') {
-                    if (t.type === '$$') {
-                        mathRanges.push({ from: startToken.index, to: t.index + 2 });
-                        mode = 'NONE';
-                        startToken = null;
-                    }
-                } else if (mode === 'INLINE') {
-                    if (t.type === '$') {
-                        mathRanges.push({ from: startToken.index, to: t.index + 1 });
-                        mode = 'NONE';
-                        startToken = null;
-                    }
-                }
-            }
-
-            const isInsideMath = (nodeFrom, nodeTo) => {
-                for (let r of mathRanges) {
-                    if (nodeFrom >= r.from && nodeTo <= r.to) return true;
-                }
-                return false;
-            };
-
-            try {
-              let tree = syntaxTree(view.state);
-
-              tree.iterate({
-                from,
-                to,
-                enter: (node) => {
-                  if (isInsideMath(node.from, node.to)) return;
-
-                  // 1. Hide Header/Emphasis Marks
-                  if (
-                    node.name === "HeaderMark" ||
-                    node.name === "EmphasisMark"
-                  ) {
-                    const parent = node.node.parent;
-                    if (parent && !isCursorIn(parent.from, parent.to)) {
-                      widgets.push(
-                        Decoration.replace({}).range(node.from, node.to)
-                      );
-                    }
-                  }
-
-                  // 2. Checkboxes for Tasks
-                  if (node.name === "TaskMarker") {
-                    const parent = node.node.parent;
-                    const slice = view.state.sliceDoc(node.from, node.to);
-                    const isChecked = slice.includes("x") || slice.includes("X");
-
-                    if (isCursorIn(node.from, node.to)) {
-                      // Show text
-                    } else {
-                      widgets.push(
-                        Decoration.replace({
-                          widget: new CheckboxWidget(isChecked, node.from),
-                        }).range(node.from, node.to)
-                      );
-                    }
-                  }
-
-                  // 3. Frontmatter Styling
-                  if (node.name === "Frontmatter") {
-                    widgets.push(
-                      Decoration.mark({ class: "cm-frontmatter" }).range(
-                        node.from,
-                        node.to
-                      )
-                    );
-                  }
-                },
-              });
-            } catch (e) {
-              console.warn(e);
-            }
-
-            return Decoration.set(widgets);
-          }
-        },
-        { decorations: (v) => v.decorations }
-      );
-
-      // Real Init
-      window._realInit = (element, onUpdate) => {
-        console.log("Initializing Editor");
-        if (!element) return;
-        element.innerHTML = "";
-
-        try {
-          const startState = EditorState.create({
-            doc: "# Loading...",
-            extensions: [
-              ...manualBasicSetup,
-              markdown(),
-              hybridPlugin,
-              mathStateField,
-              EditorView.updateListener.of((v) => {
-                if (window._isRemote) return;
-                if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
-              }),
-            ],
-          });
-
-          const view = new EditorView({
-            state: startState,
-            parent: element,
-          });
-
-          window._editor_view = view;
-          document.getElementById("loading-overlay").classList.add("hidden");
-        } catch (e) {
-          console.error("Init Error:", e);
-        }
-      };
-
-      window._cm_loaded = true;
-      while (window._editor_queue.length > 0) {
-        let req = window._editor_queue.shift();
-        if (req.element) window._realInit(req.element, req.onUpdate);
+      } catch (e) {
+        console.error("Failed to load editor adapter:", e);
+        window.logToOverlay("Failed to load editor adapter: " + e.message, true);
+        if (e.stack) window.logToOverlay(e.stack, true);
       }
     </script>
-  <link rel="modulepreload" href="/deve_web-7905eceacf5d0469.js" crossorigin="anonymous" integrity="sha384-h31iPzHOqaQdmrt/v2KGzJ2bkdkZcOhGbvMupVBI/XypVZVsCfLjkdVNf8+p652u"><link rel="preload" href="/deve_web-7905eceacf5d0469_bg.wasm" crossorigin="anonymous" integrity="sha384-EN8dxSvQwbHnxOla3uywYT5WJj7A0u6PjdBSuGyCEOhUJBv5kpqxMSV6mlCYu0OV" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/deve_web-309678c4d5c1153a.js" crossorigin="anonymous" integrity="sha384-fBDEga1HBwaK79Ui8KLxqZPdbDs/DB5kMewRQBVzizRP+rEcAsoriHnCvIRm4EdD"><link rel="preload" href="/deve_web-309678c4d5c1153a_bg.wasm" crossorigin="anonymous" integrity="sha384-kxsxET0K83Y3gRTUh/gmeq4ukRft4xIAwc7ftD/lzN1abZHk+h4vxAP3iSCQyhey" as="fetch" type="application/wasm"></head>
   <body>
-    <div id="loading-overlay">Initializing Hybrid Components...</div>
+    <div id="loading-overlay" style="display: flex; flex-direction: column; padding: 20px;">
+        <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">Initializing Hybrid Components...</div>
+    </div>
   
 <script type="module">
-import init, * as bindings from '/deve_web-7905eceacf5d0469.js';
-const wasm = await init({ module_or_path: '/deve_web-7905eceacf5d0469_bg.wasm' });
+import init, * as bindings from '/deve_web-309678c4d5c1153a.js';
+const wasm = await init({ module_or_path: '/deve_web-309678c4d5c1153a_bg.wasm' });
 
 
 window.wasmBindings = bindings;

@@ -1,0 +1,80 @@
+/* Loading Overlay */
+#loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #f8fafc;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  color: #64748b;
+}
+.hidden {
+  display: none !important;
+}
+
+/* CodeMirror Overrides */
+.cm-editor {
+  height: 100%;
+}
+.cm-scroller {
+  overflow: auto;
+}
+.cm-content .cm-heading-1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 0.5em;
+}
+.cm-content .cm-heading-2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 0.5em;
+}
+.cm-content {
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  padding-bottom: 5rem;
+} /* Padding for playback */
+.cm-syntax-hidden {
+  display: none !important;
+}
+
+/* Math Widget */
+.cm-math-widget {
+  display: inline-block;
+  background: #eee;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.cm-math-widget.cm-block-math {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+/* Frontmatter */
+.cm-frontmatter {
+  color: #94a3b8;
+  font-family: monospace;
+  font-size: 0.85em;
+  display: block;
+  background: #f8fafc;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 1rem;
+}
+
+/* Checkbox Widget */
+.cm-checkbox-widget {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}

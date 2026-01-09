@@ -4,28 +4,21 @@ use wasm_bindgen::prelude::*;
 use crate::api::WsService;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::models::DocId;
+use super::ffi::{setupCodeMirror, applyRemoteContent, applyRemoteOp, getEditorContent};
+use super::EditorStats;
 
-#[wasm_bindgen]
-extern "C" {
-    fn setupCodeMirror(element: &web_sys::HtmlElement, on_update: &Closure<dyn FnMut(String)>);
-    fn applyRemoteContent(text: &str);
-    fn applyRemoteOp(op_json: &str);
-    fn getEditorContent() -> String;
+pub struct EditorState {
+    pub is_playback: ReadSignal<bool>,
+    pub playback_version: ReadSignal<u64>,
+    pub local_version: ReadSignal<u64>, // Acts as max_version
+    pub on_playback_change: Box<dyn Fn(u64) + Send + Sync>, 
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EditorStats {
-    pub chars: usize,
-    pub words: usize,
-    pub lines: usize,
-}
-
-#[component]
-pub fn Editor(
+pub fn use_editor(
     doc_id: DocId,
-    #[prop(optional)] on_stats: Option<Callback<EditorStats>>,
-) -> impl IntoView {
-    let editor_ref = NodeRef::<Div>::new();
+    editor_ref: NodeRef<Div>,
+    on_stats: Option<Callback<EditorStats>>,
+) -> EditorState {
     let ws = use_context::<WsService>().expect("WsService should be provided");
     
     // Local state of the document to compute diffs against
@@ -193,32 +186,11 @@ pub fn Editor(
         // We do NOT update `content` signal here to avoid triggering diffs loops.
         // CodeMirror update via applyRemoteContent is enough for visual.
     });
-    
-    view! {
-        // Main container: Relative for positioning playback, 100% size
-        <div class="relative w-full h-full flex flex-col overflow-hidden">
-            // Editor Area: Flex-1 to take available space, Overflow-auto handled by CodeMirror? 
-            // Actually, for CodeMirror to scroll internally, we usually give it height: 100%.
-            // But we want the Playback to be an overlay at bottom.
-            
-            <div 
-                node_ref=editor_ref
-                class="w-full flex-1 border border-gray-300 bg-white shadow-sm overflow-hidden"
-                // CodeMirror will attach here. We need styles to ensure it fills this.
-            >
-            </div>
-            
-            // Playback: Absolute bottom, or just flex item?
-            // User complained it "scrolls with page". Fixed position is safer for "always visible".
-            // But absolute bottom of "h-full" container works if container doesn't scroll.
-            
-            <div class="absolute bottom-4 left-4 right-4 z-10">
-                <crate::components::playback::PlaybackController 
-                    max_version=local_version
-                    current_version=playback_version
-                    on_change=on_playback_change
-                />
-            </div>
-        </div>
+
+    EditorState {
+        is_playback: is_playback,
+        playback_version: playback_version,
+        local_version: local_version,
+        on_playback_change,
     }
 }
