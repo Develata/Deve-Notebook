@@ -36,57 +36,59 @@ pub fn InputModal(
     view! {
         <div 
             class=move || if show.get() { 
-                "fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm transition-opacity" 
+                "fixed inset-0 z-[60]" // Transparent overlay, high z-index
             } else { 
                 "hidden" 
             }
             on:click=move |_| set_show.set(false)
         >
+            // The Box - Top Center Floating (Matching CommandPalette)
             <div 
-                class="bg-white rounded-lg shadow-xl w-96 p-4 transform transition-all scale-100"
+                class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100"
                 on:click=move |ev| ev.stop_propagation()
             >
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">{move || title.get()}</h3>
-                    <button 
-                        class="text-gray-400 hover:text-gray-500"
-                        on:click=move |_| set_show.set(false)
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                // Title & Input Container
+                <div class="flex flex-col">
+                     // Optional Title Header (subtle)
+                     <div class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase bg-gray-50/50 border-b border-gray-100">
+                        {move || title.get()}
+                     </div>
+
+                     // Input Row
+                     <div class="p-3 flex items-center gap-3">
+                        // Icon (Generic Edit/Input)
+                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                    </button>
+                        
+                        <input 
+                            node_ref=input_ref
+                            type="text"
+                            class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
+                            placeholder=move || placeholder.get()
+                            prop:value=value
+                            on:input=move |ev| set_value.set(event_target_value(&ev))
+                            on:keydown=move |ev| {
+                                if ev.key() == "Enter" {
+                                    submit();
+                                } else if ev.key() == "Escape" {
+                                    set_show.set(false);
+                                }
+                            }
+                        />
+                     </div>
                 </div>
                 
-                <input 
-                    node_ref=input_ref
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder=move || placeholder.get()
-                    prop:value=value
-                    on:input=move |ev| set_value.set(event_target_value(&ev))
-                    on:keydown=move |ev| {
-                        if ev.key() == "Enter" {
-                            submit();
-                        } else if ev.key() == "Escape" {
-                            set_show.set(false);
-                        }
-                    }
-                />
-                
-                <div class="mt-4 flex justify-end gap-2">
-                    <button 
-                        class="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
-                        on:click=move |_| set_show.set(false)
-                    >
-                        "Cancel"
-                    </button>
-                    <button 
-                        class="px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
-                        on:click=move |_| submit()
-                    >
-                        {move || confirm_label.get()}
-                    </button>
+                // Footer Hints
+                <div class="bg-gray-50 px-4 py-2 border-t border-gray-100 flex justify-end items-center text-xs text-gray-500 gap-4">
+                     <span class="flex items-center gap-1">
+                        <kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Enter</kbd> 
+                        <span>{move || confirm_label.get()}</span>
+                     </span>
+                     <span class="flex items-center gap-1">
+                        <kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Esc</kbd> 
+                        <span>"Cancel"</span>
+                     </span>
                 </div>
             </div>
         </div>

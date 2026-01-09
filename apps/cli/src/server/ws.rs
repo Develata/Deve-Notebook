@@ -76,6 +76,32 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                                    seq,
                                    client_id 
                                });
+                               
+                               // [Critical Fix] Persistence: Write to Disk
+                               // Since this is the Source of Truth for *edits* originating from the Client,
+                               // we must flush to disk so the file system reflects the change.
+                               // 1. Get Path
+                               if let Ok(Some(path_str)) = state_clone.ledger.get_path_by_docid(doc_id) {
+                                   let file_path = state_clone.vault_path.join(&path_str);
+                                   
+                                   // 2. Get Full History & Reconstruct
+                                   // Optimization: In a real system, we'd apply the Op to a cached snapshot.
+                                   // Here, we reconstruct from scratch for correctness.
+                                   if let Ok(ops) = state_clone.ledger.get_ops(doc_id) {
+                                       let ledger_ops: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
+                                       let content = deve_core::state::reconstruct_content(&ledger_ops);
+                                       
+                                       // 3. Write Atomic (or simple write)
+                                       // We use simple write. The Watcher might see this and trigger an event.
+                                       // We rely on the Debounce/Checksum logic in the Watcher to ignore it 
+                                       // if the content matches what we just wrote.
+                                       if let Err(e) = std::fs::write(&file_path, content) {
+                                            tracing::error!("Failed to persist to disk: {:?}", e);
+                                       } else {
+                                            tracing::info!("Persisted doc {} to {:?}", doc_id, file_path);
+                                       }
+                                   }
+                               }
                            }
                            Err(e) => {
                                tracing::error!("Failed to persist op: {:?}", e);

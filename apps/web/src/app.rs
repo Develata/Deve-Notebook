@@ -87,14 +87,28 @@ fn AppContent() -> impl IntoView {
         set_current_doc.set(None);
     });
 
+    
+    // Open Doc By Path State
+    let (show_open_modal, set_show_open_modal) = signal(false);
+    
     let on_open = Callback::new(move |_| {
-         // Logic to find "index" or similar.
-         let list = docs.get_untracked();
-         if let Some((id, _)) = list.iter().find(|(_, name)| name == "index" || name == "index.md" || name == "Home") {
-             set_current_doc.set(Some(*id));
-         } else {
-             // Fallback: Just open the first one or do nothing?
-         }
+         set_show_open_modal.set(true);
+    });
+
+    let on_open_confirm = Callback::new(move |path: String| {
+        let normalized = path.replace('\\', "/");
+        // Auto-append .md if missing (assuming user might omit it)
+        let target = if normalized.ends_with(".md") { normalized.clone() } else { format!("{}.md", normalized) };
+        
+        // Find doc
+        let list = docs.get_untracked();
+        // Exact match first, then permissive
+        if let Some((id, _)) = list.iter().find(|(_, p)| p == &target || p == &normalized) {
+            set_current_doc.set(Some(*id));
+        } else {
+            leptos::logging::warn!("Document not found: {}", target);
+            // TODO: Toast "Not Found"
+        }
     });
 
     // Create Doc Callback
@@ -164,6 +178,17 @@ fn AppContent() -> impl IntoView {
             <crate::components::settings::SettingsModal 
                 show=show_settings 
                 set_show=set_show_settings
+            />
+
+            // Re-use InputModal for "Open Document"
+            <crate::components::input_modal::InputModal
+                show=show_open_modal
+                set_show=set_show_open_modal
+                title="Open Document"
+                placeholder="folder/file.md or folder\\file"
+                confirm_label="Open"
+                initial_value={None::<String>}
+                on_confirm=on_open_confirm
             />
 
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
