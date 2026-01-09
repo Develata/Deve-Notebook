@@ -2,7 +2,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::closure::Closure;
 
 #[wasm_bindgen]
-extern "C" {
+unsafe extern "C" {
     pub fn setupCodeMirror(element: &web_sys::HtmlElement, on_update: &Closure<dyn FnMut(String)>);
     
     pub fn applyRemoteContent(text: &str);

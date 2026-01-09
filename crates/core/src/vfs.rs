@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use crate::ledger::Ledger;
 use crate::models::FileNodeId;
-use file_id::FileId;
+
 
 pub struct Vfs {
     pub root: PathBuf,

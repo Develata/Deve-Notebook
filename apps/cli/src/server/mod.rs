@@ -8,6 +8,7 @@ use deve_core::protocol::ServerMessage;
 use std::net::SocketAddr;
 
 pub mod ws;
+pub mod handlers;
 
 pub struct AppState {
     pub ledger: Arc<Ledger>,
@@ -21,6 +22,24 @@ pub async fn start_server(ledger: Arc<Ledger>, vault_path: std::path::PathBuf, p
     let (tx, _rx) = broadcast::channel(100);
     
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new(ledger.clone(), vault_path.clone()));
+
+    // SPAWN WATCHER
+    let tx_for_watcher = tx.clone();
+    let sm_for_watcher = sync_manager.clone();
+    let vp_for_watcher = vault_path.clone();
+    
+    tokio::task::spawn_blocking(move || {
+        let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher)
+            .with_callback(move |msgs| {
+                for msg in msgs {
+                    let _ = tx_for_watcher.send(msg);
+                }
+            });
+            
+        if let Err(e) = watcher.watch() {
+            tracing::error!("Watcher failed: {:?}", e);
+        }
+    });
 
     let app_state = Arc::new(AppState { 
         ledger: ledger.clone(), // Clone the Arc
