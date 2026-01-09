@@ -4,6 +4,8 @@ use deve_core::models::DocId;
 
 pub mod ffi;
 pub mod hook;
+pub mod sync;
+pub mod playback;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EditorStats {
@@ -33,7 +35,7 @@ pub fn Editor(
     let on_toggle_outline = Callback::new(move |_| set_show_outline.update(|b| *b = !*b));
     
     let on_scroll = Callback::new(move |line: usize| {
-        ffi::scroll_global(line);
+        unsafe { ffi::scroll_global(line); }
     });
 
     view! {

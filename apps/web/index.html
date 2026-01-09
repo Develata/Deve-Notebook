@@ -21,7 +21,6 @@
       window.logToOverlay = (msg, isError = false) => {
         const el = document.getElementById('loading-overlay');
         if (el) {
-           // Append simple line
            const line = document.createElement('div');
            if (isError) line.style.color = 'red';
            line.innerText = msg;
@@ -39,12 +38,11 @@
         window.logToOverlay(`Unhandled Rejection: ${event.reason}`, true);
       });
 
-      // 1. Synchronous Bridge
+      // 1. Synchronous Bridge (Queue Logic only)
       window._editor_queue = [];
-      window._editor_view = null;
-      window._isRemote = false;
       window._cm_loaded = false;
 
+      // Rust calls this immediately, so we queue it until Modules are loaded
       window.setupCodeMirror = function (element, onUpdate) {
         window.logToOverlay("Rust called setupCodeMirror");
         if (window._cm_loaded && window._realInit) {
@@ -53,65 +51,12 @@
           window._editor_queue.push({ element, onUpdate });
         }
       };
-
-      window.applyRemoteContent = function (text) {
-        if (window._editor_view) {
-          window._isRemote = true;
-          try {
-            window._editor_view.dispatch({
-              changes: {
-                from: 0,
-                to: window._editor_view.state.doc.length,
-                insert: text,
-              },
-            });
-          } catch (e) {
-            console.error(e);
-          } finally {
-            window._isRemote = false;
-          }
-        }
-      };
-
-      window.getEditorContent = function () {
-        return window._editor_view
-          ? window._editor_view.state.doc.toString()
-          : "";
-      };
-
-      window.applyRemoteOp = function (op_json) {
-        if (window._editor_view) {
-          window._isRemote = true;
-          try {
-            const op = JSON.parse(op_json);
-            if (op.Insert) {
-              window._editor_view.dispatch({
-                changes: { from: op.Insert.pos, insert: op.Insert.content },
-              });
-            } else if (op.Delete) {
-              window._editor_view.dispatch({
-                changes: {
-                  from: op.Delete.pos,
-                  to: op.Delete.pos + op.Delete.len,
-                  insert: "",
-                },
-              });
-            }
-          } catch (e) {
-            console.error(e);
-          } finally {
-            window._isRemote = false;
-          }
-        }
-      };
-
-      window.scrollGlobal = function(line) {
-          if (window.scrollToLine && window._editor_view) {
-              window.scrollToLine(window._editor_view, line);
-          } else {
-              console.warn("scrollGlobal: View or Function not ready");
-          }
-      };
+      
+      // Safety Stubs
+      window.applyRemoteContent = () => console.warn("Too Early: applyRemoteContent");
+      window.applyRemoteOp = () => console.warn("Too Early: applyRemoteOp");
+      window.getEditorContent = () => "";
+      window.scrollGlobal = () => {};
     </script>
 
     <!-- 2. IMPORT MAP -->
@@ -148,25 +93,32 @@
       window.logToOverlay("Module Script Started. Importing adapter...");
 
       try {
+        // Import all adapter functions
         const module = await import('./js/editor_adapter.js');
-        const initCodeMirror = module.initCodeMirror;
-        window.scrollToLine = module.scrollToLine;
+        const { initCodeMirror, applyRemoteContent, applyRemoteOp, getEditorContent, scrollGlobal } = module;
         
+        // --- BINDING: Expose Module Functions to Global Scope for Rust FFI ---
+        window.applyRemoteContent = applyRemoteContent;
+        window.applyRemoteOp = applyRemoteOp;
+        window.getEditorContent = getEditorContent;
+        window.scrollGlobal = scrollGlobal;
+        // -------------------------------------------------------------------
+
         if (typeof initCodeMirror !== 'function') {
            throw new Error("initCodeMirror is not a function in exported module!");
         }
 
         window.logToOverlay("Adapter imported successfully.");
 
+        // Define the Real Init Bridge
         window._realInit = (element, onUpdate) => {
           window.logToOverlay("Initializing Editor View");
-          // Hide overlay when editor actually initializes
           const overlay = document.getElementById("loading-overlay");
           if (overlay) overlay.classList.add("hidden");
           
           try {
-             // Store the view globally for FFI
-             window._editor_view = initCodeMirror(element, onUpdate);
+             // Initialize. The View is now managed internally by the adapter.
+             initCodeMirror(element, onUpdate);
           } catch(e) {
              window.logToOverlay("Init call failed: " + e.message, true);
              throw e;

@@ -18,15 +18,18 @@ import {
 } from "@codemirror/language";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 
-// Import Extensions
 import { mathStateField } from "./extensions/math.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
 
-console.log("Modules Loaded via ES Imports in editor_adapter.js");
+console.log("Modules Loaded via ES Imports in editor_adapter.js (v2 - Adapter Pattern)");
+
+// --- Internal State ---
+let activeView = null;
+let isRemote = false;
 
 // --- Basic Setup ---
 function closeBrackets() {
-  return []; // Placeholder
+  return []; 
 }
 
 const manualBasicSetup = [
@@ -45,9 +48,9 @@ const manualBasicSetup = [
   keymap.of([...defaultKeymap, ...historyKeymap]),
 ];
 
-// --- Exported Init Function ---
+// --- Core Initialization ---
 export function initCodeMirror(element, onUpdate) {
-  console.log("Initializing Editor via Adapter (Modular)");
+  console.log("Initializing Editor via Adapter (Singleton)");
   if (!element) return;
   element.innerHTML = "";
 
@@ -61,7 +64,8 @@ export function initCodeMirror(element, onUpdate) {
         hybridPlugin,
         mathStateField,
         EditorView.updateListener.of((v) => {
-          if (window._isRemote) return;
+          // Internal Check: explicit isRemote flag
+          if (isRemote) return;
           if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
         }),
       ],
@@ -72,6 +76,11 @@ export function initCodeMirror(element, onUpdate) {
       parent: element,
     });
 
+    // Capture Singleton Instance
+    activeView = view;
+    // Expose for debugging if absolutely needed, but code should rely on exports
+    window._debug_view = view; 
+
     return view;
   } catch (e) {
     console.error("Init Error:", e);
@@ -79,21 +88,73 @@ export function initCodeMirror(element, onUpdate) {
   }
 }
 
-export function scrollToLine(view, lineNumber) {
-    if (!view || !view.state) return;
-    // Ensure line number is within bounds
-    const doc = view.state.doc;
+// --- Public API ---
+
+export function getEditorContent() {
+  return activeView ? activeView.state.doc.toString() : "";
+}
+
+export function applyRemoteContent(text) {
+  if (activeView) {
+    isRemote = true;
+    try {
+      activeView.dispatch({
+        changes: {
+          from: 0,
+          to: activeView.state.doc.length,
+          insert: text,
+        },
+      });
+    } catch (e) {
+      console.error("applyRemoteContent Error:", e);
+    } finally {
+      isRemote = false;
+    }
+  }
+}
+
+export function applyRemoteOp(op_json) {
+  if (activeView) {
+    isRemote = true;
+    try {
+      const op = JSON.parse(op_json);
+      if (op.Insert) {
+        activeView.dispatch({
+          changes: { from: op.Insert.pos, insert: op.Insert.content },
+        });
+      } else if (op.Delete) {
+        activeView.dispatch({
+          changes: {
+            from: op.Delete.pos,
+            to: op.Delete.pos + op.Delete.len,
+            insert: "",
+          },
+        });
+      }
+    } catch (e) {
+      console.error("applyRemoteOp Error:", e);
+    } finally {
+      isRemote = false;
+    }
+  }
+}
+
+export function scrollGlobal(lineNumber) {
+    if (!activeView || !activeView.state) return;
+    
+    // Internal impl of scrollToLine
+    const doc = activeView.state.doc;
     const lines = doc.lines;
     if (lineNumber < 1) lineNumber = 1;
     if (lineNumber > lines) lineNumber = lines;
 
     const line = doc.line(lineNumber);
     
-    view.dispatch({
+    activeView.dispatch({
         effects: [
             EditorView.scrollIntoView(line.from, { y: "start", yMargin: 20 })
         ],
         selection: { anchor: line.from }
     });
-    view.focus();
+    activeView.focus();
 }

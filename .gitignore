@@ -23,3 +23,18 @@ vault/
 dist
 
 repomix-output.xml
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.*
+
+# Misc
+tmp/
+*.swp
+*.swo
+.DS_Store

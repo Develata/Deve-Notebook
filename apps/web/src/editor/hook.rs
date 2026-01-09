@@ -2,10 +2,12 @@ use leptos::prelude::*;
 use leptos::html::Div;
 use wasm_bindgen::prelude::*;
 use crate::api::WsService;
-use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::protocol::ClientMessage;
 use deve_core::models::DocId;
-use super::ffi::{setupCodeMirror, applyRemoteContent, applyRemoteOp, getEditorContent};
+use super::ffi::{setupCodeMirror, applyRemoteContent, getEditorContent};
 use super::EditorStats;
+use super::sync;
+use super::playback;
 
 pub struct EditorState {
     pub content: ReadSignal<String>,
@@ -47,77 +49,26 @@ pub fn use_editor(
          ws_clone.send(ClientMessage::OpenDoc { doc_id });
     });
 
-    // Effect to handle incoming messages
+    // Effect to handle incoming messages (Delegated to sync module)
     let ws_clone_2 = ws.clone();
     Effect::new(move |_| {
          if let Some(msg) = ws_clone_2.msg.get() {
-             match msg {
-                 ServerMessage::Snapshot { doc_id: msg_doc_id, content: new_content, version } => {
-                     // Filter by DocId
-                     if msg_doc_id != doc_id { return; }
-                     
-                     leptos::logging::log!("Received Snapshot: {} chars, Ver: {}", new_content.len(), version);
-                     
-                     // Compute initial stats
-                     if let Some(cb) = on_stats {
-                         let lines = new_content.lines().count();
-                         let words = new_content.split_whitespace().count();
-                         cb.run(EditorStats { chars: new_content.len(), words, lines });
-                     }
-
-                     applyRemoteContent(&new_content);
-                     set_content.set(new_content);
-                     set_local_version.set(version);
-                     
-                     // Initialize playback range
-                     set_playback_version.set(version);
-                     
-                     // Request History
-                     ws_clone_2.send(ClientMessage::RequestHistory { doc_id });
-                 }
-                 ServerMessage::History { doc_id: msg_doc_id, ops } => {
-                     if msg_doc_id != doc_id { return; }
-                     leptos::logging::log!("Received History: {} ops", ops.len());
-                     set_history.set(ops);
-                 }
-                 ServerMessage::NewOp { doc_id: msg_doc_id, op, seq, client_id: origin_id } => {
-                     if msg_doc_id != doc_id { return; }
-                     
-                     let current_ver = local_version.get_untracked();
-                     if seq > current_ver {
-                         // Filter Echoes!
-                         if origin_id != client_id {
-                             if let Ok(json) = serde_json::to_string(&op) {
-                                 applyRemoteOp(&json);
-                             }
-                             // Update local content signal and stats
-                             let txt = getEditorContent();
-                             if let Some(cb) = on_stats {
-                                 let lines = txt.lines().count();
-                                 let words = txt.split_whitespace().count();
-                                 cb.run(EditorStats { chars: txt.len(), words, lines });
-                             }
-                             set_content.set(txt);
-                         }
-                         set_local_version.set(seq);
-                         
-                         // Append to History signal if valid
-                         set_history.update(|h| h.push((seq, op)));
-                         
-                         // Auto-advance playback if we are at the "head" (live)
-                         if !is_playback.get_untracked() {
-                            set_playback_version.set(seq);
-                         }
-                     }
-                 }
-                 _ => {}
-             }
+             sync::handle_server_message(
+                 msg,
+                 doc_id,
+                 client_id,
+                 &ws_clone_2,
+                 set_content,
+                 local_version,
+                 set_local_version,
+                 set_history,
+                 is_playback,
+                 set_playback_version,
+                 on_stats
+             );
          }
     });
 
-    // View Ref - wrap in SendJsValue
-    // REMOVED
-    
     Effect::new(move |_| {
         if let Some(element) = editor_ref.get() {
             let raw_element: &web_sys::HtmlElement = &element;
@@ -165,30 +116,17 @@ pub fn use_editor(
         }
     });
 
-    // Playback Logic
+    // Playback Logic (Delegated to playback module)
     let on_playback_change = Box::new(move |ver: u64| {
-        // If we move the slider, we set playback mode.
-        // If ver == local, we are "live", but maybe still considered in playback if manually dragging.
-        // Let's say if ver < local, it's Playback.
         let local = local_version.get_untracked();
-        let is_pb = ver < local;
-        set_is_playback.set(is_pb);
-        set_playback_version.set(ver);
-        
-        // Reconstruct
-        let hist = history.get_untracked();
-        // Filter history <= ver
-        let relevant_ops: Vec<deve_core::models::LedgerEntry> = hist.into_iter()
-            .filter(|(s, _)| *s <= ver)
-            .map(|(_, op)| deve_core::models::LedgerEntry {
-                 doc_id, op, timestamp: 0 // timestamp irrelevant for reconstruction
-            })
-            .collect();
-            
-        let reconstructed = deve_core::state::reconstruct_content(&relevant_ops);
-        applyRemoteContent(&reconstructed);
-        // We do NOT update `content` signal here to avoid triggering diffs loops.
-        // CodeMirror update via applyRemoteContent is enough for visual.
+        playback::handle_playback_change(
+            ver,
+            doc_id,
+            local,
+            history, 
+            set_is_playback,
+            set_playback_version
+        );
     });
 
     EditorState {
