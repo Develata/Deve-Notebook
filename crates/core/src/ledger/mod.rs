@@ -1,24 +1,10 @@
 use anyhow::Result;
-use redb::{Database, TableDefinition, ReadableTable};
+use redb::{Database, ReadableTable};
 use std::path::Path;
 use crate::models::{DocId, LedgerEntry, FileNodeId};
 
-// Table Definitions
-// DocId (u128) -> Path String
-const DOCID_TO_PATH: TableDefinition<u128, &str> = TableDefinition::new("docid_to_path");
-// Path String -> DocId (u128)
-const PATH_TO_DOCID: TableDefinition<&str, u128> = TableDefinition::new("path_to_docid");
-// FileNodeId (u128) -> DocId (u128) - For Rename Detection
-const INODE_TO_DOCID: TableDefinition<u128, u128> = TableDefinition::new("inode_to_docid");
-// Sequence (u64) -> LedgerEntry (Bytes)
-const LEDGER_OPS: TableDefinition<u64, &[u8]> = TableDefinition::new("ledger_ops");
-// DocId (u128) -> Vec<u64> (Sequence Numbers) - Secondary Index
-// Simpler: Just scan LEDGER_OPS? No, that's O(N). We need an index.
-// DocId + Seq -> ()?
-// Let's use a MultiMap equivalent? Redb supports Multimap? 
-// Redb 2.0 has MultimapTableDefinition.
-use redb::MultimapTableDefinition;
-const DOC_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("doc_ops");
+pub mod schema;
+use self::schema::*;
 
 pub struct Ledger {
     db: Database,
