@@ -372,6 +372,7 @@ export function initCodeMirror(element, onUpdate) {
       doc: "# Loading...",
       extensions: [
         ...manualBasicSetup,
+        EditorView.lineWrapping,
         markdown(),
         hybridPlugin,
         mathStateField,
