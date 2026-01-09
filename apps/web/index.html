@@ -6,26 +6,39 @@
     <title>Deve-Note</title>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
     <!-- KaTeX -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+    />
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
     <style>
-        #loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #f8fafc; z-index: 9999; display: flex;
-            align-items: center; justify-content: center;
-            font-family: sans-serif; color: #64748b;
-        }
-        .hidden { display: none !important; }
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f8fafc;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: sans-serif;
+        color: #64748b;
+      }
+      .hidden {
+        display: none !important;
+      }
     </style>
     <script>
       // 0. Global Error Handler
-      window.onerror = function(msg, url, line, col, error) {
+      window.onerror = function (msg, url, line, col, error) {
         console.error("Global Error:", msg, url, line, col, error);
-        const div = document.getElementById('loading-overlay');
+        const div = document.getElementById("loading-overlay");
         if (div) {
-            div.innerHTML = `<span style="color:red">JS Error: ${msg}</span>`;
-            div.classList.remove('hidden');
+          div.innerHTML = `<span style="color:red">JS Error: ${msg}</span>`;
+          div.classList.remove("hidden");
         }
       };
 
@@ -47,13 +60,25 @@
         if (window._editor_view) {
           window._isRemote = true;
           try {
-            window._editor_view.dispatch({ changes: { from: 0, to: window._editor_view.state.doc.length, insert: text } });
-          } catch (e) { console.error(e); } finally { window._isRemote = false; }
+            window._editor_view.dispatch({
+              changes: {
+                from: 0,
+                to: window._editor_view.state.doc.length,
+                insert: text,
+              },
+            });
+          } catch (e) {
+            console.error(e);
+          } finally {
+            window._isRemote = false;
+          }
         }
       };
 
       window.getEditorContent = function () {
-        return window._editor_view ? window._editor_view.state.doc.toString() : "";
+        return window._editor_view
+          ? window._editor_view.state.doc.toString()
+          : "";
       };
 
       window.applyRemoteOp = function (op_json) {
@@ -62,52 +87,82 @@
           try {
             const op = JSON.parse(op_json);
             if (op.Insert) {
-              window._editor_view.dispatch({ changes: { from: op.Insert.pos, insert: op.Insert.content } });
+              window._editor_view.dispatch({
+                changes: { from: op.Insert.pos, insert: op.Insert.content },
+              });
             } else if (op.Delete) {
-              window._editor_view.dispatch({ changes: { from: op.Delete.pos, to: op.Delete.pos + op.Delete.len, insert: "" } });
+              window._editor_view.dispatch({
+                changes: {
+                  from: op.Delete.pos,
+                  to: op.Delete.pos + op.Delete.len,
+                  insert: "",
+                },
+              });
             }
-          } catch (e) { console.error(e); } finally { window._isRemote = false; }
+          } catch (e) {
+            console.error(e);
+          } finally {
+            window._isRemote = false;
+          }
         }
       };
     </script>
-    
+
     <!-- 2. IMPORT MAP: The Holy Grail for Version Resolution -->
     <script type="importmap">
-    {
-      "imports": {
-        "@codemirror/state": "https://esm.sh/@codemirror/state@6.4.1?external=*",
-        "@codemirror/view": "https://esm.sh/@codemirror/view@6.26.1?external=*",
-        "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.1?external=*",
-        "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.5.0?external=*",
-        "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6?external=*",
-        "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.16.0?external=*",
-        "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.7.0?external=*",
-        "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.2.5?external=*",
-        "@codemirror/lang-html": "https://esm.sh/@codemirror/lang-html@6.4.9?external=*",
-        "@codemirror/lang-css": "https://esm.sh/@codemirror/lang-css@6.2.1?external=*",
-        "@codemirror/lang-javascript": "https://esm.sh/@codemirror/lang-javascript@6.2.2?external=*",
-        "@lezer/highlight": "https://esm.sh/@lezer/highlight@1.2.0?external=*",
-        "@lezer/common": "https://esm.sh/@lezer/common@1.2.1?external=*",
-        "@lezer/markdown": "https://esm.sh/@lezer/markdown@1.3.0?external=*",
-        "@lezer/html": "https://esm.sh/@lezer/html@1.3.6?external=*",
-        "@lezer/css": "https://esm.sh/@lezer/css@1.1.3?external=*",
-        "@lezer/javascript": "https://esm.sh/@lezer/javascript@1.4.14?external=*",
-        "@lezer/lr": "https://esm.sh/@lezer/lr@1.4.1?external=*",
-        "crelt": "https://esm.sh/crelt@1.0.6?external=*",
-        "style-mod": "https://esm.sh/style-mod@4.1.2?external=*",
-        "w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8?external=*"
+      {
+        "imports": {
+          "@codemirror/state": "https://esm.sh/@codemirror/state@6.4.1?external=*",
+          "@codemirror/view": "https://esm.sh/@codemirror/view@6.26.1?external=*",
+          "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.1?external=*",
+          "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.5.0?external=*",
+          "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6?external=*",
+          "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.16.0?external=*",
+          "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.7.0?external=*",
+          "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.2.5?external=*",
+          "@codemirror/lang-html": "https://esm.sh/@codemirror/lang-html@6.4.9?external=*",
+          "@codemirror/lang-css": "https://esm.sh/@codemirror/lang-css@6.2.1?external=*",
+          "@codemirror/lang-javascript": "https://esm.sh/@codemirror/lang-javascript@6.2.2?external=*",
+          "@lezer/highlight": "https://esm.sh/@lezer/highlight@1.2.0?external=*",
+          "@lezer/common": "https://esm.sh/@lezer/common@1.2.1?external=*",
+          "@lezer/markdown": "https://esm.sh/@lezer/markdown@1.3.0?external=*",
+          "@lezer/html": "https://esm.sh/@lezer/html@1.3.6?external=*",
+          "@lezer/css": "https://esm.sh/@lezer/css@1.1.3?external=*",
+          "@lezer/javascript": "https://esm.sh/@lezer/javascript@1.4.14?external=*",
+          "@lezer/lr": "https://esm.sh/@lezer/lr@1.4.1?external=*",
+          "crelt": "https://esm.sh/crelt@1.0.6?external=*",
+          "style-mod": "https://esm.sh/style-mod@4.1.2?external=*",
+          "w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8?external=*"
+        }
       }
-    }
     </script>
 
     <script type="module">
       // 3. Import from Bare Specifiers
       import { EditorView } from "@codemirror/view";
       import { EditorState, StateField } from "@codemirror/state";
-      import { keymap, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor, lineNumbers, highlightActiveLineGutter } from "@codemirror/view";
+      import {
+        keymap,
+        highlightSpecialChars,
+        drawSelection,
+        dropCursor,
+        rectangularSelection,
+        crosshairCursor,
+        lineNumbers,
+        highlightActiveLineGutter,
+      } from "@codemirror/view";
       import { markdown } from "@codemirror/lang-markdown";
-      import { syntaxTree, defaultHighlightStyle, syntaxHighlighting, bracketMatching } from "@codemirror/language";
-      import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+      import {
+        syntaxTree,
+        defaultHighlightStyle,
+        syntaxHighlighting,
+        bracketMatching,
+      } from "@codemirror/language";
+      import {
+        defaultKeymap,
+        history,
+        historyKeymap,
+      } from "@codemirror/commands";
       // import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"; // Removed to avoid map error
       import { Decoration, ViewPlugin, WidgetType } from "@codemirror/view";
 
@@ -122,7 +177,7 @@
         drawSelection(),
         dropCursor(),
         EditorState.allowMultipleSelections.of(true),
-        syntaxHighlighting(defaultHighlightStyle, {fallback: true}),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         bracketMatching(),
         closeBrackets(), // Not mapped
         rectangularSelection(),
@@ -131,13 +186,15 @@
           ...defaultKeymap,
           ...historyKeymap,
           // ...foldKeymap
-        ])
+        ]),
       ];
-      
-      // Simplify for now to avoid missing imports
-      function closeBrackets() { return []; } 
 
-      const style = document.createElement('style');
+      // Simplify for now to avoid missing imports
+      function closeBrackets() {
+        return [];
+      }
+
+      const style = document.createElement("style");
       style.textContent = `
         .cm-editor { height: 100%; } 
         .cm-scroller { overflow: auto; }
@@ -147,6 +204,8 @@
         .cm-syntax-hidden { display: none !important; }
         .cm-math-widget { display: inline-block; background: #eee; padding: 0 4px; border-radius: 4px; cursor: pointer; }
         .cm-math-widget.cm-block-math { display: block; text-align: center; margin: 1em 0; }
+        .cm-frontmatter { color: #94a3b8; font-family: monospace; font-size: 0.85em; display: block; background: #f8fafc; padding: 0.5rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1rem; }
+        .cm-checkbox-widget { margin-right: 0.5em; vertical-align: middle; }
       `;
       document.head.appendChild(style);
 
@@ -159,17 +218,23 @@
         }
         toDOM(view) {
           let span = document.createElement("span");
-          span.className = "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
+          span.className =
+            "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
           try {
             if (window.katex) {
-                window.katex.render(this.content, span, { 
-                    throwOnError: false, 
-                    displayMode: this.isBlock 
-                });
+              window.katex.render(this.content, span, {
+                throwOnError: false,
+                displayMode: this.isBlock,
+              });
             } else {
-                span.innerText = (this.isBlock ? "$$" : "$") + this.content + (this.isBlock ? "$$" : "$"); // Fallback
+              span.innerText =
+                (this.isBlock ? "$$" : "$") +
+                this.content +
+                (this.isBlock ? "$$" : "$"); // Fallback
             }
-          } catch(e) { span.innerText = "Error"; }
+          } catch (e) {
+            span.innerText = "Error";
+          }
           return span;
         }
       }
@@ -177,113 +242,347 @@
       // --- Math Plugin (StateField-based to allow multi-line replacement) ---
       const mathStateField = StateField.define({
         create(state) {
-            return computeMathDecorations(state);
+          return computeMathDecorations(state);
         },
         update(decorations, transaction) {
-            if (transaction.docChanged || transaction.selection) {
-                return computeMathDecorations(transaction.state);
-            }
-            return decorations;
+          if (transaction.docChanged || transaction.selection) {
+            return computeMathDecorations(transaction.state);
+          }
+          return decorations;
         },
-        provide: f => EditorView.decorations.from(f)
+        provide: (f) => EditorView.decorations.from(f),
       });
 
       function computeMathDecorations(state) {
-            let widgets = [];
-            let doc = state.doc.toString();
-            let selection = state.selection.main;
-            
-            const regexBlock = /\$\$([\s\S]*?)\$\$/g;
-            const regexInline = /\$([^$\n]+?)\$/g;
-            const isCursorIn = (from, to) => selection.head >= from && selection.head <= to;
+        let widgets = [];
+        let doc = state.doc.toString();
+        let selection = state.selection.main;
+        
+        // Match ANY dollar or pair of dollars.
+        // We match ALL $ or $$ occurrences and check context manually.
+        // But looping via regex is easier if we just match "$" or "$$".
+        // Let's use a simpler regex that finds any dollar sequence.
+        const regexAnyDollar = /\$+/g;
+        
+        // We keep track of potential "open" delimiters.
+        // Stack for inline: [pos]
+        // Stack for block: [pos]
+        // But actually, we just scan linearly.
+        
+        let match;
+        let lastClose = -1;
+        
+        // Helper to check if escaped
+        const isEscaped = (index) => {
+            let backslashes = 0;
+            let i = index - 1;
+            while (i >= 0 && doc[i] === '\\') {
+                backslashes++;
+                i--;
+            }
+            return backslashes % 2 === 1;
+        };
 
-            let match;
-            // 1. Block Math
-            while ((match = regexBlock.exec(doc)) !== null) {
-                let from = match.index;
-                let to = match.index + match[0].length;
-                let content = match[1];
-                if (!isCursorIn(from, to)) {
-                    widgets.push(Decoration.replace({ widget: new MathWidget(content, true) }).range(from, to));
+        // We collect all potential delimiters first
+        let tokens = []; // { type: '$'|'$$', index, len }
+        
+        while ((match = regexAnyDollar.exec(doc)) !== null) {
+             const val = match[0];
+             const index = match.index;
+             
+             // Check escape
+             if (isEscaped(index)) {
+                 // It IS escaped. e.g. \$ or \\\$
+                 // We should render it as just the dollar(s) text, hiding the last backslash.
+                 // The backslash is at index-1.
+                 // We add a decoration to replace "backslash + text" with "text".
+                 // BUT: We match "$+". If val is "$", repl range is [index-1, index+1], insert "$".
+                 
+                 // If cursor is NOT in range.
+                 const end = index + val.length;
+                 // Range of replacement: including the ONE escaping backslash.
+                 const escapeStart = index - 1;
+                 
+                 // Check if valid range
+                 if (escapeStart >= 0) {
+                     // Check cursor
+                     const isCursorTouching = selection.head >= escapeStart && selection.head <= end;
+                     if (!isCursorTouching) {
+                         // Replace `\$` with `$` Widget (text).
+                         // We construct a simple text replacement.
+                         // Or better: Replace range [index-1, index] (the backslash) with empty? 
+                         // No, Decoration.replace behavior deletes content.
+                         // If we replace [index-1, index] with "", the $ remains. Correct.
+                         widgets.push(Decoration.replace({}).range(escapeStart, index));
+                     }
+                 }
+                 continue; // Not a delimiter
+             }
+             
+             // If not escaped, it's a candidate
+             if (val === '$$' || val === '$') {
+                 tokens.push({ type: val, index });
+             }
+        }
+        
+        // Now Pair them
+        // Greedy pairing? 
+        // $$ ... $$ (Block)
+        // $ ... $ (Inline)
+        // Simple state machine:
+        // Mode: NONE, INLINE, BLOCK
+        
+        let mode = 'NONE'; // 'NONE', 'INLINE', 'BLOCK'
+        let startToken = null;
+        
+        for (let t of tokens) {
+            if (mode === 'NONE') {
+                if (t.type === '$$') {
+                    mode = 'BLOCK';
+                    startToken = t;
+                } else if (t.type === '$') {
+                    mode = 'INLINE';
+                    startToken = t;
+                }
+            } else if (mode === 'BLOCK') {
+                if (t.type === '$$') {
+                    // Close Block
+                    let from = startToken.index;
+                    let to = t.index + 2;
+                    let content = doc.slice(from + 2, t.index); // inner
+                    
+                    // Add Widget
+                    const isCursorIn = selection.head >= from && selection.head <= to;
+                    if (!isCursorIn) {
+                        widgets.push(Decoration.replace({ widget: new MathWidget(content, true) }).range(from, to));
+                    }
+                    mode = 'NONE';
+                    startToken = null;
+                }
+                // Ignore '$' inside block
+            } else if (mode === 'INLINE') {
+                if (t.type === '$') {
+                    // Close Inline
+                    let from = startToken.index;
+                    let to = t.index + 1;
+                    let content = doc.slice(from + 1, t.index);
+                    
+                    // Reject empty inline math $$, treated as empty math? Or just nothing?
+                    // Typically $ $ is valid empty math.
+                    // But we must check for newlines? Usually inline math doesn't span double newlines.
+                    if (content.includes('\n\n')) {
+                        // Invalid. Reset. 
+                        // Actually GFM behavior: the first $ was just a dollar.
+                        // We strictly should backtrack, but for this simple plugin, we might just invalid the pair.
+                        // Let's assume valid for now or reset mode?
+                        // If we reset, we lose the first $. Correct.
+                        mode = 'NONE';
+                        startToken = null;
+                        // Better: Re-process THIS token as potential start? 
+                        // e.g. $ foo \n\n $ bar.
+                        // First $ open. \n\n invalidates. This $ might be open for next?
+                        // Complexity high. Let's ignore newline check for MVP.
+                    } else {
+                        const isCursorIn = selection.head >= from && selection.head <= to;
+                        if (!isCursorIn) {
+                            widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
+                        }
+                        mode = 'NONE';
+                        startToken = null;
+                    }
+                } else if (t.type === '$$') {
+                    // Encountered $$ inside inline? 
+                    // Usually $..$$..$ -> The $$ is two dollars inside.
+                    // But wait, $$ token consumes the dollars.
+                    // If we see $$, it means we have $ ... $$
+                    // This is likely interpreted as $ ... $ $
+                    // So we close with first char of $$? 
+                    // Let's simplified: $$ breaks inline mode (invalidates it) or counts as closer?
+                    // Common mark: "A $ will NOT close if followed by digit" etc.
+                    // Let's keep it simple: $$ closes inline? No.
+                    // Let's ignore $$ inside inline for now, treat as content.
+                    // But we captured it as token.
+                    // If token is $$, maybe it's just two $'s content?
+                    // We skip it.
                 }
             }
-            // 2. Inline Math
-            while ((match = regexInline.exec(doc)) !== null) {
-                let from = match.index;
-                let to = match.index + match[0].length;
-                let content = match[1];
-                if (!isCursorIn(from, to)) {
-                    widgets.push(Decoration.replace({ widget: new MathWidget(content, false) }).range(from, to));
-                }
-            }
-            widgets.sort((a, b) => a.from - b.from);
-            return Decoration.set(widgets);
+        }
+        
+        widgets.sort((a, b) => a.from - b.from);
+        return Decoration.set(widgets);
+      }
+
+      // --- Checkbox Widget ---
+      class CheckboxWidget extends WidgetType {
+        constructor(checked, pos) {
+          super();
+          this.checked = checked;
+          this.pos = pos;
+        }
+        toDOM(view) {
+          let wrap = document.createElement("span");
+          wrap.className = "cm-checkbox-widget";
+          let input = document.createElement("input");
+          input.type = "checkbox";
+          input.checked = this.checked;
+          input.className = "cursor-pointer";
+
+          input.onclick = (e) => {
+            e.preventDefault(); // Prevent default double-toggle issues with CM
+            // Toggle logic: find position, replace '[ ]' with '[x]' or vice versa.
+            // Note: We need a way to send this back to CM.
+            // Simple heuristic: If we click, we toggle the char at pos+1.
+            // [ ] -> pos=start. '[ ' is pos, pos+1, ']' is pos+2.
+            // Actually TaskMarker is usually `[ ]` or `[x]`.
+            // Let's assume standard GFM: `[ ]` is 3 chars.
+
+            // We dispatch a transaction to toggle.
+            const valid = this.checked ? " " : "x";
+            // We need to find exactly where within the brackets the char is.
+            // The widget replaces the MARKER.
+            // If marker is `[ ]`, the char is at offset 1.
+            // So change at this.pos + 1.
+
+            // WARNING: This is a hacky direct dispatch. Ideally we use a command.
+            // But since we are in a widget, view is accessible via closure if we passed it?
+            // `toDOM` gives us `view`? No, only `view` is passed by CM if we use `ignoreEvent`.
+            // But `toDOM(view)` signature exists in recent CM6?
+            // Actually toDOM signature is `toDOM(view: EditorView): HTMLElement`. Yes.
+
+            view.dispatch({
+              changes: { from: this.pos + 1, to: this.pos + 2, insert: valid },
+            });
+          };
+          wrap.appendChild(input);
+          return wrap;
+        }
+
+        ignoreEvent() {
+          return false;
+        } // Let input handle clicks? No, we needed onclick above.
       }
 
       // Hybrid Plugin
-      const hybridPlugin = ViewPlugin.fromClass(class {
-        constructor(view) {
-          this.decorations = this.computeDecorations(view);
-        }
-        update(update) {
-          if (update.docChanged || update.viewportChanged || update.selectionSet) {
-            this.decorations = this.computeDecorations(update.view);
+      const hybridPlugin = ViewPlugin.fromClass(
+        class {
+          constructor(view) {
+            this.decorations = this.computeDecorations(view);
           }
-        }
-        computeDecorations(view) {
-          const widgets = [];
-          const { from, to } = view.viewport;
-          const selection = view.state.selection.main;
-          const isCursorIn = (nodeFrom, nodeTo) => selection.head >= nodeFrom && selection.head <= nodeTo;
-          
-          try {
+          update(update) {
+            if (
+              update.docChanged ||
+              update.viewportChanged ||
+              update.selectionSet
+            ) {
+              this.decorations = this.computeDecorations(update.view);
+            }
+          }
+          computeDecorations(view) {
+            const widgets = [];
+            const { from, to } = view.viewport;
+            const selection = view.state.selection.main;
+            const isCursorIn = (nodeFrom, nodeTo) =>
+              selection.head >= nodeFrom && selection.head <= nodeTo;
+
+            try {
               let tree = syntaxTree(view.state);
-              
+
               tree.iterate({
-                from, to,
+                from,
+                to,
                 enter: (node) => {
-                    if (node.name === "HeaderMark" || node.name === "EmphasisMark") {
-                        const parent = node.node.parent;
-                        if (parent && !isCursorIn(parent.from, parent.to)) {
-                            widgets.push(Decoration.replace({}).range(node.from, node.to));
-                        }
+                  // 1. Hide Header/Emphasis Marks
+                  if (
+                    node.name === "HeaderMark" ||
+                    node.name === "EmphasisMark"
+                  ) {
+                    const parent = node.node.parent;
+                    if (parent && !isCursorIn(parent.from, parent.to)) {
+                      widgets.push(
+                        Decoration.replace({}).range(node.from, node.to)
+                      );
                     }
-                }
+                  }
+
+                  // 2. Checkboxes for Tasks
+                  if (node.name === "TaskMarker") {
+                    // Node content is `[ ]` or `[x]`
+                    // We check if cursor is inside the Task (parent of marker)
+                    // If invalid parent, fallback to self.
+                    const parent = node.node.parent;
+                    // For checkboxes, we usually SHOW the widget even if cursor is there,
+                    // BUT standard hybrid hides markup only when not active.
+                    // Let's hide the `[ ]` and show widget unless cursor is *exactly* on it?
+                    // Actually Typora shows checkbox always.
+                    // Let's replace providing we can edit.
+
+                    // Check content
+                    const slice = view.state.sliceDoc(node.from, node.to);
+                    const isChecked =
+                      slice.includes("x") || slice.includes("X");
+
+                    // If cursor is overlapping the marker, show text?
+                    if (isCursorIn(node.from, node.to)) {
+                      // Show text
+                    } else {
+                      widgets.push(
+                        Decoration.replace({
+                          widget: new CheckboxWidget(isChecked, node.from),
+                        }).range(node.from, node.to)
+                      );
+                    }
+                  }
+
+                  // 3. Frontmatter Styling
+                  if (node.name === "Frontmatter") {
+                    // Add a class to dim it
+                    widgets.push(
+                      Decoration.mark({ class: "cm-frontmatter" }).range(
+                        node.from,
+                        node.to
+                      )
+                    );
+                  }
+                },
               });
-          } catch(e) { console.warn(e); }
-          
-          return Decoration.set(widgets);
-        }
-      }, { decorations: v => v.decorations });
+            } catch (e) {
+              console.warn(e);
+            }
+
+            return Decoration.set(widgets);
+          }
+        },
+        { decorations: (v) => v.decorations }
+      );
 
       // Real Init
       window._realInit = (element, onUpdate) => {
         console.log("Initializing Editor");
         if (!element) return;
-        element.innerHTML = '';
-        
+        element.innerHTML = "";
+
         try {
           const startState = EditorState.create({
             doc: "# Loading...",
             extensions: [
-                ...manualBasicSetup,
-                markdown(),
-                hybridPlugin,
-                mathStateField,
-                EditorView.updateListener.of((v) => {
-                    if (window._isRemote) return;
-                    if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
-                })
-            ]
+              ...manualBasicSetup,
+              markdown(),
+              hybridPlugin,
+              mathStateField,
+              EditorView.updateListener.of((v) => {
+                if (window._isRemote) return;
+                if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
+              }),
+            ],
           });
 
           const view = new EditorView({
             state: startState,
-            parent: element
+            parent: element,
           });
-          
+
           window._editor_view = view;
-          document.getElementById('loading-overlay').classList.add('hidden');
+          document.getElementById("loading-overlay").classList.add("hidden");
         } catch (e) {
           console.error("Init Error:", e);
         }
