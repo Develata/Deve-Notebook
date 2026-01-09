@@ -44,15 +44,17 @@ pub fn Editor(
             
             // Content Area (Flex Row)
             <div class="flex-1 flex overflow-hidden relative">
-                // Editor Area
-                <div 
-                    node_ref=editor_ref
-                    class="flex-1 border-r border-gray-200 bg-white shadow-sm overflow-hidden relative"
-                >
-                     // Toggle Outline Button (Floating top right of editor)
+                // Editor Wrapper
+                <div class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div 
+                        node_ref=editor_ref
+                        class="absolute inset-0"
+                    ></div>
+                    
+                     // Toggle Outline Button (Safe Sibling)
                      <button
                         on:click=move |_| on_toggle_outline.run(())
-                        class="absolute top-2 right-4 z-20 p-1 text-gray-400 hover:text-gray-600 bg-white/80 rounded"
+                        class="absolute top-2 right-4 z-50 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
                         title="Toggle Outline"
                      >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
