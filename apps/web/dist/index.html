@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/tailwind-6afcd0d088193187.css" integrity="sha384-BKGOAKIZqcKr7cVDwiZAsuhude07OVDcvUyKywxvcwpXvb82xEMA4yNgxdfgqETv"/>
     <link rel="stylesheet" href="/codemirror-747437e657642378.css" integrity="sha384-tqV7Y2LtR9iZwdnKtF9xAtHxp/OQsucagqNbTnI2JYpQ1kzehcHI4WQGaTqTcovR"/>
     <!-- Copy the adapter file directly to root -->
+    <!-- Copy the JS directory containing modules -->
     
     <!-- KaTeX -->
     <link
@@ -147,7 +148,7 @@
       window.logToOverlay("Module Script Started. Importing adapter...");
 
       try {
-        const module = await import('./editor_adapter.js');
+        const module = await import('./js/editor_adapter.js');
         const initCodeMirror = module.initCodeMirror;
         window.scrollToLine = module.scrollToLine;
         
@@ -189,7 +190,7 @@
         if (e.stack) window.logToOverlay(e.stack, true);
       }
     </script>
-  <link rel="modulepreload" href="/deve_web-20155cbb1993779d.js" crossorigin="anonymous" integrity="sha384-ERV2rcDyxLY2m++JOehEdQaPqwGIcRMArPzBJn0wgeVUORG6ncU8X/HU0gW2tk1X"><link rel="preload" href="/deve_web-20155cbb1993779d_bg.wasm" crossorigin="anonymous" integrity="sha384-LFC6hV4ilvmPpsPiMqZJm1O66Mz61zzRAbDQE/xQ/Rxd4kit7p0fAWfWZ2zAymrG" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/deve_web-20155cbb1993779d.js" crossorigin="anonymous" integrity="sha384-/5HIDqHcF3UZBJtBV69Ajd5SZX5aT/B3nkTwfgalY8EnoCdksmrtJd666ZbDOgep"><link rel="preload" href="/deve_web-20155cbb1993779d_bg.wasm" crossorigin="anonymous" integrity="sha384-h3xZAHHunMspQdv4YLiqlqbaZVRAFDXa6SuEOUgJsffNW7gVifZwVaN2INQMiTfx" as="fetch" type="application/wasm"></head>
   <body>
     <div id="loading-overlay" style="display: flex; flex-direction: column; padding: 20px;">
         <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">Initializing Hybrid Components...</div>

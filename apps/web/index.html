@@ -7,7 +7,8 @@
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
     <link data-trunk rel="css" href="style/codemirror.css" />
     <!-- Copy the adapter file directly to root -->
-    <link data-trunk rel="copy-file" href="editor_adapter.js" />
+    <!-- Copy the JS directory containing modules -->
+    <link data-trunk rel="copy-dir" href="js" />
     <!-- KaTeX -->
     <link
       rel="stylesheet"
@@ -147,7 +148,7 @@
       window.logToOverlay("Module Script Started. Importing adapter...");
 
       try {
-        const module = await import('./editor_adapter.js');
+        const module = await import('./js/editor_adapter.js');
         const initCodeMirror = module.initCodeMirror;
         window.scrollToLine = module.scrollToLine;
         
