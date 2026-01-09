@@ -19,7 +19,8 @@ struct TempNode {
 fn build_file_tree(docs: Vec<(DocId, String)>) -> Vec<FileNode> {
     let mut root = TempNode { id: None, children: std::collections::BTreeMap::new() };
     
-    for (id, path) in docs {
+    for (id, raw_path) in docs {
+        let path = raw_path.replace("\\", "/");
         let parts: Vec<&str> = path.split('/').collect();
         let mut current = &mut root;
         
