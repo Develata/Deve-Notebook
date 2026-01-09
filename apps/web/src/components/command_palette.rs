@@ -26,16 +26,20 @@ pub fn CommandPalette(
                 id: "settings", 
                 title_key: t::command_palette::open_settings,
                 action: Callback::new(move |_| {
-                    on_settings.run(());
-                    set_show.set(false);
+                    request_animation_frame(move || {
+                        on_settings.run(());
+                        set_show.set(false);
+                    });
                 })
             },
             Command {
                 id: "lang",
                 title_key: t::command_palette::toggle_language,
                 action: Callback::new(move |_| {
-                    locale.update(|l| *l = l.toggle());
-                    set_show.set(false);
+                    request_animation_frame(move || {
+                        locale.update(|l| *l = l.toggle());
+                        set_show.set(false);
+                    });
                 })
             }
         ]
