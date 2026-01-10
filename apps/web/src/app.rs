@@ -64,12 +64,35 @@ fn AppContent() -> impl IntoView {
     // Command Palette State
     let (show_cmd, set_show_cmd) = signal(false);
     
+    // Global Locale
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+
+    // Open Doc By Path State
+    let (show_open_modal, set_show_open_modal) = signal(false);
+
     // Global Key Handler
     let handle_keydown = move |ev: KeyboardEvent| {
-        if (ev.meta_key() || ev.ctrl_key()) && ev.key() == "k" {
+        let is_ctrl = ev.meta_key() || ev.ctrl_key();
+        let key = ev.key().to_lowercase();
+        
+        if is_ctrl && key == "k" {
             ev.prevent_default();
-            ev.stop_propagation(); // Important to stop browser default
+            ev.stop_propagation(); 
             set_show_cmd.update(|s| *s = !*s);
+        }
+        
+        // Ctrl+L: Toggle Language
+        if is_ctrl && key == "l" {
+             ev.prevent_default();
+             ev.stop_propagation();
+             locale.update(|l| *l = l.toggle());
+        }
+
+        // Ctrl+O: Open Document Modal
+        if is_ctrl && key == "o" {
+             ev.prevent_default();
+             ev.stop_propagation();
+             set_show_open_modal.set(true);
         }
         
         if show_cmd.get_untracked() && ev.key() == "Escape" {
@@ -86,10 +109,6 @@ fn AppContent() -> impl IntoView {
         // For now, Home deselects current doc (Show Welcome)
         set_current_doc.set(None);
     });
-
-    
-    // Open Doc By Path State
-    let (show_open_modal, set_show_open_modal) = signal(false);
     
     let on_open = Callback::new(move |_| {
          set_show_open_modal.set(true);
@@ -166,6 +185,8 @@ fn AppContent() -> impl IntoView {
             <crate::components::command_palette::CommandPalette 
                 show=show_cmd 
                 set_show=set_show_cmd
+                docs=docs
+                on_select_doc=on_doc_select
                 on_settings=on_settings 
             />
             <crate::components::header::Header 
