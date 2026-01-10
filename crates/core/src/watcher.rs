@@ -29,15 +29,19 @@ impl Watcher {
 
     pub fn watch(&self) -> Result<()> {
         let (tx, rx) = std::sync::mpsc::channel();
+        
+        // Canonicalize the root path to ensure we have an absolute path.
+        // This fixes issues on Windows where events have absolute paths but root is relative.
+        let root_absolute = std::fs::canonicalize(&self.root_path)?;
 
         // 200ms debounce
         let mut debouncer = new_debouncer(Duration::from_millis(200), tx)?;
 
         debouncer
             .watcher()
-            .watch(&self.root_path, RecursiveMode::Recursive)?;
+            .watch(&root_absolute, RecursiveMode::Recursive)?;
 
-        info!("Watcher started on {:?}", self.root_path);
+        info!("Watcher started on {:?}", root_absolute);
 
         for result in rx {
             match result {
@@ -45,7 +49,8 @@ impl Watcher {
                     for event in events {
                        let path = event.path;
                        // Convert to relative string
-                       if let Ok(rel) = path.strip_prefix(&self.root_path) {
+                       if let Ok(rel) = path.strip_prefix(&root_absolute) {
+                           let path_str = rel.to_string_lossy().to_string();
                            let path_str = rel.to_string_lossy().to_string();
                            match self.sync_manager.handle_fs_event(&path_str) {
                                Ok(msgs) => {
