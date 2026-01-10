@@ -68,6 +68,7 @@ pub fn Sidebar(
     });
 
     let request_delete = Callback::new(move |path: String| {
+         leptos::logging::log!("sidebar/mod.rs request_delete called: path={}", path);
          on_delete.run(path);
     });
     

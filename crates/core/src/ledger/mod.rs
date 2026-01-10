@@ -165,6 +165,44 @@ impl Ledger {
         Ok(())
     }
 
+    /// Delete all documents whose paths start with the given prefix (folder deletion).
+    pub fn delete_folder(&self, prefix: &str) -> Result<usize> {
+        let write_txn = self.db.begin_write()?;
+        let count = {
+            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+            
+            // Collect all docs to delete
+            let mut to_delete = Vec::new();
+            
+            for item in p2d.iter()? {
+                let (path_guard, id_guard) = item?;
+                let path = path_guard.value();
+                let id = id_guard.value();
+                
+                // Check if path is exactly prefix or starts with prefix + separator
+                if path == prefix 
+                    || path.starts_with(&format!("{}/", prefix)) 
+                    || path.starts_with(&format!("{}\\", prefix)) 
+                {
+                    to_delete.push((path.to_string(), id));
+                }
+            }
+            
+            let count = to_delete.len();
+            
+            // Delete all matching docs
+            for (path, id) in to_delete {
+                p2d.remove(&*path)?;
+                d2p.remove(id)?;
+            }
+            
+            count
+        };
+        write_txn.commit()?;
+        Ok(count)
+    }
+
     pub fn append_op(&self, entry: &LedgerEntry) -> Result<u64> {
         let write_txn = self.db.begin_write()?;
         let seq = {

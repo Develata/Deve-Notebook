@@ -117,6 +117,7 @@ pub fn SidebarMenu(
                                     if is_danger { "text-red-600 group" } else { "" }
                                 )
                                 on:click=move |_| { 
+                                    leptos::logging::log!("SidebarMenu: Button clicked, action={:?}", action);
                                     on_action.run(action);
                                     on_close.run(()); 
                                 }

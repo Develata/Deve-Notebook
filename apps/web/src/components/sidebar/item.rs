@@ -44,6 +44,7 @@ pub fn FileTreeItem(
     let delete_req = on_delete_req.clone();
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
+        leptos::logging::log!("item.rs handle_action called: action={:?}", action);
         let path = path_for_action.clone();
         match action {
             MenuAction::Rename => rename_req.run(path),

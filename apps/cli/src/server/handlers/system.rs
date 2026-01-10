@@ -113,10 +113,11 @@ pub async fn handle_delete_doc(
     path: String,
 ) {
     let target = join_normalized(&state.vault_path, &path);
+    let is_dir = target.is_dir();
     
     if target.exists() {
         // Check if directory
-         if target.is_dir() {
+         if is_dir {
              if let Err(e) = std::fs::remove_dir_all(&target) {
                  tracing::error!("Failed to delete dir {}: {:?}", path, e);
              } else {
@@ -133,9 +134,18 @@ pub async fn handle_delete_doc(
         tracing::warn!("File to delete not found: {:?}, removing from ledger anyway.", target);
     }
          
-    // Update Ledger ALWAYS (use original path for ledger consistency)
-    if let Err(e) = state.ledger.delete_doc(&path) {
-        tracing::error!("Failed to update ledger delete: {:?}", e);
+    // Update Ledger - use appropriate method based on whether it's a folder
+    if is_dir {
+        // Delete all documents under this folder prefix
+        match state.ledger.delete_folder(&path) {
+            Ok(count) => tracing::info!("Deleted {} docs from ledger for folder {}", count, path),
+            Err(e) => tracing::error!("Failed to update ledger delete_folder: {:?}", e),
+        }
+    } else {
+        // Delete single document
+        if let Err(e) = state.ledger.delete_doc(&path) {
+            tracing::error!("Failed to update ledger delete: {:?}", e);
+        }
     }
     
     // Update List

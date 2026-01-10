@@ -74,6 +74,7 @@ pub fn use_core() -> CoreState {
 
     let ws_for_delete = ws.clone();
     let on_doc_delete = Callback::new(move |path: String| {
+        leptos::logging::log!("use_core: on_doc_delete called with path={}", path);
         ws_for_delete.send(ClientMessage::DeleteDoc { path });
     });
     
