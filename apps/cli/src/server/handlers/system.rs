@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
+use deve_core::utils::path::join_normalized;
 use crate::server::AppState;
 
 pub async fn handle_list_docs(
@@ -24,12 +25,14 @@ pub async fn handle_create_doc(
     }
     
     // Prevent directory traversal (basic check)
-    if filename.contains("..") || filename.starts_with('/') || filename.contains('\\') {
+    // Allow forward slashes for subfolder creation (e.g., "folder/file.md")
+    if filename.contains("..") || filename.starts_with('/') || filename.starts_with('\\') {
          tracing::error!("Invalid filename: {}", filename);
          return; 
     }
         
-    let path = state.vault_path.join(&filename);
+    // Use normalized path for cross-platform compatibility
+    let path = join_normalized(&state.vault_path, &filename);
     
     // Ensure parent directory exists
     if let Some(parent) = path.parent() {
@@ -67,13 +70,14 @@ pub async fn handle_rename_doc(
     old_path: String,
     new_path: String,
 ) {
-     let src = state.vault_path.join(&old_path);
+     let src = join_normalized(&state.vault_path, &old_path);
+     
      let mut dst_name = new_path.clone();
      if !dst_name.ends_with(".md") && old_path.ends_with(".md") {
          dst_name.push_str(".md");
      }
      
-     let dst = state.vault_path.join(&dst_name);
+     let dst = join_normalized(&state.vault_path, &dst_name);
      
      if src.exists() {
          if let Some(parent) = dst.parent() {
@@ -108,7 +112,8 @@ pub async fn handle_delete_doc(
     tx: &broadcast::Sender<ServerMessage>,
     path: String,
 ) {
-    let target = state.vault_path.join(&path);
+    let target = join_normalized(&state.vault_path, &path);
+    
     if target.exists() {
         // Check if directory
          if target.is_dir() {
@@ -128,7 +133,7 @@ pub async fn handle_delete_doc(
         tracing::warn!("File to delete not found: {:?}, removing from ledger anyway.", target);
     }
          
-    // Update Ledger ALWAYS
+    // Update Ledger ALWAYS (use original path for ledger consistency)
     if let Err(e) = state.ledger.delete_doc(&path) {
         tracing::error!("Failed to update ledger delete: {:?}", e);
     }

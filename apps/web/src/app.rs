@@ -46,19 +46,22 @@ fn AppContent() -> impl IntoView {
     let set_doc = core.set_current_doc;
     let on_home = Callback::new(move |_| set_doc.set(None));
 
-    // Open Confirm Logic
+    // Open Confirm Logic - Opens existing doc or creates new one
     let docs = core.docs;
     let on_select = core.on_doc_select;
+    let on_create = core.on_doc_create;
     let on_open_confirm = Callback::new(move |path: String| {
         let normalized = path.replace('\\', "/");
         let target = if normalized.ends_with(".md") { normalized.clone() } else { format!("{}.md", normalized) };
         
-        // Find doc
+        // Try to find existing doc
         let list = docs.get_untracked();
         if let Some((id, _)) = list.iter().find(|(_, p)| p == &target || p == &normalized) {
             on_select.run(*id);
         } else {
-            leptos::logging::warn!("Document not found: {}", target);
+            // Not found, create new document
+            leptos::logging::log!("Document not found, creating: {}", target);
+            on_create.run(target);
         }
     });
 

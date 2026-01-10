@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 use deve_core::models::DocId;
-use crate::components::sidebar_menu::SidebarMenu;
+use crate::components::sidebar_menu::{SidebarMenu, MenuAction};
 use super::tree::FileNode;
 
 #[component]
@@ -37,19 +37,41 @@ pub fn FileTreeItem(
     };
 
     let path_check = node.path.clone();
-    // Use Memo to allow multiple usages (Memo is Copy)
     let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
     
+    // Build unified action handler
     let rename_req = on_rename_req.clone();
-    let path_rename = node.path.clone();
-    let handle_rename = Callback::new(move |_| {
-        leptos::logging::log!("Sidebar: handle_rename called for {}", path_rename);
-        rename_req.run(path_rename.clone())
-    });
-    
     let delete_req = on_delete_req.clone();
-    let path_delete = node.path.clone();
-    let handle_delete = Callback::new(move |_| delete_req.run(path_delete.clone()));
+    let path_for_action = node.path.clone();
+    let handle_action = Callback::new(move |action: MenuAction| {
+        let path = path_for_action.clone();
+        match action {
+            MenuAction::Rename => rename_req.run(path),
+            MenuAction::Delete => delete_req.run(path),
+            MenuAction::CopyLink => {
+                // Copy path to clipboard using execCommand fallback
+                copy_to_clipboard(&path);
+                leptos::logging::log!("Copied to clipboard: {}", path);
+            }
+            MenuAction::OpenInNewWindow => {
+                // Open in new browser tab
+                if let Some(window) = web_sys::window() {
+                    if let Ok(href) = window.location().href() {
+                        let url = format!("{}?doc={}", href, path);
+                        let _ = window.open_with_url_and_target(&url, "_blank");
+                    }
+                }
+            }
+            MenuAction::MoveTo => {
+                leptos::logging::log!("Move to... not implemented yet: {}", path);
+                // TODO: Show move dialog
+            }
+            MenuAction::Duplicate => {
+                leptos::logging::log!("Duplicate not implemented yet: {}", path);
+                // TODO: Implement duplicate
+            }
+        }
+    });
     
     let on_close_clone = on_menu_close.clone();
 
@@ -133,9 +155,8 @@ pub fn FileTreeItem(
                 {move || if is_menu_open.get() {
                     view! {
                         <SidebarMenu 
+                            on_action=handle_action 
                             on_close=on_close_clone 
-                            on_rename=handle_rename 
-                            on_delete=handle_delete
                         />
                     }.into_any()
                 } else {
@@ -168,4 +189,12 @@ pub fn FileTreeItem(
             </div>
         </div>
     }.into_any()
+}
+
+/// Copy text to clipboard (stub implementation - logs for now)
+/// TODO: Implement via JS interop for full clipboard support
+fn copy_to_clipboard(text: &str) {
+    // For now, just log. Full clipboard API requires navigator.clipboard
+    // which needs specific web-sys features or JS interop.
+    leptos::logging::log!("Copy requested: {}", text);
 }

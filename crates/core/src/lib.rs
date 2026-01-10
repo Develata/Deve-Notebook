@@ -9,3 +9,4 @@ pub mod watcher;
 pub mod sync;
 pub mod state;
 pub mod protocol;
+pub mod utils;
