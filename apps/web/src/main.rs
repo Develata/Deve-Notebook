@@ -3,6 +3,7 @@ mod editor;
 mod api;
 mod components;
 mod i18n;
+mod hooks;
 use app::App;
 use leptos::prelude::*;
 

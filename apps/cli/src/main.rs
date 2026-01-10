@@ -1,10 +1,8 @@
 use clap::{Parser, Subcommand};
-use deve_core::ledger::Ledger;
-use deve_core::vfs::Vfs;
 use std::path::PathBuf;
 
 mod server;
-use std::sync::Arc;
+mod commands;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -48,59 +46,12 @@ async fn main() -> anyhow::Result<()> {
     let vault_path = PathBuf::from("vault");
 
     match args.command {
-        Some(Commands::Init { path }) => {
-            println!("Initializing ledger at {:?}...", ledger_path);
-            let _ = Ledger::init(&ledger_path)?;
-            std::fs::create_dir_all(&vault_path)?;
-            println!("Initialization complete.");
-        }
-        Some(Commands::Scan) => {
-            let ledger = Ledger::init(&ledger_path)?;
-            let vfs = Vfs::new(&vault_path);
-            println!("Scanning vault at {:?}...", vault_path);
-            let count = vfs.scan(&ledger)?;
-            println!("Scanned. Registered {} new documents.", count);
-        }
-        Some(Commands::Watch) => {
-            let ledger = Arc::new(Ledger::init(&ledger_path)?);
-            let sync_manager = Arc::new(deve_core::sync::SyncManager::new(ledger.clone(), vault_path.clone()));
-            let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path.clone());
-            println!("Starting watcher on {:?}... Press Ctrl+C to stop.", vault_path);
-            watcher.watch()?;
-        }
-        Some(Commands::Dump { path }) => {
-            let ledger = Ledger::init(&ledger_path)?;
-            if let Some(doc_id) = ledger.get_docid(&path)? {
-                println!("DocId: {}", doc_id);
-                let ops = ledger.get_ops(doc_id)?;
-                println!("Found {} ops:", ops.len());
-                for (i, (seq, entry)) in ops.iter().enumerate() {
-                    println!("[{}] Seq:{} {} {:?}", i, seq, entry.timestamp, entry.op);
-                }
-                
-                let ops_vec: Vec<deve_core::models::LedgerEntry> = ops.iter().map(|(_, e)| e.clone()).collect();
-                let content = deve_core::state::reconstruct_content(&ops_vec);
-                println!("\nReconstructed Content:\n---\n{}\n---", content);
-            } else {
-                println!("Path not found in Ledger.");
-            }
-        }
-        Some(Commands::Serve { port }) => {
-            let ledger = Ledger::init(&ledger_path)?;
-            let ledger_arc = Arc::new(ledger);
-            
-            // Auto-scan on startup via SyncManager
-            let sync_manager = deve_core::sync::SyncManager::new(ledger_arc.clone(), vault_path.clone());
-            match sync_manager.scan() {
-                Ok(_) => {}, // Silent success
-                Err(e) => eprintln!("Startup scan warning: {:?}", e),
-            }
-            
-            server::start_server(ledger_arc, vault_path, port).await?;
-        }
-        None => {
-            println!("Please provide a subcommand. Try --help.");
-        }
+        Some(Commands::Init { path }) => commands::init::run(&ledger_path, &vault_path, path)?,
+        Some(Commands::Scan) => commands::scan::run(&ledger_path, &vault_path)?,
+        Some(Commands::Watch) => commands::watch::run(&ledger_path, &vault_path)?,
+        Some(Commands::Dump { path }) => commands::dump::run(&ledger_path, path)?,
+        Some(Commands::Serve { port }) => commands::serve::run(&ledger_path, vault_path, port).await?,
+        None => println!("Please provide a subcommand. Try --help."),
     }
 
     Ok(())
