@@ -137,12 +137,29 @@
 采用 **"Resizable Slot" (可缩放插槽)** 布局：
 
 * **Left Slot**: 文件树（核心）/ 双向链接图谱 (Mini Graph, 插件可选)。
+  * **文件项操作菜单 (File Item Menu)**：每个文件条目右侧显示省略号按钮 `⋮`，悬停时出现，点击展开下拉菜单，包含：
+    * **Rename**：重命名文件（弹出输入框）。
+    * **Copy**：复制文件。
+    * **Paste**：粘贴文件到当前文件夹（若剪贴板有内容）。
+    * **Open in New Window**：在新窗口/标签页中打开文件。
+    * **Move to**：移动文件到指定目录（弹出路径选择框）。
+    * **Delete**：删除文件（需确认）。
+  * **文件夹项操作菜单 (Folder Item Menu)**：文件夹条目右侧同样显示省略号按钮 `⋮`，点击展开下拉菜单，包含：
+    * **New File**：在该文件夹下新建文件。
+    * **New Folder**：在该文件夹下新建子文件夹。
+    * **Rename**：重命名文件夹。
+    * **Copy**：复制文件夹。
+    * **Paste**：粘贴内容到该文件夹。
+    * **Move to**：移动文件夹到指定目录。
+    * **Delete**：删除文件夹（需确认，递归删除内容）。
+  * **快速新建按钮 (+)**：侧边栏顶部或文件夹行右侧提供 `+` 按钮，点击弹出输入框，支持快速创建新文档（路径格式：`folder/file.md`）。
 * **Main Slot**: 多标签页 (Tabs) 编辑器 / 分屏 (Split View)。
 * **Right Slot**: 大纲 (TOC) / 属性面板 (Metadata) / 插件面板。
   * **[Implemented] Table of Contents**: 自动解析 Markdown 标题，支持层级缩进与点击跳转（Scroll Sync）。
 * **Bottom Slot**: 日志输出（核心）/ 终端面板 (Terminal, 插件可选)。
 * **Internationalization (i18n)**: 核心 UI 文本 **MUST** 使用 `leptos_i18n` 进行管理，支持编译时类型检查；默认提供 En/Zh-CN，根据浏览器自动协商。
 * **特性**：所有面板状态（宽度、折叠）持久化存储在 Redb 的 `ui_state` 表中，重启后完全恢复；侧边栏分组/层级可配置，风格靠近 VitePress 的导航结构。
+* **模态框统一样式 (Modal Consistency)**：所有弹出的输入框（Rename、New File、Open File、Settings 等）**MUST** 与命令面板 (Command Palette) 保持视觉风格一致，包括：背景模糊遮罩、圆角卡片、输入框样式、按钮样式、动画过渡等。统一使用 `InputModal` 或 `CommandPalette` 组件基础样式。
 
 ### 2. 编辑器内核 (The Editor Kernel)
 
