@@ -44,6 +44,11 @@ enum Commands {
         #[arg(short, long, default_value_t = 3001)]
         port: u16,
     },
+    /// Export ledger to JSONL
+    Export {
+        #[arg(short, long)]
+        output: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -53,16 +58,22 @@ async fn main() -> anyhow::Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
-    // Default paths
-    let ledger_path = PathBuf::from("deve.db");
-    let vault_path = PathBuf::from("vault");
+    // Initialize configuration from Env
+    let config = deve_core::config::Config::load();
+    
+    // Use config values
+    let ledger_path = PathBuf::from(&config.ledger_path);
+    let vault_path = PathBuf::from(&config.vault_path);
+
+    tracing::info!("Starting Deve-Note with profile: {:?}", config.profile);
 
     match args.command {
-        Some(Commands::Init { path }) => commands::init::run(&ledger_path, &vault_path, path)?,
-        Some(Commands::Scan) => commands::scan::run(&ledger_path, &vault_path)?,
-        Some(Commands::Watch) => commands::watch::run(&ledger_path, &vault_path)?,
-        Some(Commands::Dump { path }) => commands::dump::run(&ledger_path, path)?,
-        Some(Commands::Serve { port }) => commands::serve::run(&ledger_path, vault_path, port).await?,
+        Some(Commands::Init { path }) => commands::init::run(&ledger_path, &vault_path, path, config.snapshot_depth)?,
+        Some(Commands::Scan) => commands::scan::run(&ledger_path, &vault_path, config.snapshot_depth)?,
+        Some(Commands::Watch) => commands::watch::run(&ledger_path, &vault_path, config.snapshot_depth)?,
+        Some(Commands::Dump { path }) => commands::dump::run(&ledger_path, path, config.snapshot_depth)?,
+        Some(Commands::Serve { port }) => commands::serve::run(&ledger_path, vault_path, port, config.snapshot_depth).await?,
+        Some(Commands::Export { output }) => commands::export::run(&ledger_path, output, config.snapshot_depth)?,
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
 

@@ -1,13 +1,15 @@
-//! # WebSocket 连接处理器
+//! # WebSocket Handler (WebSocket 连接处理器)
 //!
-//! 本模块管理单个 WebSocket 连接并路由消息。
+//! **架构作用**:
+//! 处理 WebSocket 连接升级、生命周期管理及消息路由。
 //!
-//! ## 处理流程
+//! **核心功能清单**:
+//! - `ws_handler`: Axum 路由处理器，升级 HTTP 到 WebSocket。
+//! - `handle_socket`: 连接主循环。
+//!   - 接收 ClientMessage 并路由到 api/system handlers。
+//!   - 订阅 ServerMessage 广播并推送到客户端。
 //!
-//! 1. `ws_handler`: 将 HTTP 升级为 WebSocket
-//! 2. `handle_socket`: 管理连接生命周期
-//!    - 创建任务接收广播消息并发送给客户端
-//!    - 循环接收客户端消息并路由到相应处理器
+//! **类型**: Core MUST (核心必选)
 //!
 //! 消息根据类型路由到 `handlers::document` 或 `handlers::system`。
 
@@ -84,6 +86,12 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      }
                      ClientMessage::DeleteDoc { path } => {
                          system::handle_delete_doc(&state_clone, &tx, path).await;
+                     }
+                     ClientMessage::CopyDoc { src_path, dest_path } => {
+                         system::handle_copy_doc(&state_clone, &tx, src_path, dest_path).await;
+                     }
+                     ClientMessage::MoveDoc { src_path, dest_path } => {
+                         system::handle_move_doc(&state_clone, &tx, src_path, dest_path).await;
                      }
                 }
             }

@@ -1,12 +1,13 @@
-//! # 核心状态 Hook
+//! # Core State Hook (核心状态钩子)
 //!
-//! 本模块提供 `use_core` Hook，管理应用的核心状态。
+//! **架构作用**:
+//! 管理前端全局核心状态，连接 WebSocket 服务与 UI 组件。
 //!
-//! ## 功能
-//! - WebSocket 服务实例化
-//! - 文档列表管理
-//! - 文档 CRUD 操作回调
-//! - 编辑器统计信息
+//! **核心功能清单**:
+//! - `CoreState`: 状态容器（Docs List, Current Doc, Connection Status, Stats）。
+//! - `use_core`: 初始化 WebSocket，订阅消息，暴露 CRUD 回调（Select, Create, Rename, Delete, Copy, Move）。
+//!
+//! **类型**: Core MUST (核心必选)
 
 use leptos::prelude::*;
 use crate::api::WsService;
@@ -27,6 +28,8 @@ pub struct CoreState {
     pub on_doc_create: Callback<String>,
     pub on_doc_rename: Callback<(String, String)>,
     pub on_doc_delete: Callback<String>,
+    pub on_doc_copy: Callback<(String, String)>,
+    pub on_doc_move: Callback<(String, String)>,
     pub on_stats: Callback<EditorStats>,
 }
 
@@ -48,9 +51,6 @@ pub fn use_core() -> CoreState {
          ws_clone.send(ClientMessage::ListDocs);
     });
     
-    // ... (rest same, just struct init changes)
-
-
     // Handle Messages
     Effect::new(move |_| {
         if let Some(msg) = ws.msg.get() {
@@ -87,6 +87,18 @@ pub fn use_core() -> CoreState {
         leptos::logging::log!("use_core: on_doc_delete called with path={}", path);
         ws_for_delete.send(ClientMessage::DeleteDoc { path });
     });
+
+    let ws_for_copy = ws.clone();
+    let on_doc_copy = Callback::new(move |(src_path, dest_path): (String, String)| {
+        leptos::logging::log!("use_core: on_doc_copy called src={} dest={}", src_path, dest_path);
+        ws_for_copy.send(ClientMessage::CopyDoc { src_path, dest_path });
+    });
+
+    let ws_for_move = ws.clone();
+    let on_doc_move = Callback::new(move |(src_path, dest_path): (String, String)| {
+        leptos::logging::log!("use_core: on_doc_move called src={} dest={}", src_path, dest_path);
+        ws_for_move.send(ClientMessage::MoveDoc { src_path, dest_path });
+    });
     
     let on_stats = Callback::new(move |s| set_stats.set(s));
 
@@ -101,6 +113,8 @@ pub fn use_core() -> CoreState {
         on_doc_create,
         on_doc_rename,
         on_doc_delete,
+        on_doc_copy,
+        on_doc_move,
         on_stats,
     }
 }

@@ -1,3 +1,15 @@
+//! # File Tree Item Component (文件树节点组件)
+//!
+//! **架构作用**:
+//! 渲染文件树中的单个节点（文件或文件夹），并处理局部交互。
+//!
+//! **核心功能清单**:
+//! - 递归渲染：遇到文件夹时递归渲染子节点。
+//! - 交互：点击打开文档，点击展开/折叠文件夹。
+//! - 上下文菜单：右键或点击更多按钮触发 `handle_action` (Rename, Copy, Paste, Move, Delete)。
+//!
+//! **类型**: Core MUST (核心必选)
+
 use leptos::prelude::*;
 use deve_core::models::DocId;
 use crate::components::sidebar_menu::{SidebarMenu, MenuAction};
@@ -14,6 +26,8 @@ pub fn FileTreeItem(
     active_menu: ReadSignal<Option<String>>,
     on_rename_req: Callback<String>, 
     on_delete_req: Callback<String>, 
+    on_copy_req: Callback<(String, String)>,
+    on_move_req: Callback<String>,
     depth: usize,
 ) -> impl IntoView {
     let (is_expanded, set_expanded) = signal(true); 
@@ -39,9 +53,17 @@ pub fn FileTreeItem(
     let path_check = node.path.clone();
     let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
     
+    // Clipboard context
+    let set_clipboard = use_context::<WriteSignal<Option<String>>>()
+        .expect("clipboard set context");
+    let clipboard = use_context::<ReadSignal<Option<String>>>()
+        .expect("clipboard read context");
+    
     // Build unified action handler
     let rename_req = on_rename_req.clone();
     let delete_req = on_delete_req.clone();
+    let copy_req = on_copy_req.clone();
+    let move_req = on_move_req.clone();
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
         leptos::logging::log!("item.rs handle_action called: action={:?}", action);
@@ -49,10 +71,43 @@ pub fn FileTreeItem(
         match action {
             MenuAction::Rename => rename_req.run(path),
             MenuAction::Delete => delete_req.run(path),
-            MenuAction::CopyLink => {
-                // Copy path to clipboard using execCommand fallback
-                copy_to_clipboard(&path);
+            MenuAction::Copy => {
+                // Store in clipboard context
+                set_clipboard.set(Some(path.clone()));
                 leptos::logging::log!("Copied to clipboard: {}", path);
+            }
+            MenuAction::Paste => {
+                // Get from clipboard and log (actual paste logic requires backend support)
+                if let Some(src) = clipboard.get_untracked() {
+                    leptos::logging::log!("Paste requested: copy {} to {}", src, path);
+                    
+                    // Determine destination folder
+                    let dest_folder = if is_folder {
+                        path.clone()
+                    } else {
+                        // Parent of current item
+                         let p = std::path::Path::new(&path).parent().and_then(|p| p.to_str()).unwrap_or("");
+                         p.replace('\\', "/")
+                    };
+                    
+                    // Determine new filename from src
+                    let src_name = std::path::Path::new(&src).file_name().and_then(|n| n.to_str()).unwrap_or("unknown");
+                    
+                    let dest_path = if dest_folder.is_empty() {
+                        src_name.to_string()
+                    } else {
+                        format!("{}/{}", dest_folder, src_name)
+                    };
+                    
+                    if src == dest_path {
+                         leptos::logging::warn!("Cannot paste into same location without rename logic");
+                         // TODO: Auto-rename (e.g. "copy")
+                    } else {
+                        copy_req.run((src, dest_path));
+                    }
+                } else {
+                    leptos::logging::log!("Paste: clipboard is empty");
+                }
             }
             MenuAction::OpenInNewWindow => {
                 // Open in new browser tab
@@ -64,12 +119,7 @@ pub fn FileTreeItem(
                 }
             }
             MenuAction::MoveTo => {
-                leptos::logging::log!("Move to... not implemented yet: {}", path);
-                // TODO: Show move dialog
-            }
-            MenuAction::Duplicate => {
-                leptos::logging::log!("Duplicate not implemented yet: {}", path);
-                // TODO: Implement duplicate
+                 move_req.run(path);
             }
         }
     });
@@ -182,6 +232,8 @@ pub fn FileTreeItem(
                                 active_menu=active_menu
                                 on_rename_req=on_rename_req.clone()
                                 on_delete_req=on_delete_req.clone()
+                                on_copy_req=on_copy_req.clone()
+                                on_move_req=on_move_req.clone()
                                 depth={depth + 1} 
                             />
                         }

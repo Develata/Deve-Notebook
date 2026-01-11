@@ -38,12 +38,10 @@ impl Vfs {
         let file_id = file_id::get_file_id(&full_path)?;
         
         // Hash the FileId to get a stable u128 for Redb
-        // This is a simplification. Ideally we should serialize FileId.
-        // For Phase 0, we use a simple hash.
-        use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
+        use crate::utils::hash::StableHasher;
         
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = StableHasher::new();
         file_id.hash(&mut hasher);
         let hash = hasher.finish(); 
         // FileId hash is u64. We can use it. FileNodeId wraps u128.

@@ -3,8 +3,9 @@ use std::sync::Arc;
 use deve_core::ledger::Ledger;
 use crate::server;
 
-pub async fn run(ledger_path: &PathBuf, vault_path: PathBuf, port: u16) -> anyhow::Result<()> {
-    let ledger = Ledger::init(ledger_path)?;
+pub async fn run(ledger_path: &PathBuf, vault_path: PathBuf, port: u16, snapshot_depth: usize) -> anyhow::Result<()> {
+    // 1. Initialize Ledger
+    let ledger = Ledger::init(ledger_path, snapshot_depth)?;
     let ledger_arc = Arc::new(ledger);
     
     // Auto-scan on startup via SyncManager

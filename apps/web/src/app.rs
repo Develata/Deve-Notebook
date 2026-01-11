@@ -128,6 +128,8 @@ fn AppContent() -> impl IntoView {
                         on_create=core.on_doc_create
                         on_rename=core.on_doc_rename
                         on_delete=core.on_doc_delete
+                        on_copy=core.on_doc_copy
+                        on_move=core.on_doc_move
                      />
                  </aside>
                  

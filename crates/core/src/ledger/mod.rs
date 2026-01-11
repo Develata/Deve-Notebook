@@ -1,5 +1,5 @@
 use anyhow::Result;
-use redb::{Database, ReadableTable};
+use redb::{Database, ReadableTable, ReadableMultimapTable};
 use std::path::Path;
 use crate::models::{DocId, LedgerEntry, FileNodeId};
 use crate::utils::path::to_forward_slash;
@@ -8,11 +8,12 @@ pub mod schema;
 use self::schema::*;
 
 pub struct Ledger {
-    db: Database,
+    pub db: Database,
+    pub snapshot_depth: usize,
 }
 
 impl Ledger {
-    pub fn init(path: impl AsRef<Path>) -> Result<Self> {
+    pub fn init(path: impl AsRef<Path>, snapshot_depth: usize) -> Result<Self> {
         let db = Database::create(path)?;
         
         // Initialize tables
@@ -23,10 +24,72 @@ impl Ledger {
             let _ = write_txn.open_table(INODE_TO_DOCID)?;
             let _ = write_txn.open_table(LEDGER_OPS)?;
             let _ = write_txn.open_multimap_table(DOC_OPS)?;
+            let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+            let _ = write_txn.open_table(SNAPSHOT_DATA)?;
         }
         write_txn.commit()?;
 
-        Ok(Self { db })
+        Ok(Self { db, snapshot_depth })
+    }
+
+    /// Save a snapshot for a document.
+    pub fn save_snapshot(&self, doc_id: DocId, seq: u64, content: &str) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+            let mut data = write_txn.open_table(SNAPSHOT_DATA)?;
+            
+            // 1. Insert Data
+            data.insert(seq, content.as_bytes())?;
+            
+            // 2. Index
+            index.insert(doc_id.as_u128(), seq)?;
+        }
+        write_txn.commit()?;
+        
+        // Trigger pruning
+        self.prune_snapshots(doc_id)?;
+        
+        Ok(())
+    }
+
+    /// Prune old snapshots if they exceed the configured depth.
+    fn prune_snapshots(&self, doc_id: DocId) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        let count = {
+            // Phase 1: Collect
+            let mut snapshots = Vec::new();
+            {
+                let index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+                let iter = index.get(doc_id.as_u128())?;
+                for item in iter {
+                    let seq: u64 = item?.value();
+                    snapshots.push(seq);
+                }
+            }
+            
+            // Phase 2: Prune
+            snapshots.sort();
+            let total = snapshots.len();
+            if total > self.snapshot_depth {
+                let to_remove = total - self.snapshot_depth;
+                let remove_seqs = &snapshots[0..to_remove];
+                
+                let mut index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+                let mut data = write_txn.open_table(SNAPSHOT_DATA)?;
+                
+                for &seq in remove_seqs {
+                    index.remove(doc_id.as_u128(), seq)?;
+                    data.remove(seq)?;
+                }
+                to_remove
+            } else {
+                0
+            }
+        };
+        write_txn.commit()?;
+        
+        Ok(())
     }
 
     pub fn get_docid(&self, path: &str) -> Result<Option<DocId>> {
@@ -139,19 +202,11 @@ impl Ledger {
             // 1. Collect all affected paths first (to avoid borrowing issues while writing)
             let mut updates = Vec::new();
             
-            // Scan through all paths (Inefficient for huge DB, but OK for MVP)
-            // Ideally use range query if paths were keys, but p2d key is string.
-            // Range scan? old_prefix..old_prefix+1? String range scan is possible in redb.
-            // But let's just iter for now or use range.
-            // p2d.range(old_prefix..)?
-            
             for item in p2d.iter()? {
                 let (path_guard, id_guard) = item?;
                 let path = path_guard.value();
                 let id = id_guard.value();
                 
-                // Check if path is exactly old_prefix (if it was a file, but handled elsewhere)
-                // or starts with old_prefix + / or \
                 if path == old_prefix || path.starts_with(&format!("{}/", old_prefix)) || path.starts_with(&format!("{}\\", old_prefix)) {
                      // Calculate new path
                      let suffix = &path[old_prefix.len()..];
@@ -186,7 +241,6 @@ impl Ledger {
                 let path = path_guard.value();
                 let id = id_guard.value();
                 
-                // Check if path is exactly prefix or starts with prefix + separator
                 if path == prefix 
                     || path.starts_with(&format!("{}/", prefix)) 
                     || path.starts_with(&format!("{}\\", prefix)) 
@@ -197,7 +251,6 @@ impl Ledger {
             
             let count = to_delete.len();
             
-            // Delete all matching docs
             for (path, id) in to_delete {
                 p2d.remove(&*path)?;
                 d2p.remove(id)?;
@@ -260,5 +313,48 @@ impl Ledger {
             docs.push((DocId::from_u128(id.value()), path.value().to_string()));
         }
         Ok(docs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Result;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_snapshot_pruning() -> Result<()> {
+        let tmp_file = NamedTempFile::new()?;
+        let db_path = tmp_file.path();
+        
+        // Init ledger with snapshot_depth = 2
+        let ledger = Ledger::init(db_path, 2)?;
+        let doc_id = DocId::new();
+        
+        // Save 3 snapshots
+        ledger.save_snapshot(doc_id, 1, "Snap 1")?;
+        ledger.save_snapshot(doc_id, 2, "Snap 2")?;
+        ledger.save_snapshot(doc_id, 3, "Snap 3")?; // This should prune seq 1
+        
+        // Verify pruning
+        let read_txn = ledger.db.begin_read()?;
+        let index = read_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+        let data = read_txn.open_table(SNAPSHOT_DATA)?;
+        
+        // Check Index
+        let mut seqs = Vec::new();
+        for item in index.get(doc_id.as_u128())? {
+            seqs.push(item?.value());
+        }
+        seqs.sort();
+        
+        assert_eq!(seqs, vec![2, 3], "Snapshot index should only contain 2 and 3");
+        
+        // Check Data
+        assert!(data.get(1)?.is_none(), "Snapshot 1 data should be removed");
+        assert!(data.get(2)?.is_some(), "Snapshot 2 data should exist");
+        assert!(data.get(3)?.is_some(), "Snapshot 3 data should exist");
+        
+        Ok(())
     }
 }

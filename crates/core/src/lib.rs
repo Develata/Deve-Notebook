@@ -29,4 +29,5 @@ pub mod sync;
 pub mod state;
 pub mod protocol;
 pub mod utils;
+pub mod config;
 pub mod error;

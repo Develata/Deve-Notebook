@@ -14,3 +14,17 @@ pub const LEDGER_OPS: TableDefinition<u64, &[u8]> = TableDefinition::new("ledger
 
 // DocId (u128) -> Vec<u64> (Sequence Numbers) - Secondary Index
 pub const DOC_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("doc_ops");
+
+// DocId (u128) -> (Sequence (u64), Content (String)) - We might store multiple snapshots?
+// Ideally: (DocId, Seq) -> Content.
+// But Redb doesn't support Composite Key easily without serialization.
+// Let's use Multimap: DocId -> (Seq, ContentBytes) ?
+// Or separate table: SNAPSHOTS: Table<u64, &[u8]> where key is Sequence? No.
+// Let's use: DocId -> SnapshotData. But we need multiple?
+// "Snapshot Depth" implies multiple.
+// Let's use MultimapTableDefinition<u128, Vec<u8>>? No, we need to sort by Seq.
+// Maybe: SNAPSHOT_INDEX: Multimap<u128, u64> (DocId -> Seq)
+//        SNAPSHOT_DATA: Table<u64, &[u8]> (Seq -> Data)
+pub const SNAPSHOT_INDEX: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("snapshot_index");
+pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("snapshot_data");
+

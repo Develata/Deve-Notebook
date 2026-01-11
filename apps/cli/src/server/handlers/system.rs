@@ -1,3 +1,18 @@
+//! # System Handlers (系统操作处理器)
+//!
+//! **架构作用**:
+//! 处理与文件系统和 Ledger 相关的系统级操作请求。
+//!
+//! **核心功能清单**:
+//! - `handle_list_docs`: 列出 Vault 中的所有文档。
+//! - `handle_create_doc`: 创建新文档或文件夹。
+//! - `handle_rename_doc`: 重命名文档或文件夹，并更新 Ledger。
+//! - `handle_delete_doc`: 删除文档或文件夹，并更新 Ledger。
+//! - `handle_copy_doc`: 复制文档，并注册新 DocId。
+//! - `handle_move_doc`: 移动文档（本质上是重命名）。
+//!
+//! **类型**: Core MUST (核心必选)
+
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
@@ -152,4 +167,58 @@ pub async fn handle_delete_doc(
     
     // Update List
     handle_list_docs(state, tx).await;
+}
+
+pub async fn handle_copy_doc(
+    state: &Arc<AppState>,
+    tx: &broadcast::Sender<ServerMessage>,
+    src_path: String,
+    dest_path: String,
+) {
+    let src = join_normalized(&state.vault_path, &src_path);
+    let dst = join_normalized(&state.vault_path, &dest_path);
+
+    if !src.exists() {
+        tracing::error!("Copy failed: Source not found: {:?}", src);
+        return;
+    }
+
+    if dst.exists() {
+        tracing::error!("Copy failed: Destination already exists: {:?}", dst);
+        return;
+    }
+
+    if let Some(parent) = dst.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    if src.is_dir() {
+        // Recursive copy not fully implemented for MVP, but basic folder structure creation
+        tracing::warn!("Copying directory is not fully supported yet in MVP (recursive copy needed)");
+        // TODO: Implement recursive copy
+        return;
+    } else {
+        if let Err(e) = std::fs::copy(&src, &dst) {
+             tracing::error!("Failed to copy {} to {:?}: {:?}", src_path, dst, e);
+             return;
+        }
+
+        // Register new document in Ledger
+        if let Ok(doc_id) = state.ledger.create_docid(&dest_path) {
+            tracing::info!("Copied {} to {} (New DocId: {})", src_path, dest_path, doc_id);
+            handle_list_docs(state, tx).await;
+        } else {
+             tracing::error!("Failed to register copied doc in ledger");
+        }
+    }
+}
+
+pub async fn handle_move_doc(
+    state: &Arc<AppState>,
+    tx: &broadcast::Sender<ServerMessage>,
+    src_path: String,
+    dest_path: String,
+) {
+    // Reuse rename logic as it is essentially a move
+    handle_rename_doc(state, tx, src_path, dest_path).await;
 }

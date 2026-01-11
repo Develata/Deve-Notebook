@@ -1,13 +1,14 @@
-//! # WebSocket 协议定义
+//! # WebSocket Protocol (通信协议)
 //!
-//! 本模块定义了客户端（Web 前端）与服务端（CLI 后端）之间
-//! WebSocket 通信使用的消息类型。
+//! **架构作用**:
+//! 定义客户端与服务端之间的 WebSocket 通信消息格式。
 //!
-//! ## 消息类型
+//! **核心功能清单**:
+//! - `ClientMessage`: 定义客户端发起的请求（Edit, List, Open, Create, Copy, Move, Delete 等）。
+//! - `ServerMessage`: 定义服务端推送的响应与事件（DocList, Snapshot, NewOps, Error 等）。
+//! - `Op`: 定义 CRDT 操作单元。
 //!
-//! - `ClientMessage`: 客户端发送给服务端的消息
-//!   - Edit（编辑）, RequestHistory（请求历史）, ListDocs（列表文档）
-//!   - OpenDoc（打开文档）, CreateDoc（创建文档）, RenameDoc（重命名）, DeleteDoc（删除）
+//! **类型**: Core MUST (核心必选)
 //!
 //! - `ServerMessage`: 服务端发送给客户端的消息
 //!   - Ack（确认）, NewOp（新操作）, Snapshot（快照）
@@ -44,6 +45,16 @@ pub enum ClientMessage {
     },
     DeleteDoc {
         path: String,
+    },
+    /// Copy a document to a new location
+    CopyDoc {
+        src_path: String,
+        dest_path: String,
+    },
+    /// Move a document to a new location
+    MoveDoc {
+        src_path: String,
+        dest_path: String,
     },
 }
 

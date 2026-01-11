@@ -1,3 +1,16 @@
+//! # Sidebar Component (侧边栏组件)
+//!
+//! **架构作用**:
+//! 渲染左侧文件导航栏，管理文件操作的交互流程（Context Menu, Modals）。
+//!
+//! **核心功能清单**:
+//! - `Sidebar`: 主组件，接收全局状态与回调。
+//! - `build_file_tree`: 将平铺的文档列表构建为树状结构。
+//! - File Operations: 处理 Create, Rename, Copy, Move, Delete 的 UI 交互（弹窗确认）。
+//! - Clipboard: 管理内部剪贴板状态。
+//!
+//! **类型**: Core MUST (核心必选)
+
 use leptos::prelude::*;
 use deve_core::models::DocId;
 
@@ -15,6 +28,8 @@ pub fn Sidebar(
     #[prop(into)] on_create: Callback<String>,
     #[prop(into)] on_rename: Callback<(String, String)>,
     #[prop(into)] on_delete: Callback<String>,
+    #[prop(into)] on_copy: Callback<(String, String)>,
+    #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
     
     // Create Modal State
@@ -25,8 +40,17 @@ pub fn Sidebar(
     let (show_rename, set_show_rename) = signal(false);
     let (rename_target, set_rename_target) = signal(String::new());
     
+    // Move Modal State
+    let (show_move, set_show_move) = signal(false);
+    let (move_source, set_move_source) = signal(String::new()); // The file being moved
+    
     // Context Menu State
     let (active_menu, set_active_menu) = signal(None::<String>);
+    
+    // Clipboard State (for Copy/Paste)
+    let (clipboard_path, set_clipboard_path) = signal(None::<String>);
+    provide_context(clipboard_path);
+    provide_context(set_clipboard_path);
     
     // Callbacks
     let request_create = Callback::new(move |parent: Option<String>| {
@@ -65,6 +89,18 @@ pub fn Sidebar(
         
         leptos::logging::log!("Sidebar: confirm_rename running on_rename with {}, {}", old, new_path);
         on_rename.run((old, new_path));
+    });
+
+    let request_move = Callback::new(move |path: String| {
+        leptos::logging::log!("Sidebar: request_move for {}", path);
+        set_move_source.set(path);
+        set_show_move.set(true);
+    });
+
+    let confirm_move = Callback::new(move |dest_path: String| {
+        let src = move_source.get_untracked();
+        leptos::logging::log!("Sidebar: confirm_move {} -> {}", src, dest_path);
+        on_move.run((src, dest_path));
     });
 
     let request_delete = Callback::new(move |path: String| {
@@ -117,6 +153,16 @@ pub fn Sidebar(
                  confirm_label="Rename"
                  on_confirm=confirm_rename
              />
+             
+             <crate::components::input_modal::InputModal
+                 show=show_move
+                 set_show=set_show_move
+                 title=Signal::derive(move || "Move to...".to_string())
+                 initial_value=Signal::derive(move || Some(move_source.get())) // Default to current path
+                 placeholder="New path (e.g. folder/file.md)"
+                 confirm_label="Move"
+                 on_confirm=confirm_move
+             />
         
             <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-gray-100 hover:bg-gray-100 transition-colors group">
                  // Header content...
@@ -161,6 +207,8 @@ pub fn Sidebar(
                                     active_menu=active_menu
                                     on_rename_req=request_rename.clone()
                                     on_delete_req=request_delete.clone()
+                                    on_copy_req=on_copy.clone()
+                                    on_move_req=request_move.clone()
                                     depth=0 
                                 />
                             </div>
