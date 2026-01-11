@@ -7,3 +7,4 @@ pub mod command_palette;
 pub mod input_modal;
 pub mod sidebar_menu;
 pub mod outline;
+pub mod search_modal;

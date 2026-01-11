@@ -20,6 +20,9 @@ use deve_core::protocol::ServerMessage;
 use std::net::SocketAddr;
 use deve_core::plugin::runtime::PluginRuntime;
 
+#[cfg(feature = "search")]
+use deve_core::search::SearchService;
+
 pub mod ws;
 pub mod handlers;
 
@@ -29,6 +32,8 @@ pub struct AppState {
     pub tx: broadcast::Sender<ServerMessage>,
     pub vault_path: std::path::PathBuf,
     pub plugins: Vec<Box<dyn PluginRuntime>>,
+    #[cfg(feature = "search")]
+    pub search_service: Option<SearchService>,
 }
 
 pub async fn start_server(
@@ -60,12 +65,29 @@ pub async fn start_server(
         }
     });
 
+    #[cfg(feature = "search")]
+    let search_service = {
+        let index_path = vault_path.join(".deve_search_index");
+        match SearchService::new_on_disk(&index_path) {
+            Ok(s) => {
+                tracing::info!("Search service initialized at {:?}", index_path);
+                Some(s)
+            }
+            Err(e) => {
+                tracing::warn!("Failed to initialize search service: {:?}", e);
+                None
+            }
+        }
+    };
+
     let app_state = Arc::new(AppState { 
-        ledger: ledger.clone(), // Clone the Arc
+        ledger: ledger.clone(),
         sync_manager,
         tx,
         vault_path,
         plugins,
+        #[cfg(feature = "search")]
+        search_service,
     });
 
     let app = Router::new()

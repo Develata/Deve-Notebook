@@ -63,6 +63,11 @@ pub enum ClientMessage {
         fn_name: String,
         args: Vec<serde_json::Value>,
     },
+    /// Full-text search query
+    Search {
+        query: String,
+        limit: u32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,6 +104,10 @@ pub enum ServerMessage {
         req_id: String,
         result: Option<serde_json::Value>,
         error: Option<String>,
+    },
+    /// Full-text search results
+    SearchResults {
+        results: Vec<(String, String, f32)>, // (doc_id as UUID string, path, score)
     },
     /// Error message
     Error(String),

@@ -35,6 +35,10 @@ pub struct CoreState {
     // Plugin RPC
     pub plugin_last_response: ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
     pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
+
+    // Search
+    pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)
+    pub on_search: Callback<String>,
 }
 
 pub fn use_core() -> CoreState {
@@ -51,6 +55,9 @@ pub fn use_core() -> CoreState {
 
     // Plugin State
     let (plugin_response, set_plugin_response) = signal(None::<(String, Option<serde_json::Value>, Option<String>)>);
+
+    // Search State
+    let (search_results, set_search_results) = signal(Vec::<(String, String, f32)>::new());
 
     // Initial List Request
     let ws_clone = ws.clone();
@@ -73,6 +80,9 @@ pub fn use_core() -> CoreState {
                 },
                 ServerMessage::PluginResponse { req_id, result, error } => {
                      set_plugin_response.set(Some((req_id, result, error)));
+                },
+                ServerMessage::SearchResults { results } => {
+                     set_search_results.set(results);
                 },
                 _ => {}
             }
@@ -120,6 +130,11 @@ pub fn use_core() -> CoreState {
         ws_for_plugin.send(ClientMessage::PluginCall { req_id, plugin_id, fn_name, args });
     });
 
+    let ws_for_search = ws.clone();
+    let on_search = Callback::new(move |query: String| {
+        ws_for_search.send(ClientMessage::Search { query, limit: 50 });
+    });
+
     CoreState {
         ws,
         docs,
@@ -136,5 +151,7 @@ pub fn use_core() -> CoreState {
         on_stats,
         plugin_last_response: plugin_response,
         on_plugin_call,
+        search_results,
+        on_search,
     }
 }
