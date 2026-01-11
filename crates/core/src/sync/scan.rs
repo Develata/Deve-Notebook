@@ -28,7 +28,8 @@ pub fn scan_vault(
                     if let Some(ext) = entry.path().extension() {
                         if ext == "md" {
                             if let Ok(rel_path) = entry.path().strip_prefix(vault_root) {
-                                let path_str = rel_path.to_string_lossy().to_string();
+                                // 规范化路径：Windows 反斜杠转换为正斜杠
+                                let path_str = rel_path.to_string_lossy().replace("\\", "/");
                                 on_disk_paths.insert(path_str.clone());
 
                                 // Ensure DocID exists
@@ -54,15 +55,33 @@ pub fn scan_vault(
             Err(e) => warn!("Walk error: {:?}", e),
         }
     }
+    // 调试：显示磁盘上的文件列表
+    info!("SyncScan: 磁盘上发现 {} 个 md 文件", on_disk_paths.len());
+    for path in &on_disk_paths {
+        info!("  - 磁盘文件: {}", path);
+    }
 
     // 2. Scan Ledger -> Disk (Cleanup Ghosts)
     let docs = ledger.list_docs()?;
-    for (_doc_id, path) in docs {
-        if !on_disk_paths.contains(&path) {
-            // info!("SyncScan: Ghost file detected: {}. Removing...", path);
+    info!("SyncScan: Ledger 中有 {} 个条目", docs.len());
+    
+    for (doc_id, path) in docs {
+        info!("  - Ledger 条目: {} (DocId: {})", path, doc_id);
+        // 规范化 ledger 中的路径以确保一致比较
+        let normalized_path = path.replace("\\", "/");
+        if !on_disk_paths.contains(&normalized_path) {
+            info!("SyncScan: 检测到幽灵文件: {}（规范化后: {}），正在删除...", path, normalized_path);
+            // 尝试使用原始路径删除
             if let Err(e) = ledger.delete_doc(&path) {
-                error!("Failed to remove ghost doc {}: {:?}", path, e);
+                warn!("使用原始路径删除失败 {}: {:?}", path, e);
             }
+            // 如果路径不同，也尝试用规范化路径删除
+            if normalized_path != path {
+                if let Err(e) = ledger.delete_doc(&normalized_path) {
+                    warn!("使用规范化路径删除失败 {}: {:?}", normalized_path, e);
+                }
+            }
+            info!("SyncScan: 幽灵文件删除完成: {}", path);
         }
     }
 

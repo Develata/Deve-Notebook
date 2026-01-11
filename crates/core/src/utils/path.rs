@@ -1,46 +1,73 @@
-//! Cross-platform path utilities
+//! # 跨平台路径工具
 //!
-//! This module provides utilities for handling file paths across different
-//! operating systems (Windows, Linux, macOS).
+//! 本模块提供跨平台文件路径处理工具。
+//!
+//! ## 设计原则
+//! 
+//! 为保持一致性，所有存储在 Ledger 中的路径都使用**正斜杠格式**（Linux 风格）。
+//! 这确保了在 Windows 和 Linux 之间的互操作性，并避免路径格式不一致的问题。
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// Normalize a path string to use the system's native path separator.
+/// 将路径字符串转换为正斜杠格式（用于存储）。
 ///
-/// # Behavior
-/// - On Windows: `foo/bar` becomes `foo\bar`
-/// - On Linux/macOS: `foo\bar` becomes `foo/bar`
+/// 无论在什么操作系统上，都将反斜杠转换为正斜杠。
+/// 这是存储路径到 Ledger 前必须调用的函数。
 ///
 /// # Example
 /// ```
-/// use deve_core::utils::path::normalize;
-/// let normalized = normalize("folder/subfolder/file.md");
+/// use deve_core::utils::path::to_forward_slash;
+/// assert_eq!(to_forward_slash("folder\\subfolder\\file.md"), "folder/subfolder/file.md");
+/// assert_eq!(to_forward_slash("folder/subfolder/file.md"), "folder/subfolder/file.md");
 /// ```
-pub fn normalize(path: &str) -> String {
+pub fn to_forward_slash(path: &str) -> String {
+    path.replace('\\', "/")
+}
+
+/// 将路径转换为系统原生格式（用于文件系统操作）。
+///
+/// # Behavior
+/// - On Windows: `foo/bar` becomes `foo\\bar`
+/// - On Linux/macOS: path unchanged
+///
+/// 用于将 Ledger 中存储的正斜杠路径转换为系统可识别的格式。
+pub fn to_native(path: &str) -> String {
     #[cfg(target_os = "windows")]
     {
         path.replace('/', "\\")
     }
     #[cfg(not(target_os = "windows"))]
     {
-        path.replace('\\', "/")
+        path.to_string()
     }
 }
 
-/// Join a base path with a normalized subpath.
+/// 规范化路径字符串（别名，保持向后兼容）。
+/// 
+/// **注意**：此函数现在始终返回正斜杠格式。
+/// 如需系统原生格式，请使用 `to_native`。
+pub fn normalize(path: &str) -> String {
+    to_forward_slash(path)
+}
+
+/// 将 Path 对象转换为正斜杠格式的字符串。
+pub fn path_to_forward_slash(path: &Path) -> String {
+    to_forward_slash(&path.to_string_lossy())
+}
+
+/// Join a base path with a subpath, then convert to native format for FS operations.
 ///
-/// This function first normalizes the subpath to use the system's native
-/// path separator, then joins it with the base path.
-///
-/// # Example
-/// ```
-/// use std::path::PathBuf;
-/// use deve_core::utils::path::join_normalized;
-/// let base = PathBuf::from("/vault");
-/// let result = join_normalized(&base, "folder/file.md");
-/// ```
+/// 用于文件系统操作（创建、读取文件）。
 pub fn join_normalized(base: &PathBuf, subpath: &str) -> PathBuf {
-    base.join(normalize(subpath))
+    base.join(to_native(subpath))
+}
+
+/// Join a base path with a subpath, returning the path in forward-slash format.
+///
+/// 用于 Ledger 存储。
+pub fn join_for_storage(base: &Path, subpath: &Path) -> String {
+    let joined = base.join(subpath);
+    path_to_forward_slash(&joined)
 }
 
 #[cfg(test)]
@@ -48,21 +75,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_normalize_forward_slashes() {
-        let input = "folder/subfolder/file.md";
-        let result = normalize(input);
-        
-        #[cfg(target_os = "windows")]
-        assert_eq!(result, "folder\\subfolder\\file.md");
-        
-        #[cfg(not(target_os = "windows"))]
-        assert_eq!(result, "folder/subfolder/file.md");
+    fn test_to_forward_slash() {
+        assert_eq!(to_forward_slash("folder\\subfolder\\file.md"), "folder/subfolder/file.md");
+        assert_eq!(to_forward_slash("folder/subfolder/file.md"), "folder/subfolder/file.md");
+        assert_eq!(to_forward_slash("a\\b/c\\d"), "a/b/c/d");
     }
 
     #[test]
-    fn test_normalize_backslashes() {
-        let input = "folder\\subfolder\\file.md";
-        let result = normalize(input);
+    fn test_to_native() {
+        let input = "folder/subfolder/file.md";
+        let result = to_native(input);
         
         #[cfg(target_os = "windows")]
         assert_eq!(result, "folder\\subfolder\\file.md");
@@ -82,4 +104,11 @@ mod tests {
         #[cfg(not(target_os = "windows"))]
         assert_eq!(result, PathBuf::from("vault/folder/file.md"));
     }
+
+    #[test]
+    fn test_normalize_always_forward_slash() {
+        assert_eq!(normalize("a\\b\\c"), "a/b/c");
+        assert_eq!(normalize("a/b/c"), "a/b/c");
+    }
 }
+

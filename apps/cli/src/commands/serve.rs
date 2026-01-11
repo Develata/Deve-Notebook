@@ -11,7 +11,7 @@ pub async fn run(ledger_path: &PathBuf, vault_path: PathBuf, port: u16) -> anyho
     let sync_manager = deve_core::sync::SyncManager::new(ledger_arc.clone(), vault_path.clone());
     match sync_manager.scan() {
         Ok(_) => {}, // Silent success
-        Err(e) => eprintln!("Startup scan warning: {:?}", e),
+        Err(e) => tracing::warn!("启动扫描警告: {:?}", e),
     }
     
     server::start_server(ledger_arc, vault_path, port).await?;

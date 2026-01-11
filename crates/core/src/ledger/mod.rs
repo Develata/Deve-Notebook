@@ -2,6 +2,7 @@ use anyhow::Result;
 use redb::{Database, ReadableTable};
 use std::path::Path;
 use crate::models::{DocId, LedgerEntry, FileNodeId};
+use crate::utils::path::to_forward_slash;
 
 pub mod schema;
 use self::schema::*;
@@ -29,9 +30,10 @@ impl Ledger {
     }
 
     pub fn get_docid(&self, path: &str) -> Result<Option<DocId>> {
+        let normalized = to_forward_slash(path);
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_table(PATH_TO_DOCID)?;
-        if let Some(v) = table.get(path)? {
+        if let Some(v) = table.get(&*normalized)? {
             Ok(Some(DocId::from_u128(v.value())))
         } else {
             Ok(None)
@@ -39,14 +41,15 @@ impl Ledger {
     }
 
     pub fn create_docid(&self, path: &str) -> Result<DocId> {
+        let normalized = to_forward_slash(path);
         let id = DocId::new();
         let write_txn = self.db.begin_write()?;
         {
             let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
             let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
             
-            p2d.insert(path, id.as_u128())?;
-            d2p.insert(id.as_u128(), path)?;
+            p2d.insert(&*normalized, id.as_u128())?;
+            d2p.insert(id.as_u128(), &*normalized)?;
         }
         write_txn.commit()?;
         Ok(id)
@@ -83,21 +86,23 @@ impl Ledger {
     }
 
     pub fn rename_doc(&self, old_path: &str, new_path: &str) -> Result<()> {
+        let old_normalized = to_forward_slash(old_path);
+        let new_normalized = to_forward_slash(new_path);
         let write_txn = self.db.begin_write()?;
         {
             let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
             let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
 
             // Get ID
-            let id_opt = p2d.get(old_path)?.map(|v| v.value());
+            let id_opt = p2d.get(&*old_normalized)?.map(|v| v.value());
 
             if let Some(id) = id_opt {
                 // Remove old path mapping
-                p2d.remove(old_path)?;
+                p2d.remove(&*old_normalized)?;
                 // Insert new path mapping
-                p2d.insert(new_path, id)?;
+                p2d.insert(&*new_normalized, id)?;
                 // Update reverse mapping
-                d2p.insert(id, new_path)?;
+                d2p.insert(id, &*new_normalized)?;
             } else {
                 return Err(anyhow::anyhow!("Document not found in ledger: {}", old_path));
             }
@@ -107,16 +112,17 @@ impl Ledger {
     }
 
     pub fn delete_doc(&self, path: &str) -> Result<()> {
+        let normalized = to_forward_slash(path);
         let write_txn = self.db.begin_write()?;
         {
             let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
             let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
 
             // Get ID
-            let id_opt = p2d.get(path)?.map(|v| v.value());
+            let id_opt = p2d.get(&*normalized)?.map(|v| v.value());
 
             if let Some(id) = id_opt {
-                p2d.remove(path)?;
+                p2d.remove(&*normalized)?;
                 d2p.remove(id)?;
             }
         }

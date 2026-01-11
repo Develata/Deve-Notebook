@@ -63,7 +63,8 @@ impl Vfs {
             if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
                 // Relativize path
                 if let Ok(rel_path) = path.strip_prefix(&self.root) {
-                    let path_str = rel_path.to_string_lossy().to_string(); // Owned string
+                    // 统一使用正斜杠格式
+                    let path_str = crate::utils::path::to_forward_slash(&rel_path.to_string_lossy());
                     
                     on_disk_paths.insert(path_str.clone());
 

@@ -13,7 +13,6 @@
 
 use axum::{routing::get, Router};
 use std::sync::Arc;
-use tokio::net::TcpListener;
 use deve_core::ledger::Ledger;
 use tower_http::cors::{Any, CorsLayer};
 use tokio::sync::broadcast;

@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Watch) => commands::watch::run(&ledger_path, &vault_path)?,
         Some(Commands::Dump { path }) => commands::dump::run(&ledger_path, path)?,
         Some(Commands::Serve { port }) => commands::serve::run(&ledger_path, vault_path, port).await?,
-        None => println!("Please provide a subcommand. Try --help."),
+        None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
 
     Ok(())

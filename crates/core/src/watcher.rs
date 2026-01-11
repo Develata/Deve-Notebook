@@ -60,10 +60,9 @@ impl Watcher {
                 Ok(events) => {
                     for event in events {
                        let path = event.path;
-                       // Convert to relative string
+                       // Convert to relative string and normalize to forward slashes
                        if let Ok(rel) = path.strip_prefix(&root_absolute) {
-                           let path_str = rel.to_string_lossy().to_string();
-                           let path_str = rel.to_string_lossy().to_string();
+                           let path_str = crate::utils::path::to_forward_slash(&rel.to_string_lossy());
                            match self.sync_manager.handle_fs_event(&path_str) {
                                Ok(msgs) => {
                                    if !msgs.is_empty() {

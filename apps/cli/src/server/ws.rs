@@ -29,7 +29,7 @@ pub async fn ws_handler(
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
+async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     tracing::info!("Client connected");
     
     // Subscribe to Broadcast
@@ -39,7 +39,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     let (mut sender, mut receiver) = socket.split();
     
     // Task: Receive from Broadcast -> Send to Client
-    let mut send_task = tokio::spawn(async move {
+    let send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             if let Ok(json) = serde_json::to_string(&msg) {
                 if sender.send(Message::Text(json)).await.is_err() {
