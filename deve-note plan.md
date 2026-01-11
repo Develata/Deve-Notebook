@@ -40,9 +40,10 @@
 
 **Core MUST（核心必须）**：
 
-* 只提供“侧边栏导航 + 命令系统 + Markdown 撰写体验（含 TeX 公式渲染）”的最小闭环。
+* 只提供“登录界面 + 侧边栏导航 + 命令系统 + Markdown 撰写体验（含 TeX 公式渲染）”的最小闭环。
 * 维护 Ledger/Vault 的一致性闭环：写入、同步、和解、冲突处理、可恢复性与可观测性。
 * 提供稳定的 Host Functions、事件总线、作业队列与 Capability 校验，用于承载插件扩展。
+* 在非linux端使用时，先将命令和路径转化为 linux 命令与路径，再按照原定linux程序进行操作。
 
 **Core MUST NOT（核心禁止）**：
 
@@ -59,14 +60,14 @@
 
 ---
 
-## Phase 0: 核心验证原型 (Headless Core Verification) - [新增必选项]
+## Phase 0: 核心验证原型 (Headless Core Verification) - [必选项]
 
 在构建任何 UI 之前，**必须**先行构建并通过验证的纯命令行原型（Headless CLI）。
 
 *   **目标**：验证 `Reconciliation`（和解）的鲁棒性，确保 Ledger 与大量不可靠外部写入并存时数据不丢失。
 *   **功能清单**：
     1.  `init`: 初始化 Ledger 和 Vault。
-    2.  `watch`: 启动文件监听，能够正确处理 `vim`/`vscode` 的保存行为（含重命名/原子写入）。
+    2.  `watch`: 启动文件监听，能够正确处理 `vim`/`vscode`/`nano` 的保存行为（含重命名/原子写入）。
     3.  `append`: 通过 API 追加 Ops，验证 Vault 能否正确更新。
 *   **验收标准**：
     *   **双向同步闭环**：`VS Code 修改 -> Watcher -> Ledger -> Vault 更新` 必须稳定，无死循环。
@@ -74,13 +75,13 @@
 
 ---
 
-## 第一章：界面设计哲学 (UI Design Philosophy) - [新增核心]
+## 第一章：界面设计哲学 (UI Design Philosophy) - [核心]
 
 ### 1. The "Cockpit" Concept (驾驶舱概念)
 
 * **信息分层**：
 	* **L1 (Focus)**：编辑区是绝对中心，无干扰。
-	* **L2 (Context)**：侧边栏（大纲、文件树）提供导航。
+	* **L2 (Context)**：左侧边栏（文件树），右侧边栏（大纲）提供导航。
 	* **L3 (Meta)**：底部状态栏显示“和解状态”（Sync/Watcher）、Git 分支、字数统计。
 	* **L4 (Floating)**：`Cmd+K` 命令面板和悬浮工具栏，按需出现。
 
@@ -119,14 +120,14 @@
 
 ### 5. 体验取舍与兼容性 (Inspiration & Compatibility)
 
-* **风格参考**：UI 视觉与版式借鉴语雀的清爽阅读感，但保持开源可自定义主题。
+* **风格参考**：UI 视觉与版式借鉴语雀与 SilverBullet 的清爽阅读感，但保持开源可自定义主题。
 * **标准 Markdown 导出**：导出/投影坚持通用 GFM/Frontmatter，不添加私有标记或语雀式特有格式；富文本元数据仅存于 Ledger。
 * **效率取向**：插件与交互倾向 SilverBullet 的轻量/实用，避免臃肿；默认装载最小可用集。
 * **导航体验**：侧边栏结构参考 VitePress（分组/层级清晰），命令/快捷键呼出文件列表参考 SilverBullet 弹出式搜索。
 
 ---
 
-## 第二章：UI 架构与组件系统 (UI Architecture) - [新增核心]
+## 第二章：UI 架构与组件系统 (UI Architecture) - [核心]
 
 前端采用 **Leptos (Signals)** + **Tailwind CSS**，构建一套高性能组件库。
 
@@ -247,6 +248,14 @@
 	* **输出**：受控 Host API 调用结果（读写/网络/搜索/UI 插槽）。
 	* **约束**：default deny；Host Functions MUST 做 Capability 校验、路径/域名白名单与审计。
 	* **失败语义**：越权调用 MUST 失败并可诊断；插件崩溃 MUST 隔离，不影响核心编辑路径。
+
+* **跨平台规范化 (Cross-Platform Normalization)**：
+	* **输入**：非 Linux 端的外部命令与文件路径（如 Windows 反斜杠路径）。
+	* **输出**：标准化为 Linux 风格的内部命令与正斜杠路径。
+	* **约束**：
+		* **MUST Form-First**：在进入任何核心逻辑（Ledger/VFS/Sync）之前，所有输入必须先经由适配层转换为 Linux 风格（例如 `C:\Notes\File.md` -> `/c/Notes/File.md` 或相对路径 `Notes/File.md`）。
+		* **MUST Kernel Consistency**：核心逻辑（Ledger/算法）仅需处理 Linux 风格路径与语义，不为特定平台做特殊分支处理。
+		* **外壳适配**：由各端的外壳（Shell/Wrapper）负责在最终调用 OS API 前将 Linux 风格路径还原为该平台的原生格式。
 
 ### 认证与登录 (Auth & Login)
 
