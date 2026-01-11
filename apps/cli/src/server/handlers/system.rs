@@ -112,7 +112,9 @@ pub async fn handle_delete_doc(
     tx: &broadcast::Sender<ServerMessage>,
     path: String,
 ) {
+    tracing::info!("handle_delete_doc called with path={}", path);
     let target = join_normalized(&state.vault_path, &path);
+    tracing::info!("target path resolved to: {:?}, exists={}, is_dir={}", target, target.exists(), target.is_dir());
     let is_dir = target.is_dir();
     
     if target.exists() {
