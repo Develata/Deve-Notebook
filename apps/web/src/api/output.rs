@@ -1,10 +1,10 @@
-//! WebSocket output manager.
+//! # WebSocket 输出管理器
 //!
-//! Responsibilities:
-//! 1. Receive messages from the application layer
-//! 2. Maintain offline queue
-//! 3. Flush queue when new connection is established
-//! 4. Send messages to the server
+//! ## 职责
+//! 1. 接收应用层消息
+//! 2. 维护离线消息队列
+//! 3. 新连接建立时刷新队列
+//! 4. 向服务器发送消息
 
 use leptos::task::spawn_local;
 use gloo_net::websocket::{futures::WebSocket, Message};

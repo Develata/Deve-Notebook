@@ -61,6 +61,7 @@ impl From<serde_json::Error> for DeveError {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<bincode::Error> for DeveError {
     fn from(err: bincode::Error) -> Self {
         DeveError::Serialization(err.to_string())

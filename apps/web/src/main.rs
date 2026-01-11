@@ -1,3 +1,16 @@
+//! # Deve-Note Web 应用
+//!
+//! 这是 Deve-Note 的 WebAssembly 前端，使用 Leptos 框架构建。
+//!
+//! ## 模块说明
+//!
+//! - `app`: 主应用组件和布局
+//! - `api`: WebSocket 服务，用于后端通信
+//! - `components`: 可复用 UI 组件
+//! - `editor`: CodeMirror 编辑器集成
+//! - `hooks`: 自定义 Leptos Hooks，用于状态管理
+//! - `i18n`: 国际化（中英文支持）
+
 mod app;
 mod editor;
 mod api;

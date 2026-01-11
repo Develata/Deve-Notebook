@@ -1,3 +1,15 @@
+//! # 文件系统监听器
+//!
+//! 本模块提供 `Watcher` 结构体用于监控文件系统变更。
+//!
+//! ## 功能
+//!
+//! - 防抖的文件系统事件（200ms）避免过度处理
+//! - 与 `SyncManager` 集成处理变更
+//! - 回调支持，用于通过 WebSocket 广播变更
+//!
+//! 监听器在阻塞线程中运行，并将事件转发给同步管理器。
+
 use anyhow::Result;
 use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
 use std::time::Duration;

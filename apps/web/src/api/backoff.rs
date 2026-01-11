@@ -1,4 +1,6 @@
-//! Backoff strategy for WebSocket reconnection.
+//! # 重连退避策略
+//!
+//! 本模块提供 WebSocket 重连的指数退避策略（1秒起始，最大10秒）。
 
 use gloo_timers::future::TimeoutFuture;
 

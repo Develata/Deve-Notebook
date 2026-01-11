@@ -1,3 +1,13 @@
+//! # 核心状态 Hook
+//!
+//! 本模块提供 `use_core` Hook，管理应用的核心状态。
+//!
+//! ## 功能
+//! - WebSocket 服务实例化
+//! - 文档列表管理
+//! - 文档 CRUD 操作回调
+//! - 编辑器统计信息
+
 use leptos::prelude::*;
 use crate::api::WsService;
 use deve_core::models::DocId;
@@ -24,7 +34,7 @@ pub fn use_core() -> CoreState {
     let ws = WsService::new();
     provide_context(ws.clone());
     
-    let status_text = Signal::derive(move || format!("{:?}", ws.status.get()));
+    let status_text = Signal::derive(move || format!("{}", ws.status.get()));
     
     // Global State
     let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());

@@ -1,3 +1,14 @@
+//! # 虚拟文件系统
+//!
+//! 本模块提供 `Vfs` 结构体用于管理 vault 目录。
+//!
+//! ## 功能
+//!
+//! - `get_inode`: 获取跨平台文件标识符，用于重命名检测
+//! - `scan`: 同步 Ledger 与文件系统（添加新文件、清理幽灵条目）
+//!
+//! VFS 层抽象了文件系统操作，提供在文件重命名后仍保持稳定的标识符。
+
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;

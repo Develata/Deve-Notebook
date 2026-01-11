@@ -1,3 +1,14 @@
+//! # 核心数据模型
+//!
+//! 本模块定义了 Deve-Note 中使用的基础数据类型。
+//!
+//! ## 类型说明
+//!
+//! - `DocId`: 文档唯一标识符（基于 UUID）
+//! - `Op`: 编辑操作（插入 Insert 或 删除 Delete）
+//! - `LedgerEntry`: 带时间戳的操作记录，用于持久化
+//! - `FileNodeId`: 跨平台文件系统标识符（inode/file index）
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::fmt;

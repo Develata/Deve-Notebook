@@ -1,3 +1,14 @@
+//! # 主应用组件
+//!
+//! 本模块包含根 `App` 组件和主布局。
+//!
+//! ## 结构说明
+//!
+//! - `App`: 根组件，提供语言环境上下文
+//! - `AppContent`: 主内容区，包含头部、侧边栏、编辑器和模态框
+//!
+//! 使用自定义 Hooks: `use_core`, `use_layout`, `use_shortcuts`
+
 use crate::editor::Editor;
 use leptos::prelude::*;
 use deve_core::models::DocId;

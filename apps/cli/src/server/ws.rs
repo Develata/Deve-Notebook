@@ -1,3 +1,16 @@
+//! # WebSocket 连接处理器
+//!
+//! 本模块管理单个 WebSocket 连接并路由消息。
+//!
+//! ## 处理流程
+//!
+//! 1. `ws_handler`: 将 HTTP 升级为 WebSocket
+//! 2. `handle_socket`: 管理连接生命周期
+//!    - 创建任务接收广播消息并发送给客户端
+//!    - 循环接收客户端消息并路由到相应处理器
+//!
+//! 消息根据类型路由到 `handlers::document` 或 `handlers::system`。
+
 use axum::{
     extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State},
     response::IntoResponse,

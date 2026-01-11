@@ -1,10 +1,11 @@
-//! WebSocket API module.
+//! # WebSocket API 模块
 //!
-//! This module provides the `WsService` for communicating with the backend
-//! via WebSocket. It handles:
-//! - Connection management with automatic reconnection
-//! - Message queuing for offline support
-//! - Signal-based state updates for reactive UI
+//! 本模块提供 `WsService` 用于与后端进行 WebSocket 通信。
+//!
+//! ## 功能
+//! - 连接管理与自动重连
+//! - 离线消息队列支持
+//! - 基于信号的响应式状态更新
 
 mod backoff;
 mod connection;
@@ -29,6 +30,16 @@ pub enum ConnectionStatus {
     Disconnected,
     Connecting,
     Connected,
+}
+
+impl std::fmt::Display for ConnectionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConnectionStatus::Disconnected => write!(f, "Disconnected"),
+            ConnectionStatus::Connecting => write!(f, "Connecting..."),
+            ConnectionStatus::Connected => write!(f, "Connected"),
+        }
+    }
 }
 
 // ============================================================================

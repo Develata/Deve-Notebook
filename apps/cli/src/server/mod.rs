@@ -1,3 +1,16 @@
+//! # WebSocket 服务器模块
+//!
+//! 本模块实现 Deve-Note 的后端 WebSocket 服务器。
+//!
+//! ## 组件说明
+//!
+//! - `AppState`: 共享应用状态（Ledger、同步管理器、广播通道）
+//! - `start_server`: 启动 HTTP/WebSocket 服务器的主入口
+//! - `ws`: WebSocket 连接处理和消息路由
+//! - `handlers`: 客户端消息的业务逻辑
+//!
+//! 服务器使用 Axum 处理 HTTP/WebSocket，并向所有客户端广播变更。
+
 use axum::{routing::get, Router};
 use std::sync::Arc;
 use tokio::net::TcpListener;

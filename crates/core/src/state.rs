@@ -1,3 +1,12 @@
+//! # 文档状态管理
+//!
+//! 本模块提供文档状态管理功能：
+//!
+//! - `reconstruct_content`: 从操作序列重建文档内容
+//! - `compute_diff`: 计算两个字符串之间的编辑操作差异
+//!
+//! 这些函数被后端（用于持久化）和前端（用于同步）共同使用。
+
 use crate::models::{Op, LedgerEntry};
 // use anyhow::Result; // Not used currently
 

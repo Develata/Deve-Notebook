@@ -1,10 +1,10 @@
-//! WebSocket connection manager.
+//! # WebSocket 连接管理器
 //!
-//! Responsibilities:
-//! 1. Establish WebSocket connection
-//! 2. Exponential backoff reconnection
-//! 3. Read server messages and update signals
-//! 4. Pass the write-half to Output Manager via link_tx
+//! ## 职责
+//! 1. 建立 WebSocket 连接
+//! 2. 指数退避重连策略
+//! 3. 读取服务器消息并更新信号
+//! 4. 通过 link_tx 将写入端传递给输出管理器
 
 use leptos::task::spawn_local;
 use leptos::prelude::*;
@@ -33,8 +33,7 @@ pub fn spawn_connection_manager(
             
             match WebSocket::open(&url) {
                 Ok(ws) => {
-                    leptos::logging::log!("WS: Connected!");
-                    set_status.set(ConnectionStatus::Connected);
+                    leptos::logging::log!("WS: Socket opened, waiting for first message...");
                     backoff.reset();
                     
                     let (write, read) = ws.split();
@@ -45,7 +44,8 @@ pub fn spawn_connection_manager(
                     }
                     
                     // Block on reading until disconnect
-                    process_incoming_messages(read, set_msg.clone()).await;
+                    // Pass set_status to confirm connection after first successful message
+                    process_incoming_messages(read, set_msg.clone(), set_status.clone()).await;
                     
                     leptos::logging::log!("WS: Connection Lost (Reader ended)");
                 }
@@ -61,13 +61,24 @@ pub fn spawn_connection_manager(
 }
 
 /// Reads messages from the WebSocket until the connection is closed.
+/// Sets status to Connected after receiving the first successful message.
 async fn process_incoming_messages(
     mut read: futures::stream::SplitStream<WebSocket>,
     set_msg: WriteSignal<Option<ServerMessage>>,
+    set_status: WriteSignal<ConnectionStatus>,
 ) {
+    let mut confirmed_connected = false;
+    
     while let Some(result) = read.next().await {
         match result {
             Ok(Message::Text(txt)) => {
+                // First successful message confirms the connection
+                if !confirmed_connected {
+                    leptos::logging::log!("WS: First message received, connection confirmed!");
+                    set_status.set(ConnectionStatus::Connected);
+                    confirmed_connected = true;
+                }
+                
                 match serde_json::from_str::<ServerMessage>(&txt) {
                     Ok(server_msg) => set_msg.set(Some(server_msg)),
                     Err(e) => leptos::logging::error!("Parse Error: {:?}", e),

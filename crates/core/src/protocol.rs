@@ -1,3 +1,18 @@
+//! # WebSocket 协议定义
+//!
+//! 本模块定义了客户端（Web 前端）与服务端（CLI 后端）之间
+//! WebSocket 通信使用的消息类型。
+//!
+//! ## 消息类型
+//!
+//! - `ClientMessage`: 客户端发送给服务端的消息
+//!   - Edit（编辑）, RequestHistory（请求历史）, ListDocs（列表文档）
+//!   - OpenDoc（打开文档）, CreateDoc（创建文档）, RenameDoc（重命名）, DeleteDoc（删除）
+//!
+//! - `ServerMessage`: 服务端发送给客户端的消息
+//!   - Ack（确认）, NewOp（新操作）, Snapshot（快照）
+//!   - History（历史）, DocList（文档列表）, Error（错误）
+
 use serde::{Serialize, Deserialize};
 use crate::models::{DocId, Op};
 
