@@ -18,6 +18,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
 use std::net::SocketAddr;
+use deve_core::plugin::runtime::PluginRuntime;
 
 pub mod ws;
 pub mod handlers;
@@ -27,9 +28,15 @@ pub struct AppState {
     pub sync_manager: Arc<deve_core::sync::SyncManager>,
     pub tx: broadcast::Sender<ServerMessage>,
     pub vault_path: std::path::PathBuf,
+    pub plugins: Vec<Box<dyn PluginRuntime>>,
 }
 
-pub async fn start_server(ledger: Arc<Ledger>, vault_path: std::path::PathBuf, port: u16) -> anyhow::Result<()> {
+pub async fn start_server(
+    ledger: Arc<Ledger>,
+    vault_path: std::path::PathBuf,
+    port: u16,
+    plugins: Vec<Box<dyn PluginRuntime>>,
+) -> anyhow::Result<()> {
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
     
@@ -58,6 +65,7 @@ pub async fn start_server(ledger: Arc<Ledger>, vault_path: std::path::PathBuf, p
         sync_manager,
         tx,
         vault_path,
+        plugins,
     });
 
     let app = Router::new()

@@ -56,6 +56,13 @@ pub enum ClientMessage {
         src_path: String,
         dest_path: String,
     },
+    /// Call a plugin function
+    PluginCall {
+        req_id: String,
+        plugin_id: String,
+        fn_name: String,
+        args: Vec<serde_json::Value>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,6 +93,12 @@ pub enum ServerMessage {
     /// Server sends list of documents.
     DocList {
         docs: Vec<(DocId, String)>,
+    },
+    /// Response from a plugin call
+    PluginResponse {
+        req_id: String,
+        result: Option<serde_json::Value>,
+        error: Option<String>,
     },
     /// Error message
     Error(String),

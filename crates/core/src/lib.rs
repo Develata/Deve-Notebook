@@ -30,4 +30,5 @@ pub mod state;
 pub mod protocol;
 pub mod utils;
 pub mod config;
+pub mod plugin;
 pub mod error;

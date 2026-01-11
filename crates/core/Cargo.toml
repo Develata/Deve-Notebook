@@ -15,6 +15,7 @@ uuid.workspace = true
 regex = "1.10"
 chrono.workspace = true
 dissimilar = "1.0.10"
+rhai = { version = "1.19", features = ["serde", "sync"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 bincode = "1.3"

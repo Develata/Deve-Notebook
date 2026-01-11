@@ -31,6 +31,10 @@ pub struct CoreState {
     pub on_doc_copy: Callback<(String, String)>,
     pub on_doc_move: Callback<(String, String)>,
     pub on_stats: Callback<EditorStats>,
+    
+    // Plugin RPC
+    pub plugin_last_response: ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
+    pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
 }
 
 pub fn use_core() -> CoreState {
@@ -45,6 +49,9 @@ pub fn use_core() -> CoreState {
     // Stats State
     let (stats, set_stats) = signal(EditorStats::default());
 
+    // Plugin State
+    let (plugin_response, set_plugin_response) = signal(None::<(String, Option<serde_json::Value>, Option<String>)>);
+
     // Initial List Request
     let ws_clone = ws.clone();
     Effect::new(move |_| {
@@ -54,14 +61,20 @@ pub fn use_core() -> CoreState {
     // Handle Messages
     Effect::new(move |_| {
         if let Some(msg) = ws.msg.get() {
-            if let ServerMessage::DocList { docs: list } = msg {
-                set_docs.set(list.clone());
-                // Auto-select first if none selected
-                if current_doc.get_untracked().is_none() {
-                    if let Some(first) = list.first() {
-                        set_current_doc.set(Some(first.0));
+            match msg {
+                ServerMessage::DocList { docs: list } => {
+                    set_docs.set(list.clone());
+                    // Auto-select first if none selected
+                    if current_doc.get_untracked().is_none() {
+                        if let Some(first) = list.first() {
+                            set_current_doc.set(Some(first.0));
+                        }
                     }
-                }
+                },
+                ServerMessage::PluginResponse { req_id, result, error } => {
+                     set_plugin_response.set(Some((req_id, result, error)));
+                },
+                _ => {}
             }
         }
     });
@@ -102,6 +115,11 @@ pub fn use_core() -> CoreState {
     
     let on_stats = Callback::new(move |s| set_stats.set(s));
 
+    let ws_for_plugin = ws.clone();
+    let on_plugin_call = Callback::new(move |(req_id, plugin_id, fn_name, args): (String, String, String, Vec<serde_json::Value>)| {
+        ws_for_plugin.send(ClientMessage::PluginCall { req_id, plugin_id, fn_name, args });
+    });
+
     CoreState {
         ws,
         docs,
@@ -116,5 +134,7 @@ pub fn use_core() -> CoreState {
         on_doc_copy,
         on_doc_move,
         on_stats,
+        plugin_last_response: plugin_response,
+        on_plugin_call,
     }
 }

@@ -22,7 +22,7 @@ use futures::{StreamExt, SinkExt};
 
 use deve_core::protocol::ClientMessage;
 use crate::server::AppState;
-use crate::server::handlers::{document, system};
+use crate::server::handlers::{document, system, plugin};
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -92,6 +92,9 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      }
                      ClientMessage::MoveDoc { src_path, dest_path } => {
                          system::handle_move_doc(&state_clone, &tx, src_path, dest_path).await;
+                     }
+                     ClientMessage::PluginCall { req_id, plugin_id, fn_name, args } => {
+                         plugin::handle_plugin_call(&state_clone, &tx, req_id, plugin_id, fn_name, args).await;
                      }
                 }
             }

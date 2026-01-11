@@ -15,6 +15,22 @@ pub async fn run(ledger_path: &PathBuf, vault_path: PathBuf, port: u16, snapshot
         Err(e) => tracing::warn!("启动扫描警告: {:?}", e),
     }
     
-    server::start_server(ledger_arc, vault_path, port).await?;
+    // 2. Load Plugins
+    // We look for a 'plugins' directory in the current working directory or adjacent to the vault.
+    // For now, let's check a "plugins" folder in the current directory.
+    let plugin_dir = PathBuf::from("plugins");
+    let loader = deve_core::plugin::loader::PluginLoader::new(plugin_dir);
+    let plugins = match loader.load_all() {
+        Ok(p) => {
+            tracing::info!("Loaded {} plugins.", p.len());
+            p
+        },
+        Err(e) => {
+            tracing::warn!("Failed to load plugins: {}", e);
+            vec![]
+        }
+    };
+
+    server::start_server(ledger_arc, vault_path, port, plugins).await?;
     Ok(())
 }
