@@ -20,6 +20,7 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 
 import { mathStateField } from "./extensions/math.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
+import { tableStateField } from "./extensions/table.js";
 
 console.log("Modules Loaded via ES Imports in editor_adapter.js (v2 - Adapter Pattern)");
 
@@ -63,6 +64,7 @@ export function initCodeMirror(element, onUpdate) {
         markdown(),
         hybridPlugin,
         mathStateField,
+        tableStateField,
         EditorView.updateListener.of((v) => {
           // Internal Check: explicit isRemote flag
           if (isRemote) return;

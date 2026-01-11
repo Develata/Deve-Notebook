@@ -78,3 +78,27 @@
   margin-right: 0.5em;
   vertical-align: middle;
 }
+
+/* Table Widget */
+.cm-table-widget {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 14px;
+}
+.cm-table-widget th,
+.cm-table-widget td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+}
+.cm-table-widget th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #334155;
+}
+.cm-table-widget tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+.cm-table-widget tbody tr:hover {
+  background: #e0f2fe;
+}
