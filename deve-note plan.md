@@ -44,6 +44,7 @@
 * 维护 Ledger/Vault 的一致性闭环：写入、同步、和解、冲突处理、可恢复性与可观测性。
 * 提供稳定的 Host Functions、事件总线、作业队列与 Capability 校验，用于承载插件扩展。
 * 在非linux端使用时，先将命令和路径转化为 linux 命令与路径，再按照原定linux程序进行操作。
+* **Code Modularity & Documentation (模块化与文档铁律)**：所有代码文件 **MUST** 保持高度模块化（单一职责）；文件头部 **MUST** 包含中文注释块，明确说明：(1) 本文件的架构作用；(2) 核心功能清单；(3) 是否属于核心必选路径 (Core MUST) 或可选扩展 (Optional)。
 
 **Core MUST NOT（核心禁止）**：
 
@@ -87,13 +88,13 @@
 
 * **键盘优先 (Keyboard First)**：
 	* 所有 UI 操作（切换侧边栏、分屏、搜索、跳转）必须有快捷键。
-	* 模仿 Vim/VS Code 的操作逻辑，减少鼠标移动。
+	* 模仿 Vim/VS Code/Nano 的操作逻辑，减少鼠标移动。
 
 
 
 ### 2. Reactive Projection (响应式投影)
 
-* **即时反馈**：当后端 Watcher 检测到磁盘上的文件被 VS Code 修改时，前端编辑器不应“刷新页面”，而应通过 **Loro 的 Diff 补丁** 平滑地更新内容，并弹出一个非侵入式的 Toast 提示：“已合并外部修改”。
+* **即时反馈**：当后端 Watcher 检测到磁盘上的文件被 VS Code/Nano/Vim 修改时，前端编辑器不应“刷新页面”，而应通过 **Loro 的 Diff 补丁** 平滑地更新内容，并弹出一个非侵入式的 Toast 提示：“已合并外部修改”。
 * **乐观 UI (Optimistic UI)**：用户输入立即上屏，WebSocket 同步在后台悄悄进行。如果网络失败，状态栏图标变红，但编辑不中断。
 
 ### 3. Mathematical Aesthetics (数学美学)
