@@ -3,7 +3,7 @@ use std::sync::Arc;
 use walkdir::WalkDir;
 use tracing::{info, warn, error};
 use anyhow::Result;
-use crate::ledger::Ledger;
+use crate::ledger::RepoManager;
 use crate::vfs::Vfs;
 
 /// Performs a full scan of the vault.
@@ -11,7 +11,7 @@ use crate::vfs::Vfs;
 /// 2. Binds Inodes.
 /// 3. Removes ghost entries from Ledger.
 pub fn scan_vault(
-    ledger: &Arc<Ledger>, 
+    repo: &Arc<RepoManager>, 
     vfs: &Vfs, 
     vault_root: &Path
 ) -> Result<()> {
@@ -33,19 +33,19 @@ pub fn scan_vault(
                                 on_disk_paths.insert(path_str.clone());
 
                                 // Ensure DocID exists
-                                let doc_id = if let Some(id) = ledger.get_docid(&path_str)? {
+                                let doc_id = if let Some(id) = repo.get_docid(&path_str)? {
                                     id
                                 } else {
-                                    if let Err(e) = ledger.create_docid(&path_str) {
+                                    if let Err(e) = repo.create_docid(&path_str) {
                                         error!("Failed to register {}: {:?}", path_str, e);
                                         continue;
                                     }
-                                    ledger.get_docid(&path_str)?.unwrap()
+                                    repo.get_docid(&path_str)?.unwrap()
                                 };
 
                                 // Bind Inode
                                 if let Ok(Some(inode)) = vfs.get_inode(&path_str) {
-                                     let _ = ledger.bind_inode(&inode, doc_id);
+                                     let _ = repo.bind_inode(&inode, doc_id);
                                 }
                             }
                         }
@@ -62,22 +62,22 @@ pub fn scan_vault(
     }
 
     // 2. Scan Ledger -> Disk (Cleanup Ghosts)
-    let docs = ledger.list_docs()?;
+    let docs = repo.list_docs()?;
     info!("SyncScan: Ledger 中有 {} 个条目", docs.len());
     
     for (doc_id, path) in docs {
         info!("  - Ledger 条目: {} (DocId: {})", path, doc_id);
-        // 规范化 ledger 中的路径以确保一致比较
+        // 规范化 repo 中的路径以确保一致比较
         let normalized_path = path.replace("\\", "/");
         if !on_disk_paths.contains(&normalized_path) {
             info!("SyncScan: 检测到幽灵文件: {}（规范化后: {}），正在删除...", path, normalized_path);
             // 尝试使用原始路径删除
-            if let Err(e) = ledger.delete_doc(&path) {
+            if let Err(e) = repo.delete_doc(&path) {
                 warn!("使用原始路径删除失败 {}: {:?}", path, e);
             }
             // 如果路径不同，也尝试用规范化路径删除
             if normalized_path != path {
-                if let Err(e) = ledger.delete_doc(&normalized_path) {
+                if let Err(e) = repo.delete_doc(&normalized_path) {
                     warn!("使用规范化路径删除失败 {}: {:?}", normalized_path, e);
                 }
             }

@@ -23,7 +23,7 @@ pub async fn handle_list_docs(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
 ) {
-     if let Ok(docs) = state.ledger.list_docs() {
+     if let Ok(docs) = state.repo.list_docs() {
          let msg = ServerMessage::DocList { docs };
          let _ = tx.send(msg);
      }
@@ -59,7 +59,7 @@ pub async fn handle_create_doc(
 
     if path.exists() {
          // Already exists? Just register/get ID
-         if let Ok(_doc_id) = state.ledger.create_docid(&filename) {
+         if let Ok(_doc_id) = state.repo.create_docid(&filename) {
               // Send updated list
               handle_list_docs(state, tx).await;
          }
@@ -68,7 +68,7 @@ pub async fn handle_create_doc(
          if let Err(e) = std::fs::write(&path, "# New Note\n") {
              tracing::error!("Failed to create file: {:?}", e);
          } else {
-             if let Ok(doc_id) = state.ledger.create_docid(&filename) {
+             if let Ok(doc_id) = state.repo.create_docid(&filename) {
                  // Success
                  tracing::info!("Created doc: {} ({})", filename, doc_id);
                  
@@ -106,11 +106,11 @@ pub async fn handle_rename_doc(
               
               // Update Ledger
               if dst.is_dir() {
-                  if let Err(e) = state.ledger.rename_folder(&old_path, &dst_name) {
+                  if let Err(e) = state.repo.rename_folder(&old_path, &dst_name) {
                       tracing::error!("Failed to update ledger rename folder: {:?}", e);
                   }
               } else {
-                  if let Err(e) = state.ledger.rename_doc(&old_path, &dst_name) {
+                  if let Err(e) = state.repo.rename_doc(&old_path, &dst_name) {
                       tracing::error!("Failed to update ledger rename doc: {:?}", e);
                   }
               }
@@ -154,13 +154,13 @@ pub async fn handle_delete_doc(
     // Update Ledger - use appropriate method based on whether it's a folder
     if is_dir {
         // Delete all documents under this folder prefix
-        match state.ledger.delete_folder(&path) {
+        match state.repo.delete_folder(&path) {
             Ok(count) => tracing::info!("Deleted {} docs from ledger for folder {}", count, path),
             Err(e) => tracing::error!("Failed to update ledger delete_folder: {:?}", e),
         }
     } else {
         // Delete single document
-        if let Err(e) = state.ledger.delete_doc(&path) {
+        if let Err(e) = state.repo.delete_doc(&path) {
             tracing::error!("Failed to update ledger delete: {:?}", e);
         }
     }
@@ -204,7 +204,7 @@ pub async fn handle_copy_doc(
         }
 
         // Register new document in Ledger
-        if let Ok(doc_id) = state.ledger.create_docid(&dest_path) {
+        if let Ok(doc_id) = state.repo.create_docid(&dest_path) {
             tracing::info!("Copied {} to {} (New DocId: {})", src_path, dest_path, doc_id);
             handle_list_docs(state, tx).await;
         } else {

@@ -62,18 +62,18 @@ async fn main() -> anyhow::Result<()> {
     let config = deve_core::config::Config::load();
     
     // Use config values
-    let ledger_path = PathBuf::from(&config.ledger_path);
+    let ledger_dir = PathBuf::from(&config.ledger_dir);
     let vault_path = PathBuf::from(&config.vault_path);
 
     tracing::info!("Starting Deve-Note with profile: {:?}", config.profile);
 
     match args.command {
-        Some(Commands::Init { path }) => commands::init::run(&ledger_path, &vault_path, path, config.snapshot_depth)?,
-        Some(Commands::Scan) => commands::scan::run(&ledger_path, &vault_path, config.snapshot_depth)?,
-        Some(Commands::Watch) => commands::watch::run(&ledger_path, &vault_path, config.snapshot_depth)?,
-        Some(Commands::Dump { path }) => commands::dump::run(&ledger_path, path, config.snapshot_depth)?,
-        Some(Commands::Serve { port }) => commands::serve::run(&ledger_path, vault_path, port, config.snapshot_depth).await?,
-        Some(Commands::Export { output }) => commands::export::run(&ledger_path, output, config.snapshot_depth)?,
+        Some(Commands::Init { path }) => commands::init::run(&ledger_dir, &vault_path, path, config.snapshot_depth)?,
+        Some(Commands::Scan) => commands::scan::run(&ledger_dir, &vault_path, config.snapshot_depth)?,
+        Some(Commands::Watch) => commands::watch::run(&ledger_dir, &vault_path, config.snapshot_depth)?,
+        Some(Commands::Dump { path }) => commands::dump::run(&ledger_dir, path, config.snapshot_depth)?,
+        Some(Commands::Serve { port }) => commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth).await?,
+        Some(Commands::Export { output }) => commands::export::run(&ledger_dir, output, config.snapshot_depth)?,
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
 

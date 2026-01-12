@@ -1,12 +1,12 @@
 use std::path::PathBuf;
-use deve_core::ledger::Ledger;
+use deve_core::ledger::RepoManager;
 use anyhow::Result;
 
-pub fn run(ledger_path: &PathBuf, path_str: String, snapshot_depth: usize) -> anyhow::Result<()> {
-    let ledger = Ledger::init(ledger_path, snapshot_depth)?;
-    if let Some(doc_id) = ledger.get_docid(&path_str)? {
+pub fn run(ledger_dir: &PathBuf, path_str: String, snapshot_depth: usize) -> anyhow::Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth)?;
+    if let Some(doc_id) = repo.get_docid(&path_str)? {
         println!("DocId: {}", doc_id);
-        let ops = ledger.get_ops(doc_id)?;
+        let ops = repo.get_local_ops(doc_id)?;
         println!("Found {} ops:", ops.len());
         for (i, (seq, entry)) in ops.iter().enumerate() {
             println!("[{}] Seq:{} {} {:?}", i, seq, entry.timestamp, entry.op);

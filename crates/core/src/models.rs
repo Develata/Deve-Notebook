@@ -13,6 +13,33 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::fmt;
 
+/// 节点唯一标识符 (用于 P2P 通信)
+/// Peer ID for identifying remote nodes in the P2P network.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PeerId(pub String);
+
+impl PeerId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+    
+    /// Returns the peer ID as a string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+    
+    /// Converts to a safe filename (replaces invalid characters).
+    pub fn to_filename(&self) -> String {
+        self.0.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
+    }
+}
+
+impl fmt::Display for PeerId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DocId(pub Uuid);
 

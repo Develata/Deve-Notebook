@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use deve_core::ledger::Ledger;
+use deve_core::ledger::RepoManager;
 use crate::server;
 
-pub async fn run(ledger_path: &PathBuf, vault_path: PathBuf, port: u16, snapshot_depth: usize) -> anyhow::Result<()> {
-    // 1. Initialize Ledger
-    let ledger = Ledger::init(ledger_path, snapshot_depth)?;
-    let ledger_arc = Arc::new(ledger);
+pub async fn run(ledger_dir: &PathBuf, vault_path: PathBuf, port: u16, snapshot_depth: usize) -> anyhow::Result<()> {
+    // 1. Initialize RepoManager
+    let repo = RepoManager::init(ledger_dir, snapshot_depth)?;
+    let repo_arc = Arc::new(repo);
     
     // Auto-scan on startup via SyncManager
-    let sync_manager = deve_core::sync::SyncManager::new(ledger_arc.clone(), vault_path.clone());
+    let sync_manager = deve_core::sync::SyncManager::new(repo_arc.clone(), vault_path.clone());
     match sync_manager.scan() {
         Ok(_) => {}, // Silent success
         Err(e) => tracing::warn!("启动扫描警告: {:?}", e),
@@ -31,6 +31,6 @@ pub async fn run(ledger_path: &PathBuf, vault_path: PathBuf, port: u16, snapshot
         }
     };
 
-    server::start_server(ledger_arc, vault_path, port, plugins).await?;
+    server::start_server(repo_arc, vault_path, port, plugins).await?;
     Ok(())
 }

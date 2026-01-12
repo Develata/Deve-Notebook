@@ -49,8 +49,9 @@ pub struct Config {
     pub profile: AppProfile,
     
     // --- 路径配置 ---
-    /// 账本文件路径 (Default: "deve.db")
-    pub ledger_path: String,
+    /// 账本目录路径 (Default: "ledger")
+    /// Contains local.redb and remotes/ subdirectory
+    pub ledger_dir: String,
     /// Vault 根目录 (Default: "vault")
     pub vault_path: String,
 
@@ -69,7 +70,7 @@ impl Config {
         let profile = AppProfile::from_str(&profile_str).unwrap_or(AppProfile::Standard);
 
         // 2. Load other values or apply profile defaults
-        let ledger_path = env::var("DEVE_LEDGER_PATH").unwrap_or_else(|_| "deve.db".to_string());
+        let ledger_dir = env::var("DEVE_LEDGER_DIR").unwrap_or_else(|_| "ledger".to_string());
         let vault_path = env::var("DEVE_VAULT_PATH").unwrap_or_else(|_| "vault".to_string());
 
         let snapshot_depth = env::var("DEVE_SNAPSHOT_DEPTH")
@@ -90,7 +91,7 @@ impl Config {
 
         Self {
             profile,
-            ledger_path,
+            ledger_dir,
             vault_path,
             snapshot_depth,
             concurrency,

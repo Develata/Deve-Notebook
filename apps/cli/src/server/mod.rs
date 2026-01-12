@@ -13,7 +13,7 @@
 
 use axum::{routing::get, Router};
 use std::sync::Arc;
-use deve_core::ledger::Ledger;
+use deve_core::ledger::RepoManager;
 use tower_http::cors::{Any, CorsLayer};
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
@@ -27,7 +27,7 @@ pub mod ws;
 pub mod handlers;
 
 pub struct AppState {
-    pub ledger: Arc<Ledger>,
+    pub repo: Arc<RepoManager>,
     pub sync_manager: Arc<deve_core::sync::SyncManager>,
     pub tx: broadcast::Sender<ServerMessage>,
     pub vault_path: std::path::PathBuf,
@@ -37,7 +37,7 @@ pub struct AppState {
 }
 
 pub async fn start_server(
-    ledger: Arc<Ledger>,
+    repo: Arc<RepoManager>,
     vault_path: std::path::PathBuf,
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
@@ -45,7 +45,7 @@ pub async fn start_server(
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
     
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(ledger.clone(), vault_path.clone()));
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault_path.clone()));
 
     // SPAWN WATCHER
     let tx_for_watcher = tx.clone();
@@ -81,7 +81,7 @@ pub async fn start_server(
     };
 
     let app_state = Arc::new(AppState { 
-        ledger: ledger.clone(),
+        repo: repo.clone(),
         sync_manager,
         tx,
         vault_path,

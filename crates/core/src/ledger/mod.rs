@@ -1,23 +1,91 @@
-use anyhow::Result;
+//! # 仓库管理器 (Repository Manager)
+//!
+//! 本模块实现 P2P Git-Flow 架构中的"三位一体隔离" (Trinity Isolation)。
+//!
+//! ## 架构作用
+//!
+//! * **Store B (Local Repo)**: 本地权威库 (`local.redb`)，只有本地操作能写入
+//! * **Store C (Shadow Repos)**: 远端影子库 (`remotes/peer_X.redb`)，存储远端节点数据
+//!
+//! ## 核心功能清单
+//!
+//! - `RepoManager`: 管理本地库和多个影子库的核心结构
+//! - `RepoType`: 区分本地库和影子库的枚举
+//! - `append_local_op`: 只写入本地库
+//! - `append_remote_op`: 只写入指定的影子库
+//! - `get_ops`: 支持指定仓库类型读取操作
+//!
+//! ## 核心必选路径 (Core MUST)
+//!
+//! 本模块属于 **Core MUST**。所有数据持久化必须通过此模块。
+
+use anyhow::{Result, Context};
 use redb::{Database, ReadableTable, ReadableMultimapTable};
-use std::path::Path;
-use crate::models::{DocId, LedgerEntry, FileNodeId};
-use crate::utils::path::to_forward_slash;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::RwLock;
+use crate::models::{DocId, LedgerEntry, FileNodeId, PeerId};
 
 pub mod schema;
+pub mod metadata;
+pub mod ops;
+pub mod snapshot;
+pub mod shadow;
+
 use self::schema::*;
 
-pub struct Ledger {
-    pub db: Database,
+/// 仓库类型枚举
+/// Specifies which repository to operate on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RepoType {
+    /// 本地权威库 (Store B) - local.redb
+    Local,
+    /// 远端影子库 (Store C) - remotes/{peer_id}.redb
+    Remote(PeerId),
+}
+
+/// 仓库管理器 (Repository Manager)
+/// 
+/// 管理本地唯一的 Local Repo (Store B) 和多个 Shadow Repos (Store C)。
+/// 实现 Trinity Isolation 架构中的数据隔离策略。
+pub struct RepoManager {
+    /// 账本目录根路径
+    ledger_dir: PathBuf,
+    /// 本地权威库 (local.redb)
+    local_db: Database,
+    /// 远端影子库集合 (peer_id -> Database) - 懒加载
+    shadow_dbs: RwLock<HashMap<PeerId, Database>>,
+    /// 快照保留深度
     pub snapshot_depth: usize,
 }
 
-impl Ledger {
-    pub fn init(path: impl AsRef<Path>, snapshot_depth: usize) -> Result<Self> {
-        let db = Database::create(path)?;
+impl RepoManager {
+    /// 初始化仓库管理器。
+    /// 
+    /// 创建以下目录结构：
+    /// ```text
+    /// {ledger_dir}/
+    /// ├── local.redb          # 本地权威库
+    /// └── remotes/            # 影子库目录
+    /// ```
+    pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize) -> Result<Self> {
+        let ledger_dir = ledger_dir.as_ref().to_path_buf();
         
-        // Initialize tables
-        let write_txn = db.begin_write()?;
+        // Create directory structure
+        std::fs::create_dir_all(&ledger_dir)
+            .with_context(|| format!("Failed to create ledger directory: {:?}", ledger_dir))?;
+        
+        let remotes_dir = ledger_dir.join("remotes");
+        std::fs::create_dir_all(&remotes_dir)
+            .with_context(|| format!("Failed to create remotes directory: {:?}", remotes_dir))?;
+        
+        // Initialize local database
+        let local_db_path = ledger_dir.join("local.redb");
+        let local_db = Database::create(&local_db_path)
+            .with_context(|| format!("Failed to create local database: {:?}", local_db_path))?;
+        
+        // Initialize tables in local database
+        let write_txn = local_db.begin_write()?;
         {
             let _ = write_txn.open_table(DOCID_TO_PATH)?;
             let _ = write_txn.open_table(PATH_TO_DOCID)?;
@@ -29,290 +97,136 @@ impl Ledger {
         }
         write_txn.commit()?;
 
-        Ok(Self { db, snapshot_depth })
+        Ok(Self { 
+            ledger_dir,
+            local_db, 
+            shadow_dbs: RwLock::new(HashMap::new()),
+            snapshot_depth,
+        })
     }
 
-    /// Save a snapshot for a document.
+    /// 获取账本目录路径。
+    pub fn ledger_dir(&self) -> &Path {
+        &self.ledger_dir
+    }
+
+    /// 获取影子库目录路径。
+    pub fn remotes_dir(&self) -> PathBuf {
+        self.ledger_dir.join("remotes")
+    }
+
+    // ========== Shadow DB Management ==========
+
+    /// 确保指定 Peer 的影子库已加载。
+    pub fn ensure_shadow_db(&self, peer_id: &PeerId) -> Result<()> {
+        shadow::ensure_shadow_db(&self.remotes_dir(), &self.shadow_dbs, peer_id)
+    }
+
+    /// 列出所有已加载的影子库。
+    pub fn list_loaded_shadows(&self) -> Vec<PeerId> {
+        let dbs = self.shadow_dbs.read().unwrap();
+        dbs.keys().cloned().collect()
+    }
+
+    /// 扫描磁盘上所有影子库文件并返回 PeerId 列表。
+    pub fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
+        shadow::list_shadows_on_disk(&self.remotes_dir())
+    }
+
+    // ========== Snapshot Operations ==========
+
+    /// Save a snapshot for a document (Local DB only).
     pub fn save_snapshot(&self, doc_id: DocId, seq: u64, content: &str) -> Result<()> {
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
-            let mut data = write_txn.open_table(SNAPSHOT_DATA)?;
-            
-            // 1. Insert Data
-            data.insert(seq, content.as_bytes())?;
-            
-            // 2. Index
-            index.insert(doc_id.as_u128(), seq)?;
-        }
-        write_txn.commit()?;
-        
-        // Trigger pruning
-        self.prune_snapshots(doc_id)?;
-        
-        Ok(())
+        snapshot::save_snapshot(&self.local_db, doc_id, seq, content, self.snapshot_depth)
     }
 
-    /// Prune old snapshots if they exceed the configured depth.
-    fn prune_snapshots(&self, doc_id: DocId) -> Result<()> {
-        let write_txn = self.db.begin_write()?;
-        let count = {
-            // Phase 1: Collect
-            let mut snapshots = Vec::new();
-            {
-                let index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
-                let iter = index.get(doc_id.as_u128())?;
-                for item in iter {
-                    let seq: u64 = item?.value();
-                    snapshots.push(seq);
-                }
-            }
-            
-            // Phase 2: Prune
-            snapshots.sort();
-            let total = snapshots.len();
-            if total > self.snapshot_depth {
-                let to_remove = total - self.snapshot_depth;
-                let remove_seqs = &snapshots[0..to_remove];
-                
-                let mut index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
-                let mut data = write_txn.open_table(SNAPSHOT_DATA)?;
-                
-                for &seq in remove_seqs {
-                    index.remove(doc_id.as_u128(), seq)?;
-                    data.remove(seq)?;
-                }
-                to_remove
-            } else {
-                0
-            }
-        };
-        write_txn.commit()?;
-        
-        Ok(())
-    }
+    // ========== Path/DocId Mapping (Local DB Only) ==========
 
     pub fn get_docid(&self, path: &str) -> Result<Option<DocId>> {
-        let normalized = to_forward_slash(path);
-        let read_txn = self.db.begin_read()?;
-        let table = read_txn.open_table(PATH_TO_DOCID)?;
-        if let Some(v) = table.get(&*normalized)? {
-            Ok(Some(DocId::from_u128(v.value())))
-        } else {
-            Ok(None)
-        }
+        metadata::get_docid(&self.local_db, path)
     }
 
     pub fn create_docid(&self, path: &str) -> Result<DocId> {
-        let normalized = to_forward_slash(path);
-        let id = DocId::new();
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
-            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
-            
-            p2d.insert(&*normalized, id.as_u128())?;
-            d2p.insert(id.as_u128(), &*normalized)?;
-        }
-        write_txn.commit()?;
-        Ok(id)
+        metadata::create_docid(&self.local_db, path)
     }
 
     pub fn get_path_by_docid(&self, doc_id: DocId) -> Result<Option<String>> {
-         let read_txn = self.db.begin_read()?;
-         let table = read_txn.open_table(DOCID_TO_PATH)?;
-         if let Some(v) = table.get(doc_id.as_u128())? {
-             Ok(Some(v.value().to_string()))
-         } else {
-             Ok(None)
-         }
+         metadata::get_path_by_docid(&self.local_db, doc_id)
     }
 
     pub fn get_docid_by_inode(&self, inode: &FileNodeId) -> Result<Option<DocId>> {
-        let read_txn = self.db.begin_read()?;
-        let table = read_txn.open_table(INODE_TO_DOCID)?;
-        if let Some(v) = table.get(inode.id)? {
-            Ok(Some(DocId::from_u128(v.value())))
-        } else {
-            Ok(None)
-        }
+        metadata::get_docid_by_inode(&self.local_db, inode)
     }
 
     pub fn bind_inode(&self, inode: &FileNodeId, doc_id: DocId) -> Result<()> {
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut table = write_txn.open_table(INODE_TO_DOCID)?;
-            table.insert(inode.id, doc_id.as_u128())?;
-        }
-        write_txn.commit()?;
-        Ok(())
+        metadata::bind_inode(&self.local_db, inode, doc_id)
     }
 
     pub fn rename_doc(&self, old_path: &str, new_path: &str) -> Result<()> {
-        let old_normalized = to_forward_slash(old_path);
-        let new_normalized = to_forward_slash(new_path);
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
-            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
-
-            // Get ID
-            let id_opt = p2d.get(&*old_normalized)?.map(|v| v.value());
-
-            if let Some(id) = id_opt {
-                // Remove old path mapping
-                p2d.remove(&*old_normalized)?;
-                // Insert new path mapping
-                p2d.insert(&*new_normalized, id)?;
-                // Update reverse mapping
-                d2p.insert(id, &*new_normalized)?;
-            } else {
-                return Err(anyhow::anyhow!("Document not found in ledger: {}", old_path));
-            }
-        }
-        write_txn.commit()?;
-        Ok(())
+        metadata::rename_doc(&self.local_db, old_path, new_path)
     }
 
     pub fn delete_doc(&self, path: &str) -> Result<()> {
-        let normalized = to_forward_slash(path);
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
-            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
-
-            // Get ID
-            let id_opt = p2d.get(&*normalized)?.map(|v| v.value());
-
-            if let Some(id) = id_opt {
-                p2d.remove(&*normalized)?;
-                d2p.remove(id)?;
-            }
-        }
-        write_txn.commit()?;
-        Ok(())
+        metadata::delete_doc(&self.local_db, path)
     }
 
     pub fn rename_folder(&self, old_prefix: &str, new_prefix: &str) -> Result<()> {
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
-            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
-            
-            // 1. Collect all affected paths first (to avoid borrowing issues while writing)
-            let mut updates = Vec::new();
-            
-            for item in p2d.iter()? {
-                let (path_guard, id_guard) = item?;
-                let path = path_guard.value();
-                let id = id_guard.value();
-                
-                if path == old_prefix || path.starts_with(&format!("{}/", old_prefix)) || path.starts_with(&format!("{}\\", old_prefix)) {
-                     // Calculate new path
-                     let suffix = &path[old_prefix.len()..];
-                     let new_path = format!("{}{}", new_prefix, suffix);
-                     updates.push((path.to_string(), new_path, id));
-                }
-            }
-            
-            // 2. Apply updates
-            for (old, new, id) in updates {
-                p2d.remove(&*old)?;
-                p2d.insert(&*new, id)?;
-                d2p.insert(id, &*new)?;
-            }
-        }
-        write_txn.commit()?;
-        Ok(())
+        metadata::rename_folder(&self.local_db, old_prefix, new_prefix)
     }
 
-    /// Delete all documents whose paths start with the given prefix (folder deletion).
     pub fn delete_folder(&self, prefix: &str) -> Result<usize> {
-        let write_txn = self.db.begin_write()?;
-        let count = {
-            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
-            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
-            
-            // Collect all docs to delete
-            let mut to_delete = Vec::new();
-            
-            for item in p2d.iter()? {
-                let (path_guard, id_guard) = item?;
-                let path = path_guard.value();
-                let id = id_guard.value();
-                
-                if path == prefix 
-                    || path.starts_with(&format!("{}/", prefix)) 
-                    || path.starts_with(&format!("{}\\", prefix)) 
-                {
-                    to_delete.push((path.to_string(), id));
-                }
-            }
-            
-            let count = to_delete.len();
-            
-            for (path, id) in to_delete {
-                p2d.remove(&*path)?;
-                d2p.remove(id)?;
-            }
-            
-            count
-        };
-        write_txn.commit()?;
-        Ok(count)
-    }
-
-    pub fn append_op(&self, entry: &LedgerEntry) -> Result<u64> {
-        let write_txn = self.db.begin_write()?;
-        let seq = {
-            let mut ops = write_txn.open_table(LEDGER_OPS)?;
-            let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
-            
-            let last_seq = ops.last()?.map(|(k, _)| k.value()).unwrap_or(0u64);
-            let new_seq = last_seq + 1;
-            let bytes = bincode::serialize(entry)?;
-            ops.insert(new_seq, bytes.as_slice())?;
-            
-            // Index by DocId
-            doc_ops.insert(entry.doc_id.as_u128(), new_seq)?;
-            
-            new_seq
-        };
-        write_txn.commit()?;
-        Ok(seq)
-    }
-
-    pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        let read_txn = self.db.begin_read()?;
-        let ops_table = read_txn.open_table(LEDGER_OPS)?;
-        let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
-        
-        let mut entries = Vec::new();
-        let seqs = doc_ops_table.get(doc_id.as_u128())?;
-        
-        for seq in seqs {
-            let seq_val = seq?.value();
-            if let Some(bytes) = ops_table.get(seq_val)? {
-                 let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
-                 entries.push((seq_val, entry));
-            }
-        }
-        
-        // Sort by sequence number
-        entries.sort_by_key(|k| k.0);
-        
-        Ok(entries)
+        metadata::delete_folder(&self.local_db, prefix)
     }
 
     pub fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
-        let read_txn = self.db.begin_read()?;
-        let table = read_txn.open_table(DOCID_TO_PATH)?;
-        let mut docs = Vec::new();
-        for item in table.iter()? {
-            let (id, path) = item?;
-            docs.push((DocId::from_u128(id.value()), path.value().to_string()));
+        metadata::list_docs(&self.local_db)
+    }
+
+    // ========== Operations (Append/Read) ==========
+
+    /// 追加操作到本地库 (Store B)。
+    /// 
+    /// Local Write Only - 仅接受本地用户的操作。
+    pub fn append_local_op(&self, entry: &LedgerEntry) -> Result<u64> {
+        ops::append_op_to_db(&self.local_db, entry)
+    }
+
+    /// 追加操作到指定远端的影子库 (Store C)。
+    /// 
+    /// Remote Write Only - 仅接受来自指定 Peer 的操作。
+    pub fn append_remote_op(&self, peer_id: &PeerId, entry: &LedgerEntry) -> Result<u64> {
+        self.ensure_shadow_db(peer_id)?;
+        
+        let dbs = self.shadow_dbs.read().unwrap();
+        let db = dbs.get(peer_id)
+            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found for peer: {}", peer_id))?;
+        
+        ops::append_op_to_db(db, entry)
+    }
+
+    /// 兼容方法：追加操作到本地库（保持原有 API 兼容性）。
+    #[deprecated(note = "Use append_local_op instead for clarity")]
+    pub fn append_op(&self, entry: &LedgerEntry) -> Result<u64> {
+        self.append_local_op(entry)
+    }
+
+    /// 从指定仓库读取操作。
+    pub fn get_ops(&self, repo_type: &RepoType, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
+        match repo_type {
+            RepoType::Local => ops::get_ops_from_db(&self.local_db, doc_id),
+            RepoType::Remote(peer_id) => {
+                self.ensure_shadow_db(peer_id)?;
+                let dbs = self.shadow_dbs.read().unwrap();
+                let db = dbs.get(peer_id)
+                    .ok_or_else(|| anyhow::anyhow!("Shadow DB not found for peer: {}", peer_id))?;
+                ops::get_ops_from_db(db, doc_id)
+            }
         }
-        Ok(docs)
+    }
+
+    /// 从本地库读取操作（便捷方法）。
+    pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
+        self.get_ops(&RepoType::Local, doc_id)
     }
 }
 
@@ -320,28 +234,80 @@ impl Ledger {
 mod tests {
     use super::*;
     use anyhow::Result;
-    use tempfile::NamedTempFile;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_repo_manager_init() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let ledger_dir = tmp_dir.path().join("ledger");
+        
+        let repo = RepoManager::init(&ledger_dir, 10)?;
+        
+        // Verify directory structure
+        assert!(ledger_dir.exists());
+        assert!(ledger_dir.join("local.redb").exists());
+        assert!(ledger_dir.join("remotes").exists());
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_local_and_shadow_isolation() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let ledger_dir = tmp_dir.path().join("ledger");
+        let repo = RepoManager::init(&ledger_dir, 10)?;
+        
+        let doc_id = DocId::new();
+        let peer_id = PeerId::new("peer_mobile");
+        
+        // Write to local
+        let local_entry = LedgerEntry {
+            doc_id,
+            op: crate::models::Op::Insert { pos: 0, content: "local content".to_string() },
+            timestamp: 1000,
+        };
+        repo.append_local_op(&local_entry)?;
+        
+        // Write to shadow
+        let remote_entry = LedgerEntry {
+            doc_id,
+            op: crate::models::Op::Insert { pos: 0, content: "remote content".to_string() },
+            timestamp: 2000,
+        };
+        repo.append_remote_op(&peer_id, &remote_entry)?;
+        
+        // Verify isolation
+        let local_ops = repo.get_ops(&RepoType::Local, doc_id)?;
+        assert_eq!(local_ops.len(), 1);
+        
+        let remote_ops = repo.get_ops(&RepoType::Remote(peer_id.clone()), doc_id)?;
+        assert_eq!(remote_ops.len(), 1);
+        
+        // Verify shadow db file exists
+        let shadow_path = ledger_dir.join("remotes").join("peer_mobile.redb");
+        assert!(shadow_path.exists());
+        
+        Ok(())
+    }
 
     #[test]
     fn test_snapshot_pruning() -> Result<()> {
-        let tmp_file = NamedTempFile::new()?;
-        let db_path = tmp_file.path();
+        let tmp_dir = TempDir::new()?;
+        let ledger_dir = tmp_dir.path().join("ledger");
         
-        // Init ledger with snapshot_depth = 2
-        let ledger = Ledger::init(db_path, 2)?;
+        let repo = RepoManager::init(&ledger_dir, 2)?;
         let doc_id = DocId::new();
         
         // Save 3 snapshots
-        ledger.save_snapshot(doc_id, 1, "Snap 1")?;
-        ledger.save_snapshot(doc_id, 2, "Snap 2")?;
-        ledger.save_snapshot(doc_id, 3, "Snap 3")?; // This should prune seq 1
+        repo.save_snapshot(doc_id, 1, "Snap 1")?;
+        repo.save_snapshot(doc_id, 2, "Snap 2")?;
+        repo.save_snapshot(doc_id, 3, "Snap 3")?; // This should prune seq 1
         
         // Verify pruning
-        let read_txn = ledger.db.begin_read()?;
+        let read_txn = repo.local_db.begin_read()?;
         let index = read_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let data = read_txn.open_table(SNAPSHOT_DATA)?;
         
-        // Check Index
         let mut seqs = Vec::new();
         for item in index.get(doc_id.as_u128())? {
             seqs.push(item?.value());
@@ -349,8 +315,6 @@ mod tests {
         seqs.sort();
         
         assert_eq!(seqs, vec![2, 3], "Snapshot index should only contain 2 and 3");
-        
-        // Check Data
         assert!(data.get(1)?.is_none(), "Snapshot 1 data should be removed");
         assert!(data.get(2)?.is_some(), "Snapshot 2 data should exist");
         assert!(data.get(3)?.is_some(), "Snapshot 3 data should exist");

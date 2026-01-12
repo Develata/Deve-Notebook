@@ -17,7 +17,7 @@ pub async fn handle_edit(
         timestamp: chrono::Utc::now().timestamp_millis(),
     };
     
-    match state.ledger.append_op(&entry) {
+    match state.repo.append_op(&entry) {
         Ok(seq) => {
             // Broadcast to ALL with Sequence and ClientId
             let _ = tx.send(ServerMessage::NewOp { 
@@ -43,7 +43,7 @@ pub async fn handle_request_history(
     tx: &broadcast::Sender<ServerMessage>,
     doc_id: deve_core::models::DocId,
 ) {
-     if let Ok(entries) = state.ledger.get_ops(doc_id) {
+     if let Ok(entries) = state.repo.get_local_ops(doc_id) {
          let ops: Vec<(u64, deve_core::models::Op)> = entries.into_iter()
              .map(|(seq, entry)| (seq, entry.op))
              .collect();
@@ -66,7 +66,7 @@ pub async fn handle_open_doc(
     }
 
     // Return Snapshot from Ledger (Truth)
-    let entries_with_seq = state.ledger.get_ops(doc_id).unwrap_or_default();
+    let entries_with_seq = state.repo.get_local_ops(doc_id).unwrap_or_default();
     let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
     let final_content = deve_core::state::reconstruct_content(&ops);
     let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);

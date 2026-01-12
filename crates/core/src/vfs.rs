@@ -12,7 +12,7 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use crate::ledger::Ledger;
+use crate::ledger::RepoManager;
 use crate::models::FileNodeId;
 
 
@@ -51,7 +51,7 @@ impl Vfs {
 
     /// Scan the vault directory and ensure every markdown file has a DocId in the Ledger.
     /// Also removes entries from the Ledger that no longer exist on disk.
-    pub fn scan(&self, ledger: &Ledger) -> Result<usize> {
+    pub fn scan(&self, repo: &RepoManager) -> Result<usize> {
         let mut count = 0;
         let mut on_disk_paths = std::collections::HashSet::new();
 
@@ -67,10 +67,10 @@ impl Vfs {
                     on_disk_paths.insert(path_str.clone());
 
                     // Ensure DocId exists
-                    let doc_id = if let Some(id) = ledger.get_docid(&path_str)? {
+                    let doc_id = if let Some(id) = repo.get_docid(&path_str)? {
                         id
                     } else {
-                        let id = ledger.create_docid(&path_str)?;
+                        let id = repo.create_docid(&path_str)?;
                         count += 1;
                         id
                     };
@@ -78,7 +78,7 @@ impl Vfs {
                     // Bind Inode (Vital for Rename detection)
                     if let Ok(Some(inode)) = self.get_inode(&path_str) {
                          // We always update the inode mapping to the latest
-                         let _ = ledger.bind_inode(&inode, doc_id);
+                         let _ = repo.bind_inode(&inode, doc_id);
                     }
                 }
             }
@@ -86,7 +86,7 @@ impl Vfs {
 
         // 2. Scan Ledger -> Remove Ghosts
         // Optimization: In a real system, we might query the DB for all paths first.
-        let known_docs = ledger.list_docs()?; // Returns (DocId, String)
+        let known_docs = repo.list_docs()?; // Returns (DocId, String)
         let mut removed_count = 0;
         
         for (_id, path) in known_docs {
@@ -101,7 +101,7 @@ impl Vfs {
                  // If we just walked, it should be accurate.
                  
                  // Remove from ledger
-                 match ledger.delete_doc(&path) {
+                 match repo.delete_doc(&path) {
                      Ok(_) => {
                          removed_count += 1; 
                          // tracing::info!("Removed ghost doc: {}", path); // No tracing here, just println in main
