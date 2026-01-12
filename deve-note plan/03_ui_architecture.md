@@ -4,12 +4,20 @@
 
 ### 1. 布局系统 (The Layout Engine)
 
-采用 **"Resizable Slot" (可缩放插槽)** 布局：
+采用 **"Activity Bar + Resizable Slot"** 布局 (Ref: VS Code)：
 
-* **Left Slot**: 文件树（核心）/ 双向链接图谱 (Mini Graph, 插件可选)。
-  * **文件项操作菜单 (File Item Menu)**：Rename, Copy, Paste, Open in New Window, Move to, Delete.
-  * **文件夹项操作菜单 (Folder Item Menu)**：New File, New Folder, Rename, Copy, Paste, Move to, Delete.
-  * **快速新建按钮 (+)**：快速创建新文档。
+* **Activity Bar (最左侧)**: 侧边栏导航条。
+  * **(Icon) Explorer**: 资源管理器。
+  * **(Icon) Search**: 全局搜索。
+  * **(Icon) Source Control**: Git 版本控制。
+  * **(Icon) Extensions**: 插件管理。
+  * **(Icon) Settings (Bottom)**: 全局设置。
+
+* **Left Slot (Sidebar)**: 依据 Activity Bar 切换内容。
+  * **Explorer View**: 文件树（文件/文件夹菜单、+按钮）。
+  * **Git View**: 暂存区、提交区、Sync 按钮。
+  * **Extensions View**: Installed/Recommended 列表。
+
 * **Main Slot**: 多标签页 (Tabs) 编辑器 / 分屏 (Split View)。
 * **Right Slot**: 大纲 (TOC) / 属性面板 (Metadata) / 插件面板。
   * **[Implemented] Table of Contents**: 支持层级缩进与点击跳转。

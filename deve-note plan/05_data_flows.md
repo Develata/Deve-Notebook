@@ -22,8 +22,10 @@
 
 ### 场景三：Git 同步 (The Git Flow)
 
-1.  点击 Git Sync。
-2.  **前端**: 显示差异。
+1.  **触发方式**:
+    *   **Activity Bar**: 点击 Source Control 图标 -> Commit/Sync。
+    *   **Command Palette**: `Cmd+K` -> 输入 `Git: Sync` / `Git: Commit` / `Git: Push`。
+2.  **前端**: 显示差异 (Diff View)。
 3.  **权限检查**: 校验 Capability。
 4.  **调用**: `git_sync.rhai` (Host Functions)。
 5.  **后端**: `git add` -> `commit` -> `push`。
