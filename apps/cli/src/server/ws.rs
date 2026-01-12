@@ -22,7 +22,8 @@ use futures::{StreamExt, SinkExt};
 
 use deve_core::protocol::ClientMessage;
 use crate::server::AppState;
-use crate::server::handlers::{document, system, plugin, search};
+use crate::server::handlers::{document, system, plugin, search, sync};
+use deve_core::models::PeerId;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -33,6 +34,9 @@ pub async fn ws_handler(
 
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     tracing::info!("Client connected");
+    
+    // Session State
+    let mut authenticated_peer_id: Option<PeerId> = None;
     
     // Subscribe to Broadcast
     let mut rx = state.tx.subscribe();
@@ -99,19 +103,21 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      ClientMessage::Search { query, limit } => {
                          search::handle_search(&state_clone, &tx, query, limit).await;
                      }
-                     // P2P Sync messages - Phase 1 stubs (to be implemented)
+                     // P2P Sync messages
                      ClientMessage::SyncHello { peer_id, vector } => {
-                         tracing::warn!("SyncHello received from {:?} (not yet implemented)", peer_id);
-                         // TODO: Implement P2P handshake logic
-                         let _ = vector; // Suppress unused warning
+                         tracing::info!("SyncHello from {}", peer_id);
+                         authenticated_peer_id = Some(peer_id.clone());
+                         sync::handle_sync_hello(&state_clone, &tx, peer_id, vector).await;
                      }
                      ClientMessage::SyncRequest { requests } => {
-                         tracing::warn!("SyncRequest received (not yet implemented): {:?}", requests.len());
-                         // TODO: Implement P2P data request logic
+                         sync::handle_sync_request(&state_clone, &tx, requests).await;
                      }
                      ClientMessage::SyncPush { ops } => {
-                         tracing::warn!("SyncPush received (not yet implemented): {} ops", ops.len());
-                         // TODO: Implement P2P data push logic
+                         if let Some(pid) = &authenticated_peer_id {
+                             sync::handle_sync_push(&state_clone, &tx, pid.clone(), ops).await;
+                         } else {
+                             tracing::warn!("Ignored SyncPush from unauthenticated peer");
+                         }
                      }
                 }
             }

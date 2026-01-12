@@ -19,6 +19,9 @@ use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
 use std::net::SocketAddr;
 use deve_core::plugin::runtime::PluginRuntime;
+use deve_core::models::PeerId;
+use deve_core::sync::engine::SyncEngine;
+use std::sync::RwLock;
 
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
@@ -32,6 +35,7 @@ pub struct AppState {
     pub tx: broadcast::Sender<ServerMessage>,
     pub vault_path: std::path::PathBuf,
     pub plugins: Vec<Box<dyn PluginRuntime>>,
+    pub sync_engine: Arc<RwLock<SyncEngine>>,
     #[cfg(feature = "search")]
     pub search_service: Option<SearchService>,
 }
@@ -80,12 +84,36 @@ pub async fn start_server(
         }
     };
 
+    // Load or create PeerId
+    let peer_id_path = vault_path.join(".deve").join("peer_id");
+    let peer_id = if peer_id_path.exists() {
+        let content = std::fs::read_to_string(&peer_id_path)?;
+        PeerId::new(content.trim())
+    } else {
+        let id = PeerId::random();
+        if let Some(parent) = peer_id_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&peer_id_path, id.as_str())?;
+        tracing::info!("Generated and saved new PeerID: {}", id);
+        id
+    };
+    tracing::info!("Server PeerID: {}", peer_id);
+
+    // Initialize SyncEngine (Relay Mode -> Auto)
+    let sync_engine = Arc::new(RwLock::new(SyncEngine::new(
+        peer_id,
+        repo.clone(),
+        deve_core::config::SyncMode::Auto,
+    )));
+
     let app_state = Arc::new(AppState { 
         repo: repo.clone(),
         sync_manager,
         tx,
         vault_path,
         plugins,
+        sync_engine,
         #[cfg(feature = "search")]
         search_service,
     });

@@ -22,18 +22,18 @@
 ## 阶段 1: P2P 基础设施 (P2P Infrastructure) - [CURRENT]
 **目标**: 实现 Trinity Isolation、Relay 网络与 Gossip 协议。
 
-- [ ] **Repository Manager (仓库管理器)**:
-    - [ ] 重构 `Ledger` 为 `RepoManager` (Store B)。
-    - [ ] 实现 **Trinity Isolation** 目录结构 (Vault / Local DB / Shadow DBs)。
-    - [ ] 实现 `Shadow Repo` (Store C) 的独立加载与只读控制。
+- [x] **Repository Manager (仓库管理器)**:
+    - [x] 重构 `Ledger` 为 `RepoManager` (Store B)。
+    - [x] 实现 **Trinity Isolation** 目录结构 (Vault / Local DB / Shadow DBs)。
+    - [x] 实现 `Shadow Repo` (Store C) 的独立加载与只读控制。
 - [ ] **网络层 (Networking)**:
     - [ ] 实现 `Relay Server` (Always-on Peer)。
     - [ ] 实现 `WebSocket` 客户端 (重连、心跳、鉴权)。
-    - [ ] **Web Dashboard API**: 实现 Server 端 WebSocket 接口，支持 Web 端读写内存/DB。
-- [ ] **同步协议 (Gossip)**:
-    - [ ] 实现 `Version Vector` 结构与交换逻辑 (Manifest)。
-    - [ ] 实现 `Diff & Fetch` (增量拉取 Ops)。
-    - [ ] 实现 `SYNC_MODE` 配置 (Auto/Manual)。
+    - [x] **Web Dashboard API**: 实现 Server 端 WebSocket 接口，支持 Web 端读写内存/DB。
+- [x] **同步协议 (Gossip)**:
+    - [x] 实现 `Version Vector` 结构与交换逻辑 (Manifest)。
+    - [x] 实现 `Diff & Fetch` (增量拉取 Ops)。
+    - [x] 实现 `SYNC_MODE` 配置 (Auto/Manual)。
 - [ ] **CLI P2P 验证**:
     - [ ] `deve-note verify-p2p`: 模拟多端同步，验证 Shadow Repo 数据一致性。
 

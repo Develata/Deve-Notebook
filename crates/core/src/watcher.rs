@@ -63,6 +63,12 @@ impl Watcher {
                        // Convert to relative string and normalize to forward slashes
                        if let Ok(rel) = path.strip_prefix(&root_absolute) {
                            let path_str = crate::utils::path::to_forward_slash(&rel.to_string_lossy());
+                           
+                           // Ignore system and hidden directories
+                           if path_str.starts_with(".git") || path_str.starts_with(".deve") {
+                               continue;
+                           }
+
                            match self.sync_manager.handle_fs_event(&path_str) {
                                Ok(msgs) => {
                                    if !msgs.is_empty() {

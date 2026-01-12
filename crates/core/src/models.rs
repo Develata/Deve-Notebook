@@ -39,6 +39,11 @@ impl PeerId {
     pub fn to_filename(&self) -> String {
         self.0.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
     }
+
+    /// Generates a random Peer ID (UUID v4).
+    pub fn random() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
 }
 
 impl fmt::Display for PeerId {

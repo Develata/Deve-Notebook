@@ -32,7 +32,7 @@ pub enum ClientMessage {
     },
     /// Push operations to peer
     SyncPush {
-        ops: Vec<LedgerEntry>,
+        ops: Vec<(u64, LedgerEntry)>,
     },
     /// Client sends an edit operation for a specific document.
     Edit {
@@ -92,10 +92,18 @@ pub enum ServerMessage {
         doc_id: DocId,
         seq: u64,
     },
-    /// P2P Handshake Response (Offer what you are missing)
-    SyncOffer {
-        /// List of (PeerId, Range Start, Range End)
-        missing: Vec<(PeerId, (u64, u64))>,
+    /// P2P: Server Hello (Response to Client Hello)
+    SyncHello {
+        peer_id: PeerId,
+        vector: VersionVector,
+    },
+    /// P2P: Server requests data from Client
+    SyncRequest {
+        requests: Vec<(PeerId, (u64, u64))>,
+    },
+    /// P2P: Server pushes data to Client (Batch)
+    SyncPush {
+        ops: Vec<(u64, LedgerEntry)>,
     },
     /// Server broadcasts a new Op from another client.
     NewOp {

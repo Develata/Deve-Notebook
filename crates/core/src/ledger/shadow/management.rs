@@ -1,12 +1,18 @@
-//! # 影子库管理模块 (Shadow Repository)
-//! 
-//! 管理远端 Peer 的影子数据库 (Store C)。
-//! 实现懒加载和磁盘扫描。
+//! # 影子库管理层 (Shadow Management)
+//!
+//! **架构作用**:
+//! 处理影子库的生命周期：创建、打开、表初始化和磁盘扫描。
+//!
+//! **核心功能清单**:
+//! - `ensure_shadow_db`: 确保指定 Peer 的数据库存在且表结构完整。
+//! - `list_shadows_on_disk`: 扫描磁盘发现已有的影子库。
+//!
+//! **类型**: Core MUST (核心必选)
 
 use anyhow::{Result, Context};
-use redb::{Database, ReadableMultimapTable, ReadableTable};
+use redb::Database;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::RwLock;
 use crate::models::PeerId;
 use crate::ledger::schema::*;
