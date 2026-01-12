@@ -2,7 +2,7 @@
 
 **版本**：0.0.1
 **状态**：后端逻辑闭环 + 前端交互定义完整 + 数据/安全强化落地。
-**核心理念**：账本为真源 + ID 化 VFS + 工业级内核 (Industrial Kernel) + 沉浸式驾驶舱 (Immersive Cockpit)。
+**核心理念**：账本为真源 + **三位一体隔离 (Trinity Isolation)** + **Git-Flow 数据主权** + 工业级内核。
 
 **项目定位**：个人部署在服务器上，仅供自己使用的开源个人 Wiki Markdown 笔记项目（支持 LaTeX 数学公式）。
 
@@ -33,6 +33,12 @@
 * **Asset（资产）**：图片/附件等二进制对象，拥有独立 DocId；运行时以 `asset://<uuid>` 引用，导出时 MUST 落为标准 Markdown 引用。
 * **Reconciliation（和解）**：检测并合并外部修改（例如 VS Code 直接改 Vault 文件）到 Ledger 的过程。
 * **Job Queue（作业队列）**：用于执行长任务/插件任务/AI 调用的受控队列，提供超时、取消与并发上限。
+* **Peer（节点）**：系统中地位平等的每个设备（PC、Mobile、Server）。
+* **Relay（中继）**：特指 Server 节点，其角色降级为 **"Always-on Relay Peer"**，负责存储加密副本与转发流量，但不持有唯一真理。
+* **Three Stores (三库隔离)**：
+    * **Store A (Vault)**：本地 Markdown 文件工作区。
+    * **Store B (Local Repo)**：本地核心数据库 (`local.redb`)，**Local Write Only**。
+    * **Store C (Shadow Repo)**：远端影子数据库 (`remotes/peer_X.redb`)，**Remote Write Only**。
 
 ## 核心边界（最高优先级）
 
@@ -61,6 +67,39 @@
 
 ---
 
+---
+
+## 核心变更理念：Git-Flow P2P 架构 (Core Architecture Philosophy) - [NEW]
+
+本章节定义了从传统 Client-Server 向 **Relay-First P2P Mesh** 演进的核心原则。
+
+### 1. 拓扑结构：中继优先的 P2P 网络 (Relay-First P2P Mesh)
+* **Peer 定义**：每个设备（PC、Mobile、Server）都是地位平等的 Peer。
+    * **Server 的角色变更**：不再是中央逻辑服务器，而是降级为 **"Always-on Relay Peer" (全天候中继节点)**。它负责存储所有 Peer 的加密数据副本，并在 Peer 之间转发数据（解决 A 下线后 B 无法获取数据的问题）。
+* **连接策略**：
+    * **Core (默认)**：基于 Relay 的连接。所有 Peer 默认连接 Server，通过 Server 转发数据包。这种方式对内存和性能开销最小，且无需内网穿透。
+    * **Extension (接口)**：预留 `Transport` 接口。允许未来通过插件实现 IPv4/IPv6 直连或 NAT 穿透（如 EasyTier/WebRTC），绕过中继。
+
+### 2. 数据存储模型：三份数据隔离 (The Trinity Isolation)
+实现“绝对数据主权”和“零污染”。本地不再是单体数据库，而是物理隔离的存储结构：
+* **Store A (Vault)**: 本地 Markdown 文件（工作区）。由 Store B 实时投影生成，用户可读写。
+* **Store B (Local Master DB)**: 本地核心数据库（`local.redb`）。**只有本地用户的操作能写入此库**。
+* **Store C (Remote Shadow DBs)**: 远端影子数据库集合（`/data/ledger/remotes/peer_X.redb`）。
+    * 来自 Peer X 的数据**只写入** `remotes/peer_X.redb`，**绝对禁止**自动合并进 Store B。
+
+### 3. 同步协议：基于版本向量的 Gossip (Version Vector Gossip)
+* **废弃**：简单的广播 (Broadcast) 和时间戳 (Timestamp)。
+* **采用**：
+    * **元数据**：使用 **Sequence Number (操作序列号)** 作为单一真理。
+    * **握手流程**：Exchange Manifest (Version Vector) -> Diff & Fetch -> Update Shadow DB。
+
+### 4. 交互模式：VS Code 式分支切换
+* **分支切换器**：UI 提供类似 VS Code 左下角的分支切换功能。
+    * 切到 `Local`：读写 Store B + Store A。
+    * 切到 `Peer Mobile`：**只读模式 (Spectator Mode)**。VFS 挂载点切换，直接从 `remotes/peer_mobile.redb` 读取并在内存中生成文件树。
+
+---
+
 ## Phase 0: 核心验证原型 (Headless Core Verification) - [必选项]
 
 在构建任何 UI 之前，**必须**先行构建并通过验证的纯命令行原型（Headless CLI）。
@@ -83,7 +122,7 @@
 * **信息分层**：
 	* **L1 (Focus)**：编辑区是绝对中心，无干扰。
 	* **L2 (Context)**：左侧边栏（文件树），右侧边栏（大纲）提供导航。
-	* **L3 (Meta)**：底部状态栏显示“和解状态”（Sync/Watcher）、Git 分支、字数统计。
+	* **L3 (Meta)**：底部状态栏显示“和解状态”（Sync/Watcher）、Git 分支、字数统计、**Branch Switcher (Peer 切换器)**。
 	* **L4 (Floating)**：`Cmd+K` 命令面板和悬浮工具栏，按需出现。
 
 * **键盘优先 (Keyboard First)**：
@@ -161,6 +200,21 @@
 * **特性**：所有面板状态（宽度、折叠）持久化存储在 Redb 的 `ui_state` 表中，重启后完全恢复；侧边栏分组/层级可配置，风格靠近 VitePress 的导航结构。
 * **模态框统一样式 (Modal Consistency)**：所有弹出的输入框（Rename、New File、Open File、Settings 等）**MUST** 与命令面板 (Command Palette) 保持视觉风格一致，包括：背景模糊遮罩、圆角卡片、输入框样式、按钮样式、动画过渡等。统一使用 `InputModal` 或 `CommandPalette` 组件基础样式。
 
+### 1.x Branch Switcher & Spectator Mode (分支切换与观测者) - [NEW]
+
+* **Branch Switcher (组件)**：
+    * **位置**：状态栏左下角（参考 VS Code `main` 分支图标）。
+    * **交互**：点击弹出列表，显示 `Local (Master)` 和所有已知的 `Peer-XXX (Shadow)`。
+    * **行为**：选择 `Peer-XXX` 后，VFS 挂载点切换至 `remotes/peer_XXX.redb`。
+
+* **Spectator Mode (模式)**：
+    * **定义**：当用户查阅 Shadow Repo 时的全局 UI 状态。
+    * **特征**：
+        *   **Visual**: 编辑器背景增加**灰色/斜纹水印**，状态栏显示 "READ ONLY"。
+        *   **Input**: 键盘输入被拦截；文件树操作（新建/删除）被禁用。
+        *   **Action**: 仅允许 **Copy**、**Cherry-pick** (右键复制到 Local) 和 **Merge**。
+
+
 ### 2. 编辑器内核 (The Editor Kernel)
 
 不仅仅是一个 `<textarea>`，而是一个分层渲染器：
@@ -223,30 +277,52 @@
 
 ---
 
-## 第三章：统一后端架构 (The Vibranium Backend)
+## 第三章：统一后端架构 (The Vibranium P2P Backend)
 
-*(继承既有核心，确保逻辑闭环)*
+*(核心演进：从单体 Ledger 走向 P2P Repository Mesh)*
 
-* **存储（真源 + 投影）**：
-	* **双存储**：`/data/ledger` 保存 append-only 二进制日志分段（`log_001.bin`）+ 周期性 Snapshot（`snap_v100.bin`）。
-	* `/data/vault` 为 Markdown 投影目录（投影非真源）；支持延迟写/按需写；外部写入 Vault MUST 经由和解转换为 Ops 并追加到 Ledger。
+* **Repository Manager (仓库管理器) - [NEW]**：
+    * **职责**：管理本地唯一的 `Local Repo` (Store B) 和多个 `Shadow Repos` (Store C)。
+    * **结构**：
+        ```text
+        /data/ledger/
+        ├── local.redb          # [Store B] 本地权威
+        ├── remotes/            # [Store C] 影子库目录
+        │   ├── peer_A.redb
+        │   └── peer_B.redb
+        └── manifest.json       # Version Vector 记录
+        ```
+    * **Routing**：VFS 根据 UI 上下文路由到对应的 `.redb` 实例。
 
-* **索引与检索**：
-	* Redb/Sled 维护元数据、UI State、`DocId <-> Path` 映射。
-	* Tantivy 全文检索索引为插件可选能力；启用时强调资源上限与节流，默认不进入核心必选路径。
+* **存储（三位一体隔离）**：
+	* **Store B (Local)**：`local.redb`，仅接受本地 `Watcher` 和 `Merge` 指令写入。
+	* **Store C (Shadows)**：`remotes/peer_X.redb`，仅接受网络 Gossip 协议写入 (Append-only)。
+	* **Snapshot**：每个 Repo 独立维护自己的 Snapshot 链。
 
-* **同步/流控**：
-	* **输入**：客户端 Ops、服务端 Ops、Snapshot、订阅/心跳。
-	* **输出**：增量 Ops 推送或 Snapshot 下发；同步状态可观测（落后/追平/失败）。
-	* **约束**：
-		* MUST 有背压：所有收发队列有硬上限；超限 MUST 触发降级（断开/改发 Snapshot/拒绝低优先级任务）。
-		* MUST 支持离线：断网期间写入本地 Ops；重连后上推并对齐。
-		* SHOULD 分级：轻微落后走 Ops replay，严重落后走 Snapshot。
-	* **失败语义**：网络失败不阻塞编辑；重连后最终一致；连续失败 MUST 提供可见告警与手动重试入口。
+* **同步协议 (Gossip Protocol)**：
+	* **Version Vector**：替代时间戳，作为唯一真理。
+	* **Transport Layer**：
+        * **Relay (Phase 1)**：通过 WebSocket 连接 Relay Server 中转。
+        * **Direct (Phase 2)**：预留 WebRTC/QUIC 接口。
+	* **同步模式 (Sync Mode Configuration) - [NEW]**：
+        * **Auto (Default)**：后台自动拉取 Shadow Repo 更新；若无冲突，尝试自动合并（仅限非编辑区）。
+        * **Manual (StrictMode)**：
+            * **行为**：网络层仅交换 Version Vector，**不自动拉取** Shadow Ops，**不自动合并**。
+            * **操作**：用户必须显式点击 "Fetch" 或 "Pull Peer-X" 才会拉取数据更新 Shadow Repo。
+            * **合并**：用户必须显式执行 "Merge" 指令。
+	* **流控**：
+		* MUST 有背压：所有收发队列有硬上限。
+		* MUST 支持断点续传：利用 Vector 计算差异 (Diff)，仅拉取缺失 Ops。
 
-* **和解与外部修改**：
+* **和解与合并策略 (Reconciliation & Merge Strategy)**：
+    * **Store C -> Store B (Remote Merge)**：
+        * **Conflict Handling (冲突处理)**：
+            * 若 CRDT 算法检测到并发修改冲突（Concurrent Edit），在 **Auto Mode** 下尝试 LWW (Last-Write-Wins) 或保留双方；
+            * 在 **Manual Mode** 下，**MUST** 报错 "Merge Conflict Detected"，**禁止**自动应用变更，强制用户进入 Diff View 手动解决（Accept Local/Remote）。
+    * **Store A -> Store B (Local Watcher)**：
+        * 保持原有逻辑：Debounce -> Inode Check -> Append Ops。
 	* **输入**：Vault 文件变更事件（Notify）+ 变更内容（或 diff）。
-	* **输出**：对应 Ops（追加写入 Ledger）+ 广播“外部修改已合并”。
+	* **输出**：对应 Ops（追加写入 **Store B**）。
 	* **约束**：
 		* MUST 幂等（同一改动不重复吸收）；MUST 防死循环（Sentinel Lock）。
 		* **MUST 识别重命名**：利用 **Inode 追踪 (Linux/macOS)** 或 **File ID (Windows)** 识别文件移动/重命名。
@@ -254,12 +330,12 @@
 		* **MUST 防抖 (Debounce)**：外部写入后应有静默期（如 200ms），等待文件写入稳定（防 Editor 临时文件/原子保存干扰）。
 	* **失败语义**：无法解析/冲突不可合并时 MUST 明确提示并保留原内容（不静默丢失）。
 
-* **SyncManager (同步管理器) - [Implemented]**：
-    * 作为系统核心总线，统一调度 `Watcher`（磁盘事件）、`WebSocket`（网络事件）与 `Ledger`（核心状态）。
+* **SyncManager (同步管理器) - [Refactored]**：
+    * 作为系统核心总线，统一调度 `Watcher`、`Gossip` 与 `RepoManager`。
     * **职责**：
-        1.  **启动扫描**：应用启动时全量扫描 Vault，对比 Ledger Hash，检测离线修改。
-        2.  **事件去重**：维护 `processing_paths` 集合，防止 `Watcher` 事件与 `Ledger` 写入事件形成死循环。
-        3.  **防抖控制**：对高频磁盘写入（如 `vim` 原子保存）实施 300ms 级防抖。
+        1.  **启动扫描**：应用启动时全量扫描 Vault，确保 Vault == Local Repo Projection。
+        2.  **网络调度**：定期与 Peers 交换 Vector，拉取 Shadow Repo 更新。
+        3.  **UI 通知**：当 Shadow Repo 更新时，若用户正在查看该 Peer，触发 UI 刷新；否则仅更新状态栏。
 
 * **运行时安全（插件/脚本）**：
 	* **输入**：插件包（Rhai/Extism）+ 能力清单 + 命令/事件触发。
@@ -335,6 +411,25 @@
 5. **后端**: 执行 `git add .` -> `git commit` -> `git push`。
 6. **反馈**: 状态栏转圈 -> 变绿 "Synced"。
 
+### 场景四：P2P 分支切换与合并 (The P2P Flow) - [NEW]
+
+1.  **用户操作**：点击状态栏分支图标，选择 `Peer-iPhone`。
+2.  **UI 响应**：
+    *   进入 **Spectator Mode** (背景变灰，输入锁定)。
+    *   VFS 切换挂载 `remotes/peer_iphone.redb`。
+    *   文件树刷新，显示 iPhone 端的文件状态。
+3.  **浏览与 cherry-pick**：
+    *   用户打开 `meeting-notes.md`，发现一段有价值的记录。
+    *   选中 -> 右键 "Copy to Local"。
+4.  **合并 (Merge)**：
+    *   用户点击顶部提示栏 "Merge Peer-iPhone into Local"。
+    *   **Check**：若 `sync_mode = manual`，系统检测冲突。
+        *   **无冲突**：自动合并，提示 success。
+        *   **有冲突**：弹窗报错 "Merge Conflict: Line 40 modified on both sides." -> 用户需手动编辑解决 -> 再次 Commit。
+    *   **后端**：执行 CRDT Merge 算法，将 `peer_iphone.redb` 的 Ops 序列合并入 `local.redb`。
+    *   **结果**：Store B 更新 -> 触发 Watcher (Skip) -> 更新 Store A (Vault 文件变更)。
+    *   **UI**：自动切回 `Local` 分支，显示合并一新的文件。
+
 ---
 
 ## 第六章：技术栈清单 (The Full Stack)
@@ -409,6 +504,7 @@ allow_env = ["GITHUB_TOKEN"]
 | `FEATURE_SEARCH`  | `true`            | `false`                 | **全文搜索 (Tantivy)**。`false` = 仅支持文件名搜索。禁用 Tantivy 引擎可节省 50-150MB 堆内存与 CPU 突发占用。 |
 | `FEATURE_GRAPH`   | `true`            | `false`                 | **全域图谱后台分析**。`false` = 服务器不构建引用图谱数据，前端图谱可视化功能将不可用。                       |
 | `MEM_CACHE_MB`    | `128`             | `32`                    | **内存缓存上限**。用于图片缩略图、LaTeX 渲染结果的 LRU 缓存大小。                                            |
+| `SYNC_MODE`       | `auto`            | `auto`                  | **同步模式**。`auto`=自动拉取与合并；`manual`=需手动拉取与解决冲突。                                         |
 | `CONCURRENCY`     | `4`               | `1`                     | **后台并发度**。控制索引构建、压缩、导入等重任务的最大并发线程数。                                           |
 | `SNAPSHOT_DEPTH`  | `100`             | `10`                    | **快照保留深度**。保留最近多少个版本的快照。减少数量可显著降低 Redb 索引大小。                               |
 
