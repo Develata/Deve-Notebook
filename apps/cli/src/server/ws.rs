@@ -20,7 +20,7 @@ use axum::{
 use std::sync::Arc;
 use futures::{StreamExt, SinkExt}; 
 
-use deve_core::protocol::ClientMessage;
+use deve_core::protocol::{ClientMessage, ServerMessage};
 use crate::server::AppState;
 use crate::server::handlers::{document, system, plugin, search, sync};
 use deve_core::models::PeerId;
@@ -41,13 +41,31 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     // Subscribe to Broadcast
     let mut rx = state.tx.subscribe();
     
+    // Direct Message Channel (Unicast)
+    let (direct_tx, mut direct_rx) = tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
+
     // Split socket
     let (mut sender, mut receiver) = socket.split();
     
-    // Task: Receive from Broadcast -> Send to Client
+    // Task: Receive from Broadcast OR Direct -> Send to Client
     let send_task = tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            if let Ok(json) = serde_json::to_string(&msg) {
+        loop {
+            let msg_to_send = tokio::select! {
+                res = rx.recv() => {
+                    match res {
+                        Ok(msg) => msg,
+                        Err(_e) => continue, // Broadcast lag or closed
+                    }
+                },
+                res = direct_rx.recv() => {
+                    match res {
+                        Some(msg) => msg,
+                        None => break, // Channel closed
+                    }
+                }
+            };
+
+            if let Ok(json) = serde_json::to_string(&msg_to_send) {
                 if sender.send(Message::Text(json)).await.is_err() {
                     break;
                 }
@@ -70,6 +88,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
             if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
                 // ROUTER
                 match client_msg {
+                     ClientMessage::Ping => {
+                         // Unicast Pong
+                         let _ = direct_tx.send(ServerMessage::Pong);
+                     }
                      ClientMessage::Edit { doc_id, op, client_id } => {
                          document::handle_edit(&state_clone, &tx, doc_id, op, client_id).await;
                      }

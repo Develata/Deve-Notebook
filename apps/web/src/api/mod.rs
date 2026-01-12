@@ -12,6 +12,7 @@ mod connection;
 mod output;
 
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use gloo_net::websocket::{futures::WebSocket, Message};
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::stream::SplitSink;
@@ -70,6 +71,18 @@ impl WsService {
         // Spawn the two async tasks
         spawn_connection_manager(set_status, set_msg, link_tx);
         spawn_output_manager(rx, link_rx);
+        
+        // Spawn Heartbeat Task (30s interval)
+        let tx_clone = tx.clone();
+        let status_check = status;
+        spawn_local(async move {
+            loop {
+                gloo_timers::future::TimeoutFuture::new(30_000).await;
+                if status_check.get_untracked() == ConnectionStatus::Connected {
+                    let _ = tx_clone.unbounded_send(ClientMessage::Ping);
+                }
+            }
+        });
         
         Self { status, msg, tx }
     }

@@ -59,10 +59,26 @@ pub fn use_core() -> CoreState {
     // Search State
     let (search_results, set_search_results) = signal(Vec::<(String, String, f32)>::new());
 
-    // Initial List Request
+    // Generate Ephemeral PeerId for this session
+    let peer_id = deve_core::models::PeerId::random();
+    leptos::logging::log!("Frontend PeerId: {}", peer_id);
+
+    // Initial Handshake & List Request
     let ws_clone = ws.clone();
+    let status_signal = ws.status;
+    let pid = peer_id.clone();
+    
     Effect::new(move |_| {
-         ws_clone.send(ClientMessage::ListDocs);
+         if status_signal.get() == crate::api::ConnectionStatus::Connected {
+             leptos::logging::log!("Connected! Sending SyncHello...");
+             // Send P2P Handshake
+             ws_clone.send(ClientMessage::SyncHello { 
+                 peer_id: pid.clone(), 
+                 vector: deve_core::models::VersionVector::new() // Empty initially
+             });
+             // Request Doc List
+             ws_clone.send(ClientMessage::ListDocs);
+         }
     });
     
     // Handle Messages

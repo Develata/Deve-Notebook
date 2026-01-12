@@ -78,6 +78,48 @@ pub fn handle_server_message(
                  }
              }
          }
+         ServerMessage::SyncHello { peer_id, vector: _ } => {
+             leptos::logging::log!("P2P Handshake from Peer: {}", peer_id);
+         },
+         ServerMessage::Pong => {
+             // leptos::logging::log!("Pong received");
+         },
+         ServerMessage::SyncPush { ops } => {
+             leptos::logging::log!("Received SyncPush: {} ops", ops.len());
+             
+             let mut max_seq = local_version.get_untracked();
+             let mut applied_count = 0;
+
+             for (seq, entry) in ops {
+                 if entry.doc_id == doc_id {
+                     if seq > max_seq {
+                         if let Ok(json) = serde_json::to_string(&entry.op) {
+                             applyRemoteOp(&json);
+                             applied_count += 1;
+                         }
+                         max_seq = seq;
+                         // History
+                         set_history.update(|h| h.push((seq, entry.op)));
+                     }
+                 }
+             }
+
+             if applied_count > 0 {
+                 let txt = getEditorContent();
+                 if let Some(cb) = on_stats {
+                     let lines = txt.lines().count();
+                     let words = txt.split_whitespace().count();
+                     cb.run(EditorStats { chars: txt.len(), words, lines });
+                 }
+                 set_content.set(txt);
+                 set_local_version.set(max_seq);
+                 
+                 // Playback
+                 if !is_playback.get_untracked() {
+                    set_playback_version.set(max_seq);
+                 }
+             }
+         }
          _ => {}
     }
 }

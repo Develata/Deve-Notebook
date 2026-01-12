@@ -19,6 +19,8 @@ use crate::models::{DocId, Op, PeerId, LedgerEntry, VersionVector};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
+    /// Heartbeat Ping
+    Ping,
     /// P2P Handshake Request
     SyncHello {
         peer_id: PeerId,
@@ -87,6 +89,8 @@ pub enum ClientMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    /// Heartbeat Pong
+    Pong,
     /// Server acknowledges that an Op has been persisted with a specific Sequence Number.
     Ack {
         doc_id: DocId,
