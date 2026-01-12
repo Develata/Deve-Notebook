@@ -27,30 +27,30 @@
     - [x] 实现 **Trinity Isolation** 目录结构 (Vault / Local DB / Shadow DBs)。
     - [x] 实现 `Shadow Repo` (Store C) 的独立加载与只读控制。
 - [ ] **网络层 (Networking)**:
-    - [ ] 实现 `Relay Server` (Always-on Peer)。
-    - [ ] 实现 `WebSocket` 客户端 (重连、心跳、鉴权)。
+    - [x] 实现 `Relay Server` (Always-on Peer)。
+    - [x] 实现 `WebSocket` 客户端 (重连、心跳、鉴权)。
     - [x] **Web Dashboard API**: 实现 Server 端 WebSocket 接口，支持 Web 端读写内存/DB。
 - [x] **同步协议 (Gossip)**:
     - [x] 实现 `Version Vector` 结构与交换逻辑 (Manifest)。
     - [x] 实现 `Diff & Fetch` (增量拉取 Ops)。
     - [x] 实现 `SYNC_MODE` 配置 (Auto/Manual)。
 - [ ] **CLI P2P 验证**:
-    - [ ] `deve-note verify-p2p`: 模拟多端同步，验证 Shadow Repo 数据一致性。
+    - [x] `deve-note verify-p2p`: 模拟多端同步，验证 Shadow Repo 数据一致性。
 
 ## 阶段 2: 驾驶舱与 Web 面板 (Cockpit & Web Dashboard)
 **目标**: 构建 UI，实现分支切换、Web 瘦客户端限制。
 
-- [ ] **前端基础 (Leptos)**:
-    - [ ] Leptos v0.7 + Tailwind CSS 初始化。
-    - [ ] Slot Layout 布局实现。
-    - [ ] `leptos_i18n` 集成。
-- [ ] **Web Dashboard 特性 (Thin Client)**:
-    - [ ] **RAM-Only Mode**: 确保 Web 端不使用 IndexedDB，状态刷新即失。
-    - [ ] **Disconnect Lock**: 实现 WebSocket 断连即锁屏逻辑。
-    - [ ] **Server RPC**: 前端通过 WS 调用 Server Host Functions。
+- [x] **前端基础 (Leptos)**:
+    - [x] Leptos v0.7 + Tailwind CSS 初始化。
+    - [x] Slot Layout 布局实现。
+    - [x] `leptos_i18n` 集成。
+- [x] **Web Dashboard 特性 (Thin Client)**:
+    - [x] **RAM-Only Mode**: 确保 Web 端不使用 IndexedDB，状态刷新即失。
+    - [x] **Disconnect Lock**: 实现 WebSocket 断连即锁屏逻辑。
+    - [x] **Server RPC**: 前端通过 WS 调用 Server Host Functions。
 - [ ] **编辑器内核**:
-    - [ ] CodeMirror 6 组件封装。
-    - [ ] Loro CRDT Wasm 绑定。
+    - [x] CodeMirror 6 组件封装。
+    - [x] Loro CRDT Wasm 绑定。
     - [ ] KaTeX 数学公式渲染。
 - [ ] **P2P 交互组件**:
     - [ ] **Branch Switcher**: 切换 Local/Peer 视图。
