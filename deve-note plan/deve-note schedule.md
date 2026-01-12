@@ -51,7 +51,11 @@
 - [ ] **编辑器内核**:
     - [x] CodeMirror 6 组件封装。
     - [x] Loro CRDT Wasm 绑定。
-    - [ ] KaTeX 数学公式渲染。
+    - [x] KaTeX 数学公式渲染。
+- [ ] **P2P 交互组件**:
+    - [ ] **Branch Switcher**: 切换 Local/Peer 视图。
+    - [ ] **Spectator Mode**: 实现只读观测模式 (灰色背景)。
+    - [ ] **Manual Merge**: 实现手动合并冲突 UI。
 - [ ] **P2P 交互组件**:
     - [ ] **Branch Switcher**: 切换 Local/Peer 视图。
     - [ ] **Spectator Mode**: 实现只读观测模式 (灰色背景)。
