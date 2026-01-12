@@ -1,22 +1,36 @@
+#[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod reconcile;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod scan;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
+pub mod vector;
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
+#[cfg(not(target_arch = "wasm32"))]
 use tracing::{info, warn};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::RepoManager;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::models::DocId;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::vfs::Vfs;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
     repo: Arc<RepoManager>,
     vault_root: PathBuf,
     vfs: Vfs,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl SyncManager {
     pub fn new(repo: Arc<RepoManager>, vault_root: PathBuf) -> Self {
         let vfs = Vfs::new(&vault_root);

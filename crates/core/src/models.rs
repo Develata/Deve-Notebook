@@ -1,21 +1,28 @@
-//! # 核心数据模型
+//! # 核心数据模型 (Core Data Models)
 //!
-//! 本模块定义了 Deve-Note 中使用的基础数据类型。
+//! **架构作用**:
+//! 定义 Deve-Note 中使用的基础数据类型，包括文档标识、操作记录、节点标识等，
+//! 供 Local Repo、Shadow Repo 及 P2P 同步协议共同使用。
 //!
-//! ## 类型说明
+//! **核心功能清单**:
+//! - `PeerId`: P2P 网络中的节点唯一标识符。
+//! - `DocId`: 文档唯一标识符（基于 UUID）。
+//! - `Op`: 编辑操作（Insert / Delete）。
+//! - `LedgerEntry`: 带时间戳的操作记录，用于持久化。
+//! - `FileNodeId`: 跨平台文件系统标识符（inode/file index）。
+//! - `VersionVector`: P2P 同步的版本向量（从 sync::vector 重新导出）。
 //!
-//! - `DocId`: 文档唯一标识符（基于 UUID）
-//! - `Op`: 编辑操作（插入 Insert 或 删除 Delete）
-//! - `LedgerEntry`: 带时间戳的操作记录，用于持久化
-//! - `FileNodeId`: 跨平台文件系统标识符（inode/file index）
+//! **类型**: Core MUST (核心必选)
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::fmt;
 
+pub use crate::sync::vector::VersionVector;
+
 /// 节点唯一标识符 (用于 P2P 通信)
 /// Peer ID for identifying remote nodes in the P2P network.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct PeerId(pub String);
 
 impl PeerId {

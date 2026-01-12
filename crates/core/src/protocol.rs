@@ -15,10 +15,25 @@
 //!   - History（历史）, DocList（文档列表）, Error（错误）
 
 use serde::{Serialize, Deserialize};
-use crate::models::{DocId, Op};
+use crate::models::{DocId, Op, PeerId, LedgerEntry, VersionVector};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
+    /// P2P Handshake Request
+    SyncHello {
+        peer_id: PeerId,
+        vector: VersionVector,
+    },
+    /// Request missing operations
+    SyncRequest {
+        /// List of (PeerId, Range Start, Range End)
+        /// Note: Range<u64> is not serializable by default, so we use (u64, u64)
+        requests: Vec<(PeerId, (u64, u64))>,
+    },
+    /// Push operations to peer
+    SyncPush {
+        ops: Vec<LedgerEntry>,
+    },
     /// Client sends an edit operation for a specific document.
     Edit {
         doc_id: DocId,
@@ -76,6 +91,11 @@ pub enum ServerMessage {
     Ack {
         doc_id: DocId,
         seq: u64,
+    },
+    /// P2P Handshake Response (Offer what you are missing)
+    SyncOffer {
+        /// List of (PeerId, Range Start, Range End)
+        missing: Vec<(PeerId, (u64, u64))>,
     },
     /// Server broadcasts a new Op from another client.
     NewOp {

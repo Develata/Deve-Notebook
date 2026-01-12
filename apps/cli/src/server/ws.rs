@@ -99,6 +99,20 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      ClientMessage::Search { query, limit } => {
                          search::handle_search(&state_clone, &tx, query, limit).await;
                      }
+                     // P2P Sync messages - Phase 1 stubs (to be implemented)
+                     ClientMessage::SyncHello { peer_id, vector } => {
+                         tracing::warn!("SyncHello received from {:?} (not yet implemented)", peer_id);
+                         // TODO: Implement P2P handshake logic
+                         let _ = vector; // Suppress unused warning
+                     }
+                     ClientMessage::SyncRequest { requests } => {
+                         tracing::warn!("SyncRequest received (not yet implemented): {:?}", requests.len());
+                         // TODO: Implement P2P data request logic
+                     }
+                     ClientMessage::SyncPush { ops } => {
+                         tracing::warn!("SyncPush received (not yet implemented): {} ops", ops.len());
+                         // TODO: Implement P2P data push logic
+                     }
                 }
             }
         }
