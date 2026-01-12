@@ -1,5 +1,5 @@
 import { EditorView } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import {
   keymap,
   highlightSpecialChars,
@@ -22,11 +22,12 @@ import { mathStateField } from "./extensions/math.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
 import { tableStateField } from "./extensions/table.js";
 
-console.log("Modules Loaded via ES Imports in editor_adapter.js (v2 - Adapter Pattern)");
+console.log("Modules Loaded via ES Imports in editor_adapter.js (v3 - ReadOnly Compartment)");
 
 // --- Internal State ---
 let activeView = null;
 let isRemote = false;
+let readOnlyCompartment = new Compartment();
 
 // --- Basic Setup ---
 function closeBrackets() {
@@ -60,6 +61,7 @@ export function initCodeMirror(element, onUpdate) {
       doc: "# Loading...",
       extensions: [
         ...manualBasicSetup,
+        readOnlyCompartment.of(EditorState.readOnly.of(false)), // Default editable
         EditorView.lineWrapping, 
         markdown(),
         hybridPlugin,
@@ -159,4 +161,14 @@ export function scrollGlobal(lineNumber) {
         selection: { anchor: line.from }
     });
     activeView.focus();
+}
+
+export function setReadOnly(readOnly) {
+    if (activeView) {
+        activeView.dispatch({
+            effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(readOnly))
+        });
+        // Force DOM update for visual verification and robustness
+        activeView.contentDOM.setAttribute("contenteditable", (!readOnly).toString());
+    }
 }

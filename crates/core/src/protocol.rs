@@ -85,6 +85,20 @@ pub enum ClientMessage {
         query: String,
         limit: u32,
     },
+    
+    // === Manual Merge Messages ===
+    /// Get current sync mode
+    GetSyncMode,
+    /// Set sync mode (Auto/Manual)
+    SetSyncMode {
+        mode: String, // "auto" or "manual"
+    },
+    /// Get pending operations count and preview
+    GetPendingOps,
+    /// Confirm merge of all pending operations
+    ConfirmMerge,
+    /// Discard all pending operations
+    DiscardPending,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -141,6 +155,24 @@ pub enum ServerMessage {
     SearchResults {
         results: Vec<(String, String, f32)>, // (doc_id as UUID string, path, score)
     },
+    
+    // === Manual Merge Messages ===
+    /// Current sync mode
+    SyncModeStatus {
+        mode: String, // "auto" or "manual"
+    },
+    /// Pending operations info
+    PendingOpsInfo {
+        count: u32,
+        /// Preview of pending changes: (doc_path, old_content_preview, new_content_preview)
+        previews: Vec<(String, String, String)>,
+    },
+    /// Merge completed
+    MergeComplete {
+        merged_count: u32,
+    },
+    /// Pending discarded
+    PendingDiscarded,
     /// Error message
     Error(String),
 }

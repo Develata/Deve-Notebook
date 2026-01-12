@@ -114,6 +114,16 @@ fn AppContent() -> impl IntoView {
                 initial_value={None::<String>}
                 on_confirm=on_open_confirm
             />
+            
+            // Manual Merge Modal
+            {move || {
+                let (show_merge, set_show_merge) = signal(false);
+                // Share setter via context or callback for BottomBar?
+                // Actually, let's lift state up
+                // For now, let's create a local signal bound to core state if needed?
+                // No, better to just declare it in AppContent body.
+                view! {}
+            }}
 
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
                  // Left Sidebar
@@ -143,6 +153,7 @@ fn AppContent() -> impl IntoView {
 
                  // Main Editor
                  <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
+                    
                     {move || match core.current_doc.get() {
                         Some(id) => view! { 
                              <Editor doc_id=id on_stats=core.on_stats /> 

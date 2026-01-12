@@ -11,9 +11,17 @@
 
 use leptos::prelude::*;
 use crate::api::WsService;
-use deve_core::models::DocId;
+use std::collections::HashMap;
+use deve_core::models::{DocId, PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use crate::editor::EditorStats;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeerSession {
+    pub id: PeerId,
+    pub vector: VersionVector,
+    pub last_seen: u64, // timestamp
+}
 
 #[derive(Clone)]
 pub struct CoreState {
@@ -23,6 +31,9 @@ pub struct CoreState {
     pub set_current_doc: WriteSignal<Option<DocId>>, 
     pub status_text: Signal<String>,
     pub stats: ReadSignal<EditorStats>,
+    
+    // P2P State
+    pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     
     pub on_doc_select: Callback<DocId>,
     pub on_doc_create: Callback<String>,
@@ -39,19 +50,32 @@ pub struct CoreState {
     // Search
     pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)
     pub on_search: Callback<String>,
+    
+    // Manual Merge
+    pub sync_mode: ReadSignal<String>, // "auto" or "manual"
+    pub pending_ops_count: ReadSignal<u32>,
+    pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
+    pub on_get_sync_mode: Callback<()>,
+    pub on_set_sync_mode: Callback<String>,
+    pub on_get_pending_ops: Callback<()>,
+    pub on_confirm_merge: Callback<()>,
+    pub on_discard_pending: Callback<()>,
 }
 
 pub fn use_core() -> CoreState {
     let ws = WsService::new();
     provide_context(ws.clone());
     
-    let status_text = Signal::derive(move || format!("{}", ws.status.get()));
+    let status_signal_for_text = ws.status;
+    let status_text = Signal::derive(move || format!("{}", status_signal_for_text.get()));
     
     // Global State
     let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());
     let (current_doc, set_current_doc) = signal(None::<DocId>);
     // Stats State
     let (stats, set_stats) = signal(EditorStats::default());
+    // P2P State
+    let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
 
     // Plugin State
     let (plugin_response, set_plugin_response) = signal(None::<(String, Option<serde_json::Value>, Option<String>)>);
@@ -59,8 +83,13 @@ pub fn use_core() -> CoreState {
     // Search State
     let (search_results, set_search_results) = signal(Vec::<(String, String, f32)>::new());
 
+    // Manual Merge State
+    let (sync_mode, set_sync_mode) = signal("auto".to_string());
+    let (pending_ops_count, set_pending_ops_count) = signal(0u32);
+    let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::<(String, String, String)>::new());
+
     // Generate Ephemeral PeerId for this session
-    let peer_id = deve_core::models::PeerId::random();
+    let peer_id = PeerId::random();
     leptos::logging::log!("Frontend PeerId: {}", peer_id);
 
     // Initial Handshake & List Request
@@ -74,7 +103,7 @@ pub fn use_core() -> CoreState {
              // Send P2P Handshake
              ws_clone.send(ClientMessage::SyncHello { 
                  peer_id: pid.clone(), 
-                 vector: deve_core::models::VersionVector::new() // Empty initially
+                 vector: VersionVector::new() // Empty initially
              });
              // Request Doc List
              ws_clone.send(ClientMessage::ListDocs);
@@ -82,8 +111,9 @@ pub fn use_core() -> CoreState {
     });
     
     // Handle Messages
+    let ws_rx = ws.clone();
     Effect::new(move |_| {
-        if let Some(msg) = ws.msg.get() {
+        if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
                     set_docs.set(list.clone());
@@ -94,11 +124,42 @@ pub fn use_core() -> CoreState {
                         }
                     }
                 },
+                
+                // Track Peers
+                ServerMessage::SyncHello { peer_id, vector } => {
+                    set_peers.update(|map| {
+                        map.insert(peer_id.clone(), PeerSession {
+                            id: peer_id.clone(),
+                            vector,
+                            last_seen: js_sys::Date::now() as u64
+                        });
+                    });
+                },
+
                 ServerMessage::PluginResponse { req_id, result, error } => {
                      set_plugin_response.set(Some((req_id, result, error)));
                 },
                 ServerMessage::SearchResults { results } => {
                      set_search_results.set(results);
+                },
+                
+                // Manual Merge Messages
+                ServerMessage::SyncModeStatus { mode } => {
+                    set_sync_mode.set(mode);
+                },
+                ServerMessage::PendingOpsInfo { count, previews } => {
+                    set_pending_ops_count.set(count);
+                    set_pending_ops_previews.set(previews);
+                },
+                ServerMessage::MergeComplete { merged_count } => {
+                    leptos::logging::log!("Merged {} operations", merged_count);
+                    set_pending_ops_count.set(0);
+                    set_pending_ops_previews.set(vec![]);
+                },
+                ServerMessage::PendingDiscarded => {
+                    leptos::logging::log!("Pending operations discarded");
+                    set_pending_ops_count.set(0);
+                    set_pending_ops_previews.set(vec![]);
                 },
                 _ => {}
             }
@@ -151,13 +212,40 @@ pub fn use_core() -> CoreState {
         ws_for_search.send(ClientMessage::Search { query, limit: 50 });
     });
 
-    CoreState {
+    // Manual Merge Callbacks
+    let ws_for_get_mode = ws.clone();
+    let on_get_sync_mode = Callback::new(move |_: ()| {
+        ws_for_get_mode.send(ClientMessage::GetSyncMode);
+    });
+    
+    let ws_for_set_mode = ws.clone();
+    let on_set_sync_mode = Callback::new(move |mode: String| {
+        ws_for_set_mode.send(ClientMessage::SetSyncMode { mode });
+    });
+    
+    let ws_for_get_pending = ws.clone();
+    let on_get_pending_ops = Callback::new(move |_: ()| {
+        ws_for_get_pending.send(ClientMessage::GetPendingOps);
+    });
+    
+    let ws_for_confirm = ws.clone();
+    let on_confirm_merge = Callback::new(move |_: ()| {
+        ws_for_confirm.send(ClientMessage::ConfirmMerge);
+    });
+    
+    let ws_for_discard = ws.clone();
+    let on_discard_pending = Callback::new(move |_: ()| {
+        ws_for_discard.send(ClientMessage::DiscardPending);
+    });
+
+    let state = CoreState {
         ws,
         docs,
         current_doc,
         set_current_doc,
         status_text,
         stats,
+        peers,
         on_doc_select,
         on_doc_create,
         on_doc_rename,
@@ -169,5 +257,18 @@ pub fn use_core() -> CoreState {
         on_plugin_call,
         search_results,
         on_search,
-    }
+        sync_mode,
+        pending_ops_count,
+        pending_ops_previews,
+        on_get_sync_mode,
+        on_set_sync_mode,
+        on_get_pending_ops,
+        on_confirm_merge,
+        on_discard_pending,
+    };
+    
+    // Provide CoreState as context for child components
+    provide_context(state.clone());
+    
+    state
 }

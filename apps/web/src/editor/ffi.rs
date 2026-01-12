@@ -12,4 +12,7 @@ unsafe extern "C" {
     
     #[wasm_bindgen(js_name = scrollGlobal)]
     pub fn scroll_global(line: usize);
+
+    #[wasm_bindgen(js_name = setReadOnly)]
+    pub fn set_read_only(read_only: bool);
 }

@@ -51,7 +51,19 @@ pub fn Editor(
                     <div 
                         node_ref=editor_ref
                         class="absolute inset-0"
+                        class:bg-gray-100=move || playback_version.get() < local_version.get()
                     ></div>
+
+                    // Spectator Badge
+                    {move || if playback_version.get() < local_version.get() {
+                        view! {
+                            <div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
+                                "Spectator Mode (Read Only)"
+                            </div>
+                        }.into_any()
+                    } else {
+                        view! {}.into_any()
+                    }}
                     
                      // Toggle Outline Button (Safe Sibling)
                      <button

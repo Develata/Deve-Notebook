@@ -63,6 +63,46 @@ pub fn SettingsModal(
                             </div>
                         </div>
                         
+                        // Sync Mode Settings
+                        {move || {
+                            let core = expect_context::<crate::hooks::use_core::CoreState>();
+                            let is_manual = core.sync_mode.get() == "manual";
+                            view! {
+                                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex justify-between items-center">
+                                    <div>
+                                        <span class="font-medium text-gray-700">"Sync Mode"</span>
+                                        <p class="text-xs text-gray-500">"Auto: instant sync. Manual: review before merge."</p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button 
+                                            class=move || {
+                                                if !is_manual {
+                                                    "px-3 py-1 text-xs font-bold bg-green-500 text-white rounded transition-colors"
+                                                } else {
+                                                    "px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 rounded transition-colors"
+                                                }
+                                            }
+                                            on:click=move |_| core.on_set_sync_mode.run("auto".to_string())
+                                        >
+                                            "Auto"
+                                        </button>
+                                        <button 
+                                            class=move || {
+                                                if is_manual {
+                                                    "px-3 py-1 text-xs font-bold bg-yellow-500 text-white rounded transition-colors"
+                                                } else {
+                                                    "px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 rounded transition-colors"
+                                                }
+                                            }
+                                            on:click=move |_| core.on_set_sync_mode.run("manual".to_string())
+                                        >
+                                            "Manual"
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }}
+                        
                         // Placeholder for Hybrid Mode
                         <div class="opacity-50 pointer-events-none grayscale">
                              <div class="flex items-center justify-between">

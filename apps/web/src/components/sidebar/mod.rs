@@ -46,6 +46,12 @@ pub fn Sidebar(
     
     // Context Menu State
     let (active_menu, set_active_menu) = signal(None::<String>);
+
+    // Peer List State
+    let (show_peers, set_show_peers) = signal(false);
+    
+    // Core State (for Peers)
+    let core = expect_context::<crate::hooks::use_core::CoreState>();
     
     // Clipboard State (for Copy/Paste)
     let (clipboard_path, set_clipboard_path) = signal(None::<String>);
@@ -217,17 +223,62 @@ pub fn Sidebar(
                 />
             </div>
 
-            <div class="flex-none p-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
-                 <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>"Relay Active"</span>
+            <div class="flex-none p-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 relative">
+                 <div class="flex justify-between items-center group">
+                     <button 
+                        class="flex items-center gap-2 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                        on:click=move |_| set_show_peers.update(|b| *b = !*b)
+                     >
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>
+                            {move || {
+                                let count = core.peers.get().len();
+                                if count == 0 {
+                                    "No Peers".to_string()
+                                } else {
+                                    format!("{} Peer{}", count, if count > 1 { "s" } else { "" })
+                                }
+                            }}
+                        </span>
+                     </button>
+                     
+                     <div class="flex items-center gap-2">
+                        <span>{core.status_text}</span>
+                     </div>
                  </div>
-                 <div class="flex items-center gap-1" title="Connected Peers">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
-                      <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
-                    </svg>
-                    <span>"1"</span>
-                 </div>
+
+                 {move || if show_peers.get() {
+                    let peers_list = core.peers.get().keys().cloned().collect::<Vec<_>>();
+                    view! {
+                        <div class="absolute bottom-full left-0 w-64 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden z-50">
+                            <div class="p-2 bg-gray-50 border-b border-gray-100 font-semibold text-gray-700">
+                                "Connected Peers"
+                            </div>
+                            <ul class="max-h-48 overflow-y-auto">
+                                {peers_list.into_iter().map(|peer_id| {
+                                    let id_str = peer_id.to_string();
+                                    let short_id = if id_str.len() > 8 { format!("{}...", &id_str[0..8]) } else { id_str.clone() };
+                                    view! {
+                                        <li class="p-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                                                <span class="font-mono text-gray-600" title=id_str.clone()>{short_id}</span>
+                                            </div>
+                                            <span class="text-[10px] text-gray-400">"Online"</span>
+                                        </li>
+                                    }
+                                }).collect::<Vec<_>>()}
+                                {move || if core.peers.get().is_empty() {
+                                    view! { <li class="p-4 text-center text-gray-400 italic">"Scanning for peers..."</li> }.into_any()
+                                } else {
+                                    view! {}.into_any()
+                                }}
+                            </ul>
+                        </div>
+                    }.into_any()
+                 } else {
+                    view! {}.into_any()
+                 }}
             </div>
         </div>
     }

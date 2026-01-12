@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use crate::api::WsService;
 use deve_core::protocol::ClientMessage;
 use deve_core::models::DocId;
-use super::ffi::{setupCodeMirror, applyRemoteContent, getEditorContent};
+use super::ffi::{setupCodeMirror, applyRemoteContent, getEditorContent, set_read_only};
 use super::EditorStats;
 use super::sync;
 use super::playback;
@@ -69,6 +69,7 @@ pub fn use_editor(
          }
     });
 
+
     Effect::new(move |_| {
         if let Some(element) = editor_ref.get() {
             let raw_element: &web_sys::HtmlElement = &element;
@@ -127,6 +128,10 @@ pub fn use_editor(
             set_is_playback,
             set_playback_version
         );
+        
+        // Imperative sync to avoid Effect race/panics
+        let is_pb = ver < local;
+        unsafe { set_read_only(is_pb); }
     });
 
     EditorState {

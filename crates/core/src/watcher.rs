@@ -17,6 +17,9 @@ use tracing::{info,  error};
 use std::sync::Arc;
 use crate::sync::SyncManager;
 
+const MAX_RETRIES: u32 = 3;
+const RETRY_DELAY_MS: u64 = 100;
+
 pub struct Watcher {
     sync_manager: Arc<SyncManager>,
     root_path: std::path::PathBuf,
@@ -66,6 +69,11 @@ impl Watcher {
                            
                            // Ignore system and hidden directories
                            if path_str.starts_with(".git") || path_str.starts_with(".deve") {
+                               continue;
+                           }
+                           
+                           // Only process .md files (skip directories and other files)
+                           if !path_str.ends_with(".md") {
                                continue;
                            }
 

@@ -19,12 +19,12 @@
     <script>
       // 0. Global Error Handler
       window.logToOverlay = (msg, isError = false) => {
-        const el = document.getElementById('loading-overlay');
+        const el = document.getElementById("loading-overlay");
         if (el) {
-           const line = document.createElement('div');
-           if (isError) line.style.color = 'red';
-           line.innerText = msg;
-           el.appendChild(line);
+          const line = document.createElement("div");
+          if (isError) line.style.color = "red";
+          line.innerText = msg;
+          el.appendChild(line);
         }
         console.log("[Overlay]", msg);
       };
@@ -33,8 +33,8 @@
         window.logToOverlay(`Global Error: ${msg} @ ${line}:${col}`, true);
         return false;
       };
-      
-      window.addEventListener("unhandledrejection", function(event) {
+
+      window.addEventListener("unhandledrejection", function (event) {
         window.logToOverlay(`Unhandled Rejection: ${event.reason}`, true);
       });
 
@@ -51,9 +51,10 @@
           window._editor_queue.push({ element, onUpdate });
         }
       };
-      
+
       // Safety Stubs
-      window.applyRemoteContent = () => console.warn("Too Early: applyRemoteContent");
+      window.applyRemoteContent = () =>
+        console.warn("Too Early: applyRemoteContent");
       window.applyRemoteOp = () => console.warn("Too Early: applyRemoteOp");
       window.getEditorContent = () => "";
       window.scrollGlobal = () => {};
@@ -94,18 +95,28 @@
 
       try {
         // Import all adapter functions
-        const module = await import('./js/editor_adapter.js');
-        const { initCodeMirror, applyRemoteContent, applyRemoteOp, getEditorContent, scrollGlobal } = module;
-        
+        const module = await import("./js/editor_adapter.js");
+        const {
+          initCodeMirror,
+          applyRemoteContent,
+          applyRemoteOp,
+          getEditorContent,
+          scrollGlobal,
+          setReadOnly,
+        } = module;
+
         // --- BINDING: Expose Module Functions to Global Scope for Rust FFI ---
         window.applyRemoteContent = applyRemoteContent;
         window.applyRemoteOp = applyRemoteOp;
         window.getEditorContent = getEditorContent;
         window.scrollGlobal = scrollGlobal;
+        window.setReadOnly = setReadOnly;
         // -------------------------------------------------------------------
 
-        if (typeof initCodeMirror !== 'function') {
-           throw new Error("initCodeMirror is not a function in exported module!");
+        if (typeof initCodeMirror !== "function") {
+          throw new Error(
+            "initCodeMirror is not a function in exported module!"
+          );
         }
 
         window.logToOverlay("Adapter imported successfully.");
@@ -115,37 +126,46 @@
           window.logToOverlay("Initializing Editor View");
           const overlay = document.getElementById("loading-overlay");
           if (overlay) overlay.classList.add("hidden");
-          
+
           try {
-             // Initialize. The View is now managed internally by the adapter.
-             initCodeMirror(element, onUpdate);
-          } catch(e) {
-             window.logToOverlay("Init call failed: " + e.message, true);
-             throw e;
+            // Initialize. The View is now managed internally by the adapter.
+            initCodeMirror(element, onUpdate);
+          } catch (e) {
+            window.logToOverlay("Init call failed: " + e.message, true);
+            throw e;
           }
         };
-        
+
         window._cm_loaded = true;
-        
+
         // Flush Queue
         if (window._editor_queue.length > 0) {
-           window.logToOverlay(`Flushing ${window._editor_queue.length} queued items...`);
-           window._editor_queue.forEach(item => {
-              window._realInit(item.element, item.onUpdate);
-           });
-           window._editor_queue = [];
+          window.logToOverlay(
+            `Flushing ${window._editor_queue.length} queued items...`
+          );
+          window._editor_queue.forEach((item) => {
+            window._realInit(item.element, item.onUpdate);
+          });
+          window._editor_queue = [];
         }
-
       } catch (e) {
         console.error("Failed to load editor adapter:", e);
-        window.logToOverlay("Failed to load editor adapter: " + e.message, true);
+        window.logToOverlay(
+          "Failed to load editor adapter: " + e.message,
+          true
+        );
         if (e.stack) window.logToOverlay(e.stack, true);
       }
     </script>
   </head>
   <body>
-    <div id="loading-overlay" style="display: flex; flex-direction: column; padding: 20px;">
-        <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">Initializing Hybrid Components...</div>
+    <div
+      id="loading-overlay"
+      style="display: flex; flex-direction: column; padding: 20px"
+    >
+      <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px">
+        Initializing Hybrid Components...
+      </div>
     </div>
   </body>
 </html>

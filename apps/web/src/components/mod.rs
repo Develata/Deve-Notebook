@@ -8,3 +8,5 @@ pub mod input_modal;
 pub mod sidebar_menu;
 pub mod outline;
 pub mod search_modal;
+pub mod merge_panel;
+pub mod merge_modal;

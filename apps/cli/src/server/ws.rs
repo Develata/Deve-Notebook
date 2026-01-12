@@ -22,7 +22,7 @@ use futures::{StreamExt, SinkExt};
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use crate::server::AppState;
-use crate::server::handlers::{document, system, plugin, search, sync};
+use crate::server::handlers::{document, system, plugin, search, sync, merge};
 use deve_core::models::PeerId;
 
 pub async fn ws_handler(
@@ -140,6 +140,22 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                          } else {
                              tracing::warn!("Ignored SyncPush from unauthenticated peer");
                          }
+                     }
+                     // Manual Merge messages
+                     ClientMessage::GetSyncMode => {
+                         merge::handle_get_sync_mode(&state_clone, &tx).await;
+                     }
+                     ClientMessage::SetSyncMode { mode } => {
+                         merge::handle_set_sync_mode(&state_clone, &tx, mode).await;
+                     }
+                     ClientMessage::GetPendingOps => {
+                         merge::handle_get_pending_ops(&state_clone, &tx).await;
+                     }
+                     ClientMessage::ConfirmMerge => {
+                         merge::handle_confirm_merge(&state_clone, &tx).await;
+                     }
+                     ClientMessage::DiscardPending => {
+                         merge::handle_discard_pending(&state_clone, &tx).await;
                      }
                 }
             }
