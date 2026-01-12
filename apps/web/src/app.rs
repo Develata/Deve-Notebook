@@ -157,6 +157,30 @@ fn AppContent() -> impl IntoView {
             </main>
             
             <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats />
+            
+            // Disconnect Lock / Loading Screen
+            {move || {
+                let status = core.ws.status.get();
+                if status != crate::api::ConnectionStatus::Connected {
+                    view! {
+                        <div class="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                            <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200 text-center">
+                                <div class="text-4xl mb-4">"🔒"</div>
+                                <h1 class="text-2xl font-bold text-gray-800 mb-2">"Disconnected"</h1>
+                                <p class="text-gray-600 mb-6">"Reconnecting to server... please wait."</p>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                  <div class="bg-blue-600 h-2.5 rounded-full animate-pulse" style="width: 100%"></div>
+                                </div>
+                                <div class="mt-4 text-sm text-gray-400">
+                                    {format!("Status: {}", status)}
+                                </div>
+                            </div>
+                        </div>
+                    }.into_any()
+                } else {
+                     view! {}.into_any()
+                }
+            }}
         </div>
     }
 }
