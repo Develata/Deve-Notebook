@@ -33,10 +33,17 @@
 
 ### 场景四：P2P 分支切换与合并 (The P2P Flow)
 
-1.  点击分支图标 -> 选择 `Peer-iPhone`。
-2.  **UI**: 进入 **Spectator Mode**；VFS 切换至 Shadow Repo。
-3.  **浏览**: 查看 Peer 文件，右键 "Copy to Local"。
-4.  **合并**: 点击 "Merge Peer-iPhone into Local"。
-    *   Manual Mode 下若有冲突 -> 弹窗报错 -> 手动解决。
-    *   无冲突 -> CRDT Merge -> Store B 更新 -> Store A 更新。
-    *   **UI**: 切回 `Local` 分支。
+1.  **触发方式**:
+    *   **Activity Bar**: 点击 Source Control 图标 -> 展开 Repositories Section。
+    *   **Command Palette**: `Cmd+K` -> 输入 `P2P: Switch to Peer` / `P2P: Merge Peer`。
+2.  **选择 Peer**: 在 Repositories 列表中选择 `Peer-iPhone (Shadow)`。
+3.  **UI**: 进入 **Spectator Mode**；VFS 切换至 Shadow Repo。
+    *   编辑器背景变灰 + "READ ONLY" 状态栏提示。
+4.  **浏览**: 查看 Peer 文件内容，可右键 "Copy to Local"。
+5.  **合并**: 在 Source Control View 中点击 "Merge Peer-iPhone into Local"。
+    *   **Auto Mode**: 自动执行 CRDT Merge。
+    *   **Manual Mode**: 显示 Diff View (类似 VS Code 合并编辑器)。
+        *   有冲突 -> 用户选择保留哪个版本。
+        *   无冲突 -> 直接合并。
+    *   **结果**: Store B 更新 -> Store A 同步更新。
+6.  **UI**: 合并完成后自动切回 `Local (Master)` 分支。

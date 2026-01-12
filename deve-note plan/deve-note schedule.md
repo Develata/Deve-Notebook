@@ -48,18 +48,23 @@
     - [x] **RAM-Only Mode**: 确保 Web 端不使用 IndexedDB，状态刷新即失。
     - [x] **Disconnect Lock**: 实现 WebSocket 断连即锁屏逻辑。
     - [x] **Server RPC**: 前端通过 WS 调用 Server Host Functions。
-- [ ] **编辑器内核**:
+- [x] **编辑器内核**:
     - [x] CodeMirror 6 组件封装。
     - [x] Loro CRDT Wasm 绑定。
     - [x] KaTeX 数学公式渲染。
+- [ ] **Activity Bar 布局**:
+    - [ ] **Activity Bar 组件**: 最左侧图标导航栏 (Explorer, Search, Source Control, Extensions, Settings)。
+    - [ ] **Sidebar 视图切换**: 根据 Activity Bar 选择切换内容。
+- [ ] **Source Control View** (Ref: VS Code):
+    - [ ] **Repositories Section**: Local (Master) + Peer-XXX (Shadow) 仓库列表。
+    - [ ] **Changes Section**: 暂存区 (Staged) / 未暂存 (Unstaged)。
+    - [ ] **Commit Section**: 提交信息输入框 + Commit 按钮。
+    - [ ] **History Section**: 历史版本列表 + Time Travel Slider。
+    - [ ] **Actions Bar**: Sync, Pull, Merge, Push, Stash 按钮。
 - [ ] **P2P 交互组件**:
-    - [ ] **Branch Switcher**: 切换 Local/Peer 视图。
-    - [ ] **Spectator Mode**: 实现只读观测模式 (灰色背景)。
-    - [ ] **Manual Merge**: 实现手动合并冲突 UI。
-- [ ] **P2P 交互组件**:
-    - [ ] **Branch Switcher**: 切换 Local/Peer 视图。
-    - [ ] **Spectator Mode**: 实现只读观测模式 (灰色背景)。
-    - [ ] **Manual Merge**: 实现手动合并冲突 UI。
+    - [ ] **Branch Switcher**: 在 Repositories Section 中切换 Local/Peer 视图。
+    - [ ] **Spectator Mode**: 实现只读观测模式 (灰色背景 + READ ONLY)。
+    - [ ] **Manual Merge**: 在 Source Control View 中实现 Diff View 合并 UI。
 
 ## 阶段 3: 双引擎运行时与扩展 (Dual-Engine & Extensions)
 **目标**: 插件系统、Podman 运行时、发布。

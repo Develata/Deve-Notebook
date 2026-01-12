@@ -9,13 +9,23 @@
 * **Activity Bar (最左侧)**: 侧边栏导航条。
   * **(Icon) Explorer**: 资源管理器。
   * **(Icon) Search**: 全局搜索。
-  * **(Icon) Source Control**: Git 版本控制。
+  * **(Icon) Source Control**: Git / P2P 版本控制。
   * **(Icon) Extensions**: 插件管理。
   * **(Icon) Settings (Bottom)**: 全局设置。
 
 * **Left Slot (Sidebar)**: 依据 Activity Bar 切换内容。
   * **Explorer View**: 文件树（文件/文件夹菜单、+按钮）。
-  * **Git View**: 暂存区、提交区、Sync 按钮。
+  * **Git / Source Control View** (Ref: VS Code Source Control Panel):
+    * **Repositories Section**: 显示 `Local (Master)` 和 `Peer-XXX (Shadow)` 仓库列表。
+    * **Changes Section**: 暂存区 (Staged) / 未暂存 (Unstaged) 变更列表。
+    * **Commit Section**: 提交信息输入框 + Commit 按钮。
+    * **History Section**: 历史版本列表 + **Time Travel Slider** (回放历史版本、热力图可视化)。
+    * **Actions**:
+      * **Sync**: 同步本地与远程。
+      * **Pull / Fetch**: 从 Peer 拉取（Auto Mode 自动执行）。
+      * **Merge**: 将选中的 Peer 仓库合并到 Local（Manual Mode 核心操作）。
+      * **Push**: 推送到远程 Git 仓库（如 GitHub）。
+      * **Stash**: 暂存当前修改。
   * **Extensions View**: Installed/Recommended 列表。
 
 * **Main Slot**: 多标签页 (Tabs) 编辑器 / 分屏 (Split View)。
@@ -58,7 +68,7 @@
 ### 3. 可视化系统 (Visualization System)
 
 * **Global Graph (全域图谱，插件可选)**：力导向图引擎。
-* **Time Travel Slider (时光轴，插件可选)**：交互式热力图，回放历史版本。
+* ~~Time Travel Slider~~: 已移入 Source Control View 的 History Section。
 
 ### 4. 命令面板 (The Commander)
 
