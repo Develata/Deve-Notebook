@@ -60,7 +60,18 @@ pub struct CoreState {
     pub on_get_pending_ops: Callback<()>,
     pub on_confirm_merge: Callback<()>,
     pub on_discard_pending: Callback<()>,
+    
+    // Source Control State (Repo)
+    pub active_repo: ReadSignal<Option<PeerId>>,
+    pub set_active_repo: WriteSignal<Option<PeerId>>,
+    
+    // Source Control State (History)
+    pub doc_version: ReadSignal<u64>, // Current Max Version
+    pub set_doc_version: WriteSignal<u64>,
+    pub playback_version: ReadSignal<u64>, // Current View Version
+    pub set_playback_version: WriteSignal<u64>,
 }
+
 
 pub fn use_core() -> CoreState {
     let ws = WsService::new();
@@ -87,6 +98,12 @@ pub fn use_core() -> CoreState {
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::<(String, String, String)>::new());
+
+    // Source Control State
+    let (active_repo, set_active_repo) = signal(None::<PeerId>);
+    // History State
+    let (doc_version, set_doc_version) = signal(0u64);
+    let (playback_version, set_playback_version) = signal(0u64);
 
     // Generate Ephemeral PeerId for this session
     let peer_id = PeerId::random();
@@ -265,6 +282,12 @@ pub fn use_core() -> CoreState {
         on_get_pending_ops,
         on_confirm_merge,
         on_discard_pending,
+        active_repo,
+        set_active_repo,
+        doc_version,
+        set_doc_version,
+        playback_version,
+        set_playback_version,
     };
     
     // Provide CoreState as context for child components

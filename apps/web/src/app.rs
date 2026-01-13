@@ -19,6 +19,8 @@ use crate::hooks::use_core::use_core;
 use crate::hooks::use_layout::use_layout;
 use crate::hooks::use_shortcuts::use_shortcuts;
 
+use crate::components::activity_bar::SidebarView;
+
 #[component]
 pub fn App() -> impl IntoView {
     // Global Locale State
@@ -44,6 +46,7 @@ fn AppContent() -> impl IntoView {
     let (show_cmd, set_show_cmd) = signal(false);
     let (show_settings, set_show_settings) = signal(false);
     let (show_open_modal, set_show_open_modal) = signal(false);
+    let (active_view, set_active_view) = signal(SidebarView::Explorer);
 
     // 4. Shortcuts
     let handle_keydown = use_shortcuts(locale, show_cmd.into(), set_show_cmd, set_show_open_modal);
@@ -118,20 +121,30 @@ fn AppContent() -> impl IntoView {
             // Manual Merge Modal
             {move || {
                 let (show_merge, set_show_merge) = signal(false);
-                // Share setter via context or callback for BottomBar?
-                // Actually, let's lift state up
-                // For now, let's create a local signal bound to core state if needed?
-                // No, better to just declare it in AppContent body.
-                view! {}
+                provide_context(set_show_merge); // Allow triggering from deep components
+                view! {
+                    <crate::components::merge_modal::MergeModal 
+                        show=show_merge
+                        set_show=set_show_merge
+                    />
+                }
             }}
 
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
-                 // Left Sidebar
+                 // Activity Bar (Fixed Left)
+                 <crate::components::activity_bar::ActivityBar 
+                    active_view=active_view 
+                    set_active_view=set_active_view 
+                    on_settings=on_settings 
+                 />
+
+                 // Left Sidebar (Resizable & Swappable)
                  <aside 
                     class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                     style=move || format!("width: {}px", sidebar_width.get())
                  >
                      <crate::components::sidebar::Sidebar 
+                        active_view=active_view
                         docs=core.docs
                         current_doc=core.current_doc
                         on_select=core.on_doc_select

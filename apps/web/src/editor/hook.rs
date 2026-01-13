@@ -2,9 +2,10 @@ use leptos::prelude::*;
 use leptos::html::Div;
 use wasm_bindgen::prelude::*;
 use crate::api::WsService;
+use crate::hooks::use_core::CoreState;
 use deve_core::protocol::ClientMessage;
 use deve_core::models::DocId;
-use super::ffi::{setupCodeMirror, applyRemoteContent, getEditorContent, set_read_only};
+use super::ffi::{setupCodeMirror, set_read_only};
 use super::EditorStats;
 use super::sync;
 use super::playback;
@@ -13,7 +14,7 @@ pub struct EditorState {
     pub content: ReadSignal<String>,
     pub is_playback: ReadSignal<bool>,
     pub playback_version: ReadSignal<u64>,
-    pub local_version: ReadSignal<u64>, // Acts as max_version
+    pub local_version: ReadSignal<u64>, 
     pub on_playback_change: Box<dyn Fn(u64) + Send + Sync>, 
 }
 
@@ -23,6 +24,7 @@ pub fn use_editor(
     on_stats: Option<Callback<EditorStats>>,
 ) -> EditorState {
     let ws = use_context::<WsService>().expect("WsService should be provided");
+    let core = expect_context::<CoreState>();
     
     // Local state of the document to compute diffs against
     let (content, set_content) = signal("".to_string()); // Start empty
@@ -30,7 +32,11 @@ pub fn use_editor(
     
     // Playback State
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
-    let (playback_version, set_playback_version) = signal(0u64);
+    // We use Core's playback version signal
+    // let (playback_version, set_playback_version) = signal(0u64); <-- REPLACED
+    let playback_version = core.playback_version;
+    let set_playback_version = core.set_playback_version;
+    
     let (is_playback, set_is_playback) = signal(false);
     
     // Generate a session client_id (using random rough)
@@ -40,13 +46,24 @@ pub fn use_editor(
     // We send OpenDoc on mount AND when doc_id changes.
     // NOTE: Effect runs on prop change.
     let ws_clone = ws.clone();
+    let set_doc_ver = core.set_doc_version;
     Effect::new(move |_| {
          // Reset state when doc changes
          set_content.set("Loading...".to_string());
          set_local_version.set(0);
          set_history.set(Vec::new());
          
+         // Reset Core State for this doc
+         set_doc_ver.set(0);
+         set_playback_version.set(0);
+         
          ws_clone.send(ClientMessage::OpenDoc { doc_id });
+    });
+
+    // Sync Local Version to Core Doc Version
+    Effect::new(move |_| {
+         let ver = local_version.get();
+         set_doc_ver.set(ver);
     });
 
     // Effect to handle incoming messages (Delegated to sync module)
@@ -117,21 +134,27 @@ pub fn use_editor(
         }
     });
 
-    // Playback Logic (Delegated to playback module)
-    let on_playback_change = Box::new(move |ver: u64| {
-        let local = local_version.get_untracked();
-        playback::handle_playback_change(
+    // Playback Logic (Listens to Core Playback Version)
+    Effect::new(move |_| {
+         let ver = playback_version.get();
+         let local = local_version.get_untracked();
+         
+         // Call logic
+         playback::handle_playback_change(
             ver,
             doc_id,
             local,
             history, 
-            set_is_playback,
-            set_playback_version
+            set_is_playback
         );
         
-        // Imperative sync to avoid Effect race/panics
+        // Imperative sync
         let is_pb = ver < local;
         unsafe { set_read_only(is_pb); }
+    });
+
+    let on_playback_change = Box::new(move |ver: u64| {
+        set_playback_version.set(ver);
     });
 
     EditorState {

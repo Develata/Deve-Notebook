@@ -8,15 +8,23 @@ pub fn handle_playback_change(
     local_version: u64,
     history: ReadSignal<Vec<(u64, Op)>>,
     set_is_playback: WriteSignal<bool>,
-    set_playback_version: WriteSignal<u64>,
 ) {
-    // If ver < local, it's Playback.
+    // If ver < local, it's Playback mode.
     let is_pb = ver < local_version;
     set_is_playback.set(is_pb);
-    set_playback_version.set(ver);
-    
-    // Reconstruct
+
+    // Only reconstruct when actually in playback mode
+    // If viewing current version (is_pb == false), do NOT wipe content
+    if !is_pb {
+        return;
+    }
+
+    // Guard against empty history (nothing to reconstruct)
     let hist = history.get_untracked();
+    if hist.is_empty() {
+        return;
+    }
+
     // Filter history <= ver
     let relevant_ops: Vec<LedgerEntry> = hist.into_iter()
         .filter(|(s, _)| *s <= ver)

@@ -27,7 +27,6 @@ pub fn Editor(
     // Unwrap state
     let local_version = state.local_version;
     let playback_version = state.playback_version;
-    let on_playback_change = state.on_playback_change;
     let content = state.content;
     
     // Outline State
@@ -89,16 +88,6 @@ pub fn Editor(
                 </div>
             </div>
             
-            // Playback
-            <div class="absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
-                 <div class="pointer-events-auto">
-                    <crate::components::playback::PlaybackController 
-                        max_version=local_version
-                        current_version=playback_version
-                        on_change=on_playback_change
-                    />
-                 </div>
-            </div>
         </div>
     }
 }
