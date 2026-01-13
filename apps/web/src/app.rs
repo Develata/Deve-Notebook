@@ -50,17 +50,27 @@ fn AppContent() -> impl IntoView {
     let (sidebar_width, start_resize, stop_resize, do_resize, is_resizing) = use_layout();
 
     // 3. UI 状态
-    let (show_cmd, set_show_cmd) = signal(false);
+    let (show_search, set_show_search) = signal(false);
+    let (search_mode, set_search_mode) = signal(String::new()); // ">" for commands, "" for files
     let (show_settings, set_show_settings) = signal(false);
     let (show_open_modal, set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
 
     // 4. 快捷键
-    let handle_keydown = use_shortcuts(locale, show_cmd.into(), set_show_cmd, set_show_open_modal);
+    let handle_keydown = use_shortcuts(
+        locale, 
+        show_search.into(), 
+        set_show_search, 
+        set_search_mode,
+        set_show_open_modal
+    );
 
     // 5. 派生 UI 回调
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
-    let on_command = Callback::new(move |_| set_show_cmd.update(|s| *s = !*s));
+    let on_command = Callback::new(move |_| {
+        set_search_mode.set(">".to_string());
+        set_show_search.update(|s| *s = !*s);
+    });
     let on_open = Callback::new(move |_| set_show_open_modal.set(true));
     
     // 主页操作 (清除选择)
@@ -96,9 +106,10 @@ fn AppContent() -> impl IntoView {
             tabindex="-1" 
             style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
         >
-            <crate::components::command_palette::CommandPalette 
-                show=show_cmd 
-                set_show=set_show_cmd
+            <crate::components::unified_search::UnifiedSearch 
+                show=show_search
+                set_show=set_show_search
+                mode_signal=Signal::derive(move || search_mode.get())
                 on_settings=on_settings 
                 on_open=on_open
             />

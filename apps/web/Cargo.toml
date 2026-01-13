@@ -27,3 +27,4 @@ js-sys = "0.3.83"
 gloo-timers = { version = "0.3", features = ["futures"] }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 uuid.workspace = true
+sublime_fuzzy = "0.7.0"

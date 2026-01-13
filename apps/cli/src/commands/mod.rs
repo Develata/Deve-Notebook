@@ -7,3 +7,4 @@ pub mod watch;
 pub mod dump;
 pub mod serve;
 pub mod export;
+pub mod verify_p2p;

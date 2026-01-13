@@ -15,19 +15,45 @@ use crate::i18n::Locale;
 
 pub fn use_shortcuts(
     locale: RwSignal<Locale>,
-    show_cmd: ReadSignal<bool>,
-    set_show_cmd: WriteSignal<bool>,
+    show_search: ReadSignal<bool>,
+    set_show_search: WriteSignal<bool>,
+    set_search_mode: WriteSignal<String>,
     set_show_open_modal: WriteSignal<bool>
 ) -> impl Fn(KeyboardEvent) + Clone + 'static {
     move |ev: KeyboardEvent| {
         let is_ctrl = ev.meta_key() || ev.ctrl_key();
+        let shift = ev.shift_key();
         let key = ev.key().to_lowercase();
         
-        // Ctrl+K: 切换命令面板
+        // Ctrl+Shift+P: Command Palette (Force >)
+        if is_ctrl && shift && key == "p" {
+            ev.prevent_default();
+            ev.stop_propagation(); 
+            set_search_mode.set(">".to_string());
+            set_show_search.set(true);
+            return;
+        }
+
+        // Ctrl+P: Go to File (Default)
+        if is_ctrl && !shift && key == "p" {
+            ev.prevent_default();
+            ev.stop_propagation(); 
+            set_search_mode.set(String::new());
+            set_show_search.set(true);
+            return;
+        }
+
+        // Ctrl+K: Toggle Command Palette (VS Code style often Ctrl+Shift+P, but K is common too)
+        // Let's map Ctrl+K to Command Mode toggle
         if is_ctrl && key == "k" {
             ev.prevent_default();
             ev.stop_propagation(); 
-            set_show_cmd.update(|s| *s = !*s);
+            if show_search.get() {
+                 set_show_search.set(false);
+            } else {
+                 set_search_mode.set(">".to_string());
+                 set_show_search.set(true);
+            }
         }
         
         // Ctrl+L: 切换语言
@@ -37,7 +63,7 @@ pub fn use_shortcuts(
              locale.update(|l| *l = l.toggle());
         }
 
-        // Ctrl+O: 打开文档模态框
+        // Ctrl+O: 打开文档模态框 (Legacy Open)
         if is_ctrl && key == "o" {
              ev.prevent_default();
              ev.stop_propagation();
@@ -45,8 +71,8 @@ pub fn use_shortcuts(
         }
         
         // Escape: 关闭命令面板
-        if show_cmd.get_untracked() && ev.key() == "Escape" {
-             set_show_cmd.set(false);
+        if show_search.get_untracked() && ev.key() == "Escape" {
+             set_show_search.set(false);
         }
     }
 }

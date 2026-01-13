@@ -3,7 +3,7 @@
 //! 一个可搜索的命令面板，用于快速执行操作（仅限命令，不包括文件搜索）。
 
 mod types;
-mod commands;
+pub mod commands;
 
 pub use types::Command;
 
