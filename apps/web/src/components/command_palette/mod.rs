@@ -1,6 +1,6 @@
 //! Command palette component.
 //!
-//! A searchable command palette for quick navigation and actions.
+//! A searchable command palette for quick actions (commands only, no file search).
 
 mod types;
 mod commands;
@@ -9,16 +9,14 @@ pub use types::Command;
 
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
-use deve_core::models::DocId;
-use self::commands::{create_static_commands, create_file_commands, filter_commands};
+use self::commands::{create_static_commands, filter_commands};
 
 #[component]
 pub fn CommandPalette(
     #[prop(into)] show: Signal<bool>,
     #[prop(into)] set_show: WriteSignal<bool>,
-    #[prop(into)] docs: Signal<Vec<(DocId, String)>>,
-    #[prop(into)] on_select_doc: Callback<DocId>,
     on_settings: Callback<()>,
+    on_open: Callback<()>,  // Opens the Open Document modal
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (query, set_query) = signal(String::new());
@@ -39,18 +37,13 @@ pub fn CommandPalette(
         let static_cmds = create_static_commands(
             current_locale,
             on_settings,
+            on_open,
             set_show,
             locale,
         );
         
-        let file_cmds = create_file_commands(
-            docs.get(),
-            &q,
-            on_select_doc,
-            set_show,
-        );
-        
-        filter_commands(&q, static_cmds, file_cmds, 50)
+        // Only filter static commands, no file commands
+        filter_commands(&q, static_cmds, 50)
     });
 
     // Validated Index
@@ -112,7 +105,7 @@ pub fn CommandPalette(
                         <input 
                             type="text"
                             class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
-                            placeholder=move || if locale.get() == Locale::Zh { "搜索文件或命令..." } else { "Search files or commands..." }
+                            placeholder=move || if locale.get() == Locale::Zh { "输入命令..." } else { "Type a command..." }
                             prop:value=move || query.get()
                             on:input=move |ev| {
                                 set_query.set(event_target_value(&ev));
@@ -151,22 +144,13 @@ pub fn CommandPalette(
                                                         on:mousemove=move |_| set_selected_index.set(idx)
                                                     >
                                                         <div class=format!("flex-none {}", if is_sel { "text-blue-500" } else { "text-gray-400" })>
-                                                            <Show when=move || cmd.is_file fallback=|| view! {
-                                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                                </svg>
-                                                            }>
-                                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                </svg>
-                                                            </Show>
+                                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                            </svg>
                                                         </div>
 
                                                         <div class="flex-1 truncate">
-                                                            <span class="font-medium">{cmd.title}</span>
-                                                            <Show when=move || cmd.is_file>
-                                                                <span class="ml-2 text-xs opacity-50 border border-current px-1 rounded">DOC</span>
-                                                            </Show>
+                                                            <span class="font-medium">{cmd.title.clone()}</span>
                                                         </div>
 
                                                         <Show when=move || is_sel>

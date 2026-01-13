@@ -92,9 +92,8 @@ fn AppContent() -> impl IntoView {
             <crate::components::command_palette::CommandPalette 
                 show=show_cmd 
                 set_show=set_show_cmd
-                docs=core.docs
-                on_select_doc=core.on_doc_select
                 on_settings=on_settings 
+                on_open=on_open
             />
             <crate::components::header::Header 
                 status_text=core.status_text 
