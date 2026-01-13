@@ -20,7 +20,7 @@ pub fn create_static_commands(
             action: Callback::new(move |_| {
                 request_animation_frame(move || {
                     on_open.run(());
-                    set_show.set(false);
+                    // Do not close, as on_open re-purposes the search box
                 });
             }),
             is_file: false,

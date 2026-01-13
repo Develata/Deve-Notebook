@@ -29,8 +29,12 @@ pub fn use_shortcuts(
         if is_ctrl && shift && key == "p" {
             ev.prevent_default();
             ev.stop_propagation(); 
-            set_search_mode.set(">".to_string());
-            set_show_search.set(true);
+            if show_search.get() {
+                set_show_search.set(false);
+            } else {
+                set_search_mode.set(">".to_string());
+                set_show_search.set(true);
+            }
             return;
         }
 
@@ -38,23 +42,16 @@ pub fn use_shortcuts(
         if is_ctrl && !shift && key == "p" {
             ev.prevent_default();
             ev.stop_propagation(); 
-            set_search_mode.set(String::new());
-            set_show_search.set(true);
-            return;
-        }
-
-        // Ctrl+K: Toggle Command Palette (VS Code style often Ctrl+Shift+P, but K is common too)
-        // Let's map Ctrl+K to Command Mode toggle
-        if is_ctrl && key == "k" {
-            ev.prevent_default();
-            ev.stop_propagation(); 
             if show_search.get() {
                  set_show_search.set(false);
             } else {
-                 set_search_mode.set(">".to_string());
+                 set_search_mode.set(String::new());
                  set_show_search.set(true);
             }
+            return;
         }
+
+
         
         // Ctrl+L: 切换语言
         if is_ctrl && key == "l" {

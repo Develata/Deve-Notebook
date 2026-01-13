@@ -5,6 +5,8 @@ use crate::components::command_palette::Command;
 pub enum SearchAction {
     OpenDoc(DocId),
     RunCommand(Command),
+    SwitchBranch(String),
+    CreateDoc(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]

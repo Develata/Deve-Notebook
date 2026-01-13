@@ -21,6 +21,13 @@ use crate::hooks::use_shortcuts::use_shortcuts;
 
 use crate::components::activity_bar::SidebarView;
 
+// Context for deep components to trigger search (e.g. BranchSwitcher)
+#[derive(Clone, Copy)]
+pub struct SearchControl {
+    pub set_show: WriteSignal<bool>,
+    pub set_mode: WriteSignal<String>,
+}
+
 /// 根应用程序组件
 /// 
 /// 初始化全局状态 (Locale) 并渲染 AppContent。
@@ -51,7 +58,14 @@ fn AppContent() -> impl IntoView {
 
     // 3. UI 状态
     let (show_search, set_show_search) = signal(false);
-    let (search_mode, set_search_mode) = signal(String::new()); // ">" for commands, "" for files
+    let (search_mode, set_search_mode) = signal(String::new()); // ">" for commands, "" for files, "@" for branches
+
+    // Context for deep components to trigger search (e.g. BranchSwitcher)
+    provide_context(SearchControl {
+        set_show: set_show_search,
+        set_mode: set_search_mode,
+    });
+
     let (show_settings, set_show_settings) = signal(false);
     let (show_open_modal, set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
@@ -71,7 +85,11 @@ fn AppContent() -> impl IntoView {
         set_search_mode.set(">".to_string());
         set_show_search.update(|s| *s = !*s);
     });
-    let on_open = Callback::new(move |_| set_show_open_modal.set(true));
+    // Redirect "Open" to Unified Search (SilverBullet style)
+    let on_open = Callback::new(move |_| {
+        set_search_mode.set(String::new());
+        set_show_search.set(true);
+    });
     
     // 主页操作 (清除选择)
     let set_doc = core.set_current_doc;
@@ -125,6 +143,7 @@ fn AppContent() -> impl IntoView {
                 set_show=set_show_settings
             />
 
+            /*
             <crate::components::input_modal::InputModal
                 show=show_open_modal
                 set_show=set_show_open_modal
@@ -134,6 +153,7 @@ fn AppContent() -> impl IntoView {
                 initial_value={None::<String>}
                 on_confirm=on_open_confirm
             />
+            */
             
             // 手动合并模态框
             {move || {
