@@ -16,6 +16,7 @@
 
 use serde::{Serialize, Deserialize};
 use crate::models::{DocId, Op, PeerId, LedgerEntry, VersionVector};
+use crate::source_control::{ChangeEntry, CommitInfo};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
@@ -109,6 +110,18 @@ pub enum ClientMessage {
     // === Branch Switcher Messages (分支切换) ===
     /// 请求影子库列表 (远程分支)
     ListShadows,
+    
+    // === Source Control Messages (版本控制) ===
+    /// 获取当前变更列表 (暂存区/未暂存)
+    GetChanges,
+    /// 暂存指定文件
+    StageFile { path: String },
+    /// 取消暂存指定文件
+    UnstageFile { path: String },
+    /// 创建提交
+    Commit { message: String },
+    /// 获取提交历史
+    GetCommitHistory { limit: u32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,6 +202,30 @@ pub enum ServerMessage {
     /// 影子库 Peer ID 列表 (远程分支)
     ShadowList {
         shadows: Vec<String>,
+    },
+    
+    // === Source Control Responses (版本控制响应) ===
+    /// 变更列表响应
+    ChangesList {
+        /// 已暂存的文件
+        staged: Vec<ChangeEntry>,
+        /// 未暂存的文件
+        unstaged: Vec<ChangeEntry>,
+    },
+    /// 暂存操作确认
+    StageAck { path: String },
+    /// 取消暂存确认
+    UnstageAck { path: String },
+    /// 提交成功响应
+    CommitAck {
+        /// 提交 ID
+        commit_id: String,
+        /// 提交时间戳
+        timestamp: i64,
+    },
+    /// 提交历史响应
+    CommitHistory {
+        commits: Vec<CommitInfo>,
     },
     
     /// 错误消息

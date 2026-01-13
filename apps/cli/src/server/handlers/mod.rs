@@ -7,3 +7,4 @@ pub mod plugin;
 pub mod search;
 pub mod sync;
 pub mod merge;
+pub mod source_control;

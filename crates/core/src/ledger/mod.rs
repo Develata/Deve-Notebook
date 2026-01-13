@@ -32,6 +32,7 @@ pub mod ops;
 pub mod snapshot;
 pub mod shadow;
 pub mod range;
+pub mod source_control;
 
 use self::schema::*;
 
@@ -97,6 +98,9 @@ impl RepoManager {
             let _ = write_txn.open_table(SNAPSHOT_DATA)?;
         }
         write_txn.commit()?;
+
+        // 初始化 Source Control 表 (暂存区、提交历史)
+        source_control::init_tables(&local_db)?;
 
         Ok(Self { 
             ledger_dir,
@@ -289,6 +293,33 @@ impl RepoManager {
     /// 从本地库读取操作（便捷方法）。
     pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         self.get_ops(&RepoType::Local, doc_id)
+    }
+
+    // ========== Source Control Operations ==========
+
+    /// 暂存指定文件
+    pub fn stage_file(&self, path: &str) -> Result<()> {
+        source_control::stage_file(&self.local_db, path)
+    }
+
+    /// 取消暂存指定文件
+    pub fn unstage_file(&self, path: &str) -> Result<()> {
+        source_control::unstage_file(&self.local_db, path)
+    }
+
+    /// 获取已暂存文件列表
+    pub fn list_staged(&self) -> Result<Vec<crate::source_control::ChangeEntry>> {
+        source_control::list_staged(&self.local_db)
+    }
+
+    /// 创建提交
+    pub fn create_commit(&self, message: &str) -> Result<crate::source_control::CommitInfo> {
+        source_control::create_commit(&self.local_db, message)
+    }
+
+    /// 获取提交历史
+    pub fn list_commits(&self, limit: u32) -> Result<Vec<crate::source_control::CommitInfo>> {
+        source_control::list_commits(&self.local_db, limit)
     }
 }
 

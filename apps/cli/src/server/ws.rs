@@ -22,7 +22,7 @@ use futures::{StreamExt, SinkExt};
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use crate::server::AppState;
-use crate::server::handlers::{document, system, plugin, search, sync, merge};
+use crate::server::handlers::{document, system, plugin, search, sync, merge, source_control};
 use deve_core::models::PeerId;
 
 pub async fn ws_handler(
@@ -160,6 +160,22 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      // Branch Switcher messages
                      ClientMessage::ListShadows => {
                          system::handle_list_shadows(&state_clone, &tx).await;
+                     }
+                     // Source Control messages
+                     ClientMessage::GetChanges => {
+                         source_control::handle_get_changes(&state_clone, &tx).await;
+                     }
+                     ClientMessage::StageFile { path } => {
+                         source_control::handle_stage_file(&state_clone, &tx, path).await;
+                     }
+                     ClientMessage::UnstageFile { path } => {
+                         source_control::handle_unstage_file(&state_clone, &tx, path).await;
+                     }
+                     ClientMessage::Commit { message } => {
+                         source_control::handle_commit(&state_clone, &tx, message).await;
+                     }
+                     ClientMessage::GetCommitHistory { limit } => {
+                         source_control::handle_get_commit_history(&state_clone, &tx, limit).await;
                      }
                 }
             }
