@@ -17,7 +17,7 @@ use deve_core::protocol::ServerMessage;
 use super::backoff::BackoffStrategy;
 use super::ConnectionStatus;
 
-/// Spawns the connection manager task.
+/// 启动连接管理器任务
 pub fn spawn_connection_manager(
     set_status: WriteSignal<ConnectionStatus>,
     set_msg: WriteSignal<Option<ServerMessage>>,
@@ -60,8 +60,8 @@ pub fn spawn_connection_manager(
     });
 }
 
-/// Reads messages from the WebSocket until the connection is closed.
-/// Sets status to Connected after receiving the first successful message.
+/// 从 WebSocket 读取消息直到连接关闭。
+/// 在收到第一条成功消息后将状态设置为 Connected。
 async fn process_incoming_messages(
     mut read: futures::stream::SplitStream<WebSocket>,
     set_msg: WriteSignal<Option<ServerMessage>>,
@@ -93,7 +93,7 @@ async fn process_incoming_messages(
     }
 }
 
-/// Builds the WebSocket URL based on the current hostname.
+/// 根据当前主机名构建 WebSocket URL
 fn build_ws_url() -> String {
     let hostname = web_sys::window()
         .unwrap()

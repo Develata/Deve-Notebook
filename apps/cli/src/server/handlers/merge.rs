@@ -1,7 +1,7 @@
-//! # Manual Merge Handler
+//! # 手动合并处理器 (Manual Merge Handler)
 //! 
-//! Handles Manual Mode sync operations: get/set sync mode, 
-//! get pending ops, confirm merge, discard pending.
+//! 处理手动同步模式 (`Manual Mode`) 的相关操作：
+//! 获取/设置同步模式、获取待合并操作、确认合并、丢弃待合并操作。
 
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -9,7 +9,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::config::SyncMode;
 use crate::server::AppState;
 
-/// Get current sync mode
+/// 获取当前同步模式
 pub async fn handle_get_sync_mode(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
@@ -27,7 +27,7 @@ pub async fn handle_get_sync_mode(
     let _ = tx.send(ServerMessage::SyncModeStatus { mode: mode_str });
 }
 
-/// Set sync mode
+/// 设置同步模式
 pub async fn handle_set_sync_mode(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
@@ -57,7 +57,7 @@ pub async fn handle_set_sync_mode(
     let _ = tx.send(ServerMessage::SyncModeStatus { mode: mode_str });
 }
 
-/// Get pending operations with diff preview
+/// 获取待合并操作及其预览
 pub async fn handle_get_pending_ops(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
@@ -67,9 +67,9 @@ pub async fn handle_get_pending_ops(
         engine.pending_ops_count()
     };
     
-    // Generate previews (simplified for now)
+    // 生成预览 (目前简化处理)
     let previews: Vec<(String, String, String)> = if pending_count > 0 {
-        // TODO: Generate actual diff previews from pending ops
+        // TODO: 从 pending ops 生成实际的 diff 预览
         vec![("(pending operations)".to_string(), "...".to_string(), "...".to_string())]
     } else {
         vec![]
@@ -81,7 +81,7 @@ pub async fn handle_get_pending_ops(
     });
 }
 
-/// Confirm merge of all pending operations
+/// 确认合并所有待处理的操作
 pub async fn handle_confirm_merge(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
@@ -103,7 +103,7 @@ pub async fn handle_confirm_merge(
     }
 }
 
-/// Discard all pending operations
+/// 丢弃所有待处理的操作
 pub async fn handle_discard_pending(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,

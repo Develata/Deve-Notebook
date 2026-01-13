@@ -19,15 +19,15 @@ use deve_core::models::PeerId;
 pub fn BranchSwitcher() -> impl IntoView {
     let core = expect_context::<CoreState>();
     
-    // Dropdown open state
+    // 下拉菜单开启状态
     let (is_open, set_is_open) = signal(false);
     
-    // Request shadow list on mount
+    // 挂载时请求 Shadow 列表
     Effect::new(move |_| {
         core.on_list_shadows.run(());
     });
     
-    // Derive current branch name
+    // 获取当前分支名称
     let current_branch = move || {
         match core.active_repo.get() {
             None => "Local (Master)".to_string(),
@@ -35,30 +35,30 @@ pub fn BranchSwitcher() -> impl IntoView {
         }
     };
     
-    // Derive if in spectator (read-only) mode
+    // 判断是否为 Spectator (只读) 模式
     let is_spectator = move || core.active_repo.get().is_some();
     
-    // Toggle dropdown
+    // 切换下拉菜单
     let toggle_dropdown = move |_| {
         set_is_open.update(|v| *v = !*v);
     };
     
-    // Select local branch
+    // 选择本地分支
     let select_local = move |_| {
         core.set_active_repo.set(None);
         set_is_open.set(false);
     };
     
-    // Close dropdown when clicking outside (simplified: close on any selection)
+    // 简化处理: 任何选择后关闭下拉菜单
     
     view! {
         <div class="relative">
-            // Branch Button
+            // 分支按钮
             <button 
                 class="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors text-xs font-medium text-gray-700"
                 on:click=toggle_dropdown
             >
-                // Git branch icon
+                // Git 分支图标
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="6" y1="3" x2="6" y2="15"/>
                     <circle cx="18" cy="6" r="3"/>
@@ -71,22 +71,22 @@ pub fn BranchSwitcher() -> impl IntoView {
                 } else {
                     view! {}.into_any()
                 }}
-                // Dropdown arrow
+                // 下拉箭头
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </button>
             
-            // Dropdown Menu
+            // 下拉菜单
             {move || if is_open.get() {
                 view! {
                     <div class="absolute bottom-full left-0 mb-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                        // Header
+                        // 标题头
                         <div class="px-3 py-1.5 text-[10px] uppercase tracking-wider text-gray-400 font-semibold border-b border-gray-100">
                             "Switch Branch"
                         </div>
                         
-                        // Local (Master) - always first
+                        // Local (Master) - 始终在第一位
                         <button 
                             class=move || format!(
                                 "w-full flex items-center justify-between px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors {}",
@@ -95,7 +95,7 @@ pub fn BranchSwitcher() -> impl IntoView {
                             on:click=select_local
                         >
                             <div class="flex items-center gap-2">
-                                // Home icon
+                                // 主页图标
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                                     <polyline points="9 22 9 12 15 12 15 22"/>
@@ -109,7 +109,7 @@ pub fn BranchSwitcher() -> impl IntoView {
                             }}
                         </button>
                         
-                        // Divider if there are remote branches
+                        // 分隔线 (如果有远程分支)
                         {move || if !core.shadow_repos.get().is_empty() {
                             view! {
                                 <div class="border-t border-gray-100 my-1"></div>
@@ -121,7 +121,7 @@ pub fn BranchSwitcher() -> impl IntoView {
                             view! {}.into_any()
                         }}
                         
-                        // Remote branches from shadow_repos
+                        // 远程分支列表 (来自 shadow_repos)
                         <For
                             each=move || core.shadow_repos.get()
                             key=|name| name.clone()
@@ -149,7 +149,7 @@ pub fn BranchSwitcher() -> impl IntoView {
                                         }
                                     >
                                         <div class="flex items-center gap-2">
-                                            // Cloud icon for remote
+                                            // 远程云图标
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
                                             </svg>
@@ -161,7 +161,7 @@ pub fn BranchSwitcher() -> impl IntoView {
                             }
                         />
                         
-                        // Empty state if no remotes
+                        // 空状态 (如果没有远程分支)
                         {move || if core.shadow_repos.get().is_empty() {
                             view! {
                                 <div class="px-3 py-2 text-xs text-gray-400 italic">

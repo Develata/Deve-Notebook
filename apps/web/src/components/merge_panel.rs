@@ -1,6 +1,6 @@
-//! # Merge Panel Component
+//! # MergePanel 组件 (MergePanel Component)
 //!
-//! Displays sync mode toggle and pending operations for Manual Merge.
+//! 显示同步模式切换按钮和手动合并时的待处理操作。
 
 use leptos::prelude::*;
 
@@ -8,7 +8,7 @@ use leptos::prelude::*;
 pub fn MergePanel() -> impl IntoView {
     let core = expect_context::<crate::hooks::use_core::CoreState>();
     
-    // Fetch initial state on mount
+    // 挂载时获取初始状态
     Effect::new(move |_| {
         core.on_get_sync_mode.run(());
         core.on_get_pending_ops.run(());

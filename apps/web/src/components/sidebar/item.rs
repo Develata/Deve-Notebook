@@ -1,4 +1,4 @@
-//! # File Tree Item Component (文件树节点组件)
+//! # FileTreeItem 组件 (文件树节点组件)
 //!
 //! **架构作用**:
 //! 渲染文件树中的单个节点（文件或文件夹），并处理局部交互。
@@ -53,13 +53,13 @@ pub fn FileTreeItem(
     let path_check = node.path.clone();
     let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
     
-    // Clipboard context
+    // 剪贴板上下文
     let set_clipboard = use_context::<WriteSignal<Option<String>>>()
         .expect("clipboard set context");
     let clipboard = use_context::<ReadSignal<Option<String>>>()
         .expect("clipboard read context");
     
-    // Build unified action handler
+    // 构建统一的操作处理程序
     let rename_req = on_rename_req.clone();
     let delete_req = on_delete_req.clone();
     let copy_req = on_copy_req.clone();
@@ -72,7 +72,7 @@ pub fn FileTreeItem(
             MenuAction::Rename => rename_req.run(path),
             MenuAction::Delete => delete_req.run(path),
             MenuAction::Copy => {
-                // Store in clipboard context
+                // 存储到剪贴板上下文
                 set_clipboard.set(Some(path.clone()));
                 leptos::logging::log!("Copied to clipboard: {}", path);
             }
@@ -81,16 +81,16 @@ pub fn FileTreeItem(
                 if let Some(src) = clipboard.get_untracked() {
                     leptos::logging::log!("Paste requested: copy {} to {}", src, path);
                     
-                    // Determine destination folder
+                    // 确定目标文件夹
                     let dest_folder = if is_folder {
                         path.clone()
                     } else {
-                        // Parent of current item
+                        // 当前项目的父级
                          let p = std::path::Path::new(&path).parent().and_then(|p| p.to_str()).unwrap_or("");
                          p.replace('\\', "/")
                     };
                     
-                    // Determine new filename from src
+                    // 从源确定新文件名
                     let src_name = std::path::Path::new(&src).file_name().and_then(|n| n.to_str()).unwrap_or("unknown");
                     
                     let dest_path = if dest_folder.is_empty() {
@@ -110,7 +110,7 @@ pub fn FileTreeItem(
                 }
             }
             MenuAction::OpenInNewWindow => {
-                // Open in new browser tab
+                // 在新浏览器标签页中打开
                 if let Some(window) = web_sys::window() {
                     if let Ok(href) = window.location().href() {
                         let url = format!("{}?doc={}", href, path);
@@ -247,7 +247,7 @@ pub fn FileTreeItem(
 /// Copy text to clipboard (stub implementation - logs for now)
 /// TODO: Implement via JS interop for full clipboard support
 fn copy_to_clipboard(text: &str) {
-    // For now, just log. Full clipboard API requires navigator.clipboard
-    // which needs specific web-sys features or JS interop.
+    // 目前仅记录日志。完整的剪贴板 API 需要 navigator.clipboard
+    // 这需要特定的 web-sys 功能或 JS 互操作。
     leptos::logging::log!("Copy requested: {}", text);
 }

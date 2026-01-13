@@ -25,7 +25,7 @@ pub fn main() {
     tracing_wasm::set_as_global_default();
     tracing::info!("Initializing Deve-Note Web App");
     
-    // Hide overlay manually on mount to prevent hanging if no doc selected
+    // 挂载时手动隐藏覆盖层，以防止在未选择文档时卡住
     let window = web_sys::window().unwrap();
     let doc = window.document().unwrap();
     if let Some(el) = doc.get_element_by_id("loading-overlay") {

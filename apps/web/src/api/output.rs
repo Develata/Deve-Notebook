@@ -14,15 +14,15 @@ use futures::stream::SplitSink;
 use std::collections::VecDeque;
 use deve_core::protocol::ClientMessage;
 
-/// Internal message type for the Output Manager loop.
+/// 输出管理器循环的内部消息类型
 pub enum OutputEvent {
-    /// A message from the application to send to the server
+    /// 应用程序要发送到服务器的消息
     Client(ClientMessage),
-    /// A new WebSocket writer from a successful connection
+    /// 来自成功连接的新 WebSocket 写入端
     NewLink(SplitSink<WebSocket, Message>),
 }
 
-/// Spawns the output manager task.
+/// 启动输出管理器任务
 pub fn spawn_output_manager(
     rx: UnboundedReceiver<ClientMessage>,
     link_rx: UnboundedReceiver<SplitSink<WebSocket, Message>>,
@@ -50,7 +50,7 @@ pub fn spawn_output_manager(
     });
 }
 
-/// Handles a new WebSocket connection link.
+/// 处理新的 WebSocket 连接链接
 async fn handle_new_link(
     sink: SplitSink<WebSocket, Message>,
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
@@ -66,7 +66,7 @@ async fn handle_new_link(
     flush_queue(current_sink, queue).await;
 }
 
-/// Handles a client message to be sent.
+/// 处理要发送的客户端消息
 async fn handle_client_message(
     msg: ClientMessage,
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
@@ -89,7 +89,7 @@ async fn handle_client_message(
     }
 }
 
-/// Flushes all messages in the queue to the current connection.
+/// 将队列中的所有消息刷新到当前连接
 async fn flush_queue(
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,

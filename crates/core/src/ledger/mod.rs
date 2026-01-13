@@ -36,7 +36,7 @@ pub mod range;
 use self::schema::*;
 
 /// 仓库类型枚举
-/// Specifies which repository to operate on.
+/// 指定操作的目标仓库。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RepoType {
     /// 本地权威库 (Store B) - local.redb
@@ -146,8 +146,9 @@ impl RepoManager {
 
     /// 获取指定 Peer 的影子库只读视图。
     /// 
+    /// **逻辑**:
     /// 返回 `ShadowRepo` 提供只读访问接口。
-    /// 所有写入必须通过 `append_remote_op` 进行。
+    /// 所有写入必须强制通过 `append_remote_op` 进行，以保证单向数据流。
     pub fn get_shadow_repo(&self, peer_id: &PeerId) -> Result<Option<shadow::ShadowRepo<'_>>> {
         self.ensure_shadow_db(peer_id)?;
         
@@ -245,6 +246,7 @@ impl RepoManager {
 
     /// 追加操作到本地库 (Store B)。
     /// 
+    /// **权限**:
     /// Local Write Only - 仅接受本地用户的操作。
     pub fn append_local_op(&self, entry: &LedgerEntry) -> Result<u64> {
         ops::append_op_to_db(&self.local_db, entry)
@@ -252,6 +254,7 @@ impl RepoManager {
 
     /// 追加操作到指定远端的影子库 (Store C)。
     /// 
+    /// **权限**:
     /// Remote Write Only - 仅接受来自指定 Peer 的操作。
     pub fn append_remote_op(&self, peer_id: &PeerId, entry: &LedgerEntry) -> Result<u64> {
         self.ensure_shadow_db(peer_id)?;

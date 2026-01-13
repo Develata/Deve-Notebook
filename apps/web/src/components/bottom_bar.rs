@@ -1,3 +1,7 @@
+//! # BottomBar 组件 (BottomBar Component)
+//!
+//! 底部状态栏，显示分支切换器、连接状态和编辑器统计信息 (字数、行数、字符数)。
+
 use leptos::prelude::*;
 use crate::api::ConnectionStatus;
 use crate::i18n::{Locale, t};
@@ -28,14 +32,15 @@ pub fn BottomBar(
 
     view! {
         <footer class="h-8 bg-gray-50 border-t border-gray-200 flex items-center justify-between px-4 select-none">
-            // Left: Branch Switcher + System Status
+            // 左侧: 分支切换器 + 系统状态
             <div class="flex items-center gap-3">
                 <BranchSwitcher />
                 <div class="w-px h-4 bg-gray-200"></div>
                 {status_view}
             </div>
 
-            // Right: Editor Stats
+            // 右侧: 编辑器统计
+
             <div class="flex items-center gap-4 text-xs text-gray-500">
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::words(locale.get())}</span>

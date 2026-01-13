@@ -1,3 +1,8 @@
+//! # ExplorerView 组件 (ExplorerView Component)
+//!
+//! 侧边栏的主要文件浏览器视图。
+//! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
+
 use leptos::prelude::*;
 use deve_core::models::DocId;
 use crate::components::sidebar::tree::build_file_tree;
@@ -15,27 +20,27 @@ pub fn ExplorerView(
     #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
     
-    // Create Modal State
+    // 创建模态框状态
     let (show_create, set_show_create) = signal(false);
     let (create_parent, set_create_parent) = signal(None::<String>);
     
-    // Rename Modal State
+    // 重命名模态框状态
     let (show_rename, set_show_rename) = signal(false);
     let (rename_target, set_rename_target) = signal(String::new());
     
-    // Move Modal State
+    // 移动模态框状态
     let (show_move, set_show_move) = signal(false);
     let (move_source, set_move_source) = signal(String::new());
     
-    // Context Menu State
+    // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
 
-    // Clipboard State
+    // 剪贴板状态
     let (clipboard_path, set_clipboard_path) = signal(None::<String>);
     provide_context(clipboard_path);
     provide_context(set_clipboard_path);
     
-    // Callbacks
+    // 回调函数
     let request_create = Callback::new(move |parent: Option<String>| {
         set_create_parent.set(parent);
         set_show_create.set(true);

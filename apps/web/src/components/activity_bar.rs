@@ -1,12 +1,16 @@
+//! # ActivityBar 组件 (ActivityBar Component)
+//!
+//! 侧边栏导航条，用于在不同的视图（资源管理器、搜索、源码管理、扩展）之间切换。
+
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum SidebarView {
     #[default]
-    Explorer,
-    Search,
-    SourceControl,
-    Extensions,
+    Explorer,      // 资源管理器
+    Search,        // 搜索
+    SourceControl, // 源代码管理 (Git)
+    Extensions,    // 扩展
 }
 
 #[component]
@@ -29,7 +33,7 @@ pub fn ActivityBar(
             >
                 <div class="w-6 h-6" inner_html=icon></div>
                 
-                // Active Indicator
+                // 活动指示器
                 {move || if is_active() {
                     view! { <div class="absolute left-0 top-2 bottom-2 w-1 bg-blue-400 rounded-r"></div> }.into_any()
                 } else {
@@ -41,30 +45,30 @@ pub fn ActivityBar(
 
     view! {
         <div class="w-12 flex flex-col items-center py-4 bg-gray-900 border-r border-gray-800 flex-none z-20">
-            // Top Section: Parallel to VS Code
+            // 顶部区域: 类似于 VS Code
             
-            // Explorer
+            // 资源管理器
             {icon_btn(
                 SidebarView::Explorer, 
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>"#,
                 "Explorer"
             )}
             
-            // Search
+            // 搜索
             {icon_btn(
                 SidebarView::Search, 
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>"#,
                 "Search"
             )}
             
-            // Source Control (Git)
+            // 源代码管理 (Git)
             {icon_btn(
                 SidebarView::SourceControl, 
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9v12"/><path d="M12 15V3"/></svg>"#,
                 "Source Control"
             )}
             
-            // Extensions
+            // 扩展
             {icon_btn(
                 SidebarView::Extensions, 
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="13" y="13" width="9" height="9" rx="2"/><line x1="8" y1="21" x2="8" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><path d="M2.5 21h5.5a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H2.5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5z"/></svg>"#,
@@ -73,7 +77,7 @@ pub fn ActivityBar(
             
             <div class="flex-1"></div>
             
-            // Bottom: Settings
+            // 底部:设置
             <button 
                 class="p-3 mb-2 text-gray-400 hover:text-gray-100 rounded-lg transition-colors"
                 title="Settings"

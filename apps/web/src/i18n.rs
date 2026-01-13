@@ -1,3 +1,13 @@
+//! # Internationalization (国际化)
+//!
+//! **架构作用**:
+//! 管理应用程序的语言设置和翻译字符串。
+//! 提供简单的 `Locale` 枚举和嵌套模块结构来组织 UI 文本。
+//!
+//! **核心功能清单**:
+//! - `Locale`: 语言枚举 (En, Zh)。
+//! - `t`: 包含应用程序各部分的翻译模块 (hook, header, sidebar, settings, etc.)。
+
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -16,7 +26,7 @@ impl Locale {
     }
 }
 
-// Translation Modules
+// 翻译模块
 pub mod t {
     use super::Locale;
 

@@ -1,4 +1,4 @@
-//! # Search Modal (搜索弹窗组件)
+//! # SearchModal 组件 (SearchModal Component)
 //!
 //! **架构作用**:
 //! 提供 "Go to file..." (Ctrl+P 风格) 的全文搜索弹窗。
@@ -17,22 +17,22 @@ use std::str::FromStr;
 
 #[component]
 pub fn SearchModal(
-    /// Whether the modal is visible
+    /// 模态框是否可见
     #[prop(into)]
     show: Signal<bool>,
-    /// Callback to toggle visibility
+    /// 切换可见性的回调
     on_close: Callback<()>,
-    /// Search text input callback
+    /// 搜索文本输入回调
     on_search: Callback<String>,
-    /// Search results signal
+    /// 搜索结果信号
     #[prop(into)]
     search_results: Signal<Vec<(String, String, f32)>>,
-    /// Callback when a result is selected
+    /// 选中结果时的回调
     on_select: Callback<DocId>,
 ) -> impl IntoView {
     let (query, set_query) = signal(String::new());
     
-    // Debounce search
+    // 防抖搜索
     Effect::new(move |_| {
         let q = query.get();
         if !q.is_empty() {

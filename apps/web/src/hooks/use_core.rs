@@ -32,7 +32,7 @@ pub struct CoreState {
     pub status_text: Signal<String>,
     pub stats: ReadSignal<EditorStats>,
     
-    // P2P State
+    // P2P 状态
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     
     pub on_doc_select: Callback<DocId>,
@@ -43,15 +43,15 @@ pub struct CoreState {
     pub on_doc_move: Callback<(String, String)>,
     pub on_stats: Callback<EditorStats>,
     
-    // Plugin RPC
+    // 插件 RPC
     pub plugin_last_response: ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
     pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
 
-    // Search
+    // 搜索
     pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)
     pub on_search: Callback<String>,
     
-    // Manual Merge
+    // 手动合并
     pub sync_mode: ReadSignal<String>, // "auto" or "manual"
     pub pending_ops_count: ReadSignal<u32>,
     pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
@@ -61,18 +61,18 @@ pub struct CoreState {
     pub on_confirm_merge: Callback<()>,
     pub on_discard_pending: Callback<()>,
     
-    // Source Control State (Repo)
+    // 版本控制状态 (Repo)
     pub active_repo: ReadSignal<Option<PeerId>>,
     pub set_active_repo: WriteSignal<Option<PeerId>>,
     
-    // Branch Switcher State
+    // 分支切换状态
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     
-    // Source Control State (History)
-    pub doc_version: ReadSignal<u64>, // Current Max Version
+    // 版本控制状态 (历史)
+    pub doc_version: ReadSignal<u64>, // 当前最大版本
     pub set_doc_version: WriteSignal<u64>,
-    pub playback_version: ReadSignal<u64>, // Current View Version
+    pub playback_version: ReadSignal<u64>, // 当前回放视图版本
     pub set_playback_version: WriteSignal<u64>,
 }
 
@@ -84,38 +84,38 @@ pub fn use_core() -> CoreState {
     let status_signal_for_text = ws.status;
     let status_text = Signal::derive(move || format!("{}", status_signal_for_text.get()));
     
-    // Global State
+    // 全局状态
     let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());
     let (current_doc, set_current_doc) = signal(None::<DocId>);
-    // Stats State
+    // 统计状态
     let (stats, set_stats) = signal(EditorStats::default());
-    // P2P State
+    // P2P 状态
     let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
 
-    // Plugin State
+    // 插件状态
     let (plugin_response, set_plugin_response) = signal(None::<(String, Option<serde_json::Value>, Option<String>)>);
 
-    // Search State
+    // 搜索状态
     let (search_results, set_search_results) = signal(Vec::<(String, String, f32)>::new());
 
-    // Manual Merge State
+    // 手动合并状态
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::<(String, String, String)>::new());
 
-    // Source Control State
+    // 版本控制状态
     let (active_repo, set_active_repo) = signal(None::<PeerId>);
-    // Branch Switcher State
+    // 分支切换状态
     let (shadow_repos, set_shadow_repos) = signal(Vec::<String>::new());
-    // History State
+    // 历史状态
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
 
-    // Generate Ephemeral PeerId for this session
+    // 为当前会话生成临时的 PeerId
     let peer_id = PeerId::random();
     leptos::logging::log!("Frontend PeerId: {}", peer_id);
 
-    // Initial Handshake & List Request
+    // 初始握手与列表请求
     let ws_clone = ws.clone();
     let status_signal = ws.status;
     let pid = peer_id.clone();
@@ -123,24 +123,24 @@ pub fn use_core() -> CoreState {
     Effect::new(move |_| {
          if status_signal.get() == crate::api::ConnectionStatus::Connected {
              leptos::logging::log!("Connected! Sending SyncHello...");
-             // Send P2P Handshake
+             // 发送 P2P 握手
              ws_clone.send(ClientMessage::SyncHello { 
                  peer_id: pid.clone(), 
-                 vector: VersionVector::new() // Empty initially
+                 vector: VersionVector::new() // 初始为空
              });
-             // Request Doc List
+             // 请求文档列表
              ws_clone.send(ClientMessage::ListDocs);
          }
     });
     
-    // Handle Messages
+    // 处理消息
     let ws_rx = ws.clone();
     Effect::new(move |_| {
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
                     set_docs.set(list.clone());
-                    // Auto-select first if none selected
+                    // 如果未选择，则自动选择第一个
                     if current_doc.get_untracked().is_none() {
                         if let Some(first) = list.first() {
                             set_current_doc.set(Some(first.0));
@@ -148,7 +148,7 @@ pub fn use_core() -> CoreState {
                     }
                 },
                 
-                // Track Peers
+                // 跟踪 Peers
                 ServerMessage::SyncHello { peer_id, vector } => {
                     set_peers.update(|map| {
                         map.insert(peer_id.clone(), PeerSession {
@@ -166,7 +166,7 @@ pub fn use_core() -> CoreState {
                      set_search_results.set(results);
                 },
                 
-                // Manual Merge Messages
+                // 手动合并消息
                 ServerMessage::SyncModeStatus { mode } => {
                     set_sync_mode.set(mode);
                 },
@@ -193,7 +193,7 @@ pub fn use_core() -> CoreState {
         }
     });
 
-    // Actions
+    // 操作
     let on_doc_select = Callback::new(move |id: DocId| {
         set_current_doc.set(Some(id));
     });
@@ -239,7 +239,7 @@ pub fn use_core() -> CoreState {
         ws_for_search.send(ClientMessage::Search { query, limit: 50 });
     });
 
-    // Manual Merge Callbacks
+    // 手动合并回调
     let ws_for_get_mode = ws.clone();
     let on_get_sync_mode = Callback::new(move |_: ()| {
         ws_for_get_mode.send(ClientMessage::GetSyncMode);
@@ -265,7 +265,7 @@ pub fn use_core() -> CoreState {
         ws_for_discard.send(ClientMessage::DiscardPending);
     });
 
-    // Branch Switcher Callback
+    // 分支切换回调
     let ws_for_list_shadows = ws.clone();
     let on_list_shadows = Callback::new(move |_: ()| {
         ws_for_list_shadows.send(ClientMessage::ListShadows);
@@ -308,7 +308,7 @@ pub fn use_core() -> CoreState {
         set_playback_version,
     };
     
-    // Provide CoreState as context for child components
+    // 为子组件提供 CoreState 上下文
     provide_context(state.clone());
     
     state

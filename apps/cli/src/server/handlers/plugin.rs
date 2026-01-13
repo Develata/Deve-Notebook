@@ -25,21 +25,21 @@ pub async fn handle_plugin_call(
     fn_name: String,
     args: Vec<serde_json::Value>,
 ) {
-    // 1. Find Plugin
+    // 1. 查找插件
     let plugin = state.plugins.iter().find(|p| p.manifest().id == plugin_id);
     
     if let Some(plugin) = plugin {
-        // 2. Convert Args (JSON -> Dynamic)
-        // Rhai's serde feature handles this usually via rhai::serde::to_dynamic
-        // But we need to map over the vector.
+        // 2. 转换参数 (JSON -> Dynamic)
+        // Rhai 的 serde 特性通常通过 rhai::serde::to_dynamic 处理
+        // 但我们需要映射整个向量。
         let rhai_args: Vec<rhai::Dynamic> = args.into_iter()
             .map(|v| rhai::serde::to_dynamic(&v).unwrap_or(rhai::Dynamic::UNIT))
             .collect();
 
-        // 3. Call
+        // 3. 调用
         match plugin.call(&fn_name, rhai_args) {
             Ok(result) => {
-                // 4. Convert Result (Dynamic -> JSON)
+                // 4. 转换结果 (Dynamic -> JSON)
                 let json_result: serde_json::Value = rhai::serde::from_dynamic(&result)
                     .unwrap_or(serde_json::Value::Null);
 

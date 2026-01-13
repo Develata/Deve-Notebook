@@ -1,11 +1,11 @@
-//! # 主应用组件
+//! # App Component (App 组件)
 //!
 //! 本模块包含根 `App` 组件和主布局。
 //!
 //! ## 结构说明
 //!
-//! - `App`: 根组件，提供语言环境上下文
-//! - `AppContent`: 主内容区，包含头部、侧边栏、编辑器和模态框
+//! - `App`: 根组件，提供语言环境上下文。
+//! - `AppContent`: 主内容区，包含头部、侧边栏、编辑器和模态框。
 //!
 //! 使用自定义 Hooks: `use_core`, `use_layout`, `use_shortcuts`
 
@@ -21,9 +21,12 @@ use crate::hooks::use_shortcuts::use_shortcuts;
 
 use crate::components::activity_bar::SidebarView;
 
+/// 根应用程序组件
+/// 
+/// 初始化全局状态 (Locale) 并渲染 AppContent。
 #[component]
 pub fn App() -> impl IntoView {
-    // Global Locale State
+    // 全局语言环境状态
     let locale = RwSignal::new(Locale::default());
     provide_context(locale);
 
@@ -32,35 +35,39 @@ pub fn App() -> impl IntoView {
     }
 }
 
+/// 主应用程序布局
+/// 
+/// 编排 UI 架构中定义的 "活动栏 + 可调整大小插槽" 布局。
+/// 管理全局 UI 状态 (命令面板, 设置) 并与核心逻辑 (`use_core`) 集成。
 #[component]
 fn AppContent() -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
-    // 1. Core State (Global Logic)
+    // 1. 核心状态 (全局逻辑)
     let core = use_core();
 
-    // 2. Layout Logic
+    // 2. 布局逻辑
     let (sidebar_width, start_resize, stop_resize, do_resize, is_resizing) = use_layout();
 
-    // 3. UI State
+    // 3. UI 状态
     let (show_cmd, set_show_cmd) = signal(false);
     let (show_settings, set_show_settings) = signal(false);
     let (show_open_modal, set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
 
-    // 4. Shortcuts
+    // 4. 快捷键
     let handle_keydown = use_shortcuts(locale, show_cmd.into(), set_show_cmd, set_show_open_modal);
 
-    // 5. Derived UI Callbacks
+    // 5. 派生 UI 回调
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
     let on_command = Callback::new(move |_| set_show_cmd.update(|s| *s = !*s));
     let on_open = Callback::new(move |_| set_show_open_modal.set(true));
     
-    // Home Action (Clear Selection)
+    // 主页操作 (清除选择)
     let set_doc = core.set_current_doc;
     let on_home = Callback::new(move |_| set_doc.set(None));
 
-    // Open Confirm Logic - Opens existing doc or creates new one
+    // 打开确认逻辑 - 打开现有文档或创建新文档
     let docs = core.docs;
     let on_select = core.on_doc_select;
     let on_create = core.on_doc_create;
@@ -68,12 +75,12 @@ fn AppContent() -> impl IntoView {
         let normalized = path.replace('\\', "/");
         let target = if normalized.ends_with(".md") { normalized.clone() } else { format!("{}.md", normalized) };
         
-        // Try to find existing doc
+        // 尝试查找现有文档
         let list = docs.get_untracked();
         if let Some((id, _)) = list.iter().find(|(_, p)| p == &target || p == &normalized) {
             on_select.run(*id);
         } else {
-            // Not found, create new document
+            // 未找到，创建新文档
             leptos::logging::log!("Document not found, creating: {}", target);
             on_create.run(target);
         }
@@ -117,10 +124,10 @@ fn AppContent() -> impl IntoView {
                 on_confirm=on_open_confirm
             />
             
-            // Manual Merge Modal
+            // 手动合并模态框
             {move || {
                 let (show_merge, set_show_merge) = signal(false);
-                provide_context(set_show_merge); // Allow triggering from deep components
+                provide_context(set_show_merge); // 允许从深层组件触发
                 view! {
                     <crate::components::merge_modal::MergeModal 
                         show=show_merge
@@ -130,14 +137,14 @@ fn AppContent() -> impl IntoView {
             }}
 
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
-                 // Activity Bar (Fixed Left)
+                 // 活动栏 (固定左侧)
                  <crate::components::activity_bar::ActivityBar 
                     active_view=active_view 
                     set_active_view=set_active_view 
                     on_settings=on_settings 
                  />
 
-                 // Left Sidebar (Resizable & Swappable)
+                 // 左侧边栏 (可调整大小和切换)
                  <aside 
                     class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                     style=move || format!("width: {}px", sidebar_width.get())
@@ -155,7 +162,7 @@ fn AppContent() -> impl IntoView {
                      />
                  </aside>
                  
-                 // Drag Handle
+                 // 拖动手柄
                  <div 
                     class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
                     on:mousedown=move |ev| start_resize.run(ev)
@@ -163,7 +170,7 @@ fn AppContent() -> impl IntoView {
                     <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
                  </div>
 
-                 // Main Editor
+                 // 主编辑器
                  <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
                     
                     {move || match core.current_doc.get() {
@@ -181,7 +188,7 @@ fn AppContent() -> impl IntoView {
             
             <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats />
             
-            // Disconnect Lock / Loading Screen
+            // 断开连接锁定 / 加载屏幕
             {move || {
                 let status = core.ws.status.get();
                 if status != crate::api::ConnectionStatus::Connected {

@@ -1,26 +1,25 @@
-//! Unified error handling for Deve-Note.
+//! Deve-Note 统一错误处理模块
 //!
-//! This module provides custom error types and result aliases for consistent
-//! error handling across the codebase.
+//! 本模块提供自定义错误类型 `DeveError` 及结果别名，保证全项目错误处理的一致性。
 
 use std::fmt;
 
-/// Custom error type for Deve-Note operations.
+/// Deve-Note 的自定义错误类型
 #[derive(Debug)]
 pub enum DeveError {
-    /// I/O error when reading/writing files.
+    /// I/O 读写错误
     Io(std::io::Error),
-    /// Database error from Ledger operations.
+    /// 数据库 (Redb) 操作错误
     Database(String),
-    /// Serialization/deserialization error.
+    /// 序列化/反序列化错误
     Serialization(String),
-    /// Document not found.
+    /// 文档未找到
     NotFound(String),
-    /// Invalid path or filename.
+    /// 非法路径或文件名
     InvalidPath(String),
-    /// WebSocket connection error.
+    /// WebSocket 连接或通信错误
     WebSocket(String),
-    /// General error with message.
+    /// 其他通用错误
     Other(String),
 }
 
@@ -74,5 +73,5 @@ impl From<anyhow::Error> for DeveError {
     }
 }
 
-/// Result type alias using DeveError.
+/// 使用 DeveError 的 Result 类型别名
 pub type Result<T> = std::result::Result<T, DeveError>;

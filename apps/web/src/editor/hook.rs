@@ -1,3 +1,9 @@
+//! # Editor Hook (编辑器钩子)
+//!
+//! **架构作用**:
+//! 封装编辑器的状态管理逻辑 (`use_editor`)。
+//! 包含文档加载、WebSocket 消息处理协调、CodeMirror 初始化和更新循环。
+
 use leptos::prelude::*;
 use leptos::html::Div;
 use wasm_bindgen::prelude::*;
@@ -26,47 +32,47 @@ pub fn use_editor(
     let ws = use_context::<WsService>().expect("WsService should be provided");
     let core = expect_context::<CoreState>();
     
-    // Local state of the document to compute diffs against
+    // 文档的本地状态，用于计算 diff
     let (content, set_content) = signal("".to_string()); // Start empty
     let (local_version, set_local_version) = signal(0u64);
     
-    // Playback State
+    // 回放状态
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
-    // We use Core's playback version signal
-    // let (playback_version, set_playback_version) = signal(0u64); <-- REPLACED
+    // 我们使用 Core 的回放版本信号
+    // let (playback_version, set_playback_version) = signal(0u64); <-- 已替换
     let playback_version = core.playback_version;
     let set_playback_version = core.set_playback_version;
     
     let (is_playback, set_is_playback) = signal(false);
     
-    // Generate a session client_id (using random rough)
+    // 生成会话 client_id (使用随机数)
     let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
     
-    // Initial Request: Open Document
-    // We send OpenDoc on mount AND when doc_id changes.
-    // NOTE: Effect runs on prop change.
+    // 初始请求: 打开文档
+    // 我们在挂载时发送 OpenDoc，以及当 doc_id 改变时。
+    // 注意: Effect 在 props 改变时运行。
     let ws_clone = ws.clone();
     let set_doc_ver = core.set_doc_version;
     Effect::new(move |_| {
-         // Reset state when doc changes
+         // 文档改变时重置状态
          set_content.set("Loading...".to_string());
          set_local_version.set(0);
          set_history.set(Vec::new());
          
-         // Reset Core State for this doc
+         // 重置本文档的 Core 状态
          set_doc_ver.set(0);
          set_playback_version.set(0);
          
          ws_clone.send(ClientMessage::OpenDoc { doc_id });
     });
 
-    // Sync Local Version to Core Doc Version
+    // 将本地版本同步到 Core 文档版本
     Effect::new(move |_| {
          let ver = local_version.get();
          set_doc_ver.set(ver);
     });
 
-    // Effect to handle incoming messages (Delegated to sync module)
+    // 处理传入消息的 Effect (委托给 sync 模块)
     let ws_clone_2 = ws.clone();
     Effect::new(move |_| {
          if let Some(msg) = ws_clone_2.msg.get() {
@@ -93,7 +99,7 @@ pub fn use_editor(
             let ws_for_update = ws.clone();
             
             let on_update = Closure::wrap(Box::new(move |new_text: String| {
-                // If in playback mode, ignore changes (readonly)
+                // 如果处于回放模式，忽略更改 (只读)
                 if is_playback.get_untracked() {
                     return;
                 }
@@ -103,17 +109,17 @@ pub fn use_editor(
                     return;
                 }
 
-                // Compute Stats
+                // 计算统计信息
                 if let Some(cb) = on_stats {
                      let lines = new_text.lines().count();
                      let words = new_text.split_whitespace().count();
                      cb.run(EditorStats { chars: new_text.len(), words, lines });
                 }
                 
-                // Compute Diff
+                // 计算 Diff
                 let ops = deve_core::state::compute_diff(&old_text, &new_text);
                 
-                // Send Ops
+                // 发送 Ops
                 if !ops.is_empty() {
                     for op in ops {
                         ws_for_update.send(ClientMessage::Edit { 
@@ -124,7 +130,7 @@ pub fn use_editor(
                     }
                 }
                 
-                // Update local state
+                // 更新本地状态
                 set_content.set(new_text);
                 
             }) as Box<dyn FnMut(String)>);
@@ -134,12 +140,12 @@ pub fn use_editor(
         }
     });
 
-    // Playback Logic (Listens to Core Playback Version)
+    // 回放逻辑 (监听 Core 回放版本)
     Effect::new(move |_| {
          let ver = playback_version.get();
          let local = local_version.get_untracked();
          
-         // Call logic
+         // 调用逻辑
          playback::handle_playback_change(
             ver,
             doc_id,
@@ -148,9 +154,9 @@ pub fn use_editor(
             set_is_playback
         );
         
-        // Imperative sync
+        // 强制同步
         let is_pb = ver < local;
-        unsafe { set_read_only(is_pb); }
+        set_read_only(is_pb);
     });
 
     let on_playback_change = Box::new(move |ver: u64| {

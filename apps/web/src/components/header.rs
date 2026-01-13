@@ -1,3 +1,7 @@
+//! # Header 组件 (Header Component)
+//!
+//! 应用程序顶部导航栏，包含标题、状态指示器和常用操作（主页、打开、命令）。
+
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
 
@@ -12,15 +16,15 @@ pub fn Header(
 
     view! {
         <header class="w-full h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-50">
-            // Left: Title & Status
+            // 左侧: 标题与状态
             <div class="flex items-center gap-2">
                 <span class="font-bold text-gray-800 text-lg">{move || t::app_title(locale.get())}</span>
                 <span class="text-xs text-gray-400 border border-gray-200 rounded px-1">{move || status_text.get()}</span>
             </div>
             
-            // Right: SB-style Actions [Home] [Open] [Command]
+            // 右侧: SB 风格操作 [Home] [Open] [Command]
             <div class="flex items-center gap-1">
-                // Home
+                // 主页
                 <button 
                     class="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
                     title=move || t::header::home(locale.get())
@@ -32,7 +36,7 @@ pub fn Header(
                     </svg>
                 </button>
                 
-                // Open (Book)
+                // 打开 (书籍)
                 <button 
                     class="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
                     title=move || t::header::open(locale.get())
@@ -44,7 +48,7 @@ pub fn Header(
                     </svg>
                 </button>
                 
-                // Command (Terminal)
+                // 命令 (终端)
                 <button 
                     class="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
                     title=move || t::header::command(locale.get())

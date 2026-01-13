@@ -39,17 +39,17 @@ pub async fn handle_create_doc(
         filename.push_str(".md");
     }
     
-    // Prevent directory traversal (basic check)
-    // Allow forward slashes for subfolder creation (e.g., "folder/file.md")
+    // 防止目录遍历攻击 (简单的安全检查)
+    // 允许使用正斜杠来创建子文件夹 (如 "folder/file.md")
     if filename.contains("..") || filename.starts_with('/') || filename.starts_with('\\') {
          tracing::error!("Invalid filename: {}", filename);
          return; 
     }
         
-    // Use normalized path for cross-platform compatibility
+    // 使用规范化路径以保证跨平台兼容性
     let path = join_normalized(&state.vault_path, &filename);
     
-    // Ensure parent directory exists
+    // 确保父目录存在
     if let Some(parent) = path.parent() {
         if let Err(e) = std::fs::create_dir_all(parent) {
             tracing::error!("Failed to create directories: {:?}", e);
@@ -58,21 +58,21 @@ pub async fn handle_create_doc(
     }
 
     if path.exists() {
-         // Already exists? Just register/get ID
+         // 文件已存在？仅注册 ID
          if let Ok(_doc_id) = state.repo.create_docid(&filename) {
-              // Send updated list
+              // 广播更新列表
               handle_list_docs(state, tx).await;
          }
     } else {
-         // New file: Write headers or empty
+         // 新文件：写入标题或空内容
          if let Err(e) = std::fs::write(&path, "# New Note\n") {
              tracing::error!("Failed to create file: {:?}", e);
          } else {
              if let Ok(doc_id) = state.repo.create_docid(&filename) {
-                 // Success
+                 // 成功
                  tracing::info!("Created doc: {} ({})", filename, doc_id);
                  
-                 // Broadcast List Update
+                 // 广播更新列表
                  handle_list_docs(state, tx).await;
              }
          }
@@ -223,7 +223,7 @@ pub async fn handle_move_doc(
     handle_rename_doc(state, tx, src_path, dest_path).await;
 }
 
-/// Handle ListShadows request - returns list of shadow repositories (remote branches)
+/// 处理 ListShadows 请求 - 返回影子库列表 (远程分支)
 pub async fn handle_list_shadows(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,

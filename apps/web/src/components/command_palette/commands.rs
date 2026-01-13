@@ -1,10 +1,10 @@
-//! Static command definitions for the command palette.
+//! 命令面板的静态命令定义。
 
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
 use super::types::Command;
 
-/// Creates the list of static commands.
+/// 创建静态命令列表。
 pub fn create_static_commands(
     locale: Locale,
     on_settings: Callback<()>,
@@ -13,7 +13,7 @@ pub fn create_static_commands(
     locale_signal: RwSignal<Locale>,
 ) -> Vec<Command> {
     vec![
-        // Open Document command - opens the Open Document modal
+        // 打开文档命令 - 打开文档模态框
         Command {
             id: "open".to_string(), 
             title: if locale == Locale::Zh { "打开文档".to_string() } else { "Open Document".to_string() },
@@ -50,7 +50,7 @@ pub fn create_static_commands(
     ]
 }
 
-/// Filters commands based on the query.
+/// 基于查询字符串筛选命令。
 pub fn filter_commands(
     query: &str,
     commands: Vec<Command>,

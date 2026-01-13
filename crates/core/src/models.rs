@@ -20,8 +20,13 @@ use std::fmt;
 
 pub use crate::sync::vector::VersionVector;
 
-/// 节点唯一标识符 (用于 P2P 通信)
-/// Peer ID for identifying remote nodes in the P2P network.
+/// 节点唯一标识符 (Peer ID)
+///
+/// **功能**:
+/// 用于在 P2P 网络中唯一标识一个远程节点。
+///
+/// **实现**:
+/// 简单的 String 包装类型，通常为 UUID v4。
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct PeerId(pub String);
 
@@ -30,17 +35,20 @@ impl PeerId {
         Self(id.into())
     }
     
-    /// Returns the peer ID as a string slice.
+    /// 返回 Peer ID 字符串切片
     pub fn as_str(&self) -> &str {
         &self.0
     }
     
-    /// Converts to a safe filename (replaces invalid characters).
+    /// 转换为安全文件名
+    ///
+    /// **逻辑**:
+    /// 将文件系统非法字符（如 `/`, `\` 等）替换为下划线 `_`。
     pub fn to_filename(&self) -> String {
         self.0.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
     }
 
-    /// Generates a random Peer ID (UUID v4).
+    /// 生成随机 Peer ID (UUID v4)
     pub fn random() -> Self {
         Self(Uuid::new_v4().to_string())
     }
@@ -75,12 +83,22 @@ impl fmt::Display for DocId {
     }
 }
 
+/// 操作类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Op {
     Insert { pos: usize, content: String },
     Delete { pos: usize, len: usize },
 }
 
+/// 账本条目 (Ledger Entry)
+///
+/// **功能**:
+/// 存储在 `ledger_ops` 表中的原子操作记录。
+///
+/// **字段**:
+/// - `doc_id`: 所属文档 ID。
+/// - `op`: 具体操作内容。
+/// - `timestamp`: 操作产生的时间戳。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LedgerEntry {
     pub doc_id: DocId, // We need to know which doc this Op belongs to!

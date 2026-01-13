@@ -1,3 +1,7 @@
+//! # SidebarMenu 组件 (SidebarMenu Component)
+//!
+//! 文件树上下文菜单，提供重命名、复制、粘贴、移动、删除等操作。
+
 use leptos::prelude::*;
 
 /// 菜单操作类型
@@ -83,7 +87,7 @@ pub fn SidebarMenu(
 ) -> impl IntoView {
     view! {
         <>
-            // Backdrop
+            // 背景遮罩
             <div 
                 class="fixed inset-0 z-40" 
                 on:click=move |ev| {
@@ -92,7 +96,7 @@ pub fn SidebarMenu(
                 }
             ></div>
             
-            // Menu Panel
+            // 菜单面板
             <div 
                 class="absolute right-0 top-6 w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 z-50 text-sm text-gray-700 select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right"
                 on:click=move |ev| ev.stop_propagation()

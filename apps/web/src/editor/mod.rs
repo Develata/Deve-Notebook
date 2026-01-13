@@ -1,3 +1,15 @@
+//! # Editor Component (Editor 组件)
+//!
+//! **架构作用**:
+//! 编辑器的主 UI 容器。
+//! 整合了 CodeMirror (通过 `hook.rs`)，大纲视图 (`Outline`)，以及旁观者模式/历史回放的状态展示。
+//!
+//! **核心功能清单**:
+//! - `Editor`: 主组件。
+//! - 渲染 CodeMirror 的挂载点。
+//! - 显示 "Spectator Mode" (旁观者模式) 提示。
+//! - 管理大纲视图的显示/隐藏。
+
 use leptos::prelude::*;
 use leptos::html::Div;
 use deve_core::models::DocId;
@@ -21,31 +33,31 @@ pub fn Editor(
 ) -> impl IntoView {
     let editor_ref = NodeRef::<Div>::new();
     
-    // Use the hook logic
+    // 使用 hook 逻辑
     let state = hook::use_editor(doc_id, editor_ref, on_stats);
     
-    // Unwrap state
+    // 解包状态
     let local_version = state.local_version;
     let playback_version = state.playback_version;
     let content = state.content;
     
-    // Outline State
+    // 大纲状态
     let (show_outline, set_show_outline) = signal(true);
     let on_toggle_outline = Callback::new(move |_| set_show_outline.update(|b| *b = !*b));
     
     let on_scroll = Callback::new(move |line: usize| {
-        unsafe { ffi::scroll_global(line); }
+        ffi::scroll_global(line);
     });
 
     view! {
-        // Main container: Relative for positioning playback, 100% size
+        // 主容器: 相对定位用于回放定位，100% 尺寸
         <div class="relative w-full h-full flex flex-col overflow-hidden">
-            // Top Bar / Toggle (Absolute to not consume flow, or part of editor header?)
-            // Or just float it?
+            // 顶部栏 / 切换 (绝对定位以免占据流，或者是编辑器头部的一部分?)
+            // 或者直接浮动?
             
-            // Content Area (Flex Row)
+            // 内容区域 (Flex Row)
             <div class="flex-1 flex overflow-hidden relative">
-                // Editor Wrapper
+                // 编辑器包装器
                 <div class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div 
                         node_ref=editor_ref
@@ -53,7 +65,7 @@ pub fn Editor(
                         class:bg-gray-100=move || playback_version.get() < local_version.get()
                     ></div>
 
-                    // Spectator Badge
+                    // 旁观者模式徽章
                     {move || if playback_version.get() < local_version.get() {
                         view! {
                             <div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
@@ -64,7 +76,7 @@ pub fn Editor(
                         view! {}.into_any()
                     }}
                     
-                     // Toggle Outline Button (Safe Sibling)
+                     // 切换大纲按钮 (安全同级元素)
                      <button
                         on:click=move |_| on_toggle_outline.run(())
                         class="absolute top-2 right-4 z-50 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
@@ -76,7 +88,7 @@ pub fn Editor(
                      </button>
                 </div>
 
-                // Outline Sidebar
+                // 大纲侧边栏
                 <div 
                     class="bg-[#f9f9f9] border-l border-gray-200 transition-all duration-300 ease-in-out overflow-hidden"
                     style=move || if show_outline.get() { "width: 250px; opacity: 1;" } else { "width: 0px; opacity: 0;" }

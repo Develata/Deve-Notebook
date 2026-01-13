@@ -22,6 +22,7 @@ use crate::config::SyncMode;
 
 /// P2P 同步引擎
 /// 
+/// **功能**:
 /// 管理本地与远端 Peer 的数据同步。
 /// 协调 Version Vector 状态、差异计算与数据应用。
 pub struct SyncEngine {
@@ -97,8 +98,10 @@ impl SyncEngine {
 
     /// 从本地仓库获取指定范围的操作 (用于发送给远端)
     /// 
-    /// 这会从 Local Repo 获取本地产生的操作，
-    /// 或从 Shadow Repo 获取之前从其他 Peer 接收的操作。
+    /// **逻辑**:
+    /// 1. 如果请求的是本地数据 (`peer_id == local`), 从 `Local Repo` (Store B) 获取。
+    /// 2. 如果请求的是其他 Peer 的数据, 从对应的 `Shadow Repo` (Store C) 获取。
+    ///    (作为中继节点，转发之前从该 Peer 接收的数据)。
     pub fn get_ops_for_sync(&self, request: &SyncRequest) -> Result<SyncResponse> {
         let ops = if request.peer_id == self.local_peer_id {
             // 请求的是本地数据 - 从 Local Repo 获取
@@ -116,7 +119,12 @@ impl SyncEngine {
 
     /// 应用从远端接收的操作
     /// 
-    /// 将操作写入对应的 Shadow Repo，并更新 Version Vector。
+    /// **逻辑**:
+    /// 1. 将操作批量写入对应的 `Shadow Repo` (Store C)。
+    /// 2. 更新本地维护的 `Version Vector`。
+    ///
+    /// **返回值**:
+    /// 返回应用的最大序列号。
     pub fn apply_remote_ops(&mut self, response: SyncResponse) -> Result<u64> {
         let mut max_seq = 0u64;
 

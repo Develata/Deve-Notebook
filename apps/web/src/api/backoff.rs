@@ -4,7 +4,7 @@
 
 use gloo_timers::future::TimeoutFuture;
 
-/// Exponential backoff strategy for reconnection attempts.
+/// 连接重试的指数退避策略
 pub struct BackoffStrategy {
     current_ms: u32,
 }

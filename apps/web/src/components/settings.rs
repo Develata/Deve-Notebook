@@ -1,3 +1,8 @@
+//! # SettingsModal 组件 (SettingsModal Component)
+//!
+//! 设置模态框，允许用户更改语言、同步模式等全局配置。
+//! 显示版本信息和未来功能占位符（如混合模式）。
+
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
 
@@ -23,7 +28,7 @@ pub fn SettingsModal(
                     </div>
                     
                     <div class="space-y-6">
-                        // Version Info
+                        // 版本信息
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{move || t::settings::about(locale.get())}</h3>
                             <div class="flex justify-between items-center text-sm">
@@ -32,7 +37,7 @@ pub fn SettingsModal(
                             </div>
                         </div>
                         
-                        // Language Settings
+                        // 语言设置
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex justify-between items-center">
                             <span class="font-medium text-gray-700">{move || t::settings::language(locale.get())}</span>
                             <div class="flex gap-2">
@@ -63,7 +68,7 @@ pub fn SettingsModal(
                             </div>
                         </div>
                         
-                        // Sync Mode Settings
+                        // 同步模式设置
                         {move || {
                             let core = expect_context::<crate::hooks::use_core::CoreState>();
                             let is_manual = core.sync_mode.get() == "manual";
@@ -103,7 +108,7 @@ pub fn SettingsModal(
                             }
                         }}
                         
-                        // Placeholder for Hybrid Mode
+                        // 混合模式占位符
                         <div class="opacity-50 pointer-events-none grayscale">
                              <div class="flex items-center justify-between">
                                 <div>

@@ -1,14 +1,16 @@
 //! # Deve-Note 命令行应用
 //!
-//! 这是 Deve-Note 的命令行界面，提供开发工具和后端服务器。
+//! **架构作用**:
+//! 这是 Deve-Note 的命令行入口，提供 Local Hub 和 Backend Server 功能。
+//! 遵循 [Deve-Note Plan](../../deve-note%20plan/deve-note%20plan.md) 定义的 Git-Flow P2P 架构。
 //!
 //! ## 命令说明
 //!
 //! - `init`: 初始化新的 vault 目录
-//! - `scan`: 索引 vault 中的所有 Markdown 文件
-//! - `watch`: 监控文件系统变更
-//! - `dump`: 调试工具，用于检查文档操作记录
-//! - `serve`: 启动 WebSocket 后端服务器
+//! - `scan`: 索引 vault 中的所有 Markdown 文件 (Sync Manager)
+//! - `watch`: 监控文件系统变更 (Watcher Service)
+//! - `dump`: 调试工具，用于检查 ops 记录
+//! - `serve`: 启动 WebSocket 后端服务器 (Backend Architecture)
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

@@ -1,3 +1,7 @@
+//! # UI 组件模块 (UI Components Module)
+//!
+//! 包含 Web 应用程序的所有 Leptos UI 组件。
+//! 结构遵循 "Activity Bar + Resizable Slot" 布局。
 pub mod playback;
 pub mod header;
 pub mod sidebar;

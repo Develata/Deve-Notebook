@@ -1,17 +1,17 @@
-//! Command types for the command palette.
+//! 命令面板的命令类型定义。
 
 use leptos::prelude::*;
 
-/// A command that can be executed from the palette.
+/// 可以从面板执行的命令。
 #[derive(Clone, Debug)]
 pub struct Command {
-    /// Unique identifier for the command.
+    /// 命令的唯一标识符。
     pub id: String,
-    /// Display title shown in the palette.
+    /// 面板中显示的标题。
     pub title: String,
-    /// Action to execute when the command is selected.
+    /// 选中命令时执行的操作。
     pub action: Callback<()>,
-    /// Whether this command represents a file/document.
+    /// 该命令是否代表一个文件/文档。
     pub is_file: bool,
 }
 

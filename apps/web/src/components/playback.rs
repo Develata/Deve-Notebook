@@ -1,3 +1,7 @@
+//! # PlaybackController 组件 (PlaybackController Component)
+//!
+//! 历史回放控制器，允许用户拖动滑块查看文档的历史版本。
+
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
 

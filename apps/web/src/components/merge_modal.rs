@@ -1,7 +1,7 @@
-//! # Merge Modal Component
+//! # MergeModal 组件 (MergeModal Component)
 //!
-//! A modal dialog for reviewing and merging pending operations in Manual Mode.
-//! Triggered from the Bottom Bar / Branch Switcher.
+//! 手动合并模式下用于审核和合并待处理操作的模态对话框。
+//! 从底部状态栏或分支切换器触发。
 
 use leptos::prelude::*;
 use crate::hooks::use_core::CoreState;
@@ -41,7 +41,7 @@ pub fn MergeModal(
                         "Manual Mode is active. These changes from peers are waiting for your approval."
                     </div>
                     
-                    // Previews List
+                    // 预览列表
                     <div class="flex-1 overflow-y-auto mb-4 border border-gray-100 rounded-lg p-2 bg-gray-50">
                         <For
                             each=move || core.pending_ops_previews.get()
@@ -79,7 +79,7 @@ pub fn MergeModal(
                         }}
                     </div>
                     
-                    // Actions
+                    // 操作区
                     <div class="flex gap-3 flex-none pt-2 border-t border-gray-100">
                         <button 
                             class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"

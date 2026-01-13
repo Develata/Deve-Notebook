@@ -1,14 +1,18 @@
+//! # Outline 组件 (Outline Component)
+//!
+//! 显示文档大纲，基于 Markdown 标题解析。
+
 use leptos::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeaderNode {
     pub level: usize,
     pub text: String,
-    pub line: usize, // 1-based line number
+    pub line: usize, // 1-based 行号
 }
 
-// Simple parser for Markdown headers
-// Returns a flat list. We can render indentation via padding.
+// 简单的 Markdown 标题解析器
+// 返回扁平列表。我们可以通过 padding 来渲染缩进。
 pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
     let mut headers = Vec::new();
     
@@ -24,9 +28,9 @@ pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
                 }
             }
             
-            // Only convert if followed by space and level <= 6
+            // 仅当后面有空格且级别 <= 6 时转换
             if level > 0 && level <= 6 {
-                // Check if next char is space content
+                // 检查下一个字符是否为空格
                 let rest = &trimmed[level..];
                 if rest.starts_with(' ') {
                     headers.push(HeaderNode {

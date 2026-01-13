@@ -19,7 +19,7 @@ pub async fn handle_edit(
     
     match state.repo.append_op(&entry) {
         Ok(seq) => {
-            // Broadcast to ALL with Sequence and ClientId
+            // 广播新操作给所有连接的客户端 (携带 Seq 和 ClientId)
             let _ = tx.send(ServerMessage::NewOp { 
                 doc_id, 
                 op, 
@@ -27,7 +27,7 @@ pub async fn handle_edit(
                 client_id 
             });
             
-            // [Persistence via SyncManager]
+            // [持久化] 通过 SyncManager 更新磁盘快照
             if let Err(e) = state.sync_manager.persist_doc(doc_id) {
                 tracing::error!("SyncManager failed to persist doc {}: {:?}", doc_id, e);
             }
@@ -60,12 +60,12 @@ pub async fn handle_open_doc(
 ) {
     tracing::info!("OpenDoc Request for DocID: {}", doc_id);
     
-    // [Reconciliation via SyncManager]
+    // [调和] 确保磁盘内容与 Ledger 一致
     if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
         tracing::error!("SyncManager reconcile failed: {:?}", e);
     }
 
-    // Return Snapshot from Ledger (Truth)
+    // 返回最新快照 (Source of Truth: Ledger)
     let entries_with_seq = state.repo.get_local_ops(doc_id).unwrap_or_default();
     let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
     let final_content = deve_core::state::reconstruct_content(&ops);

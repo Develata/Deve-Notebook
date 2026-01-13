@@ -1,3 +1,8 @@
+//! # SourceControlView 组件 (SourceControlView Component)
+//!
+//! 显示仓库状态、更改列表和版本历史。
+//! 支持查看本地和远程分支，以及待处理的合并操作。
+
 use leptos::prelude::*;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::PeerId;
@@ -6,12 +11,12 @@ use deve_core::models::PeerId;
 pub fn SourceControlView() -> impl IntoView {
     let core = expect_context::<CoreState>();
     
-    // Expand/Collapse state for sections
+    // 展开/折叠部分的状态
     let (expanded_repos, set_expanded_repos) = signal(true);
     let (expanded_changes, set_expanded_changes) = signal(true);
     let (expanded_history, set_expanded_history) = signal(false);
 
-    // Helper to format PeerId
+    // 格式化 PeerId 的辅助函数
     let format_peer_id = |id: &PeerId| {
         let s = id.to_string();
         if s.len() > 8 {
@@ -46,7 +51,7 @@ pub fn SourceControlView() -> impl IntoView {
             
             <div class="flex-1 overflow-y-auto">
                 
-                // SECTION: Repositories
+                // 部分: 仓库
                 <div class="border-b border-gray-200">
                     <button 
                         class="w-full flex items-center px-2 py-1 hover:bg-gray-200 transition-colors text-xs font-bold text-gray-700"
@@ -61,7 +66,7 @@ pub fn SourceControlView() -> impl IntoView {
                     {move || if expanded_repos.get() {
                         view! {
                             <div class="pl-0 pb-2">
-                                // Local (Master)
+                                // 本地 (Master)
                                 <div 
                                     class=move || format!(
                                         "flex justify-between items-center px-4 py-1 cursor-pointer text-sm {}",
@@ -76,9 +81,9 @@ pub fn SourceControlView() -> impl IntoView {
                                     {move || if core.active_repo.get().is_none() { view!{<span class="text-[10px] bg-blue-200 px-1 rounded">"HEAD"</span>}.into_any() } else { view!{}.into_any() }}
                                 </div>
                                 
-                                // Note: Remote peers will appear here when P2P sync is fully implemented.
-                                // Currently ledger/remotes is empty, so we only show Local.
-                                // The `core.peers` currently contains connected WebSocket clients (not remote repos).
+                                // 注意: 当 P2P 同步完全实现时，远程对等点将出现在此处。
+                                // 目前 ledger/remotes 为空，因此我们只显示本地。
+                                // `core.peers` 目前包含连接的 WebSocket 客户端（而非远程仓库）。
                             </div>
                         }.into_any()
                     } else {
@@ -86,7 +91,7 @@ pub fn SourceControlView() -> impl IntoView {
                     }}
                 </div>
                 
-                // SECTION: Changes (Pending Merges)
+                // 部分: 更改 (待处理的合并)
                 <div class="border-b border-gray-200">
                     <button 
                         class="w-full flex items-center px-2 py-1 hover:bg-gray-200 transition-colors text-xs font-bold text-gray-700"
@@ -153,7 +158,7 @@ pub fn SourceControlView() -> impl IntoView {
                     }}
                 </div>
                 
-                // SECTION: History
+                // 部分: 历史
                 <div class="border-b border-gray-200">
                     <button 
                         class="w-full flex items-center px-2 py-1 hover:bg-gray-200 transition-colors text-xs font-bold text-gray-700"

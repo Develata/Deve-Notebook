@@ -1,6 +1,6 @@
-//! Command palette component.
+//! CommandPalette 组件 (CommandPalette Component)
 //!
-//! A searchable command palette for quick actions (commands only, no file search).
+//! 一个可搜索的命令面板，用于快速执行操作（仅限命令，不包括文件搜索）。
 
 mod types;
 mod commands;
@@ -22,7 +22,7 @@ pub fn CommandPalette(
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
     
-    // Reset selection when shown
+    // 显示时重置选择
     Effect::new(move |_| {
         if show.get() {
             set_query.set(String::new());
@@ -42,11 +42,11 @@ pub fn CommandPalette(
             locale,
         );
         
-        // Only filter static commands, no file commands
+        // 仅过滤静态命令，不包含文件命令
         filter_commands(&q, static_cmds, 50)
     });
 
-    // Validated Index
+    // 验证索引
     let active_index = move || {
         let count = filtered_commands.get().len();
         if count == 0 { return 0; }
@@ -54,7 +54,7 @@ pub fn CommandPalette(
         if current >= count { 0 } else { current }
     };
 
-    // Keyboard Navigation
+    // 键盘导航
     let handle_keydown = move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
         if (ev.ctrl_key() || ev.meta_key()) && key == "k" {

@@ -25,7 +25,7 @@ use self::output::spawn_output_manager;
 // Types
 // ============================================================================
 
-/// Connection status for the WebSocket.
+/// WebSocket 连接状态枚举
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConnectionStatus {
     Disconnected,
@@ -47,19 +47,19 @@ impl std::fmt::Display for ConnectionStatus {
 // WsService - Public API
 // ============================================================================
 
-/// WebSocket service for communicating with the backend.
+/// 与后端通信的 WebSocket 服务
 #[derive(Clone)]
 pub struct WsService {
-    /// Current connection status (reactive signal).
+    /// 当前连接状态 (响应式信号)
     pub status: ReadSignal<ConnectionStatus>,
-    /// Latest message from the server (reactive signal).
+    /// 来自服务器的最新消息 (响应式信号)
     pub msg: ReadSignal<Option<ServerMessage>>,
-    /// Sender for outgoing messages.
+    /// 发送消息的通道
     tx: UnboundedSender<ClientMessage>,
 }
 
 impl WsService {
-    /// Creates a new WebSocket service and starts background tasks.
+    /// 创建新的 WebSocket 服务并启动后台任务
     pub fn new() -> Self {
         let (status, set_status) = signal(ConnectionStatus::Disconnected);
         let (msg, set_msg) = signal(None);
@@ -87,8 +87,8 @@ impl WsService {
         Self { status, msg, tx }
     }
     
-    /// Enqueues a message to be sent to the server.
-    /// If offline, the message will be queued and sent when connection is restored.
+    /// 将消息排队发送到服务器。
+    /// 如果离线，消息将被排队并在连接恢复时发送。
     pub fn send(&self, msg: ClientMessage) {
         if let Err(e) = self.tx.unbounded_send(msg) {
             leptos::logging::error!("Failed to enqueue message: {:?}", e);

@@ -1,3 +1,7 @@
+//! # ExtensionsView 组件 (ExtensionsView Component)
+//!
+//! 扩展视图的占位符。计划在第三阶段实现插件系统。
+
 use leptos::prelude::*;
 
 #[component]
