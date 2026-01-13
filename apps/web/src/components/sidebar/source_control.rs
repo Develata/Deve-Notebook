@@ -80,15 +80,49 @@ pub fn SourceControlView() -> impl IntoView {
                                     </div>
                                     {move || if core.active_repo.get().is_none() { view!{<span class="text-[10px] bg-blue-200 px-1 rounded">"HEAD"</span>}.into_any() } else { view!{}.into_any() }}
                                 </div>
-                                
-                                // 注意: 当 P2P 同步完全实现时，远程对等点将出现在此处。
-                                // 目前 ledger/remotes 为空，因此我们只显示本地。
-                                // `core.peers` 目前包含连接的 WebSocket 客户端（而非远程仓库）。
-                            </div>
-                        }.into_any()
-                    } else {
-                        view! {}.into_any()
-                    }}
+                                                
+                                                // Shadow Repos (Remote Peers)
+                                                <For
+                                                    each=move || core.shadow_repos.get()
+                                                    key=|repo| repo.clone()
+                                                    children=move |repo_id: String| {
+                                                        let repo_id_for_class = repo_id.clone();
+                                                        let repo_id_for_click = repo_id.clone();
+                                                        let repo_id_display = if repo_id.len() > 8 {
+                                                            format!("Peer-{}...", &repo_id[0..8])
+                                                        } else {
+                                                            format!("Peer-{}", repo_id)
+                                                        };
+                                                        view! {
+                                                            <div 
+                                                                class=move || format!(
+                                                                    "flex justify-between items-center px-4 py-1 cursor-pointer text-sm {}",
+                                                                    if core.active_repo.get().map(|p| p.to_string()) == Some(repo_id_for_class.clone()) { 
+                                                                        "bg-purple-100 text-purple-800" 
+                                                                    } else { 
+                                                                        "hover:bg-gray-100 text-gray-700" 
+                                                                    }
+                                                                )
+                                                                on:click=move |_| {
+                                                                    if let Ok(uuid) = repo_id_for_click.parse::<uuid::Uuid>() {
+                                                                        core.set_active_repo.set(Some(PeerId(uuid.to_string())));
+                                                                    }
+                                                                }
+                                                            >
+                                                                <div class="flex items-center gap-2">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                                                    <span>{repo_id_display}</span>
+                                                                </div>
+                                                                <span class="text-[10px] bg-purple-200 text-purple-700 px-1 rounded">"Shadow"</span>
+                                                            </div>
+                                                        }
+                                                    }
+                                                />
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        view! {}.into_any()
+                                    }}
                 </div>
                 
                 // 部分: 更改 (待处理的合并)
