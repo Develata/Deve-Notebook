@@ -14,6 +14,7 @@ use crate::api::WsService;
 use std::collections::HashMap;
 use deve_core::models::{DocId, PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::source_control::{ChangeEntry, CommitInfo};
 use crate::editor::EditorStats;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -77,6 +78,16 @@ pub struct CoreState {
     
     // 旁观者模式 (Spectator Mode)
     pub is_spectator: Signal<bool>,
+
+    // Source Control (New)
+    pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
+    pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
+    pub commit_history: ReadSignal<Vec<CommitInfo>>,
+    pub on_get_changes: Callback<()>,
+    pub on_stage_file: Callback<String>,
+    pub on_unstage_file: Callback<String>,
+    pub on_commit: Callback<String>,
+    pub on_get_history: Callback<u32>,
 }
 
 
@@ -115,6 +126,11 @@ pub fn use_core() -> CoreState {
     let (playback_version, set_playback_version) = signal(0u64);
     // 旁观者模式 - 当查看 Shadow Repo 时为 true
     let is_spectator = Memo::new(move |_| active_repo.get().is_some());
+
+    // Source Control (New)
+    let (staged_changes, set_staged_changes) = signal(Vec::<ChangeEntry>::new());
+    let (unstaged_changes, set_unstaged_changes) = signal(Vec::<ChangeEntry>::new());
+    let (commit_history, set_commit_history) = signal(Vec::<CommitInfo>::new());
 
     // 为当前会话生成临时的 PeerId
     let peer_id = PeerId::random();
@@ -193,6 +209,32 @@ pub fn use_core() -> CoreState {
                     leptos::logging::log!("Received {} shadow repos", shadows.len());
                     set_shadow_repos.set(shadows);
                 },
+                
+                // Source Control Messages
+                ServerMessage::ChangesList { staged, unstaged } => {
+                    set_staged_changes.set(staged);
+                    set_unstaged_changes.set(unstaged);
+                },
+                ServerMessage::CommitHistory { commits } => {
+                    set_commit_history.set(commits);
+                },
+                ServerMessage::StageAck { path } => {
+                    leptos::logging::log!("Staged: {}", path);
+                    // Refresh changes
+                    ws_rx.send(ClientMessage::GetChanges);
+                },
+                ServerMessage::UnstageAck { path } => {
+                    leptos::logging::log!("Unstaged: {}", path);
+                    // Refresh changes
+                    ws_rx.send(ClientMessage::GetChanges);
+                },
+                ServerMessage::CommitAck { commit_id, .. } => {
+                     leptos::logging::log!("Committed: {}", commit_id);
+                     // Refresh all
+                     ws_rx.send(ClientMessage::GetChanges);
+                     ws_rx.send(ClientMessage::GetCommitHistory { limit: 50 });
+                },
+
                 _ => {}
             }
         }
@@ -276,6 +318,32 @@ pub fn use_core() -> CoreState {
         ws_for_list_shadows.send(ClientMessage::ListShadows);
     });
 
+    // Source Control callbacks
+    let ws_sc_changes = ws.clone();
+    let on_get_changes = Callback::new(move |_: ()| {
+        ws_sc_changes.send(ClientMessage::GetChanges);
+    });
+
+    let ws_sc_stage = ws.clone();
+    let on_stage_file = Callback::new(move |path: String| {
+        ws_sc_stage.send(ClientMessage::StageFile { path });
+    });
+
+    let ws_sc_unstage = ws.clone();
+    let on_unstage_file = Callback::new(move |path: String| {
+        ws_sc_unstage.send(ClientMessage::UnstageFile { path });
+    });
+
+    let ws_sc_commit = ws.clone();
+    let on_commit = Callback::new(move |message: String| {
+        ws_sc_commit.send(ClientMessage::Commit { message });
+    });
+
+    let ws_sc_history = ws.clone();
+    let on_get_history = Callback::new(move |limit: u32| {
+        ws_sc_history.send(ClientMessage::GetCommitHistory { limit });
+    });
+
     let state = CoreState {
         ws,
         docs,
@@ -312,6 +380,14 @@ pub fn use_core() -> CoreState {
         playback_version,
         set_playback_version,
         is_spectator: is_spectator.into(),
+        staged_changes,
+        unstaged_changes,
+        commit_history,
+        on_get_changes,
+        on_stage_file,
+        on_unstage_file,
+        on_commit,
+        on_get_history,
     };
     
     // 为子组件提供 CoreState 上下文

@@ -19,3 +19,4 @@ pub mod branch_switcher;
 pub mod search_box;
 pub mod quick_open;
 pub mod spectator_overlay;
+pub mod source_control;

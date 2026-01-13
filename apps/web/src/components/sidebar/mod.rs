@@ -15,14 +15,14 @@
 pub mod tree;
 pub mod item;
 pub mod explorer;
-pub mod source_control;
+// pub mod source_control; // Removed
 pub mod extensions;
 
 use leptos::prelude::*;
 use deve_core::models::DocId;
 use crate::components::activity_bar::SidebarView;
 use self::explorer::ExplorerView;
-use self::source_control::SourceControlView;
+use crate::components::source_control::SourceControlView; // New import
 use self::extensions::ExtensionsView;
 
 #[component]
