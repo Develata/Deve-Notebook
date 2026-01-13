@@ -16,4 +16,6 @@ pub mod merge_panel;
 pub mod merge_modal;
 pub mod activity_bar;
 pub mod branch_switcher;
-pub mod unified_search;
+pub mod search_box;
+pub mod quick_open;
+pub mod spectator_overlay;

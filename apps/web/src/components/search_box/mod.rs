@@ -6,7 +6,7 @@ use web_sys::{HtmlInputElement, KeyboardEvent, MouseEvent};
 use crate::i18n::{Locale, t};
 use self::types::{SearchProvider, SearchResult, SearchAction};
 use self::providers::{FileProvider, CommandProvider};
-use crate::components::command_palette::commands::create_static_commands;
+use crate::components::command_palette::registry::create_static_commands;
 use crate::hooks::use_core::use_core;
 
 #[component]

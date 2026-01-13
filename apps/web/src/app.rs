@@ -106,7 +106,7 @@ fn AppContent() -> impl IntoView {
             tabindex="-1" 
             style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
         >
-            <crate::components::unified_search::UnifiedSearch 
+            <crate::components::search_box::UnifiedSearch 
                 show=show_search
                 set_show=set_show_search
                 mode_signal=Signal::derive(move || search_mode.get())

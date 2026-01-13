@@ -74,6 +74,9 @@ pub struct CoreState {
     pub set_doc_version: WriteSignal<u64>,
     pub playback_version: ReadSignal<u64>, // 当前回放视图版本
     pub set_playback_version: WriteSignal<u64>,
+    
+    // 旁观者模式 (Spectator Mode)
+    pub is_spectator: Signal<bool>,
 }
 
 
@@ -110,6 +113,8 @@ pub fn use_core() -> CoreState {
     // 历史状态
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
+    // 旁观者模式 - 当查看 Shadow Repo 时为 true
+    let is_spectator = Memo::new(move |_| active_repo.get().is_some());
 
     // 为当前会话生成临时的 PeerId
     let peer_id = PeerId::random();
@@ -306,6 +311,7 @@ pub fn use_core() -> CoreState {
         set_doc_version,
         playback_version,
         set_playback_version,
+        is_spectator: is_spectator.into(),
     };
     
     // 为子组件提供 CoreState 上下文

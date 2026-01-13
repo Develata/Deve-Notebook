@@ -3,13 +3,13 @@
 //! 一个可搜索的命令面板，用于快速执行操作（仅限命令，不包括文件搜索）。
 
 mod types;
-pub mod commands;
+pub mod registry;
 
 pub use types::Command;
 
 use leptos::prelude::*;
 use crate::i18n::{Locale, t};
-use self::commands::{create_static_commands, filter_commands};
+use self::registry::{create_static_commands, filter_commands};
 
 #[component]
 pub fn CommandPalette(
@@ -95,7 +95,7 @@ pub fn CommandPalette(
             >
                 <div 
                     class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
-                    on:click=move |ev| ev.stop_propagation()
+                    on:click=move |ev: web_sys::MouseEvent| ev.stop_propagation()
                     on:keydown=handle_keydown
                 >
                     <div class="p-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">

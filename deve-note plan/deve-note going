@@ -1,0 +1,61 @@
+# 🚨 Deve-Note 代码库与规划审计报告
+
+**日期**: 2026-01-13
+**范围**: 代码库结构 (`apps/web`, `apps/cli`, `crates/core`) vs. 架构规划 (`00` - `07` 文档)。
+
+## 1. ❌ 不合规项 (与规划偏离)
+
+代码中存在但实现逻辑与严格架构定义不同的项目。
+
+### UI 架构 (`03_ui_architecture.md`)
+- **目录结构**:
+    - **规划**: 明确的 `quick_open/`, `branch_switcher/` 目录。
+    - **当前**: `unified_search/` (涵盖了 `quick_open` 逻辑), `branch_switcher.rs` (扁平文件，非目录)。
+- **命令面板 (Command Palette)**:
+    - **规划**: 逻辑应完全合并入 `Unified Command & Search Interface`。
+    - **当前**: `apps/web/src/components/command_palette/` 目录仍然存在 (`commands.rs` 被 UnifiedSearch 使用，但模块结构是混合的)。理想情况下应完全迁移或被严格分类为 "Provider" 源。
+- **源代码管理视图 (Source Control View)**:
+    - **规划**: 明确的 "多根模式 (Multi-Root Mode)" (Local + Peer-XXX 仓库部分)。
+    - **当前**: `source_control.rs` 侧重于单仓库历史/变更。缺少 `03_ui_architecture` 中定义的明确的 "Shadow Repo List" 可视化。
+
+### 后端架构 (`04_backend.md`)
+- **RepoManager**:
+    - **规划**: 内存模型中明确区分 `Store B` (Local) 和 `Store C` (Shadow)。
+    - **当前**: `ledger/mod.rs` 使用共享的 `Redb` 实例，通过 `access.rs` 提供视图。虽然行为上正确 (Trinity Isolation)，但代码结构严重依赖 `RepoAccess` trait，而非图中暗示的显式 "Store" 结构分离。
+
+## 2. ⚠️以此为基础的缺失项 (规划中有，代码中无)
+
+规划 (Phase 1 & 2) 中定义但当前代码库完全缺失的项目。
+
+### UI 特性
+- **旁观者模式 (Spectator Mode)**:
+    - **规划**: 观察远程 Peer 时的独立 UI 模式 (灰色背景，READ ONLY 徽章)。
+    - **当前**: `components/` 下未发现专用的 `SpectatorView` 或 `ReadonlyOverlay` 组件。
+- **活动栏 (Activity Bar)**:
+    - **规划**: 功能性的侧边栏导航 (图标)。
+    - **当前**: `activity_bar.rs` 存在但显得极简；其与 `Sidebar` 视图切换的视觉联系需要对照 "Slot Layout" 规划进行验证。
+- **严格分支策略 (Strict Branching Policy)**:
+    - **规划**: UI 层面阻止 "创建分支" (仅严格映射到 Peer IDs)。
+    - **当前**: 需要审计 `branch_switcher.rs` 逻辑以确保它强制执行了此限制。
+
+### 运行时 (`07_runtime_ops.md`)
+- **插件系统**:
+    - **规划**: 基于 `Rhai` 或 `Extism` 的 Engine A。
+    - **当前**: `crates/core/src/plugin` 存在 (基于 `wasmtime`)，但缺乏 `07_runtime_ops` 中定义的 `Manifest` 校验逻辑。
+
+## 3. ❓ 未提及项 (范围蔓延/临时新增)
+
+代码中存在但原始规划文档中未找到的项目。
+
+- **`verify-p2p` 命令**:
+    - **状态**: 最近添加到 `apps/cli` 以修复差距。
+    - **规划**: 在 `schedule.md` 中提及，但在 `04_backend.md` 中未包含实现细节 (Shadow Repo 模拟逻辑)。
+- **`InputModal`**:
+    - **状态**: `input_modal.rs` 用于重命名。
+    - **规划**: 规划侧重于 "原位编辑" 或 "命令面板"。未详细说明用于重命名的显式模态框。
+
+## 4. 可执行建议
+
+1.  **重构 `command_palette`**: 将静态命令移动到 `unified_search/providers/command_static.rs` 并删除旧模块。
+2.  **实现 `SourceControlView` 仓库列表**: 在 `source_control.rs` 中添加 "Peer List" 部分，以匹配 "驾驶舱" 多仓库愿景。
+3.  **正式化 `Spectator Mode`**: 创建 `apps/web/src/components/spectator_overlay.rs`，以在查看 Shadow Repos 时严格强制只读状态。
