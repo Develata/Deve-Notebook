@@ -52,17 +52,24 @@
     - [x] CodeMirror 6 组件封装。
     - [x] Loro CRDT Wasm 绑定。
     - [x] KaTeX 数学公式渲染。
-- [ ] **Activity Bar 布局**:
+- [ ] **Component System & Structure**:
+    - [ ] **Unified Command & Search Interface (Centralized)**:
+        - [ ] 实现 `UnifiedSearchBox` 核心组件 (Context-Sensitive Modal)。
+        - [ ] 实现 **Plugin Interface** (Traits/Hooks) 供扩展。
+        - [ ] 目录结构规范化: `command_palette/`, `quick_open/`, `branch_switcher/`。
     - [ ] **Activity Bar 组件**: 最左侧图标导航栏 (Explorer, Search, Source Control, Extensions, Settings)。
     - [ ] **Sidebar 视图切换**: 根据 Activity Bar 选择切换内容。
-- [ ] **Source Control View** (Ref: VS Code):
-    - [ ] **Repositories Section**: Local (Master) + Peer-XXX (Shadow) 仓库列表。
+- [ ] **Source Control View (Strict Git/P2P)**:
+    - [ ] **Repository Identification**: 实现 URL-based 仓库识别与 Mock 数据。
+    - [ ] **Repositories Section**: Local (Master) + Peer-XXX (Shadow) 仓库列表 (Multi-Root Mode)。
+    - [ ] **Branch Control**:
+         - [ ] 实现 **Unified Search Box** integration (Natural Sort, MRU).
+         - [ ] 实现 **Strict Branching Policy** (Prohibit creation, Allow Establishment/Deletion).
     - [ ] **Changes Section**: 暂存区 (Staged) / 未暂存 (Unstaged)。
     - [ ] **Commit Section**: 提交信息输入框 + Commit 按钮。
     - [ ] **History Section**: 历史版本列表 + Time Travel Slider。
     - [ ] **Actions Bar**: Sync, Pull, Merge, Push, Stash 按钮。
 - [ ] **P2P 交互组件**:
-    - [ ] **Branch Switcher**: 在 Repositories Section 中切换 Local/Peer 视图。
     - [ ] **Spectator Mode**: 实现只读观测模式 (灰色背景 + READ ONLY)。
     - [ ] **Manual Merge**: 在 Source Control View 中实现 Diff View 合并 UI。
 
