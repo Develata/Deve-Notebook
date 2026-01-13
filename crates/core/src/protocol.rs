@@ -99,6 +99,10 @@ pub enum ClientMessage {
     ConfirmMerge,
     /// Discard all pending operations
     DiscardPending,
+    
+    // === Branch Switcher Messages ===
+    /// Request list of shadow repositories (remote branches)
+    ListShadows,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,6 +177,13 @@ pub enum ServerMessage {
     },
     /// Pending discarded
     PendingDiscarded,
+    
+    // === Branch Switcher Messages ===
+    /// List of shadow repository peer IDs (remote branches)
+    ShadowList {
+        shadows: Vec<String>,
+    },
+    
     /// Error message
     Error(String),
 }

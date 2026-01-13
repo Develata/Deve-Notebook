@@ -222,3 +222,24 @@ pub async fn handle_move_doc(
     // Reuse rename logic as it is essentially a move
     handle_rename_doc(state, tx, src_path, dest_path).await;
 }
+
+/// Handle ListShadows request - returns list of shadow repositories (remote branches)
+pub async fn handle_list_shadows(
+    state: &Arc<AppState>,
+    tx: &broadcast::Sender<ServerMessage>,
+) {
+    match state.repo.list_shadows_on_disk() {
+        Ok(peers) => {
+            let shadows: Vec<String> = peers.iter()
+                .map(|p| p.to_string())
+                .collect();
+            tracing::info!("Listing {} shadow repos", shadows.len());
+            let _ = tx.send(ServerMessage::ShadowList { shadows });
+        }
+        Err(e) => {
+            tracing::error!("Failed to list shadow repos: {:?}", e);
+            let _ = tx.send(ServerMessage::ShadowList { shadows: vec![] });
+        }
+    }
+}
+

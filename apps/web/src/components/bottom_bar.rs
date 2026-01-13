@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use crate::api::ConnectionStatus;
 use crate::i18n::{Locale, t};
 use crate::editor::EditorStats;
+use crate::components::branch_switcher::BranchSwitcher;
 
 #[component]
 pub fn BottomBar(
@@ -27,8 +28,12 @@ pub fn BottomBar(
 
     view! {
         <footer class="h-8 bg-gray-50 border-t border-gray-200 flex items-center justify-between px-4 select-none">
-            // Left: System Status
-            {status_view}
+            // Left: Branch Switcher + System Status
+            <div class="flex items-center gap-3">
+                <BranchSwitcher />
+                <div class="w-px h-4 bg-gray-200"></div>
+                {status_view}
+            </div>
 
             // Right: Editor Stats
             <div class="flex items-center gap-4 text-xs text-gray-500">

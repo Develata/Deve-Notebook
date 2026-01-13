@@ -65,6 +65,10 @@ pub struct CoreState {
     pub active_repo: ReadSignal<Option<PeerId>>,
     pub set_active_repo: WriteSignal<Option<PeerId>>,
     
+    // Branch Switcher State
+    pub shadow_repos: ReadSignal<Vec<String>>,
+    pub on_list_shadows: Callback<()>,
+    
     // Source Control State (History)
     pub doc_version: ReadSignal<u64>, // Current Max Version
     pub set_doc_version: WriteSignal<u64>,
@@ -101,6 +105,8 @@ pub fn use_core() -> CoreState {
 
     // Source Control State
     let (active_repo, set_active_repo) = signal(None::<PeerId>);
+    // Branch Switcher State
+    let (shadow_repos, set_shadow_repos) = signal(Vec::<String>::new());
     // History State
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
@@ -177,6 +183,10 @@ pub fn use_core() -> CoreState {
                     leptos::logging::log!("Pending operations discarded");
                     set_pending_ops_count.set(0);
                     set_pending_ops_previews.set(vec![]);
+                },
+                ServerMessage::ShadowList { shadows } => {
+                    leptos::logging::log!("Received {} shadow repos", shadows.len());
+                    set_shadow_repos.set(shadows);
                 },
                 _ => {}
             }
@@ -255,6 +265,12 @@ pub fn use_core() -> CoreState {
         ws_for_discard.send(ClientMessage::DiscardPending);
     });
 
+    // Branch Switcher Callback
+    let ws_for_list_shadows = ws.clone();
+    let on_list_shadows = Callback::new(move |_: ()| {
+        ws_for_list_shadows.send(ClientMessage::ListShadows);
+    });
+
     let state = CoreState {
         ws,
         docs,
@@ -284,6 +300,8 @@ pub fn use_core() -> CoreState {
         on_discard_pending,
         active_repo,
         set_active_repo,
+        shadow_repos,
+        on_list_shadows,
         doc_version,
         set_doc_version,
         playback_version,

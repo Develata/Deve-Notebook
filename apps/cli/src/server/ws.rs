@@ -157,6 +157,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      ClientMessage::DiscardPending => {
                          merge::handle_discard_pending(&state_clone, &tx).await;
                      }
+                     // Branch Switcher messages
+                     ClientMessage::ListShadows => {
+                         system::handle_list_shadows(&state_clone, &tx).await;
+                     }
                 }
             }
         }

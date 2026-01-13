@@ -11,3 +11,4 @@ pub mod search_modal;
 pub mod merge_panel;
 pub mod merge_modal;
 pub mod activity_bar;
+pub mod branch_switcher;
