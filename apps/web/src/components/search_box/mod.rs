@@ -108,11 +108,46 @@ pub fn UnifiedSearch(
         // Stop all propagation to prevent editor from receiving keys
         ev.stop_propagation();
         
-        // Allow closing with Escape
-        if (ev.ctrl_key() || ev.meta_key()) && key == "p" {
+        // Smart Toggle Logic (replicating use_shortcuts logic because we stop propagation)
+        let is_ctrl = ev.ctrl_key() || ev.meta_key();
+        let is_shift = ev.shift_key();
+        let key_lower = key.to_lowercase();
+        
+        if is_ctrl && key_lower == "p" {
             ev.prevent_default();
             ev.stop_propagation();
-            set_show.set(false);
+
+            // Ctrl+Shift+P: Command Palette
+            if is_shift {
+                // If currently in Command mode (>), Close.
+                // Else, Switch to Command mode.
+                if query.get_untracked().starts_with('>') {
+                    set_show.set(false);
+                } else {
+                    set_query.set(">".to_string());
+                    // Reset selection
+                    set_selected_index.set(0); 
+                    // Refocus input just in case
+                    if let Some(el) = input_ref.get() { let _ = el.focus(); }
+                }
+            } 
+            // Ctrl+P: File Search
+            else {
+                // If currently in File mode (not > and not @), Close.
+                // Else, Switch to File mode (clear query).
+                let q = query.get_untracked();
+                let is_file_mode = !q.starts_with('>') && !q.starts_with('@');
+                
+                if is_file_mode {
+                    set_show.set(false);
+                } else {
+                    set_query.set(String::new());
+                    // Reset selection
+                    set_selected_index.set(0);
+                    // Refocus input just in case
+                    if let Some(el) = input_ref.get() { let _ = el.focus(); }
+                }
+            }
             return;
         }
 

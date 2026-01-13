@@ -75,9 +75,13 @@ fn AppContent() -> impl IntoView {
         locale, 
         show_search.into(), 
         set_show_search, 
+        search_mode.into(),
         set_search_mode,
         set_show_open_modal
     );
+    
+    // Bind shortcuts globally to window to override browser defaults (like Ctrl+P)
+    window_event_listener(leptos::ev::keydown, handle_keydown.clone());
 
     // 5. 派生 UI 回调
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
@@ -117,7 +121,7 @@ fn AppContent() -> impl IntoView {
     view! {
         <div 
             class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
-            on:keydown=handle_keydown
+            // on:keydown removed - moved to window_event_listener
             on:mousemove=move |ev| do_resize.run(ev)
             on:mouseup=move |_| stop_resize.run(())
             on:mouseleave=move |_| stop_resize.run(())

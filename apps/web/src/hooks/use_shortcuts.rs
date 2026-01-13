@@ -17,6 +17,7 @@ pub fn use_shortcuts(
     locale: RwSignal<Locale>,
     show_search: ReadSignal<bool>,
     set_show_search: WriteSignal<bool>,
+    search_mode: Signal<String>,
     set_search_mode: WriteSignal<String>,
     set_show_open_modal: WriteSignal<bool>
 ) -> impl Fn(KeyboardEvent) + Clone + 'static {
@@ -29,7 +30,9 @@ pub fn use_shortcuts(
         if is_ctrl && shift && key == "p" {
             ev.prevent_default();
             ev.stop_propagation(); 
-            if show_search.get() {
+            // If already open AND in command mode (>), close it.
+            // Otherwise, switch to command mode and open.
+            if show_search.get() && search_mode.get() == ">" {
                 set_show_search.set(false);
             } else {
                 set_search_mode.set(">".to_string());
@@ -42,7 +45,13 @@ pub fn use_shortcuts(
         if is_ctrl && !shift && key == "p" {
             ev.prevent_default();
             ev.stop_propagation(); 
-            if show_search.get() {
+            // If already open AND in file mode (empty or not >/@), close it.
+            // Otherwise, switch to file mode and open.
+            // Note: search_mode is empty string for file search
+            let current_mode = search_mode.get();
+            let is_file_mode = current_mode.is_empty();
+            
+            if show_search.get() && is_file_mode {
                  set_show_search.set(false);
             } else {
                  set_search_mode.set(String::new());
