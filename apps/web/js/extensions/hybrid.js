@@ -97,8 +97,13 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // ---------------------------------------------------------
             // 2. Syntax Hiding (Hiding Marks when not active)
             // ---------------------------------------------------------
-            // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 > 和 行内代码标记 `
-            if (node.name === "HeaderMark" || node.name === "EmphasisMark" || node.name === "QuoteMark" || node.name === "CodeMark") {
+            // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 > 和 行内代码标记 ` 和 删除线标记 ~~
+            if (node.name === "HeaderMark" || 
+                node.name === "EmphasisMark" || 
+                node.name === "QuoteMark" || 
+                node.name === "CodeMark" || 
+                node.name === "StrikethroughMark") {  // [NEW] Added StrikethroughMark
+                
               const parent = node.node.parent;
               
               // 特殊处理: 如果是 CodeMark (即 `), 且父节点是 FencedCode (代码块), 则不隐藏
@@ -117,14 +122,21 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // ---------------------------------------------------------
             
             // Explicit Styling for Bold/Italic/Strikethrough
+            // logic: Only apply style if cursor is NOT inside (Source Mode vs Preview Mode toggle)
             if (node.name === "StrongEmphasis") {
-                 widgets.push(Decoration.mark({ class: "cm-strong" }).range(node.from, node.to));
+                 if (!isCursorIn(node.from, node.to)) {
+                    widgets.push(Decoration.mark({ class: "cm-strong" }).range(node.from, node.to));
+                 }
             }
             if (node.name === "Emphasis") {
-                 widgets.push(Decoration.mark({ class: "cm-em" }).range(node.from, node.to));
+                 if (!isCursorIn(node.from, node.to)) {
+                    widgets.push(Decoration.mark({ class: "cm-em" }).range(node.from, node.to));
+                 }
             }
             if (node.name === "Strikethrough") {
-                 widgets.push(Decoration.mark({ class: "cm-strikethrough" }).range(node.from, node.to));
+                 if (!isCursorIn(node.from, node.to)) {
+                    widgets.push(Decoration.mark({ class: "cm-strikethrough" }).range(node.from, node.to));
+                 }
             }
             
             // Explicit Styling for Headings
