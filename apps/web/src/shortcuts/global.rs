@@ -125,7 +125,7 @@ pub fn handle_search_box_keydown(
              } else {
                  set_query.set(">".to_string());
                  set_selected_index.set(0);
-                 if let Some(el) = input_ref.get() { let _ = el.focus(); }
+                 if let Some(el) = input_ref.get_untracked() { let _ = el.focus(); }
              }
          } else {
              // File Search logic
@@ -136,7 +136,7 @@ pub fn handle_search_box_keydown(
              } else {
                  set_query.set(String::new());
                  set_selected_index.set(0); 
-                 if let Some(el) = input_ref.get() { let _ = el.focus(); }
+                 if let Some(el) = input_ref.get_untracked() { let _ = el.focus(); }
              }
          }
     }
