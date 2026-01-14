@@ -26,7 +26,7 @@ pub fn ActivityBar(
             <button
                 class=move || format!(
                     "p-3 mb-2 rounded-lg transition-colors relative group {}", 
-                    if is_active() { "text-blue-400" } else { "text-gray-400 hover:text-gray-100" }
+                    if is_active() { "text-blue-600 dark:text-blue-400" } else { "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" }
                 )
                 title=label
                 on:click=move |_| set_active_view.set(view)
@@ -44,7 +44,7 @@ pub fn ActivityBar(
     };
 
     view! {
-        <div class="w-12 flex flex-col items-center py-4 bg-gray-900 border-r border-gray-800 flex-none z-20">
+        <div class="w-12 flex flex-col items-center py-4 bg-[#f3f3f3] dark:bg-[#252526] border-r border-[#e5e5e5] dark:border-[#1e1e1e] flex-none z-20">
             // 顶部区域: 类似于 VS Code
             
             // 资源管理器
@@ -79,7 +79,7 @@ pub fn ActivityBar(
             
             // 底部:设置
             <button 
-                class="p-3 mb-2 text-gray-400 hover:text-gray-100 rounded-lg transition-colors"
+                class="p-3 mb-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded-lg transition-colors"
                 title="Settings"
                 on:click=move |_| on_settings.run(())
             >

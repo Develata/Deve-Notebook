@@ -88,6 +88,9 @@ pub struct CoreState {
     pub on_unstage_file: Callback<String>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
+    pub diff_content: ReadSignal<Option<(String, String, String)>>,
+    pub set_diff_content: WriteSignal<Option<(String, String, String)>>,
+    pub on_get_doc_diff: Callback<String>,
 }
 
 
@@ -131,6 +134,8 @@ pub fn use_core() -> CoreState {
     let (staged_changes, set_staged_changes) = signal(Vec::<ChangeEntry>::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::<ChangeEntry>::new());
     let (commit_history, set_commit_history) = signal(Vec::<CommitInfo>::new());
+    // Diff 视图状态 (path, old, new)
+    let (diff_content, set_diff_content) = signal(None::<(String, String, String)>);
 
     // 为当前会话生成临时的 PeerId
     let peer_id = PeerId::random();
@@ -246,6 +251,10 @@ pub fn use_core() -> CoreState {
                      // Refresh all
                      ws_rx.send(ClientMessage::GetChanges);
                      ws_rx.send(ClientMessage::GetCommitHistory { limit: 50 });
+                },
+                ServerMessage::DocDiff { path, old_content, new_content } => {
+                    leptos::logging::log!("Received diff for: {}", path);
+                    set_diff_content.set(Some((path, old_content, new_content)));
                 },
 
                 _ => {}
@@ -366,6 +375,11 @@ pub fn use_core() -> CoreState {
         ws_sc_history.send(ClientMessage::GetCommitHistory { limit });
     });
 
+    let ws_sc_diff = ws.clone();
+    let on_get_doc_diff = Callback::new(move |path: String| {
+        ws_sc_diff.send(ClientMessage::GetDocDiff { path });
+    });
+
     let state = CoreState {
         ws,
         docs,
@@ -410,6 +424,9 @@ pub fn use_core() -> CoreState {
         on_unstage_file,
         on_commit,
         on_get_history,
+        diff_content,
+        set_diff_content,
+        on_get_doc_diff,
     };
     
     // 为子组件提供 CoreState 上下文

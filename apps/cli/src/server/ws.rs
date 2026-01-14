@@ -195,6 +195,9 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      ClientMessage::GetCommitHistory { limit } => {
                          source_control::handle_get_commit_history(&state_clone, &tx, limit).await;
                      }
+                     ClientMessage::GetDocDiff { path } => {
+                         source_control::handle_get_doc_diff(&state_clone, &tx, path).await;
+                     }
                 }
             }
         }

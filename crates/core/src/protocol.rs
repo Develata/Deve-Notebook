@@ -125,6 +125,8 @@ pub enum ClientMessage {
     Commit { message: String },
     /// 获取提交历史
     GetCommitHistory { limit: u32 },
+    /// 获取文档的 Diff (用于 Diff 视图)
+    GetDocDiff { path: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,6 +240,15 @@ pub enum ServerMessage {
     /// 提交历史响应
     CommitHistory {
         commits: Vec<CommitInfo>,
+    },
+    /// 文档 Diff 响应 (用于 Diff 视图)
+    DocDiff {
+        /// 文件路径
+        path: String,
+        /// 已提交版本内容
+        old_content: String,
+        /// 当前版本内容
+        new_content: String,
     },
     
     /// 错误消息

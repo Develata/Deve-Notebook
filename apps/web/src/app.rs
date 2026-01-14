@@ -20,6 +20,7 @@ use crate::hooks::use_layout::use_layout;
 use crate::hooks::use_shortcuts::use_shortcuts;
 
 use crate::components::activity_bar::SidebarView;
+use crate::components::diff_view::DiffView;
 
 // Context for deep components to trigger search (e.g. BranchSwitcher)
 #[derive(Clone, Copy)]
@@ -208,15 +209,28 @@ fn AppContent() -> impl IntoView {
                  // 主编辑器
                  <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
                     
-                    {move || match core.current_doc.get() {
-                        Some(id) => view! { 
-                             <Editor doc_id=id on_stats=core.on_stats /> 
-                        }.into_any(),
-                        None => view! { 
-                            <div class="flex items-center justify-center h-full text-gray-400">
-                                "Select a document to edit"
-                            </div> 
-                        }.into_any()
+                    {move || {
+                        if let Some((path, old, new)) = core.diff_content.get() {
+                            return view! {
+                                <DiffView 
+                                    path=path 
+                                    old_content=old 
+                                    new_content=new 
+                                    on_close=move || core.set_diff_content.set(None) 
+                                />
+                            }.into_any();
+                        }
+
+                        match core.current_doc.get() {
+                            Some(id) => view! { 
+                                 <Editor doc_id=id on_stats=core.on_stats /> 
+                            }.into_any(),
+                            None => view! { 
+                                <div class="flex items-center justify-center h-full text-gray-400">
+                                    "Select a document to edit"
+                                </div> 
+                            }.into_any()
+                        }
                     }}
                  </div>
             </main>
