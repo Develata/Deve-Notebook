@@ -1,6 +1,6 @@
 import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { findMathRanges } from "./utils.js";
+import { findMathRanges, findFrontmatterRange } from "./utils.js";
 
 /**
  * Hybrid Plugin (混合插件)
@@ -43,6 +43,40 @@ export const hybridPlugin = ViewPlugin.fromClass(
         return false;
       };
 
+      // 2. Frontmatter Detection (Strict)
+      // 计算一次，如果存在有效的 Frontmatter，则添加装饰
+      const fm = findFrontmatterRange(doc);
+      if (fm) {
+          // 仅当 Frontmatter 在视口范围内时渲染
+          if (fm.from <= to && fm.to >= from) {
+              
+              // 1. Style Background (Line Decoration for Full Width)
+              // Iterate all lines from fm.from to fm.to
+              for (let pos = fm.from; pos < fm.to; ) {
+                  const line = view.state.doc.lineAt(pos);
+                  
+                  // Apply Line Decoration
+                  widgets.push(
+                      Decoration.line({ 
+                          attributes: { class: "cm-frontmatter-block" } 
+                      }).range(line.from)
+                  );
+                  
+                  pos = line.to + 1;
+              }
+
+              // 2. Hide First Delimiter (---)
+              // Only hide if cursor is NOT in the Frontmatter block
+              const isCursorInFm = selection.head >= fm.from && selection.head <= fm.to;
+              
+              if (!isCursorInFm) {
+                  widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(0, 3)); 
+                  // 3. Hide Second Delimiter (---)
+                  widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(fm.contentTo, fm.contentTo + 3));
+              }
+          }
+      }
+
       try {
         let tree = syntaxTree(view.state);
 
@@ -55,7 +89,14 @@ export const hybridPlugin = ViewPlugin.fromClass(
 
             // 跳过数学公式区域
             if (isInsideMath(node.from, node.to)) return;
+            
+            // 跳过 Frontmatter 内部 (如果已检测到)
+            // 避免 Frontmatter 内部的 key: value 被识别为 Setext Heading 的一部分并被隐藏/错误处理
+            if (fm && node.from >= fm.from && node.to <= fm.to) return;
 
+            // ---------------------------------------------------------
+            // 2. Syntax Hiding (Hiding Marks when not active)
+            // ---------------------------------------------------------
             // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 > 和 行内代码标记 `
             if (node.name === "HeaderMark" || node.name === "EmphasisMark" || node.name === "QuoteMark" || node.name === "CodeMark") {
               const parent = node.node.parent;
@@ -70,19 +111,48 @@ export const hybridPlugin = ViewPlugin.fromClass(
                 widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
               }
             }
-
-
-            // Frontmatter 样式标记
-            if (node.name === "Frontmatter") {
-              // 为整个 Frontmatter 块添加 CSS 类
-              widgets.push(
-                Decoration.mark({ class: "cm-frontmatter" }).range(
-                  node.from,
-                  node.to
-                )
-              );
+            
+            // ---------------------------------------------------------
+            // 3. Manual Styling Takeover (Ensure consistent visual)
+            // ---------------------------------------------------------
+            
+            // Explicit Styling for Bold/Italic/Strikethrough
+            if (node.name === "StrongEmphasis") {
+                 widgets.push(Decoration.mark({ class: "cm-strong" }).range(node.from, node.to));
             }
+            if (node.name === "Emphasis") {
+                 widgets.push(Decoration.mark({ class: "cm-em" }).range(node.from, node.to));
+            }
+            if (node.name === "Strikethrough") {
+                 widgets.push(Decoration.mark({ class: "cm-strikethrough" }).range(node.from, node.to));
+            }
+            
+            // Explicit Styling for Headings
+            if (node.name === "ATXHeading1") widgets.push(Decoration.mark({ class: "cm-h1" }).range(node.from, node.to));
+            if (node.name === "ATXHeading2") widgets.push(Decoration.mark({ class: "cm-h2" }).range(node.from, node.to));
+            if (node.name === "ATXHeading3") widgets.push(Decoration.mark({ class: "cm-h3" }).range(node.from, node.to));
+            if (node.name === "ATXHeading4") widgets.push(Decoration.mark({ class: "cm-h4" }).range(node.from, node.to));
+            if (node.name === "ATXHeading5") widgets.push(Decoration.mark({ class: "cm-h5" }).range(node.from, node.to));
+            if (node.name === "ATXHeading6") widgets.push(Decoration.mark({ class: "cm-h6" }).range(node.from, node.to));
 
+            // Explicit Styling for Links
+            if (node.name === "Link") {
+                widgets.push(Decoration.mark({ class: "cm-link" }).range(node.from, node.to));
+            }
+            if (node.name === "URL") {
+                 widgets.push(Decoration.mark({ class: "cm-url" }).range(node.from, node.to));
+            }
+            
+            // Explicit Styling for Blockquotes
+            if (node.name === "Blockquote") {
+                widgets.push(Decoration.mark({ class: "cm-blockquote" }).range(node.from, node.to));
+            }
+            
+            // Explicit Styling for Horizontal Rules
+            if (node.name === "HorizontalRule") {
+                 widgets.push(Decoration.mark({ class: "cm-hr" }).range(node.from, node.to));
+            }
+            
             // Inline Code 样式标记
             if (node.name === "InlineCode") {
                 // 添加背景色样式
@@ -99,7 +169,7 @@ export const hybridPlugin = ViewPlugin.fromClass(
         console.warn("HybridPlugin Error:", e);
       }
 
-      return Decoration.set(widgets);
+      return Decoration.set(widgets.sort((a, b) => a.from - b.from));
     }
   },
   { decorations: (v) => v.decorations }
