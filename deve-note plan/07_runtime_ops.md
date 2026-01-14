@@ -12,7 +12,11 @@
 *   **可用性**：仅 **Desktop** 和 **Server**。
     *   **Web 端行为**：Web 端请求执行代码块时，通过 WebSocket 转发给 **Server** 执行。
 *   **工作流**：Frontmatter 定义 runtime -> Run -> 启动临时容器 -> 注入代码 -> 捕获输出 -> 销毁。
-*   **安全**：Rootless, No Net (默认), Read-only Volume (默认)。
+*   **安全 (Security Focus)**：
+    *   **Anti-Injection (防注入)**: 严禁直接 `eval` 或在 Host 环境执行 Markdown 中的代码块。所有具体代码执行**必须**通过外置插件 (`Podman`) 在隔离容器中运行。
+    *   **Rootless**: 默认非特权模式运行。
+    *   **Network**: 默认无网络访问 (No Net)。
+    *   **Volume**: 默认只读挂载 (Read-only Volume)。
 
 ### 3. 通用插件协议
 *   **ABI**：Manifest -> Install/Activate -> Events.

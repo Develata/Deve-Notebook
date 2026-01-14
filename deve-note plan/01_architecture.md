@@ -23,6 +23,10 @@
 * **Store B (Local Master DB)**: 本地核心数据库（`local.redb`）。**只有本地用户的操作能写入此库**。
 * **Store C (Remote Shadow DBs)**: 远端影子数据库集合（`/data/ledger/remotes/peer_X.redb`）。
     * 来自 Peer X 的数据**只写入** `remotes/peer_X.redb`，**绝对禁止**自动合并进 Store B。
+    * **Clean File Policy (干净文件策略)**:
+        * **Implicit Tracking (隐式追踪)**: `DocId` (UUID) 仅存储在内部数据库 (`Ledger/RepoManager`) 中，以文件路径或 Inode 关联。
+        * **No Injection (零注入)**: 系统**严禁**自动向 Markdown 文件头注入 `uuid` 或其他 Frontmatter 元数据。Markdown 文件必须保持用户原始书写的状态。
+        * **Deceptive Metadata**: 如果用户手动书写 Frontmatter，仅用于渲染展示或兼容性，不是系统追踪的真理源 (Source of Truth)。
 
 ### 3. 同步协议：基于版本向量的 Gossip (Version Vector Gossip)
 * **废弃**：简单的广播 (Broadcast) 和时间戳 (Timestamp)。
