@@ -152,3 +152,18 @@
   font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
   font-size: 1em; /* Slightly increased from 0.85em */
 }
+
+/* 
+   Fix for Selection Visibility:
+   We elevate the selection layer to ensure it sits ON TOP of the code block backgrounds.
+   (This effectively places the background at the 'bottom' relative to the selection).
+*/
+.cm-selectionLayer {
+  z-index: 10 !important;
+  mix-blend-mode: multiply;
+}
+
+.cm-selectionBackground {
+  background-color: #b3d4fc !important;
+  opacity: 0.5;
+}
