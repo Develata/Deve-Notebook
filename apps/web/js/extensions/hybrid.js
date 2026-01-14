@@ -1,33 +1,44 @@
 import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { findMathRanges } from "./utils.js";
-import { CheckboxWidget } from "./checkbox.js";
 
-// --- Hybrid Plugin ---
+/**
+ * Hybrid Plugin (混合插件)
+ * 
+ * 作用:
+ * 1. 隐藏 Markdown 的部分语法标记 (如 Header 的 #, Emphasis 的 *)
+ * 2. 渲染 Checkbox
+ * 3. 避免在数学公式内部进行处理
+ */
 export const hybridPlugin = ViewPlugin.fromClass(
   class {
     constructor(view) {
       this.decorations = this.computeDecorations(view);
     }
+    
     update(update) {
       if (update.docChanged || update.viewportChanged || update.selectionSet) {
         this.decorations = this.computeDecorations(update.view);
       }
     }
+    
     computeDecorations(view) {
       let widgets = [];
       const { from, to } = view.viewport;
       const selection = view.state.selection.main;
       const doc = view.state.doc.toString();
+      
+      // 辅助函数: 检查光标是否在范围内
       const isCursorIn = (nodeFrom, nodeTo) =>
         selection.head >= nodeFrom && selection.head <= nodeTo;
 
-      // Use shared math parser
+      // 1. 获取所有数学公式范围，避免处理公式内的内容
       const mathRanges = findMathRanges(doc);
       
       const isInsideMath = (nodeFrom, nodeTo) => {
         for (let r of mathRanges) {
-          if (nodeFrom >= r.from && nodeTo <= r.to) return true;
+          // 只要有重叠就视为在公式内 (简单的碰撞检测)
+          if (Math.max(nodeFrom, r.from) <= Math.min(nodeTo, r.to)) return true;
         }
         return false;
       };
@@ -39,32 +50,22 @@ export const hybridPlugin = ViewPlugin.fromClass(
           from,
           to,
           enter: (node) => {
+            // 跳过数学公式区域
             if (isInsideMath(node.from, node.to)) return;
 
-            // Hide Header/Emphasis Marks
+            // 隐藏标题的 # 符号 和 强调符号 * _
             if (node.name === "HeaderMark" || node.name === "EmphasisMark") {
               const parent = node.node.parent;
+              // 只有当光标不在该行/区域时才隐藏
               if (parent && !isCursorIn(parent.from, parent.to)) {
                 widgets.push(Decoration.replace({}).range(node.from, node.to));
               }
             }
 
-            // Checkboxes
-            if (node.name === "TaskMarker") {
-              const slice = view.state.sliceDoc(node.from, node.to);
-              const isChecked = slice.toLowerCase().includes("x");
 
-              if (!isCursorIn(node.from, node.to)) {
-                widgets.push(
-                  Decoration.replace({
-                    widget: new CheckboxWidget(isChecked, node.from),
-                  }).range(node.from, node.to)
-                );
-              }
-            }
-
-            // Frontmatter
+            // Frontmatter 样式标记
             if (node.name === "Frontmatter") {
+              // 为整个 Frontmatter 块添加 CSS 类
               widgets.push(
                 Decoration.mark({ class: "cm-frontmatter" }).range(
                   node.from,
@@ -75,7 +76,7 @@ export const hybridPlugin = ViewPlugin.fromClass(
           },
         });
       } catch (e) {
-        console.warn(e);
+        console.warn("HybridPlugin Error:", e);
       }
 
       return Decoration.set(widgets);

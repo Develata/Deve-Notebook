@@ -1,58 +1,15 @@
 /**
- * Table Widget for CodeMirror
+ * Table Widget for CodeMirror (表格组件)
  * 
- * Renders Markdown tables as HTML <table> elements when cursor is not inside.
+ * 作用: 当光标不在表格区域时，将 Markdown 表格渲染为 HTML <table> 元素。
  */
 
 import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
+import { findTableRanges } from "./table_parser.js";
 
 /**
- * Parse a markdown table string into structured data
- */
-function parseTable(tableText) {
-    const lines = tableText.trim().split('\n');
-    if (lines.length < 2) return null;
-    
-    const parseRow = (line) => {
-        // Remove leading/trailing pipes and split
-        return line
-            .replace(/^\|/, '')
-            .replace(/\|$/, '')
-            .split('|')
-            .map(cell => cell.trim());
-    };
-    
-    const headerRow = parseRow(lines[0]);
-    const separatorLine = lines[1];
-    
-    // Validate separator row - must contain | and - characters
-    // Examples: |---|---|, |-|-|, | --- | --- |, |:---:|:---:|
-    if (!separatorLine.includes('|') || !separatorLine.includes('-')) return null;
-    
-    // Each cell in separator should only contain -, :, and spaces
-    const separatorCells = parseRow(separatorLine);
-    const validSeparator = separatorCells.every(cell => /^:?-+:?$/.test(cell.trim()) || cell.trim() === '');
-    if (!validSeparator) return null;
-    
-    // Parse alignment from separator
-    const alignments = separatorCells.map(sep => {
-        sep = sep.trim();
-        const left = sep.startsWith(':');
-        const right = sep.endsWith(':');
-        if (left && right) return 'center';
-        if (right) return 'right';
-        return 'left';
-    });
-    
-    // Parse body rows
-    const bodyRows = lines.slice(2).map(parseRow);
-    
-    return { header: headerRow, alignments, body: bodyRows };
-}
-
-/**
- * Widget that renders a table
+ * Table Widget (表格视图组件)
  */
 export class TableWidget extends WidgetType {
     constructor(tableData) {
@@ -62,27 +19,33 @@ export class TableWidget extends WidgetType {
     
     toDOM() {
         const table = document.createElement('table');
-        table.className = 'cm-table-widget';
+        table.className = 'cm-table-widget w-full border-collapse my-4 text-sm';
         
-        // Header
+        // 渲染表头
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
+        console.log("Header Data:", this.tableData.header);
+        
         this.tableData.header.forEach((cell, i) => {
             const th = document.createElement('th');
             th.textContent = cell;
+            th.className = "border border-gray-300 px-4 py-2 bg-gray-100 font-semibold";
             th.style.textAlign = this.tableData.alignments[i] || 'left';
             headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
         table.appendChild(thead);
         
-        // Body
+        // 渲染表体
         const tbody = document.createElement('tbody');
-        this.tableData.body.forEach(row => {
+        this.tableData.body.forEach((row, rowIndex) => {
             const tr = document.createElement('tr');
+            tr.className = rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50";
+            
             row.forEach((cell, i) => {
                 const td = document.createElement('td');
                 td.textContent = cell;
+                td.className = "border border-gray-300 px-4 py-2";
                 td.style.textAlign = this.tableData.alignments[i] || 'left';
                 tr.appendChild(td);
             });
@@ -96,84 +59,26 @@ export class TableWidget extends WidgetType {
     eq(other) {
         return JSON.stringify(this.tableData) === JSON.stringify(other.tableData);
     }
-}
 
-/**
- * Find table ranges in the document
- */
-export function findTableRanges(doc) {
-    const ranges = [];
-    const lines = doc.split('\n');
-    let i = 0;
-    let pos = 0;
-    
-    while (i < lines.length) {
-        const line = lines[i];
-        
-        // Check if this line could be a table header
-        if (line.includes('|') && i + 1 < lines.length) {
-            const nextLine = lines[i + 1];
-            
-            // Check if next line is separator (contains | and -)
-            if (nextLine.includes('|') && nextLine.includes('-')) {
-                const startPos = pos;
-                let tableEnd = i + 1;
-                
-                // Find end of table
-                for (let j = i + 2; j < lines.length; j++) {
-                    if (lines[j].includes('|')) {
-                        tableEnd = j;
-                    } else {
-                        break;
-                    }
-                }
-                
-                // Calculate end position
-                let endPos = startPos;
-                for (let j = i; j <= tableEnd; j++) {
-                    endPos += lines[j].length + 1; // +1 for newline
-                }
-                endPos--; // Remove last newline offset
-                
-                const tableText = lines.slice(i, tableEnd + 1).join('\n');
-                const tableData = parseTable(tableText);
-                
-                if (tableData) {
-                    ranges.push({
-                        from: startPos,
-                        to: endPos,
-                        data: tableData
-                    });
-                }
-                
-                // Skip processed lines
-                i = tableEnd + 1;
-                pos = endPos + 1;
-                continue;
-            }
-        }
-        
-        pos += line.length + 1;
-        i++;
+    ignoreEvent() {
+        return false;
     }
-    
-    return ranges;
 }
 
 /**
- * StateField that manages table decorations
+ * 计算表格装饰
  */
 function computeTableDecorations(state) {
     const widgets = [];
     const doc = state.doc.toString();
     const selection = state.selection.main;
     
+    // 使用 parser 模块查找表格
     const ranges = findTableRanges(doc);
-    console.log("[TABLE] Found ranges:", ranges.length, ranges);
     
     for (const range of ranges) {
+        // 检查光标是否在表格范围内
         const isCursorInside = selection.head >= range.from && selection.head <= range.to;
-        console.log("[TABLE] Range:", range.from, "-", range.to, "Cursor:", selection.head, "Inside:", isCursorInside);
         
         if (!isCursorInside) {
             widgets.push(
@@ -185,10 +90,12 @@ function computeTableDecorations(state) {
         }
     }
     
-    console.log("[TABLE] Total widgets:", widgets.length);
     return Decoration.set(widgets);
 }
 
+/**
+ * Table State Field (表格状态字段)
+ */
 export const tableStateField = StateField.define({
     create(state) {
         return computeTableDecorations(state);

@@ -11,6 +11,7 @@ import {
   highlightActiveLineGutter,
 } from "@codemirror/view";
 import { markdown } from "@codemirror/lang-markdown";
+import { GFM, Subscript, Superscript, Emoji } from "@lezer/markdown";
 import {
   defaultHighlightStyle,
   syntaxHighlighting,
@@ -21,15 +22,18 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { mathStateField } from "./extensions/math.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
 import { tableStateField } from "./extensions/table.js";
+import { imageStateField } from "./extensions/image.js"; 
+import { checkboxStateField } from "./extensions/checkbox_ext.js"; // [NEW] Checkbox StateField
 
 console.log("Modules Loaded via ES Imports in editor_adapter.js (v3 - ReadOnly Compartment)");
+console.log("GFM Extensions:", GFM);
 
-// --- Internal State ---
+// --- 内部状态 (Internal State) ---
 let activeView = null;
 let isRemote = false;
 let readOnlyCompartment = new Compartment();
 
-// --- Basic Setup ---
+// --- 基础设置 (Basic Setup) ---
 function closeBrackets() {
   return []; 
 }
@@ -50,7 +54,7 @@ const manualBasicSetup = [
   keymap.of([...defaultKeymap, ...historyKeymap]),
 ];
 
-// --- Core Initialization ---
+// --- 核心初始化 (Core Initialization) ---
 export function initCodeMirror(element, onUpdate) {
   console.log("Initializing Editor via Adapter (Singleton)");
   if (!element) return;
@@ -61,14 +65,18 @@ export function initCodeMirror(element, onUpdate) {
       doc: "# Loading...",
       extensions: [
         ...manualBasicSetup,
-        readOnlyCompartment.of(EditorState.readOnly.of(false)), // Default editable
+        readOnlyCompartment.of(EditorState.readOnly.of(false)), // 默认可编辑
         EditorView.lineWrapping, 
-        markdown(),
-        hybridPlugin,
-        mathStateField,
-        tableStateField,
+        EditorView.lineWrapping, 
+        markdown({ extensions: [...GFM, Subscript, Superscript, Emoji] }),
+        hybridPlugin,     // 混合插件 (隐藏标记等)
+        hybridPlugin,     // 混合插件 (隐藏标记等)
+        mathStateField,   // 数学公式
+        tableStateField,  // 表格
+        imageStateField,  // 图片
+        checkboxStateField, // [NEW] 复选框
         EditorView.updateListener.of((v) => {
-          // Internal Check: explicit isRemote flag
+          // 内部检查: 显式的 isRemote 标志
           if (isRemote) return;
           if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
         }),
@@ -80,9 +88,9 @@ export function initCodeMirror(element, onUpdate) {
       parent: element,
     });
 
-    // Capture Singleton Instance
+    // 捕获单例实例
     activeView = view;
-    // Expose for debugging if absolutely needed, but code should rely on exports
+    // 暴露给调试使用 (如果绝对必要)
     window._debug_view = view; 
 
     return view;
@@ -92,7 +100,7 @@ export function initCodeMirror(element, onUpdate) {
   }
 }
 
-// --- Public API ---
+// --- 公共 API (Public API) ---
 
 export function getEditorContent() {
   return activeView ? activeView.state.doc.toString() : "";
@@ -146,7 +154,7 @@ export function applyRemoteOp(op_json) {
 export function scrollGlobal(lineNumber) {
     if (!activeView || !activeView.state) return;
     
-    // Internal impl of scrollToLine
+    // 滚动到指定行的内部实现
     const doc = activeView.state.doc;
     const lines = doc.lines;
     if (lineNumber < 1) lineNumber = 1;
@@ -168,7 +176,7 @@ export function setReadOnly(readOnly) {
         activeView.dispatch({
             effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(readOnly))
         });
-        // Force DOM update for visual verification and robustness
+        // 强制 DOM 更新以进行视觉验证和稳健性检查
         activeView.contentDOM.setAttribute("contenteditable", (!readOnly).toString());
     }
 }
