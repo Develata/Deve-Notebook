@@ -1,344 +1,83 @@
+// 统一搜索组件模块入口。
 pub mod types;
 pub mod providers;
 
+mod effects;
+mod logic;
+mod ui;
+
 use leptos::prelude::*;
-use web_sys::{HtmlInputElement, KeyboardEvent, MouseEvent};
-use wasm_bindgen::JsCast;
-use crate::i18n::{Locale, t};
-use self::types::{SearchProvider, SearchResult, SearchAction};
-use self::providers::{FileProvider, CommandProvider};
-use crate::components::command_palette::registry::create_static_commands;
+use std::sync::Arc;
+use crate::i18n::Locale;
 use crate::hooks::use_core::CoreState;
 
+/// 统一搜索组件，负责聚合命令、文件、分支搜索能力。
 #[component]
 pub fn UnifiedSearch(
     #[prop(into)] show: Signal<bool>,
     #[prop(into)] set_show: WriteSignal<bool>,
-    #[prop(into)] mode_signal: Signal<String>, // ">" or ""
+    #[prop(into)] mode_signal: Signal<String>,
     on_settings: Callback<()>,
-    on_open: Callback<()>, // Legacy open callback or other action
+    on_open: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let core = use_context::<CoreState>().expect("CoreState context");
-    
+
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
-    
     let input_ref = NodeRef::<leptos::html::Input>::new();
-    
-    Effect::new(move |_| {
-        if show.get() {
-            set_query.set(mode_signal.get());
-            set_selected_index.set(0);
-            
-            // Force focus
-            request_animation_frame(move || {
-                if let Some(el) = input_ref.get() {
-                    let _ = el.focus();
-                }
-            });
-        } else {
-            // Focus Editor (.cm-content) when closed
-            request_animation_frame(move || {
-                if let Some(window) = web_sys::window() {
-                    if let Some(document) = window.document() {
-                        if let Ok(Some(el)) = document.query_selector(".cm-content") {
-                            if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
-                                let _ = html_el.focus();
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    });
 
-    let providers_results = Memo::new(move |_| {
-         if !show.get() { return Vec::new(); }
-         // ... rest of memo
+    // 打开时重置查询并聚焦输入，关闭时返回编辑器焦点。
+    effects::attach_focus_effect(
+        show,
+        mode_signal,
+        set_query,
+        set_selected_index,
+        input_ref,
+    );
 
+    // 按查询类型动态选择 Provider 并生成结果列表。
+    let providers_results = logic::create_results_memo(
+        show,
+        query.into(),
+        locale,
+        core.clone(),
+        on_settings,
+        on_open,
+        set_show,
+    );
 
-         let q = query.get();
-         let current_docs = core.docs.get();
-         let current_locale = locale.get();
-         
-         // 1. Determine active provider triggered by char
-         // Priority: Command (>) -> File (Default)
-         
-         let is_command = q.starts_with('>');
-         let is_branch = q.starts_with('@');
-         
-         if is_command {
-             let cmds = create_static_commands(
-                current_locale,
-                on_settings,
-                on_open,
-                set_show,
-                locale,
-             );
-             let provider = CommandProvider::new(cmds);
-             provider.search(&q)
-         } else if is_branch {
-             let shadows = core.shadow_repos.get();
-             let current = match core.active_repo.get() {
-                 None => Some("Local (Master)".to_string()),
-                 Some(p) => Some(p.to_string()),
-             };
-             let provider = providers::BranchProvider::new(shadows, current);
-             provider.search(&q)
-         } else {
-             let doc_list: Vec<(deve_core::models::DocId, String)> = current_docs.iter()
-                .map(|(k, v)| (*k, v.clone()))
-                .collect();
-             let provider = FileProvider::new(doc_list);
-             provider.search(&q)
-         }
-    });
+    let active_index = Arc::new(logic::make_active_index(selected_index.into(), providers_results));
 
-    let active_index = move || {
-        let count = providers_results.get().len();
-        if count == 0 { return 0; }
-        let current = selected_index.get();
-        if current >= count { 0 } else { current }
-    };
+    // 键盘导航与执行逻辑。
+    let handle_keydown = Arc::new(logic::build_keydown_handler(
+        show,
+        query.into(),
+        set_query,
+        set_selected_index,
+        providers_results,
+        active_index.clone(),
+        input_ref,
+        set_show,
+        core.clone(),
+    ));
 
-    let handle_keydown = move |ev: KeyboardEvent| {
-        let key = ev.key();
-        
-        // 阻止事件冒泡，防止编辑器接收按键
-        ev.stop_propagation();
-        
-        // 调用专门的辅助函数处理 Ctrl+P/Shift+P/Escape
-        crate::shortcuts::global::handle_search_box_keydown(
-            &ev,
-            set_show,
-            query.into(),
-            set_query,
-            set_selected_index, // WriteSignal 直接传递
-            input_ref
-        );
-        
-        if !show.get() { return; } // 如果关闭了，就不处理导航了
-        
-        let count = providers_results.get().len();
-        if count == 0 { return; }
-        
-        match key.as_str() {
-            "ArrowDown" => {
-                ev.prevent_default();
-                set_selected_index.update(|i| *i = (*i + 1) % count);
-            }
-            "ArrowUp" => {
-                ev.prevent_default();
-                set_selected_index.update(|i| *i = (*i + count - 1) % count);
-            }
-            "Enter" => {
-                ev.prevent_default();
-                let idx = active_index();
-                leptos::logging::log!("Refined Debug: Key Enter. Index: {}, Count: {}", idx, count);
-                if let Some(res) = providers_results.get().get(idx) {
-                    leptos::logging::log!("Selected Item: {} (Action: {:?})", res.title, res.action);
-                    match &res.action {
-                        SearchAction::OpenDoc(id) => {
-                            leptos::logging::log!("Executing OpenDoc: {}", id);
-                            core.on_doc_select.run(id.clone());
-                            set_show.set(false);
-                        }
-                        SearchAction::RunCommand(cmd) => {
-                             leptos::logging::log!("Executing Command: {}", cmd.title);
-                            cmd.action.run(());
-                        }
-                        SearchAction::SwitchBranch(branch) => {
-                             leptos::logging::log!("Switching Branch: {}", branch);
-                            if branch == "Local (Master)" {
-                                core.set_active_repo.set(None);
-                            } else {
-                                // Branch name is already the PeerId string
-                                core.set_active_repo.set(Some(deve_core::models::PeerId(branch.clone())));
-                            }
-                            set_show.set(false);
-                        }
-                        SearchAction::CreateDoc(path) => {
-                             leptos::logging::log!("Creating Doc: {}", path);
-                             let normalized = path.replace('\\', "/");
-                             let target = if normalized.ends_with(".md") { normalized.clone() } else { format!("{}.md", normalized) };
-                             
-                             core.on_doc_create.run(target);
-                             set_show.set(false);
-                        }
-                    }
-                } else {
-                     leptos::logging::log!("Error: Index out of bounds or item not found.");
-                }
-            }
-            _ => {}
-        }
-    };
+    let placeholder_text = logic::create_placeholder_memo(query.into(), locale);
 
-    let placeholder_text = Memo::new(move |_| {
-         let q = query.get();
-         let current_locale = locale.get();
-         if q.starts_with('>') {
-             t::search::placeholder_command(current_locale)
-         } else if q.starts_with('@') {
-             t::search::placeholder_branch(current_locale)
-         } else {
-             t::search::placeholder_file(current_locale)
-         }
-    });
-
-    view! {
-        <Show when=move || show.get()>
-            <div 
-                class="fixed inset-0 z-[60] font-sans"
-                on:click=move |_| set_show.set(false)
-            >
-                <div 
-                    class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
-                    on:click=move |ev: MouseEvent| ev.stop_propagation()
-                    on:keydown=handle_keydown
-                >
-                    <div class="p-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
-                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                             {move || if query.get().starts_with('>') {
-                                 // Command Icon
-                                 view! { <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /> }.into_any()
-                             } else if query.get().starts_with('@') {
-                                 // Branch Icon
-                                 view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> }.into_any()
-                             } else {
-                                 // File Icon
-                                 view! { <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /> }.into_any()
-                             }}
-                        </svg>
-                        <input 
-                            node_ref=input_ref
-                            type="text"
-                            class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
-                            placeholder=move || placeholder_text.get()
-                            prop:value=move || query.get()
-                            on:input=move |ev| {
-                                set_query.set(event_target_value(&ev));
-                                set_selected_index.set(0);
-                            }
-                            // autofocus - removed, handled manually
-                        />
-                    </div>
-                    
-                    <div class="overflow-y-auto p-2">
-                        {
-                            let core = core.clone();
-                            move || {
-                            let res = providers_results.get();
-                            let core = core.clone();
-                            
-                            if res.is_empty() {
-                                view! {
-                                    <div class="p-4 text-center text-gray-400 text-sm">
-                                        {move || t::command_palette::no_results(locale.get())}
-                                    </div>
-                                }.into_any()
-                            } else {
-                                let idx_sel = active_index();
-                                view! {
-                                    <div class="flex flex-col gap-1">
-                                        <For
-                                            each=move || res.clone().into_iter().enumerate()
-                                            key=|(idx, r)| format!("{}-{}", idx, r.id)
-                                            children=move |(idx, item)| {
-                                                let core = core.clone();
-                                                let is_sel = idx == idx_sel;
-                                                let detail_icon = item.detail.clone();
-                                                let detail_text = item.detail.clone();
-                                                let detail_text_cond = detail_text.clone();
-                                                view! {
-                                                    <button
-                                                        class=format!(
-                                                            "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors {}",
-                                                            if is_sel { "bg-blue-50 text-blue-700" } else { "text-gray-700 hover:bg-gray-50" }
-                                                        )
-                                                        on:click=move |_| {
-                                                            let action = item.action.clone();
-                                                            let core_clone = core.clone();
-                                                            request_animation_frame(move || {
-                                                                match action {
-                                                                    SearchAction::OpenDoc(id) => {
-                                                                        core_clone.on_doc_select.run(id);
-                                                                        set_show.set(false);
-                                                                    }
-                                                                    SearchAction::RunCommand(cmd) => {
-                                                                        cmd.action.run(());
-                                                                    }
-                                                                    SearchAction::SwitchBranch(branch) => {
-                                                                        if branch == "Local (Master)" {
-                                                                            core_clone.set_active_repo.set(None);
-                                                                        } else {
-                                                                            // Branch name is already the PeerId string
-                                                                            core_clone.set_active_repo.set(Some(deve_core::models::PeerId(branch.clone())));
-                                                                        }
-                                                                        set_show.set(false);
-                                                                    }
-                                                                    SearchAction::CreateDoc(path) => {
-                                                                        let normalized = path.replace('\\', "/");
-                                                                        let target = if normalized.ends_with(".md") { normalized.clone() } else { format!("{}.md", normalized) };
-                                                                        
-                                                                        core_clone.on_doc_create.run(target);
-                                                                        set_show.set(false);
-                                                                    }
-                                                                }
-                                                            });
-                                                        }
-                                                        on:mousemove=move |_| {
-                                                            if selected_index.get_untracked() != idx {
-                                                                // leptos::logging::log!("Mouse Move: Hover Index {}", idx);
-                                                                set_selected_index.set(idx);
-                                                            }
-                                                        }
-                                                    >
-                                                        <div class=format!("flex-none {}", if is_sel { "text-blue-500" } else { "text-gray-400" })>
-                                                            <Show when=move || detail_icon.as_deref() == Some("Command") fallback=|| view! {
-                                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                                                </svg>
-                                                            }>
-                                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                                </svg>
-                                                            </Show>
-                                                        </div>
-
-                                                        <div class="flex-1 truncate flex flex-col items-start gap-0.5">
-                                                            <span class="font-medium">{item.title.clone()}</span>
-                                                            <Show when=move || detail_text_cond.is_some()>
-                                                                <span class="text-xs opacity-60 font-mono">
-                                                                    {detail_text.clone().unwrap()}
-                                                                </span>
-                                                            </Show>
-                                                        </div>
-
-                                                        <Show when=move || is_sel>
-                                                            <svg class="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                            </svg>
-                                                        </Show>
-                                                    </button>
-                                                }
-                                            }
-                                        />
-                                    </div>
-                                }.into_any()
-                            }
-                        }}
-                    </div>
-                     <div class="bg-gray-50 px-4 py-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
-                        <div class="flex gap-4">
-                            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Up/Down</kbd> to navigate</span>
-                            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Enter</kbd> to select</span>
-                        </div>
-                        <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Esc</kbd> to close</span>
-                    </div>
-                </div>
-            </div>
-        </Show>
-    }
+    // 视图层拆分到 ui 模块，保证组件主体精简。
+    ui::render_overlay(
+        show,
+        set_show,
+        query.into(),
+        set_query,
+        placeholder_text,
+        handle_keydown.clone(),
+        providers_results,
+        selected_index.into(),
+        set_selected_index,
+        active_index.clone(),
+        input_ref,
+        core,
+        locale,
+    )
 }
