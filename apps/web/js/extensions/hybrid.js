@@ -53,8 +53,8 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // 跳过数学公式区域
             if (isInsideMath(node.from, node.to)) return;
 
-            // 隐藏标题的 # 符号 和 强调符号 * _
-            if (node.name === "HeaderMark" || node.name === "EmphasisMark") {
+            // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 >
+            if (node.name === "HeaderMark" || node.name === "EmphasisMark" || node.name === "QuoteMark") {
               const parent = node.node.parent;
               // 只有当光标不在该行/区域时才隐藏
               if (parent && !isCursorIn(parent.from, parent.to)) {

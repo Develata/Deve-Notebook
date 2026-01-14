@@ -2,12 +2,14 @@ import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 
 /**
- * Code Block Highlight Plugin
+ * Block Styling Plugin
  * 
- * Iterates through the Markdown syntax tree and applies a background class 
- * to lines that are part of a Fenced Code Block.
+ * Iterates through the Markdown syntax tree and applies background classes 
+ * to lines that are part of:
+ * 1. Fenced Code Block (.cm-code-block-line)
+ * 2. Blockquote (.cm-blockquote-line)
  */
-export const codeBlockHighlight = ViewPlugin.fromClass(
+export const blockStyling = ViewPlugin.fromClass(
   class {
     constructor(view) {
       this.decorations = this.computeDecorations(view);
@@ -30,12 +32,15 @@ export const codeBlockHighlight = ViewPlugin.fromClass(
         from,
         to,
         enter: (node) => {
-          // 在 Markdown (Lezer) 中，代码块通常是 "FencedCode"
+          let className = "";
+          
           if (node.name === "FencedCode") {
-             // 我们对每一行都应用 Line Decoration
-             // 注意: node.from 和 node.to 覆盖了整个块
-             // 我们需要找出块内的每一行
-             
+             className = "cm-code-block-line";
+          } else if (node.name === "Blockquote") {
+             className = "cm-blockquote-line";
+          }
+          
+          if (className) {
              let doc = view.state.doc;
              // 找到起始行和结束行
              let startLine = doc.lineAt(node.from);
@@ -43,24 +48,24 @@ export const codeBlockHighlight = ViewPlugin.fromClass(
              
              for (let i = startLine.number; i <= endLine.number; i++) {
                  let line = doc.line(i);
-                 
-                 let classNames = "cm-code-block-line";
+                 let lineClasses = className;
                  
                  // 圆角逻辑 (可选)
-                 if (i === startLine.number) classNames += " cm-code-block-start";
-                 if (i === endLine.number) classNames += " cm-code-block-end";
+                 if (i === startLine.number) lineClasses += node.name === "FencedCode" ? " cm-code-block-start" : " cm-blockquote-start";
+                 if (i === endLine.number) lineClasses += node.name === "FencedCode" ? " cm-code-block-end" : " cm-blockquote-end";
                  
                  // Decoration.line 会应用到整行元素 (div.cm-line)
-                 widgets.push(Decoration.line({ class: classNames }).range(line.from));
+                 widgets.push(Decoration.line({ class: lineClasses }).range(line.from));
              }
           }
         },
       });
 
-      return Decoration.set(widgets, true); // true 表示有序添加 (实际上 Line Decoration 只要位置对就行)
+      return Decoration.set(widgets, true); 
     }
   },
   {
     decorations: (v) => v.decorations,
   }
 );
+
