@@ -76,7 +76,6 @@ export function initCodeMirror(element, onUpdate) {
             extensions: [...GFM, Subscript, Superscript, Emoji] 
         }),
         hybridPlugin,     // 混合插件 (隐藏标记等)
-        hybridPlugin,     // 混合插件 (隐藏标记等)
         mathStateField,   // 数学公式
         tableStateField,  // 表格
         imageStateField,  // 图片

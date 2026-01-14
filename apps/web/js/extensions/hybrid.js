@@ -50,15 +50,18 @@ export const hybridPlugin = ViewPlugin.fromClass(
           from,
           to,
           enter: (node) => {
+            // DEBUG: Log node name
+            // console.log("Node:", node.name, node.from, node.to);
+
             // 跳过数学公式区域
             if (isInsideMath(node.from, node.to)) return;
 
-            // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 >
-            if (node.name === "HeaderMark" || node.name === "EmphasisMark" || node.name === "QuoteMark") {
+            // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 > 和 行内代码标记 `
+            if (node.name === "HeaderMark" || node.name === "EmphasisMark" || node.name === "QuoteMark" || node.name === "CodeMark") {
               const parent = node.node.parent;
               // 只有当光标不在该行/区域时才隐藏
               if (parent && !isCursorIn(parent.from, parent.to)) {
-                widgets.push(Decoration.replace({}).range(node.from, node.to));
+                widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
               }
             }
 
@@ -72,6 +75,17 @@ export const hybridPlugin = ViewPlugin.fromClass(
                   node.to
                 )
               );
+            }
+
+            // Inline Code 样式标记
+            if (node.name === "InlineCode") {
+                // 添加背景色样式
+                widgets.push(
+                    Decoration.mark({ class: "cm-inline-code" }).range(
+                        node.from,
+                        node.to
+                    )
+                );
             }
           },
         });

@@ -129,9 +129,7 @@
 /* Actually, line decoration classes are on the wrapper div. content needs padding. */
 /* But wait, if we put border on the wrapper div, the text inside will be right next to it. */
 
-.cm-blockquote-line .cm-content {
-    /* This might not work as expected because .cm-content is a parent class */
-}
+/* Removed empty rule */
 
 /* We need to clear previous .cm-quote styles if they conflict */
 .cm-quote {
@@ -145,3 +143,12 @@
     padding-left: 1rem; /* Indent the whole line content from the border */
 }
 
+/* Inline Code Styling */
+.cm-inline-code {
+  background-color: #f1f5f9; /* slate-100 */
+  color: #1e293b; /* slate-800 */
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+  font-size: 1em; /* Slightly increased from 0.85em */
+}
