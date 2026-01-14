@@ -110,6 +110,9 @@ pub enum ClientMessage {
     // === Branch Switcher Messages (分支切换) ===
     /// 请求影子库列表 (远程分支)
     ListShadows,
+    /// 切换活动分支
+    /// peer_id: None = 本地 (Master), Some = 远程影子库
+    SwitchBranch { peer_id: Option<String> },
     
     // === Source Control Messages (版本控制) ===
     /// 获取当前变更列表 (暂存区/未暂存)
@@ -202,6 +205,15 @@ pub enum ServerMessage {
     /// 影子库 Peer ID 列表 (远程分支)
     ShadowList {
         shadows: Vec<String>,
+    },
+    /// 分支切换确认
+    BranchSwitched {
+        peer_id: Option<String>,
+        success: bool,
+    },
+    /// 编辑请求被拒绝 (Shadow 分支只读)
+    EditRejected {
+        reason: String,
     },
     
     // === Source Control Responses (版本控制响应) ===

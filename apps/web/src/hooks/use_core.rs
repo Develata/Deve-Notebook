@@ -209,6 +209,19 @@ pub fn use_core() -> CoreState {
                     leptos::logging::log!("Received {} shadow repos", shadows.len());
                     set_shadow_repos.set(shadows);
                 },
+                ServerMessage::BranchSwitched { peer_id, success } => {
+                    leptos::logging::log!("Branch switched to {:?}, success: {}", peer_id, success);
+                    // 分支切换成功后重新加载当前文档
+                    if success {
+                        if let Some(doc_id) = current_doc.get_untracked() {
+                            ws_rx.send(ClientMessage::OpenDoc { doc_id });
+                        }
+                    }
+                },
+                ServerMessage::EditRejected { reason } => {
+                    leptos::logging::warn!("Edit rejected: {}", reason);
+                    // TODO: 可以显示 Toast 通知用户
+                },
                 
                 // Source Control Messages
                 ServerMessage::ChangesList { staged, unstaged } => {
@@ -272,6 +285,15 @@ pub fn use_core() -> CoreState {
     let on_doc_move = Callback::new(move |(src_path, dest_path): (String, String)| {
         leptos::logging::log!("use_core: on_doc_move called src={} dest={}", src_path, dest_path);
         ws_for_move.send(ClientMessage::MoveDoc { src_path, dest_path });
+    });
+    
+    // 监听分支切换，发送 SwitchBranch 消息
+    let ws_for_branch = ws.clone();
+    Effect::new(move |_| {
+        let peer = active_repo.get();
+        let peer_id = peer.map(|p| p.to_string());
+        leptos::logging::log!("Sending SwitchBranch: {:?}", peer_id);
+        ws_for_branch.send(ClientMessage::SwitchBranch { peer_id });
     });
     
     let on_stats = Callback::new(move |s| set_stats.set(s));

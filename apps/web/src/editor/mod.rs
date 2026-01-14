@@ -13,6 +13,7 @@
 use leptos::prelude::*;
 use leptos::html::Div;
 use deve_core::models::DocId;
+use crate::hooks::use_core::CoreState;
 
 pub mod ffi;
 pub mod hook;
@@ -40,6 +41,18 @@ pub fn Editor(
     let local_version = state.local_version;
     let playback_version = state.playback_version;
     let content = state.content;
+    
+    // 获取 CoreState 用于 Spectator 模式
+    let core = expect_context::<CoreState>();
+    
+    // 监听 is_spectator 信号，切换编辑器只读状态
+    // 注意: 回放状态由 hook.rs 中的 Effect 处理，这里仅处理 spectator 变化
+    Effect::new(move |_| {
+        let spectator = core.is_spectator.get();
+        let is_pb = playback_version.get() < local_version.get_untracked();
+        let should_readonly = spectator || is_pb;
+        ffi::set_read_only(should_readonly);
+    });
     
     // 大纲状态
     let (show_outline, set_show_outline) = signal(true);

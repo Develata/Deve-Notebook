@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
-use deve_core::models::LedgerEntry;
+use deve_core::models::{LedgerEntry, PeerId};
 use crate::server::AppState;
 
 pub async fn handle_edit(
@@ -53,24 +53,51 @@ pub async fn handle_request_history(
      }
 }
 
+/// 打开文档
+/// 
+/// **参数**:
+/// - `active_branch`: 当前活动分支。None = 本地, Some = 影子库
 pub async fn handle_open_doc(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
     doc_id: deve_core::models::DocId,
+    active_branch: Option<&PeerId>,
 ) {
-    tracing::info!("OpenDoc Request for DocID: {}", doc_id);
+    tracing::info!("OpenDoc Request for DocID: {}, Branch: {:?}", doc_id, active_branch);
     
-    // [调和] 确保磁盘内容与 Ledger 一致
-    if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
-        tracing::error!("SyncManager reconcile failed: {:?}", e);
-    }
+    let (final_content, version) = match active_branch {
+        // 本地分支: 从本地 Ledger 读取
+        None => {
+            // [调和] 确保磁盘内容与 Ledger 一致
+            if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
+                tracing::error!("SyncManager reconcile failed: {:?}", e);
+            }
 
-    // 返回最新快照 (Source of Truth: Ledger)
-    let entries_with_seq = state.repo.get_local_ops(doc_id).unwrap_or_default();
-    let ops: Vec<deve_core::models::LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
-    let final_content = deve_core::state::reconstruct_content(&ops);
-    let version = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+            let entries_with_seq = state.repo.get_local_ops(doc_id).unwrap_or_default();
+            let ops: Vec<LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
+            let content = deve_core::state::reconstruct_content(&ops);
+            let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+            (content, ver)
+        }
+        // 影子分支: 从 Shadow DB 读取
+        Some(peer_id) => {
+            match state.repo.get_shadow_ops(peer_id, doc_id) {
+                Ok(entries_with_seq) => {
+                    let ops: Vec<LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
+                    let content = deve_core::state::reconstruct_content(&ops);
+                    let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                    (content, ver)
+                }
+                Err(e) => {
+                    tracing::error!("Failed to get shadow ops for {}: {:?}", peer_id, e);
+                    // 返回空内容
+                    (String::new(), 0)
+                }
+            }
+        }
+    };
     
     let snapshot = ServerMessage::Snapshot { doc_id, content: final_content, version };
     let _ = tx.send(snapshot);
 }
+

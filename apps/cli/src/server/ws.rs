@@ -37,6 +37,8 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     
     // Session State
     let mut authenticated_peer_id: Option<PeerId> = None;
+    // 活动分支: None = 本地 (Master), Some = 远程影子库
+    let mut active_branch: Option<PeerId> = None;
     
     // Subscribe to Broadcast
     let mut rx = state.tx.subscribe();
@@ -93,13 +95,20 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                          let _ = direct_tx.send(ServerMessage::Pong);
                      }
                      ClientMessage::Edit { doc_id, op, client_id } => {
-                         document::handle_edit(&state_clone, &tx, doc_id, op, client_id).await;
+                         // 拒绝 Shadow 分支的编辑请求
+                         if active_branch.is_some() {
+                             let _ = direct_tx.send(ServerMessage::EditRejected {
+                                 reason: "Cannot edit on shadow branch (read-only)".to_string(),
+                             });
+                         } else {
+                             document::handle_edit(&state_clone, &tx, doc_id, op, client_id).await;
+                         }
                      }
                      ClientMessage::RequestHistory { doc_id } => {
                          document::handle_request_history(&state_clone, &tx, doc_id).await;
                      }
                      ClientMessage::OpenDoc { doc_id } => {
-                         document::handle_open_doc(&state_clone, &tx, doc_id).await;
+                         document::handle_open_doc(&state_clone, &tx, doc_id, active_branch.as_ref()).await;
                      }
                      ClientMessage::ListDocs => {
                          system::handle_list_docs(&state_clone, &tx).await;
@@ -160,6 +169,15 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      // Branch Switcher messages
                      ClientMessage::ListShadows => {
                          system::handle_list_shadows(&state_clone, &tx).await;
+                     }
+                     ClientMessage::SwitchBranch { peer_id } => {
+                         // 更新会话活动分支
+                         active_branch = peer_id.clone().map(|id| PeerId::new(id));
+                         tracing::info!("Client switched to branch: {:?}", active_branch);
+                         let _ = direct_tx.send(ServerMessage::BranchSwitched {
+                             peer_id,
+                             success: true,
+                         });
                      }
                      // Source Control messages
                      ClientMessage::GetChanges => {

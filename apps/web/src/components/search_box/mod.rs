@@ -184,9 +184,8 @@ pub fn UnifiedSearch(
                             if branch == "Local (Master)" {
                                 core.set_active_repo.set(None);
                             } else {
-                                if let Ok(uuid) = branch.parse::<uuid::Uuid>() {
-                                    core.set_active_repo.set(Some(deve_core::models::PeerId(uuid.to_string())));
-                                }
+                                // Branch name is already the PeerId string
+                                core.set_active_repo.set(Some(deve_core::models::PeerId(branch.clone())));
                             }
                             set_show.set(false);
                         }
@@ -305,9 +304,8 @@ pub fn UnifiedSearch(
                                                                         if branch == "Local (Master)" {
                                                                             core_clone.set_active_repo.set(None);
                                                                         } else {
-                                                                            if let Ok(uuid) = branch.parse::<uuid::Uuid>() {
-                                                                                core_clone.set_active_repo.set(Some(deve_core::models::PeerId(uuid.to_string())));
-                                                                            }
+                                                                            // Branch name is already the PeerId string
+                                                                            core_clone.set_active_repo.set(Some(deve_core::models::PeerId(branch.clone())));
                                                                         }
                                                                         set_show.set(false);
                                                                     }

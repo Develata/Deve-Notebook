@@ -154,9 +154,11 @@ pub fn use_editor(
             set_is_playback
         );
         
-        // 强制同步
+        // 判断只读状态: 回放中 OR 旁观者模式
         let is_pb = ver < local;
-        set_read_only(is_pb);
+        let spectator = core.is_spectator.get_untracked();
+        let should_readonly = is_pb || spectator;
+        set_read_only(should_readonly);
     });
 
     let on_playback_change = Box::new(move |ver: u64| {
