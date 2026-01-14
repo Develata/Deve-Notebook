@@ -7,94 +7,168 @@
  * @param {string} docString - 文档全文
  * @returns {Array} - 返回范围对象数组 [{ type, from, to, contentFrom, contentTo }]
  */
-export function findMathRanges(docString) {
-  const mathRanges = [];
-  const regexAnyDollar = /\$+/g;
+/**
+ * 查找文档中的数学公式范围 (Robust GFM-aware Parser)
+ * 
+ * 遵循以下优先级 (Priority):
+ * 1. Fenced Code (```) & Inline Code (`) -> 忽略内部内容
+ * 2. Escaping (\) -> 忽略转义字符
+ * 3. Math ($$) -> Block
+ * 4. Math ($) -> Inline (Smart Boundary Check)
+ * 
+ * @param {string} doc - 文档全文
+ * @returns {Array} - 返回范围对象数组
+ */
+export function findMathRanges(doc) {
+  const ranges = [];
+  let i = 0;
+  const len = doc.length;
   
-  // 检查是否转义 (前面有奇数个反斜杠)
-  const isEscaped = (index) => {
-    let backslashes = 0;
-    let i = index - 1;
-    while (i >= 0 && docString[i] === "\\") {
-      backslashes++;
-      i--;
+  while (i < len) {
+    const char = doc[i];
+    
+    // 1. Escaping: 跳过转义字符 (例如 \$)
+    if (char === '\\') {
+      i += 2; 
+      continue;
     }
-    return backslashes % 2 === 1;
-  };
-
-  let match;
-  let tokens = [];
-
-  // 第一步：收集所有可能的定界符 token
-  while ((match = regexAnyDollar.exec(docString)) !== null) {
-    const val = match[0];
-    const index = match.index;
-
-    if (isEscaped(index)) continue;
-
-    if (val === "$$" || val === "$") {
-      tokens.push({ type: val, index });
+    
+    // 2. Fenced Code Block: ```
+    if (char === '`' && doc.startsWith('```', i)) {
+      // 查找代码块结束
+      const start = i;
+      i += 3;
+      const endMatch = doc.indexOf('```', i);
+      if (endMatch !== -1) {
+        i = endMatch + 3;
+      } else {
+        i = len; // 未闭合，跳到末尾
+      }
+      continue; 
     }
-  }
-
-  let mode = "NONE";
-  let startToken = null;
-
-  // 第二步：配对 token
-  for (let i = 0; i < tokens.length; i++) {
-    let t = tokens[i];
-
-    if (mode === "NONE") {
-      if (t.type === "$$") {
-        mode = "BLOCK";
-        startToken = t;
-      } else if (t.type === "$") {
-        mode = "INLINE";
-        startToken = t;
+    
+    // 3. Inline Code: `
+    if (char === '`') {
+      const start = i;
+      // 计算起始反引号数量 (Run Length)
+      let runLength = 0;
+      while (i + runLength < len && doc[i + runLength] === '`') {
+        runLength++;
       }
-    } else if (mode === "BLOCK") {
-      if (t.type === "$$") {
-        // 找到块级结束
-        mathRanges.push({ 
-            type: "BLOCK",
-            from: startToken.index, 
-            to: t.index + 2,
-            contentFrom: startToken.index + 2,
-            contentTo: t.index
-        });
-        mode = "NONE";
-        startToken = null;
+      
+      i += runLength;
+      
+      // 查找匹配的结束反引号串
+      let closed = false;
+      while (i < len) {
+        if (doc[i] === '`') {
+           // 检查是否是一串相同长度的反引号
+           let closeRun = 0;
+           while (i + closeRun < len && doc[i + closeRun] === '`') {
+             closeRun++;
+           }
+           
+           if (closeRun === runLength) {
+             i += closeRun;
+             closed = true;
+             break;
+           } else {
+             // 长度不匹配，继续向前
+             i += closeRun; 
+           }
+        } else {
+           i++;
+        }
       }
-    } else if (mode === "INLINE") {
-       // 行内公式不能包含双换行 (段落分隔)
-       let contentSoFar = docString.slice(startToken.index + 1, t.index);
-       if (contentSoFar.includes("\n\n")) {
-         mode = "NONE";
-         startToken = null;
-         i--; // 回退，重新评估当前 token
-         continue;
+      continue; // 无论是否闭合，都跳过已扫描部分
+    }
+    
+    // 4. Block Math: $$
+    // (注意: 必须在 check $ 之前)
+    if (char === '$' && doc.startsWith('$$', i)) {
+       const start = i;
+       i += 2; 
+       const endMatch = doc.indexOf('$$', i);
+       if (endMatch !== -1) {
+          ranges.push({
+             type: "BLOCK",
+             from: start,
+             to: endMatch + 2,
+             contentFrom: start + 2,
+             contentTo: endMatch
+          });
+          i = endMatch + 2;
+       } else {
+          // 未闭合，当作普通文本
+          i += 1;
        }
-
-       if (t.type === "$") {
-         // 找到行内结束
-         mathRanges.push({
+       continue;
+    }
+    
+    // 5. Inline Math: $
+    if (char === '$') {
+       // Smart Boundary Check (Start)
+       // 规则: $ 紧邻非空字符 (First char non-whitespace)
+       const nextChar = doc[i+1];
+       if (!nextChar || /\s/.test(nextChar)) {
+          i++; // 无效起始，跳过
+          continue; 
+       }
+       
+       const start = i;
+       i++; // 进入内容
+       
+       // 扫描结束符
+       let closeFound = -1;
+       let scanI = i;
+       
+       while (scanI < len) {
+          const c = doc[scanI];
+          
+          if (c === '\\') {
+             scanI += 2;
+             continue;
+          }
+          
+          if (c === '$') {
+             // 检查是否是 $$ (如果是 $$，说明不是行内公式结束，甚至可能是空行内公式 $$，但通常 $$ 优先被 Parse Block 捕获)
+             // 细则: 如果 Math Parser 遇到 $$，通常视为行内结束吗？或者 Block？
+             // 这里简化: 如果遇到 $，检查 Boundary
+             
+             // Smart Boundary Check (End)
+             // 规则: $ 前紧邻非空字符 (Last char non-whitespace)
+             const prevChar = doc[scanI - 1];
+             if (!/\s/.test(prevChar)) {
+                 closeFound = scanI;
+                 break;
+             }
+          }
+          
+          // 额外安全机制: 行内公式不能包含空行 (Blank Line)
+          if (c === '\n' && doc[scanI + 1] === '\n') {
+             break; // Abort
+          }
+          
+          scanI++;
+       }
+       
+       if (closeFound !== -1) {
+          ranges.push({
              type: "INLINE",
-             from: startToken.index,
-             to: t.index + 1,
-             contentFrom: startToken.index + 1,
-             contentTo: t.index
-         });
-         mode = "NONE";
-         startToken = null;
-       } else if (t.type === "$$") {
-         // 在行内模式遇到 $$，视为错误或重置，重新开始
-         mode = "NONE";
-         startToken = null;
-         i--;
-         continue;
+             from: start,
+             to: closeFound + 1,
+             contentFrom: start + 1,
+             contentTo: closeFound
+          });
+          i = closeFound + 1;
+       } else {
+          i++; // 未找到闭合
        }
+       continue;
     }
+    
+    i++;
   }
-
-  return mathRanges;
+  
+  return ranges;
 }

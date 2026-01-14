@@ -10,7 +10,7 @@ import {
   lineNumbers,
   highlightActiveLineGutter,
 } from "@codemirror/view";
-import { markdown } from "@codemirror/lang-markdown";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { GFM, Subscript, Superscript, Emoji } from "@lezer/markdown";
 import {
   defaultHighlightStyle,
@@ -19,11 +19,13 @@ import {
 } from "@codemirror/language";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 
+import { languages } from "@codemirror/language-data"; // [NEW] Import languages
 import { mathStateField } from "./extensions/math.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
 import { tableStateField } from "./extensions/table.js";
 import { imageStateField } from "./extensions/image.js"; 
 import { checkboxStateField } from "./extensions/checkbox_ext.js"; // [NEW] Checkbox StateField
+import { codeBlockHighlight } from "./extensions/code_block_highlight.js"; // [NEW] Code Block Highlight
 
 console.log("Modules Loaded via ES Imports in editor_adapter.js (v3 - ReadOnly Compartment)");
 console.log("GFM Extensions:", GFM);
@@ -68,13 +70,18 @@ export function initCodeMirror(element, onUpdate) {
         readOnlyCompartment.of(EditorState.readOnly.of(false)), // 默认可编辑
         EditorView.lineWrapping, 
         EditorView.lineWrapping, 
-        markdown({ extensions: [...GFM, Subscript, Superscript, Emoji] }),
+        markdown({ 
+            base: markdownLanguage,
+            codeLanguages: languages,
+            extensions: [...GFM, Subscript, Superscript, Emoji] 
+        }),
         hybridPlugin,     // 混合插件 (隐藏标记等)
         hybridPlugin,     // 混合插件 (隐藏标记等)
         mathStateField,   // 数学公式
         tableStateField,  // 表格
         imageStateField,  // 图片
-        checkboxStateField, // [NEW] 复选框
+        checkboxStateField, // 复选框
+        codeBlockHighlight, // [NEW] 代码块背景高亮
         EditorView.updateListener.of((v) => {
           // 内部检查: 显式的 isRemote 标志
           if (isRemote) return;
