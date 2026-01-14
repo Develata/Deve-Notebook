@@ -65,14 +65,18 @@ export const hybridPlugin = ViewPlugin.fromClass(
                   pos = line.to + 1;
               }
 
-              // 2. Hide First Delimiter (---)
+              // 2. Manage Delimiter Visibility
               // Only hide if cursor is NOT in the Frontmatter block
               const isCursorInFm = selection.head >= fm.from && selection.head <= fm.to;
               
               if (!isCursorInFm) {
-                  widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(0, 3)); 
-                  // 3. Hide Second Delimiter (---)
+                  // Inactive: Hide delimiters
+                  widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(fm.from, fm.from + 3)); 
                   widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(fm.contentTo, fm.contentTo + 3));
+              } else {
+                  // Active: Distinctly style them (ensure visibility)
+                  widgets.push(Decoration.mark({ class: "cm-frontmatter-delim" }).range(fm.from, fm.from + 3));
+                  widgets.push(Decoration.mark({ class: "cm-frontmatter-delim" }).range(fm.contentTo, fm.contentTo + 3));
               }
           }
       }

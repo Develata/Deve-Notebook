@@ -60,6 +60,11 @@
   color: #64748b;
 }
 
+.cm-frontmatter-delim {
+  color: #cbd5e1;
+  font-weight: bold;
+}
+
 /* Checkbox Widget */
 .cm-checkbox-widget {
   margin-right: 0.5em;
