@@ -31,6 +31,8 @@ pub fn Changes() -> impl IntoView {
 
         let path_for_stage = full_path.clone();
         let path_for_unstage = full_path.clone();
+        let path_for_open = full_path.clone();
+        let path_for_discard = full_path.clone();
         
         let (icon_char, color_cls) = match entry.status {
             ChangeStatus::Modified => ("M", "text-[#d7ba7d]"),
@@ -40,7 +42,7 @@ pub fn Changes() -> impl IntoView {
 
         view! {
             <div 
-                class="flex items-center px-4 py-0.5 hover:bg-[#2a2d2e] hover:text-white text-[13px] group cursor-pointer h-[22px] text-[#cccccc]"
+                class="flex items-center px-4 py-0.5 hover:bg-[#eff1f3] dark:hover:bg-[#37373d] text-[13px] group cursor-pointer h-[22px] text-[#333] dark:text-[#cccccc]"
                 on:click=move |_| {
                     if !is_staged {
                          core.on_get_doc_diff.run(full_path.clone());
@@ -57,11 +59,12 @@ pub fn Changes() -> impl IntoView {
                 </div>
                 
                 <div class="flex items-center gap-2 pl-2">
-                    <div class="hidden group-hover:flex items-center gap-1 mr-1">
+                    <div class="hidden group-hover:!flex items-center gap-0.5 mr-1">
                         {if is_staged {
+                            // Staged file: just Unstage button
                             view! {
                                 <button 
-                                    class="p-0.5 hover:bg-[#454545] rounded text-white"
+                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
                                     title="Unstage Changes"
                                     on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(path_for_unstage.clone()); }
                                 >
@@ -69,9 +72,27 @@ pub fn Changes() -> impl IntoView {
                                 </button>
                             }.into_any()
                         } else {
+                            // Unstaged file: Open, Discard, Stage buttons
                             view! {
+                                // Open File
                                 <button 
-                                    class="p-0.5 hover:bg-[#454545] rounded text-white"
+                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
+                                    title="Open File"
+                                    on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(path_for_open.clone()); }
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                </button>
+                                // Discard Changes
+                                <button 
+                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
+                                    title="Discard Changes"
+                                    on:click=move |ev| { ev.stop_propagation(); /* TODO: Discard single file */ }
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
+                                </button>
+                                // Stage Changes
+                                <button 
+                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
                                     title="Stage Changes"
                                     on:click=move |ev| { ev.stop_propagation(); core.on_stage_file.run(path_for_stage.clone()); }
                                 >
@@ -104,6 +125,7 @@ pub fn Changes() -> impl IntoView {
                         // Staged Section
                         {
                             let staged_list = staged.clone();
+                            let staged_list_for_action = staged.clone();
                             view! {
                                 <div>
                                     <div class="px-2 py-0.5 flex justify-between items-center group cursor-pointer hover:bg-[#e8e8e8] dark:hover:bg-[#2a2d2e]">
@@ -113,7 +135,25 @@ pub fn Changes() -> impl IntoView {
                                             </span>
                                             <span class="text-[11px] font-bold text-[#424242] dark:text-[#cccccc] uppercase">"暂存的更改"</span>
                                         </div>
-                                        <span class="bg-[#c4c4c4] dark:bg-[#454545] text-white dark:text-[#cccccc] text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{staged_count}</span>
+                                        
+                                        // Right Side: Actions + Badge
+                                        <div class="flex items-center gap-2">
+                                            // Action Buttons (Staged)
+                                            <div class="hidden group-hover:!flex items-center gap-1 text-[#333] dark:text-[#cccccc]" on:click=move |e| e.stop_propagation()>
+                                                <button 
+                                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded" 
+                                                    title="Unstage All Changes" 
+                                                    on:click=move |_| { 
+                                                        for entry in staged_list_for_action.clone() {
+                                                            core.on_unstage_file.run(entry.path);
+                                                        }
+                                                    }
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                </button>
+                                            </div>
+                                            <span class="bg-[#c4c4c4] dark:bg-[#454545] text-white dark:text-[#cccccc] text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{staged_count}</span>
+                                        </div>
                                     </div>
                                     <For
                                         each=move || staged_list.clone()
@@ -127,6 +167,7 @@ pub fn Changes() -> impl IntoView {
                         // Unstaged Section
                         {
                             let unstaged_list = unstaged.clone();
+                            let unstaged_list_for_action = unstaged.clone();
                             view! {
                                 <div>
                                     <div class="px-2 py-0.5 flex justify-between items-center group cursor-pointer hover:bg-[#e8e8e8] dark:hover:bg-[#2a2d2e]">
@@ -136,7 +177,34 @@ pub fn Changes() -> impl IntoView {
                                             </span>
                                             <span class="text-[11px] font-bold text-[#424242] dark:text-[#cccccc] uppercase">"更改"</span>
                                         </div>
-                                        <span class="bg-[#c4c4c4] dark:bg-[#454545] text-white dark:text-[#cccccc] text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{unstaged_count}</span>
+                                        
+                                        // Right Side: Actions + Badge
+                                        <div class="flex items-center gap-2">
+                                            // Action Buttons (Unstaged)
+                                            <div class="hidden group-hover:!flex items-center gap-1 text-[#333] dark:text-[#cccccc]" on:click=move |e| e.stop_propagation()>
+                                                // Open Changes (folder/diff icon)
+                                                <button class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded" title="Open Changes" on:click=move |_| { /* TODO: Open Changes View */ }>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                                </button>
+                                                // Discard All Changes (undo arrow)
+                                                <button class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded" title="Discard All Changes" on:click=move |_| { /* TODO: Discard All */ }>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
+                                                </button>
+                                                // Stage All Changes (+)
+                                                <button 
+                                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded" 
+                                                    title="Stage All Changes" 
+                                                    on:click=move |_| { 
+                                                        for entry in unstaged_list_for_action.clone() {
+                                                            core.on_stage_file.run(entry.path);
+                                                        }
+                                                    }
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                </button>
+                                            </div>
+                                            <span class="bg-[#c4c4c4] dark:bg-[#454545] text-white dark:text-[#cccccc] text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{unstaged_count}</span>
+                                        </div>
                                     </div>
                                     <For
                                         each=move || unstaged_list.clone()

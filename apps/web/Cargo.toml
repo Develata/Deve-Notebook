@@ -28,3 +28,4 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 uuid.workspace = true
 sublime_fuzzy = "0.7.0"
+leptos-use = "0.18.0"
