@@ -17,7 +17,7 @@ use web_sys::KeyboardEvent;
 
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_layout::use_layout;
-use crate::hooks::use_shortcuts::use_shortcuts;
+use crate::shortcuts::create_global_shortcut_handler;
 
 use crate::components::activity_bar::SidebarView;
 use crate::components::diff_view::DiffView;
@@ -72,13 +72,11 @@ fn AppContent() -> impl IntoView {
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
 
     // 4. 快捷键
-    let handle_keydown = use_shortcuts(
-        locale, 
+    let handle_keydown = create_global_shortcut_handler(
         show_search.into(), 
         set_show_search, 
         search_mode.into(),
         set_search_mode,
-        set_show_open_modal
     );
     
     // Bind shortcuts globally to window to override browser defaults (like Ctrl+P)

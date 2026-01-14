@@ -105,52 +105,21 @@ pub fn UnifiedSearch(
     let handle_keydown = move |ev: KeyboardEvent| {
         let key = ev.key();
         
-        // Stop all propagation to prevent editor from receiving keys
+        // 阻止事件冒泡，防止编辑器接收按键
         ev.stop_propagation();
         
-        // Smart Toggle Logic (replicating use_shortcuts logic because we stop propagation)
-        let is_ctrl = ev.ctrl_key() || ev.meta_key();
-        let is_shift = ev.shift_key();
-        let key_lower = key.to_lowercase();
+        // 调用专门的辅助函数处理 Ctrl+P/Shift+P/Escape
+        crate::shortcuts::global::handle_search_box_keydown(
+            &ev,
+            set_show,
+            query.into(),
+            set_query,
+            set_selected_index, // WriteSignal 直接传递
+            input_ref
+        );
         
-        if is_ctrl && key_lower == "p" {
-            ev.prevent_default();
-            ev.stop_propagation();
-
-            // Ctrl+Shift+P: Command Palette
-            if is_shift {
-                // If currently in Command mode (>), Close.
-                // Else, Switch to Command mode.
-                if query.get_untracked().starts_with('>') {
-                    set_show.set(false);
-                } else {
-                    set_query.set(">".to_string());
-                    // Reset selection
-                    set_selected_index.set(0); 
-                    // Refocus input just in case
-                    if let Some(el) = input_ref.get() { let _ = el.focus(); }
-                }
-            } 
-            // Ctrl+P: File Search
-            else {
-                // If currently in File mode (not > and not @), Close.
-                // Else, Switch to File mode (clear query).
-                let q = query.get_untracked();
-                let is_file_mode = !q.starts_with('>') && !q.starts_with('@');
-                
-                if is_file_mode {
-                    set_show.set(false);
-                } else {
-                    set_query.set(String::new());
-                    // Reset selection
-                    set_selected_index.set(0);
-                    // Refocus input just in case
-                    if let Some(el) = input_ref.get() { let _ = el.focus(); }
-                }
-            }
-            return;
-        }
-
+        if !show.get() { return; } // 如果关闭了，就不处理导航了
+        
         let count = providers_results.get().len();
         if count == 0 { return; }
         

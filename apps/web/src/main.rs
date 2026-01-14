@@ -17,6 +17,7 @@ mod api;
 mod components;
 mod i18n;
 mod hooks;
+mod shortcuts;
 use app::App;
 use leptos::prelude::*;
 
