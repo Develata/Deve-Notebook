@@ -34,16 +34,19 @@ pub fn render_overlay(
                 <div
                     class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
-                    on:keydown=move |ev| handle_keydown_closure.as_ref()(ev)
+                    on:keydown={
+                        let handle_keydown_closure = handle_keydown_closure.clone();
+                        move |ev| handle_keydown_closure(ev)
+                    }
                 >
                     {header(query, set_query, set_selected_index, placeholder_text, input_ref)}
                     {results_panel(
                         providers_results,
                         selected_index,
                         set_selected_index,
-                        active_index_closure,
+                        active_index_closure.clone(),
                         set_show,
-                        core,
+                        core.clone(),
                         locale,
                     )}
                     {footer()}

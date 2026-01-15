@@ -12,9 +12,9 @@ async function build() {
             minify: true,
             sourcemap: true,
             target: ['es2020'],
-            external: [], // Bundle everything
+            external: [], // Bundle everything, including mermaid
         });
-        console.log('Build complete: public/js/editor.bundle.js');
+        console.log('Build complete: js/editor.bundle.js');
     } catch (e) {
         console.error('Build failed:', e);
         process.exit(1);
