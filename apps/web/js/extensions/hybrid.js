@@ -99,14 +99,15 @@ export const hybridPlugin = ViewPlugin.fromClass(
             if (fm && node.from >= fm.from && node.to <= fm.to) return;
 
             // ---------------------------------------------------------
-            // 2. Syntax Hiding (Hiding Marks when not active)
+            // 2. Syntax Hiding (Hiding Marks and Syntax when not active)
             // ---------------------------------------------------------
-            // 隐藏标题的 # 符号 和 强调符号 * _ 和 引用符号 > 和 行内代码标记 ` 和 删除线标记 ~~
+            // 隐藏标题的 # 符号, 强调符号 * _, 引用符号 >, 代码标记 `, 删除线 ~~, 以及链接语法 [ ] ( )
             if (node.name === "HeaderMark" || 
                 node.name === "EmphasisMark" || 
                 node.name === "QuoteMark" || 
                 node.name === "CodeMark" || 
-                node.name === "StrikethroughMark") {  // [NEW] Added StrikethroughMark
+                node.name === "StrikethroughMark" ||
+                node.name === "LinkMark") {  // [NEW] Added LinkMark
                 
               const parent = node.node.parent;
               
@@ -121,42 +122,24 @@ export const hybridPlugin = ViewPlugin.fromClass(
               }
             }
             
-            // ---------------------------------------------------------
-            // 3. Manual Styling Takeover (Ensure consistent visual)
-            // ---------------------------------------------------------
-            
-            // Explicit Styling for Bold/Italic/Strikethrough
-            // logic: Only apply style if cursor is NOT inside (Source Mode vs Preview Mode toggle)
-            if (node.name === "StrongEmphasis") {
-                 if (!isCursorIn(node.from, node.to)) {
-                    widgets.push(Decoration.mark({ class: "cm-strong" }).range(node.from, node.to));
-                 }
-            }
-            if (node.name === "Emphasis") {
-                 if (!isCursorIn(node.from, node.to)) {
-                    widgets.push(Decoration.mark({ class: "cm-em" }).range(node.from, node.to));
-                 }
-            }
-            if (node.name === "Strikethrough") {
-                 if (!isCursorIn(node.from, node.to)) {
-                    widgets.push(Decoration.mark({ class: "cm-strikethrough" }).range(node.from, node.to));
-                 }
-            }
-            
-            // Explicit Styling for Headings
-            if (node.name === "ATXHeading1") widgets.push(Decoration.mark({ class: "cm-h1" }).range(node.from, node.to));
-            if (node.name === "ATXHeading2") widgets.push(Decoration.mark({ class: "cm-h2" }).range(node.from, node.to));
-            if (node.name === "ATXHeading3") widgets.push(Decoration.mark({ class: "cm-h3" }).range(node.from, node.to));
-            if (node.name === "ATXHeading4") widgets.push(Decoration.mark({ class: "cm-h4" }).range(node.from, node.to));
-            if (node.name === "ATXHeading5") widgets.push(Decoration.mark({ class: "cm-h5" }).range(node.from, node.to));
-            if (node.name === "ATXHeading6") widgets.push(Decoration.mark({ class: "cm-h6" }).range(node.from, node.to));
-
             // Explicit Styling for Links
             if (node.name === "Link") {
+                // Keep the base styling (color/underline) for the whole link range
                 widgets.push(Decoration.mark({ class: "cm-link" }).range(node.from, node.to));
             }
             if (node.name === "URL") {
-                 widgets.push(Decoration.mark({ class: "cm-url" }).range(node.from, node.to));
+                 // Hybrid Logic for URL: Hide if cursor is OUTSIDE the Link
+                 const parent = node.node.parent;
+                 if (parent && parent.name === "Link") {
+                     if (!isCursorIn(parent.from, parent.to)) {
+                         widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
+                     } else {
+                         widgets.push(Decoration.mark({ class: "cm-url" }).range(node.from, node.to));
+                     }
+                 } else {
+                     // Standalone URL or other context (e.g. image), default to showing style
+                     widgets.push(Decoration.mark({ class: "cm-url" }).range(node.from, node.to));
+                 }
             }
             
             // Explicit Styling for Blockquotes

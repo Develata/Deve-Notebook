@@ -33,6 +33,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding-bottom: 5rem;
+  overflow-wrap: anywhere; /* [FIX] Force break long words */
 } /* Padding for playback */
 .cm-syntax-hidden {
   display: none !important;
