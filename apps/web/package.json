@@ -24,6 +24,10 @@
     "style-mod": "^4.1.3",
     "w3c-keyname": "^2.2.8"
   },
+  "scripts": {
+    "build": "node builder.js",
+    "postinstall": "npm run build"
+  },
   "devDependencies": {
     "esbuild": "^0.27.2"
   }
