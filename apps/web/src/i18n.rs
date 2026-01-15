@@ -8,7 +8,6 @@
 //! - `Locale`: 语言枚举 (En, Zh)。
 //! - `t`: 包含应用程序各部分的翻译模块 (hook, header, sidebar, settings, etc.)。
 
-use leptos::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Locale {

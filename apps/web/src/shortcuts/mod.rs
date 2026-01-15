@@ -15,6 +15,4 @@ pub mod config;
 pub mod global;
 
 // 重新导出常用类型
-pub use types::{KeyCombo, Shortcut, ShortcutId};
-pub use registry::ShortcutRegistry;
 pub use global::create_global_shortcut_handler;

@@ -11,9 +11,7 @@
 
 use crate::editor::Editor;
 use leptos::prelude::*;
-use deve_core::models::DocId;
 use crate::i18n::Locale;
-use web_sys::KeyboardEvent;
 
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_layout::use_layout;
@@ -49,7 +47,7 @@ pub fn App() -> impl IntoView {
 /// 管理全局 UI 状态 (命令面板, 设置) 并与核心逻辑 (`use_core`) 集成。
 #[component]
 fn AppContent() -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let _locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     // 1. 核心状态 (全局逻辑)
     let core = use_core();
@@ -68,7 +66,7 @@ fn AppContent() -> impl IntoView {
     });
 
     let (show_settings, set_show_settings) = signal(false);
-    let (show_open_modal, set_show_open_modal) = signal(false);
+    let (_show_open_modal, _set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
 
     // 4. 快捷键
@@ -102,7 +100,7 @@ fn AppContent() -> impl IntoView {
     let docs = core.docs;
     let on_select = core.on_doc_select;
     let on_create = core.on_doc_create;
-    let on_open_confirm = Callback::new(move |path: String| {
+    let _on_open_confirm = Callback::new(move |path: String| {
         let normalized = path.replace('\\', "/");
         let target = if normalized.ends_with(".md") { normalized.clone() } else { format!("{}.md", normalized) };
         

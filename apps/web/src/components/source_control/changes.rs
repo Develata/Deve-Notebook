@@ -32,7 +32,7 @@ pub fn Changes() -> impl IntoView {
         let path_for_stage = full_path.clone();
         let path_for_unstage = full_path.clone();
         let path_for_open = full_path.clone();
-        let path_for_discard = full_path.clone();
+        let _path_for_discard = full_path.clone();
         
         let (icon_char, color_cls) = match entry.status {
             ChangeStatus::Modified => ("M", "text-[#d7ba7d]"),
