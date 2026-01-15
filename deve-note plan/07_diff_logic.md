@@ -1,28 +1,57 @@
 # 07_diff_logic.md - "Git" Diff 篇 (Diff Logic)
 
-本章阐述系统核心的差异比对、和解与合并逻辑。注意区分 **Internal Diff**（P2P 核心逻辑） 与 **Git CLI**（外部插件逻辑）。
+> [!IMPORTANT]
+> **Scope Constraint (作用域约束)**: 本章所述的 Diff 与 Merge 逻辑 **仅适用于同一逻辑仓库 (Same Logical Repo) 下的不同分支**。
+> *   **Identity Check**: 系统判定两个分支是否属于同一 Repo 的唯一标准是 **RepoUUID** (或 Logical URL Hash)，**绝非** 文件名 (RepoName)。
+> *   **Strict Prohibition**: 系统 **严禁** 跨仓库 (Cross-Repo) 的自动化合并 (e.g., `wiki.redb` merge into `blog.redb` where UUIDs differ is undefined behavior)。
+
+## 核心算法 (Core Algorithms)
+
+*   **Text Diff**: 采用 **Myers Algorithm** (with linear space refinement)。用于计算文本文件的差异 (Patch Generation)。
+*   **Structural Merge**: 采用 **3-Way Merge** 策略。
+    *   **Base**: 两个分支的最近共同祖先 (LCA - Lowest Common Ancestor)。
+    *   **Left**: 本地当前状态 (Local Branch)。
+    *   **Right**: 远端传入状态 (Remote Branch)。
 
 ## 和解策略 (Reconciliation Strategy)
 
-* **Store C -> Store B (Remote Merge)**：
-    *   **Conflict Handling**：Manual Mode 下检测冲突 MUST 报错并强制手动解决。
-* **Store A -> Store B (Local Watcher)**：
-    *   Debounce -> Inode Check -> Append Ops。
-    *   **Patch Semantics**：外部编辑器对 Vault 的修改被视为一次 **"Patch"**（补丁）。核心 **MUST** 将其通过 Diff 算法转化为 Ops 合并入 Ledger，而 **MUST NOT** 简单地以文件内容覆盖账本。
+*   **Store C -> Store B (Remote Merge)**：
+    *   **Auto Mode (CRDT)**: 利用 Loro 的 Op-based Merge 自动解决非冲突变更。
+    *   **Manual Mode (Git-style)**: 若检测到同一文本块 (Hunk) 存在竞争性修改，标记为 **Conflict**，必须人工介入。
+*   **Store A -> Store B (Local Watcher)**：
+    *   **Mechanism**: Watcher 监测到文件修改 -> 计算 $Diff(Content_{disk}, Content_{ledger})$ -> 生成 Ops 追加到 Ledger。
+    *   **Anti-Thrashing**: 必须实现 300ms+ 防抖 (Debounce) 和 Hash 校验，防止循环触发。
 
 ## 合并流程 (Merging Flow)
 
-### P2P 分支合并 (The P2P Flow)
-1.  **触发方式**: 在 Source Control View 中点击 "Merge Peer-iPhone into Local"，或使用命令。
-2.  **模式行为**:
-    *   **Auto Mode**: 自动执行 CRDT Merge。
-    *   **Manual Mode**: 显示 Diff View (类似 VS Code 合并编辑器)。
-        *   有冲突 -> 用户选择保留哪个版本。
-        *   无冲突 -> 直接合并。
-3.  **结果**: Store B 更新 -> Store A 同步更新。
+### 1. The 3-Way Merge Process
+当用户执行 "Merge Peer-B into Local" 时：
+1.  **LCA Calculation**: 系统根据 Vector Clock 回溯找到 Base Snapshot。
+2.  **Diff Generation**:
+    *   $Diff_{local} = Base \to Local$
+    *   $Diff_{remote} = Base \to Remote$
+3.  **Conflict Detection**:
+    *   若 $Diff_{local}$ 和 $Diff_{remote}$ 修改了不重叠的区域 -> **Auto Merge**。
+    *   若修改了同一区域 -> **Conflict State** -> 暂停并弹出 UI。
 
-## 差异可视化
+### 2. Conflict Resolution UI (冲突解决界面)
+*   **Layout**: **Side-by-Side** (Visual Studio Code 风格)。
+    *   **Left Pane**: Current (Local).
+    *   **Right Pane**: Incoming (Remote).
+    *   **Bottom Pane**: Result (Preview).
+*   **Actions**:
+    *   `Accept Current` (保留本地)。
+    *   `Accept Incoming` (采用远端)。
+    *   `Accept Both` (同时保留，上下排列)。
+*   **Scrubbing**: 支持逐行/逐块 (Hunk) 处理。
+
+## 差异可视化 (Diff Visualization)
 *   前端需提供 **Diff View**，用于展示 Local 与 Peer 之间的变更，支持 Side-by-Side 对比。
+*   **Gutter Indicators**: 编辑器左侧槽显示变更状态 (相对于 Base)。
+    *   **Green**: Added.
+    *   **Red**: Deleted (Triangles).
+    *   **Blue**: Modified.
+*   **Inline Diff**: 编辑时即时计算与已提交状态的差异。
 
 ## 本章相关命令
 
@@ -30,4 +59,6 @@
 
 ## 本章相关配置
 
-*   无。
+*   `diff.merge_strategy`: `manual` (Default, 推荐) | `auto` (CRDT优先)。
+    *   **manual**: 总是弹出 Diff View 供用户确认，除非差异微小且确信无冲突。
+    *   **auto**: 仅在检测到 Structural Conflict 时才弹出，其余自动通过。

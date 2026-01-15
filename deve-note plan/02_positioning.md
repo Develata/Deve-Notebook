@@ -1,4 +1,4 @@
-# 02_positioning.md - 项目定位篇 (Project Positioning)
+# 02_positioning.md - 项目定位与设计篇 (Project Positioning)
 
 ## 版本与状态 (Meta)
 
@@ -29,20 +29,32 @@
 
 ### Core MUST（核心必须）
 
-* 只提供“登录界面 + **Workbench 布局 (Activity Bar/Side Bar)** + **Command Palette** + Markdown 撰写体验（含 TeX 公式渲染）”的最小闭环。
-* 维护 Ledger/Vault 的一致性闭环：写入、同步、和解、冲突处理、可恢复性与可观测性。
-* 提供稳定的 Host Functions、事件总线、作业队列与 Capability 校验，用于承载插件扩展。
-* 在非linux端使用时，先将命令和路径转化为 linux 命令与路径，再按照原定linux程序进行操作。
-* **Cross-Platform Normalization (跨平台规范化)**：
-    *   **MUST Form-First**: 所有输入转为 Linux 风格路径。
-    *   **Shell Adapter**: OS API 调用前还原为原生格式。
-* **Code Modularity & Documentation (模块化与文档铁律)**：所有代码文件 **MUST** 保持高度模块化（单一职责）；文件头部 **MUST** 包含中文注释块，明确说明：(1) 本文件的架构作用；(2) 核心功能清单；(3) 是否属于核心必选路径 (Core MUST) 或可选扩展 (Optional)。
+*   **Minimal Loop (最小闭环)**: 仅提供以下核心模块，其他均为 Extension：
+    *   **Authentication**: 登录与身份验证接口。
+    *   **Workbench**: 标准布局容器 (Activity Bar + Side Bar + Editor + Panel)。
+    *   **Command Palette**: 全局指令系统。
+    *   **Editor**: Markdown 编辑器（集成 TeX 公式渲染）。
+*   **Ledger Consistency (账本一致性)**: 核心 **MUST** 维护 Ledger 与 Vault 的一致性，覆盖写入 (Write)、同步 (Sync)、和解 (Reconciliation)、冲突处理 (Conflict Resolution) 及可恢复性。
+*   **Extensibility Host**: 提供稳定的 Host Functions、Event Bus、Job Queue 与 Capability 校验机制。
+*   **Linux Path Normalization (Linux 路径标准化)**:
+    *   **Input Handling**: 非 Linux 平台接收到的任何路径输入 **MUST** 在第一时间转换为 Linux 风格路径（Forward Slash `/`）。
+    *   **Execution**: 内部逻辑与命令执行 **MUST** 仅针对 Linux 路径格式编写。
+    *   **Adapter**: 仅在最终调用 OS API 时，通过 Adapter 还原为平台原生格式。
+*   **Code Modularity & Documentation (模块化与文档铁律)**：所有代码文件 **MUST** 保持高度模块化（单一职责）；文件头部 **MUST** 包含中文注释块，明确说明：(1) 本文件的架构作用；(2) 核心功能清单；(3) 是否属于核心必选路径 (Core MUST) 或可选扩展 (Optional)。
+*   **UUID-First Retrieval (UUID 优先核心约束)**:
+    *   **Rule**: 后端对于任意 File/Folder/Repo 的操作，**MUST** 仅通过 UUID 完成，严禁直接使用 File Path 作为主键。
+    *   **Resolution Flow**: 前端传递 `Name` -> 后端查询映射表 (`Name` -> `UUID`) -> 执行业务逻辑。
+    *   **Rationale**: 确保路径变更（重命名/移动）不破坏引用一致性。
+*   **Data Sovereignty (数据主权)**:
+    *   **Repo Instance = File**: 明确 Repo Instance 为 `.redb` 文件。
+    *   **Branch = Folder (Identity)**: 明确 Branch 为承载 Repo Instances 的文件夹 (Peer Identity)。
+    *   **Constraint**: 系统 **MUST NOT** 混用 Branch 与 Repo 概念。
 
 ### Core MUST NOT（核心禁止）
 
-* 不内置任何重能力为默认必选路径：AI、全文索引、计算/执行型代码块、批量导入导出管线、图像处理、复杂渲染/排版等。
-* 不让任何重任务阻塞交互：核心 UI 路径必须恒轻；重任务必须走作业队列并可取消/可降级。
-* 不引入私有格式污染导出：对用户可见的文本投影必须保持标准 Markdown 语义。
+*   **No Heavyweight Defaults (无默认重能力)**: 核心 **MUST NOT** 内置以下能力作为必选路径：AI 推理、Full-Text Search (全文索引)、Code Execution (代码块执行)、Batch Pipeline (批量管线)、Image Processing (图像处理)、Advanced Layout (复杂排版)。
+*   **Non-Blocking Interaction (非阻塞交互)**: 核心 UI 线程 **MUST** 保持轻量。耗时操作 (Heavy Tasks) **MUST** 提交至 Job Queue，并支持 Cancel/Degrade (取消/降级)。
+*   **No Proprietary Format (无私有格式)**: Projection 层（用户对于 Vault 的可见视图）**MUST NOT** 引入破坏标准 Markdown 语义的私有语法。
 * **Ignored Files Strategy (忽略策略)**：对于 Vault 中无法解析或过大的非 Markdown/非 Asset 文件（如编译产物、系统临时文件），核心 **MUST** 依据 `.deveignore` 或内置规则直接忽略，**MUST NOT** 尝试将其摄入 Ledger，避免核心膨胀或阻塞。
 
 ### Plugin MAY（插件可选）

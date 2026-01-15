@@ -2,21 +2,24 @@
 
 ## 双引擎插件运行时 (Dual-Engine Plugin Runtime)
 
-### 1. Engine A: Wasm Runtime (轻量引擎)
-*   **技术栈**：**Rhai** (脚本) 或 **Extism** (Wasm)。
-*   **适用场景**：UI 组件扩展、字符串处理。
-*   **约束**：严格沙箱。
+### 1. Engine A: Application Runtime (轻量级/嵌入式)
+此层级的插件直接运行在宿主进程内（或其 Webview 中），负责 UI 扩展和数据处理。
+*   **Dual-Layer Strategy (双层架构)**:
+    1.  **Scripting Layer (Rhai)**:
+        *   **用途**: 轻量逻辑 (e.g., 自定义日期格式化, 简单的保存钩子).
+        *   **优势**: 零编译，直接修改脚本即可生效，Rust 原生嵌入。
+    2.  **Binary Layer (WASM / Extism)**:
+        *   **用途**: 重型逻辑 (e.g., 自定义 Linter, AI Agent SDK).
+        *   **优势**: 高性能，多语言支持 (Rust/Go/JS -> WASM)，强沙箱隔离。
 
-### 2. Podman/Docker (计算引擎)
-*   **适用场景**：**可复现的科学计算**、Python/R 代码块。
-*   **技术栈**：**Podman (Rootless)** + **OCI Containers**。
-*   **Web 端行为**：Web 端请求执行代码块时，通过 WebSocket 转发给 **Server** 执行。
-*   **安全 (Security Focus)**：
-    *   **Anti-Injection (防注入)**: 严禁直接 `eval`。所有代码执行**必须**通过外置插件 (`Podman`) 在隔离容器中运行。
-    *   **Rootless**: 默认非特权模式运行。
-    *   **Network**: 默认无网络访问 (No Net)。
-    *   **Volume**: 默认只读挂载 (Read-only Volume)。
-*   **Workflow (工作流)**: `Frontmatter defined runtime` -> `Run` -> `Start Ephemeral Container` -> `Inject Code` -> `Capture Output` -> `Destroy`.
+### 2. Engine B: Calculation Runtime (计算引擎)
+此层级用于运行不可信的、需要完整 OS 环境的代码块 (e.g., Python Notebook, R).
+*   **核心技术**: **Podman (Rootless)** + **OCI Containers**.
+*   **Web 端行为**: Web 前端无法直接通过 WASM 调用 Podman，**MUST** 通过 WebSocket 请求后端完成执行 (Remote Execution)。
+*   **Security (安全沙箱)**:
+    *   **No Root**: 强制使用 Rootless 容器。
+    *   **No Net**: 默认禁止网络，除非用户显式授权。
+    *   **Ephemeral**: 用完即焚 (One-off containers)。
 
 ### 3. 通用插件协议 (Plugin Protocol)
 *   **ABI Lifecycle**: Manifest -> Install -> Activate -> Events.
@@ -24,9 +27,11 @@
 *   **RPC Bridge**: 前端 `client.call` -> WebSocket -> 后端插件。
 *   **Resource Quotas**: CPU/Mem/Timeout 可配。
 
-### 4. AI 辅助 (AI Assistance)
-*   **AI 抽象层**：Provider-agnostic 接口，允许插件注入不同模型提供商。
-*   **Chat 界面**：支持在 Side Bar 注入 Copilot Style 的对话界面。
+### 4. AI Integration (AI 插件)
+系统预留了专门的 `AI Chat Slot` (UI Column 5)，但不内置任何具体模型，全靠插件驱动。
+*   **Provider Independent**: 官方提供标准 `AI_Provider_Trait` (WASM ABI)，社区可开发 `OpenAI Plugin`, `Ollama Plugin` 等。
+*   **Context Safety**: 插件读取用户选中的代码上下文 **MUST** 经过用户确认 (或配置白名单)。
+*   **Chat 界面**: 插件通过标准协议向 UI 渲染 Markdown 消息流。
 *   **安全**：访问网络/文件必须显式授权 Capability。
 *   **隐私 (Privacy)**：默认关闭遥测 (Telemetry Off by Default).
 

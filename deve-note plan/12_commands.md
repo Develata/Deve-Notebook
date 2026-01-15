@@ -12,8 +12,9 @@
 ## Command Palette Commands (命令面板)
 
 *   **Global Shortcuts**:
-    *   `Cmd+K` / `Ctrl+K`: 呼出 Command Palette (指令导航)。
+    *   `Cmd+Shift+P` / `Ctrl+Shift+P`: 呼出 Command Palette (指令导航)。
     *   `Cmd+P` / `Ctrl+P`: 呼出 Quick Open (文件跳转)。
+    *   `Cmd+Shift+K` / `Ctrl+Shift+K`: 呼出 branch 切换。
 
 *   **Git / Version Control**:
     *   `Git: Sync`: 同步 (Pull & Push).

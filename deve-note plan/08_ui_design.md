@@ -10,24 +10,84 @@
 	* **L4 (Floating)**：`Cmd+K` 命令面板和悬浮工具栏，按需出现。
 * **键盘优先 (Keyboard First)**：所有 UI 操作必须有快捷键；模仿 Vim/VS Code/Nano 逻辑。
 
-### Workbench Layout (工作台布局)
-应用必须严格遵循 **VS Code Workbench** 标准网格布局：
-*   **Activity Bar**: 最左侧固定宽度列。图标垂直排列，点击切换侧边栏内容。
-*   **Primary Side Bar**: 紧邻 Activity Bar，显示 Explorer / Search / Source Control 等视图。
-*   **Editor Group**: 占据中心区域，支持多标签/分屏。
-*   **Status Bar**: 底部信息条。
-*   **Panel**: 底部可折叠区域 (日志/终端)。
+### Workbench Layout (Cursor-Style)
+应用采用类似 Cursor 的现代化布局，最大支持 **5列并排 (5-Column Grid)**，顶部为全局标题栏，底部为独立状态栏。
+
+#### Layout Visualization (布局模拟)
+
+**1. Title Bar (Global Header)**
+| Section    | Content (Flex Layout)                                   |
+| :--------- | :------------------------------------------------------ |
+| **Left**   | **Logo**: `Deve-Note` `[Badge: Connected]`              |
+| **Center** | *(Empty / Drag Region)*                                 |
+| **Right**  | `[Home 🏠]` `[Toggle Sidebar 🗖]` `[Terminal/Command >_]` |
+
+**2. Floating Overlays (Unified Search Modal)**
+*   **Component**: 一个统一的模态搜索组件 (Unified Search Box)，复用于三种核心场景。
+*   **Modes**:
+    *   **Command Palette** (`>_`): `Cmd+Shift+P` / `Ctrl+Shift+P` (Prefix: `>`)
+    *   **Quick Open** (`🔍`): `Cmd+P` / `Ctrl+P` (Prefix: None)
+    *   **Branch Switcher** (`🌿`): `Cmd+Shift+K` / `Ctrl+Shift+K` (Prefix: `@` or custom UI)
+
+*   **Smart Toggle Logic (智能切换逻辑)**:
+    系统 **MUST** 根据当前状态判断快捷键行为：
+    1.  **If Hidden**: 唤出搜索框，进入对应模式，指针锁定输入栏。
+    2.  **If Visible & Mode Matches**: **关闭** 搜索框 (Toggle Off)。
+    3.  **If Visible & Mode Differs**: **立即切换** 到新快捷键对应的模式 (Context Switch)，保持输入焦点。
+
+*   **Focus Restoration Rule (焦点还原)**:
+    当搜索框关闭时：
+    1.  **If Action Taken** (e.g., 打开了新文件/切换了分支/执行了命令): 焦点移至 Editor 的默认位置或新内容的起始位置。
+    2.  **If Cancelled** (无变化): 焦点 **MUST** 还原到唤出前的 **精确位置** (Line & Column)，确保用户心流不被打断。
+
+**3. Main Grid (5 Columns)**
+| Layer      | Col 1 (Resizable)       | Col 2 (Fixed/Ratio) | Col 3 (Fixed/Ratio) | Col 4 (Fixed)              | Col 5 (Resizable) |
+| :--------- | :---------------------- | :------------------ | :------------------ | :------------------------- | :---------------- |
+| **Header** | **Primary Sidebar**     | **Diff Old (RO)**   | **Diff New (RW)**   | **Outline**                | **AI Chat**       |
+| **Top**    | `[Explorer][Search]`    | `Filename (Left)`   | `Filename (Right)`  | `Filter...`                | `Model: GPT-4`    |
+| **Body**   | `> src`<br>`  > sub.rs` | `2 -  old()`        | `2 +  new()`        | `H1 Title`<br>`  $E=mc^2$` | `User: Hi`        |
+
+#### Status Bar Layout (独立的底部通栏)
+状态栏 **MUST NOT** 遵循上方的分列网格，而是 **MUST** 采用 Flex 布局（左/右对齐）：
+
+| Section         | Content (Left to Right)                             |
+| :-------------- | :-------------------------------------------------- |
+| **Left Group**  | `[Remote: iPad]` `[Branch: main*]` `[Sync: 🔄]`      |
+| **Right Group** | `[Spectator: READ-ONLY]` `[UTF-8]` `[Ln 12, Col 5]` |
+
+*   **Column 1: Primary Side Bar (主要侧边栏)**
+    *   **Position**: 最左侧。
+    *   **Structure**: 顶部 **MUST** 包含 **Activity Tabs** (图标水平排列)，下方为具体视图内容。
+    *   **Behavior**: **MUST** 支持拖拽调整宽度，**MUST** 支持折叠。
+*   **Column 2 & 3: Main Editor Area (主编辑区)**
+    *   **Single Mode**: 只有一列编辑器。
+    *   **Diff Mode**: 分裂为两列 (`Diff Old` | `Diff New`)。
+        *   **Left (Old)**: 只读 (Read-Only)。
+        *   **Right (New)**: 可读写 (Writable)。
+        *   **Behavior**: 两列 **MUST** 保持行对齐 (Line Alignment) 并同步滚动 (Sync Scrolling)。
+*   **Column 4: Outline Panel (大纲栏)**
+    *   **Position**: 紧邻编辑器右侧。
+    *   **Content**: **MUST** 仅渲染纯文本与 Inline Math。**MUST NOT** 渲染 Block Math 或其他富文本格式。
+    *   **Trigger (Toggle)**: **MUST** 使用 **Editor Overlay Button** (悬浮按钮)。
+        *   位置：主编辑器右上角 (Top-Right Corner)，滚动条内侧。
+        *   图标：Book Icon (📖)。
+        *   行为：点击切换大纲栏的展开/折叠。
+    *   **Behavior (Fixed)**: 宽度 **MUST** 固定 (Fixed Width, e.g., 260px)，**MUST NOT** 允许拖拽调整。
+*   **Column 5: AI Agent Chat (AI 助手)**
+    *   **Position**: 最右侧 (Far Right)。
+    *   **Behavior**: **MUST** 支持拖拽调整宽度，默认隐藏 (Collapsed)。
+*   **Resizability Note**: 除 Diff 视图内部比例可能锁定外，Sidebar 和 AI Chat **MUST** 支持用户拖拽边缘调整宽度。Outline **MUST** 固定宽度。
 
 ### Detailed View Specifications (视图详情)
-*   **Source Control View**:
-    *   **Structure**: 顶部多行 Input Box (Commit Message) -> Repositories List -> Staged/Changes Groups -> Commit Button。
-    *   **History**: 包含 Time Travel Slider (热力图/历史回放)。
-*   **Status Bar**:
-    *   **Mandatory Items**: Remote Indicator, **Branch Name**, Sync Status (Left); Language, Cursor (Right).
-    *   **Colors**: Default (Blue/Purple), **Spectator** (Orange + Watermark).
-*   **Auxiliary Slots (Secondary Side Bar)**:
-    *   **AI Chat**: 默认右侧，Copilot 风格。
-    *   **Outline**: 目录大纲。
+*   **Title Bar (顶部标题栏)**:
+    *   **Style**: 极简风格 (Minimalist).
+    *   **Content**: 左侧 **MUST** 仅显示 App Name + Connection Status；右侧 **MUST** 显示核心导航图标。
+    *   **Interaction**: 顶部 **MUST NOT** 包含输入框。点击 `>_` 图标或快捷键 **MUST** 唤起 **悬浮搜索框 (Floating Modal)**。
+*   **Unified Search Box (统一搜索框)**:
+    *   **Visual**: 屏幕中上方弹出的模态框 (Centered Modal).
+    *   **Structure**: `[Icon + Input Field]` -> `[Scrollable List]` -> `[Footer Hints]`.
+    *   **Shadow**: **MUST** 有明显的 Drop Shadow 以区分层级。
+    *   **Modes**: 支持 `Command`, `File`, `Branch` 三种模式的UI复用。
 
 ### Spectator Mode Visuals (旁观者视觉)
 *   **Watermark**: 编辑器背景增加**灰色/斜纹水印**。
@@ -77,10 +137,15 @@
 
 ## 本章相关命令
 
-*   `Cmd+K` / `Ctrl+K`: 呼出 Command Palette。
+*   `Cmd+Shift+P` / `Ctrl+Shift+P`: 呼出 Command Palette。
 *   `Cmd+P` / `Ctrl+P`: 呼出 Quick Open (文件跳转)。
+*   `Cmd+Shift+K` / `Ctrl+Shift+K`: 呼出 Branch Switcher (分支切换)。
+*   `Cmd+Shift+O` / `Ctrl+Shift+O`: Toggle Outline (切换大纲栏)。
 
 ## 本章相关配置
 
 *   `ui.recent_commands_count`: Command Palette 显示的最近命令数量 (Default: 3).
 *   `ui.recent_docs_count`: Quick Open 显示的最近文件数量 (Default: 10).
+*   `ui.sidebar_visible`: 是否显示左侧主侧边栏 (Default: true).
+*   `ui.statusbar_visible`: 是否显示底部状态栏 (Default: true).
+*   `ui.outline_visible`: 是否显示右侧大纲栏 (Default: true).

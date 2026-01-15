@@ -2,23 +2,22 @@
 
 ## 技术栈清单 (The Full Stack)
 
-| 层次          | 核心技术                    | 选型理由                 |
-| :------------ | :-------------------------- | :----------------------- |
-| **语言**      | Rust (2024)                 | 全栈统一。               |
-| **前端框架**  | **Leptos v0.7**             | 信号驱动，性能极致。     |
-| **UI 组件**   | **Tailwind CSS**            | 原子化 CSS。             |
-| **国际化**    | **leptos_i18n**             | 编译时校验。             |
-| **编辑器**    | **CodeMirror 6 / Milkdown** | 默认轻核心，可选重扩展。 |
-| **图标库**    | **Lucide Icons**            | 统一 SVG。               |
-| **图谱渲染**  | **Pixi.js / Cosmic-Graph**  | WebGL 加速。             |
-| **存储**      | **Redb/Sled**               | 嵌入式 DB。              |
-| **搜索**      | **Tantivy**                 | 全文检索（可选）。       |
-| **同步/流控** | **Axum + Tower**            | 背压、限流。             |
-| **和解**      | **Notify + Dissimilar**     | 监听与 Diff。            |
-| **构建**      | **Tauri v2**                | 跨平台外壳。             |
-| **插件**      | **Rhai + Extism**           | Wasm/脚本引擎。          |
-
-    | **插件**      | **Rhai + Extism**           | Wasm/脚本引擎。          |
+| **Layer**    | **Technology**                        | **Selection Reasoning**             |
+| :----------- | :------------------------------------ | :---------------------------------- |
+| **Language** | Rust (2024)                           | 全栈统一。                          |
+| **Frontend** | **Leptos v0.7**                       | 信号驱动 (Signals)，性能极致。      |
+| **UI**       | **Tailwind CSS**                      | 原子化 CSS。                        |
+| **I18n**     | **leptos_i18n**                       | 编译时类型安全校验。                |
+| **Editor**   | **CodeMirror 6**                      | 核心编辑器，Headless 模式。         |
+| **Icons**    | **Lucide Icons**                      | 统一 SVG 图标集。                   |
+| **Graph**    | **Pixi.js** (Web) / **Cosmic** (Rust) | 高性能图谱渲染。                    |
+| **Storage**  | **Redb** (Native)                     | 嵌入式 KV 数据库 (Zero-copy).       |
+| **Search**   | **Tantivy**                           | 全文检索、模糊搜索。                |
+| **Sync**     | **Axum + Tower** (Back)               | HTTP/WebSocket 背压与流控。         |
+| **Auth**     | **Argon2 + JWT**                      | 标准化身份认证与会话管理。          |
+| **Diff**     | **Dissimilar** (Myer's)               | 文本差异计算算法。                  |
+| **Build**    | **Tauri v2**                          | 跨平台外壳 (Mobile/Desktop)。       |
+| **Plugins**  | **Rhai + WASM (Extism)**              | 双层插件体系 (Scripting + Binary)。 |
 
 ## Markdown 兼容性与回归清单 (Compatibility Checklist)
 

@@ -2,6 +2,7 @@
 
 **版本**: 0.0.1
 **核心理念**: Git-Flow P2P Architecture, Trinity Isolation, Remote Dashboard.
+**当前状态**: Phase 2 (Design) Completed. Ready for Implementation.
 
 本文档已模块化，请参阅以下子文档获取详细规划：
 
@@ -21,13 +22,13 @@
 7.  **[Diff Logic](./07_diff_logic.md)**: 内部和解逻辑 (Reconciliation) 与合并流程.
 
 ### Phase 4: User Interface
-8.  **[UI Design](./08_ui_design.md)**: Desktop/Web/Mobile 界面设计、组件组织与视觉规范.
-9.  **[Authentication](./09_auth.md)**: 登录认证与 12-Factor Auth 策略.
-10. **[Internationalization](./10_i18n.md)**: 多语言支持策略 (i18n).
+8.  **[UI Design](./08_ui_design.md)**: **Cursor-Style** 5-Column Grid, Modal Search & Fixed Outline.
+9.  **[Authentication](./09_auth.md)**: 12-Factor Auth, Argon2 + JWT & WebSocket Security.
+10. **[Internationalization](./10_i18n.md)**: 多语言策略 (leptos_i18n) 与错误码规范.
 
 ### Phase 5: Extensions & Operations
-11. **[Plugins & Runtime](./11_plugins.md)**: 双引擎运行时 (Wasm/Podman)、AI 隐私与 RPC 协议.
+11. **[Plugins & Runtime](./11_plugins.md)**: **Dual-Engine** (Rhai/WASM) & OCI Container (Podman).
 12. **[Commands Summary](./12_commands.md)**: CLI 与 Command Palette 指令汇总.
 13. **[Settings Summary](./13_settings.md)**: 环境变量与配置文件汇总.
-14. **[Technology Stack](./14_tech_stack.md)**: 技术选型、Markdown 兼容性与性能预算.
-15. **[Release Strategy](./15_release.md)**: 开源发布、Docker 镜像与版本管理.
+14. **[Technology Stack](./14_tech_stack.md)**: **Redb + CodeMirror 6**, Native/Mobile 差异化选型.
+15. **[Release Strategy](./15_release.md)**: License (MIT), Release Channels & CI/CD Pipelines.
