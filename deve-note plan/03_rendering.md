@@ -22,6 +22,9 @@
 1.  **Trigger**: 输入 `$$` 自动切换为 Block Math 状态。
 2.  **Editing**: 输入 LaTeX 源码，即时渲染 Live Preview。
 3.  **Completion**: 按下 `Ctrl+Enter` 折叠源码，仅显示渲染后的 SVG 结果。
+4.  **Copy-Paste Protection (MUST)**:
+    *   **Behavior**: 当用户复制渲染后的数学公式时，系统 **MUST** 拦截复制并在剪贴板中写入原始 LaTeX 源码 (而非 Unicode 乱码)。
+    *   **Implementation**: 集成 `copy-tex.js` 扩展作为核心必备组件。
 
 ## Markdown 解析规则 (Parsing Rules)
 

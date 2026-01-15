@@ -40,9 +40,13 @@
 *   **流程**：`Frontend -> Command/Button -> Check Capability -> Host Function -> git add/commit/push -> Feedback`。
 *   **真正的 CLI**：在受控环境下调用系统 `git` 命令。
 
-### 6. LaTeX (数学引擎)
-*   集成 **KaTeX** 或 **MathJax** 引擎，支持高性能数学公式渲染。
-*   作为核心体验的一部分，但也设计为可替换/可升级的插件化模块。
+### 6. LaTeX & Extensions (数学引擎与扩展)
+*   **Core Engine**: 集成 **KaTeX** 引擎 (v0.16+)，支持高性能数学公式渲染 (Inline/Block).
+*   **Extensions (扩展库)**:
+    *   **Need**: 虽然核心库已集成，但高级功能需动态加载扩展模块。
+    *   **List**:
+        *   `mhchem.js`: 化学方程式支持 (`\ce{H2O}`).
+    *   **Implementation**: 作为内置 "System Extensions" 存在，默认不加载，用户通过 `config.tex_extensions` 启用以减少包体积。
 
 ## 本章相关命令
 

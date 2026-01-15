@@ -44,7 +44,7 @@
 - [x] **编辑器内核 (Editor Core - CM6)**:
     - [x] 集成 CodeMirror 6 (WASM/JS Adapter).
     - [x] **Markdown**: 支持 GFM 语法高亮 (Bold/Italic/List).
-    - [ ] **Math**: 实现 KaTeX **Inline** (`$E=mc^2$`) 与 **Block** 渲染.
+    - [x] **Math**: 实现 KaTeX **Inline** (`$E=mc^2$`) 与 **Block** 渲染.
     - [x] **行号**: 为后续同步滚动做准备.
 - [x] **辅助面板**:
     - [x] **大纲栏 (Outline)**: 固定宽度 (260px)，实现右上角悬浮开关按钮 (Overlay Toggle).
