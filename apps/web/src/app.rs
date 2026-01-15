@@ -82,14 +82,37 @@ fn AppContent() -> impl IntoView {
 
     // 5. 派生 UI 回调
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
+    
+    // Command Button: Smart Toggle
     let on_command = Callback::new(move |_| {
-        set_search_mode.set(">".to_string());
-        set_show_search.update(|s| *s = !*s);
+        let is_visible = show_search.get_untracked();
+        let mode = search_mode.get_untracked();
+        let target_mode = ">".to_string();
+
+        if is_visible && mode == target_mode {
+            // Already visible in this mode -> Toggle Off
+            set_show_search.set(false);
+        } else {
+            // Hidden OR Different Mode -> Open & Switch
+            set_search_mode.set(target_mode);
+            set_show_search.set(true);
+        }
     });
-    // Redirect "Open" to Unified Search (SilverBullet style)
+
+    // Open Button: Smart Toggle (SilverBullet style)
     let on_open = Callback::new(move |_| {
-        set_search_mode.set(String::new());
-        set_show_search.set(true);
+        let is_visible = show_search.get_untracked();
+        let mode = search_mode.get_untracked();
+        let target_mode = String::new(); // Empty for files
+
+        if is_visible && mode == target_mode {
+            // Already visible in this mode -> Toggle Off
+            set_show_search.set(false);
+        } else {
+             // Hidden OR Different Mode -> Open & Switch
+             set_search_mode.set(target_mode);
+             set_show_search.set(true);
+        }
     });
     
     // 主页操作 (清除选择)
@@ -169,29 +192,32 @@ fn AppContent() -> impl IntoView {
             }}
 
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
-                 // 活动栏 (固定左侧)
-                 <crate::components::activity_bar::ActivityBar 
-                    active_view=active_view 
-                    set_active_view=set_active_view 
-                    on_settings=on_settings 
-                 />
-
-                 // 左侧边栏 (可调整大小和切换)
+                 // 左侧边栏容器 (Activity Bar + Sidebar)
                  <aside 
-                    class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col"
                     style=move || format!("width: {}px", sidebar_width.get())
                  >
-                     <crate::components::sidebar::Sidebar 
-                        active_view=active_view
-                        docs=core.docs
-                        current_doc=core.current_doc
-                        on_select=core.on_doc_select
-                        on_create=core.on_doc_create
-                        on_rename=core.on_doc_rename
-                        on_delete=core.on_doc_delete
-                        on_copy=core.on_doc_copy
-                        on_move=core.on_doc_move
+                     // Top: Activity Bar (Horizontal)
+                     <crate::components::activity_bar::ActivityBar 
+                        active_view=active_view 
+                        set_active_view=set_active_view 
+                        on_settings=on_settings 
                      />
+                     
+                     // Body: Specific Sidebar Content
+                     <div class="flex-1 overflow-hidden">
+                         <crate::components::sidebar::Sidebar 
+                            active_view=active_view
+                            docs=core.docs
+                            current_doc=core.current_doc
+                            on_select=core.on_doc_select
+                            on_create=core.on_doc_create
+                            on_rename=core.on_doc_rename
+                            on_delete=core.on_doc_delete
+                            on_copy=core.on_doc_copy
+                            on_move=core.on_doc_move
+                         />
+                     </div>
                  </aside>
                  
                  // 拖动手柄
