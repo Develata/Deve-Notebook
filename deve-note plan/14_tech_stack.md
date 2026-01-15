@@ -1,4 +1,6 @@
-# 第六章：技术栈清单 (The Full Stack)
+# 14_tech_stack.md - 技术栈篇 (Technology Stack)
+
+## 技术栈清单 (The Full Stack)
 
 | 层次          | 核心技术                    | 选型理由                 |
 | :------------ | :-------------------------- | :----------------------- |
@@ -16,9 +18,9 @@
 | **构建**      | **Tauri v2**                | 跨平台外壳。             |
 | **插件**      | **Rhai + Extism**           | Wasm/脚本引擎。          |
 
-**核心数据结构**：`DocId(Uuid)`, `LedgerEntry`, `CapabilityManifest`。
+    | **插件**      | **Rhai + Extism**           | Wasm/脚本引擎。          |
 
-### Markdown 兼容性与回归清单
+## Markdown 兼容性与回归清单 (Compatibility Checklist)
 
 *   **导出原则**：通用 GFM，无私有语法。
 *   **语法基线**：CommonMark + GFM。
@@ -26,22 +28,17 @@
 *   **资产约定**：`asset://` <=> 导出图片引用。
 *   **回归用例**：CI 快照对比。
 
-### 性能预算与极致瘦身
+## 性能预算与配置 (Performance & Profiles)
 
-*   **前端策略**：按需加载，虚拟化渲染。
-*   **体积控制**：Code splitting, Tree-shaking, LTO。
-*   **内存预算**：空闲 < 150MB。
-*   **High/Low Profile**：
-    *   **Low-Spec (512MB)**: CSR Only, No Search Index, Snapshot Pruning.
-    *   **Standard (1GB+)**: SSR, Search, Graph.
+### High/Low Profile
+*   **Low-Spec (512MB)**: CSR Only, No Search Index, Snapshot Pruning.
+*   **Standard (1GB+)**: SSR, Search, Graph.
 
-### Server Configuration Profiles
+## 本章相关命令
 
-| 环境变量         | 默认       | 512MB 模式 | 说明       |
-| :--------------- | :--------- | :--------- | :--------- |
-| `DEVE_PROFILE`   | `standard` | `low-spec` | 一键预设   |
-| `FEATURE_SSR`    | `true`     | `false`    | 服务端渲染 |
-| `FEATURE_SEARCH` | `true`     | `false`    | 全文搜索   |
-| `FEATURE_GRAPH`  | `true`     | `false`    | 图谱分析   |
-| `MEM_CACHE_MB`   | `128`      | `32`       | 缓存上限   |
-| `SYNC_MODE`      | `auto`     | `auto`     | 同步模式   |
+* 无。
+
+## 本章相关配置
+
+*   `DEVE_PROFILE`: `standard` | `low-spec`.
+*   `MEM_CACHE_MB`: Memory cache limit.
