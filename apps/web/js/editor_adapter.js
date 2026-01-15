@@ -27,6 +27,7 @@ import { imageStateField } from "./extensions/image.js";
 import { checkboxStateField } from "./extensions/checkbox_ext.js"; // [NEW] Checkbox StateField
 import { blockStyling } from "./extensions/block_styling.js"; // [NEW] Block Styling (Code & Quote)
 import { mermaidStateField } from "./extensions/mermaid.js"; // [NEW] Mermaid Diagram
+import { copyTexExtension } from "./extensions/copy_tex.js"; // [NEW] Copy Protection
 
 console.log("Modules Loaded via ES Imports in editor_adapter.js (v3 - ReadOnly Compartment)");
 console.log("GFM Extensions:", GFM);
@@ -82,6 +83,7 @@ export function initCodeMirror(element, onUpdate) {
         imageStateField,  // 图片
         checkboxStateField, // 复选框
         mermaidStateField,
+        copyTexExtension, // 复制保护
         blockStyling, // [NEW] 代码块 & 引用块 背景高亮
         EditorView.updateListener.of((v) => {
           // 内部检查: 显式的 isRemote 标志
