@@ -3,11 +3,22 @@
 ## 编辑器内核 (The Editor Kernel)
 
 *   **Input Layer**: 采用 `ContentEditable` (Web) 或 CodeMirror 6 (Desktop) 作为输入捕获层。
-*   **State Layer**: 绑定 Loro CRDT 状态，作为单一真值源。
-*   **Render Layer**: 支持 Block Mode, Source Mode, 和 Live Preview 三种渲染策略。
-*   **Technology Stack (选型)**：
-	*   **Default (Light Core)**：CodeMirror 6 Source Mode (纯文本源码模式)。
-	*   **Extension (Rich)**：Milkdown (Prosemirror) Live Preview (实时预览模式)。
+*   **State Layer**: 绑定 Loro CRDT 状态 (Ledger)，作为单一真值源。
+*   **Projection Layer (投影层)**: 负责将 Ledger 状态不仅呈现为 **Vault** 中的物理文件，还实时渲染为可视化的视图。支持 Block Mode, Source Mode, 和 Live Preview 三种。
+*   **Technology Stack**:
+	*   **Default (Light Core)**：CodeMirror 6 Source Mode (对应 **Projection** 的纯文本形态)。
+	*   **Extension (Rich)**：Milkdown (Prosemirror) Live Preview (提供富文本交互)。
+
+### Interaction Philosophy (交互哲学)
+*   **Source-First (源码优先)**: 编辑器的核心是文本。任何渲染效果 (Widgets/Decorations) 均视为对源码的"增强"。
+*   **Cursor Reveal (光标揭示)**:
+    *   **Rule**: 当光标 **接触 (Touch)** 或 **进入 (Inside)** 渲染元素的源码范围时，渲染层 **MUST** 立即让位 (Hidden/Removed)，将原始 Markdown 源码完整呈现给用户。
+    *   **Scope**: 此规则适用于所有渲染组件，包括但不限于：
+        *   **Math**: Inline (`$...$`) & Block (`$$...$$`).
+        *   **Diagrams**: Mermaid Code Blocks.
+        *   **Inline Styles**: Bold/Italic/Strikethrough Syntax Marks.
+        *   **Frontmatter**: YAML metadata block.
+    *   **Goal**: 确保用户在编辑时永远面对的是"真理" (Source Code)，而在阅读时享受的是"美观" (Rendered View)。
 
 ## 数学渲染规范 (Mathematical Rendering Specification)
 
@@ -25,6 +36,18 @@
 4.  **Copy-Paste Protection (MUST)**:
     *   **Behavior**: 当用户复制渲染后的数学公式时，系统 **MUST** 拦截复制并在剪贴板中写入原始 LaTeX 源码 (而非 Unicode 乱码)。
     *   **Implementation**: 集成 `copy-tex.js` 扩展作为核心必备组件。
+
+## Mermaid 图表渲染规范 (Mermaid Rendering Specification)
+
+*   **Type**: Core Rendering Feature (Not Plugin). 视为核心渲染能力，随主包同步加载。
+*   **Syntax**: ` ```mermaid ` 代码块。
+*   **Rendering Logic**:
+    *   **Synchronous**: 静态打包，无网络请求，确保离线可用性。
+    *   **DOM Awareness**: 自动检测 DOM 挂载状态，防止渲染竞争。
+*   **Sizing Strategy (尺寸策略)**:
+    *   **Constraint**: 图表容器高度 **Strictly Equals** 源代码行数占据的高度 (`LineCount * LineHeight`)。
+    *   **Scaling**: 图表内容 (SVG) 强制设置为 `100% Width/Height` 并保持比例 (`preserveAspectRatio="meet"`).
+    *   **Zoom via Newlines**: 用户可以通过在代码块末尾添加换行符 (Enter) 来增加容器高度，从而等比例放大图表 (Zoom In)。
 
 ## Markdown 解析规则 (Parsing Rules)
 
