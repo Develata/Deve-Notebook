@@ -166,7 +166,13 @@ export const hybridPlugin = ViewPlugin.fromClass(
             
             // Explicit Styling for Horizontal Rules
             if (node.name === "HorizontalRule") {
-                 widgets.push(Decoration.mark({ class: "cm-hr" }).range(node.from, node.to));
+                 const inside = isCursorIn(node.from, node.to);
+                 
+                 if (!inside) {
+                     widgets.push(Decoration.mark({ class: "cm-hr-rendered" }).range(node.from, node.to));
+                 } else {
+                     widgets.push(Decoration.mark({ class: "cm-hr" }).range(node.from, node.to));
+                 }
             }
             
             // Inline Code 样式标记
