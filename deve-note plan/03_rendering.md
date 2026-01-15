@@ -20,35 +20,6 @@
         *   **Frontmatter**: YAML metadata block.
     *   **Goal**: 确保用户在编辑时永远面对的是"真理" (Source Code)，而在阅读时享受的是"美观" (Rendered View)。
 
-## 数学渲染规范 (Mathematical Rendering Specification)
-
-*   **Engine**: 默认集成 **KaTeX** (性能优先) 或 **MathJax 3** (精度优先)。
-*   **Typography**: 代码体使用 JetBrains Mono/Fira Code；正文体使用 Merriweather 等衬线字体。
-*   **Delimiters**:
-    *   **Inline**: `$...$`。
-    *   **Block**: `$$...$$`。
-*   **Heuristic Logic (启发式判定)**: 仅当 `$` 紧邻非空字符时触发渲染 (e.g., $x$ is math; $ x $ is text)。普通货币符号 (e.g., $100) 无需转义。仅在歧义时支持 `\$` 强制转义。
-
-### Interaction Flow (交互流程)
-1.  **Trigger**: 输入 `$$` 自动切换为 Block Math 状态。
-2.  **Editing**: 输入 LaTeX 源码，即时渲染 Live Preview。
-3.  **Completion**: 按下 `Ctrl+Enter` 折叠源码，仅显示渲染后的 SVG 结果。
-4.  **Copy-Paste Protection (MUST)**:
-    *   **Behavior**: 当用户复制渲染后的数学公式时，系统 **MUST** 拦截复制并在剪贴板中写入原始 LaTeX 源码 (而非 Unicode 乱码)。
-    *   **Implementation**: 集成 `copy-tex.js` 扩展作为核心必备组件。
-
-## Mermaid 图表渲染规范 (Mermaid Rendering Specification)
-
-*   **Type**: Core Rendering Feature (Not Plugin). 视为核心渲染能力，随主包同步加载。
-*   **Syntax**: ` ```mermaid ` 代码块。
-*   **Rendering Logic**:
-    *   **Synchronous**: 静态打包，无网络请求，确保离线可用性。
-    *   **DOM Awareness**: 自动检测 DOM 挂载状态，防止渲染竞争。
-*   **Sizing Strategy (尺寸策略)**:
-    *   **Constraint**: 图表容器高度 **Strictly Equals** 源代码行数占据的高度 (`LineCount * LineHeight`)。
-    *   **Scaling**: 图表内容 (SVG) 强制设置为 `100% Width/Height` 并保持比例 (`preserveAspectRatio="meet"`).
-    *   **Zoom via Newlines**: 用户可以通过在代码块末尾添加换行符 (Enter) 来增加容器高度，从而等比例放大图表 (Zoom In)。
-
 ## Markdown 解析规则 (Parsing Rules)
 
 ### Phase 1: Block Level Parsing (块级解析)
@@ -65,6 +36,54 @@
 4.  **Auto Link (<url>)**: 防止 URL 中的特殊字符触发格式解析。
 5.  **Containers (Links / Images)**: 允许内部嵌套样式 (e.g., Bold)。
 6.  **Styles**: **Bold** > *Italic* > ~~Strike~~.
+
+## 核心渲染能力 (Core Rendering Capabilities)
+
+本节定义的渲染组件均为系统内置的第一类公民 (First-Class Citizens)，随主包同步加载，具备一致的交互哲学。
+
+### 1. 数学公式 (Mathematics)
+*   **Engine**: 默认集成 **KaTeX** (性能优先) 或 **MathJax 3** (精度优先)。
+*   **Typography**: 代码体使用 JetBrains Mono/Fira Code；正文体使用 Merriweather 等衬线字体。
+*   **Delimiters**: Inline `$...$`, Block `$$...$$`.
+*   **Heuristic Logic**: 仅当 `$` 紧邻非空字符时触发渲染。
+*   **Interaction Flow**:
+    1.  **Trigger**: 输入 `$$` 自动切换为 Block Math 状态。
+    2.  **Editing**: 输入 LaTeX 源码，即时渲染 Live Preview。
+    3.  **Completion**: 按下 `Ctrl+Enter` 折叠源码，仅显示渲染后的 SVG 结果。
+    4.  **Protection**: 复制公式时拦截并写入 LaTeX 源码。
+
+### 2. Mermaid 图表 (Diagrams)
+*   **Syntax**: ` ```mermaid ` 代码块。
+*   **Rendering Logic**: 静态打包，无网络请求，DOM 感知。
+*   **Sizing Strategy**:
+    *   **Constraint**: 容器高度 **Strictly Equals** 源码行数高度。
+    *   **Scaling**: 内容 (SVG) 强制 `100%` 填充并保比 (`preserveAspectRatio="meet"`).
+    *   **Zoom**: 通过添加换行符增加高度来放大图表。
+
+### 3. 标准富文本扩展 (Rich Text Widgets)
+
+以下扩展增强了标准 Markdown 的表现力：
+
+*   **Smart Tables (智能表格)**:
+    *   **Syntax**: GFM Table Syntax.
+    *   **Behavior**: 渲染为样式化的 HTML `<table>`。
+*   **Interactive Task Lists (交互式任务列表)**:
+    *   **Syntax**: `- [ ]` / `- [x]`.
+    *   **Behavior**: 渲染为可点击的 Checkbox，点击即修改源码。
+*   **Inline Images (行内图片)**:
+    *   **Syntax**: `![alt](url)`.
+    *   **Behavior**: 渲染为受限宽高的行内图片 (`max-height: 400px`)。
+*   **Block Styling (块级样式)**:
+    *   **Target**: Fenced Code / Blockquotes.
+    *   **Behavior**: 为整行添加背景色装饰 (`cm-code-block-line`, `cm-blockquote-line`)。
+    *   **Note**: 唯一不受光标揭示逻辑影响的持久化装饰。
+*   **Hybrid View (混合视图)**:
+    *   **Scope**: Headings (`#`), Emphasis (`*`, `_`), Strikethrough (`~~`), Quotes (`>`).
+    *   **Behavior**: 当光标离开元素范围时，自动隐藏 Markdown 语法标记；光标进入时显示。
+*   **Frontmatter Support (元数据支持)**:
+    *   **Syntax**: YAML Frontmatter (`---` ... `---`).
+    *   **Behavior**: 自动识别并提供特殊的背景样式 (`cm-frontmatter-block`)。
+    *   **Cursor Reveal**: 光标移出区域时隐藏首尾 `---` 分隔符，仅保留内容区域的视觉提示。
 
 ## Markdown 语法限制 (Syntax Whitelist)
 
