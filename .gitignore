@@ -23,6 +23,8 @@ vault/
 dist
 apps/web/js/editor.bundle.js
 apps/web/js/editor.bundle.js.map
+apps/web/public/js/editor.bundle.js
+apps/web/public/js/editor.bundle.js.map
 
 repomix-output.xml
 
