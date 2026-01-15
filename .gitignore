@@ -44,3 +44,9 @@ tmp/
 *.swo
 .DS_Store
 *.redb
+
+# Configuration
+config.toml
+
+# Temp
+deve_cli_running.exe

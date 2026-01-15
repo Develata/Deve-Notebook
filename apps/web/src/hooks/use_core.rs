@@ -137,22 +137,38 @@ pub fn use_core() -> CoreState {
     // Diff 视图状态 (path, old, new)
     let (diff_content, set_diff_content) = signal(None::<(String, String, String)>);
 
-    // 为当前会话生成临时的 PeerId
-    let peer_id = PeerId::random();
+    // 为当前会话生成临时的 Identity KeyPair (Ephemeral)
+    // 在真实应用中，应存储在 IndexedDB 或 LocalStorage
+    let key_pair = std::sync::Arc::new(deve_core::security::IdentityKeyPair::generate());
+    let peer_id = key_pair.peer_id();
     leptos::logging::log!("Frontend PeerId: {}", peer_id);
 
     // 初始握手与列表请求
     let ws_clone = ws.clone();
     let status_signal = ws.status;
     let pid = peer_id.clone();
+    let kp_clone = key_pair.clone();
     
     Effect::new(move |_| {
          if status_signal.get() == crate::api::ConnectionStatus::Connected {
              leptos::logging::log!("Connected! Sending SyncHello...");
+             
+             // Sign Handshake
+             let local_vector = VersionVector::new();
+             let vec_bytes = serde_json::to_vec(&local_vector).unwrap_or_default();
+             let mut msg = Vec::new();
+             msg.extend_from_slice(b"deve-handshake");
+             msg.extend_from_slice(pid.as_str().as_bytes());
+             msg.extend_from_slice(&vec_bytes);
+             
+             let signature = kp_clone.sign(&msg);
+
              // 发送 P2P 握手
              ws_clone.send(ClientMessage::SyncHello { 
                  peer_id: pid.clone(), 
-                 vector: VersionVector::new() // 初始为空
+                 pub_key: kp_clone.public_key_bytes().to_vec(),
+                 signature,
+                 vector: local_vector
              });
              // 请求文档列表
              ws_clone.send(ClientMessage::ListDocs);
@@ -175,7 +191,7 @@ pub fn use_core() -> CoreState {
                 },
                 
                 // 跟踪 Peers
-                ServerMessage::SyncHello { peer_id, vector } => {
+                ServerMessage::SyncHello { peer_id, vector, .. } => {
                     set_peers.update(|map| {
                         map.insert(peer_id.clone(), PeerSession {
                             id: peer_id.clone(),

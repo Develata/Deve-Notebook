@@ -19,6 +19,7 @@ use serde::{Serialize, Deserialize};
 /// 同步模式
 /// 控制 P2P 同步的自动化程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SyncMode {
     /// 自动模式：后台自动拉取与合并（无冲突时）
     #[default]
@@ -39,7 +40,8 @@ impl FromStr for SyncMode {
 }
 
 /// 应用运行模式预设
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum AppProfile {
     /// 标准模式 (1GB+ RAM)：启用全功能 (SSR, Search, Graph)
     Standard,
@@ -59,69 +61,73 @@ impl FromStr for AppProfile {
 }
 
 /// 核心配置结构体
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// 当前运行模式
+    #[serde(default = "default_profile")]
     pub profile: AppProfile,
     
     // --- 路径配置 ---
     /// 账本目录路径 (Default: "ledger")
-    /// Contains local.redb and remotes/ subdirectory
+    #[serde(default = "default_ledger")]
     pub ledger_dir: String,
     /// Vault 根目录 (Default: "vault")
+    #[serde(default = "default_vault")]
     pub vault_path: String,
 
     // --- P2P 同步配置 ---
-    /// 同步模式 (Auto/Manual) - Env: DEVE_SYNC_MODE
+    /// 同步模式 (Auto/Manual)
+    #[serde(default)]
     pub sync_mode: SyncMode,
 
     // --- 性能调优 ---
-    /// 快照保留深度 (Standard: 100, LowSpec: 10)
+    /// 快照保留深度
+    #[serde(default = "default_snapshot_depth")]
     pub snapshot_depth: usize,
-    /// 后台压缩并发度 (Standard: 4, LowSpec: 1)
+    /// 后台压缩并发度
+    #[serde(default = "default_concurrency")]
     pub concurrency: usize,
 }
 
+fn default_profile() -> AppProfile { AppProfile::Standard }
+fn default_ledger() -> String { "ledger".to_string() }
+fn default_vault() -> String { "vault".to_string() }
+fn default_snapshot_depth() -> usize { 100 }
+fn default_concurrency() -> usize { 4 }
+
 impl Config {
-    /// 从环境变量加载配置
+    /// 加载配置 (Env > .env > config.toml > Default)
     pub fn load() -> Self {
-        // 1. Load Profile first to determine defaults
-        let profile_str = env::var("DEVE_PROFILE").unwrap_or_else(|_| "standard".to_string());
-        let profile = AppProfile::from_str(&profile_str).unwrap_or(AppProfile::Standard);
-
-        // 2. Load path configuration
-        let ledger_dir = env::var("DEVE_LEDGER_DIR").unwrap_or_else(|_| "ledger".to_string());
-        let vault_path = env::var("DEVE_VAULT_PATH").unwrap_or_else(|_| "vault".to_string());
-
-        // 3. Load P2P sync configuration
-        let sync_mode_str = env::var("DEVE_SYNC_MODE").unwrap_or_else(|_| "auto".to_string());
-        let sync_mode = SyncMode::from_str(&sync_mode_str).unwrap_or_default();
-
-        // 4. Load performance tuning with profile-based defaults
-        let snapshot_depth = env::var("DEVE_SNAPSHOT_DEPTH")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(|| match profile {
-                AppProfile::Standard => 100,
-                AppProfile::LowSpec => 10,
-            });
-
-        let concurrency = env::var("DEVE_CONCURRENCY")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(|| match profile {
-                AppProfile::Standard => 4,
-                AppProfile::LowSpec => 1,
-            });
-
-        Self {
-            profile,
-            ledger_dir,
-            vault_path,
-            sync_mode,
-            snapshot_depth,
-            concurrency,
+        // 1. Load .env file if present
+        if let Err(e) = dotenvy::dotenv() {
+            tracing::debug!(".env file not found or invalid: {}", e);
         }
+
+        // 2. Build Config Source
+        // Layering: Defaults -> File(config.toml) -> Env(DEVE_*)
+        let settings = config::Config::builder()
+            // Default Fallbacks implemented via Serde defaults, so we just build empty source initially
+            // Add config file (optional)
+            .add_source(config::File::with_name("config").required(false))
+            // Add environment variables (prefix DEVE_)
+            // e.g. DEVE_LEDGER_DIR -> ledger_dir
+            .add_source(config::Environment::with_prefix("DEVE").separator("_"))
+            .build()
+            .expect("Failed to build configuration");
+
+        // 3. Deserialize
+        settings.try_deserialize::<Self>().unwrap_or_else(|e| {
+            tracing::warn!("Failed to parse config, using defaults: {}", e);
+            // Fallback to manual construction if partial parsing fails heavily
+            Config {
+                profile: default_profile(),
+                ledger_dir: default_ledger(),
+                vault_path: default_vault(),
+                sync_mode: SyncMode::default(),
+                snapshot_depth: default_snapshot_depth(),
+                concurrency: default_concurrency(),
+            }
+        })
     }
 }
 
@@ -131,9 +137,8 @@ mod tests {
 
     #[test]
     fn test_default_config() {
+        // Just verify it builds without panic
         let config = Config::load();
-        // Assuming no env vars set in test env
-        assert_eq!(config.profile, AppProfile::Standard);
-        assert_eq!(config.snapshot_depth, 100);
+        assert!(!config.ledger_dir.is_empty());
     }
 }

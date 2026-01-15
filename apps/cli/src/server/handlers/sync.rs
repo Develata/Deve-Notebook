@@ -10,6 +10,8 @@ pub async fn handle_sync_hello(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
     peer_id: PeerId,
+    pub_key: Vec<u8>,
+    signature: Vec<u8>,
     remote_vector: deve_core::models::VersionVector,
 ) {
     tracing::info!("Handling SyncHello from {}", peer_id);
@@ -19,18 +21,32 @@ pub async fn handle_sync_hello(
     let local_peer_id = engine.local_peer_id.clone();
     let local_vector = engine.version_vector().clone();
 
-    // 2. 执行握手逻辑
-    let result = engine.handshake(peer_id.clone(), remote_vector);
+    // 2. 执行握手逻辑 (Verify Client)
+    let result = match engine.handshake(peer_id.clone(), &pub_key, &signature, remote_vector) {
+        Ok(res) => res,
+        Err(e) => {
+            tracing::error!("Handshake failed with {}: {}", peer_id, e);
+            return;
+        }
+    };
 
-    // 3. 构建并发送回执 Hello (让对方也能计算差异)
+    // 3. 构建并发送回执 Hello (Mutual Auth: Sign our response)
+    // Msg = "deve-handshake" + local_peer_id + json(local_vector)
+    let vec_bytes = serde_json::to_vec(&local_vector).unwrap_or_default();
+    let mut msg = Vec::new();
+    msg.extend_from_slice(b"deve-handshake");
+    msg.extend_from_slice(local_peer_id.as_str().as_bytes());
+    msg.extend_from_slice(&vec_bytes);
+    
+    let my_sig = state.identity_key.sign(&msg);
+
     let hello_msg = ServerMessage::SyncHello {
         peer_id: local_peer_id,
+        pub_key: state.identity_key.public_key_bytes().to_vec(),
+        signature: my_sig,
         vector: local_vector,
     };
-    let _ = tx.send(hello_msg); // Broadcast? No, should be unicast usually, but currently we broadcast to all WS.
-                                // Improvement: Unicast to this socket. 
-                                // But current architecture broadcasts everything.
-                                // For now, broadcast is acceptable for Relay (assuming small scale or filtered by client).
+    let _ = tx.send(hello_msg);
                                 
     // 4. 发送请求 (I need data)
     if !result.to_request.is_empty() {
@@ -87,9 +103,9 @@ pub async fn handle_sync_request(
 /// 处理数据推送 (对方发送数据)
 pub async fn handle_sync_push(
     state: &Arc<AppState>,
-    tx: &broadcast::Sender<ServerMessage>,
+    _tx: &broadcast::Sender<ServerMessage>,
     peer_id: PeerId, // Added peer_id
-    ops: Vec<(u64, LedgerEntry)>, // Fixed type
+    ops: Vec<deve_core::security::EncryptedOp>, // Updated type
 ) {
     let mut engine = state.sync_engine.write().unwrap();
     
@@ -100,16 +116,7 @@ pub async fn handle_sync_push(
 
     if let Ok(count) = engine.apply_remote_ops(response) {
         tracing::info!("Applied {} ops from {}", count, peer_id);
-        
-        // Broadcast NewOp to watchers? 
-        // NOTE: NewOp is currently single Op. For logic simplicity we might skip broadcasting individual ops 
-        // if we assume watchers will periodic refresh or use another signal.
-        // But for "Live" collaboration, we should broadcast.
-        // However, we don't have the `Op` objects easily accessible here without iterating again? 
-        // We moved `ops` into `response`.
-        // Let's rely on SyncEngine functionality.
-        // Ideally, SyncEngine or RepoManager should emit events. 
-        // But for now, let's keep it simple.
-        // We will just log.
+    } else {
+        tracing::warn!("Failed to apply ops from {}", peer_id);
     }
 }

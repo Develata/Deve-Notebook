@@ -135,10 +135,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                          search::handle_search(&state_clone, &tx, query, limit).await;
                      }
                      // P2P Sync messages
-                     ClientMessage::SyncHello { peer_id, vector } => {
+                     ClientMessage::SyncHello { peer_id, pub_key, signature, vector } => {
                          tracing::info!("SyncHello from {}", peer_id);
                          authenticated_peer_id = Some(peer_id.clone());
-                         sync::handle_sync_hello(&state_clone, &tx, peer_id, vector).await;
+                         sync::handle_sync_hello(&state_clone, &tx, peer_id, pub_key, signature, vector).await;
                      }
                      ClientMessage::SyncRequest { requests } => {
                          sync::handle_sync_request(&state_clone, &tx, requests).await;

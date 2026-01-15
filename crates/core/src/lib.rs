@@ -32,6 +32,7 @@ pub mod config;
 pub mod plugin;
 pub mod error;
 pub mod source_control;
+pub mod security;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;

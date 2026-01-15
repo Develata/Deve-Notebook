@@ -24,13 +24,15 @@ pub struct SyncRequest {
     pub range: (u64, u64),
 }
 
-/// 同步响应：包含拉取到的操作列表
+use crate::security::EncryptedOp;
+
+/// 同步响应：包含拉取到的加密操作列表
 #[derive(Debug, Clone)]
 pub struct SyncResponse {
     /// 来源 Peer ID
     pub peer_id: PeerId,
-    /// 操作列表 (seq, entry)
-    pub ops: Vec<(u64, LedgerEntry)>,
+    /// 加密的操作列表 (Envelope Body)
+    pub ops: Vec<EncryptedOp>,
 }
 
 /// 握手结果

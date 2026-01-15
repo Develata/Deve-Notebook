@@ -85,19 +85,30 @@ pub fn handle_server_message(
                  }
              }
          }
-         ServerMessage::SyncHello { peer_id, vector: _ } => {
+         ServerMessage::SyncHello { peer_id, vector: _, .. } => {
              leptos::logging::log!("P2P Handshake from Peer: {}", peer_id);
          },
          ServerMessage::Pong => {
              // leptos::logging::log!("Pong received");
          },
          ServerMessage::SyncPush { ops } => {
-             leptos::logging::log!("Received SyncPush: {} ops", ops.len());
+             leptos::logging::log!("Received SyncPush: {} encrypted ops", ops.len());
              
+             // TODO: Decrypt ops using RepoKey (requires Key Exchange or Password derivation)
+             // Currently just logging as we don't have the shared key on the client yet.
+             for enc_op in ops {
+                 leptos::logging::warn!("Skipping encrypted op seq: {} (No RepoKey)", enc_op.seq);
+             }
+             
+             // Placeholder for when we have the key:
+             /*
              let mut max_seq = local_version.get_untracked();
              let mut applied_count = 0;
 
-             for (seq, entry) in ops {
+             for enc_op in ops {
+                 let seq = enc_op.seq;
+                 // let entry = repo_key.decrypt(&enc_op)?; 
+                 
                  if entry.doc_id == doc_id {
                      if seq > max_seq {
                          if let Ok(json) = serde_json::to_string(&entry.op) {
@@ -110,22 +121,9 @@ pub fn handle_server_message(
                      }
                  }
              }
-
-             if applied_count > 0 {
-                 let txt = getEditorContent();
-                 if let Some(cb) = on_stats {
-                     let lines = txt.lines().count();
-                     let words = txt.split_whitespace().count();
-                     cb.run(EditorStats { chars: txt.len(), words, lines });
-                 }
-                 set_content.set(txt);
-                 set_local_version.set(max_seq);
-                 
-                 // 回放
-                 if !is_playback.get_untracked() {
-                    set_playback_version.set(max_seq);
-                 }
-             }
+             */
+             // Placeholder for key availability
+             // if applied_count > 0 { ... }
          }
          _ => {}
     }

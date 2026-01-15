@@ -17,6 +17,7 @@
 use serde::{Serialize, Deserialize};
 use crate::models::{DocId, Op, PeerId, LedgerEntry, VersionVector};
 use crate::source_control::{ChangeEntry, CommitInfo};
+use crate::security::EncryptedOp;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
@@ -26,9 +27,13 @@ pub enum ClientMessage {
     ///
     /// **参数**:
     /// - `peer_id`: 发起方节点 ID。
+    /// - `pub_key`: 发起方身份公钥 (Ed25519)。
+    /// - `signature`: 握手签名 (防止伪造)。
     /// - `vector`: 发起方当前的 Version Vector。
     SyncHello {
         peer_id: PeerId,
+        pub_key: Vec<u8>,
+        signature: Vec<u8>,
         vector: VersionVector,
     },
     /// 请求缺失的操作记录
@@ -37,9 +42,9 @@ pub enum ClientMessage {
         /// 注意: Range<u64> 默认不可序列化，因此使用 (u64, u64) 元组。
         requests: Vec<(PeerId, (u64, u64))>,
     },
-    /// 推送操作记录给对端
+    /// 推送加密操作记录给对端 (Envelope Mode)
     SyncPush {
-        ops: Vec<(u64, LedgerEntry)>,
+        ops: Vec<EncryptedOp>,
     },
     /// 客户端发送编辑操作 (针对特定文档)
     Edit {
@@ -141,6 +146,8 @@ pub enum ServerMessage {
     /// P2P: 服务端 Hello (响应客户端 Hello)
     SyncHello {
         peer_id: PeerId,
+        pub_key: Vec<u8>,
+        signature: Vec<u8>,
         vector: VersionVector,
     },
     /// P2P: 服务端向客户端请求数据
@@ -149,7 +156,7 @@ pub enum ServerMessage {
     },
     /// P2P: 服务端推送数据给客户端 (批量)
     SyncPush {
-        ops: Vec<(u64, LedgerEntry)>,
+        ops: Vec<EncryptedOp>,
     },
     /// 服务端广播来自其他客户端的新操作
     NewOp {

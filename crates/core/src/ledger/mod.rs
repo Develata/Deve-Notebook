@@ -25,7 +25,7 @@
 //! 本模块属于 **Core MUST**。所有数据持久化必须通过此模块。
 
 use anyhow::Result;
-use redb::{Database, ReadableMultimapTable};
+use redb::Database;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
