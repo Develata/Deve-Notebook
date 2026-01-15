@@ -17,7 +17,7 @@ export class TableWidget extends WidgetType {
         this.tableData = tableData;
     }
     
-    toDOM() {
+    toDOM(view) {
         const table = document.createElement('table');
         table.className = 'cm-table-widget w-full border-collapse my-4 text-sm';
         
@@ -53,6 +53,17 @@ export class TableWidget extends WidgetType {
         });
         table.appendChild(tbody);
         
+        
+        // [Fix RangeError] Handle selection manually
+        table.onclick = (e) => {
+            e.preventDefault();
+            const pos = view.posAtDOM(table);
+            if (pos !== null) {
+                view.dispatch({ selection: { anchor: pos } });
+                view.focus();
+            }
+        };
+        
         return table;
     }
     
@@ -61,7 +72,7 @@ export class TableWidget extends WidgetType {
     }
 
     ignoreEvent() {
-        return false;
+        return true;
     }
 }
 

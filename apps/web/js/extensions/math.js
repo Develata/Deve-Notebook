@@ -30,7 +30,26 @@ export class MathWidget extends WidgetType {
     } catch (e) {
       span.innerText = "Error";
     }
+
+    // [Fix RangeError] Only need for Block Math
+    if (this.isBlock) {
+        span.onclick = (e) => {
+            e.preventDefault();
+            const pos = view.posAtDOM(span);
+            if (pos !== null) {
+                view.dispatch({ selection: { anchor: pos } });
+                view.focus();
+            }
+        };
+    }
+
     return span;
+  }
+
+  ignoreEvent() {
+      // Only ignore events for Block Math to prevent cursor crashes
+      // Inline math behaves like text usually
+      return this.isBlock;
   }
 }
 

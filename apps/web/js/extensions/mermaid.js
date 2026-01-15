@@ -42,6 +42,16 @@ class MermaidWidget extends WidgetType {
         // Schedule render check
         this.scheduleRender(container);
 
+        // [Fix RangeError] Handle selection manually to avoid CM posAtCoords crashing on complex SVG
+        wrapper.onclick = (e) => {
+            e.preventDefault();
+            const pos = view.posAtDOM(wrapper);
+            if (pos !== null) {
+                view.dispatch({ selection: { anchor: pos } });
+                view.focus();
+            }
+        };
+
         return wrapper;
     }
 
@@ -98,7 +108,7 @@ class MermaidWidget extends WidgetType {
         container.appendChild(pre);
     }
 
-    ignoreEvent() { return false; }
+    ignoreEvent() { return true; }
 }
 
 function computeMermaidDecorations(state) {

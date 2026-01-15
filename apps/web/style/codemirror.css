@@ -55,7 +55,8 @@
 /* Frontmatter (Full Width Block) */
 .cm-frontmatter-block {
   background-color: #f8f9fa; /* Match Code Block Background */
-  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New",
+    monospace;
   font-size: 0.85em;
   color: #64748b;
 }
@@ -98,7 +99,7 @@
 /* Code Block Highlight (RStudio Style) */
 .cm-code-block-line {
   background-color: #f8f9fa; /* Light Gray Background */
-  border-radius: 0; 
+  border-radius: 0;
 }
 
 /* Optional: Rounded Corners for Start/End */
@@ -132,7 +133,7 @@
 
 /* Adjusting line padding for blockquotes */
 .cm-blockquote-line {
-    padding-left: 1rem; /* Indent the whole line content from the border */
+  padding-left: 1rem; /* Indent the whole line content from the border */
 }
 
 /* Inline Code Styling */
@@ -141,33 +142,76 @@
   color: #1e293b; /* slate-800 */
   padding: 0.2em 0.4em;
   border-radius: 4px;
-  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New",
+    monospace;
   font-size: 1em; /* Slightly increased from 0.85em */
 }
 
 /* Explicit Markdown Styling */
-.cm-strong { font-weight: bold; }
-.cm-em { font-style: italic; }
-.cm-strikethrough { text-decoration: line-through; }
+.cm-strong {
+  font-weight: bold;
+}
+.cm-em {
+  font-style: italic;
+}
+.cm-strikethrough {
+  text-decoration: line-through;
+}
 
 /* Headings */
-.cm-h1 { font-size: 2em; font-weight: bold; line-height: 1.2; }
-.cm-h2 { font-size: 1.5em; font-weight: bold; line-height: 1.3; }
-.cm-h3 { font-size: 1.25em; font-weight: bold; line-height: 1.4; }
-.cm-h4 { font-size: 1.1em; font-weight: bold; }
-.cm-h5 { font-size: 1em; font-weight: bold; }
-.cm-h6 { font-size: 0.9em; font-weight: bold; color: #64748b; }
+.cm-h1 {
+  font-size: 2em;
+  font-weight: bold;
+  line-height: 1.2;
+}
+.cm-h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+.cm-h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  line-height: 1.4;
+}
+.cm-h4 {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+.cm-h5 {
+  font-size: 1em;
+  font-weight: bold;
+}
+.cm-h6 {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #64748b;
+}
 
 /* Links */
-.cm-link { color: #2563eb; text-decoration: none; }
-.cm-link:hover { text-decoration: underline; }
-.cm-url { color: #94a3b8; font-family: monospace; }
+.cm-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+.cm-link:hover {
+  text-decoration: underline;
+}
+.cm-url {
+  color: #94a3b8;
+  font-family: monospace;
+}
 
 /* Blockquote Text */
-.cm-blockquote { color: #475569; font-style: italic; }
+.cm-blockquote {
+  color: #475569;
+  font-style: italic;
+}
 
 /* Horizontal Rule */
-.cm-hr { color: #cbd5e1; font-weight: bold; }
+.cm-hr {
+  color: #cbd5e1;
+  font-weight: bold;
+}
 
 /* 
    Fix for Selection Visibility:
@@ -177,6 +221,7 @@
 .cm-selectionLayer {
   z-index: 10 !important;
   mix-blend-mode: multiply;
+  pointer-events: none !important; /* [FIX] Prevent interception of clicks */
 }
 
 .cm-selectionBackground {

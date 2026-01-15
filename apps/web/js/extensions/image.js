@@ -31,12 +31,23 @@ class ImageWidget extends WidgetType {
     img.className = "max-w-full h-auto rounded shadow-sm border border-gray-200";
     img.style.maxHeight = "400px"; 
 
+    // [Fix RangeError] Handle selection manually
+    container.onclick = (e) => {
+        // e.preventDefault(); // Don't prevent default completely (image drag?)
+        // but ensure cursor position is set to avoid "dead zones"
+        const pos = window._debug_view.posAtDOM(container);
+        if (pos !== null) {
+            window._debug_view.dispatch({ selection: { anchor: pos } });
+            window._debug_view.focus();
+        }
+    };
+
     container.appendChild(img);
     return container;
   }
 
   ignoreEvent() {
-    return false;
+    return true;
   }
 }
 

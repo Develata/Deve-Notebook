@@ -60,7 +60,7 @@ const manualBasicSetup = [
 
 // --- 核心初始化 (Core Initialization) ---
 export function initCodeMirror(element, onUpdate) {
-  console.log("Initializing Editor via Adapter (Singleton)");
+  console.log("Initializing Editor via Adapter (Singleton) - DEBUG vCLEAN_SLATE");
   if (!element) return;
   element.innerHTML = "";
 
@@ -77,14 +77,14 @@ export function initCodeMirror(element, onUpdate) {
             codeLanguages: languages,
             extensions: [...GFM, Subscript, Superscript, Emoji] 
         }),
-        hybridPlugin,     // 混合插件 (隐藏标记等)
-        mathStateField,   // 数学公式
-        tableStateField,  // 表格
-        imageStateField,  // 图片
-        checkboxStateField, // 复选框
-        mermaidStateField,
-        copyTexExtension, // 复制保护
-        blockStyling, // [NEW] 代码块 & 引用块 背景高亮
+        // hybridPlugin,     // 混合插件 (隐藏标记等)
+        // mathStateField,   // [DEBUG]
+        // tableStateField,  // 表格
+        // imageStateField,  // 图片
+        // checkboxStateField, // 复选框
+        // mermaidStateField,
+        // copyTexExtension, // 复制保护
+        // blockStyling, // [NEW] 代码块 & 引用块 背景高亮
         EditorView.updateListener.of((v) => {
           // 内部检查: 显式的 isRemote 标志
           if (isRemote) return;
