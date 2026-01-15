@@ -33,7 +33,11 @@
 
 * **职责**：管理 `Local Repo` (Store B) 和 `Shadow Repos` (Store C)。
 * **Routing**：VFS 根据 UI 上下文路由到对应的 `.redb` 实例。
-* **Snapshot**：每个 Repo 独立维护自己的 Snapshot 链。
+* **Snapshot Strategy**:
+    *   **Dual-Table Structure**: 为了优化性能，快照存储拆分为两个表：
+        *   `SNAPSHOT_INDEX`: 索引表 (`DocId -> [SeqNo]`)，用于快速检索历史版本号。
+        *   `SNAPSHOT_DATA`: 数据表 (`SeqNo -> ContentBlob`)，存储实际快照内容。
+    *   **Pruning**: 每个 Repo 独立维护自己的 Snapshot 链，并根据配置深度 (`snapshot_depth`) 进行自动修剪。
 
 ## Clean File Policy (纯净文件策略)
 

@@ -1,13 +1,34 @@
 # Deve-Note 代码实现状态与功能映射 (Implementation Status & Plan Mapping)
 
-本文档以文件树形式展示当前代码库的详细实现逻辑，并映射到架构规划文档中的具体章节。
+本文档以文件树形式展示当前 code base 的详细实现逻辑，并映射到架构规划文档中的具体章节。
 
 **Plan Mapping Key:**
-- `[Arch]`: 01_architecture.md (核心架构)
-- `[UI-Arch]`: 03_ui_architecture.md (UI 架构)
-- `[Backend]`: 04_backend.md (后端架构)
-- `[Data]`: 05_data_flows.md (数据流)
-- `[Runtime]`: 07_runtime_ops.md (运行时与插件)
+- `[Arch]`: 01_terminology.md / 02_positioning.md
+- `[Store]`: 04_storage.md
+- `[Repo]`: 06_repository.md
+- `[Diff]`: 07_diff_logic.md
+- `[UI]`: 08_ui_design.md
+- `[Auth]`: 09_auth.md
+- `[Plugins]`: 11_plugins.md
+- `[Cmd]`: 12_commands.md
+- `[Conf]`: 13_settings.md
+- `[Stack]`: 14_tech_stack.md
+
+---
+
+## 🛑 差异与冲突 (Discrepancies & Conflicts)
+
+以下列出当前代码实现与规划文档 (`deve-note plan/`) 不一致的地方：
+
+1.  **Ledger 模块结构**:
+    *   **Plan/Old Doc**: 提及 `ledger/store.rs` 作为存储后端。
+    *   **Current Code**: 实际为 `ledger/schema.rs` 定义表结构 (`DOCID_TO_PATH`, `LEDGER_OPS` 等)，逻辑分散在 `mod.rs` 和子模块中。
+2.  **Snapshot 表结构**:
+    *   **Plan**: 提及单表 `SNAPSHOTS`。
+    *   **Current Code**: 实际使用双表结构 `SNAPSHOT_INDEX` (Index) 和 `SNAPSHOT_DATA` (Blob) 以优化性能。
+3.  **Graph 依赖**:
+    *   **Plan**: `14_tech_stack.md` 提及 `Pixi.js` (Web) / `Cosmic` (Rust)。
+    *   **Current Code**: `apps/web/Cargo.toml` (未完全验证) 或 `src/app.rs` 中尚未发现显式的 Graph 视图实现代码或引用。
 
 ---
 
@@ -16,105 +37,75 @@
 实现了 **Trinity Isolation** 和 **P2P Sync** 的核心逻辑。
 
 - **`src/`**
-  - **`config.rs`**: **配置管理** `[Runtime]`
-    - **逻辑**: 使用 `std::env` 加载环境变量，实现 `SyncMode` (Auto/Manual) 和 `AppProfile` (Standard/LowSpec) 的 `FromStr` trait，利用 `serde` 进行序列化。
+  - **`config.rs`**: **配置管理** `[Conf]`
+    - **逻辑**: 遵循 12-Factor，优先加载 `DEVE_PROFILE`, `DEVE_SYNC_MODE`.
+    - **实现**: `Config::load()` 处理 `Standard`/`LowSpec` 预设和 `Auto`/`Manual` 同步模式。
   - **`error.rs`**: **统一错误处理** `[Arch]`
-    - **逻辑**: 基于 `thiserror` 定义 `AppError`，统一处理 IO、Redb、Codec 和 Plugin 错误。
-  - **`models.rs`**: **基础数据模型** `[Data]`
-    - **逻辑**: 
-      - `DocId`/`PeerId`: 封装 UUID V4。
-      - `VersionVector`: 实现为 `BTreeMap<PeerId, u64>`，提供因果顺序比较 (`PartialOrd`)。
-  - **`protocol.rs`**: **通信协议** `[Backend]`
-    - **逻辑**: 定义 `serde` 可序列化的 `ClientMessage` (Create, Edit...) 和 `ServerMessage` (NewOp, Snapshot...) 枚举，作为 WebSocket 通信载荷。
-  - **`state.rs`**: **CRDT 状态机** `[Data]`
-    - **逻辑**: 
-      - `reconstruct_content(ops)`: 拓扑排序 Op 依赖关系 (DAG)，线性化生成最终文本。
-      - `compute_diff(old, new)`: 使用 Myers 差分算法计算文本变更，生成新的 `Op`。
-  - **`watcher.rs`**: **文件系统监听** `[Backend]`
-    - **逻辑**: 封装 `notify-debouncer-mini`，在独立线程中运行，过滤非 `.md` 文件和 `.git` 目录，防抖窗口 200ms。
-  - **`vfs.rs`**: **虚拟文件系统 (VFS)** `[Backend]`
-    - **逻辑**:
-      - `get_inode`: 使用平台特定 API (Windows `file_index`) 获取文件唯一标识，经 `StableHasher` (FNV-1a) 映射为稳定 `u128`，解决文件重命名检测问题。
-      - `scan`: 遍历 `WalkDir`，对比磁盘文件与 Ledger 记录，自动 CRUD 以保持一致性。
-  - **`ledger/`** `[Backend: Repository Manager]`
-    - **`mod.rs`**: **RepoManager**
-      - **逻辑**: 封装 `Redb` 事务。`append_local_op` 负责通过 VFS 写入磁盘并更新 DB；`append_remote_op` 仅更新 DB (Shadow Repo 模式)。
-    - **`store.rs`**: **存储后端**
-      - **逻辑**: 定义 Redb 表：`DOCS` (Path->DocId), `OPS` (DocId->Vec<Op>), `SYNC_STATE` (PeerId->Vector)。实现原子读写。
-    - **`ops.rs`**: **CRDT 操作**
-      - **逻辑**: 定义 `Op` 结构 (Seq, Deps, Content)。
-    - **`snapshot.rs`**: **快照管理**
-      - **逻辑**: 每 N 个 Op 生成一次全量文本快照，存入 `SNAPSHOTS` 表。查询时优先加载最近快照 + 后续 Ops。
-    - **`shadow/`**: **影子仓库 (Trinity Isolation)** `[Arch: Trinity Isolation]`
-      - **逻辑**: 实现 `ShadowRepo` trait，允许并在同一 DB 中存储多个对等点的视图 (Shadows)，互不干扰，仅通过 `Merge` 操作交换数据。
-  - **`sync/`** `[Backend: Gossip Protocol]`
+    - **逻辑**: 基于 `thiserror` 定义 `AppError`。
+  - **`models.rs`**: **基础数据模型** `[Store]`
+    - **逻辑**: 定义 `DocId`, `PeerId`, `VersionVector` (BTreeMap 实现).
+  - **`protocol.rs`**: **通信协议** `[Network]`
+    - **逻辑**: 定义 WebSocket 载荷 `ClientMessage` / `ServerMessage`。
+  - **`state.rs`**: **CRDT 状态机** `[Diff]`
+    - **逻辑**: `compute_diff` (Myers) 和 `reconstruct_content` (DAG 线性化).
+  - **`watcher.rs`**: **文件系统监听** `[Repo]`
+    - **逻辑**: 使用 `notify-debouncer-mini` 监听 Vault 变更。
+  - **`vfs.rs`**: **虚拟文件系统** `[Repo]`
+    - **逻辑**: 处理 Inode 映射 (FNV-1a hash) 防止文件重命名丢失追踪。
+  - **`ledger/`** `[Repo: Repository Manager]`
+    - **`mod.rs`**: **Manager 入口**
+      - **逻辑**: 管理 `local_db` (Store B) 和 `shadow_dbs` (Store C)。提供 `append_local_op` 等核心 API。
+    - **`schema.rs`**: **Redb 表定义** `[Store]`
+      - **逻辑**: 定义 `DOCID_TO_PATH`, `PATH_TO_DOCID`, `LEDGER_OPS`, `SNAPSHOT_INDEX` 等表。
+    - **`ops.rs`**: **Op 读写**
+      - **逻辑**: 封装对 `LEDGER_OPS` 表的原子读写。
+    - **`snapshot.rs`**: **快照管理** `[Store]`
+      - **逻辑**: 维护 `snapshot_depth`，写入快照数据。
+    - **`source_control.rs`**: **版本控制** `[Repo]`
+      - **逻辑**: 实现 `stage_file`, `create_commit`, `list_staged` 等类 Git 操作。
+    - **`shadow/`**: **影子库实现**
+      - **逻辑**: 管理远端 Peer 的独立数据库文件 (`remotes/*.redb`)。
+  - **`sync/`** `[Network: Gossip]`
     - **`engine.rs`**: **同步引擎**
-      - **逻辑**: 
-        - 比较本地与远程 `VersionVector`。
-        - *Push*: 找出本地有但远程没有的 Ops。
-        - *Pull*: 处理远程发来的 Ops，存入 `OpBuffer`。
-    - **`buffer.rs`**: **因果缓冲** `[Backend: Reconciliation]`
-      - **逻辑**: 暂存接收到的乱序 Ops。当 Op 依赖的所有前驱 Op 都存在时，才应用该 Op。
-  - **`plugin/`** `[Runtime: Dual-Engine]`
-    - **`runtime.rs`**: **Wasm 运行时**
-      - **逻辑**: 集成 `wasmtime`，配置资源限制 (Fuel)。注入 Host Functions (如 `host_log`, `get_doc`) 供插件沙箱调用。
-  - **`utils/hash.rs`**: **稳定哈希**
-    - **逻辑**: 实现 FNV-1a 算法，确保跨进程重启后内存对象的 Hash 值一致 (用于 Inode 映射)。
+      - **逻辑**: 计算 VersionVector 差异，生成 Push/Pull 任务。
+    - **`buffer.rs`**: **因果缓冲**
+      - **逻辑**: 解决乱序 Op 问题 (`OpBuffer`).
+  - **`plugin/`** `[Plugins]`
+    - **`runtime.rs`**: **Rhai/Wasm 运行时**
+      - **逻辑**: 集成 `rhai` (根据 Cargo.toml) 或 WASM 运行时 (代码中提及 `wasmtime` 但 `Cargo.toml` 只有 `rhai`?). *注: Cargo.toml 仅显示 rhai, verify required.*
 
 ## 📂 apps/cli (后端服务)
 
 实现了 **Server-Side Logic** 和 **WebSocket Gateway**。
 
 - **`src/`**
-  - **`main.rs`**: **CLI 入口** `[Runtime]`
-    - **逻辑**: 使用 `clap` 解析 `serve`, `scan`, `init` 子命令。初始化 `tracing-subscriber` 进行结构化日志记录。
-  - **`commands/serve.rs`**: **服务引导** `[Backend]`
-    - **逻辑**: 构建依赖注入容器 (AppState: RepoManager + SyncManager)。启动 `Axum` HTTP Router，挂载 `/ws` 端点。
-  - **`server/ws.rs`**: **WebSocket 网关** `[Backend]`
-    - **逻辑**: 
-      - **连接管理**: 为每个连接分配临时 `PeerId`。
-      - **消息路由**: 解析 JSON -> `ClientMessage` -> 分发给 Handler。
-      - **通道模型**: 使用 `Broadcast` (全量推送) 和 `MPSC` (单播响应) 通道组合。
-  - **`server/handlers/`**
-    - **`document.rs`**: **OT/CRDT 协作** `[Data: Flows]`
-      - **逻辑**: 处理 `Edit` 消息。调用 `RepoManager` 持久化 Op，并通过广播通道转发给其他客户端。
-    - **`sync.rs`**: **P2P 同步处理** `[Backend: Gossip]`
-      - **逻辑**: 处理 `SyncHello` 握手。调用 `SyncEngine` 生成差异补丁 (`SyncPush/Resp`)。
-    - **`merge.rs`**: **手动合并控制** `[Data: P2P Merge]`
-      - **逻辑**: 处理 `SetSyncMode` (切换自动/手动)。在手动模式下，将接收到的 Ops 放入暂存区而非直接应用，直到收到 `ConfirmMerge`。
-    - **`system.rs`**: **系统状态** `[UI-Arch: Branch Switcher]`
-      - **逻辑**: 响应 `ListShadows`，列出所有已知的远程 Peer 及其版本状态，供前端分支切换器使用。
+  - **`main.rs`**: **CLI 入口** `[Cmd]`
+    - **逻辑**: `clap` 解析 `serve`, `scan`, `init`, `watch` 等命令。
+  - **`commands/`**: **命令实现**
+    - **`serve.rs`**: 启动 Axum Server `[Network]`.
+    - **`scan.rs`**: 执行全量索引扫描 `[Repo]`.
+  - **`server/`**
+    - **`ws.rs`**: **WebSocket 网关** `[Network]`
+      - **逻辑**: 处理连接生命周期，PeerId 分配，消息路由 (Broadcast/MPSC)。
+    - **`handlers/`**: **消息处理器**
+      - **`document.rs`**: 处理 `Edit`, `Open` 等协作消息。
+      - **`sync.rs`**: 处理 `SyncHello`, `SyncPush`。
 
 ## 📂 apps/web (Web 前端)
 
 实现了 **UI Architecture** 和 **Cockpit Design**。
+*注: 基于 Leptos v0.7 + Tailwind CSS*
 
 - **`src/`**
-  - **`app.rs`**: **应用架构** `[UI-Arch]`
-    - **逻辑**: 
-      - **Layout**: CSS Grid 实现 "ActivityBar (Fixed) | Sidebar (Resizable) | Editor (Flex)" 布局。
-      - **Context**: 根级提供 `Locale` 和 `WsService`。
-  - **`hooks/use_core.rs`**: **前端状态中枢** `[UI-Arch: Data Flow]`
-    - **逻辑**: 
-      - 维护响应式信号 (`docs`, `current_doc`, `stats`)。
-      - 统一管理 WebSocket 发送 (`ws.send`)。
-      - 集中处理 WebSocket 接收 (`ServerMessage::match`) 并更新信号。
-  - **`components/sidebar/`** `[UI-Arch: Component System]`
-    - **`tree.rs`**: **文件树算法**
-      - **逻辑**: 将扁平的路径列表 (`Vec<String>`) 转换为嵌套的 `FileNode` 树结构。使用递归构建目录层级。
-    - **`explorer.rs`**: **资源管理器**
-      - **逻辑**: 渲染 `FileTreeItem`。实现右键上下文菜单 (`ContextMenu`) 状态管理。
-    - **`source_control.rs`**: **版本控制面板** `[UI-Arch: Branch Switcher]`
-      - **逻辑**: 
-        - 订阅 `core.pending_ops` 显示待合并变更。
-        - 实现 `Time Travel` 滑块：通过 `playback_version` 信号控制编辑器视图回滚。
-  - **`editor/`** `[UI-Arch: Editor Kernel]`
-    - **`hook.rs`**: **CodeMirror 集成**
-      - **逻辑**: 使用 `use_editor` 自定义 Hook 管理 JS 编辑器实例生命周期。
-      - **同步**: 监听 `core.current_doc` 变更，触发 `OpenDoc`。处理 `NewOp` 消息，调用 `ffi::applyRemoteOp` 更新编辑器内容。
-    - **`playback.rs`**: **客户端回放** `[Data: History]`
-      - **逻辑**: 纯客户端实现的 CRDT 重构。给定一组 Ops 和目标版本号，在内存中重建该版本的文本内容。
-    - **`ffi.rs`**: **Wasm Bindings**
-      - **逻辑**: 定义 `extern "C"` 接口，通过 `wasm-bindgen` 调用 `adapter.js` 中的 CodeMirror API。
-  - **`api/connection.rs`**: **连接韧性** `[Data: Offline]`
-    - **逻辑**: 实现指数退避重连算法。维护 `ConnectionStatus` (Connected, Reconnecting, Offline) 信号。
+  - **`app.rs`**: **应用架构** `[UI]`
+    - **逻辑**: 定义 Grid 布局 (ActivityBar | Sidebar | Editor)。
+    - **Context**: 提供 `Locale`, `SearchControl`.
+  - **`hooks/use_core.rs`**: **状态中枢** `[UI: Data Flow]`
+    - **逻辑**: 封装 WebSocket `send`/`recv`，驱动响应式信号 `docs`, `current_doc`.
+  - **`components/`**
+    - **`activity_bar.rs`**: 左侧一级导航。
+    - **`sidebar/`**: 二级侧边栏 (Explorer, SourceControl)。
+    - **`search_box/`**: **Unified Search** `[UI: Modal]` (Cmd+P).
+    - **`editor/`**: **CodeMirror 集成** `[UI: Rendering]`
+      - **`hook.rs`**: 通过 Wasm Bindings 调用 JS 编辑器。
+    - **`diff_view.rs`**: **Diff 视图** `[Diff]`.
