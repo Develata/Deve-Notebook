@@ -26,7 +26,7 @@ class MermaidWidget extends WidgetType {
         // Use default line height (fallback to 22px) + some padding buffer if needed
         const lineHeight = view.defaultLineHeight || 22; 
         // Add a bit of padding (e.g. 1 line) to avoid being too cramped
-        const height = (lineCount * lineHeight) + 10; 
+        const height = (lineCount * lineHeight); 
         
         wrapper.style.height = height + "px";
         wrapper.style.minHeight = height + "px"; // Force consistency
