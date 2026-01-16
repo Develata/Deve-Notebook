@@ -19,11 +19,20 @@ use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use crate::server::AppState;
 
+use deve_core::models::PeerId;
+use deve_core::ledger::RepoType;
+
 pub async fn handle_list_docs(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
+    active_branch: Option<&PeerId>,
 ) {
-     if let Ok(docs) = state.repo.list_docs() {
+     let repo_type = match active_branch {
+         Some(peer_id) => RepoType::Remote(peer_id.clone(), uuid::Uuid::nil()), // Default RepoId
+         None => RepoType::Local(uuid::Uuid::nil()),
+     };
+
+     if let Ok(docs) = state.repo.list_docs(&repo_type) {
          let msg = ServerMessage::DocList { docs };
          let _ = tx.send(msg);
      }
@@ -61,7 +70,7 @@ pub async fn handle_create_doc(
          // 文件已存在？仅注册 ID
          if let Ok(_doc_id) = state.repo.create_docid(&filename) {
               // 广播更新列表
-              handle_list_docs(state, tx).await;
+              handle_list_docs(state, tx, None).await;
          }
     } else {
          // 新文件：写入标题或空内容
@@ -73,7 +82,7 @@ pub async fn handle_create_doc(
                  tracing::info!("Created doc: {} ({})", filename, doc_id);
                  
                  // 广播更新列表
-                 handle_list_docs(state, tx).await;
+                 handle_list_docs(state, tx, None).await;
              }
          }
     }
@@ -115,7 +124,7 @@ pub async fn handle_rename_doc(
                   }
               }
 
-              handle_list_docs(state, tx).await;
+              handle_list_docs(state, tx, None).await;
          }
      } else {
          tracing::warn!("Rename failed: Source does not exist: {:?}", src);
@@ -166,7 +175,7 @@ pub async fn handle_delete_doc(
     }
     
     // Update List
-    handle_list_docs(state, tx).await;
+    handle_list_docs(state, tx, None).await;
 }
 
 pub async fn handle_copy_doc(
@@ -206,7 +215,7 @@ pub async fn handle_copy_doc(
         // Register new document in Ledger
         if let Ok(doc_id) = state.repo.create_docid(&dest_path) {
             tracing::info!("Copied {} to {} (New DocId: {})", src_path, dest_path, doc_id);
-            handle_list_docs(state, tx).await;
+            handle_list_docs(state, tx, None).await;
         } else {
              tracing::error!("Failed to register copied doc in ledger");
         }
@@ -228,12 +237,13 @@ pub async fn handle_list_shadows(
     state: &Arc<AppState>,
     tx: &broadcast::Sender<ServerMessage>,
 ) {
+    tracing::info!("Handling ListShadows request. Remotes dir: {:?}", state.repo.remotes_dir());
     match state.repo.list_shadows_on_disk() {
         Ok(peers) => {
             let shadows: Vec<String> = peers.iter()
                 .map(|p| p.to_string())
                 .collect();
-            tracing::info!("Listing {} shadow repos", shadows.len());
+            tracing::info!("Found {} shadow repos: {:?}", shadows.len(), shadows);
             let _ = tx.send(ServerMessage::ShadowList { shadows });
         }
         Err(e) => {

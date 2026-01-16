@@ -7,7 +7,7 @@ use anyhow::Result;
 use std::sync::Arc;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
-use crate::ledger::RepoManager;
+use crate::ledger::{RepoManager, RepoType};
 use crate::vfs::Vfs;
 use crate::sync::{reconcile, recovery};
 use crate::protocol::ServerMessage;
@@ -106,7 +106,7 @@ impl<'a> FsEventHandler<'a> {
     }
 
     fn gen_list(&self) -> Result<Vec<ServerMessage>> {
-        let docs = self.repo.list_docs()?;
+        let docs = self.repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
         Ok(vec![ServerMessage::DocList { docs }])
     }
 }

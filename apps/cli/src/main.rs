@@ -53,6 +53,11 @@ enum Commands {
     },
     /// Verify P2P Sync Logic (Simulation)
     VerifyP2P,
+    /// Seed a shadow repo with local data
+    Seed {
+        #[arg(short, long)]
+        peer: String,
+    },
 }
 
 #[tokio::main]
@@ -79,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Serve { port }) => commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth).await?,
         Some(Commands::Export { output }) => commands::export::run(&ledger_dir, output, config.snapshot_depth)?,
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
+        Some(Commands::Seed { peer }) => commands::seed::run(&ledger_dir, peer, config.snapshot_depth)?,
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
 

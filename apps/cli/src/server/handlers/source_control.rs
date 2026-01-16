@@ -11,6 +11,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
+use deve_core::ledger::RepoType;
 use crate::server::AppState;
 
 /// 获取变更列表 (暂存区 + 未暂存)
@@ -39,7 +40,7 @@ fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
     let mut changes = Vec::new();
     
     // 获取所有文档
-    let docs = match state.repo.list_docs() {
+    let docs = match state.repo.list_docs(&RepoType::Local(uuid::Uuid::nil())) {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to list docs: {:?}", e);

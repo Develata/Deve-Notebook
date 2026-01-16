@@ -17,6 +17,8 @@ use crate::models::{DocId, LedgerEntry, PeerId};
 use crate::ledger::{ops, range};
 use crate::ledger::schema::*;
 
+use crate::ledger::repo_type::RepoId;
+
 /// 影子库 (Shadow Repository)
 /// 
 /// 封装单个远端 Peer 的影子数据库，提供只读访问接口。
@@ -25,14 +27,16 @@ use crate::ledger::schema::*;
 pub struct ShadowRepo<'a> {
     /// Peer ID
     pub peer_id: PeerId,
+    /// Repo ID
+    pub repo_id: RepoId,
     /// 数据库引用 (只读访问)
     db: &'a Database,
 }
 
 impl<'a> ShadowRepo<'a> {
     /// 创建影子库的只读视图
-    pub(crate) fn new(peer_id: PeerId, db: &'a Database) -> Self {
-        Self { peer_id, db }
+    pub(crate) fn new(peer_id: PeerId, repo_id: RepoId, db: &'a Database) -> Self {
+        Self { peer_id, repo_id, db }
     }
 
     /// 获取指定文档的所有操作 (只读)
@@ -85,6 +89,7 @@ mod tests {
     use crate::models::Op;
     use crate::ledger::schema::{LEDGER_OPS, DOC_OPS};
     use crate::ledger::shadow::management::ensure_shadow_db;
+    use uuid::Uuid;
 
     #[test]
     fn test_shadow_repo_read_only_access() -> Result<()> {
@@ -92,16 +97,18 @@ mod tests {
         let remotes_dir = tmp_dir.path().join("remotes");
         std::fs::create_dir_all(&remotes_dir)?;
         
-        let shadow_dbs: RwLock<HashMap<PeerId, Database>> = RwLock::new(HashMap::new());
+        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>> = RwLock::new(HashMap::new());
         let peer_id = PeerId::new("test_peer");
+        let repo_id = Uuid::new_v4();
         
         // Ensure shadow DB exists
-        ensure_shadow_db(&remotes_dir, &shadow_dbs, &peer_id)?;
+        ensure_shadow_db(&remotes_dir, &shadow_dbs, &peer_id, &repo_id)?;
         
         // Write some test data (simulating append_remote_op)
         {
             let dbs = shadow_dbs.read().unwrap();
-            let db = dbs.get(&peer_id).unwrap();
+            let peer_repos = dbs.get(&peer_id).unwrap();
+            let db = peer_repos.get(&repo_id).unwrap();
             
             let doc_id = DocId::new();
             let entry = LedgerEntry {
@@ -125,8 +132,9 @@ mod tests {
         
         // Create read-only ShadowRepo view
         let dbs = shadow_dbs.read().unwrap();
-        let db = dbs.get(&peer_id).unwrap();
-        let shadow_repo = ShadowRepo::new(peer_id.clone(), db);
+        let peer_repos = dbs.get(&peer_id).unwrap();
+        let db = peer_repos.get(&repo_id).unwrap();
+        let shadow_repo = ShadowRepo::new(peer_id.clone(), repo_id, db);
         
         // Verify read-only access works
         let max_seq = shadow_repo.get_global_max_seq()?;

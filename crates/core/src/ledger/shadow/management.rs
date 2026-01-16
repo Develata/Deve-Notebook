@@ -17,24 +17,34 @@ use std::sync::RwLock;
 use crate::models::PeerId;
 use crate::ledger::schema::*;
 
-/// 确保指定 Peer 的影子库已加载。
+use crate::ledger::repo_type::RepoId;
+
+/// 确保指定 Peer 的特定影子库已加载。
 pub fn ensure_shadow_db(
     remotes_dir: &Path,
-    shadow_dbs: &RwLock<HashMap<PeerId, Database>>,
-    peer_id: &PeerId
+    shadow_dbs: &RwLock<HashMap<PeerId, HashMap<RepoId, Database>>>,
+    peer_id: &PeerId,
+    repo_id: &RepoId,
 ) -> Result<()> {
     // Check if already loaded
     {
         let dbs = shadow_dbs.read().unwrap();
-        if dbs.contains_key(peer_id) {
-            return Ok(());
+        if let Some(repos) = dbs.get(peer_id) {
+            if repos.contains_key(repo_id) {
+                return Ok(());
+            }
         }
     }
     
-    // Create or open the shadow database
-    let db_path = remotes_dir.join(format!("{}.redb", peer_id.to_filename()));
+    // Create peer directory: remotes/<peer_id>/
+    let peer_dir = remotes_dir.join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir)
+        .with_context(|| format!("Failed to create shadow directory for peer: {}", peer_id))?;
+
+    // Create or open the shadow database: remotes/<peer_id>/<repo_id>.redb
+    let db_path = peer_dir.join(format!("{}.redb", repo_id));
     let db = Database::create(&db_path)
-        .with_context(|| format!("Failed to create shadow database for peer: {}", peer_id))?;
+        .with_context(|| format!("Failed to create shadow database for peer {} repo {}", peer_id, repo_id))?;
     
     // Initialize tables
     let write_txn = db.begin_write()?;
@@ -43,31 +53,45 @@ pub fn ensure_shadow_db(
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
-        // Note: Shadow DBs don't need path mappings (metadata stays in local)
+        
+        // Metadata tables (for remote file listing)
+        let _ = write_txn.open_table(PATH_TO_DOCID)?;
+        let _ = write_txn.open_table(DOCID_TO_PATH)?;
+        let _ = write_txn.open_table(INODE_TO_DOCID)?;
     }
     write_txn.commit()?;
     
     // Store in map
     let mut dbs = shadow_dbs.write().unwrap();
-    dbs.insert(peer_id.clone(), db);
+    dbs.entry(peer_id.clone())
+        .or_insert_with(HashMap::new)
+        .insert(*repo_id, db);
     
     Ok(())
 }
 
-/// 扫描磁盘上所有影子库文件并返回 PeerId 列表。
+/// 扫描磁盘上所有影子库文件夹并返回 PeerId 列表。
 pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
     let mut peers = Vec::new();
     
     if remotes_dir.exists() {
-        for entry in std::fs::read_dir(remotes_dir)? {
+        tracing::info!("Scanning remotes dir: {:?}", remotes_dir);
+        let entries = std::fs::read_dir(remotes_dir)?;
+        for entry in entries {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "redb") {
-                if let Some(stem) = path.file_stem() {
+            tracing::info!("Found entry: {:?}", path);
+            if path.is_dir() {
+                if let Some(stem) = path.file_name() {
+                     // Assuming dir name is PeerId (or encoded filename)
                     peers.push(PeerId::new(stem.to_string_lossy().to_string()));
                 }
+            } else {
+                tracing::warn!("Entry is not a directory: {:?}", path);
             }
         }
+    } else {
+        tracing::warn!("Remotes dir not found: {:?}", remotes_dir);
     }
     
     Ok(peers)

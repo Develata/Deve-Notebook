@@ -14,12 +14,15 @@
 
 use crate::models::{PeerId, LedgerEntry};
 use crate::sync::vector::VersionVector;
+use crate::ledger::repo_type::RepoId;
 
 /// 同步请求：表示需要从某个 Peer 拉取的数据范围
 #[derive(Debug, Clone)]
 pub struct SyncRequest {
     /// 目标 Peer ID
     pub peer_id: PeerId,
+    /// 目标仓库 ID
+    pub repo_id: RepoId,
     /// 需要拉取的序列号范围 (start, end) - 左闭右开
     pub range: (u64, u64),
 }
@@ -31,6 +34,8 @@ use crate::security::EncryptedOp;
 pub struct SyncResponse {
     /// 来源 Peer ID
     pub peer_id: PeerId,
+    /// 来源仓库 ID
+    pub repo_id: RepoId,
     /// 加密的操作列表 (Envelope Body)
     pub ops: Vec<EncryptedOp>,
 }
@@ -56,11 +61,16 @@ pub fn compute_diff_requests(
     remote_vector: &VersionVector
 ) -> (Vec<SyncRequest>, Vec<SyncRequest>) {
     let (missing_from_remote, missing_from_local) = local_vector.diff(remote_vector);
+    
+    // TODO: Acquire current active RepodId context?
+    // For now we assume default repo ID (nil) for backward compatibility
+    let default_repo_id = uuid::Uuid::nil();
 
     let to_send: Vec<SyncRequest> = missing_from_remote
         .into_iter()
         .map(|(peer_id, range)| SyncRequest {
             peer_id,
+            repo_id: default_repo_id,
             range: (range.start, range.end),
         })
         .collect();
@@ -69,6 +79,7 @@ pub fn compute_diff_requests(
         .into_iter()
         .map(|(peer_id, range)| SyncRequest {
             peer_id,
+            repo_id: default_repo_id,
             range: (range.start, range.end),
         })
         .collect();

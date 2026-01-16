@@ -3,7 +3,7 @@ use std::sync::Arc;
 use walkdir::WalkDir;
 use tracing::{info, warn, error};
 use anyhow::Result;
-use crate::ledger::RepoManager;
+use crate::ledger::{RepoManager, RepoType};
 use crate::vfs::Vfs;
 
 /// Performs a full scan of the vault.
@@ -62,7 +62,7 @@ pub fn scan_vault(
     }
 
     // 2. Scan Ledger -> Disk (Cleanup Ghosts)
-    let docs = repo.list_docs()?;
+    let docs = repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
     info!("SyncScan: Ledger 中有 {} 个条目", docs.len());
     
     for (doc_id, path) in docs {

@@ -9,10 +9,10 @@ impl SyncEngine {
     pub fn get_ops_for_sync(&self, request: &SyncRequest) -> Result<SyncResponse> {
         let raw_ops = if request.peer_id == self.local_peer_id {
             // 请求的是本地数据 - 从 Local Repo 获取
-            self.repo.get_local_ops_in_range(request.range.0, request.range.1)?
+            self.repo.get_local_ops_in_range(&request.repo_id, request.range.0, request.range.1)?
         } else {
             // 请求的是远端数据 - 从 Shadow Repo 获取
-            self.repo.get_shadow_ops_in_range(&request.peer_id, request.range.0, request.range.1)?
+            self.repo.get_shadow_ops_in_range(&request.peer_id, &request.repo_id, request.range.0, request.range.1)?
         };
 
         let repo_key = self.repo_key.as_ref()
@@ -27,6 +27,7 @@ impl SyncEngine {
 
         Ok(SyncResponse {
             peer_id: request.peer_id.clone(),
+            repo_id: request.repo_id,
             ops: encrypted_ops,
         })
     }
@@ -44,7 +45,7 @@ impl SyncEngine {
             let entry = repo_key.decrypt(&enc_op)?;
             
             // Write Decrypted (Plaintext) Entry to Shadow DB
-            self.repo.append_remote_op(&response.peer_id, &entry)?;
+            self.repo.append_remote_op(&response.peer_id, &response.repo_id, &entry)?;
             max_seq = max_seq.max(seq);
         }
 

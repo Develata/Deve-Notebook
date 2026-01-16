@@ -60,8 +60,8 @@ pub struct RepoManager {
     pub(crate) ledger_dir: PathBuf,
     /// 本地权威库 (local.redb)
     pub(crate) local_db: Database,
-    /// 远端影子库集合 (peer_id -> Database) - 懒加载
-    pub(crate) shadow_dbs: RwLock<HashMap<PeerId, Database>>,
+    /// 远端影子库集合 (peer_id -> repo_id -> Database) - 懒加载
+    pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<crate::ledger::repo_type::RepoId, Database>>>,
     /// 快照保留深度
     pub snapshot_depth: usize,
 }
@@ -90,7 +90,8 @@ impl RepoManager {
     }
 
     /// 获取本地库指定序列号范围的操作 (用于 P2P 同步增量推送)
-    pub fn get_local_ops_in_range(&self, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
+    pub fn get_local_ops_in_range(&self, _repo_id: &crate::ledger::repo_type::RepoId, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
+        // TODO: support multi local repos. For now we use the active local_db.
         range::get_ops_in_range(&self.local_db, start_seq, end_seq)
     }
 
@@ -149,8 +150,19 @@ impl RepoManager {
     }
 
     /// 列出所有文档
-    pub fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
-        metadata::list_docs(&self.local_db)
+    pub fn list_docs(&self, repo_type: &RepoType) -> Result<Vec<(DocId, String)>> {
+        match repo_type {
+            RepoType::Local(_) => metadata::list_docs(&self.local_db),
+            RepoType::Remote(peer_id, repo_id) => {
+                 self.ensure_shadow_db(peer_id, repo_id)?;
+                 let dbs = self.shadow_dbs.read().unwrap();
+                 let peer_repos = dbs.get(peer_id)
+                     .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
+                 let db = peer_repos.get(repo_id)
+                     .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
+                 metadata::list_docs(db)
+            }
+        }
     }
 
     // ========== Operations (Append/Read) ==========
@@ -171,12 +183,14 @@ impl RepoManager {
     /// 从指定仓库读取操作
     pub fn get_ops(&self, repo_type: &RepoType, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         match repo_type {
-            RepoType::Local => ops::get_ops_from_db(&self.local_db, doc_id),
-            RepoType::Remote(peer_id) => {
-                self.ensure_shadow_db(peer_id)?;
+            RepoType::Local(_) => ops::get_ops_from_db(&self.local_db, doc_id),
+            RepoType::Remote(peer_id, repo_id) => {
+                self.ensure_shadow_db(peer_id, repo_id)?; 
                 let dbs = self.shadow_dbs.read().unwrap();
-                let db = dbs.get(peer_id)
-                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库: {}", peer_id))?;
+                let peer_repos = dbs.get(peer_id)
+                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
+                let db = peer_repos.get(repo_id)
+                    .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
                 ops::get_ops_from_db(db, doc_id)
             }
         }
@@ -184,7 +198,8 @@ impl RepoManager {
 
     /// 从本地库读取操作（便捷方法）
     pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        self.get_ops(&RepoType::Local, doc_id)
+        // 使用默认 UUID (nil) 代表当前活动的本地库
+        self.get_ops(&RepoType::Local(uuid::Uuid::nil()), doc_id)
     }
 
     // ========== Source Control Operations ==========

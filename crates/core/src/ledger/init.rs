@@ -49,12 +49,19 @@ pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize) -> Result<RepoM
     std::fs::create_dir_all(&ledger_dir)
         .with_context(|| format!("无法创建账本目录: {:?}", ledger_dir))?;
     
+    let local_dir = ledger_dir.join("local");
+    std::fs::create_dir_all(&local_dir)
+        .with_context(|| format!("无法创建本地库目录: {:?}", local_dir))?;
+
     let remotes_dir = ledger_dir.join("remotes");
     std::fs::create_dir_all(&remotes_dir)
         .with_context(|| format!("无法创建远端目录: {:?}", remotes_dir))?;
     
-    // 初始化本地数据库
-    let local_db_path = ledger_dir.join("local.redb");
+    // 初始化本地数据库 (Default Local Repo)
+    // TODO: support multi-repo init? For now, we create a default one.
+    // If we want to support existing single-file, we might need migration.
+    // But for new structure:
+    let local_db_path = local_dir.join("default.redb");
     let local_db = Database::create(&local_db_path)
         .with_context(|| format!("无法创建本地数据库: {:?}", local_db_path))?;
     

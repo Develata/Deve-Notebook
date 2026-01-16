@@ -65,12 +65,15 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
 
     // 4. Sync A -> B
     info!("--- Step 2: Sync A -> B ---");
-    let ops_a = repo_a.get_ops(&RepoType::Local, doc_id)?;
+    // Use default repo_id for local
+    let repo_id = uuid::Uuid::nil();
+    let ops_a = repo_a.get_ops(&RepoType::Local(repo_id), doc_id)?;
     info!("Extracted {} ops from Peer A", ops_a.len());
 
     let mut applied_count = 0;
     for (_seq, entry) in ops_a {
-        repo_b.append_remote_op(&peer_a_id, &entry)?;
+        // Assume syncing default repo
+        repo_b.append_remote_op(&peer_a_id, &repo_id, &entry)?;
         applied_count += 1;
     }
     info!("Applied {} ops to Peer B (Shadow: {})", applied_count, peer_a_id);
@@ -81,7 +84,7 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     // Read A's shadow in B using get_shadow_ops directly
     // Note: get_shadow_repo is currently specific about lifetimes or placeholders, so determining access via ops is safer.
     
-    let ops = repo_b.get_shadow_ops(&peer_a_id, doc_id)?;
+    let ops = repo_b.get_shadow_ops(&peer_a_id, &repo_id, doc_id)?;
     if !ops.is_empty() {
         let entries: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
         let content_in_b_shadow_a = deve_core::state::reconstruct_content(&entries);
@@ -120,7 +123,7 @@ trait ContentResolver {
 
 impl ContentResolver for RepoManager {
     fn resolve_local_content(&self, doc_id: DocId) -> Result<String> {
-        let ops = self.get_ops(&RepoType::Local, doc_id)?;
+        let ops = self.get_ops(&RepoType::Local(uuid::Uuid::nil()), doc_id)?;
         let entries: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
         Ok(deve_core::state::reconstruct_content(&entries))
     }

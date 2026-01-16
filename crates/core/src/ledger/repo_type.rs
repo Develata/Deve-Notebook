@@ -9,6 +9,10 @@
 //! - **Store C (Shadow Repos)**: 远端影子库,存储远端节点的数据副本
 
 use crate::models::PeerId;
+use uuid::Uuid;
+
+/// 仓库 ID (UUID)
+pub type RepoId = Uuid;
 
 /// 仓库类型枚举
 ///
@@ -16,30 +20,27 @@ use crate::models::PeerId;
 ///
 /// # 变体说明
 ///
-/// - `Local`: 本地权威库 (Store B),存储在 `local.redb`
-/// - `Remote(PeerId)`: 远端影子库 (Store C),存储在 `remotes/{peer_id}.redb`
-///
-/// # 示例
-///
-/// ```ignore
-/// use deve_core::ledger::RepoType;
-/// use deve_core::models::PeerId;
-///
-/// // 指定本地库
-/// let local = RepoType::Local;
-///
-/// // 指定某个远端 Peer 的影子库
-/// let remote = RepoType::Remote(PeerId::new("peer_mobile"));
-/// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// - `Local`: 本地权威库 (Store B),存储在 `ledger/local/{repo_id}.redb`
+/// - `Remote(PeerId, RepoId)`: 远端影子库 (Store C),存储在 `ledger/remotes/{peer_id}/{repo_id}.redb`
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RepoType {
     /// 本地权威库 (Store B)
     ///
-    /// 物理路径: `{ledger_dir}/local.redb`
-    Local,
+    /// 物理路径: `{ledger_dir}/local/{repo_id}.redb`
+    Local(RepoId),
 
     /// 远端影子库 (Store C)
     ///
-    /// 物理路径: `{ledger_dir}/remotes/{peer_id}.redb`
-    Remote(PeerId),
+    /// 物理路径: `{ledger_dir}/remotes/{peer_id}/{repo_id}.redb`
+    Remote(PeerId, RepoId),
+}
+
+impl RepoType {
+    /// 获取 RepoId
+    pub fn repo_id(&self) -> RepoId {
+        match self {
+            RepoType::Local(id) => *id,
+            RepoType::Remote(_, id) => *id,
+        }
+    }
 }

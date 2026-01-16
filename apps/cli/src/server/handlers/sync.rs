@@ -85,6 +85,7 @@ pub async fn handle_sync_request(
     for (peer_id, range) in requests {
         let sync_req = sync_proto::SyncRequest {
             peer_id: peer_id,
+            repo_id: uuid::Uuid::nil(),
             range: range,
         };
         
@@ -111,6 +112,7 @@ pub async fn handle_sync_push(
     
     let response = sync_proto::SyncResponse {
         peer_id: peer_id.clone(),
+        repo_id: uuid::Uuid::nil(),
         ops,
     };
 

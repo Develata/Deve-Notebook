@@ -81,7 +81,8 @@ pub async fn handle_open_doc(
         }
         // 影子分支: 从 Shadow DB 读取
         Some(peer_id) => {
-            match state.repo.get_shadow_ops(peer_id, doc_id) {
+            // TODO: Support multi-repo. Using default RepoId (nil) for now.
+            match state.repo.get_shadow_ops(peer_id, &uuid::Uuid::nil(), doc_id) {
                 Ok(entries_with_seq) => {
                     let ops: Vec<LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();
                     let content = deve_core::state::reconstruct_content(&ops);

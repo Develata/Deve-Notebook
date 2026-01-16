@@ -6,11 +6,13 @@ use super::*;
 use anyhow::Result;
 use tempfile::TempDir;
 
+use uuid::Uuid;
+
 /// 测试 RepoManager 初始化
 ///
 /// 验证:
 /// - 账本目录正确创建
-/// - 本地数据库文件存在 (`local.redb`)
+/// - 本地数据库文件存在 (`local/default.redb`)
 /// - 远端目录存在 (`remotes/`)
 #[test]
 fn test_repo_manager_init() -> Result<()> {
@@ -21,7 +23,7 @@ fn test_repo_manager_init() -> Result<()> {
     
     // 验证目录结构
     assert!(ledger_dir.exists());
-    assert!(ledger_dir.join("local.redb").exists());
+    assert!(ledger_dir.join("local").join("default.redb").exists());
     assert!(ledger_dir.join("remotes").exists());
     
     Ok(())
@@ -41,8 +43,9 @@ fn test_local_and_shadow_isolation() -> Result<()> {
     
     let doc_id = DocId::new();
     let peer_id = PeerId::new("peer_mobile");
+    let repo_id = Uuid::new_v4(); // Generate a random repo ID for testing remote sync
     
-    // 写入本地库
+    // 写入本地库 (Active Default Repo)
     let local_entry = LedgerEntry {
         doc_id,
         op: crate::models::Op::Insert { pos: 0, content: "local content".to_string() },
@@ -56,17 +59,20 @@ fn test_local_and_shadow_isolation() -> Result<()> {
         op: crate::models::Op::Insert { pos: 0, content: "remote content".to_string() },
         timestamp: 2000,
     };
-    repo.append_remote_op(&peer_id, &remote_entry)?;
+    repo.append_remote_op(&peer_id, &repo_id, &remote_entry)?;
     
     // 验证隔离性
-    let local_ops = repo.get_ops(&RepoType::Local, doc_id)?;
+    // Local ops using get_local_ops helper (uses default repo id internally)
+    let local_ops = repo.get_local_ops(doc_id)?;
     assert_eq!(local_ops.len(), 1);
     
-    let remote_ops = repo.get_ops(&RepoType::Remote(peer_id.clone()), doc_id)?;
+    let remote_ops = repo.get_ops(&RepoType::Remote(peer_id.clone(), repo_id), doc_id)?;
     assert_eq!(remote_ops.len(), 1);
     
     // 验证影子库文件存在
-    let shadow_path = ledger_dir.join("remotes").join("peer_mobile.redb");
+    let shadow_path = ledger_dir.join("remotes")
+        .join(peer_id.to_filename())
+        .join(format!("{}.redb", repo_id));
     assert!(shadow_path.exists());
     
     Ok(())

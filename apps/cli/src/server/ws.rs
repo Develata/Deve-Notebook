@@ -111,7 +111,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                          document::handle_open_doc(&state_clone, &tx, doc_id, active_branch.as_ref()).await;
                      }
                      ClientMessage::ListDocs => {
-                         system::handle_list_docs(&state_clone, &tx).await;
+                         system::handle_list_docs(&state_clone, &tx, active_branch.as_ref()).await;
                      }
                      ClientMessage::CreateDoc { name } => {
                          system::handle_create_doc(&state_clone, &tx, name).await;
@@ -178,6 +178,8 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                              peer_id,
                              success: true,
                          });
+                         // 刷新文件列表
+                         system::handle_list_docs(&state_clone, &tx, active_branch.as_ref()).await;
                      }
                      // Source Control messages
                      ClientMessage::GetChanges => {
