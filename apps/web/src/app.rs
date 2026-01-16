@@ -68,6 +68,7 @@ fn AppContent() -> impl IntoView {
     let (show_settings, set_show_settings) = signal(false);
     let (_show_open_modal, _set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
+    let (pinned_views, set_pinned_views) = signal(SidebarView::all());
 
     // 4. 快捷键
     let handle_keydown = create_global_shortcut_handler(
@@ -194,14 +195,15 @@ fn AppContent() -> impl IntoView {
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
                  // 左侧边栏容器 (Activity Bar + Sidebar)
                  <aside 
-                    class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col"
+                    class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col z-20"
                     style=move || format!("width: {}px", sidebar_width.get())
                  >
                      // Top: Activity Bar (Horizontal)
                      <crate::components::activity_bar::ActivityBar 
                         active_view=active_view 
                         set_active_view=set_active_view 
-                        on_settings=on_settings 
+                        pinned_views=pinned_views
+                        set_pinned_views=set_pinned_views
                      />
                      
                      // Body: Specific Sidebar Content
