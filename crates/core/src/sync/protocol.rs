@@ -12,9 +12,8 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use crate::models::{PeerId, LedgerEntry};
+use crate::models::{PeerId, LedgerEntry, RepoId};
 use crate::sync::vector::VersionVector;
-use crate::ledger::repo_type::RepoId;
 
 /// 同步请求：表示需要从某个 Peer 拉取的数据范围
 #[derive(Debug, Clone)]

@@ -3,7 +3,8 @@ use std::sync::Arc;
 use walkdir::WalkDir;
 use tracing::{info, warn, error};
 use anyhow::Result;
-use crate::ledger::{RepoManager, RepoType};
+use crate::ledger::RepoManager;
+use crate::models::RepoType;
 use crate::vfs::Vfs;
 
 /// Performs a full scan of the vault.

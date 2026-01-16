@@ -19,8 +19,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use crate::server::AppState;
 
-use deve_core::models::PeerId;
-use deve_core::ledger::RepoType;
+use deve_core::models::{PeerId, RepoType};
 
 pub async fn handle_list_docs(
     state: &Arc<AppState>,

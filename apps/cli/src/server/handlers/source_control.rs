@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
-use deve_core::ledger::RepoType;
+use deve_core::models::RepoType;
 use crate::server::AppState;
 
 /// 获取变更列表 (暂存区 + 未暂存)

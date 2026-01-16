@@ -26,6 +26,7 @@ deve_core.workspace = true
 js-sys = "0.3.83"
 gloo-timers = { version = "0.3", features = ["futures"] }
 getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom_old = { package = "getrandom", version = "0.2", features = ["js"] }
 uuid.workspace = true
 sublime_fuzzy = "0.7.0"
 leptos-use = "0.18.0"

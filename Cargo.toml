@@ -25,6 +25,7 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 tokio = { version = "1.0", features = ["full"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
 uuid = { version = "1.0", features = ["v4", "serde", "js"] }
 chrono = { version = "0.4", features = ["serde"] }
 

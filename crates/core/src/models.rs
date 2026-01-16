@@ -113,3 +113,33 @@ pub struct FileNodeId {
     // We combine them into a single u128 for easy storage
     pub id: u128,
 }
+
+/// 仓库 ID (UUID)
+pub type RepoId = Uuid;
+
+/// 仓库类型枚举
+///
+/// 用于指定操作的目标仓库,实现 Trinity Isolation 中的数据隔离。
+///
+/// # 变体说明
+///
+/// - `Local`: 本地权威库 (Store B)
+/// - `Remote(PeerId, RepoId)`: 远端影子库 (Store C)
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RepoType {
+    /// 本地权威库 (Store B)
+    Local(RepoId),
+
+    /// 远端影子库 (Store C)
+    Remote(PeerId, RepoId),
+}
+
+impl RepoType {
+    /// 获取 RepoId
+    pub fn repo_id(&self) -> RepoId {
+        match self {
+            RepoType::Local(id) => *id,
+            RepoType::Remote(_, id) => *id,
+        }
+    }
+}

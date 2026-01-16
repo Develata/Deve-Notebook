@@ -12,8 +12,8 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use crate::ledger::{RepoManager, RepoType};
-use crate::models::FileNodeId;
+use crate::ledger::RepoManager;
+use crate::models::{FileNodeId, RepoType};
 
 
 pub struct Vfs {

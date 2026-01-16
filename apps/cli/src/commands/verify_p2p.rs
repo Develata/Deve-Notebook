@@ -14,8 +14,8 @@ use std::path::Path;
 use std::fs;
 use anyhow::Result;
 use tracing::{info, warn};
-use deve_core::ledger::{RepoManager, RepoType};
-use deve_core::models::{PeerId, DocId, LedgerEntry, Op};
+use deve_core::ledger::RepoManager;
+use deve_core::models::{PeerId, DocId, LedgerEntry, Op, RepoType};
 
 pub fn run(snapshot_depth: usize) -> Result<()> {
     info!("Starting P2P Verification Simulation...");

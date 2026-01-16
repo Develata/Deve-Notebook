@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use anyhow::{Result, Context};
-use deve_core::ledger::{RepoManager, RepoType};
-use deve_core::models::{PeerId, LedgerEntry};
+use deve_core::ledger::RepoManager;
+use deve_core::models::{PeerId, LedgerEntry, RepoType};
 
 pub fn run(ledger_dir: &PathBuf, target_peer: String, snapshot_depth: usize) -> Result<()> {
     tracing::info!("Starting Seed Command...");

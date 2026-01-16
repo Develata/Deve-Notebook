@@ -13,11 +13,10 @@
 
 use anyhow::Result;
 use redb::Database;
-use crate::models::{DocId, LedgerEntry, PeerId};
+use crate::models::{DocId, LedgerEntry, PeerId, RepoId};
 use crate::ledger::{ops, range};
 use crate::ledger::schema::*;
 
-use crate::ledger::repo_type::RepoId;
 
 /// 影子库 (Shadow Repository)
 /// 

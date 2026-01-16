@@ -14,10 +14,8 @@ use redb::Database;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::RwLock;
-use crate::models::PeerId;
+use crate::models::{PeerId, RepoId};
 use crate::ledger::schema::*;
-
-use crate::ledger::repo_type::RepoId;
 
 /// 确保指定 Peer 的特定影子库已加载。
 pub fn ensure_shadow_db(

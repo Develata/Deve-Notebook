@@ -30,10 +30,10 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
-use crate::models::{DocId, LedgerEntry, PeerId};
+use crate::models::{DocId, LedgerEntry, PeerId, RepoType, RepoId};
 
 // ========== 子模块声明 ==========
-pub mod repo_type;
+
 pub mod init;
 mod shadow_manager;
 pub mod schema;
@@ -45,7 +45,7 @@ pub mod range;
 pub mod source_control;
 
 // ========== 公开导出 ==========
-pub use self::repo_type::RepoType;
+
 pub use self::schema::*;
 
 #[cfg(test)]
@@ -61,7 +61,7 @@ pub struct RepoManager {
     /// 本地权威库 (local.redb)
     pub(crate) local_db: Database,
     /// 远端影子库集合 (peer_id -> repo_id -> Database) - 懒加载
-    pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<crate::ledger::repo_type::RepoId, Database>>>,
+    pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>>,
     /// 快照保留深度
     pub snapshot_depth: usize,
 }
@@ -90,7 +90,7 @@ impl RepoManager {
     }
 
     /// 获取本地库指定序列号范围的操作 (用于 P2P 同步增量推送)
-    pub fn get_local_ops_in_range(&self, _repo_id: &crate::ledger::repo_type::RepoId, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
+    pub fn get_local_ops_in_range(&self, _repo_id: &RepoId, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
         // TODO: support multi local repos. For now we use the active local_db.
         range::get_ops_in_range(&self.local_db, start_seq, end_seq)
     }

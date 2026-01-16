@@ -13,13 +13,11 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::RwLock;
 
-use crate::models::{DocId, LedgerEntry, PeerId};
+use crate::models::{DocId, LedgerEntry, PeerId, RepoType, RepoId};
 use super::ops;
 use super::range;
 use super::shadow;
 use super::RepoManager;
-use super::RepoType;
-use crate::ledger::repo_type::RepoId;
 
 impl RepoManager {
     /// 确保指定 Peer 的影子库已加载到内存
