@@ -4,6 +4,7 @@ use walkdir::WalkDir;
 use tracing::{info, warn, error};
 use anyhow::Result;
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
 use crate::vfs::Vfs;
 

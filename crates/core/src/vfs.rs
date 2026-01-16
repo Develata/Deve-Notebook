@@ -13,6 +13,7 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::{FileNodeId, RepoType};
 
 

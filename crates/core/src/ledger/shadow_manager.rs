@@ -41,16 +41,7 @@ impl RepoManager {
         dbs.keys().cloned().collect()
     }
 
-    /// 扫描磁盘上所有影子库文件
-    ///
-    /// 遍历 `remotes/` 目录，返回所有已存在的影子库对应的 PeerId。
-    ///
-    /// # 返回
-    ///
-    /// 磁盘上存在的所有影子库的 PeerId 列表
-    pub fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
-        shadow::list_shadows_on_disk(&self.remotes_dir())
-    }
+    // Method moved to listing trait
 
     /// 获取指定 Peer 的影子库只读视图
     ///

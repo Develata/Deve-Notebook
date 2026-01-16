@@ -115,6 +115,8 @@ pub enum ClientMessage {
     // === Branch Switcher Messages (分支切换) ===
     /// 请求影子库列表 (远程分支)
     ListShadows,
+    /// 请求当前分支下的仓库列表 (动态读取 .redb 文件)
+    ListRepos,
     /// 切换活动分支
     /// peer_id: None = 本地 (Master), Some = 远程影子库
     SwitchBranch { peer_id: Option<String> },
@@ -214,6 +216,10 @@ pub enum ServerMessage {
     /// 影子库 Peer ID 列表 (远程分支)
     ShadowList {
         shadows: Vec<String>,
+    },
+    /// 仓库列表 (当前分支下的 .redb 文件)
+    RepoList {
+        repos: Vec<String>,
     },
     /// 分支切换确认
     BranchSwitched {

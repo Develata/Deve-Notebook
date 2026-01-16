@@ -9,6 +9,9 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+pub mod types;
+pub use types::*;
+
 use leptos::prelude::*;
 use crate::api::WsService;
 use std::collections::HashMap;
@@ -16,82 +19,6 @@ use deve_core::models::{DocId, PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::source_control::{ChangeEntry, CommitInfo};
 use crate::editor::EditorStats;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PeerSession {
-    pub id: PeerId,
-    pub vector: VersionVector,
-    pub last_seen: u64, // timestamp
-}
-
-#[derive(Clone)]
-pub struct CoreState {
-    pub ws: WsService,
-    pub docs: ReadSignal<Vec<(DocId, String)>>,
-    pub current_doc: ReadSignal<Option<DocId>>,
-    pub set_current_doc: WriteSignal<Option<DocId>>, 
-    pub status_text: Signal<String>,
-    pub stats: ReadSignal<EditorStats>,
-    
-    // P2P 状态
-    pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
-    
-    pub on_doc_select: Callback<DocId>,
-    pub on_doc_create: Callback<String>,
-    pub on_doc_rename: Callback<(String, String)>,
-    pub on_doc_delete: Callback<String>,
-    pub on_doc_copy: Callback<(String, String)>,
-    pub on_doc_move: Callback<(String, String)>,
-    pub on_stats: Callback<EditorStats>,
-    
-    // 插件 RPC
-    pub plugin_last_response: ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
-    pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
-
-    // 搜索
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)
-    pub on_search: Callback<String>,
-    
-    // 手动合并
-    pub sync_mode: ReadSignal<String>, // "auto" or "manual"
-    pub pending_ops_count: ReadSignal<u32>,
-    pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
-    pub on_get_sync_mode: Callback<()>,
-    pub on_set_sync_mode: Callback<String>,
-    pub on_get_pending_ops: Callback<()>,
-    pub on_confirm_merge: Callback<()>,
-    pub on_discard_pending: Callback<()>,
-    
-    // 版本控制状态 (Repo)
-    pub active_repo: ReadSignal<Option<PeerId>>,
-    pub set_active_repo: WriteSignal<Option<PeerId>>,
-    
-    // 分支切换状态
-    pub shadow_repos: ReadSignal<Vec<String>>,
-    pub on_list_shadows: Callback<()>,
-    
-    // 版本控制状态 (历史)
-    pub doc_version: ReadSignal<u64>, // 当前最大版本
-    pub set_doc_version: WriteSignal<u64>,
-    pub playback_version: ReadSignal<u64>, // 当前回放视图版本
-    pub set_playback_version: WriteSignal<u64>,
-    
-    // 旁观者模式 (Spectator Mode)
-    pub is_spectator: Signal<bool>,
-
-    // Source Control (New)
-    pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
-    pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
-    pub commit_history: ReadSignal<Vec<CommitInfo>>,
-    pub on_get_changes: Callback<()>,
-    pub on_stage_file: Callback<String>,
-    pub on_unstage_file: Callback<String>,
-    pub on_commit: Callback<String>,
-    pub on_get_history: Callback<u32>,
-    pub diff_content: ReadSignal<Option<(String, String, String)>>,
-    pub set_diff_content: WriteSignal<Option<(String, String, String)>>,
-    pub on_get_doc_diff: Callback<String>,
-}
 
 
 pub fn use_core() -> CoreState {
@@ -124,6 +51,8 @@ pub fn use_core() -> CoreState {
     let (active_repo, set_active_repo) = signal(None::<PeerId>);
     // 分支切换状态
     let (shadow_repos, set_shadow_repos) = signal(Vec::<String>::new());
+    // 仓库列表
+    let (repo_list, set_repo_list) = signal(Vec::<String>::new());
     // 历史状态
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
@@ -172,6 +101,8 @@ pub fn use_core() -> CoreState {
              });
              // 请求文档列表
              ws_clone.send(ClientMessage::ListDocs);
+             // 请求仓库列表
+             ws_clone.send(ClientMessage::ListRepos);
          }
     });
     
@@ -229,6 +160,10 @@ pub fn use_core() -> CoreState {
                 ServerMessage::ShadowList { shadows } => {
                     leptos::logging::log!("Received {} shadow repos", shadows.len());
                     set_shadow_repos.set(shadows);
+                },
+                ServerMessage::RepoList { repos } => {
+                    leptos::logging::log!("Received {} repos", repos.len());
+                    set_repo_list.set(repos);
                 },
                 ServerMessage::BranchSwitched { peer_id, success } => {
                     leptos::logging::log!("Branch switched to {:?}, success: {}", peer_id, success);
@@ -427,6 +362,7 @@ pub fn use_core() -> CoreState {
         set_active_repo,
         shadow_repos,
         on_list_shadows,
+        repo_list,
         doc_version,
         set_doc_version,
         playback_version,

@@ -43,6 +43,7 @@ pub mod snapshot;
 pub mod shadow;
 pub mod range;
 pub mod source_control;
+pub mod listing;
 
 // ========== 公开导出 ==========
 
@@ -148,22 +149,6 @@ impl RepoManager {
     /// 删除文件夹
     pub fn delete_folder(&self, prefix: &str) -> Result<usize> {
         metadata::delete_folder(&self.local_db, prefix)
-    }
-
-    /// 列出所有文档
-    pub fn list_docs(&self, repo_type: &RepoType) -> Result<Vec<(DocId, String)>> {
-        match repo_type {
-            RepoType::Local(_) => metadata::list_docs(&self.local_db),
-            RepoType::Remote(peer_id, repo_id) => {
-                 self.ensure_shadow_db(peer_id, repo_id)?;
-                 let dbs = self.shadow_dbs.read().unwrap();
-                 let peer_repos = dbs.get(peer_id)
-                     .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-                 let db = peer_repos.get(repo_id)
-                     .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
-                 metadata::list_docs(db)
-            }
-        }
     }
 
     // ========== Operations (Append/Read) ==========

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::fs::File;
 use std::io::{Write, BufWriter};
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{DocId, LedgerEntry, RepoType};
 use anyhow::Result;
 use serde::Serialize;

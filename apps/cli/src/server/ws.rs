@@ -22,7 +22,7 @@ use futures::{StreamExt, SinkExt};
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use crate::server::AppState;
-use crate::server::handlers::{document, system, plugin, search, sync, merge, source_control};
+use crate::server::handlers::{document, docs, listing, plugin, search, sync, merge, source_control};
 use deve_core::models::PeerId;
 
 pub async fn ws_handler(
@@ -111,22 +111,22 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                          document::handle_open_doc(&state_clone, &tx, doc_id, active_branch.as_ref()).await;
                      }
                      ClientMessage::ListDocs => {
-                         system::handle_list_docs(&state_clone, &tx, active_branch.as_ref()).await;
+                         listing::handle_list_docs(&state_clone, &tx, active_branch.as_ref()).await;
                      }
                      ClientMessage::CreateDoc { name } => {
-                         system::handle_create_doc(&state_clone, &tx, name).await;
+                         docs::handle_create_doc(&state_clone, &tx, name).await;
                      }
                      ClientMessage::RenameDoc { old_path, new_path } => {
-                         system::handle_rename_doc(&state_clone, &tx, old_path, new_path).await;
+                         docs::handle_rename_doc(&state_clone, &tx, old_path, new_path).await;
                      }
                      ClientMessage::DeleteDoc { path } => {
-                         system::handle_delete_doc(&state_clone, &tx, path).await;
+                         docs::handle_delete_doc(&state_clone, &tx, path).await;
                      }
                      ClientMessage::CopyDoc { src_path, dest_path } => {
-                         system::handle_copy_doc(&state_clone, &tx, src_path, dest_path).await;
+                         docs::handle_copy_doc(&state_clone, &tx, src_path, dest_path).await;
                      }
                      ClientMessage::MoveDoc { src_path, dest_path } => {
-                         system::handle_move_doc(&state_clone, &tx, src_path, dest_path).await;
+                         docs::handle_move_doc(&state_clone, &tx, src_path, dest_path).await;
                      }
                      ClientMessage::PluginCall { req_id, plugin_id, fn_name, args } => {
                          plugin::handle_plugin_call(&state_clone, &tx, req_id, plugin_id, fn_name, args).await;
@@ -168,7 +168,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      }
                      // Branch Switcher messages
                      ClientMessage::ListShadows => {
-                         system::handle_list_shadows(&state_clone, &tx).await;
+                         listing::handle_list_shadows(&state_clone, &tx).await;
+                     }
+                     ClientMessage::ListRepos => {
+                         listing::handle_list_repos(&state_clone, &tx, active_branch.as_ref()).await;
                      }
                      ClientMessage::SwitchBranch { peer_id } => {
                          // 更新会话活动分支
@@ -179,7 +182,9 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                              success: true,
                          });
                          // 刷新文件列表
-                         system::handle_list_docs(&state_clone, &tx, active_branch.as_ref()).await;
+                         listing::handle_list_docs(&state_clone, &tx, active_branch.as_ref()).await;
+                         // 刷新仓库列表
+                         listing::handle_list_repos(&state_clone, &tx, active_branch.as_ref()).await;
                      }
                      // Source Control messages
                      ClientMessage::GetChanges => {

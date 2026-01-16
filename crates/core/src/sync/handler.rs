@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
 use crate::vfs::Vfs;
 use crate::sync::{reconcile, recovery};
