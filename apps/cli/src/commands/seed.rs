@@ -8,7 +8,7 @@ pub fn run(ledger_dir: &PathBuf, target_peer: String, snapshot_depth: usize) -> 
     tracing::info!("Ledger Dir: {:?}", ledger_dir);
     tracing::info!("Target Peer: {}", target_peer);
 
-    let repo = RepoManager::init(ledger_dir, snapshot_depth)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None)?;
     let peer_id = PeerId::new(&target_peer);
     
     // Default Repo ID (Nil)

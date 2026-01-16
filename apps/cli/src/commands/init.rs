@@ -14,7 +14,7 @@ use deve_core::ledger::RepoManager;
 pub fn run(ledger_dir: &PathBuf, vault_path: &PathBuf, path: PathBuf, snapshot_depth: usize) -> anyhow::Result<()> {
     println!("Initializing ledger at {:?}...", ledger_dir);
     // 1. 初始化 RepoManager (创建目录结构)
-    let _ = RepoManager::init(ledger_dir, snapshot_depth)?;
+    let _ = RepoManager::init(ledger_dir, snapshot_depth, None)?;
     std::fs::create_dir_all(vault_path)?;
 
     // 2. Generate default config.toml

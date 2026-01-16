@@ -24,7 +24,7 @@ struct ExportEntry {
 /// **用途**:
 /// 数据备份、迁移或分析。
 pub fn run(ledger_dir: &PathBuf, output: Option<String>, snapshot_depth: usize) -> Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None)?;
     let docs = repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
     
     let mut writer: Box<dyn Write> = if let Some(path) = output {

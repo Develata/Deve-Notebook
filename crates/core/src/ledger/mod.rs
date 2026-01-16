@@ -70,8 +70,9 @@ impl RepoManager {
     /// 初始化仓库管理器
     ///
     /// 详细文档见 `init` 模块。
-    pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize) -> Result<Self> {
-        init::init(ledger_dir, snapshot_depth)
+    /// 初始化 RepoManager
+    pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize, repo_name: Option<&str>) -> Result<Self> {
+        init::init(ledger_dir, snapshot_depth, repo_name)
     }
 
     /// 获取账本目录路径

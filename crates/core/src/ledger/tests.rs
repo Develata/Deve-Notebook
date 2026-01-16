@@ -19,12 +19,27 @@ fn test_repo_manager_init() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
     
-    let repo = RepoManager::init(&ledger_dir, 10)?;
+    let repo = RepoManager::init(&ledger_dir, 10, None)?;
     
     // 验证目录结构
     assert!(ledger_dir.exists());
     assert!(ledger_dir.join("local").join("default.redb").exists());
     assert!(ledger_dir.join("remotes").exists());
+    
+    Ok(())
+}
+
+/// 测试自定义仓库名称初始化
+#[test]
+fn test_repo_manager_init_custom_name() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    
+    // Initialize with custom name "my_wiki"
+    let _repo = RepoManager::init(&ledger_dir, 10, Some("my_wiki"))?;
+    
+    // Verify file creation
+    assert!(ledger_dir.join("local").join("my_wiki.redb").exists());
     
     Ok(())
 }
@@ -39,7 +54,7 @@ fn test_repo_manager_init() -> Result<()> {
 fn test_local_and_shadow_isolation() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10)?;
+    let repo = RepoManager::init(&ledger_dir, 10, None)?;
     
     let doc_id = DocId::new();
     let peer_id = PeerId::new("peer_mobile");
@@ -89,7 +104,7 @@ fn test_snapshot_pruning() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
     
     // 设置快照深度为 2
-    let repo = RepoManager::init(&ledger_dir, 2)?;
+    let repo = RepoManager::init(&ledger_dir, 2, None)?;
     let doc_id = DocId::new();
     
     // 保存 3 个快照

@@ -6,10 +6,19 @@
 //!
 //! ```text
 //! {ledger_dir}/
-//! ├── local.redb          # 本地权威库 (Store B)
+//! ├── local/              # 本地权威库 (Store B)
+//! │   └── repo_name_1.redb
+//! │   └── repo_name_3.redb
+//! │   └── repo_name_4.redb
 //! └── remotes/            # 影子库目录 (Store C)
-//!     ├── peer_a.redb
-//!     └── peer_b.redb
+//!     ├── peer_a_name/
+//!     │   └── repo_name_1.redb
+//!     │   └── repo_name_2.redb
+//!     │   └── repo_name_5.redb
+//!     └── peer_b_name/
+//!         └── repo_name_1.redb
+//!         └── repo_name_2.redb
+//!         └── repo_name_3.redb
 //! ```
 
 use anyhow::{Context, Result};
@@ -30,6 +39,7 @@ use super::RepoManager;
 ///
 /// * `ledger_dir` - 账本根目录路径
 /// * `snapshot_depth` - 快照保留深度（超出部分会被裁剪）
+/// * `repo_name` - 仓库名称（可选，默认为 "default"）
 ///
 /// # 错误
 ///
@@ -40,9 +50,13 @@ use super::RepoManager;
 /// ```ignore
 /// use deve_core::ledger::RepoManager;
 ///
-/// let repo = RepoManager::init("./data/ledger", 10)?;
+/// // Initialize with default name
+/// let repo = RepoManager::init("./data/ledger", 10, None)?;
+///
+/// // Initialize with custom name
+/// let repo = RepoManager::init("./data/ledger", 10, Some("my_wiki"))?;
 /// ```
-pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize) -> Result<RepoManager> {
+pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize, repo_name: Option<&str>) -> Result<RepoManager> {
     let ledger_dir = ledger_dir.as_ref().to_path_buf();
     
     // 创建目录结构
@@ -57,11 +71,9 @@ pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize) -> Result<RepoM
     std::fs::create_dir_all(&remotes_dir)
         .with_context(|| format!("无法创建远端目录: {:?}", remotes_dir))?;
     
-    // 初始化本地数据库 (Default Local Repo)
-    // TODO: support multi-repo init? For now, we create a default one.
-    // If we want to support existing single-file, we might need migration.
-    // But for new structure:
-    let local_db_path = local_dir.join("default.redb");
+    // 初始化本地数据库 (Repo Instance)
+    let name = repo_name.unwrap_or("default");
+    let local_db_path = local_dir.join(format!("{}.redb", name));
     let local_db = Database::create(&local_db_path)
         .with_context(|| format!("无法创建本地数据库: {:?}", local_db_path))?;
     
