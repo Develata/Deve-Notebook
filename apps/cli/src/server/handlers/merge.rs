@@ -1,3 +1,4 @@
+﻿// apps\cli\src\server\handlers
 //! # 手动合并处理器 (Manual Merge Handler)
 //! 
 //! 处理手动同步模式 (`Manual Mode`) 的相关操作：

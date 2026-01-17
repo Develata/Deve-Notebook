@@ -1,3 +1,4 @@
+﻿// apps\web\src\api
 //! # WebSocket 连接管理器
 //!
 //! ## 职责

@@ -1,3 +1,4 @@
+﻿// crates\core\src\search
 //! # Search Service (搜索服务)
 //!
 //! **架构作用**:

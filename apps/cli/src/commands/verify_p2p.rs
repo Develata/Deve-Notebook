@@ -1,3 +1,4 @@
+﻿// apps\cli\src\commands
 //! # P2P 验证命令
 //!
 //! **架构作用**:

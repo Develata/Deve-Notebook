@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # 3-Way Merge Engine
 //!
 //! implements the "Git-style" 3-way merge logic and LCA calculation.

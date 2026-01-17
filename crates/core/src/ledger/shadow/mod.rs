@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger\shadow
 //! # 影子库模块 (Shadow Repository Module)
 //!
 //! **架构作用**:

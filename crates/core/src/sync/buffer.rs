@@ -1,3 +1,4 @@
+﻿// crates\core\src\sync
 //! # 同步缓冲模块 (Sync Buffer)
 //!
 //! **架构作用**:

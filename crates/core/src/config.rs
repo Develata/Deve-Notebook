@@ -1,3 +1,4 @@
+﻿// crates\core\src
 //! # 核心配置模块 (Core Configuration)
 //!
 //! **架构作用**:

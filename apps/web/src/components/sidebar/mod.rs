@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\sidebar
 //! # Sidebar Component (侧边栏组件)
 //!
 //! **架构作用**:

@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\sidebar
 //! # ExplorerView 组件 (ExplorerView Component)
 //!
 //! 侧边栏的主要文件浏览器视图。

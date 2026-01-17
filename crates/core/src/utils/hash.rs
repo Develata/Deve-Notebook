@@ -1,3 +1,4 @@
+﻿// crates\core\src\utils
 //! # 稳定哈希工具 (Stable Hash Utils)
 //!
 //! 提供稳定的哈希实现，用于跨进程/重启保持一致的 ID 生成。

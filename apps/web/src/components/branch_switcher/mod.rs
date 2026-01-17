@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\branch_switcher
 //! # Branch Switcher Component (分支切换器)
 //!
 //! **架构作用**:

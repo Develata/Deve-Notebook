@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # Spectator Overlay 组件 (旁观者模式覆盖层)
 //!
 //! 当用户查看 Shadow Repo 时显示只读指示器。

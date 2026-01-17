@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # Outline 组件 (Outline Component)
 //!
 //! 显示文档大纲，基于 Markdown 标题解析。

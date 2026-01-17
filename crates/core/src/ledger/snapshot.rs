@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # 快照模块 (Snapshot Management)
 //! 
 //! 管理文档快照的存储与自动清理。

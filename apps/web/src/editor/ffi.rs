@@ -1,3 +1,4 @@
+﻿// apps\web\src\editor
 //! # FFI Bindings (JavaScript 互操作)
 //!
 //! 定义与 JavaScript (CodeMirror adapter) 交互的外部函数接口。

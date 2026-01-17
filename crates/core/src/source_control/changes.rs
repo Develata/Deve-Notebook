@@ -1,3 +1,4 @@
+﻿// crates\core\src\source_control
 //! # 变更检测模块 (Change Detection)
 //!
 //! 对比当前 Ledger 状态与最后提交快照，检测文件变更。

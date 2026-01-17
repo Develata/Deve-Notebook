@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger\shadow
 //! # 影子库访问层 (Shadow Access)
 //!
 //! **架构作用**:

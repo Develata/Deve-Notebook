@@ -1,3 +1,4 @@
+﻿// apps\web\src
 //! # Internationalization (国际化)
 //!
 //! **架构作用**:

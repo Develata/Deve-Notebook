@@ -1,3 +1,4 @@
+﻿// apps\web\src\hooks\use_core
 use leptos::prelude::*;
 use crate::api::WsService;
 use std::collections::HashMap;

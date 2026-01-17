@@ -1,3 +1,4 @@
+﻿// crates\core\src\source_control
 //! # 暂存区管理 (Staging Manager)
 //!
 //! 管理文件的暂存状态，持久化到数据库。

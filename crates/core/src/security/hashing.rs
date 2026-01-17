@@ -1,3 +1,4 @@
+﻿// crates\core\src\security
 //! # 哈希计算 (Hashing)
 //!
 //! **功能**:

@@ -1,3 +1,4 @@
+﻿// crates\core\src\source_control
 //! # Source Control 类型定义
 //!
 //! 定义版本控制相关的数据结构，用于暂存区和提交历史。

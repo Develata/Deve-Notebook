@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # Diff 视图组件 (Diff View)
 //!
 //! 并排显示文档的新旧版本差异。

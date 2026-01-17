@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # 影子库管理模块 (Shadow DB Manager)
 //!
 //! 管理远端影子库 (Store C) 的加载、查询和操作。

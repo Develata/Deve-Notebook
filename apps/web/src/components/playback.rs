@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # PlaybackController 组件 (PlaybackController Component)
 //!
 //! 历史回放控制器，允许用户拖动滑块查看文档的历史版本。

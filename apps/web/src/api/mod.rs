@@ -1,3 +1,4 @@
+﻿// apps\web\src\api
 //! # WebSocket API 模块
 //!
 //! 本模块提供 `WsService` 用于与后端进行 WebSocket 通信。

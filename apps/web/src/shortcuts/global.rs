@@ -1,3 +1,4 @@
+﻿// apps\web\src\shortcuts
 //! # 全局快捷键 (Global Shortcuts)
 //!
 //! 定义和处理全局快捷键。

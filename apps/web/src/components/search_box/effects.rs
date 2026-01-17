@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\search_box
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 

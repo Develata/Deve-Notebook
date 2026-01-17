@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\command_palette
 //! 命令面板的静态命令定义。
 
 use leptos::prelude::*;

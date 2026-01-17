@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\search_box
 use deve_core::models::DocId;
 use crate::components::command_palette::Command;
 

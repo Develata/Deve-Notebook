@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # Source Control 集成 (RepoManager 扩展)
 //!
 //! 为 RepoManager 提供 Source Control 功能的便捷方法。

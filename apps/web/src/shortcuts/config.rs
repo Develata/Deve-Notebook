@@ -1,3 +1,4 @@
+﻿// apps\web\src\shortcuts
 //! # 快捷键配置 (Shortcut Config)
 //!
 //! 用户自定义快捷键配置，支持 localStorage 持久化。

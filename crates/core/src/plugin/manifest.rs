@@ -1,3 +1,4 @@
+﻿// crates\core\src\plugin
 //! # Plugin Manifest & Capabilities (插件清单与能力)
 //!
 //! **架构作用**:

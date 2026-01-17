@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\source_control
 //! # Repositories Component (仓库列表组件)
 //! 
 //! VS Code 风格: 紧凑列表，图标+文字。

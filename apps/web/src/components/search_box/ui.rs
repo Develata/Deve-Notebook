@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\search_box
 use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::{KeyboardEvent, MouseEvent};

@@ -1,3 +1,4 @@
+﻿// apps\web\src
 //! # App Component (App 组件)
 //!
 //! 本模块包含根 `App` 组件和主布局。

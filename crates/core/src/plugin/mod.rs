@@ -1,3 +1,4 @@
+﻿// crates\core\src\plugin
 //! # Plugin System (插件系统)
 //!
 //! **架构作用**:

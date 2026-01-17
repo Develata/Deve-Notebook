@@ -1,3 +1,4 @@
+﻿// crates\core\src\sync
 //! # 版本向量模块 (Version Vector)
 //!
 //! **架构作用**:

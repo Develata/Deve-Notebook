@@ -1,3 +1,4 @@
+﻿// apps\web\src\shortcuts
 //! # 快捷键类型定义 (Shortcut Types)
 //!
 //! 定义快捷键相关的核心类型。

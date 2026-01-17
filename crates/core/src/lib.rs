@@ -1,3 +1,4 @@
+﻿// crates\core\src
 //! # Deve-Note 核心库
 //!
 //! 本 crate 包含 Deve-Note 的核心业务逻辑，是一个实时协作文档编辑器。

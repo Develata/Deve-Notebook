@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # MergeModal 组件 (MergeModal Component)
 //!
 //! 手动合并模式下用于审核和合并待处理操作的模态对话框。

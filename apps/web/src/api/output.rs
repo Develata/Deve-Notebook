@@ -1,3 +1,4 @@
+﻿// apps\web\src\api
 //! # WebSocket 输出管理器
 //!
 //! ## 职责

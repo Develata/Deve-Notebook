@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\command_palette
 //! CommandPalette 组件 (CommandPalette Component)
 //!
 //! 一个可搜索的命令面板，用于快速执行操作（仅限命令，不包括文件搜索）。

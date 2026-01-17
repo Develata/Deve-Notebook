@@ -1,3 +1,4 @@
+﻿// apps\cli\src\server\handlers
 //! 消息处理器模块
 //!
 //! 包含各类 ClientMessage 的处理逻辑，按功能领域划分。

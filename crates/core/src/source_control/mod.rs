@@ -1,3 +1,4 @@
+﻿// crates\core\src\source_control
 //! # Source Control 模块
 //!
 //! 提供版本控制功能，包括暂存区管理、提交历史和变更检测。

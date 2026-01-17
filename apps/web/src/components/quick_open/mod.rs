@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\quick_open
 //! # Quick Open Module (快速打开模块)
 //!
 //! 提供文件搜索功能，支持模糊匹配和 MRU (Most Recently Used) 列表。

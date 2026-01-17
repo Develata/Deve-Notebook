@@ -1,3 +1,4 @@
+﻿// apps\cli\src\server\handlers
 //! # Search Handler (搜索处理器)
 //!
 //! **架构作用**:

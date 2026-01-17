@@ -1,3 +1,4 @@
+﻿// apps\web\src\editor
 //! # Editor Component (Editor 组件)
 //!
 //! **架构作用**:

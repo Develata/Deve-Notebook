@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # BottomBar 组件 (BottomBar Component)
 //!
 //! 底部状态栏，显示分支切换器、连接状态和编辑器统计信息 (字数、行数、字符数)。

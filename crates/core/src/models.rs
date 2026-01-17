@@ -1,3 +1,4 @@
+﻿// crates\core\src
 //! # 核心数据模型 (Core Data Models)
 //!
 //! **架构作用**:

@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # SettingsModal 组件 (SettingsModal Component)
 //!
 //! 设置模态框，允许用户更改语言、同步模式等全局配置。

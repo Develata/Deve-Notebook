@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\search_box
 // 统一搜索组件模块入口。
 pub mod types;
 pub mod providers;

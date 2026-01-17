@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # 仓库管理器测试模块 (RepoManager Tests)
 //!
 //! 包含 RepoManager 的单元测试和集成测试。

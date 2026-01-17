@@ -1,3 +1,4 @@
+﻿// crates\core\src\source_control
 //! # 提交管理 (Commits Manager)
 //!
 //! 管理提交历史，持久化到数据库。

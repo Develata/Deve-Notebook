@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\sidebar
 //! # 文件树组件逻辑 (File Tree Logic)
 //! 
 //! **架构作用**:

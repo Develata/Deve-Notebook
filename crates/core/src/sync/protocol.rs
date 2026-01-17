@@ -1,3 +1,4 @@
+﻿// crates\core\src\sync
 //! # P2P 同步协议定义 (P2P Sync Protocol)
 //!
 //! **架构作用**:

@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\command_palette
 //! 命令面板的命令类型定义。
 
 use leptos::prelude::*;

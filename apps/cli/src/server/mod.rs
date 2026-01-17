@@ -1,3 +1,4 @@
+﻿// apps\cli\src\server
 //! # WebSocket 服务器模块
 //!
 //! 本模块实现 Deve-Note 的后端 WebSocket 服务器。

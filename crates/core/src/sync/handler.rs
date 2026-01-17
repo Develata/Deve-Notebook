@@ -1,3 +1,4 @@
+﻿// crates\core\src\sync
 //! # 文件系统事件处理器 (FS Event Handler)
 //! 
 //! 处理 Watcher 产生的文件变更事件。

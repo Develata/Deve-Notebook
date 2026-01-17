@@ -1,3 +1,4 @@
+﻿// apps\web\src\shortcuts
 //! # 快捷键注册表 (Shortcut Registry)
 //!
 //! 管理快捷键的注册、查询和冲突检测。

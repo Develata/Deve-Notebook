@@ -1,3 +1,4 @@
+﻿// crates\core\src\security
 //! # 安全模块 (Security Module)
 //!
 //! **架构作用**:

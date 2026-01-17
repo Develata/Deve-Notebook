@@ -1,3 +1,4 @@
+﻿// crates\core\src\sync
 use std::path::Path;
 use std::sync::Arc;
 use walkdir::WalkDir;

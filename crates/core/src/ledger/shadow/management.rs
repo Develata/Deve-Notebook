@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger\shadow
 //! # 影子库管理层 (Shadow Management)
 //!
 //! **架构作用**:

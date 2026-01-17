@@ -1,3 +1,4 @@
+﻿// apps\web\src
 //! # Deve-Note Web 应用
 //!
 //! 这是 Deve-Note 的 WebAssembly 前端，使用 Leptos 框架构建。

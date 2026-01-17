@@ -1,3 +1,4 @@
+﻿// apps\web\src\hooks\use_core
 //! # Core State Hook (核心状态钩子)
 //!
 //! **架构作用**:

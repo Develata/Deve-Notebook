@@ -1,3 +1,4 @@
+﻿// apps\web\src\shortcuts
 //! # 快捷键模块 (Shortcuts Module)
 //!
 //! 统一管理全局键盘快捷键。

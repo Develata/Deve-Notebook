@@ -1,3 +1,4 @@
+﻿// apps\cli\src\server
 //! # WebSocket Handler (WebSocket 连接处理器)
 //!
 //! **架构作用**:

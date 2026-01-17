@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\search_box
 use crate::components::search_box::types::{SearchProvider, SearchResult, SearchAction};
 use crate::components::command_palette::Command;
 use deve_core::models::DocId;

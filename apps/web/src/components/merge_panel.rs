@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # MergePanel 组件 (MergePanel Component)
 //!
 //! 显示同步模式切换按钮和手动合并时的待处理操作。

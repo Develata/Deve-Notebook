@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # Header 组件 (Header Component)
 //!
 //! 应用程序顶部导航栏，包含标题、状态指示器和常用操作（主页、打开、命令）。

@@ -1,3 +1,4 @@
+﻿// apps\web\src\components\sidebar
 //! # FileTreeItem 组件 (文件树节点组件)
 //!
 //! **架构作用**:

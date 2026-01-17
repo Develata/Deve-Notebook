@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # Repository Listing (仓库列表查询)
 //!
 //! 提供 `RepoListing` trait，扩展 `RepoManager` 的列表查询能力。

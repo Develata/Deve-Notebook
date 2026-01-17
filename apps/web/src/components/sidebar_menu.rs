@@ -1,3 +1,4 @@
+﻿// apps\web\src\components
 //! # SidebarMenu 组件 (SidebarMenu Component)
 //!
 //! 文件树上下文菜单，提供重命名、复制、粘贴、移动、删除等操作。

@@ -1,3 +1,4 @@
+﻿// crates\core\src\ledger
 //! # 元数据映射模块 (Metadata Mapping)
 //! 
 //! 管理 Path/DocId/Inode 之间的映射关系。
