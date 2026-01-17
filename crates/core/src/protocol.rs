@@ -132,6 +132,8 @@ pub enum ClientMessage {
     Commit { message: String },
     /// 获取提交历史
     GetCommitHistory { limit: u32 },
+    /// P2P: 将指定 Peer 的分支合入本地
+    MergePeer { peer_id: String, doc_id: DocId },
     /// 获取文档的 Diff (用于 Diff 视图)
     GetDocDiff { path: String },
 }

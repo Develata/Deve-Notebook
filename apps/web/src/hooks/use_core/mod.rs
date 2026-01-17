@@ -331,6 +331,7 @@ pub fn use_core() -> CoreState {
         ws_sc_diff.send(ClientMessage::GetDocDiff { path });
     });
 
+    let ws_for_merge = ws.clone();
     let state = CoreState {
         ws,
         docs,
@@ -379,6 +380,11 @@ pub fn use_core() -> CoreState {
         diff_content,
         set_diff_content,
         on_get_doc_diff,
+        on_merge_peer: Callback::new(move |peer_id: String| {
+             if let Some(doc_id) = current_doc.get_untracked() {
+                 ws_for_merge.send(ClientMessage::MergePeer { peer_id, doc_id });
+             }
+        }),
     };
     
     // 为子组件提供 CoreState 上下文

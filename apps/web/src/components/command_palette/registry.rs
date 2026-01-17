@@ -46,6 +46,64 @@ pub fn create_static_commands(
                 });
             }),
             is_file: false,
+        },
+        // P2P: Switch to Peer
+        Command {
+            id: "switch_peer".to_string(), 
+            title: if locale == Locale::Zh { "P2P: 切换到节点 (Switch to Peer)".to_string() } else { "P2P: Switch to Peer".to_string() },
+            action: Callback::new(move |_| {
+                request_animation_frame(move || {
+                    let search_control = use_context::<crate::app::SearchControl>().expect("search control");
+                    search_control.set_mode.set("@".to_string());
+                    search_control.set_show.set(true);
+                    // Close this command palette (if it's a separate overlay, but Unified Search usually replaces it)
+                    // Wait, if Unified Search IS the command palette, we just change mode.
+                    // But here CommandPalette is a different component?
+                    // Yes, `mod.rs` shows it's a separate `CommandPalette` component.
+                    // So we close it.
+                    set_show.set(false);
+                });
+            }),
+            is_file: false,
+        },
+        // P2P: Establish Branch (Placeholder)
+        Command {
+            id: "establish_branch".to_string(), 
+            title: if locale == Locale::Zh { "P2P: 建立分支 (Establish Branch)".to_string() } else { "P2P: Establish Branch".to_string() },
+            action: Callback::new(move |_| {
+                request_animation_frame(move || {
+                     // For now, reuse the same logic as Switch to Peer, as selecting a peer is the first step.
+                     // Ideally this would open a dialog or automatically clone.
+                    let search_control = use_context::<crate::app::SearchControl>().expect("search control");
+                    search_control.set_mode.set("@".to_string());
+                    search_control.set_show.set(true);
+                    set_show.set(false);
+                });
+            }),
+            is_file: false,
+        },
+        // P2P: Merge Peer
+        Command {
+            id: "merge_peer".to_string(),
+            title: if locale == Locale::Zh { "P2P: 合并当前节点 (Merge Peer)".to_string() } else { "P2P: Merge Peer".to_string() },
+            action: Callback::new(move |_| {
+                request_animation_frame(move || {
+                     // Get CoreState to check active repo
+                     let core = use_context::<crate::hooks::use_core::CoreState>().expect("core state");
+                     if let Some(peer_id) = core.active_repo.get_untracked() {
+                         core.on_merge_peer.run(peer_id.to_string());
+                         // Notify user
+                         // We don't have a toast system yet, but console log happens.
+                         // Ideally we close the palette.
+                         set_show.set(false);
+                     } else {
+                         // TODO: Show Toast "Please switch to a peer first"
+                         leptos::logging::warn!("Cannot merge: No active peer selected.");
+                         set_show.set(false);
+                     }
+                });
+            }),
+            is_file: false,
         }
     ]
 }

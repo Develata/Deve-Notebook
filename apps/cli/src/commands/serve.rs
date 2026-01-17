@@ -12,7 +12,7 @@ use crate::server;
 /// 4. 启动 WebSocket 服务监听端口
 pub async fn run(ledger_dir: &PathBuf, vault_path: PathBuf, port: u16, snapshot_depth: usize) -> anyhow::Result<()> {
     // 1. 初始化 RepoManager
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_arc = Arc::new(repo);
     
     // 启动时通过 SyncManager 自动扫描

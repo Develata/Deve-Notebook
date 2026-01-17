@@ -45,6 +45,25 @@ impl IdentityKeyPair {
         PeerId::new(&hash[0..12])
     }
 
+    /// 导出私钥字节 (用于持久化)
+    /// 
+    /// **安全警告**: 导出的字节应当安全存储，避免泄露
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.signing_key.to_bytes()
+    }
+
+    /// 从字节恢复密钥对
+    /// 
+    /// **参数**: 32 字节的私钥
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() != 32 {
+            return None;
+        }
+        let arr: [u8; 32] = bytes.try_into().ok()?;
+        let signing_key = SigningKey::from_bytes(&arr);
+        Some(Self { signing_key })
+    }
+
     /// 对消息进行签名
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
         let signature: Signature = self.signing_key.sign(message);

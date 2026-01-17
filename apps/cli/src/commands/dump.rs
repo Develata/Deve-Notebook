@@ -8,7 +8,7 @@ use anyhow::Result;
 /// 打印指定文档的所有操作历史 (Ops)。
 /// 并尝试重建文档内容以验证正确性。
 pub fn run(ledger_dir: &PathBuf, path_str: String, snapshot_depth: usize) -> anyhow::Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     if let Some(doc_id) = repo.get_docid(&path_str)? {
         println!("DocId: {}", doc_id);
         let ops = repo.get_local_ops(doc_id)?;

@@ -82,4 +82,5 @@ pub struct CoreState {
     pub diff_content: ReadSignal<Option<(String, String, String)>>,
     pub set_diff_content: WriteSignal<Option<(String, String, String)>>,
     pub on_get_doc_diff: Callback<String>,
+    pub on_merge_peer: Callback<String>,
 }

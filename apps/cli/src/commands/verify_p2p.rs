@@ -38,13 +38,13 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     info!("Initialized temporary directories at {:?}", temp_dir);
 
     // 2. Init Repos
-    let repo_a = RepoManager::init(&peer_a_ledger, snapshot_depth, None)?;
+    let repo_a = RepoManager::init(&peer_a_ledger, snapshot_depth, None, None)?;
     let peer_a_id = PeerId::new("peer_a_sim");
     let peer_b_id = PeerId::new("peer_b_sim");
     
     info!("Repo A initialized (Virtual Peer: {})", peer_a_id);
 
-    let repo_b = RepoManager::init(&peer_b_ledger, snapshot_depth, None)?;
+    let repo_b = RepoManager::init(&peer_b_ledger, snapshot_depth, None, None)?;
     info!("Repo B initialized (Virtual Peer: {})", peer_b_id);
 
     // 3. Peer A creates a doc
@@ -58,6 +58,8 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
         doc_id,
         op,
         timestamp: chrono::Utc::now().timestamp_millis(),
+        peer_id: peer_a_id.clone(),
+        seq: 1,
     };
     
     let seq = repo_a.append_local_op(&entry)?;

@@ -83,9 +83,10 @@ pub async fn handle_sync_request(
     let mut ops_to_push = Vec::new();
 
     for (peer_id, range) in requests {
+        let repo_id = super::get_repo_id(state);
         let sync_req = sync_proto::SyncRequest {
             peer_id: peer_id,
-            repo_id: uuid::Uuid::nil(),
+            repo_id,
             range: range,
         };
         
@@ -104,21 +105,28 @@ pub async fn handle_sync_request(
 /// 处理数据推送 (对方发送数据)
 pub async fn handle_sync_push(
     state: &Arc<AppState>,
-    _tx: &broadcast::Sender<ServerMessage>,
-    peer_id: PeerId, // Added peer_id
-    ops: Vec<deve_core::security::EncryptedOp>, // Updated type
+    tx: &broadcast::Sender<ServerMessage>,
+    peer_id: PeerId,
+    ops: Vec<deve_core::security::EncryptedOp>,
 ) {
     let mut engine = state.sync_engine.write().unwrap();
     
+    let repo_id = super::get_repo_id(state);
     let response = sync_proto::SyncResponse {
         peer_id: peer_id.clone(),
-        repo_id: uuid::Uuid::nil(),
+        repo_id,
         ops,
     };
 
-    if let Ok(count) = engine.apply_remote_ops(response) {
-        tracing::info!("Applied {} ops from {}", count, peer_id);
-    } else {
-        tracing::warn!("Failed to apply ops from {}", peer_id);
+    match engine.apply_remote_ops(response) {
+        Ok(count) => {
+            tracing::info!("Applied {} ops from {}", count, peer_id);
+        }
+        Err(e) => {
+            tracing::error!("Failed to apply ops from {}: {:?}", peer_id, e);
+            let _ = tx.send(ServerMessage::Error(
+                format!("Failed to apply sync ops from {}: {}", peer_id, e)
+            ));
+        }
     }
 }

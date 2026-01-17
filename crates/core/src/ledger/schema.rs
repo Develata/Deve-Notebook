@@ -28,3 +28,8 @@ pub const DOC_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition:
 pub const SNAPSHOT_INDEX: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("snapshot_index");
 pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("snapshot_data");
 
+// Metadata Key (u8) -> Metadata Value (Bytes - JSON/Bincode)
+// Key 0: RepoInfo (UUID, Name, URL)
+pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo_metadata");
+
+

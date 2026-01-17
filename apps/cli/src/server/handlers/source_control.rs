@@ -40,8 +40,11 @@ pub async fn handle_get_changes(
 fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
     let mut changes = Vec::new();
     
+    // 获取实际的 RepoId
+    let repo_id = super::get_repo_id(state);
+    
     // 获取所有文档
-    let docs = match state.repo.list_docs(&RepoType::Local(uuid::Uuid::nil())) {
+    let docs = match state.repo.list_docs(&RepoType::Local(repo_id)) {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to list docs: {:?}", e);

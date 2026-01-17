@@ -11,10 +11,26 @@ pub async fn handle_edit(
     op: deve_core::models::Op,
     client_id: u64,
 ) {
+    // Get Local Peer ID
+    let local_peer_id = state.identity_key.peer_id();
+
+    // Calculate next sequence number for this peer on this doc
+    let mut next_seq = 1;
+    if let Ok(ops) = state.repo.get_local_ops(doc_id) {
+         let max_seq = ops.iter()
+             .filter(|(_, e)| e.peer_id == local_peer_id)
+             .map(|(_, e)| e.seq)
+             .max()
+             .unwrap_or(0);
+         next_seq = max_seq + 1;
+    }
+
     let entry = LedgerEntry {
         doc_id,
         op: op.clone(),
         timestamp: chrono::Utc::now().timestamp_millis(),
+        peer_id: local_peer_id,
+        seq: next_seq,
     };
     
     match state.repo.append_op(&entry) {
@@ -80,8 +96,8 @@ pub async fn handle_open_doc(
             (content, ver)
         }
         // 影子分支: 从 Shadow DB 读取
+        // 注意: 影子库数据使用 Uuid::nil() 存储 (兼容性考虑)
         Some(peer_id) => {
-            // TODO: Support multi-repo. Using default RepoId (nil) for now.
             match state.repo.get_shadow_ops(peer_id, &uuid::Uuid::nil(), doc_id) {
                 Ok(entries_with_seq) => {
                     let ops: Vec<LedgerEntry> = entries_with_seq.iter().map(|(_, entry)| entry.clone()).collect();

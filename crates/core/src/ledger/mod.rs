@@ -31,6 +31,18 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 use crate::models::{DocId, LedgerEntry, PeerId, RepoType, RepoId};
+use serde::{Deserialize, Serialize};
+
+/// 仓库元数据信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepoInfo {
+    /// 仓库唯一标识
+    pub uuid: RepoId,
+    /// 仓库名称 (Human Readable)
+    pub name: String,
+    /// 仓库 URL (唯一逻辑标识) - 可选，若无则默认为 `uuid` 形式 URN
+    pub url: Option<String>,
+}
 
 // ========== 子模块声明 ==========
 
@@ -44,6 +56,8 @@ pub mod shadow;
 pub mod range;
 pub mod source_control;
 pub mod listing;
+pub mod merge;
+
 
 // ========== 公开导出 ==========
 
@@ -72,8 +86,8 @@ impl RepoManager {
     ///
     /// 详细文档见 `init` 模块。
     /// 初始化 RepoManager
-    pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize, repo_name: Option<&str>) -> Result<Self> {
-        init::init(ledger_dir, snapshot_depth, repo_name)
+    pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize, repo_name: Option<&str>, repo_url: Option<&str>) -> Result<Self> {
+        init::init(ledger_dir, snapshot_depth, repo_name, repo_url)
     }
 
     /// 获取账本目录路径
@@ -95,6 +109,19 @@ impl RepoManager {
     pub fn get_local_ops_in_range(&self, _repo_id: &RepoId, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
         // TODO: support multi local repos. For now we use the active local_db.
         range::get_ops_in_range(&self.local_db, start_seq, end_seq)
+    }
+
+    /// 获取本地仓库的元数据信息 (UUID, Name, URL)
+    pub fn get_repo_info(&self) -> Result<Option<RepoInfo>> {
+        let read_txn = self.local_db.begin_read()?;
+        let table = read_txn.open_table(REPO_METADATA)?;
+        if let Some(guard) = table.get(&0)? {
+            let value = guard.value();
+            let info: RepoInfo = bincode::deserialize(value)?;
+            Ok(Some(info))
+        } else {
+            Ok(None)
+        }
     }
 
     // ========== Snapshot Operations ==========
@@ -234,5 +261,53 @@ impl RepoManager {
         current: Option<&str>,
     ) -> Option<crate::source_control::ChangeStatus> {
         source_control::detect_change(committed, current)
+    }
+
+    pub fn merge_peer(&self, peer_id: &PeerId, repo_id: &RepoId, doc_id: DocId) -> Result<crate::ledger::merge::MergeResult> {
+        let local_ops = self.get_local_ops(doc_id)?;
+        let remote_ops = match self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id) {
+             Ok(ops) => ops,
+             Err(_) => return Ok(crate::ledger::merge::MergeResult::Success("".to_string())),
+        };
+        
+        // 1. Version Local
+        let mut local_vv = crate::models::VersionVector::new();
+        for (_, entry) in &local_ops {
+            local_vv.update(entry.peer_id.clone(), entry.seq);
+        }
+        
+        // 2. Version Remote
+        let mut remote_vv = crate::models::VersionVector::new();
+        for (_, entry) in &remote_ops {
+             remote_vv.update(entry.peer_id.clone(), entry.seq);
+        }
+        
+        // 3. LCA
+        use crate::ledger::merge::MergeEngine;
+        let lca_vv = MergeEngine::find_lca(&local_vv, &remote_vv);
+        
+        // 4. Reconstruct Content
+        let all_local_entries: Vec<LedgerEntry> = local_ops.iter().map(|(_, e)| e.clone()).collect();
+        
+        // Pool ops for Base
+        let mut pool = HashMap::new();
+        for (_, entry) in &local_ops {
+             let key = (entry.peer_id.clone(), entry.seq);
+             pool.insert(key, entry.clone());
+        }
+        for (_, entry) in &remote_ops {
+             let key = (entry.peer_id.clone(), entry.seq);
+             pool.entry(key).or_insert(entry.clone());
+        }
+        let pooled_entries: Vec<LedgerEntry> = pool.values().cloned().collect();
+        
+        let base_content = MergeEngine::reconstruct_state_at(doc_id, &pooled_entries, &lca_vv);
+        let local_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(doc_id, &all_local_entries, &local_vv);
+        
+        let all_remote_entries: Vec<LedgerEntry> = remote_ops.iter().map(|(_, e)| e.clone()).collect();
+        let remote_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(doc_id, &all_remote_entries, &remote_vv);
+        
+        // 5. Merge
+        Ok(MergeEngine::merge_commits(&base_content, &local_content, &remote_content))
     }
 }

@@ -116,3 +116,70 @@ pub async fn handle_discard_pending(
     tracing::info!("Discarded all pending operations");
     let _ = tx.send(ServerMessage::PendingDiscarded);
 }
+
+/// 处理 P2P 分支合并
+pub async fn handle_merge_peer(
+    state: &Arc<AppState>,
+    tx: &broadcast::Sender<ServerMessage>,
+    peer_id: String,
+    doc_id: deve_core::models::DocId,
+) {
+    let repo = &state.repo;
+    
+    // 1. Get Repo ID
+    let repo_id = match repo.get_repo_info() {
+        Ok(Some(info)) => info.uuid,
+        Ok(None) => uuid::Uuid::nil(),
+        Err(e) => {
+             let _ = tx.send(ServerMessage::Error(format!("Failed to get repo info: {}", e)));
+             return;
+        }
+    };
+    
+    let pid = deve_core::models::PeerId::new(peer_id);
+    
+    // 2. Perform Merge
+    let result = repo.merge_peer(&pid, &repo_id, doc_id);
+    
+    match result {
+        Ok(merge_res) => {
+            match merge_res {
+                deve_core::ledger::merge::MergeResult::Success(content) => {
+                     // 3. Success: Materialize to FS (Store A)
+                     // Identify path
+                     if let Some(path_str) = repo.get_path_by_docid(doc_id).unwrap_or(None) {
+                         let abs_path = state.vault_path.join(&path_str);
+                         
+                         // Write to file (will trigger Watcher -> reconcile)
+                         if let Err(e) = std::fs::write(&abs_path, &content) {
+                             let _ = tx.send(ServerMessage::Error(format!("Failed to write merged content to disk: {}", e)));
+                             return;
+                         }
+                         
+                         tracing::info!("Merge Success for doc {} ({}). Content written to disk.", doc_id, path_str);
+                         let _ = tx.send(ServerMessage::MergeComplete { merged_count: 1 });
+                     } else {
+                         let _ = tx.send(ServerMessage::Error("Doc path not found for merged document".to_string()));
+                     }
+                },
+                deve_core::ledger::merge::MergeResult::Conflict { base: _, local, remote, conflicts: _ } => {
+                     // 4. Conflict: Notify Frontend
+                     tracing::warn!("Merge Conflict detected for doc {}", doc_id);
+                     
+                     if let Some(path) = repo.get_path_by_docid(doc_id).unwrap_or(None) {
+                         // Send DocDiff for visualization (Local vs Remote)
+                         let _ = tx.send(ServerMessage::DocDiff {
+                             path,
+                             old_content: local,
+                             new_content: remote,
+                         });
+                         let _ = tx.send(ServerMessage::Error("Merge Conflict detected. Showing Diff View (Local vs Peer).".to_string()));
+                     }
+                }
+            }
+        },
+        Err(e) => {
+             let _ = tx.send(ServerMessage::Error(format!("Merge failed: {}", e)));
+        }
+    }
+}

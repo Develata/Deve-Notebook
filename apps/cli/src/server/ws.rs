@@ -205,6 +205,9 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                      ClientMessage::GetDocDiff { path } => {
                          source_control::handle_get_doc_diff(&state_clone, &tx, path).await;
                      }
+                     ClientMessage::MergePeer { peer_id, doc_id } => {
+                         merge::handle_merge_peer(&state_clone, &tx, peer_id, doc_id).await;
+                     }
                 }
             }
         }

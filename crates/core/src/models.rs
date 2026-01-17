@@ -101,9 +101,13 @@ pub enum Op {
 /// - `timestamp`: 操作产生的时间戳。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LedgerEntry {
-    pub doc_id: DocId, // We need to know which doc this Op belongs to!
+    pub doc_id: DocId, 
     pub op: Op,
     pub timestamp: i64,
+    /// Origin Peer ID (who created this op)
+    pub peer_id: PeerId,
+    /// Peer-specific causal sequence number (must be monotonic per peer)
+    pub seq: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

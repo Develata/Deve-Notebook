@@ -52,6 +52,30 @@ impl VersionVector {
         }
     }
 
+    /// 获取内部时钟的迭代器
+    pub fn iter(&self) -> std::collections::hash_map::Iter<PeerId, u64> {
+        self.clock.iter()
+    }
+
+    /// 计算两个向量的交集 (LCA)。
+    /// 取每个键的最小值。
+    pub fn intersection(&self, other: &VersionVector) -> VersionVector {
+        let mut result = VersionVector::new();
+        let all_peers: Vec<&PeerId> = self.clock.keys().chain(other.clock.keys()).collect();
+        
+        for peer in all_peers {
+            let v1 = self.get(peer);
+            let v2 = other.get(peer);
+            let min_v = std::cmp::min(v1, v2);
+            if min_v > 0 {
+                result.update(peer.clone(), min_v);
+            }
+        }
+        result
+    }
+
+
+
     /// 计算差异。
     /// 比较 "Self" (My State) 和 "Remote" (Their State)。
     /// 返回两个缺失范围列表：

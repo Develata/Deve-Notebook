@@ -9,7 +9,7 @@ use deve_core::vfs::Vfs;
 /// 使用 `Vfs` 模块执行扫描操作。
 pub fn run(ledger_dir: &PathBuf, vault_path: &PathBuf, snapshot_depth: usize) -> anyhow::Result<()> {
     // 初始化 RepoManager
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let vfs = Vfs::new(vault_path);
     println!("Scanning vault at {:?}...", vault_path);
     let count = vfs.scan(&repo)?;

@@ -8,9 +8,10 @@
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use deve_core::protocol::ServerMessage;
-use deve_core::models::{PeerId, RepoType}; // Added RepoType
-use deve_core::ledger::listing::RepoListing; // Added RepoListing trait
+use deve_core::models::{PeerId, RepoType};
+use deve_core::ledger::listing::RepoListing;
 use crate::server::AppState;
+use super::get_repo_id;
 
 /// 处理 ListDocs 请求 - 列出 Vault 中的所有文档
 pub async fn handle_list_docs(
@@ -18,9 +19,11 @@ pub async fn handle_list_docs(
     tx: &broadcast::Sender<ServerMessage>,
     active_branch: Option<&PeerId>,
 ) {
+     // 注意: 对于影子分支，使用 Uuid::nil() 是因为远端数据可能以该 ID 存储
+     // 本地分支则使用实际的 RepoId
      let repo_type = match active_branch {
-         Some(peer_id) => RepoType::Remote(peer_id.clone(), uuid::Uuid::nil()), // Default RepoId
-         None => RepoType::Local(uuid::Uuid::nil()),
+         Some(peer_id) => RepoType::Remote(peer_id.clone(), uuid::Uuid::nil()),
+         None => RepoType::Local(get_repo_id(state)),
      };
 
      if let Ok(docs) = state.repo.list_docs(&repo_type) {

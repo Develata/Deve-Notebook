@@ -36,6 +36,8 @@ pub fn compute_reconcile_ops(
         doc_id,
         op,
         timestamp: now,
+        peer_id: crate::models::PeerId::new("local_watcher"), // Placeholder for local watcher
+        seq: 0, // Placeholder, watcher ops might need real seq management later
     }).collect();
 
     Ok(entries)

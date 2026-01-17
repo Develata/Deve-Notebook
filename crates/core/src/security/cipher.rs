@@ -22,6 +22,7 @@ use crate::models::{DocId, LedgerEntry};
 /// 只有拥有此密钥的 Peer 才能解密数据。
 #[derive(Clone)]
 pub struct RepoKey {
+    key_bytes: [u8; 32],
     cipher: Aes256Gcm,
 }
 
@@ -29,7 +30,9 @@ impl RepoKey {
     /// 生成新的随机密钥
     pub fn generate() -> Self {
         let key = Aes256Gcm::generate_key(&mut OsRng);
+        let key_bytes: [u8; 32] = key.into();
         Self {
+            key_bytes,
             cipher: Aes256Gcm::new(&key),
         }
     }
@@ -39,10 +42,19 @@ impl RepoKey {
         if bytes.len() != 32 {
             return None;
         }
-        let key = Key::<Aes256Gcm>::from_slice(bytes);
+        let key_bytes: [u8; 32] = bytes.try_into().ok()?;
+        let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
         Some(Self {
+            key_bytes,
             cipher: Aes256Gcm::new(key),
         })
+    }
+
+    /// 导出密钥字节 (用于持久化)
+    /// 
+    /// **安全警告**: 导出的字节应当安全存储，避免泄露
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.key_bytes
     }
 
     /// 加密 LedgerEntry

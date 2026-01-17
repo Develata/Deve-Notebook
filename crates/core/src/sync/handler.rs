@@ -99,6 +99,8 @@ impl<'a> FsEventHandler<'a> {
                  doc_id,
                  op,
                  timestamp: now,
+                 peer_id: crate::models::PeerId::new("local_watcher"),
+                 seq: 0,
              };
              self.repo.append_op(&entry)?;
              info!("Handler: Ingested initial content.");

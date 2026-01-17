@@ -35,7 +35,11 @@ pub fn handle_playback_change(
     let relevant_ops: Vec<LedgerEntry> = hist.into_iter()
         .filter(|(s, _)| *s <= ver)
         .map(|(_, op)| LedgerEntry {
-             doc_id, op, timestamp: 0 // 时间戳对于重建无关紧要
+            doc_id,
+            op,
+            timestamp: 0, // 时间戳对于重建无关紧要
+            peer_id: deve_core::models::PeerId::new("playback"),
+            seq: 0,
         })
         .collect();
         

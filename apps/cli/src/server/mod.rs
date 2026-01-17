@@ -87,16 +87,30 @@ pub async fn start_server(
     };
 
     // Load or generate Identity Key
-    let key_pair_path = vault_path.join(".deve").join("identity.key");
+    let deve_dir = vault_path.join(".deve");
+    std::fs::create_dir_all(&deve_dir)?;
+    
+    let key_pair_path = deve_dir.join("identity.key");
     let key_pair = if key_pair_path.exists() {
-        // TODO: Load from file (impl Serialize for KeyPair first, or use raw bytes).
-        // For now, regen to avoid complex FS logic in this snippet, 
-        // effectively implementing "Ephemeral Identity" for this iteration unless persisted.
-        // Real impl should persist.
-        Arc::new(deve_core::security::IdentityKeyPair::generate())
+        // 从文件加载已有密钥
+        let bytes = std::fs::read(&key_pair_path)?;
+        match deve_core::security::IdentityKeyPair::from_bytes(&bytes) {
+            Some(kp) => {
+                tracing::info!("Loaded IdentityKey from {:?}", key_pair_path);
+                Arc::new(kp)
+            }
+            None => {
+                tracing::warn!("Invalid identity.key file, regenerating...");
+                let kp = deve_core::security::IdentityKeyPair::generate();
+                std::fs::write(&key_pair_path, kp.to_bytes())?;
+                Arc::new(kp)
+            }
+        }
     } else {
+        // 生成新密钥并保存
         let kp = deve_core::security::IdentityKeyPair::generate();
-        // Save logic omitted for brevity/modularity limit, will just use generated
+        std::fs::write(&key_pair_path, kp.to_bytes())?;
+        tracing::info!("Generated and saved new IdentityKey to {:?}", key_pair_path);
         Arc::new(kp)
     };
     
@@ -104,13 +118,26 @@ pub async fn start_server(
     tracing::info!("Server PeerID: {}", peer_id);
 
     // Load or generate Repo Key (Shared Secret)
-    let repo_key_path = vault_path.join(".deve").join("repo.key");
+    let repo_key_path = deve_dir.join("repo.key");
     let repo_key = if repo_key_path.exists() {
         let bytes = std::fs::read(&repo_key_path)?;
-        deve_core::security::RepoKey::from_bytes(&bytes)
+        match deve_core::security::RepoKey::from_bytes(&bytes) {
+            Some(key) => {
+                tracing::info!("Loaded RepoKey from {:?}", repo_key_path);
+                Some(key)
+            }
+            None => {
+                tracing::warn!("Invalid repo.key file, regenerating...");
+                let key = deve_core::security::RepoKey::generate();
+                std::fs::write(&repo_key_path, key.to_bytes())?;
+                Some(key)
+            }
+        }
     } else {
+        // 生成新密钥并保存
         let key = deve_core::security::RepoKey::generate();
-        // Persist logic omitted
+        std::fs::write(&repo_key_path, key.to_bytes())?;
+        tracing::info!("Generated and saved new RepoKey to {:?}", repo_key_path);
         Some(key)
     };
 
