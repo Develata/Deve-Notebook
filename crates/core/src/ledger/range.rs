@@ -10,22 +10,26 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use anyhow::{Result, Context};
-use redb::{Database, ReadableTable};
-use crate::models::LedgerEntry;
 use crate::ledger::schema::LEDGER_OPS;
+use crate::models::LedgerEntry;
+use anyhow::{Context, Result};
+use redb::{Database, ReadableTable};
 
 /// 从数据库获取指定序列号范围的操作
-pub fn get_ops_in_range(db: &Database, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
+pub fn get_ops_in_range(
+    db: &Database,
+    start_seq: u64,
+    end_seq: u64,
+) -> Result<Vec<(u64, LedgerEntry)>> {
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(LEDGER_OPS)?;
-    
+
     let mut result = Vec::new();
     let range = table.range(start_seq..end_seq)?;
     for item in range {
         let (key, value) = item?;
         let seq = key.value();
-        let entry: LedgerEntry = serde_json::from_slice(value.value())
+        let entry: LedgerEntry = bincode::deserialize(value.value())
             .with_context(|| format!("Failed to deserialize op at seq {}", seq))?;
         result.push((seq, entry));
     }
@@ -36,11 +40,7 @@ pub fn get_ops_in_range(db: &Database, start_seq: u64, end_seq: u64) -> Result<V
 pub fn get_max_seq(db: &Database) -> Result<u64> {
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(LEDGER_OPS)?;
-    
-    let mut max_seq = 0u64;
-    for item in table.iter()? {
-        let (key, _): (redb::AccessGuard<u64>, _) = item?;
-        max_seq = max_seq.max(key.value());
-    }
-    Ok(max_seq)
+
+    let last = table.last()?;
+    Ok(last.map(|(k, _)| k.value()).unwrap_or(0))
 }

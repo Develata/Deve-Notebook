@@ -8,10 +8,11 @@
 //! - 提交管理 (create/list commits)
 //! - 变更检测 (获取未提交的文件)
 
+use crate::ledger::range;
+use crate::models::DocId;
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, changes, commits, staging};
 use anyhow::Result;
 use redb::Database;
-use crate::models::DocId;
-use crate::source_control::{changes, commits, staging, ChangeEntry, ChangeStatus, CommitInfo};
 
 /// 初始化 Source Control 相关的数据库表
 pub fn init_tables(db: &Database) -> Result<()> {
@@ -34,8 +35,12 @@ pub fn unstage_file(db: &Database, path: &str) -> Result<()> {
 /// 获取已暂存的文件列表
 pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
     let paths = staging::list_staged(db)?;
-    Ok(paths.into_iter()
-        .map(|path| ChangeEntry { path, status: ChangeStatus::Modified })
+    Ok(paths
+        .into_iter()
+        .map(|path| ChangeEntry {
+            path,
+            status: ChangeStatus::Modified,
+        })
         .collect())
 }
 
@@ -53,21 +58,22 @@ pub fn create_commit(
 ) -> Result<CommitInfo> {
     let staged = staging::list_staged(db)?;
     let doc_count = staged.len() as u32;
-    
+
     if doc_count == 0 {
         anyhow::bail!("Nothing to commit: staging area is empty");
     }
-    
+
     // 保存每个暂存文件的快照
     for path in &staged {
         if let Some((doc_id, content)) = get_content(path) {
             changes::save_snapshot(db, doc_id, &content)?;
         }
     }
-    
-    let commit = commits::create(db, message, doc_count)?;
+
+    let ledger_seq = range::get_max_seq(db)?;
+    let commit = commits::create(db, message, doc_count, ledger_seq)?;
     staging::clear(db)?;
-    
+
     Ok(commit)
 }
 
@@ -85,4 +91,3 @@ pub fn get_committed_content(db: &Database, doc_id: DocId) -> Result<Option<Stri
 pub fn detect_change(committed: Option<&str>, current: Option<&str>) -> Option<ChangeStatus> {
     changes::detect_doc_change(committed, current)
 }
-

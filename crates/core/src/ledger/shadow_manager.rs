@@ -9,16 +9,12 @@
 //! "Receive Only" 隔离策略。每个 Peer 拥有独立的 `.redb` 文件。
 
 use anyhow::Result;
-use redb::Database;
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::RwLock;
 
-use crate::models::{DocId, LedgerEntry, PeerId, RepoType, RepoId};
+use super::RepoManager;
 use super::ops;
 use super::range;
 use super::shadow;
-use super::RepoManager;
+use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType};
 
 impl RepoManager {
     /// 确保指定 Peer 的影子库已加载到内存
@@ -48,9 +44,13 @@ impl RepoManager {
     ///
     /// **注意**: 由于 Rust 生命周期限制，当前实现返回 None。
     /// 请使用 `get_shadow_ops` 等便捷方法替代。
-    pub fn get_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<Option<shadow::ShadowRepo<'_>>> {
+    pub fn get_shadow_repo(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+    ) -> Result<Option<shadow::ShadowRepo<'_>>> {
         self.ensure_shadow_db(peer_id, repo_id)?;
-        
+
         let dbs = self.shadow_dbs.read().unwrap();
         if let Some(repos) = dbs.get(peer_id) {
             if repos.contains_key(repo_id) {
@@ -75,7 +75,12 @@ impl RepoManager {
     /// # 返回
     ///
     /// 该文档在指定影子库中的所有操作记录
-    pub fn get_shadow_ops(&self, peer_id: &PeerId, repo_id: &RepoId, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
+    pub fn get_shadow_ops(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        doc_id: DocId,
+    ) -> Result<Vec<(u64, LedgerEntry)>> {
         self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id)
     }
 
@@ -93,13 +98,15 @@ impl RepoManager {
     /// 该影子库中的最大操作序列号
     pub fn get_shadow_max_seq(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<u64> {
         self.ensure_shadow_db(peer_id, repo_id)?;
-        
+
         let dbs = self.shadow_dbs.read().unwrap();
-        let peer_repos = dbs.get(peer_id)
-             .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-        let db = peer_repos.get(repo_id)
+        let peer_repos = dbs
+            .get(peer_id)
+            .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
+        let db = peer_repos
+            .get(repo_id)
             .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
-        
+
         range::get_max_seq(db)
     }
 
@@ -125,13 +132,15 @@ impl RepoManager {
         end_seq: u64,
     ) -> Result<Vec<(u64, LedgerEntry)>> {
         self.ensure_shadow_db(peer_id, repo_id)?;
-        
+
         let dbs = self.shadow_dbs.read().unwrap();
-        let peer_repos = dbs.get(peer_id)
+        let peer_repos = dbs
+            .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-        let db = peer_repos.get(repo_id)
+        let db = peer_repos
+            .get(repo_id)
             .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
-        
+
         range::get_ops_in_range(db, start_seq, end_seq)
     }
 
@@ -148,15 +157,22 @@ impl RepoManager {
     /// # 返回
     ///
     /// 新操作的序列号
-    pub fn append_remote_op(&self, peer_id: &PeerId, repo_id: &RepoId, entry: &LedgerEntry) -> Result<u64> {
+    pub fn append_remote_op(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        entry: &LedgerEntry,
+    ) -> Result<u64> {
         self.ensure_shadow_db(peer_id, repo_id)?;
-        
+
         let dbs = self.shadow_dbs.read().unwrap();
-        let peer_repos = dbs.get(peer_id)
+        let peer_repos = dbs
+            .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-        let db = peer_repos.get(repo_id)
+        let db = peer_repos
+            .get(repo_id)
             .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
-        
+
         ops::append_op_to_db(db, entry)
     }
 }

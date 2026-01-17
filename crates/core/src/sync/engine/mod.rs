@@ -1,15 +1,13 @@
 ﻿// crates\core\src\sync\engine
 use crate::models::PeerId;
 use crate::sync::vector::VersionVector;
-use crate::sync::protocol::{SyncRequest, SyncResponse};
-use anyhow::Result;
 
 pub mod handshake;
-pub mod transfer;
 pub mod manual;
+pub mod transfer;
 
 /// P2P 同步引擎
-/// 
+///
 /// **功能**:
 /// 管理本地与远端 Peer 的数据同步。
 /// 协调 Version Vector 状态、差异计算与数据应用。

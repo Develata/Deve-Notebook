@@ -31,7 +31,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
-use crate::models::{DocId, LedgerEntry, PeerId, RepoType, RepoId};
+use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType};
 use serde::{Deserialize, Serialize};
 
 /// 仓库元数据信息
@@ -48,17 +48,16 @@ pub struct RepoInfo {
 // ========== 子模块声明 ==========
 
 pub mod init;
-mod shadow_manager;
-pub mod schema;
-pub mod metadata;
-pub mod ops;
-pub mod snapshot;
-pub mod shadow;
-pub mod range;
-pub mod source_control;
 pub mod listing;
 pub mod merge;
-
+pub mod metadata;
+pub mod ops;
+pub mod range;
+pub mod schema;
+pub mod shadow;
+mod shadow_manager;
+pub mod snapshot;
+pub mod source_control;
 
 // ========== 公开导出 ==========
 
@@ -68,7 +67,7 @@ pub use self::schema::*;
 mod tests;
 
 /// 仓库管理器 (Repository Manager)
-/// 
+///
 /// 管理本地唯一的 Local Repo (Store B) 和多个 Shadow Repos (Store C)。
 /// 实现 Trinity Isolation 架构中的数据隔离策略。
 pub struct RepoManager {
@@ -87,7 +86,12 @@ impl RepoManager {
     ///
     /// 详细文档见 `init` 模块。
     /// 初始化 RepoManager
-    pub fn init(ledger_dir: impl AsRef<Path>, snapshot_depth: usize, repo_name: Option<&str>, repo_url: Option<&str>) -> Result<Self> {
+    pub fn init(
+        ledger_dir: impl AsRef<Path>,
+        snapshot_depth: usize,
+        repo_name: Option<&str>,
+        repo_url: Option<&str>,
+    ) -> Result<Self> {
         init::init(ledger_dir, snapshot_depth, repo_name, repo_url)
     }
 
@@ -107,7 +111,12 @@ impl RepoManager {
     }
 
     /// 获取本地库指定序列号范围的操作 (用于 P2P 同步增量推送)
-    pub fn get_local_ops_in_range(&self, _repo_id: &RepoId, start_seq: u64, end_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
+    pub fn get_local_ops_in_range(
+        &self,
+        _repo_id: &RepoId,
+        start_seq: u64,
+        end_seq: u64,
+    ) -> Result<Vec<(u64, LedgerEntry)>> {
         // TODO: support multi local repos. For now we use the active local_db.
         range::get_ops_in_range(&self.local_db, start_seq, end_seq)
     }
@@ -146,7 +155,7 @@ impl RepoManager {
 
     /// 根据 DocId 获取路径
     pub fn get_path_by_docid(&self, doc_id: DocId) -> Result<Option<String>> {
-         metadata::get_path_by_docid(&self.local_db, doc_id)
+        metadata::get_path_by_docid(&self.local_db, doc_id)
     }
 
     /// 根据 Inode 获取 DocId
@@ -188,23 +197,19 @@ impl RepoManager {
         ops::append_op_to_db(&self.local_db, entry)
     }
 
-    /// 兼容方法：追加操作到本地库
-    #[deprecated(note = "请使用 append_local_op 以保持语义清晰")]
-    pub fn append_op(&self, entry: &LedgerEntry) -> Result<u64> {
-        self.append_local_op(entry)
-    }
-
     /// 从指定仓库读取操作
     pub fn get_ops(&self, repo_type: &RepoType, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         match repo_type {
             RepoType::Local(_) => ops::get_ops_from_db(&self.local_db, doc_id),
             RepoType::Remote(peer_id, repo_id) => {
-                self.ensure_shadow_db(peer_id, repo_id)?; 
+                self.ensure_shadow_db(peer_id, repo_id)?;
                 let dbs = self.shadow_dbs.read().unwrap();
-                let peer_repos = dbs.get(peer_id)
+                let peer_repos = dbs
+                    .get(peer_id)
                     .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-                let db = peer_repos.get(repo_id)
-                    .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
+                let db = peer_repos.get(repo_id).ok_or_else(|| {
+                    anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
+                })?;
                 ops::get_ops_from_db(db, doc_id)
             }
         }
@@ -264,51 +269,72 @@ impl RepoManager {
         source_control::detect_change(committed, current)
     }
 
-    pub fn merge_peer(&self, peer_id: &PeerId, repo_id: &RepoId, doc_id: DocId) -> Result<crate::ledger::merge::MergeResult> {
+    pub fn merge_peer(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        doc_id: DocId,
+    ) -> Result<crate::ledger::merge::MergeResult> {
         let local_ops = self.get_local_ops(doc_id)?;
         let remote_ops = match self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id) {
-             Ok(ops) => ops,
-             Err(_) => return Ok(crate::ledger::merge::MergeResult::Success("".to_string())),
+            Ok(ops) => ops,
+            Err(_) => return Ok(crate::ledger::merge::MergeResult::Success("".to_string())),
         };
-        
+
         // 1. Version Local
         let mut local_vv = crate::models::VersionVector::new();
         for (_, entry) in &local_ops {
             local_vv.update(entry.peer_id.clone(), entry.seq);
         }
-        
+
         // 2. Version Remote
         let mut remote_vv = crate::models::VersionVector::new();
         for (_, entry) in &remote_ops {
-             remote_vv.update(entry.peer_id.clone(), entry.seq);
+            remote_vv.update(entry.peer_id.clone(), entry.seq);
         }
-        
+
         // 3. LCA
         use crate::ledger::merge::MergeEngine;
         let lca_vv = MergeEngine::find_lca(&local_vv, &remote_vv);
-        
+
         // 4. Reconstruct Content
-        let all_local_entries: Vec<LedgerEntry> = local_ops.iter().map(|(_, e)| e.clone()).collect();
-        
+        let all_local_entries: Vec<LedgerEntry> =
+            local_ops.iter().map(|(_, e)| e.clone()).collect();
+
         // Pool ops for Base
-        let mut pool = HashMap::new();
-        for (_, entry) in &local_ops {
-             let key = (entry.peer_id.clone(), entry.seq);
-             pool.insert(key, entry.clone());
-        }
-        for (_, entry) in &remote_ops {
-             let key = (entry.peer_id.clone(), entry.seq);
-             pool.entry(key).or_insert(entry.clone());
-        }
-        let pooled_entries: Vec<LedgerEntry> = pool.values().cloned().collect();
-        
+        // Pool ops for Base
+        // Optimization: Use Sort + Dedup instead of HashMap to reduce allocation and hashing overhead
+        let mut pooled_entries: Vec<LedgerEntry> =
+            Vec::with_capacity(local_ops.len() + remote_ops.len());
+        pooled_entries.extend(local_ops.iter().map(|(_, e)| e.clone()));
+        pooled_entries.extend(remote_ops.iter().map(|(_, e)| e.clone()));
+
+        // Sort by (PeerId, Seq) to align duplicates
+        pooled_entries.sort_by(|a, b| a.peer_id.cmp(&b.peer_id).then_with(|| a.seq.cmp(&b.seq)));
+
+        // Deduplicate: remove consecutive entries with same (PeerId, Seq)
+        pooled_entries.dedup_by(|a, b| a.peer_id == b.peer_id && a.seq == b.seq);
+
         let base_content = MergeEngine::reconstruct_state_at(doc_id, &pooled_entries, &lca_vv);
-        let local_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(doc_id, &all_local_entries, &local_vv);
-        
-        let all_remote_entries: Vec<LedgerEntry> = remote_ops.iter().map(|(_, e)| e.clone()).collect();
-        let remote_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(doc_id, &all_remote_entries, &remote_vv);
-        
+        let local_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(
+            doc_id,
+            &all_local_entries,
+            &local_vv,
+        );
+
+        let all_remote_entries: Vec<LedgerEntry> =
+            remote_ops.iter().map(|(_, e)| e.clone()).collect();
+        let remote_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(
+            doc_id,
+            &all_remote_entries,
+            &remote_vv,
+        );
+
         // 5. Merge
-        Ok(MergeEngine::merge_commits(&base_content, &local_content, &remote_content))
+        Ok(MergeEngine::merge_commits(
+            &base_content,
+            &local_content,
+            &remote_content,
+        ))
     }
 }

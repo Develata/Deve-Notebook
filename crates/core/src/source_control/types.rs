@@ -18,6 +18,8 @@ pub struct CommitInfo {
     pub timestamp: i64,
     /// 包含的文档数量
     pub doc_count: u32,
+    /// 对应的 Ledger 全局序列号 (Anchor Point)
+    pub ledger_seq: u64,
 }
 
 /// 文件变更状态
