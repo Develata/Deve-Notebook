@@ -9,15 +9,15 @@
 //! - `RepoKey`: 32 字节对称密钥。
 //! - `EncryptedOp`: 加密后的操作载荷结构。
 
+use crate::models::{DocId, LedgerEntry};
 use aes_gcm::{
+    Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
-    Aes256Gcm, Key, Nonce
 };
 use serde::{Deserialize, Serialize};
-use crate::models::{DocId, LedgerEntry};
 
 /// 仓库密钥 (AES-256)
-/// 
+///
 /// **用途**:
 /// 加密同步过程中传输的 `LedgerEntry`。
 /// 只有拥有此密钥的 Peer 才能解密数据。
@@ -52,23 +52,27 @@ impl RepoKey {
     }
 
     /// 导出密钥字节 (用于持久化)
-    /// 
+    ///
     /// **安全警告**: 导出的字节应当安全存储，避免泄露
     pub fn to_bytes(&self) -> [u8; 32] {
         self.key_bytes
     }
 
     /// 加密 LedgerEntry
-    pub fn encrypt(&self, entry: &LedgerEntry) -> anyhow::Result<EncryptedOp> {
+    pub fn encrypt(&self, entry: &LedgerEntry, seq: u64) -> anyhow::Result<EncryptedOp> {
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng); // 96-bits; unique per message
-        let plaintext = serde_json::to_vec(entry)?;
-        
-        let ciphertext = self.cipher.encrypt(&nonce, plaintext.as_ref())
+
+        // Use bincode for consistency and efficiency
+        let plaintext = bincode::serialize(entry)?;
+
+        let ciphertext = self
+            .cipher
+            .encrypt(&nonce, plaintext.as_ref())
             .map_err(|e| anyhow::anyhow!("Encryption failed: {}", e))?;
 
         Ok(EncryptedOp {
             doc_id: entry.doc_id,
-            seq: 0, // 这里的 Seq 需由外部 Sync 逻辑填充
+            seq, // Enforced externally
             ciphertext,
             nonce: nonce.to_vec(),
         })
@@ -77,10 +81,12 @@ impl RepoKey {
     /// 解密
     pub fn decrypt(&self, enc: &EncryptedOp) -> anyhow::Result<LedgerEntry> {
         let nonce = Nonce::from_slice(&enc.nonce);
-        let plaintext = self.cipher.decrypt(nonce, enc.ciphertext.as_ref())
+        let plaintext = self
+            .cipher
+            .decrypt(nonce, enc.ciphertext.as_ref())
             .map_err(|_| anyhow::anyhow!("Decryption failed (Bad Key or Tampered Data)"))?;
-            
-        let entry: LedgerEntry = serde_json::from_slice(&plaintext)?;
+
+        let entry: LedgerEntry = bincode::deserialize(&plaintext)?;
         Ok(entry)
     }
 }
@@ -110,14 +116,20 @@ mod tests {
         let key = RepoKey::generate();
         let entry = LedgerEntry {
             doc_id: DocId::new(),
-            op: Op::Insert { pos: 0, content: "Secret".to_string() },
+            op: Op::Insert {
+                pos: 0,
+                content: "Secret".to_string(),
+            },
             timestamp: 12345,
+            peer_id: crate::models::PeerId::new("test-peer"),
+            seq: 1,
         };
 
         // Encrypt
-        let enc = key.encrypt(&entry).unwrap();
+        let enc = key.encrypt(&entry, 100).unwrap();
         assert!(!enc.ciphertext.is_empty());
-        assert_ne!(enc.ciphertext, serde_json::to_vec(&entry).unwrap()); // Ciphertext != Plaintext
+        assert_eq!(enc.seq, 100);
+        assert_ne!(enc.ciphertext, bincode::serialize(&entry).unwrap()); // Ciphertext != Plaintext
 
         // Decrypt
         let dec = key.decrypt(&enc).unwrap();

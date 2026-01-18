@@ -37,6 +37,25 @@ pub struct Capability {
 }
 
 impl Capability {
+    /// Normalize path manually (resolve `..` and `.`) to prevent path traversal
+    fn normalize_path(path: &Path) -> PathBuf {
+        let mut components = path.components().peekable();
+        let mut ret = PathBuf::new();
+
+        for component in components {
+            match component {
+                std::path::Component::Prefix(..) => ret.push(component.as_os_str()),
+                std::path::Component::RootDir => ret.push(component.as_os_str()),
+                std::path::Component::CurDir => {}
+                std::path::Component::ParentDir => {
+                    ret.pop();
+                }
+                std::path::Component::Normal(c) => ret.push(c),
+            }
+        }
+        ret
+    }
+
     /// Check if a network domain matches the allow list.
     /// Supports exact match for now.
     pub fn check_net(&self, domain: &str) -> bool {
@@ -49,14 +68,21 @@ impl Capability {
     }
 
     /// Check if a path is allowed for reading.
-    /// Checks if the requested path starts with any allowed path prefix.
+    /// Manually normalizes the path to prevent traversal.
     pub fn check_read(&self, path: &Path) -> bool {
-        self.allow_fs_read.iter().any(|prefix| path.starts_with(prefix))
+        let path = Self::normalize_path(path);
+        self.allow_fs_read
+            .iter()
+            .any(|prefix| path.starts_with(prefix))
     }
 
     /// Check if a path is allowed for writing.
+    /// Manually normalizes the path to prevent traversal.
     pub fn check_write(&self, path: &Path) -> bool {
-        self.allow_fs_write.iter().any(|prefix| path.starts_with(prefix))
+        let path = Self::normalize_path(path);
+        self.allow_fs_write
+            .iter()
+            .any(|prefix| path.starts_with(prefix))
     }
 }
 
@@ -91,6 +117,10 @@ mod tests {
         // Write checks
         assert!(cap.check_write(Path::new("/data/vault/public/log.txt")));
         assert!(!cap.check_write(Path::new("/data/vault/private.md"))); // Write is more restrictive
+
+        // Path Traversal check
+        assert!(!cap.check_read(Path::new("/data/vault/../etc/passwd")));
+        assert!(!cap.check_write(Path::new("/data/vault/public/../../private.md")));
     }
 
     #[test]

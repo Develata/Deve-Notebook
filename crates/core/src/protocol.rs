@@ -15,10 +15,10 @@
 //!   - Ack（确认）, NewOp（新操作）, Snapshot（快照）
 //!   - History（历史）, DocList（文档列表）, Error（错误）
 
-use serde::{Serialize, Deserialize};
-use crate::models::{DocId, Op, PeerId, LedgerEntry, VersionVector};
-use crate::source_control::{ChangeEntry, CommitInfo};
+use crate::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
 use crate::security::EncryptedOp;
+use crate::source_control::{ChangeEntry, CommitInfo};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
@@ -44,9 +44,7 @@ pub enum ClientMessage {
         requests: Vec<(PeerId, (u64, u64))>,
     },
     /// 推送加密操作记录给对端 (Envelope Mode)
-    SyncPush {
-        ops: Vec<EncryptedOp>,
-    },
+    SyncPush { ops: Vec<EncryptedOp> },
     /// 客户端发送编辑操作 (针对特定文档)
     Edit {
         doc_id: DocId,
@@ -54,38 +52,21 @@ pub enum ClientMessage {
         client_id: u64,
     },
     /// 请求文档的完整操作历史
-    RequestHistory {
-        doc_id: DocId,
-    },
+    RequestHistory { doc_id: DocId },
     /// 请求所有已知文档的列表
     ListDocs,
     /// 请求打开指定文档 (获取快照)
-    OpenDoc {
-        doc_id: DocId,
-    },
+    OpenDoc { doc_id: DocId },
     /// 请求创建新文档
-    CreateDoc {
-        name: String,
-    },
+    CreateDoc { name: String },
     /// 重命名文档
-    RenameDoc {
-        old_path: String,
-        new_path: String,
-    },
+    RenameDoc { old_path: String, new_path: String },
     /// 删除文档
-    DeleteDoc {
-        path: String,
-    },
+    DeleteDoc { path: String },
     /// 复制文档到新位置
-    CopyDoc {
-        src_path: String,
-        dest_path: String,
-    },
+    CopyDoc { src_path: String, dest_path: String },
     /// 移动文档到新位置
-    MoveDoc {
-        src_path: String,
-        dest_path: String,
-    },
+    MoveDoc { src_path: String, dest_path: String },
     /// 调用插件函数
     PluginCall {
         req_id: String,
@@ -94,11 +75,8 @@ pub enum ClientMessage {
         args: Vec<serde_json::Value>,
     },
     /// 全文搜索查询
-    Search {
-        query: String,
-        limit: u32,
-    },
-    
+    Search { query: String, limit: u32 },
+
     // === Manual Merge Messages (手动合并模式) ===
     /// 获取当前同步模式 (Auto/Manual)
     GetSyncMode,
@@ -112,7 +90,7 @@ pub enum ClientMessage {
     ConfirmMerge,
     /// 丢弃所有待处理的操作
     DiscardPending,
-    
+
     // === Branch Switcher Messages (分支切换) ===
     /// 请求影子库列表 (远程分支)
     ListShadows,
@@ -121,7 +99,7 @@ pub enum ClientMessage {
     /// 切换活动分支
     /// peer_id: None = 本地 (Master), Some = 远程影子库
     SwitchBranch { peer_id: Option<String> },
-    
+
     // === Source Control Messages (版本控制) ===
     /// 获取当前变更列表 (暂存区/未暂存)
     GetChanges,
@@ -144,10 +122,7 @@ pub enum ServerMessage {
     /// 心跳 Pong
     Pong,
     /// 服务端确认操作已持久化
-    Ack {
-        doc_id: DocId,
-        seq: u64,
-    },
+    Ack { doc_id: DocId, seq: u64 },
     /// P2P: 服务端 Hello (响应客户端 Hello)
     SyncHello {
         peer_id: PeerId,
@@ -156,13 +131,9 @@ pub enum ServerMessage {
         vector: VersionVector,
     },
     /// P2P: 服务端向客户端请求数据
-    SyncRequest {
-        requests: Vec<(PeerId, (u64, u64))>,
-    },
+    SyncRequest { requests: Vec<(PeerId, (u64, u64))> },
     /// P2P: 服务端推送数据给客户端 (批量)
-    SyncPush {
-        ops: Vec<EncryptedOp>,
-    },
+    SyncPush { ops: Vec<EncryptedOp> },
     /// 服务端广播来自其他客户端的新操作
     NewOp {
         doc_id: DocId,
@@ -177,14 +148,9 @@ pub enum ServerMessage {
         version: u64,
     },
     /// 服务端发送完整操作历史 (用于回放)
-    History {
-        doc_id: DocId,
-        ops: Vec<(u64, Op)>,
-    },
+    History { doc_id: DocId, ops: Vec<(u64, Op)> },
     /// 服务端发送文档列表
-    DocList {
-        docs: Vec<(DocId, String)>,
-    },
+    DocList { docs: Vec<(DocId, String)> },
     /// 插件调用响应
     PluginResponse {
         req_id: String,
@@ -194,9 +160,9 @@ pub enum ServerMessage {
     /// 全文搜索结果
     SearchResults {
         /// (DocId String, Path, Score)
-        results: Vec<(String, String, f32)>, 
+        results: Vec<(String, String, f32)>,
     },
-    
+
     // === Manual Merge Messages (手动合并模式) ===
     /// 当前同步模式状态
     SyncModeStatus {
@@ -209,31 +175,23 @@ pub enum ServerMessage {
         previews: Vec<(String, String, String)>,
     },
     /// 合并完成
-    MergeComplete {
-        merged_count: u32,
-    },
+    MergeComplete { merged_count: u32 },
     /// 待合并操作已丢弃
     PendingDiscarded,
-    
+
     // === Branch Switcher Messages (分支切换) ===
     /// 影子库 Peer ID 列表 (远程分支)
-    ShadowList {
-        shadows: Vec<String>,
-    },
+    ShadowList { shadows: Vec<String> },
     /// 仓库列表 (当前分支下的 .redb 文件)
-    RepoList {
-        repos: Vec<String>,
-    },
+    RepoList { repos: Vec<String> },
     /// 分支切换确认
     BranchSwitched {
         peer_id: Option<String>,
         success: bool,
     },
     /// 编辑请求被拒绝 (Shadow 分支只读)
-    EditRejected {
-        reason: String,
-    },
-    
+    EditRejected { reason: String },
+
     // === Source Control Responses (版本控制响应) ===
     /// 变更列表响应
     ChangesList {
@@ -254,9 +212,7 @@ pub enum ServerMessage {
         timestamp: i64,
     },
     /// 提交历史响应
-    CommitHistory {
-        commits: Vec<CommitInfo>,
-    },
+    CommitHistory { commits: Vec<CommitInfo> },
     /// 文档 Diff 响应 (用于 Diff 视图)
     DocDiff {
         /// 文件路径
@@ -266,7 +222,10 @@ pub enum ServerMessage {
         /// 当前版本内容
         new_content: String,
     },
-    
+
+    /// 文档删除通知
+    DocDeleted { doc_id: DocId },
+
     /// 错误消息
     Error(String),
 }

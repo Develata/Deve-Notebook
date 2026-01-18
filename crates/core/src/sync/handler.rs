@@ -39,10 +39,24 @@ impl<'a> FsEventHandler<'a> {
 
         // CASE 1: File Deleted (or moved out of scope)
         if !file_path.exists() {
-            if let Some(_doc_id) = self.repo.get_docid(path_str)? {
-                warn!("Handler: File gone: {}", path_str);
+            if let Some(doc_id) = self.repo.get_docid(path_str)? {
+                warn!(
+                    "Handler: File gone: {}. Marking as deleted in Ledger.",
+                    path_str
+                );
+
+                // 1. Remove from Path Mapping (metadata) to prevent "Ghost Files"
+                // This ensures next scan won't see it as a valid entry
+                self.repo.delete_doc(path_str)?;
+
+                // 2. Broadcast Deletion to Peers
+                // TODO: Protocol needs DocDeleted message.
+                // Currently we just update local state. The sync engine should propagate
+                // this as a "Tombstone" op if we are doing CRDT deletions.
+                // But for now, ensuring metadata is clean prevents local issues.
+
+                return Ok(vec![ServerMessage::DocDeleted { doc_id }]);
             }
-            // TODO: Broadcast Delete?
             return Ok(vec![]);
         }
 
@@ -76,6 +90,8 @@ impl<'a> FsEventHandler<'a> {
                 "Handler: Inode change (Atomic Save?) for {}. Rebinding.",
                 path_str
             );
+            // RISK (Low): If user did "Delete A -> Create New A" quickly, we might bind New A content to Old A history.
+            // Accepted trade-off for supporting Vim/Editor atomic saves (Write New + Rename).
             self.repo.bind_inode(&inode, existing_id)?;
             if sync_mgr.reconcile_doc(existing_id)? {
                 // Content updated

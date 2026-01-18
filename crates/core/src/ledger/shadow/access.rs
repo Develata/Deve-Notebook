@@ -64,11 +64,9 @@ impl<'a> ShadowRepo<'a> {
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_multimap_table(DOC_OPS)?;
 
-        let mut max_seq: Option<u64> = None;
-        for item in table.get(doc_id.as_u128())? {
-            let seq = item?.value();
-            max_seq = Some(max_seq.map_or(seq, |m| m.max(seq)));
-        }
+        // Optimization: Redb Multimap values are sorted, so the last one is the max.
+        let iter = table.get(doc_id.as_u128())?;
+        let max_seq = iter.last().transpose()?.map(|v| v.value());
         Ok(max_seq)
     }
 

@@ -40,30 +40,6 @@ impl RepoManager {
 
     // Method moved to listing trait
 
-    /// 获取指定 Peer 的影子库只读视图
-    ///
-    /// **注意**: 由于 Rust 生命周期限制，当前实现返回 None。
-    /// 请使用 `get_shadow_ops` 等便捷方法替代。
-    pub fn get_shadow_repo(
-        &self,
-        peer_id: &PeerId,
-        repo_id: &RepoId,
-    ) -> Result<Option<shadow::ShadowRepo<'_>>> {
-        self.ensure_shadow_db(peer_id, repo_id)?;
-
-        let dbs = self.shadow_dbs.read().unwrap();
-        if let Some(repos) = dbs.get(peer_id) {
-            if repos.contains_key(repo_id) {
-                drop(dbs);
-                Ok(None) // 占位 - 使用 get_shadow_ops 作为替代
-            } else {
-                Ok(None)
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
     /// 从指定影子库读取操作（便捷方法）
     ///
     /// # 参数

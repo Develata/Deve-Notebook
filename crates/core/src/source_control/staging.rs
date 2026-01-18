@@ -48,6 +48,8 @@ pub fn unstage(db: &Database, path: &str) -> Result<()> {
 }
 
 /// 获取所有已暂存的文件
+///
+/// **注意**: 此操作会将所有路径加载到内存。对于大规模暂存 (>10k 文件) 可能有性能影响。
 pub fn list_staged(db: &Database) -> Result<Vec<String>> {
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(STAGED_TABLE)?;
@@ -61,16 +63,11 @@ pub fn list_staged(db: &Database) -> Result<Vec<String>> {
 
 /// 清空暂存区 (提交后调用)
 pub fn clear(db: &Database) -> Result<()> {
-    // 先读取所有 key
-    let keys = list_staged(db)?;
-    
-    // 然后删除
     let write_txn = db.begin_write()?;
     {
-        let mut table = write_txn.open_table(STAGED_TABLE)?;
-        for key in keys {
-            table.remove(key.as_str())?;
-        }
+        // Optimization: Drop and recreate table
+        write_txn.delete_table(STAGED_TABLE)?;
+        let _ = write_txn.open_table(STAGED_TABLE)?;
     }
     write_txn.commit()?;
     tracing::info!("Cleared staging area");

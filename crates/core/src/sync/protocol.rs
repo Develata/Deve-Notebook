@@ -13,7 +13,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use crate::models::{PeerId, LedgerEntry, RepoId};
+use crate::models::{LedgerEntry, PeerId, RepoId};
 use crate::sync::vector::VersionVector;
 
 /// 同步请求：表示需要从某个 Peer 拉取的数据范围
@@ -52,25 +52,22 @@ pub struct HandshakeResult {
 }
 
 /// 基于 Version Vector 计算差异，并生成同步请求列表
-/// 
+///
 /// 返回:
 /// - `to_send`: 需要发送给远端的数据范围 (远端缺失)
 /// - `to_request`: 需要从远端请求的数据范围 (本地缺失)
 pub fn compute_diff_requests(
-    local_vector: &VersionVector, 
-    remote_vector: &VersionVector
+    local_vector: &VersionVector,
+    remote_vector: &VersionVector,
+    repo_id: RepoId,
 ) -> (Vec<SyncRequest>, Vec<SyncRequest>) {
     let (missing_from_remote, missing_from_local) = local_vector.diff(remote_vector);
-    
-    // TODO: Acquire current active RepodId context?
-    // For now we assume default repo ID (nil) for backward compatibility
-    let default_repo_id = uuid::Uuid::nil();
 
     let to_send: Vec<SyncRequest> = missing_from_remote
         .into_iter()
         .map(|(peer_id, range)| SyncRequest {
             peer_id,
-            repo_id: default_repo_id,
+            repo_id,
             range: (range.start, range.end),
         })
         .collect();
@@ -79,7 +76,7 @@ pub fn compute_diff_requests(
         .into_iter()
         .map(|(peer_id, range)| SyncRequest {
             peer_id,
-            repo_id: default_repo_id,
+            repo_id,
             range: (range.start, range.end),
         })
         .collect();

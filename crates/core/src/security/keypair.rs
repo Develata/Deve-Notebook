@@ -9,15 +9,15 @@
 //! - `sign`: 对消息进行签名。
 //! - `verify`: 验证签名是否来自该公钥。
 
-use ed25519_dalek::{SigningKey, VerifyingKey, Signer, Verifier, Signature};
-use rand::rngs::OsRng;
-use rand::RngCore; // Import RngCore for fill_bytes
-use serde::{Deserialize, Serialize};
-use crate::models::PeerId;
 use super::hashing::sha256_hex;
+use crate::models::PeerId;
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use rand::RngCore; // Import RngCore for fill_bytes
+use rand::rngs::OsRng;
+use serde::{Deserialize, Serialize};
 
 /// 身份密钥对 (包含私钥)
-/// 
+///
 /// **注意**: 严禁将私钥泄露给网络或其他模块。
 pub struct IdentityKeyPair {
     signing_key: SigningKey,
@@ -47,14 +47,14 @@ impl IdentityKeyPair {
     }
 
     /// 导出私钥字节 (用于持久化)
-    /// 
+    ///
     /// **安全警告**: 导出的字节应当安全存储，避免泄露
     pub fn to_bytes(&self) -> [u8; 32] {
         self.signing_key.to_bytes()
     }
 
     /// 从字节恢复密钥对
-    /// 
+    ///
     /// **参数**: 32 字节的私钥
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != 32 {
@@ -79,13 +79,24 @@ impl IdentityKeyPair {
 /// - `message`: 原始消息
 /// - `signature_bytes`: 给定的签名 (64 bytes)
 pub fn verify_signature(pub_key_bytes: &[u8], message: &[u8], signature_bytes: &[u8]) -> bool {
-    if let Ok(verifying_key) = VerifyingKey::from_bytes(pub_key_bytes.try_into().unwrap_or(&[0; 32])) {
+    if let Ok(verifying_key) =
+        VerifyingKey::from_bytes(pub_key_bytes.try_into().unwrap_or(&[0; 32]))
+    {
         // Signature::from_bytes returns Signature directly (not Result) for fixed array
         if let Ok(sig_arr) = signature_bytes.try_into() {
-             let signature = Signature::from_bytes(sig_arr);
-             return verifying_key.verify(message, &signature).is_ok();
+            let signature = Signature::from_bytes(sig_arr);
+            match verifying_key.verify(message, &signature) {
+                Ok(_) => return true,
+                Err(_) => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("Signature verification failed.");
+                    return false;
+                }
+            }
         }
     }
+    #[cfg(debug_assertions)]
+    eprintln!("Invalid key or signature format.");
     false
 }
 
@@ -98,12 +109,16 @@ mod tests {
         let keypair = IdentityKeyPair::generate();
         let msg = b"handshake challenge";
         let sig = keypair.sign(msg);
-        
+
         // 验证合法的
         assert!(verify_signature(&keypair.public_key_bytes(), msg, &sig));
-        
+
         // 验证篡改的
-        assert!(!verify_signature(&keypair.public_key_bytes(), b"tampered", &sig));
+        assert!(!verify_signature(
+            &keypair.public_key_bytes(),
+            b"tampered",
+            &sig
+        ));
     }
 
     #[test]

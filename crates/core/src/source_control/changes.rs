@@ -7,10 +7,10 @@
 //! - `detect_all_changes`: 检测所有文档的变更状态
 //! - `get_committed_content`: 获取文档的最后提交内容
 
-use anyhow::Result;
-use redb::{Database, ReadableTable, TableDefinition};
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
+use anyhow::Result;
+use redb::{Database, ReadableTable, TableDefinition};
 
 /// 快照表定义 (doc_id -> content)
 /// 存储每个文档最后一次提交时的内容
@@ -50,7 +50,7 @@ pub fn get_committed_content(db: &Database, doc_id: DocId) -> Result<Option<Stri
     let doc_id_str = doc_id.to_string();
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(SNAPSHOTS_TABLE)?;
-    
+
     match table.get(doc_id_str.as_str())? {
         Some(guard) => Ok(Some(guard.value().to_string())),
         None => Ok(None),
@@ -64,10 +64,7 @@ pub fn get_committed_content(db: &Database, doc_id: DocId) -> Result<Option<Stri
 /// - 有快照 + 无当前内容 = Deleted
 /// - 快照 != 当前内容 = Modified
 /// - 相同 = None
-pub fn detect_doc_change(
-    committed: Option<&str>,
-    current: Option<&str>,
-) -> Option<ChangeStatus> {
+pub fn detect_doc_change(committed: Option<&str>, current: Option<&str>) -> Option<ChangeStatus> {
     match (committed, current) {
         // 新文档 (无快照但有当前内容)
         (None, Some(cur)) if !cur.is_empty() => Some(ChangeStatus::Added),
@@ -82,22 +79,12 @@ pub fn detect_doc_change(
 
 /// 清空所有快照 (重置用)
 pub fn clear_snapshots(db: &Database) -> Result<()> {
-    // 先读取所有 key
-    let keys: Vec<String> = {
-        let read_txn = db.begin_read()?;
-        let table = read_txn.open_table(SNAPSHOTS_TABLE)?;
-        table.iter()?
-            .filter_map(|e| e.ok().map(|(k, _)| k.value().to_string()))
-            .collect()
-    };
-    
-    // 然后删除
     let write_txn = db.begin_write()?;
     {
-        let mut table = write_txn.open_table(SNAPSHOTS_TABLE)?;
-        for key in keys {
-            table.remove(key.as_str())?;
-        }
+        // Optimization: Drop and recreate the table is faster than deleting row by row
+        // Redb supports delete_table
+        write_txn.delete_table(SNAPSHOTS_TABLE)?;
+        let _ = write_txn.open_table(SNAPSHOTS_TABLE)?;
     }
     write_txn.commit()?;
     tracing::info!("Cleared all snapshots");
