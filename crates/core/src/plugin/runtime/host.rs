@@ -8,10 +8,14 @@
 //! 所有敏感操作必须经过 `Capability` 检查。
 
 use crate::plugin::manifest::PluginManifest;
-use rhai::{Engine, EvalAltResult};
+use rhai::Engine;
+#[cfg(not(target_arch = "wasm32"))]
+use rhai::EvalAltResult;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
 /// 注册核心 API 到 Rhai 引擎
+#[allow(unused_variables)] // manifest is used only in non-WASM builds
 pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
     #[cfg(not(target_arch = "wasm32"))]
     {

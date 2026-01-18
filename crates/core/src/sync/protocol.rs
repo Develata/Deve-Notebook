@@ -13,7 +13,8 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use crate::models::{LedgerEntry, PeerId, RepoId};
+use crate::models::{PeerId, RepoId};
+use crate::security::EncryptedOp;
 use crate::sync::vector::VersionVector;
 
 /// 同步请求：表示需要从某个 Peer 拉取的数据范围
@@ -26,8 +27,6 @@ pub struct SyncRequest {
     /// 需要拉取的序列号范围 (start, end) - 左闭右开
     pub range: (u64, u64),
 }
-
-use crate::security::EncryptedOp;
 
 /// 同步响应：包含拉取到的加密操作列表
 #[derive(Debug, Clone)]

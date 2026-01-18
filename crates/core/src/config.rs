@@ -13,9 +13,8 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use std::env;
-use serde::{Serialize, Deserialize};
 
 /// 同步模式
 /// 控制 P2P 同步的自动化程度
@@ -67,7 +66,7 @@ pub struct Config {
     /// 当前运行模式
     #[serde(default = "default_profile")]
     pub profile: AppProfile,
-    
+
     // --- 路径配置 ---
     /// 账本目录路径 (Default: "ledger")
     #[serde(default = "default_ledger")]
@@ -90,11 +89,21 @@ pub struct Config {
     pub concurrency: usize,
 }
 
-fn default_profile() -> AppProfile { AppProfile::Standard }
-fn default_ledger() -> String { "ledger".to_string() }
-fn default_vault() -> String { "vault".to_string() }
-fn default_snapshot_depth() -> usize { 100 }
-fn default_concurrency() -> usize { 4 }
+fn default_profile() -> AppProfile {
+    AppProfile::Standard
+}
+fn default_ledger() -> String {
+    "ledger".to_string()
+}
+fn default_vault() -> String {
+    "vault".to_string()
+}
+fn default_snapshot_depth() -> usize {
+    100
+}
+fn default_concurrency() -> usize {
+    4
+}
 
 impl Config {
     /// 加载配置 (Env > .env > config.toml > Default)

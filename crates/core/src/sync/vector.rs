@@ -10,10 +10,10 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use crate::models::PeerId;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Range;
-use serde::{Deserialize, Serialize};
-use crate::models::PeerId;
 
 /// 逻辑时钟向量，用于追踪各个节点的数据同步状态。
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -54,7 +54,7 @@ impl VersionVector {
     }
 
     /// 获取内部时钟的迭代器
-    pub fn iter(&self) -> std::collections::hash_map::Iter<PeerId, u64> {
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, PeerId, u64> {
         self.clock.iter()
     }
 
@@ -63,7 +63,7 @@ impl VersionVector {
     pub fn intersection(&self, other: &VersionVector) -> VersionVector {
         let mut result = VersionVector::new();
         let all_peers: Vec<&PeerId> = self.clock.keys().chain(other.clock.keys()).collect();
-        
+
         for peer in all_peers {
             let v1 = self.get(peer);
             let v2 = other.get(peer);
@@ -75,14 +75,15 @@ impl VersionVector {
         result
     }
 
-
-
     /// 计算差异。
     /// 比较 "Self" (My State) 和 "Remote" (Their State)。
     /// 返回两个缺失范围列表：
     /// 1. `missing_from_remote`: 对方缺少的 (我比对方新的部分)
     /// 2. `missing_from_local`: 我缺少的 (对方比我新的部分)
-    pub fn diff(&self, remote: &VersionVector) -> (Vec<(PeerId, Range<u64>)>, Vec<(PeerId, Range<u64>)>) {
+    pub fn diff(
+        &self,
+        remote: &VersionVector,
+    ) -> (Vec<(PeerId, Range<u64>)>, Vec<(PeerId, Range<u64>)>) {
         let mut missing_from_remote = Vec::new();
         let mut missing_from_local = Vec::new();
 
@@ -144,7 +145,7 @@ mod tests {
 
         assert_eq!(v1.get(&p("A")), 10);
         assert_eq!(v1.get(&p("B")), 10); // Updated to max
-        assert_eq!(v1.get(&p("C")), 7);  // New entry
+        assert_eq!(v1.get(&p("C")), 7); // New entry
     }
 
     #[test]
@@ -155,7 +156,7 @@ mod tests {
         // Scenario 1: A leading (Local has more data from A)
         local.update(p("A"), 10);
         remote.update(p("A"), 5);
-        
+
         let (missing_remote, missing_local) = local.diff(&remote);
         assert!(!missing_remote.is_empty());
         assert!(missing_local.is_empty());
@@ -170,12 +171,20 @@ mod tests {
         let (missing_remote, missing_local) = local.diff(&remote);
         // From previous step (A): Local A=10, Remote A=5. -> Missing Remote: A 6..11
         // From this step (B): Local B=3, Remote B=8. -> Missing Local: B 4..9
-        
+
         // Check missing from remote (A case)
-        assert!(missing_remote.iter().any(|(id, r)| id == &p("A") && r == &(6..11)));
-        
+        assert!(
+            missing_remote
+                .iter()
+                .any(|(id, r)| id == &p("A") && r == &(6..11))
+        );
+
         // Check missing from local (B case)
-        assert!(missing_local.iter().any(|(id, r)| id == &p("B") && r == &(4..9)));
+        assert!(
+            missing_local
+                .iter()
+                .any(|(id, r)| id == &p("B") && r == &(4..9))
+        );
     }
 
     #[test]
@@ -194,9 +203,17 @@ mod tests {
         let (missing_remote, missing_local) = local.diff(&remote);
 
         // Remote needs B: 16..21
-        assert!(missing_remote.iter().any(|(id, r)| id == &p("B") && r == &(16..21)));
-        
+        assert!(
+            missing_remote
+                .iter()
+                .any(|(id, r)| id == &p("B") && r == &(16..21))
+        );
+
         // Local needs A: 11..13
-        assert!(missing_local.iter().any(|(id, r)| id == &p("A") && r == &(11..13)));
+        assert!(
+            missing_local
+                .iter()
+                .any(|(id, r)| id == &p("A") && r == &(11..13))
+        );
     }
 }

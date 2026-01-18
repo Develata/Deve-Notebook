@@ -15,7 +15,7 @@
 //!   - Ack（确认）, NewOp（新操作）, Snapshot（快照）
 //!   - History（历史）, DocList（文档列表）, Error（错误）
 
-use crate::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
+use crate::models::{DocId, Op, PeerId, VersionVector};
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitInfo};
 use serde::{Deserialize, Serialize};

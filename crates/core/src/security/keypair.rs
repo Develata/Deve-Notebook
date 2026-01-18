@@ -14,7 +14,6 @@ use crate::models::PeerId;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::RngCore; // Import RngCore for fill_bytes
 use rand::rngs::OsRng;
-use serde::{Deserialize, Serialize};
 
 /// 身份密钥对 (包含私钥)
 ///

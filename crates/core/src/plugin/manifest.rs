@@ -39,7 +39,7 @@ pub struct Capability {
 impl Capability {
     /// Normalize path manually (resolve `..` and `.`) to prevent path traversal
     fn normalize_path(path: &Path) -> PathBuf {
-        let mut components = path.components().peekable();
+        let components = path.components().peekable();
         let mut ret = PathBuf::new();
 
         for component in components {
