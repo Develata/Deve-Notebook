@@ -8,8 +8,23 @@
 //!
 //! 这些函数被后端（用于持久化）和前端（用于同步）共同使用。
 
-use crate::models::{Op, LedgerEntry};
+use crate::models::{LedgerEntry, Op};
 // use anyhow::Result; // Not used currently
+
+/// 将字符索引转换为字节索引
+///
+/// **参数**:
+/// * `s`: 原始字符串
+/// * `char_index`: 字符索引（Unicode 码点位置）
+///
+/// **返回值**:
+/// 对应的字节索引。如果字符索引超出范围，返回字符串的字节长度。
+fn char_to_byte_index(s: &str, char_index: usize) -> usize {
+    s.char_indices()
+        .nth(char_index)
+        .map(|(byte_idx, _)| byte_idx)
+        .unwrap_or(s.len())
+}
 
 /// 从操作序列重建文档内容
 ///
@@ -18,33 +33,40 @@ use crate::models::{Op, LedgerEntry};
 ///
 /// **逻辑**:
 /// 1. 遍历操作列表。
-/// 2. 对于 `Insert`，在指定 `pos` 插入字符串。
-/// 3. 对于 `Delete`，从指定 `pos` 删除 `len` 个字符。
+/// 2. 对于 `Insert`，在指定 `pos`（字符索引）插入字符串。
+/// 3. 对于 `Delete`，从指定 `pos`（字符索引）删除 `len` 个字符。
 ///
-/// **注意**: 
-/// 当前实现假设操作是线性有序的（Phase 0 简化假设）。
-/// 在更复杂的 CRDT 场景中，此处应由 Loro 等库处理。
+/// **注意**:
+/// - 所有位置都是字符索引（非字节索引），以正确处理 UTF-8 多字节字符（如中文）。
+/// - 当前实现假设操作是线性有序的（Phase 0 简化假设）。
+/// - 在更复杂的 CRDT 场景中，此处应由 Loro 等库处理。
 pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
     let mut content = String::new();
-    
+
     for entry in ops {
         match &entry.op {
             Op::Insert { pos, content: text } => {
-                if *pos >= content.len() {
+                // 将字符索引转换为字节索引
+                let byte_pos = char_to_byte_index(&content, *pos);
+                if byte_pos >= content.len() {
                     content.push_str(text);
                 } else {
-                    content.insert_str(*pos, text);
+                    content.insert_str(byte_pos, text);
                 }
             }
             Op::Delete { pos, len } => {
-                if *pos < content.len() {
-                    let end = std::cmp::min(pos + len, content.len());
-                    content.drain(*pos..end);
+                // 将字符索引转换为字节索引
+                let byte_start = char_to_byte_index(&content, *pos);
+                let byte_end = char_to_byte_index(&content, pos + len);
+
+                if byte_start < content.len() {
+                    let safe_end = std::cmp::min(byte_end, content.len());
+                    content.drain(byte_start..safe_end);
                 }
             }
         }
     }
-    
+
     content
 }
 
@@ -60,28 +82,34 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
 ///
 /// **实现**:
 /// 使用 `dissimilar` 库计算 diff，然后转换为我们的 `Op` 枚举。
+///
+/// **注意**:
+/// 所有位置和长度都是字符索引（非字节索引），以正确处理 UTF-8 多字节字符。
 pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
     use dissimilar::Chunk;
     let chunks = dissimilar::diff(old, new);
     let mut ops = Vec::new();
-    let mut pos = 0;
-    
+    let mut pos: usize = 0; // 字符位置
+
     for chunk in chunks {
         match chunk {
             Chunk::Equal(text) => {
-                pos += text.len();
+                // 使用字符数量而非字节数量
+                pos += text.chars().count();
             }
             Chunk::Insert(text) => {
                 ops.push(Op::Insert {
                     pos,
                     content: text.to_string(),
                 });
-                pos += text.len();
+                // 使用字符数量而非字节数量
+                pos += text.chars().count();
             }
             Chunk::Delete(text) => {
                 ops.push(Op::Delete {
                     pos,
-                    len: text.len(),
+                    // 使用字符数量而非字节数量
+                    len: text.chars().count(),
                 });
                 // 删除内容后，后续字符位置左移，因此 pos 不需要包含被删除的长度
             }

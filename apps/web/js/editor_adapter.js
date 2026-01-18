@@ -3,7 +3,6 @@ import { EditorState, Compartment } from "@codemirror/state";
 import {
   keymap,
   highlightSpecialChars,
-  drawSelection,
   dropCursor,
   rectangularSelection,
   crosshairCursor,
@@ -17,7 +16,7 @@ import {
   syntaxHighlighting,
   bracketMatching,
 } from "@codemirror/language";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, selectAll } from "@codemirror/commands";
 
 import { languages } from "@codemirror/language-data";
 import { mathStateField } from "./extensions/math.js";
@@ -29,7 +28,7 @@ import { blockStyling } from "./extensions/block_styling.js";
 import { mermaidStateField } from "./extensions/mermaid.js";
 import { copyTexExtension } from "./extensions/copy_tex.js";
 
-console.log("Editor Adapter v4 - Delta Mode (Performance Optimized)");
+console.log("Editor Adapter v5 - Native Selection Mode");
 
 // --- 内部状态 (Internal State) ---
 let activeView = null;
@@ -41,6 +40,7 @@ let readOnlyCompartment = new Compartment();
 let onDeltaCallback = null;
 
 // --- 基础设置 (Basic Setup) ---
+// 注意: 移除了 drawSelection()，使用浏览器原生选择来避免滚动时选择背景消失的问题
 function closeBrackets() {
   return [];
 }
@@ -50,7 +50,7 @@ const manualBasicSetup = [
   highlightActiveLineGutter(),
   highlightSpecialChars(),
   history(),
-  drawSelection(),
+  // drawSelection() 已移除 - 使用原生浏览器选择以避免滚动同步问题
   dropCursor(),
   EditorState.allowMultipleSelections.of(true),
   syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -58,7 +58,7 @@ const manualBasicSetup = [
   closeBrackets(),
   rectangularSelection(),
   crosshairCursor(),
-  keymap.of([...defaultKeymap, ...historyKeymap]),
+  keymap.of([...defaultKeymap, ...historyKeymap, { key: "Ctrl-a", run: selectAll }]),
 ];
 
 /**

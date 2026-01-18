@@ -54,4 +54,5 @@
 |                       | `Cmd+L` / `Ctrl+L`             | **Toggle Language**: 循环切换界面语言   |
 | **Version Control**   | `Cmd+S` / `Ctrl+S`             | **Save**: 保存当前文件 (触发 Diff 计算) |
 |                       | `Cmd+Enter` / `Ctrl+Enter`     | **Commit**: 提交暂存区的更改            |
+|                       | `Cmd+A` / `Ctrl+A`             | **Select All**: 全选当前文件            |
 

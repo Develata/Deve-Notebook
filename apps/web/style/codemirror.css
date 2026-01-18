@@ -56,8 +56,8 @@
 /* Frontmatter (Full Width Block) */
 .cm-frontmatter-block {
   background-color: #f8f9fa; /* Match Code Block Background */
-  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New",
-    monospace;
+  font-family:
+    "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
   font-size: 0.85em;
   color: #64748b;
 }
@@ -143,8 +143,8 @@
   color: #1e293b; /* slate-800 */
   padding: 0.2em 0.4em;
   border-radius: 4px;
-  font-family: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New",
-    monospace;
+  font-family:
+    "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
   font-size: 1em; /* Slightly increased from 0.85em */
 }
 
@@ -217,34 +217,55 @@
 /* Rendered Horizontal Rule: Full Width Line */
 /* Rendered Horizontal Rule: Full Width Line */
 .cm-hr-rendered {
-  color: transparent !important;   /* Hide text color as backup */
-  background-color: #cbd5e1;       /* The visible line color */
-  
-  display: inline-block;           /* Layout mode */
-  width: 100%;                     /* Full Width */
-  height: 2px;                     /* Thin line */
-  
-  margin: 1em 0;                   /* Vertical spacing */
-  line-height: 0px;                /* Squash line height */
-  overflow: hidden;                /* [FIX] Hide the text content securely */
-  vertical-align: middle;          /* Align with line */
-  
-  text-indent: -9999px;            /* [FIX] Push text completely out of the box */
+  color: transparent !important; /* Hide text color as backup */
+  background-color: #cbd5e1; /* The visible line color */
+
+  display: inline-block; /* Layout mode */
+  width: 100%; /* Full Width */
+  height: 2px; /* Thin line */
+
+  margin: 1em 0; /* Vertical spacing */
+  line-height: 0px; /* Squash line height */
+  overflow: hidden; /* [FIX] Hide the text content securely */
+  vertical-align: middle; /* Align with line */
+
+  text-indent: -9999px; /* [FIX] Push text completely out of the box */
 }
 /* Removed .cm-hr-widget as we use Decoration.mark now */
 
 /* 
-   Fix for Selection Visibility:
-   We elevate the selection layer to ensure it sits ON TOP of the code block backgrounds.
-   (This effectively places the background at the 'bottom' relative to the selection).
+   Selection Styling (Native Browser Selection)
+   使用浏览器原生选择机制，通过 ::selection 伪元素进行样式化
+   这种方法比 CodeMirror 的 drawSelection() 更可靠，不会在滚动时消失
 */
-.cm-selectionLayer {
-  z-index: 10 !important;
-  mix-blend-mode: multiply;
-  pointer-events: none !important; /* [FIX] Prevent interception of clicks */
+
+/* 编辑器内的文本选择样式 */
+.cm-editor ::selection {
+  background-color: rgba(59, 130, 246, 0.4) !important;
+  color: inherit;
 }
 
-.cm-selectionBackground {
-  background-color: #b3d4fc !important;
-  opacity: 0.5;
+.cm-editor ::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.4) !important;
+  color: inherit;
 }
+
+/* 确保代码块内的选择也可见 */
+.cm-code-block-line ::selection,
+.cm-blockquote-line ::selection,
+.cm-frontmatter-block ::selection {
+  background-color: rgba(59, 130, 246, 0.5) !important;
+}
+
+.cm-code-block-line ::-moz-selection,
+.cm-blockquote-line ::-moz-selection,
+.cm-frontmatter-block ::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.5) !important;
+}
+
+/* 确保内容层正常堆叠 */
+.cm-content {
+  caret-color: #333;
+}
+
+
