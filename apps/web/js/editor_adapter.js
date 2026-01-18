@@ -19,27 +19,30 @@ import {
 } from "@codemirror/language";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 
-import { languages } from "@codemirror/language-data"; // [NEW] Import languages
+import { languages } from "@codemirror/language-data";
 import { mathStateField } from "./extensions/math.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
 import { tableStateField } from "./extensions/table.js";
-import { imageStateField } from "./extensions/image.js"; 
-import { checkboxStateField } from "./extensions/checkbox_ext.js"; // [NEW] Checkbox StateField
-import { blockStyling } from "./extensions/block_styling.js"; // [NEW] Block Styling (Code & Quote)
-import { mermaidStateField } from "./extensions/mermaid.js"; // [NEW] Mermaid Diagram
-import { copyTexExtension } from "./extensions/copy_tex.js"; // [NEW] Copy Protection
+import { imageStateField } from "./extensions/image.js";
+import { checkboxStateField } from "./extensions/checkbox_ext.js";
+import { blockStyling } from "./extensions/block_styling.js";
+import { mermaidStateField } from "./extensions/mermaid.js";
+import { copyTexExtension } from "./extensions/copy_tex.js";
 
-console.log("Modules Loaded via ES Imports in editor_adapter.js (v3 - ReadOnly Compartment)");
-console.log("GFM Extensions:", GFM);
+console.log("Editor Adapter v4 - Delta Mode (Performance Optimized)");
 
 // --- 内部状态 (Internal State) ---
 let activeView = null;
 let isRemote = false;
 let readOnlyCompartment = new Compartment();
 
+// --- 回调函数 (Callbacks) ---
+/** @type {((changes: {from: number, to: number, insert: string}[]) => void) | null} */
+let onDeltaCallback = null;
+
 // --- 基础设置 (Basic Setup) ---
 function closeBrackets() {
-  return []; 
+  return [];
 }
 
 const manualBasicSetup = [
@@ -58,38 +61,65 @@ const manualBasicSetup = [
   keymap.of([...defaultKeymap, ...historyKeymap]),
 ];
 
+/**
+ * 将 CodeMirror ChangeSet 转换为 Delta 数组
+ * @param {import("@codemirror/state").ChangeSet} changes
+ * @returns {{from: number, to: number, insert: string}[]}
+ */
+function changeSetToDeltas(changes) {
+  const deltas = [];
+  changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+    deltas.push({
+      from: fromA,
+      to: toA,
+      insert: inserted.toString(),
+    });
+  });
+  return deltas;
+}
+
 // --- 核心初始化 (Core Initialization) ---
-export function initCodeMirror(element, onUpdate) {
-  console.log("Initializing Editor via Adapter (Singleton) - DEBUG vCLEAN_SLATE");
+/**
+ * 初始化 CodeMirror 编辑器
+ * @param {HTMLElement} element - 容器元素
+ * @param {(changes: {from: number, to: number, insert: string}[]) => void} onDelta - Delta 回调 (性能优化)
+ */
+export function initCodeMirror(element, onDelta) {
+  console.log("Initializing Editor (Delta Mode)");
   if (!element) return;
   element.innerHTML = "";
+
+  // 保存回调
+  onDeltaCallback = onDelta;
 
   try {
     const startState = EditorState.create({
       doc: "# Loading...",
       extensions: [
         ...manualBasicSetup,
-        readOnlyCompartment.of(EditorState.readOnly.of(false)), // 默认可编辑
-        EditorView.lineWrapping, 
-        EditorView.lineWrapping, 
-        markdown({ 
-            base: markdownLanguage,
-            codeLanguages: languages,
-            extensions: [...GFM, Subscript, Superscript, Emoji] 
+        readOnlyCompartment.of(EditorState.readOnly.of(false)),
+        EditorView.lineWrapping,
+        markdown({
+          base: markdownLanguage,
+          codeLanguages: languages,
+          extensions: [...GFM, Subscript, Superscript, Emoji],
         }),
-        hybridPlugin,     // 混合插件 (隐藏标记等)
-        mathStateField,   // [DEBUG]
-        tableStateField,  // 表格
-        imageStateField,  // 图片
-        checkboxStateField, // 复选框
+        hybridPlugin,
+        mathStateField,
+        tableStateField,
+        imageStateField,
+        checkboxStateField,
         mermaidStateField,
-        copyTexExtension, // 复制保护
-        blockStyling, // [NEW] 代码块 & 引用块 背景高亮
+        copyTexExtension,
+        blockStyling,
 
+        // 性能优化: 发送 Delta 而不是全文
         EditorView.updateListener.of((v) => {
-          // 内部检查: 显式的 isRemote 标志
           if (isRemote) return;
-          if (v.docChanged && onUpdate) onUpdate(v.state.doc.toString());
+          if (v.docChanged && onDeltaCallback) {
+            const deltas = changeSetToDeltas(v.changes);
+            onDeltaCallback(JSON.stringify(deltas));
+          }
         }),
       ],
     });
@@ -99,15 +129,26 @@ export function initCodeMirror(element, onUpdate) {
       parent: element,
     });
 
-    // 捕获单例实例
     activeView = view;
-    // 暴露给调试使用 (如果绝对必要)
-    window._debug_view = view; 
+    window._debug_view = view;
 
     return view;
   } catch (e) {
     console.error("Init Error:", e);
     throw e;
+  }
+}
+
+// --- 清理函数 (Cleanup) ---
+/**
+ * 销毁编辑器实例，释放资源
+ */
+export function destroyEditor() {
+  if (activeView) {
+    activeView.destroy();
+    activeView = null;
+    onDeltaCallback = null;
+    console.log("Editor destroyed");
   }
 }
 
@@ -163,31 +204,43 @@ export function applyRemoteOp(op_json) {
 }
 
 export function scrollGlobal(lineNumber) {
-    if (!activeView || !activeView.state) return;
-    
-    // 滚动到指定行的内部实现
-    const doc = activeView.state.doc;
-    const lines = doc.lines;
-    if (lineNumber < 1) lineNumber = 1;
-    if (lineNumber > lines) lineNumber = lines;
+  if (!activeView || !activeView.state) return;
 
-    const line = doc.line(lineNumber);
-    
-    activeView.dispatch({
-        effects: [
-            EditorView.scrollIntoView(line.from, { y: "start", yMargin: 20 })
-        ],
-        selection: { anchor: line.from }
-    });
-    activeView.focus();
+  const doc = activeView.state.doc;
+  const lines = doc.lines;
+  if (lineNumber < 1) lineNumber = 1;
+  if (lineNumber > lines) lineNumber = lines;
+
+  const line = doc.line(lineNumber);
+
+  activeView.dispatch({
+    effects: [
+      EditorView.scrollIntoView(line.from, { y: "start", yMargin: 20 }),
+    ],
+    selection: { anchor: line.from },
+  });
+  activeView.focus();
 }
 
 export function setReadOnly(readOnly) {
-    if (activeView) {
-        activeView.dispatch({
-            effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(readOnly))
-        });
-        // 强制 DOM 更新以进行视觉验证和稳健性检查
-        activeView.contentDOM.setAttribute("contenteditable", (!readOnly).toString());
-    }
+  if (activeView) {
+    activeView.dispatch({
+      effects: readOnlyCompartment.reconfigure(
+        EditorState.readOnly.of(readOnly),
+      ),
+    });
+    activeView.contentDOM.setAttribute(
+      "contenteditable",
+      (!readOnly).toString(),
+    );
+  }
 }
+
+// --- 暴露到全局作用域供 WASM 调用 ---
+window.setupCodeMirror = initCodeMirror;
+window.destroyEditor = destroyEditor;
+window.getEditorContent = getEditorContent;
+window.applyRemoteContent = applyRemoteContent;
+window.applyRemoteOp = applyRemoteOp;
+window.scrollGlobal = scrollGlobal;
+window.setReadOnly = setReadOnly;
