@@ -1,12 +1,12 @@
-﻿// crates\core\src\ledger
+﻿// crates/core/src/ledger/tests.rs
 //! # 仓库管理器测试模块 (RepoManager Tests)
 //!
 //! 包含 RepoManager 的单元测试和集成测试。
 
 use super::*;
+use crate::models::{DocId, LedgerEntry, PeerId, RepoType};
 use anyhow::Result;
 use tempfile::TempDir;
-
 use uuid::Uuid;
 
 /// 测试 RepoManager 初始化
@@ -20,7 +20,7 @@ fn test_repo_manager_init() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
 
-    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    let _repo = RepoManager::init(&ledger_dir, 10, None, None)?;
 
     // 验证目录结构
     assert!(ledger_dir.exists());
@@ -59,7 +59,7 @@ fn test_local_and_shadow_isolation() -> Result<()> {
 
     let doc_id = DocId::new();
     let peer_id = PeerId::new("peer_mobile");
-    let repo_id = Uuid::new_v4(); // Generate a random repo ID for testing remote sync
+    let repo_id = Uuid::new_v4();
 
     // 写入本地库 (Active Default Repo)
     let local_entry = LedgerEntry {
@@ -88,7 +88,6 @@ fn test_local_and_shadow_isolation() -> Result<()> {
     repo.append_remote_op(&peer_id, &repo_id, &remote_entry)?;
 
     // 验证隔离性
-    // Local ops using get_local_ops helper (uses default repo id internally)
     let local_ops = repo.get_local_ops(doc_id)?;
     assert_eq!(local_ops.len(), 1);
 
@@ -122,7 +121,7 @@ fn test_snapshot_pruning() -> Result<()> {
     // 保存 3 个快照
     repo.save_snapshot(doc_id, 1, "Snap 1")?;
     repo.save_snapshot(doc_id, 2, "Snap 2")?;
-    repo.save_snapshot(doc_id, 3, "Snap 3")?; // 这应该触发 seq=1 的裁剪
+    repo.save_snapshot(doc_id, 3, "Snap 3")?;
 
     // 验证裁剪结果
     let read_txn = repo.local_db.begin_read()?;
