@@ -12,23 +12,25 @@
 //!
 //! 服务器使用 Axum 处理 HTTP/WebSocket，并向所有客户端广播变更。
 
-use axum::{routing::get, Router};
-use std::sync::Arc;
+use axum::{Router, routing::get};
 use deve_core::ledger::RepoManager;
-use tower_http::cors::{Any, CorsLayer};
-use tokio::sync::broadcast;
-use deve_core::protocol::ServerMessage;
-use std::net::SocketAddr;
-use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::models::PeerId;
+use deve_core::plugin::runtime::PluginRuntime;
+use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
+use std::net::SocketAddr;
+use std::sync::Arc;
 use std::sync::RwLock;
+use tokio::sync::broadcast;
+use tower_http::cors::{Any, CorsLayer};
 
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
 
-pub mod ws;
+pub mod channel;
 pub mod handlers;
+pub mod session;
+pub mod ws;
 
 pub struct AppState {
     pub repo: Arc<RepoManager>,
@@ -51,14 +53,17 @@ pub async fn start_server(
 ) -> anyhow::Result<()> {
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
-    
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault_path.clone()));
+
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(
+        repo.clone(),
+        vault_path.clone(),
+    ));
 
     // SPAWN WATCHER
     let tx_for_watcher = tx.clone();
     let sm_for_watcher = sync_manager.clone();
     let vp_for_watcher = vault_path.clone();
-    
+
     tokio::task::spawn_blocking(move || {
         let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher)
             .with_callback(move |msgs| {
@@ -66,7 +71,7 @@ pub async fn start_server(
                     let _ = tx_for_watcher.send(msg);
                 }
             });
-            
+
         if let Err(e) = watcher.watch() {
             tracing::error!("Watcher failed: {:?}", e);
         }
@@ -90,7 +95,7 @@ pub async fn start_server(
     // Load or generate Identity Key
     let deve_dir = vault_path.join(".deve");
     std::fs::create_dir_all(&deve_dir)?;
-    
+
     let key_pair_path = deve_dir.join("identity.key");
     let key_pair = if key_pair_path.exists() {
         // 从文件加载已有密钥
@@ -114,7 +119,7 @@ pub async fn start_server(
         tracing::info!("Generated and saved new IdentityKey to {:?}", key_pair_path);
         Arc::new(kp)
     };
-    
+
     let peer_id = key_pair.peer_id();
     tracing::info!("Server PeerID: {}", peer_id);
 
@@ -150,7 +155,7 @@ pub async fn start_server(
         repo_key.clone(),
     )));
 
-    let app_state = Arc::new(AppState { 
+    let app_state = Arc::new(AppState {
         repo: repo.clone(),
         sync_manager,
         tx,

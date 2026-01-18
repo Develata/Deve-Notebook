@@ -1,21 +1,26 @@
-﻿// apps\cli\src\server\handlers
+﻿// apps/cli/src/server/handlers/document.rs
+//! # 文档内容处理器
+//!
+//! 处理文档编辑、历史记录、打开等操作
+
 use crate::server::AppState;
+use crate::server::channel::DualChannel;
 use deve_core::models::{LedgerEntry, PeerId};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
-use tokio::sync::broadcast;
 
+/// 处理编辑请求
 pub async fn handle_edit(
     state: &Arc<AppState>,
-    tx: &broadcast::Sender<ServerMessage>,
+    ch: &DualChannel,
     doc_id: deve_core::models::DocId,
     op: deve_core::models::Op,
     client_id: u64,
 ) {
-    // Get Local Peer ID
+    // 获取本地 Peer ID
     let local_peer_id = state.identity_key.peer_id();
 
-    // Calculate next sequence number for this peer on this doc
+    // 计算下一个序列号
     let mut next_seq = 1;
     if let Ok(ops) = state.repo.get_local_ops(doc_id) {
         let max_seq = ops
@@ -37,28 +42,30 @@ pub async fn handle_edit(
 
     match state.repo.append_local_op(&entry) {
         Ok(seq) => {
-            // 广播新操作给所有连接的客户端 (携带 Seq 和 ClientId)
-            let _ = tx.send(ServerMessage::NewOp {
+            // 广播新操作给所有连接的客户端
+            ch.broadcast(ServerMessage::NewOp {
                 doc_id,
                 op,
                 seq,
                 client_id,
             });
 
-            // [持久化] 通过 SyncManager 更新磁盘快照
+            // 持久化到磁盘
             if let Err(e) = state.sync_manager.persist_doc(doc_id) {
                 tracing::error!("SyncManager failed to persist doc {}: {:?}", doc_id, e);
             }
         }
         Err(e) => {
             tracing::error!("Failed to persist op: {:?}", e);
+            ch.send_error(format!("Failed to persist operation: {}", e));
         }
     }
 }
 
+/// 处理历史记录请求
 pub async fn handle_request_history(
     state: &Arc<AppState>,
-    tx: &broadcast::Sender<ServerMessage>,
+    ch: &DualChannel,
     doc_id: deve_core::models::DocId,
 ) {
     if let Ok(entries) = state.repo.get_local_ops(doc_id) {
@@ -67,8 +74,8 @@ pub async fn handle_request_history(
             .map(|(seq, entry)| (seq, entry.op))
             .collect();
 
-        let msg = ServerMessage::History { doc_id, ops };
-        let _ = tx.send(msg);
+        // 单播历史记录给请求者
+        ch.unicast(ServerMessage::History { doc_id, ops });
     }
 }
 
@@ -78,7 +85,7 @@ pub async fn handle_request_history(
 /// - `active_branch`: 当前活动分支。None = 本地, Some = 影子库
 pub async fn handle_open_doc(
     state: &Arc<AppState>,
-    tx: &broadcast::Sender<ServerMessage>,
+    ch: &DualChannel,
     doc_id: deve_core::models::DocId,
     active_branch: Option<&PeerId>,
 ) {
@@ -91,7 +98,7 @@ pub async fn handle_open_doc(
     let (final_content, version) = match active_branch {
         // 本地分支: 从本地 Ledger 读取
         None => {
-            // [调和] 确保磁盘内容与 Ledger 一致
+            // 调和: 确保磁盘内容与 Ledger 一致
             if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
                 tracing::error!("SyncManager reconcile failed: {:?}", e);
             }
@@ -106,7 +113,6 @@ pub async fn handle_open_doc(
             (content, ver)
         }
         // 影子分支: 从 Shadow DB 读取
-        // 注意: 影子库数据使用 Uuid::nil() 存储 (兼容性考虑)
         Some(peer_id) => {
             match state
                 .repo
@@ -123,17 +129,16 @@ pub async fn handle_open_doc(
                 }
                 Err(e) => {
                     tracing::error!("Failed to get shadow ops for {}: {:?}", peer_id, e);
-                    // 返回空内容
                     (String::new(), 0)
                 }
             }
         }
     };
 
-    let snapshot = ServerMessage::Snapshot {
+    // 单播快照给请求者
+    ch.unicast(ServerMessage::Snapshot {
         doc_id,
         content: final_content,
         version,
-    };
-    let _ = tx.send(snapshot);
+    });
 }
