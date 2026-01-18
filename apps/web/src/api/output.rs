@@ -1,19 +1,27 @@
-﻿// apps\web\src\api
+﻿// apps/web/src/api/output.rs
 //! # WebSocket 输出管理器
 //!
 //! ## 职责
 //! 1. 接收应用层消息
-//! 2. 维护离线消息队列
+//! 2. 维护离线消息队列 (有容量上限)
 //! 3. 新连接建立时刷新队列
 //! 4. 向服务器发送消息
+//!
+//! ## 队列策略
+//! 队列有 `MAX_QUEUE_SIZE` 上限。超过限制时丢弃最旧的消息并警告。
+//! 这防止了网络断开时因持续操作导致的内存耗尽。
 
-use leptos::task::spawn_local;
-use gloo_net::websocket::{futures::WebSocket, Message};
-use futures::{StreamExt, SinkExt};
+use deve_core::protocol::ClientMessage;
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::stream::SplitSink;
+use futures::{SinkExt, StreamExt};
+use gloo_net::websocket::{Message, futures::WebSocket};
+use leptos::task::spawn_local;
 use std::collections::VecDeque;
-use deve_core::protocol::ClientMessage;
+
+/// 离线队列最大容量
+/// 防止网络断开时内存无限增长
+const MAX_QUEUE_SIZE: usize = 500;
 
 /// 输出管理器循环的内部消息类型
 pub enum OutputEvent {
@@ -31,18 +39,18 @@ pub fn spawn_output_manager(
     spawn_local(async move {
         let mut current_sink: Option<SplitSink<WebSocket, Message>> = None;
         let mut queue: VecDeque<ClientMessage> = VecDeque::new();
-        
-        // Merge streams: Client Messages + New Connection Links
+
+        // 合并流: 客户端消息 + 新连接链接
         let mut events = futures::stream::select(
             rx.map(OutputEvent::Client),
-            link_rx.map(OutputEvent::NewLink)
+            link_rx.map(OutputEvent::NewLink),
         );
-        
+
         while let Some(event) = events.next().await {
             match event {
                 OutputEvent::NewLink(sink) => {
                     handle_new_link(sink, &mut current_sink, &mut queue).await;
-                },
+                }
                 OutputEvent::Client(msg) => {
                     handle_client_message(msg, &mut current_sink, &mut queue).await;
                 }
@@ -57,13 +65,13 @@ async fn handle_new_link(
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,
 ) {
-    leptos::logging::log!("OutputLoop: New Connection Link received. Flushing {} items.", queue.len() + 1);
+    leptos::logging::log!("OutputLoop: 收到新连接。刷新 {} 条消息。", queue.len() + 1);
     *current_sink = Some(sink);
-    
-    // Inject ListDocs at front to refresh state
+
+    // 注入 ListDocs 到队首以刷新状态
     queue.push_front(ClientMessage::ListDocs);
-    
-    // Flush queue
+
+    // 刷新队列
     flush_queue(current_sink, queue).await;
 }
 
@@ -76,18 +84,37 @@ async fn handle_client_message(
     if let Some(writer) = current_sink.as_mut() {
         let json = match serde_json::to_string(&msg) {
             Ok(j) => j,
-            Err(_) => return,
+            Err(e) => {
+                // 序列化失败应该极少发生，但记录日志以便调试
+                leptos::logging::error!("消息序列化失败: {:?}, 消息: {:?}", e, msg);
+                return;
+            }
         };
-        
+
         if let Err(e) = writer.send(Message::Text(json)).await {
-            leptos::logging::warn!("WS Send Error: {:?}. Queuing...", e);
-            queue.push_back(msg);
-            *current_sink = None; // Mark as dead
+            leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
+            enqueue_with_limit(queue, msg);
+            *current_sink = None; // 标记连接已死
         }
     } else {
-        // Offline, just queue
-        queue.push_back(msg);
+        // 离线状态，入队等待
+        enqueue_with_limit(queue, msg);
     }
+}
+
+/// 带容量限制的入队操作
+///
+/// 如果队列已满，丢弃最旧的消息并警告
+fn enqueue_with_limit(queue: &mut VecDeque<ClientMessage>, msg: ClientMessage) {
+    if queue.len() >= MAX_QUEUE_SIZE {
+        let dropped = queue.pop_front();
+        leptos::logging::warn!(
+            "离线队列已满 ({}), 丢弃最旧消息: {:?}",
+            MAX_QUEUE_SIZE,
+            dropped
+        );
+    }
+    queue.push_back(msg);
 }
 
 /// 将队列中的所有消息刷新到当前连接
@@ -100,9 +127,12 @@ async fn flush_queue(
         if let Some(msg) = queue.pop_front() {
             let json = match serde_json::to_string(&msg) {
                 Ok(j) => j,
-                Err(_) => continue,
+                Err(e) => {
+                    leptos::logging::error!("刷新队列时序列化失败: {:?}", e);
+                    continue;
+                }
             };
-            
+
             let writer = match current_sink.as_mut() {
                 Some(w) => w,
                 None => {
@@ -110,9 +140,9 @@ async fn flush_queue(
                     break;
                 }
             };
-            
+
             if let Err(e) = writer.send(Message::Text(json)).await {
-                leptos::logging::error!("WS Flush Error: {:?}. Connection likely died.", e);
+                leptos::logging::error!("WS 刷新错误: {:?}. 连接可能已断开。", e);
                 queue.push_front(msg);
                 *current_sink = None;
                 break;

@@ -1,7 +1,10 @@
-﻿// apps\cli\src\commands
-use std::path::PathBuf;
+﻿// apps/cli/src/commands/dump.rs
+//! # Dump 命令 (调试用)
+//!
+//! 打印指定文档的所有操作历史并重建内容
+
 use deve_core::ledger::RepoManager;
-use anyhow::Result;
+use std::path::PathBuf;
 
 /// 转储命令 (调试用)
 ///
@@ -17,8 +20,9 @@ pub fn run(ledger_dir: &PathBuf, path_str: String, snapshot_depth: usize) -> any
         for (i, (seq, entry)) in ops.iter().enumerate() {
             println!("[{}] Seq:{} {} {:?}", i, seq, entry.timestamp, entry.op);
         }
-        
-        let ops_vec: Vec<deve_core::models::LedgerEntry> = ops.iter().map(|(_, e)| e.clone()).collect();
+
+        let ops_vec: Vec<deve_core::models::LedgerEntry> =
+            ops.iter().map(|(_, e)| e.clone()).collect();
         let content = deve_core::state::reconstruct_content(&ops_vec);
         println!("\nReconstructed Content:\n---\n{}\n---", content);
     } else {

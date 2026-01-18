@@ -7,16 +7,16 @@
 //! 3. 读取服务器消息并更新信号
 //! 4. 通过 link_tx 将写入端传递给输出管理器
 
-use leptos::task::spawn_local;
-use leptos::prelude::*;
-use gloo_net::websocket::{futures::WebSocket, Message};
+use deve_core::protocol::ServerMessage;
 use futures::StreamExt;
 use futures::channel::mpsc::UnboundedSender;
 use futures::stream::SplitSink;
-use deve_core::protocol::ServerMessage;
+use gloo_net::websocket::{Message, futures::WebSocket};
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 
-use super::backoff::BackoffStrategy;
 use super::ConnectionStatus;
+use super::backoff::BackoffStrategy;
 
 /// 启动连接管理器任务
 pub fn spawn_connection_manager(
@@ -27,34 +27,34 @@ pub fn spawn_connection_manager(
     spawn_local(async move {
         let url = build_ws_url();
         let mut backoff = BackoffStrategy::new();
-        
+
         loop {
             set_status.set(ConnectionStatus::Connecting);
             leptos::logging::log!("WS: Connecting to {}...", url);
-            
+
             match WebSocket::open(&url) {
                 Ok(ws) => {
                     leptos::logging::log!("WS: Socket opened, waiting for first message...");
                     backoff.reset();
-                    
+
                     let (write, read) = ws.split();
-                    
+
                     // Hand over the writer to the Output Manager
                     if let Err(e) = link_tx.unbounded_send(write) {
                         leptos::logging::error!("Failed to send sink to output loop: {:?}", e);
                     }
-                    
+
                     // Block on reading until disconnect
                     // Pass set_status to confirm connection after first successful message
                     process_incoming_messages(read, set_msg.clone(), set_status.clone()).await;
-                    
+
                     leptos::logging::log!("WS: Connection Lost (Reader ended)");
                 }
                 Err(e) => {
                     leptos::logging::error!("WS Open Error: {:?}", e);
                 }
             }
-            
+
             set_status.set(ConnectionStatus::Disconnected);
             backoff.wait().await;
         }
@@ -69,7 +69,7 @@ async fn process_incoming_messages(
     set_status: WriteSignal<ConnectionStatus>,
 ) {
     let mut confirmed_connected = false;
-    
+
     while let Some(result) = read.next().await {
         match result {
             Ok(Message::Text(txt)) => {
@@ -79,7 +79,7 @@ async fn process_incoming_messages(
                     set_status.set(ConnectionStatus::Connected);
                     confirmed_connected = true;
                 }
-                
+
                 match serde_json::from_str::<ServerMessage>(&txt) {
                     Ok(server_msg) => set_msg.set(Some(server_msg)),
                     Err(e) => leptos::logging::error!("Parse Error: {:?}", e),
@@ -97,7 +97,7 @@ async fn process_incoming_messages(
 /// 根据当前主机名构建 WebSocket URL
 fn build_ws_url() -> String {
     let hostname = web_sys::window()
-        .unwrap()
+        .expect("Window 对象不存在 (非浏览器环境?)")
         .location()
         .hostname()
         .unwrap_or_else(|_| "localhost".to_string());

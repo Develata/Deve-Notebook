@@ -14,7 +14,6 @@
 
 use axum::{Router, routing::get};
 use deve_core::ledger::RepoManager;
-use deve_core::models::PeerId;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
