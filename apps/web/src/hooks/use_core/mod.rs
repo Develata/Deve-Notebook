@@ -18,8 +18,48 @@ pub mod types;
 pub use types::*;
 
 use crate::api::WsService;
+use base64::Engine;
 use leptos::prelude::*;
 use std::sync::Arc;
+
+const IDENTITY_KEY_STORAGE: &str = "deve_note_identity_key";
+
+/// 从 localStorage 加载或生成新的身份密钥对
+///
+/// **持久化策略**:
+/// - 首次访问时生成新密钥并存入 localStorage
+/// - 后续访问从 localStorage 恢复，保持 PeerId 一致
+/// - 避免后端 VersionVector 因一次性 PeerId 无限膨胀
+fn load_or_generate_identity() -> deve_core::security::IdentityKeyPair {
+    let window = web_sys::window().expect("no global window");
+    let storage = window
+        .local_storage()
+        .ok()
+        .flatten()
+        .expect("localStorage not available");
+
+    // 尝试从 localStorage 加载
+    if let Ok(Some(encoded)) = storage.get_item(IDENTITY_KEY_STORAGE) {
+        if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(&encoded) {
+            if let Some(key_pair) = deve_core::security::IdentityKeyPair::from_bytes(&bytes) {
+                leptos::logging::log!("Identity loaded from localStorage");
+                return key_pair;
+            }
+        }
+        leptos::logging::warn!("Failed to decode stored identity, regenerating...");
+    }
+
+    // 生成新密钥并存储
+    let key_pair = deve_core::security::IdentityKeyPair::generate();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(key_pair.to_bytes());
+    if let Err(e) = storage.set_item(IDENTITY_KEY_STORAGE, &encoded) {
+        leptos::logging::error!("Failed to save identity to localStorage: {:?}", e);
+    } else {
+        leptos::logging::log!("New identity generated and saved to localStorage");
+    }
+
+    key_pair
+}
 
 /// 初始化核心状态钩子
 ///
@@ -35,8 +75,8 @@ pub fn use_core() -> CoreState {
     // 2. 初始化所有信号
     let signals = state::init_signals();
 
-    // 3. 生成临时 Identity KeyPair
-    let key_pair = Arc::new(deve_core::security::IdentityKeyPair::generate());
+    // 3. 加载或生成持久化的 Identity KeyPair (修复向量膨胀问题)
+    let key_pair = Arc::new(load_or_generate_identity());
     let peer_id = key_pair.peer_id();
     leptos::logging::log!("Frontend PeerId: {}", peer_id);
 

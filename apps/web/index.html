@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -60,6 +60,7 @@
       window.getEditorContent = () => "";
       window.scrollGlobal = () => {};
       window.setReadOnly = () => {};
+      window.destroyEditor = () => {};
     </script>
 
     <!-- 3. Module Initialization -->
@@ -76,6 +77,7 @@
           getEditorContent,
           scrollGlobal,
           setReadOnly,
+          destroyEditor,
         } = module;
 
         // --- BINDING: Expose Module Functions to Global Scope for Rust FFI ---
@@ -84,11 +86,12 @@
         window.getEditorContent = getEditorContent;
         window.scrollGlobal = scrollGlobal;
         window.setReadOnly = setReadOnly;
+        window.destroyEditor = destroyEditor;
         // -------------------------------------------------------------------
 
         if (typeof initCodeMirror !== "function") {
           throw new Error(
-            "initCodeMirror is not a function in exported module!"
+            "initCodeMirror is not a function in exported module!",
           );
         }
 
@@ -114,7 +117,7 @@
         // Flush Queue
         if (window._editor_queue.length > 0) {
           window.logToOverlay(
-            `Flushing ${window._editor_queue.length} queued items...`
+            `Flushing ${window._editor_queue.length} queued items...`,
           );
           window._editor_queue.forEach((item) => {
             window._realInit(item.element, item.onUpdate);
@@ -125,7 +128,7 @@
         console.error("Failed to load editor adapter:", e);
         window.logToOverlay(
           "Failed to load editor adapter: " + e.message,
-          true
+          true,
         );
         if (e.stack) window.logToOverlay(e.stack, true);
       }
