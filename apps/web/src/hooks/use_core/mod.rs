@@ -1,395 +1,110 @@
-﻿// apps\web\src\hooks\use_core
+﻿// apps/web/src/hooks/use_core/mod.rs
 //! # Core State Hook (核心状态钩子)
 //!
 //! **架构作用**:
 //! 管理前端全局核心状态，连接 WebSocket 服务与 UI 组件。
 //!
-//! **核心功能清单**:
-//! - `CoreState`: 状态容器（Docs List, Current Doc, Connection Status, Stats）。
-//! - `use_core`: 初始化 WebSocket，订阅消息，暴露 CRUD 回调（Select, Create, Rename, Delete, Copy, Move）。
-//!
-//! **类型**: Core MUST (核心必选)
+//! ## 子模块
+//! - `types`: 类型定义
+//! - `state`: 信号声明
+//! - `effects`: 响应式效果
+//! - `callbacks`: 用户交互回调
 
+pub mod callbacks;
+pub mod effects;
+pub mod state;
 pub mod types;
+
 pub use types::*;
 
-use leptos::prelude::*;
 use crate::api::WsService;
-use std::collections::HashMap;
-use deve_core::models::{DocId, PeerId, VersionVector};
-use deve_core::protocol::{ClientMessage, ServerMessage};
-use deve_core::source_control::{ChangeEntry, CommitInfo};
-use crate::editor::EditorStats;
+use leptos::prelude::*;
+use std::sync::Arc;
 
-
+/// 初始化核心状态钩子
+///
+/// 返回 `CoreState`，包含所有信号和回调。
 pub fn use_core() -> CoreState {
+    // 1. 初始化 WebSocket 服务
     let ws = WsService::new();
     provide_context(ws.clone());
-    
+
     let status_signal_for_text = ws.status;
     let status_text = Signal::derive(move || format!("{}", status_signal_for_text.get()));
-    
-    // 全局状态
-    let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());
-    let (current_doc, set_current_doc) = signal(None::<DocId>);
-    // 统计状态
-    let (stats, set_stats) = signal(EditorStats::default());
-    // P2P 状态
-    let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
 
-    // 插件状态
-    let (plugin_response, set_plugin_response) = signal(None::<(String, Option<serde_json::Value>, Option<String>)>);
+    // 2. 初始化所有信号
+    let signals = state::init_signals();
 
-    // 搜索状态
-    let (search_results, set_search_results) = signal(Vec::<(String, String, f32)>::new());
-
-    // 手动合并状态
-    let (sync_mode, set_sync_mode) = signal("auto".to_string());
-    let (pending_ops_count, set_pending_ops_count) = signal(0u32);
-    let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::<(String, String, String)>::new());
-
-    // 版本控制状态
-    let (active_repo, set_active_repo) = signal(None::<PeerId>);
-    // 分支切换状态
-    let (shadow_repos, set_shadow_repos) = signal(Vec::<String>::new());
-    // 仓库列表
-    let (repo_list, set_repo_list) = signal(Vec::<String>::new());
-    // 历史状态
-    let (doc_version, set_doc_version) = signal(0u64);
-    let (playback_version, set_playback_version) = signal(0u64);
-    // 旁观者模式 - 当查看 Shadow Repo 时为 true
-    let is_spectator = Memo::new(move |_| active_repo.get().is_some());
-
-    // Source Control (New)
-    let (staged_changes, set_staged_changes) = signal(Vec::<ChangeEntry>::new());
-    let (unstaged_changes, set_unstaged_changes) = signal(Vec::<ChangeEntry>::new());
-    let (commit_history, set_commit_history) = signal(Vec::<CommitInfo>::new());
-    // Diff 视图状态 (path, old, new)
-    let (diff_content, set_diff_content) = signal(None::<(String, String, String)>);
-
-    // 为当前会话生成临时的 Identity KeyPair (Ephemeral)
-    // 在真实应用中，应存储在 IndexedDB 或 LocalStorage
-    let key_pair = std::sync::Arc::new(deve_core::security::IdentityKeyPair::generate());
+    // 3. 生成临时 Identity KeyPair
+    let key_pair = Arc::new(deve_core::security::IdentityKeyPair::generate());
     let peer_id = key_pair.peer_id();
     leptos::logging::log!("Frontend PeerId: {}", peer_id);
 
-    // 初始握手与列表请求
-    let ws_clone = ws.clone();
-    let status_signal = ws.status;
-    let pid = peer_id.clone();
-    let kp_clone = key_pair.clone();
-    
-    Effect::new(move |_| {
-         if status_signal.get() == crate::api::ConnectionStatus::Connected {
-             leptos::logging::log!("Connected! Sending SyncHello...");
-             
-             // Sign Handshake
-             let local_vector = VersionVector::new();
-             let vec_bytes = serde_json::to_vec(&local_vector).unwrap_or_default();
-             let mut msg = Vec::new();
-             msg.extend_from_slice(b"deve-handshake");
-             msg.extend_from_slice(pid.as_str().as_bytes());
-             msg.extend_from_slice(&vec_bytes);
-             
-             let signature = kp_clone.sign(&msg);
+    // 4. 设置 Effects
+    effects::setup_handshake_effect(&ws, key_pair.clone(), peer_id.clone());
+    effects::setup_message_effect(&ws, &signals);
+    effects::setup_branch_switch_effect(&ws, signals.active_repo);
 
-             // 发送 P2P 握手
-             ws_clone.send(ClientMessage::SyncHello { 
-                 peer_id: pid.clone(), 
-                 pub_key: kp_clone.public_key_bytes().to_vec(),
-                 signature,
-                 vector: local_vector
-             });
-             // 请求文档列表
-             ws_clone.send(ClientMessage::ListDocs);
-             // 请求仓库列表
-             ws_clone.send(ClientMessage::ListRepos);
-         }
-    });
-    
-    // 处理消息
-    let ws_rx = ws.clone();
-    Effect::new(move |_| {
-        if let Some(msg) = ws_rx.msg.get() {
-            match msg {
-                ServerMessage::DocList { docs: list } => {
-                    set_docs.set(list.clone());
-                    // 如果未选择，则自动选择第一个
-                    if current_doc.get_untracked().is_none() {
-                        if let Some(first) = list.first() {
-                            set_current_doc.set(Some(first.0));
-                        }
-                    }
-                },
-                
-                // 跟踪 Peers
-                ServerMessage::SyncHello { peer_id, vector, .. } => {
-                    set_peers.update(|map| {
-                        map.insert(peer_id.clone(), PeerSession {
-                            id: peer_id.clone(),
-                            vector,
-                            last_seen: js_sys::Date::now() as u64
-                        });
-                    });
-                },
+    // 5. 创建回调
+    let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc);
+    let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
+    let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
+    let misc_callbacks = callbacks::create_misc_callbacks(&ws, signals.set_stats);
 
-                ServerMessage::PluginResponse { req_id, result, error } => {
-                     set_plugin_response.set(Some((req_id, result, error)));
-                },
-                ServerMessage::SearchResults { results } => {
-                     set_search_results.set(results);
-                },
-                
-                // 手动合并消息
-                ServerMessage::SyncModeStatus { mode } => {
-                    set_sync_mode.set(mode);
-                },
-                ServerMessage::PendingOpsInfo { count, previews } => {
-                    set_pending_ops_count.set(count);
-                    set_pending_ops_previews.set(previews);
-                },
-                ServerMessage::MergeComplete { merged_count } => {
-                    leptos::logging::log!("Merged {} operations", merged_count);
-                    set_pending_ops_count.set(0);
-                    set_pending_ops_previews.set(vec![]);
-                },
-                ServerMessage::PendingDiscarded => {
-                    leptos::logging::log!("Pending operations discarded");
-                    set_pending_ops_count.set(0);
-                    set_pending_ops_previews.set(vec![]);
-                },
-                ServerMessage::ShadowList { shadows } => {
-                    leptos::logging::log!("Received {} shadow repos", shadows.len());
-                    set_shadow_repos.set(shadows);
-                },
-                ServerMessage::RepoList { repos } => {
-                    leptos::logging::log!("Received {} repos", repos.len());
-                    set_repo_list.set(repos);
-                },
-                ServerMessage::BranchSwitched { peer_id, success } => {
-                    leptos::logging::log!("Branch switched to {:?}, success: {}", peer_id, success);
-                    // 分支切换成功后重新加载当前文档
-                    if success {
-                        if let Some(doc_id) = current_doc.get_untracked() {
-                            ws_rx.send(ClientMessage::OpenDoc { doc_id });
-                        }
-                    }
-                },
-                ServerMessage::EditRejected { reason } => {
-                    leptos::logging::warn!("Edit rejected: {}", reason);
-                    // TODO: 可以显示 Toast 通知用户
-                },
-                
-                // Source Control Messages
-                ServerMessage::ChangesList { staged, unstaged } => {
-                    set_staged_changes.set(staged);
-                    set_unstaged_changes.set(unstaged);
-                },
-                ServerMessage::CommitHistory { commits } => {
-                    set_commit_history.set(commits);
-                },
-                ServerMessage::StageAck { path } => {
-                    leptos::logging::log!("Staged: {}", path);
-                    // Refresh changes
-                    ws_rx.send(ClientMessage::GetChanges);
-                },
-                ServerMessage::UnstageAck { path } => {
-                    leptos::logging::log!("Unstaged: {}", path);
-                    // Refresh changes
-                    ws_rx.send(ClientMessage::GetChanges);
-                },
-                ServerMessage::CommitAck { commit_id, .. } => {
-                     leptos::logging::log!("Committed: {}", commit_id);
-                     // Refresh all
-                     ws_rx.send(ClientMessage::GetChanges);
-                     ws_rx.send(ClientMessage::GetCommitHistory { limit: 50 });
-                },
-                ServerMessage::DocDiff { path, old_content, new_content } => {
-                    leptos::logging::log!("Received diff for: {}", path);
-                    set_diff_content.set(Some((path, old_content, new_content)));
-                },
-
-                _ => {}
-            }
-        }
-    });
-
-    // 操作
-    let on_doc_select = Callback::new(move |id: DocId| {
-        set_current_doc.set(Some(id));
-    });
-
-    let ws_for_create = ws.clone();
-    let on_doc_create = Callback::new(move |name: String| {
-        ws_for_create.send(ClientMessage::CreateDoc { name });
-    });
-
-    let ws_for_rename = ws.clone();
-    let on_doc_rename = Callback::new(move |(old_path, new_path): (String, String)| {
-        leptos::logging::log!("App: on_doc_rename sending msg: old={} new={}", old_path, new_path);
-        ws_for_rename.send(ClientMessage::RenameDoc { old_path, new_path });
-    });
-
-    let ws_for_delete = ws.clone();
-    let on_doc_delete = Callback::new(move |path: String| {
-        leptos::logging::log!("use_core: on_doc_delete called with path={}", path);
-        ws_for_delete.send(ClientMessage::DeleteDoc { path });
-    });
-
-    let ws_for_copy = ws.clone();
-    let on_doc_copy = Callback::new(move |(src_path, dest_path): (String, String)| {
-        leptos::logging::log!("use_core: on_doc_copy called src={} dest={}", src_path, dest_path);
-        ws_for_copy.send(ClientMessage::CopyDoc { src_path, dest_path });
-    });
-
-    let ws_for_move = ws.clone();
-    let on_doc_move = Callback::new(move |(src_path, dest_path): (String, String)| {
-        leptos::logging::log!("use_core: on_doc_move called src={} dest={}", src_path, dest_path);
-        ws_for_move.send(ClientMessage::MoveDoc { src_path, dest_path });
-    });
-    
-    // 监听分支切换，发送 SwitchBranch 消息
-    let ws_for_branch = ws.clone();
-    Effect::new(move |_| {
-        let peer = active_repo.get();
-        let peer_id = peer.map(|p| p.to_string());
-        leptos::logging::log!("Sending SwitchBranch: {:?}", peer_id);
-        ws_for_branch.send(ClientMessage::SwitchBranch { peer_id });
-    });
-    
-    let on_stats = Callback::new(move |s| set_stats.set(s));
-
-    let ws_for_plugin = ws.clone();
-    let on_plugin_call = Callback::new(move |(req_id, plugin_id, fn_name, args): (String, String, String, Vec<serde_json::Value>)| {
-        ws_for_plugin.send(ClientMessage::PluginCall { req_id, plugin_id, fn_name, args });
-    });
-
-    let ws_for_search = ws.clone();
-    let on_search = Callback::new(move |query: String| {
-        ws_for_search.send(ClientMessage::Search { query, limit: 50 });
-    });
-
-    // 手动合并回调
-    let ws_for_get_mode = ws.clone();
-    let on_get_sync_mode = Callback::new(move |_: ()| {
-        ws_for_get_mode.send(ClientMessage::GetSyncMode);
-    });
-    
-    let ws_for_set_mode = ws.clone();
-    let on_set_sync_mode = Callback::new(move |mode: String| {
-        ws_for_set_mode.send(ClientMessage::SetSyncMode { mode });
-    });
-    
-    let ws_for_get_pending = ws.clone();
-    let on_get_pending_ops = Callback::new(move |_: ()| {
-        ws_for_get_pending.send(ClientMessage::GetPendingOps);
-    });
-    
-    let ws_for_confirm = ws.clone();
-    let on_confirm_merge = Callback::new(move |_: ()| {
-        ws_for_confirm.send(ClientMessage::ConfirmMerge);
-    });
-    
-    let ws_for_discard = ws.clone();
-    let on_discard_pending = Callback::new(move |_: ()| {
-        ws_for_discard.send(ClientMessage::DiscardPending);
-    });
-
-    // 分支切换回调
-    let ws_for_list_shadows = ws.clone();
-    let on_list_shadows = Callback::new(move |_: ()| {
-        ws_for_list_shadows.send(ClientMessage::ListShadows);
-    });
-
-    // Source Control callbacks
-    let ws_sc_changes = ws.clone();
-    let on_get_changes = Callback::new(move |_: ()| {
-        ws_sc_changes.send(ClientMessage::GetChanges);
-    });
-
-    let ws_sc_stage = ws.clone();
-    let on_stage_file = Callback::new(move |path: String| {
-        ws_sc_stage.send(ClientMessage::StageFile { path });
-    });
-
-    let ws_sc_unstage = ws.clone();
-    let on_unstage_file = Callback::new(move |path: String| {
-        ws_sc_unstage.send(ClientMessage::UnstageFile { path });
-    });
-
-    let ws_sc_commit = ws.clone();
-    let on_commit = Callback::new(move |message: String| {
-        ws_sc_commit.send(ClientMessage::Commit { message });
-    });
-
-    let ws_sc_history = ws.clone();
-    let on_get_history = Callback::new(move |limit: u32| {
-        ws_sc_history.send(ClientMessage::GetCommitHistory { limit });
-    });
-
-    let ws_sc_diff = ws.clone();
-    let on_get_doc_diff = Callback::new(move |path: String| {
-        ws_sc_diff.send(ClientMessage::GetDocDiff { path });
-    });
-
-    let ws_for_merge = ws.clone();
+    // 6. 组装最终状态
     let state = CoreState {
         ws,
-        docs,
-        current_doc,
-        set_current_doc,
+        docs: signals.docs,
+        current_doc: signals.current_doc,
+        set_current_doc: signals.set_current_doc,
         status_text,
-        stats,
-        peers,
-        on_doc_select,
-        on_doc_create,
-        on_doc_rename,
-        on_doc_delete,
-        on_doc_copy,
-        on_doc_move,
-        on_stats,
-        plugin_last_response: plugin_response,
-        on_plugin_call,
-        search_results,
-        on_search,
-        sync_mode,
-        pending_ops_count,
-        pending_ops_previews,
-        on_get_sync_mode,
-        on_set_sync_mode,
-        on_get_pending_ops,
-        on_confirm_merge,
-        on_discard_pending,
-        active_repo,
-        set_active_repo,
-        shadow_repos,
-        on_list_shadows,
-        repo_list,
-        doc_version,
-        set_doc_version,
-        playback_version,
-        set_playback_version,
-        is_spectator: is_spectator.into(),
-        staged_changes,
-        unstaged_changes,
-        commit_history,
-        on_get_changes,
-        on_stage_file,
-        on_unstage_file,
-        on_commit,
-        on_get_history,
-        diff_content,
-        set_diff_content,
-        on_get_doc_diff,
-        on_merge_peer: Callback::new(move |peer_id: String| {
-             if let Some(doc_id) = current_doc.get_untracked() {
-                 ws_for_merge.send(ClientMessage::MergePeer { peer_id, doc_id });
-             }
-        }),
+        stats: signals.stats,
+        peers: signals.peers,
+        on_doc_select: doc_callbacks.on_doc_select,
+        on_doc_create: doc_callbacks.on_doc_create,
+        on_doc_rename: doc_callbacks.on_doc_rename,
+        on_doc_delete: doc_callbacks.on_doc_delete,
+        on_doc_copy: doc_callbacks.on_doc_copy,
+        on_doc_move: doc_callbacks.on_doc_move,
+        on_stats: misc_callbacks.on_stats,
+        plugin_last_response: signals.plugin_response,
+        on_plugin_call: misc_callbacks.on_plugin_call,
+        search_results: signals.search_results,
+        on_search: misc_callbacks.on_search,
+        sync_mode: signals.sync_mode,
+        pending_ops_count: signals.pending_ops_count,
+        pending_ops_previews: signals.pending_ops_previews,
+        on_get_sync_mode: sync_callbacks.on_get_sync_mode,
+        on_set_sync_mode: sync_callbacks.on_set_sync_mode,
+        on_get_pending_ops: sync_callbacks.on_get_pending_ops,
+        on_confirm_merge: sync_callbacks.on_confirm_merge,
+        on_discard_pending: sync_callbacks.on_discard_pending,
+        active_repo: signals.active_repo,
+        set_active_repo: signals.set_active_repo,
+        shadow_repos: signals.shadow_repos,
+        on_list_shadows: sync_callbacks.on_list_shadows,
+        repo_list: signals.repo_list,
+        doc_version: signals.doc_version,
+        set_doc_version: signals.set_doc_version,
+        playback_version: signals.playback_version,
+        set_playback_version: signals.set_playback_version,
+        is_spectator: signals.is_spectator.into(),
+        staged_changes: signals.staged_changes,
+        unstaged_changes: signals.unstaged_changes,
+        commit_history: signals.commit_history,
+        on_get_changes: sc_callbacks.on_get_changes,
+        on_stage_file: sc_callbacks.on_stage_file,
+        on_unstage_file: sc_callbacks.on_unstage_file,
+        on_commit: sc_callbacks.on_commit,
+        on_get_history: sc_callbacks.on_get_history,
+        diff_content: signals.diff_content,
+        set_diff_content: signals.set_diff_content,
+        on_get_doc_diff: sc_callbacks.on_get_doc_diff,
+        on_merge_peer: sync_callbacks.on_merge_peer,
     };
-    
-    // 为子组件提供 CoreState 上下文
+
+    // 7. 提供上下文
     provide_context(state.clone());
-    
+
     state
 }

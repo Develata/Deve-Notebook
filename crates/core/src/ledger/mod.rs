@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger
+﻿// crates/core/src/ledger/mod.rs
 //! # 仓库管理器 (Repository Manager)
 //!
 //! 本模块实现 P2P Git-Flow 架构中的"三位一体隔离" (Trinity Isolation)。
@@ -10,45 +10,33 @@
 //!
 //! ## 模块结构
 //!
-//! - `repo_type`: 仓库类型枚举 (Local/Remote)
-//! - `init`: 初始化逻辑
-//! - `shadow_manager`: Shadow DB 管理
 //! - `schema`: 数据库表定义
+//! - `init`: 初始化逻辑
 //! - `metadata`: Path/DocId 映射
 //! - `ops`: 操作日志读写
 //! - `snapshot`: 快照管理
-//! - `shadow`: Shadow 库底层实现
 //! - `range`: 范围查询
+//! - `shadow`: Shadow 库底层实现
+//! - `shadow_manager`: Shadow DB 管理
 //! - `source_control`: 版本控制集成
-//!
-//! ## 核心必选路径 (Core MUST)
-//!
-//! 本模块属于 **Core MUST**。所有数据持久化必须通过此模块。
+//! - `listing`: 文档列表
+//! - `merge`: 合并引擎
+//! - `manager`: RepoManager 实现分布模块
 
 use anyhow::Result;
 use redb::Database;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
-use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType};
-use serde::{Deserialize, Serialize};
-
-/// 仓库元数据信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RepoInfo {
-    /// 仓库唯一标识
-    pub uuid: RepoId,
-    /// 仓库名称 (Human Readable)
-    pub name: String,
-    /// 仓库 URL (唯一逻辑标识) - 可选，若无则默认为 `uuid` 形式 URN
-    pub url: Option<String>,
-}
+use crate::models::{LedgerEntry, PeerId, RepoId};
 
 // ========== 子模块声明 ==========
 
 pub mod init;
 pub mod listing;
+mod manager;
 pub mod merge;
 pub mod metadata;
 pub mod ops;
@@ -65,6 +53,17 @@ pub use self::schema::*;
 
 #[cfg(test)]
 mod tests;
+
+/// 仓库元数据信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepoInfo {
+    /// 仓库唯一标识
+    pub uuid: RepoId,
+    /// 仓库名称 (Human Readable)
+    pub name: String,
+    /// 仓库 URL (唯一逻辑标识) - 可选
+    pub url: Option<String>,
+}
 
 /// 仓库管理器 (Repository Manager)
 ///
@@ -85,7 +84,6 @@ impl RepoManager {
     /// 初始化仓库管理器
     ///
     /// 详细文档见 `init` 模块。
-    /// 初始化 RepoManager
     pub fn init(
         ledger_dir: impl AsRef<Path>,
         snapshot_depth: usize,
@@ -117,7 +115,6 @@ impl RepoManager {
         start_seq: u64,
         end_seq: u64,
     ) -> Result<Vec<(u64, LedgerEntry)>> {
-        // TODO: support multi local repos. For now we use the active local_db.
         range::get_ops_in_range(&self.local_db, start_seq, end_seq)
     }
 
@@ -132,209 +129,5 @@ impl RepoManager {
         } else {
             Ok(None)
         }
-    }
-
-    // ========== Snapshot Operations ==========
-
-    /// 保存文档快照 (仅限本地库)
-    pub fn save_snapshot(&self, doc_id: DocId, seq: u64, content: &str) -> Result<()> {
-        snapshot::save_snapshot(&self.local_db, doc_id, seq, content, self.snapshot_depth)
-    }
-
-    // ========== Path/DocId Mapping ==========
-
-    /// 根据路径获取 DocId
-    pub fn get_docid(&self, path: &str) -> Result<Option<DocId>> {
-        metadata::get_docid(&self.local_db, path)
-    }
-
-    /// 创建新的 DocId
-    pub fn create_docid(&self, path: &str) -> Result<DocId> {
-        metadata::create_docid(&self.local_db, path)
-    }
-
-    /// 根据 DocId 获取路径
-    pub fn get_path_by_docid(&self, doc_id: DocId) -> Result<Option<String>> {
-        metadata::get_path_by_docid(&self.local_db, doc_id)
-    }
-
-    /// 根据 Inode 获取 DocId
-    pub fn get_docid_by_inode(&self, inode: &crate::models::FileNodeId) -> Result<Option<DocId>> {
-        metadata::get_docid_by_inode(&self.local_db, inode)
-    }
-
-    /// 绑定 Inode 到 DocId
-    pub fn bind_inode(&self, inode: &crate::models::FileNodeId, doc_id: DocId) -> Result<()> {
-        metadata::bind_inode(&self.local_db, inode, doc_id)
-    }
-
-    /// 重命名文档
-    pub fn rename_doc(&self, old_path: &str, new_path: &str) -> Result<()> {
-        metadata::rename_doc(&self.local_db, old_path, new_path)
-    }
-
-    /// 删除文档
-    pub fn delete_doc(&self, path: &str) -> Result<()> {
-        metadata::delete_doc(&self.local_db, path)
-    }
-
-    /// 重命名文件夹
-    pub fn rename_folder(&self, old_prefix: &str, new_prefix: &str) -> Result<()> {
-        metadata::rename_folder(&self.local_db, old_prefix, new_prefix)
-    }
-
-    /// 删除文件夹
-    pub fn delete_folder(&self, prefix: &str) -> Result<usize> {
-        metadata::delete_folder(&self.local_db, prefix)
-    }
-
-    // ========== Operations (Append/Read) ==========
-
-    /// 追加操作到本地库 (Store B)
-    ///
-    /// **权限**: Local Write Only - 仅接受本地用户的操作。
-    pub fn append_local_op(&self, entry: &LedgerEntry) -> Result<u64> {
-        ops::append_op_to_db(&self.local_db, entry)
-    }
-
-    /// 从指定仓库读取操作
-    pub fn get_ops(&self, repo_type: &RepoType, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        match repo_type {
-            RepoType::Local(_) => ops::get_ops_from_db(&self.local_db, doc_id),
-            RepoType::Remote(peer_id, repo_id) => {
-                self.ensure_shadow_db(peer_id, repo_id)?;
-                let dbs = self.shadow_dbs.read().unwrap();
-                let peer_repos = dbs
-                    .get(peer_id)
-                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-                let db = peer_repos.get(repo_id).ok_or_else(|| {
-                    anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
-                })?;
-                ops::get_ops_from_db(db, doc_id)
-            }
-        }
-    }
-
-    /// 从本地库读取操作（便捷方法）
-    pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        // 使用默认 UUID (nil) 代表当前活动的本地库
-        self.get_ops(&RepoType::Local(uuid::Uuid::nil()), doc_id)
-    }
-
-    // ========== Source Control Operations ==========
-
-    /// 暂存指定文件
-    pub fn stage_file(&self, path: &str) -> Result<()> {
-        source_control::stage_file(&self.local_db, path)
-    }
-
-    /// 取消暂存指定文件
-    pub fn unstage_file(&self, path: &str) -> Result<()> {
-        source_control::unstage_file(&self.local_db, path)
-    }
-
-    /// 获取已暂存文件列表
-    pub fn list_staged(&self) -> Result<Vec<crate::source_control::ChangeEntry>> {
-        source_control::list_staged(&self.local_db)
-    }
-
-    /// 创建提交 (保存快照)
-    pub fn create_commit_with_snapshots<F>(
-        &self,
-        message: &str,
-        get_content: F,
-    ) -> Result<crate::source_control::CommitInfo>
-    where
-        F: Fn(&str) -> Option<(DocId, String)>,
-    {
-        source_control::create_commit(&self.local_db, message, get_content)
-    }
-
-    /// 获取提交历史
-    pub fn list_commits(&self, limit: u32) -> Result<Vec<crate::source_control::CommitInfo>> {
-        source_control::list_commits(&self.local_db, limit)
-    }
-
-    /// 获取文档的已提交内容 (用于 Diff)
-    pub fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
-        source_control::get_committed_content(&self.local_db, doc_id)
-    }
-
-    /// 检测单个文档的变更状态
-    pub fn detect_change(
-        &self,
-        committed: Option<&str>,
-        current: Option<&str>,
-    ) -> Option<crate::source_control::ChangeStatus> {
-        source_control::detect_change(committed, current)
-    }
-
-    pub fn merge_peer(
-        &self,
-        peer_id: &PeerId,
-        repo_id: &RepoId,
-        doc_id: DocId,
-    ) -> Result<crate::ledger::merge::MergeResult> {
-        let local_ops = self.get_local_ops(doc_id)?;
-        let remote_ops = match self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id) {
-            Ok(ops) => ops,
-            Err(_) => return Ok(crate::ledger::merge::MergeResult::Success("".to_string())),
-        };
-
-        // 1. Version Local
-        let mut local_vv = crate::models::VersionVector::new();
-        for (_, entry) in &local_ops {
-            local_vv.update(entry.peer_id.clone(), entry.seq);
-        }
-
-        // 2. Version Remote
-        let mut remote_vv = crate::models::VersionVector::new();
-        for (_, entry) in &remote_ops {
-            remote_vv.update(entry.peer_id.clone(), entry.seq);
-        }
-
-        // 3. LCA
-        use crate::ledger::merge::MergeEngine;
-        let lca_vv = MergeEngine::find_lca(&local_vv, &remote_vv);
-
-        // 4. Reconstruct Content
-        let all_local_entries: Vec<LedgerEntry> =
-            local_ops.iter().map(|(_, e)| e.clone()).collect();
-
-        // Pool ops for Base
-        // Pool ops for Base
-        // Optimization: Use Sort + Dedup instead of HashMap to reduce allocation and hashing overhead
-        let mut pooled_entries: Vec<LedgerEntry> =
-            Vec::with_capacity(local_ops.len() + remote_ops.len());
-        pooled_entries.extend(local_ops.iter().map(|(_, e)| e.clone()));
-        pooled_entries.extend(remote_ops.iter().map(|(_, e)| e.clone()));
-
-        // Sort by (PeerId, Seq) to align duplicates
-        pooled_entries.sort_by(|a, b| a.peer_id.cmp(&b.peer_id).then_with(|| a.seq.cmp(&b.seq)));
-
-        // Deduplicate: remove consecutive entries with same (PeerId, Seq)
-        pooled_entries.dedup_by(|a, b| a.peer_id == b.peer_id && a.seq == b.seq);
-
-        let base_content = MergeEngine::reconstruct_state_at(doc_id, &pooled_entries, &lca_vv);
-        let local_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(
-            doc_id,
-            &all_local_entries,
-            &local_vv,
-        );
-
-        let all_remote_entries: Vec<LedgerEntry> =
-            remote_ops.iter().map(|(_, e)| e.clone()).collect();
-        let remote_content = crate::ledger::merge::MergeEngine::reconstruct_state_at(
-            doc_id,
-            &all_remote_entries,
-            &remote_vv,
-        );
-
-        // 5. Merge
-        Ok(MergeEngine::merge_commits(
-            &base_content,
-            &local_content,
-            &remote_content,
-        ))
     }
 }

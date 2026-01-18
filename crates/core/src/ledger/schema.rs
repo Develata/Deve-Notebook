@@ -1,5 +1,5 @@
 ﻿// crates\core\src\ledger
-use redb::{TableDefinition, MultimapTableDefinition};
+use redb::{MultimapTableDefinition, TableDefinition};
 
 // DocId (u128) -> Path String
 pub const DOCID_TO_PATH: TableDefinition<u128, &str> = TableDefinition::new("docid_to_path");
@@ -26,11 +26,14 @@ pub const DOC_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition:
 // Let's use MultimapTableDefinition<u128, Vec<u8>>? No, we need to sort by Seq.
 // Maybe: SNAPSHOT_INDEX: Multimap<u128, u64> (DocId -> Seq)
 //        SNAPSHOT_DATA: Table<u64, &[u8]> (Seq -> Data)
-pub const SNAPSHOT_INDEX: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("snapshot_index");
+pub const SNAPSHOT_INDEX: MultimapTableDefinition<u128, u64> =
+    MultimapTableDefinition::new("snapshot_index");
 pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("snapshot_data");
 
 // Metadata Key (u8) -> Metadata Value (Bytes - JSON/Bincode)
 // Key 0: RepoInfo (UUID, Name, URL)
 pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo_metadata");
 
-
+// (DocId (u128), PeerId (&str)) -> MaxSeq (u64)
+// Used for atomic sequence generation and O(1) retrieval.
+pub const PEER_DOC_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("peer_doc_seq");

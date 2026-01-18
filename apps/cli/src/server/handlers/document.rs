@@ -20,34 +20,37 @@ pub async fn handle_edit(
     // 获取本地 Peer ID
     let local_peer_id = state.identity_key.peer_id();
 
-    // 计算下一个序列号
-    let mut next_seq = 1;
-    if let Ok(ops) = state.repo.get_local_ops(doc_id) {
-        let max_seq = ops
-            .iter()
-            .filter(|(_, e)| e.peer_id == local_peer_id)
-            .map(|(_, e)| e.seq)
-            .max()
-            .unwrap_or(0);
-        next_seq = max_seq + 1;
-    }
+    // 2. 构造并追加操作 (Atomic Generation)
+    // 使用 append_generated_op 自动处理序号生成，避免竞态条件
+    let op_clone = op.clone();
 
-    let entry = LedgerEntry {
-        doc_id,
-        op: op.clone(),
-        timestamp: chrono::Utc::now().timestamp_millis(),
-        peer_id: local_peer_id,
-        seq: next_seq,
-    };
+    // 我们需要克隆 peer_id 用于构建 closure
+    let peer_id_clone = local_peer_id.clone();
 
-    match state.repo.append_local_op(&entry) {
-        Ok(seq) => {
-            // 广播新操作给所有连接的客户端
+    match state
+        .repo
+        .append_generated_op(doc_id, local_peer_id.clone(), move |seq| LedgerEntry {
+            doc_id,
+            op: op_clone.clone(),
+            timestamp: chrono::Utc::now().timestamp_millis(),
+            peer_id: peer_id_clone.clone(),
+            seq,
+        }) {
+        Ok((_global_seq, local_seq)) => {
+            // 3. 广播新操作给所有连接的客户端
+            // BUG FIX: 必须广播 Local Seq (CrDT Version)，而不是 Global Seq
             ch.broadcast(ServerMessage::NewOp {
                 doc_id,
                 op,
-                seq,
+                seq: local_seq,
                 client_id,
+            });
+
+            // 4. 发送 Ack (单播给发送者 - implicit by broadcast or explicit?)
+            // 前端目前似乎期待 Ack
+            ch.unicast(ServerMessage::Ack {
+                doc_id,
+                seq: local_seq,
             });
 
             // 持久化到磁盘
