@@ -85,6 +85,15 @@
     *   **Behavior**: 自动识别并提供特殊的背景样式 (`cm-frontmatter-block`)。
     *   **Cursor Reveal**: 光标移出区域时隐藏首尾 `---` 分隔符，仅保留内容区域的视觉提示。
 
+### 4. 代码块 (Code Blocks)
+*   **Syntax**: Fenced Code (` ``` `).
+*   **Toolbar**: 渲染的代码块右上角 **MUST** 显示两个按钮（从左到右）：
+    *   **Copy**: 点击复制块内所有内容。
+    *   **Ellipsis (...)**: 点击唤出菜单。
+*   **Menu Extensibility**:
+    *   **Plugin API**: **MUST** 预留接口允许插件向菜单添加选项。
+    *   **Empty State**: 如果没有选项，**MUST** 唤出一个空白菜单。
+
 ## Markdown 语法限制 (Syntax Whitelist)
 
 ### 块级元素 (Block Elements)
