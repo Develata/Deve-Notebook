@@ -24,7 +24,7 @@ pub mod extensions;
 use self::explorer::ExplorerView;
 use self::extensions::ExtensionsView;
 use crate::components::activity_bar::SidebarView;
-use crate::components::source_control::SourceControlView; // New import
+
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -56,7 +56,9 @@ pub fn Sidebar(
                     />
                 }.into_any(),
                 SidebarView::SourceControl => view! {
-                    <SourceControlView />
+                    <div class="h-full flex items-center justify-center text-gray-400">
+                        "Source Control (WIP)"
+                    </div>
                 }.into_any(),
                 SidebarView::Extensions => view! {
                     <ExtensionsView />
