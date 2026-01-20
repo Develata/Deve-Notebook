@@ -14,12 +14,12 @@
 
 pub mod components;
 pub mod explorer;
+pub mod extensions;
 pub mod item;
 pub mod modals;
+pub mod source_control;
 pub mod tree;
 pub mod types;
-// pub mod source_control; // Removed
-pub mod extensions;
 
 use self::explorer::ExplorerView;
 use self::extensions::ExtensionsView;
@@ -56,9 +56,7 @@ pub fn Sidebar(
                     />
                 }.into_any(),
                 SidebarView::SourceControl => view! {
-                    <div class="h-full flex items-center justify-center text-gray-400">
-                        "Source Control (WIP)"
-                    </div>
+                    <crate::components::sidebar::source_control::SourceControlView />
                 }.into_any(),
                 SidebarView::Extensions => view! {
                     <ExtensionsView />
