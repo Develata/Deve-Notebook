@@ -13,6 +13,8 @@ use deve_core::models::DocId;
 use deve_core::tree::FileNode as CoreFileNode;
 use leptos::prelude::*;
 
+use crate::app::SearchControl;
+
 #[component]
 pub fn ExplorerView(
     docs: ReadSignal<Vec<(DocId, String)>>,
@@ -24,6 +26,7 @@ pub fn ExplorerView(
     #[prop(into)] on_copy: Callback<(String, String)>,
     #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
+    let search_control = expect_context::<SearchControl>();
     // 统一模态框状态 (Unified Modal State)
     let (modal_state, set_modal_state) = signal(ModalState::None);
 
@@ -37,7 +40,10 @@ pub fn ExplorerView(
 
     // 回调函数
     let request_create = Callback::new(move |parent: Option<String>| {
-        set_modal_state.set(ModalState::Create { parent });
+        let prefix = "+";
+        let path = parent.map(|p| format!("{}/", p)).unwrap_or_default();
+        search_control.set_mode.set(format!("{}{}", prefix, path));
+        search_control.set_show.set(true);
     });
 
     let confirm_create = Callback::new(move |name: String| {

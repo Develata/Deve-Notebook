@@ -9,7 +9,6 @@
 //! - `Locale`: 语言枚举 (En, Zh)。
 //! - `t`: 包含应用程序各部分的翻译模块 (hook, header, sidebar, settings, etc.)。
 
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Locale {
     #[default]
@@ -34,6 +33,22 @@ pub mod t {
         match locale {
             Locale::En => "Deve-Note",
             Locale::Zh => "Deve-Note",
+        }
+    }
+
+    pub mod common {
+        use super::Locale;
+        pub fn create(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "Create",
+                Locale::Zh => "创建",
+            }
+        }
+        pub fn new_file(locale: Locale) -> &'static str {
+            match locale {
+                Locale::En => "New File",
+                Locale::Zh => "新建文件",
+            }
         }
     }
 
@@ -77,7 +92,7 @@ pub mod t {
 
     pub mod settings {
         use super::Locale;
-        
+
         pub fn title(locale: Locale) -> &'static str {
             match locale {
                 Locale::En => "Settings",
@@ -130,7 +145,7 @@ pub mod t {
 
     pub mod bottom_bar {
         use super::Locale;
-        
+
         pub fn words(locale: Locale) -> &'static str {
             match locale {
                 Locale::En => "Words",
@@ -216,17 +231,16 @@ pub mod t {
             }
         }
         pub fn placeholder_branch(locale: Locale) -> &'static str {
-             match locale {
+            match locale {
                 Locale::En => "Switch branch...",
                 Locale::Zh => "切换分支...",
             }
         }
         pub fn placeholder_file(locale: Locale) -> &'static str {
-             match locale {
+            match locale {
                 Locale::En => "folder/.../file(.md)",
                 Locale::Zh => "文件夹/.../文件(.md)",
             }
         }
     }
-
 }

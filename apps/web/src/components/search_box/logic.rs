@@ -44,6 +44,20 @@ pub fn create_results_memo(
             };
             let provider = providers::BranchProvider::new(shadows, current);
             provider.search(&q)
+        } else if q.starts_with('+') {
+            // Create Mode: Only show Create option
+            let path = q[1..].trim();
+            if path.is_empty() {
+                Vec::new()
+            } else {
+                vec![SearchResult {
+                    id: "create-doc-only".to_string(),
+                    title: format!("{}: '{}'", t::common::create(current_locale), path),
+                    detail: Some(t::common::new_file(current_locale).to_string()),
+                    score: 1.0,
+                    action: SearchAction::CreateDoc(path.to_string()),
+                }]
+            }
         } else {
             let doc_list: Vec<(deve_core::models::DocId, String)> =
                 current_docs.iter().map(|(k, v)| (*k, v.clone())).collect();
@@ -62,6 +76,8 @@ pub fn create_placeholder_memo(query: Signal<String>, locale: RwSignal<Locale>) 
             t::search::placeholder_command(current_locale).to_string()
         } else if q.starts_with('@') {
             t::search::placeholder_branch(current_locale).to_string()
+        } else if q.starts_with('+') {
+            t::common::new_file(current_locale).to_string()
         } else {
             t::search::placeholder_file(current_locale).to_string()
         }
