@@ -12,19 +12,19 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-
-pub mod tree;
-pub mod item;
+pub mod components;
 pub mod explorer;
+pub mod item;
+pub mod tree;
 // pub mod source_control; // Removed
 pub mod extensions;
 
-use leptos::prelude::*;
-use deve_core::models::DocId;
-use crate::components::activity_bar::SidebarView;
 use self::explorer::ExplorerView;
-use crate::components::source_control::SourceControlView; // New import
 use self::extensions::ExtensionsView;
+use crate::components::activity_bar::SidebarView;
+use crate::components::source_control::SourceControlView; // New import
+use deve_core::models::DocId;
+use leptos::prelude::*;
 
 #[component]
 pub fn Sidebar(
@@ -38,7 +38,6 @@ pub fn Sidebar(
     #[prop(into)] on_copy: Callback<(String, String)>,
     #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
-    
     view! {
         <div class="h-full w-full bg-[#f7f7f7] border-r border-gray-200">
             {move || match active_view.get() {

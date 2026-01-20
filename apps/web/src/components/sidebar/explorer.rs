@@ -4,7 +4,7 @@
 //! 侧边栏的主要文件浏览器视图。
 //! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
 
-use crate::components::sidebar::item::FileTreeItem;
+use crate::components::sidebar::item::{FileActionsContext, FileTreeItem};
 use crate::components::sidebar::tree::{FileNode, build_file_tree};
 use crate::hooks::use_core::CoreState;
 use deve_core::models::DocId;
@@ -108,6 +108,21 @@ pub fn ExplorerView(
         });
     });
 
+    // Create Context
+    let actions = FileActionsContext {
+        current_doc,
+        on_select,
+        on_create: request_create.clone(),
+        on_menu_open: on_menu_click.clone(),
+        on_menu_close: close_menu.clone(),
+        active_menu,
+        on_rename: request_rename.clone(),
+        on_delete: request_delete.clone(),
+        on_copy: on_copy.clone(),
+        on_move: request_move.clone(),
+    };
+    provide_context(actions);
+
     // 使用 CoreState 中的 tree_nodes（增量更新），如果为空则回退到 build_file_tree
     let core = expect_context::<CoreState>();
     let tree_nodes = Memo::new(move |_| {
@@ -197,16 +212,6 @@ pub fn ExplorerView(
                             <div class="relative">
                                 <FileTreeItem
                                     node=node.clone()
-                                    current_doc=current_doc
-                                    on_select=on_select
-                                    on_create_click=request_create.clone()
-                                    on_menu_click=on_menu_click.clone()
-                                    on_menu_close=close_menu.clone()
-                                    active_menu=active_menu
-                                    on_rename_req=request_rename.clone()
-                                    on_delete_req=request_delete.clone()
-                                    on_copy_req=on_copy.clone()
-                                    on_move_req=request_move.clone()
                                     depth=0
                                 />
                             </div>

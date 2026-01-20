@@ -16,27 +16,34 @@ use deve_core::models::DocId;
 use crate::components::sidebar_menu::{SidebarMenu, MenuAction};
 use super::tree::FileNode;
 
+#[derive(Clone)]
+pub struct FileActionsContext {
+    pub current_doc: ReadSignal<Option<DocId>>,
+    pub on_select: Callback<DocId>,
+    pub on_create: Callback<Option<String>>,
+    pub on_menu_open: Callback<(String, web_sys::MouseEvent)>,
+    pub on_menu_close: Callback<()>,
+    pub active_menu: ReadSignal<Option<String>>,
+    pub on_rename: Callback<String>,
+    pub on_delete: Callback<String>,
+    pub on_copy: Callback<(String, String)>,
+    pub on_move: Callback<String>,
+}
+
 #[component]
 pub fn FileTreeItem(
     node: FileNode,
-    current_doc: ReadSignal<Option<DocId>>,
-    on_select: Callback<DocId>,
-    on_create_click: Callback<Option<String>>, 
-    on_menu_click: Callback<(String, web_sys::MouseEvent)>, 
-    on_menu_close: Callback<()>,
-    active_menu: ReadSignal<Option<String>>,
-    on_rename_req: Callback<String>, 
-    on_delete_req: Callback<String>, 
-    on_copy_req: Callback<(String, String)>,
-    on_move_req: Callback<String>,
+    #[prop(default = 0)]
     depth: usize,
 ) -> impl IntoView {
+    let actions = expect_context::<FileActionsContext>();
+
     let (is_expanded, set_expanded) = signal(true); 
     let is_folder = node.id.is_none();
     
     let padding = format!("padding-left: {}px", depth * 12 + 8);
     
-    let on_create_clone = on_create_click.clone();
+    let on_create_clone = actions.on_create.clone();
     let path_create = node.path.clone();
     
     let trigger_create = move |ev: web_sys::MouseEvent| {
@@ -44,7 +51,7 @@ pub fn FileTreeItem(
         on_create_clone.run(Some(path_create.clone()));
     };
 
-    let on_menu_clone = on_menu_click.clone();
+    let on_menu_clone = actions.on_menu_open.clone();
     let path_menu = node.path.clone();
     let trigger_menu = move |ev: web_sys::MouseEvent| {
         ev.stop_propagation();
@@ -52,6 +59,7 @@ pub fn FileTreeItem(
     };
 
     let path_check = node.path.clone();
+    let active_menu = actions.active_menu;
     let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
     
     // 剪贴板上下文
@@ -61,10 +69,10 @@ pub fn FileTreeItem(
         .expect("clipboard read context");
     
     // 构建统一的操作处理程序
-    let rename_req = on_rename_req.clone();
-    let delete_req = on_delete_req.clone();
-    let copy_req = on_copy_req.clone();
-    let move_req = on_move_req.clone();
+    let rename_req = actions.on_rename.clone();
+    let delete_req = actions.on_delete.clone();
+    let copy_req = actions.on_copy.clone();
+    let move_req = actions.on_move.clone();
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
         leptos::logging::log!("item.rs handle_action called: action={:?}", action);
@@ -125,7 +133,9 @@ pub fn FileTreeItem(
         }
     });
     
-    let on_close_clone = on_menu_close.clone();
+    let on_close_clone = actions.on_menu_close.clone();
+    let current_doc = actions.current_doc;
+    let on_select = actions.on_select;
 
     view! {
         <div class="relative">
@@ -149,59 +159,20 @@ pub fn FileTreeItem(
                 }
             >
                 // Icon
-                <div class=move || if is_folder { "text-gray-400" } else { "text-gray-300" }>
-                     {if is_folder {
-                         view! {
-                             <div class="transition-transform duration-200" style=move || if is_expanded.get() { "transform: rotate(90deg)" } else { "" }>
-                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                                   <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
-                                 </svg>
-                             </div>
-                         }.into_any()
-                     } else {
-                         view! {
-                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 opacity-50">
-                               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                             </svg>
-                         }.into_any()
-                     }}
-                </div>
+                <crate::components::sidebar::components::FileIcon 
+                    is_folder=is_folder
+                    is_expanded=is_expanded
+                />
                 
                 <span class="truncate flex-1 text-gray-700">{node.name.clone()}</span>
                 
                 // Actions (Visible on Hover via Opacity)
-                <div 
-                    class="flex items-center gap-1 pr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    class:opacity-100=move || is_menu_open.get() // Keep visible if menu is open
-                >
-                    // Menu Button
-                    <button 
-                        class="p-1 rounded hover:bg-gray-300 text-gray-500 transition-colors" 
-                        title="More"
-                        on:click=trigger_menu
-                    >
-                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                           <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
-                         </svg>
-                    </button>
-                    
-                    {if is_folder {
-                        view! {
-                            // New File Button
-                            <button 
-                                class="p-1 rounded hover:bg-gray-300 text-gray-600 transition-colors"
-                                title="New File"
-                                on:click=trigger_create
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                                </svg>
-                            </button>
-                        }.into_any()
-                    } else {
-                        view! {}.into_any()
-                    }}
-                </div>
+                <crate::components::sidebar::components::ItemActions
+                    is_folder=is_folder
+                    is_menu_open=is_menu_open
+                    on_menu=Callback::new(trigger_menu)
+                    on_create=Callback::new(trigger_create)
+                />
                 
                 // Context Menu
                 {move || if is_menu_open.get() {
@@ -225,16 +196,6 @@ pub fn FileTreeItem(
                         view! {
                             <FileTreeItem 
                                 node=child 
-                                current_doc=current_doc 
-                                on_select=on_select 
-                                on_create_click=on_create_click.clone() 
-                                on_menu_click=on_menu_click.clone()
-                                on_menu_close=on_menu_close.clone()
-                                active_menu=active_menu
-                                on_rename_req=on_rename_req.clone()
-                                on_delete_req=on_delete_req.clone()
-                                on_copy_req=on_copy_req.clone()
-                                on_move_req=on_move_req.clone()
                                 depth={depth + 1} 
                             />
                         }
@@ -245,10 +206,4 @@ pub fn FileTreeItem(
     }.into_any()
 }
 
-/// Copy text to clipboard (stub implementation - logs for now)
-/// TODO: Implement via JS interop for full clipboard support
-fn copy_to_clipboard(text: &str) {
-    // 目前仅记录日志。完整的剪贴板 API 需要 navigator.clipboard
-    // 这需要特定的 web-sys 功能或 JS 互操作。
-    leptos::logging::log!("Copy requested: {}", text);
-}
+

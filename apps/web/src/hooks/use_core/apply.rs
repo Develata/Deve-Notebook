@@ -3,7 +3,7 @@
 //!
 //! 将 `TreeDelta` 应用到本地树结构。
 
-use deve_core::models::DocId;
+// use deve_core::models::DocId;
 use deve_core::tree::{FileNode, TreeDelta};
 
 /// 将 TreeDelta 应用到现有树结构
