@@ -89,6 +89,26 @@
     *   **Shadow**: **MUST** 有明显的 Drop Shadow 以区分层级。
     *   **Modes**: 支持 `Command`, `File`, `Branch` 三种模式的UI复用。
 
+### Source Control UI (源代码管理界面)
+
+*   **SourceControlView (源代码管理视图)**：侧边栏的版本控制主容器。
+    *   **Description (描述)**：采用 VS Code 风格的紧凑布局，提供可折叠的子区块。
+    *   **Structure**: $V_{sc} = \{ \text{Repositories}, \text{Changes}, \text{History} \}$。
+*   **Changes (变更列表)**：文件变更的可视化容器。
+    *   **Description (描述)**：将变更按状态分为 Staged（已暂存）与 Unstaged（未暂存）两个区块。
+    *   **Composition**: $Changes = StagedSection \cup UnstagedSection$。
+*   **ChangeItem (变更条目)**：单个文件变更的可视化单元。
+    *   **Description (描述)**：渲染文件图标、名称、路径，以及状态标记 (M/A/D)。
+    *   **Status Colors**: $M \to \text{Orange}$ (`#d7ba7d`), $A \to \text{Green}$ (`#73c991`), $D \to \text{Red}$ (`#f14c4c`)。
+*   **StagedSection (暂存区组件)**：已暂存变更的列表容器。
+    *   **Actions**: `Unstage All` (取消全部暂存)。
+*   **UnstagedSection (工作区组件)**：未暂存变更的列表容器。
+    *   **Actions**: `Stage All` (暂存全部), `Discard All` (放弃全部)。
+*   **Commit (提交组件)**：提交信息输入框与提交按钮。
+    *   **Constraint**: 提交信息 MUST 非空。
+*   **History (历史记录)**：提交历史的时间轴视图。
+*   **Repositories (仓库列表)**：当前 Branch 下的 Repo 下拉切换列表。
+
 ### Spectator Mode Visuals (旁观者视觉)
 *   **Watermark**: 编辑器背景增加**灰色/斜纹水印**。
 *   **Status**: 状态栏显示橙色 "**READ ONLY**"。

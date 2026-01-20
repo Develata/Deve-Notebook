@@ -32,3 +32,13 @@
 13. **[Settings Summary](./13_settings.md)**: 环境变量与配置文件汇总.
 14. **[Technology Stack](./14_tech_stack.md)**: **Redb + CodeMirror 6**, Native/Mobile 差异化选型.
 15. **[Release Strategy](./15_release.md)**: License (MIT), Release Channels & CI/CD Pipelines.
+
+---
+
+### Global: Code Standards (代码规范)
+
+*   **单文件行数限制**: 目标 ~100 行，MUST NOT 超过 200 行。
+*   **中文注释**: 每个模块/组件 SHOULD 包含中文文档注释。
+*   **I18n 支持**: 所有用户可见文本 MUST 使用 `t::xxx::yyy()` 进行国际化。
+*   **错误码**: 所有错误码 MUST 使用 `Error::xxx::yyy()` 进行国际化。
+
