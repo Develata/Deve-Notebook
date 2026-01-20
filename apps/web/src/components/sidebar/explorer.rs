@@ -4,8 +4,10 @@
 //! 侧边栏的主要文件浏览器视图。
 //! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
 
-use crate::components::sidebar::item::{FileActionsContext, FileTreeItem};
+use crate::components::sidebar::item::FileTreeItem;
+use crate::components::sidebar::modals::{ModalState, SidebarModals};
 use crate::components::sidebar::tree::{FileNode, build_file_tree};
+use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::DocId;
 use deve_core::tree::FileNode as CoreFileNode;
@@ -22,17 +24,8 @@ pub fn ExplorerView(
     #[prop(into)] on_copy: Callback<(String, String)>,
     #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
-    // 创建模态框状态
-    let (show_create, set_show_create) = signal(false);
-    let (create_parent, set_create_parent) = signal(None::<String>);
-
-    // 重命名模态框状态
-    let (show_rename, set_show_rename) = signal(false);
-    let (rename_target, set_rename_target) = signal(String::new());
-
-    // 移动模态框状态
-    let (show_move, set_show_move) = signal(false);
-    let (move_source, set_move_source) = signal(String::new());
+    // 统一模态框状态 (Unified Modal State)
+    let (modal_state, set_modal_state) = signal(ModalState::None);
 
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
@@ -44,47 +37,51 @@ pub fn ExplorerView(
 
     // 回调函数
     let request_create = Callback::new(move |parent: Option<String>| {
-        set_create_parent.set(parent);
-        set_show_create.set(true);
+        set_modal_state.set(ModalState::Create { parent });
     });
 
     let confirm_create = Callback::new(move |name: String| {
-        let full_path = if let Some(parent) = create_parent.get_untracked() {
-            format!("{}/{}", parent, name)
-        } else {
-            name
-        };
-        on_create.run(full_path);
+        if let ModalState::Create { parent } = modal_state.get_untracked() {
+            let full_path = if let Some(p) = parent {
+                format!("{}/{}", p, name)
+            } else {
+                name
+            };
+            on_create.run(full_path);
+            set_modal_state.set(ModalState::None);
+        }
     });
 
     let request_rename = Callback::new(move |path: String| {
-        set_rename_target.set(path);
-        set_show_rename.set(true);
+        set_modal_state.set(ModalState::Rename { target: path });
     });
 
     let confirm_rename = Callback::new(move |new_name: String| {
-        let old = rename_target.get_untracked();
-        let parent = std::path::Path::new(&old)
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or("");
-        let parent = parent.replace("\\", "/");
-        let new_path = if parent.is_empty() {
-            new_name
-        } else {
-            format!("{}/{}", parent, new_name)
-        };
-        on_rename.run((old, new_path));
+        if let ModalState::Rename { target: old } = modal_state.get_untracked() {
+            let parent = std::path::Path::new(&old)
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("");
+            let parent = parent.replace("\\", "/");
+            let new_path = if parent.is_empty() {
+                new_name
+            } else {
+                format!("{}/{}", parent, new_name)
+            };
+            on_rename.run((old, new_path));
+            set_modal_state.set(ModalState::None);
+        }
     });
 
     let request_move = Callback::new(move |path: String| {
-        set_move_source.set(path);
-        set_show_move.set(true);
+        set_modal_state.set(ModalState::Move { source: path });
     });
 
     let confirm_move = Callback::new(move |dest_path: String| {
-        let src = move_source.get_untracked();
-        on_move.run((src, dest_path));
+        if let ModalState::Move { source: src } = modal_state.get_untracked() {
+            on_move.run((src, dest_path));
+            set_modal_state.set(ModalState::None);
+        }
     });
 
     let request_delete = Callback::new(move |path: String| {
@@ -148,34 +145,12 @@ pub fn ExplorerView(
 
     view! {
         <div class="h-full w-full bg-[#f7f7f7] flex flex-col font-sans select-none relative">
-             <crate::components::input_modal::InputModal
-                 show=show_create
-                 set_show=set_show_create
-                 title=Signal::derive(move || if let Some(p) = create_parent.get() { format!("Create in '{}'", p) } else { "Create New Document".to_string() })
-                 initial_value=Signal::derive(move || None::<String>)
-                 placeholder="filename or folder/filename"
-                 confirm_label="Create"
-                 on_confirm=confirm_create
-             />
-
-             <crate::components::input_modal::InputModal
-                 show=show_rename
-                 set_show=set_show_rename
-                 title=Signal::derive(move || "Rename".to_string())
-                 initial_value=Signal::derive(move || Some(rename_target.get().split('/').last().unwrap_or("").to_string()))
-                 placeholder="New name"
-                 confirm_label="Rename"
-                 on_confirm=confirm_rename
-             />
-
-             <crate::components::input_modal::InputModal
-                 show=show_move
-                 set_show=set_show_move
-                 title=Signal::derive(move || "Move to...".to_string())
-                 initial_value=Signal::derive(move || Some(move_source.get()))
-                 placeholder="New path (e.g. folder/file.md)"
-                 confirm_label="Move"
-                 on_confirm=confirm_move
+             <SidebarModals
+                 modal_state=modal_state
+                 set_modal_state=set_modal_state
+                 on_confirm_create=confirm_create
+                 on_confirm_rename=confirm_rename
+                 on_confirm_move=confirm_move
              />
 
             <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-gray-100 hover:bg-gray-100 transition-colors group">

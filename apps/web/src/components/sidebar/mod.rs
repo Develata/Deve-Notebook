@@ -15,7 +15,9 @@
 pub mod components;
 pub mod explorer;
 pub mod item;
+pub mod modals;
 pub mod tree;
+pub mod types;
 // pub mod source_control; // Removed
 pub mod extensions;
 

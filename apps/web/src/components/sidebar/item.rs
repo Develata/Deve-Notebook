@@ -14,21 +14,8 @@
 use leptos::prelude::*;
 use deve_core::models::DocId;
 use crate::components::sidebar_menu::{SidebarMenu, MenuAction};
+use crate::components::sidebar::types::FileActionsContext;
 use super::tree::FileNode;
-
-#[derive(Clone)]
-pub struct FileActionsContext {
-    pub current_doc: ReadSignal<Option<DocId>>,
-    pub on_select: Callback<DocId>,
-    pub on_create: Callback<Option<String>>,
-    pub on_menu_open: Callback<(String, web_sys::MouseEvent)>,
-    pub on_menu_close: Callback<()>,
-    pub active_menu: ReadSignal<Option<String>>,
-    pub on_rename: Callback<String>,
-    pub on_delete: Callback<String>,
-    pub on_copy: Callback<(String, String)>,
-    pub on_move: Callback<String>,
-}
 
 #[component]
 pub fn FileTreeItem(
