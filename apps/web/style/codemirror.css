@@ -1,4 +1,4 @@
-/* Loading Overlay */
+/* Loading Overlay (加载覆盖层) */
 #loading-overlay {
   position: fixed;
   top: 0;
@@ -17,7 +17,7 @@
   display: none !important;
 }
 
-/* CodeMirror Overrides */
+/* CodeMirror Overrides (CodeMirror 覆盖样式) */
 .cm-editor {
   height: 100%;
 }
@@ -25,21 +25,24 @@
   overflow: auto;
 }
 
+/* Editor Content (编辑器内容区域) */
 .cm-content {
   font-family: "Inter", sans-serif;
   font-size: 16px;
-  line-height: 1.6;
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
-  padding-bottom: 5rem;
-  overflow-wrap: anywhere; /* [FIX] Force break long words */
-} /* Padding for playback */
+  line-height: 1.6;       /* [Layout] 全局行高 */
+  padding: 2rem;          /* [Layout] 内容内边距 */
+  max-width: 800px;       /* [Layout] 最大阅读宽度 */
+  margin: 0 auto;         /* [Layout] 居中对齐 */
+  padding-bottom: 5rem;   /* [Layout] 底部留白 (以便最后一行不贴底) */
+  overflow-wrap: anywhere; /* [Fix] 强制长单词换行 */
+}
+
+/* Syntax Hiding (隐藏 Markdown 语法标记) */
 .cm-syntax-hidden {
   display: none !important;
 }
 
-/* Math Widget */
+/* Math Widget (数学公式组件) */
 .cm-math-widget {
   display: inline-block;
   background: #eee;
@@ -47,18 +50,19 @@
   border-radius: 4px;
   cursor: pointer;
 }
+/* Block Math (行间公式) */
 .cm-math-widget.cm-block-math {
   display: block;
-  text-align: center;
-  margin: 1em 0;
+  text-align: center;     /* [Layout] 居中显示 */
+  margin: 1em 0;          /* [Layout] 上下间距 */
 }
 
-/* Frontmatter (Full Width Block) */
+/* Frontmatter (元数据块) */
 .cm-frontmatter-block {
-  background-color: #f8f9fa; /* Match Code Block Background */
+  background-color: #f8f9fa; /* [Style] 浅灰背景 (匹配代码块) */
   font-family:
     "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
-  font-size: 0.85em;
+  font-size: 0.85em;      /* [Style] 稍小的字号 */
   color: #64748b;
 }
 
@@ -67,23 +71,23 @@
   font-weight: bold;
 }
 
-/* Checkbox Widget */
+/* Checkbox Widget (复选框组件) */
 .cm-checkbox-widget {
-  margin-right: 0.5em;
+  margin-right: 0.5em;    /* [Layout] 右侧间距 */
   vertical-align: middle;
 }
 
-/* Table Widget */
+/* Table Widget (表格组件) */
 .cm-table-widget {
-  width: 100%;
+  width: 100%;            /* [Layout] 宽度占满容器 */
   border-collapse: collapse;
-  margin: 1em 0;
+  margin: 1em 0;          /* [Layout] 上下间距 */
   font-size: 14px;
 }
 .cm-table-widget th,
 .cm-table-widget td {
   border: 1px solid #e2e8f0;
-  padding: 8px 12px;
+  padding: 8px 12px;      /* [Layout] 单元格内边距 */
 }
 .cm-table-widget th {
   background: #f1f5f9;
@@ -91,19 +95,20 @@
   color: #334155;
 }
 .cm-table-widget tbody tr:nth-child(even) {
-  background: #f8fafc;
+  background: #f8fafc;    /* [Style] 隔行变色 */
 }
 .cm-table-widget tbody tr:hover {
-  background: #e0f2fe;
+  background: #e0f2fe;    /* [Style] 悬停高亮 */
 }
 
-/* Code Block Highlight (RStudio Style) */
+/* Code Block Highlight (代码块高亮 - RStudio 风格) */
 .cm-code-block-line {
-  background-color: #f8f9fa; /* Light Gray Background */
+  background-color: #f8f9fa; /* [Style] 浅灰背景 */
   border-radius: 0;
+  /* [Note] 高度由内容和全局 line-height 决定，无额外 padding */
 }
 
-/* Optional: Rounded Corners for Start/End */
+/* Optional: Rounded Corners for Start/End (代码块首尾圆角) */
 .cm-code-block-start {
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
@@ -113,42 +118,35 @@
   border-bottom-right-radius: 4px;
 }
 
-/* Blockquote Styling (RStudio Style) */
+/* Blockquote Styling (引用块样式 - RStudio 风格) */
 .cm-blockquote-line {
-  background-color: #f8f9fa; /* Light Gray Background (Matches Code Block) */
-  border-left: 4px solid #cbd5e1;
+  background-color: #f8f9fa; /* [Style] 匹配代码块背景 */
+  border-left: 4px solid #cbd5e1; /* [Style] 左侧装饰线 */
 }
 
-/* Ensure padding pushes text away from border (applied to line content via .cm-line usually, but here line decoration wraps whole line) */
-/* Actually, line decoration classes are on the wrapper div. content needs padding. */
-/* But wait, if we put border on the wrapper div, the text inside will be right next to it. */
+/* Adjusting line padding for blockquotes (引用块内文本缩进) */
+.cm-blockquote-line {
+  padding-left: 1rem; /* [Layout] 内容缩进 (避免紧贴左侧线) */
+}
 
-/* Removed empty rule */
-
-/* We need to clear previous .cm-quote styles if they conflict */
+/* Previous .cm-quote styles cleanup (清理旧的引用样式) */
 .cm-quote {
   color: #64748b;
-  /* border-left removed from here, moved to line */
-  /* padding-left removed from here if line handles it */
 }
 
-/* Adjusting line padding for blockquotes */
-.cm-blockquote-line {
-  padding-left: 1rem; /* Indent the whole line content from the border */
-}
 
-/* Inline Code Styling */
+/* Inline Code Styling (行内代码样式) */
 .cm-inline-code {
   background-color: #f1f5f9; /* slate-100 */
-  color: #1e293b; /* slate-800 */
-  padding: 0.2em 0.4em;
+  color: #1e293b;            /* slate-800 */
+  padding: 0.2em 0.4em;      /* [Layout] 内边距 */
   border-radius: 4px;
   font-family:
     "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
-  font-size: 1em; /* Slightly increased from 0.85em */
+  font-size: 1em; /* 稍大一点以便阅读 */
 }
 
-/* Explicit Markdown Styling */
+/* Explicit Markdown Styling (Markdown 基础样式) */
 .cm-strong {
   font-weight: bold;
 }
@@ -159,7 +157,7 @@
   text-decoration: line-through;
 }
 
-/* Headings */
+/* Headings (标题样式) */
 .cm-h1 {
   font-size: 2em;
   font-weight: bold;
@@ -189,7 +187,7 @@
   color: #64748b;
 }
 
-/* Links */
+/* Links (链接样式) */
 .cm-link {
   color: #2563eb;
   text-decoration: none;
@@ -202,36 +200,34 @@
   font-family: monospace;
 }
 
-/* Blockquote Text */
+/* Blockquote Text (引用文本颜色) */
 .cm-blockquote {
   color: #475569;
   font-style: italic;
 }
 
-/* Horizontal Rule (Source Text) */
+/* Horizontal Rule (Source Text) (水平分割线源码) */
 .cm-hr {
   color: #cbd5e1;
   font-weight: bold;
 }
 
-/* Rendered Horizontal Rule: Full Width Line */
-/* Rendered Horizontal Rule: Full Width Line */
+/* Rendered Horizontal Rule (渲染后的水平分割线) */
 .cm-hr-rendered {
-  color: transparent !important; /* Hide text color as backup */
-  background-color: #cbd5e1; /* The visible line color */
+  color: transparent !important;   /* [Hack] 隐藏原文本颜色 */
+  background-color: #cbd5e1;       /* [Style] 线条颜色 */
 
-  display: inline-block; /* Layout mode */
-  width: 100%; /* Full Width */
-  height: 2px; /* Thin line */
+  display: inline-block;           /* [Layout] 布局模式 */
+  width: 100%;                     /* [Layout] 全宽 */
+  height: 2px;                     /* [Layout] 线条高度 */
 
-  margin: 1em 0; /* Vertical spacing */
-  line-height: 0px; /* Squash line height */
-  overflow: hidden; /* [FIX] Hide the text content securely */
-  vertical-align: middle; /* Align with line */
+  margin: 1em 0;                   /* [Layout] 上下间距 */
+  line-height: 0px;                /* [Hack] 压扁行高 */
+  overflow: hidden;                /* [Hack] 隐藏溢出内容 */
+  vertical-align: middle;
 
-  text-indent: -9999px; /* [FIX] Push text completely out of the box */
+  text-indent: -9999px;            /* [Hack] 将文本推移出可视区域 */
 }
-/* Removed .cm-hr-widget as we use Decoration.mark now */
 
 /* 
    Selection Styling (Native Browser Selection)
@@ -250,7 +246,7 @@
   color: inherit;
 }
 
-/* 确保代码块内的选择也可见 */
+/* 确保特殊块内的选择也可见 (代码块、引用、Frontmatter) */
 .cm-code-block-line ::selection,
 .cm-blockquote-line ::selection,
 .cm-frontmatter-block ::selection {
@@ -263,9 +259,7 @@
   background-color: rgba(59, 130, 246, 0.5) !important;
 }
 
-/* 确保内容层正常堆叠 */
+/* 确保光标颜色正常 */
 .cm-content {
   caret-color: #333;
 }
-
-

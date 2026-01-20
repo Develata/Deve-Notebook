@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Scrollbar Styling (Visual Polish) */
+/* Global Scrollbar Styling (全局滚动条样式 - Visual Polish) */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -13,11 +13,12 @@
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1; /* slate-300 */
   border-radius: 5px;
-  border: 2px solid #f8fafc; /* match bg for padding effect */
+  border: 2px solid #f8fafc; /* match bg for padding effect (模拟内边距效果) */
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8; /* slate-400 */
 }
+/* Dark Mode Scrollbar (暗色模式滚动条) */
 .dark ::-webkit-scrollbar-thumb {
   background: #475569; /* slate-600 */
   border-color: #1e1e2e; /* match dark bg */
@@ -26,18 +27,18 @@
   background: #64748b; /* slate-500 */
 }
 
-/* Search Modal */
+/* Search Modal (搜索模态框) */
 .search-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5); /* 半透明遮罩 */
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 10vh;
+  align-items: flex-start; /* 顶部对齐 */
+  padding-top: 10vh;       /* 距离顶部 10% 高度 */
   z-index: 1000;
 }
 
