@@ -5,6 +5,7 @@ use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ use std::sync::Arc;
 /// 1. 校验目标路径
 /// 2. 执行文件系统重命名
 /// 3. 更新 Ledger 中的路径映射
-/// 4. 广播更新后的文档列表
+/// 4. 更新 TreeManager 并广播 TreeDelta
 pub async fn handle_rename_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -58,6 +59,15 @@ pub async fn handle_rename_doc(
                 tracing::error!("Ledger 文档重命名失败: {:?}", e);
             }
 
+            // 5. 更新 TreeManager 并广播 Delta
+            let delta = state
+                .tree_manager
+                .write()
+                .unwrap()
+                .rename(&old_path, &dst_name);
+            ch.broadcast(ServerMessage::TreeUpdate(delta));
+
+            // 6. 兼容旧逻辑
             handle_list_docs(state, ch, None).await;
         }
     } else {

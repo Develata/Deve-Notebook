@@ -226,6 +226,11 @@ pub enum ServerMessage {
     /// 文档删除通知
     DocDeleted { doc_id: DocId },
 
+    /// 文件树增量更新
+    ///
+    /// 用于高效同步文件树结构变更。
+    TreeUpdate(crate::tree::TreeDelta),
+
     /// 错误消息
     Error(String),
 }

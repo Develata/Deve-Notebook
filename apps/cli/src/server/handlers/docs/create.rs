@@ -5,6 +5,7 @@ use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
 
@@ -15,7 +16,7 @@ use std::sync::Arc;
 /// 2. 确保父目录存在
 /// 3. 创建文件并写入默认内容
 /// 4. 在 Ledger 中注册 DocId
-/// 5. 广播更新后的文档列表
+/// 5. 更新 TreeManager 并广播 TreeDelta
 pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: String) {
     // 1. 确保以 .md 结尾
     let mut filename = name.clone();
@@ -43,7 +44,15 @@ pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: St
     // 5. 创建文件或注册已存在文件
     if path.exists() {
         // 文件已存在，仅注册到 Ledger
-        if let Ok(_doc_id) = state.repo.create_docid(&filename) {
+        if let Ok(doc_id) = state.repo.create_docid(&filename) {
+            // 更新 TreeManager 并广播 Delta
+            let delta = state
+                .tree_manager
+                .write()
+                .unwrap()
+                .add_file(&filename, doc_id);
+            ch.broadcast(ServerMessage::TreeUpdate(delta));
+            // 兼容旧逻辑
             handle_list_docs(state, ch, None).await;
         }
     } else if let Err(e) = std::fs::write(&path, "# New Note\n") {
@@ -51,6 +60,14 @@ pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: St
         ch.send_error(format!("Failed to create file: {}", e));
     } else if let Ok(doc_id) = state.repo.create_docid(&filename) {
         tracing::info!("已创建文档: {} ({})", filename, doc_id);
+        // 更新 TreeManager 并广播 Delta
+        let delta = state
+            .tree_manager
+            .write()
+            .unwrap()
+            .add_file(&filename, doc_id);
+        ch.broadcast(ServerMessage::TreeUpdate(delta));
+        // 兼容旧逻辑
         handle_list_docs(state, ch, None).await;
     }
 }

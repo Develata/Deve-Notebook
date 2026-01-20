@@ -18,22 +18,23 @@
 //! - `watcher`: 文件系统变更检测
 //! - `sync`: 文档同步与调和
 
+pub mod config;
+pub mod error;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;
 pub mod models;
+pub mod plugin;
+pub mod protocol;
+pub mod security;
+pub mod source_control;
+pub mod state;
+pub mod sync;
+pub mod tree;
+pub mod utils;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod vfs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod watcher;
-pub mod sync;
-pub mod state;
-pub mod protocol;
-pub mod utils;
-pub mod config;
-pub mod plugin;
-pub mod error;
-pub mod source_control;
-pub mod security;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;

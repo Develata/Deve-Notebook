@@ -23,8 +23,20 @@ pub async fn handle_list_docs(
     };
 
     if let Ok(docs) = state.repo.list_docs(&repo_type) {
-        // 广播文档列表 (其他标签页也需要更新)
+        // 广播文档列表 (兼容旧逻辑)
         ch.broadcast(ServerMessage::DocList { docs });
+
+        // 发送初始树结构 (Init Delta)
+        // 注意: TreeManager 目前仅维护本地 Repo 的状态。
+        // 如果是远程分支，发送空树以触发前端回退到 build_file_tree (基于 DocList)
+        if active_branch.is_none() {
+            let tree_delta = state.tree_manager.read().unwrap().build_init_delta();
+            ch.unicast(ServerMessage::TreeUpdate(tree_delta));
+        } else {
+            // 远程分支: 发送空树，前端 ExplorerView 收到空树会回退到 DocList
+            use deve_core::tree::TreeDelta;
+            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
+        }
     }
 }
 

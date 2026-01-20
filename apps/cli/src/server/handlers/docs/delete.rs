@@ -4,6 +4,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
 
@@ -13,7 +14,7 @@ use std::sync::Arc;
 /// 1. 判断目标是文件还是目录
 /// 2. 执行文件系统删除
 /// 3. 从 Ledger 中移除记录
-/// 4. 广播更新后的文档列表
+/// 4. 更新 TreeManager 并广播 TreeDelta
 pub async fn handle_delete_doc(state: &Arc<AppState>, ch: &DualChannel, path: String) {
     tracing::info!("handle_delete_doc: path={}", path);
     let target = join_normalized(&state.vault_path, &path);
@@ -42,6 +43,10 @@ pub async fn handle_delete_doc(state: &Arc<AppState>, ch: &DualChannel, path: St
         tracing::error!("Ledger 文档删除失败: {:?}", e);
     }
 
-    // 3. 广播列表
+    // 3. 更新 TreeManager 并广播 Delta
+    let delta = state.tree_manager.write().unwrap().remove(&path);
+    ch.broadcast(ServerMessage::TreeUpdate(delta));
+
+    // 4. 兼容旧逻辑
     handle_list_docs(state, ch, None).await;
 }

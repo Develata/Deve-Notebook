@@ -9,6 +9,7 @@ use deve_core::protocol::{ClientMessage, ServerMessage};
 use leptos::prelude::*;
 use std::sync::Arc;
 
+use super::apply::apply_tree_delta;
 use super::state::CoreSignals;
 use super::types::PeerSession;
 
@@ -76,6 +77,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_unstaged_changes = signals.set_unstaged_changes;
     let set_commit_history = signals.set_commit_history;
     let set_diff_content = signals.set_diff_content;
+    let set_tree_nodes = signals.set_tree_nodes;
 
     Effect::new(move |_| {
         if let Some(msg) = ws_rx.msg.get() {
@@ -175,6 +177,12 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 } => {
                     leptos::logging::log!("收到 Diff: {}", path);
                     set_diff_content.set(Some((path, old_content, new_content)));
+                }
+                ServerMessage::TreeUpdate(delta) => {
+                    leptos::logging::log!("收到 TreeUpdate: {:?}", delta);
+                    set_tree_nodes.update(|nodes| {
+                        apply_tree_delta(nodes, delta);
+                    });
                 }
                 _ => {}
             }

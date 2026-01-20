@@ -10,6 +10,7 @@
 //! - `effects`: 响应式效果
 //! - `callbacks`: 用户交互回调
 
+pub mod apply;
 pub mod callbacks;
 pub mod effects;
 pub mod state;
@@ -141,6 +142,7 @@ pub fn use_core() -> CoreState {
         set_diff_content: signals.set_diff_content,
         on_get_doc_diff: sc_callbacks.on_get_doc_diff,
         on_merge_peer: sync_callbacks.on_merge_peer,
+        tree_nodes: signals.tree_nodes,
     };
 
     // 7. 提供上下文

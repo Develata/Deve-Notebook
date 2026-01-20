@@ -7,6 +7,7 @@ use crate::api::WsService;
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId};
 use deve_core::source_control::{ChangeEntry, CommitInfo};
+use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
@@ -71,6 +72,10 @@ pub struct CoreSignals {
     pub set_commit_history: WriteSignal<Vec<CommitInfo>>,
     pub diff_content: ReadSignal<Option<(String, String, String)>>,
     pub set_diff_content: WriteSignal<Option<(String, String, String)>>,
+
+    // 文件树 (增量更新)
+    pub tree_nodes: ReadSignal<Vec<FileNode>>,
+    pub set_tree_nodes: WriteSignal<Vec<FileNode>>,
 }
 
 /// 初始化所有核心信号
@@ -94,6 +99,7 @@ pub fn init_signals() -> CoreSignals {
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
     let (diff_content, set_diff_content) = signal(None);
+    let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
 
     CoreSignals {
         docs,
@@ -133,5 +139,7 @@ pub fn init_signals() -> CoreSignals {
         set_commit_history,
         diff_content,
         set_diff_content,
+        tree_nodes,
+        set_tree_nodes,
     }
 }

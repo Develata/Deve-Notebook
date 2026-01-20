@@ -14,9 +14,11 @@
 
 use axum::{Router, routing::get};
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::listing::RepoListing;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
+use deve_core::tree::TreeManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -38,6 +40,8 @@ pub struct AppState {
     pub vault_path: std::path::PathBuf,
     pub plugins: Vec<Box<dyn PluginRuntime>>,
     pub sync_engine: Arc<RwLock<SyncEngine>>,
+    /// 文件树管理器 (增量更新)
+    pub tree_manager: Arc<RwLock<TreeManager>>,
     #[cfg(feature = "search")]
     pub search_service: Option<SearchService>,
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
@@ -154,6 +158,21 @@ pub async fn start_server(
         repo_key.clone(),
     )));
 
+    // 初始化文件树管理器 (从 Ledger 加载文档列表)
+    let tree_manager = {
+        let mut tm = TreeManager::new();
+        let repo_id = repo
+            .get_repo_info()
+            .ok()
+            .flatten()
+            .map(|info| info.uuid)
+            .unwrap_or_else(uuid::Uuid::nil);
+        if let Ok(docs) = repo.list_docs(&deve_core::models::RepoType::Local(repo_id)) {
+            tm.init_from_docs(docs);
+        }
+        Arc::new(RwLock::new(tm))
+    };
+
     let app_state = Arc::new(AppState {
         repo: repo.clone(),
         sync_manager,
@@ -161,6 +180,7 @@ pub async fn start_server(
         vault_path,
         plugins,
         sync_engine,
+        tree_manager,
         #[cfg(feature = "search")]
         search_service,
         identity_key: key_pair,
