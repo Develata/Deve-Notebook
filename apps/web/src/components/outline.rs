@@ -16,9 +16,23 @@ pub struct HeaderNode {
 // 返回扁平列表。我们可以通过 padding 来渲染缩进。
 pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
     let mut headers = Vec::new();
-    
+    let mut in_code_block = false;
+
     for (i, line) in content.lines().enumerate() {
         let trimmed = line.trim();
+
+        // Check for code block fences (``` or ~~~)
+        // Note: This is a simplified check. It assumes the fence is at the start of the line (after trim).
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        // Skip content inside code blocks
+        if in_code_block {
+            continue;
+        }
+
         if trimmed.starts_with('#') {
             let mut level = 0;
             for c in trimmed.chars() {
@@ -28,7 +42,7 @@ pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
                     break;
                 }
             }
-            
+
             // 仅当后面有空格且级别 <= 6 时转换
             if level > 0 && level <= 6 {
                 // 检查下一个字符是否为空格
@@ -43,18 +57,13 @@ pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
             }
         }
     }
-    
+
     headers
 }
 
 #[component]
-pub fn Outline(
-    content: ReadSignal<String>,
-    on_scroll: Callback<usize>,
-) -> impl IntoView {
-    let headers = Memo::new(move |_| {
-        parse_headers(&content.get())
-    });
+pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl IntoView {
+    let headers = Memo::new(move |_| parse_headers(&content.get()));
 
     view! {
         <div class="h-full overflow-y-auto py-4 px-2 select-none">
@@ -67,13 +76,13 @@ pub fn Outline(
                 children=move |header| {
                     let on_click = on_scroll.clone();
                     let line = header.line;
-                    
+
                     let text = header.text.clone();
                     let title_text = text.clone();
                     let padding = format!("padding-left: {}px", (header.level - 1) * 12 + 8);
-                    
+
                     view! {
-                        <div 
+                        <div
                             class="py-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer rounded transition-colors truncate"
                             style={padding}
                             on:click=move |_| on_click.run(line)

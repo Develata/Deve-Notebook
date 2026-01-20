@@ -7,7 +7,7 @@ use crate::components::command_palette::registry::create_static_commands;
 use crate::components::search_box::providers::{self, CommandProvider, FileProvider};
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 
 /// 根据查询字符切换 Provider 并实时返回结果。
 pub fn create_results_memo(
@@ -32,7 +32,8 @@ pub fn create_results_memo(
         let is_branch = q.starts_with('@');
 
         if is_command {
-            let cmds = create_static_commands(current_locale, on_settings, on_open, set_show, locale);
+            let cmds =
+                create_static_commands(current_locale, on_settings, on_open, set_show, locale);
             let provider = CommandProvider::new(cmds);
             provider.search(&q)
         } else if is_branch {
@@ -44,10 +45,8 @@ pub fn create_results_memo(
             let provider = providers::BranchProvider::new(shadows, current);
             provider.search(&q)
         } else {
-            let doc_list: Vec<(deve_core::models::DocId, String)> = current_docs
-                .iter()
-                .map(|(k, v)| (*k, v.clone()))
-                .collect();
+            let doc_list: Vec<(deve_core::models::DocId, String)> =
+                current_docs.iter().map(|(k, v)| (*k, v.clone())).collect();
             let provider = FileProvider::new(doc_list);
             provider.search(&q)
         }
@@ -80,11 +79,7 @@ pub fn make_active_index(
             return 0;
         }
         let current = selected_index.get();
-        if current >= count {
-            0
-        } else {
-            current
-        }
+        if current >= count { 0 } else { current }
     }
 }
 
@@ -139,7 +134,11 @@ pub fn build_keydown_handler(
                 leptos::logging::log!("Refined Debug: Key Enter. Index: {}, Count: {}", idx, count);
 
                 if let Some(res) = providers_results.get().get(idx) {
-                    leptos::logging::log!("Selected Item: {} (Action: {:?})", res.title, res.action);
+                    leptos::logging::log!(
+                        "Selected Item: {} (Action: {:?})",
+                        res.title,
+                        res.action
+                    );
                     match &res.action {
                         SearchAction::OpenDoc(id) => {
                             leptos::logging::log!("Executing OpenDoc: {}", id);
@@ -162,7 +161,7 @@ pub fn build_keydown_handler(
                         }
                         SearchAction::CreateDoc(path) => {
                             leptos::logging::log!("Creating Doc: {}", path);
-                            let normalized = path.replace('\\', "/");
+                            let normalized = deve_core::utils::path::to_forward_slash(&path);
                             let target = if normalized.ends_with(".md") {
                                 normalized.clone()
                             } else {
