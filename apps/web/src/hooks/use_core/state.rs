@@ -3,7 +3,6 @@
 //!
 //! 定义 `use_core` 所需的所有响应式信号。
 
-use crate::api::WsService;
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId};
 use deve_core::source_control::{ChangeEntry, CommitInfo};

@@ -26,6 +26,7 @@ pub fn ExplorerView(
     #[prop(into)] on_copy: Callback<(String, String)>,
     #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
     let search_control = expect_context::<SearchControl>();
     // 统一模态框状态 (Unified Modal State)
     let (modal_state, set_modal_state) = signal(ModalState::None);
@@ -185,20 +186,33 @@ pub fn ExplorerView(
             </div>
 
             <div class="flex-1 overflow-y-auto py-2">
-                <For
-                    each=move || tree_nodes.get()
-                    key=|node| node.path.clone()
-                    children=move |node| {
-                        view! {
-                            <div class="relative">
-                                <FileTreeItem
-                                    node=node.clone()
-                                    depth=0
-                                />
+                {move || {
+                    let nodes = tree_nodes.get();
+                    if nodes.is_empty() {
+                         view! {
+                            <div class="flex flex-col items-center justify-center h-32 text-gray-400 text-sm italic select-none">
+                                {move || crate::i18n::t::sidebar::no_docs(locale.get())}
                             </div>
-                        }
+                        }.into_any()
+                    } else {
+                        view! {
+                            <For
+                                each=move || nodes.clone()
+                                key=|node| node.path.clone()
+                                children=move |node| {
+                                    view! {
+                                        <div class="relative">
+                                            <FileTreeItem
+                                                node=node.clone()
+                                                depth=0
+                                            />
+                                        </div>
+                                    }
+                                }
+                            />
+                        }.into_any()
                     }
-                />
+                }}
             </div>
         </div>
     }

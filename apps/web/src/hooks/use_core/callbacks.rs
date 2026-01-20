@@ -8,7 +8,6 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-use super::state::CoreSignals;
 
 /// 文档操作回调
 pub struct DocCallbacks {

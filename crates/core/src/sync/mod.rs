@@ -26,7 +26,7 @@ use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
-use tracing::{info, warn};
+use tracing::info;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {

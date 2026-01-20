@@ -4,7 +4,7 @@
 //! 定义握手逻辑和消息处理 Effect。
 
 use crate::api::{ConnectionStatus, WsService};
-use deve_core::models::{DocId, PeerId, VersionVector};
+use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use leptos::prelude::*;
 use std::sync::Arc;

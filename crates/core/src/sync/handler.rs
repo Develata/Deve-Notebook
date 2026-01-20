@@ -11,7 +11,7 @@ use crate::protocol::ServerMessage;
 use crate::sync::recovery;
 use crate::vfs::Vfs;
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use tracing::{info, warn};
 
