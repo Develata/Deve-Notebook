@@ -71,14 +71,17 @@ export const blockquoteBorderPlugin = ViewPlugin.fromClass(
                         Decoration.line({ class: className }).range(line.from)
                     );
                     
-                    // 隐藏 > 符号 (Mark Decoration)
+                    // 隐藏 > 符号 (Replace Decoration)
                     // 只有当光标不在该行时才隐藏
                     if (!isCursorOnLine(line.from, line.to)) {
                         for (const pos of quotePositions) {
                             const absPos = line.from + pos;
-                            // 隐藏单个 > 字符
+                            // 使用 replace 完全隐藏 > 字符
                             widgets.push(
-                                Decoration.mark({ class: "cm-syntax-hidden" }).range(absPos, absPos + 1)
+                                Decoration.replace({
+                                    block: false,  // > 是行内字符，不是块级
+                                    inclusive: false
+                                }).range(absPos, absPos + 1)
                             );
                         }
                     }
