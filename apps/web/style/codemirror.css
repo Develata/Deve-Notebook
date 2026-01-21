@@ -59,6 +59,39 @@
   /* margin: 1em 0; -- 已移除，改用 wrapper padding */
 }
 
+/* 嵌套行间公式样式 (Nested Block Math) */
+/* 与 blockquote-depth 使用相同的 margin-left 递进 */
+.cm-nested-math-depth-1 {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 0.5rem;
+  margin-left: 0;
+  background-color: #f8fafc;
+}
+.cm-nested-math-depth-2 {
+  border-left: 3px solid #94a3b8;
+  padding-left: 0.5rem;
+  margin-left: 1.5rem;
+  background-color: #f1f5f9;
+}
+.cm-nested-math-depth-3 {
+  border-left: 3px solid #64748b;
+  padding-left: 0.5rem;
+  margin-left: 3rem;
+  background-color: #e2e8f0;
+}
+.cm-nested-math-depth-4 {
+  border-left: 3px solid #475569;
+  padding-left: 0.5rem;
+  margin-left: 4.5rem;
+  background-color: #cbd5e1;
+}
+.cm-nested-math-depth-5 {
+  border-left: 3px solid #334155;
+  padding-left: 0.5rem;
+  margin-left: 6rem;
+  background-color: #94a3b8;
+}
+
 /* Frontmatter (元数据块) */
 .cm-frontmatter-block {
   background-color: #f8f9fa; /* [Style] 浅灰背景 (匹配代码块) */
@@ -131,6 +164,54 @@
 /* Adjusting line padding for blockquotes (引用块内文本缩进) */
 .cm-blockquote-line {
   padding-left: 1rem; /* [Layout] 内容缩进 (避免紧贴左侧线) */
+}
+
+/* 递进式引用块边框 (Progressive Blockquote Depth) */
+/* 使用更高优先级覆盖 cm-blockquote-line 的样式 */
+.cm-line.cm-blockquote-depth-1 {
+  border-left: 3px solid #cbd5e1 !important;
+  padding-left: 0.5rem !important;
+  margin-left: 0 !important;
+  background-color: #f8fafc !important;
+}
+.cm-line.cm-blockquote-depth-2 {
+  border-left: 3px solid #94a3b8 !important;
+  padding-left: 0.5rem !important;
+  margin-left: 1.5rem !important;
+  background-color: #f1f5f9 !important;
+}
+.cm-line.cm-blockquote-depth-3 {
+  border-left: 3px solid #64748b !important;
+  padding-left: 0.5rem !important;
+  margin-left: 3rem !important;
+  background-color: #e2e8f0 !important;
+}
+.cm-line.cm-blockquote-depth-4 {
+  border-left: 3px solid #475569 !important;
+  padding-left: 0.5rem !important;
+  margin-left: 4.5rem !important;
+  background-color: #cbd5e1 !important;
+}
+.cm-line.cm-blockquote-depth-5 {
+  border-left: 3px solid #334155 !important;
+  padding-left: 0.5rem !important;
+  margin-left: 6rem !important;
+  background-color: #94a3b8 !important;
+}
+
+/* 列表圆点样式 (List Bullet Styling) */
+.cm-list-bullet {
+  color: #64748b;
+  font-size: 0.5em;
+  display: inline-block;
+  position: relative;
+  top: -0.2em;           /* [Fix] 微调向上偏移以居中 */
+  margin-right: 0.4em;
+}
+.cm-list-ordered {
+  color: #3b82f6;
+  font-weight: 600;
+  font-size: 0.9em;
 }
 
 /* Previous .cm-quote styles cleanup (清理旧的引用样式) */

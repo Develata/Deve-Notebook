@@ -32,29 +32,20 @@ export const blockStyling = ViewPlugin.fromClass(
         from,
         to,
         enter: (node) => {
-          let className = "";
-          
+          // 只处理 FencedCode (Blockquote 由 blockquote_border.js 处理)
           if (node.name === "FencedCode") {
-             className = "cm-code-block-line";
-          } else if (node.name === "Blockquote") {
-             className = "cm-blockquote-line";
-          }
-          
-          if (className) {
              let doc = view.state.doc;
-             // 找到起始行和结束行
              let startLine = doc.lineAt(node.from);
              let endLine = doc.lineAt(node.to);
              
              for (let i = startLine.number; i <= endLine.number; i++) {
                  let line = doc.line(i);
-                 let lineClasses = className;
+                 let lineClasses = "cm-code-block-line";
                  
-                 // 圆角逻辑 (可选)
-                 if (i === startLine.number) lineClasses += node.name === "FencedCode" ? " cm-code-block-start" : " cm-blockquote-start";
-                 if (i === endLine.number) lineClasses += node.name === "FencedCode" ? " cm-code-block-end" : " cm-blockquote-end";
+                 // 圆角逻辑
+                 if (i === startLine.number) lineClasses += " cm-code-block-start";
+                 if (i === endLine.number) lineClasses += " cm-code-block-end";
                  
-                 // Decoration.line 会应用到整行元素 (div.cm-line)
                  widgets.push(Decoration.line({ class: lineClasses }).range(line.from));
              }
           }

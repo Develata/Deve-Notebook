@@ -2,12 +2,24 @@ import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
 import { findMathRanges } from "./utils.js";
 
+// --- 辅助函数: 计算行的引用深度 ---
+function getLineQuoteDepth(lineText) {
+    let depth = 0;
+    for (let i = 0; i < lineText.length; i++) {
+        const char = lineText[i];
+        if (char === '>') depth++;
+        else if (char !== ' ' && char !== '\t') break;
+    }
+    return depth;
+}
+
 // --- Math Widget (数学公式组件) ---
 export class MathWidget extends WidgetType {
-  constructor(content, isBlock) {
+  constructor(content, isBlock, quoteDepth = 0) {
     super();
     this.content = content;
     this.isBlock = isBlock;
+    this.quoteDepth = quoteDepth;  // [NEW] 嵌套深度
   }
   
   toDOM(view) {
@@ -37,6 +49,13 @@ export class MathWidget extends WidgetType {
         const wrapper = document.createElement('div');
         wrapper.style.paddingTop = '1rem';
         wrapper.style.paddingBottom = '1rem';
+        
+        // [NEW] 应用嵌套深度样式
+        if (this.quoteDepth > 0) {
+            const effectiveDepth = Math.min(this.quoteDepth, 5);
+            wrapper.classList.add(`cm-nested-math-depth-${effectiveDepth}`);
+        }
+        
         wrapper.appendChild(span);
         
         // [Fix RangeError] Handle selection manually
@@ -79,25 +98,24 @@ function computeMathDecorations(state) {
       
       const isCursorTouching = selection.head >= r.from && selection.head <= r.to;
       
+      // [NEW] 计算公式所在行的引用深度
+      let quoteDepth = 0;
+      if (isBlock) {
+          const line = state.doc.lineAt(r.from);
+          quoteDepth = getLineQuoteDepth(line.text);
+      }
+      
       // 仅当光标未触碰时渲染 Widget
       if (!isCursorTouching) {
-        // [DEBUG] 验证 block: true 是否正确传递
-        if (isBlock) {
-            console.log("[Math Debug] Block math detected, creating decoration with block:", isBlock, "from:", r.from, "to:", r.to);
-        }
         widgets.push(
             Decoration.replace({ 
-                widget: new MathWidget(content, isBlock),
+                widget: new MathWidget(content, isBlock, quoteDepth),
                 // [NEW] block: true 让 Block Math 支持块级光标行为
                 block: isBlock
             }).range(r.from, r.to)
         );
       }
   }
-  
-  // 处理转义美元符号的逻辑 (简化版)
-  // 如果需要严格隐藏 \$ 的反斜杠，可以参考之前的逻辑
-  // 目前这里的重点是渲染公式，转义符暂时保留原样显示
   
   widgets.sort((a, b) => a.from - b.from);
   return Decoration.set(widgets);

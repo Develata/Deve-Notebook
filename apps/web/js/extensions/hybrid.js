@@ -81,6 +81,28 @@ export const hybridPlugin = ViewPlugin.fromClass(
           }
       }
 
+      // ---------------------------------------------------------
+      // Pre-scan: 收集所有 FencedCode 范围 (用于嵌套检测)
+      // ---------------------------------------------------------
+      const codeRanges = [];
+      try {
+        let tree = syntaxTree(view.state);
+        tree.iterate({
+          from,
+          to,
+          enter: (node) => {
+            if (node.name === "FencedCode") {
+              codeRanges.push({ from: node.from, to: node.to });
+            }
+          },
+        });
+      } catch (e) { /* ignore */ }
+      
+      // 辅助函数: 检查位置是否在 FencedCode 内
+      const findContainingCode = (pos) => {
+        return codeRanges.find(r => pos >= r.from && pos <= r.to);
+      };
+
       try {
         let tree = syntaxTree(view.state);
 
@@ -89,7 +111,9 @@ export const hybridPlugin = ViewPlugin.fromClass(
           to,
           enter: (node) => {
             // DEBUG: Log node name
-            // console.log("Node:", node.name, node.from, node.to);
+            if (node.name === "QuoteMark") {
+                console.log("[HybridDebug] QuoteMark found at:", node.from, node.to);
+            }
 
             // 跳过数学公式区域
             if (isInsideMath(node.from, node.to)) return;
@@ -107,12 +131,33 @@ export const hybridPlugin = ViewPlugin.fromClass(
                 node.name === "QuoteMark" || 
                 node.name === "CodeMark" || 
                 node.name === "StrikethroughMark" ||
-                node.name === "LinkMark") {  // [NEW] Added LinkMark
+                node.name === "LinkMark") {
                 
               const parent = node.node.parent;
               
-              // 特殊处理: 如果是 CodeMark (即 `), 且父节点是 FencedCode (代码块), 则不隐藏
+              // [NEW] 嵌套检测: QuoteMark 在 FencedCode 内部
+              // 当 QuoteMark 在代码块内，且光标不在代码块内时，隐藏
+              if (node.name === "QuoteMark") {
+                  const containingCode = findContainingCode(node.from);
+                  if (containingCode && !isCursorIn(containingCode.from, containingCode.to)) {
+                      widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
+                      return;
+                  }
+                  
+                  // [FIX] 普通 QuoteMark: 使用行级别检测
+                  // 当光标不在 QuoteMark 所在的行时，隐藏
+                  const line = view.state.doc.lineAt(node.from);
+                  if (!isCursorIn(line.from, line.to)) {
+                      widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
+                  }
+                  return;
+              }
+              
+              // [FIX] CodeMark 在 FencedCode 内: 当光标不在时隐藏
               if (node.name === "CodeMark" && parent && parent.name === "FencedCode") {
+                  if (!isCursorIn(parent.from, parent.to)) {
+                      widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
+                  }
                   return;
               }
 

@@ -27,6 +27,8 @@ import { checkboxStateField } from "./extensions/checkbox_ext.js";
 import { blockStyling } from "./extensions/block_styling.js";
 import { mermaidStateField } from "./extensions/mermaid.js";
 import { copyTexExtension } from "./extensions/copy_tex.js";
+import { listMarkerPlugin } from "./extensions/list_marker.js";
+import { blockquoteBorderPlugin } from "./extensions/blockquote_border.js";
 
 console.log("Editor Adapter v5 - Native Selection Mode");
 
@@ -112,6 +114,8 @@ export function initCodeMirror(element, onDelta) {
         mermaidStateField,
         copyTexExtension,
         blockStyling,
+        listMarkerPlugin,        // [NEW] 列表圆点渲染
+        blockquoteBorderPlugin,  // [NEW] 引用块边框
 
         // 性能优化: 发送 Delta 而不是全文
         EditorView.updateListener.of((v) => {
