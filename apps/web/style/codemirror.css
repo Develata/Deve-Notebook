@@ -51,10 +51,12 @@
   cursor: pointer;
 }
 /* Block Math (行间公式) */
+/* [FIX] 移除 margin，改由 JS wrapper + padding 控制间距 */
+/* 为了支持 block: true，需使用 padding（margin 不计入 offsetHeight） */
 .cm-math-widget.cm-block-math {
   display: block;
   text-align: center;     /* [Layout] 居中显示 */
-  margin: 1em 0;          /* [Layout] 上下间距 */
+  /* margin: 1em 0; -- 已移除，改用 wrapper padding */
 }
 
 /* Frontmatter (元数据块) */
@@ -78,10 +80,12 @@
 }
 
 /* Table Widget (表格组件) */
+/* [FIX] 移除 margin，改由 JS wrapper + padding 控制间距 */
+/* margin 不计入 offsetHeight，会导致 CodeMirror 行号错位 */
 .cm-table-widget {
   width: 100%;            /* [Layout] 宽度占满容器 */
   border-collapse: collapse;
-  margin: 1em 0;          /* [Layout] 上下间距 */
+  /* margin: 1em 0; -- 已移除，改用 wrapper padding */
   font-size: 14px;
 }
 .cm-table-widget th,

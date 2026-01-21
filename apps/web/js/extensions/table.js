@@ -18,8 +18,16 @@ export class TableWidget extends WidgetType {
     }
     
     toDOM(view) {
+        // [FIX] 使用 wrapper + padding 代替 margin
+        // padding 计入 offsetHeight，确保 CodeMirror 行号对齐
+        const wrapper = document.createElement('div');
+        wrapper.style.paddingTop = '1rem';
+        wrapper.style.paddingBottom = '1rem';
+        wrapper.style.overflowX = 'auto';
+
         const table = document.createElement('table');
-        table.className = 'cm-table-widget w-full border-collapse my-4 text-sm';
+        // 移除 my-4，因为 wrapper 已用 padding 控制间距
+        table.className = 'cm-table-widget w-full border-collapse text-sm';
         
         // 渲染表头
         const thead = document.createElement('thead');
@@ -53,18 +61,19 @@ export class TableWidget extends WidgetType {
         });
         table.appendChild(tbody);
         
+        wrapper.appendChild(table);
         
         // [Fix RangeError] Handle selection manually
-        table.onclick = (e) => {
+        wrapper.onclick = (e) => {
             e.preventDefault();
-            const pos = view.posAtDOM(table);
+            const pos = view.posAtDOM(wrapper);
             if (pos !== null) {
                 view.dispatch({ selection: { anchor: pos } });
                 view.focus();
             }
         };
         
-        return table;
+        return wrapper;
     }
     
     eq(other) {

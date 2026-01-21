@@ -31,16 +31,25 @@ export class MathWidget extends WidgetType {
       span.innerText = "Error";
     }
 
-    // [Fix RangeError] Only need for Block Math
+    // [Block Math] 使用 wrapper + padding 代替 margin
+    // 这样 offsetHeight 能正确包含间距，确保行号对齐
     if (this.isBlock) {
-        span.onclick = (e) => {
+        const wrapper = document.createElement('div');
+        wrapper.style.paddingTop = '1rem';
+        wrapper.style.paddingBottom = '1rem';
+        wrapper.appendChild(span);
+        
+        // [Fix RangeError] Handle selection manually
+        wrapper.onclick = (e) => {
             e.preventDefault();
-            const pos = view.posAtDOM(span);
+            const pos = view.posAtDOM(wrapper);
             if (pos !== null) {
                 view.dispatch({ selection: { anchor: pos } });
                 view.focus();
             }
         };
+        
+        return wrapper;
     }
 
     return span;
@@ -72,9 +81,15 @@ function computeMathDecorations(state) {
       
       // 仅当光标未触碰时渲染 Widget
       if (!isCursorTouching) {
+        // [DEBUG] 验证 block: true 是否正确传递
+        if (isBlock) {
+            console.log("[Math Debug] Block math detected, creating decoration with block:", isBlock, "from:", r.from, "to:", r.to);
+        }
         widgets.push(
             Decoration.replace({ 
-                widget: new MathWidget(content, isBlock) 
+                widget: new MathWidget(content, isBlock),
+                // [NEW] block: true 让 Block Math 支持块级光标行为
+                block: isBlock
             }).range(r.from, r.to)
         );
       }
