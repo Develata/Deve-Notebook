@@ -153,11 +153,8 @@ export const hybridPlugin = ViewPlugin.fromClass(
                   return;
               }
               
-              // [FIX] CodeMark 在 FencedCode 内: 当光标不在时隐藏
+              // [FIX] CodeMark 在 FencedCode 内: 永远不隐藏 (User Request)
               if (node.name === "CodeMark" && parent && parent.name === "FencedCode") {
-                  if (!isCursorIn(parent.from, parent.to)) {
-                      widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.to));
-                  }
                   return;
               }
 
