@@ -60,36 +60,52 @@
 }
 
 /* 嵌套行间公式样式 (Nested Block Math) */
-/* 与 blockquote-depth 使用相同的 margin-left 递进 */
+/* 嵌套行间公式样式 (Nested Block Math) */
+/* 与 blockquote-depth 使用相同的样式策略：Padding + Gradient */
+
+/* Depth 1 */
 .cm-nested-math-depth-1 {
-  border-left: 3px solid #cbd5e1;
-  padding-left: 0.5rem;
-  margin-left: 0;
-  background-color: #f8fafc;
+  margin-left: 0 !important;
+  padding-left: 1.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important; /* 统一底色 */
+  background-image: linear-gradient(to right, #cbd5e1 3px, transparent 3px) !important;
 }
+
+/* Depth 2 */
 .cm-nested-math-depth-2 {
-  border-left: 3px solid #94a3b8;
-  padding-left: 0.5rem;
-  margin-left: 1.5rem;
-  background-color: #f1f5f9;
+  margin-left: 0 !important;
+  padding-left: 3rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 1.5rem, #94a3b8 1.5rem, #94a3b8 calc(1.5rem + 3px), transparent calc(1.5rem + 3px)) !important;
 }
+
+/* Depth 3 */
 .cm-nested-math-depth-3 {
-  border-left: 3px solid #64748b;
-  padding-left: 0.5rem;
-  margin-left: 3rem;
-  background-color: #e2e8f0;
+  margin-left: 0 !important;
+  padding-left: 4.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 3rem, #64748b 3rem, #64748b calc(3rem + 3px), transparent calc(3rem + 3px)) !important;
 }
+
+/* Depth 4 */
 .cm-nested-math-depth-4 {
-  border-left: 3px solid #475569;
-  padding-left: 0.5rem;
-  margin-left: 4.5rem;
-  background-color: #cbd5e1;
+  margin-left: 0 !important;
+  padding-left: 6rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 4.5rem, #475569 4.5rem, #475569 calc(4.5rem + 3px), transparent calc(4.5rem + 3px)) !important;
 }
+
+/* Depth 5 */
 .cm-nested-math-depth-5 {
-  border-left: 3px solid #334155;
-  padding-left: 0.5rem;
-  margin-left: 6rem;
-  background-color: #94a3b8;
+  margin-left: 0 !important;
+  padding-left: 7.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 6rem, #334155 6rem, #334155 calc(6rem + 3px), transparent calc(6rem + 3px)) !important;
 }
 
 /* Frontmatter (元数据块) */
@@ -166,37 +182,71 @@
   padding-left: 1rem; /* [Layout] 内容缩进 (避免紧贴左侧线) */
 }
 
-/* 递进式引用块边框 (Progressive Blockquote Depth) */
-/* 使用更高优先级覆盖 cm-blockquote-line 的样式 */
+/* 递进式引用块边框 (Simplified: Single Background, Padding Indent) */
+/* 核心改动：
+   1. margin-left: 0 (确保背景色铺满左侧，消除白色空隙)
+   2. padding-left: 深度 * 1.5rem
+   3. background-color: 统一浅灰色 (只在第一层渲染底色，之后保持一致)
+   4. border-left: 使用 linear-gradient 模拟垂直线条
+*/
+
+/* Depth 1 */
 .cm-line.cm-blockquote-depth-1 {
-  border-left: 3px solid #cbd5e1 !important;
-  padding-left: 0.5rem !important;
   margin-left: 0 !important;
-  background-color: #f8fafc !important;
+  padding-left: 1.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important; /* 统一底色 */
+  background-image: linear-gradient(to right, #cbd5e1 3px, transparent 3px) !important;
 }
+
+/* Depth 2 */
 .cm-line.cm-blockquote-depth-2 {
-  border-left: 3px solid #94a3b8 !important;
-  padding-left: 0.5rem !important;
-  margin-left: 1.5rem !important;
-  background-color: #f1f5f9 !important;
+  margin-left: 0 !important;
+  padding-left: 3rem !important; /* 1.5 * 2 */
+  border-left: none !important;
+  background-color: #f8fafc !important; /* 保持与 Depth 1 一致的底色 */
+  /* 在 1.5rem 处画第二条线 */
+  background-image: linear-gradient(to right, transparent 1.5rem, #94a3b8 1.5rem, #94a3b8 calc(1.5rem + 3px), transparent calc(1.5rem + 3px)) !important;
 }
+
+/* Depth 3 */
 .cm-line.cm-blockquote-depth-3 {
-  border-left: 3px solid #64748b !important;
-  padding-left: 0.5rem !important;
-  margin-left: 3rem !important;
-  background-color: #e2e8f0 !important;
+  margin-left: 0 !important;
+  padding-left: 4.5rem !important; /* 1.5 * 3 */
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  /* 在 3rem 处画第三条线 */
+  background-image: linear-gradient(to right, transparent 3rem, #64748b 3rem, #64748b calc(3rem + 3px), transparent calc(3rem + 3px)) !important;
 }
+
+/* Depth 4 */
 .cm-line.cm-blockquote-depth-4 {
-  border-left: 3px solid #475569 !important;
-  padding-left: 0.5rem !important;
-  margin-left: 4.5rem !important;
-  background-color: #cbd5e1 !important;
+  margin-left: 0 !important;
+  padding-left: 6rem !important; /* 1.5 * 4 */
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  /* 在 4.5rem 处画第四条线 */
+  background-image: linear-gradient(to right, transparent 4.5rem, #475569 4.5rem, #475569 calc(4.5rem + 3px), transparent calc(4.5rem + 3px)) !important;
 }
+
+/* Depth 5 */
 .cm-line.cm-blockquote-depth-5 {
-  border-left: 3px solid #334155 !important;
-  padding-left: 0.5rem !important;
-  margin-left: 6rem !important;
-  background-color: #94a3b8 !important;
+  margin-left: 0 !important;
+  padding-left: 7.5rem !important; /* 1.5 * 5 */
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  /* 在 6rem 处画第五条线 */
+  background-image: linear-gradient(to right, transparent 6rem, #334155 6rem, #334155 calc(6rem + 3px), transparent calc(6rem + 3px)) !important;
+}
+
+/* [FIX] 代码块背景填充 */
+/* 让代码块的背景色覆盖整个行 */
+.cm-line.cm-code-block-line {
+    border-left: none !important;
+    /* 恢复原本的代码块背景色 #f8f9fa */
+    background-color: #f8f9fa !important; 
+    background-clip: border-box; 
+    margin-left: 0 !important;
 }
 
 /* 列表圆点样式 (List Bullet Styling) */
