@@ -14,13 +14,35 @@ export function parseTable(tableText) {
     const lines = tableText.trim().split('\n');
     if (lines.length < 2) return null;
     
-    // 辅助函数：解析一行，移除首尾竖线并分割
+    // 辅助函数：解析一行，移除首尾竖线并分割 (Robust Split for escaped pipes \|)
     const parseRow = (line) => {
-        return line
-            .replace(/^\|/, '')
-            .replace(/\|$/, '')
-            .split('|')
-            .map(cell => cell.trim());
+        // 1. Trim surrounding pipes (careful not to trim escaped pipes at ends if that were possible, typically tables start/end with |)
+        // Simplification: Standard tables align with | ... |
+        
+        let content = line.trim();
+        if (content.startsWith('|')) content = content.substring(1);
+        if (content.endsWith('|') && !content.endsWith('\\|')) content = content.substring(0, content.length - 1);
+        
+        // 2. Split by | but ignore \|
+        const cells = [];
+        let currentCell = "";
+        
+        for (let j = 0; j < content.length; j++) {
+            const char = content[j];
+            
+            if (char === '\\' && j + 1 < content.length && content[j+1] === '|') {
+                currentCell += '|'; // Add literal pipe
+                j++; // Skip escaped char
+            } else if (char === '|') {
+                cells.push(currentCell.trim());
+                currentCell = "";
+            } else {
+                currentCell += char;
+            }
+        }
+        cells.push(currentCell.trim());
+        
+        return cells;
     };
     
     const headerRow = parseRow(lines[0]);

@@ -122,6 +122,16 @@ export const hybridPlugin = ViewPlugin.fromClass(
               }
             }
             
+            // [NEW] Escape 节点处理 - 隐藏反斜杠 (plan 文档要求)
+            // 当光标不在 Escape 节点范围内时，隐藏反斜杠，仅显示被转义的字符
+            if (node.name === "Escape") {
+                // Escape 节点通常包含 \ 和被转义的字符 (共2字符)
+                // 我们只隐藏反斜杠 (第一个字符)
+                if (!isCursorIn(node.from, node.to)) {
+                    widgets.push(Decoration.mark({ class: "cm-syntax-hidden" }).range(node.from, node.from + 1));
+                }
+            }
+            
             // Explicit Styling for Links
             if (node.name === "Link") {
                 // Keep the base styling (color/underline) for the whole link range
