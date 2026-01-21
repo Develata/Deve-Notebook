@@ -7,6 +7,7 @@
 import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
 import { findTableRanges } from "./table_parser.js";
+import { renderInline } from "./inline_renderer.js";
 
 /**
  * Table Widget (表格视图组件)
@@ -36,7 +37,8 @@ export class TableWidget extends WidgetType {
         
         this.tableData.header.forEach((cell, i) => {
             const th = document.createElement('th');
-            th.textContent = cell;
+            // [Rich Text] 使用 renderInline 支持 Math/Bold/Italic
+            renderInline(cell, th);
             th.className = "border border-gray-300 px-4 py-2 bg-gray-100 font-semibold";
             th.style.textAlign = this.tableData.alignments[i] || 'left';
             headerRow.appendChild(th);
@@ -52,7 +54,8 @@ export class TableWidget extends WidgetType {
             
             row.forEach((cell, i) => {
                 const td = document.createElement('td');
-                td.textContent = cell;
+                // [Rich Text] 使用 renderInline 支持 Math/Bold/Italic
+                renderInline(cell, td);
                 td.className = "border border-gray-300 px-4 py-2";
                 td.style.textAlign = this.tableData.alignments[i] || 'left';
                 tr.appendChild(td);
