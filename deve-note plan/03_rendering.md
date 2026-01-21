@@ -31,7 +31,9 @@
 ### Phase 2: Inline Level Parsing (行内解析)
 *   **Principle**: First come, first served (先匹配者优先)。高优先级元素内部 **MUST NOT** 渲染低优先级元素。
 1.  **Inline Code (` `)**: 优先级最高。解析器 **MUST** 优先消耗反引号。内部不解析转义字符、公式或样式标记 (e.g., `echo $PATH` 中的 `$` 被保护为普通字符)。
-2.  **Escaping (\)**: 次高。转义紧随其后的单个字符 (e.g., `\$100` 渲染为 `$100`)。
+2.  **Escaping (\)**: 次高。转义紧随其后的单个字符。
+    *   **MUST** 正确处理上下文相关的特殊转义：`\$` (Prevent Math), `\|` (Prevent Table Split), `\` (Literal Backslash)。
+    *   e.g., `\|` 在表格中应渲染为竖线而不切分单元格；`\$` 应渲染为美元符号不触发公式。
 3.  **Inline Math ($...$)**: 核心优先级。视为原子节点，内容传递给 LaTeX 引擎。受 Inline Code 和 Escaping 保护。
 4.  **Auto Link (<url>)**: 防止 URL 中的特殊字符触发格式解析。
 5.  **Containers (Links / Images)**: 允许内部嵌套样式 (e.g., Bold)。
@@ -94,6 +96,17 @@
     *   **Plugin API**: **MUST** 预留接口允许插件向菜单添加选项。
     *   **Empty State**: 如果没有选项，**MUST** 唤出一个空白菜单。
 
+### 5. 深度嵌套与混合列表 (The Nested Hell)
+
+*   **Definition**: 测试列表、引用、代码块与数学公式的混合递归嵌套能力。
+*   **Rendering Logic**: 渲染引擎 **MUST** 支持任意层级的递归嵌套 (Recursive Nesting)，不得出现渲染崩坏或样式错位。
+*   **Test Case Criteria (验收标准)**:
+    *   **Indentation (缩进)**: 每一层嵌套 **MUST** 具有清晰的视觉缩进 (Visual Indentation)，且对齐严格 (Pixel-Perfect Alignment)。
+    *   **Context Preservation (上下文保留)**:
+        *   引用块内的代码块 **MUST** 同时显示引用竖线与代码块背景。
+        *   列表项内的公式 **MUST** 正确对齐列表标记 (Bullet/Number)。
+    *   **Complexity Support**: 支持 List -> Blockquote -> List -> Code/Math 的混合结构 (如 "The Nested Hell" 示例)。
+
 ## Markdown 语法限制 (Syntax Whitelist)
 
 ### 块级元素 (Block Elements)
@@ -120,6 +133,7 @@
 *   **Emphasis**: **Bold** (`**` / `__`)，*Italic* (`*` / `_`)。
 *   **Strikethrough**: ~~Strike~~ (`~~`) (GFM)。
 *   **Escaping**: `\` (反斜杠转义)。
+    *   **Support**: `!`, `"`, `#`, `$`, `%`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `-`, `.`, `/`, `:`, `;`, `<`, `=`, `>`, `?`, `@`, `[`, `\`, `]`, `^`, `_`, `` ` ``, `{`, `|`, `}`, `~`.
 
 ## 本章相关命令
 
