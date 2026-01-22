@@ -32,8 +32,8 @@ export const blockStyling = ViewPlugin.fromClass(
         from,
         to,
         enter: (node) => {
-          // 只处理 FencedCode (Blockquote 由 blockquote_border.js 处理)
-          if (node.name === "FencedCode") {
+          // 处理 FencedCode, IndentedCode 和通用的 CodeBlock
+          if (["FencedCode", "IndentedCode", "CodeBlock"].includes(node.name)) {
              let doc = view.state.doc;
              let startLine = doc.lineAt(node.from);
              let endLine = doc.lineAt(node.to);

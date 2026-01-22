@@ -65,7 +65,8 @@ export const blockquoteBorderPlugin = ViewPlugin.fromClass(
                 
                 if (depth > 0) {
                     // 添加深度样式 (Line Decoration)
-                    const effectiveDepth = Math.min(depth, 5);
+                    // [Update] 支持最高 10 层嵌套 (用户请求)
+                    const effectiveDepth = Math.min(depth, 10);
                     const className = `cm-blockquote-depth-${effectiveDepth}`;
                     widgets.push(
                         Decoration.line({ class: className }).range(line.from)

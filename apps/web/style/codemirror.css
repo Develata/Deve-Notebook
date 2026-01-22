@@ -108,6 +108,51 @@
   background-image: linear-gradient(to right, transparent 6rem, #334155 6rem, #334155 calc(6rem + 3px), transparent calc(6rem + 3px)) !important;
 }
 
+/* Depth 6 */
+.cm-nested-math-depth-6 {
+  margin-left: 0 !important;
+  padding-left: 9rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 7.5rem, #1e293b 7.5rem, #1e293b calc(7.5rem + 3px), transparent calc(7.5rem + 3px)) !important;
+}
+
+/* Depth 7 */
+.cm-nested-math-depth-7 {
+  margin-left: 0 !important;
+  padding-left: 10.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 9rem, #0f172a 9rem, #0f172a calc(9rem + 3px), transparent calc(9rem + 3px)) !important;
+}
+
+/* Depth 8 */
+.cm-nested-math-depth-8 {
+  margin-left: 0 !important;
+  padding-left: 12rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 10.5rem, #000000 10.5rem, #000000 calc(10.5rem + 3px), transparent calc(10.5rem + 3px)) !important;
+}
+
+/* Depth 9 */
+.cm-nested-math-depth-9 {
+  margin-left: 0 !important;
+  padding-left: 13.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 12rem, #000000 12rem, #000000 calc(12rem + 3px), transparent calc(12rem + 3px)) !important;
+}
+
+/* Depth 10 */
+.cm-nested-math-depth-10 {
+  margin-left: 0 !important;
+  padding-left: 15rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 13.5rem, #000000 13.5rem, #000000 calc(13.5rem + 3px), transparent calc(13.5rem + 3px)) !important;
+}
+
 /* Frontmatter (元数据块) */
 .cm-frontmatter-block {
   background-color: #f8f9fa; /* [Style] 浅灰背景 (匹配代码块) */
@@ -239,14 +284,147 @@
   background-image: linear-gradient(to right, transparent 6rem, #334155 6rem, #334155 calc(6rem + 3px), transparent calc(6rem + 3px)) !important;
 }
 
-/* [FIX] 代码块背景填充 */
-/* 让代码块的背景色覆盖整个行 */
+/* Depth 6 */
+.cm-line.cm-blockquote-depth-6 {
+  margin-left: 0 !important;
+  padding-left: 9rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 7.5rem, #1e293b 7.5rem, #1e293b calc(7.5rem + 3px), transparent calc(7.5rem + 3px)) !important;
+}
+
+/* Depth 7 */
+.cm-line.cm-blockquote-depth-7 {
+  margin-left: 0 !important;
+  padding-left: 10.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 9rem, #0f172a 9rem, #0f172a calc(9rem + 3px), transparent calc(9rem + 3px)) !important;
+}
+
+/* Depth 8 */
+.cm-line.cm-blockquote-depth-8 {
+  margin-left: 0 !important;
+  padding-left: 12rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 10.5rem, #000000 10.5rem, #000000 calc(10.5rem + 3px), transparent calc(10.5rem + 3px)) !important;
+}
+
+/* Depth 9 */
+.cm-line.cm-blockquote-depth-9 {
+  margin-left: 0 !important;
+  padding-left: 13.5rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 12rem, #000000 12rem, #000000 calc(12rem + 3px), transparent calc(12rem + 3px)) !important;
+}
+
+/* Depth 10 */
+.cm-line.cm-blockquote-depth-10 {
+  margin-left: 0 !important;
+  padding-left: 15rem !important;
+  border-left: none !important;
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(to right, transparent 13.5rem, #000000 13.5rem, #000000 calc(13.5rem + 3px), transparent calc(13.5rem + 3px)) !important;
+}
+
+/* [FIX] 代码块背景填充与缩进 */
+/* 
+   为了让代码块背景色“缩进”（即只覆盖内容区，不覆盖左侧引用边框区域），
+   我们需要利用 background-image 的多层渐变。
+   底层：引用块统一底色 (background-color)
+   上层：1. 边框线 (保留之前的 gradient)
+        2. 代码块背景色 (使用 gradient 从 padding 处开始渲染)
+*/
+
+/* 通用代码块样式 (无嵌套时) */
 .cm-line.cm-code-block-line {
-    border-left: none !important;
-    /* 恢复原本的代码块背景色 #f8f9fa */
-    background-color: #f8f9fa !important; 
-    background-clip: border-box; 
+    background-color: rgb(229, 231, 232) !important;
     margin-left: 0 !important;
+}
+
+/* 嵌套代码块特定样式 (Depth 1-5) */
+/* 注意：必须重写 background-image 以包含边框和代码背景 */
+
+/* Depth 1: Padding 1.5rem */
+.cm-line.cm-blockquote-depth-1.cm-code-block-line {
+    background-color: #f8fafc !important; /* 引用底色 */
+    background-image: 
+        linear-gradient(to right, #cbd5e1 3px, transparent 3px), /* 边框 */
+        linear-gradient(to right, transparent 1.5rem, rgb(229, 231, 232) 1.5rem) !important; /* 代码背景 */
+}
+
+/* Depth 2: Padding 3rem */
+.cm-line.cm-blockquote-depth-2.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 1.5rem, #94a3b8 1.5rem, #94a3b8 calc(1.5rem + 3px), transparent calc(1.5rem + 3px)),
+        linear-gradient(to right, transparent 3rem, rgb(229, 231, 232) 3rem) !important;
+}
+
+/* Depth 3: Padding 4.5rem */
+.cm-line.cm-blockquote-depth-3.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 3rem, #64748b 3rem, #64748b calc(3rem + 3px), transparent calc(3rem + 3px)),
+        linear-gradient(to right, transparent 4.5rem, rgb(229, 231, 232) 4.5rem) !important;
+}
+
+/* Depth 4: Padding 6rem */
+.cm-line.cm-blockquote-depth-4.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 4.5rem, #475569 4.5rem, #475569 calc(4.5rem + 3px), transparent calc(4.5rem + 3px)),
+        linear-gradient(to right, transparent 6rem, rgb(229, 231, 232) 6rem) !important;
+}
+
+/* Depth 5: Padding 7.5rem */
+.cm-line.cm-blockquote-depth-5.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 6rem, #334155 6rem, #334155 calc(6rem + 3px), transparent calc(6rem + 3px)),
+        linear-gradient(to right, transparent 7.5rem, rgb(229, 231, 232) 7.5rem) !important;
+}
+
+/* Depth 6: Padding 9rem */
+.cm-line.cm-blockquote-depth-6.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 7.5rem, #1e293b 7.5rem, #1e293b calc(7.5rem + 3px), transparent calc(7.5rem + 3px)),
+        linear-gradient(to right, transparent 9rem, rgb(229, 231, 232) 9rem) !important;
+}
+
+/* Depth 7: Padding 10.5rem */
+.cm-line.cm-blockquote-depth-7.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 9rem, #0f172a 9rem, #0f172a calc(9rem + 3px), transparent calc(9rem + 3px)),
+        linear-gradient(to right, transparent 10.5rem, rgb(229, 231, 232) 10.5rem) !important;
+}
+
+/* Depth 8: Padding 12rem */
+.cm-line.cm-blockquote-depth-8.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 10.5rem, #000000 10.5rem, #000000 calc(10.5rem + 3px), transparent calc(10.5rem + 3px)),
+        linear-gradient(to right, transparent 12rem, rgb(229, 231, 232) 12rem) !important;
+}
+
+/* Depth 9: Padding 13.5rem */
+.cm-line.cm-blockquote-depth-9.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 12rem, #000000 12rem, #000000 calc(12rem + 3px), transparent calc(12rem + 3px)),
+        linear-gradient(to right, transparent 13.5rem, rgb(229, 231, 232) 13.5rem) !important;
+}
+
+/* Depth 10: Padding 15rem */
+.cm-line.cm-blockquote-depth-10.cm-code-block-line {
+    background-color: #f8fafc !important;
+    background-image: 
+        linear-gradient(to right, transparent 13.5rem, #000000 13.5rem, #000000 calc(13.5rem + 3px), transparent calc(13.5rem + 3px)),
+        linear-gradient(to right, transparent 15rem, rgb(229, 231, 232) 15rem) !important;
 }
 
 /* 列表圆点样式 (List Bullet Styling) */
