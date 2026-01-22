@@ -1,0 +1,43 @@
+/**
+ * _variables.css - CSS 变量定义
+ * 
+ * 集中管理编辑器的颜色、间距、字体等设计令牌。
+ * 修改此文件可全局调整编辑器外观。
+ */
+
+:root {
+  /* ==================== 基础颜色 ==================== */
+  --editor-bg: #ffffff;           /* 编辑器背景色 */
+  --editor-text: #1e293b;         /* 主文本颜色 (slate-800) */
+  --editor-muted: #64748b;        /* 次要文本颜色 (slate-500) */
+  --editor-border: #e2e8f0;       /* 边框颜色 (slate-200) */
+
+  /* ==================== 引用块样式 ==================== */
+  --bq-indent-step: 1.5rem;       /* 每层缩进步长 */
+  --bq-border-width: 3px;         /* 左边框宽度 */
+  --bq-bg-color: #f8fafc;         /* 引用块统一背景色 */
+
+  /* 边框颜色 (按深度递进变暗) */
+  --bq-border-1: #cbd5e1;
+  --bq-border-2: #94a3b8;
+  --bq-border-3: #64748b;
+  --bq-border-4: #475569;
+  --bq-border-5: #334155;
+  --bq-border-6: #1e293b;
+  --bq-border-7: #0f172a;
+  --bq-border-8: #000000;
+  --bq-border-9: #000000;
+  --bq-border-10: #000000;
+
+  /* ==================== 代码块样式 ==================== */
+  --code-bg-color: rgb(229, 231, 232);  /* 代码块背景色 */
+  --code-font: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+
+  /* ==================== 链接样式 ==================== */
+  --link-color: #2563eb;          /* 链接颜色 (blue-600) */
+  --link-hover: #1d4ed8;          /* 链接悬停颜色 (blue-700) */
+
+  /* ==================== 选择高亮 ==================== */
+  --selection-bg: rgba(59, 130, 246, 0.4);  /* 选择背景色 */
+  --selection-bg-block: rgba(59, 130, 246, 0.5);  /* 块内选择背景色 */
+}

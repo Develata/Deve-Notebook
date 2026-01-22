@@ -1,0 +1,60 @@
+/**
+ * _math.css - 数学公式样式
+ * 
+ * 行内公式和行间公式的渲染样式。
+ * 嵌套在引用块内的公式使用与引用块相同的缩进策略。
+ */
+
+/* ==================== 公式组件基础样式 ==================== */
+.cm-math-widget {
+  display: inline-block;
+  background: #eee;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ==================== 行间公式样式 ==================== */
+/* 移除 margin，改由 JS wrapper + padding 控制间距 */
+.cm-math-widget.cm-block-math {
+  display: block;
+  text-align: center;
+}
+
+/* ==================== 嵌套公式深度定义 ==================== */
+.cm-nested-math-depth-1  { --depth: 1;  --border-color: var(--bq-border-1); }
+.cm-nested-math-depth-2  { --depth: 2;  --border-color: var(--bq-border-2); }
+.cm-nested-math-depth-3  { --depth: 3;  --border-color: var(--bq-border-3); }
+.cm-nested-math-depth-4  { --depth: 4;  --border-color: var(--bq-border-4); }
+.cm-nested-math-depth-5  { --depth: 5;  --border-color: var(--bq-border-5); }
+.cm-nested-math-depth-6  { --depth: 6;  --border-color: var(--bq-border-6); }
+.cm-nested-math-depth-7  { --depth: 7;  --border-color: var(--bq-border-7); }
+.cm-nested-math-depth-8  { --depth: 8;  --border-color: var(--bq-border-8); }
+.cm-nested-math-depth-9  { --depth: 9;  --border-color: var(--bq-border-9); }
+.cm-nested-math-depth-10 { --depth: 10; --border-color: var(--bq-border-10); }
+
+/* ==================== 嵌套公式通用样式 ==================== */
+[class*="cm-nested-math-depth-"] {
+  margin-left: 0 !important;
+  border-left: none !important;
+  background-color: var(--bq-bg-color) !important;
+  padding-left: calc(var(--bq-indent-step) * var(--depth)) !important;
+  
+  /* gradient 绘制边框线 */
+  background-image: linear-gradient(
+    to right,
+    transparent calc(var(--bq-indent-step) * (var(--depth) - 1)),
+    var(--border-color) calc(var(--bq-indent-step) * (var(--depth) - 1)),
+    var(--border-color) calc(var(--bq-indent-step) * (var(--depth) - 1) + var(--bq-border-width)),
+    transparent calc(var(--bq-indent-step) * (var(--depth) - 1) + var(--bq-border-width))
+  ) !important;
+}
+
+/* ==================== Depth 1 特殊处理 ==================== */
+.cm-nested-math-depth-1 {
+  background-image: linear-gradient(
+    to right,
+    var(--bq-border-1) var(--bq-border-width),
+    transparent var(--bq-border-width)
+  ) !important;
+}

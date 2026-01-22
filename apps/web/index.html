@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deve-Note</title>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
-    <link data-trunk rel="css" href="style/codemirror.css" />
+    <!-- 编辑器样式模块 (按依赖顺序加载) -->
+    <link data-trunk rel="css" href="style/_variables.css" />
+    <link data-trunk rel="css" href="style/_base.css" />
+    <link data-trunk rel="css" href="style/_blockquote.css" />
+    <link data-trunk rel="css" href="style/_code-block.css" />
+    <link data-trunk rel="css" href="style/_math.css" />
+    <link data-trunk rel="css" href="style/_typography.css" />
+    <link data-trunk rel="css" href="style/_widgets.css" />
+    <link data-trunk rel="css" href="style/_selection.css" />
     <!-- Copy the adapter file directly to root -->
     <!-- Copy the JS directory containing modules -->
     <link data-trunk rel="copy-dir" href="js" />

@@ -1,0 +1,31 @@
+/**
+ * _selection.css - 选择高亮样式
+ * 
+ * 使用浏览器原生选择机制的样式定义。
+ * 这种方法比 CodeMirror 的 drawSelection() 更可靠，不会在滚动时消失。
+ */
+
+/* ==================== 编辑器文本选择 ==================== */
+.cm-editor ::selection {
+  background-color: var(--selection-bg) !important;
+  color: inherit;
+}
+
+.cm-editor ::-moz-selection {
+  background-color: var(--selection-bg) !important;
+  color: inherit;
+}
+
+/* ==================== 特殊块内的选择 ==================== */
+/* 代码块、引用块、Frontmatter 内的选择使用更深的背景色 */
+.cm-code-block-line ::selection,
+.cm-blockquote-line ::selection,
+.cm-frontmatter-block ::selection {
+  background-color: var(--selection-bg-block) !important;
+}
+
+.cm-code-block-line ::-moz-selection,
+.cm-blockquote-line ::-moz-selection,
+.cm-frontmatter-block ::-moz-selection {
+  background-color: var(--selection-bg-block) !important;
+}

@@ -1,0 +1,38 @@
+/**
+ * _widgets.css - 组件样式
+ * 
+ * 表格、复选框等交互组件的样式。
+ */
+
+/* ==================== 表格组件 ==================== */
+.cm-table-widget {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cm-table-widget th,
+.cm-table-widget td {
+  border: 1px solid var(--editor-border);
+  padding: 8px 12px;
+}
+
+.cm-table-widget th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #334155;
+}
+
+.cm-table-widget tbody tr:nth-child(even) {
+  background: var(--bq-bg-color);
+}
+
+.cm-table-widget tbody tr:hover {
+  background: #e0f2fe;
+}
+
+/* ==================== 复选框组件 ==================== */
+.cm-checkbox-widget {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}

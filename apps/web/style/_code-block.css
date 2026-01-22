@@ -1,0 +1,83 @@
+/**
+ * _code-block.css - 代码块样式
+ * 
+ * 包括普通代码块和嵌套在引用块内的代码块。
+ * 嵌套时使用多层 gradient 实现背景色分层渲染。
+ */
+
+/* ==================== 通用代码块样式 ==================== */
+.cm-line.cm-code-block-line {
+  background-color: var(--code-bg-color) !important;
+  margin-left: 0 !important;
+  border-radius: 0;
+}
+
+/* 代码块首尾圆角 */
+.cm-code-block-start {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.cm-code-block-end {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+/* ==================== 嵌套代码块样式 ==================== */
+/* 当代码块位于引用块内时，需要同时渲染边框线和代码背景 */
+.cm-line[class*="cm-blockquote-depth-"].cm-code-block-line {
+  background-color: var(--bq-bg-color) !important;
+  background-image:
+    /* 第一层：边框线 */
+    linear-gradient(
+      to right,
+      transparent calc(var(--bq-indent-step) * (var(--depth) - 1)),
+      var(--border-color) calc(var(--bq-indent-step) * (var(--depth) - 1)),
+      var(--border-color) calc(var(--bq-indent-step) * (var(--depth) - 1) + var(--bq-border-width)),
+      transparent calc(var(--bq-indent-step) * (var(--depth) - 1) + var(--bq-border-width))
+    ),
+    /* 第二层：代码背景色 (从 padding 处开始) */
+    linear-gradient(
+      to right,
+      transparent calc(var(--bq-indent-step) * var(--depth)),
+      var(--code-bg-color) calc(var(--bq-indent-step) * var(--depth))
+    ) !important;
+}
+
+/* ==================== Depth 1 代码块特殊处理 ==================== */
+.cm-line.cm-blockquote-depth-1.cm-code-block-line {
+  background-image:
+    linear-gradient(
+      to right,
+      var(--bq-border-1) var(--bq-border-width),
+      transparent var(--bq-border-width)
+    ),
+    linear-gradient(
+      to right,
+      transparent var(--bq-indent-step),
+      var(--code-bg-color) var(--bq-indent-step)
+    ) !important;
+}
+
+/* ==================== 行内代码样式 ==================== */
+.cm-inline-code {
+  background-color: #f1f5f9;     /* slate-100 */
+  color: #1e293b;                /* slate-800 */
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: var(--code-font);
+  font-size: 1em;
+}
+
+/* ==================== Frontmatter 元数据块 ==================== */
+.cm-frontmatter-block {
+  background-color: #f8f9fa;
+  font-family: var(--code-font);
+  font-size: 0.85em;
+  color: var(--editor-muted);
+}
+
+.cm-frontmatter-delim {
+  color: #cbd5e1;
+  font-weight: bold;
+}
