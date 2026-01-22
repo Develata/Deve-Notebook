@@ -181,11 +181,21 @@ impl TreeManager {
 
     /// 从根节点构建完整树
     fn build_tree_from_root(&self) -> Vec<FileNode> {
-        self.nodes
+        let mut roots: Vec<FileNode> = self
+            .nodes
             .iter()
             .filter(|(_, info)| info.parent_path.is_empty())
             .filter_map(|(path, _)| self.build_subtree(path))
-            .collect()
+            .collect();
+
+        // [FIX] 对根目录也进行排序 (文件夹优先，然后按字母顺序)
+        roots.sort_by(|a, b| match (a.is_folder(), b.is_folder()) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        });
+
+        roots
     }
 
     /// 递归构建子树
