@@ -21,8 +21,11 @@
 ## 访问控制 (Access Control)
 
 *   **Model**: **Single-User / Owner-Only**。
-    *   系统被设计为私人笔记服务，默认仅有一个超级管理员账户。
-    *   **Multi-User Strategy**: 若需支持多用户，**SHOULD** 采用 **多实例部署 (Multi-Instance / Process-Isolation)** 方案。即为每个用户启动一个独立的 Server 进程/容器，监听不同端口，数据路径物理隔离。这是最简单且安全的扩展方式。
+    *   **Algorithm**: `Argon2` (Pass hash) + `Ed25519` (Node Identity).
+    *   **PeerID**: 基于公钥生成的唯一标识 (Hash of Public Key).
+        *   **Implementation**: `SHA256(PublicKey)[0..12]` (Hex string).
+        *   **Key Storage**: Private Key (Seed) stored in `vault/.deve/identity.key`.
+    *   **Verification**: 握手消息 (Hello) 必须包含 Ed25519 签名，由接收方使用 PubKey 验证。
 *   **Localhost Policy**:
     *   当通过 `localhost` 或 `127.0.0.1` 访问时，**MAY** 允许免密登录或自动填充默认凭据（Dev Mode），但必须有明确的配置开关 `AUTH_ALLOW_ANONYMOUS_LOCALHOST`。
 

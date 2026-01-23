@@ -23,6 +23,29 @@
         *   **Name Resolution**: 前端可传递 `RepoName` 或 `PeerName`，但后端必须先解析为 `RepoUUID` 或 `PeerUUID` 再执行文件系统操作。
     *   **Repo Instance Selection**: 当用户切换 Branch (Peer Identity) 时，前端展示该 Branch 下所有可用的 **Repo Instances**。
 
+## 树状态管理器 (Tree State Manager)
+
+*   **Implementation**: `crates/core/src/tree/manager.rs`
+*   **Data Structure**:
+    *   **Core**: `HashMap<String, NodeInfo>` (Flat Map with Path Keys).
+    *   **NodeInfo**:
+        ```rust
+        struct NodeInfo {
+            name: String,
+            doc_id: Option<DocId>, // None for pure folders
+            parent_path: String,
+            children_paths: Vec<String>,
+        }
+        ```
+    *   **Advantages**: 扁平化存储使得 `Rename` 操作需递归更新子节点路径，但在 `Lookup` 时达到 O(1) 效率。
+*   **TreeDelta Generation**:
+    *   **Add**: `TreeDelta::add_file` / `add_folder`.
+    *   **Remove**: `TreeDelta::remove`. 自动递归删除子节点。
+    *   **Rename**: `TreeDelta::rename`. 自动处理子树路径重写。
+*   **Sorting Logic**:
+    *   构建树视图 (`build_tree_from_root`) 时，严格遵循：**Folder First** > **Alphabetical (Case-Insensitive)**。
+*   **Initialization**: 服务启动时，通过 `RepoManager::list_docs` 遍历 `docid_to_path` 表进行全量加载。
+
 ## 严格分支策略 (Strict Branching Policy)
 
 *   **Logic**: "Branch" 对应 "Writer Identity"，即 Peer 的数据集合 (Folder)。

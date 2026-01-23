@@ -15,6 +15,17 @@
 
 ## 连接与协议 (Connection & Protocol)
 
+### WebSocket 协议类型 (Protocol Types)
+*   **Format (格式)**: 节点间 (Server-to-Server) 使用 **Bincode** 以确保性能；客户端与服务端 (Client-Server) 使用 **JSON** 以便调试。
+*   **ClientMessage (客户端消息)**:
+    *   `SyncHello`, `SyncRequest`, `SyncPush`: P2P 同步协议消息。
+    *   `Edit`, `Cursor`, `OpenDoc`, `CreateDoc`: 编辑器操作消息。
+    *   `PluginCall`: 远程插件调用请求。
+*   **ServerMessage (服务端消息)**:
+    *   `TreeDelta`: 文件树增量更新。
+    *   `NewOp`: 实时协作操作事件。
+    *   `Snapshot`: 完整文档内容快照。
+
 ### Peer Identity & Handshake (身份与握手)
 
 *   **Setup (初始化)**: 用户在设置中配置 `Name` (e.g., "My iPad")。

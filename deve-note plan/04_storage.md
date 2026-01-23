@@ -26,7 +26,16 @@
     *   **Filename Rules**:
         *   文件名 **MUST** 是人类可读的 `repo_name.redb`。
         *   **Conflict Strategy**: 若同个 Branch 下出现同名但不同 URL 的 Repo，必须自动重命名 (e.g., `wiki.redb` -> `wiki-1.redb`)。
-    *   **Indexing**: 系统维护 `RepoURL -> List<InstanceUUID>` 索引。前端使用 Name -> 解析为 UUID -> 执行操作。
+    *   **Indexing**: 系统使用 Redb 维护多组映射表以实现 `O(1)` 双向查找：
+        *   `DOCID_TO_PATH`: `u128 -> &str` (DocId 溯源)
+        *   `PATH_TO_DOCID`: `&str -> u128` (路径解析)
+        *   `INODE_TO_DOCID`: `u128 -> u128` (重命名追踪)
+    *   **Op Log (操作日志)**:
+        *   `LEDGER_OPS`: `u64 -> &[u8]` (全局有序日志, Key=SeqNo, Value=Bincode Serialized Entry)
+        *   `DOC_OPS`: `u128 -> [u64]` (Multimap, 允许快速检索单一文档的所有变更 Seq)
+    *   **Atomic Sequence (原子序号)**:
+        *   `PEER_DOC_SEQ`: `(DocId, PeerId) -> u64`。用于生成严格单调递增的 `OpSeq`，防止并发冲突。
+*   **Virtual Backup**: TBD.
 *   **Virtual Backup**: 针对每个 Repo Instance (`.redb`) 可存在对应的只读快照。
 
 ## Repository Manager (仓库管理器)
@@ -34,7 +43,7 @@
 * **职责**：管理 `Local Repo` (Store B) 和 `Shadow Repos` (Store C)。
 * **Routing**：VFS 根据 UI 上下文路由到对应的 `.redb` 实例。
 * **Snapshot Strategy**:
-    *   **Dual-Table Structure**: 为了优化性能，快照存储拆分为两个表：
+    *   **Dual-Table Structure**: 为了优化性能，快照存储拆分为两个表 (verified in `schema.rs`):
         *   `SNAPSHOT_INDEX`: 索引表 (`DocId -> [SeqNo]`)，用于快速检索历史版本号。
         *   `SNAPSHOT_DATA`: 数据表 (`SeqNo -> ContentBlob`)，存储实际快照内容。
     *   **Pruning**: 每个 Repo 独立维护自己的 Snapshot 链，并根据配置深度 (`snapshot_depth`) 进行自动修剪。

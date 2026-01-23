@@ -72,6 +72,10 @@
 *   **Interactive Task Lists (交互式任务列表)**:
     *   **Syntax**: `- [ ]` / `- [x]`.
     *   **Behavior**: 渲染为可点击的 Checkbox，点击即修改源码。
+*   **List Markers (列表标记)**:
+    *   **Target**: Bullet lists (`-`, `*`) and Ordered lists (`1.`).
+    *   **Behavior**: 将 Markdown 标记 (`-`) 替换为视觉符号 (e.g., `○` or `•`)，有序列表保持数字。
+    *   **Implementation**: `list_marker.js` (Decoration Widget).
 *   **Inline Images (行内图片)**:
     *   **Syntax**: `![alt](url)`.
     *   **Behavior**: 渲染为受限宽高的行内图片 (`max-height: 400px`)。
@@ -101,11 +105,13 @@
 *   **Definition**: 测试列表、引用、代码块与数学公式的混合递归嵌套能力。
 *   **Rendering Logic**: 渲染引擎 **MUST** 支持任意层级的递归嵌套 (Recursive Nesting)，不得出现渲染崩坏或样式错位。
 *   **Test Case Criteria (验收标准)**:
-    *   **Indentation (缩进)**: 每一层嵌套 **MUST** 具有清晰的视觉缩进 (Visual Indentation)，且对齐严格 (Pixel-Perfect Alignment)。
+    *   **Indentation (缩进)**: 每一层嵌套 **MUST** 具有清晰的视觉缩进 (Visual Indentation)。
+        *   **Implementation**: 使用 CSS Variable `--depth` 结合 `linear-gradient` 动态计算背景。
+        *   **Formula**: `calc(var(--bq-indent-step) * (var(--depth) - 1))` 用于计算边框线偏移量。
     *   **Context Preservation (上下文保留)**:
-        *   引用块内的代码块 **MUST** 同时显示引用竖线与代码块背景。
-        *   列表项内的公式 **MUST** 正确对齐列表标记 (Bullet/Number)。
-    *   **Complexity Support**: 支持 List -> Blockquote -> List -> Code/Math 的混合结构 (如 "The Nested Hell" 示例)。
+        *   引用块内的代码块 **MUST** 使用多层背景 (`background-image`) 叠加：底层为引用块边框线，顶层为代码块背景色。
+        *   具体逻辑见 `apps/web/style/_code-block.css`.
+    *   **Complexity Support**: 支持 List -> Blockquote -> List -> Code/Math 的混合结构。
 
 ## Markdown 语法限制 (Syntax Whitelist)
 

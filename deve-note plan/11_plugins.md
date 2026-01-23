@@ -23,6 +23,12 @@
 
 ### 3. 通用插件协议 (Plugin Protocol)
 *   **ABI Lifecycle**: Manifest -> Install -> Activate -> Events.
+*   **Manifest (清单)**: 结构体位于 `crates/core/src/plugin/manifest.rs`.
+    *   Fields: `id`, `name`, `version`, `entry` (脚本入口路径).
+    *   **Capabilities (权限能力)**:
+        *   `allow_net`: 域名白名单 (精确匹配).
+        *   `allow_fs_read` / `allow_fs_write`: 路径白名单 (前缀匹配, 自动标准化).
+        *   `allow_env`: 环境变量白名单.
 *   **Host Functions**: 受控 API，必须 Capability 校验 (default deny)。
 *   **RPC Bridge**: 前端 `client.call` -> WebSocket -> 后端插件。
 *   **Resource Quotas**: CPU/Mem/Timeout 可配。

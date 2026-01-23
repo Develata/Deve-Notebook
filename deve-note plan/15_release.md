@@ -20,15 +20,20 @@
 1.  **Stable (稳定版)**:
     *   Tag: `v1.0.0`
     *   频率: 仅当 Milestone 完成且通过所有测试后发布。
+    *   Artifacts: Binaries, Docker Image (`latest`, `v1.0.0`).
     *   适用: 生产环境。
 2.  **Nightly (每日构建)**:
-    *   Tag: `nightly-yyyyMMdd`
+    *   Tag: `nightly` (Rolling), `nightly-yyyyMMdd`
     *   频率: 每日 `main` 分支构建。
+    *   Artifacts: Docker Image (`nightly`), Binaries (Optional).
     *   适用: 尝鲜用户，QA 测试。
 
 ## 2. CI/CD Pipelines (自动化流程)
 
 基于 GitHub Actions 实现全自动构建。
+
+> [!NOTE]
+> **Status (状态)**: 计划中 (Planned). (CI 工作流尚未在 `.github/workflows` 中实现)。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
@@ -39,11 +44,22 @@
     4.  **Bundle (Tauri)**: `npm run tauri build`.
     5.  **Sign**: 调用 macOS Notary / Windows SignTool。
     6.  **Upload**: 上传 Artifacts 至 GitHub Releases。
-    7.  **Docker Push**: 构建并推送镜像至 GHCR (`ghcr.io/Develata/deve-server:latest`).
+    7.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
+        *   **Registry**: GHCR (`ghcr.io`).
+        *   **Platforms**: `linux/amd64`, `linux/arm64`.
+        *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
-### 2.2 Security & Signing (安全签名)
+### 2.2 Workflow: `nightly.yml`
+*   **Trigger**: Schedule (Daily 00:00 UTC) or Push to `main`.
+*   **Steps**:
+    1.  **Build & Test**: 确保代码库健康。
+    2.  **Docker Push**: 构建并推送 Nightly 镜像。
+        *   **Tags**: `nightly` (Updated daily).
+
+### 2.3 Security & Signing (安全签名)
 *   **macOS**: 必须配置 `APPLE_SIGNING_IDENTITY` 和 `APPLE_PROVIDER_SHORT_NAME` 以通过 Gatekeeper。
 *   **Update**: 使用 Tauri Updater 机制，公钥 (`pubkey.pem`) 硬编码在客户端，私钥仅在 CI Secret 中。
+*   **Container**: 镜像使用 GitHub Actor 签名 (Keyless signing with Sigstore/Cosign optional).
 
 ## 3. Versioning (版本规范)
 
@@ -62,7 +78,43 @@
 
 *   **MIT License**: 允许任何人免费使用、修改、分发甚至闭源商用，仅需在副本中包含原作者的版权声明。
 
-## 5. Checklist for Release (发布清单)
+## 5. Docker Deployment (容器化部署)
+
+支持通过 OCI 容器在服务器或 NAS 环境中运行 `deve-server`。
+
+### 5.1 Run with Docker CLI
+```bash
+docker run -d \
+  --name deve-server \
+  -p 3000:3000 \
+  -v $(pwd)/data:/data \
+  -e DEVE_VAULT_PATH=/data/vault \
+  ghcr.io/develata/deve-server:latest
+```
+
+### 5.2 Run with Docker Compose
+```yaml
+version: '3.8'
+services:
+  deve-server:
+    image: ghcr.io/develata/deve-note:latest
+    container_name: deve-server
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - DEVE_BIND_ADDR=0.0.0.0:3000
+      - DEVE_VAULT_PATH=/data/vault
+```
+
+### 5.3 Build Strategy
+*   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).
+*   **Builder**: `rust:1.80-bookworm` (Multi-stage build).
+*   **Optimization**: 使用 `cargo-chef` 缓存依赖构建层。
+
+## 6. Checklist for Release (发布清单)
 
 发布前 (Pre-flight Check) 必须确认：
 

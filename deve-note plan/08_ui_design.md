@@ -147,10 +147,14 @@
 ## 6. 组件组织与扩展规范 (Component Organization)
 
 *   **File Structure (文件结构)**:
-    *   `apps/web/src/components/command_palette/`: **Command Palette** 专用目录。
-    *   `apps/web/src/components/branch_switcher/`: **Branch Switcher** 专用目录。
-    *   `apps/web/src/components/quick_open/`: **Open Document** 专用目录。
-    *   `apps/web/src/components/search_box/`: **Core Unified Search Box** 基础组件目录。
+    *   `apps/web/src/components/`
+        *   `activity_bar/`: 活动栏组件 (Activity Bar items)。
+        *   `sidebar/`: 文件资源管理器与操作 (File explorer & actions)。
+        *   `editor/`: CodeMirror 编辑器封装 (CodeMirror wrapper)。
+        *   `diff_view/`: 并排差异对比视图 (Side-by-side diff)。
+        *   `search_box/`: 统一搜索框 (命令/文件/分支)。
+        *   `settings/`: 设置模态框 (Settings modal)。
+        *   `bottom_bar/`: 底部状态栏指示器 (Status indicators)。
 *   **Modularization Rule (模块化原则)**:
     *   **One Component, One File/Folder**: 每个组件代码若较短则对应单文件；若代码过长或包含子组件，**MUST** 封装为独立文件夹。
     *   **Plugin Interface**: 下拉/搜索组件 **MUST** 预留插件接口 (Traits/Hooks)。

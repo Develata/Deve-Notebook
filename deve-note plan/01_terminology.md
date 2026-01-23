@@ -29,6 +29,9 @@
 *   **Vault (投影仓)**：宿主文件系统上的一个具体目录路径 `$ROOT/data/vault`。
     *   是 Projection 的物理容器。
     *   **External Edit**: 发生在 Vault 内但未经由 Deve-Note 产生的修改视为“外部突变”，需经 Reconstruction 流程回到 Ledger。
+*   **Tree State (树状态)**:
+    *   **Definition**: 内存中维护的文件树结构缓存 $T_{mem}$ (Managed by `TreeManager`)。
+    *   **Role**: 用于快速生成目录树 UI，减少 IO 扫描，并生成 `TreeDelta` 推送前端。
 *   **DocId**: 图（Graph）中的不变节点标识。
     *   定义为 128-bit UUID v4。
     *   在时空上唯一标识一个逻辑文档，$DocId \perp FilePath$（DocId 正交于文件路径）。

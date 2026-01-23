@@ -2,22 +2,26 @@
 
 ## 技术栈清单 (The Full Stack)
 
-| **Layer**    | **Technology**                        | **Selection Reasoning**             |
-| :----------- | :------------------------------------ | :---------------------------------- |
-| **Language** | Rust (2024)                           | 全栈统一。                          |
-| **Frontend** | **Leptos v0.7**                       | 信号驱动 (Signals)，性能极致。      |
-| **UI**       | **Tailwind CSS**                      | 原子化 CSS。                        |
-| **I18n**     | **leptos_i18n**                       | 编译时类型安全校验。                |
-| **Editor**   | **CodeMirror 6**                      | 核心编辑器，Headless 模式。         |
-| **Icons**    | **Lucide Icons**                      | 统一 SVG 图标集。                   |
-| **Graph**    | **Pixi.js** (Web) / **Cosmic** (Rust) | 高性能图谱渲染。                    |
-| **Storage**  | **Redb** (Native)                     | 嵌入式 KV 数据库 (Zero-copy).       |
-| **Search**   | **Tantivy**                           | 全文检索、模糊搜索。                |
-| **Sync**     | **Axum + Tower** (Back)               | HTTP/WebSocket 背压与流控。         |
-| **Auth**     | **Argon2 + JWT**                      | 标准化身份认证与会话管理。          |
-| **Diff**     | **Dissimilar** (Myer's)               | 文本差异计算算法。                  |
-| **Build**    | **Tauri v2**                          | 跨平台外壳 (Mobile/Desktop)。       |
-| **Plugins**  | **Rhai + WASM (Extism)**              | 双层插件体系 (Scripting + Binary)。 |
+| **Layer**    | **Technology**           | **Status**        | **Selection Reasoning**             |
+| :----------- | :----------------------- | :---------------- | :---------------------------------- |
+| **Language** | Rust (2024)              | Verified          | 全栈统一。                          |
+| **Frontend** | **Leptos v0.7**          | Verified          | 信号驱动 (Signals)，性能极致。      |
+| **UI**       | **Tailwind CSS**         | Verified          | 原子化 CSS。                        |
+| **Router**   | **leptos_router**        | Verified          | 前端路由管理。                      |
+| **I18n**     | **leptos_i18n**          | Verified          | 编译时类型安全校验。                |
+| **Editor**   | **CodeMirror 6**         | Verified          | 核心编辑器，Headless 模式。         |
+| **Icons**    | **Lucide Icons**         | Verified          | 统一 SVG 图标集。                   |
+| **Storage**  | **Redb** (Native)        | Verified          | 嵌入式 KV 数据库 (Zero-copy).       |
+| **Auth**     | **Argon2 + Ed25519**     | Verified          | 身份认证与节点签名。                |
+| **Diff**     | **Dissimilar**           | Verified          | 文本差异计算算法。                  |
+| **CLI**      | **Clap v4**              | Verified          | 命令行解析。                        |
+| **Async**    | **Tokio v1**             | Verified          | 异步运行时。                        |
+| **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
+| **Graph**    | **d3-force + Pixi.js**   | Planned           | 高性能图谱渲染 (Web Canvas).        |
+| **Search**   | **Tantivy** (Rust)       | Planned           | 全文检索、模糊搜索 (Backend).       |
+| **Sync**     | **Axum + Tower**         | Planned (Partial) | HTTP/WebSocket 背压与流控。         |
+| **Build**    | **Tauri v2**             | Planned           | 跨平台外壳 (Mobile/Desktop)。       |
+| **Plugins**  | **Rhai + WASM (Extism)** | Planned           | 双层插件体系 (Scripting + Binary)。 |
 
 ## Markdown 兼容性与回归清单 (Compatibility Checklist)
 

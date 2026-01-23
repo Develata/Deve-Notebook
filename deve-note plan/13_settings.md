@@ -37,10 +37,14 @@
 | `ui.recent_docs_count`     | Number | `10`    | Quick Open 顶部显示的历史文件数.                    |
 
 ### 2.2 Core Logic (核心)
-| Key                   | Type   | Default  | Description                                           |
-| :-------------------- | :----- | :------- | :---------------------------------------------------- |
-| `diff.merge_strategy` | String | `manual` | 默认合并策略. `auto` (CRDT优先), `manual` (人工确认). |
-| `core.auto_save`      | Bool   | `true`   | 是否开启自动保存 (Auto-Save).                         |
+| Key (config.toml / Env) | Type   | Default    | Description                                            |
+| :---------------------- | :----- | :--------- | :----------------------------------------------------- |
+| `profile`               | String | `standard` | 运行模式: `standard` (全功能), `low-spec` (低配).      |
+| `ledger_dir`            | String | `ledger`   | 账本存储目录 (Relative or Absolute).                   |
+| `vault_path`            | String | `vault`    | 投影库根目录 (Relative or Absolute).                   |
+| `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (仅交换 Vector). |
+| `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
+| `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
 
 ## 3. Keyboard Shortcuts (快捷键)
 

@@ -4,10 +4,14 @@
 
 ## CLI Commands (命令行)
 
-*   `deve init`: 初始化 Ledger 和 Vault。
-*   `deve watch`: 启动文件监听 (Headless Mode)。
-*   `deve serve`: 启动后端服务 (Server Mode)。
-*   `deve append`: (Debug) 通过 API 追加 Ops。
+*   `deve init`: 初始化 Vault.
+*   `deve scan`: 扫描并建立索引.
+*   `deve watch`: 监听文件变更.
+*   `deve serve`: 启动 WebSocket 服务端.
+*   `deve dump`: 调试工具 (Dump Ops).
+*   `deve export`: 导出 Ledger 为 JSONL.
+*   `deve verify-p2p`: P2P 逻辑验证.
+*   `deve seed`: 种子节点数据注入.
 
 ## Command Palette Commands (命令面板)
 
