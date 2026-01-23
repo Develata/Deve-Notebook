@@ -29,6 +29,9 @@
 3.  **Graph 依赖**:
     *   **Plan**: `14_tech_stack.md` 提及 `Pixi.js` (Web) / `Cosmic` (Rust)。
     *   **Current Code**: `apps/web/Cargo.toml` (未完全验证) 或 `src/app.rs` 中尚未发现显式的 Graph 视图实现代码或引用。
+4.  **Merge Logic (关键缺失)**:
+    *   **Plan**: `07_diff_logic.md` 明确要求 Atomic Persistence 和 3-Way Merge。
+    *   **Current Code**: `ledger/merge.rs` 仅有占位符实现，**严重缺失**。需优先解决。
 
 ---
 

@@ -6,6 +6,7 @@
 
 - **`Cargo.toml`**: Workspace 配置文件，管理 workspace members (`apps/*`, `crates/*`).
 - **`deve-note plan/`**: 项目规划文档目录.
+- **`deve-note report/`**: 项目状态与进度报告目录.
 
 ---
 
@@ -82,3 +83,4 @@
     - **`branch_switcher/`**: 分支切换组件。
     - **`merge_panel.rs`**: 手动合并面板。
     - **`outline.rs`**: 文档大纲视图。
+    - **`spectator_overlay.rs`**: 旁观者模式覆盖层。
