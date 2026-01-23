@@ -78,6 +78,11 @@
     *   **Ledger Corruption (损坏)** -> **Reverse Import**: 从 Vault 文件反向生成新的 Ledger (Reset History)。
     *   **State Deviation (状态错乱)** -> **Hard Reset**: 清空 Store B 并从头重建。
 *   **Disaster Recovery (灾难恢复)**: 系统 **MUST** 提供将 Ledger 导出为 JSON Lines 格式的能力，确保数据的可移植性 (Portability)。
+*   **Schema Stability & Migration (架构稳定性与迁移)**:
+    *   **Fixed Schema**: 本地数据存储路径与核心 Schema 结构已固定，**SHOULD NOT** 发生变更。
+    *   **Manual Migration (手动迁移)**:
+        *   若发生不可避免的 Breaking Change，系统 **MUST NOT** 尝试执行复杂的原地 Migration 脚本（风险过高）。
+        *   **Strategy**: 采用 "Copy & Rebuild" 策略。用户只需保留 `vault` 中的 Markdown 原文件（Source of Truth 的物理投影），在新版本中重新 `init` 并导入即可。后端程序更新不会破坏本地数据，仅需复制数据文件即可完成环境迁移。
 
 ## Core Interaction Constraint (核心交互约束)
 

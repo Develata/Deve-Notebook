@@ -20,6 +20,10 @@
 *   **Store C -> Store B (Remote Merge)**：
     *   **Auto Mode (CRDT)**: 利用 Loro 的 Op-based Merge 自动解决非冲突变更。
     *   **Manual Mode (Git-style)**: 若检测到同一文本块 (Hunk) 存在竞争性修改，标记为 **Conflict**，必须人工介入。
+    *   **Atomic Persistence (原子持久化)**:
+        *   **Immediate Commit**: 合并过程本质上是后端生成一系列 Ops 并顺序追加到 Local Ledger 的过程。系统 **MUST** 保证每生成一个 Op 即持久化（模拟写入），**不会** 存在“内存中合并了一半未保存”的中间状态。
+        *   **Interruption Handling (中断处理)**: 若合并过程中发生异常（如浏览器关闭、网络断开），已持久化的 Ops 永久生效，未处理的 Diff 保持未合并状态。
+        *   **Resumption (自然续传)**: 系统重启后，Local Ledger 的 Vector Clock 已推进。再次发起合并时，系统将基于新的 Base 重新计算剩余 Diff，自然完成续传，无需特殊的回滚或恢复逻辑。
 *   **Store A -> Store B (Local Watcher)**：
     *   **Mechanism**: Watcher 监测到文件修改 -> 计算 $Diff(Content_{disk}, Content_{ledger})$ -> 生成 Ops 追加到 Ledger。
     *   **Anti-Thrashing**: 必须实现 300ms+ 防抖 (Debounce) 和 Hash 校验，防止循环触发。

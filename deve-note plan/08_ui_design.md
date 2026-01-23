@@ -126,12 +126,21 @@
         2.  后端检测 -> 推送 Ops。
         3.  前端平滑更新 -> 弹出非侵入式 Toast 提示：“已合并外部修改”。
 
-## 3. Mobile UI
+## 3. Mobile UI (Mobile Adaptation)
 
-### 移动端适配
-*   **架构**：基于 Tauri Mobile / WebView 封装。
-*   **存储**：作为完整 P2P 节点 (Full Peer)，推荐使用 Redb 或 SQLite，不依赖 IndexedDB。
-*   **适配策略**：针对触摸屏优化交互；在小屏幕下侧边栏默认折叠。
+### 移动端适配策略
+*   **Design Philosophy (设计哲学)**: **Content-First**。参考 **VitePress** 或 **Vue** 文档的移动端风格，追求极致的清爽与阅读体验。
+*   **Navigation Strategy (导航策略)**:
+    *   **Sidebar (Left)**: 默认隐藏。通过左上角 **Hamburger Menu** (`≡`) 唤出，以 **Drawer (抽屉)** 形式从左侧滑入。
+    *   **Outline (Right)**: 默认隐藏。通过右上角或内容顶部的 **TOC Icon** 唤出，以 **Bottom Sheet** 或 **Drawer** 形式展示。
+*   **Layout (布局)**:
+    *   **Single Column**: 强制 **单列显示**，移除所有多列网格。Editor 占据 100% 宽度。
+    *   **Status Bar**: 简化信息，仅保留 Sync 状态与 Read-Only 指示器。
+*   **Diff View (差异对比)**:
+    *   **Vertical Stack**: 移动端 **MUST NOT** 使用 Side-by-Side 对比。
+    *   **Behavior**: 采用 **Unified View** 或 **Vertical Split** (Old Top / New Bottom) 展示差异。
+*   **Spectator Indicator**:
+    *   在 Spectator Mode 下，顶部导航栏下方 **MUST** 显示一条醒目的橙色 Banner: `"Read-Only"`，明确提示当前不可编辑。
 
 ## 4. UI 状态与样式指引 (Styling Guidelines)
 *   **Colors**: 必须使用 CSS Variables 定义语义化颜色 (`--activity-bar-bg`, `--editor-bg`, etc.)，禁止硬编码 Hex。

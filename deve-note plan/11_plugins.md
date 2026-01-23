@@ -4,6 +4,14 @@
 
 ### 1. Engine A: Application Runtime (轻量级/嵌入式)
 此层级的插件直接运行在宿主进程内（或其 Webview 中），负责 UI 扩展和数据处理。
+*   **Performance Constraint (性能约束)**:
+    *   WASM 虽然高效，但频繁跨越边界操作 DOM (WASM <-> JS) 会带来巨大的序列化/反序列化开销。
+    *   因此，**禁止** WASM 插件直接进行细粒度的 DOM 操作 (e.g., 单个字符的样式渲染)。
+*   **Hybrid Architecture (混合架构)**:
+    *   **Logic Layer (WASM/Rust)**: 负责重型计算、数据清洗、Linter 规则校验、AI 上下文组装。输入为纯文本，输出为结构化数据 (JSON)。
+    *   **UI Layer (JS/JSON Protocol)**: 前端宿主负责解析 WASM 输出的 "Rendering Instructions" (渲染指令)，并通过原生 JS 高效更新 DOM。
+    *   **Example**: 自定义 Linter 插件 -> WASM 计算出 `[ { line: 10, msg: "Error" } ]` -> JS 接收并调用 CodeMirror API 绘制波浪线。
+
 *   **Dual-Layer Strategy (双层架构)**:
     1.  **Scripting Layer (Rhai)**:
         *   **用途**: 轻量逻辑 (e.g., 自定义日期格式化, 简单的保存钩子).

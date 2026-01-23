@@ -56,6 +56,24 @@
 *   **No Arbitrary Creation**: ❌ 禁止类似 `git checkout -b feature` 的操作。分支由 Peer 身份唯一确定。
 *   **Deletion**: 允许删除某个 Remote Branch 文件夹（即移除该 Peer 的所有数据）。但不建议删除 Local Branch (除非重置应用)。
 
+## Spectator Mode Definition (旁观者模式定义)
+
+> [!IMPORTANT]
+> **Core Philosophy**: Spectator Mode 意味着 **"Source Read-Only" (源端只读)**。无论是 P2P 查看远端 Peer，还是登录 Server 浏览，此原则绝对适用。
+
+*   **Capabilities (允许的操作)**:
+    *   **Read**: 浏览、搜索、查看 Diff。
+    *   **Copy/Export**: 将内容复制到剪贴板，或导出为文件。
+    *   **Merge into Local**: 将 Spectator 视角的 Ledger 合并入 **Local Branch** (Pull 操作)。
+    *   **Podman Run**: 在隔离沙箱中运行代码 (不修改 Ledger)。
+*   **Prohibitions (禁止的操作)**:
+    *   **No Modification**: 严禁修改、删除、重命名 Spectator 视图下的任何文件。
+    *   **No Write-Back**: 严禁将变更直接回写到 Remote Ledger。
+    *   **No Cross-Peer Merge**: 严禁将 Peer A 的 Ledger 合并入 Peer B 的 Ledger (除非你是 Peer B 的 Owner)。
+*   **Interaction Logic**:
+    *   在 Spectator Mode 下，所有 "Edit" 相关的 UI 控件 (Save, Rename, Delete) **MUST** 处于禁用或隐藏状态。
+    *   尝试编辑 **MUST** 触发 "Read-Only" 提示，并引导用户 Fork 或 Merge 到本地。
+
 ## 分支切换与交互 (Branch Switching)
 
 * **分支切换器**：UI 提供类似 VS Code 左下角的分支切换功能。
