@@ -55,7 +55,10 @@ impl<'a> FsEventHandler<'a> {
                 // this as a "Tombstone" op if we are doing CRDT deletions.
                 // But for now, ensuring metadata is clean prevents local issues.
 
-                return Ok(vec![ServerMessage::DocDeleted { doc_id }]);
+                // 删除事件同时返回 DocList，用于前端刷新文件树
+                let mut msgs = vec![ServerMessage::DocDeleted { doc_id }];
+                msgs.extend(self.gen_list()?);
+                return Ok(msgs);
             }
             return Ok(vec![]);
         }

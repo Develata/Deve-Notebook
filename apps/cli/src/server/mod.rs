@@ -62,24 +62,6 @@ pub async fn start_server(
         vault_path.clone(),
     ));
 
-    // SPAWN WATCHER
-    let tx_for_watcher = tx.clone();
-    let sm_for_watcher = sync_manager.clone();
-    let vp_for_watcher = vault_path.clone();
-
-    tokio::task::spawn_blocking(move || {
-        let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher)
-            .with_callback(move |msgs| {
-                for msg in msgs {
-                    let _ = tx_for_watcher.send(msg);
-                }
-            });
-
-        if let Err(e) = watcher.watch() {
-            tracing::error!("Watcher failed: {:?}", e);
-        }
-    });
-
     #[cfg(feature = "search")]
     let search_service = {
         let index_path = vault_path.join(".deve_search_index");
@@ -172,6 +154,38 @@ pub async fn start_server(
         }
         Arc::new(RwLock::new(tm))
     };
+
+    // SPAWN WATCHER
+    let tx_for_watcher = tx.clone();
+    let sm_for_watcher = sync_manager.clone();
+    let vp_for_watcher = vault_path.clone();
+    let tm_for_watcher = tree_manager.clone();
+
+    tokio::task::spawn_blocking(move || {
+        let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher)
+            .with_callback(move |msgs| {
+                for msg in msgs {
+                    if let ServerMessage::DocList { docs } = &msg {
+                        // watcher 触发的 DocList 代表文件结构变动或需要刷新树
+                        match tm_for_watcher.write() {
+                            Ok(mut tm) => {
+                                tm.init_from_docs(docs.clone());
+                                let delta = tm.build_init_delta();
+                                let _ = tx_for_watcher.send(ServerMessage::TreeUpdate(delta));
+                            }
+                            Err(e) => {
+                                tracing::error!("TreeManager lock failed: {:?}", e);
+                            }
+                        }
+                    }
+                    let _ = tx_for_watcher.send(msg);
+                }
+            });
+
+        if let Err(e) = watcher.watch() {
+            tracing::error!("Watcher failed: {:?}", e);
+        }
+    });
 
     let app_state = Arc::new(AppState {
         repo: repo.clone(),

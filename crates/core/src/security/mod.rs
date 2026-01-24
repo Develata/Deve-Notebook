@@ -1,4 +1,4 @@
-﻿// crates\core\src\security
+// crates\core\src\security
 //! # 安全模块 (Security Module)
 //!
 //! **架构作用**:
@@ -14,7 +14,9 @@
 pub mod hashing;
 pub mod keypair;
 pub mod cipher;
+pub mod auth;
 
 // Re-exports
 pub use self::keypair::IdentityKeyPair;
 pub use self::cipher::{RepoKey, EncryptedOp};
+pub use self::auth::AuthManager;

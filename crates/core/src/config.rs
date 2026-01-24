@@ -7,7 +7,8 @@
 //!
 //! **核心功能清单**:
 //! - `AppProfile`: 应用运行模式枚举 (Standard/LowSpec)
-//! - `SyncMode`: 同步模式枚举 (Auto/Manual)
+//! - `SyncMode`: P2P 同步模式枚举 (Auto/Manual)
+//! - `MergeStrategy`: 合并冲突策略枚举 (Manual/Auto)
 //! - `Config`: 聚合所有配置项的结构体
 //! - `Config::load()`: 从环境加载配置的工厂方法
 //!
@@ -60,6 +61,29 @@ impl FromStr for AppProfile {
     }
 }
 
+/// 合并冲突处理策略 (07_diff_logic.md)
+/// 控制 3-Way Merge 时冲突的处理方式
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MergeStrategy {
+    /// 手动模式 (默认): 总是弹出 Diff View 供用户确认
+    #[default]
+    Manual,
+    /// 自动模式 (CRDT 优先): 仅在检测到结构冲突时才弹出
+    Auto,
+}
+
+impl FromStr for MergeStrategy {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "auto" | "crdt" => Ok(MergeStrategy::Auto),
+            _ => Ok(MergeStrategy::Manual), // Default to Manual (safer)
+        }
+    }
+}
+
 /// 核心配置结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -79,6 +103,11 @@ pub struct Config {
     /// 同步模式 (Auto/Manual)
     #[serde(default)]
     pub sync_mode: SyncMode,
+
+    // --- Diff/Merge 配置 ---
+    /// 合并策略: Manual (总是确认) | Auto (CRDT 优先)
+    #[serde(default)]
+    pub merge_strategy: MergeStrategy,
 
     // --- 性能调优 ---
     /// 快照保留深度
@@ -134,6 +163,7 @@ impl Config {
                 ledger_dir: default_ledger(),
                 vault_path: default_vault(),
                 sync_mode: SyncMode::default(),
+                merge_strategy: MergeStrategy::default(),
                 snapshot_depth: default_snapshot_depth(),
                 concurrency: default_concurrency(),
             }
