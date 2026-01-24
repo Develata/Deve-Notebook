@@ -48,6 +48,23 @@
         *   `SNAPSHOT_DATA`: 数据表 (`SeqNo -> ContentBlob`)，存储实际快照内容。
     *   **Pruning**: 每个 Repo 独立维护自己的 Snapshot 链，并根据配置深度 (`snapshot_depth`) 进行自动修剪。
 
+## Synchronization Architecture (同步架构)
+
+实现单向数据流与原子持久化策略：
+
+*   **Ledger-First Strategy (账本优先策略)**:
+    *   所有的变更 (Edit, Discard, etc.) **MUST** 首先作为 `Op` 写入 Store B (Ledger)。
+    *   绝不允许绕过 Ledger 直接修改 Store A (Vault) 文件，唯一的例外是外部编辑器的 `Watcher` 触发 Ingestion。
+*   **Atomic Persistence (原子持久化)**:
+    *   **Component**: `SyncManager` 负责协调 Op 应用与文件写入。
+    *   **Method**: `apply_local_op_and_persist`.
+        1.  **Append**: 调用 `RepoManager` 将 Op 写入 Redb。
+        2.  **Reconstruct**: 基于 Ledger 计算最新文档快照。
+        3.  **Persist**: 立即将快照写入 Vault 文件系统 ($W_{user}$)。
+    *   **Logic**: `Op -> Ledger -> Snapshot -> Disk`. 确保文件系统总是 Ledger 的最新投影。
+*   **Batch Optimization (批量优化)**:
+    *   对于批量操作 (如 `Discard` 重置整个文件)，系统 **SHOULD** 批量应用 Ops (仅写入 DB)，并在最后执行一次 `persist_doc`，以减少 I/O 开销。
+
 ## Clean File Policy (纯净文件策略)
 
 *   **Implicit Tracking (隐式追踪)**: 系统 **MUST** 使用 `DocId` (UUID) 作为内部追踪标识。

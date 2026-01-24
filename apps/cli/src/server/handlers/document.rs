@@ -20,22 +20,25 @@ pub async fn handle_edit(
     // 获取本地 Peer ID
     let local_peer_id = state.identity_key.peer_id();
 
-    // 2. 构造并追加操作 (Atomic Generation)
-    // 使用 append_generated_op 自动处理序号生成，避免竞态条件
+    // 2. 构造并追加操作 (Atomic Generation & Persist)
+    // 使用 sync_manager.apply_local_op 自动处理序号生成和持久化
     let op_clone = op.clone();
 
     // 我们需要克隆 peer_id 用于构建 closure
     let peer_id_clone = local_peer_id.clone();
 
-    match state
-        .repo
-        .append_generated_op(doc_id, local_peer_id.clone(), move |seq| LedgerEntry {
+    match state.sync_manager.apply_local_op(
+        doc_id,
+        local_peer_id.clone(),
+        move |seq| LedgerEntry {
             doc_id,
             op: op_clone.clone(),
             timestamp: chrono::Utc::now().timestamp_millis(),
             peer_id: peer_id_clone.clone(),
             seq,
-        }) {
+        },
+        true, // 自动写入 Vault
+    ) {
         Ok((_global_seq, local_seq)) => {
             // 3. 广播新操作给所有连接的客户端
             // BUG FIX: 必须广播 Local Seq (CrDT Version)，而不是 Global Seq
@@ -46,17 +49,11 @@ pub async fn handle_edit(
                 client_id,
             });
 
-            // 4. 发送 Ack (单播给发送者 - implicit by broadcast or explicit?)
-            // 前端目前似乎期待 Ack
+            // 4. 发送 Ack
             ch.unicast(ServerMessage::Ack {
                 doc_id,
                 seq: local_seq,
             });
-
-            // 持久化到磁盘
-            if let Err(e) = state.sync_manager.persist_doc(doc_id) {
-                tracing::error!("SyncManager failed to persist doc {}: {:?}", doc_id, e);
-            }
         }
         Err(e) => {
             tracing::error!("Failed to persist op: {:?}", e);

@@ -5,7 +5,7 @@
 //!
 //! ## 功能
 //!
-//! - 防抖的文件系统事件（200ms）避免过度处理
+//! - 防抖的文件系统事件（300ms）避免过度处理
 //! - 与 `SyncManager` 集成处理变更
 //! - 回调支持，用于通过 WebSocket 广播变更
 //!
@@ -17,9 +17,6 @@ use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
-
-const MAX_RETRIES: u32 = 3;
-const RETRY_DELAY_MS: u64 = 100;
 
 pub struct Watcher {
     sync_manager: Arc<SyncManager>,

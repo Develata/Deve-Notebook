@@ -239,33 +239,29 @@ pub async fn handle_discard_file(state: &Arc<AppState>, ch: &DualChannel, path: 
     // 应用操作到 Ledger
     for op in ops {
         let peer_id = deve_core::models::PeerId("local".to_string());
-        if let Err(e) =
-            state
-                .repo
-                .append_generated_op(doc_id, peer_id, |seq| deve_core::models::LedgerEntry {
-                    doc_id,
-                    peer_id: deve_core::models::PeerId("local".to_string()),
-                    seq,
-                    op: op.clone(),
-                    timestamp: chrono::Utc::now().timestamp_millis(),
-                })
-        {
+        // 使用 SyncManager 应用 Op，但不每次都持久化 (为了性能)
+        if let Err(e) = state.sync_manager.apply_local_op(
+            doc_id,
+            peer_id.clone(),
+            move |seq| deve_core::models::LedgerEntry {
+                doc_id,
+                peer_id: deve_core::models::PeerId("local".to_string()),
+                seq,
+                op: op.clone(),
+                timestamp: chrono::Utc::now().timestamp_millis(),
+            },
+            false, // 稍后一次性持久化
+        ) {
             tracing::error!("Failed to apply discard op: {:?}", e);
             ch.send_error(format!("Failed to discard: {}", e));
             return;
         }
     }
 
-    // **关键修复**: 同时更新 Vault 文件，防止 reconcile 检测到不匹配后撤销 Ledger 更改
-    let vault_file_path = state.vault_path.join(&path);
-    if let Some(parent) = vault_file_path.parent() {
-        if let Err(e) = std::fs::create_dir_all(parent) {
-            tracing::error!("Failed to create parent directory for discard: {:?}", e);
-        }
-    }
-    if let Err(e) = std::fs::write(&vault_file_path, &committed_content) {
-        tracing::error!("Failed to write discarded content to vault: {:?}", e);
-        ch.send_error(format!("Failed to write discarded file: {}", e));
+    // 统一持久化到 Vault
+    if let Err(e) = state.sync_manager.persist_doc(doc_id) {
+        tracing::error!("Failed to persist discarded content: {:?}", e);
+        ch.send_error(format!("Failed to persist discard: {}", e));
         return;
     }
 

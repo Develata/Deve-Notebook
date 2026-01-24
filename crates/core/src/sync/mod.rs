@@ -91,10 +91,46 @@ impl SyncManager {
             );
 
             // Write
+            if let Some(parent) = file_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
             std::fs::write(&file_path, content)?;
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
         }
         Ok(())
+    }
+
+    /// 应用操作并选择性持久化到 Vault
+    pub fn apply_local_op(
+        &self,
+        doc_id: DocId,
+        peer_id: crate::models::PeerId,
+        op_entry_builder: impl FnMut(u64) -> crate::models::LedgerEntry,
+        persist: bool,
+    ) -> Result<(u64, u64)> {
+        // 1. Append Op to Ledger
+        let seqs = crate::ledger::ops::append_generated_op(
+            &self.repo.local_db,
+            doc_id,
+            peer_id,
+            op_entry_builder,
+        )?;
+
+        // 2. Optional Persist
+        if persist {
+            if let Err(e) = self.persist_doc(doc_id) {
+                tracing::error!(
+                    "SyncManager: Failed to persist doc {} after op: {:?}",
+                    doc_id,
+                    e
+                );
+                // We don't rollback the op, but we log headers error.
+                // In a perfect world we might want transactionality across FS and DB, but that's hard.
+                return Err(e);
+            }
+        }
+
+        Ok(seqs)
     }
 
     // --- The Main Logic: Orchestration ---
