@@ -43,9 +43,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         <div
             class="flex items-center px-4 py-0.5 hover:bg-[#eff1f3] dark:hover:bg-[#37373d] text-[13px] group cursor-pointer h-[22px] text-[#333] dark:text-[#cccccc]"
             on:click=move |_| {
-                if !is_staged {
-                     core.on_get_doc_diff.run(full_path.clone());
-                }
+                // 点击任何条目都打开 diff 视图 (与 VS Code 行为一致)
+                core.on_get_doc_diff.run(full_path.clone());
             }
         >
             <div class="flex items-center gap-1.5 flex-1 overflow-hidden">
