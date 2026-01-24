@@ -28,6 +28,7 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel) {
 }
 
 /// 检测未暂存的变更
+/// 检测未暂存的变更
 fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
     let mut changes = Vec::new();
     let repo_id = super::get_repo_id(state);
@@ -40,16 +41,20 @@ fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
         }
     };
 
+    // 规范化路径: 统一使用 forward slash '/'
+    let normalize_path = |p: &str| p.replace('\\', "/");
+
     let staged_paths: std::collections::HashSet<String> = state
         .repo
         .list_staged()
         .unwrap_or_default()
         .into_iter()
-        .map(|e| e.path)
+        .map(|e| normalize_path(&e.path))
         .collect();
 
     for (doc_id, path) in docs {
-        if staged_paths.contains(&path) {
+        let normalized = normalize_path(&path);
+        if staged_paths.contains(&normalized) {
             continue;
         }
 
@@ -178,4 +183,100 @@ pub async fn handle_get_doc_diff(state: &Arc<AppState>, ch: &DualChannel, path: 
         old_content,
         new_content,
     });
+}
+
+/// 放弃文件变更 (恢复到已提交状态)
+///
+/// **逻辑**:
+/// 1. 获取文档的已提交快照内容
+/// 2. 清除当前 Ledger 操作并重建为快照内容
+/// 3. 发送确认消息
+pub async fn handle_discard_file(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+    let doc_id = match state.repo.get_docid(&path) {
+        Ok(Some(id)) => id,
+        Ok(None) => {
+            ch.send_error(format!("Document not found: {}", path));
+            return;
+        }
+        Err(e) => {
+            ch.send_error(e.to_string());
+            return;
+        }
+    };
+
+    // 获取已提交的快照内容
+    let committed_content = state
+        .repo
+        .get_committed_content(doc_id)
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+
+    // 实际恢复逻辑:
+    // 1. 获取当前内容
+    // 2. 计算差异 (current -> committed)
+    // 3. 应用差异操作
+    let current_content = state
+        .repo
+        .get_local_ops(doc_id)
+        .ok()
+        .map(|ops| {
+            let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+            deve_core::state::reconstruct_content(&entries)
+        })
+        .unwrap_or_default();
+
+    if current_content == committed_content {
+        tracing::info!("Discard file: {} - already matches committed state", path);
+        ch.unicast(ServerMessage::DiscardAck { path: path.clone() });
+        handle_get_changes(state, ch).await;
+        return;
+    }
+
+    // 计算差异并生成反向操作
+    let ops = deve_core::state::compute_diff(&current_content, &committed_content);
+
+    // 应用操作到 Ledger
+    for op in ops {
+        let peer_id = deve_core::models::PeerId("local".to_string());
+        if let Err(e) =
+            state
+                .repo
+                .append_generated_op(doc_id, peer_id, |seq| deve_core::models::LedgerEntry {
+                    doc_id,
+                    peer_id: deve_core::models::PeerId("local".to_string()),
+                    seq,
+                    op: op.clone(),
+                    timestamp: chrono::Utc::now().timestamp_millis(),
+                })
+        {
+            tracing::error!("Failed to apply discard op: {:?}", e);
+            ch.send_error(format!("Failed to discard: {}", e));
+            return;
+        }
+    }
+
+    // **关键修复**: 同时更新 Vault 文件，防止 reconcile 检测到不匹配后撤销 Ledger 更改
+    let vault_file_path = state.vault_path.join(&path);
+    if let Some(parent) = vault_file_path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            tracing::error!("Failed to create parent directory for discard: {:?}", e);
+        }
+    }
+    if let Err(e) = std::fs::write(&vault_file_path, &committed_content) {
+        tracing::error!("Failed to write discarded content to vault: {:?}", e);
+        ch.send_error(format!("Failed to write discarded file: {}", e));
+        return;
+    }
+
+    tracing::info!(
+        "Discard file: {} (restored to {} bytes, was {} bytes)",
+        path,
+        committed_content.len(),
+        current_content.len()
+    );
+
+    ch.unicast(ServerMessage::DiscardAck { path: path.clone() });
+    // 刷新 Changes 列表
+    handle_get_changes(state, ch).await;
 }

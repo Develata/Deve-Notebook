@@ -241,6 +241,9 @@ async fn route_message(
         ClientMessage::GetDocDiff { path } => {
             source_control::handle_get_doc_diff(state, ch, path).await;
         }
+        ClientMessage::DiscardFile { path } => {
+            source_control::handle_discard_file(state, ch, path).await;
+        }
 
         // === 插件 ===
         ClientMessage::PluginCall {

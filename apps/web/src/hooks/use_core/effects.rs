@@ -165,6 +165,10 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     leptos::logging::log!("已取消暂存: {}", path);
                     ws_rx.send(ClientMessage::GetChanges);
                 }
+                ServerMessage::DiscardAck { path } => {
+                    leptos::logging::log!("已放弃变更: {}", path);
+                    // 后端已自动刷新 GetChanges，无需手动发送
+                }
                 ServerMessage::CommitAck { commit_id, .. } => {
                     leptos::logging::log!("已提交: {}", commit_id);
                     ws_rx.send(ClientMessage::GetChanges);

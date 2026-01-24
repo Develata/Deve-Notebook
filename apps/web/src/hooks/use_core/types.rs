@@ -80,6 +80,7 @@ pub struct CoreState {
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<String>,
     pub on_unstage_file: Callback<String>,
+    pub on_discard_file: Callback<String>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
     pub diff_content: ReadSignal<Option<(String, String, String)>>,

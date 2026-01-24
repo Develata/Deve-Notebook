@@ -31,6 +31,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let path_for_stage = full_path.clone();
     let path_for_unstage = full_path.clone();
     let path_for_open = full_path.clone();
+    let path_for_discard = full_path.clone();
 
     // 状态图标和颜色
     let (icon_char, color_cls) = match entry.status {
@@ -84,7 +85,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                             <button
                                 class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
                                 title="Discard Changes"
-                                on:click=move |ev| { ev.stop_propagation(); /* TODO: Discard */ }
+                                on:click=move |ev| { ev.stop_propagation(); core.on_discard_file.run(path_for_discard.clone()); }
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
                             </button>

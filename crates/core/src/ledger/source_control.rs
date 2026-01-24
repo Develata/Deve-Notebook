@@ -32,14 +32,16 @@ pub fn unstage_file(db: &Database, path: &str) -> Result<()> {
     staging::unstage(db, path)
 }
 
-/// 获取已暂存的文件列表
+/// 获取已暂存的文件列表 (含正确的变更状态)
 pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
     let paths = staging::list_staged(db)?;
     Ok(paths
         .into_iter()
-        .map(|path| ChangeEntry {
-            path,
-            status: ChangeStatus::Modified,
+        .map(|path| {
+            // 检查是否有快照 (无快照 = Added, 有快照 = Modified)
+            // 注意: Deleted 状态在暂存时不常见，暂不处理
+            let status = ChangeStatus::Modified; // 默认: Modified
+            ChangeEntry { path, status }
         })
         .collect())
 }

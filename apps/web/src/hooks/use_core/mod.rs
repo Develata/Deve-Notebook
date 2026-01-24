@@ -136,6 +136,7 @@ pub fn use_core() -> CoreState {
         on_get_changes: sc_callbacks.on_get_changes,
         on_stage_file: sc_callbacks.on_stage_file,
         on_unstage_file: sc_callbacks.on_unstage_file,
+        on_discard_file: sc_callbacks.on_discard_file,
         on_commit: sc_callbacks.on_commit,
         on_get_history: sc_callbacks.on_get_history,
         diff_content: signals.diff_content,

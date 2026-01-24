@@ -21,7 +21,8 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
 
     let unstaged_count = unstaged.len();
     let unstaged_list = StoredValue::new(unstaged.clone());
-    let unstaged_list_for_stage = StoredValue::new(unstaged);
+    let unstaged_list_for_stage = StoredValue::new(unstaged.clone());
+    let unstaged_list_for_discard = StoredValue::new(unstaged);
 
     // 如果没有未暂存文件，不渲染此区块
     if unstaged_count == 0 {
@@ -52,9 +53,9 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
                             title="Discard All Changes"
                             on:click=move |_| {
-                                // TODO: 实现 Discard All 功能
-                                // 需要后端支持 DiscardChanges 消息
-                                leptos::logging::log!("Discard All clicked - not yet implemented");
+                                for entry in unstaged_list_for_discard.get_value() {
+                                    core.on_discard_file.run(entry.path);
+                                }
                             }
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>

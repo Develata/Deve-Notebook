@@ -115,6 +115,8 @@ pub enum ClientMessage {
     MergePeer { peer_id: String, doc_id: DocId },
     /// 获取文档的 Diff (用于 Diff 视图)
     GetDocDiff { path: String },
+    /// 放弃文件变更 (恢复到已提交状态)
+    DiscardFile { path: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,6 +227,8 @@ pub enum ServerMessage {
 
     /// 文档删除通知
     DocDeleted { doc_id: DocId },
+    /// 放弃变更确认
+    DiscardAck { path: String },
 
     /// 文件树增量更新
     ///

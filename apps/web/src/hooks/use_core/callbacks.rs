@@ -8,7 +8,6 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-
 /// 文档操作回调
 pub struct DocCallbacks {
     pub on_doc_select: Callback<DocId>,
@@ -142,6 +141,7 @@ pub struct SourceControlCallbacks {
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<String>,
     pub on_unstage_file: Callback<String>,
+    pub on_discard_file: Callback<String>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
     pub on_get_doc_diff: Callback<String>,
@@ -179,10 +179,17 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
         ws6.send(ClientMessage::GetDocDiff { path });
     });
 
+    let ws7 = ws.clone();
+    let on_discard_file = Callback::new(move |path: String| {
+        leptos::logging::log!("on_discard_file callback triggered for: {}", path);
+        ws7.send(ClientMessage::DiscardFile { path });
+    });
+
     SourceControlCallbacks {
         on_get_changes,
         on_stage_file,
         on_unstage_file,
+        on_discard_file,
         on_commit,
         on_get_history,
         on_get_doc_diff,
