@@ -147,6 +147,13 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                         }
                     }
                 }
+                ServerMessage::RepoSwitched { name, uuid: _ } => {
+                    leptos::logging::log!("仓库已切换到: {}", name);
+                    // Refresh current doc to ensure it's valid in new repo context
+                    if let Some(doc_id) = current_doc.get_untracked() {
+                        ws_rx.send(ClientMessage::OpenDoc { doc_id });
+                    }
+                }
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);
                 }
@@ -194,13 +201,35 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     });
 }
 
-/// 设置分支切换 Effect
-pub fn setup_branch_switch_effect(ws: &WsService, active_repo: ReadSignal<Option<PeerId>>) {
+/// 设置分支切换 Effect (P2P Remote)
+pub fn setup_branch_switch_effect(ws: &WsService, active_branch: ReadSignal<Option<PeerId>>) {
     let ws_for_branch = ws.clone();
     Effect::new(move |_| {
-        let peer = active_repo.get();
+        let peer = active_branch.get();
         let peer_id = peer.map(|p| p.to_string());
         leptos::logging::log!("发送 SwitchBranch: {:?}", peer_id);
         ws_for_branch.send(ClientMessage::SwitchBranch { peer_id });
+    });
+}
+
+/// 设置仓库切换 Effect (Local .redb)
+pub fn setup_repo_switch_effect(ws: &WsService, current_repo: ReadSignal<Option<String>>) {
+    let ws_for_repo = ws.clone();
+    Effect::new(move |_| {
+        // Only send if it changes.
+        // Note: init signal is None ("default"). If UI sets "default", we send "default".
+        // Backend expects String.
+        if let Some(name) = current_repo.get() {
+            leptos::logging::log!("发送 SwitchRepo: {}", name);
+            ws_for_repo.send(ClientMessage::SwitchRepo { name });
+        } else {
+            // If None, switch to default? Or do nothing?
+            // Since backend defaults to "default" if explicit switch isn't called,
+            // checking initial state might be tricky.
+            // But if we switch FROM something TO None, we should send "default"?
+            // Let's assume frontend logic ensures None -> Some("default") if explicitly selected?
+            // Or we treat None as "default" and send it?
+            // RepoSwitcher likely sets a string.
+        }
     });
 }

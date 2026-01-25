@@ -152,9 +152,8 @@ pub fn ExplorerView(
 
     // Derived active repo label
     let active_repo_label = Signal::derive(move || {
-        core.active_repo
+        core.current_repo
             .get()
-            .map(|id| id.0)
             .unwrap_or_else(|| "Knowledge Base".to_string())
     });
 

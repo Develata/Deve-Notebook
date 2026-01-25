@@ -1,5 +1,5 @@
 use crate::hooks::use_core::CoreState;
-use deve_core::models::PeerId;
+
 use leptos::prelude::*;
 
 #[component]
@@ -9,9 +9,8 @@ pub fn RepoSwitcher() -> impl IntoView {
 
     // Derived active repo label
     let active_repo_label = Signal::derive(move || {
-        core.active_repo
+        core.current_repo
             .get()
-            .map(|id| id.0)
             .unwrap_or_else(|| "default".to_string())
     });
 
@@ -55,7 +54,7 @@ pub fn RepoSwitcher() -> impl IntoView {
                                              class:bg-blue-50=move || is_active
                                              class:text-blue-600=move || is_active
                                              on:click=move |_| {
-                                                 core.set_active_repo.set(Some(PeerId(repo_name_c.clone())));
+                                                 core.set_current_repo.set(Some(repo_name_c.clone()));
                                                  set_show_menu.set(false);
                                              }
                                          >

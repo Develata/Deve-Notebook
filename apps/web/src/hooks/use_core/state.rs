@@ -48,8 +48,10 @@ pub struct CoreSignals {
     pub set_pending_ops_previews: WriteSignal<Vec<(String, String, String)>>,
 
     // 分支/仓库
-    pub active_repo: ReadSignal<Option<PeerId>>,
-    pub set_active_repo: WriteSignal<Option<PeerId>>,
+    pub active_branch: ReadSignal<Option<PeerId>>,
+    pub set_active_branch: WriteSignal<Option<PeerId>>,
+    pub current_repo: ReadSignal<Option<String>>,
+    pub set_current_repo: WriteSignal<Option<String>>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub set_shadow_repos: WriteSignal<Vec<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
@@ -88,12 +90,13 @@ pub fn init_signals() -> CoreSignals {
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::new());
-    let (active_repo, set_active_repo) = signal(None::<PeerId>);
+    let (active_branch, set_active_branch) = signal(None::<PeerId>);
+    let (current_repo, set_current_repo) = signal(None::<String>);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (repo_list, set_repo_list) = signal(Vec::new());
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
-    let is_spectator = Memo::new(move |_| active_repo.get().is_some());
+    let is_spectator = Memo::new(move |_| active_branch.get().is_some());
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
@@ -119,8 +122,10 @@ pub fn init_signals() -> CoreSignals {
         set_pending_ops_count,
         pending_ops_previews,
         set_pending_ops_previews,
-        active_repo,
-        set_active_repo,
+        active_branch,
+        set_active_branch,
+        current_repo,
+        set_current_repo,
         shadow_repos,
         set_shadow_repos,
         repo_list,

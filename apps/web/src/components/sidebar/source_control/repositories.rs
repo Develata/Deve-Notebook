@@ -1,5 +1,4 @@
-﻿use deve_core::models::PeerId;
-use leptos::prelude::*;
+﻿use leptos::prelude::*;
 
 #[component]
 pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) -> impl IntoView {
@@ -7,9 +6,8 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
 
     // Derived State for Active Repo Name
     let active_repo_label = Signal::derive(move || {
-        core.active_repo
+        core.current_repo
             .get()
-            .map(|id| id.0)
             .unwrap_or_else(|| "default.redb".to_string())
     });
 

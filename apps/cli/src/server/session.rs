@@ -25,6 +25,12 @@ pub struct WsSession {
     /// - `None`: 本地分支 (Master)
     /// - `Some(peer_id)`: 远程影子库 (只读模式)
     pub active_branch: Option<PeerId>,
+
+    /// 当前活动仓库名称 (repo name)
+    ///
+    /// - `None`: 默认仓库 ("default")
+    /// - `Some(name)`: 指定名称的仓库 (.redb)
+    pub active_repo: Option<String>,
 }
 
 impl WsSession {
@@ -43,6 +49,11 @@ impl WsSession {
     /// 传入 `None` 切换回本地分支，传入 `Some(id)` 切换到影子库。
     pub fn switch_branch(&mut self, peer_id: Option<String>) {
         self.active_branch = peer_id.map(|id| PeerId::new(id));
+    }
+
+    /// 切换活动仓库
+    pub fn switch_repo(&mut self, repo_name: String) {
+        self.active_repo = Some(repo_name);
     }
 
     /// 检查是否在影子分支 (只读模式)

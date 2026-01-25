@@ -3,7 +3,6 @@
 //!
 //! 处理各类列表查询请求: ListDocs, ListShadows, ListRepos
 
-use super::get_repo_id;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use deve_core::ledger::listing::RepoListing;
@@ -16,26 +15,49 @@ pub async fn handle_list_docs(
     state: &Arc<AppState>,
     ch: &DualChannel,
     active_branch: Option<&PeerId>,
+    active_repo: Option<&String>,
 ) {
-    let repo_type = match active_branch {
-        Some(peer_id) => RepoType::Remote(peer_id.clone(), uuid::Uuid::nil()),
-        None => RepoType::Local(get_repo_id(state)),
+    let docs = if let Some(peer_id) = active_branch {
+        // Remote (Shadow)
+        let repo_type = RepoType::Remote(peer_id.clone(), uuid::Uuid::nil()); // UUID handling to be improved later
+        state.repo.list_docs(&repo_type)
+    } else {
+        // Local (Multi-Repo)
+        state.repo.list_local_docs(active_repo.map(|s| s.as_str()))
     };
 
-    if let Ok(docs) = state.repo.list_docs(&repo_type) {
-        // 广播文档列表 (兼容旧逻辑)
-        ch.broadcast(ServerMessage::DocList { docs });
+    match docs {
+        Ok(docs_list) => {
+            // 广播文档列表 (兼容旧逻辑)
+            ch.broadcast(ServerMessage::DocList { docs: docs_list });
 
-        // 发送初始树结构 (Init Delta)
-        // 注意: TreeManager 目前仅维护本地 Repo 的状态。
-        // 如果是远程分支，发送空树以触发前端回退到 build_file_tree (基于 DocList)
-        if active_branch.is_none() {
-            let tree_delta = state.tree_manager.read().unwrap().build_init_delta();
-            ch.unicast(ServerMessage::TreeUpdate(tree_delta));
-        } else {
-            // 远程分支: 发送空树，前端 ExplorerView 收到空树会回退到 DocList
-            use deve_core::tree::TreeDelta;
-            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
+            // 发送初始树结构 (Init Delta)
+            if active_branch.is_none() {
+                // TODO: TreeManager currently binds to main repo?
+                // We should probably rely on DocList to rebuild tree in frontend for now
+                // OR update TreeManager to support multi-repo.
+                // Given the time constraint, we send Empty Tree to force frontend rebuild from DocList unless it's main repo?
+                // Actually TreeManager init logic in `mod.rs` uses `list_docs`.
+                // If we switched repo, TreeManager (global singleton) might still hold old tree.
+                // This is a "Tenant" issue.
+                // Critical: TreeManager should be per-repo or stateless?
+                // TreeManager is `Arc<RwLock<TreeManager>>` in AppState.
+                // If we switch repo, we should probably not use the shared TreeManager unless we reload it.
+                // But TreeManager is shared across clients!
+                // If client A is on Repo A, client B on Repo B.
+                // We cannot share one TreeManager.
+                // Solution: Send empty tree delta, force frontend to build from `DocList`.
+                // Frontend `explorer.rs` has fallback: `if core_nodes.is_empty() { build_file_tree(docs) }`.
+                use deve_core::tree::TreeDelta;
+                ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
+            } else {
+                use deve_core::tree::TreeDelta;
+                ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to list docs: {:?}", e);
+            ch.send_error(format!("Failed to list docs: {}", e));
         }
     }
 }

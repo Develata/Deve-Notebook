@@ -68,7 +68,7 @@ pub async fn handle_rename_doc(
             ch.broadcast(ServerMessage::TreeUpdate(delta));
 
             // 6. 兼容旧逻辑
-            handle_list_docs(state, ch, None).await;
+            handle_list_docs(state, ch, None, None).await;
         }
     } else {
         tracing::warn!("重命名失败: 源不存在: {:?}", src);

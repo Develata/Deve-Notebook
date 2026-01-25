@@ -48,5 +48,5 @@ pub async fn handle_delete_doc(state: &Arc<AppState>, ch: &DualChannel, path: St
     ch.broadcast(ServerMessage::TreeUpdate(delta));
 
     // 4. 兼容旧逻辑
-    handle_list_docs(state, ch, None).await;
+    handle_list_docs(state, ch, None, None).await;
 }

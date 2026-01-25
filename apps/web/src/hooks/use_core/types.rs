@@ -53,9 +53,13 @@ pub struct CoreState {
     pub on_confirm_merge: Callback<()>,
     pub on_discard_pending: Callback<()>,
 
-    // 版本控制状态 (Repo)
-    pub active_repo: ReadSignal<Option<PeerId>>,
-    pub set_active_repo: WriteSignal<Option<PeerId>>,
+    // 分支状态 (Branch -> Peer)
+    pub active_branch: ReadSignal<Option<PeerId>>,
+    pub set_active_branch: WriteSignal<Option<PeerId>>,
+
+    // 仓库状态 (Repo -> .redb File)
+    pub current_repo: ReadSignal<Option<String>>,
+    pub set_current_repo: WriteSignal<Option<String>>,
 
     // 分支切换状态
     pub shadow_repos: ReadSignal<Vec<String>>,

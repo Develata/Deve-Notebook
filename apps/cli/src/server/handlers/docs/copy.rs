@@ -63,7 +63,7 @@ pub async fn handle_copy_doc(
             dest_path,
             doc_id
         );
-        handle_list_docs(state, ch, None).await;
+        handle_list_docs(state, ch, None, None).await;
     } else {
         tracing::error!("Ledger 注册复制文档失败");
     }

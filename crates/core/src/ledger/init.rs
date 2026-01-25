@@ -28,9 +28,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::RwLock;
 
+use super::RepoManager;
 use super::schema::*;
 use super::source_control;
-use super::RepoManager;
 
 /// 初始化 RepoManager 实例
 ///
@@ -53,11 +53,11 @@ pub fn init(
     repo_url: Option<&str>,
 ) -> Result<RepoManager> {
     let ledger_dir = ledger_dir.as_ref().to_path_buf();
-    
+
     // 1. 创建目录结构
     std::fs::create_dir_all(&ledger_dir)
         .with_context(|| format!("无法创建账本目录: {:?}", ledger_dir))?;
-    
+
     let local_dir = ledger_dir.join("local");
     std::fs::create_dir_all(&local_dir)
         .with_context(|| format!("无法创建本地库目录: {:?}", local_dir))?;
@@ -65,10 +65,10 @@ pub fn init(
     let remotes_dir = ledger_dir.join("remotes");
     std::fs::create_dir_all(&remotes_dir)
         .with_context(|| format!("无法创建远端目录: {:?}", remotes_dir))?;
-    
+
     // 2. 准备仓库标识
     let base_name = repo_name.unwrap_or("default");
-    
+
     // 3. 碰撞检测与处理 (Collision Handling)
     // 策略: 检查文件是否存在 -> 若存在，检查 URL 是否匹配 -> 若不匹配，重命名尝试 (name-1)
     let mut final_name = base_name.to_string();
@@ -85,35 +85,35 @@ pub fn init(
         if db_path.exists() {
             // 尝试打开现有库检查 Metadata
             let db = Database::create(&db_path)
-                 .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", db_path))?;
-            
+                .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", db_path))?;
+
             // 检查 URL
-             let read_txn = db.begin_read()?;
-             match read_txn.open_table(REPO_METADATA) {
+            let read_txn = db.begin_read()?;
+            match read_txn.open_table(REPO_METADATA) {
                 Ok(table) => {
                     if let Some(guard) = table.get(&0)? {
-                         let val = guard.value();
-                         let info: super::RepoInfo = bincode::deserialize(val)?;
-                         
-                         // 如果 URL 匹配 (或都为 None)，则确认为同一仓库
-                         // 注意:这里简化处理，如果输入的 URL 为 None，我们假设匹配任何（或者生成新的？）
-                         // 根据需求: "Logical Identity: URL is strictly distinguishing"
-                         // 如果输入 URL 为 None, 我们通常是在"打开默认库"，所以匹配。
-                         // 如果输入 URL 有值，必须严格匹配。
-                         let match_url = match (repo_url, &info.url) {
+                        let val = guard.value();
+                        let info: super::RepoInfo = bincode::deserialize(val)?;
+
+                        // 如果 URL 匹配 (或都为 None)，则确认为同一仓库
+                        // 注意:这里简化处理，如果输入的 URL 为 None，我们假设匹配任何（或者生成新的？）
+                        // 根据需求: "Logical Identity: URL is strictly distinguishing"
+                        // 如果输入 URL 为 None, 我们通常是在"打开默认库"，所以匹配。
+                        // 如果输入 URL 有值，必须严格匹配。
+                        let match_url = match (repo_url, &info.url) {
                             (Some(u1), Some(u2)) => u1 == u2,
                             (None, _) => true, // 没有指定 URL，默认复用同名库
                             (Some(_), None) => false, // 指定了 URL 但库里没有 (视为不匹配，或是旧库升级?) -> 安全起见视为不匹配
-                         };
+                        };
 
-                         if match_url {
-                             local_db = db;
-                             break;
-                         } else {
-                             // URL 不匹配，这是另一个同名仓库 -> 继续循环尝试下一个名字
-                             counter += 1;
-                             continue;
-                         }
+                        if match_url {
+                            local_db = db;
+                            break;
+                        } else {
+                            // URL 不匹配，这是另一个同名仓库 -> 继续循环尝试下一个名字
+                            counter += 1;
+                            continue;
+                        }
                     }
                 }
                 Err(_) => {
@@ -122,7 +122,7 @@ pub fn init(
                     local_db = db;
                     break;
                 }
-             }
+            }
         } else {
             // 文件不存在，创建新库
             local_db = Database::create(&db_path)
@@ -131,10 +131,10 @@ pub fn init(
             break;
         }
     }
-    
+
     // 4. 初始化核心表
     init_core_tables(&local_db)?;
-    
+
     // 5. 初始化 Source Control 表
     source_control::init_tables(&local_db)?;
 
@@ -146,7 +146,9 @@ pub fn init(
         let info = super::RepoInfo {
             uuid: repo_uuid,
             name: final_name.clone(),
-            url: repo_url.map(|s| s.to_string()).or_else(|| Some(format!("urn:uuid:{}", repo_uuid))),
+            url: repo_url
+                .map(|s| s.to_string())
+                .or_else(|| Some(format!("urn:uuid:{}", repo_uuid))),
         };
         let write_txn = local_db.begin_write()?;
         {
@@ -157,9 +159,11 @@ pub fn init(
         write_txn.commit()?;
     }
 
-    Ok(RepoManager { 
+    Ok(RepoManager {
         ledger_dir,
-        local_db, 
+        local_db,
+        local_repo_name: final_name,
+        extra_local_dbs: RwLock::new(HashMap::new()),
         shadow_dbs: RwLock::new(HashMap::new()),
         snapshot_depth,
     })

@@ -26,6 +26,7 @@ use crate::server::handlers::{
     docs, document, listing, merge, plugin, search, source_control, sync,
 };
 use crate::server::session::WsSession;
+use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 
 /// Axum WebSocket 升级处理器
@@ -130,12 +131,25 @@ async fn route_message(
             document::handle_request_history(state, ch, doc_id).await;
         }
         ClientMessage::OpenDoc { doc_id } => {
-            document::handle_open_doc(state, ch, doc_id, session.active_branch.as_ref()).await;
+            document::handle_open_doc(
+                state,
+                ch,
+                doc_id,
+                session.active_branch.as_ref(),
+                session.active_repo.as_ref(),
+            )
+            .await;
         }
 
         // === 列表查询 ===
         ClientMessage::ListDocs => {
-            listing::handle_list_docs(state, ch, session.active_branch.as_ref()).await;
+            listing::handle_list_docs(
+                state,
+                ch,
+                session.active_branch.as_ref(),
+                session.active_repo.as_ref(),
+            )
+            .await;
         }
         ClientMessage::ListShadows => {
             listing::handle_list_shadows(state, ch).await;
@@ -210,16 +224,96 @@ async fn route_message(
         }
 
         // === 分支切换 ===
+        // === 分支切换 ===
         ClientMessage::SwitchBranch { peer_id } => {
+            // 1. 获取当前 Repo 的 URL (用于智能切换)
+            let current_repo_url = if let Some(current_repo) = &session.active_repo {
+                state
+                    .repo
+                    .get_repo_url(session.active_branch.as_ref(), current_repo)
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
             session.switch_branch(peer_id.clone());
             tracing::info!("Client switched to branch: {:?}", session.active_branch);
             ch.unicast(ServerMessage::BranchSwitched {
-                peer_id,
+                peer_id: peer_id.clone(),
                 success: true,
             });
-            // 刷新列表
-            listing::handle_list_docs(state, ch, session.active_branch.as_ref()).await;
+
+            // 2. 自动切Repo: 查找相同 URL 的 Repo，或者默认第一个
+            let repos = state
+                .repo
+                .list_repos(session.active_branch.as_ref())
+                .unwrap_or_default();
+            let mut target_repo = None;
+
+            // 策略 A: 尝试匹配 URL
+            if let Some(url) = &current_repo_url {
+                for repo_name in &repos {
+                    if let Ok(Some(r_url)) = state
+                        .repo
+                        .get_repo_url(session.active_branch.as_ref(), repo_name)
+                    {
+                        if r_url == *url {
+                            target_repo = Some(repo_name.clone());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 策略 B: 默认第一个 (Alphabetical First, list_repos guarantees sorting)
+            if target_repo.is_none() {
+                if let Some(first) = repos.first() {
+                    target_repo = Some(first.clone());
+                }
+            }
+
+            // 3. 执行 Repo 切换
+            if let Some(repo_name) = target_repo {
+                session.switch_repo(repo_name.clone());
+                ch.unicast(ServerMessage::RepoSwitched {
+                    name: repo_name.clone(),
+                    uuid: "".to_string(), // TODO: Fetch UUID from specific DB file
+                });
+            }
+
+            // 4. 刷新列表
+            listing::handle_list_docs(
+                state,
+                ch,
+                session.active_branch.as_ref(),
+                session.active_repo.as_ref(),
+            )
+            .await;
             listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
+        }
+        ClientMessage::SwitchRepo { name } => {
+            // Verify if repo exists in the CURRENT branch
+            let branch = session.active_branch.as_ref();
+            let repos = state.repo.list_repos(branch).unwrap_or_default();
+
+            if repos.contains(&name) {
+                session.switch_repo(name.clone());
+                tracing::info!("Client switched to repo: {}", name);
+                ch.unicast(ServerMessage::RepoSwitched {
+                    name: name.clone(),
+                    uuid: "".to_string(), // TODO: Fetch UUID
+                });
+                listing::handle_list_docs(
+                    state,
+                    ch,
+                    session.active_branch.as_ref(),
+                    session.active_repo.as_ref(),
+                )
+                .await;
+            } else {
+                ch.send_error(format!("Repository not found: {}", name));
+            }
         }
 
         // === 版本控制 ===

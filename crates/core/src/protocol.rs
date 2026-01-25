@@ -99,6 +99,9 @@ pub enum ClientMessage {
     /// 切换活动分支
     /// peer_id: None = 本地 (Master), Some = 远程影子库
     SwitchBranch { peer_id: Option<String> },
+    /// 切换当前仓库 (.redb 文件)
+    /// name: 仓库名称 (e.g. "default.redb" or "knowledge-base")
+    SwitchRepo { name: String },
 
     // === Source Control Messages (版本控制) ===
     /// 获取当前变更列表 (暂存区/未暂存)
@@ -191,6 +194,8 @@ pub enum ServerMessage {
         peer_id: Option<String>,
         success: bool,
     },
+    /// 仓库切换确认
+    RepoSwitched { name: String, uuid: String },
     /// 编辑请求被拒绝 (Shadow 分支只读)
     EditRejected { reason: String },
 

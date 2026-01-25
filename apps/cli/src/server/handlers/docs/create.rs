@@ -53,7 +53,7 @@ pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: St
                 .add_file(&filename, doc_id);
             ch.broadcast(ServerMessage::TreeUpdate(delta));
             // 兼容旧逻辑
-            handle_list_docs(state, ch, None).await;
+            handle_list_docs(state, ch, None, None).await;
         }
     } else if let Err(e) = std::fs::write(&path, "# New Note\n") {
         tracing::error!("创建文件失败: {:?}", e);
@@ -68,6 +68,6 @@ pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: St
             .add_file(&filename, doc_id);
         ch.broadcast(ServerMessage::TreeUpdate(delta));
         // 兼容旧逻辑
-        handle_list_docs(state, ch, None).await;
+        handle_list_docs(state, ch, None, None).await;
     }
 }

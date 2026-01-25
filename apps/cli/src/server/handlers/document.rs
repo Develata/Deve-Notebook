@@ -88,29 +88,50 @@ pub async fn handle_open_doc(
     ch: &DualChannel,
     doc_id: deve_core::models::DocId,
     active_branch: Option<&PeerId>,
+    active_repo: Option<&String>,
 ) {
     tracing::info!(
-        "OpenDoc Request for DocID: {}, Branch: {:?}",
+        "OpenDoc Request for DocID: {}, Branch: {:?}, Repo: {:?}",
         doc_id,
-        active_branch
+        active_branch,
+        active_repo
     );
 
     let (final_content, version) = match active_branch {
-        // 本地分支: 从本地 Ledger 读取
+        // 本地分支: 从本地 Ledger 读取 (Main or Extra)
         None => {
-            // 调和: 确保磁盘内容与 Ledger 一致
-            if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
-                tracing::error!("SyncManager reconcile failed: {:?}", e);
+            let repo_name = active_repo
+                .map(|s| s.as_str())
+                .unwrap_or(state.repo.local_repo_name());
+
+            // Reconcile logic: 暂时只对主库启用自动重整，避免多库冲突
+            // TODO: Enhance SyncManager to support multi-repo reconciliation
+            if repo_name == state.repo.local_repo_name() {
+                if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
+                    tracing::error!("SyncManager reconcile failed: {:?}", e);
+                }
             }
 
-            let entries_with_seq = state.repo.get_local_ops(doc_id).unwrap_or_default();
-            let ops: Vec<LedgerEntry> = entries_with_seq
-                .iter()
-                .map(|(_, entry)| entry.clone())
-                .collect();
-            let content = deve_core::state::reconstruct_content(&ops);
-            let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-            (content, ver)
+            let res: anyhow::Result<Vec<(u64, LedgerEntry)>> =
+                state.repo.run_on_local_repo(repo_name, |db| {
+                    deve_core::ledger::ops::get_ops_from_db(db, doc_id)
+                });
+
+            match res {
+                Ok(entries_with_seq) => {
+                    let ops: Vec<LedgerEntry> = entries_with_seq
+                        .iter()
+                        .map(|(_, entry)| entry.clone())
+                        .collect();
+                    let content = deve_core::state::reconstruct_content(&ops);
+                    let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                    (content, ver)
+                }
+                Err(e) => {
+                    tracing::error!("Failed to read ops from repo {}: {:?}", repo_name, e);
+                    (String::new(), 0)
+                }
+            }
         }
         // 影子分支: 从 Shadow DB 读取
         Some(peer_id) => {
