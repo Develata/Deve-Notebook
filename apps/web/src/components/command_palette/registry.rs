@@ -55,8 +55,8 @@ pub fn create_static_commands(
                 "P2P: Switch to Peer".to_string()
             },
             action: Callback::new(move |_| {
-                let search_control =
-                    use_context::<crate::app::SearchControl>().expect("search control");
+                let search_control = use_context::<crate::components::main_layout::SearchControl>()
+                    .expect("search control");
                 search_control.set_mode.set("@".to_string());
                 search_control.set_show.set(true);
                 // Close this command palette (if it's a separate overlay, but Unified Search usually replaces it)
@@ -79,8 +79,8 @@ pub fn create_static_commands(
             action: Callback::new(move |_| {
                 // For now, reuse the same logic as Switch to Peer, as selecting a peer is the first step.
                 // Ideally this would open a dialog or automatically clone.
-                let search_control =
-                    use_context::<crate::app::SearchControl>().expect("search control");
+                let search_control = use_context::<crate::components::main_layout::SearchControl>()
+                    .expect("search control");
                 search_control.set_mode.set("@".to_string());
                 search_control.set_show.set(true);
                 set_show.set(false);

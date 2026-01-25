@@ -17,6 +17,7 @@ pub mod explorer;
 pub mod extensions;
 pub mod item;
 pub mod modals;
+pub mod repo_switcher;
 pub mod source_control;
 pub mod tree;
 pub mod types;

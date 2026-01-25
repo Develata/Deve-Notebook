@@ -13,7 +13,7 @@ use deve_core::models::DocId;
 use deve_core::tree::FileNode as CoreFileNode;
 use leptos::prelude::*;
 
-use crate::app::SearchControl;
+use crate::components::main_layout::SearchControl;
 
 #[component]
 pub fn ExplorerView(
@@ -150,6 +150,14 @@ pub fn ExplorerView(
         }
     }
 
+    // Derived active repo label
+    let active_repo_label = Signal::derive(move || {
+        core.active_repo
+            .get()
+            .map(|id| id.0)
+            .unwrap_or_else(|| "Knowledge Base".to_string())
+    });
+
     view! {
         <div class="h-full w-full bg-[#f7f7f7] flex flex-col font-sans select-none relative">
              <SidebarModals
@@ -161,15 +169,13 @@ pub fn ExplorerView(
              />
 
             <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-gray-100 hover:bg-gray-100 transition-colors group">
-                <div class="flex items-center gap-2 overflow-hidden text-gray-700">
-                    <div class="p-1 rounded text-gray-400 hover:bg-gray-200 cursor-pointer">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                          <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                        </svg>
+                <div class="flex items-center gap-2 flex-1 min-w-0 text-gray-700">
+                    <crate::components::sidebar::repo_switcher::RepoSwitcher />
+                    <div class="overflow-hidden flex-1">
+                        <span class="font-medium text-sm truncate block" title=move || active_repo_label.get()>
+                            {move || active_repo_label.get()}
+                        </span>
                     </div>
-                    <span class="font-medium text-sm truncate">
-                        "Knowledge Base"
-                    </span>
                 </div>
 
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

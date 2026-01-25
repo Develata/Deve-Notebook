@@ -15,6 +15,7 @@ pub mod sidebar_menu;
 
 pub mod activity_bar;
 pub mod branch_switcher;
+pub mod main_layout;
 pub mod merge_modal;
 pub mod merge_panel;
 pub mod quick_open;

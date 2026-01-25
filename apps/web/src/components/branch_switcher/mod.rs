@@ -12,39 +12,37 @@
 //!
 //! **类型**: Core MAY (扩展可选)
 
-use leptos::prelude::*;
+use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::CoreState;
-use crate::app::SearchControl;
+use leptos::prelude::*;
 
 #[component]
 pub fn BranchSwitcher() -> impl IntoView {
     let core = expect_context::<CoreState>();
     let search_control = expect_context::<SearchControl>();
-    
+
     // 挂载时请求 Shadow 列表
     Effect::new(move |_| {
         core.on_list_shadows.run(());
     });
-    
+
     // 获取当前分支名称
-    let current_branch = move || {
-        match core.active_repo.get() {
-            None => "Local (Master)".to_string(),
-            Some(peer) => peer.to_string(),
-        }
+    let current_branch = move || match core.active_repo.get() {
+        None => "Local (Master)".to_string(),
+        Some(peer) => peer.to_string(),
     };
-    
+
     // 判断是否为 Spectator (只读) 模式
     let is_spectator = move || core.active_repo.get().is_some();
-    
+
     // 点击打开 Unified Search 并切换到 Branch Mode (@)
     let onclick = move |_| {
         search_control.set_mode.set("@".to_string());
         search_control.set_show.set(true);
     };
-    
+
     view! {
-        <button 
+        <button
             class="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors text-xs font-medium text-gray-700"
             on:click=onclick
             title="Switch Branch (Ctrl+Shift+L)"
