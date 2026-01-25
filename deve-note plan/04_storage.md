@@ -111,6 +111,20 @@
         3.  **Execution**: 所有的业务逻辑执行 (Execution) **MUST** 仅针对 UUID 进行。
     *   **Rationale**: 确保在文件重命名或移动（Path 变更）时，正在进行的后台任务（如 Embeddings, Sync）不中断，且路径不一致时以 UUID 指向的实体为准。
 
+## Cross-Platform Path Strategy (跨平台路径策略)
+
+为解决 Windows/Linux/macOS 路径分隔符不一致的问题，系统实施严格的路径规范化策略：
+
+*   **Canonical Internal Format (内部权威格式)**:
+    *   **Rule**: 所有存储在 Ledger、KV Database、Memory Cache 中的路径字符串，**MUST** 统一使用 Linux 风格的正斜杠 (`/`) 分隔符。
+    *   **Scope**: `DocId <-> Path` 映射表、Op Logs、Protocol Messages (Sync/Gossip)。
+    *   **Example**: `folder/subfolder/file.md` (Valid), `folder\subfolder\file.md` (Invalid).
+*   **Normalization Boundary (规范化边界)**:
+    *   **Ingestion (输入)**: 当从 OS 文件系统读取路径时 (e.g. Watcher events, File Dialogs)，**MUST** 立即调用规范化函数 (`to_forward_slash`) 转换为内部格式。
+    *   **Interaction (输出)**: 仅在直接调用 OS 文件系统 API (e.g. `std::fs`, `open_file`) 的瞬间，**SHOULD** 调用转换函数 (`to_native`) 还原为系统原生格式。
+*   **Implementation**:
+    *   核心库提供 `crates/core/src/utils/path.rs` 标准模块，包含 `to_forward_slash` 和 `to_native` 方法，所有路径操作 **MUST** 通过此模块进行，严禁手动通过字符串替换 (`replace`) 处理。
+
 ## 本章相关命令
 
 * 无。

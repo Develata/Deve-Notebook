@@ -10,7 +10,7 @@
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use anyhow::Result;
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, TableDefinition};
 
 /// 快照表定义 (doc_id -> content)
 /// 存储每个文档最后一次提交时的内容

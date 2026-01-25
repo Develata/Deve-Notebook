@@ -21,7 +21,10 @@
     *   **Retrieval Constraint**:
         *   **UUID-First**: 所有 Repo 和 Branch 的后端操作 **MUST** 使用 UUID 检索。
         *   **Name Resolution**: 前端可传递 `RepoName` 或 `PeerName`，但后端必须先解析为 `RepoUUID` 或 `PeerUUID` 再执行文件系统操作。
-    *   **Repo Instance Selection**: 当用户切换 Branch (Peer Identity) 时，前端展示该 Branch 下所有可用的 **Repo Instances**。
+    *   **Repo Instance Selection (Switching Strategy)**:
+        *   **UI Layout**: 侧边栏 Source Control 视图 **MUST** 只显示 **当前激活 (Active)** 的仓库状态。禁止同时列出所有 Repo。
+        *   **Switching Interaction**: 用户通过 Sidebar Header 区域的 **"Switch Repository"** 下拉菜单进行切换。
+        *   **Reasoning**: 保持界面整洁，符合 VS Code 单一责权 (Single Responsibility) 的视觉习惯。
 
 ## 树状态管理器 (Tree State Manager)
 

@@ -28,7 +28,6 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel) {
 }
 
 /// 检测未暂存的变更
-/// 检测未暂存的变更
 fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
     let mut changes = Vec::new();
     let repo_id = super::get_repo_id(state);
@@ -41,19 +40,16 @@ fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
         }
     };
 
-    // 规范化路径: 统一使用 forward slash '/'
-    let normalize_path = |p: &str| p.replace('\\', "/");
-
     let staged_paths: std::collections::HashSet<String> = state
         .repo
         .list_staged()
         .unwrap_or_default()
         .into_iter()
-        .map(|e| normalize_path(&e.path))
+        .map(|e| deve_core::utils::path::to_forward_slash(&e.path))
         .collect();
 
     for (doc_id, path) in docs {
-        let normalized = normalize_path(&path);
+        let normalized = deve_core::utils::path::to_forward_slash(&path);
         if staged_paths.contains(&normalized) {
             continue;
         }
@@ -78,6 +74,7 @@ fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
 
 /// 暂存指定文件
 pub async fn handle_stage_file(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+    let path = deve_core::utils::path::to_forward_slash(&path);
     match state.repo.stage_file(&path) {
         Ok(()) => {
             tracing::info!("Staged file: {}", path);
@@ -92,6 +89,7 @@ pub async fn handle_stage_file(state: &Arc<AppState>, ch: &DualChannel, path: St
 
 /// 取消暂存指定文件
 pub async fn handle_unstage_file(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+    let path = deve_core::utils::path::to_forward_slash(&path);
     match state.repo.unstage_file(&path) {
         Ok(()) => {
             tracing::info!("Unstaged file: {}", path);
@@ -107,7 +105,8 @@ pub async fn handle_unstage_file(state: &Arc<AppState>, ch: &DualChannel, path: 
 /// 创建提交 (保存快照)
 pub async fn handle_commit(state: &Arc<AppState>, ch: &DualChannel, message: String) {
     let get_content = |path: &str| -> Option<(deve_core::models::DocId, String)> {
-        let doc_id = state.repo.get_docid(path).ok()??;
+        let normalized = deve_core::utils::path::to_forward_slash(path);
+        let doc_id = state.repo.get_docid(&normalized).ok()??;
         let ops = state.repo.get_local_ops(doc_id).ok()?;
         let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
         let content = deve_core::state::reconstruct_content(&entries);
