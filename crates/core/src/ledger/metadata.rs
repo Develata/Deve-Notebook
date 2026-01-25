@@ -188,5 +188,6 @@ pub fn list_docs(db: &Database) -> Result<Vec<(DocId, String)>> {
         let (id, path) = item?;
         docs.push((DocId::from_u128(id.value()), path.value().to_string()));
     }
+    tracing::info!("Listed {} docs from DB", docs.len());
     Ok(docs)
 }

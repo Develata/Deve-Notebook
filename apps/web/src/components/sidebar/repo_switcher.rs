@@ -54,8 +54,13 @@ pub fn RepoSwitcher() -> impl IntoView {
                                              class:bg-blue-50=move || is_active
                                              class:text-blue-600=move || is_active
                                              on:click=move |_| {
-                                                 core.set_current_repo.set(Some(repo_name_c.clone()));
-                                                 set_show_menu.set(false);
+                                                 let name = repo_name_c.clone();
+                                                 let cb = core.on_switch_repo.clone();
+                                                 let set_menu = set_show_menu;
+                                                 request_animation_frame(move || {
+                                                     cb.run(name);
+                                                     set_menu.set(false);
+                                                 });
                                              }
                                          >
                                              <span class="truncate">{repo_name}</span>

@@ -156,7 +156,16 @@ impl RepoManager {
         repo_name: Option<&str>,
     ) -> Result<Vec<(crate::models::DocId, String)>> {
         let name = repo_name.unwrap_or(&self.local_repo_name);
-        self.run_on_local_repo(name, |db| metadata::list_docs(db))
+        tracing::debug!("RepoManager: list_local_docs for '{}'", name);
+        self.run_on_local_repo(name, |db| {
+            let res = metadata::list_docs(db);
+            if let Ok(ref docs) = res {
+                tracing::debug!("RepoManager: Found {} docs in '{}'", docs.len(), name);
+            } else {
+                tracing::error!("RepoManager: Failed to list docs in '{}'", name);
+            }
+            res
+        })
     }
 
     /// 获取账本目录路径

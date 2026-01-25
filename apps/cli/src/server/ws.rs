@@ -1,108 +1,83 @@
-﻿// apps/cli/src/server/ws.rs
-//! # WebSocket Handler (WebSocket 连接处理器)
-//!
-//! **架构作用**:
-//! 处理 WebSocket 连接升级、生命周期管理及消息路由。
-//!
-//! **核心功能**:
-//! - `ws_handler`: Axum 路由处理器，升级 HTTP 到 WebSocket
-//! - `handle_socket`: 连接主循环
-//!
-//! **类型**: Core MUST (核心必选)
-
-use axum::{
-    extract::{
-        State,
-        ws::{Message, WebSocket, WebSocketUpgrade},
-    },
-    response::IntoResponse,
-};
+﻿use axum::extract::State;
+use axum::response::IntoResponse;
 use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::{
-    docs, document, listing, merge, plugin, search, source_control, sync,
+    docs, document, listing, merge, plugin, search, source_control, switcher, sync,
 };
 use crate::server::session::WsSession;
-use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 
-/// Axum WebSocket 升级处理器
+/// HTTP/WebSocket 入口
 pub async fn ws_handler(
-    ws: WebSocketUpgrade,
+    ws: axum::extract::WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, state))
+    let peer_id = uuid::Uuid::new_v4().to_string();
+    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id))
 }
 
-/// WebSocket 连接主循环
-async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
-    tracing::info!("Client connected");
-
-    // 会话状态
-    let mut session = WsSession::new();
-
-    // 订阅广播通道
-    let mut rx = state.tx.subscribe();
-
-    // 创建单播通道
-    let (direct_tx, mut direct_rx) = tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
-
-    // 分离 Socket
+/// WebSocket 消息处理器
+pub async fn handle_socket(
+    state: Arc<AppState>,
+    socket: axum::extract::ws::WebSocket,
+    peer_id: String,
+) {
     let (mut sender, mut receiver) = socket.split();
 
-    // Task: 从广播/单播接收消息并发送到客户端
-    let send_task = tokio::spawn(async move {
-        loop {
-            let msg_to_send = tokio::select! {
-                res = rx.recv() => {
-                    match res {
-                        Ok(msg) => msg,
-                        Err(_) => continue,
-                    }
-                },
-                res = direct_rx.recv() => {
-                    match res {
-                        Some(msg) => msg,
-                        None => break,
-                    }
-                }
-            };
+    // Create Unicast Channel (MPSC)
+    let (unicast_tx, mut unicast_rx) = mpsc::unbounded_channel::<ServerMessage>();
 
-            if let Ok(json) = serde_json::to_string(&msg_to_send) {
-                if sender.send(Message::Text(json)).await.is_err() {
+    tokio::spawn(async move {
+        while let Some(msg) = unicast_rx.recv().await {
+            if let Ok(text) = serde_json::to_string(&msg) {
+                if let Err(e) = sender.send(axum::extract::ws::Message::Text(text)).await {
+                    tracing::warn!("Failed to send message to WS: {:?}", e);
                     break;
                 }
             }
         }
     });
 
-    // 创建双通道上下文
-    let ch = DualChannel::new(state.tx.clone(), direct_tx);
+    // Create DualChannel
+    let ch = DualChannel::new(state.tx.clone(), unicast_tx.clone());
 
-    // 主循环: 接收客户端消息并路由
+    tracing::info!("Client connected: {}", peer_id);
+
+    // 会话状态
+    let mut session = WsSession::new();
+
+    // 主循环
     while let Some(msg) = receiver.next().await {
-        let msg = match msg {
-            Ok(msg) => msg,
-            Err(_) => break,
-        };
-
-        if let Message::Text(text) = msg {
-            if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
-                route_message(&state, &ch, &mut session, client_msg).await;
+        if let Ok(msg) = msg {
+            match msg {
+                axum::extract::ws::Message::Text(text) => {
+                    if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
+                        route_message(&state, &ch, &mut session, client_msg).await;
+                    } else {
+                        tracing::warn!("Failed to parse client message: {}", text);
+                    }
+                }
+                axum::extract::ws::Message::Binary(bin) => {
+                    tracing::warn!("Received binary message (ignored): {} bytes", bin.len());
+                }
+                axum::extract::ws::Message::Close(_) => {
+                    tracing::info!("Client disconnected: {}", peer_id);
+                    break;
+                }
+                _ => {}
             }
+        } else {
+            break;
         }
     }
-
-    send_task.abort();
-    tracing::info!("Client disconnected");
 }
 
-/// 消息路由器
-///
-/// 根据消息类型分发到对应的 Handler
+/// 消息路由
 async fn route_message(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -110,55 +85,17 @@ async fn route_message(
     msg: ClientMessage,
 ) {
     match msg {
-        // === 基础消息 ===
-        ClientMessage::Ping => {
-            ch.unicast(ServerMessage::Pong);
+        // === 握手与初始化 ===
+        ClientMessage::SyncHello {
+            peer_id,
+            pub_key,
+            signature,
+            vector,
+        } => {
+            sync::handle_sync_hello(state, ch, peer_id, pub_key, signature, vector).await;
         }
 
         // === 文档操作 ===
-        ClientMessage::Edit {
-            doc_id,
-            op,
-            client_id,
-        } => {
-            if session.is_readonly() {
-                ch.send_error("Cannot edit on shadow branch (read-only)".to_string());
-            } else {
-                document::handle_edit(state, ch, doc_id, op, client_id).await;
-            }
-        }
-        ClientMessage::RequestHistory { doc_id } => {
-            document::handle_request_history(state, ch, doc_id).await;
-        }
-        ClientMessage::OpenDoc { doc_id } => {
-            document::handle_open_doc(
-                state,
-                ch,
-                doc_id,
-                session.active_branch.as_ref(),
-                session.active_repo.as_ref(),
-            )
-            .await;
-        }
-
-        // === 列表查询 ===
-        ClientMessage::ListDocs => {
-            listing::handle_list_docs(
-                state,
-                ch,
-                session.active_branch.as_ref(),
-                session.active_repo.as_ref(),
-            )
-            .await;
-        }
-        ClientMessage::ListShadows => {
-            listing::handle_list_shadows(state, ch).await;
-        }
-        ClientMessage::ListRepos => {
-            listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
-        }
-
-        // === 文档 CRUD ===
         ClientMessage::CreateDoc { name } => {
             docs::handle_create_doc(state, ch, name).await;
         }
@@ -181,29 +118,39 @@ async fn route_message(
             docs::handle_move_doc(state, ch, src_path, dest_path).await;
         }
 
-        // === P2P 同步 ===
-        ClientMessage::SyncHello {
-            peer_id,
-            pub_key,
-            signature,
-            vector,
-        } => {
-            tracing::info!("SyncHello from {}", peer_id);
-            session.set_authenticated(peer_id.clone());
-            sync::handle_sync_hello(state, ch, peer_id, pub_key, signature, vector).await;
+        // === 编辑与同步 ===
+        ClientMessage::OpenDoc { doc_id } => {
+            document::handle_open_doc(
+                state,
+                ch,
+                doc_id,
+                session.active_branch.as_ref(), // Pass branch
+                session.active_repo.as_ref(),   // Pass repo
+            )
+            .await;
         }
-        ClientMessage::SyncRequest { requests } => {
-            sync::handle_sync_request(state, ch, requests).await;
-        }
-        ClientMessage::SyncPush { ops } => {
-            if let Some(pid) = &session.authenticated_peer_id {
-                sync::handle_sync_push(state, ch, pid.clone(), ops).await;
-            } else {
-                tracing::warn!("Ignored SyncPush from unauthenticated peer");
-            }
+        ClientMessage::Edit { doc_id, op, .. } => {
+            document::handle_edit(state, ch, doc_id, op, 0).await;
         }
 
-        // === 手动合并 ===
+        // === 列表查询 ===
+        ClientMessage::ListDocs => {
+            listing::handle_list_docs(
+                state,
+                ch,
+                session.active_branch.as_ref(),
+                session.active_repo.as_ref(),
+            )
+            .await;
+        }
+        ClientMessage::ListShadows => {
+            listing::handle_list_shadows(state, ch).await;
+        }
+        ClientMessage::ListRepos => {
+            listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
+        }
+
+        // === 合并操作 ===
         ClientMessage::GetSyncMode => {
             merge::handle_get_sync_mode(state, ch).await;
         }
@@ -223,97 +170,25 @@ async fn route_message(
             merge::handle_merge_peer(state, ch, peer_id, doc_id).await;
         }
 
-        // === 分支切换 ===
-        // === 分支切换 ===
+        // === 搜索与插件 ===
+        ClientMessage::Search { query, limit } => {
+            search::handle_search(state, ch, query, limit).await;
+        }
+        ClientMessage::PluginCall {
+            req_id,
+            plugin_id,
+            fn_name,
+            args,
+        } => {
+            plugin::handle_plugin_call(state, ch, req_id, plugin_id, fn_name, args).await;
+        }
+
+        // === 分支切换 (Updated to safe handler) ===
         ClientMessage::SwitchBranch { peer_id } => {
-            // 1. 获取当前 Repo 的 URL (用于智能切换)
-            let current_repo_url = if let Some(current_repo) = &session.active_repo {
-                state
-                    .repo
-                    .get_repo_url(session.active_branch.as_ref(), current_repo)
-                    .ok()
-                    .flatten()
-            } else {
-                None
-            };
-
-            session.switch_branch(peer_id.clone());
-            tracing::info!("Client switched to branch: {:?}", session.active_branch);
-            ch.unicast(ServerMessage::BranchSwitched {
-                peer_id: peer_id.clone(),
-                success: true,
-            });
-
-            // 2. 自动切Repo: 查找相同 URL 的 Repo，或者默认第一个
-            let repos = state
-                .repo
-                .list_repos(session.active_branch.as_ref())
-                .unwrap_or_default();
-            let mut target_repo = None;
-
-            // 策略 A: 尝试匹配 URL
-            if let Some(url) = &current_repo_url {
-                for repo_name in &repos {
-                    if let Ok(Some(r_url)) = state
-                        .repo
-                        .get_repo_url(session.active_branch.as_ref(), repo_name)
-                    {
-                        if r_url == *url {
-                            target_repo = Some(repo_name.clone());
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // 策略 B: 默认第一个 (Alphabetical First, list_repos guarantees sorting)
-            if target_repo.is_none() {
-                if let Some(first) = repos.first() {
-                    target_repo = Some(first.clone());
-                }
-            }
-
-            // 3. 执行 Repo 切换
-            if let Some(repo_name) = target_repo {
-                session.switch_repo(repo_name.clone());
-                ch.unicast(ServerMessage::RepoSwitched {
-                    name: repo_name.clone(),
-                    uuid: "".to_string(), // TODO: Fetch UUID from specific DB file
-                });
-            }
-
-            // 4. 刷新列表
-            listing::handle_list_docs(
-                state,
-                ch,
-                session.active_branch.as_ref(),
-                session.active_repo.as_ref(),
-            )
-            .await;
-            listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
+            switcher::handle_switch_branch(state, ch, session, peer_id).await;
         }
         ClientMessage::SwitchRepo { name } => {
-            // Verify if repo exists in the CURRENT branch
-            let branch = session.active_branch.as_ref();
-            let repos = state.repo.list_repos(branch).unwrap_or_default();
-
-            if repos.contains(&name) {
-                session.switch_repo(name.clone());
-                tracing::info!("Client switched to repo: {}", name);
-                ch.unicast(ServerMessage::RepoSwitched {
-                    name: name.clone(),
-                    uuid: "".to_string(), // TODO: Fetch UUID
-                });
-                listing::handle_list_docs(
-                    state,
-                    ch,
-                    session.active_branch.as_ref(),
-                    session.active_repo.as_ref(),
-                )
-                .await;
-            } else {
-                ch.send_error(format!("Repository not found: {}", name));
-            }
+            switcher::handle_switch_repo(state, ch, session, name).await;
         }
 
         // === 版本控制 ===
@@ -326,32 +201,19 @@ async fn route_message(
         ClientMessage::UnstageFile { path } => {
             source_control::handle_unstage_file(state, ch, path).await;
         }
+        ClientMessage::DiscardFile { path } => {
+            source_control::handle_discard_file(state, ch, path).await;
+        }
         ClientMessage::Commit { message } => {
             source_control::handle_commit(state, ch, message).await;
         }
         ClientMessage::GetCommitHistory { limit } => {
-            source_control::handle_get_commit_history(state, ch, limit).await;
+            source_control::handle_get_commit_history(state, ch, limit as u32).await;
         }
         ClientMessage::GetDocDiff { path } => {
             source_control::handle_get_doc_diff(state, ch, path).await;
         }
-        ClientMessage::DiscardFile { path } => {
-            source_control::handle_discard_file(state, ch, path).await;
-        }
 
-        // === 插件 ===
-        ClientMessage::PluginCall {
-            req_id,
-            plugin_id,
-            fn_name,
-            args,
-        } => {
-            plugin::handle_plugin_call(state, ch, req_id, plugin_id, fn_name, args).await;
-        }
-
-        // === 搜索 ===
-        ClientMessage::Search { query, limit } => {
-            search::handle_search(state, ch, query, limit).await;
-        }
+        _ => {}
     }
 }

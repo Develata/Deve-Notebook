@@ -38,7 +38,7 @@ pub fn create_results_memo(
             provider.search(&q)
         } else if is_branch {
             let shadows = core.shadow_repos.get();
-            let current = match core.active_repo.get() {
+            let current = match core.active_branch.get() {
                 None => Some("Local (Master)".to_string()),
                 Some(p) => Some(p.to_string()),
             };
@@ -168,10 +168,9 @@ pub fn build_keydown_handler(
                         SearchAction::SwitchBranch(branch) => {
                             leptos::logging::log!("Switching Branch: {}", branch);
                             if branch == "Local (Master)" {
-                                core.set_active_repo.set(None);
+                                core.on_switch_branch.run(None);
                             } else {
-                                core.set_active_repo
-                                    .set(Some(deve_core::models::PeerId(branch.clone())));
+                                core.on_switch_branch.run(Some(branch.clone()));
                             }
                             set_show.set(false);
                         }

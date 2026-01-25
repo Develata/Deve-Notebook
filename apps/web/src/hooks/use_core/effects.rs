@@ -78,11 +78,14 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_commit_history = signals.set_commit_history;
     let set_diff_content = signals.set_diff_content;
     let set_tree_nodes = signals.set_tree_nodes;
+    let set_active_branch = signals.set_active_branch;
+    let set_current_repo = signals.set_current_repo;
 
     Effect::new(move |_| {
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
+                    leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
                     set_docs.set(list.clone());
                     if current_doc.get_untracked().is_none() {
                         if let Some(first) = list.first() {
@@ -142,6 +145,16 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::BranchSwitched { peer_id, success } => {
                     leptos::logging::log!("分支已切换到 {:?}, 成功: {}", peer_id, success);
                     if success {
+                        // Sync signal with server state (e.g. backend auto-correction)
+                        // Use Update to trigger effects only if changed
+                        // PeerId string vs PeerId type? ClientMessage uses PeerId. Signal usage uses Option<PeerId>.
+                        // ServerMessage peer_id is Option<String>.
+                        let new_val = peer_id.clone().map(PeerId::new);
+                        // Access signal getter to check current value to avoid redundant set/effect loop?
+                        // Actually set_active_branch.set() usually checks PartialEq if implemented?
+                        // Option<PeerId> derives PartialEq.
+                        set_active_branch.set(new_val);
+
                         if let Some(doc_id) = current_doc.get_untracked() {
                             ws_rx.send(ClientMessage::OpenDoc { doc_id });
                         }
@@ -149,6 +162,9 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 }
                 ServerMessage::RepoSwitched { name, uuid: _ } => {
                     leptos::logging::log!("仓库已切换到: {}", name);
+                    // Sync signal with server state
+                    set_current_repo.set(Some(name));
+
                     // Refresh current doc to ensure it's valid in new repo context
                     if let Some(doc_id) = current_doc.get_untracked() {
                         ws_rx.send(ClientMessage::OpenDoc { doc_id });
@@ -197,39 +213,6 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 }
                 _ => {}
             }
-        }
-    });
-}
-
-/// 设置分支切换 Effect (P2P Remote)
-pub fn setup_branch_switch_effect(ws: &WsService, active_branch: ReadSignal<Option<PeerId>>) {
-    let ws_for_branch = ws.clone();
-    Effect::new(move |_| {
-        let peer = active_branch.get();
-        let peer_id = peer.map(|p| p.to_string());
-        leptos::logging::log!("发送 SwitchBranch: {:?}", peer_id);
-        ws_for_branch.send(ClientMessage::SwitchBranch { peer_id });
-    });
-}
-
-/// 设置仓库切换 Effect (Local .redb)
-pub fn setup_repo_switch_effect(ws: &WsService, current_repo: ReadSignal<Option<String>>) {
-    let ws_for_repo = ws.clone();
-    Effect::new(move |_| {
-        // Only send if it changes.
-        // Note: init signal is None ("default"). If UI sets "default", we send "default".
-        // Backend expects String.
-        if let Some(name) = current_repo.get() {
-            leptos::logging::log!("发送 SwitchRepo: {}", name);
-            ws_for_repo.send(ClientMessage::SwitchRepo { name });
-        } else {
-            // If None, switch to default? Or do nothing?
-            // Since backend defaults to "default" if explicit switch isn't called,
-            // checking initial state might be tricky.
-            // But if we switch FROM something TO None, we should send "default"?
-            // Let's assume frontend logic ensures None -> Some("default") if explicitly selected?
-            // Or we treat None as "default" and send it?
-            // RepoSwitcher likely sets a string.
         }
     });
 }

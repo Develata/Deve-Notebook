@@ -238,3 +238,29 @@ pub fn create_misc_callbacks(
         on_search,
     }
 }
+
+/// 切换操作回调
+pub struct SwitchCallbacks {
+    pub on_switch_branch: Callback<Option<String>>,
+    pub on_switch_repo: Callback<String>,
+}
+
+/// 创建切换回调
+pub fn create_switch_callbacks(ws: &WsService) -> SwitchCallbacks {
+    let ws_branch = ws.clone();
+    let on_switch_branch = Callback::new(move |peer_id: Option<String>| {
+        leptos::logging::log!("触发 SwitchBranch 回调: {:?}", peer_id);
+        ws_branch.send(ClientMessage::SwitchBranch { peer_id });
+    });
+
+    let ws_repo = ws.clone();
+    let on_switch_repo = Callback::new(move |name: String| {
+        leptos::logging::log!("触发 SwitchRepo 回调: {}", name);
+        ws_repo.send(ClientMessage::SwitchRepo { name });
+    });
+
+    SwitchCallbacks {
+        on_switch_branch,
+        on_switch_repo,
+    }
+}

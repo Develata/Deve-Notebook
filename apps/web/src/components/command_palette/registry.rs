@@ -98,7 +98,7 @@ pub fn create_static_commands(
             action: Callback::new(move |_| {
                 // Get CoreState to check active repo
                 let core = use_context::<crate::hooks::use_core::CoreState>().expect("core state");
-                if let Some(peer_id) = core.active_repo.get_untracked() {
+                if let Some(peer_id) = core.active_branch.get_untracked() {
                     core.on_merge_peer.run(peer_id.to_string());
                     // Notify user
                     // We don't have a toast system yet, but console log happens.

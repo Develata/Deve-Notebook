@@ -84,14 +84,13 @@ pub fn use_core() -> CoreState {
     // 4. 设置 Effects
     effects::setup_handshake_effect(&ws, key_pair.clone(), peer_id.clone());
     effects::setup_message_effect(&ws, &signals);
-    effects::setup_branch_switch_effect(&ws, signals.active_branch);
-    effects::setup_repo_switch_effect(&ws, signals.current_repo);
 
     // 5. 创建回调
     let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc);
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
     let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
     let misc_callbacks = callbacks::create_misc_callbacks(&ws, signals.set_stats);
+    let switch_callbacks = callbacks::create_switch_callbacks(&ws);
 
     // 6. 组装最终状态
     let state = CoreState {
@@ -123,8 +122,10 @@ pub fn use_core() -> CoreState {
         on_discard_pending: sync_callbacks.on_discard_pending,
         active_branch: signals.active_branch,
         set_active_branch: signals.set_active_branch,
+        on_switch_branch: switch_callbacks.on_switch_branch,
         current_repo: signals.current_repo,
         set_current_repo: signals.set_current_repo,
+        on_switch_repo: switch_callbacks.on_switch_repo,
         shadow_repos: signals.shadow_repos,
         on_list_shadows: sync_callbacks.on_list_shadows,
         repo_list: signals.repo_list,

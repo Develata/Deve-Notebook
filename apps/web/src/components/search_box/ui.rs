@@ -5,7 +5,7 @@ use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::components::search_box::types::{SearchAction, SearchResult};
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 
 /// 负责渲染整体遮罩与内部布局。
 pub fn render_overlay(
@@ -190,11 +190,9 @@ fn result_item(
                         }
                         SearchAction::SwitchBranch(branch) => {
                             if branch == "Local (Master)" {
-                                core_clone.set_active_repo.set(None);
+                                core_clone.on_switch_branch.run(None);
                             } else {
-                                core_clone
-                                    .set_active_repo
-                                    .set(Some(deve_core::models::PeerId(branch.clone())));
+                                core_clone.on_switch_branch.run(Some(branch));
                             }
                             set_show.set(false);
                         }

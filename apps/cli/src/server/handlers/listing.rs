@@ -28,8 +28,8 @@ pub async fn handle_list_docs(
 
     match docs {
         Ok(docs_list) => {
-            // 广播文档列表 (兼容旧逻辑)
-            ch.broadcast(ServerMessage::DocList { docs: docs_list });
+            // 单播文档列表 (确保只有请求者收到，且用于当前 Repo 上下文)
+            ch.unicast(ServerMessage::DocList { docs: docs_list });
 
             // 发送初始树结构 (Init Delta)
             if active_branch.is_none() {

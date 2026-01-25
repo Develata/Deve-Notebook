@@ -27,13 +27,13 @@ pub fn BranchSwitcher() -> impl IntoView {
     });
 
     // 获取当前分支名称
-    let current_branch = move || match core.active_repo.get() {
+    let current_branch = move || match core.active_branch.get() {
         None => "Local (Master)".to_string(),
         Some(peer) => peer.to_string(),
     };
 
     // 判断是否为 Spectator (只读) 模式
-    let is_spectator = move || core.active_repo.get().is_some();
+    let is_spectator = move || core.active_branch.get().is_some();
 
     // 点击打开 Unified Search 并切换到 Branch Mode (@)
     let onclick = move |_| {

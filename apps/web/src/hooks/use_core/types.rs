@@ -56,10 +56,12 @@ pub struct CoreState {
     // 分支状态 (Branch -> Peer)
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub set_active_branch: WriteSignal<Option<PeerId>>,
+    pub on_switch_branch: Callback<Option<String>>, // None for Local
 
     // 仓库状态 (Repo -> .redb File)
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
+    pub on_switch_repo: Callback<String>,
 
     // 分支切换状态
     pub shadow_repos: ReadSignal<Vec<String>>,
