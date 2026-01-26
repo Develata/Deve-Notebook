@@ -1,4 +1,4 @@
-﻿// apps/cli/src/server/handlers/sync.rs
+// apps/cli/src/server/handlers/sync.rs
 //! # P2P 同步消息处理器
 //!
 //! 处理 P2P 同步相关的消息: SyncHello, SyncRequest, SyncPush
@@ -136,3 +136,32 @@ pub async fn handle_sync_push(
         }
     }
 }
+
+/// 处理删除 Peer 请求 (物理删除远端分支)
+
+pub async fn handle_delete_peer(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    peer_id_str: String,
+) {
+    let peer_id = PeerId::new(peer_id_str.clone());
+    tracing::info!("Handling DeletePeer request for: {}", peer_id);
+
+    // 1. 调用 RepoManager 执行物理删除
+    match state.repo.delete_peer_branch(&peer_id) {
+        Ok(_) => {
+            tracing::info!("Successfully deleted peer branch: {}", peer_id);
+            
+            // 2. 发送确认消息
+            ch.broadcast(ServerMessage::PeerDeleted { peer_id: peer_id_str });
+            
+            // 3. 广播最新的 Shadow 列表 (刷新所有客户端侧边栏)
+            crate::server::handlers::listing::handle_list_shadows(state, ch).await;
+        }
+        Err(e) => {
+            tracing::error!("Failed to delete peer branch {}: {:?}", peer_id, e);
+            ch.send_error(format!("Failed to delete peer: {}", e));
+        }
+    }
+}
+

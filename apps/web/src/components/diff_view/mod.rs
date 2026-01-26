@@ -12,6 +12,7 @@ pub fn DiffView<F>(
     path: String,
     old_content: String,
     new_content: String,
+    #[prop(default = false)] is_readonly: bool,
     on_close: F,
 ) -> impl IntoView
 where
@@ -45,14 +46,25 @@ where
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-[#3b3b3b] dark:text-[#cccccc]">"Diff: "</span>
                     <span class="text-[#237893] dark:text-[#4fc1ff]">{filename}</span>
+                    {move || if is_readonly {
+                        view! { <span class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500">"Read Only"</span> }.into_any()
+                    } else {
+                        view! {}.into_any()
+                    }}
                 </div>
                 <div class="flex items-center gap-2">
-                    <button
-                        class="px-3 py-1 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs hover:bg-gray-50 dark:hover:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
-                        on:click=move |_| set_is_editing.update(|v| *v = !*v)
-                    >
-                        {move || if is_editing.get() { "Preview Diff" } else { "Edit" }}
-                    </button>
+                    {move || if !is_readonly {
+                        view! {
+                            <button
+                                class="px-3 py-1 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs hover:bg-gray-50 dark:hover:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
+                                on:click=move |_| set_is_editing.update(|v| *v = !*v)
+                            >
+                                {move || if is_editing.get() { "Preview Diff" } else { "Edit" }}
+                            </button>
+                        }.into_any()
+                    } else {
+                        view! {}.into_any()
+                    }}
                     <button
                         class="p-1 hover:bg-[#e1e1e1] dark:hover:bg-[#3e3e42] rounded text-[#616161]"
                         on:click=move |_| on_close()
@@ -62,6 +74,7 @@ where
                     </button>
                 </div>
             </div>
+
 
             // Content
             <div class="flex-1 overflow-hidden flex relative">

@@ -209,10 +209,12 @@ pub fn MainLayout() -> impl IntoView {
                                     path=path
                                     old_content=old
                                     new_content=new
+                                    is_readonly=core.is_spectator.get()
                                     on_close=move || core.set_diff_content.set(None)
                                 />
                             }.into_any();
                         }
+
 
                         match core.current_doc.get() {
                             Some(id) => view! {

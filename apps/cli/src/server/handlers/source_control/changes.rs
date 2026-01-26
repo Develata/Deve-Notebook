@@ -4,7 +4,7 @@ use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
 use deve_core::models::RepoType;
-use deve_core::ledger::listing::RepoListing; // Import added
+use deve_core::ledger::listing::RepoListing;
 use std::sync::Arc;
 
 /// 获取变更列表 (暂存区 + 未暂存)
@@ -70,12 +70,24 @@ fn detect_unstaged_changes(state: &Arc<AppState>, session: &WsSession) -> Vec<Ch
             continue;
         }
 
-        let current = state.repo.get_local_ops(doc_id).ok().map(|ops| {
-            let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-            deve_core::state::reconstruct_content(&entries)
-        });
+        let current = match state.repo.get_local_ops(doc_id) {
+            Ok(ops) => {
+                let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+                Some(deve_core::state::reconstruct_content(&entries))
+            }
+            Err(e) => {
+                tracing::error!("Failed to get local ops for {}: {:?}", path, e);
+                // On error, we shouldn't treat it as "empty/deleted", better to skip detecting change for this file
+                // to avoid false positives.
+                continue;
+            }
+        };
 
-        let committed = state.repo.get_committed_content(doc_id).ok().flatten();
+        let committed = state
+            .repo
+            .get_committed_content(doc_id)
+            .ok()
+            .flatten();
 
         if let Some(status) = state
             .repo

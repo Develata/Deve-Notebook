@@ -1,4 +1,4 @@
-﻿// crates\core\src
+// crates\core\src
 //! # WebSocket Protocol (通信协议)
 //!
 //! **架构作用**:
@@ -102,6 +102,8 @@ pub enum ClientMessage {
     /// 切换当前仓库 (.redb 文件)
     /// name: 仓库名称 (e.g. "default.redb" or "knowledge-base")
     SwitchRepo { name: String },
+    /// 删除指定 Peer 的远端分支 (物理删除)
+    DeletePeer { peer_id: String },
 
     // === Source Control Messages (版本控制) ===
     /// 获取当前变更列表 (暂存区/未暂存)
@@ -196,6 +198,8 @@ pub enum ServerMessage {
     },
     /// 仓库切换确认
     RepoSwitched { name: String, uuid: String },
+    /// 远端 Peer 删除确认
+    PeerDeleted { peer_id: String },
     /// 编辑请求被拒绝 (Shadow 分支只读)
     EditRejected { reason: String },
 

@@ -23,7 +23,7 @@
 //! - `merge`: 合并引擎
 //! - `manager`: RepoManager 实现分布模块
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -323,5 +323,29 @@ impl RepoManager {
         }
 
         Ok(None)
+    }
+
+    /// 删除指定 Peer 的影子库目录
+
+    pub fn delete_peer_branch(&self, peer_id: &PeerId) -> Result<()> {
+        let peer_dir = self.remotes_dir().join(peer_id.to_filename());
+
+        // 1. Check if exists
+        if !peer_dir.exists() {
+            return Ok(()); // Idempotent success
+        }
+
+        // 2. Remove from cache (shadow_dbs)
+        {
+            let mut guard = self.shadow_dbs.write().unwrap();
+            guard.remove(peer_id);
+        }
+
+        // 3. Physical delete
+        std::fs::remove_dir_all(&peer_dir)
+            .with_context(|| format!("无法删除 Peer 目录: {:?}", peer_dir))?;
+
+        tracing::info!("Deleted peer branch: {}", peer_id);
+        Ok(())
     }
 }

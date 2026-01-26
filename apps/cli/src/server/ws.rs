@@ -1,4 +1,4 @@
-﻿use axum::extract::State;
+use axum::extract::State;
 use axum::response::IntoResponse;
 use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
@@ -177,8 +177,12 @@ async fn route_message(
         ClientMessage::SwitchRepo { name } => {
             switcher::handle_switch_repo(state, ch, session, name).await;
         }
+        ClientMessage::DeletePeer { peer_id } => {
+            sync::handle_delete_peer(state, ch, peer_id).await;
+        }
 
         // === 版本控制 ===
+
         ClientMessage::GetChanges => {
             source_control::handle_get_changes(state, ch, session).await;
         }
