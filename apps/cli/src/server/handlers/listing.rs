@@ -16,8 +16,21 @@ use std::sync::Arc;
 /// **逻辑**:
 /// 优先使用 session 中锁定的 active_db 列出文档。
 /// 这确保文件树与当前选中的 repo 保持一致。
+/// 同时发送 RepoSwitched 通知前端当前仓库名称。
 pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
-    // 使用 session 锁定的数据库，或回退到参数
+    // 确定当前仓库名称
+    let current_repo = session
+        .active_repo
+        .clone()
+        .unwrap_or_else(|| state.repo.local_repo_name().to_string());
+
+    // 发送 RepoSwitched 让前端知道当前仓库 (用于初始化及切换后同步)
+    ch.unicast(ServerMessage::RepoSwitched {
+        name: current_repo.clone(),
+        uuid: String::new(), // TODO: Fetch UUID
+    });
+
+    // 使用 session 锁定的数据库，或回退到默认逻辑
     let docs = if let Some(handle) = session.get_active_db() {
         // 直接从锁定的数据库读取文档列表
         deve_core::ledger::metadata::list_docs(&handle.db)
@@ -33,7 +46,11 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
 
     match docs {
         Ok(docs_list) => {
-            tracing::info!("ListDocs: Returning {} docs for session", docs_list.len());
+            tracing::info!(
+                "ListDocs: Returning {} docs for repo '{}'",
+                docs_list.len(),
+                current_repo
+            );
             // 单播文档列表 (确保只有请求者收到，且用于当前 Repo 上下文)
             ch.unicast(ServerMessage::DocList { docs: docs_list });
 

@@ -179,7 +179,8 @@ pub async fn handle_switch_repo(
         session.switch_repo(name.clone());
         tracing::info!("Client switched to repo: {} (Branch: {:?})", name, branch);
 
-        // 3. 锁定数据库
+        // 3. 锁定数据库 (对于非主库)
+        // 主库由 RepoManager 直接管理，不需要单独锁定
         match state.repo.open_database(branch.as_ref(), &name) {
             Ok(handle) => {
                 session.set_active_db(handle);
@@ -190,9 +191,10 @@ pub async fn handle_switch_repo(
                 );
             }
             Err(e) => {
-                tracing::error!("Failed to lock database: {:?}", e);
-                ch.send_error(format!("Failed to lock database: {}", e));
-                return;
+                // 对于主库，open_database 会返回错误（因为 RepoManager 已持有）
+                // 这是正常的，我们清除 active_db 让后续操作通过 run_on_local_repo 访问
+                tracing::debug!("Database lock skipped (main repo): {:?}", e);
+                session.active_db = None;
             }
         }
 
