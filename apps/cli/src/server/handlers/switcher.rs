@@ -138,11 +138,7 @@ pub async fn handle_switch_branch(
                 // 继续，但不设置 active_db
             }
         }
-
-        ch.unicast(ServerMessage::RepoSwitched {
-            name: repo_name.clone(),
-            uuid: "".to_string(), // TODO: Fetch UUID
-        });
+        // RepoSwitched 通知由 handle_list_docs 统一发送
     } else {
         // If no repo found (e.g. empty branch), clear active db
         session.active_db = None;
@@ -198,12 +194,7 @@ pub async fn handle_switch_repo(
             }
         }
 
-        ch.unicast(ServerMessage::RepoSwitched {
-            name: name.clone(),
-            uuid: "".to_string(), // TODO: Fetch UUID
-        });
-
-        // 4. 刷新文档列表 (使用新的 Repo 上下文)
+        // 4. 刷新文档列表 (包含 RepoSwitched 通知)
         listing::handle_list_docs(state, ch, session).await;
     } else {
         tracing::warn!(
