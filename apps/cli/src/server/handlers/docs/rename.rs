@@ -5,6 +5,7 @@ use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
@@ -19,9 +20,17 @@ use std::sync::Arc;
 pub async fn handle_rename_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &WsSession,
     old_path: String,
     new_path: String,
 ) {
+    // 只读模式检查: 静默忽略重命名请求
+    // TODO: Frontend will hide rename buttons when readonly
+    if session.is_readonly() {
+        tracing::debug!("Rename ignored: session is readonly (remote branch)");
+        return;
+    }
+
     let src = join_normalized(&state.vault_path, &old_path);
 
     // 1. 确保目标路径以 .md 结尾 (如果源是 .md)
@@ -67,8 +76,8 @@ pub async fn handle_rename_doc(
                 .rename(&old_path, &dst_name);
             ch.broadcast(ServerMessage::TreeUpdate(delta));
 
-            // 6. 兼容旧逻辑
-            handle_list_docs(state, ch, None, None).await;
+            // 6. 刷新文档列表
+            handle_list_docs(state, ch, session).await;
         }
     } else {
         tracing::warn!("重命名失败: 源不存在: {:?}", src);
@@ -80,8 +89,9 @@ pub async fn handle_rename_doc(
 pub async fn handle_move_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &WsSession,
     src_path: String,
     dest_path: String,
 ) {
-    handle_rename_doc(state, ch, src_path, dest_path).await;
+    handle_rename_doc(state, ch, session, src_path, dest_path).await;
 }

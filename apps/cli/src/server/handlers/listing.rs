@@ -5,55 +5,42 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{PeerId, RepoType};
+use deve_core::models::PeerId;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-/// 处理 ListDocs 请求 - 列出 Vault 中的所有文档
-pub async fn handle_list_docs(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    active_branch: Option<&PeerId>,
-    active_repo: Option<&String>,
-) {
-    let docs = if let Some(peer_id) = active_branch {
-        // Remote (Shadow)
-        let repo_type = RepoType::Remote(peer_id.clone(), uuid::Uuid::nil()); // UUID handling to be improved later
-        state.repo.list_docs(&repo_type)
+/// 处理 ListDocs 请求 - 列出当前激活仓库中的所有文档
+///
+/// **逻辑**:
+/// 优先使用 session 中锁定的 active_db 列出文档。
+/// 这确保文件树与当前选中的 repo 保持一致。
+pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
+    // 使用 session 锁定的数据库，或回退到参数
+    let docs = if let Some(handle) = session.get_active_db() {
+        // 直接从锁定的数据库读取文档列表
+        deve_core::ledger::metadata::list_docs(&handle.db)
     } else {
-        // Local (Multi-Repo)
-        state.repo.list_local_docs(active_repo.map(|s| s.as_str()))
+        // 回退: 使用 active_branch/active_repo 字符串
+        if let Some(peer_id) = &session.active_branch {
+            let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), uuid::Uuid::nil());
+            state.repo.list_docs(&repo_type)
+        } else {
+            state.repo.list_local_docs(session.active_repo.as_deref())
+        }
     };
 
     match docs {
         Ok(docs_list) => {
+            tracing::info!("ListDocs: Returning {} docs for session", docs_list.len());
             // 单播文档列表 (确保只有请求者收到，且用于当前 Repo 上下文)
             ch.unicast(ServerMessage::DocList { docs: docs_list });
 
-            // 发送初始树结构 (Init Delta)
-            if active_branch.is_none() {
-                // TODO: TreeManager currently binds to main repo?
-                // We should probably rely on DocList to rebuild tree in frontend for now
-                // OR update TreeManager to support multi-repo.
-                // Given the time constraint, we send Empty Tree to force frontend rebuild from DocList unless it's main repo?
-                // Actually TreeManager init logic in `mod.rs` uses `list_docs`.
-                // If we switched repo, TreeManager (global singleton) might still hold old tree.
-                // This is a "Tenant" issue.
-                // Critical: TreeManager should be per-repo or stateless?
-                // TreeManager is `Arc<RwLock<TreeManager>>` in AppState.
-                // If we switch repo, we should probably not use the shared TreeManager unless we reload it.
-                // But TreeManager is shared across clients!
-                // If client A is on Repo A, client B on Repo B.
-                // We cannot share one TreeManager.
-                // Solution: Send empty tree delta, force frontend to build from `DocList`.
-                // Frontend `explorer.rs` has fallback: `if core_nodes.is_empty() { build_file_tree(docs) }`.
-                use deve_core::tree::TreeDelta;
-                ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
-            } else {
-                use deve_core::tree::TreeDelta;
-                ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
-            }
+            // 发送空树结构，让前端从 DocList 重建
+            // (TreeManager 是全局共享的，无法用于多租户场景)
+            use deve_core::tree::TreeDelta;
+            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
         }
         Err(e) => {
             tracing::error!("Failed to list docs: {:?}", e);

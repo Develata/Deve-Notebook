@@ -94,76 +94,70 @@ pub async fn handle_request_history(
 /// 打开文档
 ///
 /// **参数**:
-/// - `active_branch`: 当前活动分支。None = 本地, Some = 影子库
+/// - `session`: WebSocket 会话，包含锁定的数据库
+///
+/// **逻辑**:
+/// 使用 session 中锁定的 active_db 直接读取操作日志，
+/// 支持本地和远程分支的统一读取。
 pub async fn handle_open_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &WsSession,
     doc_id: deve_core::models::DocId,
-    active_branch: Option<&PeerId>,
-    active_repo: Option<&String>,
 ) {
     tracing::info!(
         "OpenDoc Request for DocID: {}, Branch: {:?}, Repo: {:?}",
         doc_id,
-        active_branch,
-        active_repo
+        session.active_branch,
+        session.active_repo
     );
 
-    let (final_content, version) = match active_branch {
-        // 本地分支: 从本地 Ledger 读取 (Main or Extra)
-        None => {
-            let repo_name = active_repo
-                .map(|s| s.as_str())
-                .unwrap_or(state.repo.local_repo_name());
-
-            // Reconcile logic: 暂时只对主库启用自动重整，避免多库冲突
-            // TODO: Enhance SyncManager to support multi-repo reconciliation
-            if repo_name == state.repo.local_repo_name() {
-                if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
-                    tracing::error!("SyncManager reconcile failed: {:?}", e);
-                }
+    // 优先使用 session 锁定的数据库
+    let (final_content, version) = if let Some(handle) = session.get_active_db() {
+        // 直接从锁定的数据库读取
+        match deve_core::ledger::ops::get_ops_from_db(&handle.db, doc_id) {
+            Ok(entries_with_seq) => {
+                let ops: Vec<LedgerEntry> = entries_with_seq
+                    .iter()
+                    .map(|(_, entry)| entry.clone())
+                    .collect();
+                let content = deve_core::state::reconstruct_content(&ops);
+                let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                (content, ver)
             }
-
-            let res: anyhow::Result<Vec<(u64, LedgerEntry)>> =
-                state.repo.run_on_local_repo(repo_name, |db| {
-                    deve_core::ledger::ops::get_ops_from_db(db, doc_id)
-                });
-
-            match res {
-                Ok(entries_with_seq) => {
-                    let ops: Vec<LedgerEntry> = entries_with_seq
-                        .iter()
-                        .map(|(_, entry)| entry.clone())
-                        .collect();
-                    let content = deve_core::state::reconstruct_content(&ops);
-                    let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-                    (content, ver)
-                }
-                Err(e) => {
-                    tracing::error!("Failed to read ops from repo {}: {:?}", repo_name, e);
-                    (String::new(), 0)
-                }
+            Err(e) => {
+                tracing::error!("Failed to read ops from active_db: {:?}", e);
+                (String::new(), 0)
             }
         }
-        // 影子分支: 从 Shadow DB 读取
-        Some(peer_id) => {
-            match state
-                .repo
-                .get_shadow_ops(peer_id, &uuid::Uuid::nil(), doc_id)
-            {
-                Ok(entries_with_seq) => {
-                    let ops: Vec<LedgerEntry> = entries_with_seq
-                        .iter()
-                        .map(|(_, entry)| entry.clone())
-                        .collect();
-                    let content = deve_core::state::reconstruct_content(&ops);
-                    let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-                    (content, ver)
-                }
-                Err(e) => {
-                    tracing::error!("Failed to get shadow ops for {}: {:?}", peer_id, e);
-                    (String::new(), 0)
-                }
+    } else {
+        // 回退: 使用默认本地库
+        tracing::warn!("No active_db in session, falling back to main local repo");
+        let repo_name = state.repo.local_repo_name();
+
+        // Reconcile logic for main repo
+        if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
+            tracing::error!("SyncManager reconcile failed: {:?}", e);
+        }
+
+        let res: anyhow::Result<Vec<(u64, LedgerEntry)>> =
+            state.repo.run_on_local_repo(repo_name, |db| {
+                deve_core::ledger::ops::get_ops_from_db(db, doc_id)
+            });
+
+        match res {
+            Ok(entries_with_seq) => {
+                let ops: Vec<LedgerEntry> = entries_with_seq
+                    .iter()
+                    .map(|(_, entry)| entry.clone())
+                    .collect();
+                let content = deve_core::state::reconstruct_content(&ops);
+                let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
+                (content, ver)
+            }
+            Err(e) => {
+                tracing::error!("Failed to read ops from repo {}: {:?}", repo_name, e);
+                (String::new(), 0)
             }
         }
     };

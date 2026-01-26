@@ -5,6 +5,7 @@ use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
@@ -17,7 +18,19 @@ use std::sync::Arc;
 /// 3. 创建文件并写入默认内容
 /// 4. 在 Ledger 中注册 DocId
 /// 5. 更新 TreeManager 并广播 TreeDelta
-pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: String) {
+pub async fn handle_create_doc(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    name: String,
+) {
+    // 只读模式检查: 静默忽略创建请求
+    // TODO: Frontend will hide create buttons when readonly
+    if session.is_readonly() {
+        tracing::debug!("Create ignored: session is readonly (remote branch)");
+        return;
+    }
+
     // 1. 确保以 .md 结尾
     let mut filename = name.clone();
     if !filename.ends_with(".md") {
@@ -52,8 +65,8 @@ pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: St
                 .unwrap()
                 .add_file(&filename, doc_id);
             ch.broadcast(ServerMessage::TreeUpdate(delta));
-            // 兼容旧逻辑
-            handle_list_docs(state, ch, None, None).await;
+            // 刷新文档列表
+            handle_list_docs(state, ch, session).await;
         }
     } else if let Err(e) = std::fs::write(&path, "# New Note\n") {
         tracing::error!("创建文件失败: {:?}", e);
@@ -67,7 +80,7 @@ pub async fn handle_create_doc(state: &Arc<AppState>, ch: &DualChannel, name: St
             .unwrap()
             .add_file(&filename, doc_id);
         ch.broadcast(ServerMessage::TreeUpdate(delta));
-        // 兼容旧逻辑
-        handle_list_docs(state, ch, None, None).await;
+        // 刷新文档列表
+        handle_list_docs(state, ch, session).await;
     }
 }

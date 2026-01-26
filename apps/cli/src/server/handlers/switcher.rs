@@ -153,13 +153,7 @@ pub async fn handle_switch_branch(
     // If active_branch is None (Local), this calls list_local_docs.
     // If active_branch is Some (Remote), this calls list_docs(Remote), which triggers ensure_shadow_db.
     // This is valid IF the branch actually exists (which we verified or corrected above).
-    listing::handle_list_docs(
-        state,
-        ch,
-        session.active_branch.as_ref(), // Updated branch
-        session.active_repo.as_ref(),   // Updated repo
-    )
-    .await;
+    listing::handle_list_docs(state, ch, session).await;
     listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
 }
 
@@ -208,13 +202,7 @@ pub async fn handle_switch_repo(
         });
 
         // 4. 刷新文档列表 (使用新的 Repo 上下文)
-        listing::handle_list_docs(
-            state,
-            ch,
-            session.active_branch.as_ref(),
-            session.active_repo.as_ref(),
-        )
-        .await;
+        listing::handle_list_docs(state, ch, session).await;
     } else {
         tracing::warn!(
             "Repo switch failed: '{}' not found in branch {:?}. Available: {:?}",

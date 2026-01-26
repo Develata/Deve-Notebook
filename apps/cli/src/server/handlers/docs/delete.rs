@@ -4,6 +4,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
@@ -15,7 +16,19 @@ use std::sync::Arc;
 /// 2. 执行文件系统删除
 /// 3. 从 Ledger 中移除记录
 /// 4. 更新 TreeManager 并广播 TreeDelta
-pub async fn handle_delete_doc(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+pub async fn handle_delete_doc(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    path: String,
+) {
+    // 只读模式检查: 静默忽略删除请求
+    // TODO: Frontend will hide delete buttons when readonly
+    if session.is_readonly() {
+        tracing::debug!("Delete ignored: session is readonly (remote branch)");
+        return;
+    }
+
     tracing::info!("handle_delete_doc: path={}", path);
     let target = join_normalized(&state.vault_path, &path);
     let is_dir = target.is_dir();
@@ -47,6 +60,6 @@ pub async fn handle_delete_doc(state: &Arc<AppState>, ch: &DualChannel, path: St
     let delta = state.tree_manager.write().unwrap().remove(&path);
     ch.broadcast(ServerMessage::TreeUpdate(delta));
 
-    // 4. 兼容旧逻辑
-    handle_list_docs(state, ch, None, None).await;
+    // 4. 刷新文档列表
+    handle_list_docs(state, ch, session).await;
 }

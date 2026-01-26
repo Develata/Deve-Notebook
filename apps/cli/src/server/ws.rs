@@ -97,37 +97,30 @@ async fn route_message(
 
         // === 文档操作 ===
         ClientMessage::CreateDoc { name } => {
-            docs::handle_create_doc(state, ch, name).await;
+            docs::handle_create_doc(state, ch, session, name).await;
         }
         ClientMessage::RenameDoc { old_path, new_path } => {
-            docs::handle_rename_doc(state, ch, old_path, new_path).await;
+            docs::handle_rename_doc(state, ch, session, old_path, new_path).await;
         }
         ClientMessage::DeleteDoc { path } => {
-            docs::handle_delete_doc(state, ch, path).await;
+            docs::handle_delete_doc(state, ch, session, path).await;
         }
         ClientMessage::CopyDoc {
             src_path,
             dest_path,
         } => {
-            docs::handle_copy_doc(state, ch, src_path, dest_path).await;
+            docs::handle_copy_doc(state, ch, session, src_path, dest_path).await;
         }
         ClientMessage::MoveDoc {
             src_path,
             dest_path,
         } => {
-            docs::handle_move_doc(state, ch, src_path, dest_path).await;
+            docs::handle_move_doc(state, ch, session, src_path, dest_path).await;
         }
 
         // === 编辑与同步 ===
         ClientMessage::OpenDoc { doc_id } => {
-            document::handle_open_doc(
-                state,
-                ch,
-                doc_id,
-                session.active_branch.as_ref(), // Pass branch
-                session.active_repo.as_ref(),   // Pass repo
-            )
-            .await;
+            document::handle_open_doc(state, ch, session, doc_id).await;
         }
         ClientMessage::Edit { doc_id, op, .. } => {
             document::handle_edit(state, ch, session, doc_id, op, 0).await;
@@ -135,13 +128,7 @@ async fn route_message(
 
         // === 列表查询 ===
         ClientMessage::ListDocs => {
-            listing::handle_list_docs(
-                state,
-                ch,
-                session.active_branch.as_ref(),
-                session.active_repo.as_ref(),
-            )
-            .await;
+            listing::handle_list_docs(state, ch, session).await;
         }
         ClientMessage::ListShadows => {
             listing::handle_list_shadows(state, ch).await;

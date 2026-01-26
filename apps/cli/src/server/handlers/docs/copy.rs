@@ -5,6 +5,7 @@ use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::session::WsSession;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
 
@@ -19,9 +20,17 @@ use std::sync::Arc;
 pub async fn handle_copy_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &WsSession,
     src_path: String,
     dest_path: String,
 ) {
+    // 只读模式检查: 静默忽略复制请求
+    // TODO: Frontend will hide copy buttons when readonly
+    if session.is_readonly() {
+        tracing::debug!("Copy ignored: session is readonly (remote branch)");
+        return;
+    }
+
     let src = join_normalized(&state.vault_path, &src_path);
     let dst = join_normalized(&state.vault_path, &dest_path);
 
@@ -63,7 +72,7 @@ pub async fn handle_copy_doc(
             dest_path,
             doc_id
         );
-        handle_list_docs(state, ch, None, None).await;
+        handle_list_docs(state, ch, session).await;
     } else {
         tracing::error!("Ledger 注册复制文档失败");
     }
