@@ -5,18 +5,30 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::session::WsSession;
 use deve_core::models::{LedgerEntry, PeerId};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 /// 处理编辑请求
+///
+/// **只读模式处理**:
+/// 当 session 处于只读模式 (remotes 分支) 时，静默忽略编辑请求。
+/// // TODO: Frontend will hide edit buttons when readonly
 pub async fn handle_edit(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &WsSession,
     doc_id: deve_core::models::DocId,
     op: deve_core::models::Op,
     client_id: u64,
 ) {
+    // 只读模式检查: 静默忽略编辑请求
+    if session.is_readonly() {
+        tracing::debug!("Edit ignored: session is readonly (remote branch)");
+        return;
+    }
+
     // 获取本地 Peer ID
     let local_peer_id = state.identity_key.peer_id();
 

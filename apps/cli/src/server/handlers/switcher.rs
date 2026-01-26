@@ -115,17 +115,37 @@ pub async fn handle_switch_branch(
         best_match
     };
 
-    // 4. 执行 Repo 切换
+    // 4. 执行 Repo 切换并锁定数据库
     if let Some(repo_name) = target_repo {
         tracing::info!("Auto-switching to repo: {}", repo_name);
         session.switch_repo(repo_name.clone());
+
+        // 锁定数据库
+        match state
+            .repo
+            .open_database(session.active_branch.as_ref(), &repo_name)
+        {
+            Ok(handle) => {
+                session.set_active_db(handle);
+                tracing::info!(
+                    "Database locked: {} (readonly: {})",
+                    repo_name,
+                    session.is_readonly()
+                );
+            }
+            Err(e) => {
+                tracing::error!("Failed to lock database: {:?}", e);
+                // 继续，但不设置 active_db
+            }
+        }
+
         ch.unicast(ServerMessage::RepoSwitched {
             name: repo_name.clone(),
             uuid: "".to_string(), // TODO: Fetch UUID
         });
     } else {
-        // If no repo found (e.g. empty branch), maybe clear active repo?
-        // session.active_repo = None; // Optional
+        // If no repo found (e.g. empty branch), clear active db
+        session.active_db = None;
     }
 
     // 5. 刷新列表
@@ -165,12 +185,29 @@ pub async fn handle_switch_repo(
         session.switch_repo(name.clone());
         tracing::info!("Client switched to repo: {} (Branch: {:?})", name, branch);
 
+        // 3. 锁定数据库
+        match state.repo.open_database(branch.as_ref(), &name) {
+            Ok(handle) => {
+                session.set_active_db(handle);
+                tracing::info!(
+                    "Database locked: {} (readonly: {})",
+                    name,
+                    session.is_readonly()
+                );
+            }
+            Err(e) => {
+                tracing::error!("Failed to lock database: {:?}", e);
+                ch.send_error(format!("Failed to lock database: {}", e));
+                return;
+            }
+        }
+
         ch.unicast(ServerMessage::RepoSwitched {
             name: name.clone(),
             uuid: "".to_string(), // TODO: Fetch UUID
         });
 
-        // 3. 刷新文档列表 (使用新的 Repo 上下文)
+        // 4. 刷新文档列表 (使用新的 Repo 上下文)
         listing::handle_list_docs(
             state,
             ch,

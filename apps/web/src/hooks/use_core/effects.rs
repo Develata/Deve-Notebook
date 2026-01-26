@@ -169,6 +169,10 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     if let Some(doc_id) = current_doc.get_untracked() {
                         ws_rx.send(ClientMessage::OpenDoc { doc_id });
                     }
+
+                    // Refresh source control data
+                    ws_rx.send(ClientMessage::GetChanges);
+                    ws_rx.send(ClientMessage::GetCommitHistory { limit: 50 });
                 }
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);

@@ -130,7 +130,7 @@ async fn route_message(
             .await;
         }
         ClientMessage::Edit { doc_id, op, .. } => {
-            document::handle_edit(state, ch, doc_id, op, 0).await;
+            document::handle_edit(state, ch, session, doc_id, op, 0).await;
         }
 
         // === 列表查询 ===

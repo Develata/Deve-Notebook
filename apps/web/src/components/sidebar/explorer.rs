@@ -196,10 +196,7 @@ pub fn ExplorerView(
                     if nodes.is_empty() {
                          view! {
                             <div class="flex flex-col items-center justify-center h-32 text-gray-400 text-sm italic select-none">
-                                <div>{move || crate::i18n::t::sidebar::no_docs(locale.get())}</div>
-                                <div class="text-xs text-gray-300 mt-1">
-                                    {move || format!("Docs: {}, Nodes: {}", docs.get().len(), nodes.len())}
-                                </div>
+                                {move || crate::i18n::t::sidebar::no_docs(locale.get())}
                             </div>
                         }.into_any()
                     } else {
