@@ -167,8 +167,23 @@ pub async fn handle_get_commit_history(state: &Arc<AppState>, ch: &DualChannel, 
     }
 }
 
-/// 获取文档的 Diff (已提交版本 vs 当前版本)
-pub async fn handle_get_doc_diff(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+/// 获取文档的 Diff
+///
+/// **Local 分支**: 已提交版本 (左) vs 当前版本 (右)
+/// **Remote 分支**: Local 对应文档 (左) vs Remote 文档 (右)
+pub async fn handle_get_doc_diff(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    path: String,
+) {
+    // 只读模式 (Remote 分支) → 跨分支 diff
+    if session.is_readonly() {
+        handle_remote_diff(state, ch, session, path).await;
+        return;
+    }
+
+    // Local 分支 → 原有逻辑 (committed vs current)
     let doc_id = match state.repo.get_docid(&path) {
         Ok(Some(id)) => id,
         Ok(None) => {
@@ -203,6 +218,63 @@ pub async fn handle_get_doc_diff(state: &Arc<AppState>, ch: &DualChannel, path: 
         old_content,
         new_content,
     });
+}
+
+/// Remote 分支的跨分支 Diff
+///
+/// **左侧 (old)**: Local 分支对应文档
+/// **右侧 (new)**: Remote 分支文档 (当前只读视图)
+async fn handle_remote_diff(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    path: String,
+) {
+    // 从 Remote DB 获取文档内容 (右侧)
+    let new_content = match get_remote_doc_content(session, &path) {
+        Some(content) => content,
+        None => {
+            ch.send_error(format!("Remote document not found: {}", path));
+            return;
+        }
+    };
+
+    // 从 Local 分支获取对应文档 (左侧)
+    let old_content = get_local_counterpart(state, &path);
+
+    ch.unicast(ServerMessage::DocDiff {
+        path,
+        old_content,
+        new_content,
+    });
+}
+
+/// 从 Remote DB 读取文档内容
+fn get_remote_doc_content(session: &WsSession, path: &str) -> Option<String> {
+    let db = session.get_active_db()?;
+    let doc_id = deve_core::ledger::metadata::get_docid(&db.db, path).ok()??;
+    let ops = deve_core::ledger::ops::get_ops_from_db(&db.db, doc_id).ok()?;
+    let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+    Some(deve_core::state::reconstruct_content(&entries))
+}
+
+/// 从 Local 分支读取对应路径的文档
+fn get_local_counterpart(state: &Arc<AppState>, path: &str) -> String {
+    let doc_id = state.repo.get_docid(path).ok().flatten();
+    if let Some(id) = doc_id {
+        state
+            .repo
+            .get_local_ops(id)
+            .ok()
+            .map(|ops| {
+                let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+                deve_core::state::reconstruct_content(&entries)
+            })
+            .unwrap_or_default()
+    } else {
+        // Local 不存在该文档，返回空 (表示 Remote 新增)
+        String::new()
+    }
 }
 
 /// 放弃文件变更 (恢复到已提交状态)

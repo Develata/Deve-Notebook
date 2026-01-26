@@ -198,7 +198,7 @@ async fn route_message(
             source_control::handle_get_commit_history(state, ch, limit as u32).await;
         }
         ClientMessage::GetDocDiff { path } => {
-            source_control::handle_get_doc_diff(state, ch, path).await;
+            source_control::handle_get_doc_diff(state, ch, session, path).await;
         }
 
         _ => {}
