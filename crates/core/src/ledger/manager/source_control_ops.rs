@@ -3,8 +3,8 @@
 //!
 //! 实现 `RepoManager` 的暂存、提交、历史等版本控制方法。
 
-use crate::ledger::RepoManager;
 use crate::ledger::source_control;
+use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo};
 use anyhow::Result;

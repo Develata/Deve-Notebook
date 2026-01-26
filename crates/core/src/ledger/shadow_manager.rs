@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 //! # 影子库管理模块 (Shadow DB Manager)
 //!
 //! 管理远端影子库 (Store C) 的加载、查询和操作。
@@ -10,10 +10,10 @@
 
 use anyhow::Result;
 
-use super::RepoManager;
 use super::ops;
 use super::range;
 use super::shadow;
+use super::RepoManager;
 use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType};
 
 impl RepoManager {

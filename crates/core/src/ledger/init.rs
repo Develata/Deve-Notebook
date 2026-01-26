@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 //! # 仓库管理器初始化模块 (RepoManager Initialization)
 //!
 //! 处理 RepoManager 的初始化逻辑，包括目录结构创建和数据库表初始化。
@@ -28,9 +28,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::RwLock;
 
-use super::RepoManager;
 use super::schema::*;
 use super::source_control;
+use super::RepoManager;
 
 /// 初始化 RepoManager 实例
 ///

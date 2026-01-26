@@ -1,4 +1,4 @@
-﻿// crates/core/src/ledger/mod.rs
+// crates/core/src/ledger/mod.rs
 //! # 仓库管理器 (Repository Manager)
 //!
 //! 本模块实现 P2P Git-Flow 架构中的"三位一体隔离" (Trinity Isolation)。
@@ -277,5 +277,51 @@ impl RepoManager {
             let db = Database::create(&db_path)?;
             return read_url(&db);
         }
+    }
+
+    /// 查找具有指定 URL 的本地仓库 (Main 或 Extra)
+    pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
+        // 1. Check Main Repo
+        if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db) {
+            if info.url.as_deref() == Some(target_url) {
+                return Ok(Some(self.local_repo_name.clone()));
+            }
+        }
+
+        // 2. Iterate all .redb files in ledger/local
+        let local_dir = self.ledger_dir.join("local");
+        if !local_dir.exists() {
+            return Ok(None);
+        }
+
+        for entry in std::fs::read_dir(local_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
+                let file_stem = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default();
+
+                // Skip if main (already checked)
+                if file_stem == self.local_repo_name {
+                    continue;
+                }
+
+                // Use run_on_local_repo to safely access/cache
+                let is_match = self
+                    .run_on_local_repo(file_stem, |db| {
+                        let info = Self::read_repo_info_from_db(db)?;
+                        Ok(info.and_then(|i| i.url).as_deref() == Some(target_url))
+                    })
+                    .unwrap_or(false);
+
+                if is_match {
+                    return Ok(Some(file_stem.to_string()));
+                }
+            }
+        }
+
+        Ok(None)
     }
 }

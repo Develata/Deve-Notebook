@@ -1,9 +1,9 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 //! # Repository Listing (仓库列表查询)
 //!
 //! 提供 `RepoListing` trait，扩展 `RepoManager` 的列表查询能力。
 
-use crate::ledger::{RepoManager, metadata};
+use crate::ledger::{metadata, RepoManager};
 use crate::models::{DocId, PeerId, RepoType};
 use anyhow::Result;
 

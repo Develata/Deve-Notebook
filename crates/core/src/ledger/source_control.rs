@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 //! # Source Control 集成 (RepoManager 扩展)
 //!
 //! 为 RepoManager 提供 Source Control 功能的便捷方法。
@@ -10,7 +10,7 @@
 
 use crate::ledger::range;
 use crate::models::DocId;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, changes, commits, staging};
+use crate::source_control::{changes, commits, staging, ChangeEntry, ChangeStatus, CommitInfo};
 use anyhow::Result;
 use redb::Database;
 

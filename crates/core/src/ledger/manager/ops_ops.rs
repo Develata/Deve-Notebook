@@ -3,8 +3,8 @@
 //!
 //! 实现 `RepoManager` 的操作追加和读取方法。
 
-use crate::ledger::RepoManager;
 use crate::ledger::ops;
+use crate::ledger::RepoManager;
 use crate::models::{DocId, LedgerEntry, PeerId, RepoType};
 use anyhow::Result;
 

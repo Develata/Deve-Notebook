@@ -3,8 +3,8 @@
 //!
 //! 实现 `RepoManager` 的路径与 DocId 映射相关方法。
 
-use crate::ledger::RepoManager;
 use crate::ledger::metadata;
+use crate::ledger::RepoManager;
 use crate::models::DocId;
 use anyhow::Result;
 

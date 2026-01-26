@@ -3,8 +3,8 @@
 //!
 //! 实现 `RepoManager` 的快照保存方法。
 
-use crate::ledger::RepoManager;
 use crate::ledger::snapshot;
+use crate::ledger::RepoManager;
 use crate::models::DocId;
 use anyhow::Result;
 
