@@ -5,6 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::RepoType;
 use deve_core::protocol::ServerMessage;
@@ -12,7 +13,18 @@ use deve_core::source_control::ChangeEntry;
 use std::sync::Arc;
 
 /// 获取变更列表 (暂存区 + 未暂存)
-pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel) {
+///
+/// 使用 session 上下文确定当前仓库
+pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
+    // 只读模式没有暂存/未暂存概念，返回空列表
+    if session.is_readonly() {
+        ch.unicast(ServerMessage::ChangesList {
+            staged: vec![],
+            unstaged: vec![],
+        });
+        return;
+    }
+
     let staged = match state.repo.list_staged() {
         Ok(list) => list,
         Err(e) => {
@@ -22,17 +34,26 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel) {
         }
     };
 
-    let unstaged = detect_unstaged_changes(state);
+    let unstaged = detect_unstaged_changes(state, session);
 
     ch.unicast(ServerMessage::ChangesList { staged, unstaged });
 }
 
 /// 检测未暂存的变更
-fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
+///
+/// 使用 session 的 active_db 或回退到 active_repo
+fn detect_unstaged_changes(state: &Arc<AppState>, session: &WsSession) -> Vec<ChangeEntry> {
     let mut changes = Vec::new();
-    let repo_id = super::get_repo_id(state);
 
-    let docs = match state.repo.list_docs(&RepoType::Local(repo_id)) {
+    // 使用 session 锁定的数据库，或回退到默认逻辑
+    let docs = if let Some(handle) = session.get_active_db() {
+        deve_core::ledger::metadata::list_docs(&handle.db)
+    } else {
+        let repo_id = super::get_repo_id(state);
+        state.repo.list_docs(&RepoType::Local(repo_id))
+    };
+
+    let docs = match docs {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to list docs: {:?}", e);
@@ -190,7 +211,12 @@ pub async fn handle_get_doc_diff(state: &Arc<AppState>, ch: &DualChannel, path: 
 /// 1. 获取文档的已提交快照内容
 /// 2. 清除当前 Ledger 操作并重建为快照内容
 /// 3. 发送确认消息
-pub async fn handle_discard_file(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+pub async fn handle_discard_file(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    path: String,
+) {
     let doc_id = match state.repo.get_docid(&path) {
         Ok(Some(id)) => id,
         Ok(None) => {
@@ -228,7 +254,7 @@ pub async fn handle_discard_file(state: &Arc<AppState>, ch: &DualChannel, path: 
     if current_content == committed_content {
         tracing::info!("Discard file: {} - already matches committed state", path);
         ch.unicast(ServerMessage::DiscardAck { path: path.clone() });
-        handle_get_changes(state, ch).await;
+        handle_get_changes(state, ch, session).await;
         return;
     }
 
@@ -273,5 +299,5 @@ pub async fn handle_discard_file(state: &Arc<AppState>, ch: &DualChannel, path: 
 
     ch.unicast(ServerMessage::DiscardAck { path: path.clone() });
     // 刷新 Changes 列表
-    handle_get_changes(state, ch).await;
+    handle_get_changes(state, ch, session).await;
 }

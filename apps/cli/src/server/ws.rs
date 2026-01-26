@@ -180,7 +180,7 @@ async fn route_message(
 
         // === 版本控制 ===
         ClientMessage::GetChanges => {
-            source_control::handle_get_changes(state, ch).await;
+            source_control::handle_get_changes(state, ch, session).await;
         }
         ClientMessage::StageFile { path } => {
             source_control::handle_stage_file(state, ch, path).await;
@@ -189,7 +189,7 @@ async fn route_message(
             source_control::handle_unstage_file(state, ch, path).await;
         }
         ClientMessage::DiscardFile { path } => {
-            source_control::handle_discard_file(state, ch, path).await;
+            source_control::handle_discard_file(state, ch, session, path).await;
         }
         ClientMessage::Commit { message } => {
             source_control::handle_commit(state, ch, message).await;
