@@ -93,6 +93,18 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
                 }
             },
         );
+
+        // API: get_project_tree
+        // Returns a compact directory tree string for LLM context
+        engine.register_fn(
+            "get_project_tree",
+            move || -> Result<String, Box<EvalAltResult>> {
+                // Assume current working directory is project root
+                let root = std::env::current_dir().map_err(|e| e.to_string())?;
+                let tree = crate::context::DirectoryTree::generate(&root);
+                Ok(tree.structure)
+            },
+        );
     }
 
     // API: log_info(msg: &str)

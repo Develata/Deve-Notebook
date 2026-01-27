@@ -1,21 +1,25 @@
-use crate::hooks::use_core::UseCore;
+use crate::hooks::use_core::use_core;
+use leptos::prelude::*;
 use leptos::*;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
 
 #[component]
 pub fn ChatPanel() -> impl IntoView {
-    let core = UseCore::use_core();
+    let core = use_core();
 
     // UI State
-    let (input, set_input) = create_signal(String::new());
+    let (input, set_input) = signal(String::new());
+    let (is_drag_over, set_is_drag_over) = signal(false);
 
     // Auto-scroll ref
-    let messages_end_ref = create_node_ref::<html::Div>();
+    let messages_end_ref = NodeRef::<html::Div>::new();
 
     // Derived signal for messages from core state
     let messages = core.chat_messages;
     let is_streaming = core.is_chat_streaming;
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // Auto scroll to bottom when messages change
         messages.track();
         if let Some(el) = messages_end_ref.get() {
@@ -41,13 +45,89 @@ pub fn ChatPanel() -> impl IntoView {
         let args = vec![serde_json::json!(req_id), serde_json::json!(msg)];
 
         // Trigger Plugin Call
-        // This sends `ClientMessage::PluginCall { plugin_id: "ai-chat", fn_name: "chat", ... }`
         core.on_plugin_call
             .run(("ai-chat".to_string(), "chat".to_string(), req_id, args));
     };
 
+    // Drag & Drop Handlers
+    let on_drag_over = move |ev: web_sys::DragEvent| {
+        ev.prevent_default();
+        set_is_drag_over.set(true);
+    };
+
+    let on_drag_leave = move |ev: web_sys::DragEvent| {
+        ev.prevent_default();
+        set_is_drag_over.set(false);
+    };
+
+    let on_drop = {
+        let set_input = set_input.clone();
+        move |ev: web_sys::DragEvent| {
+            ev.prevent_default();
+            set_is_drag_over.set(false);
+
+            if let Some(data_transfer) = ev.data_transfer() {
+                if let Some(files) = data_transfer.files() {
+                    for i in 0..files.length() {
+                        if let Some(file) = files.item(i) {
+                            let name = file.name();
+                            // Only allow text files or code
+                            // Simple heuristic: extension check or size check
+                            // For now, assume user knows what they are doing, but we should limit size.
+                            if file.size() > 1024.0 * 1024.0 {
+                                leptos::logging::warn!("File too large: {}", name);
+                                continue;
+                            }
+
+                            let reader = web_sys::FileReader::new().unwrap();
+                            let reader_c = reader.clone();
+                            let name_c = name.clone();
+                            let set_input = set_input.clone();
+
+                            let onload = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+                                if let Ok(content) = reader_c
+                                    .result()
+                                    .and_then(|r| r.as_string().ok_or(wasm_bindgen::JsValue::NULL))
+                                {
+                                    set_input.update(|curr| {
+                                        let block = format!("\n```{}\n{}\n```\n", name_c, content);
+                                        curr.push_str(&block);
+                                    });
+                                }
+                            })
+                                as Box<dyn FnMut(_)>);
+
+                            reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+                            onload.forget(); // Leak memory to keep closure alive until callback (ok for SPA)
+
+                            let _ = reader.read_as_text(&file);
+                        }
+                    }
+                }
+            }
+        }
+    };
+
     view! {
-        <div class="h-full flex flex-col bg-[#f3f3f3] dark:bg-[#1e1e1e] border-l border-[#e5e5e5] dark:border-[#252526]">
+        <div
+            class="h-full flex flex-col bg-[#f3f3f3] dark:bg-[#1e1e1e] border-l border-[#e5e5e5] dark:border-[#252526] relative"
+            on:dragover=on_drag_over
+            on:dragleave=on_drag_leave
+            on:drop=on_drop
+        >
+            // Drag Overlay
+            {move || if is_drag_over.get() {
+                view! {
+                    <div class="absolute inset-0 z-50 bg-blue-500/20 backdrop-blur-sm border-2 border-blue-500 border-dashed m-2 rounded-lg flex items-center justify-center pointer-events-none">
+                        <span class="text-blue-600 dark:text-blue-400 font-bold text-lg bg-white/80 dark:bg-black/80 px-4 py-2 rounded-full">
+                            "Drop files to add to context"
+                        </span>
+                    </div>
+                }.into_any()
+            } else {
+                view! {}.into_any()
+            }}
+
             // Header
             <div class="h-9 flex items-center px-4 border-b border-[#e5e5e5] dark:border-[#252526] bg-[#f8f8f8] dark:bg-[#2d2d2d]">
                 <span class="text-xs font-bold text-[#3b3b3b] dark:text-[#cccccc] uppercase tracking-wider">"AI Assistant"</span>
@@ -108,7 +188,7 @@ pub fn ChatPanel() -> impl IntoView {
                     view! {}.into_any()
                 }}
 
-                <div _ref=messages_end_ref></div>
+                <div node_ref=messages_end_ref></div>
             </div>
 
             // Input Area
@@ -120,10 +200,13 @@ pub fn ChatPanel() -> impl IntoView {
                         rows="1"
                         prop:value=input
                         on:input=move |ev| set_input.set(event_target_value(&ev))
-                        on:keydown=move |ev| {
-                            if ev.key() == "Enter" && !ev.shift_key() {
-                                ev.prevent_default();
-                                send_message();
+                        on:keydown={
+                            let send_message = send_message.clone();
+                            move |ev| {
+                                if ev.key() == "Enter" && !ev.shift_key() {
+                                    ev.prevent_default();
+                                    send_message();
+                                }
                             }
                         }
                     ></textarea>
