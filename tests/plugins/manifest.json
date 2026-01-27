@@ -1,0 +1,12 @@
+{
+    "id": "http-test",
+    "name": "HTTP Test Plugin",
+    "version": "0.1.0",
+    "entry": "main.rhai",
+    "capabilities": {
+        "allow_net": ["httpbin.org"],
+        "allow_fs_read": [],
+        "allow_fs_write": [],
+        "allow_env": []
+    }
+}

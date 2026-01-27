@@ -1,4 +1,4 @@
-﻿// crates\core\src\plugin
+// crates\core\src\plugin
 //! # Plugin Loader (插件加载器)
 //!
 //! **架构作用**:
@@ -12,15 +12,15 @@
 //! **类型**: Core MUST (核心必选)
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::fs;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::{Path, PathBuf};
-#[cfg(not(target_arch = "wasm32"))]
-use anyhow::{Result, Context};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::manifest::PluginManifest;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::runtime::{PluginRuntime, RhaiRuntime};
+#[cfg(not(target_arch = "wasm32"))]
+use anyhow::{Context, Result};
+#[cfg(not(target_arch = "wasm32"))]
+use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::{Path, PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub struct PluginLoader {
@@ -38,7 +38,7 @@ impl PluginLoader {
         let mut plugins = Vec::new();
 
         if !self.plugin_dir.exists() {
-             return Ok(plugins);
+            return Ok(plugins);
         }
 
         for entry in fs::read_dir(&self.plugin_dir)? {
@@ -61,12 +61,12 @@ impl PluginLoader {
         Ok(plugins)
     }
 
-    fn load_plugin(&self, path: &Path) -> Result<Box<dyn PluginRuntime>> {
+    pub fn load_plugin(&self, path: &Path) -> Result<Box<dyn PluginRuntime>> {
         // 1. Read manifest.json
         let manifest_path = path.join("manifest.json");
         let manifest_content = fs::read_to_string(&manifest_path)
             .with_context(|| format!("Missing manifest.json in {:?}", path))?;
-        
+
         let manifest: PluginManifest = serde_json::from_str(&manifest_content)
             .with_context(|| "Failed to parse manifest.json")?;
 
@@ -124,7 +124,7 @@ mod tests {
         assert_eq!(plugins.len(), 1);
         let plugin = &plugins[0];
         assert_eq!(plugin.manifest().id, "test-plugin");
-        
+
         let res = plugin.call("hello", vec![]).expect("Failed to call");
         assert_eq!(res.clone().into_string().unwrap(), "world");
     }
