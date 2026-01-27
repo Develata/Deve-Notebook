@@ -43,8 +43,19 @@ pub enum ClientMessage {
         /// 注意: Range<u64> 默认不可序列化，因此使用 (u64, u64) 元组。
         requests: Vec<(PeerId, (u64, u64))>,
     },
+    /// 请求快照 (差异过大时)
+    SyncSnapshotRequest {
+        peer_id: PeerId,
+        repo_id: crate::models::RepoId,
+    },
     /// 推送加密操作记录给对端 (Envelope Mode)
     SyncPush { ops: Vec<EncryptedOp> },
+    /// 推送快照给对端 (Envelope Mode)
+    SyncPushSnapshot {
+        peer_id: PeerId,
+        repo_id: crate::models::RepoId,
+        ops: Vec<EncryptedOp>, // Snapshot Ops
+    },
     /// 客户端发送编辑操作 (针对特定文档)
     Edit {
         doc_id: DocId,
@@ -139,8 +150,19 @@ pub enum ServerMessage {
     },
     /// P2P: 服务端向客户端请求数据
     SyncRequest { requests: Vec<(PeerId, (u64, u64))> },
+    /// P2P: 服务端向客户端请求快照
+    SyncSnapshotRequest {
+        peer_id: PeerId,
+        repo_id: crate::models::RepoId,
+    },
     /// P2P: 服务端推送数据给客户端 (批量)
     SyncPush { ops: Vec<EncryptedOp> },
+    /// P2P: 服务端推送快照给客户端
+    SyncPushSnapshot {
+        peer_id: PeerId,
+        repo_id: crate::models::RepoId,
+        ops: Vec<EncryptedOp>,
+    },
     /// 服务端广播来自其他客户端的新操作
     NewOp {
         doc_id: DocId,

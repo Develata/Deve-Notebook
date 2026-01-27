@@ -180,6 +180,16 @@ async fn route_message(
         ClientMessage::DeletePeer { peer_id } => {
             sync::handle_delete_peer(state, ch, peer_id).await;
         }
+        ClientMessage::SyncSnapshotRequest { peer_id, repo_id } => {
+            sync::handle_sync_snapshot_request(state, ch, peer_id, repo_id).await;
+        }
+        ClientMessage::SyncPushSnapshot {
+            peer_id,
+            repo_id,
+            ops,
+        } => {
+            sync::handle_sync_push_snapshot(state, ch, peer_id, repo_id, ops).await;
+        }
 
         // === 版本控制 ===
 

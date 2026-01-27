@@ -325,6 +325,54 @@ impl RepoManager {
         Ok(None)
     }
 
+    /// 重置指定 Shadow 文档的所有历史操作 (物理清空)
+    ///
+    /// **用途**: 当接收到 P2P Snapshot 时，旧的增量日志失效，需清空并重写。
+    pub fn reset_shadow_doc(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        doc_id: &crate::models::DocId,
+    ) -> Result<()> {
+        let shadow_db = self.ensure_shadow_db(peer_id, repo_id)?;
+
+        // Redb 2.0 transaction safety:
+        // We cannot call begin_write on a Database object directly if it's not a Database?
+        // Wait, ensure_shadow_db returns `Result<&Database>`.
+        // The error says "method not found in `()`".
+        // This implies ensure_shadow_db returns `Result<()>`. Let's check `shadow_manager.rs`.
+
+        // Ah, `shadow_manager` implementation likely returns `Result<()>` or something else.
+        // Or I am calling it wrong.
+
+        // Actually, `ensure_shadow_db` is implemented in `shadow_manager.rs`.
+        // Let's check the implementation.
+        // It likely returns `Result<()>`. It ensures it is loaded into `shadow_dbs`.
+        // So we need to fetch it from `shadow_dbs` map after ensuring.
+
+        self.ensure_shadow_db(peer_id, repo_id)?;
+
+        let guard = self.shadow_dbs.read().unwrap();
+        let peer_map = guard
+            .get(peer_id)
+            .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
+        let db = peer_map
+            .get(repo_id)
+            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
+
+        let write_txn = db.begin_write()?;
+
+        {
+            let mut table = write_txn.open_multimap_table(DOC_OPS)?;
+            // Redb multimap remove deletes a specific key-value pair.
+            // remove_all is what we want (delete all values for a key).
+            table.remove_all(&doc_id.as_u128())?;
+        }
+
+        write_txn.commit()?;
+        Ok(())
+    }
+
     /// 删除指定 Peer 的影子库目录
 
     pub fn delete_peer_branch(&self, peer_id: &PeerId) -> Result<()> {

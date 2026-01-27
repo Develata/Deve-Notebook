@@ -1,4 +1,4 @@
-﻿// crates\core\src\sync\engine
+// crates\core\src\sync\engine
 use super::SyncEngine;
 use crate::config::SyncMode;
 use crate::models::PeerId;
@@ -6,14 +6,18 @@ use crate::security::hashing::sha256_hex;
 use crate::security::keypair::verify_signature;
 use crate::sync::protocol::{self, HandshakeResult};
 use crate::sync::vector::VersionVector;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 
 impl SyncEngine {
     /// 计算与远端 Peer 的差异 (Internal)
     pub fn compute_diff(
         &self,
         remote_vector: &VersionVector,
-    ) -> (Vec<protocol::SyncRequest>, Vec<protocol::SyncRequest>) {
+    ) -> (
+        Vec<protocol::SyncRequest>,
+        Vec<protocol::SyncRequest>,
+        Vec<protocol::SyncSnapshotRequest>,
+    ) {
         // TODO: Pass actual RepoId
         protocol::compute_diff_requests(&self.version_vector, remote_vector, uuid::Uuid::nil())
     }
@@ -59,11 +63,12 @@ impl SyncEngine {
         }
 
         // 3. Compute Diff
-        let (to_send, to_request) = self.compute_diff(&remote_vector);
+        let (to_send, to_request, snapshot_requests) = self.compute_diff(&remote_vector);
 
         Ok(HandshakeResult {
             to_send,
             to_request,
+            snapshot_requests,
             auto_apply: self.sync_mode == SyncMode::Auto,
         })
     }

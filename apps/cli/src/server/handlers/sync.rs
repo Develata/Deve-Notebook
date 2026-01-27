@@ -67,6 +67,18 @@ pub async fn handle_sync_hello(
         ch.unicast(request_msg);
     }
 
+    // 4.1 发送快照请求 (I need snapshot)
+    for req in result.snapshot_requests {
+        let msg = ServerMessage::SyncSnapshotRequest {
+            peer_id: req.peer_id,
+            repo_id: req.repo_id,
+        };
+        ch.unicast(msg);
+    }
+
+    // 5. 推送数据 (I have data you need)
+
+
     // 5. 推送数据 (I have data you need)
     let mut ops_to_push = Vec::new();
     for req in result.to_send {
@@ -133,6 +145,66 @@ pub async fn handle_sync_push(
             tracing::error!("Failed to apply ops from {}: {:?}", peer_id, e);
             // 使用单播发送错误给当前客户端
             ch.send_error(format!("Failed to apply sync ops from {}: {}", peer_id, e));
+        }
+    }
+}
+
+/// 处理快照请求 (对方落后太多，请求全量)
+pub async fn handle_sync_snapshot_request(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    peer_id: PeerId,
+    repo_id: deve_core::models::RepoId,
+) {
+    let engine = state.sync_engine.read().unwrap();
+    tracing::info!("Handling SnapshotRequest from {}", peer_id);
+
+    let request = deve_core::sync::protocol::SyncSnapshotRequest {
+        peer_id: peer_id.clone(),
+        repo_id,
+    };
+
+    match engine.get_snapshot_for_sync(&request) {
+        Ok(response) => {
+            tracing::info!("Sending snapshot with {} ops to {}", response.ops.len(), peer_id);
+            let msg = ServerMessage::SyncPushSnapshot {
+                peer_id: engine.local_peer_id.clone(), // I am the source
+                repo_id: response.repo_id,
+                ops: response.ops,
+            };
+            ch.unicast(msg);
+        }
+        Err(e) => {
+            tracing::error!("Failed to generate snapshot for {}: {:?}", peer_id, e);
+            ch.send_error(format!("Failed to generate snapshot: {}", e));
+        }
+    }
+}
+
+/// 处理快照推送 (对方发送全量数据)
+pub async fn handle_sync_push_snapshot(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    peer_id: PeerId,
+    repo_id: deve_core::models::RepoId,
+    ops: Vec<deve_core::security::EncryptedOp>,
+) {
+    let mut engine = state.sync_engine.write().unwrap();
+    tracing::info!("Handling PushSnapshot from {} ({} ops)", peer_id, ops.len());
+
+    let response = deve_core::sync::protocol::SyncResponse {
+        peer_id: peer_id.clone(),
+        repo_id,
+        ops,
+    };
+
+    match engine.apply_remote_snapshot(response) {
+        Ok(seq) => {
+            tracing::info!("Applied snapshot from {}. Updated VV to seq {}", peer_id, seq);
+        }
+        Err(e) => {
+            tracing::error!("Failed to apply snapshot from {}: {:?}", peer_id, e);
+            ch.send_error(format!("Failed to apply snapshot: {}", e));
         }
     }
 }
