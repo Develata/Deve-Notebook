@@ -2,11 +2,13 @@
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
+use crate::utils::path::{path_to_forward_slash, to_forward_slash};
 use crate::vfs::Vfs;
 use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 use walkdir::WalkDir;
 
 /// Performs a full scan of the vault.
@@ -27,8 +29,8 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                     if let Some(ext) = entry.path().extension() {
                         if ext == "md" {
                             if let Ok(rel_path) = entry.path().strip_prefix(vault_root) {
-                                // 规范化路径：Windows 反斜杠转换为正斜杠
-                                let path_str = rel_path.to_string_lossy().replace("\\", "/");
+                                // 规范化路径：统一使用正斜杠格式（内部权威格式）
+                                let path_str = path_to_forward_slash(rel_path);
                                 on_disk_paths.insert(path_str.clone());
 
                                 // Ensure DocID exists
@@ -54,20 +56,20 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
             Err(e) => warn!("Walk error: {:?}", e),
         }
     }
-    // 调试：显示磁盘上的文件列表
     info!("SyncScan: 磁盘上发现 {} 个 md 文件", on_disk_paths.len());
-    for path in &on_disk_paths {
-        info!("  - 磁盘文件: {}", path);
-    }
+    debug!("SyncScan: On-disk paths: {:?}", on_disk_paths);
 
     // 2. Scan Ledger -> Disk (Cleanup Ghosts)
-    let docs = repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
+    let repo_id = repo
+        .get_repo_info()?
+        .map(|info| info.uuid)
+        .unwrap_or_else(Uuid::nil);
+    let docs = repo.list_docs(&RepoType::Local(repo_id))?;
     info!("SyncScan: Ledger 中有 {} 个条目", docs.len());
 
     for (doc_id, path) in docs {
-        info!("  - Ledger 条目: {} (DocId: {})", path, doc_id);
-        // 规范化 repo 中的路径以确保一致比较
-        let normalized_path = path.replace("\\", "/");
+        debug!("SyncScan: Ledger 条目: {} (DocId: {})", path, doc_id);
+        let normalized_path = to_forward_slash(&path);
         if !on_disk_paths.contains(&normalized_path) {
             info!(
                 "SyncScan: 检测到幽灵文件: {}（规范化后: {}），正在删除...",

@@ -13,6 +13,7 @@
 
 use deve_core::protocol::ServerMessage;
 use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc::error::TrySendError;
 
 /// 响应通道类型
 ///
@@ -22,7 +23,7 @@ pub enum ResponseChannel {
     /// 广播通道 - 发送给所有连接的客户端
     Broadcast(broadcast::Sender<ServerMessage>),
     /// 单播通道 - 仅发送给当前客户端
-    Unicast(mpsc::UnboundedSender<ServerMessage>),
+    Unicast(mpsc::Sender<ServerMessage>),
 }
 
 impl ResponseChannel {
@@ -35,7 +36,16 @@ impl ResponseChannel {
                 let _ = tx.send(msg);
             }
             ResponseChannel::Unicast(tx) => {
-                let _ = tx.send(msg);
+                if let Err(e) = tx.try_send(msg) {
+                    match e {
+                        TrySendError::Full(_) => {
+                            tracing::warn!("Unicast channel full; dropping message");
+                        }
+                        TrySendError::Closed(_) => {
+                            tracing::debug!("Unicast channel closed; dropping message");
+                        }
+                    }
+                }
             }
         }
     }
@@ -49,14 +59,14 @@ pub struct DualChannel {
     /// 广播通道 - 全局事件
     pub broadcast: broadcast::Sender<ServerMessage>,
     /// 单播通道 - 单客户端响应
-    pub unicast: mpsc::UnboundedSender<ServerMessage>,
+    pub unicast: mpsc::Sender<ServerMessage>,
 }
 
 impl DualChannel {
     /// 创建双通道上下文
     pub fn new(
         broadcast: broadcast::Sender<ServerMessage>,
-        unicast: mpsc::UnboundedSender<ServerMessage>,
+        unicast: mpsc::Sender<ServerMessage>,
     ) -> Self {
         Self { broadcast, unicast }
     }
@@ -68,7 +78,16 @@ impl DualChannel {
 
     /// 单播消息 (单客户端响应)
     pub fn unicast(&self, msg: ServerMessage) {
-        let _ = self.unicast.send(msg);
+        if let Err(e) = self.unicast.try_send(msg) {
+            match e {
+                TrySendError::Full(_) => {
+                    tracing::warn!("Unicast channel full; dropping message");
+                }
+                TrySendError::Closed(_) => {
+                    tracing::debug!("Unicast channel closed; dropping message");
+                }
+            }
+        }
     }
 
     /// 发送错误响应 (自动使用单播)

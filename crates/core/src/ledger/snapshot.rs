@@ -30,6 +30,39 @@ pub fn save_snapshot(
     Ok(())
 }
 
+/// Load the latest snapshot for a document.
+///
+/// Returns the snapshot sequence number and content if it exists.
+pub fn load_latest_snapshot(db: &Database, doc_id: DocId) -> Result<Option<(u64, String)>> {
+    let read_txn = db.begin_read()?;
+
+    let index = match read_txn.open_multimap_table(SNAPSHOT_INDEX) {
+        Ok(index) => index,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+        Err(e) => return Err(e.into()),
+    };
+    let data = read_txn.open_table(SNAPSHOT_DATA)?;
+
+    let mut latest_seq: Option<u64> = None;
+    for item in index.get(doc_id.as_u128())? {
+        let seq = item?.value();
+        latest_seq = Some(latest_seq.map_or(seq, |cur| cur.max(seq)));
+    }
+
+    let seq = match latest_seq {
+        Some(seq) => seq,
+        None => return Ok(None),
+    };
+
+    match data.get(seq)? {
+        Some(bytes) => {
+            let content = std::str::from_utf8(bytes.value())?.to_owned();
+            Ok(Some((seq, content)))
+        }
+        None => Ok(None),
+    }
+}
+
 /// Prune old snapshots if they exceed the configured depth.
 fn prune_snapshots(db: &Database, doc_id: DocId, depth: usize) -> Result<()> {
     let write_txn = db.begin_write()?;

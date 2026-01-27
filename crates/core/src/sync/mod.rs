@@ -10,6 +10,8 @@ pub mod reconcile;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod rebuild;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod scan;
 pub mod vector;
 
@@ -26,7 +28,7 @@ use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
-use tracing::info;
+use tracing::{info, warn};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
@@ -83,19 +85,23 @@ impl SyncManager {
     pub fn persist_doc(&self, doc_id: DocId) -> Result<()> {
         if let Some(path_str) = self.repo.get_path_by_docid(doc_id)? {
             let file_path = self.vault_root.join(&path_str);
-
-            // Reconstruct
-            let ops = self.repo.get_local_ops(doc_id)?;
-            let content = crate::state::reconstruct_content(
-                &ops.into_iter().map(|(_, e)| e).collect::<Vec<_>>(),
-            );
+            let rebuilt = rebuild::rebuild_local_doc(&self.repo, doc_id)?;
 
             // Write
             if let Some(parent) = file_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::write(&file_path, content)?;
+            std::fs::write(&file_path, &rebuilt.content)?;
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
+
+            // Snapshot throttle: only update snapshot when it is sufficiently stale.
+            const SNAPSHOT_INTERVAL: u64 = 64;
+            let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
+            if rebuilt.max_seq > 0 && delta >= SNAPSHOT_INTERVAL {
+                if let Err(e) = self.repo.save_snapshot(doc_id, rebuilt.max_seq, &rebuilt.content) {
+                    warn!("SyncManager: Failed to save snapshot for {}: {:?}", doc_id, e);
+                }
+            }
         }
         Ok(())
     }

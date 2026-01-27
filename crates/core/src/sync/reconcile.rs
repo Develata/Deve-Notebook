@@ -12,9 +12,7 @@ pub fn compute_reconcile_ops(
     ledger_ops: &[LedgerEntry],
     disk_content: &str,
 ) -> Result<Vec<LedgerEntry>> {
-    let ledger_content = state::reconstruct_content(
-        &ledger_ops.iter().cloned().map(|e| e.clone()).collect::<Vec<_>>()
-    );
+    let ledger_content = state::reconstruct_content(ledger_ops);
     
     // Normalize newlines for comparison
     let disk_norm = disk_content.replace("\r\n", "\n");
