@@ -5,11 +5,12 @@ This repository is a Rust workspace designed for high-performance, low-resource 
 ## 1. Project Architecture & Constraints
 
 - **Core Philosophy**: Minimal resource usage, mathematical rigor, and strict modularity.
-- **Target Environment**: **768MB - 1GB RAM VPS**. Avoid heavy dependencies (Electron is banned). Prefer Zero-copy implementations.
+- **Target Environment**: **768MB - 1GB RAM VPS**. Avoid heavy dependencies. Prefer Zero-copy implementations.
 - **Structure**:
-  - **`crates/core`**: Business logic, storage (Redb), Sync (CRDT/Conflict Resolution), Search (Tantivy).
+  - **`crates/core`**: Business logic, storage (Redb), Sync (CRDT), Search (Tantivy), Plugins (Rhai).
   - **`apps/web`**: WASM Frontend (Leptos).
   - **`apps/cli`**: Axum-based Server & CLI.
+  - **`plugins`**: Built-in Rhai plugins (e.g. `ai-chat`).
 
 ## 2. Strict Engineering Standards (The "Iron Rules")
 
@@ -27,13 +28,13 @@ To maintain maintainability and cognitive load control:
 - **Error Handling**:
   - App: `anyhow::Result`.
   - Lib: `thiserror` (Recoverable).
-- **Path Handling**: Windows-compatible (`std::path::Path`).
+- **Path Handling**: Windows-compatible (`std::path::Path`), use `deve_core::utils::path::to_forward_slash`.
 
 ## 3. Build & Test Commands
 
 ### General
-- **Build**: `cargo build --release` (Check memory usage)
-- **Test**: `cargo test`
+- **Build All**: `cargo build --release` (Check memory usage)
+- **Test All**: `cargo test`
 - **Lint**: `cargo clippy`
 
 ### Efficient Testing (Single Test)
@@ -45,6 +46,9 @@ cargo test --package <package_name> --lib <test_function_name> -- --nocapture
 
 # Example: Run 'test_merge_conflict' in core
 cargo test --package deve_core --lib test_merge_conflict -- --nocapture
+
+# Example: Run plugin system tests
+cargo test --package deve_core --test plugin_test -- --nocapture
 ```
 
 ### Frontend (Leptos)
@@ -52,10 +56,11 @@ Requires `trunk` and `npm`.
 
 1.  **Setup**: `cargo install trunk` & `cd apps/web && npm install`.
 2.  **Dev Server**: `trunk serve` (runs on 127.0.0.1:8080).
+    *   *Note*: Ensure `deve_cli serve` is running for backend API support if needed, though trunk proxies calls.
 
 ## 4. Agent Workflow Protocol
 
-1.  **Docs First**: Check `deve-note plan/` or `README.md` before coding.
+1.  **Docs First**: Check `deve-note plan/`, `deve-note report/schedules`, or `README.md` before coding.
 2.  **Low-Resource Assessment**: 
     - Before adding a dependency, ask: "Will this run on 768MB RAM?"
     - If `false`, find a lighter alternative or implement a minimal version.
@@ -70,10 +75,12 @@ Requires `trunk` and `npm`.
 
 ## 5. Directory Map
 
-- `crates/core/src/ledger`: Append-only log & storage.
-- `crates/core/src/sync`: Synchronization & Conflict resolution.
-- `crates/core/src/plugin`: Rhai script runtime.
-- `apps/cli/src/server`: WebSocket sync server.
+- `crates/core/src/ledger`: Append-only log & storage (Redb).
+- `crates/core/src/sync`: Synchronization, Conflict resolution, Vector Clock.
+- `crates/core/src/plugin`: Rhai script runtime & Host API.
+- `crates/core/src/context`: Context Engine (Directory Tree, etc.).
+- `apps/cli/src/server`: WebSocket sync server (Axum).
+- `apps/web/src/components`: Leptos UI components (Chat, Editor, Sidebar).
 
 ## 6. Commit Convention
 
