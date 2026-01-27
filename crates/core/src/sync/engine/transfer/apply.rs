@@ -59,4 +59,3 @@ impl SyncEngine {
         Ok(max_seq)
     }
 }
-

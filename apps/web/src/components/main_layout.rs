@@ -8,7 +8,8 @@ use crate::hooks::use_layout::use_layout;
 use crate::shortcuts::create_global_shortcut_handler;
 
 use crate::components::activity_bar::SidebarView;
-use crate::components::diff_view::DiffView;
+use crate::components::chat::ChatPanel;
+use crate::components::diff_view::DiffView; // [NEW]
 
 // Context for deep components to trigger search (e.g. BranchSwitcher)
 #[derive(Clone, Copy)]
@@ -19,7 +20,7 @@ pub struct SearchControl {
 
 /// 主应用程序布局
 ///
-/// 编排 UI 架构中定义的 "活动栏 + 可调整大小插槽" 布局。
+/// 编排 UI 架构中定义的 "Activity Bar + Resizable Slot" 布局。
 /// 管理全局 UI 状态 (命令面板, 设置) 并与核心逻辑 (`use_core`) 集成。
 #[component]
 pub fn MainLayout() -> impl IntoView {
@@ -45,6 +46,9 @@ pub fn MainLayout() -> impl IntoView {
     let (_show_open_modal, _set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
     let (pinned_views, set_pinned_views) = signal(SidebarView::all());
+
+    // AI Chat Visibility (Default Hidden)
+    let (chat_visible, set_chat_visible) = signal(false); // Can be toggled by command/shortcut
 
     // 4. 快捷键
     let handle_keydown = create_global_shortcut_handler(
@@ -228,6 +232,23 @@ pub fn MainLayout() -> impl IntoView {
                         }
                     }}
                  </div>
+
+                 // Column 5: AI Chat (Resizable Slot)
+                 // Right Sidebar for Chat
+                 // Currently fixed width 300px for simplicity, can be resizable later
+                 {move || if chat_visible.get() {
+                    view! {
+                        <div class="w-[350px] flex-none ml-4 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+                            <ChatPanel />
+                        </div>
+                    }.into_any()
+                 } else {
+                    // Chat Toggle Button (Floating or Integrated)
+                    // Let's add a small toggle button if hidden?
+                    // Or rely on command palette to toggle.
+                    // For now, let's just use command palette to toggle `chat_visible`.
+                    view! {}.into_any()
+                 }}
             </main>
 
             <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats />

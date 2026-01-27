@@ -163,6 +163,15 @@ pub enum ServerMessage {
         repo_id: crate::models::RepoId,
         ops: Vec<EncryptedOp>,
     },
+
+    // === Plugin & AI ===
+    /// AI 聊天增量块 (Streaming)
+    ChatChunk {
+        req_id: String,
+        delta: Option<String>,
+        finish_reason: Option<String>,
+    },
+
     /// 服务端广播来自其他客户端的新操作
     NewOp {
         doc_id: DocId,

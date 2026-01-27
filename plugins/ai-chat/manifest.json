@@ -1,0 +1,12 @@
+{
+    "id": "ai-chat",
+    "name": "AI Assistant",
+    "version": "0.1.0",
+    "entry": "main.rhai",
+    "capabilities": {
+        "allow_net": ["api.openai.com", "openrouter.ai"],
+        "allow_env": ["AI_API_KEY", "AI_BASE_URL", "AI_MODEL"],
+        "allow_fs_read": [".deve/chat"],
+        "allow_fs_write": [".deve/chat"]
+    }
+}

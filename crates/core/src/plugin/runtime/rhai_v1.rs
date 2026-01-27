@@ -4,10 +4,10 @@
 //! **功能**:
 //! 基于 Rhai 脚本引擎实现的插件运行时。
 
-use super::{PluginRuntime, host};
+use super::{host, PluginRuntime};
 use crate::plugin::manifest::PluginManifest;
-use anyhow::{Result, anyhow};
-use rhai::{AST, Dynamic, Engine, Scope};
+use anyhow::{anyhow, Result};
+use rhai::{Dynamic, Engine, Scope, AST};
 use std::sync::Mutex;
 
 /// Rhai 引擎运行时

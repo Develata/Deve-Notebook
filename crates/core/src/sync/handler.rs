@@ -1,11 +1,11 @@
-﻿// crates\core\src\sync
+// crates\core\src\sync
 //! # 文件系统事件处理器 (FS Event Handler)
 //!
 //! 处理 Watcher 产生的文件变更事件。
 //! 分离处理：删除、重命名、内容更新、新文件。
 
-use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
+use crate::ledger::RepoManager;
 use crate::models::RepoType;
 use crate::protocol::ServerMessage;
 use crate::sync::recovery;

@@ -1,4 +1,4 @@
-﻿// apps\web\src\hooks\use_core
+// apps\web\src\hooks\use_core
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId, VersionVector};
@@ -12,6 +12,13 @@ pub struct PeerSession {
     pub id: PeerId,
     pub vector: VersionVector,
     pub last_seen: u64, // timestamp
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChatMessage {
+    pub role: String, // "user" or "assistant"
+    pub content: String,
+    pub req_id: Option<String>, // To link with streaming chunks
 }
 
 #[derive(Clone)]
@@ -38,6 +45,12 @@ pub struct CoreState {
     pub plugin_last_response:
         ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
     pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
+
+    // AI Chat State
+    pub chat_messages: ReadSignal<Vec<ChatMessage>>,
+    pub set_chat_messages: WriteSignal<Vec<ChatMessage>>, // Used by effect logic (in mod.rs, we'll wrap helpers)
+    pub is_chat_streaming: ReadSignal<bool>,
+    pub set_is_chat_streaming: WriteSignal<bool>,
 
     // 搜索
     pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)
@@ -96,4 +109,35 @@ pub struct CoreState {
 
     // 文件树 (增量更新)
     pub tree_nodes: ReadSignal<Vec<FileNode>>,
+}
+
+impl CoreState {
+    pub fn append_chat_message(&self, role: &str, content: &str, req_id: Option<String>) {
+        self.set_chat_messages.update(|msgs| {
+            msgs.push(ChatMessage {
+                role: role.to_string(),
+                content: content.to_string(),
+                req_id,
+            });
+        });
+    }
+
+    pub fn update_chat_message(&self, req_id: &str, delta: &str) {
+        self.set_chat_messages.update(|msgs| {
+            if let Some(msg) = msgs
+                .iter_mut()
+                .rev()
+                .find(|m| m.req_id.as_deref() == Some(req_id))
+            {
+                msg.content.push_str(delta);
+            } else {
+                // If not found (race), append new
+                msgs.push(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: delta.to_string(),
+                    req_id: Some(req_id.to_string()),
+                });
+            }
+        });
+    }
 }

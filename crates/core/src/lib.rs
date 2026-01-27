@@ -1,4 +1,4 @@
-﻿// crates\core\src
+// crates\core\src
 //! # Deve-Note 核心库
 //!
 //! 本 crate 包含 Deve-Note 的核心业务逻辑，是一个实时协作文档编辑器。
@@ -19,6 +19,7 @@
 //! - `sync`: 文档同步与调和
 
 pub mod config;
+pub mod context;
 pub mod error;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;
@@ -26,6 +27,7 @@ pub mod models;
 pub mod plugin;
 pub mod protocol;
 pub mod security;
+pub mod skill;
 pub mod source_control;
 pub mod state;
 pub mod sync;
@@ -34,7 +36,7 @@ pub mod utils;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod vfs;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod watcher;
+pub mod watcher; // [NEW] Context Engine (Tree, etc.)
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;

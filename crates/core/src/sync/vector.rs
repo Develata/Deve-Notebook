@@ -1,4 +1,4 @@
-﻿// crates\core\src\sync
+// crates\core\src\sync
 //! # 版本向量模块 (Version Vector)
 //!
 //! **架构作用**:
@@ -173,18 +173,14 @@ mod tests {
         // From this step (B): Local B=3, Remote B=8. -> Missing Local: B 4..9
 
         // Check missing from remote (A case)
-        assert!(
-            missing_remote
-                .iter()
-                .any(|(id, r)| id == &p("A") && r == &(6..11))
-        );
+        assert!(missing_remote
+            .iter()
+            .any(|(id, r)| id == &p("A") && r == &(6..11)));
 
         // Check missing from local (B case)
-        assert!(
-            missing_local
-                .iter()
-                .any(|(id, r)| id == &p("B") && r == &(4..9))
-        );
+        assert!(missing_local
+            .iter()
+            .any(|(id, r)| id == &p("B") && r == &(4..9)));
     }
 
     #[test]
@@ -203,17 +199,13 @@ mod tests {
         let (missing_remote, missing_local) = local.diff(&remote);
 
         // Remote needs B: 16..21
-        assert!(
-            missing_remote
-                .iter()
-                .any(|(id, r)| id == &p("B") && r == &(16..21))
-        );
+        assert!(missing_remote
+            .iter()
+            .any(|(id, r)| id == &p("B") && r == &(16..21)));
 
         // Local needs A: 11..13
-        assert!(
-            missing_local
-                .iter()
-                .any(|(id, r)| id == &p("A") && r == &(11..13))
-        );
+        assert!(missing_local
+            .iter()
+            .any(|(id, r)| id == &p("A") && r == &(11..13)));
     }
 }

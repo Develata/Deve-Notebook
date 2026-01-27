@@ -54,7 +54,43 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
                     )
                     .into());
                 }
+                // Ensure parent dir exists
+                if let Some(parent) = p.parent() {
+                    std::fs::create_dir_all(parent)
+                        .map_err(|_| "IO Error: Failed to create parent dir")?;
+                }
                 std::fs::write(p, content).map_err(|_| "IO Error: Write failed".into())
+            },
+        );
+
+        // API: to_json (Helper)
+        engine.register_fn(
+            "to_json",
+            |val: rhai::Dynamic| -> Result<String, Box<EvalAltResult>> {
+                serde_json::to_string(&val).map_err(|e| e.to_string().into())
+            },
+        );
+
+        // API: parse_json (Helper)
+        engine.register_fn(
+            "parse_json",
+            |json: &str| -> Result<rhai::Dynamic, Box<EvalAltResult>> {
+                serde_json::from_str(json).map_err(|e| e.to_string().into())
+            },
+        );
+
+        // API: env (Helper for capabilities)
+        let caps_env = caps.clone();
+        engine.register_fn(
+            "env",
+            move |key: &str| -> Result<rhai::Dynamic, Box<EvalAltResult>> {
+                if !caps_env.check_env(key) {
+                    return Ok(rhai::Dynamic::UNIT); // Not allowed = None
+                }
+                match std::env::var(key) {
+                    Ok(v) => Ok(v.into()),
+                    Err(_) => Ok(rhai::Dynamic::UNIT),
+                }
             },
         );
     }
@@ -62,6 +98,5 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
     // API: log_info(msg: &str)
     engine.register_fn("log_info", |msg: &str| {
         println!("[Plugin Log] {}", msg);
-        // TODO: Integrate with tracing::info!
     });
 }

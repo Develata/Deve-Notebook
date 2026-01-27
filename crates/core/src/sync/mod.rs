@@ -1,4 +1,4 @@
-﻿// crates\core\src\sync
+// crates\core\src\sync
 pub mod buffer;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod engine;
@@ -6,11 +6,11 @@ pub mod engine;
 pub mod handler;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod rebuild;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod reconcile;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod rebuild;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scan;
 pub mod vector;
@@ -98,8 +98,14 @@ impl SyncManager {
             const SNAPSHOT_INTERVAL: u64 = 64;
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
             if rebuilt.max_seq > 0 && delta >= SNAPSHOT_INTERVAL {
-                if let Err(e) = self.repo.save_snapshot(doc_id, rebuilt.max_seq, &rebuilt.content) {
-                    warn!("SyncManager: Failed to save snapshot for {}: {:?}", doc_id, e);
+                if let Err(e) = self
+                    .repo
+                    .save_snapshot(doc_id, rebuilt.max_seq, &rebuilt.content)
+                {
+                    warn!(
+                        "SyncManager: Failed to save snapshot for {}: {:?}",
+                        doc_id, e
+                    );
                 }
             }
         }

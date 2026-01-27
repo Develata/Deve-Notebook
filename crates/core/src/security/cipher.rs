@@ -1,4 +1,4 @@
-﻿// crates\core\src\security
+// crates\core\src\security
 //! # 加密模块 (Cipher)
 //!
 //! **功能**:
@@ -11,8 +11,8 @@
 
 use crate::models::{DocId, LedgerEntry};
 use aes_gcm::{
-    Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
+    Aes256Gcm, Key, Nonce,
 };
 use serde::{Deserialize, Serialize};
 

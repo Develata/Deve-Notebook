@@ -1,4 +1,4 @@
-﻿// crates\core\src\security
+// crates\core\src\security
 //! # 哈希计算 (Hashing)
 //!
 //! **功能**:
@@ -8,10 +8,10 @@
 //! - 使用 SHA2-256。
 //! - 输出十六进制字符串或原始字节。
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 /// 计算数据的 SHA256 哈希，返回十六进制字符串
-/// 
+///
 /// **用途**:
 /// - PeerID 生成: `hash(pub_key)`
 /// - 数据完整性校验
@@ -37,6 +37,9 @@ mod tests {
     fn test_sha256() {
         let input = b"hello world";
         let hex = sha256_hex(input);
-        assert_eq!(hex, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+        assert_eq!(
+            hex,
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+        );
     }
 }

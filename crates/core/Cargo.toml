@@ -25,6 +25,9 @@ config = "0.13"
 dotenvy = "0.15"
 bincode = "1.3"
 argon2 = "0.5.3"
+ignore = "0.4.25"
+walkdir = "2.5.0"
+reqwest-eventsource = "0.6.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { workspace = true }

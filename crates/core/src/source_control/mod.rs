@@ -1,4 +1,4 @@
-﻿// crates\core\src\source_control
+// crates\core\src\source_control
 //! # Source Control 模块
 //!
 //! 提供版本控制功能，包括暂存区管理、提交历史和变更检测。
@@ -12,12 +12,11 @@
 pub mod types;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub mod staging;
+pub mod changes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod commits;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod changes;
+pub mod staging;
 
 // 重新导出常用类型
 pub use types::{ChangeEntry, ChangeStatus, CommitInfo};
-

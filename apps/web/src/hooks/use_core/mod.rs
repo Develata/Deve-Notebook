@@ -1,4 +1,4 @@
-﻿// apps/web/src/hooks/use_core/mod.rs
+// apps/web/src/hooks/use_core/mod.rs
 //! # Core State Hook (核心状态钩子)
 //!
 //! **架构作用**:
@@ -148,6 +148,10 @@ pub fn use_core() -> CoreState {
         on_get_doc_diff: sc_callbacks.on_get_doc_diff,
         on_merge_peer: sync_callbacks.on_merge_peer,
         tree_nodes: signals.tree_nodes,
+        chat_messages: signals.chat_messages,
+        set_chat_messages: signals.set_chat_messages,
+        is_chat_streaming: signals.is_chat_streaming,
+        set_is_chat_streaming: signals.set_is_chat_streaming,
     };
 
     // 7. 提供上下文

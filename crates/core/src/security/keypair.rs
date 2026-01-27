@@ -1,4 +1,4 @@
-﻿// crates\core\src\security
+// crates\core\src\security
 //! # 密钥对管理 (KeyPair Management)
 //!
 //! **功能**:
@@ -12,8 +12,8 @@
 use super::hashing::sha256_hex;
 use crate::models::PeerId;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
-use rand::RngCore; // Import RngCore for fill_bytes
 use rand::rngs::OsRng;
+use rand::RngCore; // Import RngCore for fill_bytes
 
 /// 身份密钥对 (包含私钥)
 ///

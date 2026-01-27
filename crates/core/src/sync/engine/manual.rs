@@ -1,6 +1,6 @@
-﻿// crates\core\src\sync\engine
-use crate::sync::protocol::SyncResponse;
+// crates\core\src\sync\engine
 use super::SyncEngine;
+use crate::sync::protocol::SyncResponse;
 use anyhow::Result;
 
 impl SyncEngine {
@@ -23,12 +23,12 @@ impl SyncEngine {
     pub fn merge_pending(&mut self) -> Result<u64> {
         let mut total = 0u64;
         let pending = self.pending_ops.take_all();
-        
+
         for response in pending {
             let count = self.apply_remote_ops(response)?;
             total += count;
         }
-        
+
         Ok(total)
     }
 

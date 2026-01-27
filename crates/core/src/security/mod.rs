@@ -8,15 +8,17 @@
 //! - `hashing`: Hash 计算 (SHA256) 用于 PeerID 生成。
 //! - `keypair`: 身份密钥对 (Identity Key) 管理。
 //! - `cipher`: 对称加密 (Repo Key) 逻辑。
+//! - `permission`: 插件/Agent 权限控制系统。
 //!
 //! **类型**: Core MUST (核心必选)
 
+pub mod auth;
+pub mod cipher;
 pub mod hashing;
 pub mod keypair;
-pub mod cipher;
-pub mod auth;
+pub mod permission;
 
 // Re-exports
-pub use self::keypair::IdentityKeyPair;
-pub use self::cipher::{RepoKey, EncryptedOp};
 pub use self::auth::AuthManager;
+pub use self::cipher::{EncryptedOp, RepoKey};
+pub use self::keypair::IdentityKeyPair;

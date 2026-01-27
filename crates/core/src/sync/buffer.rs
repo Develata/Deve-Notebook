@@ -1,4 +1,4 @@
-﻿// crates\core\src\sync
+// crates\core\src\sync
 //! # 同步缓冲模块 (Sync Buffer)
 //!
 //! **架构作用**:
@@ -23,9 +23,7 @@ pub struct PendingOpsBuffer {
 impl PendingOpsBuffer {
     /// 创建新的缓冲区
     pub fn new() -> Self {
-        Self {
-            queue: Vec::new(),
-        }
+        Self { queue: Vec::new() }
     }
 
     /// 暂存来自远端的同步响应

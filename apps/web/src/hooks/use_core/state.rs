@@ -10,7 +10,7 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
-use super::types::PeerSession;
+use super::types::{ChatMessage, PeerSession};
 
 /// 核心状态信号集合
 ///
@@ -34,6 +34,12 @@ pub struct CoreSignals {
     pub plugin_response: ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
     pub set_plugin_response:
         WriteSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
+
+    // AI Chat
+    pub chat_messages: ReadSignal<Vec<ChatMessage>>,
+    pub set_chat_messages: WriteSignal<Vec<ChatMessage>>,
+    pub is_chat_streaming: ReadSignal<bool>,
+    pub set_is_chat_streaming: WriteSignal<bool>,
 
     // 搜索
     pub search_results: ReadSignal<Vec<(String, String, f32)>>,
@@ -86,6 +92,8 @@ pub fn init_signals() -> CoreSignals {
     let (stats, set_stats) = signal(EditorStats::default());
     let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
     let (plugin_response, set_plugin_response) = signal(None);
+    let (chat_messages, set_chat_messages) = signal(Vec::new());
+    let (is_chat_streaming, set_is_chat_streaming) = signal(false);
     let (search_results, set_search_results) = signal(Vec::new());
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
@@ -114,6 +122,10 @@ pub fn init_signals() -> CoreSignals {
         set_peers,
         plugin_response,
         set_plugin_response,
+        chat_messages,
+        set_chat_messages,
+        is_chat_streaming,
+        set_is_chat_streaming,
         search_results,
         set_search_results,
         sync_mode,

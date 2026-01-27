@@ -1,4 +1,4 @@
-﻿// apps\web\src\components
+// apps\web\src\components
 //! # UI 组件模块 (UI Components Module)
 //!
 //! 包含 Web 应用程序的所有 Leptos UI 组件。
@@ -15,6 +15,7 @@ pub mod sidebar_menu;
 
 pub mod activity_bar;
 pub mod branch_switcher;
+pub mod chat; // [NEW] AI Chat
 pub mod main_layout;
 pub mod merge_modal;
 pub mod merge_panel;

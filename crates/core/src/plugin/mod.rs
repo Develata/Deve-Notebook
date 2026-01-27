@@ -1,4 +1,4 @@
-﻿// crates\core\src\plugin
+// crates\core\src\plugin
 //! # Plugin System (插件系统)
 //!
 //! **架构作用**:
@@ -9,6 +9,6 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+pub mod loader;
 pub mod manifest;
 pub mod runtime;
-pub mod loader;

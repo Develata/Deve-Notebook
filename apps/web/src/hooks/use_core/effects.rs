@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use super::apply::apply_tree_delta;
 use super::state::CoreSignals;
-use super::types::PeerSession;
+use super::types::{ChatMessage, PeerSession};
 
 /// 设置握手 Effect
 ///
@@ -80,6 +80,8 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_tree_nodes = signals.set_tree_nodes;
     let set_active_branch = signals.set_active_branch;
     let set_current_repo = signals.set_current_repo;
+    let set_chat_messages = signals.set_chat_messages;
+    let set_is_chat_streaming = signals.set_is_chat_streaming;
 
     Effect::new(move |_| {
         if let Some(msg) = ws_rx.msg.get() {
@@ -113,6 +115,33 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     error,
                 } => {
                     set_plugin_response.set(Some((req_id, result, error)));
+                }
+                ServerMessage::ChatChunk {
+                    req_id,
+                    delta,
+                    finish_reason,
+                } => {
+                    if let Some(text) = delta {
+                        set_chat_messages.update(|msgs| {
+                            if let Some(msg) = msgs
+                                .iter_mut()
+                                .rev()
+                                .find(|m| m.req_id.as_deref() == Some(&req_id))
+                            {
+                                msg.content.push_str(&text);
+                            } else {
+                                msgs.push(ChatMessage {
+                                    role: "assistant".to_string(),
+                                    content: text,
+                                    req_id: Some(req_id.clone()),
+                                });
+                            }
+                        });
+                        set_is_chat_streaming.set(true);
+                    }
+                    if finish_reason.is_some() {
+                        set_is_chat_streaming.set(false);
+                    }
                 }
                 ServerMessage::SearchResults { results } => {
                     set_search_results.set(results);

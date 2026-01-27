@@ -1,4 +1,4 @@
-﻿// crates\core\src
+// crates\core\src
 //! # 核心数据模型 (Core Data Models)
 //!
 //! **架构作用**:
@@ -16,8 +16,8 @@
 //! **类型**: Core MUST (核心必选)
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::fmt;
+use uuid::Uuid;
 
 pub use crate::sync::vector::VersionVector;
 
@@ -35,18 +35,19 @@ impl PeerId {
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
-    
+
     /// 返回 Peer ID 字符串切片
     pub fn as_str(&self) -> &str {
         &self.0
     }
-    
+
     /// 转换为安全文件名
     ///
     /// **逻辑**:
     /// 将文件系统非法字符（如 `/`, `\` 等）替换为下划线 `_`。
     pub fn to_filename(&self) -> String {
-        self.0.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
+        self.0
+            .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
     }
 
     /// 生成随机 Peer ID (UUID v4)
@@ -102,7 +103,7 @@ pub enum Op {
 /// - `timestamp`: 操作产生的时间戳。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LedgerEntry {
-    pub doc_id: DocId, 
+    pub doc_id: DocId,
     pub op: Op,
     pub timestamp: i64,
     /// Origin Peer ID (who created this op)

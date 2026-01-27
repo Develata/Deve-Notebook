@@ -56,7 +56,11 @@ pub(crate) fn rebuild_local_doc(repo: &RepoManager, doc_id: DocId) -> Result<Reb
     })
 }
 
-fn load_doc_entries_after(repo: &RepoManager, doc_id: DocId, min_seq: u64) -> Result<Vec<(u64, LedgerEntry)>> {
+fn load_doc_entries_after(
+    repo: &RepoManager,
+    doc_id: DocId,
+    min_seq: u64,
+) -> Result<Vec<(u64, LedgerEntry)>> {
     let read_txn = repo.local_db.begin_read()?;
     let ops_table = read_txn.open_table(LEDGER_OPS)?;
     let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
