@@ -29,8 +29,10 @@ import { mermaidStateField } from "./extensions/mermaid.js";
 import { copyTexExtension } from "./extensions/copy_tex.js";
 import { listMarkerPlugin } from "./extensions/list_marker.js";
 import { blockquoteBorderPlugin } from "./extensions/blockquote_border.js";
+import { codeToolbarPlugin } from "./extensions/code_toolbar.js"; // [NEW]
 
 console.log("Editor Adapter v5 - Native Selection Mode");
+
 
 // --- 内部状态 (Internal State) ---
 let activeView = null;
@@ -116,8 +118,10 @@ export function initCodeMirror(element, onDelta) {
         blockStyling,
         listMarkerPlugin,        // [NEW] 列表圆点渲染
         blockquoteBorderPlugin,  // [NEW] 引用块边框
+        codeToolbarPlugin,       // [NEW] 代码块工具栏 (Copy/Lang)
 
         // 性能优化: 发送 Delta 而不是全文
+
         EditorView.updateListener.of((v) => {
           if (isRemote) return;
           if (v.docChanged && onDeltaCallback) {

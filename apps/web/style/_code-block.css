@@ -16,7 +16,15 @@
 .cm-code-block-start {
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
+  position: relative; /* 为 CodeToolbar 提供定位锚点 */
 }
+
+/* 鼠标悬停时显示工具栏 */
+.cm-code-block-start:hover .cm-code-toolbar,
+.cm-code-block-start:focus-within .cm-code-toolbar {
+  opacity: 1;
+}
+
 
 .cm-code-block-end {
   border-bottom-left-radius: 4px;
