@@ -16,6 +16,7 @@ mod app;
 mod editor;
 mod api;
 mod components;
+mod utils;
 mod i18n;
 mod hooks;
 mod shortcuts;

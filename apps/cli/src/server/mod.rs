@@ -29,6 +29,7 @@ use tower_http::cors::{Any, CorsLayer};
 use deve_core::search::SearchService;
 
 pub mod channel;
+pub mod ai_chat;
 pub mod handlers;
 pub mod session;
 pub mod ws;
@@ -54,6 +55,7 @@ pub async fn start_server(
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
 ) -> anyhow::Result<()> {
+    ai_chat::init_chat_stream_handler()?;
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
 

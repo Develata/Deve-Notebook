@@ -8,6 +8,7 @@
 //! 所有敏感操作必须经过 `Capability` 检查。
 
 use crate::plugin::manifest::PluginManifest;
+use crate::plugin::runtime::chat_stream;
 use rhai::Engine;
 #[cfg(not(target_arch = "wasm32"))]
 use rhai::EvalAltResult;
@@ -105,10 +106,111 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
                 Ok(tree.structure)
             },
         );
+
+        let caps_chat = caps.clone();
+        engine.register_fn(
+            "ai_chat_stream",
+            move |req_id: &str,
+                  config: rhai::Dynamic,
+                  history: rhai::Dynamic|
+                  -> Result<rhai::Dynamic, Box<EvalAltResult>> {
+                let config_json: serde_json::Value =
+                    rhai::serde::from_dynamic(&config).map_err(|e| e.to_string())?;
+                let history_json: serde_json::Value =
+                    rhai::serde::from_dynamic(&history).map_err(|e| e.to_string())?;
+
+                let base_url = config_json
+                    .get("base_url")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| "Missing base_url".to_string())?;
+                let domain =
+                    extract_domain(base_url).ok_or_else(|| "Invalid base_url".to_string())?;
+                if !caps_chat.check_net(domain) {
+                    return Err(format!(
+                        "Permission denied: net access to '{}' is not allowed by manifest.",
+                        domain
+                    )
+                    .into());
+                }
+
+                let handler = chat_stream::chat_stream_handler()
+                    .ok_or_else(|| "Chat stream handler not configured".to_string())?;
+                let sink = chat_stream::current_chat_stream_sink()
+                    .ok_or_else(|| "Chat stream sink not configured".to_string())?;
+
+                let request = chat_stream::ChatStreamRequest {
+                    req_id: req_id.to_string(),
+                    config: config_json,
+                    history: history_json,
+                    tools: None, // No tools for basic chat
+                };
+                let response = handler.stream(request, sink).map_err(|e| e.to_string())?;
+
+                // Convert response to Dynamic
+                let result_json = serde_json::to_value(&response).map_err(|e| e.to_string())?;
+                rhai::serde::to_dynamic(&result_json).map_err(|e| e.to_string().into())
+            },
+        );
+
+        // API: ai_chat_stream_with_tools - supports function calling
+        let caps_chat_tools = caps.clone();
+        engine.register_fn(
+            "ai_chat_stream_with_tools",
+            move |req_id: &str,
+                  config: rhai::Dynamic,
+                  history: rhai::Dynamic,
+                  tools: rhai::Dynamic|
+                  -> Result<rhai::Dynamic, Box<EvalAltResult>> {
+                let config_json: serde_json::Value =
+                    rhai::serde::from_dynamic(&config).map_err(|e| e.to_string())?;
+                let history_json: serde_json::Value =
+                    rhai::serde::from_dynamic(&history).map_err(|e| e.to_string())?;
+                let tools_json: serde_json::Value =
+                    rhai::serde::from_dynamic(&tools).map_err(|e| e.to_string())?;
+
+                let base_url = config_json
+                    .get("base_url")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| "Missing base_url".to_string())?;
+                let domain =
+                    extract_domain(base_url).ok_or_else(|| "Invalid base_url".to_string())?;
+                if !caps_chat_tools.check_net(domain) {
+                    return Err(format!(
+                        "Permission denied: net access to '{}' is not allowed by manifest.",
+                        domain
+                    )
+                    .into());
+                }
+
+                let handler = chat_stream::chat_stream_handler()
+                    .ok_or_else(|| "Chat stream handler not configured".to_string())?;
+                let sink = chat_stream::current_chat_stream_sink()
+                    .ok_or_else(|| "Chat stream sink not configured".to_string())?;
+
+                let request = chat_stream::ChatStreamRequest {
+                    req_id: req_id.to_string(),
+                    config: config_json,
+                    history: history_json,
+                    tools: Some(tools_json),
+                };
+                let response = handler.stream(request, sink).map_err(|e| e.to_string())?;
+
+                // Convert response to Dynamic
+                let result_json = serde_json::to_value(&response).map_err(|e| e.to_string())?;
+                rhai::serde::to_dynamic(&result_json).map_err(|e| e.to_string().into())
+            },
+        );
     }
 
     // API: log_info(msg: &str)
     engine.register_fn("log_info", |msg: &str| {
         println!("[Plugin Log] {}", msg);
     });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn extract_domain(url: &str) -> Option<&str> {
+    let without_scheme = url.split("://").nth(1).unwrap_or(url);
+    let host = without_scheme.split('/').next()?;
+    host.split(':').next()
 }

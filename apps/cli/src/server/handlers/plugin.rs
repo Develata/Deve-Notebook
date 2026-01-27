@@ -6,7 +6,9 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use deve_core::protocol::ServerMessage;
+use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
 use std::sync::Arc;
+use tokio::task::block_in_place;
 
 /// 处理插件调用
 pub async fn handle_plugin_call(
@@ -28,7 +30,14 @@ pub async fn handle_plugin_call(
             .collect();
 
         // 3. 调用
-        match plugin.call(&fn_name, rhai_args) {
+        let ch_for_stream = ch.clone();
+        let stream_sink = ChatStreamSink::new(move |msg| ch_for_stream.unicast(msg));
+        let call_result = block_in_place(|| {
+            let _scope = ChatStreamScope::new(stream_sink);
+            plugin.call(&fn_name, rhai_args)
+        });
+
+        match call_result {
             Ok(result) => {
                 // 4. 转换结果 (Dynamic -> JSON)
                 let json_result: serde_json::Value =

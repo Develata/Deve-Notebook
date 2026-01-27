@@ -1,8 +1,9 @@
-﻿// apps\web\src\components\command_palette
+// apps\web\src\components\command_palette
 //! 命令面板的静态命令定义。
 
 use super::types::Command;
-use crate::i18n::{Locale, t};
+use crate::components::main_layout::ChatControl;
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 /// 创建静态命令列表。
@@ -13,7 +14,10 @@ pub fn create_static_commands(
     set_show: WriteSignal<bool>,
     locale_signal: RwSignal<Locale>,
 ) -> Vec<Command> {
-    vec![
+    // Try to get ChatControl from context at creation time
+    let chat_control = use_context::<ChatControl>();
+
+    let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
         Command {
             id: "open".to_string(),
@@ -59,11 +63,6 @@ pub fn create_static_commands(
                     .expect("search control");
                 search_control.set_mode.set("@".to_string());
                 search_control.set_show.set(true);
-                // Close this command palette (if it's a separate overlay, but Unified Search usually replaces it)
-                // Wait, if Unified Search IS the command palette, we just change mode.
-                // But here CommandPalette is a different component?
-                // Yes, `mod.rs` shows it's a separate `CommandPalette` component.
-                // So we close it.
                 set_show.set(false);
             }),
             is_file: false,
@@ -77,8 +76,6 @@ pub fn create_static_commands(
                 "P2P: Establish Branch".to_string()
             },
             action: Callback::new(move |_| {
-                // For now, reuse the same logic as Switch to Peer, as selecting a peer is the first step.
-                // Ideally this would open a dialog or automatically clone.
                 let search_control = use_context::<crate::components::main_layout::SearchControl>()
                     .expect("search control");
                 search_control.set_mode.set("@".to_string());
@@ -96,23 +93,38 @@ pub fn create_static_commands(
                 "P2P: Merge Peer".to_string()
             },
             action: Callback::new(move |_| {
-                // Get CoreState to check active repo
                 let core = use_context::<crate::hooks::use_core::CoreState>().expect("core state");
                 if let Some(peer_id) = core.active_branch.get_untracked() {
                     core.on_merge_peer.run(peer_id.to_string());
-                    // Notify user
-                    // We don't have a toast system yet, but console log happens.
-                    // Ideally we close the palette.
                     set_show.set(false);
                 } else {
-                    // TODO: Show Toast "Please switch to a peer first"
                     leptos::logging::warn!("Cannot merge: No active peer selected.");
                     set_show.set(false);
                 }
             }),
             is_file: false,
         },
-    ]
+    ];
+
+    // Add AI Chat toggle command if ChatControl is available
+    if let Some(chat_ctrl) = chat_control {
+        commands.push(Command {
+            id: "toggle_ai_chat".to_string(),
+            title: if locale == Locale::Zh {
+                "AI: 切换聊天面板".to_string()
+            } else {
+                "AI: Toggle Chat Panel".to_string()
+            },
+            action: Callback::new(move |_| {
+                let current = chat_ctrl.chat_visible.get_untracked();
+                chat_ctrl.set_chat_visible.set(!current);
+                set_show.set(false);
+            }),
+            is_file: false,
+        });
+    }
+
+    commands
 }
 
 /// 基于查询字符串筛选命令。

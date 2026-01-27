@@ -10,12 +10,21 @@ use crate::shortcuts::create_global_shortcut_handler;
 use crate::components::activity_bar::SidebarView;
 use crate::components::chat::ChatPanel;
 use crate::components::diff_view::DiffView; // [NEW]
+use crate::components::disconnect_overlay::DisconnectedOverlay;
+use crate::components::merge_modal_slot::MergeModalSlot;
 
 // Context for deep components to trigger search (e.g. BranchSwitcher)
 #[derive(Clone, Copy)]
 pub struct SearchControl {
     pub set_show: WriteSignal<bool>,
     pub set_mode: WriteSignal<String>,
+}
+
+/// Context for toggling AI Chat panel visibility
+#[derive(Clone, Copy)]
+pub struct ChatControl {
+    pub chat_visible: ReadSignal<bool>,
+    pub set_chat_visible: WriteSignal<bool>,
 }
 
 /// 主应用程序布局
@@ -47,8 +56,14 @@ pub fn MainLayout() -> impl IntoView {
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
     let (pinned_views, set_pinned_views) = signal(SidebarView::all());
 
-    // AI Chat Visibility (Default Hidden)
-    let (chat_visible, set_chat_visible) = signal(false); // Can be toggled by command/shortcut
+    // AI Chat Visibility (Default Visible for testing, can be toggled)
+    let (chat_visible, set_chat_visible) = signal(true); // Default to visible
+
+    // Provide ChatControl context for command palette
+    provide_context(ChatControl {
+        chat_visible,
+        set_chat_visible,
+    });
 
     // 4. 快捷键
     let handle_keydown = create_global_shortcut_handler(
@@ -153,17 +168,7 @@ pub fn MainLayout() -> impl IntoView {
                 set_show=set_show_settings
             />
 
-            // 手动合并模态框
-            {move || {
-                let (show_merge, set_show_merge) = signal(false);
-                provide_context(set_show_merge); // 允许从深层组件触发
-                view! {
-                    <crate::components::merge_modal::MergeModal
-                        show=show_merge
-                        set_show=set_show_merge
-                    />
-                }
-            }}
+            <MergeModalSlot />
 
             <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
                  // 左侧边栏容器 (Activity Bar + Sidebar)
@@ -205,7 +210,6 @@ pub fn MainLayout() -> impl IntoView {
 
                  // 主编辑器
                  <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
-
                     {move || {
                         if let Some((path, old, new)) = core.diff_content.get() {
                             return view! {
@@ -218,7 +222,6 @@ pub fn MainLayout() -> impl IntoView {
                                 />
                             }.into_any();
                         }
-
 
                         match core.current_doc.get() {
                             Some(id) => view! {
@@ -250,32 +253,9 @@ pub fn MainLayout() -> impl IntoView {
                     view! {}.into_any()
                  }}
             </main>
-
             <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats />
 
-            // 断开连接锁定 / 加载屏幕
-            {move || {
-                let status = core.ws.status.get();
-                if status != crate::api::ConnectionStatus::Connected {
-                    view! {
-                        <div class="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                            <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200 text-center">
-                                <div class="text-4xl mb-4">"🔒"</div>
-                                <h1 class="text-2xl font-bold text-gray-800 mb-2">"Disconnected"</h1>
-                                <p class="text-gray-600 mb-6">"Reconnecting to server... please wait."</p>
-                                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                  <div class="bg-blue-600 h-2.5 rounded-full animate-pulse" style="width: 100%"></div>
-                                </div>
-                                <div class="mt-4 text-sm text-gray-400">
-                                    {format!("Status: {}", status)}
-                                </div>
-                            </div>
-                        </div>
-                    }.into_any()
-                } else {
-                     view! {}.into_any()
-                }
-            }}
+            <DisconnectedOverlay status=core.ws.status.into() />
         </div>
     }
 }

@@ -1,4 +1,5 @@
 use crate::hooks::use_core::use_core;
+use crate::utils::markdown::render_markdown;
 use leptos::prelude::*;
 use leptos::*;
 use wasm_bindgen::closure::Closure;
@@ -41,8 +42,26 @@ pub fn ChatPanel() -> impl IntoView {
         // Optimistic Update
         core.append_chat_message("user", &msg, None);
 
-        // Call Plugin (Real Logic)
-        let args = vec![serde_json::json!(req_id), serde_json::json!(msg)];
+        // Build context: current document path (if any)
+        let current_doc_path = core
+            .current_doc
+            .get_untracked()
+            .and_then(|doc_id| {
+                core.docs
+                    .get_untracked()
+                    .iter()
+                    .find(|(id, _)| *id == doc_id)
+                    .map(|(_, path)| path.clone())
+            })
+            .unwrap_or_default();
+
+        // Build context object for AI
+        let context = serde_json::json!({
+            "current_file": current_doc_path,
+        });
+
+        // Call Plugin with context
+        let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
 
         // Trigger Plugin Call
         core.on_plugin_call
@@ -167,10 +186,7 @@ pub fn ChatPanel() -> impl IntoView {
                                 // Note: We need a Markdown renderer component.
                                 // For now, simple text or innerHTML if trusted.
                                 <div class="markdown-body" inner_html={
-                                    // Use a helper to render markdown?
-                                    // Or just raw text for now.
-                                    // crate::utils::render_markdown(&msg.content)
-                                    msg.content.clone()
+                                    render_markdown(&msg.content)
                                 }></div>
                             </div>
                         </div>

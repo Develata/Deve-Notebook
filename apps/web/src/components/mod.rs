@@ -16,8 +16,10 @@ pub mod sidebar_menu;
 pub mod activity_bar;
 pub mod branch_switcher;
 pub mod chat; // [NEW] AI Chat
+pub mod disconnect_overlay;
 pub mod main_layout;
 pub mod merge_modal;
+pub mod merge_modal_slot;
 pub mod merge_panel;
 pub mod quick_open;
 pub mod search_box;
