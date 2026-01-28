@@ -48,14 +48,12 @@
 | **Body**   | `> src`<br>`  > sub.rs` | `2 -  old()`        | `2 +  new()`        | `H1 Title`<br>`  $E=mc^2$` | `User: Hi`        |
 
 #### Status Bar Layout (独立的底部通栏)
-状态栏 **MUST NOT** 遵循上方的分列网格，而是 **MUST** 采用 Flex 布局（左/右对齐），并保持极简：
+状态栏 **MUST NOT** 遵循上方的分列网格，而是 **MUST** 采用 Flex 布局（左/右对齐）：
 
-| Section         | Content (Left to Right)              |
-| :-------------- | :----------------------------------- |
-| **Left Group**  | `[AI: PLAN]` 或 `[AI: BUILD]`         |
-| **Right Group** | `统计信息 (Words/Lines/Chars)`        |
-
-*   **原则**：大多数功能放入命令面板；底栏只保留 AI 模式与基础统计。
+| Section         | Content (Left to Right)                             |
+| :-------------- | :-------------------------------------------------- |
+| **Left Group**  | `[Remote: iPad]` `[Branch: main*]` `[Sync: 🔄]`      |
+| **Right Group** | `[Spectator: READ-ONLY]` `[UTF-8]` `[Ln 12, Col 5]` |
 
 *   **Column 1: Primary Side Bar (主要侧边栏)**
     *   **Position**: 最左侧。
