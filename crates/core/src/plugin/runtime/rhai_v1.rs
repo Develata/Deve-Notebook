@@ -3,25 +3,49 @@
 //!
 //! **功能**:
 //! 基于 Rhai 脚本引擎实现的插件运行时。
+//!
+//! **模块化支持**:
+//! 通过 FileModuleResolver 支持 `import "module_name"` 语法，
+//! 允许插件拆分为多个 .rhai 文件。(仅非 WASM 环境)
 
 use super::{host, PluginRuntime};
 use crate::plugin::manifest::PluginManifest;
 use anyhow::{anyhow, Result};
 use rhai::{Dynamic, Engine, Scope, AST};
+use std::path::PathBuf;
 use std::sync::Mutex;
 
+#[cfg(not(target_arch = "wasm32"))]
+use rhai::module_resolvers::FileModuleResolver;
+
 /// Rhai 引擎运行时
+///
+/// **Invariant**: `base_dir` 必须是插件根目录的有效路径。
+/// **Post-condition**: 引擎配置了 FileModuleResolver，可解析同目录下的 .rhai 模块。
 pub struct RhaiRuntime {
     engine: Engine,
     ast: Option<AST>,
     scope: Mutex<Scope<'static>>,
     manifest: PluginManifest,
+    #[allow(dead_code)]
+    base_dir: PathBuf,
 }
 
 impl RhaiRuntime {
     /// 创建新的运行时实例
-    pub fn new(manifest: PluginManifest) -> Self {
+    ///
+    /// **参数**:
+    /// - `manifest`: 插件清单
+    /// - `base_dir`: 插件根目录路径，用于解析 import 语句
+    pub fn new(manifest: PluginManifest, base_dir: PathBuf) -> Self {
         let mut engine = Engine::new();
+
+        // 配置模块解析器 (仅非 WASM 环境支持文件系统)
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let resolver = FileModuleResolver::new_with_path(&base_dir);
+            engine.set_module_resolver(resolver);
+        }
 
         // 注册宿主 API
         host::register_core_api(&mut engine, &manifest);
@@ -31,6 +55,7 @@ impl RhaiRuntime {
             ast: None,
             scope: Mutex::new(Scope::new()),
             manifest,
+            base_dir,
         }
     }
 }
@@ -95,7 +120,8 @@ mod tests {
             entry: "main.rhai".into(),
             capabilities: Default::default(),
         };
-        let mut runtime = RhaiRuntime::new(manifest.clone());
+        let base_dir = PathBuf::from(".");
+        let mut runtime = RhaiRuntime::new(manifest.clone(), base_dir);
         runtime
             .load(manifest.clone(), "fn add(a, b) { a + b }")
             .unwrap();
@@ -110,6 +136,7 @@ mod tests {
         write!(temp, "secret").unwrap();
         let path = temp.path().to_path_buf();
         let path_str = path.to_str().unwrap().to_string();
+        let base_dir = PathBuf::from(".");
 
         // Allowed
         let mut cap = Capability::default();
@@ -121,7 +148,7 @@ mod tests {
             entry: "m.rhai".into(),
             capabilities: cap,
         };
-        let mut rt = RhaiRuntime::new(manifest.clone());
+        let mut rt = RhaiRuntime::new(manifest.clone(), base_dir.clone());
         rt.load(manifest, "fn read(p) { fs_read(p) }").unwrap();
         assert_eq!(
             rt.call("read", vec![path_str.clone().into()])
@@ -139,7 +166,7 @@ mod tests {
             entry: "m.rhai".into(),
             capabilities: Default::default(),
         };
-        let mut rt_deny = RhaiRuntime::new(manifest_deny.clone());
+        let mut rt_deny = RhaiRuntime::new(manifest_deny.clone(), base_dir);
         rt_deny
             .load(manifest_deny, "fn read(p) { fs_read(p) }")
             .unwrap();

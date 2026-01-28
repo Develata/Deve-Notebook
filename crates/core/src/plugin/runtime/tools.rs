@@ -88,6 +88,69 @@ pub fn builtin_tools() -> Vec<ToolDefinition> {
         ToolDefinition {
             tool_type: "function".to_string(),
             function: FunctionDefinition {
+                name: "git_status".to_string(),
+                description: "List unstaged changes in Redb source control".to_string(),
+                parameters: Some(serde_json::json!({
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                })),
+            },
+        },
+        ToolDefinition {
+            tool_type: "function".to_string(),
+            function: FunctionDefinition {
+                name: "git_diff".to_string(),
+                description: "Show unified diff for a document path".to_string(),
+                parameters: Some(serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The document path to diff"
+                        }
+                    },
+                    "required": ["path"]
+                })),
+            },
+        },
+        ToolDefinition {
+            tool_type: "function".to_string(),
+            function: FunctionDefinition {
+                name: "git_add".to_string(),
+                description: "Stage a document path in Redb source control".to_string(),
+                parameters: Some(serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The document path to stage"
+                        }
+                    },
+                    "required": ["path"]
+                })),
+            },
+        },
+        ToolDefinition {
+            tool_type: "function".to_string(),
+            function: FunctionDefinition {
+                name: "git_commit".to_string(),
+                description: "Commit staged documents with a message".to_string(),
+                parameters: Some(serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string",
+                            "description": "Commit message"
+                        }
+                    },
+                    "required": ["message"]
+                })),
+            },
+        },
+        ToolDefinition {
+            tool_type: "function".to_string(),
+            function: FunctionDefinition {
                 name: "search_files".to_string(),
                 description: "Search for files matching a glob pattern".to_string(),
                 parameters: Some(serde_json::json!({

@@ -15,3 +15,4 @@ mod metadata_ops;
 mod ops_ops;
 mod snapshot_ops;
 mod source_control_ops;
+mod source_control_query_ops;

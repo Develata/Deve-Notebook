@@ -23,6 +23,8 @@ pub mod context;
 pub mod error;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod mcp;
 pub mod models;
 pub mod plugin;
 pub mod protocol;

@@ -6,7 +6,9 @@
 use crate::ledger::source_control;
 use crate::ledger::RepoManager;
 use crate::models::DocId;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo};
+use crate::source_control::snapshot_paths;
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate};
+use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
 impl RepoManager {
@@ -54,5 +56,30 @@ impl RepoManager {
         current: Option<&str>,
     ) -> Option<ChangeStatus> {
         source_control::detect_change(committed, current)
+    }
+
+    /// 提交已暂存文件 (内部快照策略)
+    pub fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
+        source_control::create_commit_with_updates(&self.local_db, message, |path| {
+            let normalized = to_forward_slash(path);
+            if let Ok(Some(doc_id)) =
+                crate::ledger::metadata::get_docid(&self.local_db, &normalized)
+            {
+                let ops = self.get_local_ops(doc_id).ok()?;
+                let entries: Vec<_> = ops.into_iter().map(|(_, entry)| entry).collect();
+                let content = crate::state::reconstruct_content(&entries);
+                Some(SnapshotUpdate::Save {
+                    doc_id,
+                    path: normalized,
+                    content,
+                })
+            } else if let Ok(Some(doc_id)) =
+                snapshot_paths::find_snapshot_doc_id(&self.local_db, &normalized)
+            {
+                Some(SnapshotUpdate::Delete { doc_id })
+            } else {
+                None
+            }
+        })
     }
 }

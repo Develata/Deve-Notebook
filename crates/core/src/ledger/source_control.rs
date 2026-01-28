@@ -10,7 +10,9 @@
 
 use crate::ledger::range;
 use crate::models::DocId;
-use crate::source_control::{changes, commits, staging, ChangeEntry, ChangeStatus, CommitInfo};
+use crate::source_control::{
+    changes, commits, staging, ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate,
+};
 use anyhow::Result;
 use redb::Database;
 
@@ -58,6 +60,25 @@ pub fn create_commit(
     message: &str,
     get_content: impl Fn(&str) -> Option<(DocId, String)>,
 ) -> Result<CommitInfo> {
+    create_commit_with_updates(db, message, |path| {
+        get_content(path).map(|(doc_id, content)| SnapshotUpdate::Save {
+            doc_id,
+            path: path.to_string(),
+            content,
+        })
+    })
+}
+
+/// 创建提交并应用快照更新
+///
+/// **Invariant**: 每个暂存路径至多对应一个快照更新动作。
+/// **Pre-condition**: 暂存区非空。
+/// **Post-condition**: 快照与提交记录同步更新，暂存区被清空。
+pub fn create_commit_with_updates(
+    db: &Database,
+    message: &str,
+    resolve_update: impl Fn(&str) -> Option<SnapshotUpdate>,
+) -> Result<CommitInfo> {
     let staged = staging::list_staged(db)?;
     let doc_count = staged.len() as u32;
 
@@ -65,10 +86,16 @@ pub fn create_commit(
         anyhow::bail!("Nothing to commit: staging area is empty");
     }
 
-    // 保存每个暂存文件的快照
     for path in &staged {
-        if let Some((doc_id, content)) = get_content(path) {
-            changes::save_snapshot(db, doc_id, &content)?;
+        if let Some(update) = resolve_update(path) {
+            match update {
+                SnapshotUpdate::Save {
+                    doc_id,
+                    path,
+                    content,
+                } => changes::save_snapshot(db, doc_id, &path, &content)?,
+                SnapshotUpdate::Delete { doc_id } => changes::remove_snapshot(db, doc_id)?,
+            }
         }
     }
 

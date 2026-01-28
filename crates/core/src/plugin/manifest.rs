@@ -34,6 +34,8 @@ pub struct Capability {
     pub allow_fs_write: Vec<PathBuf>,
     #[serde(default)]
     pub allow_env: Vec<String>,
+    #[serde(default)]
+    pub allow_source_control: bool,
 }
 
 impl Capability {
@@ -83,6 +85,11 @@ impl Capability {
         self.allow_fs_write
             .iter()
             .any(|prefix| path.starts_with(prefix))
+    }
+
+    /// Check if source control access is allowed.
+    pub fn check_source_control(&self) -> bool {
+        self.allow_source_control
     }
 }
 

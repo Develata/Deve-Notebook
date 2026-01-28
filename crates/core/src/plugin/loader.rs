@@ -75,8 +75,8 @@ impl PluginLoader {
         let script_content = fs::read_to_string(&entry_path)
             .with_context(|| format!("Missing entry script '{}' in {:?}", manifest.entry, path))?;
 
-        // 3. Initialize Runtime
-        let mut runtime = RhaiRuntime::new(manifest.clone());
+        // 3. Initialize Runtime (传递插件目录路径以支持模块解析)
+        let mut runtime = RhaiRuntime::new(manifest.clone(), path.to_path_buf());
         runtime.load(manifest, &script_content)?;
 
         Ok(Box::new(runtime))

@@ -13,7 +13,21 @@ use futures::StreamExt;
 use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
 use serde::Deserialize;
 use serde_json::json;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+
+/// 全局 HTTP 客户端单例 (复用 TCP 连接池)
+/// 
+/// **优化说明**: 避免每次请求都创建新的 Client，复用底层连接池
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+fn get_http_client() -> &'static reqwest::Client {
+    HTTP_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .pool_max_idle_per_host(5) // 每个主机最多保持 5 个空闲连接
+            .build()
+            .expect("Failed to create HTTP client")
+    })
+}
 
 #[derive(Debug, Deserialize)]
 struct ChatConfig {
@@ -73,7 +87,7 @@ impl ChatStreamHandler for AiChatStreamHandler {
 
         let req_id = request.req_id.clone();
         tokio::runtime::Handle::current().block_on(async move {
-            let client = reqwest::Client::new();
+            let client = get_http_client(); // 使用全局单例客户端
             let mut req = client
                 .post(endpoint)
                 .bearer_auth(&config.api_key)

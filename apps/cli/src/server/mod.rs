@@ -16,9 +16,12 @@ use axum::{Router, routing::get};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::plugin::runtime::PluginRuntime;
+use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::tree::TreeManager;
+use deve_core::mcp::{McpManager, McpServerConfig};
+use serde_json;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -30,6 +33,7 @@ use deve_core::search::SearchService;
 
 pub mod channel;
 pub mod ai_chat;
+pub mod mcp;
 pub mod handlers;
 pub mod session;
 pub mod ws;
@@ -55,7 +59,10 @@ pub async fn start_server(
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
 ) -> anyhow::Result<()> {
+    host::set_repo_manager(repo.clone())?;
     ai_chat::init_chat_stream_handler()?;
+    let mcp_manager = Arc::new(load_mcp_manager(&vault_path));
+    let _ = host::set_mcp_manager(mcp_manager.clone());
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
 
@@ -219,4 +226,32 @@ pub async fn start_server(
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {
+    let mut manager = McpManager::new();
+    let cfg_path = vault_path.join(".deve").join("mcp.json");
+    if !cfg_path.exists() {
+        return manager;
+    }
+
+    let content = match std::fs::read_to_string(&cfg_path) {
+        Ok(c) => c,
+        Err(err) => {
+            tracing::warn!("Failed to read MCP config: {:?}", err);
+            return manager;
+        }
+    };
+
+    let configs: Vec<McpServerConfig> = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(err) => {
+            tracing::warn!("Invalid MCP config: {:?}", err);
+            return manager;
+        }
+    };
+
+    mcp::register_mcp_servers(&mut manager, configs);
+
+    manager
 }

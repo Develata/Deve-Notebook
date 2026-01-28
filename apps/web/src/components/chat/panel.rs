@@ -28,13 +28,11 @@ pub fn ChatPanel() -> impl IntoView {
         }
     });
 
-    let send_message = move || {
-        let msg = input.get().trim().to_string();
+    let send_text = move |msg: String| {
+        let msg = msg.trim().to_string();
         if msg.is_empty() || is_streaming.get() {
             return;
         }
-
-        set_input.set(String::new()); // Clear input immediately
 
         // Generate Request ID
         let req_id = uuid::Uuid::new_v4().to_string();
@@ -66,6 +64,27 @@ pub fn ChatPanel() -> impl IntoView {
         // Trigger Plugin Call
         core.on_plugin_call
             .run(("ai-chat".to_string(), "chat".to_string(), req_id, args));
+    };
+
+    let send_message = {
+        let send_text = send_text.clone();
+        move || {
+            let msg = input.get().trim().to_string();
+            if msg.is_empty() || is_streaming.get() {
+                return;
+            }
+
+            set_input.set(String::new()); // Clear input immediately
+            send_text(msg);
+        }
+    };
+
+    let send_example = {
+        let send_text = send_text.clone();
+        move |example: &'static str| {
+            set_input.set(String::new());
+            send_text(example.to_string());
+        }
     };
 
     // Drag & Drop Handlers
@@ -161,37 +180,77 @@ pub fn ChatPanel() -> impl IntoView {
 
             // Messages Area
             <div class="flex-1 overflow-y-auto p-4 space-y-4">
-                {move || messages.get().iter().map(|msg| {
-                    let is_user = msg.role == "user";
-                    view! {
-                        <div class="flex flex-col gap-1">
-                            <div class={format!("flex items-center gap-2 {}", if is_user { "flex-row-reverse" } else { "flex-row" })}>
-                                <div class={format!("w-6 h-6 rounded flex items-center justify-center text-xs font-bold {}",
-                                    if is_user { "bg-[#007acc] text-white" } else { "bg-[#2d2d2d] text-[#cccccc]" }
-                                )}>
-                                    {if is_user { "U" } else { "AI" }}
+                {
+                    let send_example = send_example.clone();
+                    move || {
+                    let send_example = send_example.clone();
+                    if messages.get().is_empty() {
+                        let send_example_1 = send_example.clone();
+                        let send_example_2 = send_example.clone();
+                        view! {
+                            <div class="h-full flex flex-col items-center justify-center text-center text-[#616161] dark:text-[#858585]">
+                                <div class="text-sm uppercase tracking-widest text-[#9aa1a8]">"Deve-Note AI"</div>
+                                <div class="mt-2 text-lg font-semibold text-[#3b3b3b] dark:text-[#cccccc]">"Try these"</div>
+                                <div class="mt-4 flex flex-col gap-2 w-full max-w-xs">
+                                    <button
+                                        class="px-3 py-2 rounded border border-[#e5e5e5] dark:border-[#3e3e42] bg-white dark:bg-[#252526] text-sm hover:bg-[#f3f3f3] dark:hover:bg-[#3e3e42]"
+                                        on:click=move |_| send_example_1("git_status")
+                                    >
+                                        "git_status"
+                                    </button>
+                                    <button
+                                        class="px-3 py-2 rounded border border-[#e5e5e5] dark:border-[#3e3e42] bg-white dark:bg-[#252526] text-sm hover:bg-[#f3f3f3] dark:hover:bg-[#3e3e42]"
+                                        on:click=move |_| send_example_2("git_diff \"path/to/file.md\"")
+                                    >
+                                        "git_diff \"path/to/file.md\""
+                                    </button>
+                                    <div class="text-xs text-[#9aa1a8] mt-2">
+                                        "AI can stage and commit after review"
+                                    </div>
                                 </div>
-                                <span class="text-xs text-[#616161] dark:text-[#858585]">{if is_user { "You" } else { "Assistant" }}</span>
                             </div>
+                        }
+                        .into_any()
+                    } else {
+                        view! {
+                            <For
+                                each=move || messages.get()
+                                key=|msg| msg.req_id.clone().unwrap_or_else(|| msg.content.chars().take(32).collect())
+                                children=move |msg| {
+                                    let is_user = msg.role == "user";
+                                    let content = msg.content.clone();
+                                    view! {
+                                        <div class="flex flex-col gap-1">
+                                            <div class={format!("flex items-center gap-2 {}", if is_user { "flex-row-reverse" } else { "flex-row" })}>
+                                                <div class={format!("w-6 h-6 rounded flex items-center justify-center text-xs font-bold {}",
+                                                    if is_user { "bg-[#007acc] text-white" } else { "bg-[#2d2d2d] text-[#cccccc]" }
+                                                )}>
+                                                    {if is_user { "U" } else { "AI" }}
+                                                </div>
+                                                <span class="text-xs text-[#616161] dark:text-[#858585]">{if is_user { "You" } else { "Assistant" }}</span>
+                                            </div>
 
-                            // Message Bubble
-                            <div class={format!("rounded px-3 py-2 text-sm leading-relaxed max-w-[90%] {}",
-                                if is_user {
-                                    "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-8"
-                                } else {
-                                    "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-8"
+                                            // Message Bubble
+                                            <div class={format!("rounded px-3 py-2 text-sm leading-relaxed max-w-[90%] {}",
+                                                if is_user {
+                                                    "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-8"
+                                                } else {
+                                                    "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-8"
+                                                }
+                                            )}>
+                                                // Render Markdown Content
+                                                <div class="markdown-body" inner_html={
+                                                    render_markdown(&content)
+                                                }></div>
+                                            </div>
+                                        </div>
+                                    }
                                 }
-                            )}>
-                                // Render Markdown Content
-                                // Note: We need a Markdown renderer component.
-                                // For now, simple text or innerHTML if trusted.
-                                <div class="markdown-body" inner_html={
-                                    render_markdown(&msg.content)
-                                }></div>
-                            </div>
-                        </div>
+                            />
+                        }
+                        .into_any()
                     }
-                }).collect::<Vec<_>>()}
+                }}
 
                 // Loading Indicator
                 {move || if is_streaming.get() {

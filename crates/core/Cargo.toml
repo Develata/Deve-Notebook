@@ -15,6 +15,7 @@ uuid.workspace = true
 regex = "1.10"
 chrono.workspace = true
 dissimilar = "1.0.10"
+similar = "2.7.0"
 rhai = { version = "1.19", features = ["serde", "sync"] }
 ed25519-dalek = "2.2.0"
 rand = "0.8.5"
