@@ -77,6 +77,51 @@
   font-size: 1em;
 }
 
+/* ==================== Chat Markdown Code Blocks ==================== */
+.markdown-code-block {
+  position: relative;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+  background: #f8f9fb;
+}
+
+.markdown-code-block pre {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  overflow-x: auto;
+  background: transparent;
+}
+
+.markdown-code-block code {
+  font-family: var(--code-font);
+  font-size: 0.9em;
+}
+
+.markdown-code-block .code-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.35rem 0.5rem;
+  background: #f1f3f5;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.markdown-code-block .apply-code {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #d0d7de;
+  background: #ffffff;
+  color: #24292f;
+  cursor: pointer;
+}
+
+.markdown-code-block .apply-code:hover {
+  background: #f3f4f6;
+}
+
 /* ==================== Frontmatter 元数据块 ==================== */
 .cm-frontmatter-block {
   background-color: #f8f9fa;
