@@ -13,6 +13,15 @@
 * **存储**：**Stateless / RAM-Only (纯内存)**。Web 端严禁使用 IndexedDB/LocalStorage 存储业务数据。它只是 Server 状态的“易失性投影”。
 * **连接约束**：Web 端必须保持与 Server 的 WebSocket 连接才能工作。**断连即锁屏**，严禁离线编辑。
 
+### 主节点 / 代理节点 (Main / Proxy)
+* **动机**：Redb 为独占锁模型，同一时间只允许一个进程持锁。
+* **策略**：当 `deve_cli serve` 检测到端口被占用或数据库已锁定时，自动降级为 **Proxy 模式**。
+    * **Main**：持锁进程，监听主端口 (默认 3001)，负责真实读写。
+    * **Proxy**：不触碰数据库，通过 HTTP 转发访问主节点。
+* **端口策略**：Proxy 自动选择主端口 + 1 的空闲端口 (如 3002)。
+* **探测接口**：`GET /api/node/role` 返回 `{ role, ws_port, main_port }`。
+* **前端行为**：默认尝试连接 3001..3005；也支持 `?ws_port=xxxx` 强制指定。
+
 ## 连接与协议 (Connection & Protocol)
 
 ### WebSocket 协议类型 (Protocol Types)

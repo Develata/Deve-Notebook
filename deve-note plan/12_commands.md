@@ -30,6 +30,20 @@
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
 
+*   **交互准则 (Command First)**:
+    *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。
+    *   底部状态栏仅展示 AI 模式与基础统计。
+
+*   **AI / Agents**:
+    *   `AI: 切换到 PLAN 模式`: 将 AI 进入计划模式.
+    *   `AI: 切换到 BUILD 模式`: 将 AI 进入执行模式.
+
+## Chat Slash Commands (聊天命令)
+
+*   `/plan`: 切换到 PLAN 模式.
+*   `/build`: 切换到 BUILD 模式.
+*   `/agents`: 在 PLAN ↔ BUILD 之间顺序切换.
+
 ## 本章相关命令
 
 *   无 (本章即为命令汇总)。

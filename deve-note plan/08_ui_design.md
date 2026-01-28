@@ -48,12 +48,14 @@
 | **Body**   | `> src`<br>`  > sub.rs` | `2 -  old()`        | `2 +  new()`        | `H1 Title`<br>`  $E=mc^2$` | `User: Hi`        |
 
 #### Status Bar Layout (独立的底部通栏)
-状态栏 **MUST NOT** 遵循上方的分列网格，而是 **MUST** 采用 Flex 布局（左/右对齐）：
+状态栏 **MUST NOT** 遵循上方的分列网格，而是 **MUST** 采用 Flex 布局（左/右对齐），并保持极简：
 
-| Section         | Content (Left to Right)                             |
-| :-------------- | :-------------------------------------------------- |
-| **Left Group**  | `[Remote: iPad]` `[Branch: main*]` `[Sync: 🔄]`      |
-| **Right Group** | `[Spectator: READ-ONLY]` `[UTF-8]` `[Ln 12, Col 5]` |
+| Section         | Content (Left to Right)              |
+| :-------------- | :----------------------------------- |
+| **Left Group**  | `[AI: PLAN]` 或 `[AI: BUILD]`         |
+| **Right Group** | `统计信息 (Words/Lines/Chars)`        |
+
+*   **原则**：大多数功能放入命令面板；底栏只保留 AI 模式与基础统计。
 
 *   **Column 1: Primary Side Bar (主要侧边栏)**
     *   **Position**: 最左侧。
@@ -148,6 +150,12 @@
     *   UI 字体: System Sans-Serif (San Francisco, Segoe UI).
     *   Editor 字体: Monospace (JetBrains Mono, Fira Code).
 *   **Focus Ring**: 所有可交互元素在键盘 Focus 时必须显示高对比度轮廓 (`outline: 2px solid var(--focus-border)`).
+
+## 6. Command First (命令优先交互)
+
+*   **原则**：功能入口以命令面板为主，UI 按钮为辅。
+*   **目标**：降低界面密度，保持 VSCode/opencode 风格的极简感。
+*   **状态栏**：仅显示 `AI: PLAN/BUILD` 与基础统计。
 
 ## 5. 体验取舍 (Inspiration & Compatibility)
 *   **风格参考**：UI 视觉与版式借鉴语雀与 SilverBullet 的清爽阅读感，但保持开源可自定义主题。

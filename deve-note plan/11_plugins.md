@@ -49,6 +49,11 @@
 *   **安全**：访问网络/文件必须显式授权 Capability。
 *   **隐私 (Privacy)**：默认关闭遥测 (Telemetry Off by Default).
 
+#### AI 模式 (Plan / Build)
+*   **Plan**：只输出计划，不执行代码与工具调用。
+*   **Build**：执行模式，可调用工具并修改代码。
+*   **切换方式**：支持 `/plan`、`/build`，以及 `/agents` 顺序切换。
+
 ### 5. Git 推送 (Git Integration)
 *   **机制**：调用 Host Functions 中的 `git_sync.rhai`。
 *   **流程**：`Frontend -> Command/Button -> Check Capability -> Host Function -> git add/commit/push -> Feedback`。
