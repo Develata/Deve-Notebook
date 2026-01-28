@@ -28,6 +28,7 @@ pub fn ChatPanel() -> impl IntoView {
         }
     });
 
+    let core_for_send = core.clone();
     let send_text = move |msg: String| {
         let msg = msg.trim().to_string();
         if msg.is_empty() || is_streaming.get() {
@@ -38,14 +39,15 @@ pub fn ChatPanel() -> impl IntoView {
         let req_id = uuid::Uuid::new_v4().to_string();
 
         // Optimistic Update
-        core.append_chat_message("user", &msg, None);
+        core_for_send.append_chat_message("user", &msg, None);
 
         // Build context: current document path (if any)
-        let current_doc_path = core
+        let current_doc_path = core_for_send
             .current_doc
             .get_untracked()
             .and_then(|doc_id| {
-                core.docs
+                core_for_send
+                    .docs
                     .get_untracked()
                     .iter()
                     .find(|(id, _)| *id == doc_id)
@@ -62,7 +64,8 @@ pub fn ChatPanel() -> impl IntoView {
         let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
 
         // Trigger Plugin Call
-        core.on_plugin_call
+        core_for_send
+            .on_plugin_call
             .run(("ai-chat".to_string(), "chat".to_string(), req_id, args));
     };
 
@@ -169,6 +172,12 @@ pub fn ChatPanel() -> impl IntoView {
             // Header
             <div class="h-9 flex items-center px-4 border-b border-[#e5e5e5] dark:border-[#252526] bg-[#f8f8f8] dark:bg-[#2d2d2d]">
                 <span class="text-xs font-bold text-[#3b3b3b] dark:text-[#cccccc] uppercase tracking-wider">"AI Assistant"</span>
+                <span class="ml-2 text-[10px] uppercase font-mono px-2 py-[2px] rounded bg-[#eeeeee] dark:bg-[#3a3a3a] text-[#555555] dark:text-[#cccccc] border border-[#dddddd] dark:border-[#4a4a4a]">
+                    {move || {
+                        let mode = core.ai_mode.get();
+                        if mode == "plan" { "PLAN" } else { "BUILD" }
+                    }}
+                </span>
                 <div class="flex-1"></div>
                 // Model Selector (Mock)
                 <select class="text-xs bg-transparent border-none outline-none text-[#616161] dark:text-[#858585] cursor-pointer">

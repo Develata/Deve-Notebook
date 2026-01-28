@@ -253,7 +253,7 @@ pub fn MainLayout() -> impl IntoView {
                     view! {}.into_any()
                  }}
             </main>
-            <crate::components::bottom_bar::BottomBar ai_mode=core.ai_mode stats=core.stats />
+            <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats />
 
             <DisconnectedOverlay status=core.ws.status.into() />
         </div>
