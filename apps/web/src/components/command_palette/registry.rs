@@ -123,61 +123,45 @@ pub fn create_static_commands(
             is_file: false,
         });
 
-        commands.push(Command {
-            id: "ai_plan".to_string(),
-            title: if locale == Locale::Zh {
-                "AI: 切换到 PLAN 模式".to_string()
+        let ai_cmds = vec!["/agents", "/skills"];
+        for cmd in ai_cmds {
+            let title = if locale == Locale::Zh {
+                format!("AI:{}", cmd.trim_start_matches('/'))
             } else {
-                "AI: Switch to PLAN".to_string()
-            },
-            action: Callback::new(move |_| {
-                if let Some(core) = use_context::<crate::hooks::use_core::CoreState>() {
-                    core.set_ai_mode.set("plan".to_string());
-                    let req_id = uuid::Uuid::new_v4().to_string();
-                    let args = vec![
-                        serde_json::json!(req_id),
-                        serde_json::json!("/plan"),
-                        serde_json::json!({}),
-                    ];
-                    core.on_plugin_call.run((
-                        "ai-chat".to_string(),
-                        "chat".to_string(),
-                        req_id,
-                        args,
-                    ));
-                }
-                set_show.set(false);
-            }),
-            is_file: false,
-        });
-
-        commands.push(Command {
-            id: "ai_build".to_string(),
-            title: if locale == Locale::Zh {
-                "AI: 切换到 BUILD 模式".to_string()
-            } else {
-                "AI: Switch to BUILD".to_string()
-            },
-            action: Callback::new(move |_| {
-                if let Some(core) = use_context::<crate::hooks::use_core::CoreState>() {
-                    core.set_ai_mode.set("build".to_string());
-                    let req_id = uuid::Uuid::new_v4().to_string();
-                    let args = vec![
-                        serde_json::json!(req_id),
-                        serde_json::json!("/build"),
-                        serde_json::json!({}),
-                    ];
-                    core.on_plugin_call.run((
-                        "ai-chat".to_string(),
-                        "chat".to_string(),
-                        req_id,
-                        args,
-                    ));
-                }
-                set_show.set(false);
-            }),
-            is_file: false,
-        });
+                format!("AI:{}", cmd.trim_start_matches('/'))
+            };
+            let cmd_str = cmd.to_string();
+            commands.push(Command {
+                id: format!("ai_{}", cmd.trim_start_matches('/')),
+                title,
+                action: Callback::new(move |_| {
+                    if let Some(core) = use_context::<crate::hooks::use_core::CoreState>() {
+                        if cmd_str == "/agents" {
+                            let next = if core.ai_mode.get_untracked() == "plan" {
+                                "build"
+                            } else {
+                                "plan"
+                            };
+                            core.set_ai_mode.set(next.to_string());
+                        }
+                        let req_id = uuid::Uuid::new_v4().to_string();
+                        let args = vec![
+                            serde_json::json!(req_id),
+                            serde_json::json!(cmd_str),
+                            serde_json::json!({}),
+                        ];
+                        core.on_plugin_call.run((
+                            "ai-chat".to_string(),
+                            "chat".to_string(),
+                            req_id,
+                            args,
+                        ));
+                    }
+                    set_show.set(false);
+                }),
+                is_file: false,
+            });
+        }
     }
 
     commands
