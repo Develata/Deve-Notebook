@@ -12,6 +12,7 @@ use futures::StreamExt;
 use futures::channel::mpsc::UnboundedSender;
 use futures::stream::SplitSink;
 use gloo_net::websocket::{Message, futures::WebSocket};
+use gloo_net::http::Request;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
@@ -22,18 +23,27 @@ use super::backoff::BackoffStrategy;
 pub fn spawn_connection_manager(
     set_status: WriteSignal<ConnectionStatus>,
     set_msg: WriteSignal<Option<ServerMessage>>,
+    set_endpoint: WriteSignal<String>,
+    set_node_role: WriteSignal<String>,
     link_tx: UnboundedSender<SplitSink<WebSocket, Message>>,
 ) {
     spawn_local(async move {
-        let url = build_ws_url();
+        let urls = build_ws_urls();
+        let mut url_idx = 0usize;
         let mut backoff = BackoffStrategy::new();
 
         loop {
+            let url = urls
+                .get(url_idx)
+                .cloned()
+                .unwrap_or_else(|| build_ws_url(3001));
             set_status.set(ConnectionStatus::Connecting);
             leptos::logging::log!("WS: Connecting to {}...", url);
 
             match WebSocket::open(&url) {
                 Ok(ws) => {
+                    set_endpoint.set(url.clone());
+                    spawn_local(fetch_node_role(url.clone(), set_node_role));
                     leptos::logging::log!("WS: Socket opened, waiting for first message...");
                     backoff.reset();
 
@@ -52,13 +62,39 @@ pub fn spawn_connection_manager(
                 }
                 Err(e) => {
                     leptos::logging::error!("WS Open Error: {:?}", e);
+                    if url_idx + 1 < urls.len() {
+                        url_idx += 1;
+                        continue;
+                    }
                 }
             }
 
             set_status.set(ConnectionStatus::Disconnected);
             backoff.wait().await;
+            url_idx = 0;
         }
     });
+}
+
+async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
+    let http_url = ws_url.replace("ws://", "http://").replace("/ws", "");
+    let url = format!("{}/api/node/role", http_url);
+    let res = Request::get(&url).send().await;
+    if let Ok(resp) = res {
+        if let Ok(json) = resp.json::<serde_json::Value>().await {
+            let role = json.get("role").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let main_port = json.get("main_port").and_then(|v| v.as_u64()).unwrap_or(0);
+            let ws_port = json.get("ws_port").and_then(|v| v.as_u64()).unwrap_or(0);
+            let text = if role == "proxy" && main_port > 0 {
+                format!("proxy → {} (ws:{})", main_port, ws_port)
+            } else if ws_port > 0 {
+                format!("{} (ws:{})", role, ws_port)
+            } else {
+                role.to_string()
+            };
+            set_node_role.set(text);
+        }
+    }
 }
 
 /// 从 WebSocket 读取消息直到连接关闭。
@@ -95,11 +131,34 @@ async fn process_incoming_messages(
 }
 
 /// 根据当前主机名构建 WebSocket URL
-fn build_ws_url() -> String {
+fn build_ws_url(port: u16) -> String {
     let hostname = web_sys::window()
         .expect("Window 对象不存在 (非浏览器环境?)")
         .location()
         .hostname()
         .unwrap_or_else(|_| "localhost".to_string());
-    format!("ws://{}:3001/ws", hostname)
+    format!("ws://{}:{}/ws", hostname, port)
+}
+
+fn build_ws_urls() -> Vec<String> {
+    let mut urls = Vec::new();
+    if let Some(port) = query_port() {
+        urls.push(build_ws_url(port));
+        return urls;
+    }
+    for p in 3001..=3005 {
+        urls.push(build_ws_url(p));
+    }
+    urls
+}
+
+fn query_port() -> Option<u16> {
+    let window = web_sys::window()?;
+    let search = window.location().search().ok()?;
+    if search.is_empty() {
+        return None;
+    }
+    let params = web_sys::UrlSearchParams::new_with_str(&search).ok()?;
+    let val = params.get("ws_port")?;
+    val.parse::<u16>().ok()
 }

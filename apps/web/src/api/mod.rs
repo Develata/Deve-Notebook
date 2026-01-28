@@ -85,6 +85,12 @@ pub struct WsService {
     /// 当前连接状态 (响应式信号)
     pub status: ReadSignal<ConnectionStatus>,
 
+    /// 当前连接的端点 (ws url)
+    pub endpoint: ReadSignal<String>,
+
+    /// 当前节点角色 (main/proxy)
+    pub node_role: ReadSignal<String>,
+
     /// 来自服务器的最新消息 (响应式信号)
     ///
     /// **性能注意**: 此信号在每收到一条消息时更新。
@@ -105,6 +111,8 @@ impl WsService {
     pub fn new() -> Self {
         let (status, set_status) = signal(ConnectionStatus::Disconnected);
         let (msg, set_msg) = signal(None);
+        let (endpoint, set_endpoint) = signal(String::new());
+        let (node_role, set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
 
         // 所有权转移通道: 将 WebSocket 写入句柄从 Connection 传递给 Output
@@ -112,7 +120,7 @@ impl WsService {
         let (link_tx, link_rx) = unbounded::<SplitSink<WebSocket, Message>>();
 
         // 启动两个异步任务
-        spawn_connection_manager(set_status, set_msg, link_tx);
+        spawn_connection_manager(set_status, set_msg, set_endpoint, set_node_role, link_tx);
         spawn_output_manager(rx, link_rx);
 
         // 启动心跳任务 (30秒间隔)
@@ -127,7 +135,7 @@ impl WsService {
             }
         });
 
-        Self { status, msg, tx }
+        Self { status, endpoint, node_role, msg, tx }
     }
 
     /// 将消息排队发送到服务器

@@ -9,6 +9,7 @@
 //! - `commits`: 提交管理函数 [仅后端]
 //! - `changes`: 变更检测函数 [仅后端]
 
+pub mod api;
 pub mod diff;
 pub mod types;
 
@@ -22,6 +23,7 @@ pub mod snapshot_paths;
 pub mod staging;
 
 // 重新导出常用类型
+pub use api::SourceControlApi;
 pub use types::{ChangeEntry, ChangeStatus, CommitInfo};
 
 /// 提交时对快照的更新策略

@@ -152,6 +152,8 @@ pub fn use_core() -> CoreState {
         set_chat_messages: signals.set_chat_messages,
         is_chat_streaming: signals.is_chat_streaming,
         set_is_chat_streaming: signals.set_is_chat_streaming,
+        ai_mode: signals.ai_mode,
+        set_ai_mode: signals.set_ai_mode,
     };
 
     // 7. 提供上下文

@@ -7,6 +7,7 @@ pub mod document;
 pub mod listing;
 pub mod merge;
 pub mod plugin;
+pub mod repo;
 pub mod search;
 pub mod source_control;
 pub mod switcher;

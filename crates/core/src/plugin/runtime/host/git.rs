@@ -45,7 +45,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_status.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repo_manager().map_err(|e| e.to_string())?;
+            let repo = super::repository().map_err(|e| e.to_string())?;
             let mut changes = repo.list_changes().map_err(|e| e.to_string())?;
             let max_changes = 50usize;
             if changes.len() > max_changes {
@@ -68,7 +68,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_diff.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repo_manager().map_err(|e| e.to_string())?;
+            let repo = super::repository().map_err(|e| e.to_string())?;
             let diff = repo.diff_doc_path(path).map_err(|e| e.to_string())?;
             Ok(truncate_text(&diff, 200, 240))
         },
@@ -81,7 +81,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_stage.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repo_manager().map_err(|e| e.to_string())?;
+            let repo = super::repository().map_err(|e| e.to_string())?;
             repo.stage_file(path).map_err(|e| e.to_string().into())
         },
     );
@@ -93,7 +93,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_commit.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repo_manager().map_err(|e| e.to_string())?;
+            let repo = super::repository().map_err(|e| e.to_string())?;
             let commit = repo.commit_staged(message).map_err(|e| e.to_string())?;
             let json = serde_json::to_value(&commit).map_err(|e| e.to_string())?;
             rhai::serde::to_dynamic(&json).map_err(|e| e.to_string().into())

@@ -9,6 +9,13 @@ fn handle_command(user_message) {
         state::set_mode(state::mode_build());
         return "已切换到 BUILD 模式。请告诉我需要实现的功能或修复。";
     }
+    if user_message == "/agents" {
+        let current = state::get_mode();
+        let next = if current == state::mode_plan() { state::mode_build() } else { state::mode_plan() };
+        state::set_mode(next);
+        let label = if next == state::mode_plan() { "PLAN" } else { "BUILD" };
+        return `已切换到 ${label} 模式。`;
+    }
     if user_message == "/skills" {
         let skills_text = format::format_skills();
         return `可用技能:\n${skills_text}`;

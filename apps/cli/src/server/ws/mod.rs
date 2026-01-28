@@ -9,7 +9,7 @@ use crate::server::session::WsSession;
 use deve_core::protocol::ClientMessage;
 
 mod route;
-mod send;
+pub(crate) mod send;
 
 /// HTTP/WebSocket 入口。
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -64,4 +64,3 @@ pub async fn handle_socket(state: Arc<AppState>, socket: axum::extract::ws::WebS
         }
     }
 }
-

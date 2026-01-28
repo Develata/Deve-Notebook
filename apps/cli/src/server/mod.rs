@@ -12,7 +12,7 @@
 //!
 //! 服务器使用 Axum 处理 HTTP/WebSocket，并向所有客户端广播变更。
 
-use axum::{Router, routing::get};
+use axum::{Router, routing::{get, post}};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::plugin::runtime::PluginRuntime;
@@ -37,6 +37,10 @@ pub mod mcp;
 pub mod handlers;
 pub mod session;
 pub mod ws;
+pub mod source_control_proxy;
+pub mod plugin_host;
+pub mod node_role;
+pub mod node_role_http;
 
 pub struct AppState {
     pub repo: Arc<RepoManager>,
@@ -59,7 +63,9 @@ pub async fn start_server(
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
 ) -> anyhow::Result<()> {
-    host::set_repo_manager(repo.clone())?;
+    let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
+    host::set_repository(repo_api)?;
+    node_role::set_node_role(node_role::NodeRole { role: "main".into(), ws_port: port, main_port: port });
     ai_chat::init_chat_stream_handler()?;
     let mcp_manager = Arc::new(load_mcp_manager(&vault_path));
     let _ = host::set_mcp_manager(mcp_manager.clone());
@@ -212,6 +218,13 @@ pub async fn start_server(
 
     let app = Router::new()
         .route("/ws", get(ws::ws_handler))
+        .route("/api/node/role", get(node_role_http::role))
+        .route("/api/sc/status", get(handlers::source_control::http::status))
+        .route("/api/sc/diff", get(handlers::source_control::http::diff))
+        .route("/api/sc/stage", post(handlers::source_control::http::stage))
+        .route("/api/sc/commit", post(handlers::source_control::http::commit))
+        .route("/api/repo/docs", get(handlers::repo::http::list_docs))
+        .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .with_state(app_state)
         .layer(
             CorsLayer::new()
@@ -226,6 +239,13 @@ pub async fn start_server(
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+pub async fn start_plugin_host_only(
+    plugins: Vec<Box<dyn PluginRuntime>>,
+    port: u16,
+) -> anyhow::Result<()> {
+    plugin_host::start_plugin_host_only(plugins, port).await
 }
 
 fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {

@@ -51,6 +51,8 @@ pub struct CoreState {
     pub set_chat_messages: WriteSignal<Vec<ChatMessage>>, // Used by effect logic (in mod.rs, we'll wrap helpers)
     pub is_chat_streaming: ReadSignal<bool>,
     pub set_is_chat_streaming: WriteSignal<bool>,
+    pub ai_mode: ReadSignal<String>,
+    pub set_ai_mode: WriteSignal<String>,
 
     // 搜索
     pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)

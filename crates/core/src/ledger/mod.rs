@@ -47,6 +47,7 @@ pub mod shadow;
 mod shadow_manager;
 pub mod snapshot;
 pub mod source_control;
+pub mod traits;
 
 // ========== 公开导出 ==========
 

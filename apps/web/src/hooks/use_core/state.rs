@@ -40,6 +40,8 @@ pub struct CoreSignals {
     pub set_chat_messages: WriteSignal<Vec<ChatMessage>>,
     pub is_chat_streaming: ReadSignal<bool>,
     pub set_is_chat_streaming: WriteSignal<bool>,
+    pub ai_mode: ReadSignal<String>,
+    pub set_ai_mode: WriteSignal<String>,
 
     // 搜索
     pub search_results: ReadSignal<Vec<(String, String, f32)>>,
@@ -94,6 +96,7 @@ pub fn init_signals() -> CoreSignals {
     let (plugin_response, set_plugin_response) = signal(None);
     let (chat_messages, set_chat_messages) = signal(Vec::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
+    let (ai_mode, set_ai_mode) = signal("build".to_string());
     let (search_results, set_search_results) = signal(Vec::new());
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
@@ -126,6 +129,8 @@ pub fn init_signals() -> CoreSignals {
         set_chat_messages,
         is_chat_streaming,
         set_is_chat_streaming,
+        ai_mode,
+        set_ai_mode,
         search_results,
         set_search_results,
         sync_mode,

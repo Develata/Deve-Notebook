@@ -5,6 +5,7 @@
 pub mod changes;
 pub mod commits;
 pub mod diff;
+pub mod http;
 pub mod staging;
 
 pub use changes::*;
