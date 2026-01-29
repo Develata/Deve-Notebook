@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\sidebar
+// apps\web\src\components\sidebar
 //! # FileTreeItem 组件 (文件树节点组件)
 //!
 //! **架构作用**:
@@ -11,27 +11,23 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use leptos::prelude::*;
-use crate::components::sidebar_menu::{SidebarMenu, MenuAction};
-use crate::components::sidebar::types::FileActionsContext;
 use super::tree::FileNode;
+use crate::components::sidebar::types::FileActionsContext;
+use crate::components::sidebar_menu::{MenuAction, SidebarMenu};
+use leptos::prelude::*;
 
 #[component]
-pub fn FileTreeItem(
-    node: FileNode,
-    #[prop(default = 0)]
-    depth: usize,
-) -> impl IntoView {
+pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl IntoView {
     let actions = expect_context::<FileActionsContext>();
 
-    let (is_expanded, set_expanded) = signal(true); 
+    let (is_expanded, set_expanded) = signal(true);
     let is_folder = node.id.is_none();
-    
+
     let padding = format!("padding-left: {}px", depth * 12 + 8);
-    
+
     let on_create_clone = actions.on_create.clone();
     let path_create = node.path.clone();
-    
+
     let trigger_create = move |ev: web_sys::MouseEvent| {
         ev.stop_propagation();
         on_create_clone.run(Some(path_create.clone()));
@@ -47,13 +43,12 @@ pub fn FileTreeItem(
     let path_check = node.path.clone();
     let active_menu = actions.active_menu;
     let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
-    
+
     // 剪贴板上下文
-    let set_clipboard = use_context::<WriteSignal<Option<String>>>()
-        .expect("clipboard set context");
-    let clipboard = use_context::<ReadSignal<Option<String>>>()
-        .expect("clipboard read context");
-    
+    let set_clipboard =
+        use_context::<WriteSignal<Option<String>>>().expect("clipboard set context");
+    let clipboard = use_context::<ReadSignal<Option<String>>>().expect("clipboard read context");
+
     // 构建统一的操作处理程序
     let rename_req = actions.on_rename.clone();
     let delete_req = actions.on_delete.clone();
@@ -75,28 +70,36 @@ pub fn FileTreeItem(
                 // Get from clipboard and log (actual paste logic requires backend support)
                 if let Some(src) = clipboard.get_untracked() {
                     leptos::logging::log!("Paste requested: copy {} to {}", src, path);
-                    
+
                     // 确定目标文件夹
                     let dest_folder = if is_folder {
                         path.clone()
                     } else {
                         // 当前项目的父级
-                         let p = std::path::Path::new(&path).parent().and_then(|p| p.to_str()).unwrap_or("");
-                         p.replace('\\', "/")
+                        let p = std::path::Path::new(&path)
+                            .parent()
+                            .and_then(|p| p.to_str())
+                            .unwrap_or("");
+                        p.replace('\\', "/")
                     };
-                    
+
                     // 从源确定新文件名
-                    let src_name = std::path::Path::new(&src).file_name().and_then(|n| n.to_str()).unwrap_or("unknown");
-                    
+                    let src_name = std::path::Path::new(&src)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("unknown");
+
                     let dest_path = if dest_folder.is_empty() {
                         src_name.to_string()
                     } else {
                         format!("{}/{}", dest_folder, src_name)
                     };
-                    
+
                     if src == dest_path {
-                         leptos::logging::warn!("Cannot paste into same location without rename logic");
-                         // TODO: Auto-rename (e.g. "copy")
+                        leptos::logging::warn!(
+                            "Cannot paste into same location without rename logic"
+                        );
+                        // TODO: Auto-rename (e.g. "copy")
                     } else {
                         copy_req.run((src, dest_path));
                     }
@@ -114,11 +117,11 @@ pub fn FileTreeItem(
                 }
             }
             MenuAction::MoveTo => {
-                 move_req.run(path);
+                move_req.run(path);
             }
         }
     });
-    
+
     let on_close_clone = actions.on_menu_close.clone();
     let current_doc = actions.current_doc;
     let on_select = actions.on_select;
@@ -191,5 +194,3 @@ pub fn FileTreeItem(
         </div>
     }.into_any()
 }
-
-

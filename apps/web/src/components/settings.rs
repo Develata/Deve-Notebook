@@ -1,33 +1,30 @@
-﻿// apps\web\src\components
+// apps\web\src\components
 //! # SettingsModal 组件 (SettingsModal Component)
 //!
 //! 设置模态框，允许用户更改语言、同步模式等全局配置。
 //! 显示版本信息和未来功能占位符（如混合模式）。
 
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
-use crate::i18n::{Locale, t};
 
 #[component]
-pub fn SettingsModal(
-    show: ReadSignal<bool>,
-    set_show: WriteSignal<bool>,
-) -> impl IntoView {
+pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    
+
     view! {
         <Show when=move || show.get()>
             <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-xl font-bold text-gray-800">{move || t::settings::title(locale.get())}</h2>
-                        <button 
+                        <button
                             class="p-1 hover:bg-gray-100 rounded-full text-gray-500"
                             on:click=move |_| set_show.set(false)
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    
+
                     <div class="space-y-6">
                         // 版本信息
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
@@ -37,12 +34,12 @@ pub fn SettingsModal(
                                 <span class="font-mono text-gray-800">"0.5.0-alpha"</span>
                             </div>
                         </div>
-                        
+
                         // 语言设置
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex justify-between items-center">
                             <span class="font-medium text-gray-700">{move || t::settings::language(locale.get())}</span>
                             <div class="flex gap-2">
-                                <button 
+                                <button
                                     class=move || {
                                         if locale.get() == Locale::En {
                                             "px-3 py-1 text-xs font-bold bg-blue-500 text-white rounded transition-colors"
@@ -54,7 +51,7 @@ pub fn SettingsModal(
                                 >
                                     "English"
                                 </button>
-                                <button 
+                                <button
                                     class=move || {
                                         if locale.get() == Locale::Zh {
                                             "px-3 py-1 text-xs font-bold bg-blue-500 text-white rounded transition-colors"
@@ -68,7 +65,7 @@ pub fn SettingsModal(
                                 </button>
                             </div>
                         </div>
-                        
+
                         // 同步模式设置
                         {move || {
                             let core = expect_context::<crate::hooks::use_core::CoreState>();
@@ -80,7 +77,7 @@ pub fn SettingsModal(
                                         <p class="text-xs text-gray-500">"Auto: instant sync. Manual: review before merge."</p>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button 
+                                        <button
                                             class=move || {
                                                 if !is_manual {
                                                     "px-3 py-1 text-xs font-bold bg-green-500 text-white rounded transition-colors"
@@ -92,7 +89,7 @@ pub fn SettingsModal(
                                         >
                                             "Auto"
                                         </button>
-                                        <button 
+                                        <button
                                             class=move || {
                                                 if is_manual {
                                                     "px-3 py-1 text-xs font-bold bg-yellow-500 text-white rounded transition-colors"
@@ -108,7 +105,7 @@ pub fn SettingsModal(
                                 </div>
                             }
                         }}
-                        
+
                         // 混合模式占位符
                         <div class="opacity-50 pointer-events-none grayscale">
                              <div class="flex items-center justify-between">
@@ -123,9 +120,9 @@ pub fn SettingsModal(
                              <p class="text-xs text-blue-500 mt-2">{move || t::settings::coming_soon(locale.get())}</p>
                         </div>
                     </div>
-                    
+
                     <div class="mt-8 pt-4 border-t border-gray-100 text-center">
-                        <button 
+                        <button
                             class="w-full py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
                             on:click=move |_| set_show.set(false)
                         >

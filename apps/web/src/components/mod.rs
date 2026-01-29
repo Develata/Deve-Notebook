@@ -7,6 +7,7 @@ pub mod bottom_bar;
 pub mod command_palette;
 pub mod header;
 pub mod input_modal;
+pub mod layout_context;
 pub mod outline;
 pub mod playback;
 pub mod settings;

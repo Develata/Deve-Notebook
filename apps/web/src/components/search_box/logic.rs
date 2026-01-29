@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\search_box
+// apps\web\src\components\search_box
 use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::KeyboardEvent;
@@ -7,7 +7,7 @@ use crate::components::command_palette::registry::create_static_commands;
 use crate::components::search_box::providers::{self, CommandProvider, FileProvider};
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 
 /// 根据查询字符切换 Provider 并实时返回结果。
 pub fn create_results_memo(
@@ -95,7 +95,11 @@ pub fn make_active_index(
             return 0;
         }
         let current = selected_index.get();
-        if current >= count { 0 } else { current }
+        if current >= count {
+            0
+        } else {
+            current
+        }
     }
 }
 

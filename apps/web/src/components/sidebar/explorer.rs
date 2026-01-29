@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\sidebar
+// apps\web\src\components\sidebar
 //! # ExplorerView 组件 (ExplorerView Component)
 //!
 //! 侧边栏的主要文件浏览器视图。
@@ -6,7 +6,7 @@
 
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::modals::{ModalState, SidebarModals};
-use crate::components::sidebar::tree::{FileNode, build_file_tree};
+use crate::components::sidebar::tree::{build_file_tree, FileNode};
 use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::DocId;

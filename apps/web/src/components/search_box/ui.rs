@@ -1,11 +1,12 @@
-﻿// apps\web\src\components\search_box
+// apps\web\src\components\search_box
 use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::{KeyboardEvent, MouseEvent};
 
-use crate::components::search_box::types::{SearchAction, SearchResult};
+use crate::components::search_box::result_item::result_item;
+use crate::components::search_box::types::SearchResult;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 
 /// 负责渲染整体遮罩与内部布局。
 pub fn render_overlay(
@@ -153,96 +154,6 @@ fn results_panel(
                 }
             }
         </div>
-    }
-}
-
-/// 单条结果项，支持鼠标与键盘操作。
-fn result_item(
-    idx: usize,
-    item: SearchResult,
-    is_sel: bool,
-    selected_index: Signal<usize>,
-    set_selected_index: WriteSignal<usize>,
-    set_show: WriteSignal<bool>,
-    core: CoreState,
-) -> impl IntoView {
-    let detail_icon = item.detail.clone();
-    let detail_text = item.detail.clone();
-    let detail_text_cond = detail_text.clone();
-
-    view! {
-        <button
-            class=format!(
-                "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors {}",
-                if is_sel { "bg-blue-50 text-blue-700" } else { "text-gray-700 hover:bg-gray-50" }
-            )
-            on:click=move |_| {
-                let action = item.action.clone();
-                let core_clone = core.clone();
-                request_animation_frame(move || {
-                    match action {
-                        SearchAction::OpenDoc(id) => {
-                            core_clone.on_doc_select.run(id);
-                            set_show.set(false);
-                        }
-                        SearchAction::RunCommand(cmd) => {
-                            cmd.action.run(());
-                        }
-                        SearchAction::SwitchBranch(branch) => {
-                            if branch == "Local (Master)" {
-                                core_clone.on_switch_branch.run(None);
-                            } else {
-                                core_clone.on_switch_branch.run(Some(branch));
-                            }
-                            set_show.set(false);
-                        }
-                        SearchAction::CreateDoc(path) => {
-                            let normalized = path.replace('\\', "/");
-                            let target = if normalized.ends_with(".md") {
-                                normalized.clone()
-                            } else {
-                                format!("{}.md", normalized)
-                            };
-
-                            core_clone.on_doc_create.run(target);
-                            set_show.set(false);
-                        }
-                    }
-                });
-            }
-            on:mousemove=move |_| {
-                if selected_index.get_untracked() != idx {
-                    set_selected_index.set(idx);
-                }
-            }
-        >
-            <div class=format!("flex-none {}", if is_sel { "text-blue-500" } else { "text-gray-400" })>
-                <Show when=move || detail_icon.as_deref() == Some("Command") fallback=|| view! {
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                }>
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                </Show>
-            </div>
-
-            <div class="flex-1 truncate flex flex-col items-start gap-0.5">
-                <span class="font-medium">{item.title.clone()}</span>
-                <Show when=move || detail_text_cond.is_some()>
-                    <span class="text-xs opacity-60 font-mono">
-                        {detail_text.clone().unwrap()}
-                    </span>
-                </Show>
-            </div>
-
-            <Show when=move || is_sel>
-                <svg class="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-            </Show>
-        </button>
     }
 }
 

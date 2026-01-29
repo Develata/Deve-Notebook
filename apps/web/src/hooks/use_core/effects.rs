@@ -2,6 +2,7 @@
 //! # 响应式效果 (Effects)
 //!
 //! 定义握手逻辑和消息处理 Effect。
+//! 复杂消息处理器已拆分到 `effects_msg.rs`。
 
 use crate::api::{ConnectionStatus, WsService};
 use deve_core::models::{PeerId, VersionVector};
@@ -10,8 +11,8 @@ use leptos::prelude::*;
 use std::sync::Arc;
 
 use super::apply::apply_tree_delta;
+use super::effects_msg;
 use super::state::CoreSignals;
-use super::types::{ChatMessage, PeerSession};
 
 /// 设置握手 Effect
 ///
@@ -87,27 +88,12 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
-                    leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
-                    set_docs.set(list.clone());
-                    if current_doc.get_untracked().is_none() {
-                        if let Some(first) = list.first() {
-                            set_current_doc.set(Some(first.0));
-                        }
-                    }
+                    effects_msg::handle_doc_list(list, set_docs, current_doc, set_current_doc);
                 }
                 ServerMessage::SyncHello {
                     peer_id, vector, ..
                 } => {
-                    set_peers.update(|map| {
-                        map.insert(
-                            peer_id.clone(),
-                            PeerSession {
-                                id: peer_id.clone(),
-                                vector,
-                                last_seen: js_sys::Date::now() as u64,
-                            },
-                        );
-                    });
+                    effects_msg::handle_sync_hello(peer_id, vector, set_peers);
                 }
                 ServerMessage::PluginResponse {
                     req_id,
@@ -121,27 +107,13 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     delta,
                     finish_reason,
                 } => {
-                    if let Some(text) = delta {
-                        set_chat_messages.update(|msgs| {
-                            if let Some(msg) = msgs
-                                .iter_mut()
-                                .rev()
-                                .find(|m| m.req_id.as_deref() == Some(&req_id))
-                            {
-                                msg.content.push_str(&text);
-                            } else {
-                                msgs.push(ChatMessage {
-                                    role: "assistant".to_string(),
-                                    content: text,
-                                    req_id: Some(req_id.clone()),
-                                });
-                            }
-                        });
-                        set_is_chat_streaming.set(true);
-                    }
-                    if finish_reason.is_some() {
-                        set_is_chat_streaming.set(false);
-                    }
+                    effects_msg::handle_chat_chunk(
+                        req_id,
+                        delta,
+                        finish_reason,
+                        set_chat_messages,
+                        set_is_chat_streaming,
+                    );
                 }
                 ServerMessage::SearchResults { results } => {
                     set_search_results.set(results);
@@ -172,36 +144,16 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     set_repo_list.set(repos);
                 }
                 ServerMessage::BranchSwitched { peer_id, success } => {
-                    leptos::logging::log!("分支已切换到 {:?}, 成功: {}", peer_id, success);
-                    if success {
-                        // Sync signal with server state (e.g. backend auto-correction)
-                        // Use Update to trigger effects only if changed
-                        // PeerId string vs PeerId type? ClientMessage uses PeerId. Signal usage uses Option<PeerId>.
-                        // ServerMessage peer_id is Option<String>.
-                        let new_val = peer_id.clone().map(PeerId::new);
-                        // Access signal getter to check current value to avoid redundant set/effect loop?
-                        // Actually set_active_branch.set() usually checks PartialEq if implemented?
-                        // Option<PeerId> derives PartialEq.
-                        set_active_branch.set(new_val);
-
-                        if let Some(doc_id) = current_doc.get_untracked() {
-                            ws_rx.send(ClientMessage::OpenDoc { doc_id });
-                        }
-                    }
+                    effects_msg::handle_branch_switched(
+                        &ws_rx,
+                        peer_id,
+                        success,
+                        current_doc,
+                        set_active_branch,
+                    );
                 }
                 ServerMessage::RepoSwitched { name, uuid: _ } => {
-                    leptos::logging::log!("仓库已切换到: {}", name);
-                    // Sync signal with server state
-                    set_current_repo.set(Some(name));
-
-                    // Refresh current doc to ensure it's valid in new repo context
-                    if let Some(doc_id) = current_doc.get_untracked() {
-                        ws_rx.send(ClientMessage::OpenDoc { doc_id });
-                    }
-
-                    // Refresh source control data
-                    ws_rx.send(ClientMessage::GetChanges);
-                    ws_rx.send(ClientMessage::GetCommitHistory { limit: 50 });
+                    effects_msg::handle_repo_switched(&ws_rx, name, current_doc, set_current_repo);
                 }
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);
@@ -223,7 +175,6 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 }
                 ServerMessage::DiscardAck { path } => {
                     leptos::logging::log!("已放弃变更: {}", path);
-                    // 后端已自动刷新 GetChanges，无需手动发送
                 }
                 ServerMessage::CommitAck { commit_id, .. } => {
                     leptos::logging::log!("已提交: {}", commit_id);

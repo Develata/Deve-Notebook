@@ -9,10 +9,13 @@
 //! - `state`: 信号声明
 //! - `effects`: 响应式效果
 //! - `callbacks`: 用户交互回调
+//! - `callbacks_sc`: Source Control 回调 (已拆分)
 
 pub mod apply;
 pub mod callbacks;
+pub mod callbacks_sc;
 pub mod effects;
+pub mod effects_msg;
 pub mod state;
 pub mod types;
 

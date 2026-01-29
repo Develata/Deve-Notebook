@@ -1,4 +1,4 @@
-﻿// apps\web\src\components
+// apps\web\src\components
 //! # SidebarMenu 组件 (SidebarMenu Component)
 //!
 //! 文件树上下文菜单，提供重命名、复制、粘贴、移动、删除等操作。
@@ -27,14 +27,20 @@ struct MenuItem {
 
 impl MenuItem {
     const fn new(action: MenuAction, label: &'static str, icon: &'static str) -> Self {
-        Self { action, label, icon, is_danger: false, is_separator_before: false }
+        Self {
+            action,
+            label,
+            icon,
+            is_danger: false,
+            is_separator_before: false,
+        }
     }
-    
+
     const fn danger(mut self) -> Self {
         self.is_danger = true;
         self
     }
-    
+
     const fn with_separator(mut self) -> Self {
         self.is_separator_before = true;
         self
@@ -82,23 +88,25 @@ const MENU_ITEMS: &[MenuItem] = &[
 #[component]
 pub fn SidebarMenu(
     /// 当用户选择一个操作时触发
-    #[prop(into)] on_action: Callback<MenuAction>,
+    #[prop(into)]
+    on_action: Callback<MenuAction>,
     /// 关闭菜单
-    #[prop(into)] on_close: Callback<()>,
+    #[prop(into)]
+    on_close: Callback<()>,
 ) -> impl IntoView {
     view! {
         <>
             // 背景遮罩
-            <div 
-                class="fixed inset-0 z-40" 
+            <div
+                class="fixed inset-0 z-40"
                 on:click=move |ev| {
                     ev.stop_propagation();
                     on_close.run(());
                 }
             ></div>
-            
+
             // 菜单面板
-            <div 
+            <div
                 class="absolute right-0 top-6 w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 z-50 text-sm text-gray-700 select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right"
                 on:click=move |ev| ev.stop_propagation()
             >
@@ -108,7 +116,7 @@ pub fn SidebarMenu(
                     let icon_path = item.icon;
                     let is_danger = item.is_danger;
                     let has_separator = item.is_separator_before;
-                    
+
                     view! {
                         <>
                             {if has_separator {
@@ -116,23 +124,23 @@ pub fn SidebarMenu(
                             } else {
                                 None
                             }}
-                            <button 
+                            <button
                                 class=format!(
                                     "w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2 {}",
                                     if is_danger { "text-red-600 group" } else { "" }
                                 )
-                                on:click=move |_| { 
+                                on:click=move |_| {
                                     leptos::logging::log!("SidebarMenu: Button clicked, action={:?}", action);
                                     on_action.run(action);
-                                    on_close.run(()); 
+                                    on_close.run(());
                                 }
                             >
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    fill="none" 
-                                    viewBox="0 0 24 24" 
-                                    stroke-width="1.5" 
-                                    stroke="currentColor" 
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
                                     class=format!(
                                         "w-4 h-4 {}",
                                         if is_danger { "text-red-500 group-hover:text-red-600" } else { "text-gray-400" }

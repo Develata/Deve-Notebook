@@ -1,6 +1,6 @@
-﻿// apps\web\src\components\search_box
-use deve_core::models::DocId;
+// apps\web\src\components\search_box
 use crate::components::command_palette::Command;
+use deve_core::models::DocId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SearchAction {

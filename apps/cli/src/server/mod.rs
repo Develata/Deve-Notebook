@@ -1,4 +1,4 @@
-﻿// apps\cli\src\server
+// apps\cli\src\server
 //! # WebSocket 服务器模块
 //!
 //! 本模块实现 Deve-Note 的后端 WebSocket 服务器。
@@ -41,6 +41,7 @@ pub mod source_control_proxy;
 pub mod plugin_host;
 pub mod node_role;
 pub mod node_role_http;
+pub mod security;
 
 pub struct AppState {
     pub repo: Arc<RepoManager>,
@@ -96,56 +97,12 @@ pub async fn start_server(
     let deve_dir = vault_path.join(".deve");
     std::fs::create_dir_all(&deve_dir)?;
 
-    let key_pair_path = deve_dir.join("identity.key");
-    let key_pair = if key_pair_path.exists() {
-        // 从文件加载已有密钥
-        let bytes = std::fs::read(&key_pair_path)?;
-        match deve_core::security::IdentityKeyPair::from_bytes(&bytes) {
-            Some(kp) => {
-                tracing::info!("Loaded IdentityKey from {:?}", key_pair_path);
-                Arc::new(kp)
-            }
-            None => {
-                tracing::warn!("Invalid identity.key file, regenerating...");
-                let kp = deve_core::security::IdentityKeyPair::generate();
-                std::fs::write(&key_pair_path, kp.to_bytes())?;
-                Arc::new(kp)
-            }
-        }
-    } else {
-        // 生成新密钥并保存
-        let kp = deve_core::security::IdentityKeyPair::generate();
-        std::fs::write(&key_pair_path, kp.to_bytes())?;
-        tracing::info!("Generated and saved new IdentityKey to {:?}", key_pair_path);
-        Arc::new(kp)
-    };
-
+    let key_pair = security::load_or_generate_identity_key(&deve_dir)?;
     let peer_id = key_pair.peer_id();
     tracing::info!("Server PeerID: {}", peer_id);
 
     // Load or generate Repo Key (Shared Secret)
-    let repo_key_path = deve_dir.join("repo.key");
-    let repo_key = if repo_key_path.exists() {
-        let bytes = std::fs::read(&repo_key_path)?;
-        match deve_core::security::RepoKey::from_bytes(&bytes) {
-            Some(key) => {
-                tracing::info!("Loaded RepoKey from {:?}", repo_key_path);
-                Some(key)
-            }
-            None => {
-                tracing::warn!("Invalid repo.key file, regenerating...");
-                let key = deve_core::security::RepoKey::generate();
-                std::fs::write(&repo_key_path, key.to_bytes())?;
-                Some(key)
-            }
-        }
-    } else {
-        // 生成新密钥并保存
-        let key = deve_core::security::RepoKey::generate();
-        std::fs::write(&repo_key_path, key.to_bytes())?;
-        tracing::info!("Generated and saved new RepoKey to {:?}", repo_key_path);
-        Some(key)
-    };
+    let repo_key = security::load_or_generate_repo_key(&deve_dir)?;
 
     // Initialize SyncEngine (Relay Mode -> Auto)
     let sync_engine = Arc::new(RwLock::new(SyncEngine::new(

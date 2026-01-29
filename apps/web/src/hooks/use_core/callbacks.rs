@@ -2,11 +2,16 @@
 //! # 回调函数定义
 //!
 //! 定义所有用户交互回调 (文档 CRUD, 插件, 搜索, 同步, 版本控制)。
+//!
+//! Source Control 相关回调已迁移到 `callbacks_sc.rs`。
 
 use crate::api::WsService;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
+
+// Re-export from submodule
+pub use super::callbacks_sc::{create_source_control_callbacks, SourceControlCallbacks};
 
 /// 文档操作回调
 pub struct DocCallbacks {
@@ -133,66 +138,6 @@ pub fn create_sync_callbacks(
         on_discard_pending,
         on_list_shadows,
         on_merge_peer,
-    }
-}
-
-/// Source Control 回调
-pub struct SourceControlCallbacks {
-    pub on_get_changes: Callback<()>,
-    pub on_stage_file: Callback<String>,
-    pub on_unstage_file: Callback<String>,
-    pub on_discard_file: Callback<String>,
-    pub on_commit: Callback<String>,
-    pub on_get_history: Callback<u32>,
-    pub on_get_doc_diff: Callback<String>,
-}
-
-/// 创建 Source Control 回调
-pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks {
-    let ws1 = ws.clone();
-    let on_get_changes = Callback::new(move |_: ()| {
-        ws1.send(ClientMessage::GetChanges);
-    });
-
-    let ws2 = ws.clone();
-    let on_stage_file = Callback::new(move |path: String| {
-        ws2.send(ClientMessage::StageFile { path });
-    });
-
-    let ws3 = ws.clone();
-    let on_unstage_file = Callback::new(move |path: String| {
-        ws3.send(ClientMessage::UnstageFile { path });
-    });
-
-    let ws4 = ws.clone();
-    let on_commit = Callback::new(move |message: String| {
-        ws4.send(ClientMessage::Commit { message });
-    });
-
-    let ws5 = ws.clone();
-    let on_get_history = Callback::new(move |limit: u32| {
-        ws5.send(ClientMessage::GetCommitHistory { limit });
-    });
-
-    let ws6 = ws.clone();
-    let on_get_doc_diff = Callback::new(move |path: String| {
-        ws6.send(ClientMessage::GetDocDiff { path });
-    });
-
-    let ws7 = ws.clone();
-    let on_discard_file = Callback::new(move |path: String| {
-        leptos::logging::log!("on_discard_file callback triggered for: {}", path);
-        ws7.send(ClientMessage::DiscardFile { path });
-    });
-
-    SourceControlCallbacks {
-        on_get_changes,
-        on_stage_file,
-        on_unstage_file,
-        on_discard_file,
-        on_commit,
-        on_get_history,
-        on_get_doc_diff,
     }
 }
 

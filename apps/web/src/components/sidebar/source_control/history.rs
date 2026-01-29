@@ -1,23 +1,23 @@
-﻿// apps\web\src\components\source_control
+// apps\web\src\components\source_control
 //! # History Component (历史记录组件)
-//! 
+//!
 //! VS Code 风格: Timeline 视图。
 //! 左侧带有连接线和圆点。
 
-use leptos::prelude::*;
 use crate::hooks::use_core::CoreState;
+use leptos::prelude::*;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<CoreState>();
-    
+
     Effect::new(move |_| {
         core.on_get_history.run(20);
     });
 
     view! {
         <div class="border-t border-[#e5e5e5]">
-            <button 
+            <button
                 class="w-full flex items-center px-1 py-0.5 hover:bg-[#e8e8e8] dark:hover:bg-[#2a2d2e] text-[11px] font-bold text-[#424242] dark:text-[#cccccc] uppercase"
                 on:click=move |_| expanded.update(|b| *b = !*b)
             >
@@ -26,7 +26,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                 </span>
                 "图形"
             </button>
-            
+
             {move || if expanded.get() {
                 view! {
                     <div class="pb-2">
@@ -34,7 +34,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                         <div class="relative pl-6 pt-2">
                             // Vertical Line
                             <div class="absolute left-[19px] top-2 bottom-0 w-[1px] bg-[#e0e0e0]"></div>
-                            
+
                             <For
                                 each=move || core.commit_history.get()
                                 key=|c| c.id.clone()
@@ -43,7 +43,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                                         <div class="relative mb-3 group">
                                             // Dot
                                             <div class="absolute -left-[19px] top-[3px] w-2.5 h-2.5 rounded-full border-2 border-white bg-[#007fd4] shadow-sm z-10"></div>
-                                            
+
                                             <div class="pr-2">
                                                 <div class="text-[13px] text-[#333] leading-tight mb-0.5 font-medium truncate" title={commit.message.clone()}>
                                                     {commit.message.clone()}

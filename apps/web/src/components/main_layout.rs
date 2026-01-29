@@ -9,23 +9,12 @@ use crate::shortcuts::create_global_shortcut_handler;
 
 use crate::components::activity_bar::SidebarView;
 use crate::components::chat::ChatPanel;
-use crate::components::diff_view::DiffView; // [NEW]
+use crate::components::diff_view::DiffView;
 use crate::components::disconnect_overlay::DisconnectedOverlay;
 use crate::components::merge_modal_slot::MergeModalSlot;
 
-// Context for deep components to trigger search (e.g. BranchSwitcher)
-#[derive(Clone, Copy)]
-pub struct SearchControl {
-    pub set_show: WriteSignal<bool>,
-    pub set_mode: WriteSignal<String>,
-}
-
-/// Context for toggling AI Chat panel visibility
-#[derive(Clone, Copy)]
-pub struct ChatControl {
-    pub chat_visible: ReadSignal<bool>,
-    pub set_chat_visible: WriteSignal<bool>,
-}
+// Re-export context types for backward compatibility
+pub use crate::components::layout_context::{ChatControl, SearchControl};
 
 /// 主应用程序布局
 ///
