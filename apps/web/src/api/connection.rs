@@ -99,6 +99,10 @@ async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
 
 /// 从 WebSocket 读取消息直到连接关闭。
 /// 在收到第一条成功消息后将状态设置为 Connected。
+///
+/// ## 协议策略
+/// - **优先二进制 (Bincode)**: 体积更小，解析更快，零字符串分配。
+/// - **降级 JSON**: 向后兼容旧版服务端或调试场景。
 async fn process_incoming_messages(
     mut read: futures::stream::SplitStream<WebSocket>,
     set_msg: WriteSignal<Option<ServerMessage>>,
@@ -108,20 +112,32 @@ async fn process_incoming_messages(
 
     while let Some(result) = read.next().await {
         match result {
-            Ok(Message::Text(txt)) => {
-                // First successful message confirms the connection
+            // 优先处理二进制消息 (Bincode)
+            Ok(Message::Bytes(bytes)) => {
                 if !confirmed_connected {
-                    leptos::logging::log!("WS: First message received, connection confirmed!");
+                    leptos::logging::log!("WS: First binary message received, connection confirmed!");
+                    set_status.set(ConnectionStatus::Connected);
+                    confirmed_connected = true;
+                }
+
+                match bincode::deserialize::<ServerMessage>(&bytes) {
+                    Ok(server_msg) => set_msg.set(Some(server_msg)),
+                    Err(e) => leptos::logging::error!("Bincode Parse Error: {:?}", e),
+                }
+            }
+            // 向后兼容: JSON 文本消息
+            Ok(Message::Text(txt)) => {
+                if !confirmed_connected {
+                    leptos::logging::log!("WS: First text message received, connection confirmed!");
                     set_status.set(ConnectionStatus::Connected);
                     confirmed_connected = true;
                 }
 
                 match serde_json::from_str::<ServerMessage>(&txt) {
                     Ok(server_msg) => set_msg.set(Some(server_msg)),
-                    Err(e) => leptos::logging::error!("Parse Error: {:?}", e),
+                    Err(e) => leptos::logging::error!("JSON Parse Error: {:?}", e),
                 }
             }
-            Ok(_) => {} // Ignore binary messages
             Err(e) => {
                 leptos::logging::error!("WS Read Error: {:?}", e);
                 break;

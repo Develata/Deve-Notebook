@@ -14,10 +14,42 @@
 //!
 //! ## 数学不变量 (Mathematical Invariants)
 //!
-//! 1. **单调性**: 对于任意 PeerId p，`self.get(p)` 只能单调递增。
-//! 2. **幂等合并**: `v.merge(&v) == v` (合并自身不改变状态)。
-//! 3. **交换律**: `v1.merge(&v2)` 与 `v2.merge(&v1)` 结果相同。
-//! 4. **有序性**: 内部数组按 PeerId 升序排列 (二分查找前提)。
+//! 以下不变量为形式化验证 (Lean4) 迁移做准备：
+//!
+//! 1. **单调性 (Monotonicity)**:
+//!    ```text
+//!    ∀ p : PeerId, ∀ v v' : VersionVector,
+//!      v.update(p, s) = v' → v'.get(p) ≥ v.get(p)
+//!    ```
+//!
+//! 2. **幂等合并 (Idempotent Merge)**:
+//!    ```text
+//!    ∀ v : VersionVector, v.merge(&v) = v
+//!    ```
+//!
+//! 3. **交换律 (Commutativity)**:
+//!    ```text
+//!    ∀ v1 v2 : VersionVector, v1.merge(&v2) = v2.merge(&v1)
+//!    ```
+//!
+//! 4. **结合律 (Associativity)**:
+//!    ```text
+//!    ∀ v1 v2 v3 : VersionVector,
+//!      v1.merge(&v2).merge(&v3) = v1.merge(&v2.merge(&v3))
+//!    ```
+//!
+//! 5. **有序性 (Sorted Invariant)**:
+//!    ```text
+//!    ∀ i j : ℕ, i < j < len(clock) → clock[i].0 < clock[j].0
+//!    ```
+//!
+//! ## 收敛性定理 (Convergence Theorem)
+//!
+//! 在最终一致性模型下，若所有节点最终收到所有消息，则：
+//! ```text
+//! lim_{t→∞} (v_A(t) = v_B(t) = ... = v_N(t))
+//! ```
+//! 其中 `v_X(t)` 表示节点 X 在时间 t 的版本向量。
 
 #[cfg(test)]
 mod tests;
@@ -102,17 +134,16 @@ impl VersionVector {
     /// 对内部数组进行排序与去重 (保持最大 seq)
     pub fn normalize(&mut self) {
         self.clock.sort_by(|(a, _), (b, _)| a.cmp(b));
-        self.clock
-            .dedup_by(|(a_peer, a_seq), (b_peer, b_seq)| {
-                if a_peer == b_peer {
-                    if *b_seq > *a_seq {
-                        *a_seq = *b_seq;
-                    }
-                    true
-                } else {
-                    false
+        self.clock.dedup_by(|(a_peer, a_seq), (b_peer, b_seq)| {
+            if a_peer == b_peer {
+                if *b_seq > *a_seq {
+                    *a_seq = *b_seq;
                 }
-            });
+                true
+            } else {
+                false
+            }
+        });
     }
 }
 

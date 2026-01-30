@@ -76,22 +76,24 @@ async fn handle_new_link(
 }
 
 /// 处理要发送的客户端消息
+///
+/// ## 协议策略
+/// - **使用二进制 (Bincode)**: 体积更小，解析更快。
 async fn handle_client_message(
     msg: ClientMessage,
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,
 ) {
     if let Some(writer) = current_sink.as_mut() {
-        let json = match serde_json::to_string(&msg) {
-            Ok(j) => j,
+        let bytes = match bincode::serialize(&msg) {
+            Ok(b) => b,
             Err(e) => {
-                // 序列化失败应该极少发生，但记录日志以便调试
                 leptos::logging::error!("消息序列化失败: {:?}, 消息: {:?}", e, msg);
                 return;
             }
         };
 
-        if let Err(e) = writer.send(Message::Text(json)).await {
+        if let Err(e) = writer.send(Message::Bytes(bytes)).await {
             leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
             enqueue_with_limit(queue, msg);
             *current_sink = None; // 标记连接已死
@@ -118,6 +120,9 @@ fn enqueue_with_limit(queue: &mut VecDeque<ClientMessage>, msg: ClientMessage) {
 }
 
 /// 将队列中的所有消息刷新到当前连接
+///
+/// ## 协议策略
+/// - **使用二进制 (Bincode)**: 体积更小，解析更快。
 async fn flush_queue(
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,
@@ -125,8 +130,8 @@ async fn flush_queue(
     let count = queue.len();
     for _ in 0..count {
         if let Some(msg) = queue.pop_front() {
-            let json = match serde_json::to_string(&msg) {
-                Ok(j) => j,
+            let bytes = match bincode::serialize(&msg) {
+                Ok(b) => b,
                 Err(e) => {
                     leptos::logging::error!("刷新队列时序列化失败: {:?}", e);
                     continue;
@@ -141,7 +146,7 @@ async fn flush_queue(
                 }
             };
 
-            if let Err(e) = writer.send(Message::Text(json)).await {
+            if let Err(e) = writer.send(Message::Bytes(bytes)).await {
                 leptos::logging::error!("WS 刷新错误: {:?}. 连接可能已断开。", e);
                 queue.push_front(msg);
                 *current_sink = None;

@@ -46,3 +46,20 @@ leptos_router = { version = "0.7" }
 console_error_panic_hook = "0.1"
 tracing-wasm = "0.2"
 
+# ============================================================================
+# Release Profile 优化配置
+# ============================================================================
+# 注: 由于 Cargo 限制，package-specific profile 只能覆盖以下字段:
+#     opt-level, debug, debug-assertions, overflow-checks, codegen-units, strip
+# panic 和 lto 必须在子 crate 的 Cargo.toml 中配置。
+
+[profile.release]
+lto = "thin"              # 薄 LTO，平衡编译速度与优化
+strip = "debuginfo"       # 移除调试信息，保留符号
+
+# WASM 前端专用优化 (仅限 Cargo 允许的字段)
+[profile.release.package.deve_web]
+opt-level = "z"           # 体积优先 (比 "s" 更激进)
+codegen-units = 1         # 单代码生成单元，最大化优化潜力
+strip = true              # 移除所有符号和调试信息
+

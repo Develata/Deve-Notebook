@@ -85,12 +85,13 @@ fn format_with_suffix(stem: &str, suffix: &str, ext: &str) -> String {
 mod tests {
     use super::*;
     use deve_core::models::DocId;
+    use uuid::Uuid;
 
     fn make_docs(paths: &[&str]) -> Vec<(DocId, String)> {
         paths
             .iter()
             .enumerate()
-            .map(|(i, p)| (DocId(i as u64), p.to_string()))
+            .map(|(i, p)| (DocId(Uuid::from_u128(i as u128)), p.to_string()))
             .collect()
     }
 
@@ -114,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_folder_copy() {
-        let docs = make_docs(&["folder/a.md"]);
+        let _docs = make_docs(&["folder/a.md"]);
         // 文件夹本身不在 docs 列表中，但假设它作为路径存在
         let folder_docs: Vec<(DocId, String)> = vec![];
         assert_eq!(find_available_path("folder", &folder_docs), "folder");

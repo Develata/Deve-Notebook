@@ -16,21 +16,24 @@ pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Recei
 }
 
 /// 启动单播发送任务：将单播队列中的消息写入 WebSocket。
+///
+/// ## 协议策略
+/// - **使用二进制 (Bincode)**: 体积更小，解析更快，减少带宽占用。
 pub(crate) fn spawn_unicast_sender_task(
     mut sender: futures::stream::SplitSink<WebSocket, Message>,
     mut rx: mpsc::Receiver<ServerMessage>,
 ) {
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            let text = match serde_json::to_string(&msg) {
-                Ok(text) => text,
+            let bytes = match bincode::serialize(&msg) {
+                Ok(b) => b,
                 Err(e) => {
                     tracing::warn!("Failed to serialize WS message: {:?}", e);
                     continue;
                 }
             };
 
-            if let Err(e) = sender.send(Message::Text(text)).await {
+            if let Err(e) = sender.send(Message::Binary(bytes)).await {
                 tracing::warn!("Failed to send message to WS: {:?}", e);
                 break;
             }

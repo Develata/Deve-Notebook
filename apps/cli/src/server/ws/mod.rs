@@ -1,5 +1,6 @@
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
+use bincode::Options;
 use futures::StreamExt;
 use std::sync::Arc;
 
@@ -11,6 +12,10 @@ use deve_core::protocol::ClientMessage;
 mod route;
 pub(crate) mod send;
 
+/// Bincode 消息大小限制 (防止 DoS 攻击)
+/// 16 MB 足以处理大型文档快照
+const MAX_BINCODE_SIZE: u64 = 16 * 1024 * 1024;
+
 /// HTTP/WebSocket 入口。
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let peer_id = uuid::Uuid::new_v4().to_string();
@@ -18,6 +23,10 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>
 }
 
 /// WebSocket 消息处理器。
+///
+/// ## 协议策略
+/// - **优先二进制 (Bincode)**: 体积更小，解析更快，零字符串分配。
+/// - **降级 JSON**: 向后兼容旧版客户端或调试场景。
 pub async fn handle_socket(state: Arc<AppState>, socket: axum::extract::ws::WebSocket, peer_id: String) {
     let (sender, mut receiver) = socket.split();
 
@@ -37,6 +46,9 @@ pub async fn handle_socket(state: Arc<AppState>, socket: axum::extract::ws::WebS
 
     let mut session = WsSession::new();
 
+    // Bincode 配置: 带大小限制防止内存耗尽攻击
+    let bincode_config = bincode::options().with_limit(MAX_BINCODE_SIZE);
+
     while let Some(msg) = receiver.next().await {
         let msg = match msg {
             Ok(msg) => msg,
@@ -47,14 +59,19 @@ pub async fn handle_socket(state: Arc<AppState>, socket: axum::extract::ws::WebS
         };
 
         match msg {
+            // 优先处理二进制消息 (Bincode)
+            axum::extract::ws::Message::Binary(bin) => {
+                match bincode_config.deserialize::<ClientMessage>(&bin) {
+                    Ok(client_msg) => route::route_message(&state, &ch, &mut session, client_msg).await,
+                    Err(e) => tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len()),
+                }
+            }
+            // 向后兼容: JSON 文本消息
             axum::extract::ws::Message::Text(text) => {
                 match serde_json::from_str::<ClientMessage>(&text) {
                     Ok(client_msg) => route::route_message(&state, &ch, &mut session, client_msg).await,
                     Err(_) => tracing::warn!("Failed to parse client message: {}", text),
                 }
-            }
-            axum::extract::ws::Message::Binary(bin) => {
-                tracing::warn!("Received binary message (ignored): {} bytes", bin.len());
             }
             axum::extract::ws::Message::Close(_) => {
                 tracing::info!("Client disconnected: {}", peer_id);
