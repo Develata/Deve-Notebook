@@ -96,9 +96,11 @@
 *   **Toolbar**: 渲染的代码块右上角 **MUST** 显示两个按钮（从左到右）：
     *   **Copy**: 点击复制块内所有内容。
     *   **Ellipsis (...)**: 点击唤出菜单。
-*   **Menu Extensibility**:
-    *   **Plugin API**: **MUST** 预留接口允许插件向菜单添加选项。
-    *   **Empty State**: 如果没有选项，**MUST** 唤出一个空白菜单。
+*   **Menu Extensibility**: ✅ **DONE**
+    *   **Plugin API**: 通过 `window.deve_code_actions` 注册 Action。
+    *   **Toggle Behavior**: 再次点击省略号关闭菜单；点击外部也可关闭。
+    *   **Empty State**: 如果没有选项，显示 "No actions available"。
+    *   **Default Actions**: "Run Code", "Send to AI" (Console placeholder).
 
 ### 5. 深度嵌套与混合列表 (The Nested Hell)
 

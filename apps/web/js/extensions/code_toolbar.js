@@ -1,6 +1,6 @@
 import { WidgetType, Decoration, ViewPlugin } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { showMenu } from "./code_menu.js";
+import { toggleMenu } from "./code_menu.js";
 import { ICON_COPY, ICON_CHECK, ICON_ELLIPSIS } from "./code_icons.js";
 
 /**
@@ -55,7 +55,7 @@ class CodeToolbarWidget extends WidgetType {
         menuBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            showMenu(menuBtn, { code: view.state.sliceDoc(this.from, this.to), language: this.language, view });
+            toggleMenu(menuBtn, { code: view.state.sliceDoc(this.from, this.to), language: this.language, view });
         };
 
         container.appendChild(copyBtn);
