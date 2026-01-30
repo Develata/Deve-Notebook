@@ -32,7 +32,7 @@ impl SyncEngine {
                 doc_id,
                 op: Op::Insert {
                     pos: 0,
-                    content: rebuilt.content,
+                    content: rebuilt.content.into(),
                 },
                 timestamp: chrono::Utc::now().timestamp_millis(),
                 peer_id: self.local_peer_id.clone(),

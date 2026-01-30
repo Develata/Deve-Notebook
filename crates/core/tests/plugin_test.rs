@@ -14,7 +14,7 @@ mod tests {
 
         let loader = PluginLoader::new(plugin_dir.clone());
         // Load specific plugin
-        let mut runtime = loader
+        let _runtime = loader
             .load_plugin(&plugin_dir)
             .expect("Failed to load plugin");
 

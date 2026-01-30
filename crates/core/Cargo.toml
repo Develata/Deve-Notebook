@@ -12,6 +12,7 @@ thiserror.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+smol_str.workspace = true
 regex = "1.10"
 chrono.workspace = true
 dissimilar = "1.0.10"
@@ -51,3 +52,10 @@ search = ["tantivy"]
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.tantivy]
 version = "0.22"
 optional = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "sync_bench"
+harness = false

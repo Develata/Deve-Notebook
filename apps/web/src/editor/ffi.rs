@@ -1,4 +1,4 @@
-﻿// apps/web/src/editor/ffi.rs
+// apps/web/src/editor/ffi.rs
 //! # FFI Bindings (JavaScript 互操作)
 //!
 //! 定义与 JavaScript (CodeMirror adapter) 交互的外部函数接口。
@@ -47,8 +47,8 @@ pub struct Delta {
     pub insert: String,
 }
 
-/// 将 Delta 转换为 Op
 impl Delta {
+    /// 将 Delta 转换为单个 Op (简化版，Replace 返回 Delete)
     pub fn to_op(&self) -> Option<deve_core::models::Op> {
         let delete_len = self.to.saturating_sub(self.from);
         let has_delete = delete_len > 0;
@@ -56,9 +56,7 @@ impl Delta {
 
         match (has_delete, has_insert) {
             (true, true) => {
-                // Replace = Delete + Insert (返回 Delete，Insert 在下一次处理)
-                // 为简化，这里将 Replace 视为先删除后插入
-                // 调用方需要处理这种情况
+                // Replace = Delete + Insert. For simplicity, return only the more significant one.
                 Some(deve_core::models::Op::Delete {
                     pos: self.from,
                     len: delete_len,
@@ -70,7 +68,7 @@ impl Delta {
             }),
             (false, true) => Some(deve_core::models::Op::Insert {
                 pos: self.from,
-                content: self.insert.clone(),
+                content: self.insert.clone().into(),
             }),
             (false, false) => None,
         }
@@ -93,8 +91,8 @@ impl Delta {
 
         if has_insert {
             ops.push(deve_core::models::Op::Insert {
-                pos: self.from, // 插入位置 = 删除位置
-                content: self.insert.clone(),
+                pos: self.from,
+                content: self.insert.clone().into(),
             });
         }
 

@@ -32,6 +32,7 @@ pub struct SearchResult {
 pub struct SearchService {
     index: Index,
     writer: Mutex<IndexWriter>,
+    #[allow(dead_code)]
     schema: Schema,
     field_doc_id: Field,
     field_path: Field,

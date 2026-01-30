@@ -122,7 +122,7 @@ mod tests {
                 doc_id,
                 op: Op::Insert {
                     pos: 0,
-                    content: "test".to_string(),
+                    content: "test".into(),
                 },
                 timestamp: 1000,
                 peer_id: peer_id.clone(),

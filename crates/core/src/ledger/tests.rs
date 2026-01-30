@@ -1,4 +1,4 @@
-﻿// crates/core/src/ledger/tests.rs
+// crates/core/src/ledger/tests.rs
 //! # 仓库管理器测试模块 (RepoManager Tests)
 //!
 //! 包含 RepoManager 的单元测试和集成测试。
@@ -66,7 +66,7 @@ fn test_local_and_shadow_isolation() -> Result<()> {
         doc_id,
         op: crate::models::Op::Insert {
             pos: 0,
-            content: "local content".to_string(),
+            content: "local content".into(),
         },
         timestamp: 1000,
         peer_id: peer_id.clone(),
@@ -79,7 +79,7 @@ fn test_local_and_shadow_isolation() -> Result<()> {
         doc_id,
         op: crate::models::Op::Insert {
             pos: 0,
-            content: "remote content".to_string(),
+            content: "remote content".into(),
         },
         timestamp: 2000,
         peer_id: peer_id.clone(),

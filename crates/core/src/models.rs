@@ -6,7 +6,7 @@
 //! 供 Local Repo、Shadow Repo 及 P2P 同步协议共同使用。
 //!
 //! **核心功能清单**:
-//! - `PeerId`: P2P 网络中的节点唯一标识符。
+//! - `PeerId`: P2P 网络中的节点唯一标识符 (栈分配优化)。
 //! - `DocId`: 文档唯一标识符（基于 UUID）。
 //! - `Op`: 编辑操作（Insert / Delete）。
 //! - `LedgerEntry`: 带时间戳的操作记录，用于持久化。
@@ -16,6 +16,7 @@
 //! **类型**: Core MUST (核心必选)
 
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 use std::fmt;
 use uuid::Uuid;
 
@@ -23,27 +24,36 @@ pub use crate::sync::vector::VersionVector;
 
 /// 节点唯一标识符 (Peer ID)
 ///
-/// **功能**:
-/// 用于在 P2P 网络中唯一标识一个远程节点。
+/// ## 内存优化
 ///
-/// **实现**:
-/// 简单的 String 包装类型，通常为 UUID v4。
+/// 使用 `SmolStr` 代替 `String`，实现以下优化：
+/// - **内联存储**: 23 字节以内的字符串直接存储在栈上，零堆分配。
+/// - **不可变性**: `SmolStr` 是不可变的，避免意外修改。
+/// - **Clone 开销**: 对于短字符串，Clone 是 O(1) 的栈拷贝。
+///
+/// ## 典型 PeerId 长度
+///
+/// - UUID v4: 36 字符 (超出内联阈值，会堆分配，但使用 Arc 共享)
+/// - 短 ID (如 "local_watcher"): 13 字符 (内联存储)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct PeerId(pub String);
+pub struct PeerId(SmolStr);
 
 impl PeerId {
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
+    /// 创建新的 PeerId
+    ///
+    /// 接受任何可转换为字符串的类型。
+    pub fn new(id: impl AsRef<str>) -> Self {
+        Self(SmolStr::new(id.as_ref()))
     }
 
     /// 返回 Peer ID 字符串切片
+    #[inline]
     pub fn as_str(&self) -> &str {
-        &self.0
+        self.0.as_str()
     }
 
     /// 转换为安全文件名
     ///
-    /// **逻辑**:
     /// 将文件系统非法字符（如 `/`, `\` 等）替换为下划线 `_`。
     pub fn to_filename(&self) -> String {
         self.0
@@ -52,7 +62,7 @@ impl PeerId {
 
     /// 生成随机 Peer ID (UUID v4)
     pub fn random() -> Self {
-        Self(Uuid::new_v4().to_string())
+        Self(SmolStr::new(Uuid::new_v4().to_string()))
     }
 }
 
@@ -62,6 +72,9 @@ impl fmt::Display for PeerId {
     }
 }
 
+/// 文档唯一标识符 (Doc ID)
+///
+/// 基于 UUID v4，实现 Copy trait 以支持高效传递。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DocId(pub Uuid);
 
@@ -92,21 +105,21 @@ impl fmt::Display for DocId {
 }
 
 /// 操作类型
+///
+/// ## 内存优化
+///
+/// `Insert` 变体使用 `SmolStr` 代替 `String`：
+/// - 短插入 (< 23 字节) 零堆分配
+/// - 典型用例：单字符输入、短词插入
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Op {
-    Insert { pos: usize, content: String },
+    Insert { pos: usize, content: SmolStr },
     Delete { pos: usize, len: usize },
 }
 
 /// 账本条目 (Ledger Entry)
 ///
-/// **功能**:
 /// 存储在 `ledger_ops` 表中的原子操作记录。
-///
-/// **字段**:
-/// - `doc_id`: 所属文档 ID。
-/// - `op`: 具体操作内容。
-/// - `timestamp`: 操作产生的时间戳。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LedgerEntry {
     pub doc_id: DocId,
@@ -118,11 +131,11 @@ pub struct LedgerEntry {
     pub seq: u64,
 }
 
+/// 跨平台文件系统标识符
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FileNodeId {
     // Windows: (volume_serial_number as u64) << 64 | file_index
     // Linux/Unix: (device_id as u64) << 64 | inode
-    // We combine them into a single u128 for easy storage
     pub id: u128,
 }
 
@@ -131,17 +144,11 @@ pub type RepoId = Uuid;
 
 /// 仓库类型枚举
 ///
-/// 用于指定操作的目标仓库,实现 Trinity Isolation 中的数据隔离。
-///
-/// # 变体说明
-///
-/// - `Local`: 本地权威库 (Store B)
-/// - `Remote(PeerId, RepoId)`: 远端影子库 (Store C)
+/// 用于指定操作的目标仓库，实现 Trinity Isolation 中的数据隔离。
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RepoType {
     /// 本地权威库 (Store B)
     Local(RepoId),
-
     /// 远端影子库 (Store C)
     Remote(PeerId, RepoId),
 }

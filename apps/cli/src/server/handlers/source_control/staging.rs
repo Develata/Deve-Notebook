@@ -87,14 +87,14 @@ pub async fn handle_discard_file(
 
     // 应用操作到 Ledger
     for op in ops {
-        let peer_id = deve_core::models::PeerId("local".to_string());
+        let peer_id = deve_core::models::PeerId::new("local");
         // 使用 SyncManager 应用 Op，但不每次都持久化 (为了性能)
         if let Err(e) = state.sync_manager.apply_local_op(
             doc_id,
             peer_id.clone(),
             move |seq| deve_core::models::LedgerEntry {
                 doc_id,
-                peer_id: deve_core::models::PeerId("local".to_string()),
+                peer_id: deve_core::models::PeerId::new("local"),
                 seq,
                 op: op.clone(),
                 timestamp: chrono::Utc::now().timestamp_millis(),

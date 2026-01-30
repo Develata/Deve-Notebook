@@ -1,4 +1,4 @@
-﻿// apps\cli\src\commands
+// apps\cli\src\commands
 //! # P2P 验证命令
 //!
 //! **架构作用**:
@@ -11,12 +11,12 @@
 //! 3. 模拟 "Gossip" 过程：手动交换 Op。
 //! 4. 验证数据一致性。
 
-use std::path::Path;
-use std::fs;
 use anyhow::Result;
-use tracing::{info, warn};
 use deve_core::ledger::RepoManager;
-use deve_core::models::{PeerId, DocId, LedgerEntry, Op, RepoType};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoType};
+use std::fs;
+use std::path::Path;
+use tracing::{info, warn};
 
 pub fn run(snapshot_depth: usize) -> Result<()> {
     info!("Starting P2P Verification Simulation...");
@@ -42,7 +42,7 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     let repo_a = RepoManager::init(&peer_a_ledger, snapshot_depth, None, None)?;
     let peer_a_id = PeerId::new("peer_a_sim");
     let peer_b_id = PeerId::new("peer_b_sim");
-    
+
     info!("Repo A initialized (Virtual Peer: {})", peer_a_id);
 
     let repo_b = RepoManager::init(&peer_b_ledger, snapshot_depth, None, None)?;
@@ -52,9 +52,12 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     info!("--- Step 1: Peer A creates document ---");
     let doc_path = "hello.md";
     let doc_content = "Hello from Peer A";
-    
+
     let doc_id = repo_a.create_docid(doc_path)?;
-    let op = Op::Insert { pos: 0, content: doc_content.to_string() };
+    let op = Op::Insert {
+        pos: 0,
+        content: doc_content.into(),
+    };
     let entry = LedgerEntry {
         doc_id,
         op,
@@ -62,9 +65,12 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
         peer_id: peer_a_id.clone(),
         seq: 1,
     };
-    
+
     let seq = repo_a.append_local_op(&entry)?;
-    info!("Peer A created doc: {} ({}) at seq {}", doc_path, doc_id, seq);
+    info!(
+        "Peer A created doc: {} ({}) at seq {}",
+        doc_path, doc_id, seq
+    );
 
     // 4. Sync A -> B
     info!("--- Step 2: Sync A -> B ---");
@@ -79,25 +85,31 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
         repo_b.append_remote_op(&peer_a_id, &repo_id, &entry)?;
         applied_count += 1;
     }
-    info!("Applied {} ops to Peer B (Shadow: {})", applied_count, peer_a_id);
+    info!(
+        "Applied {} ops to Peer B (Shadow: {})",
+        applied_count, peer_a_id
+    );
 
     // 5. Verify B state
     info!("--- Step 3: Verify Peer B State ---");
-    
+
     // Read A's shadow in B using get_shadow_ops directly
     // Note: get_shadow_repo is currently specific about lifetimes or placeholders, so determining access via ops is safer.
-    
+
     let ops = repo_b.get_shadow_ops(&peer_a_id, &repo_id, doc_id)?;
     if !ops.is_empty() {
         let entries: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
         let content_in_b_shadow_a = deve_core::state::reconstruct_content(&entries);
-        
+
         info!("Peer B's view of Peer A: {:?}", content_in_b_shadow_a);
-        
+
         if content_in_b_shadow_a == doc_content {
             info!("✅ SUCCESS: Peer B correctly sees Peer A's content in Shadow Repo.");
         } else {
-            warn!("❌ FAILURE: Content mismatch. Expected '{}', got '{}'", doc_content, content_in_b_shadow_a);
+            warn!(
+                "❌ FAILURE: Content mismatch. Expected '{}', got '{}'",
+                doc_content, content_in_b_shadow_a
+            );
             return Err(anyhow::anyhow!("Verification failed at Step 3"));
         }
     } else {
@@ -115,7 +127,7 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
 
     // 7. Cleanup
     cleanup(&temp_dir);
-    
+
     info!("P2P Verification Completed Successfully.");
     Ok(())
 }

@@ -67,7 +67,10 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             return;
         };
         let pos = getEditorContent().len();
-        let op = Op::Insert { pos, content: code };
+        let op = Op::Insert {
+            pos,
+            content: code.into(),
+        };
         let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
         core.ws.send(ClientMessage::Edit {
             doc_id,

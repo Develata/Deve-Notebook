@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger\shadow
+// crates\core\src\ledger\shadow
 //! # 影子库管理层 (Shadow Management)
 //!
 //! **架构作用**:
@@ -95,7 +95,7 @@ pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
             if path.is_dir() {
                 if let Some(stem) = path.file_name() {
                     // Assuming dir name is PeerId (or encoded filename)
-                    peers.push(PeerId::new(stem.to_string_lossy().to_string()));
+                    peers.push(PeerId::new(&*stem.to_string_lossy()));
                 }
             } else {
                 tracing::warn!("Entry is not a directory: {:?}", path);

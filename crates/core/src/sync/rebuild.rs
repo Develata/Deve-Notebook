@@ -33,7 +33,7 @@ pub(crate) fn rebuild_local_doc(repo: &RepoManager, doc_id: DocId) -> Result<Reb
             doc_id,
             op: Op::Insert {
                 pos: 0,
-                content: base_content,
+                content: base_content.into(),
             },
             timestamp: 0,
             peer_id: PeerId::new("snapshot"),

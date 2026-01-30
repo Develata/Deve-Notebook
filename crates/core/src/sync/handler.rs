@@ -126,7 +126,7 @@ impl<'a> FsEventHandler<'a> {
         // Initial ingest
         if !content.is_empty() {
             let now = chrono::Utc::now().timestamp_millis();
-            let op = crate::models::Op::Insert { pos: 0, content };
+            let op = crate::models::Op::Insert { pos: 0, content: content.into() };
             let entry = crate::models::LedgerEntry {
                 doc_id,
                 op,

@@ -118,7 +118,7 @@ mod tests {
             doc_id: DocId::new(),
             op: Op::Insert {
                 pos: 0,
-                content: "Secret".to_string(),
+                content: "Secret".into(),
             },
             timestamp: 12345,
             peer_id: crate::models::PeerId::new("test-peer"),

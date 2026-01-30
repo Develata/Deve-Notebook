@@ -1,4 +1,4 @@
-﻿// crates\core\src
+// crates\core\src
 //! # 文档状态管理
 //!
 //! 本模块提供文档状态管理功能：
@@ -100,7 +100,7 @@ pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
             Chunk::Insert(text) => {
                 ops.push(Op::Insert {
                     pos,
-                    content: text.to_string(),
+                    content: text.into(),
                 });
                 // 使用字符数量而非字节数量
                 pos += text.chars().count();

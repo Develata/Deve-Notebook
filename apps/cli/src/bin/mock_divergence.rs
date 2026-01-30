@@ -1,7 +1,7 @@
-﻿// apps\cli\src\bin
+// apps\cli\src\bin
 use anyhow::Result;
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId, RepoType};
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -55,7 +55,7 @@ fn inject_conflict(
                 doc_id,
                 op: Op::Insert {
                     pos: 0,
-                    content: format!("CONFLICT_START{}CONFLICT_END\n", content),
+                    content: format!("CONFLICT_START{}CONFLICT_END\n", content).into(),
                 },
                 timestamp: chrono::Utc::now().timestamp_millis(),
                 peer_id: peer_id.clone(),
