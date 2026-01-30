@@ -25,10 +25,10 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
     for entry in walker.filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.')) {
         match entry {
             Ok(entry) => {
-                if entry.file_type().is_file() {
-                    if let Some(ext) = entry.path().extension() {
-                        if ext == "md" {
-                            if let Ok(rel_path) = entry.path().strip_prefix(vault_root) {
+                if entry.file_type().is_file()
+                    && let Some(ext) = entry.path().extension()
+                        && ext == "md"
+                            && let Ok(rel_path) = entry.path().strip_prefix(vault_root) {
                                 // 规范化路径：统一使用正斜杠格式（内部权威格式）
                                 let path_str = path_to_forward_slash(rel_path);
                                 on_disk_paths.insert(path_str.clone());
@@ -49,9 +49,6 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                                     let _ = repo.bind_inode(&inode, doc_id);
                                 }
                             }
-                        }
-                    }
-                }
             }
             Err(e) => warn!("Walk error: {:?}", e),
         }
@@ -86,11 +83,10 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                 warn!("使用原始路径删除失败 {}: {:?}", path, e);
             }
             // 如果路径不同，也尝试用规范化路径删除
-            if normalized_path != path {
-                if let Err(e) = repo.delete_doc(&normalized_path) {
+            if normalized_path != path
+                && let Err(e) = repo.delete_doc(&normalized_path) {
                     warn!("使用规范化路径删除失败 {}: {:?}", normalized_path, e);
                 }
-            }
             info!("SyncScan: 幽灵文件删除完成: {}", path);
         }
     }

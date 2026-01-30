@@ -57,7 +57,7 @@ impl Vfs {
         // 1. Scan Disk -> Upsert Ledger
         for entry in WalkDir::new(&self.root).into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
                 // Relativize path
                 if let Ok(rel_path) = path.strip_prefix(&self.root) {
                     // 统一使用正斜杠格式
@@ -101,12 +101,9 @@ impl Vfs {
                 // If we just walked, it should be accurate.
 
                 // Remove from ledger
-                match repo.delete_doc(&path) {
-                    Ok(_) => {
-                        removed_count += 1;
-                        // tracing::info!("Removed ghost doc: {}", path); // No tracing here, just println in main
-                    }
-                    Err(_) => {}
+                if repo.delete_doc(&path).is_ok() {
+                    removed_count += 1;
+                    // tracing::info!("Removed ghost doc: {}", path); // No tracing here, just println in main
                 }
             }
         }

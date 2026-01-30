@@ -65,6 +65,12 @@ impl fmt::Display for PeerId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DocId(pub Uuid);
 
+impl Default for DocId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DocId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())

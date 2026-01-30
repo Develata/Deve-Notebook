@@ -11,15 +11,13 @@ pub fn try_recover_from_content(content: &str) -> Option<DocId> {
     // (?m) enables multiline mode so ^ matches start of line
     let re = Regex::new(r"(?m)^uuid:\s*([a-fA-F0-9-]{36})").ok()?;
 
-    if let Some(caps) = re.captures(content) {
-        if let Some(uuid_str) = caps.get(1) {
-            if let Ok(uuid_val) = Uuid::parse_str(uuid_str.as_str()) {
+    if let Some(caps) = re.captures(content)
+        && let Some(uuid_str) = caps.get(1)
+            && let Ok(uuid_val) = Uuid::parse_str(uuid_str.as_str()) {
                 let doc_id = DocId::from_u128(uuid_val.as_u128());
                 info!("Recovery: Found UUID in content -> {:?}", doc_id);
                 return Some(doc_id);
             }
-        }
-    }
 
     None
 }

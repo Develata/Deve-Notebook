@@ -126,12 +126,11 @@ pub(crate) fn edits_overlap(a: &Edit, b: &Edit) -> bool {
 }
 
 fn push_edit(edits: &mut Vec<Edit>, edit: Edit) {
-    if let Some(last) = edits.last_mut() {
-        if last.start == edit.start && last.end == edit.end {
+    if let Some(last) = edits.last_mut()
+        && last.start == edit.start && last.end == edit.end {
             last.replacement.push_str(&edit.replacement);
             return;
         }
-    }
     edits.push(edit);
 }
 

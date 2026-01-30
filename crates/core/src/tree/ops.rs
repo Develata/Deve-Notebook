@@ -131,18 +131,15 @@ pub fn insert_path(nodes: &mut HashMap<String, NodeInfo>, path: &str, doc_id: Op
                     children_paths: Vec::new(),
                 },
             );
-            if !parent.is_empty() {
-                if let Some(p) = nodes.get_mut(&parent) {
-                    if !p.children_paths.contains(&current) {
+            if !parent.is_empty()
+                && let Some(p) = nodes.get_mut(&parent)
+                    && !p.children_paths.contains(&current) {
                         p.children_paths.push(current.clone());
                     }
-                }
-            }
-        } else if is_last {
-            if let Some(node) = nodes.get_mut(&current) {
+        } else if is_last
+            && let Some(node) = nodes.get_mut(&current) {
                 node.doc_id = id;
             }
-        }
         parent = current.clone();
     }
 }

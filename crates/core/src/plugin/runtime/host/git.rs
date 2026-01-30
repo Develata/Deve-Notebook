@@ -11,9 +11,8 @@ use std::sync::Arc;
 /// 截断文本，防止输出过长
 fn truncate_text(input: &str, max_lines: usize, max_line_chars: usize) -> String {
     let mut output = String::new();
-    let mut line_count = 0usize;
 
-    for line in input.lines() {
+    for (line_count, line) in input.lines().enumerate() {
         if line_count >= max_lines {
             output.push_str("... [Truncated]\n");
             break;
@@ -25,7 +24,6 @@ fn truncate_text(input: &str, max_lines: usize, max_line_chars: usize) -> String
         }
         output.push_str(&truncated_line);
         output.push('\n');
-        line_count += 1;
     }
 
     output

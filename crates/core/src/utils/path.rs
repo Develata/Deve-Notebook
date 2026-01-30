@@ -1,4 +1,4 @@
-﻿// crates\core\src\utils
+// crates\core\src\utils
 //! # 跨平台路径工具
 //!
 //! 本模块提供跨平台文件路径处理工具。
@@ -56,7 +56,7 @@ pub fn path_to_forward_slash(path: &Path) -> String {
 /// Join a base path with a subpath, then convert to native format for FS operations.
 ///
 /// 用于文件系统操作（创建、读取文件）。
-pub fn join_normalized(base: &PathBuf, subpath: &str) -> PathBuf {
+pub fn join_normalized(base: &Path, subpath: &str) -> PathBuf {
     base.join(to_native(subpath))
 }
 

@@ -30,7 +30,7 @@ impl RepoManager {
 
             // Just open it. Redb handles file locking.
             let db = Database::create(&db_path)?;
-            return read_url(&db);
+            read_url(&db)
         } else {
             // Local
             // 1. Check Main Repo
@@ -52,18 +52,17 @@ impl RepoManager {
                 return Ok(None);
             }
             let db = Database::create(&db_path)?;
-            return read_url(&db);
+            read_url(&db)
         }
     }
 
     /// 查找具有指定 URL 的本地仓库 (Main 或 Extra)
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
         // 1. Check Main Repo
-        if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db) {
-            if info.url.as_deref() == Some(target_url) {
+        if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
+            && info.url.as_deref() == Some(target_url) {
                 return Ok(Some(self.local_repo_name.clone()));
             }
-        }
 
         // 2. Iterate all .redb files in ledger/local
         let local_dir = self.ledger_dir.join("local");

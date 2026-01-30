@@ -85,13 +85,11 @@ pub fn list(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
 
     let mut commits = Vec::new();
     for seq in seqs {
-        if let Some(commit_id) = order_table.get(seq)? {
-            if let Some(json) = commits_table.get(commit_id.value())? {
-                if let Ok(info) = serde_json::from_str::<CommitInfo>(json.value()) {
+        if let Some(commit_id) = order_table.get(seq)?
+            && let Some(json) = commits_table.get(commit_id.value())?
+                && let Ok(info) = serde_json::from_str::<CommitInfo>(json.value()) {
                     commits.push(info);
                 }
-            }
-        }
     }
 
     Ok(commits)

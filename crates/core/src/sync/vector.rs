@@ -15,6 +15,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Range;
 
+/// 版本向量差异结果类型
+/// - 第一个元素：对方缺少的 (我比对方新的部分)
+/// - 第二个元素：我缺少的 (对方比我新的部分)
+pub type VvDiffResult = (Vec<(PeerId, Range<u64>)>, Vec<(PeerId, Range<u64>)>);
+
 /// 逻辑时钟向量，用于追踪各个节点的数据同步状态。
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionVector {
@@ -80,10 +85,7 @@ impl VersionVector {
     /// 返回两个缺失范围列表：
     /// 1. `missing_from_remote`: 对方缺少的 (我比对方新的部分)
     /// 2. `missing_from_local`: 我缺少的 (对方比我新的部分)
-    pub fn diff(
-        &self,
-        remote: &VersionVector,
-    ) -> (Vec<(PeerId, Range<u64>)>, Vec<(PeerId, Range<u64>)>) {
+    pub fn diff(&self, remote: &VersionVector) -> VvDiffResult {
         let mut missing_from_remote = Vec::new();
         let mut missing_from_local = Vec::new();
 

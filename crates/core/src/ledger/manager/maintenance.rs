@@ -13,7 +13,7 @@ impl RepoManager {
         repo_id: &RepoId,
         doc_id: &DocId,
     ) -> Result<()> {
-        let _ = self.ensure_shadow_db(peer_id, repo_id)?;
+        self.ensure_shadow_db(peer_id, repo_id)?;
 
         let guard = self.shadow_dbs.read().unwrap();
         let peer_map = guard

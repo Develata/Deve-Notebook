@@ -128,15 +128,13 @@ fn build_conflict_hunk(base: &str, local: &Edit, remote: &Edit) -> ConflictHunk 
 
 fn char_index_to_line(s: &str, char_index: usize) -> usize {
     let mut line = 0usize;
-    let mut count = 0usize;
-    for ch in s.chars() {
+    for (count, ch) in s.chars().enumerate() {
         if count >= char_index {
             break;
         }
         if ch == '\n' {
             line += 1;
         }
-        count += 1;
     }
     line
 }

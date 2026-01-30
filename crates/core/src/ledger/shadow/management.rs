@@ -28,11 +28,10 @@ pub fn ensure_shadow_db(
     // Check if already loaded (Read Lock)
     {
         let dbs = shadow_dbs.read().unwrap();
-        if let Some(repos) = dbs.get(peer_id) {
-            if repos.contains_key(repo_id) {
+        if let Some(repos) = dbs.get(peer_id)
+            && repos.contains_key(repo_id) {
                 return Ok(());
             }
-        }
     }
 
     // Acquire Write Lock
@@ -40,11 +39,10 @@ pub fn ensure_shadow_db(
 
     // Double-Check: Check again under Write Lock
     // Another thread might have created it while we waited for the lock
-    if let Some(repos) = dbs.get(peer_id) {
-        if repos.contains_key(repo_id) {
+    if let Some(repos) = dbs.get(peer_id)
+        && repos.contains_key(repo_id) {
             return Ok(());
         }
-    }
 
     // Create peer directory: remotes/<peer_id>/
     let peer_dir = remotes_dir.join(peer_id.to_filename());
@@ -77,7 +75,7 @@ pub fn ensure_shadow_db(
 
     // Store in map
     dbs.entry(peer_id.clone())
-        .or_insert_with(HashMap::new)
+        .or_default()
         .insert(*repo_id, db);
 
     Ok(())

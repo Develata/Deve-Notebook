@@ -71,13 +71,12 @@ impl<'a> FsEventHandler<'a> {
         // CASE 2: Known Inode (Rename or Content Update)
         if let Some(doc_id) = self.repo.get_docid_by_inode(&inode)? {
             // 2a. Check Path (Rename)
-            if let Some(known_path) = self.repo.get_path_by_docid(doc_id)? {
-                if known_path != path_str {
+            if let Some(known_path) = self.repo.get_path_by_docid(doc_id)?
+                && known_path != path_str {
                     info!("Handler: Rename detected {} -> {}", known_path, path_str);
                     self.repo.rename_doc(&known_path, path_str)?;
                     return self.gen_list();
                 }
-            }
 
             // 2b. Same Path => Content Update
             if sync_mgr.reconcile_doc(doc_id)? {
@@ -104,8 +103,8 @@ impl<'a> FsEventHandler<'a> {
 
         // 3b. Check Content for UUID (Recovery)
         let content = std::fs::read_to_string(&file_path)?;
-        if let Some(recovered_id) = recovery::try_recover_from_content(&content) {
-            if let Ok(Some(old_path)) = self.repo.get_path_by_docid(recovered_id) {
+        if let Some(recovered_id) = recovery::try_recover_from_content(&content)
+            && let Ok(Some(old_path)) = self.repo.get_path_by_docid(recovered_id) {
                 info!(
                     "Handler: Recovery UUID found. Resurrecting {:?} from {} to {}",
                     recovered_id, old_path, path_str
@@ -118,7 +117,6 @@ impl<'a> FsEventHandler<'a> {
                 let _ = sync_mgr.reconcile_doc(recovered_id);
                 return self.gen_list();
             }
-        }
 
         // 3c. Truly New File
         info!("Handler: New file detected: {}", path_str);

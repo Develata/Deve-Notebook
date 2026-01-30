@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger\shadow
+// crates\core\src\ledger\shadow
 //! # 影子库访问层 (Shadow Access)
 //!
 //! **架构作用**:
@@ -34,6 +34,7 @@ pub struct ShadowRepo<'a> {
 
 impl<'a> ShadowRepo<'a> {
     /// 创建影子库的只读视图
+    #[allow(dead_code)] // 用于测试和未来扩展
     pub(crate) fn new(peer_id: PeerId, repo_id: RepoId, db: &'a Database) -> Self {
         Self {
             peer_id,

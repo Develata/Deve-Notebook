@@ -1,4 +1,4 @@
-﻿// crates/core/src/ledger/ops.rs
+// crates/core/src/ledger/ops.rs
 //! # 操作日志模块 (Operations Log)
 //!
 //! 实现 append-only 操作日志的读写。
@@ -56,9 +56,8 @@ pub fn append_generated_op(
     let peer_id_str = peer_id.as_str();
     let key = (doc_id.as_u128(), peer_id_str);
 
-    let mut next_local_seq = 1;
-    if let Some(val) = peer_seqs.get(key)? {
-        next_local_seq = val.value() + 1;
+    let next_local_seq = if let Some(val) = peer_seqs.get(key)? {
+        val.value() + 1
     } else {
         // Lazy Migration: 扫描现有的 ops 找到最大值
         // 注意: 这是一个一次性成本 (One-time cost)
@@ -77,15 +76,13 @@ pub fn append_generated_op(
                 // 只反序列化头部? Bincode 不支持部分反序列化。
                 // 但我们需要 PeerId
                 let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
-                if entry.peer_id == peer_id {
-                    if entry.seq > max_seq {
-                        max_seq = entry.seq;
-                    }
+                if entry.peer_id == peer_id && entry.seq > max_seq {
+                    max_seq = entry.seq;
                 }
             }
         }
-        next_local_seq = max_seq + 1;
-    }
+        max_seq + 1
+    };
 
     // 2. 构建 Entry
     let entry = op_entry_builder(next_local_seq);

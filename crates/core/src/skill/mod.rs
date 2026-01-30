@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -40,11 +40,10 @@ impl SkillManager {
         for entry in std::fs::read_dir(&self.skills_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "md") {
-                if let Ok(skill) = self.load_skill_from_path(&path) {
+            if path.extension().is_some_and(|ext| ext == "md")
+                && let Ok(skill) = self.load_skill_from_path(&path) {
                     skills.push(skill);
                 }
-            }
         }
         Ok(skills)
     }
@@ -75,11 +74,10 @@ impl SkillManager {
                     continue;
                 }
                 // Parse key: value
-                if let Some((key, val)) = line.split_once(':') {
-                    if key.trim() == "description" {
+                if let Some((key, val)) = line.split_once(':')
+                    && key.trim() == "description" {
                         description = val.trim().to_string();
                     }
-                }
             } else {
                 content.push_str(line);
                 content.push('\n');

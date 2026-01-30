@@ -97,8 +97,8 @@ impl SyncManager {
             // Snapshot throttle: only update snapshot when it is sufficiently stale.
             const SNAPSHOT_INTERVAL: u64 = 64;
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
-            if rebuilt.max_seq > 0 && delta >= SNAPSHOT_INTERVAL {
-                if let Err(e) = self
+            if rebuilt.max_seq > 0 && delta >= SNAPSHOT_INTERVAL
+                && let Err(e) = self
                     .repo
                     .save_snapshot(doc_id, rebuilt.max_seq, &rebuilt.content)
                 {
@@ -107,7 +107,6 @@ impl SyncManager {
                         doc_id, e
                     );
                 }
-            }
         }
         Ok(())
     }
@@ -129,8 +128,8 @@ impl SyncManager {
         )?;
 
         // 2. Optional Persist
-        if persist {
-            if let Err(e) = self.persist_doc(doc_id) {
+        if persist
+            && let Err(e) = self.persist_doc(doc_id) {
                 tracing::error!(
                     "SyncManager: Failed to persist doc {} after op: {:?}",
                     doc_id,
@@ -140,7 +139,6 @@ impl SyncManager {
                 // In a perfect world we might want transactionality across FS and DB, but that's hard.
                 return Err(e);
             }
-        }
 
         Ok(seqs)
     }

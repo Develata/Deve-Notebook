@@ -1,4 +1,4 @@
-﻿// crates\core\src\source_control
+// crates\core\src\source_control
 //! # 变更检测模块 (Change Detection)
 //!
 //! 对比当前 Ledger 状态与最后提交快照，检测文件变更。
@@ -11,7 +11,7 @@ use crate::models::DocId;
 use crate::source_control::snapshot_paths::SNAPSHOT_PATHS_TABLE;
 use crate::source_control::ChangeStatus;
 use anyhow::Result;
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, TableDefinition};
 
 /// 快照表定义 (doc_id -> content)
 /// 存储每个文档最后一次提交时的内容

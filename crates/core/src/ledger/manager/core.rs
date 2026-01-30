@@ -79,7 +79,7 @@ impl RepoManager {
         repo_name: Option<&str>,
     ) -> Result<Vec<(crate::models::DocId, String)>> {
         let name = repo_name.unwrap_or(&self.local_repo_name);
-        self.run_on_local_repo(name, |db| metadata::list_docs(db))
+        self.run_on_local_repo(name, metadata::list_docs)
     }
 
     /// 获取账本目录路径

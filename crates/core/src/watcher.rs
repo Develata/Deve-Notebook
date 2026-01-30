@@ -79,11 +79,10 @@ impl Watcher {
 
                             match self.sync_manager.handle_fs_event(&path_str) {
                                 Ok(msgs) => {
-                                    if !msgs.is_empty() {
-                                        if let Some(cb) = &self.on_event {
+                                    if !msgs.is_empty()
+                                        && let Some(cb) = &self.on_event {
                                             cb(msgs);
                                         }
-                                    }
                                 }
                                 Err(e) => {
                                     error!("Error handling event for {}: {:?}", path_str, e);

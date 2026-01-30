@@ -76,7 +76,7 @@ impl PluginRuntime for RhaiRuntime {
             .map_err(|_| anyhow!("Failed to lock plugin scope"))?;
 
         self.engine
-            .run_ast_with_scope(&mut *scope, &ast)
+            .run_ast_with_scope(&mut scope, &ast)
             .map_err(|e| anyhow!("Failed to initialize plugin: {}", e))?;
 
         self.ast = Some(ast);
@@ -96,7 +96,7 @@ impl PluginRuntime for RhaiRuntime {
             .map_err(|_| anyhow!("Failed to lock plugin scope"))?;
 
         self.engine
-            .call_fn(&mut *scope, ast, fn_name, args)
+            .call_fn(&mut scope, ast, fn_name, args)
             .map_err(|e| anyhow!("Runtime error in function '{}': {}", fn_name, e))
     }
 

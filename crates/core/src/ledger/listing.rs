@@ -51,11 +51,10 @@ impl RepoListing for RepoManager {
         for entry in std::fs::read_dir(target_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb")
+                && let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     repos.push(stem.to_string());
                 }
-            }
         }
 
         repos.sort();
@@ -72,11 +71,10 @@ impl RepoListing for RepoManager {
         for entry in std::fs::read_dir(remotes_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_dir() {
-                if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+            if path.is_dir()
+                && let Some(name) = path.file_name().and_then(|s| s.to_str()) {
                     peers.push(PeerId::new(name));
                 }
-            }
         }
         Ok(peers)
     }

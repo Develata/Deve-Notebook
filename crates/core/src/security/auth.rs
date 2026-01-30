@@ -16,6 +16,7 @@ pub struct AuthConfig {
 }
 
 pub struct AuthManager {
+    #[allow(dead_code)] // 用于未来 JWT Token 生成
     secret: String,
 }
 
