@@ -35,6 +35,11 @@
     *   `NewOp`: 实时协作操作事件。
     *   `Snapshot`: 完整文档内容快照。
 
+### OpenDoc 性能策略 (Snapshot-First + Progressive Prefetch)
+*   **Snapshot-First**: 打开文档优先返回最近快照 + 增量 Ops。
+*   **Client Prefetch**: 客户端按自适应批次应用增量 Ops。
+*   **Search Gate**: 预加载完成前禁用全文搜索。
+
 ### Peer Identity & Handshake (身份与握手)
 
 *   **Setup (初始化)**: 用户在设置中配置 `Name` (e.g., "My iPad")。

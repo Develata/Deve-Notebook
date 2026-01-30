@@ -9,6 +9,12 @@
 	*   **Default (Light Core)**：CodeMirror 6 Source Mode (对应 **Projection** 的纯文本形态)。
 	*   **Extension (Rich)**：Milkdown (Prosemirror) Live Preview (提供富文本交互)。
 
+### 大文档渲染策略 (Large Doc Rendering)
+*   **First Paint**: 打开文档时优先渲染首屏 + 预缓冲区。
+*   **Virtual Render**: 文本已完整加载，但仅渲染可视区。
+*   **Progressive Prefetch**: 后台自适应分批预加载剩余内容。
+*   **Search Gate**: 预加载完成前禁用全文搜索。
+
 ### Interaction Philosophy (交互哲学)
 *   **Source-First (源码优先)**: 编辑器的核心是文本。任何渲染效果 (Widgets/Decorations) 均视为对源码的"增强"。
 *   **Cursor Reveal (光标揭示)**:

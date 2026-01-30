@@ -59,6 +59,15 @@
     *   **Blue**: Modified.
 *   **Inline Diff**: 编辑时即时计算与已提交状态的差异。
 
+## 长文档打开策略 (Large Doc Open Strategy)
+
+> 目标：首屏 < 200ms 可见，完整可编辑时间最短化。
+
+*   **Snapshot-First**: 打开文档时优先读取最新快照，再仅重放快照之后的 Ops。
+*   **UTF-16 Index Cache**: 为 UTF-16 索引引入断点缓存，降低定位成本。
+*   **Progressive Prefetch**: 先渲染首屏 + 缓冲区，其余内容后台分批预加载。
+*   **Search Gate**: 预加载完成前，全文搜索必须禁用，完成后自动启用。
+
 ## 本章相关命令
 
 *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地。
