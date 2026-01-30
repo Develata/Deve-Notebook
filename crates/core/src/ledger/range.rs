@@ -10,6 +10,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use crate::ledger::compat;
 use crate::ledger::schema::LEDGER_OPS;
 use crate::models::LedgerEntry;
 use anyhow::{Context, Result};
@@ -29,7 +30,7 @@ pub fn get_ops_in_range(
     for item in range {
         let (key, value) = item?;
         let seq = key.value();
-        let entry: LedgerEntry = bincode::deserialize(value.value())
+        let entry: LedgerEntry = compat::decode_entry(value.value())
             .with_context(|| format!("Failed to deserialize op at seq {}", seq))?;
         result.push((seq, entry));
     }

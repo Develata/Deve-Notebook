@@ -9,8 +9,11 @@
 //! 这些函数被后端（用于持久化）和前端（用于同步）共同使用。
 
 use crate::models::{LedgerEntry, Op};
-use utf16::{add_utf16_pos, utf16_len, utf16_to_byte_index};
+use rope_utf16::utf16_to_char_idx;
+use ropey::Rope;
+use utf16::{add_utf16_pos, utf16_len};
 
+mod rope_utf16;
 mod utf16;
 // use anyhow::Result; // Not used currently
 
@@ -29,34 +32,26 @@ mod utf16;
 /// - 当前实现假设操作是线性有序的（Phase 0 简化假设）。
 /// - 在更复杂的 CRDT 场景中，此处应由 Loro 等库处理。
 pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
-    let mut content = String::new();
+    let mut content = Rope::new();
 
     for entry in ops {
         match &entry.op {
             Op::Insert { pos, content: text } => {
-                // 将 UTF-16 索引转换为字节索引
-                let byte_pos = utf16_to_byte_index(&content, *pos as usize);
-                if byte_pos >= content.len() {
-                    content.push_str(text);
-                } else {
-                    content.insert_str(byte_pos, text);
-                }
+                let char_idx = utf16_to_char_idx(&content, *pos as usize);
+                content.insert(char_idx, text);
             }
             Op::Delete { pos, len } => {
-                // 将 UTF-16 索引转换为字节索引
                 let end_pos = pos.checked_add(*len).unwrap_or(u32::MAX);
-                let byte_start = utf16_to_byte_index(&content, *pos as usize);
-                let byte_end = utf16_to_byte_index(&content, end_pos as usize);
-
-                if byte_start < content.len() {
-                    let safe_end = std::cmp::min(byte_end, content.len());
-                    content.drain(byte_start..safe_end);
+                let start_idx = utf16_to_char_idx(&content, *pos as usize);
+                let end_idx = utf16_to_char_idx(&content, end_pos as usize);
+                if end_idx > start_idx {
+                    content.remove(start_idx..end_idx);
                 }
             }
         }
     }
 
-    content
+    content.to_string()
 }
 
 /// 计算两个字符串之间的编辑操作差异

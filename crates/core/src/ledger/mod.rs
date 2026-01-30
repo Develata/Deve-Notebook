@@ -28,6 +28,7 @@
 pub mod database;
 pub mod init;
 pub mod listing;
+pub(crate) mod compat;
 mod manager;
 pub mod merge;
 pub mod metadata;
