@@ -1,4 +1,4 @@
-﻿// apps/cli/src/server/handlers/document.rs
+// apps/cli/src/server/handlers/document.rs
 //! # 文档内容处理器
 //!
 //! 处理文档编辑、历史记录、打开等操作
@@ -6,7 +6,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::{LedgerEntry, PeerId};
+use deve_core::models::LedgerEntry;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -75,6 +75,7 @@ pub async fn handle_edit(
 }
 
 /// 处理历史记录请求
+#[allow(dead_code)] // 历史回放功能预留
 pub async fn handle_request_history(
     state: &Arc<AppState>,
     ch: &DualChannel,

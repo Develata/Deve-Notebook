@@ -58,10 +58,10 @@ impl ChatStreamHandler for AiChatStreamHandler {
             "max_tokens": config.max_tokens,
         });
 
-        if let Some(tools) = &request.tools {
-            if let Some(obj) = body.as_object_mut() {
-                obj.insert("tools".to_string(), tools.clone());
-            }
+        if let Some(tools) = &request.tools
+            && let Some(obj) = body.as_object_mut()
+        {
+            obj.insert("tools".to_string(), tools.clone());
         }
 
         let req_id = request.req_id.clone();

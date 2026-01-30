@@ -3,6 +3,8 @@
 //!
 //! 包含顶部导航栏相关的翻译字符串。
 
+#![allow(dead_code)] // 翻译字符串按需使用
+
 use super::Locale;
 
 pub fn settings(locale: Locale) -> &'static str {

@@ -23,7 +23,7 @@ pub fn render_markdown(source: &str) -> String {
             }
             _ => true,
         })
-        .into_iter();
+        .peekable();
 
     while let Some(event) = iter.next() {
         match event {
@@ -38,7 +38,7 @@ pub fn render_markdown(source: &str) -> String {
                     CodeBlockKind::Indented => String::new(),
                 };
                 let mut code = String::new();
-                while let Some(ev) = iter.next() {
+                for ev in iter.by_ref() {
                     match ev {
                         Event::End(TagEnd::CodeBlock) => break,
                         Event::Text(t) | Event::Code(t) => code.push_str(&t),

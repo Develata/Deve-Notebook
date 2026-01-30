@@ -97,20 +97,19 @@ pub async fn handle_switch_branch(
                 if let Ok(Some(r_url)) = state
                     .repo
                     .get_repo_url(session.active_branch.as_ref(), repo_name)
+                    && r_url == *url
                 {
-                    if r_url == *url {
-                        best_match = Some(repo_name.clone());
-                        break;
-                    }
+                    best_match = Some(repo_name.clone());
+                    break;
                 }
             }
         }
 
         // 策略 B: 默认第一个 (Alphabetical First)
-        if best_match.is_none() {
-            if let Some(first) = repos.first() {
-                best_match = Some(first.clone());
-            }
+        if best_match.is_none()
+            && let Some(first) = repos.first()
+        {
+            best_match = Some(first.clone());
         }
         best_match
     };

@@ -3,6 +3,8 @@
 //!
 //! 处理 P2P 同步相关的消息: SyncHello, SyncRequest, SyncPush
 
+#![allow(dead_code)] // P2P 同步功能尚未完全集成，预留接口
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use deve_core::models::PeerId;
@@ -210,7 +212,6 @@ pub async fn handle_sync_push_snapshot(
 }
 
 /// 处理删除 Peer 请求 (物理删除远端分支)
-
 pub async fn handle_delete_peer(
     state: &Arc<AppState>,
     ch: &DualChannel,

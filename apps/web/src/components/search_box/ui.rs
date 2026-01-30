@@ -9,6 +9,7 @@ use crate::hooks::use_core::CoreState;
 use crate::i18n::{t, Locale};
 
 /// 负责渲染整体遮罩与内部布局。
+#[allow(clippy::too_many_arguments)]
 pub fn render_overlay(
     show: Signal<bool>,
     set_show: WriteSignal<bool>,
@@ -107,6 +108,7 @@ fn search_icon(query: Signal<String>) -> impl IntoView {
 }
 
 /// 列表区域，包含空态与结果列表。
+#[allow(clippy::too_many_arguments)]
 fn results_panel(
     providers_results: Memo<Vec<SearchResult>>,
     selected_index: Signal<usize>,

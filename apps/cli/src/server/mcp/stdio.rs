@@ -48,7 +48,7 @@ impl StdioExecutor {
         let payload = serde_json::to_string(&req)? + "\n";
 
         let mut attempt = 0;
-        loop {
+        'retry: loop {
             attempt += 1;
             let mut cmd = Command::new(&self.command);
             cmd.args(&self.args)
@@ -72,7 +72,7 @@ impl StdioExecutor {
                     let _ = child.kill();
                     if attempt <= self.retries {
                         std::thread::sleep(std::time::Duration::from_millis(self.backoff_ms));
-                        continue;
+                        continue 'retry;
                     }
                     return Err(anyhow!("MCP stdio timeout"));
                 }

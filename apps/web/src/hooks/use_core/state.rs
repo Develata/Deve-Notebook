@@ -12,6 +12,9 @@ use std::collections::HashMap;
 
 use super::types::{ChatMessage, PeerSession};
 
+/// 插件响应类型别名
+pub type PluginResponse = Option<(String, Option<serde_json::Value>, Option<String>)>;
+
 /// 核心状态信号集合
 ///
 /// 包含所有 `use_core` 需要的响应式信号。
@@ -31,9 +34,8 @@ pub struct CoreSignals {
     pub set_peers: WriteSignal<HashMap<PeerId, PeerSession>>,
 
     // 插件
-    pub plugin_response: ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
-    pub set_plugin_response:
-        WriteSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
+    pub plugin_response: ReadSignal<PluginResponse>,
+    pub set_plugin_response: WriteSignal<PluginResponse>,
 
     // AI Chat
     pub chat_messages: ReadSignal<Vec<ChatMessage>>,

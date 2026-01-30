@@ -1,4 +1,4 @@
-﻿// apps/web/src/editor/hook.rs
+// apps/web/src/editor/hook.rs
 //! # Editor Hook (编辑器钩子)
 //!
 //! **架构作用**:
@@ -10,10 +10,10 @@
 //! - 避免了 JS->WASM 全文拷贝和 Rust 端 Diff 计算
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
-use super::EditorStats;
-use super::ffi::{Delta, destroyEditor, set_read_only, setupCodeMirror};
+use super::ffi::{destroyEditor, set_read_only, setupCodeMirror, Delta};
 use super::playback;
 use super::sync;
+use super::EditorStats;
 use crate::api::WsService;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::DocId;
@@ -22,6 +22,7 @@ use leptos::html::Div;
 use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
 
+#[allow(dead_code)] // 为回放功能预留的字段
 pub struct EditorState {
     pub content: ReadSignal<String>,
     pub is_playback: ReadSignal<bool>,

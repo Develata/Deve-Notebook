@@ -1,4 +1,4 @@
-﻿// apps\web\src
+// apps\web\src
 //! # Deve-Note Web 应用
 //!
 //! 这是 Deve-Note 的 WebAssembly 前端，使用 Leptos 框架构建。
@@ -11,6 +11,14 @@
 //! - `editor`: CodeMirror 编辑器集成
 //! - `hooks`: 自定义 Leptos Hooks，用于状态管理
 //! - `i18n`: 国际化（中英文支持）
+
+// Leptos 框架特定的 clippy 豁免：
+// - `unused_unit`: Leptos view! {} 宏返回 () 是框架惯用法
+// - `unit_arg`: view! {}.into_any() 是 Leptos 返回空视图的标准方式
+// - `clone_on_copy`: Leptos 信号类型实现 Copy 但 clone 更明确表达意图
+#![allow(clippy::unused_unit)]
+#![allow(clippy::unit_arg)]
+#![allow(clippy::clone_on_copy)]
 
 mod app;
 mod editor;

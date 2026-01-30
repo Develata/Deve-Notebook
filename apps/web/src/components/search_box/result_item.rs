@@ -11,6 +11,7 @@ use crate::components::search_box::types::{SearchAction, SearchResult};
 use crate::hooks::use_core::CoreState;
 
 /// 单条结果项，支持鼠标与键盘操作。
+#[allow(clippy::too_many_arguments)]
 pub fn result_item(
     idx: usize,
     item: SearchResult,

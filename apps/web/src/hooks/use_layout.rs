@@ -1,4 +1,4 @@
-﻿// apps\web\src\hooks
+// apps\web\src\hooks
 //! # Layout Hook (布局钩子)
 //!
 //! **架构作用**:
@@ -10,25 +10,28 @@
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
-pub fn use_layout() -> (
+/// 布局钩子返回类型
+pub type LayoutHookReturn = (
     ReadSignal<i32>,
     Callback<MouseEvent>, // 开始拖拽
     Callback<()>,         // 停止拖拽
     Callback<MouseEvent>, // 执行拖拽
-    ReadSignal<bool>      // 是否正在拖拽
-) {
+    ReadSignal<bool>,     // 是否正在拖拽
+);
+
+pub fn use_layout() -> LayoutHookReturn {
     let (sidebar_width, set_sidebar_width) = signal(250);
     let (is_resizing, set_is_resizing) = signal(false);
-    
+
     let start_resize = Callback::new(move |ev: MouseEvent| {
         ev.prevent_default();
         set_is_resizing.set(true);
     });
-    
+
     let stop_resize = Callback::new(move |_| {
         set_is_resizing.set(false);
     });
-    
+
     let do_resize = Callback::new(move |ev: MouseEvent| {
         if is_resizing.get_untracked() {
             let new_width = ev.client_x();
@@ -39,5 +42,11 @@ pub fn use_layout() -> (
         }
     });
 
-    (sidebar_width, start_resize, stop_resize, do_resize, is_resizing)
+    (
+        sidebar_width,
+        start_resize,
+        stop_resize,
+        do_resize,
+        is_resizing,
+    )
 }

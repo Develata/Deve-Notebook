@@ -47,7 +47,7 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
         match &entry.op {
             Op::Insert { pos, content: text } => {
                 // 将字符索引转换为字节索引
-                let byte_pos = char_to_byte_index(&content, *pos);
+                let byte_pos = char_to_byte_index(&content, *pos as usize);
                 if byte_pos >= content.len() {
                     content.push_str(text);
                 } else {
@@ -56,8 +56,8 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
             }
             Op::Delete { pos, len } => {
                 // 将字符索引转换为字节索引
-                let byte_start = char_to_byte_index(&content, *pos);
-                let byte_end = char_to_byte_index(&content, pos + len);
+                let byte_start = char_to_byte_index(&content, *pos as usize);
+                let byte_end = char_to_byte_index(&content, (*pos + *len) as usize);
 
                 if byte_start < content.len() {
                     let safe_end = std::cmp::min(byte_end, content.len());
@@ -89,13 +89,13 @@ pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
     use dissimilar::Chunk;
     let chunks = dissimilar::diff(old, new);
     let mut ops = Vec::new();
-    let mut pos: usize = 0; // 字符位置
+    let mut pos: u32 = 0; // 字符位置
 
     for chunk in chunks {
         match chunk {
             Chunk::Equal(text) => {
                 // 使用字符数量而非字节数量
-                pos += text.chars().count();
+                pos += text.chars().count() as u32;
             }
             Chunk::Insert(text) => {
                 ops.push(Op::Insert {
@@ -103,13 +103,13 @@ pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
                     content: text.into(),
                 });
                 // 使用字符数量而非字节数量
-                pos += text.chars().count();
+                pos += text.chars().count() as u32;
             }
             Chunk::Delete(text) => {
                 ops.push(Op::Delete {
                     pos,
                     // 使用字符数量而非字节数量
-                    len: text.chars().count(),
+                    len: text.chars().count() as u32,
                 });
                 // 删除内容后，后续字符位置左移，因此 pos 不需要包含被删除的长度
             }

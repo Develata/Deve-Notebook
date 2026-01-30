@@ -22,7 +22,7 @@ where
     let filename = path
         .replace('\\', "/")
         .split('/')
-        .last()
+        .next_back()
         .unwrap_or("?")
         .to_string();
 

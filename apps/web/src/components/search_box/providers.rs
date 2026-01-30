@@ -98,11 +98,7 @@ impl SearchProvider for CommandProvider {
     }
 
     fn search(&self, query: &str) -> Vec<SearchResult> {
-        let clean_query = if query.starts_with('>') {
-            &query[1..]
-        } else {
-            query
-        };
+        let clean_query = query.strip_prefix('>').unwrap_or(query);
         let clean_query = clean_query.trim();
 
         if clean_query.is_empty() {
@@ -173,11 +169,7 @@ impl SearchProvider for BranchProvider {
     }
 
     fn search(&self, query: &str) -> Vec<SearchResult> {
-        let clean_query = if query.starts_with('@') {
-            &query[1..]
-        } else {
-            query
-        };
+        let clean_query = query.strip_prefix('@').unwrap_or(query);
         let clean_query = clean_query.trim();
 
         let mut results: Vec<SearchResult> = self

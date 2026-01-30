@@ -1,4 +1,4 @@
-﻿// apps\cli\src\commands
+// apps\cli\src\commands
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -127,10 +127,10 @@ async fn detect_main_port(port: u16) -> u16 {
         let url = format!("http://127.0.0.1:{}/api/repo/docs", p);
         let req = client.get(&url);
         let res = timeout(Duration::from_millis(300), req.send()).await;
-        if let Ok(Ok(resp)) = res {
-            if resp.status().is_success() {
-                return p;
-            }
+        if let Ok(Ok(resp)) = res
+            && resp.status().is_success()
+        {
+            return p;
         }
     }
     port

@@ -124,7 +124,7 @@ fn remove_node_returning(roots: &mut Vec<FileNode>, path: &str) -> Option<FileNo
 }
 
 /// 原地重命名 (同级目录)
-fn rename_node_in_place(roots: &mut Vec<FileNode>, old_path: &str, new_path: &str) {
+fn rename_node_in_place(roots: &mut [FileNode], old_path: &str, new_path: &str) {
     for node in roots.iter_mut() {
         if node.path == old_path {
             node.path = new_path.to_string();
@@ -154,7 +154,7 @@ fn update_children_paths(node: &mut FileNode, old_prefix: &str, new_prefix: &str
 }
 
 /// 排序节点 (文件夹优先，然后按字母顺序)
-fn sort_nodes(nodes: &mut Vec<FileNode>) {
+fn sort_nodes(nodes: &mut [FileNode]) {
     nodes.sort_by(|a, b| {
         match (a.doc_id.is_none(), b.doc_id.is_none()) {
             (true, false) => std::cmp::Ordering::Less, // 文件夹优先

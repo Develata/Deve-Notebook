@@ -13,6 +13,7 @@ use crate::hooks::use_core::CoreState;
 use crate::i18n::{t, Locale};
 
 /// 根据查询字符切换 Provider 并实时返回结果。
+#[allow(clippy::too_many_arguments)]
 pub fn create_results_memo(
     show: Signal<bool>,
     query: Signal<String>,
@@ -54,9 +55,9 @@ pub fn create_results_memo(
             };
             let provider = providers::BranchProvider::new(shadows, current);
             provider.search(&q)
-        } else if q.starts_with('+') {
+        } else if let Some(stripped) = q.strip_prefix('+') {
             // Create Mode: Only show Create option
-            let path = q[1..].trim();
+            let path = stripped.trim();
             if path.is_empty() {
                 Vec::new()
             } else {
@@ -118,6 +119,7 @@ pub fn make_active_index(
 }
 
 /// 构建键盘事件处理逻辑，涵盖导航与执行。
+#[allow(clippy::too_many_arguments)]
 pub fn build_keydown_handler(
     show: Signal<bool>,
     query: Signal<String>,
@@ -139,7 +141,7 @@ pub fn build_keydown_handler(
         crate::shortcuts::global::handle_search_box_keydown(
             &ev,
             set_show,
-            query.into(),
+            query,
             set_query,
             set_selected_index,
             input_ref,

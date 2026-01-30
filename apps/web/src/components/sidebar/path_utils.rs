@@ -3,6 +3,8 @@
 //!
 //! 提供文件路径处理工具，如自动重命名以避免冲突。
 
+#![allow(dead_code)] // 为文件操作功能预留
+
 use deve_core::models::DocId;
 
 /// 查找可用的目标路径名
@@ -64,11 +66,11 @@ fn split_path_ext(path: &str) -> (&str, &str) {
     let file_name = &path[file_name_start..];
 
     // 在文件名中找扩展名 (仅当存在 `.` 且不在开头时)
-    if let Some(dot_pos) = file_name.rfind('.') {
-        if dot_pos > 0 {
-            let ext_start = file_name_start + dot_pos;
-            return (&path[..ext_start], &path[ext_start..]);
-        }
+    if let Some(dot_pos) = file_name.rfind('.')
+        && dot_pos > 0
+    {
+        let ext_start = file_name_start + dot_pos;
+        return (&path[..ext_start], &path[ext_start..]);
     }
 
     (path, "")

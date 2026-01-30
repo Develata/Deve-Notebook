@@ -1,4 +1,4 @@
-﻿// apps/web/src/api/output.rs
+// apps/web/src/api/output.rs
 //! # WebSocket 输出管理器
 //!
 //! ## 职责
@@ -26,7 +26,7 @@ const MAX_QUEUE_SIZE: usize = 500;
 /// 输出管理器循环的内部消息类型
 pub enum OutputEvent {
     /// 应用程序要发送到服务器的消息
-    Client(ClientMessage),
+    Client(Box<ClientMessage>),
     /// 来自成功连接的新 WebSocket 写入端
     NewLink(SplitSink<WebSocket, Message>),
 }
@@ -42,7 +42,7 @@ pub fn spawn_output_manager(
 
         // 合并流: 客户端消息 + 新连接链接
         let mut events = futures::stream::select(
-            rx.map(OutputEvent::Client),
+            rx.map(|m| OutputEvent::Client(Box::new(m))),
             link_rx.map(OutputEvent::NewLink),
         );
 
@@ -52,7 +52,7 @@ pub fn spawn_output_manager(
                     handle_new_link(sink, &mut current_sink, &mut queue).await;
                 }
                 OutputEvent::Client(msg) => {
-                    handle_client_message(msg, &mut current_sink, &mut queue).await;
+                    handle_client_message(*msg, &mut current_sink, &mut queue).await;
                 }
             }
         }

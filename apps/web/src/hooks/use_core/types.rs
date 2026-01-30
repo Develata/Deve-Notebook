@@ -1,4 +1,7 @@
 // apps\web\src\hooks\use_core
+
+#![allow(dead_code)] // CoreState 字段为未来功能预留
+
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId, VersionVector};
@@ -6,6 +9,8 @@ use deve_core::source_control::{ChangeEntry, CommitInfo};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
+
+use super::state::PluginResponse;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PeerSession {
@@ -42,8 +47,7 @@ pub struct CoreState {
     pub on_stats: Callback<EditorStats>,
 
     // 插件 RPC
-    pub plugin_last_response:
-        ReadSignal<Option<(String, Option<serde_json::Value>, Option<String>)>>,
+    pub plugin_last_response: ReadSignal<PluginResponse>,
     pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
 
     // AI Chat State

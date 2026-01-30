@@ -126,7 +126,7 @@ fn build_move_copy_results(
         return results;
     }
 
-    let src = parsed.args.get(0).cloned().unwrap_or_default();
+    let src = parsed.args.first().cloned().unwrap_or_default();
     let dst_prefix = parsed.args.get(1).cloned().unwrap_or_default();
     let dirs = collect_dirs(docs);
     let recent = if kind == FileOpKind::Move {
@@ -296,8 +296,8 @@ fn parse_args(input: &str) -> ParsedArgs {
     let mut args = Vec::new();
     let mut current = String::new();
     let mut in_quote = false;
-    let mut chars = input.chars().peekable();
-    while let Some(ch) = chars.next() {
+    let chars = input.chars().peekable();
+    for ch in chars {
         match ch {
             '"' => {
                 in_quote = !in_quote;

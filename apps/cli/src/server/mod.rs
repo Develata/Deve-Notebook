@@ -21,7 +21,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::tree::TreeManager;
 use deve_core::mcp::{McpManager, McpServerConfig};
-use serde_json;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -43,6 +43,7 @@ pub mod node_role;
 pub mod node_role_http;
 pub mod security;
 
+#[allow(dead_code)] // repo_key: 为未来加密功能预留
 pub struct AppState {
     pub repo: Arc<RepoManager>,
     pub sync_manager: Arc<deve_core::sync::SyncManager>,

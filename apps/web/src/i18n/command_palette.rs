@@ -1,6 +1,8 @@
 // apps\web\src\i18n
 //! # I18n Command Palette Module (命令面板翻译)
 
+#![allow(dead_code)] // 翻译字符串按需使用
+
 use super::Locale;
 
 pub fn placeholder(locale: Locale) -> &'static str {

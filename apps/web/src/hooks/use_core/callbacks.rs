@@ -11,6 +11,7 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 // Re-export from submodule
+#[allow(unused_imports)] // SourceControlCallbacks 为外部模块预留
 pub use super::callbacks_sc::{create_source_control_callbacks, SourceControlCallbacks};
 
 /// 文档操作回调

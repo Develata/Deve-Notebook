@@ -3,6 +3,8 @@
 //!
 //! 历史回放控制器，允许用户拖动滑块查看文档的历史版本。
 
+#![allow(dead_code)] // 组件参数由 Leptos 宏使用
+
 use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 

@@ -86,22 +86,22 @@ pub fn parse_sse_message(data: &str) -> Result<ParsedSseEvent, String> {
     };
 
     // 处理文本内容
-    if let Some(content) = &delta.content {
-        if !content.is_empty() {
-            return Ok(ParsedSseEvent::ContentDelta(content.clone()));
-        }
+    if let Some(content) = &delta.content
+        && !content.is_empty()
+    {
+        return Ok(ParsedSseEvent::ContentDelta(content.clone()));
     }
 
     // 处理工具调用
-    if let Some(tool_calls) = &delta.tool_calls {
-        if let Some(tc) = tool_calls.first() {
-            return Ok(ParsedSseEvent::ToolCallDelta {
-                index: tc.index.unwrap_or(0),
-                id: tc.id.clone(),
-                name: tc.function.as_ref().and_then(|f| f.name.clone()),
-                arguments: tc.function.as_ref().and_then(|f| f.arguments.clone()),
-            });
-        }
+    if let Some(tool_calls) = &delta.tool_calls
+        && let Some(tc) = tool_calls.first()
+    {
+        return Ok(ParsedSseEvent::ToolCallDelta {
+            index: tc.index.unwrap_or(0),
+            id: tc.id.clone(),
+            name: tc.function.as_ref().and_then(|f| f.name.clone()),
+            arguments: tc.function.as_ref().and_then(|f| f.arguments.clone()),
+        });
     }
 
     Ok(ParsedSseEvent::Empty)

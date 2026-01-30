@@ -12,12 +12,13 @@
 //! Handler 函数接收 `ResponseChannel` 参数，根据消息类型选择合适的通道发送。
 
 use deve_core::protocol::ServerMessage;
-use tokio::sync::{broadcast, mpsc};
 use tokio::sync::mpsc::error::TrySendError;
+use tokio::sync::{broadcast, mpsc};
 
 /// 响应通道类型
 ///
 /// 封装广播和单播两种发送方式，提供统一的 API。
+#[allow(dead_code)] // 为 Handler 模块预留的通道抽象
 #[derive(Clone)]
 pub enum ResponseChannel {
     /// 广播通道 - 发送给所有连接的客户端
@@ -26,6 +27,7 @@ pub enum ResponseChannel {
     Unicast(mpsc::Sender<ServerMessage>),
 }
 
+#[allow(dead_code)] // 为 Handler 模块预留的通道抽象
 impl ResponseChannel {
     /// 发送消息
     ///

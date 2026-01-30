@@ -43,14 +43,12 @@ fn load_or_generate_identity() -> deve_core::security::IdentityKeyPair {
         .expect("localStorage not available");
 
     // 尝试从 localStorage 加载
-    if let Ok(Some(encoded)) = storage.get_item(IDENTITY_KEY_STORAGE) {
-        if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(&encoded) {
-            if let Some(key_pair) = deve_core::security::IdentityKeyPair::from_bytes(&bytes) {
-                leptos::logging::log!("Identity loaded from localStorage");
-                return key_pair;
-            }
-        }
-        leptos::logging::warn!("Failed to decode stored identity, regenerating...");
+    if let Ok(Some(encoded)) = storage.get_item(IDENTITY_KEY_STORAGE)
+        && let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(&encoded)
+        && let Some(key_pair) = deve_core::security::IdentityKeyPair::from_bytes(&bytes)
+    {
+        leptos::logging::log!("Identity loaded from localStorage");
+        return key_pair;
     }
 
     // 生成新密钥并存储

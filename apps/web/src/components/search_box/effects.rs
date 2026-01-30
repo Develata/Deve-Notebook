@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\search_box
+// apps\web\src\components\search_box
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -31,14 +31,12 @@ pub fn attach_focus_effect(
         } else {
             // 关闭后把焦点交还给编辑器，维持流畅体验。
             request_animation_frame(move || {
-                if let Some(window) = web_sys::window() {
-                    if let Some(document) = window.document() {
-                        if let Ok(Some(el)) = document.query_selector(".cm-content") {
-                            if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
-                                let _ = html_el.focus();
-                            }
-                        }
-                    }
+                if let Some(window) = web_sys::window()
+                    && let Some(document) = window.document()
+                    && let Ok(Some(el)) = document.query_selector(".cm-content")
+                    && let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>()
+                {
+                    let _ = html_el.focus();
                 }
             });
         }

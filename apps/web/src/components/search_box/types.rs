@@ -1,4 +1,7 @@
 // apps\web\src\components\search_box
+
+#![allow(dead_code)] // SearchProvider trait 为插件式搜索预留
+
 use crate::components::command_palette::Command;
 use deve_core::models::DocId;
 

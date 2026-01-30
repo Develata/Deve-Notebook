@@ -1,4 +1,4 @@
-﻿// apps/web/src/api/mod.rs
+// apps/web/src/api/mod.rs
 //! # WebSocket API 模块
 //!
 //! 本模块提供 `WsService` 用于与后端进行 WebSocket 通信。
@@ -80,6 +80,7 @@ impl std::fmt::Display for ConnectionStatus {
 ///     }
 /// });
 /// ```
+#[allow(dead_code)] // endpoint/node_role: 为多节点架构预留
 #[derive(Clone)]
 pub struct WsService {
     /// 当前连接状态 (响应式信号)

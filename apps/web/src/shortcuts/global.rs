@@ -1,4 +1,4 @@
-﻿// apps\web\src\shortcuts
+// apps\web\src\shortcuts
 //! # 全局快捷键 (Global Shortcuts)
 //!
 //! 定义和处理全局快捷键。
@@ -8,9 +8,11 @@
 //! - `Ctrl+P`: 打开/关闭文件搜索
 //! - `Ctrl+Shift+P`: 打开/关闭命令面板
 
+#![allow(dead_code)] // 快捷键系统模块预留
+
+use super::types::KeyCombo;
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
-use super::types::KeyCombo;
 
 /// 全局快捷键 ID
 pub mod ids {
@@ -105,7 +107,7 @@ pub fn handle_search_box_keydown(
     let is_ctrl = ev.ctrl_key() || ev.meta_key();
     let shift = ev.shift_key();
     let key_lower = key.to_lowercase();
-    
+
     // Escape: Close
     if key == "Escape" {
         ev.prevent_default();
@@ -113,32 +115,36 @@ pub fn handle_search_box_keydown(
         set_show.set(false);
         return;
     }
-    
+
     // Ctrl+P / Shift+P Logic
     if is_ctrl && key_lower == "p" {
-         ev.prevent_default();
-         ev.stop_propagation();
-         
-         if shift {
-             // Command Palette logic using local query
-             if query.get_untracked().starts_with('>') {
-                 set_show.set(false);
-             } else {
-                 set_query.set(">".to_string());
-                 set_selected_index.set(0);
-                 if let Some(el) = input_ref.get_untracked() { let _ = el.focus(); }
-             }
-         } else {
-             // File Search logic
-             let q = query.get_untracked();
-             let is_file = !q.starts_with('>') && !q.starts_with('@');
-             if is_file {
-                 set_show.set(false);
-             } else {
-                 set_query.set(String::new());
-                 set_selected_index.set(0); 
-                 if let Some(el) = input_ref.get_untracked() { let _ = el.focus(); }
-             }
-         }
+        ev.prevent_default();
+        ev.stop_propagation();
+
+        if shift {
+            // Command Palette logic using local query
+            if query.get_untracked().starts_with('>') {
+                set_show.set(false);
+            } else {
+                set_query.set(">".to_string());
+                set_selected_index.set(0);
+                if let Some(el) = input_ref.get_untracked() {
+                    let _ = el.focus();
+                }
+            }
+        } else {
+            // File Search logic
+            let q = query.get_untracked();
+            let is_file = !q.starts_with('>') && !q.starts_with('@');
+            if is_file {
+                set_show.set(false);
+            } else {
+                set_query.set(String::new());
+                set_selected_index.set(0);
+                if let Some(el) = input_ref.get_untracked() {
+                    let _ = el.focus();
+                }
+            }
+        }
     }
 }

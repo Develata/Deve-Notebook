@@ -3,6 +3,8 @@
 //!
 //! 包含版本控制面板相关的翻译字符串。
 
+#![allow(dead_code)] // 翻译字符串按需使用
+
 use super::Locale;
 
 pub fn title(locale: Locale) -> &'static str {

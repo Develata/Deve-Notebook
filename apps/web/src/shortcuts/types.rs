@@ -1,7 +1,9 @@
-﻿// apps\web\src\shortcuts
+// apps\web\src\shortcuts
 //! # 快捷键类型定义 (Shortcut Types)
 //!
 //! 定义快捷键相关的核心类型。
+
+#![allow(dead_code)] // 快捷键系统模块预留
 
 use std::fmt;
 
@@ -16,7 +18,7 @@ impl fmt::Display for ShortcutId {
 }
 
 /// 按键组合
-/// 
+///
 /// 表示一个快捷键的按键组合，如 Ctrl+P, Ctrl+Shift+P 等。
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KeyCombo {
@@ -64,9 +66,15 @@ impl KeyCombo {
 impl fmt::Display for KeyCombo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut parts = Vec::new();
-        if self.ctrl { parts.push("Ctrl"); }
-        if self.shift { parts.push("Shift"); }
-        if self.alt { parts.push("Alt"); }
+        if self.ctrl {
+            parts.push("Ctrl");
+        }
+        if self.shift {
+            parts.push("Shift");
+        }
+        if self.alt {
+            parts.push("Alt");
+        }
         let key_upper = self.key.to_uppercase();
         parts.push(&key_upper);
         write!(f, "{}", parts.join("+"))

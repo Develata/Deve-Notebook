@@ -3,6 +3,8 @@
 //!
 //! 一个可搜索的命令面板，用于快速执行操作（仅限命令，不包括文件搜索）。
 
+#![allow(dead_code)] // 组件参数由 Leptos 宏使用，编译器未能识别
+
 pub mod registry;
 mod types;
 

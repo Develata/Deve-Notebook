@@ -15,6 +15,7 @@ use deve_core::models::PeerId;
 /// WebSocket 会话状态
 ///
 /// 每个 WebSocket 连接维护独立的会话状态实例。
+#[allow(dead_code)] // 为 P2P 握手和分支切换预留的字段
 #[derive(Default)]
 pub struct WsSession {
     /// 已认证的对端 Peer ID
@@ -40,6 +41,7 @@ pub struct WsSession {
     pub active_db: Option<DatabaseHandle>,
 }
 
+#[allow(dead_code)] // 为 P2P 握手和分支切换预留
 impl WsSession {
     /// 创建新会话
     pub fn new() -> Self {
@@ -55,7 +57,7 @@ impl WsSession {
     ///
     /// 传入 `None` 切换回本地分支，传入 `Some(id)` 切换到影子库。
     pub fn switch_branch(&mut self, peer_id: Option<String>) {
-        self.active_branch = peer_id.map(|id| PeerId::new(id));
+        self.active_branch = peer_id.map(PeerId::new);
     }
 
     /// 切换活动仓库

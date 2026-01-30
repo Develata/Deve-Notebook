@@ -5,16 +5,11 @@
 
 use leptos::prelude::*;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum Align {
     Left,
+    #[default]
     Right,
-}
-
-impl Default for Align {
-    fn default() -> Self {
-        Align::Right
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

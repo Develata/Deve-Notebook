@@ -4,6 +4,8 @@
 //! 提供文件搜索功能，支持模糊匹配和 MRU (Most Recently Used) 列表。
 //! 符合 `03_ui_architecture.md` 规范。
 
+#![allow(dead_code)] // Quick Open 功能模块预留
+
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;
 

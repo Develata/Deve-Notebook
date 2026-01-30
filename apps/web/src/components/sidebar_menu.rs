@@ -3,6 +3,8 @@
 //!
 //! 文件树上下文菜单，提供重命名、复制、移动、删除等操作。
 
+#![allow(dead_code)] // danger/with_separator: 菜单项 Builder 模式预留
+
 use leptos::prelude::*;
 
 use crate::components::dropdown::{Align, AnchorRect, Dropdown};

@@ -125,11 +125,7 @@ pub fn create_static_commands(
 
         let ai_cmds = vec!["/agents", "/skills"];
         for cmd in ai_cmds {
-            let title = if locale == Locale::Zh {
-                format!("AI:{}", cmd.trim_start_matches('/'))
-            } else {
-                format!("AI:{}", cmd.trim_start_matches('/'))
-            };
+            let title = format!("AI:{}", cmd.trim_start_matches('/'));
             let cmd_str = cmd.to_string();
             commands.push(Command {
                 id: format!("ai_{}", cmd.trim_start_matches('/')),

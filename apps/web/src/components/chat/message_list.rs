@@ -24,12 +24,11 @@ pub fn MessageList(
         }
         if let Some(window) = web_sys::window() {
             let hljs = js_sys::Reflect::get(&window, &"hljs".into()).ok();
-            if let Some(hljs) = hljs {
-                if let Ok(func) = js_sys::Reflect::get(&hljs, &"highlightAll".into()) {
-                    if let Some(func) = func.dyn_ref::<js_sys::Function>() {
-                        let _ = func.call0(&hljs);
-                    }
-                }
+            if let Some(hljs) = hljs
+                && let Ok(func) = js_sys::Reflect::get(&hljs, &"highlightAll".into())
+                && let Some(func) = func.dyn_ref::<js_sys::Function>()
+            {
+                let _ = func.call0(&hljs);
             }
         }
     });
@@ -39,14 +38,12 @@ pub fn MessageList(
             .target()
             .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
         while let Some(node) = el {
-            if node.class_list().contains("apply-code") {
-                if let Some(data) = node.get_attribute("data-code") {
-                    if let Ok(bytes) = STANDARD.decode(data) {
-                        if let Ok(code) = String::from_utf8(bytes) {
-                            on_apply.run(code);
-                        }
-                    }
-                }
+            if node.class_list().contains("apply-code")
+                && let Some(data) = node.get_attribute("data-code")
+                && let Ok(bytes) = STANDARD.decode(data)
+                && let Ok(code) = String::from_utf8(bytes)
+            {
+                on_apply.run(code);
                 break;
             }
             el = node.parent_element();

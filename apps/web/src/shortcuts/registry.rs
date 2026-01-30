@@ -1,10 +1,12 @@
-﻿// apps\web\src\shortcuts
+// apps\web\src\shortcuts
 //! # 快捷键注册表 (Shortcut Registry)
 //!
 //! 管理快捷键的注册、查询和冲突检测。
 
-use std::collections::HashMap;
+#![allow(dead_code)] // 快捷键系统模块预留
+
 use super::types::{KeyCombo, Shortcut, ShortcutId};
+use std::collections::HashMap;
 
 /// 冲突错误
 #[derive(Debug)]
@@ -24,7 +26,7 @@ impl std::fmt::Display for ConflictError {
 }
 
 /// 快捷键注册表
-/// 
+///
 /// 存储所有已注册的快捷键，支持冲突检测。
 #[derive(Debug, Default)]
 pub struct ShortcutRegistry {
@@ -44,15 +46,12 @@ impl ShortcutRegistry {
     fn combo_key(combo: &KeyCombo) -> String {
         format!(
             "{}:{}:{}:{}",
-            combo.key,
-            combo.ctrl as u8,
-            combo.shift as u8,
-            combo.alt as u8
+            combo.key, combo.ctrl as u8, combo.shift as u8, combo.alt as u8
         )
     }
 
     /// 注册快捷键
-    /// 
+    ///
     /// 如果快捷键已存在或按键组合冲突，返回错误。
     pub fn register(&mut self, shortcut: Shortcut) -> Result<(), ConflictError> {
         let combo_key = Self::combo_key(&shortcut.combo);

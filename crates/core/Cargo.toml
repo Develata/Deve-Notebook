@@ -13,6 +13,7 @@ anyhow.workspace = true
 tracing.workspace = true
 uuid.workspace = true
 smol_str.workspace = true
+smallvec.workspace = true
 regex = "1.10"
 chrono.workspace = true
 dissimilar = "1.0.10"

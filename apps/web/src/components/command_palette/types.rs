@@ -1,5 +1,7 @@
-﻿// apps\web\src\components\command_palette
+// apps\web\src\components\command_palette
 //! 命令面板的命令类型定义。
+
+#![allow(dead_code)] // is_file: 为文件搜索功能预留
 
 use leptos::prelude::*;
 

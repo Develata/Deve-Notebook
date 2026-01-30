@@ -46,12 +46,12 @@ pub async fn handle_create_doc(
     let path = join_normalized(&state.vault_path, &filename);
 
     // 4. 确保父目录存在
-    if let Some(parent) = path.parent() {
-        if let Err(e) = std::fs::create_dir_all(parent) {
-            tracing::error!("创建目录失败: {:?}", e);
-            ch.send_error(format!("Failed to create directories: {}", e));
-            return;
-        }
+    if let Some(parent) = path.parent()
+        && let Err(e) = std::fs::create_dir_all(parent)
+    {
+        tracing::error!("创建目录失败: {:?}", e);
+        ch.send_error(format!("Failed to create directories: {}", e));
+        return;
     }
 
     // 5. 创建文件或注册已存在文件

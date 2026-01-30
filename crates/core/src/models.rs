@@ -108,13 +108,17 @@ impl fmt::Display for DocId {
 ///
 /// ## 内存优化
 ///
-/// `Insert` 变体使用 `SmolStr` 代替 `String`：
-/// - 短插入 (< 23 字节) 零堆分配
-/// - 典型用例：单字符输入、短词插入
+/// 1. `Insert` 变体使用 `SmolStr` 代替 `String`：
+///    - 短插入 (< 23 字节) 零堆分配
+///    - 典型用例：单字符输入、短词插入
+///
+/// 2. 索引使用 `u32` 代替 `usize`：
+///    - 节省 8 字节/操作 (64-bit 平台)
+///    - 4GB 文档大小限制对文本编辑器来说是无限的
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Op {
-    Insert { pos: usize, content: SmolStr },
-    Delete { pos: usize, len: usize },
+    Insert { pos: u32, content: SmolStr },
+    Delete { pos: u32, len: u32 },
 }
 
 /// 账本条目 (Ledger Entry)

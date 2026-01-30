@@ -62,15 +62,13 @@ pub fn collect_md_files(dir: &Path, base: &Path) -> io::Result<Vec<String>> {
 
             if file_type.is_dir() {
                 stack.push(path);
-            } else if file_type.is_file() {
-                if let Some(ext) = path.extension() {
-                    if ext == "md" {
-                        if let Ok(rel) = path.strip_prefix(base) {
-                            let rel_str = rel.to_string_lossy().replace('\\', "/");
-                            results.push(rel_str);
-                        }
-                    }
-                }
+            } else if file_type.is_file()
+                && let Some(ext) = path.extension()
+                && ext == "md"
+                && let Ok(rel) = path.strip_prefix(base)
+            {
+                let rel_str = rel.to_string_lossy().replace('\\', "/");
+                results.push(rel_str);
             }
         }
     }

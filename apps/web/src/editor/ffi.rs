@@ -49,6 +49,7 @@ pub struct Delta {
 
 impl Delta {
     /// 将 Delta 转换为单个 Op (简化版，Replace 返回 Delete)
+    #[allow(dead_code)] // 预留的 Delta → Op 转换接口
     pub fn to_op(&self) -> Option<deve_core::models::Op> {
         let delete_len = self.to.saturating_sub(self.from);
         let has_delete = delete_len > 0;
@@ -58,16 +59,16 @@ impl Delta {
             (true, true) => {
                 // Replace = Delete + Insert. For simplicity, return only the more significant one.
                 Some(deve_core::models::Op::Delete {
-                    pos: self.from,
-                    len: delete_len,
+                    pos: self.from as u32,
+                    len: delete_len as u32,
                 })
             }
             (true, false) => Some(deve_core::models::Op::Delete {
-                pos: self.from,
-                len: delete_len,
+                pos: self.from as u32,
+                len: delete_len as u32,
             }),
             (false, true) => Some(deve_core::models::Op::Insert {
-                pos: self.from,
+                pos: self.from as u32,
                 content: self.insert.clone().into(),
             }),
             (false, false) => None,
@@ -84,14 +85,14 @@ impl Delta {
 
         if has_delete {
             ops.push(deve_core::models::Op::Delete {
-                pos: self.from,
-                len: delete_len,
+                pos: self.from as u32,
+                len: delete_len as u32,
             });
         }
 
         if has_insert {
             ops.push(deve_core::models::Op::Insert {
-                pos: self.from,
+                pos: self.from as u32,
                 content: self.insert.clone().into(),
             });
         }

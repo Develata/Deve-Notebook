@@ -19,10 +19,10 @@ pub fn handle_doc_list(
 ) {
     leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
     set_docs.set(list.clone());
-    if current_doc.get_untracked().is_none() {
-        if let Some(first) = list.first() {
-            set_current_doc.set(Some(first.0));
-        }
+    if current_doc.get_untracked().is_none()
+        && let Some(first) = list.first()
+    {
+        set_current_doc.set(Some(first.0));
     }
 }
 

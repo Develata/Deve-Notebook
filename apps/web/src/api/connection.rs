@@ -1,4 +1,4 @@
-﻿// apps\web\src\api
+// apps\web\src\api
 //! # WebSocket 连接管理器
 //!
 //! ## 职责
@@ -56,7 +56,7 @@ pub fn spawn_connection_manager(
 
                     // Block on reading until disconnect
                     // Pass set_status to confirm connection after first successful message
-                    process_incoming_messages(read, set_msg.clone(), set_status.clone()).await;
+                    process_incoming_messages(read, set_msg, set_status).await;
 
                     leptos::logging::log!("WS: Connection Lost (Reader ended)");
                 }
@@ -80,20 +80,20 @@ async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
     let http_url = ws_url.replace("ws://", "http://").replace("/ws", "");
     let url = format!("{}/api/node/role", http_url);
     let res = Request::get(&url).send().await;
-    if let Ok(resp) = res {
-        if let Ok(json) = resp.json::<serde_json::Value>().await {
-            let role = json.get("role").and_then(|v| v.as_str()).unwrap_or("unknown");
-            let main_port = json.get("main_port").and_then(|v| v.as_u64()).unwrap_or(0);
-            let ws_port = json.get("ws_port").and_then(|v| v.as_u64()).unwrap_or(0);
-            let text = if role == "proxy" && main_port > 0 {
-                format!("proxy → {} (ws:{})", main_port, ws_port)
-            } else if ws_port > 0 {
-                format!("{} (ws:{})", role, ws_port)
-            } else {
-                role.to_string()
-            };
-            set_node_role.set(text);
-        }
+    if let Ok(resp) = res
+        && let Ok(json) = resp.json::<serde_json::Value>().await
+    {
+        let role = json.get("role").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let main_port = json.get("main_port").and_then(|v| v.as_u64()).unwrap_or(0);
+        let ws_port = json.get("ws_port").and_then(|v| v.as_u64()).unwrap_or(0);
+        let text = if role == "proxy" && main_port > 0 {
+            format!("proxy → {} (ws:{})", main_port, ws_port)
+        } else if ws_port > 0 {
+            format!("{} (ws:{})", role, ws_port)
+        } else {
+            role.to_string()
+        };
+        set_node_role.set(text);
     }
 }
 

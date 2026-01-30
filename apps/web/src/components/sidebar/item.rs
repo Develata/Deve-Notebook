@@ -39,18 +39,18 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let path_menu = node.path.clone();
     let trigger_menu = move |ev: web_sys::MouseEvent| {
         ev.stop_propagation();
-        if let Some(target) = ev.current_target() {
-            if let Ok(el) = target.dyn_into::<web_sys::Element>() {
-                let rect = el.get_bounding_client_rect();
-                let anchor = AnchorRect {
-                    top: rect.top(),
-                    bottom: rect.bottom(),
-                    left: rect.left(),
-                    right: rect.right(),
-                };
-                on_menu_clone.run((path_menu.clone(), anchor));
-                return;
-            }
+        if let Some(target) = ev.current_target()
+            && let Ok(el) = target.dyn_into::<web_sys::Element>()
+        {
+            let rect = el.get_bounding_client_rect();
+            let anchor = AnchorRect {
+                top: rect.top(),
+                bottom: rect.bottom(),
+                left: rect.left(),
+                right: rect.right(),
+            };
+            on_menu_clone.run((path_menu.clone(), anchor));
+            return;
         }
         let anchor = AnchorRect {
             top: 0.0,
@@ -83,11 +83,11 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
             }
             MenuAction::OpenInNewWindow => {
                 // 在新浏览器标签页中打开
-                if let Some(window) = web_sys::window() {
-                    if let Ok(href) = window.location().href() {
-                        let url = format!("{}?doc={}", href, path);
-                        let _ = window.open_with_url_and_target(&url, "_blank");
-                    }
+                if let Some(window) = web_sys::window()
+                    && let Ok(href) = window.location().href()
+                {
+                    let url = format!("{}?doc={}", href, path);
+                    let _ = window.open_with_url_and_target(&url, "_blank");
                 }
             }
             MenuAction::MoveTo => {
@@ -105,10 +105,10 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
             <div 
                 class=move || {
                      let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-gray-100 text-sm transition-colors select-none group";
-                     if let Some(id) = node.id {
-                         if current_doc.get() == Some(id) {
-                            return format!("{} bg-[#e6f7ff] text-[#008dff]", base);
-                         }
+                     if let Some(id) = node.id
+                         && current_doc.get() == Some(id)
+                     {
+                        return format!("{} bg-[#e6f7ff] text-[#008dff]", base);
                      }
                      format!("{} text-gray-700", base)
                 }

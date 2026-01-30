@@ -66,7 +66,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             leptos::logging::warn!("No active doc to apply code.");
             return;
         };
-        let pos = getEditorContent().len();
+        let pos = getEditorContent().len() as u32;
         let op = Op::Insert {
             pos,
             content: code.into(),
