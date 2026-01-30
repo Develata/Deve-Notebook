@@ -66,7 +66,14 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             leptos::logging::warn!("No active doc to apply code.");
             return;
         };
-        let pos = getEditorContent().len() as u32;
+        let utf16_len = getEditorContent().encode_utf16().count();
+        let pos = match u32::try_from(utf16_len) {
+            Ok(v) => v,
+            Err(_) => {
+                leptos::logging::warn!("Apply code aborted: UTF-16 length overflow.");
+                return;
+            }
+        };
         let op = Op::Insert {
             pos,
             content: code.into(),

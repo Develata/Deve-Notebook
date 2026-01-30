@@ -112,7 +112,7 @@ impl fmt::Display for DocId {
 ///    - 短插入 (< 23 字节) 零堆分配
 ///    - 典型用例：单字符输入、短词插入
 ///
-/// 2. 索引使用 `u32` 代替 `usize`：
+/// 2. 索引使用 `u32` 代替 `usize` (UTF-16 code unit 索引)：
 ///    - 节省 8 字节/操作 (64-bit 平台)
 ///    - 4GB 文档大小限制对文本编辑器来说是无限的
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -62,6 +62,9 @@ impl SyncEngine {
             return Err(anyhow!("Invalid Handshake Signature"));
         }
 
+        let mut remote_vector = remote_vector;
+        remote_vector.normalize();
+
         // 3. Compute Diff
         let (to_send, to_request, snapshot_requests) = self.compute_diff(&remote_vector);
 
