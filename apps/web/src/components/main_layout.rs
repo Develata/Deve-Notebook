@@ -175,17 +175,13 @@ pub fn MainLayout() -> impl IntoView {
 
                      // Body: Specific Sidebar Content
                      <div class="flex-1 overflow-hidden">
-                         <crate::components::sidebar::Sidebar
-                            active_view=active_view
-                            docs=core.docs
-                            current_doc=core.current_doc
-                            on_select=core.on_doc_select
-                            on_create=core.on_doc_create
-                            on_rename=core.on_doc_rename
-                            on_delete=core.on_doc_delete
-                            on_copy=core.on_doc_copy
-                            on_move=core.on_doc_move
-                         />
+                     <crate::components::sidebar::Sidebar
+                         active_view=active_view
+                         docs=core.docs
+                         current_doc=core.current_doc
+                         on_select=core.on_doc_select
+                         on_delete=core.on_doc_delete
+                     />
                      </div>
                  </aside>
 

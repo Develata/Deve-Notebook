@@ -5,7 +5,6 @@
 //! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
 
 use crate::components::sidebar::item::FileTreeItem;
-use crate::components::sidebar::modals::{ModalState, SidebarModals};
 use crate::components::sidebar::tree::{build_file_tree, FileNode};
 use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::CoreState;
@@ -20,17 +19,10 @@ pub fn ExplorerView(
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     #[prop(into)] on_select: Callback<DocId>,
-    #[prop(into)] on_create: Callback<String>,
-    #[prop(into)] on_rename: Callback<(String, String)>,
     #[prop(into)] on_delete: Callback<String>,
-    #[prop(into)] on_copy: Callback<(String, String)>,
-    #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
     let search_control = expect_context::<SearchControl>();
-    // 统一模态框状态 (Unified Modal State)
-    let (modal_state, set_modal_state) = signal(ModalState::None);
-
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
 
@@ -40,55 +32,15 @@ pub fn ExplorerView(
     provide_context(set_clipboard_path);
 
     // 回调函数
-    let request_create = Callback::new(move |parent: Option<String>| {
-        let prefix = "+";
-        let path = parent.map(|p| format!("{}/", p)).unwrap_or_default();
-        search_control.set_mode.set(format!("{}{}", prefix, path));
+    let open_search = Callback::new(move |query: String| {
+        search_control.set_mode.set(query);
         search_control.set_show.set(true);
     });
 
-    let confirm_create = Callback::new(move |name: String| {
-        if let ModalState::Create { parent } = modal_state.get_untracked() {
-            let full_path = if let Some(p) = parent {
-                format!("{}/{}", p, name)
-            } else {
-                name
-            };
-            on_create.run(full_path);
-            set_modal_state.set(ModalState::None);
-        }
-    });
-
-    let request_rename = Callback::new(move |path: String| {
-        set_modal_state.set(ModalState::Rename { target: path });
-    });
-
-    let confirm_rename = Callback::new(move |new_name: String| {
-        if let ModalState::Rename { target: old } = modal_state.get_untracked() {
-            let parent = std::path::Path::new(&old)
-                .parent()
-                .and_then(|p| p.to_str())
-                .unwrap_or("");
-            let parent = parent.replace("\\", "/");
-            let new_path = if parent.is_empty() {
-                new_name
-            } else {
-                format!("{}/{}", parent, new_name)
-            };
-            on_rename.run((old, new_path));
-            set_modal_state.set(ModalState::None);
-        }
-    });
-
-    let request_move = Callback::new(move |path: String| {
-        set_modal_state.set(ModalState::Move { source: path });
-    });
-
-    let confirm_move = Callback::new(move |dest_path: String| {
-        if let ModalState::Move { source: src } = modal_state.get_untracked() {
-            on_move.run((src, dest_path));
-            set_modal_state.set(ModalState::None);
-        }
+    let request_create = Callback::new(move |parent: Option<String>| {
+        let prefix = "+";
+        let path = parent.map(|p| format!("{}/", p)).unwrap_or_default();
+        open_search.run(format!("{}{}", prefix, path));
     });
 
     let request_delete = Callback::new(move |path: String| {
@@ -115,16 +67,13 @@ pub fn ExplorerView(
     // Create Context
     let actions = FileActionsContext {
         current_doc,
-        docs,
         on_select,
         on_create: request_create.clone(),
+        on_open_search: open_search.clone(),
         on_menu_open: on_menu_click.clone(),
         on_menu_close: close_menu.clone(),
         active_menu,
-        on_rename: request_rename.clone(),
         on_delete: request_delete.clone(),
-        on_copy: on_copy.clone(),
-        on_move: request_move.clone(),
     };
     provide_context(actions);
 
@@ -160,14 +109,6 @@ pub fn ExplorerView(
 
     view! {
         <div class="h-full w-full bg-[#f7f7f7] flex flex-col font-sans select-none relative">
-             <SidebarModals
-                 modal_state=modal_state
-                 set_modal_state=set_modal_state
-                 on_confirm_create=confirm_create
-                 on_confirm_rename=confirm_rename
-                 on_confirm_move=confirm_move
-             />
-
             <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-gray-100 hover:bg-gray-100 transition-colors group">
                 <div class="flex items-center gap-2 flex-1 min-w-0 text-gray-700">
                     <crate::components::sidebar::repo_switcher::RepoSwitcher />

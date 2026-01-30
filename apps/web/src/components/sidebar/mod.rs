@@ -16,7 +16,6 @@ pub mod components;
 pub mod explorer;
 pub mod extensions;
 pub mod item;
-pub mod modals;
 pub mod path_utils;
 pub mod repo_switcher;
 pub mod source_control;
@@ -36,11 +35,7 @@ pub fn Sidebar(
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     #[prop(into)] on_select: Callback<DocId>,
-    #[prop(into)] on_create: Callback<String>,
-    #[prop(into)] on_rename: Callback<(String, String)>,
     #[prop(into)] on_delete: Callback<String>,
-    #[prop(into)] on_copy: Callback<(String, String)>,
-    #[prop(into)] on_move: Callback<(String, String)>,
 ) -> impl IntoView {
     view! {
         <div class="h-full w-full bg-[#f7f7f7] border-r border-gray-200">
@@ -50,11 +45,7 @@ pub fn Sidebar(
                         docs=docs
                         current_doc=current_doc
                         on_select=on_select
-                        on_create=on_create
-                        on_rename=on_rename
                         on_delete=on_delete
-                        on_copy=on_copy
-                        on_move=on_move
                     />
                 }.into_any(),
                 SidebarView::SourceControl => view! {

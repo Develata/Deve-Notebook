@@ -88,6 +88,24 @@
     *   **Structure**: `[Icon + Input Field]` -> `[Scrollable List]` -> `[Footer Hints]`.
     *   **Shadow**: **MUST** 有明显的 Drop Shadow 以区分层级。
     *   **Modes**: 支持 `Command`, `File`, `Branch` 三种模式的UI复用。
+    *   **FileOps (命令式文件操作)**:
+        *   **入口统一**: 侧边栏文件树的 UI 按钮 (Copy/Paste/Rename/Move/Create) **MUST** 唤起同一个搜索框。
+        *   **预填策略**:
+            *   Move: `>mv "<selected>" ""`，光标定位到目标参数。
+            *   Copy: `>cp "<selected>" ""`，光标定位到目标参数。
+            *   Rename: `>mv "<selected>" ""` (等价 Move)。
+            *   Create: `+` 作为创建模式入口。
+        *   **命令语法**:
+            *   `>mv <src> <dst>` / `>cp <src> <dst>` / `>rm <path>` / `+<path>`.
+        *   **参数解析规则**:
+            *   无空格路径可不加引号；含空格必须加引号。
+            *   允许混合引号 (src 无引号 / dst 有引号)。
+            *   自动补 `.md`：参数**不以 `/` 结尾**且**无 `.xxx` 后缀**时自动补齐。
+        *   **候选列表**:
+            *   **只显示目录**。
+            *   分组显示：`recent` (最近 4 个 mv 目标目录) 与 `all` (所有目录按顺序排列)。
+        *   **错误提示**:
+            *   路径含空格但未加引号时，**MUST** 给出明确提示。
 
 ### Source Control UI (源代码管理界面)
 

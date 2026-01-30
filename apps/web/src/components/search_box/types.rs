@@ -8,6 +8,29 @@ pub enum SearchAction {
     RunCommand(Command),
     SwitchBranch(String),
     CreateDoc(String),
+    FileOp(FileOpAction),
+    InsertQuery(InsertQuery),
+    Noop,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FileOpKind {
+    Move,
+    Copy,
+    Remove,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FileOpAction {
+    pub kind: FileOpKind,
+    pub src: String,
+    pub dst: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InsertQuery {
+    pub query: String,
+    pub cursor: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]

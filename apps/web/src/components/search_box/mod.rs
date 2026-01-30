@@ -5,6 +5,7 @@ pub mod result_item;
 pub mod types;
 
 mod effects;
+mod file_ops;
 mod logic;
 mod ui;
 
@@ -30,6 +31,7 @@ pub fn UnifiedSearch(
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
     let input_ref = NodeRef::<leptos::html::Input>::new();
+    let (recent_move_dirs, set_recent_move_dirs) = signal(Vec::<String>::new());
 
     // 打开时重置查询并聚焦输入，关闭时返回编辑器焦点。
     effects::attach_focus_effect(show, mode_signal, set_query, set_selected_index, input_ref);
@@ -64,6 +66,7 @@ pub fn UnifiedSearch(
         debounced_query.into(),
         locale,
         core.clone(),
+        recent_move_dirs.into(),
         on_settings,
         on_open,
         set_show,
@@ -85,6 +88,7 @@ pub fn UnifiedSearch(
         input_ref,
         set_show,
         core.clone(),
+        set_recent_move_dirs,
     ));
 
     let placeholder_text = logic::create_placeholder_memo(query.into(), locale);
@@ -104,5 +108,6 @@ pub fn UnifiedSearch(
         input_ref,
         core,
         locale,
+        set_recent_move_dirs,
     )
 }

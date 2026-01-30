@@ -4,8 +4,11 @@ use std::sync::Arc;
 use web_sys::KeyboardEvent;
 
 use crate::components::command_palette::registry::create_static_commands;
+use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::{self, CommandProvider, FileProvider};
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::components::search_box::types::{
+    InsertQuery, SearchAction, SearchProvider, SearchResult,
+};
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{t, Locale};
 
@@ -15,6 +18,7 @@ pub fn create_results_memo(
     query: Signal<String>,
     locale: RwSignal<Locale>,
     core: CoreState,
+    recent_move_dirs: Signal<Vec<String>>,
     on_settings: Callback<()>,
     on_open: Callback<()>,
     set_show: WriteSignal<bool>,
@@ -30,8 +34,14 @@ pub fn create_results_memo(
 
         let is_command = q.starts_with('>');
         let is_branch = q.starts_with('@');
+        let is_file_op = file_ops::detect_file_op(&q).is_some();
 
         if is_command {
+            if is_file_op {
+                let doc_list: Vec<(deve_core::models::DocId, String)> =
+                    current_docs.iter().map(|(k, v)| (*k, v.clone())).collect();
+                return file_ops::build_file_ops_results(&q, &doc_list, &recent_move_dirs.get());
+            }
             let cmds =
                 create_static_commands(current_locale, on_settings, on_open, set_show, locale);
             let provider = CommandProvider::new(cmds);
@@ -95,10 +105,14 @@ pub fn make_active_index(
             return 0;
         }
         let current = selected_index.get();
+        let res = providers_results.get();
         if current >= count {
-            0
-        } else {
+            return first_selectable(&res).unwrap_or(0);
+        }
+        if is_selectable(res.get(current)) {
             current
+        } else {
+            first_selectable(&res).unwrap_or(0)
         }
     }
 }
@@ -114,6 +128,7 @@ pub fn build_keydown_handler(
     input_ref: NodeRef<leptos::html::Input>,
     set_show: WriteSignal<bool>,
     core: CoreState,
+    set_recent_move_dirs: WriteSignal<Vec<String>>,
 ) -> impl Fn(KeyboardEvent) + Send + Sync + 'static {
     move |ev: KeyboardEvent| {
         let key = ev.key();
@@ -134,7 +149,8 @@ pub fn build_keydown_handler(
             return;
         }
 
-        let count = providers_results.get().len();
+        let results = providers_results.get();
+        let count = results.len();
         if count == 0 {
             return;
         }
@@ -142,55 +158,34 @@ pub fn build_keydown_handler(
         match key.as_str() {
             "ArrowDown" => {
                 ev.prevent_default();
-                set_selected_index.update(|i| *i = (*i + 1) % count);
+                let next = next_selectable_index(&results, active_index(), 1);
+                set_selected_index.set(next);
             }
             "ArrowUp" => {
                 ev.prevent_default();
-                set_selected_index.update(|i| *i = (*i + count - 1) % count);
+                let next = next_selectable_index(&results, active_index(), -1);
+                set_selected_index.set(next);
             }
             "Enter" => {
                 ev.prevent_default();
                 let idx = active_index();
                 leptos::logging::log!("Refined Debug: Key Enter. Index: {}, Count: {}", idx, count);
 
-                if let Some(res) = providers_results.get().get(idx) {
+                if let Some(res) = results.get(idx) {
                     leptos::logging::log!(
                         "Selected Item: {} (Action: {:?})",
                         res.title,
                         res.action
                     );
-                    match &res.action {
-                        SearchAction::OpenDoc(id) => {
-                            leptos::logging::log!("Executing OpenDoc: {}", id);
-                            core.on_doc_select.run(id.clone());
-                            set_show.set(false);
-                        }
-                        SearchAction::RunCommand(cmd) => {
-                            leptos::logging::log!("Executing Command: {}", cmd.title);
-                            cmd.action.run(());
-                        }
-                        SearchAction::SwitchBranch(branch) => {
-                            leptos::logging::log!("Switching Branch: {}", branch);
-                            if branch == "Local (Master)" {
-                                core.on_switch_branch.run(None);
-                            } else {
-                                core.on_switch_branch.run(Some(branch.clone()));
-                            }
-                            set_show.set(false);
-                        }
-                        SearchAction::CreateDoc(path) => {
-                            leptos::logging::log!("Creating Doc: {}", path);
-                            let normalized = deve_core::utils::path::to_forward_slash(&path);
-                            let target = if normalized.ends_with(".md") {
-                                normalized.clone()
-                            } else {
-                                format!("{}.md", normalized)
-                            };
-
-                            core.on_doc_create.run(target);
-                            set_show.set(false);
-                        }
-                    }
+                    execute_action(
+                        &res.action,
+                        &core,
+                        set_show,
+                        set_query,
+                        set_selected_index,
+                        input_ref,
+                        set_recent_move_dirs,
+                    );
                 } else {
                     leptos::logging::log!("Error: Index out of bounds or item not found.");
                 }
@@ -198,4 +193,110 @@ pub fn build_keydown_handler(
             _ => {}
         }
     }
+}
+
+pub(crate) fn execute_action(
+    action: &SearchAction,
+    core: &CoreState,
+    set_show: WriteSignal<bool>,
+    set_query: WriteSignal<String>,
+    set_selected_index: WriteSignal<usize>,
+    input_ref: NodeRef<leptos::html::Input>,
+    set_recent_move_dirs: WriteSignal<Vec<String>>,
+) {
+    match action {
+        SearchAction::OpenDoc(id) => {
+            core.on_doc_select.run(*id);
+            set_show.set(false);
+        }
+        SearchAction::RunCommand(cmd) => {
+            cmd.action.run(());
+        }
+        SearchAction::SwitchBranch(branch) => {
+            if branch == "Local (Master)" {
+                core.on_switch_branch.run(None);
+            } else {
+                core.on_switch_branch.run(Some(branch.clone()));
+            }
+            set_show.set(false);
+        }
+        SearchAction::CreateDoc(path) => {
+            let normalized = file_ops::normalize_doc_path(path);
+            core.on_doc_create.run(normalized);
+            set_show.set(false);
+        }
+        SearchAction::FileOp(op) => match op.kind {
+            crate::components::search_box::types::FileOpKind::Move => {
+                if let Some(dst) = &op.dst {
+                    core.on_doc_move.run((op.src.clone(), dst.clone()));
+                    update_recent_move_dirs(set_recent_move_dirs, dst);
+                    set_show.set(false);
+                }
+            }
+            crate::components::search_box::types::FileOpKind::Copy => {
+                if let Some(dst) = &op.dst {
+                    core.on_doc_copy.run((op.src.clone(), dst.clone()));
+                    set_show.set(false);
+                }
+            }
+            crate::components::search_box::types::FileOpKind::Remove => {
+                core.on_doc_delete.run(op.src.clone());
+                set_show.set(false);
+            }
+        },
+        SearchAction::InsertQuery(InsertQuery { query, cursor }) => {
+            set_query.set(query.clone());
+            set_selected_index.set(0);
+            let cursor = *cursor;
+            request_animation_frame(move || {
+                if let Some(el) = input_ref.get_untracked() {
+                    let _ = el.set_selection_range(cursor as u32, cursor as u32);
+                }
+            });
+        }
+        SearchAction::Noop => {}
+    }
+}
+
+fn update_recent_move_dirs(set_recent_move_dirs: WriteSignal<Vec<String>>, dst: &str) {
+    let normalized = dst.replace('\\', "/");
+    let parent = std::path::Path::new(&normalized)
+        .parent()
+        .and_then(|p| p.to_str())
+        .unwrap_or("");
+    if parent.is_empty() {
+        return;
+    }
+    let dir = format!("{}/", parent.replace('\\', "/"));
+    set_recent_move_dirs.update(|list| {
+        list.retain(|d| d != &dir);
+        list.insert(0, dir);
+        if list.len() > 4 {
+            list.truncate(4);
+        }
+    });
+}
+
+pub(crate) fn is_selectable(result: Option<&SearchResult>) -> bool {
+    matches!(result, Some(r) if r.action != SearchAction::Noop)
+}
+
+fn first_selectable(results: &[SearchResult]) -> Option<usize> {
+    results
+        .iter()
+        .position(|res| res.action != SearchAction::Noop)
+}
+
+fn next_selectable_index(results: &[SearchResult], current: usize, dir: i32) -> usize {
+    if results.is_empty() {
+        return 0;
+    }
+    let mut idx = current as i32;
+    for _ in 0..results.len() {
+        idx = (idx + dir).rem_euclid(results.len() as i32);
+        if results[idx as usize].action != SearchAction::Noop {
+            return idx as usize;
+        }
+    }
+    current
 }

@@ -11,7 +11,6 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use super::path_utils::find_available_path;
 use super::tree::FileNode;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::components::sidebar_menu::{MenuAction, SidebarMenu};
@@ -51,22 +50,22 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let clipboard = use_context::<ReadSignal<Option<String>>>().expect("clipboard read context");
 
     // 构建统一的操作处理程序
-    let rename_req = actions.on_rename.clone();
     let delete_req = actions.on_delete.clone();
-    let copy_req = actions.on_copy.clone();
-    let move_req = actions.on_move.clone();
-    let docs_signal = actions.docs;
+    let open_search = actions.on_open_search.clone();
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
         leptos::logging::log!("item.rs handle_action called: action={:?}", action);
         let path = path_for_action.clone();
         match action {
-            MenuAction::Rename => rename_req.run(path),
+            MenuAction::Rename => {
+                open_search.run(build_prefill_command("mv", &path, None));
+            }
             MenuAction::Delete => delete_req.run(path),
             MenuAction::Copy => {
                 // 存储到剪贴板上下文
                 set_clipboard.set(Some(path.clone()));
                 leptos::logging::log!("Copied to clipboard: {}", path);
+                open_search.run(build_prefill_command("cp", &path, None));
             }
             MenuAction::Paste => {
                 // Get from clipboard and execute copy with auto-rename
@@ -74,35 +73,25 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     leptos::logging::log!("Paste requested: copy {} to {}", src, path);
 
                     // 确定目标文件夹
-                    let dest_folder = if is_folder {
+                    let mut dest_folder = if is_folder {
                         path.clone()
                     } else {
-                        // 当前项目的父级
                         let p = std::path::Path::new(&path)
                             .parent()
                             .and_then(|p| p.to_str())
                             .unwrap_or("");
                         p.replace('\\', "/")
                     };
+                    if !dest_folder.is_empty() && !dest_folder.ends_with('/') {
+                        dest_folder.push('/');
+                    }
 
-                    // 从源确定新文件名
-                    let src_name = std::path::Path::new(&src)
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("unknown");
-
-                    let base_dest = if dest_folder.is_empty() {
-                        src_name.to_string()
+                    let dst_with_cursor = if dest_folder.is_empty() {
+                        None
                     } else {
-                        format!("{}/{}", dest_folder, src_name)
+                        Some(format!("{}|", dest_folder))
                     };
-
-                    // 使用 find_available_path 自动重命名
-                    let docs_list = docs_signal.get_untracked();
-                    let final_dest = find_available_path(&base_dest, &docs_list);
-
-                    leptos::logging::log!("Paste: {} -> {}", src, final_dest);
-                    copy_req.run((src, final_dest));
+                    open_search.run(build_prefill_command("cp", &src, dst_with_cursor));
                 } else {
                     leptos::logging::log!("Paste: clipboard is empty");
                 }
@@ -117,7 +106,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                 }
             }
             MenuAction::MoveTo => {
-                move_req.run(path);
+                open_search.run(build_prefill_command("mv", &path, None));
             }
         }
     });
@@ -193,4 +182,21 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
             </div>
         </div>
     }.into_any()
+}
+
+fn build_prefill_command(cmd: &str, src: &str, dst_with_cursor: Option<String>) -> String {
+    let src_text = quote_arg(src);
+    let dst_text = match dst_with_cursor {
+        Some(dst) => format!("\"{}\"", sanitize_arg(&dst)),
+        None => "\"|\"".to_string(),
+    };
+    format!(">{} {} {}", cmd, src_text, dst_text)
+}
+
+fn quote_arg(arg: &str) -> String {
+    format!("\"{}\"", sanitize_arg(arg))
+}
+
+fn sanitize_arg(arg: &str) -> String {
+    arg.replace('"', "'")
 }

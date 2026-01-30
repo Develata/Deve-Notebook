@@ -13,12 +13,19 @@ pub fn attach_focus_effect(
     Effect::new(move |_| {
         if show.get() {
             // 打开时重置查询并聚焦搜索框。
-            set_query.set(mode_signal.get());
+            let raw = mode_signal.get();
+            let cursor_pos = raw.chars().take_while(|c| *c != '|').count();
+            let cleaned = raw.replacen('|', "", 1);
+            let has_cursor = raw.contains('|');
+            set_query.set(cleaned);
             set_selected_index.set(0);
 
             request_animation_frame(move || {
                 if let Some(el) = input_ref.get_untracked() {
                     let _ = el.focus();
+                    if has_cursor {
+                        let _ = el.set_selection_range(cursor_pos as u32, cursor_pos as u32);
+                    }
                 }
             });
         } else {

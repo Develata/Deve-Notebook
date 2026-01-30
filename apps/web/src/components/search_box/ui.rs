@@ -23,6 +23,7 @@ pub fn render_overlay(
     input_ref: NodeRef<leptos::html::Input>,
     core: CoreState,
     locale: RwSignal<Locale>,
+    set_recent_move_dirs: WriteSignal<Vec<String>>,
 ) -> impl IntoView {
     let handle_keydown_closure = handle_keydown.clone();
     let active_index_closure = active_index.clone();
@@ -30,11 +31,11 @@ pub fn render_overlay(
     view! {
         <Show when=move || show.get()>
             <div
-                class="fixed inset-0 z-[60] font-sans"
+                class="fixed inset-0 z-[100] font-sans"
                 on:click=move |_| set_show.set(false)
             >
                 <div
-                    class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
+                    class="absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
                     on:keydown={
                         let handle_keydown_closure = handle_keydown_closure.clone();
@@ -48,8 +49,11 @@ pub fn render_overlay(
                         set_selected_index,
                         active_index_closure.clone(),
                         set_show,
+                        set_query,
+                        input_ref,
                         core.clone(),
                         locale,
+                        set_recent_move_dirs,
                     )}
                     {footer()}
                 </div>
@@ -109,8 +113,11 @@ fn results_panel(
     set_selected_index: WriteSignal<usize>,
     active_index: Arc<dyn Fn() -> usize + Send + Sync>,
     set_show: WriteSignal<bool>,
+    set_query: WriteSignal<String>,
+    input_ref: NodeRef<leptos::html::Input>,
     core: CoreState,
     locale: RwSignal<Locale>,
+    set_recent_move_dirs: WriteSignal<Vec<String>>,
 ) -> impl IntoView {
     view! {
         <div class="overflow-y-auto p-2">
@@ -143,7 +150,10 @@ fn results_panel(
                                             selected_index,
                                             set_selected_index,
                                             set_show,
+                                            set_query,
+                                            input_ref,
                                             core.clone(),
+                                            set_recent_move_dirs,
                                         )
                                     }
                                 />

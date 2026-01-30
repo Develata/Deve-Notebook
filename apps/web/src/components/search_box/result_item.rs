@@ -6,6 +6,7 @@
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
+use crate::components::search_box::logic;
 use crate::components::search_box::types::{SearchAction, SearchResult};
 use crate::hooks::use_core::CoreState;
 
@@ -17,77 +18,108 @@ pub fn result_item(
     selected_index: Signal<usize>,
     set_selected_index: WriteSignal<usize>,
     set_show: WriteSignal<bool>,
+    set_query: WriteSignal<String>,
+    input_ref: NodeRef<leptos::html::Input>,
     core: CoreState,
+    set_recent_move_dirs: WriteSignal<Vec<String>>,
 ) -> impl IntoView {
-    let detail_icon = item.detail.clone();
     let detail_text = item.detail.clone();
     let detail_text_cond = detail_text.clone();
+    let is_group =
+        matches!(item.action, SearchAction::Noop) && item.detail.as_deref() == Some("Group");
+    let is_error =
+        matches!(item.action, SearchAction::Noop) && item.detail.as_deref() == Some("Error");
+    let is_selectable = logic::is_selectable(Some(&item));
+
+    if is_group {
+        return view! {
+            <div class="px-4 py-2 text-[11px] uppercase tracking-widest text-gray-400">
+                {item.title}
+            </div>
+        }
+        .into_any();
+    }
+
+    if is_error {
+        return view! {
+            <div class="px-4 py-2 text-sm text-red-500">
+                {item.title}
+            </div>
+        }
+        .into_any();
+    }
 
     view! {
         <button
             class=format!(
                 "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors {}",
-                if is_sel { "bg-blue-50 text-blue-700" } else { "text-gray-700 hover:bg-gray-50" }
+                if is_sel && is_selectable {
+                    "bg-blue-50 text-blue-700"
+                } else if is_selectable {
+                    "text-gray-700 hover:bg-gray-50"
+                } else {
+                    "text-gray-400 cursor-default"
+                }
             )
             on:click=move |_| {
+                if !is_selectable {
+                    return;
+                }
                 let action = item.action.clone();
                 let core_clone = core.clone();
                 request_animation_frame(move || {
-                    match action {
-                        SearchAction::OpenDoc(id) => {
-                            core_clone.on_doc_select.run(id);
-                            set_show.set(false);
-                        }
-                        SearchAction::RunCommand(cmd) => {
-                            cmd.action.run(());
-                        }
-                        SearchAction::SwitchBranch(branch) => {
-                            if branch == "Local (Master)" {
-                                core_clone.on_switch_branch.run(None);
-                            } else {
-                                core_clone.on_switch_branch.run(Some(branch));
-                            }
-                            set_show.set(false);
-                        }
-                        SearchAction::CreateDoc(path) => {
-                            let normalized = path.replace('\\', "/");
-                            let target = if normalized.ends_with(".md") {
-                                normalized.clone()
-                            } else {
-                                format!("{}.md", normalized)
-                            };
-
-                            core_clone.on_doc_create.run(target);
-                            set_show.set(false);
-                        }
-                    }
+                    logic::execute_action(
+                        &action,
+                        &core_clone,
+                        set_show,
+                        set_query,
+                        set_selected_index,
+                        input_ref,
+                        set_recent_move_dirs,
+                    );
                 });
             }
             on:mousemove=move |_: MouseEvent| {
-                if selected_index.get_untracked() != idx {
+                if is_selectable && selected_index.get_untracked() != idx {
                     set_selected_index.set(idx);
                 }
             }
         >
-            {item_icon(is_sel, detail_icon)}
+            {item_icon(is_sel, item.action.clone(), item.detail.clone())}
             {item_content(item.title.clone(), detail_text_cond, detail_text)}
             {selection_arrow(is_sel)}
         </button>
     }
+    .into_any()
 }
 
-fn item_icon(is_sel: bool, detail: Option<String>) -> impl IntoView {
+fn item_icon(is_sel: bool, action: SearchAction, detail: Option<String>) -> impl IntoView {
+    let icon = match action {
+        SearchAction::RunCommand(_) => "command",
+        SearchAction::SwitchBranch(_) => "branch",
+        SearchAction::OpenDoc(_) => "file",
+        SearchAction::CreateDoc(_) => "plus",
+        SearchAction::FileOp(_) => "fileop",
+        SearchAction::InsertQuery(_) => "folder",
+        SearchAction::Noop => "none",
+    };
     view! {
         <div class=format!("flex-none {}", if is_sel { "text-blue-500" } else { "text-gray-400" })>
-            <Show when=move || detail.as_deref() == Some("Command") fallback=|| view! {
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+            <Show when=move || icon == "command" fallback=move || match icon {
+                "branch" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> }.into_any(),
+                "folder" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg> }.into_any(),
+                "plus" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> }.into_any(),
+                _ => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> }.into_any(),
             }>
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
             </Show>
+            {move || if detail.as_deref() == Some("Error") {
+                view! { <span class="text-xs font-semibold text-red-500">"!"</span> }.into_any()
+            } else {
+                view! {}.into_any()
+            }}
         </div>
     }
 }
