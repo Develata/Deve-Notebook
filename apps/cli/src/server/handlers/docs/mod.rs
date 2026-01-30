@@ -10,6 +10,7 @@
 //! - `copy`: 复制文档
 
 mod copy;
+mod copy_utils;
 mod create;
 mod delete;
 mod rename;

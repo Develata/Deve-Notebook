@@ -115,6 +115,7 @@ pub fn ExplorerView(
     // Create Context
     let actions = FileActionsContext {
         current_doc,
+        docs,
         on_select,
         on_create: request_create.clone(),
         on_menu_open: on_menu_click.clone(),

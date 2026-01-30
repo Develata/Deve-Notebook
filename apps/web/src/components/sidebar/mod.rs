@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\sidebar
+// apps\web\src\components\sidebar
 //! # Sidebar Component (侧边栏组件)
 //!
 //! **架构作用**:
@@ -17,6 +17,7 @@ pub mod explorer;
 pub mod extensions;
 pub mod item;
 pub mod modals;
+pub mod path_utils;
 pub mod repo_switcher;
 pub mod source_control;
 pub mod tree;

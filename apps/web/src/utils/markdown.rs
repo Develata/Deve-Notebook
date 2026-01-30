@@ -14,7 +14,15 @@ pub fn render_markdown(source: &str) -> String {
     let mut out = String::new();
     let mut buffer: Vec<Event> = Vec::new();
     let mut iter = Parser::new_ext(source, options)
-        .filter(|event| !matches!(event, Event::Html(_) | Event::InlineHtml(_)))
+        .filter(|event| match event {
+            Event::Html(tag) | Event::InlineHtml(tag) => {
+                let t = tag.trim();
+                t.eq_ignore_ascii_case("<br>")
+                    || t.eq_ignore_ascii_case("<br/>")
+                    || t.eq_ignore_ascii_case("<br />")
+            }
+            _ => true,
+        })
         .into_iter();
 
     while let Some(event) = iter.next() {

@@ -25,6 +25,9 @@ ctrlc = "3.4"
 reqwest = { version = "0.12", features = ["json"] }
 reqwest-eventsource = "0.6"
 
+[dev-dependencies]
+tempfile = "3.24"
+
 [features]
 default = []
 search = ["deve_core/search"]

@@ -12,6 +12,7 @@ use leptos::prelude::*;
 #[derive(Clone)]
 pub struct FileActionsContext {
     pub current_doc: ReadSignal<Option<DocId>>,
+    pub docs: ReadSignal<Vec<(DocId, String)>>,
     pub on_select: Callback<DocId>,
     pub on_create: Callback<Option<String>>,
     pub on_menu_open: Callback<(String, web_sys::MouseEvent)>,

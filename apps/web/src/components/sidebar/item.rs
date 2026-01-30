@@ -11,6 +11,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use super::path_utils::find_available_path;
 use super::tree::FileNode;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::components::sidebar_menu::{MenuAction, SidebarMenu};
@@ -54,6 +55,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let delete_req = actions.on_delete.clone();
     let copy_req = actions.on_copy.clone();
     let move_req = actions.on_move.clone();
+    let docs_signal = actions.docs;
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
         leptos::logging::log!("item.rs handle_action called: action={:?}", action);
@@ -67,7 +69,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                 leptos::logging::log!("Copied to clipboard: {}", path);
             }
             MenuAction::Paste => {
-                // Get from clipboard and log (actual paste logic requires backend support)
+                // Get from clipboard and execute copy with auto-rename
                 if let Some(src) = clipboard.get_untracked() {
                     leptos::logging::log!("Paste requested: copy {} to {}", src, path);
 
@@ -89,20 +91,18 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                         .and_then(|n| n.to_str())
                         .unwrap_or("unknown");
 
-                    let dest_path = if dest_folder.is_empty() {
+                    let base_dest = if dest_folder.is_empty() {
                         src_name.to_string()
                     } else {
                         format!("{}/{}", dest_folder, src_name)
                     };
 
-                    if src == dest_path {
-                        leptos::logging::warn!(
-                            "Cannot paste into same location without rename logic"
-                        );
-                        // TODO: Auto-rename (e.g. "copy")
-                    } else {
-                        copy_req.run((src, dest_path));
-                    }
+                    // 使用 find_available_path 自动重命名
+                    let docs_list = docs_signal.get_untracked();
+                    let final_dest = find_available_path(&base_dest, &docs_list);
+
+                    leptos::logging::log!("Paste: {} -> {}", src, final_dest);
+                    copy_req.run((src, final_dest));
                 } else {
                     leptos::logging::log!("Paste: clipboard is empty");
                 }

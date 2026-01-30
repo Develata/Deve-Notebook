@@ -14,6 +14,9 @@ pub mod delta;
 pub mod node;
 
 #[cfg(not(target_arch = "wasm32"))]
+mod ops;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod manager;
 
 // 重导出常用类型

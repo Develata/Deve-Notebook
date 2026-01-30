@@ -65,6 +65,9 @@ impl FileNode {
     }
 
     /// 按名称排序子节点 (文件夹优先，然后按字母顺序)
+    ///
+    /// **注意**: 仅排序直接子节点，不递归。
+    /// 深层排序由 TreeManager 的迭代构建过程保证。
     pub fn sort_children(&mut self) {
         self.children
             .sort_by(|a, b| match (a.is_folder(), b.is_folder()) {
@@ -72,9 +75,18 @@ impl FileNode {
                 (false, true) => std::cmp::Ordering::Greater,
                 _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
             });
-        // 递归排序
-        for child in &mut self.children {
-            child.sort_children();
+    }
+
+    /// 递归排序所有层级子节点 (迭代实现，避免栈溢出)
+    ///
+    /// **复杂度**: O(n log n) 排序，O(depth) 栈空间
+    pub fn sort_all_children(&mut self) {
+        let mut stack: Vec<&mut FileNode> = vec![self];
+        while let Some(node) = stack.pop() {
+            node.sort_children();
+            for child in &mut node.children {
+                stack.push(child);
+            }
         }
     }
 }

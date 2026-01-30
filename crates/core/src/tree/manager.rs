@@ -6,6 +6,9 @@
 
 use super::delta::TreeDelta;
 use super::node::FileNode;
+use super::ops::{
+    build_subtree_iterative, insert_path, remove_iterative, rename_children, split_path, NodeInfo,
+};
 use crate::models::DocId;
 use crate::utils::path::to_forward_slash;
 use std::collections::HashMap;
@@ -16,15 +19,6 @@ use std::collections::HashMap;
 pub struct TreeManager {
     /// 路径 -> 节点信息 的映射 (O(1) 查找)
     nodes: HashMap<String, NodeInfo>,
-}
-
-/// 节点信息 (内部使用)
-#[derive(Clone, Debug)]
-struct NodeInfo {
-    name: String,
-    doc_id: Option<DocId>,
-    parent_path: String,
-    children_paths: Vec<String>,
 }
 
 impl TreeManager {
@@ -39,7 +33,7 @@ impl TreeManager {
     pub fn init_from_docs(&mut self, docs: Vec<(DocId, String)>) {
         self.nodes.clear();
         for (doc_id, path) in docs {
-            self.insert_path(&to_forward_slash(&path), Some(doc_id));
+            insert_path(&mut self.nodes, &to_forward_slash(&path), Some(doc_id));
         }
     }
 
@@ -56,7 +50,7 @@ impl TreeManager {
         let (parent, name) = split_path(&normalized);
         let parent_str = parent.to_string();
         let name_str = name.to_string();
-        self.insert_path(&normalized, Some(doc_id));
+        insert_path(&mut self.nodes, &normalized, Some(doc_id));
         TreeDelta::add_file(normalized, parent_str, name_str, doc_id)
     }
 
@@ -66,14 +60,14 @@ impl TreeManager {
         let (parent, name) = split_path(&normalized);
         let parent_str = parent.to_string();
         let name_str = name.to_string();
-        self.insert_path(&normalized, None);
+        insert_path(&mut self.nodes, &normalized, None);
         TreeDelta::add_folder(normalized, parent_str, name_str)
     }
 
     /// 删除节点，返回 Delta
     pub fn remove(&mut self, path: &str) -> TreeDelta {
         let normalized = to_forward_slash(path);
-        self.remove_recursive(&normalized);
+        remove_iterative(&mut self.nodes, &normalized);
         TreeDelta::remove(normalized)
     }
 
@@ -86,133 +80,30 @@ impl TreeManager {
             let (new_parent, new_name) = split_path(&new);
             info.name = new_name.to_string();
             info.parent_path = new_parent.to_string();
-            self.rename_children(&old, &new);
+            rename_children(&mut self.nodes, &old, &new);
             self.nodes.insert(new.clone(), info);
         }
         TreeDelta::rename(old, new)
     }
 
-    // ========== 内部方法 ==========
-
-    /// 插入路径，自动创建中间文件夹
-    fn insert_path(&mut self, path: &str, doc_id: Option<DocId>) {
-        let parts: Vec<&str> = path.split('/').collect();
-        let mut current = String::new();
-        let mut parent = String::new();
-
-        for (i, part) in parts.iter().enumerate() {
-            if !current.is_empty() {
-                current.push('/');
-            }
-            current.push_str(part);
-
-            let is_last = i == parts.len() - 1;
-            let id = if is_last { doc_id } else { None };
-
-            if !self.nodes.contains_key(&current) {
-                self.nodes.insert(
-                    current.clone(),
-                    NodeInfo {
-                        name: part.to_string(),
-                        doc_id: id,
-                        parent_path: parent.clone(),
-                        children_paths: Vec::new(),
-                    },
-                );
-                if !parent.is_empty() {
-                    if let Some(p) = self.nodes.get_mut(&parent) {
-                        if !p.children_paths.contains(&current) {
-                            p.children_paths.push(current.clone());
-                        }
-                    }
-                }
-            } else if is_last {
-                if let Some(node) = self.nodes.get_mut(&current) {
-                    node.doc_id = id;
-                }
-            }
-            parent = current.clone();
-        }
-    }
-
-    /// 递归删除节点及子节点
-    fn remove_recursive(&mut self, path: &str) {
-        let children: Vec<String> = self
-            .nodes
-            .get(path)
-            .map(|i| i.children_paths.clone())
-            .unwrap_or_default();
-
-        for child in children {
-            self.remove_recursive(&child);
-        }
-
-        if let Some(info) = self.nodes.get(path) {
-            let parent = info.parent_path.clone();
-            if let Some(p) = self.nodes.get_mut(&parent) {
-                p.children_paths.retain(|c| c != path);
-            }
-        }
-        self.nodes.remove(path);
-    }
-
-    /// 递归更新子节点路径
-    fn rename_children(&mut self, old_prefix: &str, new_prefix: &str) {
-        let affected: Vec<(String, String)> = self
-            .nodes
-            .keys()
-            .filter(|p| p.starts_with(&format!("{}/", old_prefix)))
-            .map(|old| {
-                (
-                    old.clone(),
-                    format!("{}{}", new_prefix, &old[old_prefix.len()..]),
-                )
-            })
-            .collect();
-
-        for (old, new) in affected {
-            if let Some(mut info) = self.nodes.remove(&old) {
-                let (new_parent, _) = split_path(&new);
-                info.parent_path = new_parent.to_string();
-                self.nodes.insert(new, info);
-            }
-        }
-    }
-
-    /// 从根节点构建完整树
+    /// 从根节点构建完整树 (迭代实现)
     fn build_tree_from_root(&self) -> Vec<FileNode> {
         let mut roots: Vec<FileNode> = self
             .nodes
             .iter()
             .filter(|(_, info)| info.parent_path.is_empty())
-            .filter_map(|(path, _)| self.build_subtree(path))
+            .filter_map(|(path, _)| build_subtree_iterative(&self.nodes, path))
             .collect();
 
-        // [FIX] 对根目录也进行排序 (文件夹优先，然后按字母顺序)
-        roots.sort_by(|a, b| match (a.is_folder(), b.is_folder()) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        });
+        roots.sort_by(
+            |a: &FileNode, b: &FileNode| match (a.is_folder(), b.is_folder()) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+            },
+        );
 
         roots
-    }
-
-    /// 递归构建子树
-    fn build_subtree(&self, path: &str) -> Option<FileNode> {
-        let info = self.nodes.get(path)?;
-        let mut node = FileNode {
-            name: info.name.clone(),
-            path: path.to_string(),
-            doc_id: info.doc_id,
-            children: info
-                .children_paths
-                .iter()
-                .filter_map(|c| self.build_subtree(c))
-                .collect(),
-        };
-        node.sort_children();
-        Some(node)
     }
 }
 
@@ -220,10 +111,4 @@ impl Default for TreeManager {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// 分割路径为 (父路径, 名称)
-fn split_path(path: &str) -> (&str, &str) {
-    path.rfind('/')
-        .map_or(("", path), |pos| (&path[..pos], &path[pos + 1..]))
 }
