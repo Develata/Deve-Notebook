@@ -39,7 +39,7 @@
 - [x] **Peer Deletion**: 物理删除无效的 Remote Branch.
 
 ## 4. Diff 与合并 (Diff Logic - Plan 07)
-- [x] **Text Diff**: 使用 Myers 算法 (基于 `char_indices`).
+- [x] **Text Diff**: 使用 Myers 算法 (基于 UTF-16 code unit 索引).
 - [x] **3-Way Merge**:
     - [x] **LCA**: 最近共同祖先计算.
     - [x] **Conflict Detection**: 自动检测结构性冲突.

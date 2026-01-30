@@ -8,8 +8,8 @@
 ## 核心算法 (Core Algorithms)
 
 *   **Text Diff**: 采用 **Myers Algorithm** (implemented via `similar` crate).
-    *   **UTF-8 Handling**: 必须使用 `char_indices` 对齐位置，确保多字节字符（中文/Emoji）的 Index 准确性。
-    *   **Atomicity**: `Op::Insert` 和 `Op::Delete` 均基于字符位置 (Char Pos) 而非字节位置 (Byte Pos)。
+    *   **Index Standard**: 全链路统一为 **UTF-16 code unit** 索引（与 JS/CodeMirror 一致）。
+    *   **Atomicity**: `Op::Insert` 和 `Op::Delete` 均基于 UTF-16 位置而非字节位置 (Byte Pos)。
 *   **Structural Merge**: 采用 **3-Way Merge** 策略。
     *   **Base**: 两个分支的最近共同祖先 (LCA - Lowest Common Ancestor)。
     *   **Left**: 本地当前状态 (Local Branch)。
