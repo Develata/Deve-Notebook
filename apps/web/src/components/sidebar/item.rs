@@ -7,14 +7,16 @@
 //! **核心功能清单**:
 //! - 递归渲染：遇到文件夹时递归渲染子节点。
 //! - 交互：点击打开文档，点击展开/折叠文件夹。
-//! - 上下文菜单：右键或点击更多按钮触发 `handle_action` (Rename, Copy, Paste, Move, Delete)。
+//! - 上下文菜单：右键或点击更多按钮触发 `handle_action` (Rename, Copy, Move, Delete)。
 //!
 //! **类型**: Core MUST (核心必选)
 
 use super::tree::FileNode;
+use crate::components::dropdown::AnchorRect;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::components::sidebar_menu::{MenuAction, SidebarMenu};
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 
 #[component]
 pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl IntoView {
@@ -37,17 +39,32 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let path_menu = node.path.clone();
     let trigger_menu = move |ev: web_sys::MouseEvent| {
         ev.stop_propagation();
-        on_menu_clone.run((path_menu.clone(), ev));
+        if let Some(target) = ev.current_target() {
+            if let Ok(el) = target.dyn_into::<web_sys::Element>() {
+                let rect = el.get_bounding_client_rect();
+                let anchor = AnchorRect {
+                    top: rect.top(),
+                    bottom: rect.bottom(),
+                    left: rect.left(),
+                    right: rect.right(),
+                };
+                on_menu_clone.run((path_menu.clone(), anchor));
+                return;
+            }
+        }
+        let anchor = AnchorRect {
+            top: 0.0,
+            bottom: 0.0,
+            left: 0.0,
+            right: 0.0,
+        };
+        on_menu_clone.run((path_menu.clone(), anchor));
     };
 
     let path_check = node.path.clone();
     let active_menu = actions.active_menu;
+    let menu_anchor = actions.menu_anchor;
     let is_menu_open = Memo::new(move |_| active_menu.get() == Some(path_check.clone()));
-
-    // 剪贴板上下文
-    let set_clipboard =
-        use_context::<WriteSignal<Option<String>>>().expect("clipboard set context");
-    let clipboard = use_context::<ReadSignal<Option<String>>>().expect("clipboard read context");
 
     // 构建统一的操作处理程序
     let delete_req = actions.on_delete.clone();
@@ -62,39 +79,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
             }
             MenuAction::Delete => delete_req.run(path),
             MenuAction::Copy => {
-                // 存储到剪贴板上下文
-                set_clipboard.set(Some(path.clone()));
-                leptos::logging::log!("Copied to clipboard: {}", path);
                 open_search.run(build_prefill_command("cp", &path, None));
-            }
-            MenuAction::Paste => {
-                // Get from clipboard and execute copy with auto-rename
-                if let Some(src) = clipboard.get_untracked() {
-                    leptos::logging::log!("Paste requested: copy {} to {}", src, path);
-
-                    // 确定目标文件夹
-                    let mut dest_folder = if is_folder {
-                        path.clone()
-                    } else {
-                        let p = std::path::Path::new(&path)
-                            .parent()
-                            .and_then(|p| p.to_str())
-                            .unwrap_or("");
-                        p.replace('\\', "/")
-                    };
-                    if !dest_folder.is_empty() && !dest_folder.ends_with('/') {
-                        dest_folder.push('/');
-                    }
-
-                    let dst_with_cursor = if dest_folder.is_empty() {
-                        None
-                    } else {
-                        Some(format!("{}|", dest_folder))
-                    };
-                    open_search.run(build_prefill_command("cp", &src, dst_with_cursor));
-                } else {
-                    leptos::logging::log!("Paste: clipboard is empty");
-                }
             }
             MenuAction::OpenInNewWindow => {
                 // 在新浏览器标签页中打开
@@ -157,7 +142,8 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     view! {
                         <SidebarMenu 
                             on_action=handle_action 
-                            on_close=on_close_clone 
+                            on_close=on_close_clone
+                            anchor=menu_anchor
                         />
                     }.into_any()
                 } else {

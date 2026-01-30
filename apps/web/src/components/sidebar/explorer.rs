@@ -12,6 +12,7 @@ use deve_core::models::DocId;
 use deve_core::tree::FileNode as CoreFileNode;
 use leptos::prelude::*;
 
+use crate::components::dropdown::AnchorRect;
 use crate::components::main_layout::SearchControl;
 
 #[component]
@@ -25,11 +26,7 @@ pub fn ExplorerView(
     let search_control = expect_context::<SearchControl>();
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
-
-    // 剪贴板状态
-    let (clipboard_path, set_clipboard_path) = signal(None::<String>);
-    provide_context(clipboard_path);
-    provide_context(set_clipboard_path);
+    let (menu_anchor, set_menu_anchor) = signal(None::<AnchorRect>);
 
     // 回调函数
     let open_search = Callback::new(move |query: String| {
@@ -47,20 +44,24 @@ pub fn ExplorerView(
         on_delete.run(path);
     });
 
-    let on_menu_click = Callback::new(move |(path, _ev): (String, web_sys::MouseEvent)| {
+    let on_menu_click = Callback::new(move |(path, anchor): (String, AnchorRect)| {
         set_active_menu.update(|curr| {
             if *curr == Some(path.clone()) {
                 *curr = None;
+                set_menu_anchor.set(None);
             } else {
                 *curr = Some(path);
+                set_menu_anchor.set(Some(anchor));
             }
         });
     });
 
     let close_menu = Callback::new(move |_| {
         let set_active = set_active_menu.clone();
+        let set_anchor = set_menu_anchor.clone();
         request_animation_frame(move || {
             set_active.set(None);
+            set_anchor.set(None);
         });
     });
 
@@ -73,6 +74,7 @@ pub fn ExplorerView(
         on_menu_open: on_menu_click.clone(),
         on_menu_close: close_menu.clone(),
         active_menu,
+        menu_anchor,
         on_delete: request_delete.clone(),
     };
     provide_context(actions);

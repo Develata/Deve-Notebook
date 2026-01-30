@@ -6,6 +6,8 @@
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
+use crate::components::dropdown::AnchorRect;
+
 /// 文件操作上下文
 ///
 /// 用于在文件树组件深层传递操作回调，避免 Prop Drilling。
@@ -15,8 +17,9 @@ pub struct FileActionsContext {
     pub on_select: Callback<DocId>,
     pub on_create: Callback<Option<String>>,
     pub on_open_search: Callback<String>,
-    pub on_menu_open: Callback<(String, web_sys::MouseEvent)>,
+    pub on_menu_open: Callback<(String, AnchorRect)>,
     pub on_menu_close: Callback<()>,
     pub active_menu: ReadSignal<Option<String>>,
+    pub menu_anchor: ReadSignal<Option<AnchorRect>>,
     pub on_delete: Callback<String>,
 }

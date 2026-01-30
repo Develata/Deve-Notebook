@@ -1,16 +1,17 @@
 // apps\web\src\components
 //! # SidebarMenu 组件 (SidebarMenu Component)
 //!
-//! 文件树上下文菜单，提供重命名、复制、粘贴、移动、删除等操作。
+//! 文件树上下文菜单，提供重命名、复制、移动、删除等操作。
 
 use leptos::prelude::*;
+
+use crate::components::dropdown::{Align, AnchorRect, Dropdown};
 
 /// 菜单操作类型
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MenuAction {
     Rename,
     Copy,
-    Paste,
     OpenInNewWindow,
     MoveTo,
     Delete,
@@ -60,11 +61,6 @@ const MENU_ITEMS: &[MenuItem] = &[
         "M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
     ),
     MenuItem::new(
-        MenuAction::Paste,
-        "Paste",
-        "M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"
-    ),
-    MenuItem::new(
         MenuAction::OpenInNewWindow,
         "Open in New Window",
         "M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
@@ -93,23 +89,12 @@ pub fn SidebarMenu(
     /// 关闭菜单
     #[prop(into)]
     on_close: Callback<()>,
+    /// 触发点位置
+    anchor: ReadSignal<Option<AnchorRect>>,
 ) -> impl IntoView {
     view! {
-        <>
-            // 背景遮罩
-            <div
-                class="fixed inset-0 z-40"
-                on:click=move |ev| {
-                    ev.stop_propagation();
-                    on_close.run(());
-                }
-            ></div>
-
-            // 菜单面板
-            <div
-                class="absolute right-0 top-6 w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 z-50 text-sm text-gray-700 select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right"
-                on:click=move |ev| ev.stop_propagation()
-            >
+        <Dropdown anchor=anchor.into() on_close=on_close align=Align::Right offset=6.0>
+            <div class="w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 text-sm text-gray-700 select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right">
                 {MENU_ITEMS.iter().map(|item| {
                     let action = item.action;
                     let label = item.label;
@@ -154,6 +139,6 @@ pub fn SidebarMenu(
                     }
                 }).collect_view()}
             </div>
-        </>
+        </Dropdown>
     }
 }

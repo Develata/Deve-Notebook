@@ -89,7 +89,7 @@
     *   **Shadow**: **MUST** 有明显的 Drop Shadow 以区分层级。
     *   **Modes**: 支持 `Command`, `File`, `Branch` 三种模式的UI复用。
     *   **FileOps (命令式文件操作)**:
-        *   **入口统一**: 侧边栏文件树的 UI 按钮 (Copy/Paste/Rename/Move/Create) **MUST** 唤起同一个搜索框。
+        *   **入口统一**: 侧边栏文件树的 UI 按钮 (Copy/Rename/Move/Create) **MUST** 唤起同一个搜索框。
         *   **预填策略**:
             *   Move: `>mv "<selected>" ""`，光标定位到目标参数。
             *   Copy: `>cp "<selected>" ""`，光标定位到目标参数。

@@ -5,6 +5,7 @@
 //! 结构遵循 "Activity Bar + Resizable Slot" 布局。
 pub mod bottom_bar;
 pub mod command_palette;
+pub mod dropdown;
 pub mod header;
 pub mod layout_context;
 pub mod outline;
