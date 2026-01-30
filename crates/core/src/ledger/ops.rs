@@ -4,7 +4,6 @@
 //! 实现 append-only 操作日志的读写。
 //! 支持 Local 和 Shadow 库的隔离写入。
 
-use crate::ledger::compat;
 use crate::ledger::schema::*;
 use crate::models::{DocId, LedgerEntry};
 use anyhow::Result;
@@ -76,7 +75,7 @@ pub fn append_generated_op(
             if let Some(bytes) = ops.get(seq_val)? {
                 // 只反序列化头部? Bincode 不支持部分反序列化。
                 // 但我们需要 PeerId
-                let entry: LedgerEntry = compat::decode_entry(bytes.value())?;
+                let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
                 if entry.peer_id == peer_id && entry.seq > max_seq {
                     max_seq = entry.seq;
                 }
@@ -127,7 +126,7 @@ pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerE
     for seq in seqs {
         let seq_val = seq?.value();
         if let Some(bytes) = ops_table.get(seq_val)? {
-            let entry: LedgerEntry = compat::decode_entry(bytes.value())?;
+            let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
             entries.push((seq_val, entry));
         }
     }

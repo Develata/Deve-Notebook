@@ -1,4 +1,3 @@
-use crate::ledger::compat;
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS};
 use crate::ledger::RepoManager;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
@@ -73,7 +72,7 @@ fn load_doc_entries_after(
             continue;
         }
         if let Some(bytes) = ops_table.get(seq)? {
-            let entry: LedgerEntry = compat::decode_entry(bytes.value())?;
+            let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
             result.push((seq, entry));
         }
     }

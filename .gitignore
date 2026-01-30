@@ -19,6 +19,7 @@ Thumbs.db
 # Project Specific
 deve.db
 vault/
+Vault_old/
 *.log
 
 # Web
