@@ -1,4 +1,4 @@
-﻿// apps\web\src\editor
+// apps\web\src\editor
 //! # Editor Component (Editor 组件)
 //!
 //! **架构作用**:
@@ -12,6 +12,7 @@
 //! - 管理大纲视图的显示/隐藏。
 
 use crate::hooks::use_core::CoreState;
+use crate::hooks::use_outline::use_outline;
 use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
@@ -57,9 +58,10 @@ pub fn Editor(
         ffi::set_read_only(should_readonly);
     });
 
-    // 大纲状态 (嵌入模式下默认禁用且不显示)
-    let (show_outline, set_show_outline) = signal(!embedded);
-    let on_toggle_outline = Callback::new(move |_| set_show_outline.update(|b| *b = !*b));
+    // 大纲状态 (嵌入模式下默认禁用且不显示，否则使用持久化状态)
+    let (outline_pref, set_outline_pref) = use_outline();
+    let show_outline = Signal::derive(move || !embedded && outline_pref.get());
+    let on_toggle_outline = Callback::new(move |_| set_outline_pref.update(|b| *b = !*b));
 
     let on_scroll = Callback::new(move |line: usize| {
         ffi::scroll_global(line);
