@@ -1,4 +1,4 @@
-use crate::ledger::schema::{DOC_OPS, LEDGER_OPS};
+use crate::ledger::ops;
 use crate::ledger::RepoManager;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use anyhow::Result;
@@ -42,7 +42,7 @@ pub(crate) fn rebuild_local_doc(repo: &RepoManager, doc_id: DocId) -> Result<Reb
     }
 
     let mut max_seq = base_seq;
-    let delta_entries = load_doc_entries_after(repo, doc_id, base_seq)?;
+    let delta_entries = ops::get_ops_from_db_after(&repo.local_db, doc_id, base_seq)?;
     for (seq, entry) in delta_entries {
         max_seq = max_seq.max(seq);
         entries.push(entry);
@@ -54,29 +54,4 @@ pub(crate) fn rebuild_local_doc(repo: &RepoManager, doc_id: DocId) -> Result<Reb
         base_seq,
         max_seq,
     })
-}
-
-fn load_doc_entries_after(
-    repo: &RepoManager,
-    doc_id: DocId,
-    min_seq: u64,
-) -> Result<Vec<(u64, LedgerEntry)>> {
-    let read_txn = repo.local_db.begin_read()?;
-    let ops_table = read_txn.open_table(LEDGER_OPS)?;
-    let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
-
-    let mut result = Vec::new();
-    for seq in doc_ops_table.get(doc_id.as_u128())? {
-        let seq = seq?.value();
-        if seq <= min_seq {
-            continue;
-        }
-        if let Some(bytes) = ops_table.get(seq)? {
-            let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
-            result.push((seq, entry));
-        }
-    }
-
-    result.sort_by_key(|(seq, _)| *seq);
-    Ok(result)
 }

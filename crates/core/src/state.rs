@@ -9,7 +9,7 @@
 //! 这些函数被后端（用于持久化）和前端（用于同步）共同使用。
 
 use crate::models::{LedgerEntry, Op};
-use rope_utf16::utf16_to_char_idx;
+use rope_utf16::Utf16IndexCache;
 use ropey::Rope;
 use utf16::{add_utf16_pos, utf16_len};
 
@@ -33,25 +33,55 @@ mod utf16;
 /// - 在更复杂的 CRDT 场景中，此处应由 Loro 等库处理。
 pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
     let mut content = Rope::new();
+    let mut total_utf16: u32 = 0;
+    let mut cache = Utf16IndexCache::new(adaptive_step(total_utf16));
 
     for entry in ops {
         match &entry.op {
             Op::Insert { pos, content: text } => {
-                let char_idx = utf16_to_char_idx(&content, *pos as usize);
+                let char_idx = cache.locate(&content, *pos);
+                let utf16_delta = text.encode_utf16().count() as u32;
+                let char_delta = text.chars().count();
                 content.insert(char_idx, text);
+                total_utf16 = total_utf16.saturating_add(utf16_delta);
+                let next_step = adaptive_step(total_utf16);
+                if cache.update_after_insert(*pos, utf16_delta, char_delta)
+                    || cache.step() != next_step
+                {
+                    cache = Utf16IndexCache::build(&content, next_step);
+                }
             }
             Op::Delete { pos, len } => {
                 let end_pos = pos.checked_add(*len).unwrap_or(u32::MAX);
-                let start_idx = utf16_to_char_idx(&content, *pos as usize);
-                let end_idx = utf16_to_char_idx(&content, end_pos as usize);
+                let start_idx = cache.locate(&content, *pos);
+                let end_idx = cache.locate(&content, end_pos);
                 if end_idx > start_idx {
+                    let removed_slice = content.slice(start_idx..end_idx);
+                    let mut removed_utf16 = 0u32;
+                    let mut removed_chars = 0usize;
+                    for ch in removed_slice.chars() {
+                        removed_utf16 += ch.len_utf16() as u32;
+                        removed_chars += 1;
+                    }
                     content.remove(start_idx..end_idx);
+                    total_utf16 = total_utf16.saturating_sub(removed_utf16);
+                    let next_step = adaptive_step(total_utf16);
+                    if cache.update_after_delete(*pos, removed_utf16, removed_utf16, removed_chars)
+                        || cache.step() != next_step
+                    {
+                        cache = Utf16IndexCache::build(&content, next_step);
+                    }
                 }
             }
         }
     }
 
     content.to_string()
+}
+
+fn adaptive_step(total_utf16: u32) -> u32 {
+    let step = total_utf16 / 64;
+    step.clamp(64, 1024)
 }
 
 /// 计算两个字符串之间的编辑操作差异

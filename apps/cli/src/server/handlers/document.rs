@@ -6,7 +6,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::LedgerEntry;
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -114,21 +114,13 @@ pub async fn handle_open_doc(
     );
 
     // 优先使用 session 锁定的数据库
-    let (final_content, version) = if let Some(handle) = session.get_active_db() {
+    let (snapshot_content, base_seq, delta_ops, version) = if let Some(handle) = session.get_active_db() {
         // 直接从锁定的数据库读取
-        match deve_core::ledger::ops::get_ops_from_db(&handle.db, doc_id) {
-            Ok(entries_with_seq) => {
-                let ops: Vec<LedgerEntry> = entries_with_seq
-                    .iter()
-                    .map(|(_, entry)| entry.clone())
-                    .collect();
-                let content = deve_core::state::reconstruct_content(&ops);
-                let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-                (content, ver)
-            }
+        match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth) {
+            Ok(payload) => payload,
             Err(e) => {
-                tracing::error!("Failed to read ops from active_db: {:?}", e);
-                (String::new(), 0)
+                tracing::error!("Failed to build snapshot from active_db: {:?}", e);
+                (String::new(), 0, Vec::new(), 0)
             }
         }
     } else {
@@ -141,24 +133,16 @@ pub async fn handle_open_doc(
             tracing::error!("SyncManager reconcile failed: {:?}", e);
         }
 
-        let res: anyhow::Result<Vec<(u64, LedgerEntry)>> =
-            state.repo.run_on_local_repo(repo_name, |db| {
-                deve_core::ledger::ops::get_ops_from_db(db, doc_id)
-            });
+        let res: anyhow::Result<(String, u64, Vec<(u64, Op)>, u64)> = state.repo.run_on_local_repo(
+            repo_name,
+            |db| build_snapshot_payload(db, doc_id, state.repo.snapshot_depth),
+        );
 
         match res {
-            Ok(entries_with_seq) => {
-                let ops: Vec<LedgerEntry> = entries_with_seq
-                    .iter()
-                    .map(|(_, entry)| entry.clone())
-                    .collect();
-                let content = deve_core::state::reconstruct_content(&ops);
-                let ver = entries_with_seq.last().map(|(seq, _)| *seq).unwrap_or(0);
-                (content, ver)
-            }
+            Ok(payload) => payload,
             Err(e) => {
-                tracing::error!("Failed to read ops from repo {}: {:?}", repo_name, e);
-                (String::new(), 0)
+                tracing::error!("Failed to read snapshot from repo {}: {:?}", repo_name, e);
+                (String::new(), 0, Vec::new(), 0)
             }
         }
     };
@@ -166,7 +150,72 @@ pub async fn handle_open_doc(
     // 单播快照给请求者
     ch.unicast(ServerMessage::Snapshot {
         doc_id,
-        content: final_content,
+        content: snapshot_content,
+        base_seq,
         version,
+        delta_ops,
     });
+}
+
+fn build_snapshot_payload(
+    db: &redb::Database,
+    doc_id: deve_core::models::DocId,
+    snapshot_depth: usize,
+) -> anyhow::Result<(String, u64, Vec<(u64, Op)>, u64)> {
+    let snapshot = deve_core::ledger::snapshot::load_latest_snapshot(db, doc_id)?;
+    let has_snapshot = snapshot.is_some();
+    let (base_seq, content) = snapshot.unwrap_or((0, String::new()));
+
+    let delta_entries = deve_core::ledger::ops::get_ops_from_db_after(db, doc_id, base_seq)?;
+    let mut version = base_seq;
+    let mut delta_ops = Vec::new();
+    for (seq, entry) in delta_entries {
+        version = version.max(seq);
+        delta_ops.push((seq, entry.op));
+    }
+
+    if !has_snapshot {
+        let full_entries = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
+        if full_entries.is_empty() {
+            return Ok((String::new(), 0, Vec::new(), 0));
+        }
+
+        let ops: Vec<LedgerEntry> = full_entries
+            .iter()
+            .map(|(_, entry)| entry.clone())
+            .collect();
+        let full_content = deve_core::state::reconstruct_content(&ops);
+        let full_version = full_entries.last().map(|(seq, _)| *seq).unwrap_or(0);
+        let _ = deve_core::ledger::snapshot::save_snapshot(
+            db,
+            doc_id,
+            full_version,
+            &full_content,
+            snapshot_depth,
+        );
+        return Ok((full_content, full_version, Vec::new(), full_version));
+    }
+
+    if content.is_empty() && base_seq == 0 && !delta_ops.is_empty() {
+        let full_entries = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
+        if full_entries.is_empty() {
+            return Ok((String::new(), 0, Vec::new(), 0));
+        }
+        let ops: Vec<LedgerEntry> = full_entries
+            .iter()
+            .map(|(_, entry)| entry.clone())
+            .collect();
+        let full_content = deve_core::state::reconstruct_content(&ops);
+        let full_version = full_entries.last().map(|(seq, _)| *seq).unwrap_or(0);
+        let _ = deve_core::ledger::snapshot::save_snapshot(
+            db,
+            doc_id,
+            full_version,
+            &full_content,
+            snapshot_depth,
+        );
+        return Ok((full_content, full_version, Vec::new(), full_version));
+    }
+
+    Ok((content, base_seq, delta_ops, version))
 }

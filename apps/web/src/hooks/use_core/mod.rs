@@ -113,6 +113,8 @@ pub fn use_core() -> CoreState {
         on_plugin_call: misc_callbacks.on_plugin_call,
         search_results: signals.search_results,
         on_search: misc_callbacks.on_search,
+        load_state: signals.load_state,
+        set_load_state: signals.set_load_state,
         sync_mode: signals.sync_mode,
         pending_ops_count: signals.pending_ops_count,
         pending_ops_previews: signals.pending_ops_previews,

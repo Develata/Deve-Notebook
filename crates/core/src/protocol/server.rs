@@ -54,7 +54,9 @@ pub enum ServerMessage {
     Snapshot {
         doc_id: DocId,
         content: String,
+        base_seq: u64,
         version: u64,
+        delta_ops: Vec<(u64, Op)>,
     },
     /// 服务端发送完整操作历史 (用于回放)
     History { doc_id: DocId, ops: Vec<(u64, Op)> },

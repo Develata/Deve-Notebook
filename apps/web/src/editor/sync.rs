@@ -7,6 +7,7 @@
 //! 负责更新本地文档状态、版本号和 CodeMirror 内容。
 
 use super::ffi::{applyRemoteContent, applyRemoteOp, getEditorContent};
+use super::prefetch::{apply_ops_in_batches, PrefetchConfig};
 use super::EditorStats;
 use crate::api::WsService;
 use deve_core::models::{DocId, Op};
@@ -26,13 +27,16 @@ pub fn handle_server_message(
     set_history: WriteSignal<Vec<(u64, Op)>>,
     is_playback: ReadSignal<bool>,
     set_playback_version: WriteSignal<u64>,
+    set_load_state: WriteSignal<String>,
     on_stats: Option<Callback<EditorStats>>,
 ) {
     match msg {
         ServerMessage::Snapshot {
             doc_id: msg_doc_id,
             content: new_content,
+            base_seq,
             version,
+            delta_ops,
         } => {
             // 按 DocId 过滤
             if msg_doc_id != doc_id {
@@ -40,9 +44,11 @@ pub fn handle_server_message(
             }
 
             leptos::logging::log!(
-                "Received Snapshot: {} chars, Ver: {}",
+                "Received Snapshot: {} chars, Base: {}, Ver: {}, Pending: {}",
                 new_content.len(),
-                version
+                base_seq,
+                version,
+                delta_ops.len()
             );
 
             // 计算初始统计信息
@@ -58,13 +64,63 @@ pub fn handle_server_message(
 
             applyRemoteContent(&new_content);
             set_content.set(new_content);
-            set_local_version.set(version);
+            set_local_version.set(base_seq);
 
             // 初始化回放范围
-            set_playback_version.set(version);
+            set_playback_version.set(base_seq);
+            set_load_state.set("partial".to_string());
 
-            // 请求历史记录
-            ws.send(ClientMessage::RequestHistory { doc_id });
+            if delta_ops.is_empty() {
+                set_local_version.set(version);
+                set_playback_version.set(version);
+                set_load_state.set("ready".to_string());
+                ws.send(ClientMessage::RequestHistory { doc_id });
+                return;
+            }
+
+            let set_local_version = set_local_version;
+            let set_history = set_history;
+            let on_stats = on_stats;
+            let set_content = set_content;
+            let set_playback_version = set_playback_version;
+            let set_load_state = set_load_state;
+            let ws = ws.clone();
+
+            let apply_op = std::rc::Rc::new(move |seq: u64, op: &Op| {
+                if let Ok(json) = serde_json::to_string(op) {
+                    applyRemoteOp(&json);
+                }
+                set_local_version.set(seq);
+                set_history.update(|h| h.push((seq, op.clone())));
+            });
+
+            let on_done = std::rc::Rc::new(move || {
+                let txt = getEditorContent();
+                if let Some(cb) = on_stats {
+                    let lines = txt.lines().count();
+                    let words = txt.split_whitespace().count();
+                    cb.run(EditorStats {
+                        chars: txt.len(),
+                        words,
+                        lines,
+                    });
+                }
+                set_content.set(txt);
+                set_playback_version.set(version);
+                set_load_state.set("ready".to_string());
+                ws.send(ClientMessage::RequestHistory { doc_id });
+            });
+
+            apply_ops_in_batches(
+                delta_ops,
+                PrefetchConfig {
+                    target_ms: 8.0,
+                    initial_batch: 16,
+                    max_batch: 256,
+                },
+                apply_op,
+                on_done,
+            );
         }
         ServerMessage::History {
             doc_id: msg_doc_id,

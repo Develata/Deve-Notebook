@@ -19,6 +19,7 @@ use leptos::prelude::*;
 pub mod ffi;
 pub mod hook;
 pub mod playback;
+pub mod prefetch;
 pub mod sync;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -51,7 +52,8 @@ pub fn Editor(
     Effect::new(move |_| {
         let spectator = core.is_spectator.get();
         let is_pb = playback_version.get() < local_version.get_untracked();
-        let should_readonly = spectator || is_pb;
+        let loading = core.load_state.get() != "ready";
+        let should_readonly = spectator || is_pb || loading;
         ffi::set_read_only(should_readonly);
     });
 

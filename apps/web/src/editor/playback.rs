@@ -1,13 +1,13 @@
-﻿// apps\web\src\editor
+// apps\web\src\editor
 //! # Playback Logic (回放逻辑)
 //!
 //! **架构作用**:
 //! 处理历史版本回放的逻辑。
 //! 当用户拖动时间轴时，从 `Op` 历史记录中重建文档内容。
 
-use leptos::prelude::*;
-use deve_core::models::{DocId, Op, LedgerEntry};
 use super::ffi::applyRemoteContent;
+use deve_core::models::{DocId, LedgerEntry, Op};
+use leptos::prelude::*;
 
 pub fn handle_playback_change(
     ver: u64,
@@ -33,7 +33,8 @@ pub fn handle_playback_change(
     }
 
     // 过滤 history <= ver
-    let relevant_ops: Vec<LedgerEntry> = hist.into_iter()
+    let relevant_ops: Vec<LedgerEntry> = hist
+        .into_iter()
         .filter(|(s, _)| *s <= ver)
         .map(|(_, op)| LedgerEntry {
             doc_id,
@@ -43,7 +44,7 @@ pub fn handle_playback_change(
             seq: 0,
         })
         .collect();
-        
+
     let reconstructed = deve_core::state::reconstruct_content(&relevant_ops);
     applyRemoteContent(&reconstructed);
     // 我们在此不更新 `content` 信号，以避免触发 diff 循环。

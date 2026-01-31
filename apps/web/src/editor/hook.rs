@@ -42,6 +42,7 @@ pub fn use_editor(
     // 文档的本地状态
     let (content, set_content) = signal("".to_string());
     let (local_version, set_local_version) = signal(0u64);
+    let set_load_state = core.set_load_state;
 
     // 回放状态
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
@@ -62,6 +63,7 @@ pub fn use_editor(
         set_history.set(Vec::new());
         set_doc_ver.set(0);
         set_playback_version.set(0);
+        set_load_state.set("loading".to_string());
         ws_clone.send(ClientMessage::OpenDoc { doc_id });
     });
 
@@ -86,6 +88,7 @@ pub fn use_editor(
                 set_history,
                 is_playback,
                 set_playback_version,
+                set_load_state,
                 on_stats,
             );
         }
@@ -162,7 +165,8 @@ pub fn use_editor(
 
         let is_pb = ver < local;
         let spectator = core.is_spectator.get_untracked();
-        let should_readonly = is_pb || spectator;
+        let loading = core.load_state.get_untracked() != "ready";
+        let should_readonly = is_pb || spectator || loading;
         set_read_only(should_readonly);
     });
 

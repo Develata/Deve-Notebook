@@ -62,6 +62,10 @@ pub struct CoreState {
     pub search_results: ReadSignal<Vec<(String, String, f32)>>, // (doc_id, path, score)
     pub on_search: Callback<String>,
 
+    // 文档加载状态
+    pub load_state: ReadSignal<String>,
+    pub set_load_state: WriteSignal<String>,
+
     // 手动合并
     pub sync_mode: ReadSignal<String>, // "auto" or "manual"
     pub pending_ops_count: ReadSignal<u32>,

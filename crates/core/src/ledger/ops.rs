@@ -134,3 +134,29 @@ pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerE
     entries.sort_by_key(|k| k.0);
     Ok(entries)
 }
+
+/// 从指定数据库读取指定序列号之后的操作。
+pub fn get_ops_from_db_after(
+    db: &Database,
+    doc_id: DocId,
+    min_seq: u64,
+) -> Result<Vec<(u64, LedgerEntry)>> {
+    let read_txn = db.begin_read()?;
+    let ops_table = read_txn.open_table(LEDGER_OPS)?;
+    let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
+
+    let mut entries = Vec::new();
+    for seq in doc_ops_table.get(doc_id.as_u128())? {
+        let seq = seq?.value();
+        if seq <= min_seq {
+            continue;
+        }
+        if let Some(bytes) = ops_table.get(seq)? {
+            let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
+            entries.push((seq, entry));
+        }
+    }
+
+    entries.sort_by_key(|(seq, _)| *seq);
+    Ok(entries)
+}
