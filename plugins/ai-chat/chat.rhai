@@ -60,7 +60,7 @@ fn chat(req_id, user_message, context) {
     if type_of(extra_headers) == "map" { config.headers = extra_headers; }
 
     if config.api_key == () {
-        return "Error: AI_API_KEY not set in environment.";
+        return #{ error: true, code: "MISSING_API_KEY", message: "AI_API_KEY not set in environment." };
     }
 
     let tool_defs = if mode == state::mode_plan() { [] } else { tools::get_tools() };

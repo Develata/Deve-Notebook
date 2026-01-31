@@ -30,6 +30,7 @@ import { copyTexExtension } from "./extensions/copy_tex.js";
 import { listMarkerPlugin } from "./extensions/list_marker.js";
 import { blockquoteBorderPlugin } from "./extensions/blockquote_border.js";
 import { codeToolbarPlugin } from "./extensions/code_toolbar.js"; // [NEW]
+import { hyperlinkClickPlugin } from "./extensions/hyperlink_click.js"; // [NEW] Ctrl+Click 链接跳转
 
 console.log("Editor Adapter v5 - Native Selection Mode");
 
@@ -119,6 +120,7 @@ export function initCodeMirror(element, onDelta) {
         listMarkerPlugin,        // [NEW] 列表圆点渲染
         blockquoteBorderPlugin,  // [NEW] 引用块边框
         codeToolbarPlugin,       // [NEW] 代码块工具栏 (Copy/Lang)
+        hyperlinkClickPlugin,    // [NEW] Ctrl+Click 链接跳转
 
         // 性能优化: 发送 Delta 而不是全文
 
