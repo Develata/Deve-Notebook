@@ -13,6 +13,8 @@ pub mod reconcile;
 pub mod recovery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scan;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod snapshot_policy;
 pub mod vector;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -29,6 +31,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing::{info, warn};
+#[cfg(not(target_arch = "wasm32"))]
+use snapshot_policy::SnapshotPolicy;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
@@ -94,19 +98,21 @@ impl SyncManager {
             std::fs::write(&file_path, &rebuilt.content)?;
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
 
-            // Snapshot throttle: only update snapshot when it is sufficiently stale.
-            const SNAPSHOT_INTERVAL: u64 = 64;
+            // Adaptive Snapshot Policy
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
-            if rebuilt.max_seq > 0 && delta >= SNAPSHOT_INTERVAL
+            let policy = SnapshotPolicy::default();
+            let doc_len = rebuilt.content.encode_utf16().count();
+            if rebuilt.max_seq > 0
+                && policy.should_snapshot(doc_len, delta, 0)
                 && let Err(e) = self
                     .repo
                     .save_snapshot(doc_id, rebuilt.max_seq, &rebuilt.content)
-                {
-                    warn!(
-                        "SyncManager: Failed to save snapshot for {}: {:?}",
-                        doc_id, e
-                    );
-                }
+            {
+                warn!(
+                    "SyncManager: Failed to save snapshot for {}: {:?}",
+                    doc_id, e
+                );
+            }
         }
         Ok(())
     }

@@ -121,4 +121,35 @@ impl Utf16IndexCache {
             }
         }
     }
+
+    pub(super) fn validate_sample(&self, rope: &Rope) -> bool {
+        if self.checkpoints.len() <= 2 {
+            return true;
+        }
+        let mid = self.checkpoints.len() / 2;
+        let samples = [0, mid, self.checkpoints.len() - 1];
+        for idx in samples {
+            let (utf16, char_idx) = self.checkpoints[idx];
+            if !verify_checkpoint(rope, utf16, char_idx) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+fn verify_checkpoint(rope: &Rope, utf16_target: u32, char_target: usize) -> bool {
+    let mut utf16 = 0u32;
+    let mut char_idx = 0usize;
+    for ch in rope.chars() {
+        if utf16 >= utf16_target {
+            return char_idx == char_target;
+        }
+        utf16 += ch.len_utf16() as u32;
+        char_idx += 1;
+        if char_idx > char_target {
+            return false;
+        }
+    }
+    utf16_target == utf16 && char_idx == char_target
 }

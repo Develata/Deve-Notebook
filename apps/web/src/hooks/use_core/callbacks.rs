@@ -153,6 +153,7 @@ pub struct MiscCallbacks {
 pub fn create_misc_callbacks(
     ws: &WsService,
     set_stats: WriteSignal<crate::editor::EditorStats>,
+    load_state: ReadSignal<String>,
 ) -> MiscCallbacks {
     let on_stats = Callback::new(move |s| set_stats.set(s));
 
@@ -175,6 +176,10 @@ pub fn create_misc_callbacks(
 
     let ws_search = ws.clone();
     let on_search = Callback::new(move |query: String| {
+        if load_state.get_untracked() != "ready" {
+            leptos::logging::warn!("Search disabled while loading");
+            return;
+        }
         ws_search.send(ClientMessage::Search { query, limit: 50 });
     });
 

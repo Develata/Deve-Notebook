@@ -9,6 +9,7 @@ use crate::server::session::WsSession;
 use deve_core::models::{LedgerEntry, Op};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
+use std::time::Instant;
 
 /// 处理编辑请求
 ///
@@ -113,6 +114,8 @@ pub async fn handle_open_doc(
         session.active_repo
     );
 
+    let start = Instant::now();
+
     // 优先使用 session 锁定的数据库
     let (snapshot_content, base_seq, delta_ops, version) = if let Some(handle) = session.get_active_db() {
         // 直接从锁定的数据库读取
@@ -146,6 +149,15 @@ pub async fn handle_open_doc(
             }
         }
     };
+
+    tracing::info!(
+        "OpenDoc Prepared: doc={}, base_seq={}, version={}, pending_ops={}, elapsed_ms={}",
+        doc_id,
+        base_seq,
+        version,
+        delta_ops.len(),
+        start.elapsed().as_millis()
+    );
 
     // 单播快照给请求者
     ch.unicast(ServerMessage::Snapshot {

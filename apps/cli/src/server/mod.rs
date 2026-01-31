@@ -42,6 +42,7 @@ pub mod plugin_host;
 pub mod node_role;
 pub mod node_role_http;
 pub mod security;
+pub mod prewarm;
 
 #[allow(dead_code)] // repo_key: 为未来加密功能预留
 pub struct AppState {
@@ -78,6 +79,8 @@ pub async fn start_server(
         repo.clone(),
         vault_path.clone(),
     ));
+
+    prewarm::spawn_prewarm(repo.clone());
 
     #[cfg(feature = "search")]
     let search_service = {

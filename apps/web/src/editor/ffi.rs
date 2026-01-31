@@ -27,6 +27,10 @@ unsafe extern "C" {
     /// 应用远程操作 (增量)
     pub fn applyRemoteOp(op_json: &str);
 
+    /// 批量应用远程操作 (增量)
+    #[wasm_bindgen(js_namespace = window, js_name = applyRemoteOpsBatch)]
+    pub fn applyRemoteOpsBatch(ops_json: &str);
+
     /// 获取当前编辑器内容
     pub fn getEditorContent() -> String;
 

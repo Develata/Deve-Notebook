@@ -43,6 +43,8 @@ pub fn use_editor(
     let (content, set_content) = signal("".to_string());
     let (local_version, set_local_version) = signal(0u64);
     let set_load_state = core.set_load_state;
+    let set_load_progress = core.set_load_progress;
+    let set_load_eta_ms = core.set_load_eta_ms;
 
     // 回放状态
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
@@ -64,6 +66,8 @@ pub fn use_editor(
         set_doc_ver.set(0);
         set_playback_version.set(0);
         set_load_state.set("loading".to_string());
+        set_load_progress.set((0, 0));
+        set_load_eta_ms.set(0);
         ws_clone.send(ClientMessage::OpenDoc { doc_id });
     });
 
@@ -89,6 +93,8 @@ pub fn use_editor(
                 is_playback,
                 set_playback_version,
                 set_load_state,
+                set_load_progress,
+                set_load_eta_ms,
                 on_stats,
             );
         }

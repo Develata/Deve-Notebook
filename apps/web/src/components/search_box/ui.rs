@@ -12,7 +12,6 @@ use crate::i18n::{t, Locale};
 #[allow(clippy::too_many_arguments)]
 pub fn render_overlay(
     show: Signal<bool>,
-    search_enabled: Signal<bool>,
     set_show: WriteSignal<bool>,
     query: Signal<String>,
     set_query: WriteSignal<String>,
@@ -41,24 +40,17 @@ pub fn render_overlay(
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
                     on:keydown={
                         let handle_keydown_closure = handle_keydown_closure.clone();
-                        move |ev| {
-                            if !search_enabled.get() {
-                                return;
-                            }
-                            handle_keydown_closure(ev)
-                        }
+                        move |ev| handle_keydown_closure(ev)
                     }
                 >
                     {header(
                         query,
-                        search_enabled,
                         set_query,
                         set_selected_index,
                         placeholder_text,
                         input_ref,
                     )}
                     {results_panel(
-                        search_enabled,
                         providers_results,
                         selected_index,
                         set_selected_index,
@@ -80,7 +72,6 @@ pub fn render_overlay(
 /// 头部搜索框区域。
 fn header(
     query: Signal<String>,
-    search_enabled: Signal<bool>,
     set_query: WriteSignal<String>,
     set_selected_index: WriteSignal<usize>,
     placeholder_text: Memo<String>,
@@ -95,8 +86,7 @@ fn header(
                 node_ref=input_ref
                 type="text"
                 class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
-                placeholder=move || if search_enabled.get() { placeholder_text.get() } else { "Indexing in background...".to_string() }
-                prop:disabled=move || !search_enabled.get()
+                placeholder=move || placeholder_text.get()
                 prop:value=move || query.get()
                 on:input=move |ev| {
                     set_query.set(event_target_value(&ev));
@@ -126,7 +116,6 @@ fn search_icon(query: Signal<String>) -> impl IntoView {
 /// 列表区域，包含空态与结果列表。
 #[allow(clippy::too_many_arguments)]
 fn results_panel(
-    search_enabled: Signal<bool>,
     providers_results: Memo<Vec<SearchResult>>,
     selected_index: Signal<usize>,
     set_selected_index: WriteSignal<usize>,
@@ -143,14 +132,6 @@ fn results_panel(
             {
                 let core = core.clone();
                 move || {
-                    if !search_enabled.get() {
-                        return view! {
-                            <div class="p-4 text-center text-gray-400 text-sm">
-                                "Indexing in background..."
-                            </div>
-                        }
-                        .into_any();
-                    }
                     let res = providers_results.get();
                     let core = core.clone();
 

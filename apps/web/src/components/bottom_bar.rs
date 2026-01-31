@@ -20,6 +20,9 @@ pub fn BottomBar(
     let max_ver = core.doc_version;
     let curr_ver = core.playback_version;
     let set_ver = core.set_playback_version;
+    let load_state = core.load_state;
+    let load_progress = core.load_progress;
+    let load_eta_ms = core.load_eta_ms;
 
     let status_view = move || {
         let (color, text) = match status.get() {
@@ -58,6 +61,30 @@ pub fn BottomBar(
         }
     };
 
+    let load_status = move || {
+        let state = load_state.get();
+        if state == "ready" {
+            return view! {}.into_any();
+        }
+        let (done, total) = load_progress.get();
+        let eta_ms = load_eta_ms.get();
+        let text = if total > 0 {
+            if eta_ms > 0 {
+                format!("Loading {}/{} (~{}ms)", done, total, eta_ms)
+            } else {
+                format!("Loading {}/{}", done, total)
+            }
+        } else {
+            "Loading...".to_string()
+        };
+        view! {
+            <div class="text-[10px] text-gray-500 font-mono">
+                {text}
+            </div>
+        }
+        .into_any()
+    };
+
     view! {
         <footer class="h-8 bg-gray-50 border-t border-gray-200 flex items-center justify-between px-4 select-none relative">
             // 左侧: 分支切换器 + 系统状态
@@ -73,6 +100,7 @@ pub fn BottomBar(
             // 右侧: 编辑器统计
 
             <div class="flex items-center gap-4 text-xs text-gray-500">
+                {load_status}
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::words(locale.get())}</span>
                     <span class="font-mono text-gray-700">{move || stats.get().words}</span>

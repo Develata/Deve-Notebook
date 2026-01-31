@@ -211,6 +211,35 @@ export function applyRemoteOp(op_json) {
   }
 }
 
+export function applyRemoteOpsBatch(ops_json) {
+  if (activeView) {
+    isRemote = true;
+    try {
+      const ops = JSON.parse(ops_json);
+      if (!Array.isArray(ops)) return;
+      for (const op of ops) {
+        if (op.Insert) {
+          activeView.dispatch({
+            changes: { from: op.Insert.pos, insert: op.Insert.content },
+          });
+        } else if (op.Delete) {
+          activeView.dispatch({
+            changes: {
+              from: op.Delete.pos,
+              to: op.Delete.pos + op.Delete.len,
+              insert: "",
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.error("applyRemoteOpsBatch Error:", e);
+    } finally {
+      isRemote = false;
+    }
+  }
+}
+
 export function scrollGlobal(lineNumber) {
   if (!activeView || !activeView.state) return;
 
@@ -250,5 +279,7 @@ window.destroyEditor = destroyEditor;
 window.getEditorContent = getEditorContent;
 window.applyRemoteContent = applyRemoteContent;
 window.applyRemoteOp = applyRemoteOp;
+window.applyRemoteOpsBatch = applyRemoteOpsBatch;
+globalThis.applyRemoteOpsBatch = applyRemoteOpsBatch;
 window.scrollGlobal = scrollGlobal;
 window.setReadOnly = setReadOnly;

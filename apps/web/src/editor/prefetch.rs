@@ -12,7 +12,8 @@ pub struct PrefetchConfig {
 pub fn apply_ops_in_batches(
     ops: Vec<(u64, Op)>,
     config: PrefetchConfig,
-    apply_op: Rc<dyn Fn(u64, &Op)>,
+    apply_batch: Rc<dyn Fn(&[(u64, Op)])>,
+    on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
     if ops.is_empty() {
@@ -28,7 +29,7 @@ pub fn apply_ops_in_batches(
         target_ms: config.target_ms.max(1.0),
     }));
 
-    schedule_batch(ops, state, apply_op, on_done);
+    schedule_batch(ops, state, apply_batch, on_progress, on_done);
 }
 
 struct BatchState {
@@ -41,17 +42,19 @@ struct BatchState {
 fn schedule_batch(
     ops: Rc<Vec<(u64, Op)>>,
     state: Rc<RefCell<BatchState>>,
-    apply_op: Rc<dyn Fn(u64, &Op)>,
+    apply_batch: Rc<dyn Fn(&[(u64, Op)])>,
+    on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
-    let task = move || run_batch(ops, state, apply_op, on_done);
+    let task = move || run_batch(ops, state, apply_batch, on_progress, on_done);
     Timeout::new(0, task).forget();
 }
 
 fn run_batch(
     ops: Rc<Vec<(u64, Op)>>,
     state: Rc<RefCell<BatchState>>,
-    apply_op: Rc<dyn Fn(u64, &Op)>,
+    apply_batch: Rc<dyn Fn(&[(u64, Op)])>,
+    on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
     let total = ops.len();
@@ -65,14 +68,13 @@ fn run_batch(
     let start = now_ms();
     let remaining = total - st.index;
     let count = st.batch.min(remaining);
-
-    for _ in 0..count {
-        let (seq, op) = &ops[st.index];
-        apply_op(*seq, op);
-        st.index += 1;
-    }
+    let start_idx = st.index;
+    let end_idx = st.index + count;
+    apply_batch(&ops[start_idx..end_idx]);
+    st.index = end_idx;
 
     let elapsed = now_ms() - start;
+    on_progress(st.index, total, elapsed);
     if elapsed > st.target_ms {
         st.batch = (st.batch / 2).max(1);
     } else if elapsed < st.target_ms * 0.6 {
@@ -80,7 +82,7 @@ fn run_batch(
     }
 
     drop(st);
-    schedule_batch(ops, state, apply_op, on_done);
+    schedule_batch(ops, state, apply_batch, on_progress, on_done);
 }
 
 fn now_ms() -> f64 {

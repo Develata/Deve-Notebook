@@ -16,7 +16,6 @@ use crate::i18n::{t, Locale};
 #[allow(clippy::too_many_arguments)]
 pub fn create_results_memo(
     show: Signal<bool>,
-    search_enabled: Signal<bool>,
     query: Signal<String>,
     locale: RwSignal<Locale>,
     core: CoreState,
@@ -27,10 +26,6 @@ pub fn create_results_memo(
 ) -> Memo<Vec<SearchResult>> {
     Memo::new(move |_| {
         if !show.get() {
-            return Vec::new();
-        }
-
-        if !search_enabled.get() {
             return Vec::new();
         }
 

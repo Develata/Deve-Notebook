@@ -6,7 +6,7 @@
 //! 分发快照、历史记录、新操作 (NewOp) 和 P2P 同步通知。
 //! 负责更新本地文档状态、版本号和 CodeMirror 内容。
 
-use super::ffi::{applyRemoteContent, applyRemoteOp, getEditorContent};
+use super::ffi::{applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, getEditorContent};
 use super::prefetch::{apply_ops_in_batches, PrefetchConfig};
 use super::EditorStats;
 use crate::api::WsService;
@@ -28,6 +28,8 @@ pub fn handle_server_message(
     is_playback: ReadSignal<bool>,
     set_playback_version: WriteSignal<u64>,
     set_load_state: WriteSignal<String>,
+    set_load_progress: WriteSignal<(usize, usize)>,
+    set_load_eta_ms: WriteSignal<u64>,
     on_stats: Option<Callback<EditorStats>>,
 ) {
     match msg {
@@ -42,6 +44,8 @@ pub fn handle_server_message(
             if msg_doc_id != doc_id {
                 return;
             }
+
+            let load_start = now_ms();
 
             leptos::logging::log!(
                 "Received Snapshot: {} chars, Base: {}, Ver: {}, Pending: {}",
@@ -69,11 +73,20 @@ pub fn handle_server_message(
             // 初始化回放范围
             set_playback_version.set(base_seq);
             set_load_state.set("partial".to_string());
+            set_load_progress.set((0, delta_ops.len()));
+            set_load_eta_ms.set(0);
 
             if delta_ops.is_empty() {
                 set_local_version.set(version);
                 set_playback_version.set(version);
                 set_load_state.set("ready".to_string());
+                set_load_progress.set((0, 0));
+                set_load_eta_ms.set(0);
+                leptos::logging::log!(
+                    "Snapshot load complete: doc={}, elapsed_ms={}",
+                    doc_id,
+                    (now_ms() - load_start) as u64
+                );
                 ws.send(ClientMessage::RequestHistory { doc_id });
                 return;
             }
@@ -84,15 +97,37 @@ pub fn handle_server_message(
             let set_content = set_content;
             let set_playback_version = set_playback_version;
             let set_load_state = set_load_state;
+            let set_load_eta_ms = set_load_eta_ms;
             let ws = ws.clone();
 
-            let apply_op = std::rc::Rc::new(move |seq: u64, op: &Op| {
-                if let Ok(json) = serde_json::to_string(op) {
-                    applyRemoteOp(&json);
+            let apply_batch = std::rc::Rc::new(move |batch: &[(u64, Op)]| {
+                let ops_only: Vec<Op> = batch.iter().map(|(_, op)| op.clone()).collect();
+                if let Ok(json) = serde_json::to_string(&ops_only) {
+                    applyRemoteOpsBatch(&json);
                 }
-                set_local_version.set(seq);
-                set_history.update(|h| h.push((seq, op.clone())));
+                if let Some((seq, _)) = batch.last() {
+                    set_local_version.set(*seq);
+                }
+                set_history.update(|h| {
+                    for (seq, op) in batch {
+                        h.push((*seq, op.clone()));
+                    }
+                });
             });
+
+            let elapsed_total = std::rc::Rc::new(std::cell::RefCell::new(0.0));
+            let on_progress = {
+                let elapsed_total = elapsed_total.clone();
+                std::rc::Rc::new(move |done: usize, total: usize, batch_ms: f64| {
+                    set_load_progress.set((done, total));
+                    *elapsed_total.borrow_mut() += batch_ms;
+                    if done > 0 {
+                        let per_op = *elapsed_total.borrow() / done as f64;
+                        let remaining = (total - done) as f64 * per_op;
+                        set_load_eta_ms.set(remaining as u64);
+                    }
+                })
+            };
 
             let on_done = std::rc::Rc::new(move || {
                 let txt = getEditorContent();
@@ -108,6 +143,13 @@ pub fn handle_server_message(
                 set_content.set(txt);
                 set_playback_version.set(version);
                 set_load_state.set("ready".to_string());
+                set_load_progress.set((0, 0));
+                set_load_eta_ms.set(0);
+                leptos::logging::log!(
+                    "Snapshot load complete: doc={}, elapsed_ms={}",
+                    doc_id,
+                    (now_ms() - load_start) as u64
+                );
                 ws.send(ClientMessage::RequestHistory { doc_id });
             });
 
@@ -118,7 +160,8 @@ pub fn handle_server_message(
                     initial_batch: 16,
                     max_batch: 256,
                 },
-                apply_op,
+                apply_batch,
+                on_progress,
                 on_done,
             );
         }
@@ -217,4 +260,11 @@ pub fn handle_server_message(
         }
         _ => {}
     }
+}
+
+fn now_ms() -> f64 {
+    web_sys::window()
+        .and_then(|w| w.performance())
+        .map(|p| p.now())
+        .unwrap_or(0.0)
 }

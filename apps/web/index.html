@@ -89,6 +89,7 @@
           initCodeMirror,
           applyRemoteContent,
           applyRemoteOp,
+          applyRemoteOpsBatch,
           getEditorContent,
           scrollGlobal,
           setReadOnly,
@@ -98,6 +99,19 @@
         // --- BINDING: Expose Module Functions to Global Scope for Rust FFI ---
         window.applyRemoteContent = applyRemoteContent;
         window.applyRemoteOp = applyRemoteOp;
+        window.applyRemoteOpsBatch =
+          applyRemoteOpsBatch ||
+          ((opsJson) => {
+            try {
+              const ops = JSON.parse(opsJson);
+              if (!Array.isArray(ops)) return;
+              for (const op of ops) {
+                window.applyRemoteOp(JSON.stringify(op));
+              }
+            } catch (e) {
+              console.error("applyRemoteOpsBatch Fallback Error:", e);
+            }
+          });
         window.getEditorContent = getEditorContent;
         window.scrollGlobal = scrollGlobal;
         window.setReadOnly = setReadOnly;

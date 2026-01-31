@@ -29,7 +29,6 @@ pub fn UnifiedSearch(
     let core = use_context::<CoreState>().expect("CoreState context");
 
     let (query, set_query) = signal(String::new());
-    let search_enabled = Signal::derive(move || core.load_state.get() == "ready");
     let (selected_index, set_selected_index) = signal(0);
     let input_ref = NodeRef::<leptos::html::Input>::new();
     let (recent_move_dirs, set_recent_move_dirs) = signal(Vec::<String>::new());
@@ -64,7 +63,6 @@ pub fn UnifiedSearch(
     // 按查询类型动态选择 Provider 并生成结果列表。
     let providers_results = logic::create_results_memo(
         show,
-        search_enabled,
         debounced_query.into(),
         locale,
         core.clone(),
@@ -98,7 +96,6 @@ pub fn UnifiedSearch(
     // 视图层拆分到 ui 模块，保证组件主体精简。
     ui::render_overlay(
         show,
-        search_enabled,
         set_show,
         query.into(),
         set_query,

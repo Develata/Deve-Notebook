@@ -35,8 +35,10 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
     let mut content = Rope::new();
     let mut total_utf16: u32 = 0;
     let mut cache = Utf16IndexCache::new(adaptive_step(total_utf16));
+    let mut op_count = 0u32;
 
     for entry in ops {
+        op_count = op_count.wrapping_add(1);
         match &entry.op {
             Op::Insert { pos, content: text } => {
                 let char_idx = cache.locate(&content, *pos);
@@ -73,6 +75,10 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
                     }
                 }
             }
+        }
+
+        if op_count % 256 == 0 && !cache.validate_sample(&content) {
+            cache = Utf16IndexCache::build(&content, adaptive_step(total_utf16));
         }
     }
 

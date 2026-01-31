@@ -90,7 +90,7 @@ pub fn use_core() -> CoreState {
     let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc);
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
     let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
-    let misc_callbacks = callbacks::create_misc_callbacks(&ws, signals.set_stats);
+    let misc_callbacks = callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
     let switch_callbacks = callbacks::create_switch_callbacks(&ws);
 
     // 6. 组装最终状态
@@ -115,6 +115,10 @@ pub fn use_core() -> CoreState {
         on_search: misc_callbacks.on_search,
         load_state: signals.load_state,
         set_load_state: signals.set_load_state,
+        load_progress: signals.load_progress,
+        set_load_progress: signals.set_load_progress,
+        load_eta_ms: signals.load_eta_ms,
+        set_load_eta_ms: signals.set_load_eta_ms,
         sync_mode: signals.sync_mode,
         pending_ops_count: signals.pending_ops_count,
         pending_ops_previews: signals.pending_ops_previews,

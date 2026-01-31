@@ -1,11 +1,13 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 //! # 快照模块 (Snapshot Management)
 //!
 //! 管理文档快照的存储与自动清理。
 
+use crate::ledger::ops;
 use crate::ledger::schema::*;
 use crate::models::DocId;
-use anyhow::Result;
+use crate::state;
+use anyhow::{anyhow, Result};
 use redb::{Database, ReadableMultimapTable};
 
 /// Save a snapshot for a document (Local DB only).
@@ -16,6 +18,10 @@ pub fn save_snapshot(
     content: &str,
     depth: usize,
 ) -> Result<()> {
+    let verified = verify_snapshot_consistency(db, doc_id, seq, content, true)?;
+    if !verified {
+        return Err(anyhow!("Snapshot verification failed"));
+    }
     let write_txn = db.begin_write()?;
     {
         let mut index = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
@@ -28,6 +34,46 @@ pub fn save_snapshot(
 
     prune_snapshots(db, doc_id, depth)?;
     Ok(())
+}
+
+/// 验证快照内容与账本重建结果一致性。
+pub fn verify_snapshot_consistency(
+    db: &Database,
+    doc_id: DocId,
+    seq: u64,
+    content: &str,
+    sample: bool,
+) -> Result<bool> {
+    let entries = ops::get_ops_from_db(db, doc_id)?;
+    if entries.is_empty() {
+        return Ok(content.is_empty());
+    }
+
+    let max_seq = entries.last().map(|(s, _)| *s).unwrap_or(0);
+    if seq != max_seq {
+        return Ok(false);
+    }
+
+    let ops: Vec<crate::models::LedgerEntry> =
+        entries.iter().map(|(_, entry)| entry.clone()).collect();
+    let rebuilt = state::reconstruct_content(&ops);
+    if !sample || rebuilt.len() <= 2048 {
+        return Ok(rebuilt == content);
+    }
+
+    if rebuilt.chars().count() != content.chars().count() {
+        return Ok(false);
+    }
+
+    let head = rebuilt.chars().take(1024).collect::<String>();
+    let tail = rebuilt.chars().rev().take(1024).collect::<Vec<_>>();
+    let tail: String = tail.into_iter().rev().collect();
+
+    let content_head = content.chars().take(1024).collect::<String>();
+    let content_tail = content.chars().rev().take(1024).collect::<Vec<_>>();
+    let content_tail: String = content_tail.into_iter().rev().collect();
+
+    Ok(head == content_head && tail == content_tail)
 }
 
 /// Load the latest snapshot for a document.

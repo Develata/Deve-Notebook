@@ -65,6 +65,10 @@ pub struct CoreState {
     // 文档加载状态
     pub load_state: ReadSignal<String>,
     pub set_load_state: WriteSignal<String>,
+    pub load_progress: ReadSignal<(usize, usize)>,
+    pub set_load_progress: WriteSignal<(usize, usize)>,
+    pub load_eta_ms: ReadSignal<u64>,
+    pub set_load_eta_ms: WriteSignal<u64>,
 
     // 手动合并
     pub sync_mode: ReadSignal<String>, // "auto" or "manual"

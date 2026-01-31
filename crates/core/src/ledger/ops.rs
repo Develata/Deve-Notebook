@@ -135,6 +135,30 @@ pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerE
     Ok(entries)
 }
 
+pub fn count_ops_from_db(db: &Database, doc_id: DocId) -> Result<u64> {
+    let read_txn = db.begin_read()?;
+    let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
+    let mut count = 0u64;
+    for item in doc_ops_table.get(doc_id.as_u128())? {
+        let _ = item?;
+        count += 1;
+    }
+    Ok(count)
+}
+
+pub fn max_seq_from_db(db: &Database, doc_id: DocId) -> Result<u64> {
+    let read_txn = db.begin_read()?;
+    let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
+    let mut max_seq = 0u64;
+    for item in doc_ops_table.get(doc_id.as_u128())? {
+        let seq = item?.value();
+        if seq > max_seq {
+            max_seq = seq;
+        }
+    }
+    Ok(max_seq)
+}
+
 /// 从指定数据库读取指定序列号之后的操作。
 pub fn get_ops_from_db_after(
     db: &Database,

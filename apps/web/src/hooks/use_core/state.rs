@@ -52,6 +52,10 @@ pub struct CoreSignals {
     // 文档加载状态
     pub load_state: ReadSignal<String>,
     pub set_load_state: WriteSignal<String>,
+    pub load_progress: ReadSignal<(usize, usize)>,
+    pub set_load_progress: WriteSignal<(usize, usize)>,
+    pub load_eta_ms: ReadSignal<u64>,
+    pub set_load_eta_ms: WriteSignal<u64>,
 
     // 手动合并
     pub sync_mode: ReadSignal<String>,
@@ -105,6 +109,8 @@ pub fn init_signals() -> CoreSignals {
     let (ai_mode, set_ai_mode) = signal("build".to_string());
     let (search_results, set_search_results) = signal(Vec::new());
     let (load_state, set_load_state) = signal("ready".to_string());
+    let (load_progress, set_load_progress) = signal((0usize, 0usize));
+    let (load_eta_ms, set_load_eta_ms) = signal(0u64);
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::new());
@@ -142,6 +148,10 @@ pub fn init_signals() -> CoreSignals {
         set_search_results,
         load_state,
         set_load_state,
+        load_progress,
+        set_load_progress,
+        load_eta_ms,
+        set_load_eta_ms,
         sync_mode,
         set_sync_mode,
         pending_ops_count,
