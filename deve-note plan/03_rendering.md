@@ -25,6 +25,13 @@
         *   **Inline Styles**: Bold/Italic/Strikethrough Syntax Marks.
         *   **Frontmatter**: YAML metadata block.
     *   **Goal**: 确保用户在编辑时永远面对的是"真理" (Source Code)，而在阅读时享受的是"美观" (Rendered View)。
+*   **Link Navigation (链接跳转)**:
+    *   **Default State**: 渲染视图中的链接（Links）在默认状态下 **不可直接点击**（Cursor: Text/Default），以防止在编辑或选择文本时误触。
+    *   **Activation**: 仅当用户按住 **Ctrl** (Windows/Linux) 或 **Cmd/Meta** (macOS) 键时，链接才通过 CSS 变为可点击状态（Cursor: Pointer + Underline），并允许点击跳转。
+    *   **Implementation Constraint**:
+        *   **Global State**: 使用 Rust/WASM 监听全局 `keydown/keyup` 事件，切换 `body.is-ctrl-pressed` 类。
+        *   **Zero-Copy Logic**: CSS 负责视觉反馈，Rust 负责事件拦截，避免昂贵的 JS 逐个元素绑定。
+        *   **Security**: 所有渲染的外部链接 **MUST** 强制包含 `target="_blank"` 与 `rel="noopener noreferrer"`。
 
 ## Markdown 解析规则 (Parsing Rules)
 

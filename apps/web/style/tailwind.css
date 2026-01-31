@@ -96,3 +96,36 @@
   font-size: 12px;
   margin-left: 10px;
 }
+
+/* ==================== Link Navigation (Ctrl+Click) ==================== */
+/* Default: Links in markdown are NOT clickable (prevent accidental navigation) */
+.markdown-body a {
+  cursor: text;
+  text-decoration: none;
+  color: #3b82f6; /* blue-500 */
+  transition: all 0.15s ease;
+}
+
+/* Activated: When Ctrl/Meta is pressed, links become clickable */
+body.is-ctrl-pressed .markdown-body a {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+body.is-ctrl-pressed .markdown-body a:hover {
+  color: #2563eb; /* blue-600 */
+}
+
+/* Markdown Link Interaction (链接交互) */
+/* 默认状态: 看起来不像链接，防止误触 */
+.markdown-body a {
+  cursor: text;
+  text-decoration: none;
+  color: #3b82f6; /* 保持蓝色以示区分，但无下划线 */
+}
+
+/* 激活状态: Ctrl/Meta 按下时，变成可点击状态 */
+body.is-ctrl-pressed .markdown-body a {
+  cursor: pointer;
+  text-decoration: underline;
+}

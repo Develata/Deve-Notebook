@@ -2,6 +2,24 @@
 use crate::hooks::use_core::types::ChatMessage;
 use crate::utils::markdown::render_markdown;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
+
+/// Handles click events on markdown content.
+/// Prevents link navigation unless Ctrl/Meta key is pressed.
+fn handle_link_click(ev: web_sys::MouseEvent) {
+    // Check if click target is an <a> element
+    if let Some(target) = ev.target() {
+        if let Ok(el) = target.dyn_into::<web_sys::HtmlElement>() {
+            // Use closest() to handle clicks on nested elements within <a>
+            if el.closest("a").ok().flatten().is_some() {
+                // Only allow navigation when Ctrl/Meta is pressed
+                if !ev.ctrl_key() && !ev.meta_key() {
+                    ev.prevent_default();
+                }
+            }
+        }
+    }
+}
 
 #[component]
 pub fn MessageItem(msg: ChatMessage) -> impl IntoView {
@@ -26,7 +44,11 @@ pub fn MessageItem(msg: ChatMessage) -> impl IntoView {
                     "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-8"
                 }
             )}>
-                <div class="markdown-body" inner_html={render_markdown(&content)}></div>
+                <div
+                    class="markdown-body"
+                    inner_html={render_markdown(&content)}
+                    on:click=handle_link_click
+                ></div>
             </div>
         </div>
     }

@@ -4,6 +4,7 @@ use crate::i18n::Locale;
 use leptos::prelude::*;
 
 use crate::hooks::use_core::use_core;
+use crate::hooks::use_ctrl_key::use_ctrl_key;
 use crate::hooks::use_layout::use_layout;
 use crate::shortcuts::create_global_shortcut_handler;
 
@@ -29,6 +30,9 @@ pub fn MainLayout() -> impl IntoView {
 
     // 2. 布局逻辑
     let (sidebar_width, start_resize, stop_resize, do_resize, is_resizing) = use_layout();
+
+    // 2.5 全局 Ctrl/Meta 键状态 (用于链接导航)
+    use_ctrl_key();
 
     // 3. UI 状态
     let (show_search, set_show_search) = signal(false);

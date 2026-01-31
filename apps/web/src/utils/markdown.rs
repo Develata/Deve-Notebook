@@ -1,9 +1,9 @@
 // apps/web/src/utils/markdown.rs
-//! Lightweight Markdown renderer with HTML filtering.
+//! Lightweight Markdown renderer with HTML filtering and secure link handling.
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{html, CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd};
 
 pub fn render_markdown(source: &str) -> String {
     let mut options = Options::empty();
@@ -48,6 +48,24 @@ pub fn render_markdown(source: &str) -> String {
                 }
                 out.push_str(&render_code_block(&code, &lang));
             }
+            // Intercept links: add target="_blank" and security attributes
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                title,
+                ..
+            }) => {
+                if !buffer.is_empty() {
+                    html::push_html(&mut out, buffer.drain(..));
+                }
+                render_link_open(&mut out, &dest_url, &title, link_type);
+            }
+            Event::End(TagEnd::Link) => {
+                if !buffer.is_empty() {
+                    html::push_html(&mut out, buffer.drain(..));
+                }
+                out.push_str("</a>");
+            }
             other => buffer.push(other),
         }
     }
@@ -89,4 +107,23 @@ fn escape_html(input: &str) -> String {
         }
     }
     out
+}
+
+/// Renders secure link opening tag with target="_blank" and rel="noopener noreferrer".
+///
+/// # Security
+/// External links MUST include `rel="noopener noreferrer"` to prevent:
+/// - `window.opener` attacks (tabnabbing)
+/// - Referrer leakage
+fn render_link_open(out: &mut String, url: &str, title: &str, _link_type: LinkType) {
+    let escaped_url = escape_html(url);
+    out.push_str("<a href=\"");
+    out.push_str(&escaped_url);
+    out.push_str("\" target=\"_blank\" rel=\"noopener noreferrer\"");
+    if !title.is_empty() {
+        out.push_str(" title=\"");
+        out.push_str(&escape_html(title));
+        out.push('"');
+    }
+    out.push('>');
 }
