@@ -26,10 +26,10 @@
     *   **Filename Rules**:
         *   文件名 **MUST** 是人类可读的 `repo_name.redb`。
         *   **Conflict Strategy**: 若同个 Branch 下出现同名但不同 URL 的 Repo，必须自动重命名 (e.g., `wiki.redb` -> `wiki-1.redb`)。
-    *   **Indexing**: 系统使用 Redb 维护多组映射表以实现 `O(1)` 双向查找：
-        *   `DOCID_TO_PATH`: `u128 -> &str` (DocId 溯源)
-        *   `PATH_TO_DOCID`: `&str -> u128` (路径解析)
-        *   `INODE_TO_DOCID`: `u128 -> u128` (重命名追踪)
+*   **Indexing**: 系统使用 Redb 维护多组映射表以实现 `O(1)` 双向查找：
+    *   `NODEID_TO_META`: `u128 -> NodeMeta` (统一节点元数据)
+    *   `PATH_TO_NODEID`: `&str -> u128` (路径解析)
+    *   `INODE_TO_NODEID`: `u128 -> u128` (重命名追踪, 文件节点)
     *   **Op Log (操作日志)**:
         *   `LEDGER_OPS`: `u64 -> &[u8]` (全局有序日志, Key=SeqNo, Value=Bincode Serialized Entry)
         *   `DOC_OPS`: `u128 -> [u64]` (Multimap, 允许快速检索单一文档的所有变更 Seq)
@@ -67,8 +67,8 @@
 
 ## Clean File Policy (纯净文件策略)
 
-*   **Implicit Tracking (隐式追踪)**: 系统 **MUST** 使用 `DocId` (UUID) 作为内部追踪标识。
-    *   **Storage Location**: `DocId <-> Inode/Path` 的映射表 **MUST** 存储在 **Store B (Local Repo)** 的专用 Table/Bucket 中，严禁存储在 Markdown 文件内。
+*   **Implicit Tracking (隐式追踪)**: 系统 **MUST** 使用 `NodeId` (UUID) 作为内部追踪标识。
+    *   **Storage Location**: `NodeId <-> Path/Inode` 的映射表 **MUST** 存储在 **Store B (Local Repo)** 的专用 Table/Bucket 中，严禁存储在 Markdown 文件内。
 *   **Zero Injection (零注入原则)**: 系统 **MUST NOT** 向用户创建的 Markdown 文件中注入任何元数据（如 YAML Frontmatter 中的 UUID）。
 *   **Metadata Source (元数据溯源)**: 即使文件中存在用户手写的 Frontmatter，系统也 **MUST** 视其为普通文本内容 (Payload)。
     *   **No Impact**: 投影中的 Frontmatter 修改 **MUST NOT** 反向影响 Ledger 中的系统元数据（如 Creation Time, UUID等）。Ledger 的元数据仅由 Authoritative Ops 变更。
@@ -79,7 +79,7 @@
     *   **Watcher Service**: 系统核心 **MUST** 运行一个文件系统监听服务 (Watcher)，实时监控 Vault 目录。
         *   **Create / Modify**: 监测到 Markdown 文件的新增或内容变更 -> 触发 Ledger **写入/更新**操作 (Append Ops)。
         *   **Delete**: 监测到 Markdown 文件被移除 -> 触发 Ledger **标记删除**操作 (Mark Deleted)。
-        *   **Rename / Move**: 监测到重命名或移动 -> 更新 **Path Mapping**，保持 `DocId` 不变。
+        *   **Rename / Move**: 监测到重命名或移动 -> 更新 **Path Mapping**，保持 `NodeId` 不变。
     *   **External Tools Support**: 必须兼容 VS Code, Vim, Nano 等外部编辑器的原子写入 (Atomic Write) 和重命名行为。
     *   **Mechanism**: Watcher Event -> Debouncer -> Inode Tracker -> Op Generator.
     *   **Constraints**:
@@ -104,12 +104,27 @@
 ## Core Interaction Constraint (核心交互约束)
 
 *   **UUID-First Retrieval (UUID 优先检索)**:
-    *   **Rule**: 后端对于任意 File/Folder/Repo 的检索与操作，**MUST** 仅通过 UUID 完成，严禁直接使用 File Path 作为主键。
+    *   **Rule**: 后端对于任意 File/Folder/Repo 的检索与操作，**MUST** 仅通过 `NodeId/RepoUUID` 完成，严禁直接使用 File Path 作为主键。
     *   **Resolution Flow**:
         1.  **Frontend**: 允许传递用户可读的 `Name` 或 `Path`。
-        2.  **Resolution**: 后端接收到 Name 后，**MUST** 先查询映射表 (`Name` -> `UUID`) 获取唯一标识。
+        2.  **Resolution**: 后端接收到 Name 后，**MUST** 先查询映射表 (`Name/Path` -> `NodeId`) 获取唯一标识。
         3.  **Execution**: 所有的业务逻辑执行 (Execution) **MUST** 仅针对 UUID 进行。
-    *   **Rationale**: 确保在文件重命名或移动（Path 变更）时，正在进行的后台任务（如 Embeddings, Sync）不中断，且路径不一致时以 UUID 指向的实体为准。
+    *   **Rationale**: 确保在文件/目录重命名或移动（Path 变更）时，正在进行的后台任务（如 Embeddings, Sync）不中断，且路径不一致时以 UUID 指向的实体为准。
+
+## Node Entity Unification (统一节点实体)
+
+> 目标: 为未来自研 VFS 提前建立同构语义层。
+
+*   **Definition**: 目录与文件统一为 `Node`，以 `NodeId` 作为唯一标识。
+*   **NodeMeta**:
+    *   `kind`: `File | Dir`
+    *   `name`: 当前节点名
+    *   `parent_id`: 父节点 `NodeId`
+*   **Path Strategy**: `path` 为可重建缓存，不作为主键。
+*   **Invariants**:
+    *   任何节点均有且仅有一个 `NodeId`。
+    *   树结构由 `parent_id` 关系完全决定。
+    *   文件内容仅对 `kind=File` 生效。
 
 ## Cross-Platform Path Strategy (跨平台路径策略)
 

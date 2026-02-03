@@ -30,24 +30,28 @@
 
 *   **Implementation**: `crates/core/src/tree/manager.rs`
 *   **Data Structure**:
-    *   **Core**: `HashMap<String, NodeInfo>` (Flat Map with Path Keys).
+    *   **Core**: `HashMap<NodeId, NodeInfo>` (Flat Map with NodeId Keys).
     *   **NodeInfo**:
         ```rust
         struct NodeInfo {
+            node_id: NodeId,
+            kind: NodeKind, // File | Dir
             name: String,
-            doc_id: Option<DocId>, // None for pure folders
-            parent_path: String,
-            children_paths: Vec<String>,
+            parent_id: Option<NodeId>,
+            children_ids: Vec<NodeId>,
+            path_cache: String,
+            doc_id: Option<DocId>, // 仅 File 节点有效
         }
         ```
-    *   **Advantages**: 扁平化存储使得 `Rename` 操作需递归更新子节点路径，但在 `Lookup` 时达到 O(1) 效率。
+    *   **Advantages**: NodeId 作为主键，路径仅缓存；重命名与移动只需更新子树缓存。
 *   **TreeDelta Generation**:
-    *   **Add**: `TreeDelta::add_file` / `add_folder`.
-    *   **Remove**: `TreeDelta::remove`. 自动递归删除子节点。
-    *   **Rename**: `TreeDelta::rename`. 自动处理子树路径重写。
+    *   **Add**: `TreeDelta::add_node` (File/Dir).
+    *   **Remove**: `TreeDelta::remove_node`. 自动递归删除子节点。
+    *   **Rename**: `TreeDelta::rename_node`. 自动处理子树路径重写。
+    *   **Move**: `TreeDelta::move_node`. 仅更新 parent 关系与 path_cache。
 *   **Sorting Logic**:
     *   构建树视图 (`build_tree_from_root`) 时，严格遵循：**Folder First** > **Alphabetical (Case-Insensitive)**。
-*   **Initialization**: 服务启动时，通过 `RepoManager::list_docs` 遍历 `docid_to_path` 表进行全量加载。
+*   **Initialization**: 服务启动时，通过 Node 表全量加载并构建树 (不依赖 FS 扫描)。
 
 ## 严格分支策略 (Strict Branching Policy)
 
