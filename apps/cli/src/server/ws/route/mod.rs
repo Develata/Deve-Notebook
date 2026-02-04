@@ -30,4 +30,3 @@ pub(crate) async fn route_message(
         other => docs::route_docs(state, ch, session, other).await,
     }
 }
-

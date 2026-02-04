@@ -5,6 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 #[cfg(feature = "search")]

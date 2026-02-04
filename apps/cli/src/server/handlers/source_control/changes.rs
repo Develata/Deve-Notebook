@@ -1,10 +1,10 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
+use deve_core::ledger::listing::RepoListing;
+use deve_core::models::RepoType;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
-use deve_core::models::RepoType;
-use deve_core::ledger::listing::RepoListing;
 use std::sync::Arc;
 
 /// 获取变更列表 (暂存区 + 未暂存)
@@ -83,11 +83,7 @@ fn detect_unstaged_changes(state: &Arc<AppState>, session: &WsSession) -> Vec<Ch
             }
         };
 
-        let committed = state
-            .repo
-            .get_committed_content(doc_id)
-            .ok()
-            .flatten();
+        let committed = state.repo.get_committed_content(doc_id).ok().flatten();
 
         if let Some(status) = state
             .repo

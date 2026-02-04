@@ -13,6 +13,7 @@ mod copy;
 mod copy_utils;
 mod create;
 mod delete;
+mod node_helpers;
 mod rename;
 
 pub use copy::handle_copy_doc;

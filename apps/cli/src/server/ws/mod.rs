@@ -17,7 +17,10 @@ pub(crate) mod send;
 const MAX_BINCODE_SIZE: u64 = 16 * 1024 * 1024;
 
 /// HTTP/WebSocket 入口。
-pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
     let peer_id = uuid::Uuid::new_v4().to_string();
     ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id))
 }
@@ -27,7 +30,11 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>
 /// ## 协议策略
 /// - **优先二进制 (Bincode)**: 体积更小，解析更快，零字符串分配。
 /// - **降级 JSON**: 向后兼容旧版客户端或调试场景。
-pub async fn handle_socket(state: Arc<AppState>, socket: axum::extract::ws::WebSocket, peer_id: String) {
+pub async fn handle_socket(
+    state: Arc<AppState>,
+    socket: axum::extract::ws::WebSocket,
+    peer_id: String,
+) {
     let (sender, mut receiver) = socket.split();
 
     // 为每个连接创建有界单播队列，避免慢客户端导致无界内存增长。
@@ -62,14 +69,18 @@ pub async fn handle_socket(state: Arc<AppState>, socket: axum::extract::ws::WebS
             // 优先处理二进制消息 (Bincode)
             axum::extract::ws::Message::Binary(bin) => {
                 match bincode_config.deserialize::<ClientMessage>(&bin) {
-                    Ok(client_msg) => route::route_message(&state, &ch, &mut session, client_msg).await,
+                    Ok(client_msg) => {
+                        route::route_message(&state, &ch, &mut session, client_msg).await
+                    }
                     Err(e) => tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len()),
                 }
             }
             // 向后兼容: JSON 文本消息
             axum::extract::ws::Message::Text(text) => {
                 match serde_json::from_str::<ClientMessage>(&text) {
-                    Ok(client_msg) => route::route_message(&state, &ch, &mut session, client_msg).await,
+                    Ok(client_msg) => {
+                        route::route_message(&state, &ch, &mut session, client_msg).await
+                    }
                     Err(_) => tracing::warn!("Failed to parse client message: {}", text),
                 }
             }

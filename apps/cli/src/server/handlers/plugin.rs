@@ -1,12 +1,12 @@
-﻿// apps/cli/src/server/handlers/plugin.rs
+// apps/cli/src/server/handlers/plugin.rs
 //! # 插件处理器 (Plugin Handler)
 //!
 //! 处理来自客户端的插件调用请求 (RPC)
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use deve_core::protocol::ServerMessage;
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use tokio::task::block_in_place;
 

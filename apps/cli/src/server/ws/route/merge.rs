@@ -32,4 +32,3 @@ pub(super) async fn route_merge(
         other => super::source_control::route_source_control(state, ch, session, other).await,
     }
 }
-

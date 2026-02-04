@@ -1,21 +1,21 @@
 // apps/cli/src/server/handlers/repo/http.rs
 //! # Repo HTTP API
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::server::AppState;
-use crate::server::plugin_host::PluginHostState;
 use crate::server::handlers;
+use crate::server::plugin_host::PluginHostState;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::DocId;
 use deve_core::models::RepoType;
-use deve_core::state::reconstruct_content;
 use deve_core::plugin::runtime::host;
+use deve_core::state::reconstruct_content;
 
 #[derive(Deserialize)]
 pub struct DocQuery {
@@ -30,7 +30,9 @@ pub async fn list_docs(State(state): State<Arc<AppState>>) -> impl IntoResponse 
     }
 }
 
-pub async fn list_docs_plugin_host(State(_state): State<Arc<PluginHostState>>) -> impl IntoResponse {
+pub async fn list_docs_plugin_host(
+    State(_state): State<Arc<PluginHostState>>,
+) -> impl IntoResponse {
     match host::repository() {
         Ok(repo) => match repo.list_docs() {
             Ok(list) => Json(list).into_response(),

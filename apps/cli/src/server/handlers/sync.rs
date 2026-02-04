@@ -80,7 +80,6 @@ pub async fn handle_sync_hello(
 
     // 5. 推送数据 (I have data you need)
 
-
     // 5. 推送数据 (I have data you need)
     let mut ops_to_push = Vec::new();
     for req in result.to_send {
@@ -168,7 +167,11 @@ pub async fn handle_sync_snapshot_request(
 
     match engine.get_snapshot_for_sync(&request) {
         Ok(response) => {
-            tracing::info!("Sending snapshot with {} ops to {}", response.ops.len(), peer_id);
+            tracing::info!(
+                "Sending snapshot with {} ops to {}",
+                response.ops.len(),
+                peer_id
+            );
             let msg = ServerMessage::SyncPushSnapshot {
                 peer_id: engine.local_peer_id.clone(), // I am the source
                 repo_id: response.repo_id,
@@ -202,7 +205,11 @@ pub async fn handle_sync_push_snapshot(
 
     match engine.apply_remote_snapshot(response) {
         Ok(seq) => {
-            tracing::info!("Applied snapshot from {}. Updated VV to seq {}", peer_id, seq);
+            tracing::info!(
+                "Applied snapshot from {}. Updated VV to seq {}",
+                peer_id,
+                seq
+            );
         }
         Err(e) => {
             tracing::error!("Failed to apply snapshot from {}: {:?}", peer_id, e);
@@ -212,11 +219,7 @@ pub async fn handle_sync_push_snapshot(
 }
 
 /// 处理删除 Peer 请求 (物理删除远端分支)
-pub async fn handle_delete_peer(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    peer_id_str: String,
-) {
+pub async fn handle_delete_peer(state: &Arc<AppState>, ch: &DualChannel, peer_id_str: String) {
     let peer_id = PeerId::new(peer_id_str.clone());
     tracing::info!("Handling DeletePeer request for: {}", peer_id);
 
@@ -224,10 +227,12 @@ pub async fn handle_delete_peer(
     match state.repo.delete_peer_branch(&peer_id) {
         Ok(_) => {
             tracing::info!("Successfully deleted peer branch: {}", peer_id);
-            
+
             // 2. 发送确认消息
-            ch.broadcast(ServerMessage::PeerDeleted { peer_id: peer_id_str });
-            
+            ch.broadcast(ServerMessage::PeerDeleted {
+                peer_id: peer_id_str,
+            });
+
             // 3. 广播最新的 Shadow 列表 (刷新所有客户端侧边栏)
             crate::server::handlers::listing::handle_list_shadows(state, ch).await;
         }
@@ -237,4 +242,3 @@ pub async fn handle_delete_peer(
         }
     }
 }
-

@@ -35,4 +35,3 @@ pub(super) async fn route_docs(
         other => super::merge::route_merge(state, ch, session, other).await,
     }
 }
-

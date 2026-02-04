@@ -3,9 +3,9 @@
 //!
 //! **功能**: 执行 OpenAI 兼容的 SSE 流式 HTTP 请求。
 
-use super::sse_parser::{parse_sse_message, ToolCallBuilder};
+use super::sse_parser::{ToolCallBuilder, parse_sse_message};
 use super::types::ParsedSseEvent;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use deve_core::plugin::runtime::chat_stream::{ChatStreamResponse, ChatStreamSink};
 use futures::StreamExt;
 use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
@@ -40,8 +40,8 @@ pub async fn execute_stream(
         req = req.header(key.as_str(), value.as_str());
     }
 
-    let mut stream = EventSource::new(req)
-        .map_err(|e| anyhow!("Failed to create SSE stream: {}", e))?;
+    let mut stream =
+        EventSource::new(req).map_err(|e| anyhow!("Failed to create SSE stream: {}", e))?;
 
     let mut output = String::new();
     let mut tool_builder = ToolCallBuilder::new();
@@ -61,7 +61,12 @@ pub async fn execute_stream(
                         output.push_str(&content);
                         sink.send_chunk(req_id, Some(content), None);
                     }
-                    ParsedSseEvent::ToolCallDelta { index, id, name, arguments } => {
+                    ParsedSseEvent::ToolCallDelta {
+                        index,
+                        id,
+                        name,
+                        arguments,
+                    } => {
                         tool_builder.process_delta(index, id, name, arguments);
                     }
                     ParsedSseEvent::Finished(reason) => {

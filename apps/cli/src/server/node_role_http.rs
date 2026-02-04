@@ -1,7 +1,7 @@
 // apps/cli/src/server/node_role_http.rs
 
-use axum::response::IntoResponse;
 use axum::Json;
+use axum::response::IntoResponse;
 
 use crate::server::node_role;
 

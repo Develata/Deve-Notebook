@@ -1,9 +1,9 @@
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::sync::snapshot_policy::SnapshotPolicy;
 use deve_core::state;
+use deve_core::sync::snapshot_policy::SnapshotPolicy;
 use std::sync::Arc;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 const PREWARM_LIMIT: usize = 5;
 

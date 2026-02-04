@@ -24,7 +24,12 @@ impl Repository for RemoteSourceControlApi {
     fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
         let url = format!("{}/api/repo/docs", self.base_url);
         let res = tokio::runtime::Handle::current().block_on(async {
-            self.client.get(&url).send().await?.json::<Vec<(DocId, String)>>().await
+            self.client
+                .get(&url)
+                .send()
+                .await?
+                .json::<Vec<(DocId, String)>>()
+                .await
         })?;
         Ok(res)
     }
@@ -35,8 +40,10 @@ impl Repository for RemoteSourceControlApi {
             self.client
                 .get(&url)
                 .query(&[("doc_id", doc_id.to_string())])
-                .send().await?
-                .text().await
+                .send()
+                .await?
+                .text()
+                .await
         })?;
         Ok(res)
     }
@@ -44,7 +51,12 @@ impl Repository for RemoteSourceControlApi {
     fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
         let url = format!("{}/api/sc/status", self.base_url);
         let res = tokio::runtime::Handle::current().block_on(async {
-            self.client.get(&url).send().await?.json::<Vec<ChangeEntry>>().await
+            self.client
+                .get(&url)
+                .send()
+                .await?
+                .json::<Vec<ChangeEntry>>()
+                .await
         })?;
         Ok(res)
     }
@@ -52,7 +64,13 @@ impl Repository for RemoteSourceControlApi {
     fn diff_doc_path(&self, path: &str) -> Result<String> {
         let url = format!("{}/api/sc/diff", self.base_url);
         let res = tokio::runtime::Handle::current().block_on(async {
-            self.client.get(&url).query(&[("path", path)]).send().await?.text().await
+            self.client
+                .get(&url)
+                .query(&[("path", path)])
+                .send()
+                .await?
+                .text()
+                .await
         })?;
         Ok(res)
     }
@@ -60,7 +78,11 @@ impl Repository for RemoteSourceControlApi {
     fn stage_file(&self, path: &str) -> Result<()> {
         let url = format!("{}/api/sc/stage", self.base_url);
         tokio::runtime::Handle::current().block_on(async {
-            self.client.post(&url).json(&serde_json::json!({"path": path})).send().await?
+            self.client
+                .post(&url)
+                .json(&serde_json::json!({"path": path}))
+                .send()
+                .await?
                 .error_for_status()?;
             Ok::<(), reqwest::Error>(())
         })?;
@@ -73,9 +95,11 @@ impl Repository for RemoteSourceControlApi {
             self.client
                 .post(&url)
                 .json(&serde_json::json!({"message": message}))
-                .send().await?
+                .send()
+                .await?
                 .error_for_status()?
-                .json::<CommitInfo>().await
+                .json::<CommitInfo>()
+                .await
         })?;
         Ok(res)
     }

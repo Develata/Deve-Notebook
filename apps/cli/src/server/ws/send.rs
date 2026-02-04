@@ -1,9 +1,9 @@
 use axum::extract::ws::{Message, WebSocket};
 use deve_core::protocol::ServerMessage;
 use futures::SinkExt;
-use tokio::sync::{broadcast, mpsc};
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::mpsc::error::TrySendError;
+use tokio::sync::{broadcast, mpsc};
 
 /// 单播队列容量（每个连接）。
 ///
@@ -11,7 +11,8 @@ use tokio::sync::mpsc::error::TrySendError;
 pub(crate) const UNICAST_CAPACITY: usize = 256;
 
 /// 创建有界单播通道。
-pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Receiver<ServerMessage>) {
+pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Receiver<ServerMessage>)
+{
     mpsc::channel(UNICAST_CAPACITY)
 }
 
@@ -67,4 +68,3 @@ pub(crate) fn spawn_broadcast_forwarder(
         }
     });
 }
-

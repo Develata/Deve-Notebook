@@ -1,10 +1,10 @@
 // apps/cli/src/server/handlers/source_control/http.rs
 //! # Source Control HTTP API
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::Deserialize;
 use std::sync::Arc;
 

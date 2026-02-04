@@ -1,4 +1,4 @@
-﻿// apps/cli/src/server/handlers/listing.rs
+// apps/cli/src/server/handlers/listing.rs
 //! # 列表查询处理器
 //!
 //! 处理各类列表查询请求: ListDocs, ListShadows, ListRepos
@@ -7,7 +7,9 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::node_meta;
 use deve_core::models::PeerId;
+use deve_core::models::RepoType;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -51,13 +53,40 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
                 docs_list.len(),
                 current_repo
             );
-            // 单播文档列表 (确保只有请求者收到，且用于当前 Repo 上下文)
-            ch.unicast(ServerMessage::DocList { docs: docs_list });
+            // 单播文档列表
+            ch.unicast(ServerMessage::DocList {
+                docs: docs_list.clone(),
+            });
 
-            // 发送空树结构，让前端从 DocList 重建
-            // (TreeManager 是全局共享的，无法用于多租户场景)
-            use deve_core::tree::TreeDelta;
-            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::Init { roots: vec![] }));
+            if let Some(handle) = session.get_active_db()
+                && handle.readonly
+            {
+                if let Ok(mut tm) = state.tree_manager.write() {
+                    tm.init_from_docs(docs_list);
+                    let delta = tm.build_init_delta();
+                    ch.unicast(ServerMessage::TreeUpdate(delta));
+                }
+                return;
+            }
+
+            // 重新初始化 TreeManager 并发送完整树 (从 Node 表)
+            let nodes = if let Some(handle) = session.get_active_db() {
+                let _ = node_meta::migrate_nodes_from_docs(&handle.db);
+                node_meta::list_nodes(&handle.db)
+            } else if let Some(peer_id) = &session.active_branch {
+                let repo_type = RepoType::Remote(peer_id.clone(), uuid::Uuid::nil());
+                state.repo.list_nodes(&repo_type)
+            } else {
+                state.repo.list_local_nodes(session.active_repo.as_deref())
+            };
+
+            if let Ok(nodes) = nodes
+                && let Ok(mut tm) = state.tree_manager.write()
+            {
+                tm.init_from_nodes(nodes);
+                let delta = tm.build_init_delta();
+                ch.unicast(ServerMessage::TreeUpdate(delta));
+            }
         }
         Err(e) => {
             tracing::error!("Failed to list docs: {:?}", e);

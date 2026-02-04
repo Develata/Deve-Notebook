@@ -11,6 +11,9 @@ use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use std::time::Instant;
 
+/// 快照结果类型: (content, base_seq, delta_ops, version)
+type SnapshotPayload = (String, u64, Vec<(u64, Op)>, u64);
+
 /// 处理编辑请求
 ///
 /// **只读模式处理**:
@@ -117,7 +120,9 @@ pub async fn handle_open_doc(
     let start = Instant::now();
 
     // 优先使用 session 锁定的数据库
-    let (snapshot_content, base_seq, delta_ops, version) = if let Some(handle) = session.get_active_db() {
+    let (snapshot_content, base_seq, delta_ops, version) = if let Some(handle) =
+        session.get_active_db()
+    {
         // 直接从锁定的数据库读取
         match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth) {
             Ok(payload) => payload,
@@ -136,10 +141,9 @@ pub async fn handle_open_doc(
             tracing::error!("SyncManager reconcile failed: {:?}", e);
         }
 
-        let res: anyhow::Result<(String, u64, Vec<(u64, Op)>, u64)> = state.repo.run_on_local_repo(
-            repo_name,
-            |db| build_snapshot_payload(db, doc_id, state.repo.snapshot_depth),
-        );
+        let res: anyhow::Result<SnapshotPayload> = state.repo.run_on_local_repo(repo_name, |db| {
+            build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
+        });
 
         match res {
             Ok(payload) => payload,
@@ -173,7 +177,7 @@ fn build_snapshot_payload(
     db: &redb::Database,
     doc_id: deve_core::models::DocId,
     snapshot_depth: usize,
-) -> anyhow::Result<(String, u64, Vec<(u64, Op)>, u64)> {
+) -> anyhow::Result<SnapshotPayload> {
     let snapshot = deve_core::ledger::snapshot::load_latest_snapshot(db, doc_id)?;
     let has_snapshot = snapshot.is_some();
     let (base_seq, content) = snapshot.unwrap_or((0, String::new()));

@@ -78,19 +78,22 @@ async fn handle_remote_diff(
 
     // 1. 获取 Remote Repo URL
     let repo_name = session.active_repo.as_deref().unwrap_or("default");
-    let remote_url = match state.repo.get_repo_url(session.active_branch.as_ref(), repo_name) {
+    let remote_url = match state
+        .repo
+        .get_repo_url(session.active_branch.as_ref(), repo_name)
+    {
         Ok(url) => url,
         Err(e) => {
-             tracing::error!("Failed to get remote repo URL: {:?}", e);
-             None
+            tracing::error!("Failed to get remote repo URL: {:?}", e);
+            None
         }
     };
 
     // 2. 查找匹配的 Local Repo (通过 URL)
     let local_repo_name = if let Some(url) = remote_url {
-         state.repo.find_local_repo_name_by_url(&url).unwrap_or(None)
+        state.repo.find_local_repo_name_by_url(&url).unwrap_or(None)
     } else {
-         None
+        None
     };
 
     if local_repo_name.is_none() {
@@ -121,23 +124,25 @@ fn get_remote_doc_content(session: &WsSession, path: &str) -> Option<String> {
 /// * `repo_name`: 指定的本地仓库名称 (若 None 则返回空，表示无对应仓库)
 fn get_local_counterpart(state: &Arc<AppState>, path: &str, repo_name: Option<String>) -> String {
     if let Some(name) = repo_name {
-        state.repo.run_on_local_repo(&name, |db| {
-            let doc_id = match deve_core::ledger::metadata::get_docid(db, path) {
-                Ok(Some(id)) => id,
-                Ok(None) => return Ok(None),
-                Err(e) => return Err(e),
-            };
-            
-            let ops = match deve_core::ledger::ops::get_ops_from_db(db, doc_id) {
-                Ok(ops) => ops,
-                Err(e) => return Err(e),
-            };
+        state
+            .repo
+            .run_on_local_repo(&name, |db| {
+                let doc_id = match deve_core::ledger::metadata::get_docid(db, path) {
+                    Ok(Some(id)) => id,
+                    Ok(None) => return Ok(None),
+                    Err(e) => return Err(e),
+                };
 
-            let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-            Ok(Some(deve_core::state::reconstruct_content(&entries)))
-        })
-        .unwrap_or(None) 
-        .unwrap_or_default()
+                let ops = match deve_core::ledger::ops::get_ops_from_db(db, doc_id) {
+                    Ok(ops) => ops,
+                    Err(e) => return Err(e),
+                };
+
+                let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+                Ok(Some(deve_core::state::reconstruct_content(&entries)))
+            })
+            .unwrap_or(None)
+            .unwrap_or_default()
     } else {
         // 无对应本地仓库 -> 视为远端新增文件
         String::new()

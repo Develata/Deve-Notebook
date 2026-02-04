@@ -3,7 +3,7 @@
 
 use super::parse_tools;
 use super::protocol::{JsonRpcRequest, JsonRpcResponse};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use deve_core::mcp::{McpCallResult, McpExecutor, McpToolSpec};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -61,18 +61,23 @@ impl HttpExecutor {
             let resp = match resp {
                 Ok(Ok(r)) => r,
                 Ok(Err(e)) => {
-                    if attempt <= self.retries { std::thread::sleep(std::time::Duration::from_millis(self.backoff_ms)); continue; }
+                    if attempt <= self.retries {
+                        std::thread::sleep(std::time::Duration::from_millis(self.backoff_ms));
+                        continue;
+                    }
                     return Err(anyhow!("MCP http error: {}", e));
                 }
                 Err(_) => {
-                    if attempt <= self.retries { std::thread::sleep(std::time::Duration::from_millis(self.backoff_ms)); continue; }
+                    if attempt <= self.retries {
+                        std::thread::sleep(std::time::Duration::from_millis(self.backoff_ms));
+                        continue;
+                    }
                     return Err(anyhow!("MCP http timeout"));
                 }
             };
 
-            let val: JsonRpcResponse = tokio::runtime::Handle::current().block_on(async {
-                resp.json().await
-            })?;
+            let val: JsonRpcResponse =
+                tokio::runtime::Handle::current().block_on(async { resp.json().await })?;
 
             if let Some(err) = val.error {
                 return Err(anyhow!("MCP error: {}", err));

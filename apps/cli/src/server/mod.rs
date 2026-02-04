@@ -12,15 +12,17 @@
 //!
 //! 服务器使用 Axum 处理 HTTP/WebSocket，并向所有客户端广播变更。
 
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
+use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::tree::TreeManager;
-use deve_core::mcp::{McpManager, McpServerConfig};
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -31,18 +33,18 @@ use tower_http::cors::{Any, CorsLayer};
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
 
-pub mod channel;
 pub mod ai_chat;
-pub mod mcp;
+pub mod channel;
 pub mod handlers;
-pub mod session;
-pub mod ws;
-pub mod source_control_proxy;
-pub mod plugin_host;
+pub mod mcp;
 pub mod node_role;
 pub mod node_role_http;
-pub mod security;
+pub mod plugin_host;
 pub mod prewarm;
+pub mod security;
+pub mod session;
+pub mod source_control_proxy;
+pub mod ws;
 
 #[allow(dead_code)] // repo_key: 为未来加密功能预留
 pub struct AppState {
@@ -68,7 +70,11 @@ pub async fn start_server(
 ) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
-    node_role::set_node_role(node_role::NodeRole { role: "main".into(), ws_port: port, main_port: port });
+    node_role::set_node_role(node_role::NodeRole {
+        role: "main".into(),
+        ws_port: port,
+        main_port: port,
+    });
     ai_chat::init_chat_stream_handler()?;
     let mcp_manager = Arc::new(load_mcp_manager(&vault_path));
     let _ = host::set_mcp_manager(mcp_manager.clone());
@@ -116,17 +122,11 @@ pub async fn start_server(
         repo_key.clone(),
     )));
 
-    // 初始化文件树管理器 (从 Ledger 加载文档列表)
+    // 初始化文件树管理器 (从 Ledger Node 表加载)
     let tree_manager = {
         let mut tm = TreeManager::new();
-        let repo_id = repo
-            .get_repo_info()
-            .ok()
-            .flatten()
-            .map(|info| info.uuid)
-            .unwrap_or_else(uuid::Uuid::nil);
-        if let Ok(docs) = repo.list_docs(&deve_core::models::RepoType::Local(repo_id)) {
-            tm.init_from_docs(docs);
+        if let Ok(nodes) = repo.list_local_nodes(None) {
+            tm.init_from_nodes(nodes);
         }
         Arc::new(RwLock::new(tm))
     };
@@ -136,25 +136,27 @@ pub async fn start_server(
     let sm_for_watcher = sync_manager.clone();
     let vp_for_watcher = vault_path.clone();
     let tm_for_watcher = tree_manager.clone();
+    let repo_for_watcher = repo.clone();
 
     tokio::task::spawn_blocking(move || {
-        let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher)
-            .with_callback(move |msgs| {
-                for msg in msgs {
-                    if let ServerMessage::DocList { docs } = &msg {
-                        // watcher 触发的 DocList 代表文件结构变动或需要刷新树
-                        match tm_for_watcher.write() {
-                            Ok(mut tm) => {
-                                tm.init_from_docs(docs.clone());
-                                let delta = tm.build_init_delta();
-                                let _ = tx_for_watcher.send(ServerMessage::TreeUpdate(delta));
-                            }
-                            Err(e) => {
-                                tracing::error!("TreeManager lock failed: {:?}", e);
-                            }
+        use deve_core::watcher::FsEventType;
+
+        let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher.clone())
+            .with_callback(move |event| match event {
+                FsEventType::DocChange(msgs) => {
+                    for msg in msgs {
+                        if let Ok(nodes) = repo_for_watcher.list_local_nodes(None)
+                            && let Ok(mut tm) = tm_for_watcher.write()
+                        {
+                            tm.init_from_nodes(nodes);
+                            let delta = tm.build_init_delta();
+                            let _ = tx_for_watcher.send(ServerMessage::TreeUpdate(delta));
                         }
+                        let _ = tx_for_watcher.send(msg);
                     }
-                    let _ = tx_for_watcher.send(msg);
+                }
+                FsEventType::DirChange => {
+                    tracing::warn!("DirChange detected: ignore without Node update");
                 }
             });
 
@@ -180,10 +182,16 @@ pub async fn start_server(
     let app = Router::new()
         .route("/ws", get(ws::ws_handler))
         .route("/api/node/role", get(node_role_http::role))
-        .route("/api/sc/status", get(handlers::source_control::http::status))
+        .route(
+            "/api/sc/status",
+            get(handlers::source_control::http::status),
+        )
         .route("/api/sc/diff", get(handlers::source_control::http::diff))
         .route("/api/sc/stage", post(handlers::source_control::http::stage))
-        .route("/api/sc/commit", post(handlers::source_control::http::commit))
+        .route(
+            "/api/sc/commit",
+            post(handlers::source_control::http::commit),
+        )
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .with_state(app_state)

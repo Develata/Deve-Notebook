@@ -4,8 +4,11 @@
 use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
 use crate::server::handlers::listing::handle_list_docs;
 use crate::server::session::WsSession;
+use anyhow::anyhow;
+use deve_core::ledger::node_meta;
 use deve_core::protocol::ServerMessage;
 use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
@@ -46,6 +49,12 @@ pub async fn handle_rename_doc(
 
     let dst = join_normalized(&state.vault_path, &dst_name);
 
+    if dst.exists() {
+        tracing::error!("重命名失败: 目标已存在: {:?}", dst);
+        ch.send_error(format!("Destination exists: {}", dst_name));
+        return;
+    }
+
     // 3. 执行重命名
     if src.exists() {
         // 确保目标父目录存在
@@ -69,12 +78,28 @@ pub async fn handle_rename_doc(
             }
 
             // 5. 更新 TreeManager 并广播 Delta
-            let delta = state
-                .tree_manager
-                .write()
-                .unwrap()
-                .rename(&old_path, &dst_name);
-            ch.broadcast(ServerMessage::TreeUpdate(delta));
+            if let Ok((node_id, meta)) =
+                state
+                    .repo
+                    .run_on_local_repo(state.repo.local_repo_name(), |db| {
+                        let node_id = node_meta::get_node_id(db, &dst_name)?
+                            .ok_or_else(|| anyhow!("Node not found: {}", dst_name))?;
+                        let meta = node_meta::get_node_meta(db, node_id)?
+                            .ok_or_else(|| anyhow!("Node meta missing"))?;
+                        Ok((node_id, meta))
+                    })
+            {
+                if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
+                    tracing::error!("广播父目录失败: {:?}", e);
+                }
+                let delta = state.tree_manager.write().unwrap().update_node(
+                    node_id,
+                    meta.parent_id,
+                    meta.name.clone(),
+                    meta.path.clone(),
+                );
+                ch.broadcast(ServerMessage::TreeUpdate(delta));
+            }
 
             // 6. 刷新文档列表
             handle_list_docs(state, ch, session).await;

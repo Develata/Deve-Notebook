@@ -18,11 +18,11 @@ mod sse_parser;
 mod stream;
 mod types;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use config::ChatConfig;
 use deve_core::plugin::runtime::chat_stream::{
-    set_chat_stream_handler, ChatStreamHandler, ChatStreamRequest,
-    ChatStreamResponse, ChatStreamSink,
+    ChatStreamHandler, ChatStreamRequest, ChatStreamResponse, ChatStreamSink,
+    set_chat_stream_handler,
 };
 use serde_json::json;
 use std::sync::Arc;

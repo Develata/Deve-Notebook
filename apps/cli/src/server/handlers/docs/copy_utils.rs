@@ -76,6 +76,31 @@ pub fn collect_md_files(dir: &Path, base: &Path) -> io::Result<Vec<String>> {
     Ok(results)
 }
 
+/// 收集目录下所有子目录的相对路径 (包含根目录)
+pub fn collect_dirs(dir: &Path, base: &Path) -> io::Result<Vec<String>> {
+    let mut results = Vec::new();
+    let mut stack: Vec<PathBuf> = vec![dir.to_path_buf()];
+
+    while let Some(current_dir) = stack.pop() {
+        if let Ok(rel) = current_dir.strip_prefix(base) {
+            let rel_str = rel.to_string_lossy().replace('\\', "/");
+            if !rel_str.is_empty() {
+                results.push(rel_str);
+            }
+        }
+
+        for entry in std::fs::read_dir(&current_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_dir() {
+                stack.push(path);
+            }
+        }
+    }
+
+    Ok(results)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
