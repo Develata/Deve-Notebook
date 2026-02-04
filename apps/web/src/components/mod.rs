@@ -9,6 +9,7 @@ pub mod dropdown;
 pub mod header;
 pub mod layout_context;
 pub mod outline;
+pub mod outline_render;
 pub mod playback;
 pub mod settings;
 pub mod sidebar;

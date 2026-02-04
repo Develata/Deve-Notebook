@@ -1,8 +1,9 @@
-﻿// apps\web\src\components
+// apps\web\src\components
 //! # Outline 组件 (Outline Component)
 //!
 //! 显示文档大纲，基于 Markdown 标题解析。
 
+use crate::components::outline_render::render_outline_inline;
 use leptos::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -79,6 +80,7 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
 
                     let text = header.text.clone();
                     let title_text = text.clone();
+                    let rendered = render_outline_inline(&text);
                     let padding = format!("padding-left: {}px", (header.level - 1) * 12 + 8);
 
                     view! {
@@ -88,7 +90,7 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
                             on:click=move |_| on_click.run(line)
                             title={title_text}
                         >
-                            {text}
+                            {rendered}
                         </div>
                     }
                 }

@@ -14,8 +14,12 @@ pub(super) async fn route_core(
         ClientMessage::OpenDoc { doc_id } => {
             document::handle_open_doc(state, ch, session, doc_id).await;
         }
-        ClientMessage::Edit { doc_id, op, .. } => {
-            document::handle_edit(state, ch, session, doc_id, op, 0).await;
+        ClientMessage::Edit {
+            doc_id,
+            op,
+            client_id,
+        } => {
+            document::handle_edit(state, ch, session, doc_id, op, client_id).await;
         }
         ClientMessage::ListDocs => {
             listing::handle_list_docs(state, ch, session).await;
