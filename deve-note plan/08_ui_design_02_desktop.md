@@ -46,6 +46,10 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
 
 *   **Primary Sidebar (Col 1)**:
     *   **Behavior**: **MUST** 支持拖拽调整宽度 (`180px` ~ `500px`)。
+    *   **Persistence**: **MUST** 记住用户设置。
+*   **Right Panel (Col 5)**:
+    *   **Behavior**: **MUST** 支持拖拽调整宽度 (`240px` ~ `520px`)。
+    *   **Persistence**: **MUST** 记住用户设置。
     *   **State**: 包含 `ActivityBar` (Icon Strip) 与 `SideView` (Content)。
 *   **Editor Area (Col 2 & 3)**:
     *   **Single Mode**: $Width(Col_2) = 0$。

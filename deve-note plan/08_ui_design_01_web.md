@@ -68,3 +68,11 @@ struct SystemMetrics {
 Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
 *   `display`: `standalone` (隐藏浏览器 UI)。
 *   `theme_color`: `#1e1e1e` (匹配 Dark Mode)。
+
+## 5. 布局伸缩 (Resizable Layout)
+
+*   **Scope**: 左侧 Sidebar 与主编辑区之间、主编辑区与右侧面板之间。
+*   **Constraints**:
+    *   Sidebar Width: `180px` ~ `500px`。
+    *   Right Panel Width: `240px` ~ `520px`。
+*   **Persistence**: 伸缩宽度 **MUST** 通过 `localStorage` 持久化。

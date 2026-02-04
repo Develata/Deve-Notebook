@@ -33,6 +33,8 @@
 | `ui.statusbar_visible`     | Bool   | `true`  | 是否显示 Status Bar (底部状态栏).                   |
 | `ui.outline_visible`       | Bool   | `true`  | 是否显示 Outline Panel (右侧大纲).                  |
 | `ui.outline_width`         | Number | `260`   | Outline 面板宽度 (Fixed, px).                       |
+| `ui.sidebar_width`         | Number | `250`   | Sidebar 默认宽度 (Resizable, px).                   |
+| `ui.right_panel_width`     | Number | `350`   | 右侧面板默认宽度 (Resizable, px).                   |
 | `ui.recent_commands_count` | Number | `3`     | Command Palette 顶部显示的历史命令数.               |
 | `ui.recent_docs_count`     | Number | `10`    | Quick Open 顶部显示的历史文件数.                    |
 

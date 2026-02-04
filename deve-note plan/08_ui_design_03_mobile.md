@@ -39,7 +39,12 @@
 *   **Right Drawer (Outline)**:
     *   **Trigger**: 右上角图标 或 **屏幕右边缘左滑**。
 
-### 2.2 虚拟辅助键盘栏 (Mobile Toolbar)
+### 2.2 面板宽度策略 (Panel Width Policy)
+
+*   **Resizable Handles**: 移动端 **SHOULD NOT** 显示左右拉伸手柄。
+*   **Persistence**: 仍可读取已保存的桌面宽度，但移动端不提供调整入口。
+
+### 2.3 虚拟辅助键盘栏 (Mobile Toolbar)
 为了解决移动端输入 Markdown 符号的痛点，系统 **MUST** 在软键盘上方渲染 Accessory View。
 
 **Key Layout (Visual Representation)**:
@@ -51,7 +56,7 @@
 **Technical Constraint**:
 必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡。
 
-### 2.3 手势系统 (Gesture System)
+### 2.4 手势系统 (Gesture System)
 仅支持轻量级 Edge Swipe，参数定义如下：
 *   $Zone_{edge} = 20px$ (从屏幕边缘起算的响应区)。
 *   $Threshold_{swipe} = 50px$ (触发滑动的最小距离)。
