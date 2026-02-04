@@ -43,6 +43,7 @@
 
 *   **Resizable Handles**: 移动端 **SHOULD NOT** 显示左右拉伸手柄。
 *   **Persistence**: 仍可读取已保存的桌面宽度，但移动端不提供调整入口。
+*   **Outer Gutter**: 移动端 **SHOULD NOT** 提供外边距拖拽。
 
 ### 2.3 虚拟辅助键盘栏 (Mobile Toolbar)
 为了解决移动端输入 Markdown 符号的痛点，系统 **MUST** 在软键盘上方渲染 Accessory View。

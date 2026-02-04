@@ -76,3 +76,4 @@ Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
     *   Sidebar Width: `180px` ~ `500px`。
     *   Right Panel Width: `240px` ~ `520px`。
 *   **Persistence**: 伸缩宽度 **MUST** 通过 `localStorage` 持久化。
+*   **Outer Gutter**: 主区域左右边距 **MUST** 支持拖拽调整，并持久化。
