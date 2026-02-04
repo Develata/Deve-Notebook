@@ -5,6 +5,8 @@
 
 本章定义了 Deve-Note 的用户界面设计规范 (Design System) 与交互原则。
 
+> **Responsive Mapping**: Web 端界面 **MUST** 在移动端视口匹配 Mobile 规范，在大屏视口匹配 Desktop 规范。
+
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求，违反即视为设计错误。
 *   **SHOULD**: 强烈建议，偏离需有充分理由。

@@ -25,6 +25,12 @@
 $$ \forall path \notin API, Serve(path) \to index.html $$
 这确保了前端路由刷新时不会 404。
 
+## 1.3 视口适配策略 (Viewport Mapping)
+
+*   **Rule**: Web 端 **MUST** 根据视口宽度映射到 Mobile / Desktop 规范。
+*   **Mobile View**: $W_{view} \le 768px$ 时，Web UI **MUST** 与 Mobile UI 规范一致。
+*   **Desktop View**: $W_{view} > 768px$ 时，Web UI **MUST** 与 Desktop UI 规范一致。
+
 ## 2. 服务器仪表盘 (Server Dashboard)
 
 ### 2.1 仪表盘布局 (Dashboard Layout)

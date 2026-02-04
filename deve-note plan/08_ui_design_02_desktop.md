@@ -5,6 +5,8 @@
 
 本节定义了 Desktop 端的“驾驶舱”布局规范与交互逻辑。
 
+> **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
+
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。

@@ -5,6 +5,8 @@
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
+> **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
+
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
