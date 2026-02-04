@@ -4,14 +4,16 @@ pub struct SnapshotPolicy {
     pub max_interval: u64,
 }
 
-impl SnapshotPolicy {
-    pub fn default() -> Self {
+impl Default for SnapshotPolicy {
+    fn default() -> Self {
         Self {
             min_interval: 16,
             max_interval: 256,
         }
     }
+}
 
+impl SnapshotPolicy {
     pub fn should_snapshot(&self, doc_len: usize, ops_delta: u64, last_open_ms: u64) -> bool {
         let len_factor = if doc_len > 200_000 {
             16

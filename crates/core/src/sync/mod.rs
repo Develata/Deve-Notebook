@@ -26,13 +26,13 @@ use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
 #[cfg(not(target_arch = "wasm32"))]
+use snapshot_policy::SnapshotPolicy;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing::{info, warn};
-#[cfg(not(target_arch = "wasm32"))]
-use snapshot_policy::SnapshotPolicy;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
@@ -134,17 +134,16 @@ impl SyncManager {
         )?;
 
         // 2. Optional Persist
-        if persist
-            && let Err(e) = self.persist_doc(doc_id) {
-                tracing::error!(
-                    "SyncManager: Failed to persist doc {} after op: {:?}",
-                    doc_id,
-                    e
-                );
-                // We don't rollback the op, but we log headers error.
-                // In a perfect world we might want transactionality across FS and DB, but that's hard.
-                return Err(e);
-            }
+        if persist && let Err(e) = self.persist_doc(doc_id) {
+            tracing::error!(
+                "SyncManager: Failed to persist doc {} after op: {:?}",
+                doc_id,
+                e
+            );
+            // We don't rollback the op, but we log headers error.
+            // In a perfect world we might want transactionality across FS and DB, but that's hard.
+            return Err(e);
+        }
 
         Ok(seqs)
     }

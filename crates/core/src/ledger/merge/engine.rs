@@ -8,7 +8,7 @@
 use crate::models::{DocId, LedgerEntry};
 use crate::sync::vector::VersionVector;
 
-use super::diff::{apply_edits, diff_to_edits, edits_equivalent, edits_overlap, Edit};
+use super::diff::{Edit, apply_edits, diff_to_edits, edits_equivalent, edits_overlap};
 use super::types::{ConflictHunk, MergeResult};
 
 pub struct MergeEngine;

@@ -28,9 +28,11 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::RwLock;
 
+use super::RepoManager;
+use super::node_check;
+use super::node_meta;
 use super::schema::*;
 use super::source_control;
-use super::RepoManager;
 
 /// 初始化 RepoManager 实例
 ///
@@ -138,7 +140,16 @@ pub fn init(
     // 5. 初始化 Source Control 表
     source_control::init_tables(&local_db)?;
 
-    // 6. 写入 Metadata (如果是新库，或者旧库缺失)
+    // 6. Node 元数据迁移 (若为空则从 Doc 表重建)
+    node_meta::migrate_nodes_from_docs(&local_db)?;
+
+    // 7. Node 表一致性修复 (仅补齐缺失节点)
+    let report = node_check::repair_missing_nodes(&local_db)?;
+    if !report.orphan_nodes.is_empty() {
+        tracing::warn!("Orphan nodes detected: {}", report.orphan_nodes.len());
+    }
+
+    // 7. 写入 Metadata (如果是新库，或者旧库缺失)
     // 即使是旧库，如果缺失也可以补全? 还是保持原样?
     // 这里我们只在 is_new_repo 时写入，或者做一下检查
     if is_new_repo {
@@ -175,6 +186,9 @@ pub fn init(
 /// - `DOCID_TO_PATH`: DocId -> 文件路径 映射
 /// - `PATH_TO_DOCID`: 文件路径 -> DocId 映射
 /// - `INODE_TO_DOCID`: Inode -> DocId 映射 (用于重命名检测)
+/// - `NODEID_TO_META`: NodeId -> NodeMeta 映射
+/// - `PATH_TO_NODEID`: Path -> NodeId 映射
+/// - `INODE_TO_NODEID`: Inode -> NodeId 映射 (文件节点)
 /// - `LEDGER_OPS`: 操作日志表
 /// - `DOC_OPS`: 文档操作索引
 /// - `SNAPSHOT_INDEX`: 快照索引
@@ -185,6 +199,9 @@ fn init_core_tables(db: &Database) -> Result<()> {
         let _ = write_txn.open_table(DOCID_TO_PATH)?;
         let _ = write_txn.open_table(PATH_TO_DOCID)?;
         let _ = write_txn.open_table(INODE_TO_DOCID)?;
+        let _ = write_txn.open_table(NODEID_TO_META)?;
+        let _ = write_txn.open_table(PATH_TO_NODEID)?;
+        let _ = write_txn.open_table(INODE_TO_NODEID)?;
         let _ = write_txn.open_table(LEDGER_OPS)?;
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;

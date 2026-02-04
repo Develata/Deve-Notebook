@@ -1,9 +1,9 @@
 // crates/core/src/ledger/manager/repository.rs
 //! # Repository Trait 实现 (RepoManager)
 
+use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
 use crate::ledger::traits::Repository;
-use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::models::RepoType;
 use crate::source_control::{ChangeEntry, CommitInfo};

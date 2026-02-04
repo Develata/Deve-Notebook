@@ -4,7 +4,7 @@
 //! 定义树的增量更新消息类型，用于 WebSocket 传输。
 
 use super::node::FileNode;
-use crate::models::DocId;
+use crate::models::{DocId, NodeId};
 use serde::{Deserialize, Serialize};
 
 /// 树增量更新
@@ -25,12 +25,14 @@ pub enum TreeDelta {
     ///
     /// 新建文件或文件夹时发送。
     Add {
-        /// 新节点的完整路径
-        path: String,
-        /// 父节点路径 (空字符串表示根目录)
-        parent_path: String,
+        /// 新节点 ID
+        node_id: NodeId,
+        /// 父节点 ID (None 表示根目录)
+        parent_id: Option<NodeId>,
         /// 节点名称
         name: String,
+        /// 完整路径 (缓存)
+        path: String,
         /// 文档 ID (文件夹为 None)
         doc_id: Option<DocId>,
     },
@@ -39,18 +41,22 @@ pub enum TreeDelta {
     ///
     /// 删除文件或文件夹时发送。
     Remove {
-        /// 被删除节点的路径
-        path: String,
+        /// 被删除节点 ID
+        node_id: NodeId,
     },
 
     /// 重命名/移动节点
     ///
     /// 重命名或移动文件/文件夹时发送。
-    Rename {
-        /// 原路径
-        old_path: String,
-        /// 新路径
-        new_path: String,
+    Update {
+        /// 目标节点 ID
+        node_id: NodeId,
+        /// 新父节点 ID (None 表示根目录)
+        parent_id: Option<NodeId>,
+        /// 新名称
+        name: String,
+        /// 新路径 (缓存)
+        path: String,
     },
 }
 
@@ -61,32 +67,50 @@ impl TreeDelta {
     }
 
     /// 创建添加文件 Delta
-    pub fn add_file(path: String, parent_path: String, name: String, doc_id: DocId) -> Self {
+    pub fn add_file(
+        node_id: NodeId,
+        parent_id: Option<NodeId>,
+        name: String,
+        path: String,
+        doc_id: DocId,
+    ) -> Self {
         Self::Add {
-            path,
-            parent_path,
+            node_id,
+            parent_id,
             name,
+            path,
             doc_id: Some(doc_id),
         }
     }
 
     /// 创建添加文件夹 Delta
-    pub fn add_folder(path: String, parent_path: String, name: String) -> Self {
+    pub fn add_folder(
+        node_id: NodeId,
+        parent_id: Option<NodeId>,
+        name: String,
+        path: String,
+    ) -> Self {
         Self::Add {
-            path,
-            parent_path,
+            node_id,
+            parent_id,
             name,
+            path,
             doc_id: None,
         }
     }
 
     /// 创建删除 Delta
-    pub fn remove(path: String) -> Self {
-        Self::Remove { path }
+    pub fn remove(node_id: NodeId) -> Self {
+        Self::Remove { node_id }
     }
 
     /// 创建重命名 Delta
-    pub fn rename(old_path: String, new_path: String) -> Self {
-        Self::Rename { old_path, new_path }
+    pub fn update(node_id: NodeId, parent_id: Option<NodeId>, name: String, path: String) -> Self {
+        Self::Update {
+            node_id,
+            parent_id,
+            name,
+            path,
+        }
     }
 }

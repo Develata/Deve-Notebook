@@ -60,9 +60,10 @@ impl RepoManager {
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
         // 1. Check Main Repo
         if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
-            && info.url.as_deref() == Some(target_url) {
-                return Ok(Some(self.local_repo_name.clone()));
-            }
+            && info.url.as_deref() == Some(target_url)
+        {
+            return Ok(Some(self.local_repo_name.clone()));
+        }
 
         // 2. Iterate all .redb files in ledger/local
         let local_dir = self.ledger_dir.join("local");

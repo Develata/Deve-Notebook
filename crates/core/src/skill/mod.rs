@@ -41,9 +41,10 @@ impl SkillManager {
             let entry = entry?;
             let path = entry.path();
             if path.extension().is_some_and(|ext| ext == "md")
-                && let Ok(skill) = self.load_skill_from_path(&path) {
-                    skills.push(skill);
-                }
+                && let Ok(skill) = self.load_skill_from_path(&path)
+            {
+                skills.push(skill);
+            }
         }
         Ok(skills)
     }
@@ -75,9 +76,10 @@ impl SkillManager {
                 }
                 // Parse key: value
                 if let Some((key, val)) = line.split_once(':')
-                    && key.trim() == "description" {
-                        description = val.trim().to_string();
-                    }
+                    && key.trim() == "description"
+                {
+                    description = val.trim().to_string();
+                }
             } else {
                 content.push_str(line);
                 content.push('\n');

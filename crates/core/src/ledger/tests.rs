@@ -4,6 +4,7 @@
 //! 包含 RepoManager 的单元测试和集成测试。
 
 use super::*;
+use crate::ledger::{node_check, node_meta};
 use crate::models::{DocId, LedgerEntry, PeerId, RepoType};
 use anyhow::Result;
 use tempfile::TempDir;
@@ -117,11 +118,24 @@ fn test_snapshot_pruning() -> Result<()> {
     // 设置快照深度为 2
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let doc_id = DocId::new();
+    let peer_id = PeerId::new("local");
 
-    // 保存 3 个快照
-    repo.save_snapshot(doc_id, 1, "Snap 1")?;
-    repo.save_snapshot(doc_id, 2, "Snap 2")?;
-    repo.save_snapshot(doc_id, 3, "Snap 3")?;
+    let ops = [(1, "a"), (2, "ab"), (3, "abc")];
+
+    for (seq, content) in ops.iter() {
+        let entry = LedgerEntry {
+            doc_id,
+            op: crate::models::Op::Insert {
+                pos: (seq - 1) as u32,
+                content: content.chars().last().unwrap().to_string().into(),
+            },
+            timestamp: 1000 + (*seq as i64),
+            peer_id: peer_id.clone(),
+            seq: *seq,
+        };
+        repo.append_local_op(&entry)?;
+        repo.save_snapshot(doc_id, *seq, content)?;
+    }
 
     // 验证裁剪结果
     let read_txn = repo.local_db.begin_read()?;
@@ -138,6 +152,67 @@ fn test_snapshot_pruning() -> Result<()> {
     assert!(data.get(1)?.is_none(), "快照 1 的数据应该被删除");
     assert!(data.get(2)?.is_some(), "快照 2 的数据应该存在");
     assert!(data.get(3)?.is_some(), "快照 3 的数据应该存在");
+
+    Ok(())
+}
+
+#[test]
+fn test_node_migration_and_consistency() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+
+    let path = "notes/alpha.md";
+    let doc_id = repo.create_docid(path)?;
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        node_meta::ensure_file_node(db, path, doc_id)?;
+        Ok(())
+    })?;
+
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let report = node_check::check_node_consistency(db)?;
+        assert!(report.is_clean());
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_dir_node_creation() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let dir_id = node_meta::create_dir_node(db, "projects/math")?;
+        let meta = node_meta::get_node_meta(db, dir_id)?.expect("dir meta missing");
+        assert_eq!(meta.path, "projects/math");
+        assert!(meta.parent_id.is_some());
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_node_repair_missing() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+
+    let path = "notes/repair.md";
+    let doc_id = repo.create_docid(path)?;
+
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        node_meta::remove_node_by_path(db, path)?;
+        let report = node_check::repair_missing_nodes(db)?;
+        assert!(report.missing_nodes.is_empty());
+        let meta = node_meta::get_node_meta(db, crate::models::NodeId::from_doc_id(doc_id))?
+            .expect("node meta should exist after repair");
+        assert_eq!(meta.path, path);
+        Ok(())
+    })?;
 
     Ok(())
 }

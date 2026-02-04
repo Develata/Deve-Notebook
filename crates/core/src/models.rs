@@ -8,6 +8,7 @@
 //! **核心功能清单**:
 //! - `PeerId`: P2P 网络中的节点唯一标识符 (栈分配优化)。
 //! - `DocId`: 文档唯一标识符（基于 UUID）。
+//! - `NodeId`: 统一节点标识符（文件/目录）。
 //! - `Op`: 编辑操作（Insert / Delete）。
 //! - `LedgerEntry`: 带时间戳的操作记录，用于持久化。
 //! - `FileNodeId`: 跨平台文件系统标识符（inode/file index）。
@@ -102,6 +103,59 @@ impl fmt::Display for DocId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+/// 统一节点标识符 (Node ID)
+///
+/// 文件与目录共用一套 UUID 空间。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct NodeId(pub Uuid);
+
+impl Default for NodeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl NodeId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+
+    pub fn from_u128(v: u128) -> Self {
+        Self(Uuid::from_u128(v))
+    }
+
+    pub fn from_doc_id(doc_id: DocId) -> Self {
+        Self(doc_id.0)
+    }
+
+    pub fn as_u128(&self) -> u128 {
+        self.0.as_u128()
+    }
+}
+
+impl fmt::Display for NodeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// 节点类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NodeKind {
+    File,
+    Dir,
+}
+
+/// 节点元数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeMeta {
+    pub kind: NodeKind,
+    pub name: String,
+    pub parent_id: Option<NodeId>,
+    pub path: String,
+    pub doc_id: Option<DocId>,
 }
 
 /// 操作类型

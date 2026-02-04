@@ -77,7 +77,7 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
             }
         }
 
-        if op_count % 256 == 0 && !cache.validate_sample(&content) {
+        if op_count.is_multiple_of(256) && !cache.validate_sample(&content) {
             cache = Utf16IndexCache::build(&content, adaptive_step(total_utf16));
         }
     }

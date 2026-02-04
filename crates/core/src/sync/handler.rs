@@ -4,8 +4,8 @@
 //! 处理 Watcher 产生的文件变更事件。
 //! 分离处理：删除、重命名、内容更新、新文件。
 
-use crate::ledger::listing::RepoListing;
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
 use crate::protocol::ServerMessage;
 use crate::sync::recovery;
@@ -72,11 +72,12 @@ impl<'a> FsEventHandler<'a> {
         if let Some(doc_id) = self.repo.get_docid_by_inode(&inode)? {
             // 2a. Check Path (Rename)
             if let Some(known_path) = self.repo.get_path_by_docid(doc_id)?
-                && known_path != path_str {
-                    info!("Handler: Rename detected {} -> {}", known_path, path_str);
-                    self.repo.rename_doc(&known_path, path_str)?;
-                    return self.gen_list();
-                }
+                && known_path != path_str
+            {
+                info!("Handler: Rename detected {} -> {}", known_path, path_str);
+                self.repo.rename_doc(&known_path, path_str)?;
+                return self.gen_list();
+            }
 
             // 2b. Same Path => Content Update
             if sync_mgr.reconcile_doc(doc_id)? {
@@ -104,19 +105,20 @@ impl<'a> FsEventHandler<'a> {
         // 3b. Check Content for UUID (Recovery)
         let content = std::fs::read_to_string(&file_path)?;
         if let Some(recovered_id) = recovery::try_recover_from_content(&content)
-            && let Ok(Some(old_path)) = self.repo.get_path_by_docid(recovered_id) {
-                info!(
-                    "Handler: Recovery UUID found. Resurrecting {:?} from {} to {}",
-                    recovered_id, old_path, path_str
-                );
+            && let Ok(Some(old_path)) = self.repo.get_path_by_docid(recovered_id)
+        {
+            info!(
+                "Handler: Recovery UUID found. Resurrecting {:?} from {} to {}",
+                recovered_id, old_path, path_str
+            );
 
-                if old_path != path_str {
-                    self.repo.rename_doc(&old_path, path_str)?;
-                }
-                self.repo.bind_inode(&inode, recovered_id)?;
-                let _ = sync_mgr.reconcile_doc(recovered_id);
-                return self.gen_list();
+            if old_path != path_str {
+                self.repo.rename_doc(&old_path, path_str)?;
             }
+            self.repo.bind_inode(&inode, recovered_id)?;
+            let _ = sync_mgr.reconcile_doc(recovered_id);
+            return self.gen_list();
+        }
 
         // 3c. Truly New File
         info!("Handler: New file detected: {}", path_str);
@@ -126,7 +128,10 @@ impl<'a> FsEventHandler<'a> {
         // Initial ingest
         if !content.is_empty() {
             let now = chrono::Utc::now().timestamp_millis();
-            let op = crate::models::Op::Insert { pos: 0, content: content.into() };
+            let op = crate::models::Op::Insert {
+                pos: 0,
+                content: content.into(),
+            };
             let entry = crate::models::LedgerEntry {
                 doc_id,
                 op,

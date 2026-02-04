@@ -1,5 +1,5 @@
-use crate::ledger::ops;
 use crate::ledger::RepoManager;
+use crate::ledger::ops;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use anyhow::Result;
 

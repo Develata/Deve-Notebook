@@ -3,14 +3,17 @@
 //!
 //! 提供 `RepoListing` trait，扩展 `RepoManager` 的列表查询能力。
 
-use crate::ledger::{metadata, RepoManager};
-use crate::models::{DocId, PeerId, RepoType};
+use crate::ledger::{RepoManager, metadata, node_meta};
+use crate::models::{DocId, NodeId, NodeMeta, PeerId, RepoType};
 use anyhow::Result;
 
 /// 仓库列表查询扩展Trait
 pub trait RepoListing {
     /// 列出所有文档
     fn list_docs(&self, repo_type: &RepoType) -> Result<Vec<(DocId, String)>>;
+
+    /// 列出所有节点
+    fn list_nodes(&self, repo_type: &RepoType) -> Result<Vec<(NodeId, NodeMeta)>>;
 
     /// 列出指定 Peer (或本地) 下的所有仓库文件
     fn list_repos(&self, peer_id: Option<&PeerId>) -> Result<Vec<String>>;
@@ -37,6 +40,24 @@ impl RepoListing for RepoManager {
         }
     }
 
+    fn list_nodes(&self, repo_type: &RepoType) -> Result<Vec<(NodeId, NodeMeta)>> {
+        match repo_type {
+            RepoType::Local(_) => node_meta::list_nodes(&self.local_db),
+            RepoType::Remote(peer_id, repo_id) => {
+                self.ensure_shadow_db(peer_id, repo_id)?;
+                let dbs = self.shadow_dbs.read().unwrap();
+                let peer_repos = dbs
+                    .get(peer_id)
+                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
+                let db = peer_repos.get(repo_id).ok_or_else(|| {
+                    anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
+                })?;
+                node_meta::migrate_nodes_from_docs(db)?;
+                node_meta::list_nodes(db)
+            }
+        }
+    }
+
     fn list_repos(&self, peer_id: Option<&PeerId>) -> Result<Vec<String>> {
         let target_dir = match peer_id {
             None => self.ledger_dir.join("local"),
@@ -51,10 +72,12 @@ impl RepoListing for RepoManager {
         for entry in std::fs::read_dir(target_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb")
-                && let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                    repos.push(stem.to_string());
-                }
+            if path.is_file()
+                && path.extension().and_then(|s| s.to_str()) == Some("redb")
+                && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+            {
+                repos.push(stem.to_string());
+            }
         }
 
         repos.sort();
@@ -72,9 +95,10 @@ impl RepoListing for RepoManager {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir()
-                && let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                    peers.push(PeerId::new(name));
-                }
+                && let Some(name) = path.file_name().and_then(|s| s.to_str())
+            {
+                peers.push(PeerId::new(name));
+            }
         }
         Ok(peers)
     }

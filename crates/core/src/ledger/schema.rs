@@ -10,6 +10,15 @@ pub const PATH_TO_DOCID: TableDefinition<&str, u128> = TableDefinition::new("pat
 // FileNodeId (u128) -> DocId (u128) - For Rename Detection
 pub const INODE_TO_DOCID: TableDefinition<u128, u128> = TableDefinition::new("inode_to_docid");
 
+// NodeId (u128) -> NodeMeta (Bytes)
+pub const NODEID_TO_META: TableDefinition<u128, &[u8]> = TableDefinition::new("nodeid_to_meta");
+
+// Path String -> NodeId (u128)
+pub const PATH_TO_NODEID: TableDefinition<&str, u128> = TableDefinition::new("path_to_nodeid");
+
+// FileNodeId (u128) -> NodeId (u128) - For Rename Detection (File only)
+pub const INODE_TO_NODEID: TableDefinition<u128, u128> = TableDefinition::new("inode_to_nodeid");
+
 // Sequence (u64) -> LedgerEntry (Bytes)
 pub const LEDGER_OPS: TableDefinition<u64, &[u8]> = TableDefinition::new("ledger_ops");
 

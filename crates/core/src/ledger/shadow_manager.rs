@@ -10,10 +10,10 @@
 
 use anyhow::Result;
 
+use super::RepoManager;
 use super::ops;
 use super::range;
 use super::shadow;
-use super::RepoManager;
 use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType};
 
 impl RepoManager {

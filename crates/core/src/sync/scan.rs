@@ -1,6 +1,6 @@
 // crates\core\src\sync
-use crate::ledger::listing::RepoListing;
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
 use crate::utils::path::{path_to_forward_slash, to_forward_slash};
 use crate::vfs::Vfs;
@@ -27,28 +27,29 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
             Ok(entry) => {
                 if entry.file_type().is_file()
                     && let Some(ext) = entry.path().extension()
-                        && ext == "md"
-                            && let Ok(rel_path) = entry.path().strip_prefix(vault_root) {
-                                // 规范化路径：统一使用正斜杠格式（内部权威格式）
-                                let path_str = path_to_forward_slash(rel_path);
-                                on_disk_paths.insert(path_str.clone());
+                    && ext == "md"
+                    && let Ok(rel_path) = entry.path().strip_prefix(vault_root)
+                {
+                    // 规范化路径：统一使用正斜杠格式（内部权威格式）
+                    let path_str = path_to_forward_slash(rel_path);
+                    on_disk_paths.insert(path_str.clone());
 
-                                // Ensure DocID exists
-                                let doc_id = if let Some(id) = repo.get_docid(&path_str)? {
-                                    id
-                                } else {
-                                    if let Err(e) = repo.create_docid(&path_str) {
-                                        error!("Failed to register {}: {:?}", path_str, e);
-                                        continue;
-                                    }
-                                    repo.get_docid(&path_str)?.unwrap()
-                                };
+                    // Ensure DocID exists
+                    let doc_id = if let Some(id) = repo.get_docid(&path_str)? {
+                        id
+                    } else {
+                        if let Err(e) = repo.create_docid(&path_str) {
+                            error!("Failed to register {}: {:?}", path_str, e);
+                            continue;
+                        }
+                        repo.get_docid(&path_str)?.unwrap()
+                    };
 
-                                // Bind Inode
-                                if let Ok(Some(inode)) = vfs.get_inode(&path_str) {
-                                    let _ = repo.bind_inode(&inode, doc_id);
-                                }
-                            }
+                    // Bind Inode
+                    if let Ok(Some(inode)) = vfs.get_inode(&path_str) {
+                        let _ = repo.bind_inode(&inode, doc_id);
+                    }
+                }
             }
             Err(e) => warn!("Walk error: {:?}", e),
         }
@@ -84,9 +85,10 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
             }
             // 如果路径不同，也尝试用规范化路径删除
             if normalized_path != path
-                && let Err(e) = repo.delete_doc(&normalized_path) {
-                    warn!("使用规范化路径删除失败 {}: {:?}", normalized_path, e);
-                }
+                && let Err(e) = repo.delete_doc(&normalized_path)
+            {
+                warn!("使用规范化路径删除失败 {}: {:?}", normalized_path, e);
+            }
             info!("SyncScan: 幽灵文件删除完成: {}", path);
         }
     }

@@ -4,6 +4,7 @@
 //! 管理 Path/DocId/Inode 之间的映射关系。
 //! 所有映射仅存储在 local.redb 中。
 
+use crate::ledger::node_meta;
 use crate::ledger::schema::*;
 use crate::models::{DocId, FileNodeId};
 use crate::utils::path::to_forward_slash;
@@ -33,6 +34,7 @@ pub fn create_docid(db: &Database, path: &str) -> Result<DocId> {
         d2p.insert(id.as_u128(), &*normalized)?;
     }
     write_txn.commit()?;
+    node_meta::ensure_file_node(db, &normalized, id)?;
     Ok(id)
 }
 
@@ -88,6 +90,7 @@ pub fn rename_doc(db: &Database, old_path: &str, new_path: &str) -> Result<()> {
         }
     }
     write_txn.commit()?;
+    node_meta::rename_path_prefix(db, &old_normalized, &new_normalized)?;
     Ok(())
 }
 
@@ -106,6 +109,7 @@ pub fn delete_doc(db: &Database, path: &str) -> Result<()> {
         }
     }
     write_txn.commit()?;
+    node_meta::remove_node_by_path(db, &normalized)?;
     Ok(())
 }
 
@@ -143,6 +147,7 @@ pub fn rename_folder(db: &Database, old_prefix: &str, new_prefix: &str) -> Resul
         }
     }
     write_txn.commit()?;
+    node_meta::rename_path_prefix(db, old_prefix, new_prefix)?;
     Ok(())
 }
 
@@ -177,6 +182,8 @@ pub fn delete_folder(db: &Database, prefix: &str) -> Result<usize> {
         count
     };
     write_txn.commit()?;
+    let node_count = node_meta::delete_path_prefix(db, prefix)?;
+    tracing::debug!("NodeMeta deleted: {}", node_count);
     Ok(count)
 }
 

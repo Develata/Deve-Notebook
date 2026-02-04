@@ -1,4 +1,4 @@
-﻿// crates\core\src\source_control
+// crates\core\src\source_control
 //! # 提交管理 (Commits Manager)
 //!
 //! 管理提交历史，持久化到数据库。
@@ -87,9 +87,10 @@ pub fn list(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
     for seq in seqs {
         if let Some(commit_id) = order_table.get(seq)?
             && let Some(json) = commits_table.get(commit_id.value())?
-                && let Ok(info) = serde_json::from_str::<CommitInfo>(json.value()) {
-                    commits.push(info);
-                }
+            && let Ok(info) = serde_json::from_str::<CommitInfo>(json.value())
+        {
+            commits.push(info);
+        }
     }
 
     Ok(commits)

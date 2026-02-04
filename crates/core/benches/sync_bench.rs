@@ -9,7 +9,7 @@
 //! 3. **LedgerEntry 克隆**: 模拟真实同步场景
 //! 4. **批量操作**: 模拟 P2P 同步时的批量处理
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use smol_str::SmolStr;
 
 // ============================================================================
@@ -104,14 +104,14 @@ fn bench_batch_clone(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("String", name), &string_vec, |b, vec| {
             b.iter(|| {
-                let cloned: Vec<String> = vec.iter().cloned().collect();
+                let cloned: Vec<String> = vec.to_vec();
                 black_box(cloned)
             });
         });
 
         group.bench_with_input(BenchmarkId::new("SmolStr", name), &smol_vec, |b, vec| {
             b.iter(|| {
-                let cloned: Vec<SmolStr> = vec.iter().cloned().collect();
+                let cloned: Vec<SmolStr> = vec.to_vec();
                 black_box(cloned)
             });
         });

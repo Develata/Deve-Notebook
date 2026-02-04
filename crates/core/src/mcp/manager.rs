@@ -5,7 +5,7 @@
 //! 未来可扩展为 Stdio/SSE 客户端。
 
 use super::{McpCallResult, McpExecutor, McpServerConfig, McpToolSpec};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;

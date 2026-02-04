@@ -3,7 +3,7 @@
 //!
 //! 定义文件树中的节点结构，用于表示文件和文件夹。
 
-use crate::models::DocId;
+use crate::models::{DocId, NodeId};
 use serde::{Deserialize, Serialize};
 
 /// 文件树节点
@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 /// 该结构可序列化，用于 WebSocket 传输。
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FileNode {
+    /// 节点 ID
+    pub node_id: NodeId,
     /// 节点名称 (文件名或文件夹名)
     pub name: String,
 
@@ -32,6 +34,7 @@ impl FileNode {
     /// 创建文件节点
     pub fn file(name: String, path: String, doc_id: DocId) -> Self {
         Self {
+            node_id: NodeId::from_doc_id(doc_id),
             name,
             path,
             doc_id: Some(doc_id),
@@ -40,8 +43,9 @@ impl FileNode {
     }
 
     /// 创建文件夹节点
-    pub fn folder(name: String, path: String) -> Self {
+    pub fn folder(node_id: NodeId, name: String, path: String) -> Self {
         Self {
+            node_id,
             name,
             path,
             doc_id: None,

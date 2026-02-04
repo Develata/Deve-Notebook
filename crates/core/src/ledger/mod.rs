@@ -13,6 +13,8 @@
 //! - `schema`: 数据库表定义
 //! - `init`: 初始化逻辑
 //! - `metadata`: Path/DocId 映射
+//! - `node_meta`: NodeId/Path/Meta 映射
+//! - `node_check`: Node 表一致性检查
 //! - `ops`: 操作日志读写
 //! - `snapshot`: 快照管理
 //! - `range`: 范围查询
@@ -31,6 +33,8 @@ pub mod listing;
 mod manager;
 pub mod merge;
 pub mod metadata;
+pub mod node_check;
+pub mod node_meta;
 pub mod ops;
 pub mod range;
 pub mod schema;
@@ -44,8 +48,8 @@ pub mod traits;
 
 pub use self::schema::*;
 pub use manager::types::*; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager
-                                                              // We don't need to export manager::core because impl blocks are attached to the struct.
-                                                              // But we might want to export the module for some reason? No, usually not.
+// We don't need to export manager::core because impl blocks are attached to the struct.
+// But we might want to export the module for some reason? No, usually not.
 
 #[cfg(test)]
 mod tests;

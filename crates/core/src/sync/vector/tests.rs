@@ -52,14 +52,18 @@ fn test_diff_scenarios() {
     let (missing_remote, missing_local) = local.diff(&remote);
 
     // Check missing from remote (A case)
-    assert!(missing_remote
-        .iter()
-        .any(|(id, r)| id == &p("A") && r == &(6..11)));
+    assert!(
+        missing_remote
+            .iter()
+            .any(|(id, r)| id == &p("A") && r == &(6..11))
+    );
 
     // Check missing from local (B case)
-    assert!(missing_local
-        .iter()
-        .any(|(id, r)| id == &p("B") && r == &(4..9)));
+    assert!(
+        missing_local
+            .iter()
+            .any(|(id, r)| id == &p("B") && r == &(4..9))
+    );
 }
 
 #[test]
@@ -78,14 +82,18 @@ fn test_diff_concurrent() {
     let (missing_remote, missing_local) = local.diff(&remote);
 
     // Remote needs B: 16..21
-    assert!(missing_remote
-        .iter()
-        .any(|(id, r)| id == &p("B") && r == &(16..21)));
+    assert!(
+        missing_remote
+            .iter()
+            .any(|(id, r)| id == &p("B") && r == &(16..21))
+    );
 
     // Local needs A: 11..13
-    assert!(missing_local
-        .iter()
-        .any(|(id, r)| id == &p("A") && r == &(11..13)));
+    assert!(
+        missing_local
+            .iter()
+            .any(|(id, r)| id == &p("A") && r == &(11..13))
+    );
 }
 
 #[test]

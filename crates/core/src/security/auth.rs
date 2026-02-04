@@ -3,10 +3,10 @@
 //!
 //! 实现 Argon2 密码哈希验证和 JWT Token 生成。
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use serde::{Deserialize, Serialize};
 
@@ -65,13 +65,16 @@ mod tests {
         let auth = AuthManager::new("secret".to_string());
 
         // Verify correct password
-        assert!(auth
-            .verify_password(password, &hash)
-            .expect("Verification failed"));
+        assert!(
+            auth.verify_password(password, &hash)
+                .expect("Verification failed")
+        );
 
         // Verify wrong password
-        assert!(!auth
-            .verify_password("wrong_password", &hash)
-            .expect("Verification failed"));
+        assert!(
+            !auth
+                .verify_password("wrong_password", &hash)
+                .expect("Verification failed")
+        );
     }
 }

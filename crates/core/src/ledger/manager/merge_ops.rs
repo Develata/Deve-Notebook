@@ -3,8 +3,8 @@
 //!
 //! 实现 `RepoManager` 的 `merge_peer` 方法。
 
-use crate::ledger::merge::{MergeEngine, MergeResult};
 use crate::ledger::RepoManager;
+use crate::ledger::merge::{MergeEngine, MergeResult};
 use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType, VersionVector};
 use anyhow::Result;
 

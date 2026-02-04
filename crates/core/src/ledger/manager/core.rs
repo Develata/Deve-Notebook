@@ -1,11 +1,12 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use redb::Database;
 use std::path::{Path, PathBuf};
 
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
+use crate::ledger::node_meta;
 use crate::ledger::schema::*;
 use crate::ledger::{init, metadata, range};
-use crate::models::{LedgerEntry, RepoId};
+use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
 
 impl RepoManager {
     /// 初始化仓库管理器
@@ -80,6 +81,12 @@ impl RepoManager {
     ) -> Result<Vec<(crate::models::DocId, String)>> {
         let name = repo_name.unwrap_or(&self.local_repo_name);
         self.run_on_local_repo(name, metadata::list_docs)
+    }
+
+    /// 列出指定本地仓库的节点
+    pub fn list_local_nodes(&self, repo_name: Option<&str>) -> Result<Vec<(NodeId, NodeMeta)>> {
+        let name = repo_name.unwrap_or(&self.local_repo_name);
+        self.run_on_local_repo(name, node_meta::list_nodes)
     }
 
     /// 获取账本目录路径

@@ -11,7 +11,7 @@
 use crate::ledger::range;
 use crate::models::DocId;
 use crate::source_control::{
-    changes, commits, staging, ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate,
+    ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, changes, commits, staging,
 };
 use anyhow::Result;
 use redb::Database;

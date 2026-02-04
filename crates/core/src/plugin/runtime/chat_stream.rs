@@ -28,7 +28,7 @@
 //! 3. 任意时刻，每个线程最多只有一个活跃的 `ChatStreamSink`
 
 use crate::protocol::ServerMessage;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cell::RefCell;

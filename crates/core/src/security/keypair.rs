@@ -12,8 +12,8 @@
 use super::hashing::sha256_hex;
 use crate::models::PeerId;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
-use rand::rngs::OsRng;
-use rand::RngCore; // Import RngCore for fill_bytes
+use rand::RngCore;
+use rand::rngs::OsRng; // Import RngCore for fill_bytes
 
 /// 身份密钥对 (包含私钥)
 ///

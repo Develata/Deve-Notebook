@@ -1,4 +1,4 @@
-use super::{VersionVector, VvDiffResult, INLINE_CAP};
+use super::{INLINE_CAP, VersionVector, VvDiffResult};
 use crate::models::PeerId;
 use smallvec::SmallVec;
 impl VersionVector {

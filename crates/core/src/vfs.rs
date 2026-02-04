@@ -10,8 +10,8 @@
 //!
 //! VFS 层抽象了文件系统操作，提供在文件重命名后仍保持稳定的标识符。
 
-use crate::ledger::listing::RepoListing;
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::{FileNodeId, RepoType};
 use anyhow::Result;
 use std::path::{Path, PathBuf};

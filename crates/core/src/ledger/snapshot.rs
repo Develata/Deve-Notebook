@@ -7,7 +7,7 @@ use crate::ledger::ops;
 use crate::ledger::schema::*;
 use crate::models::DocId;
 use crate::state;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use redb::{Database, ReadableMultimapTable};
 
 /// Save a snapshot for a document (Local DB only).

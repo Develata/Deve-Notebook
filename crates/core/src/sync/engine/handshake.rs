@@ -6,7 +6,7 @@ use crate::security::hashing::sha256_hex;
 use crate::security::keypair::verify_signature;
 use crate::sync::protocol::{self, HandshakeResult};
 use crate::sync::vector::VersionVector;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 impl SyncEngine {
     /// 计算与远端 Peer 的差异 (Internal)

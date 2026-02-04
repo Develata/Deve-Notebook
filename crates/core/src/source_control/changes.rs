@@ -8,8 +8,8 @@
 //! - `get_committed_content`: 获取文档的最后提交内容
 
 use crate::models::DocId;
-use crate::source_control::snapshot_paths::SNAPSHOT_PATHS_TABLE;
 use crate::source_control::ChangeStatus;
+use crate::source_control::snapshot_paths::SNAPSHOT_PATHS_TABLE;
 use anyhow::Result;
 use redb::{Database, TableDefinition};
 
