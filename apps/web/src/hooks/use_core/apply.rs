@@ -88,8 +88,10 @@ fn remove_node(roots: &mut Vec<FileNode>, node_id: NodeId) {
 
 /// 递归更新子节点的路径前缀
 fn update_children_paths(node: &mut FileNode, old_prefix: &str, new_prefix: &str) {
+    let old_prefix = old_prefix.trim_end_matches('/');
+    let old_prefix_slash = format!("{}/", old_prefix);
     for child in node.children.iter_mut() {
-        if child.path.starts_with(old_prefix) {
+        if child.path.starts_with(&old_prefix_slash) {
             child.path = format!("{}{}", new_prefix, &child.path[old_prefix.len()..]);
         }
         update_children_paths(child, old_prefix, new_prefix);

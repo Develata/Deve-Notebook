@@ -58,8 +58,7 @@ pub async fn handle_delete_doc(
         }
     } else {
         tracing::warn!("待删除文件不存在: {:?}", target);
-        ch.send_error("Target not found".to_string());
-        return;
+        ch.send_error("Target not found, removing from ledger".to_string());
     }
 
     // 3. 更新 Ledger

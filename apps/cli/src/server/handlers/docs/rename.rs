@@ -47,6 +47,11 @@ pub async fn handle_rename_doc(
         return;
     }
 
+    if old_path == dst_name {
+        tracing::info!("重命名忽略: 路径未变化: {}", old_path);
+        return;
+    }
+
     let dst = join_normalized(&state.vault_path, &dst_name);
 
     if dst.exists() {

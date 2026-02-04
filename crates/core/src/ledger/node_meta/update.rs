@@ -5,7 +5,7 @@ use super::split_path;
 use crate::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use crate::models::{NodeId, NodeMeta};
 use crate::utils::path::to_forward_slash;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable};
 
 pub fn remove_node_by_path(db: &Database, path: &str) -> Result<()> {
@@ -27,8 +27,15 @@ pub fn remove_node_by_path(db: &Database, path: &str) -> Result<()> {
 }
 
 pub fn rename_path_prefix(db: &Database, old_prefix: &str, new_prefix: &str) -> Result<()> {
-    let old_prefix = to_forward_slash(old_prefix);
-    let new_prefix = to_forward_slash(new_prefix);
+    let old_prefix = to_forward_slash(old_prefix)
+        .trim_end_matches('/')
+        .to_string();
+    let new_prefix = to_forward_slash(new_prefix)
+        .trim_end_matches('/')
+        .to_string();
+    if old_prefix.is_empty() || new_prefix.is_empty() {
+        return Err(anyhow!("Empty path prefix is not allowed"));
+    }
     if old_prefix == new_prefix {
         return Ok(());
     }
