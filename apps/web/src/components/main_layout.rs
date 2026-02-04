@@ -2,6 +2,7 @@
 use crate::editor::Editor;
 use crate::i18n::Locale;
 use leptos::prelude::*;
+use web_sys::UiEvent;
 
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_ctrl_key::use_ctrl_key;
@@ -29,7 +30,18 @@ pub fn MainLayout() -> impl IntoView {
     let core = use_core();
 
     // 2. 布局逻辑
-    let (sidebar_width, start_resize, stop_resize, do_resize, is_resizing) = use_layout();
+    let (
+        sidebar_width,
+        right_width,
+        outer_gutter,
+        start_resize_left,
+        start_resize_right,
+        start_resize_outer_left,
+        start_resize_outer_right,
+        stop_resize,
+        do_resize,
+        is_resizing,
+    ) = use_layout();
 
     // 2.5 全局 Ctrl/Meta 键状态 (用于链接导航)
     use_ctrl_key();
@@ -69,6 +81,17 @@ pub fn MainLayout() -> impl IntoView {
     // Bind shortcuts globally to window to override browser defaults (like Ctrl+P)
     // Note: We use window_event_listener here just like in the original Code.
     window_event_listener(leptos::ev::keydown, handle_keydown.clone());
+
+    let (is_mobile, set_is_mobile) = signal(false);
+    let update_is_mobile = move || {
+        let width = web_sys::window()
+            .and_then(|w| w.inner_width().ok())
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1024.0);
+        set_is_mobile.set(width <= 768.0);
+    };
+    update_is_mobile();
+    window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_is_mobile());
 
     // 5. 派生 UI 回调
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
@@ -136,9 +159,9 @@ pub fn MainLayout() -> impl IntoView {
         <div
             class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
             // on:keydown removed - moved to window_event_listener
-            on:mousemove=move |ev| do_resize.run(ev)
-            on:mouseup=move |_| stop_resize.run(())
-            on:mouseleave=move |_| stop_resize.run(())
+            on:pointermove=move |ev| do_resize.run(ev)
+            on:pointerup=move |_| stop_resize.run(())
+            on:pointerleave=move |_| stop_resize.run(())
             tabindex="-1"
             style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
         >
@@ -163,12 +186,38 @@ pub fn MainLayout() -> impl IntoView {
 
             <MergeModalSlot />
 
-            <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 flex overflow-hidden">
+            <main
+                class="flex-1 w-full flex overflow-hidden relative"
+                style=move || {
+                    format!(
+                        "padding-left: {}px; padding-right: {}px;",
+                        outer_gutter.get(),
+                        outer_gutter.get()
+                    )
+                }
+            >
+                {move || if !is_mobile.get() {
+                    view! {
+                        <div
+                            class="absolute top-0 h-full w-3 cursor-col-resize"
+                            style=move || format!("left: {}px; transform: translateX(-50%);", outer_gutter.get())
+                            on:pointerdown=move |ev| start_resize_outer_left.run(ev)
+                        ></div>
+                        <div
+                            class="absolute top-0 h-full w-3 cursor-col-resize"
+                            style=move || format!("right: {}px; transform: translateX(50%);", outer_gutter.get())
+                            on:pointerdown=move |ev| start_resize_outer_right.run(ev)
+                        ></div>
+                    }
+                    .into_any()
+                } else {
+                    view! {}.into_any()
+                }}
                  // 左侧边栏容器 (Activity Bar + Sidebar)
-                 <aside
+                  <aside
                     class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col z-20"
                     style=move || format!("width: {}px", sidebar_width.get())
-                 >
+                  >
                      // Top: Activity Bar (Horizontal)
                      <crate::components::activity_bar::ActivityBar
                         active_view=active_view
@@ -190,12 +239,18 @@ pub fn MainLayout() -> impl IntoView {
                  </aside>
 
                  // 拖动手柄
-                 <div
-                    class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
-                    on:mousedown=move |ev| start_resize.run(ev)
-                 >
-                    <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
-                 </div>
+                  {move || if !is_mobile.get() {
+                      view! {
+                        <div
+                           class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
+                           on:pointerdown=move |ev| start_resize_left.run(ev)
+                        >
+                           <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
+                        </div>
+                      }.into_any()
+                  } else {
+                      view! {}.into_any()
+                  }}
 
                  // 主编辑器
                  <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
@@ -225,16 +280,32 @@ pub fn MainLayout() -> impl IntoView {
                     }}
                  </div>
 
-                 // Column 5: AI Chat (Resizable Slot)
-                 // Right Sidebar for Chat
-                 // Currently fixed width 300px for simplicity, can be resizable later
-                 {move || if chat_visible.get() {
-                    view! {
-                        <div class="w-[350px] flex-none ml-4 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex flex-col">
-                            <ChatPanel />
+                  // Column 5: AI Chat (Resizable Slot)
+                  // Right Sidebar for Chat
+                  {move || if chat_visible.get() {
+                     view! {
+                        <div class="flex items-stretch ml-4">
+                            {move || if !is_mobile.get() {
+                                view! {
+                                    <div
+                                        class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
+                                        on:pointerdown=move |ev| start_resize_right.run(ev)
+                                    >
+                                        <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
+                                    </div>
+                                }.into_any()
+                            } else {
+                                view! {}.into_any()
+                            }}
+                            <div
+                                class="flex-none bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex flex-col"
+                                style=move || format!("width: {}px", right_width.get())
+                            >
+                                <ChatPanel />
+                            </div>
                         </div>
-                    }.into_any()
-                 } else {
+                     }.into_any()
+                  } else {
                     // Chat Toggle Button (Floating or Integrated)
                     // Let's add a small toggle button if hidden?
                     // Or rely on command palette to toggle.
