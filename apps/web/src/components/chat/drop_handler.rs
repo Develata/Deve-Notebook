@@ -1,7 +1,7 @@
 // apps/web/src/components/chat/drop_handler.rs
 use leptos::prelude::*;
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 
 pub fn on_drag_over(set_is_drag_over: WriteSignal<bool>) -> impl Fn(web_sys::DragEvent) {
     move |ev: web_sys::DragEvent| {

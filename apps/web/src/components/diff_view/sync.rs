@@ -1,7 +1,7 @@
 use leptos::html;
 use leptos::prelude::*;
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 
 /// Hook to synchronize scrolling between two containers
 pub fn use_scroll_sync(left_container: NodeRef<html::Div>, right_container: NodeRef<html::Div>) {

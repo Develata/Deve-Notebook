@@ -6,7 +6,7 @@
 
 use super::change_item::ChangeItem;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 

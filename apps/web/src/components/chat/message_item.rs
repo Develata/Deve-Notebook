@@ -8,15 +8,16 @@ use wasm_bindgen::JsCast;
 /// Prevents link navigation unless Ctrl/Meta key is pressed.
 fn handle_link_click(ev: web_sys::MouseEvent) {
     // Check if click target is an <a> element
-    if let Some(target) = ev.target() {
-        if let Ok(el) = target.dyn_into::<web_sys::HtmlElement>() {
-            // Use closest() to handle clicks on nested elements within <a>
-            if el.closest("a").ok().flatten().is_some() {
-                // Only allow navigation when Ctrl/Meta is pressed
-                if !ev.ctrl_key() && !ev.meta_key() {
-                    ev.prevent_default();
-                }
-            }
+    let Some(target) = ev.target() else { return };
+    let Ok(el) = target.dyn_into::<web_sys::HtmlElement>() else {
+        return;
+    };
+
+    // Use closest() to handle clicks on nested elements within <a>
+    if el.closest("a").ok().flatten().is_some() {
+        // Only allow navigation when Ctrl/Meta is pressed
+        if !ev.ctrl_key() && !ev.meta_key() {
+            ev.prevent_default();
         }
     }
 }

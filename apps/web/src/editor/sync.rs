@@ -6,9 +6,9 @@
 //! 分发快照、历史记录、新操作 (NewOp) 和 P2P 同步通知。
 //! 负责更新本地文档状态、版本号和 CodeMirror 内容。
 
-use super::ffi::{applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, getEditorContent};
-use super::prefetch::{apply_ops_in_batches, PrefetchConfig};
 use super::EditorStats;
+use super::ffi::{applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, getEditorContent};
+use super::prefetch::{PrefetchConfig, apply_ops_in_batches};
 use crate::api::WsService;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ServerMessage};
@@ -91,13 +91,6 @@ pub fn handle_server_message(
                 return;
             }
 
-            let set_local_version = set_local_version;
-            let set_history = set_history;
-            let on_stats = on_stats;
-            let set_content = set_content;
-            let set_playback_version = set_playback_version;
-            let set_load_state = set_load_state;
-            let set_load_eta_ms = set_load_eta_ms;
             let ws = ws.clone();
 
             let apply_batch = std::rc::Rc::new(move |batch: &[(u64, Op)]| {

@@ -136,7 +136,13 @@ impl WsService {
             }
         });
 
-        Self { status, endpoint, node_role, msg, tx }
+        Self {
+            status,
+            endpoint,
+            node_role,
+            msg,
+            tx,
+        }
     }
 
     /// 将消息排队发送到服务器

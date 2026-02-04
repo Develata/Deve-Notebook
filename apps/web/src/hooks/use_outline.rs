@@ -41,9 +41,7 @@ fn read_from_storage() -> Option<bool> {
 
 /// Writes boolean value to LocalStorage.
 fn write_to_storage(val: bool) {
-    if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            let _ = storage.set_item(STORAGE_KEY, if val { "true" } else { "false" });
-        }
+    if let Some(Ok(Some(storage))) = web_sys::window().map(|w| w.local_storage()) {
+        let _ = storage.set_item(STORAGE_KEY, if val { "true" } else { "false" });
     }
 }

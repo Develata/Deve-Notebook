@@ -1,9 +1,9 @@
 // apps/web/src/utils/markdown.rs
 //! Lightweight Markdown renderer with HTML filtering and secure link handling.
 
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use pulldown_cmark::{html, CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd};
+use base64::engine::general_purpose::STANDARD;
+use pulldown_cmark::{CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd, html};
 
 pub fn render_markdown(source: &str) -> String {
     let mut options = Options::empty();
@@ -88,9 +88,7 @@ fn render_code_block(code: &str, lang: &str) -> String {
 
     format!(
         "<div class=\"markdown-code-block\"><div class=\"code-toolbar\"><button class=\"apply-code\" data-code=\"{}\">Apply</button></div><pre><code class=\"{}\">{}</code></pre></div>",
-        encoded,
-        lang_class,
-        escaped
+        encoded, lang_class, escaped
     )
 }
 

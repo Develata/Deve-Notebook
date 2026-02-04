@@ -147,6 +147,12 @@ fn build_move_copy_results(
 fn build_execute_result(kind: FileOpKind, src: &str, dst: &str) -> Option<SearchResult> {
     let src_norm = normalize_doc_path(src);
     let dst_norm = finalize_dst(&src_norm, dst);
+
+    // 如果目标为空 (例如用户只输入了 `|`)，不生成执行选项
+    if dst_norm.is_empty() {
+        return None;
+    }
+
     let title = match kind {
         FileOpKind::Move => format!("Move: {} -> {}", src_norm, dst_norm),
         FileOpKind::Copy => format!("Copy: {} -> {}", src_norm, dst_norm),
@@ -247,7 +253,15 @@ fn format_dir_arg_with_cursor(dir: &str) -> (String, usize) {
 }
 
 fn finalize_dst(src: &str, dst_raw: &str) -> String {
-    let dst_norm = dst_raw.replace('\\', "/");
+    // 移除光标占位符 `|` (由 build_prefill_command 生成)
+    let dst_clean = dst_raw.replace('|', "");
+    let dst_norm = dst_clean.replace('\\', "/");
+
+    // 如果清理后为空，返回空字符串 (无效目标)
+    if dst_norm.trim().is_empty() {
+        return String::new();
+    }
+
     if dst_norm.ends_with('/') {
         let base = Path::new(src)
             .file_name()

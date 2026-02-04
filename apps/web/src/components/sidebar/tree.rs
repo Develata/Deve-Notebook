@@ -1,24 +1,13 @@
-﻿// apps\web\src\components\sidebar
+// apps/web/src/components/sidebar/tree.rs
 //! # 文件树组件逻辑 (File Tree Logic)
 //!
-//! **架构作用**:
-//! 将扁平的文档列表 (path string) 转换为层级化的树形结构 (`FileNode`)，供 Sidebar 使用。
-//!
+//! 将扁平的文档列表转换为树结构（仅用于回退）。
 
-use deve_core::models::DocId;
+#![allow(dead_code)]
+
+use deve_core::models::{DocId, NodeId};
+use deve_core::tree::FileNode;
 use std::collections::BTreeMap;
-
-/// 树节点结构
-/// 代表侧边栏树中的一个文件或文件夹。
-#[derive(Clone, Debug, PartialEq)]
-pub struct FileNode {
-    /// 文件夹为 None，文件为 Some(DocId)
-    pub id: Option<DocId>,
-    pub name: String,
-    pub children: Vec<FileNode>,
-    /// 完整的路径，用于创建上下文和验证
-    pub path: String,
-}
 
 // 构建树的内部辅助结构
 struct TempNode {
@@ -47,7 +36,6 @@ pub fn build_file_tree(docs: Vec<(DocId, String)>) -> Vec<FileNode> {
         for (i, part) in parts.iter().enumerate() {
             let is_last = i == parts.len() - 1;
 
-            // 导航或创建
             current = current
                 .children
                 .entry(part.to_string())
@@ -62,7 +50,6 @@ pub fn build_file_tree(docs: Vec<(DocId, String)>) -> Vec<FileNode> {
         }
     }
 
-    // 递归转换
     fn convert(name: String, node: TempNode, path_prefix: String) -> FileNode {
         let full_path = if path_prefix.is_empty() {
             name.clone()
@@ -75,11 +62,21 @@ pub fn build_file_tree(docs: Vec<(DocId, String)>) -> Vec<FileNode> {
             .map(|(n, c)| convert(n, c, full_path.clone()))
             .collect();
 
-        FileNode {
-            id: node.id,
-            name,
-            children,
-            path: full_path,
+        match node.id {
+            Some(doc_id) => FileNode {
+                node_id: NodeId::from_doc_id(doc_id),
+                name,
+                path: full_path,
+                doc_id: Some(doc_id),
+                children,
+            },
+            None => FileNode {
+                node_id: NodeId::new(),
+                name,
+                path: full_path,
+                doc_id: None,
+                children,
+            },
         }
     }
 

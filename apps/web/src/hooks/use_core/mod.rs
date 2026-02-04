@@ -90,7 +90,8 @@ pub fn use_core() -> CoreState {
     let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc);
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
     let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
-    let misc_callbacks = callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
+    let misc_callbacks =
+        callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
     let switch_callbacks = callbacks::create_switch_callbacks(&ws);
 
     // 6. 组装最终状态

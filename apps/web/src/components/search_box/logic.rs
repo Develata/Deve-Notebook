@@ -10,7 +10,7 @@ use crate::components::search_box::types::{
     InsertQuery, SearchAction, SearchProvider, SearchResult,
 };
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 
 /// 根据查询字符切换 Provider 并实时返回结果。
 #[allow(clippy::too_many_arguments)]

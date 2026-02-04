@@ -7,7 +7,7 @@ use crate::api::ConnectionStatus;
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

@@ -42,7 +42,7 @@ pub fn Sidebar(
             {move || match active_view.get() {
                 SidebarView::Explorer => view! {
                     <ExplorerView
-                        docs=docs
+                        _docs=docs
                         current_doc=current_doc
                         on_select=on_select
                         on_delete=on_delete

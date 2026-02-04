@@ -12,7 +12,7 @@ use leptos::prelude::*;
 
 // Re-export from submodule
 #[allow(unused_imports)] // SourceControlCallbacks 为外部模块预留
-pub use super::callbacks_sc::{create_source_control_callbacks, SourceControlCallbacks};
+pub use super::callbacks_sc::{SourceControlCallbacks, create_source_control_callbacks};
 
 /// 文档操作回调
 pub struct DocCallbacks {

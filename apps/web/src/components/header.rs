@@ -3,7 +3,7 @@
 //!
 //! 应用程序顶部导航栏，包含标题、状态指示器和常用操作（主页、打开、命令）。
 
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

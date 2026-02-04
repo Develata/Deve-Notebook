@@ -6,7 +6,7 @@ use web_sys::{KeyboardEvent, MouseEvent};
 use crate::components::search_box::result_item::result_item;
 use crate::components::search_box::types::SearchResult;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 
 /// 负责渲染整体遮罩与内部布局。
 #[allow(clippy::too_many_arguments)]

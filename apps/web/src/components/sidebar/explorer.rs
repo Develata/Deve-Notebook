@@ -5,11 +5,9 @@
 //! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
 
 use crate::components::sidebar::item::FileTreeItem;
-use crate::components::sidebar::tree::{build_file_tree, FileNode};
 use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::DocId;
-use deve_core::tree::FileNode as CoreFileNode;
 use leptos::prelude::*;
 
 use crate::components::dropdown::AnchorRect;
@@ -17,7 +15,7 @@ use crate::components::main_layout::SearchControl;
 
 #[component]
 pub fn ExplorerView(
-    docs: ReadSignal<Vec<(DocId, String)>>,
+    _docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
@@ -79,28 +77,9 @@ pub fn ExplorerView(
     };
     provide_context(actions);
 
-    // 使用 CoreState 中的 tree_nodes（增量更新），如果为空则回退到 build_file_tree
+    // 使用 TreeDelta 增量更新的树
     let core = expect_context::<CoreState>();
-    let tree_nodes = Memo::new(move |_| {
-        let core_nodes = core.tree_nodes.get();
-        if core_nodes.is_empty() {
-            // 回退到传统方式
-            build_file_tree(docs.get())
-        } else {
-            // 转换 CoreFileNode -> FileNode (UI 层类型)
-            core_nodes.into_iter().map(convert_node).collect()
-        }
-    });
-
-    // 转换函数: CoreFileNode -> FileNode
-    fn convert_node(node: CoreFileNode) -> FileNode {
-        FileNode {
-            id: node.doc_id,
-            name: node.name,
-            path: node.path,
-            children: node.children.into_iter().map(convert_node).collect(),
-        }
-    }
+    let tree_nodes = Memo::new(move |_| core.tree_nodes.get());
 
     // Derived active repo label
     let active_repo_label = Signal::derive(move || {

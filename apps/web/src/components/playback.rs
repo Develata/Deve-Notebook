@@ -5,7 +5,7 @@
 
 #![allow(dead_code)] // 组件参数由 Leptos 宏使用
 
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

@@ -17,23 +17,19 @@ use leptos::prelude::*;
 /// - Handles edge cases: blur event clears state to prevent stuck modifier.
 pub fn use_ctrl_key() {
     // Keydown: Add class when Ctrl/Meta pressed
-    window_event_listener(leptos::ev::keydown, move |ev| {
-        let ev: web_sys::KeyboardEvent = ev.into();
-        if ev.ctrl_key() || ev.meta_key() {
-            if let Some(body) = document().body() {
-                let _ = body.class_list().add_1("is-ctrl-pressed");
-            }
+    window_event_listener(leptos::ev::keydown, move |ev: web_sys::KeyboardEvent| {
+        if (ev.ctrl_key() || ev.meta_key()) && document().body().is_some() {
+            let body = document().body().unwrap();
+            let _ = body.class_list().add_1("is-ctrl-pressed");
         }
     });
 
     // Keyup: Remove class when Ctrl/Meta released
-    window_event_listener(leptos::ev::keyup, move |ev| {
-        let ev: web_sys::KeyboardEvent = ev.into();
+    window_event_listener(leptos::ev::keyup, move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
-        if key == "Control" || key == "Meta" {
-            if let Some(body) = document().body() {
-                let _ = body.class_list().remove_1("is-ctrl-pressed");
-            }
+        if (key == "Control" || key == "Meta") && document().body().is_some() {
+            let body = document().body().unwrap();
+            let _ = body.class_list().remove_1("is-ctrl-pressed");
         }
     });
 

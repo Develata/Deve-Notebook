@@ -11,10 +11,10 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use super::tree::FileNode;
 use crate::components::dropdown::AnchorRect;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::components::sidebar_menu::{MenuAction, SidebarMenu};
+use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -23,7 +23,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let actions = expect_context::<FileActionsContext>();
 
     let (is_expanded, set_expanded) = signal(true);
-    let is_folder = node.id.is_none();
+    let is_folder = node.doc_id.is_none();
 
     let padding = format!("padding-left: {}px", depth * 12 + 8);
 
@@ -102,10 +102,10 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
 
     view! {
         <div class="relative">
-            <div 
+            <div
                 class=move || {
                      let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-gray-100 text-sm transition-colors select-none group";
-                     if let Some(id) = node.id
+                     if let Some(id) = node.doc_id
                          && current_doc.get() == Some(id)
                      {
                         return format!("{} bg-[#e6f7ff] text-[#008dff]", base);
@@ -116,19 +116,17 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                 on:click=move |_| {
                     if is_folder {
                         set_expanded.update(|b| *b = !*b);
-                    } else if let Some(id) = node.id {
+                    } else if let Some(id) = node.doc_id {
                         on_select.run(id);
                     }
                 }
             >
                 // Icon
-                <crate::components::sidebar::components::FileIcon 
+                <crate::components::sidebar::components::FileIcon
                     is_folder=is_folder
                     is_expanded=is_expanded
                 />
-                
                 <span class="truncate flex-1 text-gray-700">{node.name.clone()}</span>
-                
                 // Actions (Visible on Hover via Opacity)
                 <crate::components::sidebar::components::ItemActions
                     is_folder=is_folder
@@ -136,12 +134,11 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     on_menu=Callback::new(trigger_menu)
                     on_create=Callback::new(trigger_create)
                 />
-                
                 // Context Menu
                 {move || if is_menu_open.get() {
                     view! {
-                        <SidebarMenu 
-                            on_action=handle_action 
+                        <SidebarMenu
+                            on_action=handle_action
                             on_close=on_close_clone
                             anchor=menu_anchor
                         />
@@ -150,7 +147,6 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     view! {}.into_any()
                 }}
             </div>
-            
             // Children
             <div class=move || if is_expanded.get() { "block" } else { "hidden" }>
                 <For
@@ -158,9 +154,9 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     key=|child| child.path.clone()
                     children=move |child| {
                         view! {
-                            <FileTreeItem 
-                                node=child 
-                                depth={depth + 1} 
+                            <FileTreeItem
+                                node=child
+                                depth={depth + 1}
                             />
                         }
                     }

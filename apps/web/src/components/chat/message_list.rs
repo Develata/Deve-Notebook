@@ -2,8 +2,8 @@
 use crate::components::chat::empty_state::EmptyState;
 use crate::components::chat::message_item::MessageItem;
 use crate::hooks::use_core::types::ChatMessage;
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use leptos::html;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;

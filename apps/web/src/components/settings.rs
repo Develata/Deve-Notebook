@@ -4,7 +4,7 @@
 //! 设置模态框，允许用户更改语言、同步模式等全局配置。
 //! 显示版本信息和未来功能占位符（如混合模式）。
 
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

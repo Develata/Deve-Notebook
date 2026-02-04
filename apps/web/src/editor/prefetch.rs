@@ -9,10 +9,13 @@ pub struct PrefetchConfig {
     pub max_batch: usize,
 }
 
+/// 批量应用操作的回调类型
+pub type ApplyBatchFn = Rc<dyn Fn(&[(u64, Op)])>;
+
 pub fn apply_ops_in_batches(
     ops: Vec<(u64, Op)>,
     config: PrefetchConfig,
-    apply_batch: Rc<dyn Fn(&[(u64, Op)])>,
+    apply_batch: ApplyBatchFn,
     on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
@@ -42,7 +45,7 @@ struct BatchState {
 fn schedule_batch(
     ops: Rc<Vec<(u64, Op)>>,
     state: Rc<RefCell<BatchState>>,
-    apply_batch: Rc<dyn Fn(&[(u64, Op)])>,
+    apply_batch: ApplyBatchFn,
     on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
@@ -53,7 +56,7 @@ fn schedule_batch(
 fn run_batch(
     ops: Rc<Vec<(u64, Op)>>,
     state: Rc<RefCell<BatchState>>,
-    apply_batch: Rc<dyn Fn(&[(u64, Op)])>,
+    apply_batch: ApplyBatchFn,
     on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {

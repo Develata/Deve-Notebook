@@ -3,7 +3,7 @@
 
 use super::types::Command;
 use crate::components::main_layout::ChatControl;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 /// 创建静态命令列表。

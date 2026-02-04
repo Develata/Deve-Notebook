@@ -20,14 +20,14 @@
 #![allow(clippy::unit_arg)]
 #![allow(clippy::clone_on_copy)]
 
-mod app;
-mod editor;
 mod api;
+mod app;
 mod components;
-mod utils;
-mod i18n;
+mod editor;
 mod hooks;
+mod i18n;
 mod shortcuts;
+mod utils;
 use app::App;
 use leptos::prelude::*;
 
@@ -35,7 +35,7 @@ pub fn main() {
     console_error_panic_hook::set_once();
     tracing_wasm::set_as_global_default();
     tracing::info!("Initializing Deve-Note Web App");
-    
+
     // 挂载时手动隐藏覆盖层，以防止在未选择文档时卡住
     let window = web_sys::window().unwrap();
     let doc = window.document().unwrap();
