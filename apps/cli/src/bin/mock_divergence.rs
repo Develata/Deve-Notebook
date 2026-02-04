@@ -1,7 +1,7 @@
 // apps\cli\src\bin
 use anyhow::Result;
-use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{LedgerEntry, Op, PeerId, RepoType};
 use std::path::PathBuf;
 use uuid::Uuid;

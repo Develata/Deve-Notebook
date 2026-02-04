@@ -1,4 +1,4 @@
-﻿// apps\cli\src
+// apps\cli\src
 //! # Deve-Note 命令行应用
 //!
 //! **架构作用**:
@@ -16,8 +16,8 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-mod server;
 mod commands;
+mod server;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -59,18 +59,23 @@ enum Commands {
         #[arg(short, long)]
         peer: String,
     },
+    /// Check node consistency
+    NodeCheck {
+        #[arg(long)]
+        repair: bool,
+    },
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    
+
     // Initialize logging
     tracing_subscriber::fmt::init();
 
     // Initialize configuration from Env
     let config = deve_core::config::Config::load();
-    
+
     // Use config values
     let ledger_dir = PathBuf::from(&config.ledger_dir);
     let vault_path = PathBuf::from(&config.vault_path);
@@ -78,14 +83,31 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Starting Deve-Note with profile: {:?}", config.profile);
 
     match args.command {
-        Some(Commands::Init { path }) => commands::init::run(&ledger_dir, &vault_path, path, config.snapshot_depth)?,
-        Some(Commands::Scan) => commands::scan::run(&ledger_dir, &vault_path, config.snapshot_depth)?,
-        Some(Commands::Watch) => commands::watch::run(&ledger_dir, &vault_path, config.snapshot_depth)?,
-        Some(Commands::Dump { path }) => commands::dump::run(&ledger_dir, path, config.snapshot_depth)?,
-        Some(Commands::Serve { port }) => commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth).await?,
-        Some(Commands::Export { output }) => commands::export::run(&ledger_dir, output, config.snapshot_depth)?,
+        Some(Commands::Init { path }) => {
+            commands::init::run(&ledger_dir, &vault_path, path, config.snapshot_depth)?
+        }
+        Some(Commands::Scan) => {
+            commands::scan::run(&ledger_dir, &vault_path, config.snapshot_depth)?
+        }
+        Some(Commands::Watch) => {
+            commands::watch::run(&ledger_dir, &vault_path, config.snapshot_depth)?
+        }
+        Some(Commands::Dump { path }) => {
+            commands::dump::run(&ledger_dir, path, config.snapshot_depth)?
+        }
+        Some(Commands::Serve { port }) => {
+            commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth).await?
+        }
+        Some(Commands::Export { output }) => {
+            commands::export::run(&ledger_dir, output, config.snapshot_depth)?
+        }
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
-        Some(Commands::Seed { peer }) => commands::seed::run(&ledger_dir, peer, config.snapshot_depth)?,
+        Some(Commands::Seed { peer }) => {
+            commands::seed::run(&ledger_dir, peer, config.snapshot_depth)?
+        }
+        Some(Commands::NodeCheck { repair }) => {
+            commands::node_check::run(&ledger_dir, config.snapshot_depth, repair)?
+        }
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
 
