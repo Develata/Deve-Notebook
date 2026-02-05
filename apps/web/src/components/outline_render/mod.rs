@@ -35,6 +35,10 @@ pub fn render_outline_inline(text: &str) -> Vec<AnyView> {
                 <del>{render_outline_inline(&seg.text)}</del>
             }
             .into_any(),
+            parse::SegmentKind::Mark => view! {
+                <mark>{render_outline_inline(&seg.text)}</mark>
+            }
+            .into_any(),
         })
         .collect()
 }

@@ -9,6 +9,7 @@ pub enum SegmentKind {
     Strong,
     Em,
     Del,
+    Mark,
 }
 
 #[derive(Clone, Debug)]
@@ -64,13 +65,19 @@ pub fn split_inline_segments(text: &str) -> Vec<Segment> {
             continue;
         }
 
-        if ch == '*' || ch == '~' {
+        if ch == '*' || ch == '~' || ch == '_' || ch == '=' {
             let (marker, kind) = if ch == '*' && text[i + len..].starts_with('*') {
                 ("**", SegmentKind::Strong)
+            } else if ch == '_' && text[i + len..].starts_with('_') {
+                ("__", SegmentKind::Strong)
             } else if ch == '~' && text[i + len..].starts_with('~') {
                 ("~~", SegmentKind::Del)
+            } else if ch == '=' && text[i + len..].starts_with('=') {
+                ("==", SegmentKind::Mark)
             } else if ch == '*' {
                 ("*", SegmentKind::Em)
+            } else if ch == '_' {
+                ("_", SegmentKind::Em)
             } else {
                 ("", SegmentKind::Text)
             };
