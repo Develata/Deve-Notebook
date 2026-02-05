@@ -5,6 +5,8 @@
 
 本节定义了 Web 端作为 Server Dashboard 的特有功能与部署架构。
 
+> **Scope Boundary**: Web 端仅作为服务器侧 UI。移动端/桌面端 **MUST** 采用原生 UI + 内嵌服务。
+
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
@@ -83,3 +85,8 @@ Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
     *   Right Panel Width: `240px` ~ `520px`。
 *   **Persistence**: 伸缩宽度 **MUST** 通过 `localStorage` 持久化。
 *   **Outer Gutter**: 主区域左右边距 **MUST** 支持拖拽调整，并持久化。
+
+## 6. 实现策略边界 (Implementation Boundaries)
+
+*   **Rule**: Web 端仅作为服务器 UI，不承载移动/桌面端原生实现细节。
+*   **Offline**: Web 端离线能力仅限 PWA 缓存，**MUST NOT** 替代内嵌服务。

@@ -6,6 +6,7 @@
 本章定义了 Deve-Note 的用户界面设计规范 (Design System) 与交互原则。
 
 > **Responsive Mapping**: Web 端界面 **MUST** 在移动端视口匹配 Mobile 规范，在大屏视口匹配 Desktop 规范。
+> **Native-First & Offline-First**: Mobile/Desktop **MUST** 以原生 UI 为标准实现，并在完全离线场景下保持完整可用。
 
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求，违反即视为设计错误。
@@ -21,6 +22,9 @@
     *   **Principle**: 界面布局 $L$ 是当前状态 $S$ 的函数 $L = f(S)$。例如，进入 Diff 模式时，Grid 布局自动分裂。
 *   **Visual Clarity (视觉清晰性)**：
     *   借鉴 SilverBullet 的清爽阅读感，但在编辑区保持 VS Code 级的代码掌控力。
+*   **Offline Priority (离线优先)**：
+    *   **Principle**: Mobile/Desktop 的所有核心功能在无网络环境下 **MUST** 可用。
+    *   **Goal**: 本地优先、服务内嵌、无依赖可运行。
 
 ## 2. 设计系统 (Design System)
 
