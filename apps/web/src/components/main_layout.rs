@@ -2,6 +2,7 @@
 use crate::editor::Editor;
 use crate::i18n::Locale;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::UiEvent;
 
 use crate::hooks::use_core::use_core;
@@ -162,6 +163,7 @@ pub fn MainLayout() -> impl IntoView {
             on:pointermove=move |ev| do_resize.run(ev)
             on:pointerup=move |_| stop_resize.run(())
             on:pointerleave=move |_| stop_resize.run(())
+            on:pointercancel=move |_| stop_resize.run(())
             tabindex="-1"
             style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
         >
@@ -199,14 +201,28 @@ pub fn MainLayout() -> impl IntoView {
                 {move || if !is_mobile.get() {
                     view! {
                         <div
-                            class="absolute top-0 h-full w-3 cursor-col-resize"
+                            class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
                             style=move || format!("left: {}px; transform: translateX(-50%);", outer_gutter.get())
-                            on:pointerdown=move |ev| start_resize_outer_left.run(ev)
+                            on:pointerdown=move |ev| {
+                                if let Some(target) = ev.target()
+                                    && let Ok(el) = target.dyn_into::<web_sys::Element>()
+                                {
+                                    let _ = el.set_pointer_capture(ev.pointer_id());
+                                }
+                                start_resize_outer_left.run(ev)
+                            }
                         ></div>
                         <div
-                            class="absolute top-0 h-full w-3 cursor-col-resize"
+                            class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
                             style=move || format!("right: {}px; transform: translateX(50%);", outer_gutter.get())
-                            on:pointerdown=move |ev| start_resize_outer_right.run(ev)
+                            on:pointerdown=move |ev| {
+                                if let Some(target) = ev.target()
+                                    && let Ok(el) = target.dyn_into::<web_sys::Element>()
+                                {
+                                    let _ = el.set_pointer_capture(ev.pointer_id());
+                                }
+                                start_resize_outer_right.run(ev)
+                            }
                         ></div>
                     }
                     .into_any()
@@ -242,8 +258,15 @@ pub fn MainLayout() -> impl IntoView {
                   {move || if !is_mobile.get() {
                       view! {
                         <div
-                           class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
-                           on:pointerdown=move |ev| start_resize_left.run(ev)
+                           class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors touch-none"
+                           on:pointerdown=move |ev| {
+                               if let Some(target) = ev.target()
+                                   && let Ok(el) = target.dyn_into::<web_sys::Element>()
+                               {
+                                   let _ = el.set_pointer_capture(ev.pointer_id());
+                               }
+                               start_resize_left.run(ev)
+                           }
                         >
                            <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
                         </div>
@@ -288,8 +311,16 @@ pub fn MainLayout() -> impl IntoView {
                             {move || if !is_mobile.get() {
                                 view! {
                                     <div
-                                        class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors"
-                                        on:pointerdown=move |ev| start_resize_right.run(ev)
+                                        class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors touch-none"
+                                        on:pointerdown=move |ev| {
+                                            if let Some(target) = ev.target()
+                                                && let Ok(el) =
+                                                    target.dyn_into::<web_sys::Element>()
+                                            {
+                                                let _ = el.set_pointer_capture(ev.pointer_id());
+                                            }
+                                            start_resize_right.run(ev)
+                                        }
                                     >
                                         <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
                                     </div>

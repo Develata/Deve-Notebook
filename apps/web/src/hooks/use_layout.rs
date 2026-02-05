@@ -44,6 +44,7 @@ pub fn use_layout() -> LayoutHookReturn {
     let (active_resize, set_active_resize) = signal(None::<ResizeTarget>);
     let (start_x, set_start_x) = signal(0i32);
     let (start_width, set_start_width) = signal(0i32);
+    let (active_pointer, set_active_pointer) = signal(None::<i32>);
 
     Effect::new(move |_| {
         write_width("ui_sidebar_width", sidebar_width.get());
@@ -63,6 +64,7 @@ pub fn use_layout() -> LayoutHookReturn {
         set_active_resize.set(Some(ResizeTarget::Left));
         set_start_x.set(ev.client_x());
         set_start_width.set(sidebar_width.get_untracked());
+        set_active_pointer.set(Some(ev.pointer_id()));
     });
 
     let start_resize_right = Callback::new(move |ev: PointerEvent| {
@@ -71,6 +73,7 @@ pub fn use_layout() -> LayoutHookReturn {
         set_active_resize.set(Some(ResizeTarget::Right));
         set_start_x.set(ev.client_x());
         set_start_width.set(right_width.get_untracked());
+        set_active_pointer.set(Some(ev.pointer_id()));
     });
 
     let start_resize_outer_left = Callback::new(move |ev: PointerEvent| {
@@ -79,6 +82,7 @@ pub fn use_layout() -> LayoutHookReturn {
         set_active_resize.set(Some(ResizeTarget::OuterLeft));
         set_start_x.set(ev.client_x());
         set_start_width.set(outer_gutter.get_untracked());
+        set_active_pointer.set(Some(ev.pointer_id()));
     });
 
     let start_resize_outer_right = Callback::new(move |ev: PointerEvent| {
@@ -87,15 +91,22 @@ pub fn use_layout() -> LayoutHookReturn {
         set_active_resize.set(Some(ResizeTarget::OuterRight));
         set_start_x.set(ev.client_x());
         set_start_width.set(outer_gutter.get_untracked());
+        set_active_pointer.set(Some(ev.pointer_id()));
     });
 
     let stop_resize = Callback::new(move |_| {
         set_is_resizing.set(false);
         set_active_resize.set(None);
+        set_active_pointer.set(None);
     });
 
     let do_resize = Callback::new(move |ev: PointerEvent| {
         if !is_resizing.get_untracked() {
+            return;
+        }
+        if let Some(active) = active_pointer.get_untracked()
+            && ev.pointer_id() != active
+        {
             return;
         }
         let delta = ev.client_x() - start_x.get_untracked();
