@@ -1,46 +1,23 @@
-// apps/web/src/components/outline_render.rs
-//! # Outline Inline Renderer
-//!
-//! Render inline math/code for outline items.
-
-use js_sys::{Function, Object, Reflect};
-use leptos::prelude::*;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
+// apps/web/src/components/outline_render/parse.rs
+//! # Outline Inline Parser
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum SegmentKind {
+pub enum SegmentKind {
     Text,
     Code,
     Math,
+    Strong,
+    Em,
+    Del,
 }
 
 #[derive(Clone, Debug)]
-struct Segment {
-    kind: SegmentKind,
-    text: String,
+pub struct Segment {
+    pub kind: SegmentKind,
+    pub text: String,
 }
 
-pub fn render_outline_inline(text: &str) -> Vec<AnyView> {
-    let segments = split_inline_segments(text);
-    segments
-        .into_iter()
-        .map(|seg| match seg.kind {
-            SegmentKind::Text => view! { <span>{seg.text}</span> }.into_any(),
-            SegmentKind::Code => {
-                view! { <span class="cm-inline-code">{seg.text}</span> }.into_any()
-            }
-            SegmentKind::Math => match render_katex_to_string(&seg.text) {
-                Some(html) => {
-                    view! { <span class="cm-math-widget" inner_html=html></span> }.into_any()
-                }
-                None => view! { <span>{format!("${}$", seg.text)}</span> }.into_any(),
-            },
-        })
-        .collect()
-}
-
-fn split_inline_segments(text: &str) -> Vec<Segment> {
+pub fn split_inline_segments(text: &str) -> Vec<Segment> {
     let mut segments = Vec::new();
     let mut last = 0;
     let mut i = 0;
@@ -85,6 +62,32 @@ fn split_inline_segments(text: &str) -> Vec<Segment> {
             i = close + len;
             last = i;
             continue;
+        }
+
+        if ch == '*' || ch == '~' {
+            let (marker, kind) = if ch == '*' && text[i + len..].starts_with('*') {
+                ("**", SegmentKind::Strong)
+            } else if ch == '~' && text[i + len..].starts_with('~') {
+                ("~~", SegmentKind::Del)
+            } else if ch == '*' {
+                ("*", SegmentKind::Em)
+            } else {
+                ("", SegmentKind::Text)
+            };
+
+            if !marker.is_empty()
+                && let Some(close) = find_style_close(text, i + marker.len(), marker)
+            {
+                push_text(&mut segments, text, last, i);
+                let inner = &text[i + marker.len()..close];
+                segments.push(Segment {
+                    kind,
+                    text: inner.to_string(),
+                });
+                i = close + marker.len();
+                last = i;
+                continue;
+            }
         }
 
         i += len;
@@ -136,23 +139,23 @@ fn find_math_close(text: &str, start: usize) -> Option<usize> {
     None
 }
 
-fn render_katex_to_string(expr: &str) -> Option<String> {
-    let window = web_sys::window()?;
-    let katex = Reflect::get(&window, &JsValue::from_str("katex")).ok()?;
-    if katex.is_undefined() {
-        return None;
+fn find_style_close(text: &str, start: usize, marker: &str) -> Option<usize> {
+    let mut i = start;
+    while i < text.len() {
+        let ch = text[i..].chars().next().unwrap();
+        let len = ch.len_utf8();
+        if ch == '\\' {
+            i += len;
+            if i < text.len() {
+                let next_len = text[i..].chars().next().unwrap().len_utf8();
+                i += next_len;
+            }
+            continue;
+        }
+        if text[i..].starts_with(marker) {
+            return Some(i);
+        }
+        i += len;
     }
-    let render = Reflect::get(&katex, &JsValue::from_str("renderToString")).ok()?;
-    let func: Function = render.dyn_into().ok()?;
-    let options = Object::new();
-    let _ = Reflect::set(
-        &options,
-        &JsValue::from_str("throwOnError"),
-        &JsValue::FALSE,
-    );
-    let _ = Reflect::set(&options, &JsValue::from_str("displayMode"), &JsValue::FALSE);
-    let html = func
-        .call2(&katex, &JsValue::from_str(expr), &options)
-        .ok()?;
-    html.as_string()
+    None
 }
