@@ -85,6 +85,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   **Bottom Bar**: 与 Desktop 功能对齐（Branch/连接状态/加载状态/历史条/统计），移动端允许多行折叠布局。
     *   默认折叠态 **MUST** 仅显示一行：`Branch / Ready / Words / Lines / Col`。
     *   通过右侧箭头按钮展开详情；再次点击或点击状态栏外区域自动收起。
+    *   折叠态信息 **SHOULD** 无需横向滚动。
 
 ### 4.2 顶部导航栏 (Top App Bar)
 *   **Left**: Hamburger Menu (`≡`) 打开 Sidebar Drawer。
@@ -223,7 +224,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   保持低复杂度与模块化；单文件目标 `< 130` 行，熔断阈值 `250` 行。
 
 ### 8.4 本轮落地记录 (Web, 2026-02)
-*   Bottom Sheet 关闭策略完成：阈值 `72px`、防抖 `<=90ms & <=20px`、仅在列表 `scrollTop==0` 且下拉意图成立时关闭。
+*   Top Sheet 关闭策略完成：阈值 `72px`、防抖 `<=90ms & <=20px`、以顶部把手/头部区域上滑关闭为主，避免与结果列表滚动冲突。
 *   Drawer 与触控反馈完成一致化：标题栏/关闭按钮命中区 `44px+`，Sidebar/Outline/Search Result 的 `hover/active/selected` 语义对齐。
 *   视口与阅读态完成：`meta viewport` 补齐、移动端 `Read-Only Mode` 24px 横幅、Diff 强制 Unified。
 *   顶部与底部导航完成对齐：Top Bar 右侧改为 Home/Open/Command；Bottom Bar 对齐 Desktop 的 branch、状态、历史、统计（移动端多行布局）。
@@ -231,6 +232,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   输入态冲突完成收敛：Accessory Toolbar 仅在软键盘出现时显示，键盘出现时隐藏底部状态栏；`<=360px` 极窄屏启用专用排版（历史控制拆分为两行，统计标签压缩）。
 *   视觉一致性微调：Top Sheet 增加轻量遮罩与模糊背景，Outline 浮动开关位置与动画节律对齐，Bottom Bar 信息胶囊统一浅浮雕层次。
 *   Bottom Bar 交互升级：新增折叠/展开箭头，折叠态固定单行展示 `Branch/Ready/Words/Lines/Col`，展开态显示加载信息与历史控制；点击栏外区域自动收起。
+*   动效节律对齐：Drawer、Top Sheet、Outline Toggle、按钮反馈统一为 `duration-200 + ease-out`。
 
 ## 9. SHOULD 条目映射矩阵 (Web Mobile)
 
