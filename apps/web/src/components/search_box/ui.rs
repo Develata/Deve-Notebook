@@ -35,6 +35,8 @@ pub fn render_overlay(
     let (touch_start_y, set_touch_start_y) = signal(0i32);
     let (touch_start_at, set_touch_start_at) = signal(0.0f64);
     let (can_dismiss_sheet, set_can_dismiss_sheet) = signal(false);
+    let (sheet_drag_offset, set_sheet_drag_offset) = signal(0i32);
+    let (sheet_dragging, set_sheet_dragging) = signal(false);
 
     let panel_class = move || match ui_mode.get() {
         SearchUiMode::Sheet => {
@@ -45,8 +47,19 @@ pub fn render_overlay(
         }
     };
     let panel_style = move || match ui_mode.get() {
-        SearchUiMode::Sheet => "padding-top: env(safe-area-inset-top);",
-        SearchUiMode::Overlay => "",
+        SearchUiMode::Sheet => {
+            let y = sheet_drag_offset.get();
+            let transition = if sheet_dragging.get() {
+                "none"
+            } else {
+                "transform 200ms ease-out"
+            };
+            format!(
+                "padding-top: env(safe-area-inset-top); transform: translateY({}px); transition: {};",
+                y, transition
+            )
+        }
+        SearchUiMode::Overlay => "".to_string(),
     };
     let backdrop_class = move || match ui_mode.get() {
         SearchUiMode::Sheet => "fixed inset-0 z-[100] font-sans bg-black/20 backdrop-blur-[1px]",
@@ -73,6 +86,20 @@ pub fn render_overlay(
                                 set_touch_start_at,
                                 set_can_dismiss_sheet,
                             );
+                            set_sheet_dragging.set(true);
+                        }
+                    }
+                    on:touchmove=move |ev: TouchEvent| {
+                        if ui_mode.get_untracked() == SearchUiMode::Sheet {
+                            let start_y = touch_start_y.get_untracked();
+                            if let Some(touch) = ev.changed_touches().get(0) {
+                                let delta = touch.client_y() - start_y;
+                                if delta < 0 && can_dismiss_sheet.get_untracked() {
+                                    set_sheet_drag_offset.set(delta.max(-120));
+                                } else {
+                                    set_sheet_drag_offset.set(0);
+                                }
+                            }
                         }
                     }
                     on:touchend=move |ev: TouchEvent| {
@@ -86,10 +113,16 @@ pub fn render_overlay(
                             ) {
                                 set_show.set(false);
                             }
+                            set_sheet_dragging.set(false);
+                            set_sheet_drag_offset.set(0);
                             sheet_gesture::reset(set_can_dismiss_sheet);
                         }
                     }
-                    on:touchcancel=move |_| sheet_gesture::reset(set_can_dismiss_sheet)
+                    on:touchcancel=move |_| {
+                        set_sheet_dragging.set(false);
+                        set_sheet_drag_offset.set(0);
+                        sheet_gesture::reset(set_can_dismiss_sheet)
+                    }
                     on:keydown={
                         let handle_keydown_closure = handle_keydown_closure.clone();
                         move |ev| handle_keydown_closure(ev)

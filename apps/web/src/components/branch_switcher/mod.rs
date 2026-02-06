@@ -58,7 +58,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
         <button
             class=move || {
                 if compact {
-                    "flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 ease-out text-[10px] font-medium text-gray-700"
+                    "flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 ease-out text-[10px] font-medium text-gray-700 max-w-[96px]"
                 } else {
                     "flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors duration-200 ease-out text-xs font-medium text-gray-700"
                 }
@@ -73,7 +73,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
                 <circle cx="6" cy="18" r="3"/>
                 <path d="M18 9a9 9 0 0 1-9 9"/>
             </svg>
-            <span>{current_branch}</span>
+            <span class=move || if compact { "truncate max-w-[60px]" } else { "" }>{current_branch}</span>
             {move || if is_spectator() && !compact {
                 view! { <span class="text-[10px] bg-amber-100 text-amber-700 px-1 rounded font-normal">"READ"</span> }.into_any()
             } else {
