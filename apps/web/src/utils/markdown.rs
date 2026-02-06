@@ -5,7 +5,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use pulldown_cmark::{CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd, html};
 
-pub fn render_markdown(source: &str) -> String {
+pub fn render_markdown(source: &str, apply_label: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -46,7 +46,7 @@ pub fn render_markdown(source: &str) -> String {
                         _ => {}
                     }
                 }
-                out.push_str(&render_code_block(&code, &lang));
+                out.push_str(&render_code_block(&code, &lang, apply_label));
             }
             // Intercept links: add target="_blank" and security attributes
             Event::Start(Tag::Link {
@@ -77,7 +77,7 @@ pub fn render_markdown(source: &str) -> String {
     out
 }
 
-fn render_code_block(code: &str, lang: &str) -> String {
+fn render_code_block(code: &str, lang: &str, apply_label: &str) -> String {
     let escaped = escape_html(code);
     let encoded = STANDARD.encode(code.as_bytes());
     let lang_class = if lang.is_empty() {
@@ -87,8 +87,11 @@ fn render_code_block(code: &str, lang: &str) -> String {
     };
 
     format!(
-        "<div class=\"markdown-code-block\"><div class=\"code-toolbar\"><button class=\"apply-code\" data-code=\"{}\">Apply</button></div><pre><code class=\"{}\">{}</code></pre></div>",
-        encoded, lang_class, escaped
+        "<div class=\"markdown-code-block\"><div class=\"code-toolbar\"><button class=\"apply-code\" data-code=\"{}\">{}</button></div><pre><code class=\"{}\">{}</code></pre></div>",
+        encoded,
+        escape_html(apply_label),
+        lang_class,
+        escaped
     )
 }
 

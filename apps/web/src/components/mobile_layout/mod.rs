@@ -1,6 +1,7 @@
 // apps/web/src/components/mobile_layout/mod.rs
 //! # Mobile Layout
 
+mod chat_sheet;
 mod content;
 mod drawers;
 mod effects;
@@ -13,6 +14,7 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::layout_context::EditorContentContext;
 use crate::editor::ffi::getEditorContent;
 use crate::hooks::use_core::CoreState;
+use chat_sheet::MobileChatSheet;
 use content::MobileContent;
 use drawers::MobileDrawers;
 use effects::apply_body_scroll_lock;
@@ -37,6 +39,7 @@ pub fn MobileLayout(
     let (swipe_start_x, set_swipe_start_x) = signal(0i32);
     let (swipe_target, set_swipe_target) = signal(None::<gesture::SwipeTarget>);
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
+    let (chat_expanded, set_chat_expanded) = signal(false);
 
     let title = Memo::new(move |_| {
         let current = core.current_doc.get();
@@ -178,11 +181,21 @@ pub fn MobileLayout(
                 keyboard_offset=keyboard_offset
                 readonly=core.is_spectator
                 visible=Signal::derive(move || {
-                    current_doc.get().is_some() && !drawer_open.get() && keyboard_offset.get() > 0
+                    current_doc.get().is_some()
+                        && !drawer_open.get()
+                        && keyboard_offset.get() > 0
+                        && !chat_expanded.get()
                 })
             />
 
-            <Show when=move || keyboard_offset.get() <= 0>
+            <MobileChatSheet
+                keyboard_offset=keyboard_offset
+                drawer_open=drawer_open
+                expanded=chat_expanded
+                set_expanded=set_chat_expanded
+            />
+
+            <Show when=move || keyboard_offset.get() <= 0 && !chat_expanded.get()>
                 <MobileFooter core=core.clone() />
             </Show>
         </div>

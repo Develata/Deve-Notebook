@@ -1,5 +1,6 @@
 // apps/web/src/components/chat/message_item.rs
 use crate::hooks::use_core::types::ChatMessage;
+use crate::i18n::{Locale, t};
 use crate::utils::markdown::render_markdown;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
@@ -23,9 +24,14 @@ fn handle_link_click(ev: web_sys::MouseEvent) {
 }
 
 #[component]
-pub fn MessageItem(msg: ChatMessage) -> impl IntoView {
+pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let is_user = msg.role == "user";
     let content = msg.content.clone();
+    let ts_text = {
+        let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(msg.ts_ms as f64));
+        format!("{:02}:{:02}", date.get_hours(), date.get_minutes())
+    };
 
     view! {
         <div class="flex flex-col gap-1">
@@ -35,21 +41,33 @@ pub fn MessageItem(msg: ChatMessage) -> impl IntoView {
                 )}>
                     {if is_user { "U" } else { "AI" }}
                 </div>
-                <span class="text-xs text-[#616161] dark:text-[#858585]">{if is_user { "You" } else { "Assistant" }}</span>
+                <span class="text-xs text-[#616161] dark:text-[#858585]">{if is_user {
+                    t::chat::you(locale.get())
+                } else {
+                    t::chat::assistant(locale.get())
+                }}</span>
             </div>
 
-            <div class={format!("rounded px-3 py-2 text-sm leading-relaxed max-w-[90%] {}",
+            <div class={format!("rounded px-3 py-2 text-sm leading-relaxed {} {}",
+                if mobile { "max-w-[96%]" } else { "max-w-[90%]" },
                 if is_user {
-                    "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-8"
+                    if mobile {
+                        "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-3"
+                    } else {
+                        "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-8"
+                    }
+                } else if mobile {
+                    "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-3"
                 } else {
                     "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-8"
                 }
             )}>
                 <div
-                    class="markdown-body"
-                    inner_html={render_markdown(&content)}
+                    class="markdown-body break-words overflow-x-auto"
+                    inner_html={render_markdown(&content, t::chat::apply(locale.get()))}
                     on:click=handle_link_click
                 ></div>
+                <div class="mt-1 text-[10px] text-[#8a8a8a] text-right">{ts_text}</div>
             </div>
         </div>
     }

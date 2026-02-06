@@ -5,7 +5,12 @@ use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-pub fn make_send_text(core: CoreState, is_streaming: ReadSignal<bool>) -> Callback<String> {
+pub fn make_send_text(
+    core: CoreState,
+    is_streaming: ReadSignal<bool>,
+    on_req_id: Option<Callback<String>>,
+    on_user_text: Option<Callback<String>>,
+) -> Callback<String> {
     Callback::new(move |msg: String| {
         let msg = msg.trim().to_string();
         if msg.is_empty() || is_streaming.get() {
@@ -14,6 +19,12 @@ pub fn make_send_text(core: CoreState, is_streaming: ReadSignal<bool>) -> Callba
 
         let req_id = uuid::Uuid::new_v4().to_string();
         core.append_chat_message("user", &msg, None);
+        if let Some(cb) = on_user_text.as_ref() {
+            cb.run(msg.clone());
+        }
+        if let Some(cb) = on_req_id.as_ref() {
+            cb.run(req_id.clone());
+        }
 
         let current_doc_path = core
             .current_doc

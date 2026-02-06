@@ -24,6 +24,7 @@ pub struct ChatMessage {
     pub role: String, // "user" or "assistant"
     pub content: String,
     pub req_id: Option<String>, // To link with streaming chunks
+    pub ts_ms: u64,
 }
 
 #[derive(Clone)]
@@ -132,6 +133,7 @@ impl CoreState {
                 role: role.to_string(),
                 content: content.to_string(),
                 req_id,
+                ts_ms: js_sys::Date::now() as u64,
             });
         });
     }
@@ -150,6 +152,7 @@ impl CoreState {
                     role: "assistant".to_string(),
                     content: delta.to_string(),
                     req_id: Some(req_id.to_string()),
+                    ts_ms: js_sys::Date::now() as u64,
                 });
             }
         });

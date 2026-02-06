@@ -65,6 +65,7 @@ pub fn handle_chat_chunk(
                     role: "assistant".to_string(),
                     content: text,
                     req_id: Some(req_id.clone()),
+                    ts_ms: js_sys::Date::now() as u64,
                 });
             }
         });

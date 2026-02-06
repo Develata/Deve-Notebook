@@ -17,6 +17,7 @@
 //! - `source_control`: 版本控制面板翻译
 
 pub mod bottom_bar;
+pub mod chat;
 pub mod command_palette;
 pub mod common;
 pub mod header;
@@ -56,6 +57,7 @@ pub fn app_title(locale: Locale) -> &'static str {
 pub mod t {
     pub use super::app_title;
     pub use super::bottom_bar;
+    pub use super::chat;
     pub use super::command_palette;
     pub use super::common;
     pub use super::header;

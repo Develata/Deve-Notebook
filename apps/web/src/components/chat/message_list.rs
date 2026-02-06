@@ -2,6 +2,7 @@
 use crate::components::chat::empty_state::EmptyState;
 use crate::components::chat::message_item::MessageItem;
 use crate::hooks::use_core::types::ChatMessage;
+use crate::i18n::{Locale, t};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use leptos::html;
@@ -14,7 +15,9 @@ pub fn MessageList(
     is_streaming: ReadSignal<bool>,
     send_example: Callback<String>,
     on_apply: Callback<String>,
+    #[prop(optional)] mobile: bool,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let messages_end_ref = NodeRef::<html::Div>::new();
 
     Effect::new(move |_| {
@@ -51,7 +54,11 @@ pub fn MessageList(
     };
 
     view! {
-        <div class="flex-1 overflow-y-auto p-4 space-y-4" on:click=on_click>
+        <div class=move || if mobile {
+            "flex-1 overflow-y-auto p-2.5 space-y-3"
+        } else {
+            "flex-1 overflow-y-auto p-4 space-y-4"
+        } on:click=on_click>
             {move || if messages.get().is_empty() {
                 view! { <EmptyState send_example=send_example.clone() /> }.into_any()
             } else {
@@ -59,15 +66,15 @@ pub fn MessageList(
                     <For
                         each=move || messages.get()
                         key=|msg| msg.req_id.clone().unwrap_or_else(|| msg.content.chars().take(32).collect())
-                        children=move |msg| view! { <MessageItem msg=msg /> }
+                        children=move |msg| view! { <MessageItem msg=msg mobile=mobile /> }
                     />
                 }.into_any()
             }}
 
             {move || if is_streaming.get() {
                 view! {
-                    <div class="flex items-center gap-2 text-xs text-[#616161]">
-                        <span class="animate-pulse">"Thinking..."</span>
+                    <div class="flex items-center gap-2 text-xs text-[#616161] px-1">
+                        <span class="animate-pulse">{move || t::chat::thinking(locale.get())}</span>
                     </div>
                 }.into_any()
             } else {

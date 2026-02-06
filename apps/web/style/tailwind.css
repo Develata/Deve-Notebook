@@ -112,6 +112,16 @@ body.is-ctrl-pressed .markdown-body a {
   text-decoration: underline;
 }
 
+.markdown-body {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body pre {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body.is-ctrl-pressed .markdown-body a:hover {
   color: #2563eb; /* blue-600 */
 }

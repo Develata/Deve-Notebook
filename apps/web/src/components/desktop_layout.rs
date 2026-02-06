@@ -161,7 +161,7 @@ pub fn DesktopLayout(
                             class="flex-none bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex flex-col"
                             style=move || format!("width: {}px", right_width.get())
                         >
-                            <ChatPanel />
+                            <ChatPanel on_close=Callback::new(move |_| ()) />
                         </div>
                     </div>
                 }
