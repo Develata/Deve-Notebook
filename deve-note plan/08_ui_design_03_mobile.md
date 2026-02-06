@@ -239,6 +239,8 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   I18n 对齐：移动端新增文案 `File tree`、`Close file tree`、`Toggle status details`、`Files`、`Outline`、`Outline unavailable`、`No headings found` 已接入 i18n key，移除对应硬编码。
 *   复杂度治理：`search_box/logic.rs` 已拆分为 `logic/{providers,selection,actions,execute}.rs`，降低单文件复杂度并便于后续移动端交互迭代。
 *   交互丝滑度增强：Top Sheet 新增手势跟手位移（上滑拖拽过程实时反馈），未达到关闭阈值时平滑回弹。
+*   细节识别优化：Bottom Bar 紧凑分支名采用前后保留压缩（如 `feature...23ab`），提升分支辨识度。
+*   手势物理感增强：Top Sheet 新增快甩关闭判定（速度阈值）与阻尼位移（越拉越难）。
 
 ## 9. SHOULD 条目映射矩阵 (Web Mobile)
 

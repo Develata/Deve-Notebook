@@ -6,6 +6,8 @@ const CLOSE_THRESHOLD_PX: i32 = 72;
 const MIN_DRAG_PX: i32 = 12;
 const QUICK_TAP_MS: f64 = 90.0;
 const QUICK_TAP_MAX_DRAG_PX: i32 = 20;
+const FAST_FLICK_PX_PER_MS: f64 = 0.9;
+const FAST_FLICK_MIN_DRAG_PX: i32 = 24;
 
 pub fn on_start(
     ev: &TouchEvent,
@@ -52,11 +54,34 @@ pub fn should_close(
     if elapsed <= QUICK_TAP_MS && upward_drag <= QUICK_TAP_MAX_DRAG_PX {
         return false;
     }
+    if elapsed > 0.0
+        && upward_drag >= FAST_FLICK_MIN_DRAG_PX
+        && (upward_drag as f64 / elapsed) >= FAST_FLICK_PX_PER_MS
+    {
+        return true;
+    }
     upward_drag >= CLOSE_THRESHOLD_PX
 }
 
 pub fn reset(set_can_dismiss: WriteSignal<bool>) {
     set_can_dismiss.set(false);
+}
+
+pub fn damped_offset(start_y: i32, current_y: i32, can_dismiss: bool) -> i32 {
+    if !can_dismiss {
+        return 0;
+    }
+    let delta = current_y - start_y;
+    if delta >= 0 {
+        return 0;
+    }
+    let upward = (-delta) as f32;
+    let damped = if upward <= 60.0 {
+        upward * 0.62
+    } else {
+        37.2 + (upward - 60.0).sqrt() * 6.2
+    };
+    -(damped.min(120.0) as i32)
 }
 
 fn can_start_dismiss(ev: &TouchEvent, results_ref: &NodeRef<leptos::html::Div>) -> bool {

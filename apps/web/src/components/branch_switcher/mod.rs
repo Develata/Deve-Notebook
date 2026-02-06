@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\branch_switcher
+// apps\web\src\components\branch_switcher
 //! # Branch Switcher Component (分支切换器)
 //!
 //! **架构作用**:
@@ -37,11 +37,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
         }
         Some(peer) => {
             let s = peer.to_string();
-            if compact && s.chars().count() > 8 {
-                format!("{}..", s.chars().take(8).collect::<String>())
-            } else {
-                s
-            }
+            if compact { compact_branch_name(&s) } else { s }
         }
     };
 
@@ -81,4 +77,22 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
             }}
         </button>
     }
+}
+
+fn compact_branch_name(name: &str) -> String {
+    let chars: Vec<char> = name.chars().collect();
+    if chars.len() <= 13 {
+        return name.to_string();
+    }
+    let head: String = chars.iter().take(7).collect();
+    let tail: String = chars
+        .iter()
+        .rev()
+        .take(4)
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    format!("{}...{}", head, tail)
 }
