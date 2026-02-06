@@ -17,7 +17,7 @@ use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 
 #[component]
-pub fn BranchSwitcher() -> impl IntoView {
+pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
     let core = expect_context::<CoreState>();
     let search_control = expect_context::<SearchControl>();
 
@@ -28,8 +28,21 @@ pub fn BranchSwitcher() -> impl IntoView {
 
     // 获取当前分支名称
     let current_branch = move || match core.active_branch.get() {
-        None => "Local (Master)".to_string(),
-        Some(peer) => peer.to_string(),
+        None => {
+            if compact {
+                "Local".to_string()
+            } else {
+                "Local (Master)".to_string()
+            }
+        }
+        Some(peer) => {
+            let s = peer.to_string();
+            if compact && s.chars().count() > 8 {
+                format!("{}..", s.chars().take(8).collect::<String>())
+            } else {
+                s
+            }
+        }
     };
 
     // 判断是否为 Spectator (只读) 模式
@@ -43,7 +56,13 @@ pub fn BranchSwitcher() -> impl IntoView {
 
     view! {
         <button
-            class="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors text-xs font-medium text-gray-700"
+            class=move || {
+                if compact {
+                    "flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 ease-out text-[10px] font-medium text-gray-700"
+                } else {
+                    "flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors duration-200 ease-out text-xs font-medium text-gray-700"
+                }
+            }
             on:click=onclick
             title="Switch Branch (Ctrl+Shift+L)"
         >
@@ -55,7 +74,7 @@ pub fn BranchSwitcher() -> impl IntoView {
                 <path d="M18 9a9 9 0 0 1-9 9"/>
             </svg>
             <span>{current_branch}</span>
-            {move || if is_spectator() {
+            {move || if is_spectator() && !compact {
                 view! { <span class="text-[10px] bg-amber-100 text-amber-700 px-1 rounded font-normal">"READ"</span> }.into_any()
             } else {
                 view! {}.into_any()

@@ -24,6 +24,7 @@ pub fn result_item(
     core: CoreState,
     set_recent_move_dirs: WriteSignal<Vec<String>>,
 ) -> impl IntoView {
+    let is_mobile = window_width().map(|w| w <= 768).unwrap_or(false);
     let detail_text = item.detail.clone();
     let detail_text_cond = detail_text.clone();
     let is_group =
@@ -33,27 +34,42 @@ pub fn result_item(
     let is_selectable = logic::is_selectable(Some(&item));
 
     if is_group {
+        let group_class = if is_mobile {
+            "px-3 py-2 text-[10px] uppercase tracking-wide text-gray-400"
+        } else {
+            "px-4 py-2 text-[11px] uppercase tracking-widest text-gray-400"
+        };
+        return view! { <div class=group_class>{item.title}</div> }.into_any();
+    }
+
+    if is_error {
+        let error_class = if is_mobile {
+            "px-3 py-2 text-xs text-red-500"
+        } else {
+            "px-4 py-2 text-sm text-red-500"
+        };
         return view! {
-            <div class="px-4 py-2 text-[11px] uppercase tracking-widest text-gray-400">
+            <div class=error_class>
                 {item.title}
             </div>
         }
         .into_any();
     }
 
-    if is_error {
-        return view! {
-            <div class="px-4 py-2 text-sm text-red-500">
-                {item.title}
-            </div>
-        }
-        .into_any();
-    }
+    let base = if is_mobile {
+        "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 group transition-colors active:bg-gray-100"
+    } else {
+        "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors active:bg-gray-100"
+    };
+
+    let action_clone = item.action.clone();
+    let detail_clone = item.detail.clone();
 
     view! {
         <button
             class=format!(
-                "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors {}",
+                "{} {}",
+                base,
                 if is_sel && is_selectable {
                     "bg-blue-50 text-blue-700"
                 } else if is_selectable {
@@ -85,10 +101,23 @@ pub fn result_item(
                     set_selected_index.set(idx);
                 }
             }
+            on:touchstart=move |_| {
+                if is_selectable && selected_index.get_untracked() != idx {
+                    set_selected_index.set(idx);
+                }
+            }
         >
-            {item_icon(is_sel, item.action.clone(), item.detail.clone())}
+            {move || if is_mobile {
+                view! {}.into_any()
+            } else {
+                item_icon(is_sel, action_clone.clone(), detail_clone.clone()).into_any()
+            }}
             {item_content(item.title.clone(), detail_text_cond, detail_text)}
-            {selection_arrow(is_sel)}
+            {move || if is_mobile {
+                view! {}.into_any()
+            } else {
+                selection_arrow(is_sel).into_any()
+            }}
         </button>
     }
     .into_any()
@@ -130,11 +159,12 @@ fn item_content(
     detail_cond: Option<String>,
     detail_text: Option<String>,
 ) -> impl IntoView {
+    let is_mobile = window_width().map(|w| w <= 768).unwrap_or(false);
     view! {
         <div class="flex-1 truncate flex flex-col items-start gap-0.5">
             <span class="font-medium">{title}</span>
             <Show when=move || detail_cond.is_some()>
-                <span class="text-xs opacity-60 font-mono">
+                <span class=if is_mobile { "text-[11px] opacity-60 font-mono" } else { "text-xs opacity-60 font-mono" }>
                     {detail_text.clone().unwrap()}
                 </span>
             </Show>
@@ -150,4 +180,10 @@ fn selection_arrow(is_sel: bool) -> impl IntoView {
             </svg>
         </Show>
     }
+}
+
+fn window_width() -> Option<i32> {
+    let window = web_sys::window()?;
+    let width = window.inner_width().ok()?.as_f64()?;
+    Some(width as i32)
 }

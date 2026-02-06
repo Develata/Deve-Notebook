@@ -1,13 +1,14 @@
 // apps\web\src\components\search_box
-use leptos::prelude::*;
-use std::sync::Arc;
-use web_sys::{KeyboardEvent, MouseEvent};
-
+use crate::components::search_box::SearchUiMode;
 use crate::components::search_box::result_item::result_item;
+use crate::components::search_box::sheet_gesture;
 use crate::components::search_box::types::SearchResult;
+use crate::components::search_box::ui_footer::footer;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
-
+use leptos::prelude::*;
+use std::sync::Arc;
+use web_sys::{KeyboardEvent, MouseEvent, TouchEvent};
 /// 负责渲染整体遮罩与内部布局。
 #[allow(clippy::too_many_arguments)]
 pub fn render_overlay(
@@ -25,30 +26,92 @@ pub fn render_overlay(
     core: CoreState,
     locale: RwSignal<Locale>,
     set_recent_move_dirs: WriteSignal<Vec<String>>,
+    ui_mode: Signal<SearchUiMode>,
 ) -> impl IntoView {
     let handle_keydown_closure = handle_keydown.clone();
     let active_index_closure = active_index.clone();
+    let results_ref = NodeRef::<leptos::html::Div>::new();
+    let (touch_start_x, set_touch_start_x) = signal(0i32);
+    let (touch_start_y, set_touch_start_y) = signal(0i32);
+    let (touch_start_at, set_touch_start_at) = signal(0.0f64);
+    let (can_dismiss_sheet, set_can_dismiss_sheet) = signal(false);
+
+    let panel_class = move || match ui_mode.get() {
+        SearchUiMode::Sheet => {
+            "absolute top-0 left-0 right-0 bg-white rounded-b-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[72vh] animate-in fade-in slide-in-from-top-4 duration-200 ease-out"
+        }
+        SearchUiMode::Overlay => {
+            "absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-200 ease-out"
+        }
+    };
+    let panel_style = move || match ui_mode.get() {
+        SearchUiMode::Sheet => "padding-top: env(safe-area-inset-top);",
+        SearchUiMode::Overlay => "",
+    };
+    let backdrop_class = move || match ui_mode.get() {
+        SearchUiMode::Sheet => "fixed inset-0 z-[100] font-sans bg-black/20 backdrop-blur-[1px]",
+        SearchUiMode::Overlay => "fixed inset-0 z-[100] font-sans",
+    };
 
     view! {
         <Show when=move || show.get()>
             <div
-                class="fixed inset-0 z-[100] font-sans"
+                class=backdrop_class
                 on:click=move |_| set_show.set(false)
             >
                 <div
-                    class="absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
+                    class=panel_class
+                    style=panel_style
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
+                    on:touchstart=move |ev: TouchEvent| {
+                        if ui_mode.get_untracked() == SearchUiMode::Sheet {
+                            sheet_gesture::on_start(
+                                &ev,
+                                &results_ref,
+                                set_touch_start_x,
+                                set_touch_start_y,
+                                set_touch_start_at,
+                                set_can_dismiss_sheet,
+                            );
+                        }
+                    }
+                    on:touchend=move |ev: TouchEvent| {
+                        if ui_mode.get_untracked() == SearchUiMode::Sheet {
+                            if sheet_gesture::should_close(
+                                &ev,
+                                touch_start_x,
+                                touch_start_y,
+                                touch_start_at,
+                                can_dismiss_sheet,
+                            ) {
+                                set_show.set(false);
+                            }
+                            sheet_gesture::reset(set_can_dismiss_sheet);
+                        }
+                    }
+                    on:touchcancel=move |_| sheet_gesture::reset(set_can_dismiss_sheet)
                     on:keydown={
                         let handle_keydown_closure = handle_keydown_closure.clone();
                         move |ev| handle_keydown_closure(ev)
                     }
                 >
+                    {move || if ui_mode.get() == SearchUiMode::Sheet {
+                        view! {
+                            <div data-sheet-drag-handle="1" class="flex justify-center py-2">
+                                <div class="w-10 h-1.5 rounded-full bg-gray-200"></div>
+                            </div>
+                        }
+                        .into_any()
+                    } else {
+                        view! {}.into_any()
+                    }}
                     {header(
                         query,
                         set_query,
                         set_selected_index,
                         placeholder_text,
                         input_ref,
+                        ui_mode,
                     )}
                     {results_panel(
                         providers_results,
@@ -61,8 +124,10 @@ pub fn render_overlay(
                         core.clone(),
                         locale,
                         set_recent_move_dirs,
+                        ui_mode,
+                        results_ref,
                     )}
-                    {footer()}
+                    {footer(ui_mode)}
                 </div>
             </div>
         </Show>
@@ -76,16 +141,25 @@ fn header(
     set_selected_index: WriteSignal<usize>,
     placeholder_text: Memo<String>,
     input_ref: NodeRef<leptos::html::Input>,
+    ui_mode: Signal<SearchUiMode>,
 ) -> impl IntoView {
+    let header_class = move || match ui_mode.get() {
+        SearchUiMode::Sheet => {
+            "px-3 py-2 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50"
+        }
+        SearchUiMode::Overlay => {
+            "p-3 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50"
+        }
+    };
     view! {
-        <div class="p-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
+        <div data-sheet-drag-handle="1" class=header_class>
             <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {search_icon(query)}
             </svg>
             <input
                 node_ref=input_ref
                 type="text"
-                class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
+                class="flex-1 outline-none text-sm bg-transparent text-gray-800 placeholder:text-gray-400"
                 placeholder=move || placeholder_text.get()
                 prop:value=move || query.get()
                 on:input=move |ev| {
@@ -126,15 +200,16 @@ fn results_panel(
     core: CoreState,
     locale: RwSignal<Locale>,
     set_recent_move_dirs: WriteSignal<Vec<String>>,
+    _ui_mode: Signal<SearchUiMode>,
+    results_ref: NodeRef<leptos::html::Div>,
 ) -> impl IntoView {
     view! {
-        <div class="overflow-y-auto p-2">
+        <div node_ref=results_ref data-sheet-results="1" class="overflow-y-auto p-2">
             {
                 let core = core.clone();
                 move || {
                     let res = providers_results.get();
                     let core = core.clone();
-
                     if res.is_empty() {
                         view! {
                             <div class="p-4 text-center text-gray-400 text-sm">
@@ -171,19 +246,6 @@ fn results_panel(
                     }
                 }
             }
-        </div>
-    }
-}
-
-/// 底部快捷键提示。
-fn footer() -> impl IntoView {
-    view! {
-        <div class="bg-gray-50 px-4 py-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
-            <div class="flex gap-4">
-                <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Up/Down</kbd> to navigate</span>
-                <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Enter</kbd> to select</span>
-            </div>
-            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Esc</kbd> to close</span>
         </div>
     }
 }

@@ -1,36 +1,25 @@
-// apps\web\src\components\main_layout.rs
-use crate::editor::Editor;
-use crate::i18n::Locale;
-use leptos::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::UiEvent;
+// apps/web/src/components/main_layout.rs
+//! # Main Layout
 
+use crate::components::activity_bar::SidebarView;
+use crate::components::desktop_layout::DesktopLayout;
+use crate::components::disconnect_overlay::DisconnectedOverlay;
+pub use crate::components::layout_context::{ChatControl, SearchControl};
+use crate::components::merge_modal_slot::MergeModalSlot;
+use crate::components::mobile_layout::MobileLayout;
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_ctrl_key::use_ctrl_key;
 use crate::hooks::use_layout::use_layout;
+use crate::i18n::Locale;
 use crate::shortcuts::create_global_shortcut_handler;
+use leptos::prelude::*;
+use web_sys::UiEvent;
 
-use crate::components::activity_bar::SidebarView;
-use crate::components::chat::ChatPanel;
-use crate::components::diff_view::DiffView;
-use crate::components::disconnect_overlay::DisconnectedOverlay;
-use crate::components::merge_modal_slot::MergeModalSlot;
-
-// Re-export context types for backward compatibility
-pub use crate::components::layout_context::{ChatControl, SearchControl};
-
-/// 主应用程序布局
-///
-/// 编排 UI 架构中定义的 "Activity Bar + Resizable Slot" 布局。
-/// 管理全局 UI 状态 (命令面板, 设置) 并与核心逻辑 (`use_core`) 集成。
 #[component]
 pub fn MainLayout() -> impl IntoView {
     let _locale = use_context::<RwSignal<Locale>>().expect("locale context");
-
-    // 1. 核心状态 (全局逻辑)
     let core = use_core();
 
-    // 2. 布局逻辑
     let (
         sidebar_width,
         right_width,
@@ -43,44 +32,43 @@ pub fn MainLayout() -> impl IntoView {
         do_resize,
         is_resizing,
     ) = use_layout();
+    let desktop_layout = (
+        sidebar_width,
+        right_width,
+        outer_gutter,
+        start_resize_left,
+        start_resize_right,
+        start_resize_outer_left,
+        start_resize_outer_right,
+        stop_resize,
+        do_resize,
+        is_resizing,
+    );
 
-    // 2.5 全局 Ctrl/Meta 键状态 (用于链接导航)
     use_ctrl_key();
 
-    // 3. UI 状态
     let (show_search, set_show_search) = signal(false);
-    let (search_mode, set_search_mode) = signal(String::new()); // ">" for commands, "" for files, "@" for branches
-
-    // Context for deep components to trigger search (e.g. BranchSwitcher)
+    let (search_mode, set_search_mode) = signal(String::new());
     provide_context(SearchControl {
         set_show: set_show_search,
         set_mode: set_search_mode,
     });
 
     let (show_settings, set_show_settings) = signal(false);
-    let (_show_open_modal, _set_show_open_modal) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
     let (pinned_views, set_pinned_views) = signal(SidebarView::all());
-
-    // AI Chat Visibility (Default Visible for testing, can be toggled)
-    let (chat_visible, set_chat_visible) = signal(true); // Default to visible
-
-    // Provide ChatControl context for command palette
+    let (chat_visible, set_chat_visible) = signal(true);
     provide_context(ChatControl {
         chat_visible,
         set_chat_visible,
     });
 
-    // 4. 快捷键
     let handle_keydown = create_global_shortcut_handler(
         show_search.into(),
         set_show_search,
         search_mode.into(),
         set_search_mode,
     );
-
-    // Bind shortcuts globally to window to override browser defaults (like Ctrl+P)
-    // Note: We use window_event_listener here just like in the original Code.
     window_event_listener(leptos::ev::keydown, handle_keydown.clone());
 
     let (is_mobile, set_is_mobile) = signal(false);
@@ -94,72 +82,37 @@ pub fn MainLayout() -> impl IntoView {
     update_is_mobile();
     window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_is_mobile());
 
-    // 5. 派生 UI 回调
     let on_settings = Callback::new(move |_| set_show_settings.set(true));
-
-    // Command Button: Smart Toggle
     let on_command = Callback::new(move |_| {
         let is_visible = show_search.get_untracked();
         let mode = search_mode.get_untracked();
         let target_mode = ">".to_string();
-
         if is_visible && mode == target_mode {
-            // Already visible in this mode -> Toggle Off
             set_show_search.set(false);
         } else {
-            // Hidden OR Different Mode -> Open & Switch
             set_search_mode.set(target_mode);
             set_show_search.set(true);
         }
     });
-
-    // Open Button: Smart Toggle (SilverBullet style)
     let on_open = Callback::new(move |_| {
         let is_visible = show_search.get_untracked();
         let mode = search_mode.get_untracked();
-        let target_mode = String::new(); // Empty for files
-
+        let target_mode = String::new();
         if is_visible && mode == target_mode {
-            // Already visible in this mode -> Toggle Off
             set_show_search.set(false);
         } else {
-            // Hidden OR Different Mode -> Open & Switch
             set_search_mode.set(target_mode);
             set_show_search.set(true);
         }
     });
-
-    // 主页操作 (清除选择)
     let set_doc = core.set_current_doc;
     let on_home = Callback::new(move |_| set_doc.set(None));
 
-    // 打开确认逻辑 - 打开现有文档或创建新文档
-    let docs = core.docs;
-    let on_select = core.on_doc_select;
-    let on_create = core.on_doc_create;
-    let _on_open_confirm = Callback::new(move |path: String| {
-        let normalized = path.replace('\\', "/");
-        let target = if normalized.ends_with(".md") {
-            normalized.clone()
-        } else {
-            format!("{}.md", normalized)
-        };
-
-        // 尝试查找现有文档
-        let list = docs.get_untracked();
-        if let Some((id, _)) = list.iter().find(|(_, p)| p == &target || p == &normalized) {
-            on_select.run(*id);
-        } else {
-            // 未找到，创建新文档
-            leptos::logging::log!("Document not found, creating: {}", target);
-            on_create.run(target);
-        }
-    });
+    let core_for_layout = core.clone();
 
     view! {
         <div
             class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
-            // on:keydown removed - moved to window_event_listener
             on:pointermove=move |ev| do_resize.run(ev)
             on:pointerup=move |_| stop_resize.run(())
             on:pointerleave=move |_| stop_resize.run(())
@@ -171,14 +124,15 @@ pub fn MainLayout() -> impl IntoView {
                 show=show_search
                 set_show=set_show_search
                 mode_signal=Signal::derive(move || search_mode.get())
+                ui_mode=Signal::derive(move || {
+                    if is_mobile.get() {
+                        crate::components::search_box::SearchUiMode::Sheet
+                    } else {
+                        crate::components::search_box::SearchUiMode::Overlay
+                    }
+                })
                 on_settings=on_settings
                 on_open=on_open
-            />
-            <crate::components::header::Header
-                status_text=core.status_text
-                on_home=on_home
-                on_open=on_open
-                on_command=on_command
             />
 
             <crate::components::settings::SettingsModal
@@ -188,164 +142,41 @@ pub fn MainLayout() -> impl IntoView {
 
             <MergeModalSlot />
 
-            <main
-                class="flex-1 w-full flex overflow-hidden relative"
-                style=move || {
-                    format!(
-                        "padding-left: {}px; padding-right: {}px;",
-                        outer_gutter.get(),
-                        outer_gutter.get()
-                    )
+            {move || if is_mobile.get() {
+                view! {
+                    <MobileLayout
+                        core=core_for_layout.clone()
+                        active_view=active_view
+                        on_home=on_home
+                        on_open=on_open
+                        on_command=on_command
+                    />
                 }
-            >
-                {move || if !is_mobile.get() {
-                    view! {
-                        <div
-                            class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
-                            style=move || format!("left: {}px; transform: translateX(-50%);", outer_gutter.get())
-                            on:pointerdown=move |ev| {
-                                if let Some(target) = ev.target()
-                                    && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                                {
-                                    let _ = el.set_pointer_capture(ev.pointer_id());
-                                }
-                                start_resize_outer_left.run(ev)
-                            }
-                        ></div>
-                        <div
-                            class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
-                            style=move || format!("right: {}px; transform: translateX(50%);", outer_gutter.get())
-                            on:pointerdown=move |ev| {
-                                if let Some(target) = ev.target()
-                                    && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                                {
-                                    let _ = el.set_pointer_capture(ev.pointer_id());
-                                }
-                                start_resize_outer_right.run(ev)
-                            }
-                        ></div>
-                    }
-                    .into_any()
-                } else {
-                    view! {}.into_any()
-                }}
-                 // 左侧边栏容器 (Activity Bar + Sidebar)
-                  <aside
-                    class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col z-20"
-                    style=move || format!("width: {}px", sidebar_width.get())
-                  >
-                     // Top: Activity Bar (Horizontal)
-                     <crate::components::activity_bar::ActivityBar
+                .into_any()
+            } else {
+                view! {
+                    <DesktopLayout
+                        core=core_for_layout.clone()
+                        layout=desktop_layout
                         active_view=active_view
                         set_active_view=set_active_view
                         pinned_views=pinned_views
                         set_pinned_views=set_pinned_views
-                     />
+                        on_home=on_home
+                        on_open=on_open
+                        on_command=on_command
+                        chat_visible=chat_visible
+                    />
+                }
+                .into_any()
+            }}
 
-                     // Body: Specific Sidebar Content
-                     <div class="flex-1 overflow-hidden">
-                     <crate::components::sidebar::Sidebar
-                         active_view=active_view
-                         docs=core.docs
-                         current_doc=core.current_doc
-                         on_select=core.on_doc_select
-                         on_delete=core.on_doc_delete
-                     />
-                     </div>
-                 </aside>
-
-                 // 拖动手柄
-                  {move || if !is_mobile.get() {
-                      view! {
-                        <div
-                           class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors touch-none"
-                           on:pointerdown=move |ev| {
-                               if let Some(target) = ev.target()
-                                   && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                               {
-                                   let _ = el.set_pointer_capture(ev.pointer_id());
-                               }
-                               start_resize_left.run(ev)
-                           }
-                        >
-                           <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
-                        </div>
-                      }.into_any()
-                  } else {
-                      view! {}.into_any()
-                  }}
-
-                 // 主编辑器
-                 <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
-                    {move || {
-                        if let Some((path, old, new)) = core.diff_content.get() {
-                            return view! {
-                                <DiffView
-                                    path=path
-                                    old_content=old
-                                    new_content=new
-                                    is_readonly=core.is_spectator.get()
-                                    on_close=move || core.set_diff_content.set(None)
-                                />
-                            }.into_any();
-                        }
-
-                        match core.current_doc.get() {
-                            Some(id) => view! {
-                                 <Editor doc_id=id on_stats=core.on_stats />
-                            }.into_any(),
-                            None => view! {
-                                <div class="flex items-center justify-center h-full text-gray-400">
-                                    "Select a document to edit"
-                                </div>
-                            }.into_any()
-                        }
-                    }}
-                 </div>
-
-                  // Column 5: AI Chat (Resizable Slot)
-                  // Right Sidebar for Chat
-                  {move || if chat_visible.get() {
-                     view! {
-                        <div class="flex items-stretch ml-4">
-                            {move || if !is_mobile.get() {
-                                view! {
-                                    <div
-                                        class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors touch-none"
-                                        on:pointerdown=move |ev| {
-                                            if let Some(target) = ev.target()
-                                                && let Ok(el) =
-                                                    target.dyn_into::<web_sys::Element>()
-                                            {
-                                                let _ = el.set_pointer_capture(ev.pointer_id());
-                                            }
-                                            start_resize_right.run(ev)
-                                        }
-                                    >
-                                        <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
-                                    </div>
-                                }.into_any()
-                            } else {
-                                view! {}.into_any()
-                            }}
-                            <div
-                                class="flex-none bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex flex-col"
-                                style=move || format!("width: {}px", right_width.get())
-                            >
-                                <ChatPanel />
-                            </div>
-                        </div>
-                     }.into_any()
-                  } else {
-                    // Chat Toggle Button (Floating or Integrated)
-                    // Let's add a small toggle button if hidden?
-                    // Or rely on command palette to toggle.
-                    // For now, let's just use command palette to toggle `chat_visible`.
-                    view! {}.into_any()
-                 }}
-            </main>
-            <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats />
-
+            {move || if !is_mobile.get() {
+                view! { <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats /> }
+                    .into_any()
+            } else {
+                view! {}.into_any()
+            }}
             <DisconnectedOverlay status=core.ws.status.into() />
         </div>
     }

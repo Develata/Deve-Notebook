@@ -104,12 +104,12 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
         <div class="relative">
             <div
                 class=move || {
-                     let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-gray-100 text-sm transition-colors select-none group";
+                     let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-gray-50 active:bg-gray-100 text-sm transition-colors select-none group";
                      if let Some(id) = node.doc_id
-                         && current_doc.get() == Some(id)
-                     {
-                        return format!("{} bg-[#e6f7ff] text-[#008dff]", base);
-                     }
+                          && current_doc.get() == Some(id)
+                      {
+                        return format!("{} bg-blue-50 text-blue-700", base);
+                      }
                      format!("{} text-gray-700", base)
                 }
                 style={padding}

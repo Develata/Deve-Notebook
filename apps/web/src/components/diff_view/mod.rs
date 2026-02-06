@@ -13,6 +13,7 @@ pub fn DiffView<F>(
     old_content: String,
     new_content: String,
     #[prop(default = false)] is_readonly: bool,
+    #[prop(default = false)] force_unified: bool,
     on_close: F,
 ) -> impl IntoView
 where
@@ -38,6 +39,36 @@ where
 
     // Activate Scroll Sync
     use_scroll_sync(left_container, right_container);
+
+    let unified_lines = Memo::new(move |_| {
+        let (left, right) = diff_result.get();
+        let mut lines = Vec::with_capacity(left.len() + right.len());
+        for (l, r) in left.into_iter().zip(right.into_iter()) {
+            if !l.content.is_empty()
+                && !r.content.is_empty()
+                && l.class.is_empty()
+                && r.class.is_empty()
+            {
+                lines.push((r.num, format!("  {}", r.content), ""));
+                continue;
+            }
+            if !l.content.is_empty() {
+                lines.push((
+                    l.num,
+                    format!("- {}", l.content),
+                    "bg-red-100 dark:bg-[#4b1818]",
+                ));
+            }
+            if !r.content.is_empty() {
+                lines.push((
+                    r.num,
+                    format!("+ {}", r.content),
+                    "bg-green-100 dark:bg-[#143d20]",
+                ));
+            }
+        }
+        lines
+    });
 
     view! {
         <div class="h-full w-full bg-white dark:bg-[#1e1e1e] flex flex-col font-mono text-[13px]">
@@ -78,6 +109,32 @@ where
 
             // Content
             <div class="flex-1 overflow-hidden flex relative">
+                {move || if force_unified {
+                    view! {
+                        <div class="flex-1 flex overflow-auto" node_ref=right_container>
+                            <div class="w-12 flex-none bg-[#f8f8f8] dark:bg-[#1e1e1e] text-right pr-3 text-[#aaa] select-none py-1 border-r border-[#eee] dark:border-[#333]">
+                                <For
+                                    each=move || unified_lines.get()
+                                    key=|item| format!("{}{}", item.0.unwrap_or(0), item.1)
+                                    children=|item| view! { <div class="h-[20px] leading-[20px]">{item.0.map(|n| n.to_string()).unwrap_or_default()}</div> }
+                                />
+                            </div>
+                            <div class="flex-1 min-w-0 py-1 bg-white dark:bg-[#1e1e1e] select-text">
+                                <For
+                                    each=move || unified_lines.get()
+                                    key=|item| format!("{}{}", item.0.unwrap_or(0), item.1)
+                                    children=|item| view! {
+                                        <div class=format!("h-[20px] leading-[20px] whitespace-pre px-2 {}", item.2)>
+                                            {item.1}
+                                        </div>
+                                    }
+                                />
+                            </div>
+                        </div>
+                    }
+                    .into_any()
+                } else {
+                    view! {
                 // Left Pane (Old) - Always Visible
                 <div
                     class="flex-1 flex overflow-auto border-r border-[#e5e5e5] dark:border-[#454545]"
@@ -148,6 +205,9 @@ where
                         }.into_any()
                     }}
                 </div>
+                    }
+                    .into_any()
+                }}
             </div>
         </div>
     }

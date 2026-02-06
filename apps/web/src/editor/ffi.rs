@@ -41,6 +41,18 @@ unsafe extern "C" {
     /// 设置只读状态
     #[wasm_bindgen(js_name = setReadOnly)]
     pub fn set_read_only(read_only: bool);
+
+    /// Mobile: 在光标处插入文本
+    #[wasm_bindgen(js_namespace = window, js_name = mobileInsertText)]
+    pub fn mobile_insert_text(text: &str);
+
+    /// Mobile: 包裹当前选区
+    #[wasm_bindgen(js_namespace = window, js_name = mobileWrapSelection)]
+    pub fn mobile_wrap_selection(prefix: &str, suffix: &str);
+
+    /// Mobile: 撤销一步
+    #[wasm_bindgen(js_namespace = window, js_name = mobileUndo)]
+    pub fn mobile_undo();
 }
 
 /// Delta 结构 (从 JS 传入)

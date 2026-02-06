@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Deve-Note</title>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
     <!-- 编辑器样式模块 (按依赖顺序加载) -->
@@ -75,6 +75,56 @@
       window.scrollGlobal = () => {};
       window.setReadOnly = () => {};
       window.destroyEditor = () => {};
+
+      window.mobileInsertText = (text) => {
+        const view = window._debug_view;
+        if (!view || typeof text !== "string") return false;
+        const sel = view.state.selection.main;
+        view.dispatch({
+          changes: { from: sel.from, to: sel.to, insert: text },
+          selection: { anchor: sel.from + text.length },
+        });
+        view.focus();
+        return true;
+      };
+
+      window.mobileWrapSelection = (prefix, suffix) => {
+        const view = window._debug_view;
+        if (!view) return false;
+        const sel = view.state.selection.main;
+        const p = String(prefix || "");
+        const s = String(suffix || "");
+        const selected = view.state.sliceDoc(sel.from, sel.to);
+        const insert = `${p}${selected}${s}`;
+        const anchor = selected.length > 0 ? sel.from + insert.length : sel.from + p.length;
+        view.dispatch({
+          changes: { from: sel.from, to: sel.to, insert },
+          selection: { anchor },
+        });
+        view.focus();
+        return true;
+      };
+
+      window.mobileUndo = () => {
+        const view = window._debug_view;
+        if (!view) return false;
+        view.focus();
+        try {
+          if (document.queryCommandSupported?.("undo")) {
+            document.execCommand("undo");
+            return true;
+          }
+        } catch (_) {}
+        const isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
+        const evt = new KeyboardEvent("keydown", {
+          key: "z",
+          bubbles: true,
+          ctrlKey: !isMac,
+          metaKey: isMac,
+        });
+        view.contentDOM.dispatchEvent(evt);
+        return true;
+      };
     </script>
 
     <!-- 3. Module Initialization -->

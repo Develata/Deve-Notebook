@@ -7,7 +7,9 @@ pub mod types;
 mod effects;
 mod file_ops;
 mod logic;
+mod sheet_gesture;
 mod ui;
+mod ui_footer;
 
 use crate::hooks::use_core::CoreState;
 use crate::i18n::Locale;
@@ -16,12 +18,19 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SearchUiMode {
+    Overlay,
+    Sheet,
+}
+
 /// 统一搜索组件，负责聚合命令、文件、分支搜索能力。
 #[component]
 pub fn UnifiedSearch(
     #[prop(into)] show: Signal<bool>,
     #[prop(into)] set_show: WriteSignal<bool>,
     #[prop(into)] mode_signal: Signal<String>,
+    #[prop(into)] ui_mode: Signal<SearchUiMode>,
     on_settings: Callback<()>,
     on_open: Callback<()>,
 ) -> impl IntoView {
@@ -109,5 +118,6 @@ pub fn UnifiedSearch(
         core,
         locale,
         set_recent_move_dirs,
+        ui_mode,
     )
 }

@@ -20,3 +20,9 @@ pub struct ChatControl {
     pub chat_visible: ReadSignal<bool>,
     pub set_chat_visible: WriteSignal<bool>,
 }
+
+/// Editor content context for outline rendering
+#[derive(Clone, Copy)]
+pub struct EditorContentContext {
+    pub content: ReadSignal<String>,
+}

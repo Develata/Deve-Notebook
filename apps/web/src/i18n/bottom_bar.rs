@@ -44,3 +44,10 @@ pub fn offline(locale: Locale) -> &'static str {
         Locale::Zh => "离线",
     }
 }
+
+pub fn toggle_status_details(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Toggle status details",
+        Locale::Zh => "切换状态详情",
+    }
+}

@@ -11,6 +11,7 @@
 //! - 显示 "Spectator Mode" (旁观者模式) 提示。
 //! - 管理大纲视图的显示/隐藏。
 
+use crate::components::layout_context::EditorContentContext;
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_outline::use_outline;
 use deve_core::models::DocId;
@@ -48,6 +49,8 @@ pub fn Editor(
 
     // 获取 CoreState 用于 Spectator 模式
     let core = expect_context::<CoreState>();
+
+    provide_context(EditorContentContext { content });
 
     // 监听 is_spectator 信号，切换编辑器只读状态
     Effect::new(move |_| {

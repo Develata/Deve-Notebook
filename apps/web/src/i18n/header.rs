@@ -34,3 +34,10 @@ pub fn command(locale: Locale) -> &'static str {
         Locale::Zh => "命令面板",
     }
 }
+
+pub fn file_tree(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "File tree",
+        Locale::Zh => "文件树",
+    }
+}
