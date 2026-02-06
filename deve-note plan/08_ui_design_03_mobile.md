@@ -192,3 +192,60 @@
 ### 4.4 体积与性能约束 (Size & Performance)
 *   **Size**: 体积 **MUST** 可控，避免引入重型依赖。
 *   **Perf**: 输入延迟与滚动流畅性必须优先保障。
+
+## 8. Web Mobile 映射对齐清单 (2026-02)
+
+> 目标：在 `W_view <= 768px` 的 Web 视口中，持续对齐本章 Mobile 规范。
+
+### 8.1 当前已完成
+*   移动布局模块化拆分（`mobile_layout/{mod,header,content,footer,effects,gesture}`）。
+*   Drawer 模块化拆分（`mobile_layout/drawers/{mod,left,right}`）。
+*   左右抽屉、边缘滑动开关、抽屉互斥、抽屉打开时 body 锁滚。
+*   Safe-area 适配、Bottom Sheet 搜索面板、空态与 CTA、基础触控反馈。
+
+### 8.2 本轮优先对齐项
+*   **Bottom Sheet 手势关闭**：
+    *   **MUST** 具备下拉关闭阈值（避免轻微位移误关闭）。
+    *   **MUST** 增加误触防抖（短时微位移不触发关闭）。
+    *   **MUST** 处理与滚动冲突：仅在列表位于顶部且判定为下拉意图时才允许关闭。
+*   **Drawer 可达性一致性**：
+    *   **MUST** 统一标题栏与关闭按钮交互语义。
+    *   **SHOULD** 保障触控命中高度不低于 `44px`。
+*   **列表触控反馈一致性**：
+    *   Sidebar / Outline / Search Result 的 `selected`、`hover`、`active` 语义 **MUST** 保持一致。
+
+### 8.3 执行与验证
+*   小步迭代，每轮改动后执行：`cargo clippy --all-targets --all-features -- -D warnings`。
+*   保持低复杂度与模块化；单文件目标 `< 130` 行，熔断阈值 `250` 行。
+
+### 8.4 本轮落地记录 (Web, 2026-02)
+*   Bottom Sheet 手势关闭已加入三段判定：
+    *   距离阈值：`72px`。
+    *   防抖：`<=90ms` 且位移 `<=20px` 视为误触。
+    *   滚动冲突：仅当结果列表 `scrollTop == 0` 且判定为下拉意图时允许关闭。
+*   Drawer 交互已统一：标题栏/关闭按钮命中区与反馈一致（目标触控高度 `44px+`）。
+*   Sidebar / Outline / Search Result 已对齐 `hover` / `active` / `selected` 的移动优先语义。
+*   视口配置已对齐：`index.html` 的 `meta viewport` 已补齐 `maximum-scale=1.0`、`user-scalable=no`、`viewport-fit=cover`。
+*   Spectator 指示条已对齐：移动端内容区顶部增加 `24px` 橙色 "Read-Only Mode" 横幅。
+*   Diff 视图已对齐：移动端强制单列 Unified 渲染，避免左右并排。
+
+## 9. SHOULD 条目映射矩阵 (Web Mobile)
+
+| 条目 | 规范原文 (SHOULD) | 代码路径 | 状态 | 备注 |
+| :--- | :--- | :--- | :--- | :--- |
+| MOB-SHOULD-001 | Resizable Handles: 移动端 SHOULD NOT 显示左右拉伸手柄 | `apps/web/src/components/main_layout.rs` | 已实现 | `is_mobile` 分支渲染 `MobileLayout`，不挂载桌面拖拽手柄 UI。 |
+| MOB-SHOULD-002 | Outer Gutter: 移动端 SHOULD NOT 提供外边距拖拽 | `apps/web/src/components/main_layout.rs` | 已实现 | 外边距拖拽仅在 `DesktopLayout` 生效。 |
+| MOB-SHOULD-003 | Font Size: 默认字号 SHOULD 设为 16px | `apps/web/src/editor/mod.rs` | 部分实现 | 编辑器基础字号尚未统一锁定为 16px（后续可在编辑器容器样式或主题变量中强制）。 |
+| MOB-SHOULD-004 | App 后台时服务 SHOULD 降低资源占用 | N/A (Web Scope) | 不适用 | 属于原生 Mobile App 进程生命周期，不在 Web 映射实现范围。 |
+| MOB-SHOULD-005 | Firewall SHOULD 显式阻断非回环访问 | N/A (Embedded Service) | 不适用 | 属于移动端内嵌服务与系统防火墙策略。 |
+| MOB-SHOULD-006 | Export SHOULD 支持单文档/全量导出 | N/A (Mobile Native Service) | 不适用 | 属于原生端导出与存储能力。 |
+| MOB-SHOULD-007 | Audit SHOULD 记录关键操作日志 | N/A (Core/Service) | 不适用 | 属于后端审计链路，不在 Web UI 直接实现。 |
+| MOB-SHOULD-008 | Recovery Drill SHOULD 提供恢复演练流程 | N/A (Release/Ops) | 不适用 | 属于发布与运维流程规范。 |
+
+### 9.1 与本轮实现直接相关的 SHOULD 细化
+
+| 条目 | 代码路径 | 状态 | 备注 |
+| :--- | :--- | :--- | :--- |
+| MOB-UX-SHOULD-001 | `apps/web/src/components/mobile_layout/drawers/left.rs`, `apps/web/src/components/mobile_layout/drawers/right.rs`, `apps/web/src/components/mobile_layout/header.rs` | 已实现 | 触控命中区统一到 `44px+`，标题栏/关闭按钮语义一致。 |
+| MOB-UX-SHOULD-002 | `apps/web/src/components/search_box/ui.rs`, `apps/web/src/components/search_box/sheet_gesture.rs` | 已实现 | Bottom Sheet 手势关闭已做阈值/防抖/滚动冲突判定。 |
+| MOB-UX-SHOULD-003 | `apps/web/src/components/sidebar/item.rs`, `apps/web/src/components/outline.rs`, `apps/web/src/components/search_box/result_item.rs` | 已实现 | 列表项 `hover/active/selected` 语义对齐，移动端优先 `active`。 |
