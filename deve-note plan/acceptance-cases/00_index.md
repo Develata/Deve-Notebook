@@ -14,3 +14,4 @@
 - `acceptance-cases/10_plugins.md`: 插件与运行时用例。
 - `acceptance-cases/11_commands_settings.md`: CLI/Command Palette/Settings 用例。
 - `acceptance-cases/12_tech_release.md`: 技术栈、性能预算、发布与运维用例。
+- `acceptance-cases/13_ui_mobile_chat_regression.md`: 移动端 AI Chat 最小回归脚本。

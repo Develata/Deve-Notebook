@@ -239,6 +239,11 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   I18n 对齐：移动端新增文案 `File tree`、`Close file tree`、`Toggle status details`、`Files`、`Outline`、`Outline unavailable`、`No headings found` 已接入 i18n key，移除对应硬编码。
 *   复杂度治理：`search_box/logic.rs` 已拆分为 `logic/{providers,selection,actions,execute}.rs`，降低单文件复杂度并便于后续移动端交互迭代。
 *   交互丝滑度增强：Top Sheet 新增手势跟手位移（上滑拖拽过程实时反馈），未达到关闭阈值时平滑回弹。
+*   AI Chat 移动端接入：新增可折叠入口（`AI` 胶囊按钮），点击后进入同页全屏 Chat 页面（非浏览器新窗口），右上角关闭后返回原编辑页面。
+*   AI Chat 输入与层级收敛：Chat Sheet 展开时自动让位 Bottom Bar 与移动辅助键盘栏，键盘弹起时以 `visualViewport` 偏移贴合，保证发送按钮可达。
+*   AI Chat 消息可读性增强：移动端气泡宽度与边距重排、长文本强制换行、代码块横向滚动、消息时间戳展示；流式状态、加载态、错误态、重试态在移动端统一可见。
+*   AI Chat i18n 收口：聊天面板标题、角色名、输入占位、发送/失败/重试、空态提示、`Apply` 代码按钮与移动端切换文案均接入 `t::chat::*`，组件不再新增硬编码文案。
+*   AI Chat 全屏交互收敛：移除半屏抓手关闭手势，统一采用顶部关闭按钮返回，减少误触并对齐移动端“页面级”交互预期。
 *   细节识别优化：Bottom Bar 紧凑分支名采用前后保留压缩（如 `feature...23ab`），提升分支辨识度。
 *   手势物理感增强：Top Sheet 新增快甩关闭判定（速度阈值）与阻尼位移（越拉越难）。
 
