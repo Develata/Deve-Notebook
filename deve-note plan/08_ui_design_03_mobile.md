@@ -86,6 +86,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
     *   默认折叠态 **MUST** 仅显示一行：`Branch / Ready / Words / Lines / Col`。
     *   通过右侧箭头按钮展开详情；再次点击或点击状态栏外区域自动收起。
     *   折叠态信息 **SHOULD** 无需横向滚动。
+    *   分支名在折叠态 **SHOULD** 自动截断，避免挤压状态与统计信息。
 
 ### 4.2 顶部导航栏 (Top App Bar)
 *   **Left**: Hamburger Menu (`≡`) 打开 Sidebar Drawer。
@@ -236,6 +237,8 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   Bottom Bar 交互升级：新增折叠/展开箭头，折叠态固定单行展示 `Branch/Ready/Words/Lines/Col`，展开态显示加载信息与历史控制；点击栏外区域自动收起。
 *   动效节律对齐：Drawer、Top Sheet、Outline Toggle、按钮反馈统一为 `duration-200 + ease-out`。
 *   I18n 对齐：移动端新增文案 `File tree`、`Close file tree`、`Toggle status details`、`Files`、`Outline`、`Outline unavailable`、`No headings found` 已接入 i18n key，移除对应硬编码。
+*   复杂度治理：`search_box/logic.rs` 已拆分为 `logic/{providers,selection,actions,execute}.rs`，降低单文件复杂度并便于后续移动端交互迭代。
+*   交互丝滑度增强：Top Sheet 新增手势跟手位移（上滑拖拽过程实时反馈），未达到关闭阈值时平滑回弹。
 
 ## 9. SHOULD 条目映射矩阵 (Web Mobile)
 
