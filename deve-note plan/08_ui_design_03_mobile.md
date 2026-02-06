@@ -39,10 +39,10 @@
 移动端移除常驻侧边栏，改为 **Drawer (抽屉)** 模式。
 
 *   **Left Drawer (Sidebar)**:
-    *   **Trigger**: 左上角汉堡菜单 (`≡`) 或 **屏幕左边缘右滑 (Edge Swipe)**。
-    *   **Visual**: 覆盖在编辑器之上，背景带有半透明 Backdrop (`z-index: 100`).
+*   **Trigger**: 左上角汉堡菜单 (`≡`) 或 **屏幕左边缘右滑 (Edge Swipe)**。
+*   **Visual**: 覆盖在编辑器之上，背景带有半透明 Backdrop (`z-index: 100`).
 *   **Right Drawer (Outline)**:
-    *   **Trigger**: 右上角图标 或 **屏幕右边缘左滑**。
+*   **Trigger**: 编辑器内容区右上角的 `Toggle Outline` 浮动图标（非 Top Bar）或 **屏幕右边缘左滑**。
 
 ### 2.2 面板宽度策略 (Panel Width Policy)
 
@@ -61,6 +61,7 @@
 
 **Technical Constraint**:
 必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡。
+Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状态栏可暂时让位以优先输入。
 
 ### 2.4 手势系统 (Gesture System)
 仅支持轻量级 Edge Swipe，参数定义如下：
@@ -81,12 +82,14 @@
 ### 4.1 结构层级 (Hierarchy)
 *   **Top App Bar**: 固定顶部，包含导航与核心操作。
 *   **Content Stack**: 单列内容区，默认全屏编辑器。
-*   **Bottom Bar**: 简化状态栏（连接/同步/只读）。
+*   **Bottom Bar**: 与 Desktop 功能对齐（Branch/连接状态/加载状态/历史条/统计），移动端允许多行折叠布局。
+    *   默认折叠态 **MUST** 仅显示一行：`Branch / Ready / Words / Lines / Col`。
+    *   通过右侧箭头按钮展开详情；再次点击或点击状态栏外区域自动收起。
 
 ### 4.2 顶部导航栏 (Top App Bar)
 *   **Left**: Hamburger Menu (`≡`) 打开 Sidebar Drawer。
 *   **Center**: 文档标题/仓库名（省略溢出）。
-*   **Right**: Search / Outline / More (菜单)。
+*   **Right**: Home / Open / Command（与 Desktop 顶栏语义一致）。
 
 ### 4.3 Drawer 规范 (Side Drawers)
 *   **Sidebar Drawer**:
@@ -112,12 +115,13 @@
 2. 选择文档 -> Drawer 自动收起 -> Editor 渲染。
 
 ### 5.2 查看大纲
-1. 点击 Outline 图标 -> 打开右侧 Drawer。
+1. 点击编辑器内容区右上角 `Toggle Outline` 图标 -> 打开右侧 Drawer。
 2. 点击条目 -> Drawer 自动收起 -> Editor 滚动定位。
 
 ### 5.3 搜索/命令
-1. 点击 Search -> Bottom Sheet 打开。
+1. 点击 Search -> Top Sheet 自上而下展开。
 2. 选择结果 -> 自动关闭并跳转。
+3. 关闭手势以顶部拖拽上滑为主（避免与结果列表滚动冲突）。
 
 ## 6. 性能与体积 (Performance & Size)
 *   **Target**: 首屏渲染 < 1s，输入延迟 < 16ms。
@@ -219,15 +223,14 @@
 *   保持低复杂度与模块化；单文件目标 `< 130` 行，熔断阈值 `250` 行。
 
 ### 8.4 本轮落地记录 (Web, 2026-02)
-*   Bottom Sheet 手势关闭已加入三段判定：
-    *   距离阈值：`72px`。
-    *   防抖：`<=90ms` 且位移 `<=20px` 视为误触。
-    *   滚动冲突：仅当结果列表 `scrollTop == 0` 且判定为下拉意图时允许关闭。
-*   Drawer 交互已统一：标题栏/关闭按钮命中区与反馈一致（目标触控高度 `44px+`）。
-*   Sidebar / Outline / Search Result 已对齐 `hover` / `active` / `selected` 的移动优先语义。
-*   视口配置已对齐：`index.html` 的 `meta viewport` 已补齐 `maximum-scale=1.0`、`user-scalable=no`、`viewport-fit=cover`。
-*   Spectator 指示条已对齐：移动端内容区顶部增加 `24px` 橙色 "Read-Only Mode" 横幅。
-*   Diff 视图已对齐：移动端强制单列 Unified 渲染，避免左右并排。
+*   Bottom Sheet 关闭策略完成：阈值 `72px`、防抖 `<=90ms & <=20px`、仅在列表 `scrollTop==0` 且下拉意图成立时关闭。
+*   Drawer 与触控反馈完成一致化：标题栏/关闭按钮命中区 `44px+`，Sidebar/Outline/Search Result 的 `hover/active/selected` 语义对齐。
+*   视口与阅读态完成：`meta viewport` 补齐、移动端 `Read-Only Mode` 24px 横幅、Diff 强制 Unified。
+*   顶部与底部导航完成对齐：Top Bar 右侧改为 Home/Open/Command；Bottom Bar 对齐 Desktop 的 branch、状态、历史、统计（移动端多行布局）。
+*   Outline 入口完成统一：取消 Top Bar 入口，改为内容区 `Toggle Outline` 浮动图标（开时位于右抽屉左上角，关时位于内容区右上角）。
+*   输入态冲突完成收敛：Accessory Toolbar 仅在软键盘出现时显示，键盘出现时隐藏底部状态栏；`<=360px` 极窄屏启用专用排版（历史控制拆分为两行，统计标签压缩）。
+*   视觉一致性微调：Top Sheet 增加轻量遮罩与模糊背景，Outline 浮动开关位置与动画节律对齐，Bottom Bar 信息胶囊统一浅浮雕层次。
+*   Bottom Bar 交互升级：新增折叠/展开箭头，折叠态固定单行展示 `Branch/Ready/Words/Lines/Col`，展开态显示加载信息与历史控制；点击栏外区域自动收起。
 
 ## 9. SHOULD 条目映射矩阵 (Web Mobile)
 
