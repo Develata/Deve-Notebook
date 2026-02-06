@@ -89,12 +89,14 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 
 ### 4.2 顶部导航栏 (Top App Bar)
 *   **Left**: Hamburger Menu (`≡`) 打开 Sidebar Drawer。
+    *   该入口按钮文案/可访问性语义建议统一为 `File tree`。
 *   **Center**: 文档标题/仓库名（省略溢出）。
 *   **Right**: Home / Open / Command（与 Desktop 顶栏语义一致）。
 
 ### 4.3 Drawer 规范 (Side Drawers)
 *   **Sidebar Drawer**:
     *   内容：文件树、快速操作、新建。
+    *   关闭按钮建议使用 `X` 图标而非文本 `Close`，以符合移动端通用习惯。
     *   行为：点击文件后自动收起。
 *   **Outline Drawer**:
     *   内容：标题结构、大纲条目。
