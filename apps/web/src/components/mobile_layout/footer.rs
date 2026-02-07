@@ -163,6 +163,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                                     "‹"
                                 </button>
                                 <input
+                                    name="mobile-time-travel"
                                     type="range"
                                     min="0"
                                     max=move || max_ver.get().to_string()
@@ -203,6 +204,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                             </button>
                         </div>
                         <input
+                            name="mobile-time-travel-narrow"
                             type="range"
                             min="0"
                             max=move || max_ver.get().to_string()

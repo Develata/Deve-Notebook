@@ -46,6 +46,7 @@ pub fn BottomBar(
                     {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
                 </span>
                 <input
+                    name="time-travel"
                     type="range"
                     min="0"
                     max=move || max_ver.get().to_string()

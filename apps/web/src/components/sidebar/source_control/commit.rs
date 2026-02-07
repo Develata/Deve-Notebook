@@ -37,6 +37,7 @@ pub fn Commit() -> impl IntoView {
             <div class="flex flex-col gap-2">
                 <div class="relative w-full">
                     <textarea
+                        name="commit-message"
                         class="w-full h-9 p-1.5 pr-20 text-[13px] bg-white dark:bg-[#3c3c3c] border border-[#cecece] dark:border-[#3c3c3c] rounded-[2px] focus:outline-none focus:border-[#007fd4] focus:ring-1 focus:ring-[#007fd4] placeholder-gray-400 dark:text-[#cccccc] font-sans resize-none block leading-tight"
                         placeholder="消息(Ctrl+Enter 在“main”提交)"
                         prop:value=msg

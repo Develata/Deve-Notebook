@@ -26,6 +26,7 @@ pub fn PlaybackController(
             <span class="text-xs font-mono text-gray-500">{move || t::playback::label(locale.get())}</span>
 
             <input
+                name="playback-slider"
                 type="range"
                 min="0"
                 max=move || max_version.get().to_string()

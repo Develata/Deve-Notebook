@@ -85,13 +85,8 @@ const MENU_ITEMS: &[MenuItem] = &[
 
 #[component]
 pub fn SidebarMenu(
-    /// 当用户选择一个操作时触发
-    #[prop(into)]
-    on_action: Callback<MenuAction>,
-    /// 关闭菜单
-    #[prop(into)]
-    on_close: Callback<()>,
-    /// 触发点位置
+    #[prop(into)] on_action: Callback<MenuAction>,
+    #[prop(into)] on_close: Callback<()>,
     anchor: ReadSignal<Option<AnchorRect>>,
 ) -> impl IntoView {
     view! {

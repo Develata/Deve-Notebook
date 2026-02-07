@@ -28,11 +28,14 @@ pub fn ChatHeader(
                 }}
             </span>
             <div class="flex-1"></div>
-            <select class=move || if mobile {
+            <select
+                name="ai-model-select"
+                class=move || if mobile {
                 "hidden"
             } else {
                 "text-xs bg-transparent border-none outline-none text-[#616161] dark:text-[#858585] cursor-pointer"
-            }>
+            }
+            >
                 <option>"GPT-4o"</option>
                 <option>"Claude 3.5"</option>
                 <option>"DeepSeek V3"</option>

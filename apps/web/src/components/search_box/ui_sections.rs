@@ -28,6 +28,7 @@ pub fn header(
                 {search_icon(query)}
             </svg>
             <input
+                name="search-query"
                 node_ref=input_ref
                 type="text"
                 class="flex-1 outline-none text-sm bg-transparent text-gray-800 placeholder:text-gray-400"

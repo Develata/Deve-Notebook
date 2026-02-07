@@ -22,6 +22,7 @@ pub fn InputArea(
         >
             <div class="relative rounded border border-[#e5e5e5] dark:border-[#3e3e42] bg-white dark:bg-[#252526] focus-within:border-[#007acc] dark:focus-within:border-[#007acc] transition-colors">
                 <textarea
+                    name="ai-chat-input"
                     class="w-full max-h-32 p-2 bg-transparent border-none outline-none text-sm resize-none dark:text-[#cccccc] font-sans"
                     placeholder=move || t::chat::input_placeholder(locale.get())
                     rows="1"

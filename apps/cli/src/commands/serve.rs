@@ -140,10 +140,11 @@ async fn detect_main_port(port: u16) -> u16 {
     for p in ports {
         let url = format!("http://127.0.0.1:{}/api/repo/docs", p);
         let req = client.get(&url);
-        let res = timeout(Duration::from_millis(300), req.send()).await;
-        if let Ok(Ok(resp)) = res
-            && resp.status().is_success()
-        {
+        let is_ok = matches!(
+            timeout(Duration::from_millis(300), req.send()).await,
+            Ok(Ok(resp)) if resp.status().is_success()
+        );
+        if is_ok {
             return p;
         }
     }

@@ -4,12 +4,8 @@ use leptos::prelude::*;
 /// 根据节点类型和展开状态显示不同的 SVG 图标
 #[component]
 pub fn FileIcon(
-    /// 是否为文件夹
-    #[prop(into)]
-    is_folder: bool,
-    /// 文件夹是否展开（仅对文件夹有效）
-    #[prop(into)]
-    is_expanded: Signal<bool>,
+    #[prop(into)] is_folder: bool,
+    #[prop(into)] is_expanded: Signal<bool>,
 ) -> impl IntoView {
     view! {
         <div class=move || if is_folder { "text-gray-400" } else { "text-gray-300" }>
@@ -38,18 +34,10 @@ pub fn FileIcon(
 /// 悬停时显示的操作按钮（更多菜单、新建文件等）
 #[component]
 pub fn ItemActions(
-    /// 是否为文件夹
-    #[prop(into)]
-    is_folder: bool,
-    /// 菜单是否打开（保持可见性）
-    #[prop(into)]
-    is_menu_open: Signal<bool>,
-    /// 点击更多菜单的回调
-    #[prop(into)]
-    on_menu: Callback<web_sys::MouseEvent>,
-    /// 点击新建文件的回调
-    #[prop(into)]
-    on_create: Callback<web_sys::MouseEvent>,
+    #[prop(into)] is_folder: bool,
+    #[prop(into)] is_menu_open: Signal<bool>,
+    #[prop(into)] on_menu: Callback<web_sys::MouseEvent>,
+    #[prop(into)] on_create: Callback<web_sys::MouseEvent>,
 ) -> impl IntoView {
     view! {
         <div
