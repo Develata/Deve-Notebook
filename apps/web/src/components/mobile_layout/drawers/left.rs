@@ -12,11 +12,52 @@ use super::drawer_class;
 pub fn LeftDrawer(
     core: CoreState,
     active_view: ReadSignal<SidebarView>,
+    set_active_view: WriteSignal<SidebarView>,
+    pinned_views: ReadSignal<Vec<SidebarView>>,
+    set_pinned_views: WriteSignal<Vec<SidebarView>>,
     open: ReadSignal<bool>,
     on_doc_select: Callback<deve_core::models::DocId>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let (show_more, set_show_more) = signal(false);
+
+    let title = Signal::derive(move || match active_view.get() {
+        SidebarView::Explorer => t::sidebar::explorer(locale.get()),
+        SidebarView::Search => t::sidebar::search(locale.get()),
+        SidebarView::SourceControl => t::sidebar::source_control(locale.get()),
+        SidebarView::Extensions => t::sidebar::extensions(locale.get()),
+    });
+
+    let toggle_pin = move |view: SidebarView| {
+        set_pinned_views.update(|pinned| {
+            if pinned.contains(&view) {
+                if pinned.len() > 1 {
+                    pinned.retain(|v| *v != view);
+                }
+            } else {
+                pinned.push(view);
+            }
+        });
+    };
+
+    let tab = move |view: SidebarView, label: Signal<&'static str>| {
+        view! {
+            <button
+                class=move || if active_view.get() == view {
+                    "h-11 flex-1 min-w-12 px-3 rounded-md bg-blue-50 border border-blue-200 text-blue-700 active:scale-95 transition-transform duration-150 ease-out"
+                } else {
+                    "h-11 flex-1 min-w-12 px-3 rounded-md bg-white border border-gray-200 text-gray-600 active:bg-gray-100 active:scale-95 transition-transform duration-150 ease-out"
+                }
+                on:click=move |_| set_active_view.set(view)
+                title=move || label.get().to_string()
+                aria-label=move || label.get().to_string()
+            >
+                <div class="w-4 h-4 mx-auto" inner_html=view.icon()></div>
+            </button>
+        }
+    };
+
     view! {
         <div class=move || drawer_class("left", open.get())>
             <div class="flex flex-col h-full">
@@ -24,9 +65,7 @@ pub fn LeftDrawer(
                     class="h-12 px-3 flex items-center justify-between border-b border-gray-200 text-sm font-semibold"
                     style="padding-top: env(safe-area-inset-top);"
                 >
-                    <span class="text-gray-800 flex items-center gap-1">
-                        {move || t::sidebar::files(locale.get())}
-                    </span>
+                    <span class="text-gray-800 flex items-center gap-1">{move || title.get().to_string()}</span>
                     <button
                         class="h-11 min-w-11 px-3 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors duration-200 ease-out"
                         title=move || t::sidebar::close_file_tree(locale.get())
@@ -39,50 +78,73 @@ pub fn LeftDrawer(
                     </button>
                 </div>
 
-                <div
-                    class="flex-1 overflow-hidden px-2 pb-3"
-                    style="padding-bottom: env(safe-area-inset-bottom);"
-                >
-                    {move || {
-                        let docs = core.docs.get();
-                        if docs.is_empty() {
-                            view! {
-                                <div class="px-4 py-8 text-sm text-gray-500 flex flex-col items-center gap-3">
-                                    <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                                        "∅"
-                                    </div>
-                                    <div class="text-gray-600">{move || t::sidebar::no_docs_yet(locale.get())}</div>
-                                    <div class="text-[11px] text-gray-400">{move || t::sidebar::create_first_note(locale.get())}</div>
-                                    <button
-                                        class="px-3 py-1 text-xs font-medium text-blue-600 rounded-md border border-blue-100 bg-blue-50"
-                                        on:click=move |_| {
-                                            core.on_doc_create.run(t::sidebar::new_note(locale.get()).to_string());
-                                            on_close.run(());
-                                        }
-                                    >
-                                        {move || t::sidebar::new_note(locale.get())}
-                                    </button>
-                                </div>
+                <div class="px-2 py-2 border-b border-gray-100 relative">
+                    <div class="flex items-center gap-2 w-full">
+                        <For
+                            each=move || pinned_views.get()
+                            key=|v| *v
+                            children=move |view| {
+                                let label = Signal::derive(move || match view {
+                                    SidebarView::Explorer => t::sidebar::explorer(locale.get()),
+                                    SidebarView::Search => t::sidebar::search(locale.get()),
+                                    SidebarView::SourceControl => t::sidebar::source_control(locale.get()),
+                                    SidebarView::Extensions => t::sidebar::extensions(locale.get()),
+                                });
+                                tab(view, label)
                             }
-                            .into_any()
-                        } else {
-                            view! {
-                                <div class="h-full overflow-y-auto">
-                                    <Sidebar
-                                        active_view=active_view
-                                        docs=core.docs
-                                        current_doc=core.current_doc
-                                        on_select=Callback::new(move |id| {
-                                            on_doc_select.run(id);
-                                            on_close.run(())
-                                        })
-                                        on_delete=core.on_doc_delete
-                                    />
-                                </div>
-                            }
-                            .into_any()
-                        }
+                        />
+
+                        <button
+                            class="h-11 min-w-11 px-2 rounded-md bg-white border border-gray-200 text-gray-600 active:bg-gray-100 active:scale-95 transition-transform duration-150 ease-out"
+                            title=move || t::sidebar::more(locale.get())
+                            aria-label=move || t::sidebar::more(locale.get())
+                            on:click=move |_| set_show_more.update(|v| *v = !*v)
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        </button>
+                    </div>
+
+                    {move || if show_more.get() {
+                        view! {
+                            <div class="fixed inset-0 z-[51]" on:click=move |_| set_show_more.set(false)></div>
+                            <div class="absolute right-2 top-full mt-1 w-44 bg-white shadow-xl rounded-lg border border-gray-200 py-1 z-[52]">
+                                {SidebarView::all().into_iter().map(|item| {
+                                    let pinned = Signal::derive(move || pinned_views.get().contains(&item));
+                                    view! {
+                                        <button
+                                            class="w-full h-11 px-3 text-left text-sm text-gray-700 active:bg-gray-100 flex items-center justify-between"
+                                            on:click=move |_| {
+                                                toggle_pin(item);
+                                                set_active_view.set(item);
+                                            }
+                                        >
+                                            <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title()}</span>
+                                            <span class=move || if pinned.get() { "text-blue-600" } else { "text-transparent" }>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
+                                            </span>
+                                        </button>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                        }.into_any()
+                    } else {
+                        view! {}.into_any()
                     }}
+                </div>
+
+                <div class="flex-1 overflow-hidden px-2 pb-3" style="padding-bottom: env(safe-area-inset-bottom);">
+                    <div class="h-full overflow-y-auto">
+                        <Sidebar
+                            active_view=active_view
+                            docs=core.docs
+                            current_doc=core.current_doc
+                            on_select=Callback::new(move |id| {
+                                on_doc_select.run(id);
+                                on_close.run(())
+                            })
+                            on_delete=core.on_doc_delete
+                        />
+                    </div>
                 </div>
             </div>
         </div>

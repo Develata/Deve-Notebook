@@ -29,6 +29,9 @@ use toolbar::MobileAccessoryToolbar;
 pub fn MobileLayout(
     core: CoreState,
     active_view: ReadSignal<SidebarView>,
+    set_active_view: WriteSignal<SidebarView>,
+    pinned_views: ReadSignal<Vec<SidebarView>>,
+    set_pinned_views: WriteSignal<Vec<SidebarView>>,
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
@@ -170,6 +173,9 @@ pub fn MobileLayout(
             <MobileDrawers
                 core=core.clone()
                 active_view=active_view
+                set_active_view=set_active_view
+                pinned_views=pinned_views
+                set_pinned_views=set_pinned_views
                 show_sidebar=show_sidebar
                 show_outline=show_outline
                 on_doc_select=on_doc_select

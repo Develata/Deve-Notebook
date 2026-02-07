@@ -147,6 +147,9 @@ pub fn MainLayout() -> impl IntoView {
                     <MobileLayout
                         core=core_for_layout.clone()
                         active_view=active_view
+                        set_active_view=set_active_view
+                        pinned_views=pinned_views
+                        set_pinned_views=set_pinned_views
                         on_home=on_home
                         on_open=on_open
                         on_command=on_command

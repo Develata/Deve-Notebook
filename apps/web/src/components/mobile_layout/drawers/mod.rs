@@ -15,6 +15,9 @@ use right::RightDrawer;
 pub fn MobileDrawers(
     core: CoreState,
     active_view: ReadSignal<SidebarView>,
+    set_active_view: WriteSignal<SidebarView>,
+    pinned_views: ReadSignal<Vec<SidebarView>>,
+    set_pinned_views: WriteSignal<Vec<SidebarView>>,
     show_sidebar: ReadSignal<bool>,
     show_outline: ReadSignal<bool>,
     on_doc_select: Callback<deve_core::models::DocId>,
@@ -25,6 +28,9 @@ pub fn MobileDrawers(
         <LeftDrawer
             core=core.clone()
             active_view=active_view
+            set_active_view=set_active_view
+            pinned_views=pinned_views
+            set_pinned_views=set_pinned_views
             open=show_sidebar
             on_doc_select=on_doc_select
             on_close=on_close

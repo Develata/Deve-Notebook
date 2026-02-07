@@ -10,34 +10,6 @@ pub fn no_docs(locale: Locale) -> &'static str {
     }
 }
 
-pub fn files(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Files",
-        Locale::Zh => "文件",
-    }
-}
-
-pub fn no_docs_yet(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "No documents yet",
-        Locale::Zh => "暂无文档",
-    }
-}
-
-pub fn create_first_note(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Create your first note",
-        Locale::Zh => "创建你的第一条笔记",
-    }
-}
-
-pub fn new_note(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "New Note",
-        Locale::Zh => "新建笔记",
-    }
-}
-
 pub fn close_file_tree(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Close file tree",
@@ -70,5 +42,40 @@ pub fn no_headings_found(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "No headings found",
         Locale::Zh => "未找到标题",
+    }
+}
+
+pub fn explorer(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Explorer",
+        Locale::Zh => "资源管理器",
+    }
+}
+
+pub fn search(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Search",
+        Locale::Zh => "搜索",
+    }
+}
+
+pub fn source_control(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Source Control",
+        Locale::Zh => "源代码管理",
+    }
+}
+
+pub fn extensions(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Extensions",
+        Locale::Zh => "扩展",
+    }
+}
+
+pub fn more(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "More",
+        Locale::Zh => "更多",
     }
 }
