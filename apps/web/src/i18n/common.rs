@@ -20,3 +20,17 @@ pub fn new_file(locale: Locale) -> &'static str {
         Locale::Zh => "新建文件",
     }
 }
+
+pub fn read_only_mode(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Read-Only Mode",
+        Locale::Zh => "只读模式",
+    }
+}
+
+pub fn select_document(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Select a document",
+        Locale::Zh => "请选择文档",
+    }
+}

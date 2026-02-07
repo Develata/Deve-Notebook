@@ -3,10 +3,12 @@
 
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     view! {
         <div
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"
@@ -15,7 +17,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
         >
             <Show when=move || core.is_spectator.get()>
                 <div class="h-6 px-3 flex items-center text-[11px] font-medium text-orange-900 bg-orange-200 border-b border-orange-300">
-                    "Read-Only Mode"
+                    {move || t::common::read_only_mode(locale.get())}
                 </div>
             </Show>
             <div class="flex-1 overflow-hidden">
@@ -29,7 +31,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                                 is_readonly=core.is_spectator.get()
                                 force_unified=true
                                 mobile=true
-                                on_close=move || core.set_diff_content.set(None)
+                                on_close=Callback::new(move |_| core.set_diff_content.set(None))
                             />
                         }
                         .into_any();
@@ -42,7 +44,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                         }
                         None => view! {
                             <div class="flex items-center justify-center h-full text-gray-400">
-                                "Select a document"
+                                {move || t::common::select_document(locale.get())}
                             </div>
                         }
                         .into_any(),

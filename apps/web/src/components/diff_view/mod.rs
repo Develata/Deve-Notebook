@@ -1,239 +1,95 @@
+pub mod header;
+mod line_render;
 pub mod model;
-pub mod sync;
+mod navigation;
+mod split_pane;
+mod state;
+pub mod unified;
+mod unified_pane;
 
-use self::model::compute_diff;
-use self::sync::use_scroll_sync;
-
+use self::header::DiffHeader;
+use self::navigation::{create_hunk_nav, should_ignore_shortcut};
+use self::split_pane::SplitPane;
+use self::state::{create_compute_state, create_unified_viewport};
+use self::unified_pane::UnifiedPane;
+use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
 
 #[component]
-pub fn DiffView<F>(
+pub fn DiffView(
     path: String,
     old_content: String,
     new_content: String,
     #[prop(default = false)] is_readonly: bool,
     #[prop(default = false)] force_unified: bool,
     #[prop(default = false)] mobile: bool,
-    on_close: F,
-) -> impl IntoView
-where
-    F: Fn() + 'static + Clone,
-{
-    // Extract filename for display
+    on_close: Callback<()>,
+) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let filename = path
         .replace('\\', "/")
         .split('/')
         .next_back()
         .unwrap_or("?")
         .to_string();
-    let filename_title = filename.clone();
 
-    // State for Edit Mode
-    let (is_editing, set_is_editing) = signal(false);
-    let (content, set_content) = signal(new_content);
+    let compute = create_compute_state(old_content, new_content);
+    let left_ref = NodeRef::<html::Div>::new();
+    let right_ref = NodeRef::<html::Div>::new();
+    let (syncing_left, set_syncing_left) = signal(false);
+    let (syncing_right, set_syncing_right) = signal(false);
+    let viewport = create_unified_viewport(compute.unified_lines);
+    let nav = create_hunk_nav(
+        compute.unified_lines,
+        force_unified,
+        viewport.unified_ref,
+        left_ref,
+        right_ref,
+    );
 
-    // Compute Diff
-    // Use Memo to allow shared access to diff results without moving ownership
-    let diff_result = Memo::new(move |_| compute_diff(&old_content, &content.get())); // Refs for scroll sync
-    let left_container = NodeRef::<html::Div>::new();
-    let right_container = NodeRef::<html::Div>::new();
-
-    // Activate Scroll Sync
-    use_scroll_sync(left_container, right_container);
-
-    let unified_lines = Memo::new(move |_| {
-        let (left, right) = diff_result.get();
-        let mut lines = Vec::with_capacity(left.len() + right.len());
-        for (l, r) in left.into_iter().zip(right.into_iter()) {
-            if !l.content.is_empty()
-                && !r.content.is_empty()
-                && l.class.is_empty()
-                && r.class.is_empty()
-            {
-                lines.push((r.num, format!("  {}", r.content), ""));
-                continue;
+    let on_close_for_key = on_close;
+    let on_prev_hunk_for_key = nav.on_prev_hunk;
+    let on_next_hunk_for_key = nav.on_next_hunk;
+    let _esc_listener =
+        window_event_listener(leptos::ev::keydown, move |ev: web_sys::KeyboardEvent| {
+            if should_ignore_shortcut(&ev) {
+                return;
             }
-            if !l.content.is_empty() {
-                lines.push((
-                    l.num,
-                    format!("- {}", l.content),
-                    "bg-red-100 dark:bg-[#4b1818]",
-                ));
+            if ev.key() == "Escape" {
+                ev.prevent_default();
+                on_close_for_key.run(());
+                return;
             }
-            if !r.content.is_empty() {
-                lines.push((
-                    r.num,
-                    format!("+ {}", r.content),
-                    "bg-green-100 dark:bg-[#143d20]",
-                ));
+            let key = ev.key();
+            if key == "]" || (ev.alt_key() && key == "ArrowDown") {
+                ev.prevent_default();
+                on_next_hunk_for_key.run(());
+                return;
             }
-        }
-        lines
-    });
+            if key == "[" || (ev.alt_key() && key == "ArrowUp") {
+                ev.prevent_default();
+                on_prev_hunk_for_key.run(());
+            }
+        });
 
     view! {
-        <div class=move || {
-            if mobile {
-                "diff-view-mobile h-full w-full bg-white dark:bg-[#1e1e1e] flex flex-col font-mono text-[13px]"
-            } else {
-                "h-full w-full bg-white dark:bg-[#1e1e1e] flex flex-col font-mono text-[13px]"
-            }
-        }>
-            // Header
-            <div
-                class=move || if mobile {
-                    "flex-none border-b border-[#e5e5e5] dark:border-[#252526] flex items-center justify-between px-3 bg-[#f3f3f3] dark:bg-[#2d2d2d]"
-                } else {
-                    "flex-none h-10 border-b border-[#e5e5e5] dark:border-[#252526] flex items-center justify-between px-4 bg-[#f3f3f3] dark:bg-[#2d2d2d]"
-                }
-                style=move || if mobile {
-                    "padding-top: env(safe-area-inset-top); height: calc(48px + env(safe-area-inset-top));"
-                } else {
-                    ""
-                }
-            >
-                <div class="flex items-center gap-2">
-                    <span class="font-bold text-[#3b3b3b] dark:text-[#cccccc]">"Diff: "</span>
-                    <span class="text-[#237893] dark:text-[#4fc1ff] truncate max-w-[46vw]" title=filename_title>{filename}</span>
-                    {move || if is_readonly {
-                        view! { <span class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500">"Read Only"</span> }.into_any()
-                    } else {
-                        view! {}.into_any()
-                    }}
-                </div>
-                <div class="flex items-center gap-2">
-                    {move || if !is_readonly {
-                        view! {
-                            <button
-                                class=move || if mobile {
-                                    "h-9 px-3 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs active:bg-gray-100 dark:active:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
-                                } else {
-                                    "px-3 py-1 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs hover:bg-gray-50 dark:hover:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
-                                }
-                                on:click=move |_| set_is_editing.update(|v| *v = !*v)
-                            >
-                                {move || if is_editing.get() { "Preview Diff" } else { "Edit" }}
-                            </button>
-                        }.into_any()
-                    } else {
-                        view! {}.into_any()
-                    }}
-                    <button
-                        class=move || if mobile {
-                            "diff-close-button h-11 min-w-11 p-2 active:bg-[#e1e1e1] dark:active:bg-[#3e3e42] rounded text-[#616161]"
-                        } else {
-                            "p-1 hover:bg-[#e1e1e1] dark:hover:bg-[#3e3e42] rounded text-[#616161]"
-                        }
-                        on:click=move |_| on_close()
-                        title="Close Diff View"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
-
-
-            // Content
+        <div class=move || if mobile { "diff-view-mobile h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]" } else { "h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]" }>
+            <DiffHeader mobile=mobile filename=filename is_readonly=is_readonly is_editing=compute.is_editing hunk_index_text=nav.hunk_index_text has_hunks=nav.has_hunks added_count=nav.added_count deleted_count=nav.deleted_count on_prev_hunk=nav.on_prev_hunk on_next_hunk=nav.on_next_hunk toggle_edit=Callback::new(move |_| compute.set_is_editing.update(|v| *v = !*v)) on_close=on_close />
             <div class="flex-1 overflow-hidden flex relative">
+                <Show when=move || compute.compute_state.get() == "computing">
+                    <div class="diff-compute-indicator absolute top-2 right-2 z-10 rounded border border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-2 py-1 text-[11px] text-[var(--diff-muted)] shadow-sm">
+                        {move || t::diff::computing(locale.get())}
+                    </div>
+                </Show>
                 {move || if force_unified {
-                    view! {
-                        <div class="flex-1 flex overflow-auto" node_ref=right_container>
-                            <div class="w-12 flex-none bg-[#f8f8f8] dark:bg-[#1e1e1e] text-right pr-3 text-[#aaa] select-none py-1 border-r border-[#eee] dark:border-[#333]">
-                                <For
-                                    each=move || unified_lines.get()
-                                    key=|item| format!("{}{}", item.0.unwrap_or(0), item.1)
-                                    children=|item| view! { <div class="h-[20px] leading-[20px]">{item.0.map(|n| n.to_string()).unwrap_or_default()}</div> }
-                                />
-                            </div>
-                            <div class="flex-1 min-w-0 py-1 bg-white dark:bg-[#1e1e1e] select-text">
-                                <For
-                                    each=move || unified_lines.get()
-                                    key=|item| format!("{}{}", item.0.unwrap_or(0), item.1)
-                                    children=|item| view! {
-                                        <div class=format!("h-[20px] leading-[20px] whitespace-pre px-2 {}", item.2)>
-                                            {item.1}
-                                        </div>
-                                    }
-                                />
-                            </div>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    view! {
-                // Left Pane (Old) - Always Visible
-                <div
-                    class="flex-1 flex overflow-auto border-r border-[#e5e5e5] dark:border-[#454545]"
-                    node_ref=left_container
-                >
-                    // Line Nums
-                    <div class="w-10 flex-none bg-[#f8f8f8] dark:bg-[#1e1e1e] text-right pr-3 text-[#aaa] select-none py-1 border-r border-[#eee] dark:border-[#333]">
-                         <For
-                            each=move || diff_result.get().0
-                            key=|item| format!("{}{}", item.num.unwrap_or(0), item.content)
-                            children=|item| view! { <div class="h-[20px] leading-[20px]">{item.num.map(|n| n.to_string()).unwrap_or_default()}</div> }
-                        />
-                    </div>
-                    // Code
-                    <div class="flex-1 min-w-0 py-1 bg-white dark:bg-[#1e1e1e]">
-                         <For
-                            each=move || diff_result.get().0
-                            key=|item| format!("{}{}", item.num.unwrap_or(0), item.content)
-                            children=|item| view! {
-                                <div class=format!("h-[20px] leading-[20px] whitespace-pre px-2 {}", item.class)>
-                                    {item.content}
-                                </div>
-                            }
-                        />
-                    </div>
-                </div>
-
-                // Right Pane (New) - Switchable
-                <div
-                    class="flex-1 flex overflow-auto relative"
-                    node_ref=right_container
-                >
-                    {move || if is_editing.get() {
-                        view! {
-                            <textarea
-                                class="w-full h-full p-2 resize-none outline-none font-mono text-[13px] bg-white dark:bg-[#1e1e1e] text-[#3b3b3b] dark:text-[#cccccc] border-none"
-                                prop:value=move || content.get()
-                                on:input=move |ev| {
-                                    let val = event_target_value(&ev);
-                                    set_content.set(val);
-                                }
-                            ></textarea>
-                        }.into_any()
+                    if compute.is_editing.get() {
+                        view! { <div class="flex-1 overflow-auto"><textarea name="diff-edit-mobile" class="w-full h-full p-2 resize-none outline-none font-mono text-[13px] bg-[var(--diff-bg)] text-[var(--diff-fg)] border-none" prop:value=move || compute.content.get() on:input=move |ev| compute.set_content.set(event_target_value(&ev))></textarea></div> }.into_any()
                     } else {
-                        view! {
-                            <div class="flex w-full min-h-full">
-                                // Line Nums
-                                <div class="w-10 flex-none bg-[#f8f8f8] dark:bg-[#1e1e1e] text-right pr-3 text-[#aaa] select-none py-1 border-r border-[#eee] dark:border-[#333]">
-                                     <For
-                                        each=move || diff_result.get().1
-                                        key=|item| format!("{}{}", item.num.unwrap_or(0), item.content)
-                                        children=|item| view! { <div class="h-[20px] leading-[20px]">{item.num.map(|n| n.to_string()).unwrap_or_default()}</div> }
-                                    />
-                                </div>
-                                // Code
-                                <div class="flex-1 min-w-0 py-1 bg-white dark:bg-[#1e1e1e] select-text">
-                                    <For
-                                        each=move || diff_result.get().1
-                                        key=|item| format!("{}{}", item.num.unwrap_or(0), item.content)
-                                        children=|item| view! {
-                                            <div class=format!("h-[20px] leading-[20px] whitespace-pre px-2 {}", item.class)>
-                                                {item.content}
-                                            </div>
-                                        }
-                                    />
-                                </div>
-                            </div>
-                        }.into_any()
-                    }}
-                </div>
+                        view! { <UnifiedPane lines=compute.unified_lines visible_lines=viewport.visible_unified window=viewport.window unified_ref=viewport.unified_ref set_scroll_top=viewport.set_scroll_top set_viewport_h=viewport.set_viewport_h compute_state=compute.compute_state /> }.into_any()
                     }
-                    .into_any()
+                } else {
+                    view! { <SplitPane diff_result=compute.diff_result left_ref=left_ref right_ref=right_ref syncing_left=syncing_left set_syncing_left=set_syncing_left syncing_right=syncing_right set_syncing_right=set_syncing_right is_editing=compute.is_editing content=compute.content set_content=compute.set_content /> }.into_any()
                 }}
             </div>
         </div>

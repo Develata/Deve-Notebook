@@ -20,6 +20,7 @@ pub mod bottom_bar;
 pub mod chat;
 pub mod command_palette;
 pub mod common;
+pub mod diff;
 pub mod header;
 pub mod playback;
 pub mod search;
@@ -60,6 +61,7 @@ pub mod t {
     pub use super::chat;
     pub use super::command_palette;
     pub use super::common;
+    pub use super::diff;
     pub use super::header;
     pub use super::playback;
     pub use super::search;

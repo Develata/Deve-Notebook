@@ -7,13 +7,13 @@ use crate::components::chat::drop_handler::{on_drag_leave, on_drag_over, on_drop
 use crate::components::chat::header::ChatHeader;
 use crate::components::chat::input_area::InputArea;
 use crate::components::chat::message_list::MessageList;
-use crate::hooks::use_core::use_core;
+use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl IntoView {
-    let core = use_core();
+    let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (input, set_input) = signal(String::new());
     let (is_drag_over, set_is_drag_over) = signal(false);

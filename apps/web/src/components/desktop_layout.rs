@@ -123,7 +123,7 @@ pub fn DesktopLayout(
                                 old_content=old
                                 new_content=new
                                 is_readonly=core.is_spectator.get()
-                                on_close=move || core.set_diff_content.set(None)
+                                on_close=Callback::new(move |_| core.set_diff_content.set(None))
                             />
                         }
                         .into_any();

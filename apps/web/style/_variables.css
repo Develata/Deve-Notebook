@@ -40,4 +40,41 @@
   /* ==================== 选择高亮 ==================== */
   --selection-bg: rgba(59, 130, 246, 0.4);  /* 选择背景色 */
   --selection-bg-block: rgba(59, 130, 246, 0.5);  /* 块内选择背景色 */
+
+  /* ==================== Diff 视图 ==================== */
+  --diff-bg: #ffffff;
+  --diff-header-bg: #f3f3f3;
+  --diff-border: #e5e5e5;
+  --diff-fg: #3b3b3b;
+  --diff-muted: #616161;
+  --diff-filename: #237893;
+  --diff-pill-bg: #e5e7eb;
+  --diff-pill-fg: #6b7280;
+  --diff-btn-hover: #e1e1e1;
+  --diff-gutter-bg: #f8f8f8;
+  --diff-gutter-fg: #a3a3a3;
+  --diff-line-add: #dcfce7;
+  --diff-line-del: #fee2e2;
+  --diff-line-empty: #f3f4f6;
+  --diff-word-add: #86efac;
+  --diff-word-del: #fca5a5;
+}
+
+.dark {
+  --diff-bg: #1e1e1e;
+  --diff-header-bg: #2d2d2d;
+  --diff-border: #454545;
+  --diff-fg: #cccccc;
+  --diff-muted: #9ca3af;
+  --diff-filename: #4fc1ff;
+  --diff-pill-bg: #374151;
+  --diff-pill-fg: #d1d5db;
+  --diff-btn-hover: #3e3e42;
+  --diff-gutter-bg: #1e1e1e;
+  --diff-gutter-fg: #9ca3af;
+  --diff-line-add: #143d20;
+  --diff-line-del: #4b1818;
+  --diff-line-empty: #252526;
+  --diff-word-add: #166534;
+  --diff-word-del: #7f1d1d;
 }

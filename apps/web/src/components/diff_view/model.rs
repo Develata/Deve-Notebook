@@ -1,92 +1,88 @@
-use similar::{DiffTag, TextDiff};
+mod model_chunk;
+mod replace_word;
 
-/// View model for a single line in the diff
+pub const CHUNK_SIZE: usize = 300;
+pub const LINE_HEIGHT_PX: i32 = 20;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LineView {
     pub num: Option<usize>,
     pub content: String,
     pub class: &'static str,
+    pub word_ranges: Vec<(usize, usize)>,
+    pub kind: LineKind,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnifiedLine {
+    pub num: Option<usize>,
+    pub content: String,
+    pub class: &'static str,
+    pub word_ranges: Vec<(usize, usize)>,
+    pub kind: LineKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LineKind {
+    Normal,
+    Add,
+    Del,
+    Empty,
 }
 
 impl LineView {
     pub fn empty() -> Self {
         Self {
             num: None,
-            content: "".to_string(),
-            class: "bg-gray-100 dark:bg-[#252526]",
+            content: String::new(),
+            class: "bg-[var(--diff-line-empty)]",
+            word_ranges: Vec::new(),
+            kind: LineKind::Empty,
         }
     }
 }
 
-/// Compute side-by-side diff lines
 pub fn compute_diff(old_content: &str, new_content: &str) -> (Vec<LineView>, Vec<LineView>) {
-    let diff = TextDiff::from_lines(old_content, new_content);
-    let mut left_lines = Vec::new();
-    let mut right_lines = Vec::new();
+    model_chunk::compute_diff_chunked_inner(old_content, new_content, CHUNK_SIZE)
+}
 
-    for op in diff.ops() {
-        match op.tag() {
-            DiffTag::Equal => {
-                let old_range = op.old_range();
-                let new_range = op.new_range();
-                for (i, j) in old_range.zip(new_range) {
-                    let content = old_content.lines().nth(i).unwrap_or("");
-                    left_lines.push(LineView {
-                        num: Some(i + 1),
-                        content: content.to_string(),
-                        class: "",
-                    });
-                    right_lines.push(LineView {
-                        num: Some(j + 1),
-                        content: content.to_string(),
-                        class: "",
-                    });
-                }
-            }
-            DiffTag::Delete => {
-                for i in op.old_range() {
-                    let content = old_content.lines().nth(i).unwrap_or("");
-                    left_lines.push(LineView {
-                        num: Some(i + 1),
-                        content: content.to_string(),
-                        class: "bg-red-100 dark:bg-[#4b1818]",
-                    });
-                    right_lines.push(LineView::empty());
-                }
-            }
-            DiffTag::Insert => {
-                for j in op.new_range() {
-                    let content = new_content.lines().nth(j).unwrap_or("");
-                    left_lines.push(LineView::empty());
-                    right_lines.push(LineView {
-                        num: Some(j + 1),
-                        content: content.to_string(),
-                        class: "bg-green-100 dark:bg-[#143d20]",
-                    });
-                }
-            }
-            DiffTag::Replace => {
-                for i in op.old_range() {
-                    let content = old_content.lines().nth(i).unwrap_or("");
-                    left_lines.push(LineView {
-                        num: Some(i + 1),
-                        content: content.to_string(),
-                        class: "bg-red-100 dark:bg-[#4b1818]",
-                    });
-                    right_lines.push(LineView::empty());
-                }
-                for j in op.new_range() {
-                    let content = new_content.lines().nth(j).unwrap_or("");
-                    left_lines.push(LineView::empty());
-                    right_lines.push(LineView {
-                        num: Some(j + 1),
-                        content: content.to_string(),
-                        class: "bg-green-100 dark:bg-[#143d20]",
-                    });
-                }
-            }
+pub fn to_unified(left: &[LineView], right: &[LineView]) -> Vec<UnifiedLine> {
+    let mut lines = Vec::with_capacity(left.len().saturating_add(right.len()));
+    for (l, r) in left.iter().zip(right.iter()) {
+        if !l.content.is_empty()
+            && !r.content.is_empty()
+            && l.class.is_empty()
+            && r.class.is_empty()
+        {
+            lines.push(UnifiedLine {
+                num: r.num,
+                content: format!("  {}", r.content),
+                class: "",
+                word_ranges: Vec::new(),
+                kind: LineKind::Normal,
+            });
+            continue;
+        }
+        if !l.content.is_empty() {
+            let ranges = l.word_ranges.iter().map(|(s, e)| (s + 2, e + 2)).collect();
+            lines.push(UnifiedLine {
+                num: l.num,
+                content: format!("- {}", l.content),
+                class: "bg-[var(--diff-line-del)]",
+                word_ranges: ranges,
+                kind: LineKind::Del,
+            });
+        }
+        if !r.content.is_empty() {
+            let ranges = r.word_ranges.iter().map(|(s, e)| (s + 2, e + 2)).collect();
+            lines.push(UnifiedLine {
+                num: r.num,
+                content: format!("+ {}", r.content),
+                class: "bg-[var(--diff-line-add)]",
+                word_ranges: ranges,
+                kind: LineKind::Add,
+            });
         }
     }
-
-    (left_lines, right_lines)
+    lines
 }
