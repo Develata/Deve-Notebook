@@ -4,6 +4,7 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::sidebar::Sidebar;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
+use leptos::html;
 use leptos::prelude::*;
 
 use super::drawer_class;
@@ -21,6 +22,7 @@ pub fn LeftDrawer(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (show_more, set_show_more) = signal(false);
+    let more_menu_ref = NodeRef::<html::Div>::new();
 
     let title = Signal::derive(move || match active_view.get() {
         SidebarView::Explorer => t::sidebar::explorer(locale.get()),
@@ -44,12 +46,22 @@ pub fn LeftDrawer(
     let tab = move |view: SidebarView, label: Signal<&'static str>| {
         view! {
             <button
-                class=move || if active_view.get() == view {
-                    "h-11 flex-1 min-w-12 px-3 rounded-md bg-blue-50 border border-blue-200 text-blue-700 active:scale-95 transition-transform duration-150 ease-out"
-                } else {
-                    "h-11 flex-1 min-w-12 px-3 rounded-md bg-white border border-gray-200 text-gray-600 active:bg-gray-100 active:scale-95 transition-transform duration-150 ease-out"
+                class=move || {
+                    let state = if active_view.get() == view {
+                        "bg-blue-50 border border-blue-200 text-blue-700"
+                    } else {
+                        "bg-white border border-gray-200 text-gray-600 active:bg-gray-100"
+                    };
+                    format!(
+                        "mobile-sidebar-tab {} h-11 min-w-12 px-3 rounded-md active:scale-95 transition-transform duration-150 ease-out {}",
+                        sidebar_tab_class(view),
+                        state
+                    )
                 }
-                on:click=move |_| set_active_view.set(view)
+                on:click=move |_| {
+                    set_active_view.set(view);
+                    set_show_more.set(false);
+                }
                 title=move || label.get().to_string()
                 aria-label=move || label.get().to_string()
             >
@@ -57,6 +69,20 @@ pub fn LeftDrawer(
             </button>
         }
     };
+
+    Effect::new(move |_| {
+        if !open.get() {
+            set_show_more.set(false);
+        }
+    });
+
+    Effect::new(move |_| {
+        if show_more.get()
+            && let Some(el) = more_menu_ref.get()
+        {
+            let _ = el.focus();
+        }
+    });
 
     view! {
         <div class=move || drawer_class("left", open.get())>
@@ -80,22 +106,25 @@ pub fn LeftDrawer(
 
                 <div class="px-2 py-2 border-b border-gray-100 relative">
                     <div class="flex items-center gap-2 w-full">
-                        <For
-                            each=move || pinned_views.get()
-                            key=|v| *v
-                            children=move |view| {
-                                let label = Signal::derive(move || match view {
-                                    SidebarView::Explorer => t::sidebar::explorer(locale.get()),
-                                    SidebarView::Search => t::sidebar::search(locale.get()),
-                                    SidebarView::SourceControl => t::sidebar::source_control(locale.get()),
-                                    SidebarView::Extensions => t::sidebar::extensions(locale.get()),
-                                });
-                                tab(view, label)
-                            }
-                        />
-
+                        <div class="flex-1 overflow-x-auto">
+                            <div class="flex items-center gap-2 min-w-max">
+                                <For
+                                    each=move || pinned_views.get()
+                                    key=|v| *v
+                                    children=move |view| {
+                                        let label = Signal::derive(move || match view {
+                                            SidebarView::Explorer => t::sidebar::explorer(locale.get()),
+                                            SidebarView::Search => t::sidebar::search(locale.get()),
+                                            SidebarView::SourceControl => t::sidebar::source_control(locale.get()),
+                                            SidebarView::Extensions => t::sidebar::extensions(locale.get()),
+                                        });
+                                        tab(view, label)
+                                    }
+                                />
+                            </div>
+                        </div>
                         <button
-                            class="h-11 min-w-11 px-2 rounded-md bg-white border border-gray-200 text-gray-600 active:bg-gray-100 active:scale-95 transition-transform duration-150 ease-out"
+                            class="mobile-more-button h-11 min-w-11 px-2 rounded-md bg-white border border-gray-200 text-gray-600 active:bg-gray-100 active:scale-95 transition-transform duration-150 ease-out"
                             title=move || t::sidebar::more(locale.get())
                             aria-label=move || t::sidebar::more(locale.get())
                             on:click=move |_| set_show_more.update(|v| *v = !*v)
@@ -106,16 +135,31 @@ pub fn LeftDrawer(
 
                     {move || if show_more.get() {
                         view! {
-                            <div class="fixed inset-0 z-[51]" on:click=move |_| set_show_more.set(false)></div>
-                            <div class="absolute right-2 top-full mt-1 w-44 bg-white shadow-xl rounded-lg border border-gray-200 py-1 z-[52]">
+                            <div class="mobile-more-backdrop fixed inset-0 z-[51]" on:click=move |_| set_show_more.set(false)></div>
+                            <div
+                                class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-white shadow-xl rounded-lg border border-gray-200 py-1 z-[52]"
+                                node_ref=more_menu_ref
+                                tabindex="-1"
+                                role="menu"
+                                on:keydown=move |ev| {
+                                    if ev.key() == "Escape" {
+                                        ev.prevent_default();
+                                        set_show_more.set(false);
+                                    }
+                                }
+                            >
                                 {SidebarView::all().into_iter().map(|item| {
                                     let pinned = Signal::derive(move || pinned_views.get().contains(&item));
                                     view! {
                                         <button
-                                            class="w-full h-11 px-3 text-left text-sm text-gray-700 active:bg-gray-100 flex items-center justify-between"
+                                            class=format!(
+                                                "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-gray-700 active:bg-gray-100 flex items-center justify-between",
+                                                more_item_class(item)
+                                            )
+                                            role="menuitem"
                                             on:click=move |_| {
                                                 toggle_pin(item);
-                                                set_active_view.set(item);
+                                                set_show_more.set(false);
                                             }
                                         >
                                             <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title()}</span>
@@ -148,5 +192,23 @@ pub fn LeftDrawer(
                 </div>
             </div>
         </div>
+    }
+}
+
+fn sidebar_tab_class(view: SidebarView) -> &'static str {
+    match view {
+        SidebarView::Explorer => "mobile-tab-explorer",
+        SidebarView::Search => "mobile-tab-search",
+        SidebarView::SourceControl => "mobile-tab-source-control",
+        SidebarView::Extensions => "mobile-tab-extensions",
+    }
+}
+
+fn more_item_class(view: SidebarView) -> &'static str {
+    match view {
+        SidebarView::Explorer => "more_menu_item_explorer",
+        SidebarView::Search => "more_menu_item_search",
+        SidebarView::SourceControl => "more_menu_item_source_control",
+        SidebarView::Extensions => "more_menu_item_extensions",
     }
 }

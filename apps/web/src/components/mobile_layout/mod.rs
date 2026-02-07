@@ -188,6 +188,7 @@ pub fn MobileLayout(
                 readonly=core.is_spectator
                 visible=Signal::derive(move || {
                     current_doc.get().is_some()
+                        && diff_content.get().is_none()
                         && !drawer_open.get()
                         && keyboard_offset.get() > 0
                         && !chat_expanded.get()
@@ -197,6 +198,7 @@ pub fn MobileLayout(
             <MobileChatSheet
                 keyboard_offset=keyboard_offset
                 drawer_open=drawer_open
+                diff_open=Signal::derive(move || diff_content.get().is_some())
                 expanded=chat_expanded
                 set_expanded=set_chat_expanded
             />

@@ -9,6 +9,7 @@ use leptos::prelude::*;
 pub fn MobileChatSheet(
     keyboard_offset: ReadSignal<i32>,
     drawer_open: Signal<bool>,
+    diff_open: Signal<bool>,
     expanded: ReadSignal<bool>,
     set_expanded: WriteSignal<bool>,
 ) -> impl IntoView {
@@ -23,7 +24,7 @@ pub fn MobileChatSheet(
     let close_chat = Callback::new(move |_| set_expanded.set(false));
 
     view! {
-        <Show when=move || visible.get() && !drawer_open.get() && keyboard_offset.get() <= 0>
+        <Show when=move || visible.get() && !drawer_open.get() && !diff_open.get() && keyboard_offset.get() <= 0>
             <div
                 class=move || if expanded.get() {
                     "fixed inset-0 z-[80] bg-white dark:bg-[#1e1e1e] transition-opacity duration-200 ease-out"

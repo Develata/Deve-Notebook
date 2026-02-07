@@ -28,6 +28,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                                 new_content=new
                                 is_readonly=core.is_spectator.get()
                                 force_unified=true
+                                mobile=true
                                 on_close=move || core.set_diff_content.set(None)
                             />
                         }

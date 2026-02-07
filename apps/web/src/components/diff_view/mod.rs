@@ -14,6 +14,7 @@ pub fn DiffView<F>(
     new_content: String,
     #[prop(default = false)] is_readonly: bool,
     #[prop(default = false)] force_unified: bool,
+    #[prop(default = false)] mobile: bool,
     on_close: F,
 ) -> impl IntoView
 where
@@ -26,6 +27,7 @@ where
         .next_back()
         .unwrap_or("?")
         .to_string();
+    let filename_title = filename.clone();
 
     // State for Edit Mode
     let (is_editing, set_is_editing) = signal(false);
@@ -71,12 +73,29 @@ where
     });
 
     view! {
-        <div class="h-full w-full bg-white dark:bg-[#1e1e1e] flex flex-col font-mono text-[13px]">
+        <div class=move || {
+            if mobile {
+                "diff-view-mobile h-full w-full bg-white dark:bg-[#1e1e1e] flex flex-col font-mono text-[13px]"
+            } else {
+                "h-full w-full bg-white dark:bg-[#1e1e1e] flex flex-col font-mono text-[13px]"
+            }
+        }>
             // Header
-            <div class="flex-none h-10 border-b border-[#e5e5e5] dark:border-[#252526] flex items-center justify-between px-4 bg-[#f3f3f3] dark:bg-[#2d2d2d]">
+            <div
+                class=move || if mobile {
+                    "flex-none border-b border-[#e5e5e5] dark:border-[#252526] flex items-center justify-between px-3 bg-[#f3f3f3] dark:bg-[#2d2d2d]"
+                } else {
+                    "flex-none h-10 border-b border-[#e5e5e5] dark:border-[#252526] flex items-center justify-between px-4 bg-[#f3f3f3] dark:bg-[#2d2d2d]"
+                }
+                style=move || if mobile {
+                    "padding-top: env(safe-area-inset-top); height: calc(48px + env(safe-area-inset-top));"
+                } else {
+                    ""
+                }
+            >
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-[#3b3b3b] dark:text-[#cccccc]">"Diff: "</span>
-                    <span class="text-[#237893] dark:text-[#4fc1ff]">{filename}</span>
+                    <span class="text-[#237893] dark:text-[#4fc1ff] truncate max-w-[46vw]" title=filename_title>{filename}</span>
                     {move || if is_readonly {
                         view! { <span class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500">"Read Only"</span> }.into_any()
                     } else {
@@ -87,7 +106,11 @@ where
                     {move || if !is_readonly {
                         view! {
                             <button
-                                class="px-3 py-1 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs hover:bg-gray-50 dark:hover:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
+                                class=move || if mobile {
+                                    "h-9 px-3 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs active:bg-gray-100 dark:active:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
+                                } else {
+                                    "px-3 py-1 bg-white dark:bg-[#3e3e42] border border-[#e5e5e5] dark:border-[#454545] rounded text-xs hover:bg-gray-50 dark:hover:bg-[#4d4d4d] text-[#3b3b3b] dark:text-[#cccccc]"
+                                }
                                 on:click=move |_| set_is_editing.update(|v| *v = !*v)
                             >
                                 {move || if is_editing.get() { "Preview Diff" } else { "Edit" }}
@@ -97,7 +120,11 @@ where
                         view! {}.into_any()
                     }}
                     <button
-                        class="p-1 hover:bg-[#e1e1e1] dark:hover:bg-[#3e3e42] rounded text-[#616161]"
+                        class=move || if mobile {
+                            "diff-close-button h-11 min-w-11 p-2 active:bg-[#e1e1e1] dark:active:bg-[#3e3e42] rounded text-[#616161]"
+                        } else {
+                            "p-1 hover:bg-[#e1e1e1] dark:hover:bg-[#3e3e42] rounded text-[#616161]"
+                        }
                         on:click=move |_| on_close()
                         title="Close Diff View"
                     >
