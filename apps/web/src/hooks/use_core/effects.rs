@@ -17,7 +17,6 @@ use super::apply::apply_tree_delta;
 use super::diff_session::DiffSessionWire;
 use super::effects_msg;
 use super::state::CoreSignals;
-use super::types::BulkScProgress;
 
 /// 设置握手 Effect
 ///
@@ -82,8 +81,6 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_staged_changes = signals.set_staged_changes;
     let set_unstaged_changes = signals.set_unstaged_changes;
     let set_commit_history = signals.set_commit_history;
-    let set_sc_bulk_progress = signals.set_sc_bulk_progress;
-    let set_sc_bulk_failed_paths = signals.set_sc_bulk_failed_paths;
     let set_diff_content = signals.set_diff_content;
     let set_tree_nodes = signals.set_tree_nodes;
     let set_active_branch = signals.set_active_branch;
@@ -184,7 +181,6 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::ChangesList { staged, unstaged } => {
                     set_staged_changes.set(staged);
                     set_unstaged_changes.set(unstaged);
-                    set_sc_bulk_progress.set(None);
                 }
                 ServerMessage::CommitHistory { commits } => {
                     set_commit_history.set(commits);
@@ -196,33 +192,6 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::UnstageAck { path } => {
                     leptos::logging::log!("已取消暂存: {}", path);
                     schedule_refresh();
-                }
-                ServerMessage::BulkStageProgress {
-                    op,
-                    total,
-                    done,
-                    failed,
-                } => {
-                    set_sc_bulk_progress.set(Some(BulkScProgress {
-                        op,
-                        total,
-                        done,
-                        failed,
-                    }));
-                }
-                ServerMessage::BulkStageDone {
-                    op,
-                    total,
-                    success,
-                    failed_paths,
-                } => {
-                    set_sc_bulk_progress.set(Some(BulkScProgress {
-                        op,
-                        total,
-                        done: total,
-                        failed: total.saturating_sub(success),
-                    }));
-                    set_sc_bulk_failed_paths.set(failed_paths);
                 }
                 ServerMessage::DiscardAck { path } => {
                     leptos::logging::log!("已放弃变更: {}", path);
