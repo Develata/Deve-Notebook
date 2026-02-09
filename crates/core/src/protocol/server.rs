@@ -119,22 +119,6 @@ pub enum ServerMessage {
     StageAck { path: String },
     /// 取消暂存确认
     UnstageAck { path: String },
-    /// 批量暂存/取消暂存进度
-    BulkStageProgress {
-        /// "stage" or "unstage"
-        op: String,
-        total: u32,
-        done: u32,
-        failed: u32,
-    },
-    /// 批量暂存/取消暂存完成
-    BulkStageDone {
-        /// "stage" or "unstage"
-        op: String,
-        total: u32,
-        success: u32,
-        failed_paths: Vec<String>,
-    },
     /// 提交成功响应
     CommitAck {
         /// 提交 ID
@@ -166,4 +150,25 @@ pub enum ServerMessage {
 
     /// 错误消息
     Error(String),
+
+    /// 批量暂存/取消暂存进度
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    BulkStageProgress {
+        /// "stage" or "unstage"
+        op: String,
+        total: u32,
+        done: u32,
+        failed: u32,
+    },
+    /// 批量暂存/取消暂存完成
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    BulkStageDone {
+        /// "stage" or "unstage"
+        op: String,
+        total: u32,
+        success: u32,
+        failed_paths: Vec<String>,
+    },
 }

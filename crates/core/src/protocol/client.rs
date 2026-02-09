@@ -106,12 +106,8 @@ pub enum ClientMessage {
     GetChanges,
     /// 暂存指定文件
     StageFile { path: String },
-    /// 批量暂存文件
-    StageFiles { paths: Vec<String> },
     /// 取消暂存指定文件
     UnstageFile { path: String },
-    /// 批量取消暂存文件
-    UnstageFiles { paths: Vec<String> },
     /// 创建提交
     Commit { message: String },
     /// 获取提交历史
@@ -122,4 +118,13 @@ pub enum ClientMessage {
     GetDocDiff { path: String },
     /// 放弃文件变更 (恢复到已提交状态)
     DiscardFile { path: String },
+
+    /// 批量暂存文件
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    StageFiles { paths: Vec<String> },
+    /// 批量取消暂存文件
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    UnstageFiles { paths: Vec<String> },
 }
