@@ -132,3 +132,38 @@ pub fn branch_main(locale: Locale) -> &'static str {
         Locale::Zh => "主分支*",
     }
 }
+
+pub fn bulk_stage_progress(locale: Locale, done: u32, total: u32, failed: u32) -> String {
+    match locale {
+        Locale::En => format!("Staging {}/{} (failed: {})", done, total, failed),
+        Locale::Zh => format!("暂存中 {}/{}（失败: {}）", done, total, failed),
+    }
+}
+
+pub fn bulk_unstage_progress(locale: Locale, done: u32, total: u32, failed: u32) -> String {
+    match locale {
+        Locale::En => format!("Unstaging {}/{} (failed: {})", done, total, failed),
+        Locale::Zh => format!("取消暂存中 {}/{}（失败: {}）", done, total, failed),
+    }
+}
+
+pub fn bulk_done(locale: Locale, success: u32, total: u32) -> String {
+    match locale {
+        Locale::En => format!("Batch done: {}/{}", success, total),
+        Locale::Zh => format!("批量完成：{}/{}", success, total),
+    }
+}
+
+pub fn failed_paths(locale: Locale, count: usize) -> String {
+    match locale {
+        Locale::En => format!("Failed paths: {}", count),
+        Locale::Zh => format!("失败文件：{}", count),
+    }
+}
+
+pub fn show_more(locale: Locale, remain: usize) -> String {
+    match locale {
+        Locale::En => format!("Show more (+{})", remain),
+        Locale::Zh => format!("显示更多（+{}）", remain),
+    }
+}

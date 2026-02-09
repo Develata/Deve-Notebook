@@ -15,7 +15,7 @@ use leptos::prelude::*;
 pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let (bulk_busy, set_bulk_busy) = signal(false);
+    let (render_limit, set_render_limit) = signal(200usize);
 
     // 折叠状态
     let expanded = RwSignal::new(true);
@@ -25,9 +25,10 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     let staged_list_for_action = StoredValue::new(staged);
 
     Effect::new(move |_| {
-        let _ = core.unstaged_changes.get();
-        let _ = core.staged_changes.get();
-        set_bulk_busy.set(false);
+        let count = core.staged_changes.get().len();
+        if count < render_limit.get() {
+            set_render_limit.set(200);
+        }
     });
 
     // 如果没有暂存文件，不渲染此区块
@@ -57,9 +58,9 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
                             title=move || t::source_control::unstage_all_changes(locale.get())
-                            disabled=move || bulk_busy.get()
+                            disabled=move || core.sc_bulk_progress.get().is_some()
                             on:click=move |_| {
-                                set_bulk_busy.set(true);
+                                core.set_sc_bulk_failed_paths.set(vec![]);
                                 let paths = staged_list_for_action
                                     .get_value()
                                     .into_iter()
@@ -79,10 +80,24 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
             {move || if expanded.get() {
                 view! {
                     <For
-                        each=move || staged_list.get_value()
+                        each=move || {
+                            staged_list
+                                .get_value()
+                                .into_iter()
+                                .take(render_limit.get())
+                                .collect::<Vec<_>>()
+                        }
                         key=|e| e.path.clone()
                         children=move |e| view! { <ChangeItem entry=e is_staged=true /> }
                     />
+                    <Show when=move || { staged_count > render_limit.get() }>
+                        <button
+                            class="w-full py-1 text-[11px] text-blue-600 hover:bg-blue-50"
+                            on:click=move |_| set_render_limit.update(|v| *v += 200)
+                        >
+                            {move || t::source_control::show_more(locale.get(), staged_count.saturating_sub(render_limit.get()))}
+                        </button>
+                    </Show>
                 }.into_any()
             } else {
                 view! {}.into_any()
