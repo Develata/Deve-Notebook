@@ -15,6 +15,7 @@ use leptos::prelude::*;
 pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let (bulk_busy, set_bulk_busy) = signal(false);
 
     // 折叠状态
     let expanded = RwSignal::new(true);
@@ -23,6 +24,12 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     let unstaged_list = StoredValue::new(unstaged.clone());
     let unstaged_list_for_stage = StoredValue::new(unstaged.clone());
     let unstaged_list_for_discard = StoredValue::new(unstaged);
+
+    Effect::new(move |_| {
+        let _ = core.unstaged_changes.get();
+        let _ = core.staged_changes.get();
+        set_bulk_busy.set(false);
+    });
 
     // 如果没有未暂存文件，不渲染此区块
     if unstaged_count == 0 {
@@ -52,7 +59,9 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
                             title=move || t::source_control::discard_all_changes(locale.get())
+                            disabled=move || bulk_busy.get()
                             on:click=move |_| {
+                                set_bulk_busy.set(true);
                                 for entry in unstaged_list_for_discard.get_value() {
                                     core.on_discard_file.run(entry.path);
                                 }
@@ -64,13 +73,18 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
                             title=move || t::source_control::stage_all_changes(locale.get())
+                            disabled=move || bulk_busy.get()
                             on:click=move |_| {
-                                for entry in unstaged_list_for_stage.get_value() {
-                                    core.on_stage_file.run(entry.path);
-                                }
+                                set_bulk_busy.set(true);
+                                let paths = unstaged_list_for_stage
+                                    .get_value()
+                                    .into_iter()
+                                    .map(|entry| entry.path)
+                                    .collect::<Vec<_>>();
+                                core.on_stage_files.run(paths);
                             }
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         </button>
                     </div>
                     <span class="bg-[#c4c4c4] dark:bg-[#454545] text-white dark:text-[#cccccc] text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{unstaged_count}</span>

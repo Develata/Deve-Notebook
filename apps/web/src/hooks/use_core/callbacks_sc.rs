@@ -11,7 +11,9 @@ use leptos::prelude::*;
 pub struct SourceControlCallbacks {
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<String>,
+    pub on_stage_files: Callback<Vec<String>>,
     pub on_unstage_file: Callback<String>,
+    pub on_unstage_files: Callback<Vec<String>>,
     pub on_discard_file: Callback<String>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
@@ -33,6 +35,22 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
     let ws3 = ws.clone();
     let on_unstage_file = Callback::new(move |path: String| {
         ws3.send(ClientMessage::UnstageFile { path });
+    });
+
+    let ws3b = ws.clone();
+    let on_stage_files = Callback::new(move |paths: Vec<String>| {
+        if paths.is_empty() {
+            return;
+        }
+        ws3b.send(ClientMessage::StageFiles { paths });
+    });
+
+    let ws3c = ws.clone();
+    let on_unstage_files = Callback::new(move |paths: Vec<String>| {
+        if paths.is_empty() {
+            return;
+        }
+        ws3c.send(ClientMessage::UnstageFiles { paths });
     });
 
     let ws4 = ws.clone();
@@ -59,7 +77,9 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
     SourceControlCallbacks {
         on_get_changes,
         on_stage_file,
+        on_stage_files,
         on_unstage_file,
+        on_unstage_files,
         on_discard_file,
         on_commit,
         on_get_history,

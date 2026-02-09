@@ -15,6 +15,7 @@ use leptos::prelude::*;
 pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let (bulk_busy, set_bulk_busy) = signal(false);
 
     // 折叠状态
     let expanded = RwSignal::new(true);
@@ -22,6 +23,12 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     let staged_count = staged.len();
     let staged_list = StoredValue::new(staged.clone());
     let staged_list_for_action = StoredValue::new(staged);
+
+    Effect::new(move |_| {
+        let _ = core.unstaged_changes.get();
+        let _ = core.staged_changes.get();
+        set_bulk_busy.set(false);
+    });
 
     // 如果没有暂存文件，不渲染此区块
     if staged_count == 0 {
@@ -50,10 +57,15 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
                             title=move || t::source_control::unstage_all_changes(locale.get())
+                            disabled=move || bulk_busy.get()
                             on:click=move |_| {
-                                for entry in staged_list_for_action.get_value() {
-                                    core.on_unstage_file.run(entry.path);
-                                }
+                                set_bulk_busy.set(true);
+                                let paths = staged_list_for_action
+                                    .get_value()
+                                    .into_iter()
+                                    .map(|entry| entry.path)
+                                    .collect::<Vec<_>>();
+                                core.on_unstage_files.run(paths);
                             }
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>

@@ -7,7 +7,10 @@
 use crate::api::{ConnectionStatus, WsService};
 use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerMessage};
+use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use super::apply::apply_tree_delta;
@@ -84,8 +87,24 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_current_repo = signals.set_current_repo;
     let set_chat_messages = signals.set_chat_messages;
     let set_is_chat_streaming = signals.set_is_chat_streaming;
+    let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
 
     Effect::new(move |_| {
+        let schedule_refresh = {
+            let changes_refresh = changes_refresh.clone();
+            let ws = ws_rx.clone();
+            move || {
+                if let Some(t) = changes_refresh.borrow_mut().take() {
+                    t.cancel();
+                }
+                let ws_for_timer = ws.clone();
+                let timer = Timeout::new(120, move || {
+                    ws_for_timer.send(ClientMessage::GetChanges);
+                });
+                *changes_refresh.borrow_mut() = Some(timer);
+            }
+        };
+
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
@@ -168,11 +187,11 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 }
                 ServerMessage::StageAck { path } => {
                     leptos::logging::log!("已暂存: {}", path);
-                    ws_rx.send(ClientMessage::GetChanges);
+                    schedule_refresh();
                 }
                 ServerMessage::UnstageAck { path } => {
                     leptos::logging::log!("已取消暂存: {}", path);
-                    ws_rx.send(ClientMessage::GetChanges);
+                    schedule_refresh();
                 }
                 ServerMessage::DiscardAck { path } => {
                     leptos::logging::log!("已放弃变更: {}", path);
