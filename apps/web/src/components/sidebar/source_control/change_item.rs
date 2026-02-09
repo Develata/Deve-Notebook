@@ -17,7 +17,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let core = expect_context::<CoreState>();
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     let full_path = entry.path.clone();
     let path_parts: Vec<&str> = full_path.split('/').collect();

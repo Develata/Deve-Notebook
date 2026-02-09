@@ -40,7 +40,7 @@ pub fn DiffView(
     #[prop(default = false)] mobile: bool,
     on_close: Callback<()>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let filename = path
         .replace('\\', "/")
         .split('/')

@@ -11,7 +11,7 @@ use leptos::prelude::*;
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<CoreState>();
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     Effect::new(move |_| {
         core.on_get_history.run(20);

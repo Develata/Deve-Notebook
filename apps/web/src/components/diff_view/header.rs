@@ -20,7 +20,7 @@ pub fn DiffHeader(
     toggle_edit: Callback<()>,
     on_close: Callback<()>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     view! {
         <div
             class=move || if mobile {

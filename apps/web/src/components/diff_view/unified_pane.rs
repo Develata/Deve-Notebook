@@ -17,7 +17,7 @@ pub fn UnifiedPane(
     compute_state: ReadSignal<ComputePhase>,
     on_expand_fold: Callback<usize>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     view! {
         <div
             class="diff-unified-viewport flex-1 flex overflow-auto"

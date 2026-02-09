@@ -13,7 +13,7 @@ use web_sys::KeyboardEvent;
 #[component]
 pub fn Commit() -> impl IntoView {
     let core = expect_context::<CoreState>();
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     let (msg, set_msg) = signal(String::new());
 

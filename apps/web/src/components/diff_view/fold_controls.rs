@@ -4,7 +4,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn FoldControls(fold_state: FoldState) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     view! {
         <div class="absolute top-2 left-2 z-10 flex items-center gap-2">
             <button

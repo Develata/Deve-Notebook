@@ -8,7 +8,7 @@ pub fn MobileAccessoryToolbar(
     readonly: Signal<bool>,
     visible: Signal<bool>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     const FOOTER_HEIGHT_PX: i32 = 0;
     let on_tab = Callback::new(move |_| {
         ffi::mobile_insert_text("\t");

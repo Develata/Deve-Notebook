@@ -37,7 +37,7 @@ pub fn MobileLayout(
     on_open: Callback<()>,
     on_command: Callback<()>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let (show_sidebar, set_show_sidebar) = signal(false);
     let (show_outline, set_show_outline) = signal(false);
     let drawer_open = Signal::derive(move || show_sidebar.get() || show_outline.get());

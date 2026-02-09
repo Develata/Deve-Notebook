@@ -8,7 +8,7 @@ pub fn SplitLeftColumn(
     split_rows: Memo<Vec<SplitRow>>,
     on_expand_fold: Callback<usize>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     view! {
         <>
             <div class="w-10 flex-none bg-[var(--diff-gutter-bg)] text-right pr-3 text-[var(--diff-gutter-fg)] select-none py-1 border-r border-[var(--diff-border)]">
@@ -53,7 +53,7 @@ pub fn SplitRightColumn(
     set_content: WriteSignal<String>,
     on_expand_fold: Callback<usize>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     view! {
         {move || if is_editing.get() {
             view! { <textarea name="diff-edit-desktop" class="w-full h-full p-2 resize-none outline-none font-mono text-[13px] bg-[var(--diff-bg)] text-[var(--diff-fg)] border-none" prop:value=move || content.get() on:input=move |ev| set_content.set(event_target_value(&ev))></textarea> }.into_any()
