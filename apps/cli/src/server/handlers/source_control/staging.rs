@@ -42,14 +42,10 @@ pub async fn handle_stage_files(
     session: &WsSession,
     paths: Vec<String>,
 ) {
-    for path in normalized_unique_paths(paths) {
-        if let Err(e) = state.repo.stage_file(&path) {
-            tracing::error!("Failed to stage file {}: {:?}", path, e);
-            ch.send_error(e.to_string());
-            return;
-        }
-    }
-    super::changes::handle_get_changes(state, ch, session).await;
+    run_bulk_stage(state, ch, session, "stage", paths, |repo, path| {
+        repo.stage_file(path)
+    })
+    .await;
 }
 
 /// 批量取消暂存文件
@@ -59,13 +55,58 @@ pub async fn handle_unstage_files(
     session: &WsSession,
     paths: Vec<String>,
 ) {
-    for path in normalized_unique_paths(paths) {
-        if let Err(e) = state.repo.unstage_file(&path) {
-            tracing::error!("Failed to unstage file {}: {:?}", path, e);
-            ch.send_error(e.to_string());
-            return;
+    run_bulk_stage(state, ch, session, "unstage", paths, |repo, path| {
+        repo.unstage_file(path)
+    })
+    .await;
+}
+
+async fn run_bulk_stage<F>(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    op: &str,
+    paths: Vec<String>,
+    mut action: F,
+) where
+    F: FnMut(&deve_core::ledger::RepoManager, &str) -> anyhow::Result<()>,
+{
+    let normalized = normalized_unique_paths(paths);
+    let total = normalized.len() as u32;
+    if total == 0 {
+        ch.unicast(ServerMessage::BulkStageDone {
+            op: op.to_string(),
+            total,
+            success: 0,
+            failed_paths: vec![],
+        });
+        return;
+    }
+
+    let mut failed_paths = Vec::new();
+    for (idx, path) in normalized.iter().enumerate() {
+        if let Err(e) = action(&state.repo, path) {
+            tracing::error!("Failed to {} file {}: {:?}", op, path, e);
+            failed_paths.push(path.clone());
+        }
+
+        let done = (idx + 1) as u32;
+        if done.is_multiple_of(16) || done == total {
+            ch.unicast(ServerMessage::BulkStageProgress {
+                op: op.to_string(),
+                total,
+                done,
+                failed: failed_paths.len() as u32,
+            });
         }
     }
+
+    ch.unicast(ServerMessage::BulkStageDone {
+        op: op.to_string(),
+        total,
+        success: total.saturating_sub(failed_paths.len() as u32),
+        failed_paths,
+    });
     super::changes::handle_get_changes(state, ch, session).await;
 }
 

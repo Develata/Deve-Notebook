@@ -28,6 +28,14 @@ pub struct ChatMessage {
     pub ts_ms: u64,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct BulkScProgress {
+    pub op: String,
+    pub total: u32,
+    pub done: u32,
+    pub failed: u32,
+}
+
 #[derive(Clone)]
 pub struct CoreState {
     pub ws: WsService,
@@ -112,6 +120,10 @@ pub struct CoreState {
     pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
+    pub sc_bulk_progress: ReadSignal<Option<BulkScProgress>>,
+    pub set_sc_bulk_progress: WriteSignal<Option<BulkScProgress>>,
+    pub sc_bulk_failed_paths: ReadSignal<Vec<String>>,
+    pub set_sc_bulk_failed_paths: WriteSignal<Vec<String>>,
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<String>,
     pub on_stage_files: Callback<Vec<String>>,

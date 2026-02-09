@@ -11,7 +11,7 @@ use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::diff_session::DiffSessionWire;
-use super::types::{ChatMessage, PeerSession};
+use super::types::{BulkScProgress, ChatMessage, PeerSession};
 
 /// 插件响应类型别名
 pub type PluginResponse = Option<(String, Option<serde_json::Value>, Option<String>)>;
@@ -90,6 +90,10 @@ pub struct CoreSignals {
     pub set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub set_commit_history: WriteSignal<Vec<CommitInfo>>,
+    pub sc_bulk_progress: ReadSignal<Option<BulkScProgress>>,
+    pub set_sc_bulk_progress: WriteSignal<Option<BulkScProgress>>,
+    pub sc_bulk_failed_paths: ReadSignal<Vec<String>>,
+    pub set_sc_bulk_failed_paths: WriteSignal<Vec<String>>,
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
 
@@ -125,6 +129,8 @@ pub fn init_signals() -> CoreSignals {
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
+    let (sc_bulk_progress, set_sc_bulk_progress) = signal(None::<BulkScProgress>);
+    let (sc_bulk_failed_paths, set_sc_bulk_failed_paths) = signal(Vec::<String>::new());
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
 
@@ -178,6 +184,10 @@ pub fn init_signals() -> CoreSignals {
         set_unstaged_changes,
         commit_history,
         set_commit_history,
+        sc_bulk_progress,
+        set_sc_bulk_progress,
+        sc_bulk_failed_paths,
+        set_sc_bulk_failed_paths,
         diff_content,
         set_diff_content,
         tree_nodes,
