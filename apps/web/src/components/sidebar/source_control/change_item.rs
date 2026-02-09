@@ -5,6 +5,7 @@
 //! 支持 Stage/Unstage/Open/Discard 操作。
 
 use crate::hooks::use_core::CoreState;
+use crate::i18n::{Locale, t};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use leptos::prelude::*;
 
@@ -16,6 +17,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let core = expect_context::<CoreState>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     let full_path = entry.path.clone();
     let path_parts: Vec<&str> = full_path.split('/').collect();
@@ -64,11 +66,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     {if is_staged {
                         // 暂存区: 仅显示 Unstage 按钮
                         view! {
-                            <button
-                                class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
-                                title="Unstage Changes"
-                                on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(path_for_unstage.clone()); }
-                            >
+                                <button
+                                    class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
+                                    title=move || t::source_control::unstage_changes(locale.get())
+                                    on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(path_for_unstage.clone()); }
+                                >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             </button>
                         }.into_any()
@@ -77,21 +79,21 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                         view! {
                             <button
                                 class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
-                                title="Open File"
+                                title=move || t::source_control::open_file(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(path_for_open.clone()); }
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                             </button>
                             <button
                                 class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
-                                title="Discard Changes"
+                                title=move || t::source_control::discard_changes(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_discard_file.run(path_for_discard.clone()); }
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
                             </button>
                             <button
                                 class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded text-gray-600 dark:text-gray-300"
-                                title="Stage Changes"
+                                title=move || t::source_control::stage_changes(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_stage_file.run(path_for_stage.clone()); }
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

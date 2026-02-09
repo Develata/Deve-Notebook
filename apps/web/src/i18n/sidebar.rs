@@ -79,3 +79,10 @@ pub fn more(locale: Locale) -> &'static str {
         Locale::Zh => "更多",
     }
 }
+
+pub fn more_actions(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "More Actions",
+        Locale::Zh => "更多操作",
+    }
+}

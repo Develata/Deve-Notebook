@@ -1,4 +1,5 @@
 use crate::editor::ffi;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
@@ -7,6 +8,7 @@ pub fn MobileAccessoryToolbar(
     readonly: Signal<bool>,
     visible: Signal<bool>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     const FOOTER_HEIGHT_PX: i32 = 0;
     let on_tab = Callback::new(move |_| {
         ffi::mobile_insert_text("\t");
@@ -49,14 +51,14 @@ pub fn MobileAccessoryToolbar(
                 }
             >
                 <div class="flex items-center gap-1 overflow-x-auto">
-                    <button class=base on:click=move |_| on_tab.run(()) disabled=disabled title="Tab">"⇥"</button>
-                    <button class=base on:click=move |_| on_h1.run(()) disabled=disabled title="Heading">"H"</button>
-                    <button class=base on:click=move |_| on_list.run(()) disabled=disabled title="List">"•"</button>
-                    <button class=base on:click=move |_| on_task.run(()) disabled=disabled title="Task">"☑"</button>
-                    <button class=base on:click=move |_| on_bold.run(()) disabled=disabled title="Bold">"B"</button>
-                    <button class=base on:click=move |_| on_italic.run(()) disabled=disabled title="I">"I"</button>
-                    <button class=base on:click=move |_| on_code.run(()) disabled=disabled title="Code">"<>"</button>
-                    <button class=base on:click=move |_| on_undo.run(()) title="Undo">"↩"</button>
+                    <button class=base on:click=move |_| on_tab.run(()) disabled=disabled title=move || t::common::tab(locale.get())>"⇥"</button>
+                    <button class=base on:click=move |_| on_h1.run(()) disabled=disabled title=move || t::common::heading(locale.get())>"H"</button>
+                    <button class=base on:click=move |_| on_list.run(()) disabled=disabled title=move || t::common::list(locale.get())>"•"</button>
+                    <button class=base on:click=move |_| on_task.run(()) disabled=disabled title=move || t::common::task(locale.get())>"☑"</button>
+                    <button class=base on:click=move |_| on_bold.run(()) disabled=disabled title=move || t::common::bold(locale.get())>"B"</button>
+                    <button class=base on:click=move |_| on_italic.run(()) disabled=disabled title=move || t::common::italic(locale.get())>"I"</button>
+                    <button class=base on:click=move |_| on_code.run(()) disabled=disabled title=move || t::common::code(locale.get())>"<>"</button>
+                    <button class=base on:click=move |_| on_undo.run(()) title=move || t::common::undo(locale.get())>"↩"</button>
                 </div>
             </div>
         </Show>

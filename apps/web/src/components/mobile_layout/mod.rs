@@ -14,6 +14,7 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::layout_context::EditorContentContext;
 use crate::editor::ffi::getEditorContent;
 use crate::hooks::use_core::CoreState;
+use crate::i18n::{Locale, t};
 use chat_sheet::MobileChatSheet;
 use content::MobileContent;
 use drawers::MobileDrawers;
@@ -36,6 +37,7 @@ pub fn MobileLayout(
     on_open: Callback<()>,
     on_command: Callback<()>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (show_sidebar, set_show_sidebar) = signal(false);
     let (show_outline, set_show_outline) = signal(false);
     let drawer_open = Signal::derive(move || show_sidebar.get() || show_outline.get());
@@ -139,8 +141,8 @@ pub fn MobileLayout(
                             "top: calc(env(safe-area-inset-top) + 54px); right: 10px;"
                         }
                     }
-                    title="Toggle Outline"
-                    aria-label="Toggle Outline"
+                    title=move || t::header::toggle_outline(locale.get())
+                    aria-label=move || t::header::toggle_outline(locale.get())
                     on:click=move |_| {
                         set_show_sidebar.set(false);
                         set_show_outline.update(|v| *v = !*v);

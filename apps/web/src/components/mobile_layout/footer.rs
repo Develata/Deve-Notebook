@@ -57,13 +57,19 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                 if is_narrow.get() {
                     format!("L {}/{}", done, total)
                 } else {
-                    format!("Loading {}/{} (~{}ms)", done, total, eta_ms)
+                    format!(
+                        "{} {}/{} (~{}ms)",
+                        t::bottom_bar::loading(locale.get()),
+                        done,
+                        total,
+                        eta_ms
+                    )
                 }
             } else {
                 format!("L {}/{}", done, total)
             }
         } else {
-            "Loading...".to_string()
+            t::bottom_bar::loading(locale.get()).to_string()
         };
         view! { <div class="text-[10px] text-gray-500 font-mono">{text}</div> }.into_any()
     };
@@ -156,10 +162,10 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                     fallback=move || {
                         view! {
                             <div class="flex items-center gap-1.5 px-1 py-1 rounded-lg bg-gray-50 border border-gray-200">
-                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title="First" on:click=move |_| on_to_start.run(())>
+                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
                                     "«"
                                 </button>
-                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title="Prev" on:click=move |_| on_prev.run(())>
+                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
                                     "‹"
                                 </button>
                                 <input
@@ -173,12 +179,12 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                                         set_ver.set(val);
                                     }
                                     class="flex-1 min-w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#007fd4]"
-                                    title="Time Travel"
+                                    title=move || t::bottom_bar::time_travel(locale.get())
                                 />
-                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title="Next" on:click=move |_| on_next.run(())>
+                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
                                     "›"
                                 </button>
-                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title="Latest" on:click=move |_| on_to_end.run(())>
+                                <button class="h-7 min-w-7 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100" title=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
                                     "»"
                                 </button>
                             </div>
@@ -187,19 +193,19 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                 >
                     <div class="rounded-lg bg-gray-50 border border-gray-200 px-1 py-1 flex flex-col gap-1">
                         <div class="flex items-center justify-between gap-1">
-                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title="First" on:click=move |_| on_to_start.run(())>
+                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
                                 "«"
                             </button>
-                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title="Prev" on:click=move |_| on_prev.run(())>
+                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
                                 "‹"
                             </button>
                             <span class="text-[9px] text-gray-500 font-mono px-0.5 min-w-12 text-center">
                                 {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
                             </span>
-                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title="Next" on:click=move |_| on_next.run(())>
+                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
                                 "›"
                             </button>
-                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title="Latest" on:click=move |_| on_to_end.run(())>
+                            <button class="h-6 min-w-6 px-1 rounded border border-gray-200 bg-white text-gray-600 active:bg-gray-100 text-[10px]" title=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
                                 "»"
                             </button>
                         </div>
@@ -214,7 +220,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                                 set_ver.set(val);
                             }
                             class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#007fd4]"
-                            title="Time Travel"
+                            title=move || t::bottom_bar::time_travel(locale.get())
                         />
                     </div>
                 </Show>

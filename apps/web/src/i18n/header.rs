@@ -41,3 +41,10 @@ pub fn file_tree(locale: Locale) -> &'static str {
         Locale::Zh => "文件树",
     }
 }
+
+pub fn toggle_outline(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Toggle Outline",
+        Locale::Zh => "切换大纲",
+    }
+}

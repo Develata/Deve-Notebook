@@ -48,3 +48,87 @@ pub fn graph(locale: Locale) -> &'static str {
         Locale::Zh => "图形",
     }
 }
+
+pub fn open_file(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Open File",
+        Locale::Zh => "打开文件",
+    }
+}
+
+pub fn stage_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Stage Changes",
+        Locale::Zh => "暂存更改",
+    }
+}
+
+pub fn unstage_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unstage Changes",
+        Locale::Zh => "取消暂存更改",
+    }
+}
+
+pub fn discard_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Discard Changes",
+        Locale::Zh => "放弃更改",
+    }
+}
+
+pub fn stage_all_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Stage All Changes",
+        Locale::Zh => "暂存全部更改",
+    }
+}
+
+pub fn unstage_all_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unstage All Changes",
+        Locale::Zh => "取消暂存全部更改",
+    }
+}
+
+pub fn discard_all_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Discard All Changes",
+        Locale::Zh => "放弃全部更改",
+    }
+}
+
+pub fn commit_message_placeholder(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Message (Ctrl+Enter to commit on \"main\")",
+        Locale::Zh => "提交信息（Ctrl+Enter 在“main”分支提交）",
+    }
+}
+
+pub fn commit(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Commit",
+        Locale::Zh => "提交",
+    }
+}
+
+pub fn generate_commit_message(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Generate Commit Message",
+        Locale::Zh => "生成提交信息",
+    }
+}
+
+pub fn generate(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Generate",
+        Locale::Zh => "生成",
+    }
+}
+
+pub fn branch_main(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "main*",
+        Locale::Zh => "主分支*",
+    }
+}

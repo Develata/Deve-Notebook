@@ -5,11 +5,13 @@
 //! 左侧带有连接线和圆点。
 
 use crate::hooks::use_core::CoreState;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<CoreState>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     Effect::new(move |_| {
         core.on_get_history.run(20);
@@ -24,7 +26,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                 <span class=move || if expanded.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-[#424242] dark:text-[#cccccc]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                 </span>
-                "图形"
+                {move || t::source_control::graph(locale.get())}
             </button>
 
             {move || if expanded.get() {

@@ -49,7 +49,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                     <div class="hidden group-hover:!flex items-center gap-1 text-[#333] dark:text-[#cccccc]" on:click=move |e| e.stop_propagation()>
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
-                            title="Unstage All Changes"
+                            title=move || t::source_control::unstage_all_changes(locale.get())
                             on:click=move |_| {
                                 for entry in staged_list_for_action.get_value() {
                                     core.on_unstage_file.run(entry.path);

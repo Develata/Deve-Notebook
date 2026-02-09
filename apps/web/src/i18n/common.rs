@@ -34,3 +34,59 @@ pub fn select_document(locale: Locale) -> &'static str {
         Locale::Zh => "请选择文档",
     }
 }
+
+pub fn tab(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Tab",
+        Locale::Zh => "制表",
+    }
+}
+
+pub fn heading(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Heading",
+        Locale::Zh => "标题",
+    }
+}
+
+pub fn list(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "List",
+        Locale::Zh => "列表",
+    }
+}
+
+pub fn task(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Task",
+        Locale::Zh => "任务",
+    }
+}
+
+pub fn bold(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Bold",
+        Locale::Zh => "加粗",
+    }
+}
+
+pub fn italic(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Italic",
+        Locale::Zh => "斜体",
+    }
+}
+
+pub fn code(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Code",
+        Locale::Zh => "代码",
+    }
+}
+
+pub fn undo(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Undo",
+        Locale::Zh => "撤销",
+    }
+}

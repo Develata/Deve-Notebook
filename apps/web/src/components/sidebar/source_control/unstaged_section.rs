@@ -51,7 +51,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         // Discard All (刷新图标 - 恢复到已提交状态)
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
-                            title="Discard All Changes"
+                            title=move || t::source_control::discard_all_changes(locale.get())
                             on:click=move |_| {
                                 for entry in unstaged_list_for_discard.get_value() {
                                     core.on_discard_file.run(entry.path);
@@ -63,7 +63,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         // Stage All
                         <button
                             class="p-0.5 hover:bg-[#d0d0d0] dark:hover:bg-[#454545] rounded"
-                            title="Stage All Changes"
+                            title=move || t::source_control::stage_all_changes(locale.get())
                             on:click=move |_| {
                                 for entry in unstaged_list_for_stage.get_value() {
                                     core.on_stage_file.run(entry.path);

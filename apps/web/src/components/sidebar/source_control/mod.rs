@@ -60,7 +60,7 @@ pub fn SourceControlView() -> impl IntoView {
                     // More Actions Button
                     <button
                         class="p-1 hover:bg-[#0000001a] dark:hover:bg-[#ffffff1a] rounded"
-                        title="More Actions"
+                        title=move || t::sidebar::more_actions(locale.get())
                         on:click=move |e| {
                             e.stop_propagation();
                             show_menu.update(|v| *v = !*v);
@@ -80,7 +80,7 @@ pub fn SourceControlView() -> impl IntoView {
                                     class="px-3 py-1.5 hover:bg-[#e8e8e8] dark:hover:bg-[#37373d] cursor-pointer flex items-center justify-between"
                                     on:click=move |_| { show_repos.update(|v| *v = !*v); }
                                 >
-                                    <span>"Repositories"</span>
+                                    <span>{move || t::source_control::repositories(locale.get())}</span>
                                     {move || if show_repos.get() {
                                         view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> }.into_any()
                                     } else {
@@ -91,7 +91,7 @@ pub fn SourceControlView() -> impl IntoView {
                                     class="px-3 py-1.5 hover:bg-[#e8e8e8] dark:hover:bg-[#37373d] cursor-pointer flex items-center justify-between"
                                     on:click=move |_| { show_changes.update(|v| *v = !*v); }
                                 >
-                                    <span>"Changes"</span>
+                                    <span>{move || t::source_control::changes(locale.get())}</span>
                                     {move || if show_changes.get() {
                                         view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> }.into_any()
                                     } else {
@@ -139,10 +139,10 @@ pub fn SourceControlView() -> impl IntoView {
                                 <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
                                 <div class="hidden group-hover:flex items-center gap-1">
                                     // Actions
-                                    <div class="p-0.5 hover:bg-gray-300 dark:hover:bg-[#454545] rounded" title="Discard All Changes">
+                                    <div class="p-0.5 hover:bg-gray-300 dark:hover:bg-[#454545] rounded" title=move || t::source_control::discard_all_changes(locale.get())>
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                                     </div>
-                                    <div class="p-0.5 hover:bg-gray-300 dark:hover:bg-[#454545] rounded" title="Stage All Changes">
+                                    <div class="p-0.5 hover:bg-gray-300 dark:hover:bg-[#454545] rounded" title=move || t::source_control::stage_all_changes(locale.get())>
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                     </div>
                                 </div>
