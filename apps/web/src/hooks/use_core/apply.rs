@@ -19,6 +19,8 @@ pub fn apply_tree_delta(current: &mut Vec<FileNode>, delta: TreeDelta) {
             path,
             doc_id,
         } => {
+            remove_node(current, node_id);
+            remove_node_by_path(current, &path);
             let new_node = FileNode {
                 node_id,
                 name,
@@ -42,6 +44,7 @@ pub fn apply_tree_delta(current: &mut Vec<FileNode>, delta: TreeDelta) {
                 node.name = name;
                 node.path = path.clone();
                 update_children_paths(&mut node, &old_path, &path);
+                remove_node_by_path(current, &path);
                 insert_node(current, parent_id, node);
             }
         }
@@ -84,6 +87,18 @@ fn remove_node_returning(roots: &mut Vec<FileNode>, node_id: NodeId) -> Option<F
 /// 删除节点
 fn remove_node(roots: &mut Vec<FileNode>, node_id: NodeId) {
     let _ = remove_node_returning(roots, node_id);
+}
+
+fn remove_node_by_path(roots: &mut Vec<FileNode>, path: &str) -> Option<FileNode> {
+    if let Some(idx) = roots.iter().position(|n| n.path == path) {
+        return Some(roots.remove(idx));
+    }
+    for node in roots.iter_mut() {
+        if let Some(found) = remove_node_by_path(&mut node.children, path) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 /// 递归更新子节点的路径前缀

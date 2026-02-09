@@ -79,7 +79,6 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_unstaged_changes = signals.set_unstaged_changes;
     let set_commit_history = signals.set_commit_history;
     let set_diff_content = signals.set_diff_content;
-    let tree_nodes = signals.tree_nodes;
     let set_tree_nodes = signals.set_tree_nodes;
     let set_active_branch = signals.set_active_branch;
     let set_current_repo = signals.set_current_repo;
@@ -197,13 +196,9 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 }
                 ServerMessage::TreeUpdate(delta) => {
                     leptos::logging::log!("收到 TreeUpdate");
-                    // 使用 request_animation_frame 延迟更新，避免借用冲突
                     let set_nodes = set_tree_nodes;
-                    let current = tree_nodes.get_untracked();
                     request_animation_frame(move || {
-                        let mut nodes = current;
-                        apply_tree_delta(&mut nodes, delta);
-                        set_nodes.set(nodes);
+                        set_nodes.update(|nodes| apply_tree_delta(nodes, delta));
                     });
                 }
                 _ => {}
