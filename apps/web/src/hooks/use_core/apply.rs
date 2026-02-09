@@ -5,6 +5,7 @@
 
 use deve_core::models::NodeId;
 use deve_core::tree::{FileNode, TreeDelta};
+use std::collections::HashSet;
 
 /// 将 TreeDelta 应用到现有树结构
 pub fn apply_tree_delta(current: &mut Vec<FileNode>, delta: TreeDelta) {
@@ -49,6 +50,8 @@ pub fn apply_tree_delta(current: &mut Vec<FileNode>, delta: TreeDelta) {
             }
         }
     }
+
+    dedupe_tree(current, &mut HashSet::new(), &mut HashSet::new());
 }
 
 /// 在指定父节点下插入新节点
@@ -63,8 +66,16 @@ fn insert_node(roots: &mut Vec<FileNode>, parent_id: Option<NodeId>, new_node: F
                 parent.children.push(new_node);
                 sort_nodes(&mut parent.children);
             } else {
-                roots.push(new_node);
-                sort_nodes(roots);
+                let parent_path = parent_path_of(&new_node.path);
+                if let Some(pp) = parent_path {
+                    if let Some(parent) = find_node_mut_by_path(roots, pp) {
+                        parent.children.push(new_node);
+                        sort_nodes(&mut parent.children);
+                    }
+                } else {
+                    roots.push(new_node);
+                    sort_nodes(roots);
+                }
             }
         }
     }
@@ -132,4 +143,39 @@ fn find_node_mut(roots: &mut [FileNode], node_id: NodeId) -> Option<&mut FileNod
         }
     }
     None
+}
+
+fn find_node_mut_by_path<'a>(roots: &'a mut [FileNode], path: &str) -> Option<&'a mut FileNode> {
+    for node in roots.iter_mut() {
+        if normalize_path(&node.path) == normalize_path(path) {
+            return Some(node);
+        }
+        if let Some(found) = find_node_mut_by_path(&mut node.children, path) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+fn parent_path_of(path: &str) -> Option<&str> {
+    path.rsplit_once('/').map(|(parent, _)| parent)
+}
+
+fn normalize_path(path: &str) -> String {
+    path.replace('\\', "/")
+}
+
+fn dedupe_tree(
+    nodes: &mut Vec<FileNode>,
+    seen_ids: &mut HashSet<NodeId>,
+    seen_paths: &mut HashSet<String>,
+) {
+    nodes.retain(|n| {
+        let path_key = normalize_path(&n.path);
+        seen_ids.insert(n.node_id) && seen_paths.insert(path_key)
+    });
+    for node in nodes.iter_mut() {
+        dedupe_tree(&mut node.children, seen_ids, seen_paths);
+    }
+    sort_nodes(nodes);
 }
