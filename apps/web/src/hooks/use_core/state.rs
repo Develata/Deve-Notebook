@@ -10,6 +10,7 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
+use super::diff_session::DiffSessionWire;
 use super::types::{ChatMessage, PeerSession};
 
 /// 插件响应类型别名
@@ -89,8 +90,8 @@ pub struct CoreSignals {
     pub set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub set_commit_history: WriteSignal<Vec<CommitInfo>>,
-    pub diff_content: ReadSignal<Option<(String, String, String)>>,
-    pub set_diff_content: WriteSignal<Option<(String, String, String)>>,
+    pub diff_content: ReadSignal<Option<DiffSessionWire>>,
+    pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
 
     // 文件树 (增量更新)
     pub tree_nodes: ReadSignal<Vec<FileNode>>,
@@ -124,7 +125,7 @@ pub fn init_signals() -> CoreSignals {
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
-    let (diff_content, set_diff_content) = signal(None);
+    let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
 
     CoreSignals {

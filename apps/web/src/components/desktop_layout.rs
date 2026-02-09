@@ -116,12 +116,13 @@ pub fn DesktopLayout(
 
             <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
                 {move || {
-                    if let Some((path, old, new)) = core.diff_content.get() {
+                    if let Some(session) = core.diff_content.get() {
                         return view! {
                             <DiffView
-                                path=path
-                                old_content=old
-                                new_content=new
+                                repo_scope=core.current_repo.get().unwrap_or_default()
+                                path=session.path
+                                old_content=session.old_content
+                                new_content=session.new_content
                                 is_readonly=core.is_spectator.get()
                                 on_close=Callback::new(move |_| core.set_diff_content.set(None))
                             />

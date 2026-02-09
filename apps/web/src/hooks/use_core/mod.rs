@@ -14,6 +14,7 @@
 pub mod apply;
 pub mod callbacks;
 pub mod callbacks_sc;
+pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
 pub mod state;

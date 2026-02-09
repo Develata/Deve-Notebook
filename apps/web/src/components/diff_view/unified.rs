@@ -50,7 +50,7 @@ impl ChunkWindow {
     }
 }
 
-pub fn slice_lines(lines: &[UnifiedLine], window: ChunkWindow) -> Vec<UnifiedLine> {
+pub fn slice_lines<T: Clone>(lines: &[T], window: ChunkWindow) -> Vec<T> {
     let (start, end) = window.line_range(lines.len());
     lines[start..end].to_vec()
 }

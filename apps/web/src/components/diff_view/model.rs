@@ -1,8 +1,19 @@
+pub mod hunk_fold;
 mod model_chunk;
+mod myers_fallback;
+mod patience;
 mod replace_word;
+mod segment;
+pub mod split_fold;
 
 pub const CHUNK_SIZE: usize = 300;
 pub const LINE_HEIGHT_PX: i32 = 20;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiffAlgorithm {
+    Myers,
+    PatienceMyers,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LineView {
@@ -42,7 +53,10 @@ impl LineView {
     }
 }
 
-pub fn compute_diff(old_content: &str, new_content: &str) -> (Vec<LineView>, Vec<LineView>) {
+pub fn compute_diff_with_meta(
+    old_content: &str,
+    new_content: &str,
+) -> ((Vec<LineView>, Vec<LineView>), DiffAlgorithm) {
     model_chunk::compute_diff_chunked_inner(old_content, new_content, CHUNK_SIZE)
 }
 

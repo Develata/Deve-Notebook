@@ -10,6 +10,7 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
+use super::diff_session::DiffSessionWire;
 use super::state::PluginResponse;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -117,8 +118,8 @@ pub struct CoreState {
     pub on_discard_file: Callback<String>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
-    pub diff_content: ReadSignal<Option<(String, String, String)>>,
-    pub set_diff_content: WriteSignal<Option<(String, String, String)>>,
+    pub diff_content: ReadSignal<Option<DiffSessionWire>>,
+    pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<String>,
     pub on_merge_peer: Callback<String>,
 

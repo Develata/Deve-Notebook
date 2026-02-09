@@ -11,6 +11,7 @@ use leptos::prelude::*;
 use std::sync::Arc;
 
 use super::apply::apply_tree_delta;
+use super::diff_session::DiffSessionWire;
 use super::effects_msg;
 use super::state::CoreSignals;
 
@@ -188,7 +189,11 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     new_content,
                 } => {
                     leptos::logging::log!("收到 Diff: {}", path);
-                    set_diff_content.set(Some((path, old_content, new_content)));
+                    set_diff_content.set(Some(DiffSessionWire::new(
+                        path,
+                        old_content,
+                        new_content,
+                    )));
                 }
                 ServerMessage::TreeUpdate(delta) => {
                     leptos::logging::log!("收到 TreeUpdate");

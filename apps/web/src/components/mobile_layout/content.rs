@@ -22,12 +22,13 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
             </Show>
             <div class="flex-1 overflow-hidden">
                 {move || {
-                    if let Some((path, old, new)) = core.diff_content.get() {
+                    if let Some(session) = core.diff_content.get() {
                         return view! {
                             <crate::components::diff_view::DiffView
-                                path=path
-                                old_content=old
-                                new_content=new
+                                repo_scope=core.current_repo.get().unwrap_or_default()
+                                path=session.path
+                                old_content=session.old_content
+                                new_content=session.new_content
                                 is_readonly=core.is_spectator.get()
                                 force_unified=true
                                 mobile=true

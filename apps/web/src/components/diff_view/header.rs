@@ -11,6 +11,10 @@ pub fn DiffHeader(
     has_hunks: Signal<bool>,
     added_count: Signal<usize>,
     deleted_count: Signal<usize>,
+    cache_hit: Signal<bool>,
+    cache_hit_ratio: Signal<u32>,
+    compute_ms: Signal<u32>,
+    algorithm: Signal<String>,
     on_prev_hunk: Callback<()>,
     on_next_hunk: Callback<()>,
     toggle_edit: Callback<()>,
@@ -46,10 +50,23 @@ pub fn DiffHeader(
                 <span class="text-[11px] px-1.5 py-0.5 rounded bg-[var(--diff-line-del)] text-[var(--diff-fg)]" title=move || t::diff::deleted(locale.get())>
                     {move || format!("-{}", deleted_count.get())}
                 </span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]">
+                    {move || if cache_hit.get() { t::diff::cache_hit(locale.get()) } else { t::diff::cache_miss(locale.get()) }}
+                </span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]">
+                    {move || t::diff::cache_ratio(locale.get(), cache_hit_ratio.get())}
+                </span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]" title=move || t::diff::algorithm_help(locale.get())>
+                    {move || t::diff::algorithm(locale.get(), &algorithm.get())}
+                </span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]">
+                    {move || t::diff::compute_ms(locale.get(), compute_ms.get())}
+                </span>
                 <Show when=move || has_hunks.get()>
                     <button
                         class="diff-prev-hunk h-8 px-2 border border-[var(--diff-border)] rounded text-xs hover:bg-[var(--diff-btn-hover)] text-[var(--diff-fg)]"
-                        title=move || t::diff::prev_change(locale.get())
+                        aria-label=move || t::diff::prev_change(locale.get())
+                        title=move || t::diff::prev_change_hint(locale.get())
                         on:click=move |_| on_prev_hunk.run(())
                     >
                         "↑"
@@ -57,7 +74,8 @@ pub fn DiffHeader(
                     <span class="text-[11px] text-[var(--diff-muted)] min-w-12 text-center">{move || hunk_index_text.get()}</span>
                     <button
                         class="diff-next-hunk h-8 px-2 border border-[var(--diff-border)] rounded text-xs hover:bg-[var(--diff-btn-hover)] text-[var(--diff-fg)]"
-                        title=move || t::diff::next_change(locale.get())
+                        aria-label=move || t::diff::next_change(locale.get())
+                        title=move || t::diff::next_change_hint(locale.get())
                         on:click=move |_| on_next_hunk.run(())
                     >
                         "↓"

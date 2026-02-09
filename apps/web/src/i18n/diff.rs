@@ -49,10 +49,24 @@ pub fn prev_change(locale: Locale) -> &'static str {
     }
 }
 
+pub fn prev_change_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Previous change (Shift+F7 / [)",
+        Locale::Zh => "上一个变更（Shift+F7 / [）",
+    }
+}
+
 pub fn next_change(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Next change",
         Locale::Zh => "下一个变更",
+    }
+}
+
+pub fn next_change_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Next change (F7 / ])",
+        Locale::Zh => "下一个变更（F7 / ]）",
     }
 }
 
@@ -67,5 +81,85 @@ pub fn deleted(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Deleted lines",
         Locale::Zh => "删除行",
+    }
+}
+
+pub fn fold_unchanged(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Fold unchanged",
+        Locale::Zh => "折叠未变更",
+    }
+}
+
+pub fn show_all_lines(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Show all lines",
+        Locale::Zh => "显示全部行",
+    }
+}
+
+pub fn folded_lines(locale: Locale, count: usize) -> String {
+    match locale {
+        Locale::En => format!("... {} unchanged lines (click to expand)", count),
+        Locale::Zh => format!("... {} 行未变更（点击展开）", count),
+    }
+}
+
+pub fn context_lines(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Context",
+        Locale::Zh => "上下文",
+    }
+}
+
+pub fn cache_hit(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Cache hit",
+        Locale::Zh => "缓存命中",
+    }
+}
+
+pub fn cache_miss(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Cache miss",
+        Locale::Zh => "缓存未命中",
+    }
+}
+
+pub fn compute_ms(locale: Locale, ms: u32) -> String {
+    match locale {
+        Locale::En => format!("{} ms", ms),
+        Locale::Zh => format!("{} 毫秒", ms),
+    }
+}
+
+pub fn algorithm(locale: Locale, value: &str) -> String {
+    let label = match value {
+        "Patience+Myers" => match locale {
+            Locale::En => "Patience+Myers",
+            Locale::Zh => "耐心法+Myers",
+        },
+        _ => match locale {
+            Locale::En => "Myers",
+            Locale::Zh => "Myers",
+        },
+    };
+    match locale {
+        Locale::En => format!("Algo: {}", label),
+        Locale::Zh => format!("算法: {}", label),
+    }
+}
+
+pub fn algorithm_help(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Patience+Myers is preferred for stable hunk alignment.",
+        Locale::Zh => "优先使用耐心法+Myers以获得更稳定的变更块对齐。",
+    }
+}
+
+pub fn cache_ratio(locale: Locale, ratio: u32) -> String {
+    match locale {
+        Locale::En => format!("Hit: {}%", ratio),
+        Locale::Zh => format!("命中率: {}%", ratio),
     }
 }
