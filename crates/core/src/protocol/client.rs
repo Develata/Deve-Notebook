@@ -106,8 +106,12 @@ pub enum ClientMessage {
     GetChanges,
     /// 暂存指定文件
     StageFile { path: String },
+    /// 批量暂存文件
+    StageFiles { paths: Vec<String> },
     /// 取消暂存指定文件
     UnstageFile { path: String },
+    /// 批量取消暂存文件
+    UnstageFiles { paths: Vec<String> },
     /// 创建提交
     Commit { message: String },
     /// 获取提交历史

@@ -17,8 +17,14 @@ pub(super) async fn route_source_control(
         ClientMessage::StageFile { path } => {
             source_control::handle_stage_file(state, ch, path).await;
         }
+        ClientMessage::StageFiles { paths } => {
+            source_control::handle_stage_files(state, ch, session, paths).await;
+        }
         ClientMessage::UnstageFile { path } => {
             source_control::handle_unstage_file(state, ch, path).await;
+        }
+        ClientMessage::UnstageFiles { paths } => {
+            source_control::handle_unstage_files(state, ch, session, paths).await;
         }
         ClientMessage::DiscardFile { path } => {
             source_control::handle_discard_file(state, ch, session, path).await;
