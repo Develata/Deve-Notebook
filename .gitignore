@@ -1,6 +1,7 @@
 # Total
 *.cache
 *.log
+*.backup
 
 # Rust
 /target
@@ -30,9 +31,6 @@ repomix-output.xml
 .codex/*
 !.codex/prompts/
 /target_codex*
-
-.specify/extensions/.cache/
-.specify/extensions/.backup/
 
 
 
