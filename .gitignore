@@ -1,16 +1,40 @@
+# Total
+*.cache
+*.log
+
 # Rust
 /target
-/target_codex*
 /debug
 /release
 **/*.rs.bk
 Cargo.lock
 
-# IDEs
+# Node
+node_modules/
+
+# npx repomix
+repomix-output.xml
+
+# Agents
 .vscode/
+
 .trae/
 .idea/
-*.iml
+
+.opencode/*
+!.opencode/command/
+
+.claude/*
+!.claude/commands/
+
+.codex/*
+!.codex/prompts/
+/target_codex*
+
+.specify/extensions/.cache/
+.specify/extensions/.backup/
+
+
 
 # OS
 Thumbs.db
@@ -20,7 +44,6 @@ Thumbs.db
 deve.db
 vault/
 Vault_old/
-*.log
 
 # Web
 dist
@@ -29,13 +52,6 @@ apps/web/js/editor.bundle.js.map
 apps/web/public/js/editor.bundle.js
 apps/web/public/js/editor.bundle.js.map
 apps/web/public/katex/
-
-repomix-output.xml
-
-# Node
-node_modules/
-npm-debug.log
-yarn-error.log
 
 # Environment
 .env
