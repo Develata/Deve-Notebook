@@ -51,6 +51,12 @@ pub async fn handle_agent_chat(ch: &DualChannel, req_id: String, args: Vec<serde
         Err(e) => {
             tracing::error!("Agent bridge error: {:?}", e);
             send_error(ch, &req_id, &format!("Agent CLI error: {}", e));
+            // 必须发送 finish 信号，否则前端 streaming 状态永远不会结束
+            ch.unicast(ServerMessage::ChatChunk {
+                req_id: req_id.clone(),
+                delta: None,
+                finish_reason: Some("stop".to_string()),
+            });
         }
     }
 }
@@ -87,7 +93,7 @@ async fn spawn_and_stream(
     use tokio::io::AsyncBufReadExt;
 
     let mut child = tokio::process::Command::new(cli_path)
-        .arg(query)
+        .args(["run", query])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -112,11 +118,14 @@ async fn spawn_and_stream(
         match reader.read_line(&mut line).await {
             Ok(0) => break, // EOF
             Ok(_) => {
-                ch.unicast(ServerMessage::ChatChunk {
-                    req_id: req_id.to_string(),
-                    delta: Some(line.clone()),
-                    finish_reason: None,
-                });
+                let clean = strip_ansi(&line);
+                if !clean.trim().is_empty() {
+                    ch.unicast(ServerMessage::ChatChunk {
+                        req_id: req_id.to_string(),
+                        delta: Some(clean),
+                        finish_reason: None,
+                    });
+                }
             }
             Err(e) => {
                 tracing::warn!("Agent stdout read error: {:?}", e);
@@ -139,6 +148,29 @@ async fn spawn_and_stream(
     }
 
     Ok(())
+}
+
+/// 剥离 ANSI 转义序列 (如终端颜色码 `\x1b[31m`)。
+///
+/// 使用手写状态机，零依赖，O(n) 复杂度。
+fn strip_ansi(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.chars();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // 跳过 ESC[ ... m 序列
+            if chars.next() == Some('[') {
+                for c2 in chars.by_ref() {
+                    if c2.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// 向客户端发送错误响应。
