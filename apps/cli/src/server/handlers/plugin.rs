@@ -30,6 +30,12 @@ pub async fn handle_plugin_call_with_plugins(
     fn_name: String,
     args: Vec<serde_json::Value>,
 ) {
+    // Agent Bridge 拦截: 绕过 Rhai 插件，直接调用外部 CLI
+    if plugin_id == "agent-bridge" {
+        crate::server::agent_bridge::handle_agent_chat(ch, req_id, args).await;
+        return;
+    }
+
     let plugin = plugins.iter().find(|p| p.manifest().id == plugin_id);
 
     if let Some(plugin) = plugin {

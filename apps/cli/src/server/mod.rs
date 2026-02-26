@@ -33,6 +33,7 @@ use tower_http::cors::{Any, CorsLayer};
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
 
+pub mod agent_bridge;
 pub mod ai_chat;
 pub mod channel;
 pub mod handlers;

@@ -147,9 +147,9 @@ pub fn create_static_commands(
                             serde_json::json!({}),
                         ];
                         core.on_plugin_call.run((
-                            "ai-chat".to_string(),
+                            req_id.clone(),
+                            "agent-bridge".to_string(),
                             "chat".to_string(),
-                            req_id,
                             args,
                         ));
                     }

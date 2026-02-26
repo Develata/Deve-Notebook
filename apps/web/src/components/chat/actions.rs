@@ -41,7 +41,7 @@ pub fn make_send_text(
         let context = serde_json::json!({ "current_file": current_doc_path });
         let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
         core.on_plugin_call
-            .run(("ai-chat".to_string(), "chat".to_string(), req_id, args));
+            .run((req_id, "agent-bridge".to_string(), "chat".to_string(), args));
     })
 }
 
