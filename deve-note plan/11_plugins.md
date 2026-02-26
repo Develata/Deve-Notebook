@@ -41,18 +41,17 @@
 *   **RPC Bridge**: 前端 `client.call` -> WebSocket -> 后端插件。
 *   **Resource Quotas**: CPU/Mem/Timeout 可配。
 
-### 4. AI Integration (AI 插件)
-系统预留了专门的 `AI Chat Slot` (UI Column 5)，但不内置任何具体模型，全靠插件驱动。
-*   **Provider Independent**: 官方提供标准 `AI_Provider_Trait` (WASM ABI)，社区可开发 `OpenAI Plugin`, `Ollama Plugin` 等。
-*   **Context Safety**: 插件读取用户选中的代码上下文 **MUST** 经过用户确认 (或配置白名单)。
-*   **Chat 界面**: 插件通过标准协议向 UI 渲染 Markdown 消息流。
-*   **安全**：访问网络/文件必须显式授权 Capability。
-*   **隐私 (Privacy)**：默认关闭遥测 (Telemetry Off by Default).
-
-#### AI 模式 (Plan / Build)
-*   **Plan**：只输出计划，不执行代码与工具调用。
-*   **Build**：执行模式，可调用工具并修改代码。
-*   **切换方式**：支持 `/plan`、`/build`，以及 `/agents` 顺序切换。
+### 4. AI Integration (外部 CLI 桥接)
+系统预留了专门的 `AI Chat Slot` (UI Column 5)，但不直接内置大模型推理或复杂的 Agent 状态流。
+*   **Architecture (架构)**：彻底抛弃基于 Rhai 脚本或 WASM 插件实现的 Agent 循环，转而采用 **Backend Subprocess Bridge (后端子进程桥接)** 架构。
+*   **External CLI (外部成熟的 CLI)**：后端直接调起成熟的外部 AI CLI 工具（如 `opencode` 或 `zeroclaw`）作为子进程执行。这避免了重复造轮子（开发历史记录管理、工具调度、上下文合并等）。
+    *   **zeroclaw**：同为 Rust 编写的轻量级 Agent 工具，没有沉重的 Python/Node 运行时负担，非常适合当前项目的诉求。
+*   **Workflow (生命周期)**：
+    1. UI 收集指令，发送 WebSocket 请求到 Rust 后端。
+    2. 后端 (`tokio::process::Command`) 发起子进程 `zeroclaw "用户指令"`。
+    3. 后端将子进程的标准输出流 (`stdout`) 实时管道转发给 WebSocket 返回前端渲染。
+*   **按需驻留资源 (On-demand Memory)**：外部 CLI 为按需启动进程，用完即销毁，在 768MB 的极低内存 VPS 环境中不再占用常驻内存。
+*   **安全与隐私**：外部 CLI 内在受控容器（如有配置）中执行，配置参数交由环境变量或专门的配置文件进行限制。
 
 ### 5. Git 推送 (Git Integration)
 *   **机制**：调用 Host Functions 中的 `git_sync.rhai`。
