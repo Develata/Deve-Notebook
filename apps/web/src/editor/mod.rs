@@ -117,7 +117,7 @@ pub fn Editor(
                 {if !embedded {
                     view! {
                         <div
-                            class="bg-[#f9f9f9] border-l border-gray-200 transition-all duration-300 ease-in-out overflow-hidden"
+                            class="bg-[var(--bg-sidebar)] border-l border-gray-200 transition-all duration-300 ease-in-out overflow-hidden"
                             style=move || if show_outline.get() { "width: 250px; opacity: 1;" } else { "width: 0px; opacity: 0;" }
                         >
                             <crate::components::outline::Outline

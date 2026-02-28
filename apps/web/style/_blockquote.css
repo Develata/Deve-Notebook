@@ -48,7 +48,7 @@
 
 /* ==================== 引用文本样式 ==================== */
 .cm-blockquote {
-  color: #475569;
+  color: var(--fg-blockquote);
   font-style: italic;
 }
 

@@ -18,9 +18,9 @@
 }
 
 .cm-table-widget th {
-  background: #f1f5f9;
+  background: var(--bg-table-header);
   font-weight: 600;
-  color: #334155;
+  color: var(--fg-primary);
 }
 
 .cm-table-widget tbody tr:nth-child(even) {
@@ -28,7 +28,7 @@
 }
 
 .cm-table-widget tbody tr:hover {
-  background: #e0f2fe;
+  background: var(--bg-table-hover);
 }
 
 /* ==================== 复选框组件 ==================== */

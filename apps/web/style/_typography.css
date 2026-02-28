@@ -64,7 +64,7 @@
 }
 
 .cm-url {
-  color: #94a3b8;
+  color: var(--fg-url);
   font-family: monospace;
 }
 
@@ -90,7 +90,7 @@
 }
 
 .cm-list-ordered {
-  color: #3b82f6;
+  color: var(--fg-accent);
   font-weight: 600;
   font-size: 0.9em;
 }
@@ -98,14 +98,14 @@
 /* ==================== 水平分割线 ==================== */
 /* 源码样式 */
 .cm-hr {
-  color: #cbd5e1;
+  color: var(--fg-hr);
   font-weight: bold;
 }
 
 /* 渲染后样式 */
 .cm-hr-rendered {
   color: transparent !important;
-  background-color: #cbd5e1;
+  background-color: var(--fg-hr);
   display: inline-block;
   width: 100%;
   height: 2px;

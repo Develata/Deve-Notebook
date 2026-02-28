@@ -8,7 +8,7 @@
 /* ==================== 公式组件基础样式 ==================== */
 .cm-math-widget {
   display: inline-block;
-  background: #eee;
+  background: var(--bg-math-widget);
   padding: 0 4px;
   border-radius: 4px;
   cursor: pointer;

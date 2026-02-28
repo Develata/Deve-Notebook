@@ -6,7 +6,7 @@
 
 use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use leptos::prelude::*;
 
@@ -53,7 +53,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         >
             <div class="flex items-center gap-1.5 flex-1 overflow-hidden">
                 // 文件图标
-                <FileText class=format!("w-3.5 h-3.5 min-w-3.5 {}", if filename.ends_with(".rs") { "text-[#dea584]" } else { "text-muted" }) />
+                <FileText class=format!("w-3.5 h-3.5 min-w-3.5 {}", if filename.ends_with(".rs") { "text-[var(--color-file-rust)]" } else { "text-muted" }) />
 
                 <span class="truncate">{filename}</span>
                 <span class="text-xs text-muted truncate shrink-0 ml-1">

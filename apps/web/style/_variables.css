@@ -123,4 +123,29 @@
   --scrollbar-thumb-hover: #94a3b8;
   --scrollbar-track: transparent;
   --scrollbar-border: #f8fafc;
+
+  /* ==================== Modal / Search ==================== */
+  --bg-modal: #ffffff;             /* 模态框/搜索面板背景 */
+  --shadow-modal: rgba(0, 0, 0, 0.3); /* 模态框阴影 */
+
+  /* ==================== Inline Code & Frontmatter ==================== */
+  --code-inline-bg: #f1f5f9;      /* 行内代码背景 (slate-100) */
+  --bg-frontmatter: #f8f9fa;      /* Frontmatter 块背景 */
+  --fg-frontmatter-delim: #cbd5e1; /* Frontmatter 分隔符色 */
+
+  /* ==================== Table ==================== */
+  --bg-table-header: #f1f5f9;     /* 表格 th 背景 */
+  --bg-table-hover: #e0f2fe;      /* 表格行悬停 (sky-100) */
+
+  /* ==================== Typography extras ==================== */
+  --fg-blockquote: #475569;        /* 引用块文字 (slate-600) */
+  --fg-url: #94a3b8;              /* URL 显示色 (slate-400) */
+  --fg-hr: #cbd5e1;               /* 水平线色 (slate-300) */
+  --fg-caret: #333333;            /* 编辑器光标 */
+
+  /* ==================== Math ==================== */
+  --bg-math-widget: #eeeeee;      /* 数学公式块背景 */
+
+  /* ==================== File type colors ==================== */
+  --color-file-rust: #dea584;     /* Rust 文件图标色 */
 }

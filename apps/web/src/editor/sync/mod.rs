@@ -8,8 +8,8 @@ pub mod context;
 mod decrypt;
 mod snapshot;
 
-use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
+use super::EditorStats;
 use context::SyncContext;
 use deve_core::protocol::ServerMessage;
 use deve_core::security::RepoKey;

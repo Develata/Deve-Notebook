@@ -109,4 +109,29 @@
   --scrollbar-thumb-hover: #777777;
   --scrollbar-track: transparent;
   --scrollbar-border: #1e1e1e;
+
+  /* Modal / Search */
+  --bg-modal: #1e1e2e;
+  --shadow-modal: rgba(0, 0, 0, 0.5);
+
+  /* Inline Code & Frontmatter */
+  --code-inline-bg: #2d2d2d;
+  --bg-frontmatter: #252526;
+  --fg-frontmatter-delim: #555555;
+
+  /* Table */
+  --bg-table-header: #2d2d2d;
+  --bg-table-hover: #264f78;
+
+  /* Typography extras */
+  --fg-blockquote: #a0a0a0;
+  --fg-url: #6b7280;
+  --fg-hr: #555555;
+  --fg-caret: #cccccc;
+
+  /* Math */
+  --bg-math-widget: #3c3c3c;
+
+  /* File type colors */
+  --color-file-rust: #dea584;
 }
