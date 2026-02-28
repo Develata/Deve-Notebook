@@ -32,6 +32,15 @@ fn safe_project_tree() {
     r
 }
 
+fn safe_search_files(pattern) {
+    let r = (); try { r = search_files(pattern); } catch(e) { return "Error: " + e; }
+    r
+}
+fn safe_grep_files(pattern, path) {
+    let r = (); try { r = grep_files(pattern, path); } catch(e) { return "Error: " + e; }
+    r
+}
+
 /// 执行单个工具调用，返回字符串结果
 fn execute_tool(name, arguments) {
     let args = parse_json(arguments);
@@ -62,12 +71,14 @@ fn execute_tool(name, arguments) {
     if name == "search_files" {
         let pattern = args["pattern"];
         if pattern == () { return "Error: missing 'pattern' argument"; }
-        return safe_project_tree();
+        return safe_search_files(pattern);
     }
     if name == "grep" {
         let pattern = args["pattern"];
         if pattern == () { return "Error: missing 'pattern' argument"; }
-        return safe_project_tree();
+        let path = args["path"];
+        if path == () { path = ""; }
+        return safe_grep_files(pattern, path);
     }
 
     "Error: unknown tool '" + name + "'"

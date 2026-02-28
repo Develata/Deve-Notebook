@@ -2,6 +2,7 @@
     "id": "ai-chat",
     "name": "AI Chat",
     "version": "0.1.0",
+    "engine": "rhai-v1",
     "entry": "main.rhai",
     "capabilities": {
         "allow_net": ["api.openai.com", "api.anthropic.com", "localhost", "127.0.0.1"],

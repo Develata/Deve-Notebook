@@ -44,10 +44,12 @@ fn build_config() {
         model = "gpt-4o-mini";
     }
 
-    let max_tokens = env("AI_MAX_TOKENS");
-    if max_tokens == () || max_tokens == "" {
-        max_tokens = 4096;
-    }
+    let max_tokens_str = env("AI_MAX_TOKENS");
+    let max_tokens = if max_tokens_str == () || max_tokens_str == "" {
+        4096
+    } else {
+        parse_int(max_tokens_str)
+    };
 
     #{
         base_url: base_url,
