@@ -1,8 +1,9 @@
-use crate::components::search_box::SearchUiMode;
+use crate::components::icons::{GitBranch, Search, Terminal};
 use crate::components::search_box::result_item::result_item;
 use crate::components::search_box::types::SearchResult;
+use crate::components::search_box::SearchUiMode;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 use std::sync::Arc;
 
@@ -22,9 +23,9 @@ pub fn header(
     };
     view! {
         <div data-sheet-drag-handle="1" class=header_class>
-            <svg class="w-4 h-4 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="w-4 h-4 text-muted">
                 {search_icon(query)}
-            </svg>
+            </div>
             <input
                 name="search-query"
                 node_ref=input_ref
@@ -105,14 +106,11 @@ pub fn results_panel(
 fn search_icon(query: Signal<String>) -> impl IntoView {
     move || {
         if query.get().starts_with('>') {
-            view! { <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /> }
-                .into_any()
+            view! { <Terminal class="w-4 h-4"/> }.into_any()
         } else if query.get().starts_with('@') {
-            view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> }
-                .into_any()
+            view! { <GitBranch class="w-4 h-4"/> }.into_any()
         } else {
-            view! { <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /> }
-                .into_any()
+            view! { <Search class="w-4 h-4"/> }.into_any()
         }
     }
 }

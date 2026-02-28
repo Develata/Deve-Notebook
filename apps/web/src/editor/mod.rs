@@ -11,6 +11,7 @@
 //! - 显示 "Spectator Mode" (旁观者模式) 提示。
 //! - 管理大纲视图的显示/隐藏。
 
+use crate::components::icons::PanelLeft;
 use crate::components::layout_context::EditorContentContext;
 use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_outline::use_outline;
@@ -103,9 +104,7 @@ pub fn Editor(
                                 class="absolute top-2 right-4 z-50 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
                                 title="Toggle Outline"
                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
-                                  <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h9.5A2.25 2.25 0 0117 4.25v11.5A2.25 2.25 0 0114.75 18h-9.5A2.25 2.25 0 013 15.75V4.25zM6 13a1 1 0 11-2 0 1 1 0 012 0zm0-5a1 1 0 11-2 0 1 1 0 012 0zm0-5a1 1 0 11-2 0 1 1 0 012 0zm3 10a1 1 0 110-2 1 1 0 010 2zm0-5a1 1 0 110-2 1 1 0 010 2zm0-5a1 1 0 110-2 1 1 0 010 2zm7 5a1 1 0 110-2 1 1 0 010 2zm0-5a1 1 0 110-2 1 1 0 010 2z" clip-rule="evenodd" />
-                                </svg>
+                                <PanelLeft class="w-5 h-5"/>
                              </button>
                          }.into_any()
                      } else {

@@ -1,7 +1,8 @@
 // apps/web/src/components/mobile_layout/header.rs
 //! # Mobile Header
 
-use crate::i18n::{Locale, t};
+use crate::components::icons::{Book, Home, Terminal};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -37,10 +38,7 @@ pub fn MobileHeader(
                     aria-label=move || t::header::home(locale.get())
                     on:click=move |_| on_home.run(())
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg>
+                    <Home class="w-[18px] h-[18px]"/>
                 </button>
                 <button
                     class=action_btn
@@ -48,10 +46,23 @@ pub fn MobileHeader(
                     aria-label=move || t::header::open(locale.get())
                     on:click=move |_| on_open.run(())
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                    </svg>
+                    <Book class="w-[18px] h-[18px]"/>
+                </button>
+                <button
+                    class=action_btn
+                    title=move || t::header::command(locale.get())
+                    aria-label=move || t::header::command(locale.get())
+                    on:click=move |_| on_command.run(())
+                >
+                    <Terminal class="w-[18px] h-[18px]"/>
+                </button>
+                <button
+                    class=action_btn
+                    title=move || t::header::open(locale.get())
+                    aria-label=move || t::header::open(locale.get())
+                    on:click=move |_| on_open.run(())
+                >
+                    <Book class="w-[18px] h-[18px]"/>
                 </button>
                 <button
                     class=action_btn

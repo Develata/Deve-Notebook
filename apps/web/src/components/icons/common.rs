@@ -3,25 +3,6 @@
 
 use leptos::prelude::*;
 
-/// SVG 公共属性宏 (减少重复)
-macro_rules! icon {
-    ($name:ident, $body:expr) => {
-        #[component]
-        pub fn $name(
-            #[prop(default = "w-4 h-4".to_string(), into)] class: String,
-        ) -> impl IntoView {
-            let cls = class;
-            view! {
-                <svg class=cls xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    {$body}
-                </svg>
-            }
-        }
-    };
-}
-
 // ────── Navigation ──────
 
 icon!(ChevronRight, view! { <path d="m9 18 6-6-6-6"/> });

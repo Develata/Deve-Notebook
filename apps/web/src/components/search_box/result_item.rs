@@ -6,6 +6,7 @@
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
+use crate::components::icons::{ArrowRight, File, Folder, GitBranch, Plus, Terminal};
 use crate::components::search_box::logic;
 use crate::components::search_box::types::{SearchAction, SearchResult};
 use crate::hooks::use_core::CoreState;
@@ -124,27 +125,19 @@ pub fn result_item(
 }
 
 fn item_icon(is_sel: bool, action: SearchAction, detail: Option<String>) -> impl IntoView {
-    let icon = match action {
-        SearchAction::RunCommand(_) => "command",
-        SearchAction::SwitchBranch(_) => "branch",
-        SearchAction::OpenDoc(_) => "file",
-        SearchAction::CreateDoc(_) => "plus",
-        SearchAction::FileOp(_) => "fileop",
-        SearchAction::InsertQuery(_) => "folder",
-        SearchAction::Noop => "none",
+    let cls = "w-5 h-5";
+    let icon_view = match action {
+        SearchAction::RunCommand(_) => view! { <Terminal class=cls/> }.into_any(),
+        SearchAction::SwitchBranch(_) => view! { <GitBranch class=cls/> }.into_any(),
+        SearchAction::CreateDoc(_) => view! { <Plus class=cls/> }.into_any(),
+        SearchAction::InsertQuery(_) => view! { <Folder class=cls/> }.into_any(),
+        SearchAction::OpenDoc(_) | SearchAction::FileOp(_) | SearchAction::Noop => {
+            view! { <File class=cls/> }.into_any()
+        }
     };
     view! {
         <div class=format!("flex-none {}", if is_sel { "text-accent" } else { "text-muted" })>
-            <Show when=move || icon == "command" fallback=move || match icon {
-                "branch" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> }.into_any(),
-                "folder" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg> }.into_any(),
-                "plus" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> }.into_any(),
-                _ => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> }.into_any(),
-            }>
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </Show>
+            {icon_view}
             {move || if detail.as_deref() == Some("Error") {
                 view! { <span class="text-xs font-semibold text-red-500">"!"</span> }.into_any()
             } else {
@@ -175,9 +168,7 @@ fn item_content(
 fn selection_arrow(is_sel: bool) -> impl IntoView {
     view! {
         <Show when=move || is_sel>
-            <svg class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
+            <ArrowRight class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity"/>
         </Show>
     }
 }

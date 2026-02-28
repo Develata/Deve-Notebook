@@ -12,9 +12,10 @@
 //!
 //! **类型**: Core MAY (扩展可选)
 
+use crate::components::icons::GitBranch;
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::BranchContext;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -39,7 +40,11 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
         }
         Some(peer) => {
             let s = peer.to_string();
-            if compact { compact_branch_name(&s) } else { s }
+            if compact {
+                compact_branch_name(&s)
+            } else {
+                s
+            }
         }
     };
 
@@ -65,12 +70,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
             title="Switch Branch (Ctrl+Shift+L)"
         >
             // Git 分支图标
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="6" y1="3" x2="6" y2="15"/>
-                <circle cx="18" cy="6" r="3"/>
-                <circle cx="6" cy="18" r="3"/>
-                <path d="M18 9a9 9 0 0 1-9 9"/>
-            </svg>
+            <GitBranch class="w-3.5 h-3.5"/>
             <span class=move || if compact { "truncate max-w-[60px]" } else { "" }>{current_branch}</span>
             {move || if is_spectator() && !compact {
                 view! { <span class="text-[10px] bg-amber-100 text-amber-700 px-1 rounded font-normal">"READ"</span> }.into_any()

@@ -11,7 +11,8 @@ mod types;
 pub use types::Command;
 
 use self::registry::{create_static_commands, filter_commands};
-use crate::i18n::{Locale, t};
+use crate::components::icons::{ArrowRight, Search, Zap};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -51,7 +52,11 @@ pub fn CommandPalette(
             return 0;
         }
         let current = selected_index.get();
-        if current >= count { 0 } else { current }
+        if current >= count {
+            0
+        } else {
+            current
+        }
     };
 
     // 键盘导航
@@ -101,9 +106,7 @@ pub fn CommandPalette(
                     on:keydown=handle_keydown
                 >
                     <div class="p-3 border-b border-default flex items-center gap-3 bg-sidebar">
-                        <svg class="w-4 h-4 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search class="w-4 h-4 text-muted"/>
                         <input
                             name="command-palette-query"
                             type="text"
@@ -147,9 +150,7 @@ pub fn CommandPalette(
                                                         on:mousemove=move |_| set_selected_index.set(idx)
                                                     >
                                                         <div class=format!("flex-none {}", if is_sel { "text-accent" } else { "text-muted" })>
-                                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                            </svg>
+                                                            <Zap class="w-5 h-5"/>
                                                         </div>
 
                                                         <div class="flex-1 truncate">
@@ -157,9 +158,7 @@ pub fn CommandPalette(
                                                         </div>
 
                                                         <Show when=move || is_sel>
-                                                            <svg class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                            </svg>
+                                                            <ArrowRight class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity"/>
                                                         </Show>
                                                     </button>
                                                 }

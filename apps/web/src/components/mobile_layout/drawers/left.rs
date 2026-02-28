@@ -1,6 +1,7 @@
 // apps/web/src/components/mobile_layout/drawers/left.rs
 
 use crate::components::activity_bar::SidebarView;
+use crate::components::icons::{MoreHorizontal, Pin, X};
 use crate::components::sidebar::Sidebar;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
@@ -65,7 +66,7 @@ pub fn LeftDrawer(
                 title=move || label.get().to_string()
                 aria-label=move || label.get().to_string()
             >
-                <div class="w-4 h-4 mx-auto" inner_html=view.icon()></div>
+                <div class="w-4 h-4 mx-auto">{view.icon_view("w-4 h-4")}</div>
             </button>
         }
     };
@@ -98,9 +99,7 @@ pub fn LeftDrawer(
                         aria-label=move || t::sidebar::close_file_tree(locale.get())
                         on:click=move |_| on_close.run(())
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 mx-auto">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l8 8M14 6l-8 8" />
-                        </svg>
+                        <X class="w-4 h-4 mx-auto"/>
                     </button>
                 </div>
 
@@ -129,7 +128,7 @@ pub fn LeftDrawer(
                             aria-label=move || t::sidebar::more(locale.get())
                             on:click=move |_| set_show_more.update(|v| *v = !*v)
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                            <MoreHorizontal class="w-[18px] h-[18px] mx-auto"/>
                         </button>
                     </div>
 
@@ -164,7 +163,7 @@ pub fn LeftDrawer(
                                         >
                                             <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
                                             <span class=move || if pinned.get() { "text-accent" } else { "text-transparent" }>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
+                                                <Pin class="w-3.5 h-3.5"/>
                                             </span>
                                         </button>
                                     }

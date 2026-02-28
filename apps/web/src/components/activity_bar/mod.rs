@@ -8,6 +8,7 @@ mod types;
 
 pub use types::SidebarView;
 
+use crate::components::icons::MoreHorizontal;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 use popup_menu::ViewPopupMenu;
@@ -35,7 +36,6 @@ pub fn ActivityBar(
 
     let icon_btn = move |view: SidebarView| {
         let is_active = move || active_view.get() == view;
-        let icon = view.icon();
         view! {
             <button
                 class=move || format!(
@@ -45,7 +45,7 @@ pub fn ActivityBar(
                 title=move || view.title(locale.get())
                 on:click=move |_| set_active_view.set(view)
             >
-                <div class="w-4 h-4" inner_html=icon></div>
+                {view.icon_view("w-4 h-4")}
                 {move || if is_active() {
                     view! { <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-t"></div> }.into_any()
                 } else {
@@ -82,7 +82,7 @@ pub fn ActivityBar(
                     title="More..."
                     on:click=move |_| set_show_more.update(|v| *v = !*v)
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    <MoreHorizontal class="w-[18px] h-[18px]"/>
                 </button>
 
                 {move || if show_more.get() {

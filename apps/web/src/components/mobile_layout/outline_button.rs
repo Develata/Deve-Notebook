@@ -3,7 +3,8 @@
 //!
 //! Floating button to toggle the document outline panel.
 
-use crate::i18n::{Locale, t};
+use crate::components::icons::PanelLeft;
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -41,9 +42,7 @@ pub fn OutlineToggleButton(
             } else {
                 "h-8 w-8 rounded-md border border-default bg-panel text-secondary shadow-sm flex items-center justify-center"
             }>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
-                    <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h9.5A2.25 2.25 0 0117 4.25v11.5A2.25 2.25 0 0114.75 18h-9.5A2.25 2.25 0 013 15.75V4.25zM6 13a1 1 0 11-2 0 1 1 0 012 0zm0-5a1 1 0 11-2 0 1 1 0 012 0zm0-5a1 1 0 11-2 0 1 1 0 012 0zm3 10a1 1 0 110-2 1 1 0 010 2zm0-5a1 1 0 110-2 1 1 0 010 2zm0-5a1 1 0 110-2 1 1 0 010 2zm7 5a1 1 0 110-2 1 1 0 010 2zm0-5a1 1 0 110-2 1 1 0 010 2z" clip-rule="evenodd" />
-                </svg>
+                <PanelLeft class="w-5 h-5"/>
             </span>
         </button>
     }

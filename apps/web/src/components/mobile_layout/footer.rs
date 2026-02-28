@@ -7,8 +7,9 @@
 use super::footer_playback::{PlaybackNarrow, PlaybackWide};
 use super::footer_status::{LoadStatus, StatusView};
 use crate::components::branch_switcher::BranchSwitcher;
+use crate::components::icons::{ChevronDown, ChevronUp};
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
@@ -86,17 +87,13 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                     {move || if expanded.get() {
                         view! {
                             <span class="h-8 w-8 rounded-md border border-default bg-panel text-secondary flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8l5 5 5-5" />
-                                </svg>
+                                <ChevronDown class="w-4 h-4"/>
                             </span>
                         }.into_any()
                     } else {
                         view! {
                             <span class="h-8 w-8 rounded-md border border-default bg-panel text-secondary flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5-5 5 5" />
-                                </svg>
+                                <ChevronUp class="w-4 h-4"/>
                             </span>
                         }.into_any()
                     }}
