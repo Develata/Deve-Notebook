@@ -41,17 +41,21 @@
 *   **RPC Bridge**: 前端 `client.call` -> WebSocket -> 后端插件。
 *   **Resource Quotas**: CPU/Mem/Timeout 可配。
 
-### 4. AI Integration (外部 CLI 桥接)
-系统预留了专门的 `AI Chat Slot` (UI Column 5)，但不直接内置大模型推理或复杂的 Agent 状态流。
-*   **Architecture (架构)**：彻底抛弃基于 Rhai 脚本或 WASM 插件实现的 Agent 循环，转而采用 **Backend Subprocess Bridge (后端子进程桥接)** 架构。
-*   **External CLI (外部成熟的 CLI)**：后端直接调起成熟的外部 AI CLI 工具（如 `opencode` 或 `zeroclaw`）作为子进程执行。这避免了重复造轮子（开发历史记录管理、工具调度、上下文合并等）。
-    *   **zeroclaw**：同为 Rust 编写的轻量级 Agent 工具，没有沉重的 Python/Node 运行时负担，非常适合当前项目的诉求。
-*   **Workflow (生命周期)**：
-    1. UI 收集指令，发送 WebSocket 请求到 Rust 后端。
-    2. 后端 (`tokio::process::Command`) 发起子进程 `zeroclaw "用户指令"`。
-    3. 后端将子进程的标准输出流 (`stdout`) 实时管道转发给 WebSocket 返回前端渲染。
-*   **按需驻留资源 (On-demand Memory)**：外部 CLI 为按需启动进程，用完即销毁，在 768MB 的极低内存 VPS 环境中不再占用常驻内存。
-*   **安全与隐私**：外部 CLI 内在受控容器（如有配置）中执行，配置参数交由环境变量或专门的配置文件进行限制。
+### 4. AI Integration (双通道原生功能)
+系统预留了专门的 `AI Chat Slot` (UI Column 5)，提供两条原生 AI 通道。
+桥接层本身极轻量 (< 5 MB)，不违背低资源原则。
+
+*   **通道 A — Agent Bridge (默认)**：
+    *   后端 (`tokio::process::Command`) 调起外部成熟 CLI (opencode/zeroclaw) 作为子进程。
+    *   继承完整 Agent 能力（MCP、Tools、History、Token 优化），零维护成本。
+    *   内存：桥接层 ~0 MB 常驻，CLI 进程按需 15-100 MB，用完即销毁。
+*   **通道 B — AI Chat (备选)**：
+    *   内置 Rhai 插件 (`plugins/ai-chat/`)，直连 OpenAI 兼容 API。
+    *   功能边界：单/多轮对话 + 基础工具 (read_file, git ops)，最多 3 轮 tool loop。
+    *   **不做**：MCP 集成、历史持久化、复杂 Agent 状态机、Token 滑动窗口。
+    *   内存：Rhai Engine ~2-4 MB（按需加载），脚本 ~290 行，零额外依赖。
+    *   适用：用户自带 API Key 的轻量问答场景，无需安装外部工具。
+*   **前端切换**：Settings 面板 CLI/API 按钮 (`ai_mode` signal)，两条通道共享同一套 Chat UI。
 
 ### 5. Git 推送 (Git Integration)
 *   **机制**：调用 Host Functions 中的 `git_sync.rhai`。
