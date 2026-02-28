@@ -39,6 +39,7 @@ getrandom_02 = { workspace = true }
 uuid = { version = "1.8.0", features = ["v4", "js"] } 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+jsonwebtoken = "9.3"
 redb.workspace = true
 walkdir = "2.5.0"
 notify = "8.2.0"

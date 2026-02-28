@@ -19,6 +19,7 @@ pub mod keypair;
 pub mod permission;
 
 // Re-exports
-pub use self::auth::AuthManager;
+#[cfg(not(target_arch = "wasm32"))]
+pub use self::auth::{AuthConfig, Claims};
 pub use self::cipher::{EncryptedOp, RepoKey};
 pub use self::keypair::IdentityKeyPair;

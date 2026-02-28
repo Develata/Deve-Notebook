@@ -47,7 +47,7 @@
 
 ### 1.2 关键差距详解
 
-#### GAP-1: JWT 认证体系完全缺失 [CRITICAL]
+#### GAP-1: ✅ 已实现 — JWT 认证体系
 
 **Plan 要求** (`09_auth.md`):
 - 12-Factor Auth, Argon2 密码哈希 + JWT 凭证
@@ -55,23 +55,27 @@
 - HttpOnly Cookie 存储
 - 环境变量 `AUTH_SECRET`, `AUTH_USER`, `AUTH_PASS`
 
-**实际状态**: 仅存在 P2P Ed25519 握手认证，**无用户登录系统**。
+**修复**: 完整实现 JWT 认证体系，严格遵循 `09_auth.md` 规格。
 
-- 无 JWT 库依赖 (未引入 `jsonwebtoken` 等 crate)
-- 无 User model、登录/注册接口
-- `AUTH_USER` / `AUTH_PASS` 环境变量虽在 plan 中定义，代码中未读取
-- WebSocket 入口 `ws/mod.rs` 直接分配随机 UUID，无任何认证:
-  ```rust
-  let peer_id = uuid::Uuid::new_v4().to_string(); // 零鉴权
-  ```
+- **Core 层** (`crates/core/src/security/auth/`):
+  - `jwt.rs` — HS256 JWT 签发与验证，Claims `{sub, iat, exp, ver}`，24h 有效期，`ver` 字段支持令牌撤销
+  - `config.rs` — 12-Factor `AuthConfig::from_env()` 读取 `AUTH_SECRET`/`AUTH_USER`/`AUTH_PASS`/`AUTH_TOKEN_VERSION`/`AUTH_ALLOW_ANONYMOUS_LOCALHOST`
+  - `password.rs` — Argon2 密码哈希/验证 (重构自旧 `auth.rs`)
+- **CLI 层** (`apps/cli/src/server/auth/`):
+  - `handlers.rs` — POST `/api/auth/login` (凭证验证 + JWT Cookie 签发)、POST `/api/auth/logout` (Cookie 清除)、GET `/api/auth/me` (当前用户)
+  - `middleware.rs` — JWT Cookie 提取中间件，localhost 免认证旁路
+  - `brute_force.rs` — Per-IP 暴力破解防护 (5 次失败 → 15 分钟封禁，惰性 GC)
+  - `headers.rs` — 安全响应头 (X-Content-Type-Options, X-Frame-Options, CSP)
+- **依赖**: `jsonwebtoken = "9.3"` (core)、`axum-extra = { version = "0.9", features = ["cookie"] }` (cli)
+- **Cookie**: `token=<jwt>; Path=/; HttpOnly; SameSite=Strict`
+- **测试**: 9 项通过 (jwt×3, config×1, password×1, brute_force×4)
+- **构建**: `cargo check --package deve_cli` = 0 errors, 0 warnings
 
-**影响**: 任何客户端都能直接连接 WebSocket 进行读写操作，在公网部署时为严重安全漏洞。
-
-#### GAP-2: WebSocket 握手无鉴权 [CRITICAL]
+#### GAP-2: ✅ 已实现 — WebSocket 握手鉴权
 
 **Plan 要求** (`09_auth.md`): "WebSocket Auth: 必须在握手阶段验证 Ticket/Token"
 
-**实际状态**: HTTP Upgrade 层无任何 Token/Cookie 校验。P2P 层的 `SyncHello` 签名验证存在但位于协议层，攻击者可跳过直接发送其他消息类型。
+**修复**: `ws/mod.rs` 在 HTTP Upgrade 阶段从请求 Cookie 中提取 JWT 令牌并验证。验证通过后方允许协议升级。支持 `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 旁路用于本地开发。未认证请求返回 `401 Unauthorized`。
 
 #### GAP-3: ✅ 已实现 — 速率限制
 
@@ -358,7 +362,7 @@
 
 | # | 问题 | 状态 | 位置 |
 |---|:-----|:-----|:-----|
-| 5 | GAP-1: JWT 认证体系 | ⏳ 待实现 (大型功能) | 新增 `auth/` 模块 |
+| 5 | GAP-1: JWT 认证体系 | ✅ 已实现 | `security/auth/` + `server/auth/` (10 文件, 9 测试) |
 | 6 | GAP-3: 速率限制 | ✅ 已实现 | `server/rate_limit.rs` |
 | 7 | BUG-C2: `applyRemoteOpsBatch` O(N²) | ✅ 已修复 | `editor_adapter.js` |
 | 8 | BUG-C3: `on_delta.forget()` 内存泄漏 | ✅ 已修复 | `editor/hook.rs` |
@@ -414,11 +418,10 @@
 
 **修复进展** (2026-02-28 更新):
 - ✅ **P0 全部完成** (4/4): CORS 限制、Mermaid XSS、block_on 死锁、WASM expect panic
-- ✅ **P1 代码级全部完成** (6/7): 批量 dispatch O(1)、Closure 泄漏修复、wss:// 自适应、密钥权限 0600、RwLock 17 处级联修复、**Per-IP 速率限制已实现**
-- ⏳ **P1 待实现** (1/7): JWT 认证体系 (大型功能)
+- ✅ **P1 全部完成** (7/7): 批量 dispatch O(1)、Closure 泄漏修复、wss:// 自适应、密钥权限 0600、RwLock 17 处级联修复、Per-IP 速率限制、**JWT 认证体系 (HS256 + HttpOnly Cookie + 暴力破解防护 + 安全响应头)**
 - ✅ **P2 全部完成** (6/6): serve.rs 去重、VisualViewport 泄漏修复、ffi.rs to_op 标注、console.log 6 处清除、**4 个超硬限文件全部重构完成**、**i18n 硬编码 64 处全部迁移至 i18n 模块**
 - ✅ **P3 大部分完成** (6/8): init.rs _path 修复、node_role 警告、prewarm 错误日志、**CoreState 拆分为 6 个独立上下文 + 19 个组件迁移**、**Plan 文档矛盾 3 处修正**、**编译警告 11 处清零**
 - ✅ **Leptos 0.7 API 迁移完成**: 53 个编译错误全部修复 (StoredValue/trait imports)
 - ✅ **BUG-H6 已修复**: sync.rs 14 参数 → SyncContext 结构体 + 目录模块拆分
 - ✅ **清洁构建**: `cargo check --package deve_web` = 0 errors, 0 warnings
-- **剩余工作估算**: JWT 认证 (~2-3 周)、CSS Token 迁移 (~2 周)
+- **剩余工作估算**: CSS Token 迁移 (~2 周)、组件目录规范化 (P3)、lucide 图标迁移 (P3)
