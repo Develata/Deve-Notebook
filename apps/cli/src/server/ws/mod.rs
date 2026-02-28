@@ -41,7 +41,7 @@ pub async fn ws_handler(
         .map(|ci| ci.0.ip().is_loopback())
         .unwrap_or(false);
 
-    if !authed && !(config.allow_anonymous_localhost && is_local) {
+    if !(authed || config.allow_anonymous_localhost && is_local) {
         return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
 

@@ -86,3 +86,17 @@ pub fn manual_mode(locale: Locale) -> &'static str {
         Locale::Zh => "手动",
     }
 }
+
+pub fn ai_backend(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "AI Backend",
+        Locale::Zh => "AI 后端",
+    }
+}
+
+pub fn ai_backend_desc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "CLI: external agent. API: built-in OpenAI-compatible.",
+        Locale::Zh => "CLI: 外部 Agent。API: 内置 OpenAI 兼容接口。",
+    }
+}

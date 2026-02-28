@@ -40,8 +40,9 @@ pub fn make_send_text(
 
         let context = serde_json::json!({ "current_file": current_doc_path });
         let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
+        let plugin_id = core.ai_mode.get_untracked();
         core.on_plugin_call
-            .run((req_id, "agent-bridge".to_string(), "chat".to_string(), args));
+            .run((req_id, plugin_id, "chat".to_string(), args));
     })
 }
 
