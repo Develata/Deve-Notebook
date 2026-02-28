@@ -128,3 +128,31 @@ pub fn mobile_chip(locale: Locale) -> &'static str {
         Locale::Zh => "AI",
     }
 }
+
+pub fn agent_bridge(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Agent Bridge",
+        Locale::Zh => "Agent Bridge",
+    }
+}
+
+pub fn drop_files(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Drop files to add to context",
+        Locale::Zh => "拖放文件以添加到上下文",
+    }
+}
+
+pub fn example_summarize(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Summarize the project structure",
+        Locale::Zh => "帮我总结当前项目结构",
+    }
+}
+
+pub fn example_find_bugs(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Find bugs in this file",
+        Locale::Zh => "这个文件里有什么 bug？",
+    }
+}

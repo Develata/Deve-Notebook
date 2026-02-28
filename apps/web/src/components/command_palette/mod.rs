@@ -108,7 +108,7 @@ pub fn CommandPalette(
                             name="command-palette-query"
                             type="text"
                             class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
-                            placeholder=move || if locale.get() == Locale::Zh { "输入命令..." } else { "Type a command..." }
+                            placeholder=move || t::command_palette::placeholder(locale.get())
                             prop:value=move || query.get()
                             on:input=move |ev| {
                                 set_query.set(event_target_value(&ev));

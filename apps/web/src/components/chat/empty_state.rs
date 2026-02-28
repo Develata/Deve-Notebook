@@ -8,20 +8,8 @@ pub fn EmptyState(send_example: Callback<String>) -> impl IntoView {
     let send_example_2 = send_example.clone();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
-    let example_1 = move || {
-        if locale.get() == Locale::Zh {
-            "帮我总结当前项目结构"
-        } else {
-            "Summarize the project structure"
-        }
-    };
-    let example_2 = move || {
-        if locale.get() == Locale::Zh {
-            "这个文件里有什么 bug？"
-        } else {
-            "Find bugs in this file"
-        }
-    };
+    let example_1 = move || t::chat::example_summarize(locale.get());
+    let example_2 = move || t::chat::example_find_bugs(locale.get());
 
     view! {
         <div class="h-full flex flex-col items-center justify-center text-center text-[#616161] dark:text-[#858585]">

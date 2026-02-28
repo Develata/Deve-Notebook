@@ -90,3 +90,24 @@ pub fn undo(locale: Locale) -> &'static str {
         Locale::Zh => "撤销",
     }
 }
+
+pub fn read_only_watermark(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "READ ONLY",
+        Locale::Zh => "只读",
+    }
+}
+
+pub fn spectator_status(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Spectator Mode - Read Only",
+        Locale::Zh => "旁观者模式 - 只读",
+    }
+}
+
+pub fn select_document_to_edit(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Select a document to edit",
+        Locale::Zh => "请选择一个文档进行编辑",
+    }
+}

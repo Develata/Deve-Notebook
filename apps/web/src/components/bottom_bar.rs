@@ -70,13 +70,9 @@ pub fn BottomBar(
         let (done, total) = load_progress.get();
         let eta_ms = load_eta_ms.get();
         let text = if total > 0 {
-            if eta_ms > 0 {
-                format!("Loading {}/{} (~{}ms)", done, total, eta_ms)
-            } else {
-                format!("Loading {}/{}", done, total)
-            }
+            t::bottom_bar::loading_progress(locale.get(), done, total, eta_ms)
         } else {
-            "Loading...".to_string()
+            t::bottom_bar::loading(locale.get()).to_string()
         };
         view! {
             <div class="text-[10px] text-gray-500 font-mono">

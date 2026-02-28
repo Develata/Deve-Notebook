@@ -3,6 +3,7 @@
 //!
 //! 侧边栏导航条，用于在不同的视图（资源管理器、搜索、源码管理、扩展）之间切换。
 
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Hash)]
@@ -24,12 +25,12 @@ impl SidebarView {
         ]
     }
 
-    pub fn title(&self) -> &'static str {
+    pub fn title(&self, locale: Locale) -> &'static str {
         match self {
-            Self::Explorer => "Explorer",
-            Self::Search => "Search",
-            Self::SourceControl => "Source Control",
-            Self::Extensions => "Extensions",
+            Self::Explorer => t::sidebar::explorer(locale),
+            Self::Search => t::sidebar::search(locale),
+            Self::SourceControl => t::sidebar::source_control(locale),
+            Self::Extensions => t::sidebar::extensions(locale),
         }
     }
 
@@ -59,6 +60,7 @@ pub fn ActivityBar(
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     // Close menu when clicking outside (simple version)
     // For a robust implementation, use leptos_use::onClickOutside, but here we'll use a backdrop.
@@ -76,15 +78,16 @@ pub fn ActivityBar(
         }
     };
 
-    let icon_btn = move |view: SidebarView, icon: &'static str, label: &'static str| {
+    let icon_btn = move |view: SidebarView| {
         let is_active = move || active_view.get() == view;
+        let icon = view.icon();
         view! {
             <button
                 class=move || format!(
                     "p-2 mr-1 rounded-lg transition-colors relative group {}",
                     if is_active() { "text-blue-600 dark:text-blue-400" } else { "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" }
                 )
-                title=label
+                title=move || view.title(locale.get())
                 on:click=move |_| set_active_view.set(view)
             >
                 <div class="w-4 h-4" inner_html=icon></div>
@@ -119,7 +122,7 @@ pub fn ActivityBar(
                     key=|view| *view
                     children=move |view| {
                         view! {
-                             {icon_btn(view, view.icon(), view.title())}
+                             {icon_btn(view)}
                         }
                     }
                 />
@@ -150,7 +153,7 @@ pub fn ActivityBar(
                                             on:click=move |_| toggle_pin(item)
                                         >
                                             <span class=move || if is_active() { "font-bold" } else { "" }>
-                                                {item.title()}
+                                                {item.title(locale.get())}
                                             </span>
 
                                             // Pin Icon if pinned

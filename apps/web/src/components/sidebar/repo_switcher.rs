@@ -1,10 +1,11 @@
 use crate::hooks::use_core::CoreState;
-
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn RepoSwitcher() -> impl IntoView {
     let core = expect_context::<CoreState>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (show_menu, set_show_menu) = signal(false);
 
     // Derived active repo label
@@ -39,7 +40,7 @@ pub fn RepoSwitcher() -> impl IntoView {
                         on:click=move |e| e.stop_propagation()
                      >
                          <div class="px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100 dark:border-[#454545]">
-                             "Repositories"
+                             {move || t::source_control::repositories(locale.get())}
                          </div>
                          <div class="max-h-64 overflow-y-auto">
                              <For

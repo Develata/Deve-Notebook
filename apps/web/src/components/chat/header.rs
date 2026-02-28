@@ -21,7 +21,7 @@ pub fn ChatHeader(
         }>
             <span class="text-xs font-bold text-[#3b3b3b] dark:text-[#cccccc] uppercase tracking-wider">{move || t::chat::panel_title(locale.get())}</span>
             <span class="ml-2 text-[10px] font-mono px-2 py-[2px] rounded bg-[#dff0d8] dark:bg-[#2a3a2a] text-[#3c763d] dark:text-[#8bc34a] border border-[#d6e9c6] dark:border-[#4a5a3a]">
-                "Agent Bridge"
+                {move || t::chat::agent_bridge(locale.get())}
             </span>
             <div class="flex-1"></div>
             {move || if mobile {

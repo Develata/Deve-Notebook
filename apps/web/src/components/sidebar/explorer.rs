@@ -7,6 +7,7 @@
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::CoreState;
+use crate::i18n::t;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -85,7 +86,7 @@ pub fn ExplorerView(
     let active_repo_label = Signal::derive(move || {
         core.current_repo
             .get()
-            .unwrap_or_else(|| "Knowledge Base".to_string())
+            .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
     });
 
     view! {

@@ -8,6 +8,7 @@ use crate::components::header::Header;
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_layout::LayoutHookReturn;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -24,6 +25,7 @@ pub fn DesktopLayout(
     on_command: Callback<()>,
     chat_visible: ReadSignal<bool>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (
         sidebar_width,
         right_width,
@@ -134,7 +136,7 @@ pub fn DesktopLayout(
                         Some(id) => view! { <Editor doc_id=id on_stats=core.on_stats /> }.into_any(),
                         None => view! {
                             <div class="flex items-center justify-center h-full text-gray-400">
-                                "Select a document to edit"
+                                {move || t::common::select_document_to_edit(locale.get())}
                             </div>
                         }
                         .into_any(),

@@ -58,3 +58,31 @@ pub fn coming_soon(locale: Locale) -> &'static str {
         Locale::Zh => "将在 Phase 6 推出",
     }
 }
+
+pub fn sync_mode(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Sync Mode",
+        Locale::Zh => "同步模式",
+    }
+}
+
+pub fn sync_mode_desc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Auto: instant sync. Manual: review before merge.",
+        Locale::Zh => "自动: 实时同步。手动: 合并前审查。",
+    }
+}
+
+pub fn auto_mode(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Auto",
+        Locale::Zh => "自动",
+    }
+}
+
+pub fn manual_mode(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Manual",
+        Locale::Zh => "手动",
+    }
+}

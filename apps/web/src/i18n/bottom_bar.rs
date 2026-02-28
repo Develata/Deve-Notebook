@@ -93,3 +93,22 @@ pub fn loading(locale: Locale) -> &'static str {
         Locale::Zh => "加载中...",
     }
 }
+
+pub fn loading_progress(locale: Locale, done: usize, total: usize, eta_ms: u64) -> String {
+    match locale {
+        Locale::En => {
+            if eta_ms > 0 {
+                format!("Loading {}/{} (~{}ms)", done, total, eta_ms)
+            } else {
+                format!("Loading {}/{}", done, total)
+            }
+        }
+        Locale::Zh => {
+            if eta_ms > 0 {
+                format!("加载中 {}/{} (~{}ms)", done, total, eta_ms)
+            } else {
+                format!("加载中 {}/{}", done, total)
+            }
+        }
+    }
+}

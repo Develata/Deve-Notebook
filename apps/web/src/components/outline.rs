@@ -4,6 +4,7 @@
 //! 显示文档大纲，基于 Markdown 标题解析。
 
 use crate::components::outline_render::render_outline_inline;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -65,11 +66,12 @@ pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
 #[component]
 pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl IntoView {
     let headers = Memo::new(move |_| parse_headers(&content.get()));
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     view! {
         <div class="h-full overflow-y-auto py-3 px-2 select-none">
                 <div class="font-bold text-gray-500 mb-2 px-2 text-[10px] uppercase tracking-wider">
-                "Outline"
+                {move || t::sidebar::outline(locale.get())}
             </div>
             <For
                 each=move || headers.get()

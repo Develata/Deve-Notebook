@@ -2,7 +2,6 @@
 
 use js_sys::{Function, Reflect};
 use leptos::prelude::*;
-use leptos::reactive::stored_value::StoredValue;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
@@ -93,9 +92,9 @@ pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
         );
 
         // 存储闭包和 viewport 引用，on_cleanup 时移除事件监听并释放内存
-        let viewport_stored = StoredValue::new(Some(viewport));
-        let resize_stored = StoredValue::new(Some(resize_cb));
-        let scroll_stored = StoredValue::new(Some(scroll_cb));
+        let viewport_stored = StoredValue::new_local(Some(viewport));
+        let resize_stored = StoredValue::new_local(Some(resize_cb));
+        let scroll_stored = StoredValue::new_local(Some(scroll_cb));
 
         on_cleanup(move || {
             if let Some(vp) = viewport_stored.try_get_value().flatten() {
@@ -103,20 +102,24 @@ pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
                     Reflect::get(&vp, &JsValue::from_str("removeEventListener"))
                 {
                     if let Ok(remove_fn) = remove_fn.dyn_into::<Function>() {
-                        if let Some(ref cb) = resize_stored.try_get_value().flatten() {
-                            let _ = remove_fn.call2(
-                                &vp,
-                                &JsValue::from_str("resize"),
-                                cb.as_ref().unchecked_ref(),
-                            );
-                        }
-                        if let Some(ref cb) = scroll_stored.try_get_value().flatten() {
-                            let _ = remove_fn.call2(
-                                &vp,
-                                &JsValue::from_str("scroll"),
-                                cb.as_ref().unchecked_ref(),
-                            );
-                        }
+                        resize_stored.with_value(|cb_opt| {
+                            if let Some(cb) = cb_opt {
+                                let _ = remove_fn.call2(
+                                    &vp,
+                                    &JsValue::from_str("resize"),
+                                    cb.as_ref().unchecked_ref(),
+                                );
+                            }
+                        });
+                        scroll_stored.with_value(|cb_opt| {
+                            if let Some(cb) = cb_opt {
+                                let _ = remove_fn.call2(
+                                    &vp,
+                                    &JsValue::from_str("scroll"),
+                                    cb.as_ref().unchecked_ref(),
+                                );
+                            }
+                        });
                     }
                 }
             }

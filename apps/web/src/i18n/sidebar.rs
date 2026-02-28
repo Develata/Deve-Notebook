@@ -86,3 +86,24 @@ pub fn more_actions(locale: Locale) -> &'static str {
         Locale::Zh => "更多操作",
     }
 }
+
+pub fn knowledge_base(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Knowledge Base",
+        Locale::Zh => "知识库",
+    }
+}
+
+pub fn local_branch(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Local",
+        Locale::Zh => "本地",
+    }
+}
+
+pub fn local_master_branch(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Local (Master)",
+        Locale::Zh => "本地 (主分支)",
+    }
+}

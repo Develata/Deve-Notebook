@@ -3,11 +3,13 @@
 //!
 //! 显示同步模式切换按钮和手动合并时的待处理操作。
 
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn MergePanel() -> impl IntoView {
     let core = expect_context::<crate::hooks::use_core::CoreState>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     // 挂载时获取初始状态
     Effect::new(move |_| {
@@ -39,7 +41,7 @@ pub fn MergePanel() -> impl IntoView {
         <div class="p-4 bg-white border-b border-gray-200">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-gray-700">"Sync Mode:"</span>
+                    <span class="text-sm font-medium text-gray-700">{move || t::merge::sync_mode_label(locale.get())}</span>
                     <button
                         class=move || format!(
                             "px-3 py-1 text-xs font-semibold rounded-full transition-colors {}",
@@ -51,7 +53,7 @@ pub fn MergePanel() -> impl IntoView {
                         )
                         on:click=toggle_mode
                     >
-                        {move || if is_manual.get() { "Manual" } else { "Auto" }}
+                        {move || if is_manual.get() { t::merge::manual(locale.get()) } else { t::merge::auto(locale.get()) }}
                     </button>
                 </div>
 
@@ -59,7 +61,7 @@ pub fn MergePanel() -> impl IntoView {
                     view! {
                         <div class="flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
                             <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                            {move || format!("{} pending", core.pending_ops_count.get())}
+                            {move || t::merge::n_pending(locale.get(), core.pending_ops_count.get())}
                         </div>
                     }.into_any()
                 } else {
@@ -70,7 +72,7 @@ pub fn MergePanel() -> impl IntoView {
             {move || if is_manual.get() && has_pending.get() {
                 view! {
                     <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3">"Pending Operations"</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">{move || t::merge::pending_operations(locale.get())}</h3>
 
                         <div class="space-y-2 mb-4 max-h-48 overflow-y-auto">
                             <For
@@ -99,13 +101,13 @@ pub fn MergePanel() -> impl IntoView {
                                 class="flex-1 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
                                 on:click=confirm_merge
                             >
-                                "Confirm Merge"
+                                {move || t::merge::confirm_merge(locale.get())}
                             </button>
                             <button
                                 class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
                                 on:click=discard_pending
                             >
-                                "Discard"
+                                {move || t::merge::discard(locale.get())}
                             </button>
                         </div>
                     </div>

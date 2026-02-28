@@ -5,11 +5,13 @@
 //! 从底部状态栏或分支切换器触发。
 
 use crate::hooks::use_core::CoreState;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
     let core = expect_context::<CoreState>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     let confirm_merge = move |_| {
         core.on_confirm_merge.run(());
@@ -26,7 +28,7 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
             <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 flex flex-col max-h-[80vh]">
                     <div class="flex items-center justify-between mb-4 flex-none">
-                        <h2 class="text-xl font-bold text-gray-800">"Pending Merges"</h2>
+                        <h2 class="text-xl font-bold text-gray-800">{move || t::merge::pending_merges(locale.get())}</h2>
                         <button
                             class="p-1 hover:bg-gray-100 rounded-full text-gray-500"
                             on:click=move |_| set_show.set(false)
@@ -36,7 +38,7 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
                     </div>
 
                     <div class="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm mb-4 flex-none">
-                        "Manual Mode is active. These changes from peers are waiting for your approval."
+                        {move || t::merge::manual_mode_hint(locale.get())}
                     </div>
 
                     // 预览列表
@@ -50,13 +52,13 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
                                         <div class="font-medium text-gray-700 mb-2 border-b border-gray-100 pb-1">{path}</div>
                                         <div class="grid grid-cols-2 gap-2 font-mono text-xs">
                                             <div>
-                                                <div class="text-xs text-gray-400 mb-0.5">"Current"</div>
+                                                <div class="text-xs text-gray-400 mb-0.5">{move || t::merge::current(locale.get())}</div>
                                                 <div class="bg-red-50 text-red-700 p-1.5 rounded break-all">
                                                     {format!("- {}", old_preview)}
                                                 </div>
                                             </div>
                                             <div>
-                                                 <div class="text-xs text-gray-400 mb-0.5">"Incoming"</div>
+                                                 <div class="text-xs text-gray-400 mb-0.5">{move || t::merge::incoming(locale.get())}</div>
                                                 <div class="bg-green-50 text-green-700 p-1.5 rounded break-all">
                                                     {format!("+ {}", new_preview)}
                                                 </div>
@@ -69,7 +71,7 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
                         {move || if core.pending_ops_previews.get().is_empty() {
                             view! {
                                 <div class="text-center py-8 text-gray-400 italic">
-                                    "No pending operations."
+                                    {move || t::merge::no_pending(locale.get())}
                                 </div>
                             }.into_any()
                         } else {
@@ -83,13 +85,13 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
                             class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
                             on:click=discard_pending
                         >
-                            "Discard All"
+                            {move || t::merge::discard_all(locale.get())}
                         </button>
                         <button
                             class="flex-1 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm"
                             on:click=confirm_merge
                         >
-                            {move || format!("Merge {} Operations", core.pending_ops_count.get())}
+                            {move || t::merge::merge_n_ops(locale.get(), core.pending_ops_count.get())}
                         </button>
                     </div>
                 </div>

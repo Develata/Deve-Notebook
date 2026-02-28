@@ -14,12 +14,14 @@
 
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::CoreState;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
     let core = expect_context::<CoreState>();
     let search_control = expect_context::<SearchControl>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     // 挂载时请求 Shadow 列表
     Effect::new(move |_| {
@@ -30,9 +32,9 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
     let current_branch = move || match core.active_branch.get() {
         None => {
             if compact {
-                "Local".to_string()
+                t::sidebar::local_branch(locale.get()).to_string()
             } else {
-                "Local (Master)".to_string()
+                t::sidebar::local_master_branch(locale.get()).to_string()
             }
         }
         Some(peer) => {

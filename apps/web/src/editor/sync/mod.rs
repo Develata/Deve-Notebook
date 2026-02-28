@@ -11,6 +11,7 @@ use context::SyncContext;
 use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
 use deve_core::protocol::ServerMessage;
+use leptos::prelude::*;
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {

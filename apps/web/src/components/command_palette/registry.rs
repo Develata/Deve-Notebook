@@ -21,11 +21,7 @@ pub fn create_static_commands(
         // 打开文档命令 - 打开文档模态框
         Command {
             id: "open".to_string(),
-            title: if locale == Locale::Zh {
-                "打开文档".to_string()
-            } else {
-                "Open Document".to_string()
-            },
+            title: (t::command_palette::open_document)(locale).to_string(),
             action: Callback::new(move |_| {
                 on_open.run(());
                 // Do not close, as on_open re-purposes the search box
@@ -53,11 +49,7 @@ pub fn create_static_commands(
         // P2P: Switch to Peer
         Command {
             id: "switch_peer".to_string(),
-            title: if locale == Locale::Zh {
-                "P2P: 切换到节点 (Switch to Peer)".to_string()
-            } else {
-                "P2P: Switch to Peer".to_string()
-            },
+            title: (t::command_palette::switch_peer)(locale).to_string(),
             action: Callback::new(move |_| {
                 let search_control = use_context::<crate::components::main_layout::SearchControl>()
                     .expect("search control");
@@ -70,11 +62,7 @@ pub fn create_static_commands(
         // P2P: Establish Branch (Placeholder)
         Command {
             id: "establish_branch".to_string(),
-            title: if locale == Locale::Zh {
-                "P2P: 建立分支 (Establish Branch)".to_string()
-            } else {
-                "P2P: Establish Branch".to_string()
-            },
+            title: (t::command_palette::establish_branch)(locale).to_string(),
             action: Callback::new(move |_| {
                 let search_control = use_context::<crate::components::main_layout::SearchControl>()
                     .expect("search control");
@@ -87,11 +75,7 @@ pub fn create_static_commands(
         // P2P: Merge Peer
         Command {
             id: "merge_peer".to_string(),
-            title: if locale == Locale::Zh {
-                "P2P: 合并当前节点 (Merge Peer)".to_string()
-            } else {
-                "P2P: Merge Peer".to_string()
-            },
+            title: (t::command_palette::merge_peer)(locale).to_string(),
             action: Callback::new(move |_| {
                 let core = use_context::<crate::hooks::use_core::CoreState>().expect("core state");
                 if let Some(peer_id) = core.active_branch.get_untracked() {
@@ -110,11 +94,7 @@ pub fn create_static_commands(
     if let Some(chat_ctrl) = chat_control {
         commands.push(Command {
             id: "toggle_ai_chat".to_string(),
-            title: if locale == Locale::Zh {
-                "AI: 切换聊天面板".to_string()
-            } else {
-                "AI: Toggle Chat Panel".to_string()
-            },
+            title: (t::command_palette::toggle_ai_chat)(locale).to_string(),
             action: Callback::new(move |_| {
                 let current = chat_ctrl.chat_visible.get_untracked();
                 chat_ctrl.set_chat_visible.set(!current);

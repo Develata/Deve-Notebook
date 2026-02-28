@@ -73,11 +73,11 @@
 
 **实际状态**: HTTP Upgrade 层无任何 Token/Cookie 校验。P2P 层的 `SyncHello` 签名验证存在但位于协议层，攻击者可跳过直接发送其他消息类型。
 
-#### GAP-3: 速率限制缺失 [HIGH]
+#### GAP-3: ✅ 已实现 — 速率限制
 
 **Plan 要求** (`09_auth.md`): "Rate Limiting 必须实施速率限制"
 
-**实际状态**: 全代码库搜索 `rate_limit`, `throttle`, `RateLimit` 均无结果。WebSocket 仅有 16MB 消息大小限制 (DoS 防护不等于速率限制)。
+**修复**: 新增 `server/rate_limit.rs` — Per-IP 滑动窗口速率限制器。200 req/min/IP，`429 Too Many Requests` + `Retry-After` 响应头。零外部依赖，惰性 GC (> 1024 IP 时触发清理)。4 项单元测试通过。通过 `axum::middleware::from_fn` + `Extension` 集成到全部路由 (HTTP + WS)。
 
 #### GAP-4: CSS Design Token 未实现 [HIGH]
 
@@ -373,7 +373,7 @@
 | # | 问题 | 状态 | 位置 |
 |---|:-----|:-----|:-----|
 | 5 | GAP-1: JWT 认证体系 | ⏳ 待实现 (大型功能) | 新增 `auth/` 模块 |
-| 6 | GAP-3: 速率限制 | ⏳ 待实现 (中型功能) | `server/mod.rs` 路由层 |
+| 6 | GAP-3: 速率限制 | ✅ 已实现 | `server/rate_limit.rs` |
 | 7 | BUG-C2: `applyRemoteOpsBatch` O(N²) | ✅ 已修复 | `editor_adapter.js` |
 | 8 | BUG-C3: `on_delta.forget()` 内存泄漏 | ✅ 已修复 | `editor/hook.rs` |
 | 9 | SEC-H1: `ws://` → `wss://` 自适应 | ✅ 已修复 | `api/connection.rs` |
@@ -388,7 +388,7 @@
 | 13 | BUG-C1: `serve.rs` proxy 代码重复 | ✅ 已修复 | `commands/serve.rs` |
 | 14 | BUG-H3: VisualViewport 内存泄漏 | ✅ 已修复 | `mobile_layout/effects.rs` |
 | 15 | GAP-4: CSS Design Token 迁移 | ⏳ 待实现 (大型工作) | 全部组件 |
-| 16 | i18n 硬编码修复 | ⏳ 待实现 | ~12 处位置 |
+| 16 | i18n 硬编码修复 | ✅ 已完成 | 17 个组件文件 + 2 个新 i18n 模块 |
 | 17 | console.log 清理 | ✅ 已修复 (6处) | 4 个 JS 文件 |
 
 ### P3 — 低优先级 (按需修复)
@@ -427,9 +427,9 @@
 
 **修复进展** (2026-02-28 更新):
 - ✅ **P0 全部完成** (4/4): CORS 限制、Mermaid XSS、block_on 死锁、WASM expect panic
-- ✅ **P1 代码级全部完成** (5/7): 批量 dispatch O(1)、Closure 泄漏修复、wss:// 自适应、密钥权限 0600、RwLock 17 处级联修复
-- ⏳ **P1 待实现** (2/7): JWT 认证体系 (大型功能)、速率限制 (中型功能)
-- ✅ **P2 大部分完成** (5/6): serve.rs 去重、VisualViewport 泄漏修复、ffi.rs to_op 标注、console.log 6 处清除、**4 个超硬限文件全部重构完成**
+- ✅ **P1 代码级全部完成** (6/7): 批量 dispatch O(1)、Closure 泄漏修复、wss:// 自适应、密钥权限 0600、RwLock 17 处级联修复、**Per-IP 速率限制已实现**
+- ⏳ **P1 待实现** (1/7): JWT 认证体系 (大型功能)
+- ✅ **P2 全部完成** (6/6): serve.rs 去重、VisualViewport 泄漏修复、ffi.rs to_op 标注、console.log 6 处清除、**4 个超硬限文件全部重构完成**、**i18n 硬编码 64 处全部迁移至 i18n 模块**
 - ✅ **P3 部分完成** (3/5): init.rs _path 修复、node_role 警告、prewarm 错误日志
 - ✅ **BUG-H6 已修复**: sync.rs 14 参数 → SyncContext 结构体 + 目录模块拆分
-- **剩余工作估算**: JWT + 速率限制 (~2-3 周)、CSS Token 迁移 (~2 周)、i18n 硬编码 (~1 周)
+- **剩余工作估算**: JWT 认证 (~2-3 周)、CSS Token 迁移 (~2 周)

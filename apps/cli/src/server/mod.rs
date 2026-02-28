@@ -40,6 +40,7 @@ pub mod node_role;
 pub mod node_role_http;
 pub mod plugin_host;
 pub mod prewarm;
+mod rate_limit;
 pub mod security;
 mod setup;
 pub mod session;
@@ -154,6 +155,9 @@ pub async fn start_server(
         repo_key,
     });
 
+    // 速率限制: 每 IP 每分钟最多 200 次请求
+    let limiter = rate_limit::RateLimiter::new(200, std::time::Duration::from_secs(60));
+
     let app = Router::new()
         .route("/ws", get(ws::ws_handler))
         .route("/api/node/role", get(node_role_http::role))
@@ -170,13 +174,19 @@ pub async fn start_server(
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .with_state(app_state)
+        .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware))
+        .layer(axum::Extension(limiter))
         .layer(setup::build_cors_layer(port));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Server running on ws://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }
 

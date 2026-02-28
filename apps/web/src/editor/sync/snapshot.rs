@@ -7,7 +7,7 @@ use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
 use crate::editor::EditorStats;
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
-use leptos::prelude::Callback;
+use leptos::prelude::*;
 
 /// 处理 ServerMessage::Snapshot
 ///

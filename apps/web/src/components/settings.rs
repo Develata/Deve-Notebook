@@ -73,8 +73,8 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                             view! {
                                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex justify-between items-center">
                                     <div>
-                                        <span class="font-medium text-gray-700">"Sync Mode"</span>
-                                        <p class="text-xs text-gray-500">"Auto: instant sync. Manual: review before merge."</p>
+                                        <span class="font-medium text-gray-700">{move || t::settings::sync_mode(locale.get())}</span>
+                                        <p class="text-xs text-gray-500">{move || t::settings::sync_mode_desc(locale.get())}</p>
                                     </div>
                                     <div class="flex gap-2">
                                         <button
@@ -87,7 +87,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                             }
                                             on:click=move |_| core.on_set_sync_mode.run("auto".to_string())
                                         >
-                                            "Auto"
+                                            {move || t::settings::auto_mode(locale.get())}
                                         </button>
                                         <button
                                             class=move || {
@@ -99,7 +99,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                             }
                                             on:click=move |_| core.on_set_sync_mode.run("manual".to_string())
                                         >
-                                            "Manual"
+                                            {move || t::settings::manual_mode(locale.get())}
                                         </button>
                                     </div>
                                 </div>

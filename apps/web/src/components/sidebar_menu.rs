@@ -8,6 +8,7 @@
 use leptos::prelude::*;
 
 use crate::components::dropdown::{Align, AnchorRect, Dropdown};
+use crate::i18n::{Locale, t};
 
 /// 菜单操作类型
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,6 +18,18 @@ pub enum MenuAction {
     OpenInNewWindow,
     MoveTo,
     Delete,
+}
+
+impl MenuAction {
+    pub fn label(&self, locale: Locale) -> &'static str {
+        match self {
+            Self::Rename => t::context_menu::rename(locale),
+            Self::Copy => t::context_menu::copy(locale),
+            Self::OpenInNewWindow => t::context_menu::open_in_new_window(locale),
+            Self::MoveTo => t::context_menu::move_to(locale),
+            Self::Delete => t::context_menu::delete(locale),
+        }
+    }
 }
 
 /// 菜单项配置
@@ -89,12 +102,12 @@ pub fn SidebarMenu(
     #[prop(into)] on_close: Callback<()>,
     anchor: ReadSignal<Option<AnchorRect>>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     view! {
         <Dropdown anchor=anchor.into() on_close=on_close align=Align::Right offset=6.0>
             <div class="w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 text-sm text-gray-700 select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right">
                 {MENU_ITEMS.iter().map(|item| {
                     let action = item.action;
-                    let label = item.label;
                     let icon_path = item.icon;
                     let is_danger = item.is_danger;
                     let has_separator = item.is_separator_before;
@@ -130,7 +143,7 @@ pub fn SidebarMenu(
                                 >
                                     <path stroke-linecap="round" stroke-linejoin="round" d={icon_path} />
                                 </svg>
-                                {label}
+                                {move || action.label(locale.get())}
                             </button>
                         </>
                     }

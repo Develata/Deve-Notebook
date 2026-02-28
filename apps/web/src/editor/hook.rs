@@ -153,7 +153,7 @@ pub fn use_editor(
 
             setupCodeMirror(raw_element, &on_delta);
             // Store the closure so it gets dropped on cleanup instead of leaking
-            let on_delta = StoredValue::new(Some(on_delta));
+            let on_delta = StoredValue::new_local(Some(on_delta));
             on_cleanup(move || {
                 // Drop the closure to prevent memory leak
                 on_delta.update_value(|v| { v.take(); });
