@@ -1,10 +1,10 @@
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::BranchContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn RepoSwitcher() -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<BranchContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (show_menu, set_show_menu) = signal(false);
 

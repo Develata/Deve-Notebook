@@ -13,13 +13,13 @@
 //! **类型**: Core MAY (扩展可选)
 
 use crate::components::main_layout::SearchControl;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::BranchContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<BranchContext>();
     let search_control = expect_context::<SearchControl>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 

@@ -4,7 +4,7 @@
 //! 渲染单个文件变更条目，包含文件图标、名称、路径和状态标记。
 //! 支持 Stage/Unstage/Open/Discard 操作。
 
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use leptos::prelude::*;
@@ -16,7 +16,7 @@ use leptos::prelude::*;
 /// - `is_staged`: 是否为暂存区条目
 #[component]
 pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     let full_path = entry.path.clone();

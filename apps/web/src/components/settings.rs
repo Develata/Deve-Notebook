@@ -68,7 +68,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
                         // 同步模式设置
                         {move || {
-                            let core = expect_context::<crate::hooks::use_core::CoreState>();
+                            let core = expect_context::<crate::hooks::use_core::SyncMergeContext>();
                             let is_manual = core.sync_mode.get() == "manual";
                             view! {
                                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex justify-between items-center">

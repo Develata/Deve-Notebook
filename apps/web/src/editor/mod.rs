@@ -12,7 +12,7 @@
 //! - 管理大纲视图的显示/隐藏。
 
 use crate::components::layout_context::EditorContentContext;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_outline::use_outline;
 use deve_core::models::DocId;
 use leptos::html::Div;
@@ -48,7 +48,7 @@ pub fn Editor(
     let content = state.content;
 
     // 获取 CoreState 用于 Spectator 模式
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<EditorContext>();
 
     provide_context(EditorContentContext { content });
 

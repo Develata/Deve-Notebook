@@ -4,7 +4,7 @@
 //! 组合 `StagedSection` 和 `UnstagedSection` 子组件，
 //! 显示完整的变更列表视图。
 
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::SourceControlContext;
 use leptos::prelude::*;
 
 use super::staged_section::StagedSection;
@@ -17,7 +17,7 @@ use super::unstaged_section::UnstagedSection;
 /// - 分发数据到子组件
 #[component]
 pub fn Changes() -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<SourceControlContext>();
 
     // 初次加载时获取变更数据
     Effect::new(move |_| {

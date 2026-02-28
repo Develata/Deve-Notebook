@@ -4,13 +4,13 @@
 //! VS Code 风格: Timeline 视图。
 //! 左侧带有连接线和圆点。
 
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     Effect::new(move |_| {

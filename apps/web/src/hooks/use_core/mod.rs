@@ -14,13 +14,16 @@
 pub mod apply;
 pub mod callbacks;
 pub mod callbacks_sc;
+pub mod contexts;
 pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
+mod provide;
 pub mod state;
 pub mod types;
 
 pub use types::*;
+pub use contexts::*;
 
 use crate::api::WsService;
 use base64::Engine;
@@ -167,8 +170,9 @@ pub fn use_core() -> CoreState {
         set_ai_mode: signals.set_ai_mode,
     };
 
-    // 7. 提供上下文
+    // 7. 提供上下文 (CoreState 兼容 + 6 个子上下文)
     provide_context(state.clone());
+    provide::provide_sub_contexts(&state);
 
     state
 }

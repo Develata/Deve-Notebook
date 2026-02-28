@@ -6,7 +6,7 @@
 
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::types::FileActionsContext;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::{DocContext, BranchContext};
 use crate::i18n::t;
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -79,12 +79,13 @@ pub fn ExplorerView(
     provide_context(actions);
 
     // 使用 TreeDelta 增量更新的树
-    let core = expect_context::<CoreState>();
-    let tree_nodes = Memo::new(move |_| core.tree_nodes.get());
+    let doc = expect_context::<DocContext>();
+    let branch = expect_context::<BranchContext>();
+    let tree_nodes = Memo::new(move |_| doc.tree_nodes.get());
 
     // Derived active repo label
     let active_repo_label = Signal::derive(move || {
-        core.current_repo
+        branch.current_repo
             .get()
             .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
     });

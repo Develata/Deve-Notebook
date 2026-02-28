@@ -5,14 +5,14 @@
 //! - Input Message Box
 //! - Blue "Commit" button with dropdown arrow
 
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 #[component]
 pub fn Commit() -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     let (msg, set_msg) = signal(String::new());

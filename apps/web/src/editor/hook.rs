@@ -15,7 +15,7 @@ use super::ffi::{Delta, destroyEditor, set_read_only, setupCodeMirror};
 use super::playback;
 use super::sync;
 use crate::api::WsService;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::html::Div;
@@ -37,7 +37,7 @@ pub fn use_editor(
     on_stats: Option<Callback<EditorStats>>,
 ) -> EditorState {
     let ws = use_context::<WsService>().expect("WsService should be provided");
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<EditorContext>();
 
     // 文档的本地状态
     let (content, set_content) = signal("".to_string());

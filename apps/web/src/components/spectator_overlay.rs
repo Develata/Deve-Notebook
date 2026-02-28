@@ -4,7 +4,7 @@
 //! 当用户查看 Shadow Repo 时显示只读指示器。
 //! 符合 `03_ui_architecture.md` Section 1.x 规范。
 
-use crate::hooks::use_core::use_core;
+use crate::hooks::use_core::EditorContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -13,7 +13,7 @@ use leptos::prelude::*;
 /// - 渲染灰色水印覆盖层 + "READ ONLY" 指示器
 #[component]
 pub fn SpectatorOverlay() -> impl IntoView {
-    let core = use_core();
+    let core = expect_context::<EditorContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     view! {

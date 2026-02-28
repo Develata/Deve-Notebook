@@ -4,13 +4,13 @@
 //! 手动合并模式下用于审核和合并待处理操作的模态对话框。
 //! 从底部状态栏或分支切换器触发。
 
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::SyncMergeContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<SyncMergeContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     let confirm_merge = move |_| {

@@ -8,7 +8,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn MergePanel() -> impl IntoView {
-    let core = expect_context::<crate::hooks::use_core::CoreState>();
+    let core = expect_context::<crate::hooks::use_core::SyncMergeContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     // 挂载时获取初始状态

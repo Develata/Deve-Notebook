@@ -3,7 +3,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) -> impl IntoView {
-    let core = use_context::<crate::hooks::use_core::CoreState>().expect("CoreState missing");
+    let core = expect_context::<crate::hooks::use_core::BranchContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     // Derived State for Active Repo Name

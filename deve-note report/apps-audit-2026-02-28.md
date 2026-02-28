@@ -5,7 +5,7 @@
 **对照基准**: `deve-note plan/` 全部设计文档 (01-15)  
 **审查标准**: AGENTS.md 工程规范 (130 行目标 / 250 行硬限)  
 **修复日期**: 2026-02-28  
-**修复状态**: P0 全部完成 (4/4) | P1 大部分完成 (7/7 代码级) | P2 大部分完成 (5/6) | P3 部分完成 (3/5)
+**修复状态**: P0 全部完成 (4/4) | P1 大部分完成 (7/7 代码级) | P2 全部完成 (6/6) | P3 部分完成 (4/6)
 
 ---
 
@@ -399,7 +399,7 @@
 | 19 | GAP-5: E2EE 客户端密钥交换 | `editor/sync.rs` |
 | 20 | 组件目录结构规范化 | `components/` |
 | 21 | lucide-leptos 图标迁移 | 全部组件 |
-| 22 | CoreState 拆分为独立 Context | `hooks/use_core/` |
+| 22 | CoreState 拆分为独立 Context | ✅ 已完成 | 6 个子上下文 + 19 个组件迁移 |
 | 23 | Plan 文档矛盾修正 | `deve-note plan/` |
 
 ---
@@ -430,6 +430,7 @@
 - ✅ **P1 代码级全部完成** (6/7): 批量 dispatch O(1)、Closure 泄漏修复、wss:// 自适应、密钥权限 0600、RwLock 17 处级联修复、**Per-IP 速率限制已实现**
 - ⏳ **P1 待实现** (1/7): JWT 认证体系 (大型功能)
 - ✅ **P2 全部完成** (6/6): serve.rs 去重、VisualViewport 泄漏修复、ffi.rs to_op 标注、console.log 6 处清除、**4 个超硬限文件全部重构完成**、**i18n 硬编码 64 处全部迁移至 i18n 模块**
-- ✅ **P3 部分完成** (3/5): init.rs _path 修复、node_role 警告、prewarm 错误日志
+- ✅ **P3 部分完成** (4/6): init.rs _path 修复、node_role 警告、prewarm 错误日志、**CoreState 拆分为 6 个独立上下文 + 19 个组件迁移**
+- ✅ **Leptos 0.7 API 迁移完成**: 53 个编译错误全部修复 (StoredValue/trait imports)
 - ✅ **BUG-H6 已修复**: sync.rs 14 参数 → SyncContext 结构体 + 目录模块拆分
 - **剩余工作估算**: JWT 认证 (~2-3 周)、CSS Token 迁移 (~2 周)

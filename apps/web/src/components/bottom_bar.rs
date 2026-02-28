@@ -6,7 +6,7 @@
 use crate::api::ConnectionStatus;
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::editor::EditorStats;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -15,7 +15,7 @@ pub fn BottomBar(
     status: ReadSignal<ConnectionStatus>,
     stats: ReadSignal<EditorStats>,
 ) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<EditorContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let max_ver = core.doc_version;
     let curr_ver = core.playback_version;

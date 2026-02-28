@@ -5,7 +5,7 @@
 //! 支持折叠/展开 (VS Code 风格)。
 
 use super::change_item::ChangeItem;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
@@ -13,7 +13,7 @@ use leptos::prelude::*;
 /// 工作区组件
 #[component]
 pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (bulk_busy, set_bulk_busy) = signal(false);
 
