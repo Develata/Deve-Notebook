@@ -87,6 +87,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_current_repo = signals.set_current_repo;
     let set_chat_messages = signals.set_chat_messages;
     let set_is_chat_streaming = signals.set_is_chat_streaming;
+    let set_system_metrics = signals.set_system_metrics;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
 
     Effect::new(move |_| {
@@ -220,7 +221,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                         set_nodes.update(|nodes| apply_tree_delta(nodes, delta));
                     });
                 }
-                _ => {}
+                other => effects_msg::handle_remaining(other, set_system_metrics),
             }
         }
     });

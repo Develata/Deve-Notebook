@@ -3,12 +3,12 @@
 
 use crate::components::activity_bar::SidebarView;
 use crate::components::chat::ChatPanel;
+use crate::components::dashboard::Dashboard;
 use crate::components::diff_view::DiffView;
 use crate::components::header::Header;
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_layout::LayoutHookReturn;
-use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -25,7 +25,6 @@ pub fn DesktopLayout(
     on_command: Callback<()>,
     chat_visible: ReadSignal<bool>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (
         sidebar_width,
         right_width,
@@ -134,12 +133,7 @@ pub fn DesktopLayout(
 
                     match core.current_doc.get() {
                         Some(id) => view! { <Editor doc_id=id on_stats=core.on_stats /> }.into_any(),
-                        None => view! {
-                            <div class="flex items-center justify-center h-full text-muted">
-                                {move || t::common::select_document_to_edit(locale.get())}
-                            </div>
-                        }
-                        .into_any(),
+                        None => view! { <Dashboard /> }.into_any(),
                     }
                 }}
             </div>

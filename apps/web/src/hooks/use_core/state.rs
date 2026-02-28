@@ -10,6 +10,7 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
+use super::contexts::SystemMetricsData;
 use super::diff_session::DiffSessionWire;
 use super::types::{ChatMessage, PeerSession};
 
@@ -96,6 +97,10 @@ pub struct CoreSignals {
     // 文件树 (增量更新)
     pub tree_nodes: ReadSignal<Vec<FileNode>>,
     pub set_tree_nodes: WriteSignal<Vec<FileNode>>,
+
+    // Dashboard 系统指标
+    pub system_metrics: ReadSignal<Option<SystemMetricsData>>,
+    pub set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
 }
 
 /// 初始化所有核心信号
@@ -107,7 +112,7 @@ pub fn init_signals() -> CoreSignals {
     let (plugin_response, set_plugin_response) = signal(None);
     let (chat_messages, set_chat_messages) = signal(Vec::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
-    let (ai_mode, set_ai_mode) = signal("build".to_string());
+    let (ai_mode, set_ai_mode) = signal("agent-bridge".to_string());
     let (search_results, set_search_results) = signal(Vec::new());
     let (load_state, set_load_state) = signal("ready".to_string());
     let (load_progress, set_load_progress) = signal((0usize, 0usize));
@@ -127,6 +132,7 @@ pub fn init_signals() -> CoreSignals {
     let (commit_history, set_commit_history) = signal(Vec::new());
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
+    let (system_metrics, set_system_metrics) = signal(None::<SystemMetricsData>);
 
     CoreSignals {
         docs,
@@ -182,5 +188,7 @@ pub fn init_signals() -> CoreSignals {
         set_diff_content,
         tree_nodes,
         set_tree_nodes,
+        system_metrics,
+        set_system_metrics,
     }
 }

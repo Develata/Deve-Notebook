@@ -1,4 +1,5 @@
 use crate::server::handlers::sync;
+use crate::server::metrics;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::protocol::ClientMessage;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ pub(crate) async fn route_message(
     session: &mut WsSession,
     msg: ClientMessage,
 ) {
+    metrics::increment_ops();
     match msg {
         ClientMessage::SyncHello {
             peer_id,

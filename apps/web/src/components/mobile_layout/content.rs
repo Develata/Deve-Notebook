@@ -1,9 +1,10 @@
 // apps/web/src/components/mobile_layout/content.rs
 //! # Mobile Content
 
+use crate::components::dashboard::Dashboard;
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -43,12 +44,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                             view! { <Editor doc_id=id on_stats=core.on_stats embedded=true /> }
                                 .into_any()
                         }
-                        None => view! {
-                            <div class="flex items-center justify-center h-full text-muted">
-                                {move || t::common::select_document(locale.get())}
-                            </div>
-                        }
-                        .into_any(),
+                        None => view! { <Dashboard /> }.into_any(),
                     }
                 }}
             </div>

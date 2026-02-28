@@ -8,6 +8,8 @@ use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
+use deve_core::protocol::ServerMessage;
+
 use super::types::{ChatMessage, PeerSession};
 
 /// 处理 DocList 消息
@@ -111,4 +113,23 @@ pub fn handle_repo_switched(
 
     ws.send(ClientMessage::GetChanges);
     ws.send(ClientMessage::GetCommitHistory { limit: 50 });
+}
+
+/// 处理 effects.rs 主 match 未覆盖的剩余消息
+///
+/// 当前仅处理 `SystemMetrics`，其余忽略。
+/// 随着消息类型增加，可继续在此扩展。
+pub fn handle_remaining(
+    msg: ServerMessage,
+    set_system_metrics: WriteSignal<Option<super::contexts::SystemMetricsData>>,
+) {
+    if let ServerMessage::SystemMetrics {
+        cpu_usage_percent, memory_used_mb, active_connections,
+        ops_processed, uptime_secs, db_size_bytes, doc_count,
+    } = msg {
+        set_system_metrics.set(Some(super::contexts::SystemMetricsData {
+            cpu_usage_percent, memory_used_mb, active_connections,
+            ops_processed, uptime_secs, db_size_bytes, doc_count,
+        }));
+    }
 }

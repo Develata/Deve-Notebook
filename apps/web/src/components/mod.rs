@@ -28,6 +28,7 @@ pub mod quick_open;
 pub mod search_box;
 pub mod spectator_overlay;
 
+pub mod dashboard;
 pub mod desktop_layout;
 pub mod diff_view;
 pub mod mobile_layout;

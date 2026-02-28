@@ -37,6 +37,7 @@ pub mod auth;
 pub mod channel;
 pub mod handlers;
 pub mod mcp;
+pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;
 pub mod plugin_host;
@@ -78,6 +79,7 @@ pub async fn start_server(
         main_port: port,
     });
     ai_chat::init_chat_stream_handler()?;
+    metrics::init_start_time();
     let mcp_manager = Arc::new(setup::load_mcp_manager(&vault_path));
     let _ = host::set_mcp_manager(mcp_manager.clone());
     // Create broadcast channel for WS server
@@ -155,6 +157,9 @@ pub async fn start_server(
         identity_key: key_pair,
         repo_key,
     });
+
+    // 启动系统指标广播任务 (每 5 秒)
+    metrics::spawn_broadcaster(app_state.clone());
 
     // --- 认证配置加载 ---
     let auth_config = load_auth_config();

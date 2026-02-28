@@ -183,4 +183,20 @@ pub enum ServerMessage {
     },
     /// 密钥请求被拒绝 (无认证或服务端无密钥)
     KeyDenied { reason: String },
+
+    // === Server Dashboard Metrics (仪表盘指标) ===
+    /// 服务端定期推送系统指标 (每 5 秒)
+    ///
+    /// **Invariant**: 仅推送给已认证客户端，数据为瞬时快照。
+    /// **Pre-condition**: 服务端 metrics 采集任务已启动。
+    /// **Post-condition**: 客户端 Dashboard 组件消费并展示。
+    SystemMetrics {
+        cpu_usage_percent: f32,
+        memory_used_mb: u64,
+        active_connections: u32,
+        ops_processed: u64,
+        uptime_secs: u64,
+        db_size_bytes: u64,
+        doc_count: u32,
+    },
 }

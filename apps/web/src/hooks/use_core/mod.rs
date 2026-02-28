@@ -170,9 +170,12 @@ pub fn use_core() -> CoreState {
         set_ai_mode: signals.set_ai_mode,
     };
 
-    // 7. 提供上下文 (CoreState 兼容 + 6 个子上下文)
+    // 7. 提供上下文 (CoreState 兼容 + 6 个子上下文 + Dashboard)
     provide_context(state.clone());
     provide::provide_sub_contexts(&state);
+    provide_context(contexts::DashboardContext {
+        metrics: signals.system_metrics,
+    });
 
     state
 }
