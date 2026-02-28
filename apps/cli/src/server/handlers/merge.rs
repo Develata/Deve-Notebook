@@ -13,7 +13,7 @@ use std::sync::Arc;
 /// 获取当前同步模式
 pub async fn handle_get_sync_mode(state: &Arc<AppState>, ch: &DualChannel) {
     let mode = {
-        let engine = state.sync_engine.read().unwrap();
+        let engine = state.sync_engine.read().unwrap_or_else(|e| e.into_inner());
         engine.sync_mode()
     };
 
@@ -37,7 +37,7 @@ pub async fn handle_set_sync_mode(state: &Arc<AppState>, ch: &DualChannel, mode:
     };
 
     {
-        let mut engine = state.sync_engine.write().unwrap();
+        let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
         engine.set_sync_mode(new_mode);
     }
 
@@ -54,7 +54,7 @@ pub async fn handle_set_sync_mode(state: &Arc<AppState>, ch: &DualChannel, mode:
 /// 获取待合并操作及其预览
 pub async fn handle_get_pending_ops(state: &Arc<AppState>, ch: &DualChannel) {
     let pending_count = {
-        let engine = state.sync_engine.read().unwrap();
+        let engine = state.sync_engine.read().unwrap_or_else(|e| e.into_inner());
         engine.pending_ops_count()
     };
 
@@ -78,7 +78,7 @@ pub async fn handle_get_pending_ops(state: &Arc<AppState>, ch: &DualChannel) {
 /// 确认合并所有待处理的操作
 pub async fn handle_confirm_merge(state: &Arc<AppState>, ch: &DualChannel) {
     let result = {
-        let mut engine = state.sync_engine.write().unwrap();
+        let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
         engine.merge_pending()
     };
 
@@ -99,7 +99,7 @@ pub async fn handle_confirm_merge(state: &Arc<AppState>, ch: &DualChannel) {
 /// 丢弃所有待处理的操作
 pub async fn handle_discard_pending(state: &Arc<AppState>, ch: &DualChannel) {
     {
-        let mut engine = state.sync_engine.write().unwrap();
+        let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
         engine.clear_pending();
     }
 

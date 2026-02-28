@@ -30,18 +30,18 @@ pub fn run(ledger_dir: &PathBuf, vault_path: &PathBuf, snapshot_depth: usize) ->
         vault_path.clone(),
     ));
 
-    // 3. 创建并启动 Watcher
-    let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path.clone());
-    println!("启动 Watcher: {:?}", vault_path);
-    println!("按 Ctrl+C 停止...");
-    watcher.watch()?;
-
-    // 4. 注册 Ctrl+C 信号处理
+    // 3. 注册 Ctrl+C 信号处理 (必须在 watcher.watch() 之前)
     ctrlc::set_handler(move || {
         println!("\n收到退出信号，正在停止...");
         RUNNING.store(false, Ordering::SeqCst);
     })
     .expect("无法设置 Ctrl+C 处理器");
+
+    // 4. 创建并启动 Watcher
+    let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path.clone());
+    println!("启动 Watcher: {:?}", vault_path);
+    println!("按 Ctrl+C 停止...");
+    watcher.watch()?;
 
     // 5. 阻塞主线程直到收到退出信号
     while RUNNING.load(Ordering::SeqCst) {

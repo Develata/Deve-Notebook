@@ -110,11 +110,6 @@ export const hybridPlugin = ViewPlugin.fromClass(
           from,
           to,
           enter: (node) => {
-            // DEBUG: Log node name
-            if (node.name === "QuoteMark") {
-                console.log("[HybridDebug] QuoteMark found at:", node.from, node.to);
-            }
-
             // 跳过数学公式区域
             if (isInsideMath(node.from, node.to)) return;
             

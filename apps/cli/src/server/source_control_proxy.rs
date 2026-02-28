@@ -20,10 +20,21 @@ impl RemoteSourceControlApi {
     }
 }
 
+/// 在异步上下文中安全执行阻塞 HTTP 请求
+///
+/// # 不变量
+/// - 使用 `block_in_place` 避免在 Tokio 工作线程上死锁
+fn block_on_safe<F, T>(f: F) -> T
+where
+    F: std::future::Future<Output = T>,
+{
+    tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(f))
+}
+
 impl Repository for RemoteSourceControlApi {
     fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
         let url = format!("{}/api/repo/docs", self.base_url);
-        let res = tokio::runtime::Handle::current().block_on(async {
+        let res = block_on_safe(async {
             self.client
                 .get(&url)
                 .send()
@@ -36,7 +47,7 @@ impl Repository for RemoteSourceControlApi {
 
     fn get_doc_content(&self, doc_id: DocId) -> Result<String> {
         let url = format!("{}/api/repo/doc", self.base_url);
-        let res = tokio::runtime::Handle::current().block_on(async {
+        let res = block_on_safe(async {
             self.client
                 .get(&url)
                 .query(&[("doc_id", doc_id.to_string())])
@@ -50,7 +61,7 @@ impl Repository for RemoteSourceControlApi {
 
     fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
         let url = format!("{}/api/sc/status", self.base_url);
-        let res = tokio::runtime::Handle::current().block_on(async {
+        let res = block_on_safe(async {
             self.client
                 .get(&url)
                 .send()
@@ -63,7 +74,7 @@ impl Repository for RemoteSourceControlApi {
 
     fn diff_doc_path(&self, path: &str) -> Result<String> {
         let url = format!("{}/api/sc/diff", self.base_url);
-        let res = tokio::runtime::Handle::current().block_on(async {
+        let res = block_on_safe(async {
             self.client
                 .get(&url)
                 .query(&[("path", path)])
@@ -77,7 +88,7 @@ impl Repository for RemoteSourceControlApi {
 
     fn stage_file(&self, path: &str) -> Result<()> {
         let url = format!("{}/api/sc/stage", self.base_url);
-        tokio::runtime::Handle::current().block_on(async {
+        block_on_safe(async {
             self.client
                 .post(&url)
                 .json(&serde_json::json!({"path": path}))
@@ -91,7 +102,7 @@ impl Repository for RemoteSourceControlApi {
 
     fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
         let url = format!("{}/api/sc/commit", self.base_url);
-        let res = tokio::runtime::Handle::current().block_on(async {
+        let res = block_on_safe(async {
             self.client
                 .post(&url)
                 .json(&serde_json::json!({"message": message}))

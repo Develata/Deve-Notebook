@@ -81,11 +81,10 @@ pub fn use_editor(
     let ws_clone_2 = ws.clone();
     Effect::new(move |_| {
         if let Some(msg) = ws_clone_2.msg.get() {
-            sync::handle_server_message(
-                msg,
+            let ctx = sync::context::SyncContext {
                 doc_id,
                 client_id,
-                &ws_clone_2,
+                ws: &ws_clone_2,
                 set_content,
                 local_version,
                 set_local_version,
@@ -96,7 +95,8 @@ pub fn use_editor(
                 set_load_progress,
                 set_load_eta_ms,
                 on_stats,
-            );
+            };
+            sync::handle_server_message(msg, &ctx);
         }
     });
 
@@ -152,7 +152,12 @@ pub fn use_editor(
             }) as Box<dyn FnMut(String)>);
 
             setupCodeMirror(raw_element, &on_delta);
-            on_delta.forget();
+            // Store the closure so it gets dropped on cleanup instead of leaking
+            let on_delta = StoredValue::new(Some(on_delta));
+            on_cleanup(move || {
+                // Drop the closure to prevent memory leak
+                on_delta.update_value(|v| { v.take(); });
+            });
         }
     });
 

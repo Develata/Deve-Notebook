@@ -97,7 +97,7 @@ pub async fn handle_rename_doc(
                 if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
                     tracing::error!("广播父目录失败: {:?}", e);
                 }
-                let delta = state.tree_manager.write().unwrap().update_node(
+                let delta = state.tree_manager.write().unwrap_or_else(|e| e.into_inner()).update_node(
                     node_id,
                     meta.parent_id,
                     meta.name.clone(),

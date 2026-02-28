@@ -13,7 +13,9 @@ pub struct NodeRole {
 static NODE_ROLE: OnceLock<Arc<NodeRole>> = OnceLock::new();
 
 pub fn set_node_role(role: NodeRole) {
-    let _ = NODE_ROLE.set(Arc::new(role));
+    if NODE_ROLE.set(Arc::new(role)).is_err() {
+        tracing::warn!("NodeRole already set, ignoring duplicate call");
+    }
 }
 
 pub fn get_node_role() -> Arc<NodeRole> {

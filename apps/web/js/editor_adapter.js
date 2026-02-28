@@ -1,5 +1,5 @@
 import { EditorView } from "@codemirror/view";
-import { EditorState, Compartment } from "@codemirror/state";
+import { EditorState } from "@codemirror/state";
 import {
   keymap,
   highlightSpecialChars,
@@ -32,20 +32,18 @@ import { blockquoteBorderPlugin } from "./extensions/blockquote_border.js";
 import { codeToolbarPlugin } from "./extensions/code_toolbar.js"; // [NEW]
 import { hyperlinkClickPlugin } from "./extensions/hyperlink_click.js"; // [NEW] Ctrl+Click 链接跳转
 
-console.log("Editor Adapter v5 - Native Selection Mode");
-
-
-// --- 内部状态 (Internal State) ---
-let activeView = null;
-let isRemote = false;
-let readOnlyCompartment = new Compartment();
-
-// --- 回调函数 (Callbacks) ---
-/** @type {((changes: {from: number, to: number, insert: string}[]) => void) | null} */
-let onDeltaCallback = null;
+// --- 共享状态与远程操作 (从子模块导入) ---
+import { ctx } from "./editor_state.js";
+import {
+  getEditorContent,
+  applyRemoteContent,
+  applyRemoteOp,
+  applyRemoteOpsBatch,
+  scrollGlobal,
+  setReadOnly,
+} from "./editor_remote_ops.js";
 
 // --- 基础设置 (Basic Setup) ---
-// 注意: 移除了 drawSelection()，使用浏览器原生选择来避免滚动时选择背景消失的问题
 function closeBrackets() {
   return [];
 }
@@ -55,7 +53,6 @@ const manualBasicSetup = [
   highlightActiveLineGutter(),
   highlightSpecialChars(),
   history(),
-  // drawSelection() 已移除 - 使用原生浏览器选择以避免滚动同步问题
   dropCursor(),
   EditorState.allowMultipleSelections.of(true),
   syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -68,41 +65,27 @@ const manualBasicSetup = [
 
 /**
  * 将 CodeMirror ChangeSet 转换为 Delta 数组
- * @param {import("@codemirror/state").ChangeSet} changes
- * @returns {{from: number, to: number, insert: string}[]}
  */
 function changeSetToDeltas(changes) {
   const deltas = [];
   changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-    deltas.push({
-      from: fromA,
-      to: toA,
-      insert: inserted.toString(),
-    });
+    deltas.push({ from: fromA, to: toA, insert: inserted.toString() });
   });
   return deltas;
 }
 
 // --- 核心初始化 (Core Initialization) ---
-/**
- * 初始化 CodeMirror 编辑器
- * @param {HTMLElement} element - 容器元素
- * @param {(changes: {from: number, to: number, insert: string}[]) => void} onDelta - Delta 回调 (性能优化)
- */
 export function initCodeMirror(element, onDelta) {
-  console.log("Initializing Editor (Delta Mode)");
   if (!element) return;
   element.innerHTML = "";
-
-  // 保存回调
-  onDeltaCallback = onDelta;
+  ctx.onDeltaCallback = onDelta;
 
   try {
     const startState = EditorState.create({
       doc: "# Loading...",
       extensions: [
         ...manualBasicSetup,
-        readOnlyCompartment.of(EditorState.readOnly.of(false)),
+        ctx.readOnlyCompartment.of(EditorState.readOnly.of(false)),
         EditorView.lineWrapping,
         markdown({
           base: markdownLanguage,
@@ -117,31 +100,24 @@ export function initCodeMirror(element, onDelta) {
         mermaidStateField,
         copyTexExtension,
         blockStyling,
-        listMarkerPlugin,        // [NEW] 列表圆点渲染
-        blockquoteBorderPlugin,  // [NEW] 引用块边框
-        codeToolbarPlugin,       // [NEW] 代码块工具栏 (Copy/Lang)
-        hyperlinkClickPlugin,    // [NEW] Ctrl+Click 链接跳转
-
-        // 性能优化: 发送 Delta 而不是全文
+        listMarkerPlugin,
+        blockquoteBorderPlugin,
+        codeToolbarPlugin,
+        hyperlinkClickPlugin,
 
         EditorView.updateListener.of((v) => {
-          if (isRemote) return;
-          if (v.docChanged && onDeltaCallback) {
+          if (ctx.isRemote) return;
+          if (v.docChanged && ctx.onDeltaCallback) {
             const deltas = changeSetToDeltas(v.changes);
-            onDeltaCallback(JSON.stringify(deltas));
+            ctx.onDeltaCallback(JSON.stringify(deltas));
           }
         }),
       ],
     });
 
-    const view = new EditorView({
-      state: startState,
-      parent: element,
-    });
-
-    activeView = view;
+    const view = new EditorView({ state: startState, parent: element });
+    ctx.activeView = view;
     window._debug_view = view;
-
     return view;
   } catch (e) {
     console.error("Init Error:", e);
@@ -149,131 +125,16 @@ export function initCodeMirror(element, onDelta) {
   }
 }
 
-// --- 清理函数 (Cleanup) ---
-/**
- * 销毁编辑器实例，释放资源
- */
 export function destroyEditor() {
-  if (activeView) {
-    activeView.destroy();
-    activeView = null;
-    onDeltaCallback = null;
-    console.log("Editor destroyed");
+  if (ctx.activeView) {
+    ctx.activeView.destroy();
+    ctx.activeView = null;
+    ctx.onDeltaCallback = null;
   }
 }
 
-// --- 公共 API (Public API) ---
-
-export function getEditorContent() {
-  return activeView ? activeView.state.doc.toString() : "";
-}
-
-export function applyRemoteContent(text) {
-  if (activeView) {
-    isRemote = true;
-    try {
-      activeView.dispatch({
-        changes: {
-          from: 0,
-          to: activeView.state.doc.length,
-          insert: text,
-        },
-      });
-    } catch (e) {
-      console.error("applyRemoteContent Error:", e);
-    } finally {
-      isRemote = false;
-    }
-  }
-}
-
-export function applyRemoteOp(op_json) {
-  if (activeView) {
-    isRemote = true;
-    try {
-      const op = JSON.parse(op_json);
-      if (op.Insert) {
-        activeView.dispatch({
-          changes: { from: op.Insert.pos, insert: op.Insert.content },
-        });
-      } else if (op.Delete) {
-        activeView.dispatch({
-          changes: {
-            from: op.Delete.pos,
-            to: op.Delete.pos + op.Delete.len,
-            insert: "",
-          },
-        });
-      }
-    } catch (e) {
-      console.error("applyRemoteOp Error:", e);
-    } finally {
-      isRemote = false;
-    }
-  }
-}
-
-export function applyRemoteOpsBatch(ops_json) {
-  if (activeView) {
-    isRemote = true;
-    try {
-      const ops = JSON.parse(ops_json);
-      if (!Array.isArray(ops)) return;
-      for (const op of ops) {
-        if (op.Insert) {
-          activeView.dispatch({
-            changes: { from: op.Insert.pos, insert: op.Insert.content },
-          });
-        } else if (op.Delete) {
-          activeView.dispatch({
-            changes: {
-              from: op.Delete.pos,
-              to: op.Delete.pos + op.Delete.len,
-              insert: "",
-            },
-          });
-        }
-      }
-    } catch (e) {
-      console.error("applyRemoteOpsBatch Error:", e);
-    } finally {
-      isRemote = false;
-    }
-  }
-}
-
-export function scrollGlobal(lineNumber) {
-  if (!activeView || !activeView.state) return;
-
-  const doc = activeView.state.doc;
-  const lines = doc.lines;
-  if (lineNumber < 1) lineNumber = 1;
-  if (lineNumber > lines) lineNumber = lines;
-
-  const line = doc.line(lineNumber);
-
-  activeView.dispatch({
-    effects: [
-      EditorView.scrollIntoView(line.from, { y: "start", yMargin: 20 }),
-    ],
-    selection: { anchor: line.from },
-  });
-  activeView.focus();
-}
-
-export function setReadOnly(readOnly) {
-  if (activeView) {
-    activeView.dispatch({
-      effects: readOnlyCompartment.reconfigure(
-        EditorState.readOnly.of(readOnly),
-      ),
-    });
-    activeView.contentDOM.setAttribute(
-      "contenteditable",
-      (!readOnly).toString(),
-    );
-  }
-}
+// --- Re-export for window bindings ---
+export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly };
 
 // --- 暴露到全局作用域供 WASM 调用 ---
 window.setupCodeMirror = initCodeMirror;

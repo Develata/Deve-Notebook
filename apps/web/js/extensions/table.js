@@ -33,7 +33,6 @@ export class TableWidget extends WidgetType {
         // 渲染表头
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        console.log("Header Data:", this.tableData.header);
         
         this.tableData.header.forEach((cell, i) => {
             const th = document.createElement('th');

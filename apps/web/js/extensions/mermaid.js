@@ -8,7 +8,7 @@ import mermaid from "mermaid"; // 静态导入 (已打包)
 mermaid.initialize({
     startOnLoad: false,
     theme: 'default',
-    securityLevel: 'loose', // 允许 HTML 标签
+    securityLevel: 'strict', // 禁止 HTML 注入 (XSS 防护)
 });
 
 /**

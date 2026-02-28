@@ -24,7 +24,7 @@ pub async fn handle_sync_hello(
     tracing::info!("Handling SyncHello from {}", peer_id);
 
     // 1. 获取 SyncEngine
-    let mut engine = state.sync_engine.write().unwrap();
+    let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
     let local_peer_id = engine.local_peer_id.clone();
     let local_vector = engine.version_vector().clone();
 
@@ -100,7 +100,7 @@ pub async fn handle_sync_request(
     ch: &DualChannel,
     requests: Vec<(PeerId, (u64, u64))>,
 ) {
-    let engine = state.sync_engine.read().unwrap();
+    let engine = state.sync_engine.read().unwrap_or_else(|e| e.into_inner());
     let mut ops_to_push = Vec::new();
 
     for (peer_id, range) in requests {
@@ -129,7 +129,7 @@ pub async fn handle_sync_push(
     peer_id: PeerId,
     ops: Vec<deve_core::security::EncryptedOp>,
 ) {
-    let mut engine = state.sync_engine.write().unwrap();
+    let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
 
     let repo_id = super::get_repo_id(state);
     let response = sync_proto::SyncResponse {
@@ -157,7 +157,7 @@ pub async fn handle_sync_snapshot_request(
     peer_id: PeerId,
     repo_id: deve_core::models::RepoId,
 ) {
-    let engine = state.sync_engine.read().unwrap();
+    let engine = state.sync_engine.read().unwrap_or_else(|e| e.into_inner());
     tracing::info!("Handling SnapshotRequest from {}", peer_id);
 
     let request = deve_core::sync::protocol::SyncSnapshotRequest {
@@ -194,7 +194,7 @@ pub async fn handle_sync_push_snapshot(
     repo_id: deve_core::models::RepoId,
     ops: Vec<deve_core::security::EncryptedOp>,
 ) {
-    let mut engine = state.sync_engine.write().unwrap();
+    let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
     tracing::info!("Handling PushSnapshot from {} ({} ops)", peer_id, ops.len());
 
     let response = deve_core::sync::protocol::SyncResponse {

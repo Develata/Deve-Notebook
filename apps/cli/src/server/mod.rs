@@ -17,7 +17,6 @@ use axum::{
     routing::{get, post},
 };
 use deve_core::ledger::RepoManager;
-use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
@@ -28,7 +27,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::RwLock;
 use tokio::sync::broadcast;
-use tower_http::cors::{Any, CorsLayer};
 
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
@@ -43,6 +41,7 @@ pub mod node_role_http;
 pub mod plugin_host;
 pub mod prewarm;
 pub mod security;
+mod setup;
 pub mod session;
 pub mod source_control_proxy;
 pub mod ws;
@@ -77,7 +76,7 @@ pub async fn start_server(
         main_port: port,
     });
     ai_chat::init_chat_stream_handler()?;
-    let mcp_manager = Arc::new(load_mcp_manager(&vault_path));
+    let mcp_manager = Arc::new(setup::load_mcp_manager(&vault_path));
     let _ = host::set_mcp_manager(mcp_manager.clone());
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
@@ -133,38 +132,13 @@ pub async fn start_server(
     };
 
     // SPAWN WATCHER
-    let tx_for_watcher = tx.clone();
-    let sm_for_watcher = sync_manager.clone();
-    let vp_for_watcher = vault_path.clone();
-    let tm_for_watcher = tree_manager.clone();
-    let repo_for_watcher = repo.clone();
-
-    tokio::task::spawn_blocking(move || {
-        use deve_core::watcher::FsEventType;
-
-        let watcher = deve_core::watcher::Watcher::new(sm_for_watcher, vp_for_watcher.clone())
-            .with_callback(move |event| match event {
-                FsEventType::DocChange(msgs) => {
-                    for msg in msgs {
-                        if let Ok(nodes) = repo_for_watcher.list_local_nodes(None)
-                            && let Ok(mut tm) = tm_for_watcher.write()
-                        {
-                            tm.init_from_nodes(nodes);
-                            let delta = tm.build_init_delta();
-                            let _ = tx_for_watcher.send(ServerMessage::TreeUpdate(delta));
-                        }
-                        let _ = tx_for_watcher.send(msg);
-                    }
-                }
-                FsEventType::DirChange => {
-                    tracing::warn!("DirChange detected: ignore without Node update");
-                }
-            });
-
-        if let Err(e) = watcher.watch() {
-            tracing::error!("Watcher failed: {:?}", e);
-        }
-    });
+    setup::spawn_file_watcher(
+        repo.clone(),
+        sync_manager.clone(),
+        vault_path.clone(),
+        tree_manager.clone(),
+        tx.clone(),
+    );
 
     let app_state = Arc::new(AppState {
         repo: repo.clone(),
@@ -196,12 +170,7 @@ pub async fn start_server(
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .with_state(app_state)
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        );
+        .layer(setup::build_cors_layer(port));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Server running on ws://{}", addr);
@@ -216,32 +185,4 @@ pub async fn start_plugin_host_only(
     port: u16,
 ) -> anyhow::Result<()> {
     plugin_host::start_plugin_host_only(plugins, port).await
-}
-
-fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {
-    let mut manager = McpManager::new();
-    let cfg_path = vault_path.join(".deve").join("mcp.json");
-    if !cfg_path.exists() {
-        return manager;
-    }
-
-    let content = match std::fs::read_to_string(&cfg_path) {
-        Ok(c) => c,
-        Err(err) => {
-            tracing::warn!("Failed to read MCP config: {:?}", err);
-            return manager;
-        }
-    };
-
-    let configs: Vec<McpServerConfig> = match serde_json::from_str(&content) {
-        Ok(v) => v,
-        Err(err) => {
-            tracing::warn!("Invalid MCP config: {:?}", err);
-            return manager;
-        }
-    };
-
-    mcp::register_mcp_servers(&mut manager, configs);
-
-    manager
 }

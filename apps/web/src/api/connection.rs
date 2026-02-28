@@ -77,7 +77,10 @@ pub fn spawn_connection_manager(
 }
 
 async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
-    let http_url = ws_url.replace("ws://", "http://").replace("/ws", "");
+    let http_url = ws_url
+        .replace("wss://", "https://")
+        .replace("ws://", "http://")
+        .replace("/ws", "");
     let url = format!("{}/api/node/role", http_url);
     let res = Request::get(&url).send().await;
     if let Ok(resp) = res
@@ -151,14 +154,23 @@ async fn process_incoming_messages(
     }
 }
 
-/// 根据当前主机名构建 WebSocket URL
+/// 根据当前主机名和协议构建 WebSocket URL
+///
+/// 自动检测 HTTPS 并升级为 wss://
 fn build_ws_url(port: u16) -> String {
-    let hostname = web_sys::window()
-        .expect("Window 对象不存在 (非浏览器环境?)")
-        .location()
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => return format!("ws://localhost:{}/ws", port),
+    };
+    let location = window.location();
+    let hostname = location
         .hostname()
         .unwrap_or_else(|_| "localhost".to_string());
-    format!("ws://{}:{}/ws", hostname, port)
+    let protocol = location
+        .protocol()
+        .unwrap_or_else(|_| "http:".to_string());
+    let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
+    format!("{}://{}:{}/ws", ws_scheme, hostname, port)
 }
 
 fn build_ws_urls() -> Vec<String> {

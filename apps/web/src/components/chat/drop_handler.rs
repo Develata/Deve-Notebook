@@ -1,5 +1,7 @@
 // apps/web/src/components/chat/drop_handler.rs
 use leptos::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 
@@ -41,6 +43,11 @@ pub fn on_drop(
                     let name_c = name.clone();
                     let set_input = set_input;
 
+                    // 使用 Rc<RefCell> 自清理模式，避免 .forget() 导致的内存泄漏
+                    let onload_slot: Rc<RefCell<Option<Closure<dyn FnMut(web_sys::Event)>>>> =
+                        Rc::new(RefCell::new(None));
+                    let onload_slot_c = onload_slot.clone();
+
                     let onload = Closure::wrap(Box::new(move |_e: web_sys::Event| {
                         if let Ok(content) = reader_c
                             .result()
@@ -51,10 +58,12 @@ pub fn on_drop(
                                 curr.push_str(&block);
                             });
                         }
+                        // 自清理: 释放闭包引用，允许 GC 回收
+                        let _ = onload_slot_c.borrow_mut().take();
                     }) as Box<dyn FnMut(_)>);
 
                     reader.set_onload(Some(onload.as_ref().unchecked_ref()));
-                    onload.forget();
+                    *onload_slot.borrow_mut() = Some(onload);
                     let _ = reader.read_as_text(&file);
                 }
             }

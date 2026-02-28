@@ -2,8 +2,6 @@ import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 
-console.log("Loading Checkbox Extension (SyntaxTree Version)...");
-
 /**
  * Checkbox Widget (复选框组件)
  * 

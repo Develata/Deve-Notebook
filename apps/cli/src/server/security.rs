@@ -11,6 +11,21 @@ use deve_core::security::{IdentityKeyPair, RepoKey};
 use std::path::Path;
 use std::sync::Arc;
 
+/// 将密钥安全写入文件 (Unix 上设置权限为 0600)
+///
+/// # 不变量
+/// - 密钥文件仅 Owner 可读写。
+fn write_key_file(path: &Path, data: &[u8]) -> anyhow::Result<()> {
+    std::fs::write(path, data)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o600);
+        std::fs::set_permissions(path, perms)?;
+    }
+    Ok(())
+}
+
 /// 加载或生成 Identity Key
 ///
 /// # 前置条件
@@ -32,14 +47,14 @@ pub fn load_or_generate_identity_key(deve_dir: &Path) -> anyhow::Result<Arc<Iden
             None => {
                 tracing::warn!("Invalid identity.key file, regenerating...");
                 let kp = IdentityKeyPair::generate();
-                std::fs::write(&key_pair_path, kp.to_bytes())?;
+                write_key_file(&key_pair_path, &kp.to_bytes())?;
                 Ok(Arc::new(kp))
             }
         }
     } else {
         // 生成新密钥并保存
         let kp = IdentityKeyPair::generate();
-        std::fs::write(&key_pair_path, kp.to_bytes())?;
+        write_key_file(&key_pair_path, &kp.to_bytes())?;
         tracing::info!("Generated and saved new IdentityKey to {:?}", key_pair_path);
         Ok(Arc::new(kp))
     }
@@ -65,14 +80,14 @@ pub fn load_or_generate_repo_key(deve_dir: &Path) -> anyhow::Result<Option<RepoK
             None => {
                 tracing::warn!("Invalid repo.key file, regenerating...");
                 let key = RepoKey::generate();
-                std::fs::write(&repo_key_path, key.to_bytes())?;
+                write_key_file(&repo_key_path, &key.to_bytes())?;
                 Ok(Some(key))
             }
         }
     } else {
         // 生成新密钥并保存
         let key = RepoKey::generate();
-        std::fs::write(&repo_key_path, key.to_bytes())?;
+        write_key_file(&repo_key_path, &key.to_bytes())?;
         tracing::info!("Generated and saved new RepoKey to {:?}", repo_key_path);
         Ok(Some(key))
     }

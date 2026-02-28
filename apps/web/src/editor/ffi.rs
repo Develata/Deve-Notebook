@@ -67,8 +67,11 @@ pub struct Delta {
 }
 
 impl Delta {
-    /// 将 Delta 转换为单个 Op (简化版，Replace 返回 Delete)
-    #[allow(dead_code)] // 预留的 Delta → Op 转换接口
+    /// 将 Delta 转换为单个 Op (⚠️ Replace 时仅返回 Delete，丢弃 Insert)
+    ///
+    /// **已废弃**: 请使用 `to_ops()` 代替，它能正确处理 Replace = Delete + Insert
+    #[allow(dead_code)]
+    #[deprecated(note = "Replace 场景会丢弃 Insert，请改用 to_ops()")]
     pub fn to_op(&self) -> Option<deve_core::models::Op> {
         let delete_len = self.to.saturating_sub(self.from);
         let has_delete = delete_len > 0;

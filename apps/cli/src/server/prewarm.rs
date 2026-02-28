@@ -11,7 +11,11 @@ pub fn spawn_prewarm(repo: Arc<RepoManager>) {
     tokio::spawn(async move {
         sleep(Duration::from_secs(2)).await;
         let repo = repo.clone();
-        let _ = tokio::task::spawn_blocking(move || prewarm_snapshots(&repo)).await;
+        match tokio::task::spawn_blocking(move || prewarm_snapshots(&repo)).await {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => tracing::warn!("Prewarm snapshots failed: {:?}", e),
+            Err(e) => tracing::warn!("Prewarm task panicked: {:?}", e),
+        }
     });
 }
 

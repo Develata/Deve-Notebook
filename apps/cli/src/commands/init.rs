@@ -10,12 +10,12 @@ use std::path::PathBuf;
 /// **参数**:
 /// * `ledger_dir`: 账本存储路径
 /// * `vault_path`: 文档库路径
-/// * `path`: 指定的初始化路径 (可能是 ledger 或 vault，取决于上下文，此处似乎未使用)
+/// * `path`: 指定的初始化根目录, config.toml 和 .env 将生成在此目录下
 /// * `snapshot_depth`: 快照深度配置
 pub fn run(
     ledger_dir: &PathBuf,
     vault_path: &PathBuf,
-    _path: PathBuf,
+    path: PathBuf,
     snapshot_depth: usize,
 ) -> anyhow::Result<()> {
     println!("Initializing ledger at {:?}...", ledger_dir);
@@ -24,7 +24,7 @@ pub fn run(
     std::fs::create_dir_all(vault_path)?;
 
     // 2. Generate default config.toml
-    let config_path = std::path::Path::new("config.toml");
+    let config_path = path.join("config.toml");
     if !config_path.exists() {
         let default_config = r#"# Deve-Note Configuration
 
@@ -51,7 +51,7 @@ concurrency = 4
     }
 
     // 3. Generate default .env
-    let env_path = std::path::Path::new(".env");
+    let env_path = path.join(".env");
     if !env_path.exists() {
         let default_env = r#"# Deve-Note Environment Overrides
 # Uncomment to override config.toml settings
