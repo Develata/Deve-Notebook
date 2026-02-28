@@ -34,7 +34,7 @@ pub fn BottomBar(
         view! {
              <div class="flex items-center gap-2">
                 <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
-                <span class="text-xs text-gray-600 font-medium">{text}</span>
+                <span class="text-xs text-secondary font-medium">{text}</span>
             </div>
         }
     };
@@ -42,7 +42,7 @@ pub fn BottomBar(
     let time_travel_view = move || {
         view! {
             <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span class="text-[10px] text-gray-500 font-mono">
+                <span class="text-[10px] text-muted font-mono">
                     {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
                 </span>
                 <input
@@ -55,7 +55,7 @@ pub fn BottomBar(
                         let val = event_target_value(&ev).parse::<u64>().unwrap_or(0);
                         set_ver.set(val);
                     }
-                    class="w-32 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#007fd4]"
+                    class="w-32 h-1 bg-active rounded-lg appearance-none cursor-pointer accent-accent"
                     title="Time Travel"
                 />
             </div>
@@ -75,7 +75,7 @@ pub fn BottomBar(
             t::bottom_bar::loading(locale.get()).to_string()
         };
         view! {
-            <div class="text-[10px] text-gray-500 font-mono">
+            <div class="text-[10px] text-muted font-mono">
                 {text}
             </div>
         }
@@ -83,11 +83,11 @@ pub fn BottomBar(
     };
 
     view! {
-        <footer class="h-8 bg-gray-50 border-t border-gray-200 flex items-center justify-between px-4 select-none relative">
+        <footer class="h-8 bg-sidebar border-t border-default flex items-center justify-between px-4 select-none relative">
             // 左侧: 分支切换器 + 系统状态
             <div class="flex items-center gap-3">
                 <BranchSwitcher />
-                <div class="w-px h-4 bg-gray-200"></div>
+                <div class="w-px h-4 bg-active"></div>
                 {status_view}
             </div>
 
@@ -96,19 +96,19 @@ pub fn BottomBar(
 
             // 右侧: 编辑器统计
 
-            <div class="flex items-center gap-4 text-xs text-gray-500">
+            <div class="flex items-center gap-4 text-xs text-muted">
                 {load_status}
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::words(locale.get())}</span>
-                    <span class="font-mono text-gray-700">{move || stats.get().words}</span>
+                    <span class="font-mono text-primary">{move || stats.get().words}</span>
                 </div>
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::lines(locale.get())}</span>
-                    <span class="font-mono text-gray-700">{move || stats.get().lines}</span>
+                    <span class="font-mono text-primary">{move || stats.get().lines}</span>
                 </div>
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::col(locale.get())}</span>
-                    <span class="font-mono text-gray-700">{move || stats.get().chars}</span>
+                    <span class="font-mono text-primary">{move || stats.get().chars}</span>
                 </div>
             </div>
         </footer>

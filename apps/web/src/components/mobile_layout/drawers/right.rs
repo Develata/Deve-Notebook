@@ -18,14 +18,14 @@ pub fn RightDrawer(
         <div class=move || drawer_class("right", open.get())>
             <div class="flex flex-col h-full">
                 <div
-                    class="h-12 px-3 flex items-center justify-between border-b border-gray-200 text-sm font-semibold"
+                    class="h-12 px-3 flex items-center justify-between border-b border-default text-sm font-semibold"
                     style="padding-top: env(safe-area-inset-top);"
                 >
-                    <span class="text-gray-800 flex items-center gap-1">
+                    <span class="text-primary flex items-center gap-1">
                         {move || t::sidebar::outline(locale.get())}
                     </span>
                     <button
-                        class="h-11 min-w-11 px-3 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors duration-200 ease-out"
+                        class="h-11 min-w-11 px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
                         title=move || t::sidebar::close_outline(locale.get())
                         aria-label=move || t::sidebar::close_outline(locale.get())
                         on:click=move |_| on_close.run(())
@@ -55,12 +55,12 @@ pub fn RightDrawer(
                             .into_any()
                         } else {
                             view! {
-                                <div class="px-4 py-8 text-sm text-gray-500 flex flex-col items-center gap-2">
-                                    <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                                <div class="px-4 py-8 text-sm text-muted flex flex-col items-center gap-2">
+                                    <div class="w-9 h-9 rounded-full bg-hover flex items-center justify-center text-muted">
                                         "∅"
                                     </div>
-                                    <div class="text-gray-600">{move || t::sidebar::outline_unavailable(locale.get())}</div>
-                                    <div class="text-[11px] text-gray-400">{move || t::sidebar::no_headings_found(locale.get())}</div>
+                                    <div class="text-secondary">{move || t::sidebar::outline_unavailable(locale.get())}</div>
+                                    <div class="text-[11px] text-muted">{move || t::sidebar::no_headings_found(locale.get())}</div>
                                 </div>
                             }
                             .into_any()

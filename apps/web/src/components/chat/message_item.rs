@@ -37,11 +37,11 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
         <div class="flex flex-col gap-1">
             <div class={format!("flex items-center gap-2 {}", if is_user { "flex-row-reverse" } else { "flex-row" })}>
                 <div class={format!("w-6 h-6 rounded flex items-center justify-center text-xs font-bold {}",
-                    if is_user { "bg-[#007acc] text-white" } else { "bg-[#2d2d2d] text-[#cccccc]" }
+                    if is_user { "bg-accent text-on-accent" } else { "bg-panel text-primary" }
                 )}>
                     {if is_user { "U" } else { "AI" }}
                 </div>
-                <span class="text-xs text-[#616161] dark:text-[#858585]">{if is_user {
+                <span class="text-xs text-muted">{if is_user {
                     t::chat::you(locale.get())
                 } else {
                     t::chat::assistant(locale.get())
@@ -52,14 +52,14 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
                 if mobile { "max-w-[96%]" } else { "max-w-[90%]" },
                 if is_user {
                     if mobile {
-                        "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-3"
+                        "bg-chat-user text-primary self-end ml-3"
                     } else {
-                        "bg-[#e1f0fa] dark:bg-[#0e2a3f] text-[#3b3b3b] dark:text-[#cccccc] self-end ml-8"
+                        "bg-chat-user text-primary self-end ml-8"
                     }
                 } else if mobile {
-                    "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-3"
+                    "bg-panel text-primary border border-default self-start mr-3"
                 } else {
-                    "bg-white dark:bg-[#252526] text-[#3b3b3b] dark:text-[#cccccc] border border-[#e5e5e5] dark:border-[#3e3e42] self-start mr-8"
+                    "bg-panel text-primary border border-default self-start mr-8"
                 }
             )}>
                 <div
@@ -67,7 +67,7 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
                     inner_html={render_markdown(&content, t::chat::apply(locale.get()))}
                     on:click=handle_link_click
                 ></div>
-                <div class="mt-1 text-[10px] text-[#8a8a8a] text-right">{ts_text}</div>
+                <div class="mt-1 text-[10px] text-muted text-right">{ts_text}</div>
             </div>
         </div>
     }

@@ -51,7 +51,7 @@ pub(super) fn drawer_class(side: &str, open: bool) -> String {
         "fixed inset-y-0 right-0"
     };
     let width = "w-[78%] max-w-[320px]";
-    let surface = "bg-white z-50 shadow-lg transform transition-transform duration-200 ease-out";
+    let surface = "bg-panel z-50 shadow-lg transform transition-transform duration-200 ease-out";
     let offset = if open {
         "translate-x-0"
     } else if side == "left" {

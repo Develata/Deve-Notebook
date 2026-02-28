@@ -38,10 +38,10 @@ pub fn MergePanel() -> impl IntoView {
     };
 
     view! {
-        <div class="p-4 bg-white border-b border-gray-200">
+        <div class="p-4 bg-panel border-b border-default">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-gray-700">{move || t::merge::sync_mode_label(locale.get())}</span>
+                    <span class="text-sm font-medium text-primary">{move || t::merge::sync_mode_label(locale.get())}</span>
                     <button
                         class=move || format!(
                             "px-3 py-1 text-xs font-semibold rounded-full transition-colors {}",
@@ -71,8 +71,8 @@ pub fn MergePanel() -> impl IntoView {
 
             {move || if is_manual.get() && has_pending.get() {
                 view! {
-                    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3">{move || t::merge::pending_operations(locale.get())}</h3>
+                    <div class="bg-sidebar rounded-lg border border-default p-4">
+                        <h3 class="text-sm font-semibold text-primary mb-3">{move || t::merge::pending_operations(locale.get())}</h3>
 
                         <div class="space-y-2 mb-4 max-h-48 overflow-y-auto">
                             <For
@@ -80,8 +80,8 @@ pub fn MergePanel() -> impl IntoView {
                                 key=|(path, _, _)| path.clone()
                                 children=move |(path, old_preview, new_preview)| {
                                     view! {
-                                        <div class="bg-white rounded border border-gray-100 p-2 text-xs">
-                                            <div class="font-medium text-gray-700 mb-1">{path}</div>
+                                        <div class="bg-panel rounded border border-default p-2 text-xs">
+                                            <div class="font-medium text-primary mb-1">{path}</div>
                                             <div class="grid grid-cols-2 gap-2">
                                                 <div class="bg-red-50 p-1 rounded text-red-700 font-mono truncate">
                                                     {format!("- {}", old_preview)}
@@ -104,7 +104,7 @@ pub fn MergePanel() -> impl IntoView {
                                 {move || t::merge::confirm_merge(locale.get())}
                             </button>
                             <button
-                                class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+                                class="flex-1 px-4 py-2 bg-active text-primary text-sm font-semibold rounded-lg hover:bg-hover transition-colors"
                                 on:click=discard_pending
                             >
                                 {move || t::merge::discard(locale.get())}

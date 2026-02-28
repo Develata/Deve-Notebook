@@ -27,7 +27,7 @@ pub fn MobileChatSheet(
         <Show when=move || visible.get() && !drawer_open.get() && !diff_open.get() && keyboard_offset.get() <= 0>
             <div
                 class=move || if expanded.get() {
-                    "fixed inset-0 z-[80] bg-white dark:bg-[#1e1e1e] transition-opacity duration-200 ease-out"
+                    "fixed inset-0 z-[80] bg-panel transition-opacity duration-200 ease-out"
                 } else {
                     "fixed right-2 z-[55]"
                 }
@@ -49,7 +49,7 @@ pub fn MobileChatSheet(
                     fallback=move || {
                         view! {
                             <button
-                                class="mobile-chat-chip h-11 min-w-11 px-3 rounded-full bg-white border border-gray-200 shadow-sm text-sm font-medium text-gray-700 active:bg-gray-100"
+                                class="mobile-chat-chip h-11 min-w-11 px-3 rounded-full bg-panel border border-default shadow-sm text-sm font-medium text-primary active:bg-hover"
                                 title=move || t::chat::toggle_mobile_chat(locale.get())
                                 aria-label=move || t::chat::toggle_mobile_chat(locale.get())
                                 on:click=move |_| set_expanded.set(true)

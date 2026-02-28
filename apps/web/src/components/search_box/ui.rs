@@ -40,10 +40,10 @@ pub fn render_overlay(
 
     let panel_class = move || match ui_mode.get() {
         SearchUiMode::Sheet => {
-            "absolute top-0 left-0 right-0 bg-white rounded-b-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[72vh] animate-in fade-in slide-in-from-top-4 duration-200 ease-out"
+            "absolute top-0 left-0 right-0 bg-panel rounded-b-2xl shadow-xl border border-default overflow-hidden flex flex-col max-h-[72vh] animate-in fade-in slide-in-from-top-4 duration-200 ease-out"
         }
         SearchUiMode::Overlay => {
-            "absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-200 ease-out"
+            "absolute top-14 left-1/2 -translate-x-1/2 w-full max-w-xl bg-panel rounded-lg shadow-xl border border-default overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-200 ease-out"
         }
     };
     let panel_style = move || match ui_mode.get() {
@@ -131,7 +131,7 @@ pub fn render_overlay(
                     {move || if ui_mode.get() == SearchUiMode::Sheet {
                         view! {
                             <div data-sheet-drag-handle="1" class="flex justify-center py-2">
-                                <div class="w-10 h-1.5 rounded-full bg-gray-200"></div>
+                                <div class="w-10 h-1.5 rounded-full bg-active"></div>
                             </div>
                         }
                         .into_any()

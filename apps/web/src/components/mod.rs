@@ -7,6 +7,7 @@ pub mod bottom_bar;
 pub mod command_palette;
 pub mod dropdown;
 pub mod header;
+pub mod icons;
 pub mod layout_context;
 pub mod outline;
 pub mod outline_render;

@@ -35,13 +35,13 @@ pub fn MobileAccessoryToolbar(
         ffi::mobile_undo();
     });
 
-    let base = "h-9 min-w-9 px-2 rounded-md border border-gray-200 bg-white text-gray-700 active:bg-gray-100 text-xs font-medium";
+    let base = "h-9 min-w-9 px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium";
     let disabled = move || readonly.get();
 
     view! {
         <Show when=move || visible.get()>
             <div
-                class="fixed left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-gray-200 px-2 py-2"
+                class="fixed left-0 right-0 z-50 bg-panel/95 backdrop-blur border-t border-default px-2 py-2"
                 style=move || {
                     format!(
                         "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",

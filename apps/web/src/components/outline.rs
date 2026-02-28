@@ -70,7 +70,7 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
 
     view! {
         <div class="h-full overflow-y-auto py-3 px-2 select-none">
-                <div class="font-bold text-gray-500 mb-2 px-2 text-[10px] uppercase tracking-wider">
+                <div class="font-bold text-muted mb-2 px-2 text-[10px] uppercase tracking-wider">
                 {move || t::sidebar::outline(locale.get())}
             </div>
             <For
@@ -87,7 +87,7 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
 
                     view! {
                         <div
-                            class="min-h-8 py-1.5 pr-2 text-xs text-gray-600 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 cursor-pointer rounded transition-colors truncate flex items-center"
+                            class="min-h-8 py-1.5 pr-2 text-xs text-secondary hover:bg-hover hover:text-primary active:bg-hover cursor-pointer rounded transition-colors truncate flex items-center"
                             style={padding}
                             on:click=move |_| on_click.run(line)
                             title={title_text}

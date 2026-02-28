@@ -96,18 +96,18 @@ pub fn CommandPalette(
                 on:click=move |_| set_show.set(false)
             >
                 <div
-                    class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
+                    class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-panel rounded-lg shadow-xl border border-default overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
                     on:click=move |ev: web_sys::MouseEvent| ev.stop_propagation()
                     on:keydown=handle_keydown
                 >
-                    <div class="p-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
-                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="p-3 border-b border-default flex items-center gap-3 bg-sidebar">
+                        <svg class="w-4 h-4 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                             name="command-palette-query"
                             type="text"
-                            class="flex-1 outline-none text-base bg-transparent text-gray-800 placeholder:text-gray-400"
+                            class="flex-1 outline-none text-base bg-transparent text-primary placeholder:text-muted"
                             placeholder=move || t::command_palette::placeholder(locale.get())
                             prop:value=move || query.get()
                             on:input=move |ev| {
@@ -124,7 +124,7 @@ pub fn CommandPalette(
 
                             if cmds.is_empty() {
                                 view! {
-                                    <div class="p-4 text-center text-gray-400 text-sm">
+                                    <div class="p-4 text-center text-muted text-sm">
                                         {move || t::command_palette::no_results(locale.get())}
                                     </div>
                                 }.into_any()
@@ -141,12 +141,12 @@ pub fn CommandPalette(
                                                     <button
                                                         class=format!(
                                                             "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors {}",
-                                                            if is_sel { "bg-blue-50 text-blue-700" } else { "text-gray-700 hover:bg-gray-50" }
+                                                            if is_sel { "bg-accent-subtle text-accent" } else { "text-primary hover:bg-hover" }
                                                         )
                                                         on:click=move |_| cmd.action.run(())
                                                         on:mousemove=move |_| set_selected_index.set(idx)
                                                     >
-                                                        <div class=format!("flex-none {}", if is_sel { "text-blue-500" } else { "text-gray-400" })>
+                                                        <div class=format!("flex-none {}", if is_sel { "text-accent" } else { "text-muted" })>
                                                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                                             </svg>
@@ -157,7 +157,7 @@ pub fn CommandPalette(
                                                         </div>
 
                                                         <Show when=move || is_sel>
-                                                            <svg class="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <svg class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                                             </svg>
                                                         </Show>
@@ -170,12 +170,12 @@ pub fn CommandPalette(
                             }
                         }}
                     </div>
-                     <div class="bg-gray-50 px-4 py-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                     <div class="bg-sidebar px-4 py-2 border-t border-default flex justify-between items-center text-xs text-muted">
                         <div class="flex gap-4">
-                            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Up/Down</kbd> to navigate</span>
-                            <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Enter</kbd> to select</span>
+                            <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Up/Down</kbd> to navigate</span>
+                            <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Enter</kbd> to select</span>
                         </div>
-                        <span><kbd class="font-sans bg-white px-1.5 py-0.5 rounded border border-gray-200">Esc</kbd> to close</span>
+                        <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Esc</kbd> to close</span>
                     </div>
                 </div>
             </div>

@@ -112,7 +112,7 @@ pub fn MainLayout() -> impl IntoView {
 
     view! {
         <div
-            class="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans"
+            class="h-screen w-screen flex flex-col bg-sidebar text-primary font-sans"
             on:pointermove=move |ev| do_resize.run(ev)
             on:pointerup=move |_| stop_resize.run(())
             on:pointerleave=move |_| stop_resize.run(())

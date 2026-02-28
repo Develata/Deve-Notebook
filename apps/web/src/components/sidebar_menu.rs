@@ -105,7 +105,7 @@ pub fn SidebarMenu(
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     view! {
         <Dropdown anchor=anchor.into() on_close=on_close align=Align::Right offset=6.0>
-            <div class="w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 text-sm text-gray-700 select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right">
+            <div class="w-48 bg-panel rounded-md shadow-lg border border-default py-1 text-sm text-primary select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right">
                 {MENU_ITEMS.iter().map(|item| {
                     let action = item.action;
                     let icon_path = item.icon;
@@ -115,13 +115,13 @@ pub fn SidebarMenu(
                     view! {
                         <>
                             {if has_separator {
-                                Some(view! { <div class="my-1 border-t border-gray-100"></div> })
+                                Some(view! { <div class="my-1 border-t border-default"></div> })
                             } else {
                                 None
                             }}
                             <button
                                 class=format!(
-                                    "w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2 {}",
+                                    "w-full text-left px-3 py-1.5 hover:bg-hover flex items-center gap-2 {}",
                                     if is_danger { "text-red-600 group" } else { "" }
                                 )
                                 on:click=move |_| {
@@ -138,7 +138,7 @@ pub fn SidebarMenu(
                                     stroke="currentColor"
                                     class=format!(
                                         "w-4 h-4 {}",
-                                        if is_danger { "text-red-500 group-hover:text-red-600" } else { "text-gray-400" }
+                                        if is_danger { "text-red-500 group-hover:text-red-600" } else { "text-muted" }
                                     )
                                 >
                                     <path stroke-linecap="round" stroke-linejoin="round" d={icon_path} />

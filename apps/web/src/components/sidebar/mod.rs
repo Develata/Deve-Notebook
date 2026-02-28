@@ -38,7 +38,7 @@ pub fn Sidebar(
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
     view! {
-        <div class="h-full w-full bg-[#f7f7f7] border-r border-gray-200">
+        <div class="h-full w-full bg-sidebar border-r border-default">
             {move || match active_view.get() {
                 SidebarView::Explorer => view! {
                     <ExplorerView
@@ -55,7 +55,7 @@ pub fn Sidebar(
                     <ExtensionsView />
                 }.into_any(),
                 _ => view! {
-                    <div class="p-4 text-gray-400 text-center">"View not implemented"</div>
+                    <div class="p-4 text-muted text-center">"View not implemented"</div>
                 }.into_any()
             }}
         </div>

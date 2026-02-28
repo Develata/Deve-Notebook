@@ -44,7 +44,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                                 .into_any()
                         }
                         None => view! {
-                            <div class="flex items-center justify-center h-full text-gray-400">
+                            <div class="flex items-center justify-center h-full text-muted">
                                 {move || t::common::select_document(locale.get())}
                             </div>
                         }

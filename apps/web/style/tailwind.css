@@ -11,21 +11,14 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
+  background: var(--scrollbar-thumb);
   border-radius: 5px;
-  border: 2px solid #f8fafc; /* match bg for padding effect (模拟内边距效果) */
+  border: 2px solid var(--scrollbar-border);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
+  background: var(--scrollbar-thumb-hover);
 }
-/* Dark Mode Scrollbar (暗色模式滚动条) */
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569; /* slate-600 */
-  border-color: #1e1e2e; /* match dark bg */
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b; /* slate-500 */
-}
+/* Dark Mode Scrollbar — now handled by CSS variables in .dark scope */
 
 /* Search Modal (搜索模态框) */
 .search-modal-overlay {

@@ -48,9 +48,9 @@ pub fn LeftDrawer(
             <button
                 class=move || {
                     let state = if active_view.get() == view {
-                        "bg-blue-50 border border-blue-200 text-blue-700"
+                        "bg-accent-subtle border border-b-accent text-accent"
                     } else {
-                        "bg-white border border-gray-200 text-gray-600 active:bg-gray-100"
+                        "bg-panel border border-default text-secondary active:bg-hover"
                     };
                     format!(
                         "mobile-sidebar-tab {} h-11 min-w-12 px-3 rounded-md active:scale-95 transition-transform duration-150 ease-out {}",
@@ -88,12 +88,12 @@ pub fn LeftDrawer(
         <div class=move || drawer_class("left", open.get())>
             <div class="flex flex-col h-full">
                 <div
-                    class="h-12 px-3 flex items-center justify-between border-b border-gray-200 text-sm font-semibold"
+                    class="h-12 px-3 flex items-center justify-between border-b border-default text-sm font-semibold"
                     style="padding-top: env(safe-area-inset-top);"
                 >
-                    <span class="text-gray-800 flex items-center gap-1">{move || title.get().to_string()}</span>
+                    <span class="text-primary flex items-center gap-1">{move || title.get().to_string()}</span>
                     <button
-                        class="h-11 min-w-11 px-3 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors duration-200 ease-out"
+                        class="h-11 min-w-11 px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
                         title=move || t::sidebar::close_file_tree(locale.get())
                         aria-label=move || t::sidebar::close_file_tree(locale.get())
                         on:click=move |_| on_close.run(())
@@ -104,7 +104,7 @@ pub fn LeftDrawer(
                     </button>
                 </div>
 
-                <div class="px-2 py-2 border-b border-gray-100 relative">
+                <div class="px-2 py-2 border-b border-default relative">
                     <div class="flex items-center gap-2 w-full">
                         <div class="flex-1 overflow-x-auto">
                             <div class="flex items-center gap-2 min-w-max">
@@ -124,7 +124,7 @@ pub fn LeftDrawer(
                             </div>
                         </div>
                         <button
-                            class="mobile-more-button h-11 min-w-11 px-2 rounded-md bg-white border border-gray-200 text-gray-600 active:bg-gray-100 active:scale-95 transition-transform duration-150 ease-out"
+                            class="mobile-more-button h-11 min-w-11 px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
                             title=move || t::sidebar::more(locale.get())
                             aria-label=move || t::sidebar::more(locale.get())
                             on:click=move |_| set_show_more.update(|v| *v = !*v)
@@ -137,7 +137,7 @@ pub fn LeftDrawer(
                         view! {
                             <div class="mobile-more-backdrop fixed inset-0 z-[51]" on:click=move |_| set_show_more.set(false)></div>
                             <div
-                                class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-white shadow-xl rounded-lg border border-gray-200 py-1 z-[52]"
+                                class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-panel shadow-xl rounded-lg border border-default py-1 z-[52]"
                                 node_ref=more_menu_ref
                                 tabindex="-1"
                                 role="menu"
@@ -153,7 +153,7 @@ pub fn LeftDrawer(
                                     view! {
                                         <button
                                             class=format!(
-                                                "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-gray-700 active:bg-gray-100 flex items-center justify-between",
+                                                "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-primary active:bg-hover flex items-center justify-between",
                                                 more_item_class(item)
                                             )
                                             role="menuitem"
@@ -163,7 +163,7 @@ pub fn LeftDrawer(
                                             }
                                         >
                                             <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
-                                            <span class=move || if pinned.get() { "text-blue-600" } else { "text-transparent" }>
+                                            <span class=move || if pinned.get() { "text-accent" } else { "text-transparent" }>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
                                             </span>
                                         </button>

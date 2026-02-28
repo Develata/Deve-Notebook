@@ -21,6 +21,7 @@ pub mod unstaged_section;
 use self::changes::Changes;
 use self::commit::Commit;
 use self::history::History;
+use crate::components::icons::*;
 use leptos::prelude::*;
 
 #[component]
@@ -45,66 +46,66 @@ pub fn SourceControlView() -> impl IntoView {
     // let active_repo_label = ... (Removed)
 
     view! {
-        <div class="h-full w-full bg-[#f3f3f3] dark:bg-[#252526] flex flex-col font-sans select-none overflow-hidden text-[13px] text-[#3b3b3b] dark:text-[#cccccc] relative">
+        <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none overflow-hidden text-[13px] text-primary relative">
             // Global Header
             // Global Header
             // Global Header
-            <div class="flex-none h-9 flex items-center justify-between px-4 hover:bg-[#e4e6f1] dark:hover:bg-[#2a2d2e] group border-b border-transparent hover:border-[#e5e5e5] dark:hover:border-[#454545] relative">
+            <div class="flex-none h-9 flex items-center justify-between px-4 hover:bg-hover group border-b border-transparent hover:border-default relative">
                  <div class="flex items-center gap-2 overflow-hidden">
-                     <span class="font-normal text-[11px] text-[#616161] dark:text-[#cccccc] uppercase whitespace-nowrap">
+                     <span class="font-normal text-[11px] text-secondary uppercase whitespace-nowrap">
                         {move || t::source_control::title(locale.get())}
                      </span>
                  </div>
 
-                 <div class="flex gap-1 opacity-100 dark:text-[#cccccc] relative">
+                 <div class="flex gap-1 opacity-100 relative">
                     // More Actions Button
                     <button
-                        class="p-1 hover:bg-[#0000001a] dark:hover:bg-[#ffffff1a] rounded"
+                        class="p-1 hover:bg-hover rounded"
                         title=move || t::sidebar::more_actions(locale.get())
                         on:click=move |e| {
                             e.stop_propagation();
                             show_menu.update(|v| *v = !*v);
                         }
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        <MoreHorizontal class="w-3.5 h-3.5" />
                     </button>
 
                     // Context Menu
                     {move || if show_menu.get() {
                         view! {
                             <div
-                                class="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-[#252526] border border-[#e5e5e5] dark:border-[#454545] shadow-lg rounded z-50 text-[12px] py-1"
+                                class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1"
                                 on:click=move |e| e.stop_propagation()
                             >
                                 <div
-                                    class="px-3 py-1.5 hover:bg-[#e8e8e8] dark:hover:bg-[#37373d] cursor-pointer flex items-center justify-between"
+                                    class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
                                     on:click=move |_| { show_repos.update(|v| *v = !*v); }
                                 >
                                     <span>{move || t::source_control::repositories(locale.get())}</span>
                                     {move || if show_repos.get() {
-                                        view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> }.into_any()
+                                        view! { <Check class="w-3 h-3" /> }.into_any()
                                     } else {
                                         view! {}.into_any()
                                     }}
                                 </div>
                                 <div
-                                    class="px-3 py-1.5 hover:bg-[#e8e8e8] dark:hover:bg-[#37373d] cursor-pointer flex items-center justify-between"
+                                    class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
                                     on:click=move |_| { show_changes.update(|v| *v = !*v); }
                                 >
                                     <span>{move || t::source_control::changes(locale.get())}</span>
                                     {move || if show_changes.get() {
-                                        view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> }.into_any()
+                                        view! { <Check class="w-3 h-3" /> }.into_any()
                                     } else {
                                         view! {}.into_any()
                                     }}
                                 </div>
                                 <div
-                                    class="px-3 py-1.5 hover:bg-[#e8e8e8] dark:hover:bg-[#37373d] cursor-pointer flex items-center justify-between"
+                                    class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
                                     on:click=move |_| { show_graph.update(|v| *v = !*v); }
                                 >
                                     <span>{move || t::source_control::graph(locale.get())}</span>
                                     {move || if show_graph.get() {
-                                        view! { <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> }.into_any()
+                                        view! { <Check class="w-3 h-3" /> }.into_any()
                                     } else {
                                         view! {}.into_any()
                                     }}
@@ -128,22 +129,22 @@ pub fn SourceControlView() -> impl IntoView {
                 // 2. Changes Section
                 {move || if show_changes.get() {
                     view! {
-                        <div class="border-t border-[#e5e5e5] dark:border-[#252526]">
+                        <div class="border-t border-default">
                             <button
-                                 class="w-full flex items-center px-1 py-0.5 hover:bg-[#e8e8e8] dark:hover:bg-[#2a2d2e] text-[11px] font-bold text-[#424242] dark:text-[#cccccc] uppercase group focus:outline-none"
+                                 class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
                                  on:click=move |_| expand_changes.update(|b| *b = !*b)
                             >
                                 <span class=move || if expand_changes.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                                    <ChevronRight class="w-3 h-3" />
                                 </span>
                                 <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
                                 <div class="hidden group-hover:flex items-center gap-1">
                                     // Actions
-                                    <div class="p-0.5 hover:bg-gray-300 dark:hover:bg-[#454545] rounded" title=move || t::source_control::discard_all_changes(locale.get())>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                    <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::discard_all_changes(locale.get())>
+                                        <RefreshCw class="w-3.5 h-3.5" />
                                     </div>
-                                    <div class="p-0.5 hover:bg-gray-300 dark:hover:bg-[#454545] rounded" title=move || t::source_control::stage_all_changes(locale.get())>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::stage_all_changes(locale.get())>
+                                        <Plus class="w-3.5 h-3.5" />
                                     </div>
                                 </div>
                             </button>

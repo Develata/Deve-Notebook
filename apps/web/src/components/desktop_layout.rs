@@ -82,7 +82,7 @@ pub fn DesktopLayout(
             ></div>
 
             <aside
-                class="flex-none bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col z-20"
+                class="flex-none bg-panel rounded-lg shadow-sm border border-default flex flex-col z-20"
                 style=move || format!("width: {}px", sidebar_width.get())
             >
                 <crate::components::activity_bar::ActivityBar
@@ -103,7 +103,7 @@ pub fn DesktopLayout(
             </aside>
 
             <div
-                class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors touch-none"
+                class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
                 on:pointerdown=move |ev| {
                     if let Some(target) = ev.target()
                         && let Ok(el) = target.dyn_into::<web_sys::Element>()
@@ -113,10 +113,10 @@ pub fn DesktopLayout(
                     start_resize_left.run(ev)
                 }
             >
-                <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
+                <div class="w-[1px] h-8 bg-active group-hover:bg-accent transition-colors"></div>
             </div>
 
-            <div class="flex-1 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden relative flex flex-col min-w-0">
+            <div class="flex-1 bg-panel shadow-sm border border-default rounded-lg overflow-hidden relative flex flex-col min-w-0">
                 {move || {
                     if let Some(session) = core.diff_content.get() {
                         return view! {
@@ -135,7 +135,7 @@ pub fn DesktopLayout(
                     match core.current_doc.get() {
                         Some(id) => view! { <Editor doc_id=id on_stats=core.on_stats /> }.into_any(),
                         None => view! {
-                            <div class="flex items-center justify-center h-full text-gray-400">
+                            <div class="flex items-center justify-center h-full text-muted">
                                 {move || t::common::select_document_to_edit(locale.get())}
                             </div>
                         }
@@ -148,7 +148,7 @@ pub fn DesktopLayout(
                 view! {
                     <div class="flex items-stretch ml-4">
                         <div
-                            class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-blue-50/50 group transition-colors touch-none"
+                            class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
                             on:pointerdown=move |ev| {
                                 if let Some(target) = ev.target()
                                     && let Ok(el) = target.dyn_into::<web_sys::Element>()
@@ -158,10 +158,10 @@ pub fn DesktopLayout(
                                 start_resize_right.run(ev)
                             }
                         >
-                            <div class="w-[1px] h-8 bg-gray-200 group-hover:bg-blue-300 transition-colors"></div>
+                            <div class="w-[1px] h-8 bg-active group-hover:bg-accent transition-colors"></div>
                         </div>
                         <div
-                            class="flex-none bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden flex flex-col"
+                            class="flex-none bg-panel shadow-sm border border-default rounded-lg overflow-hidden flex flex-col"
                             style=move || format!("width: {}px", right_width.get())
                         >
                             <ChatPanel on_close=Callback::new(move |_| ()) />

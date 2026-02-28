@@ -67,9 +67,9 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     view! {
         <div
             class=move || if mobile {
-                "h-full flex flex-col bg-[#f3f3f3] dark:bg-[#1e1e1e] relative"
+                "h-full flex flex-col bg-sidebar relative"
             } else {
-                "h-full flex flex-col bg-[#f3f3f3] dark:bg-[#1e1e1e] border-l border-[#e5e5e5] dark:border-[#252526] relative"
+                "h-full flex flex-col bg-sidebar border-l border-default relative"
             }
             on:dragover=on_drag_over(set_is_drag_over)
             on:dragleave=on_drag_leave(set_is_drag_over)
@@ -93,7 +93,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
                         }}
                     </div>
                     <button
-                        class="h-11 min-w-11 px-3 rounded bg-white border border-red-200 text-red-700 active:bg-red-100"
+                        class="h-11 min-w-11 px-3 rounded bg-panel border border-red-200 text-red-700 active:bg-red-100"
                         on:click=move |_| retry.run(())
                     >
                         {move || t::chat::retry(locale.get())}
@@ -101,7 +101,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
                 </div>
             </Show>
             <Show when=move || loading.get()>
-                <div class="px-3 pb-1 text-[11px] text-[#6d6d6d]">{move || t::chat::loading(locale.get())}</div>
+                <div class="px-3 pb-1 text-[11px] text-muted">{move || t::chat::loading(locale.get())}</div>
             </Show>
             <InputArea
                 input=input

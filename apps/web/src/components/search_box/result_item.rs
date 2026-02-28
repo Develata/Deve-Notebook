@@ -35,9 +35,9 @@ pub fn result_item(
 
     if is_group {
         let group_class = if is_mobile {
-            "px-3 py-2 text-[10px] uppercase tracking-wide text-gray-400"
+            "px-3 py-2 text-[10px] uppercase tracking-wide text-muted"
         } else {
-            "px-4 py-2 text-[11px] uppercase tracking-widest text-gray-400"
+            "px-4 py-2 text-[11px] uppercase tracking-widest text-muted"
         };
         return view! { <div class=group_class>{item.title}</div> }.into_any();
     }
@@ -57,9 +57,9 @@ pub fn result_item(
     }
 
     let base = if is_mobile {
-        "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 group transition-colors active:bg-gray-100"
+        "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 group transition-colors active:bg-hover"
     } else {
-        "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors active:bg-gray-100"
+        "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors active:bg-hover"
     };
 
     let action_clone = item.action.clone();
@@ -71,11 +71,11 @@ pub fn result_item(
                 "{} {}",
                 base,
                 if is_sel && is_selectable {
-                    "bg-blue-50 text-blue-700"
+                    "bg-accent-subtle text-accent"
                 } else if is_selectable {
-                    "text-gray-700 hover:bg-gray-50"
+                    "text-primary hover:bg-hover"
                 } else {
-                    "text-gray-400 cursor-default"
+                    "text-muted cursor-default"
                 }
             )
             on:click=move |_| {
@@ -134,7 +134,7 @@ fn item_icon(is_sel: bool, action: SearchAction, detail: Option<String>) -> impl
         SearchAction::Noop => "none",
     };
     view! {
-        <div class=format!("flex-none {}", if is_sel { "text-blue-500" } else { "text-gray-400" })>
+        <div class=format!("flex-none {}", if is_sel { "text-accent" } else { "text-muted" })>
             <Show when=move || icon == "command" fallback=move || match icon {
                 "branch" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> }.into_any(),
                 "folder" => view! { <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg> }.into_any(),
@@ -175,7 +175,7 @@ fn item_content(
 fn selection_arrow(is_sel: bool) -> impl IntoView {
     view! {
         <Show when=move || is_sel>
-            <svg class="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
         </Show>

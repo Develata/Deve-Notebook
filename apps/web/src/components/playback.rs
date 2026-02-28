@@ -22,8 +22,8 @@ pub fn PlaybackController(
     };
 
     view! {
-        <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg flex items-center gap-4 z-40">
-            <span class="text-xs font-mono text-gray-500">{move || t::playback::label(locale.get())}</span>
+        <div class="absolute bottom-0 left-0 right-0 bg-panel border-t border-default p-4 shadow-lg flex items-center gap-4 z-40">
+            <span class="text-xs font-mono text-muted">{move || t::playback::label(locale.get())}</span>
 
             <input
                 name="playback-slider"
@@ -32,11 +32,11 @@ pub fn PlaybackController(
                 max=move || max_version.get().to_string()
                 value=move || current_version.get().to_string()
                 on:input=on_input
-                class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                class="flex-1 h-2 bg-active rounded-lg appearance-none cursor-pointer"
             />
 
             <div class="font-mono text-sm min-w-[3rem] text-right">
-                {move || current_version.get()} <span class="text-gray-400">/ {move || max_version.get()}</span>
+                {move || current_version.get()} <span class="text-muted">/ {move || max_version.get()}</span>
             </div>
         </div>
     }

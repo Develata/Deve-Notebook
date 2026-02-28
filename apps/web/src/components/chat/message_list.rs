@@ -73,7 +73,7 @@ pub fn MessageList(
 
             {move || if is_streaming.get() {
                 view! {
-                    <div class="flex items-center gap-2 text-xs text-[#616161] px-1">
+                    <div class="flex items-center gap-2 text-xs text-secondary px-1">
                         <span class="animate-pulse">{move || t::chat::thinking(locale.get())}</span>
                     </div>
                 }.into_any()

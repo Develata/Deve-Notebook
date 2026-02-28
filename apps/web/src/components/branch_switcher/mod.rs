@@ -56,9 +56,9 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
         <button
             class=move || {
                 if compact {
-                    "flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 ease-out text-[10px] font-medium text-gray-700 max-w-[96px]"
+                    "flex items-center gap-1 px-1.5 py-0.5 rounded border border-default bg-sidebar hover:bg-hover transition-colors duration-200 ease-out text-[10px] font-medium text-primary max-w-[96px]"
                 } else {
-                    "flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-gray-200 transition-colors duration-200 ease-out text-xs font-medium text-gray-700"
+                    "flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-active transition-colors duration-200 ease-out text-xs font-medium text-primary"
                 }
             }
             on:click=onclick

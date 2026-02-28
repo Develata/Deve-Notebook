@@ -16,22 +16,22 @@ pub fn header(
 ) -> impl IntoView {
     let header_class = move || match ui_mode.get() {
         SearchUiMode::Sheet => {
-            "px-3 py-2 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50"
+            "px-3 py-2 border-b border-default flex items-center gap-2 bg-sidebar"
         }
         SearchUiMode::Overlay => {
-            "p-3 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50"
+            "p-3 border-b border-default flex items-center gap-2 bg-sidebar"
         }
     };
     view! {
         <div data-sheet-drag-handle="1" class=header_class>
-            <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-4 h-4 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {search_icon(query)}
             </svg>
             <input
                 name="search-query"
                 node_ref=input_ref
                 type="text"
-                class="flex-1 outline-none text-sm bg-transparent text-gray-800 placeholder:text-gray-400"
+                class="flex-1 outline-none text-sm bg-transparent text-primary placeholder:text-muted"
                 placeholder=move || placeholder_text.get()
                 prop:value=move || query.get()
                 on:input=move |ev| {
@@ -66,7 +66,7 @@ pub fn results_panel(
                     let core = core.clone();
                     if res.is_empty() {
                         view! {
-                            <div class="p-4 text-center text-gray-400 text-sm">
+                            <div class="p-4 text-center text-muted text-sm">
                                 {move || t::command_palette::no_results(locale.get())}
                             </div>
                         }

@@ -85,7 +85,7 @@ pub fn ActivityBar(
             <button
                 class=move || format!(
                     "p-2 mr-1 rounded-lg transition-colors relative group {}",
-                    if is_active() { "text-blue-600 dark:text-blue-400" } else { "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" }
+                    if is_active() { "text-accent" } else { "text-muted hover:text-primary" }
                 )
                 title=move || view.title(locale.get())
                 on:click=move |_| set_active_view.set(view)
@@ -94,7 +94,7 @@ pub fn ActivityBar(
 
                 // 活动指示器 (Horizontal)
                 {move || if is_active() {
-                    view! { <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-blue-400 rounded-t"></div> }.into_any()
+                    view! { <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-t"></div> }.into_any()
                 } else {
                     view! {}.into_any()
                 }}
@@ -114,7 +114,7 @@ pub fn ActivityBar(
 
     view! {
         {backdrop}
-        <div class="w-full h-10 flex flex-row items-center px-1 bg-[#f3f3f3] dark:bg-[#252526] border-b border-[#e5e5e5] dark:border-[#1e1e1e] flex-none overflow-visible">
+        <div class="w-full h-10 flex flex-row items-center px-1 bg-sidebar border-b border-default flex-none overflow-visible">
             // Render pinned views (Scrollable)
             <div class="flex-1 flex flex-row items-center overflow-x-auto no-scrollbar mask-gradient">
                 <For
@@ -131,7 +131,7 @@ pub fn ActivityBar(
             // More / Config Button (Static, allow popup overflow)
             <div class="flex-none flex items-center relative ml-1">
                 <button
-                    class="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded-lg transition-colors"
+                    class="p-2 text-muted hover:text-primary rounded-lg transition-colors"
                     title="More..."
                     on:click=move |_| set_show_more.update(|v| *v = !*v)
                 >
@@ -142,14 +142,14 @@ pub fn ActivityBar(
                 // Popup Menu
                 {move || if show_more.get() {
                     view! {
-                        <div class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#252526] shadow-xl rounded-lg border border-gray-200 dark:border-[#1e1e1e] py-1 z-50">
+                        <div class="absolute right-0 top-full mt-1 w-48 bg-panel shadow-xl rounded-lg border border-default py-1 z-50">
                              {
                                 SidebarView::all().into_iter().map(|item| {
                                     let is_pinned = move || pinned_views.get().contains(&item);
                                     let is_active = move || active_view.get() == item;
                                     view! {
                                         <div
-                                            class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#37373d] cursor-pointer flex items-center justify-between text-sm text-gray-700 dark:text-gray-200"
+                                            class="px-3 py-2 hover:bg-hover cursor-pointer flex items-center justify-between text-sm text-primary"
                                             on:click=move |_| toggle_pin(item)
                                         >
                                             <span class=move || if is_active() { "font-bold" } else { "" }>
@@ -159,7 +159,7 @@ pub fn ActivityBar(
                                             // Pin Icon if pinned
                                             {move || if is_pinned() {
                                                 view! {
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
                                                 }.into_any()
                                             } else {
                                                 view! {}.into_any()

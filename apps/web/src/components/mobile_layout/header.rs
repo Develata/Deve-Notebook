@@ -13,10 +13,10 @@ pub fn MobileHeader(
     on_command: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let action_btn = "h-11 min-w-11 px-3 text-base text-gray-700 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors duration-200 ease-out";
+    let action_btn = "h-11 min-w-11 px-3 text-base text-primary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out";
     view! {
         <div
-            class="flex items-center justify-between px-2 py-1 bg-white border-b border-gray-200"
+            class="flex items-center justify-between px-2 py-1 bg-panel border-b border-default"
             style="padding-top: env(safe-area-inset-top);"
         >
             <button
@@ -27,7 +27,7 @@ pub fn MobileHeader(
             >
                 "≡"
             </button>
-            <div class="flex-1 mx-2 text-sm font-semibold text-gray-800 truncate text-center">
+            <div class="flex-1 mx-2 text-sm font-semibold text-primary truncate text-center">
                 {move || title.get()}
             </div>
             <div class="flex items-center gap-2">

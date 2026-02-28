@@ -104,13 +104,13 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
         <div class="relative">
             <div
                 class=move || {
-                     let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-gray-50 active:bg-gray-100 text-sm transition-colors select-none group";
+                     let base = "relative flex items-center gap-1 py-1 pr-2 cursor-pointer hover:bg-hover active:bg-active text-sm transition-colors select-none group";
                      if let Some(id) = node.doc_id
                           && current_doc.get() == Some(id)
                       {
-                        return format!("{} bg-blue-50 text-blue-700", base);
+                        return format!("{} bg-accent-subtle text-accent", base);
                       }
-                     format!("{} text-gray-700", base)
+                     format!("{} text-primary", base)
                 }
                 style={padding}
                 on:click=move |_| {
@@ -126,7 +126,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     is_folder=is_folder
                     is_expanded=is_expanded
                 />
-                <span class="truncate flex-1 text-gray-700">{node.name.clone()}</span>
+                <span class="truncate flex-1 text-primary">{node.name.clone()}</span>
                 // Actions (Visible on Hover via Opacity)
                 <crate::components::sidebar::components::ItemActions
                     is_folder=is_folder

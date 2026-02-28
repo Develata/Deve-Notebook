@@ -1,23 +1,83 @@
 /**
- * _variables.css - CSS 变量定义
- * 
- * 集中管理编辑器的颜色、间距、字体等设计令牌。
- * 修改此文件可全局调整编辑器外观。
+ * _variables.css — Design Tokens (设计令牌)
+ *
+ * 遵循 08_ui_design.md §2.1: 严禁硬编码 Hex 值,
+ * 所有组件 MUST 通过 CSS 变量引用颜色。
+ *
+ * 变量命名约定:
+ *   --bg-*   背景色 (background)
+ *   --fg-*   前景/文字色 (foreground)
+ *   --border-*  边框色
+ *   --color-*   语义色 (Git status 等)
+ *   --bq-*   引用块
+ *   --diff-*   Diff 视图
+ *   --code-*   代码块
  */
 
+/* ===================================================================
+ * Light Theme (默认)
+ * =================================================================== */
 :root {
-  /* ==================== 基础颜色 ==================== */
-  --editor-bg: #ffffff;           /* 编辑器背景色 */
-  --editor-text: #1e293b;         /* 主文本颜色 (slate-800) */
-  --editor-muted: #64748b;        /* 次要文本颜色 (slate-500) */
-  --editor-border: #e2e8f0;       /* 边框颜色 (slate-200) */
+  /* ==================== Layout Backgrounds ==================== */
+  --bg-app: #ffffff;              /* 主容器背景 */
+  --bg-sidebar: #f9fafb;         /* 侧边栏 (gray-50) */
+  --bg-editor: #ffffff;          /* 编辑器区域 */
+  --bg-panel: #f3f4f6;           /* 面板/区块 (gray-100) */
+  --bg-statusbar: #007acc;       /* 状态栏 (正常) */
+  --bg-statusbar-ro: #e06c75;    /* 状态栏 (只读) */
 
-  /* ==================== 引用块样式 ==================== */
-  --bq-indent-step: 1.5rem;       /* 每层缩进步长 */
-  --bq-border-width: 3px;         /* 左边框宽度 */
-  --bq-bg-color: #f8fafc;         /* 引用块统一背景色 */
+  /* ==================== Component Backgrounds ==================== */
+  --bg-input: #f3f4f6;           /* 输入框 (gray-100) */
+  --bg-hover: #f3f4f6;           /* 悬停 (gray-100) */
+  --bg-active: #e5e7eb;          /* 选中/激活 (gray-200) */
+  --bg-accent: #3b82f6;          /* 主强调色 (blue-500) */
+  --bg-accent-hover: #2563eb;     /* 强调悬停 (blue-600) */
+  --bg-accent-subtle: #eff6ff;   /* 浅强调背景 (blue-50) */
+  --bg-overlay: rgba(0, 0, 0, 0.4); /* 遮罩层 */
+  --bg-tooltip: #1f2937;         /* 工具提示 (gray-800) */
+  --bg-badge: #ef4444;           /* 角标 (red-500) */
+  --bg-badge-count: #c4c4c4;     /* 计数徽章 (gray-400) */
 
-  /* 边框颜色 (按深度递进变暗) */
+  /* ==================== Chat ==================== */
+  --bg-chat-user: #e1f0fa;       /* 用户消息气泡 */
+  --bg-badge-success: #dff0d8;   /* 成功徽章背景 */
+  --fg-badge-success: #3c763d;   /* 成功徽章文字 */
+  --border-badge-success: #d6e9c6; /* 成功徽章边框 */
+
+  /* ==================== Foreground / Text ==================== */
+  --fg-primary: #374151;         /* 主文字 (gray-700) */
+  --fg-secondary: #6b7280;       /* 次要文字 (gray-500) */
+  --fg-muted: #9ca3af;           /* 禁用/占位 (gray-400) */
+  --fg-accent: #2563eb;          /* 链接/强调 (blue-600) */
+  --fg-on-accent: #ffffff;       /* 强调色上的文字 */
+  --fg-on-tooltip: #ffffff;      /* 工具提示文字 */
+
+  /* ==================== Borders ==================== */
+  --border-default: #e5e7eb;     /* 默认边框 (gray-200) */
+  --border-hover: #d1d5db;       /* 悬停边框 (gray-300) */
+  --border-active: #9ca3af;      /* 激活边框 (gray-400) */
+  --border-accent: #3b82f6;      /* 强调边框 (blue-500) */
+
+  /* ==================== Semantic Colors (Git) ==================== */
+  --color-added: #22c55e;        /* 新增 (green-500) */
+  --color-added-bg: #dcfce7;     /* 新增背景 (green-100) */
+  --color-modified: #eab308;     /* 修改 (yellow-500) */
+  --color-modified-bg: #fef9c3;  /* 修改背景 (yellow-100) */
+  --color-deleted: #ef4444;      /* 删除 (red-500) */
+  --color-deleted-bg: #fee2e2;   /* 删除背景 (red-100) */
+  --color-warning: #f97316;      /* 警告 (orange-500) */
+  --color-info: #3b82f6;         /* 信息 (blue-500) */
+
+  /* ==================== Editor (CodeMirror) ==================== */
+  --editor-bg: #ffffff;
+  --editor-text: #1e293b;        /* slate-800 */
+  --editor-muted: #64748b;       /* slate-500 */
+  --editor-border: #e2e8f0;      /* slate-200 */
+
+  /* ==================== Blockquote ==================== */
+  --bq-indent-step: 1.5rem;
+  --bq-border-width: 3px;
+  --bq-bg-color: #f8fafc;
   --bq-border-1: #cbd5e1;
   --bq-border-2: #94a3b8;
   --bq-border-3: #64748b;
@@ -29,19 +89,19 @@
   --bq-border-9: #000000;
   --bq-border-10: #000000;
 
-  /* ==================== 代码块样式 ==================== */
-  --code-bg-color: rgb(229, 231, 232);  /* 代码块背景色 */
+  /* ==================== Code Block ==================== */
+  --code-bg-color: rgb(229, 231, 232);
   --code-font: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
 
-  /* ==================== 链接样式 ==================== */
-  --link-color: #2563eb;          /* 链接颜色 (blue-600) */
-  --link-hover: #1d4ed8;          /* 链接悬停颜色 (blue-700) */
+  /* ==================== Links ==================== */
+  --link-color: #2563eb;
+  --link-hover: #1d4ed8;
 
-  /* ==================== 选择高亮 ==================== */
-  --selection-bg: rgba(59, 130, 246, 0.4);  /* 选择背景色 */
-  --selection-bg-block: rgba(59, 130, 246, 0.5);  /* 块内选择背景色 */
+  /* ==================== Selection ==================== */
+  --selection-bg: rgba(59, 130, 246, 0.4);
+  --selection-bg-block: rgba(59, 130, 246, 0.5);
 
-  /* ==================== Diff 视图 ==================== */
+  /* ==================== Diff View ==================== */
   --diff-bg: #ffffff;
   --diff-header-bg: #f3f3f3;
   --diff-border: #e5e5e5;
@@ -58,9 +118,99 @@
   --diff-line-empty: #f3f4f6;
   --diff-word-add: #86efac;
   --diff-word-del: #fca5a5;
+
+  /* ==================== Scrollbar ==================== */
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+  --scrollbar-track: transparent;
+  --scrollbar-border: #f8fafc;
 }
 
+/* ===================================================================
+ * Dark Theme
+ * =================================================================== */
 .dark {
+  /* Layout Backgrounds */
+  --bg-app: #1e1e1e;
+  --bg-sidebar: #252526;
+  --bg-editor: #1e1e1e;
+  --bg-panel: #2d2d2d;
+  --bg-statusbar: #007acc;
+  --bg-statusbar-ro: #e06c75;
+
+  /* Component Backgrounds */
+  --bg-input: #3c3c3c;
+  --bg-hover: #2a2d2e;
+  --bg-active: #37373d;
+  --bg-accent: #0078d4;
+  --bg-accent-hover: #006ab1;
+  --bg-accent-subtle: #264f78;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-tooltip: #383838;
+  --bg-badge: #e06c75;
+  --bg-badge-count: #454545;
+
+  /* Chat */
+  --bg-chat-user: #0e2a3f;
+  --bg-badge-success: #2a3a2a;
+  --fg-badge-success: #8bc34a;
+  --border-badge-success: #4a5a3a;
+
+  /* Foreground / Text */
+  --fg-primary: #cccccc;
+  --fg-secondary: #969696;
+  --fg-muted: #5a5a5a;
+  --fg-accent: #4fc1ff;
+  --fg-on-accent: #ffffff;
+  --fg-on-tooltip: #cccccc;
+
+  /* Borders */
+  --border-default: #454545;
+  --border-hover: #6b6b6b;
+  --border-active: #888888;
+  --border-accent: #0078d4;
+
+  /* Semantic (Git) */
+  --color-added: #81b88b;
+  --color-added-bg: #143d20;
+  --color-modified: #e2c08d;
+  --color-modified-bg: #3d3520;
+  --color-deleted: #e06c75;
+  --color-deleted-bg: #4b1818;
+  --color-warning: #d19a66;
+  --color-info: #4fc1ff;
+
+  /* Editor */
+  --editor-bg: #1e1e1e;
+  --editor-text: #cccccc;
+  --editor-muted: #969696;
+  --editor-border: #454545;
+
+  /* Blockquote */
+  --bq-bg-color: #252526;
+  --bq-border-1: #555555;
+  --bq-border-2: #666666;
+  --bq-border-3: #777777;
+  --bq-border-4: #888888;
+  --bq-border-5: #999999;
+  --bq-border-6: #aaaaaa;
+  --bq-border-7: #bbbbbb;
+  --bq-border-8: #cccccc;
+  --bq-border-9: #cccccc;
+  --bq-border-10: #cccccc;
+
+  /* Code Block */
+  --code-bg-color: #2d2d2d;
+
+  /* Links */
+  --link-color: #4fc1ff;
+  --link-hover: #74d0ff;
+
+  /* Selection */
+  --selection-bg: rgba(38, 79, 120, 0.6);
+  --selection-bg-block: rgba(38, 79, 120, 0.7);
+
+  /* Diff View */
   --diff-bg: #1e1e1e;
   --diff-header-bg: #2d2d2d;
   --diff-border: #454545;
@@ -77,4 +227,10 @@
   --diff-line-empty: #252526;
   --diff-word-add: #166534;
   --diff-word-del: #7f1d1d;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #555555;
+  --scrollbar-thumb-hover: #777777;
+  --scrollbar-track: transparent;
+  --scrollbar-border: #1e1e1e;
 }

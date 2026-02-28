@@ -10,6 +10,7 @@ use crate::hooks::use_core::{DocContext, BranchContext};
 use crate::i18n::t;
 use deve_core::models::DocId;
 use leptos::prelude::*;
+use crate::components::icons::Plus;
 
 use crate::components::dropdown::AnchorRect;
 use crate::components::main_layout::SearchControl;
@@ -91,9 +92,9 @@ pub fn ExplorerView(
     });
 
     view! {
-        <div class="h-full w-full bg-[#f7f7f7] flex flex-col font-sans select-none relative">
-            <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-gray-100 hover:bg-gray-100 transition-colors group">
-                <div class="flex items-center gap-2 flex-1 min-w-0 text-gray-700">
+        <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none relative">
+            <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-default hover:bg-hover transition-colors group">
+                <div class="flex items-center gap-2 flex-1 min-w-0 text-primary">
                     <crate::components::sidebar::repo_switcher::RepoSwitcher />
                     <div class="overflow-hidden flex-1">
                         <span class="font-medium text-sm truncate block" title=move || active_repo_label.get()>
@@ -104,13 +105,11 @@ pub fn ExplorerView(
 
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                    <button
-                        class="p-1 rounded hover:bg-gray-200 text-gray-500"
+                        class="p-1 rounded hover:bg-hover text-secondary"
                         title="New Doc"
                         on:click=move |_| request_create.run(None)
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                        </svg>
+                        <Plus />
                     </button>
                 </div>
             </div>
@@ -120,7 +119,7 @@ pub fn ExplorerView(
                     let nodes = tree_nodes.get();
                     if nodes.is_empty() {
                          view! {
-                            <div class="flex flex-col items-center justify-center h-32 text-gray-400 text-sm italic select-none">
+                            <div class="flex flex-col items-center justify-center h-32 text-muted text-sm italic select-none">
                                 {move || crate::i18n::t::sidebar::no_docs(locale.get())}
                             </div>
                         }.into_any()
