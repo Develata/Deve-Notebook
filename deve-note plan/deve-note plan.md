@@ -28,6 +28,7 @@
 
 ### Phase 5: Extensions & Operations
 11. **[Plugins & Runtime](./11_plugins.md)**: **Dual-Engine** (Rhai/WASM) & OCI Container (Podman).
+11b. **[AI Integration](./11b_ai_integration.md)**: 双通道 AI 架构 (Agent Bridge + AI Chat)。
 12. **[Commands Summary](./12_commands.md)**: CLI 与 Command Palette 指令汇总.
 13. **[Settings Summary](./13_settings.md)**: 环境变量与配置文件汇总.
 14. **[Technology Stack](./14_tech_stack.md)**: **Redb + CodeMirror 6**, Native/Mobile 差异化选型.
