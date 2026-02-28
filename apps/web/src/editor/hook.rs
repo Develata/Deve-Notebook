@@ -10,14 +10,15 @@
 //! - 避免了 JS->WASM 全文拷贝和 Rust 端 Diff 计算
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
-use super::EditorStats;
-use super::ffi::{Delta, destroyEditor, set_read_only, setupCodeMirror};
+use super::ffi::{destroyEditor, set_read_only, setupCodeMirror, Delta};
 use super::playback;
 use super::sync;
-use crate::api::WsService;
+use super::EditorStats;
+use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
+use deve_core::security::RepoKey;
 use leptos::html::Div;
 use leptos::prelude::*;
 use wasm_bindgen::prelude::*;
@@ -53,6 +54,9 @@ pub fn use_editor(
 
     let (is_playback, set_is_playback) = signal(false);
 
+    // E2EE: RepoKey 信号 (RAM-only, 页面卸载时自动清除)
+    let (repo_key, set_repo_key) = signal(None::<RepoKey>);
+
     // 生成会话 client_id
     let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
 
@@ -69,6 +73,14 @@ pub fn use_editor(
         set_load_progress.set((0, 0));
         set_load_eta_ms.set(0);
         ws_clone.send(ClientMessage::OpenDoc { doc_id });
+    });
+
+    // E2EE: 连接成功后请求 RepoKey
+    let ws_key = ws.clone();
+    Effect::new(move |_| {
+        if ws_key.status.get() == ConnectionStatus::Connected {
+            ws_key.send(ClientMessage::RequestKey);
+        }
     });
 
     // 同步本地版本到 Core
@@ -95,6 +107,8 @@ pub fn use_editor(
                 set_load_progress,
                 set_load_eta_ms,
                 on_stats,
+                repo_key,
+                set_repo_key,
             };
             sync::handle_server_message(msg, &ctx);
         }
@@ -156,7 +170,9 @@ pub fn use_editor(
             let on_delta = StoredValue::new_local(Some(on_delta));
             on_cleanup(move || {
                 // Drop the closure to prevent memory leak
-                on_delta.update_value(|v| { v.take(); });
+                on_delta.update_value(|v| {
+                    v.take();
+                });
             });
         }
     });

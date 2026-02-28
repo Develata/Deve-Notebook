@@ -1,4 +1,4 @@
-use crate::server::handlers::{document, listing, plugin, search, switcher, sync};
+use crate::server::handlers::{document, key_exchange, listing, plugin, search, switcher, sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::protocol::ClientMessage;
 use std::sync::Arc;
@@ -62,6 +62,9 @@ pub(super) async fn route_core(
         }
         ClientMessage::Ping => {
             ch.unicast(deve_core::protocol::ServerMessage::Pong);
+        }
+        ClientMessage::RequestKey => {
+            key_exchange::handle_request_key(state, ch).await;
         }
         other => {
             tracing::debug!("Unhandled client message: {:?}", other);

@@ -2,15 +2,17 @@
 //! # Sync Logic (同步逻辑)
 //!
 //! 处理来自 WebSocket 的 `ServerMessage`，分发至各子模块。
-//! 拆分为 context (参数打包) / snapshot (快照处理) 两个子模块。
+//! 拆分为 context (参数打包) / snapshot (快照处理) / decrypt (E2EE) 子模块。
 
 pub mod context;
+mod decrypt;
 mod snapshot;
 
 use context::SyncContext;
 use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
 use deve_core::protocol::ServerMessage;
+use deve_core::security::RepoKey;
 use leptos::prelude::*;
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
@@ -55,9 +57,32 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         }
         ServerMessage::Pong => {}
         ServerMessage::SyncPush { ops } => {
-            handle_sync_push(&ops);
+            decrypt::handle_sync_push(ctx, &ops);
+        }
+        ServerMessage::KeyProvide { repo_key } => {
+            handle_key_provide(ctx, &repo_key);
+        }
+        ServerMessage::KeyDenied { reason } => {
+            leptos::logging::warn!("KeyDenied: {}", reason);
         }
         _ => {}
+    }
+}
+
+/// E2EE: 收到服务端提供的 RepoKey，存入内存信号
+///
+/// # Invariants
+/// - `repo_key` 必须恰好 32 bytes (AES-256)
+/// - 仅存于 RAM 信号中，页面卸载时自动清除
+fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
+    match RepoKey::from_bytes(raw) {
+        Some(key) => {
+            leptos::logging::log!("E2EE: RepoKey received ({} bytes)", raw.len());
+            ctx.set_repo_key.set(Some(key));
+        }
+        None => {
+            leptos::logging::error!("E2EE: Invalid RepoKey length: {}", raw.len());
+        }
     }
 }
 
@@ -93,12 +118,5 @@ fn handle_new_op(
     // 如果处于 "head" (实时) 状态，自动推进回放
     if !ctx.is_playback.get_untracked() {
         ctx.set_playback_version.set(seq);
-    }
-}
-
-fn handle_sync_push(ops: &[deve_core::security::EncryptedOp]) {
-    leptos::logging::log!("Received SyncPush: {} encrypted ops", ops.len());
-    for enc_op in ops {
-        leptos::logging::warn!("Skipping encrypted op seq: {} (No RepoKey)", enc_op.seq);
     }
 }

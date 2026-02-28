@@ -127,4 +127,11 @@ pub enum ClientMessage {
     ///
     /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
     UnstageFiles { paths: Vec<String> },
+
+    // === E2EE Key Exchange (密钥交换) ===
+    /// 请求当前仓库的 RepoKey (通过已认证的 WSS 通道)
+    ///
+    /// **Pre-condition**: 客户端已通过 JWT 认证。
+    /// **Post-condition**: 服务端回复 `ServerMessage::KeyProvide`。
+    RequestKey,
 }

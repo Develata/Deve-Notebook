@@ -171,4 +171,16 @@ pub enum ServerMessage {
         success: u32,
         failed_paths: Vec<String>,
     },
+
+    // === E2EE Key Exchange (密钥交换) ===
+    /// 服务端向已认证客户端提供 RepoKey
+    ///
+    /// **Invariant**: 仅通过已认证的 WSS 通道传输，安全性由 TLS + JWT 保证。
+    /// **Post-condition**: 客户端收到后在内存中持有 RepoKey，页面卸载时清除。
+    KeyProvide {
+        /// AES-256 密钥的原始字节 (32 bytes)
+        repo_key: Vec<u8>,
+    },
+    /// 密钥请求被拒绝 (无认证或服务端无密钥)
+    KeyDenied { reason: String },
 }

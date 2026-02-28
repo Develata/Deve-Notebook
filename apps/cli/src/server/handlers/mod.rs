@@ -4,6 +4,7 @@
 //! 包含各类 ClientMessage 的处理逻辑，按功能领域划分。
 pub mod docs;
 pub mod document;
+pub mod key_exchange;
 pub mod listing;
 pub mod merge;
 pub mod plugin;
