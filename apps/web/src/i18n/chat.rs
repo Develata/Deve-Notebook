@@ -10,6 +10,7 @@ pub fn panel_title(locale: Locale) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 pub fn mode_plan(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "PLAN",
@@ -17,6 +18,7 @@ pub fn mode_plan(locale: Locale) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 pub fn mode_build(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "BUILD",

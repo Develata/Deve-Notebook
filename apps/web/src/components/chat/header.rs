@@ -4,7 +4,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ChatHeader(
-    ai_mode: ReadSignal<String>,
+    #[prop(optional)] _ai_mode: Option<ReadSignal<String>>,
     #[prop(optional)] mobile: bool,
     on_close: Callback<()>,
 ) -> impl IntoView {

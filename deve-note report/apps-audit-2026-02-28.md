@@ -115,49 +115,35 @@
 
 ## 第二部分: Plan 设计不合理之处
 
-### 2.1 文件行数限制自相矛盾 [MEDIUM]
+### 2.1 ✅ 已修正 — 文件行数限制自相矛盾 [MEDIUM]
 
-**问题**: Plan 主文档 (`deve-note plan.md`) 规定 "单文件行数限制: 目标 ~100 行，MUST NOT 超过 200 行"。而 `AGENTS.md` 规定 "目标 < 130 行，硬限 250 行"。两份文档存在冲突。
+**问题**: Plan 主文档曾规定 "~100 行 / 200 行"，与 `AGENTS.md` 的 "130/250" 冲突。
+**修正**: `deve-note plan.md` 已统一为 130/250 标准。
 
-**建议**: 统一为 AGENTS.md 的 130/250 标准 (更实际)。更新 `deve-note plan.md` 中的表述。
+### 2.2 ✅ 已修正 — Web 端 "禁用 IndexedDB" 策略过于严格 [MEDIUM]
 
-### 2.2 Web 端 "禁用 IndexedDB" 策略过于严格 [MEDIUM]
+**问题**: Plan 禁止 localStorage，又要求 UI 偏好持久化。
+**修正**: `05_network.md` 已添加例外条款："纯 UI 偏好 MAY 使用 localStorage"。
 
-**问题** (`05_network.md` + `08_ui_design_01_web.md`): Plan 规定 "Web 端严禁使用 IndexedDB/LocalStorage 存储业务数据" 且 "RAM-Only"。但同时 `13_settings.md` 和 `08_ui_design_01_web.md` §5 又要求 "伸缩宽度、配置项等 MUST 通过 localStorage 持久化"。
+### 2.3 ✅ 已修正 — "CORS 允许所有" 与 "CSRF 防护" 矛盾 [HIGH]
 
-**矛盾点**: 一方面禁止持久化存储，另一方面要求 UI 布局偏好必须持久化。区分"业务数据"和"UI 偏好数据"在表述上模糊。
+**问题**: Plan 要求 CSRF 防护，但代码使用 `allow_origin(Any)`；Plan 原文缺乏 dev/prod 区分。
+**修正**: `09_auth.md` CORS 策略已细化为 Production (域名白名单) / Development (localhost only + 日志标记) 两套策略，通过 `DEVE_ENV` 环境变量切换。
 
-**建议**: 明确划分:
-- **禁止**: 文档内容、Ledger 数据、同步状态等业务数据
-- **允许**: UI 偏好 (侧边栏宽度、主题、语言) 通过 localStorage 存储
+### 2.4 ✅ 已修正 — Desktop/Mobile "MUST 原生 UI" 与现实冲突 [LOW]
 
-### 2.3 "CORS 允许所有" 与 "CSRF 防护" 矛盾 [HIGH]
+**问题**: Plan 要求 "原生 UI"，但实际使用 Tauri v2 (WebView)。
+**修正**: `08_ui_design_01_web.md` Scope Boundary 措辞已修正为 "Tauri v2 (原生外壳 + 内嵌 WebView)"；`08_ui_design_02_desktop.md` §4.1 已有说明 Note。
 
-**问题**: Plan `09_auth.md` 要求 CSRF 防护，但 Server 代码中使用 `CorsLayer::allow_origin(Any)`。通配 CORS 配置天然抵消了 CSRF 防护的意义 — 任何第三方网页都可发起跨域请求。
+### 2.5 ✅ 已修正 — single-file 行数限制对 JS bundle 不适用 [LOW]
 
-**建议**: Plan 中应明确 CORS 策略:
-- 生产环境: `allow_origin` 限制为 `same-origin` 或明确的域名列表
-- 开发环境: 可放宽但需要显著标记
+**问题**: 构建产物 (`*.bundle.js`, `dist/`) 不应受源文件行数限制约束。
+**修正**: `deve-note plan.md` 已添加豁免条款："`*.bundle.js`、`dist/`、`target/` 等构建产物不受行数限制约束"。
 
-### 2.4 Desktop/Mobile "MUST 原生 UI" 与现实冲突 [LOW]
+### 2.6 ✅ 已修正 — Plan 中 "Loro CRDT" 与实际 "Dissimilar Diff" 不一致 [MEDIUM]
 
-**问题** (`08_ui_design_02_desktop.md` §4.1, `08_ui_design_03_mobile.md` §7.1): Plan 规定 Desktop/Mobile "MUST 以原生 UI 为标准实现"，但技术栈 (`14_tech_stack.md`) 选定 Tauri v2 (本质上是 WebView + Rust Backend)。Tauri 的前端层仍然是 Web 技术渲染。
-
-**建议**: 将措辞修改为 "MUST 提供原生级体验 (Native-feel)"，或改用 "MUST 使用原生外壳 (Native Shell) + 内嵌 WebView 的混合方案" 以匹配实际技术路线。
-
-### 2.5 single-file 行数限制对 JS bundle 不适用 [LOW]
-
-**问题**: `editor.bundle.js` (2614 行) 是 Webpack/Rollup 打包产物。AGENTS.md 的 130/250 行限制针对源文件，打包产物不应受限。
-
-**建议**: Plan 中明确排除 `*.bundle.js`、`dist/` 目录下的构建产物。在 `.deveignore` 或 AGENTS.md 中列出豁免清单。
-
-### 2.6 Plan 中 "Loro CRDT" 与实际 "Dissimilar Diff" 不一致 [MEDIUM]
-
-**问题**: `03_rendering.md` 提到 "State Layer: 绑定 Loro CRDT 状态 (Ledger)"，`07_diff_logic.md` 提到 "Auto Mode (CRDT): 利用 Loro 的 Op-based Merge"。但 `14_tech_stack.md` 技术栈表中 Diff 引擎标注为 "Dissimilar (Verified)"，Loro CRDT 未出现在技术栈中。
-
-实际代码 `crates/core/` 使用自研的 Op-based 日志 + `dissimilar` crate 计算 diff，**并未引入 Loro CRDT**。
-
-**建议**: 统一 Plan 表述: 要么移除 Loro 引用改为 "自研 Op-based Sync"，要么补充 Loro 的引入计划与时间线。
+**问题**: 多处引用 Loro CRDT，但实际使用自研 Op-based + dissimilar。
+**修正**: `03_rendering.md` 已改为 "自研 Op-based 状态"；`07_diff_logic.md` 已改为 "不依赖外部 CRDT 框架，Loro 为远期预研 (TBD)"；`14_tech_stack.md` 已标注 ~~Loro~~ TBD。
 
 ---
 
@@ -400,7 +386,8 @@
 | 20 | 组件目录结构规范化 | `components/` |
 | 21 | lucide-leptos 图标迁移 | 全部组件 |
 | 22 | CoreState 拆分为独立 Context | ✅ 已完成 | 6 个子上下文 + 19 个组件迁移 |
-| 23 | Plan 文档矛盾修正 | `deve-note plan/` |
+| 23 | Plan 文档矛盾修正 | ✅ 已完成 | §2.3 CORS dev/prod、§2.4 原生 UI 措辞、§2.5 构建产物豁免 |
+| 24 | 编译警告清理 (11处) | ✅ 已完成 | contexts.rs、header.rs、i18n/chat.rs、effects.rs |
 
 ---
 
@@ -430,7 +417,8 @@
 - ✅ **P1 代码级全部完成** (6/7): 批量 dispatch O(1)、Closure 泄漏修复、wss:// 自适应、密钥权限 0600、RwLock 17 处级联修复、**Per-IP 速率限制已实现**
 - ⏳ **P1 待实现** (1/7): JWT 认证体系 (大型功能)
 - ✅ **P2 全部完成** (6/6): serve.rs 去重、VisualViewport 泄漏修复、ffi.rs to_op 标注、console.log 6 处清除、**4 个超硬限文件全部重构完成**、**i18n 硬编码 64 处全部迁移至 i18n 模块**
-- ✅ **P3 部分完成** (4/6): init.rs _path 修复、node_role 警告、prewarm 错误日志、**CoreState 拆分为 6 个独立上下文 + 19 个组件迁移**
+- ✅ **P3 大部分完成** (6/8): init.rs _path 修复、node_role 警告、prewarm 错误日志、**CoreState 拆分为 6 个独立上下文 + 19 个组件迁移**、**Plan 文档矛盾 3 处修正**、**编译警告 11 处清零**
 - ✅ **Leptos 0.7 API 迁移完成**: 53 个编译错误全部修复 (StoredValue/trait imports)
 - ✅ **BUG-H6 已修复**: sync.rs 14 参数 → SyncContext 结构体 + 目录模块拆分
+- ✅ **清洁构建**: `cargo check --package deve_web` = 0 errors, 0 warnings
 - **剩余工作估算**: JWT 认证 (~2-3 周)、CSS Token 迁移 (~2 周)

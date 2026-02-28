@@ -123,10 +123,10 @@ pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
                     }
                 }
             }
-            // StoredValue drop 会释放 Closure 内存
-            drop(resize_stored);
-            drop(scroll_stored);
-            drop(viewport_stored);
+            // StoredValue 是 Copy，离开作用域后自动释放内部 Closure
+            let _ = resize_stored;
+            let _ = scroll_stored;
+            let _ = viewport_stored;
         });
     }
 }

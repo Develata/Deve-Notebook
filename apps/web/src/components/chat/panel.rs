@@ -76,7 +76,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             on:drop=on_drop(set_input, set_is_drag_over)
         >
             <DragOverlay is_drag_over=is_drag_over />
-            <ChatHeader ai_mode=core.ai_mode mobile=mobile on_close=on_close />
+            <ChatHeader mobile=mobile on_close=on_close />
             <MessageList
                 messages=messages
                 is_streaming=is_streaming

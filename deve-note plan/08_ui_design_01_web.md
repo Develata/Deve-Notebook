@@ -5,7 +5,7 @@
 
 本节定义了 Web 端作为 Server Dashboard 的特有功能与部署架构。
 
-> **Scope Boundary**: Web 端仅作为服务器侧 UI。移动端/桌面端 **MUST** 采用原生 UI + 内嵌服务。
+> **Scope Boundary**: Web 端仅作为服务器侧 UI。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §4.1 和 `08_ui_design_03_mobile.md` §7.1。
 
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求。

@@ -32,8 +32,9 @@
 ## 安全策略 (Security Policies)
 
 *   **CORS 策略**:
-    *   **Server 模式**: Origin 限制为 `http://localhost:{port}` 和用户配置的域名白名单。
-    *   **MUST NOT** 使用 `allow_origin(Any)`；公网部署时仅允许明确列出的 Origin。
+    *   **生产环境 (Production)**: Origin 限制为用户配置的域名白名单，**MUST NOT** 使用 `allow_origin(Any)`。
+    *   **开发环境 (Development)**: **MAY** 放宽为 `http://localhost:{port}` 和 `http://127.0.0.1:{port}`，但 **MUST** 在日志中显著标记 `⚠ CORS: Dev-Mode (Relaxed)` 以提醒开发者。
+    *   **切换条件**: 通过环境变量 `DEVE_ENV=production | development` 控制策略分支。
 *   **Brute Force Protection**: 连续 5 次登录失败后 IP 封禁 15 分钟。
 *   **Token Revocation**: 密码修改后所有已签发 JWT 立即失效 (通过 `token_version` 计数器机制)。
 *   **Security Headers**: 所有 HTTP 响应 **MUST** 包含:

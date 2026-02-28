@@ -1,6 +1,10 @@
 // apps/web/src/hooks/use_core/contexts.rs
 //! 子上下文定义：将 CoreState 按领域拆分为 6 个独立上下文。
 //! 组件按需 `expect_context::<XxxContext>()` 而非依赖单一巨型结构。
+//!
+//! 部分字段暂未被组件直接读取（仅通过 CoreState 兼容层使用），
+//! 待后续组件全部迁移后自然消除。
+#![allow(dead_code)]
 
 use crate::editor::EditorStats;
 use super::diff_session::DiffSessionWire;
