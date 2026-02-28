@@ -7,12 +7,7 @@
 //! | POST   | /api/auth/logout   | Yes  | 清除 Cookie          |
 //! | GET    | /api/auth/me       | Yes  | 返回当前用户信息      |
 
-use axum::{
-    Extension, Json,
-    extract::ConnectInfo,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Extension, Json, extract::ConnectInfo, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -81,8 +76,7 @@ pub async fn login(
     }
 
     // 密码校验 (Argon2)
-    let ok = password::verify_password(&body.password, &config.password_hash)
-        .unwrap_or(false);
+    let ok = password::verify_password(&body.password, &config.password_hash).unwrap_or(false);
 
     if !ok {
         guard.record_failure(&ip);
@@ -107,7 +101,10 @@ pub async fn login(
             (
                 StatusCode::OK,
                 cookie,
-                Json(LoginResponse { success: true, error: None }),
+                Json(LoginResponse {
+                    success: true,
+                    error: None,
+                }),
             )
         }
         Err(e) => {
@@ -126,17 +123,21 @@ pub async fn login(
 
 /// POST /api/auth/logout — 清除 Cookie
 pub async fn logout() -> impl IntoResponse {
-    (StatusCode::OK, build_removal_cookie(), Json(LoginResponse {
-        success: true,
-        error: None,
-    }))
+    (
+        StatusCode::OK,
+        build_removal_cookie(),
+        Json(LoginResponse {
+            success: true,
+            error: None,
+        }),
+    )
 }
 
 /// GET /api/auth/me — 返回已认证用户 (受中间件保护)
-pub async fn me(
-    Extension(claims): Extension<deve_core::security::Claims>,
-) -> impl IntoResponse {
-    Json(MeResponse { username: claims.sub })
+pub async fn me(Extension(claims): Extension<deve_core::security::Claims>) -> impl IntoResponse {
+    Json(MeResponse {
+        username: claims.sub,
+    })
 }
 
 fn build_auth_cookie(token: &str) -> [(String, String); 1] {

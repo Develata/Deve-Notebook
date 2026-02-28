@@ -22,6 +22,8 @@ mod git;
 #[cfg(not(target_arch = "wasm32"))]
 mod mcp;
 #[cfg(not(target_arch = "wasm32"))]
+mod search;
+#[cfg(not(target_arch = "wasm32"))]
 mod skill;
 mod util;
 
@@ -81,6 +83,7 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
         chat::register_chat_api(engine, caps.clone());
         util::register_util_api(engine, caps.clone());
         skill::register_skill_api(engine);
+        search::register_search_api(engine);
         let manager = mcp_manager().unwrap_or_else(|| Arc::new(McpManager::new()));
         mcp::register_mcp_api(engine, manager);
     }

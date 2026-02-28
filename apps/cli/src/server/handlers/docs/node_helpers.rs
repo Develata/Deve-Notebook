@@ -16,7 +16,10 @@ pub fn broadcast_dir_chain(state: &Arc<AppState>, ch: &DualChannel, node_id: Nod
             collect_dir_chain(db, node_id)
         })?;
 
-    let mut tm = state.tree_manager.write().unwrap_or_else(|e| e.into_inner());
+    let mut tm = state
+        .tree_manager
+        .write()
+        .unwrap_or_else(|e| e.into_inner());
     for (id, meta) in chain.into_iter().rev() {
         if tm.has_node(id) {
             continue;

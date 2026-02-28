@@ -1,0 +1,112 @@
+/**
+ * _variables-dark.css — Design Tokens (Dark Theme)
+ *
+ * Overrides :root variables defined in _variables.css.
+ * Applied when <html class="dark"> or ancestor has .dark class.
+ */
+
+.dark {
+  /* Layout Backgrounds */
+  --bg-app: #1e1e1e;
+  --bg-sidebar: #252526;
+  --bg-editor: #1e1e1e;
+  --bg-panel: #2d2d2d;
+  --bg-statusbar: #007acc;
+  --bg-statusbar-ro: #e06c75;
+
+  /* Component Backgrounds */
+  --bg-input: #3c3c3c;
+  --bg-hover: #2a2d2e;
+  --bg-active: #37373d;
+  --bg-accent: #0078d4;
+  --bg-accent-hover: #006ab1;
+  --bg-accent-subtle: #264f78;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-tooltip: #383838;
+  --bg-badge: #e06c75;
+  --bg-badge-count: #454545;
+
+  /* Chat */
+  --bg-chat-user: #0e2a3f;
+  --bg-badge-success: #2a3a2a;
+  --fg-badge-success: #8bc34a;
+  --border-badge-success: #4a5a3a;
+
+  /* Foreground / Text */
+  --fg-primary: #cccccc;
+  --fg-secondary: #969696;
+  --fg-muted: #5a5a5a;
+  --fg-accent: #4fc1ff;
+  --fg-on-accent: #ffffff;
+  --fg-on-tooltip: #cccccc;
+
+  /* Borders */
+  --border-default: #454545;
+  --border-hover: #6b6b6b;
+  --border-active: #888888;
+  --border-accent: #0078d4;
+
+  /* Semantic (Git) */
+  --color-added: #81b88b;
+  --color-added-bg: #143d20;
+  --color-modified: #e2c08d;
+  --color-modified-bg: #3d3520;
+  --color-deleted: #e06c75;
+  --color-deleted-bg: #4b1818;
+  --color-warning: #d19a66;
+  --color-info: #4fc1ff;
+
+  /* Editor */
+  --editor-bg: #1e1e1e;
+  --editor-text: #cccccc;
+  --editor-muted: #969696;
+  --editor-border: #454545;
+
+  /* Blockquote */
+  --bq-bg-color: #252526;
+  --bq-border-1: #555555;
+  --bq-border-2: #666666;
+  --bq-border-3: #777777;
+  --bq-border-4: #888888;
+  --bq-border-5: #999999;
+  --bq-border-6: #aaaaaa;
+  --bq-border-7: #bbbbbb;
+  --bq-border-8: #cccccc;
+  --bq-border-9: #cccccc;
+  --bq-border-10: #cccccc;
+
+  /* Code Block */
+  --code-bg-color: #2d2d2d;
+
+  /* Links */
+  --link-color: #4fc1ff;
+  --link-hover: #74d0ff;
+
+  /* Selection */
+  --selection-bg: rgba(38, 79, 120, 0.6);
+  --selection-bg-block: rgba(38, 79, 120, 0.7);
+
+  /* Diff View */
+  --diff-bg: #1e1e1e;
+  --diff-header-bg: #2d2d2d;
+  --diff-border: #454545;
+  --diff-fg: #cccccc;
+  --diff-muted: #9ca3af;
+  --diff-filename: #4fc1ff;
+  --diff-pill-bg: #374151;
+  --diff-pill-fg: #d1d5db;
+  --diff-btn-hover: #3e3e42;
+  --diff-gutter-bg: #1e1e1e;
+  --diff-gutter-fg: #9ca3af;
+  --diff-line-add: #143d20;
+  --diff-line-del: #4b1818;
+  --diff-line-empty: #252526;
+  --diff-word-add: #166534;
+  --diff-word-del: #7f1d1d;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #555555;
+  --scrollbar-thumb-hover: #777777;
+  --scrollbar-track: transparent;
+  --scrollbar-border: #1e1e1e;
+}

@@ -29,6 +29,8 @@ pub mod search_box;
 pub mod spectator_overlay;
 
 pub mod dashboard;
+pub mod desktop_chat_panel;
 pub mod desktop_layout;
 pub mod diff_view;
 pub mod mobile_layout;
+pub mod settings_sections;

@@ -73,7 +73,11 @@ pub async fn handle_delete_doc(
 
     // 4. 更新 TreeManager 并广播 Delta
     if let Some(node_id) = node_id {
-        let delta = state.tree_manager.write().unwrap_or_else(|e| e.into_inner()).remove(node_id);
+        let delta = state
+            .tree_manager
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(node_id);
         ch.broadcast(ServerMessage::TreeUpdate(delta));
     }
 

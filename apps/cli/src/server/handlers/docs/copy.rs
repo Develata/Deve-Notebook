@@ -111,13 +111,17 @@ pub async fn handle_copy_doc(
                 if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
                     tracing::error!("广播父目录失败: {:?}", e);
                 }
-                let delta = state.tree_manager.write().unwrap_or_else(|e| e.into_inner()).add_file(
-                    node_id,
-                    meta.path.clone(),
-                    meta.parent_id,
-                    meta.name.clone(),
-                    doc_id,
-                );
+                let delta = state
+                    .tree_manager
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .add_file(
+                        node_id,
+                        meta.path.clone(),
+                        meta.parent_id,
+                        meta.name.clone(),
+                        doc_id,
+                    );
                 ch.broadcast(ServerMessage::TreeUpdate(delta));
             }
         } else {
@@ -191,13 +195,17 @@ fn register_and_broadcast_copied_docs(
                         if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
                             tracing::error!("广播父目录失败: {:?}", e);
                         }
-                        let delta = state.tree_manager.write().unwrap_or_else(|e| e.into_inner()).add_file(
-                            node_id,
-                            meta.path.clone(),
-                            meta.parent_id,
-                            meta.name.clone(),
-                            doc_id,
-                        );
+                        let delta = state
+                            .tree_manager
+                            .write()
+                            .unwrap_or_else(|e| e.into_inner())
+                            .add_file(
+                                node_id,
+                                meta.path.clone(),
+                                meta.parent_id,
+                                meta.name.clone(),
+                                doc_id,
+                            );
                         ch.broadcast(ServerMessage::TreeUpdate(delta));
                     }
                 } else {

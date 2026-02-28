@@ -8,9 +8,9 @@ pub mod context;
 mod decrypt;
 mod snapshot;
 
-use context::SyncContext;
 use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
+use context::SyncContext;
 use deve_core::protocol::ServerMessage;
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
@@ -86,12 +86,7 @@ fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
     }
 }
 
-fn handle_new_op(
-    ctx: &SyncContext,
-    op: deve_core::models::Op,
-    seq: u64,
-    origin_id: u64,
-) {
+fn handle_new_op(ctx: &SyncContext, op: deve_core::models::Op, seq: u64, origin_id: u64) {
     let current_ver = ctx.local_version.get_untracked();
     if seq <= current_ver {
         return;

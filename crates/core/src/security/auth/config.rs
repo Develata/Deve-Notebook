@@ -33,8 +33,7 @@ impl AuthConfig {
     /// - `AUTH_SECRET` 必须存在且 >= 32 字节
     /// - `AUTH_PASS` 必须存在 (Argon2 哈希)
     pub fn from_env() -> Result<Self> {
-        let secret = std::env::var("AUTH_SECRET")
-            .map_err(|_| anyhow!("AUTH_SECRET not set"))?;
+        let secret = std::env::var("AUTH_SECRET").map_err(|_| anyhow!("AUTH_SECRET not set"))?;
 
         if secret.len() < 32 {
             return Err(anyhow!(
@@ -43,11 +42,9 @@ impl AuthConfig {
             ));
         }
 
-        let username = std::env::var("AUTH_USER")
-            .unwrap_or_else(|_| "admin".into());
+        let username = std::env::var("AUTH_USER").unwrap_or_else(|_| "admin".into());
 
-        let password_hash = std::env::var("AUTH_PASS")
-            .map_err(|_| anyhow!("AUTH_PASS not set"))?;
+        let password_hash = std::env::var("AUTH_PASS").map_err(|_| anyhow!("AUTH_PASS not set"))?;
 
         let allow_anon = std::env::var("AUTH_ALLOW_ANONYMOUS_LOCALHOST")
             .map(|v| v == "true" || v == "1")

@@ -10,10 +10,7 @@
 use anyhow::{Result, anyhow};
 use argon2::{
     Argon2,
-    password_hash::{
-        PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
-        rand_core::OsRng,
-    },
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 
 /// 验证密码是否匹配已存储的 Argon2 哈希
@@ -24,8 +21,8 @@ use argon2::{
 /// # 后置条件
 /// - 返回 Ok(true) 当且仅当密码匹配
 pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool> {
-    let parsed = PasswordHash::new(stored_hash)
-        .map_err(|e| anyhow!("Invalid hash format: {}", e))?;
+    let parsed =
+        PasswordHash::new(stored_hash).map_err(|e| anyhow!("Invalid hash format: {}", e))?;
     match Argon2::default().verify_password(password.as_bytes(), &parsed) {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),

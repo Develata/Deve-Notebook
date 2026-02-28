@@ -44,8 +44,8 @@ pub mod plugin_host;
 pub mod prewarm;
 mod rate_limit;
 pub mod security;
-mod setup;
 pub mod session;
+mod setup;
 pub mod source_control_proxy;
 pub mod ws;
 

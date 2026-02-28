@@ -22,8 +22,8 @@ mod provide;
 pub mod state;
 pub mod types;
 
-pub use types::*;
 pub use contexts::*;
+pub use types::*;
 
 use crate::api::WsService;
 use base64::Engine;

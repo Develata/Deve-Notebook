@@ -28,13 +28,6 @@ pub fn read_only_mode(locale: Locale) -> &'static str {
     }
 }
 
-pub fn select_document(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Select a document",
-        Locale::Zh => "请选择文档",
-    }
-}
-
 pub fn tab(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Tab",
@@ -102,12 +95,5 @@ pub fn spectator_status(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Spectator Mode - Read Only",
         Locale::Zh => "旁观者模式 - 只读",
-    }
-}
-
-pub fn select_document_to_edit(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Select a document to edit",
-        Locale::Zh => "请选择一个文档进行编辑",
     }
 }

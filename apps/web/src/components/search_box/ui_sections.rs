@@ -18,9 +18,7 @@ pub fn header(
         SearchUiMode::Sheet => {
             "px-3 py-2 border-b border-default flex items-center gap-2 bg-sidebar"
         }
-        SearchUiMode::Overlay => {
-            "p-3 border-b border-default flex items-center gap-2 bg-sidebar"
-        }
+        SearchUiMode::Overlay => "p-3 border-b border-default flex items-center gap-2 bg-sidebar",
     };
     view! {
         <div data-sheet-drag-handle="1" class=header_class>

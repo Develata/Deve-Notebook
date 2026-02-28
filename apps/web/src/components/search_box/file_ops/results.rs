@@ -7,7 +7,7 @@ use crate::components::search_box::types::{
 use deve_core::models::DocId;
 use std::collections::HashSet;
 
-use super::parser::{is_ready_for_dst, ParsedArgs};
+use super::parser::{ParsedArgs, is_ready_for_dst};
 use super::path_utils::{
     collect_dirs, filter_dirs, finalize_dst, format_arg, format_dir_arg_with_cursor,
     normalize_doc_path,

@@ -14,7 +14,9 @@ pub fn pending_merges(locale: Locale) -> &'static str {
 
 pub fn manual_mode_hint(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Manual Mode is active. These changes from peers are waiting for your approval.",
+        Locale::En => {
+            "Manual Mode is active. These changes from peers are waiting for your approval."
+        }
         Locale::Zh => "手动模式已激活。来自对等方的更改等待您的审批。",
     }
 }

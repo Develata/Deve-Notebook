@@ -1,7 +1,11 @@
 // apps/web/src/components/mobile_layout/footer.rs
 //! # Mobile Footer
+//!
+//! Entry point. Delegates status/load to `footer_status`,
+//! playback controls to `footer_playback`.
 
-use crate::api::ConnectionStatus;
+use super::footer_playback::{PlaybackNarrow, PlaybackWide};
+use super::footer_status::{LoadStatus, StatusView};
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
@@ -32,48 +36,6 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
     update_narrow();
     window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_narrow());
 
-    let status_view = move || {
-        let (color, text) = match status.get() {
-            ConnectionStatus::Connected => ("bg-green-500", t::bottom_bar::ready(locale.get())),
-            ConnectionStatus::Connecting => ("bg-yellow-500", t::bottom_bar::syncing(locale.get())),
-            ConnectionStatus::Disconnected => ("bg-red-500", t::bottom_bar::offline(locale.get())),
-        };
-        view! {
-            <div class="flex items-center gap-1.5">
-                <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
-                <span class="text-[11px] text-secondary font-medium">{text}</span>
-            </div>
-        }
-    };
-
-    let load_status = move || {
-        if load_state.get() == "ready" {
-            return view! {}.into_any();
-        }
-        let (done, total) = load_progress.get();
-        let eta_ms = load_eta_ms.get();
-        let text = if total > 0 {
-            if eta_ms > 0 {
-                if is_narrow.get() {
-                    format!("L {}/{}", done, total)
-                } else {
-                    format!(
-                        "{} {}/{} (~{}ms)",
-                        t::bottom_bar::loading(locale.get()),
-                        done,
-                        total,
-                        eta_ms
-                    )
-                }
-            } else {
-                format!("L {}/{}", done, total)
-            }
-        } else {
-            t::bottom_bar::loading(locale.get()).to_string()
-        };
-        view! { <div class="text-[10px] text-muted font-mono">{text}</div> }.into_any()
-    };
-
     let on_to_start = Callback::new(move |_| set_ver.set(0));
     let on_prev = Callback::new(move |_| {
         let next = curr_ver.get_untracked().saturating_sub(1);
@@ -97,11 +59,9 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
         >
             <div class="flex items-center gap-1.5">
                 <div class="flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-hidden">
-                    <div class="shrink-0">
-                        <BranchSwitcher compact=true />
-                    </div>
+                    <div class="shrink-0"><BranchSwitcher compact=true /></div>
                     <div class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
-                        {status_view}
+                        {move || view! { <StatusView status=status locale=locale /> }}
                     </div>
                     <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                         <span>{move || if is_narrow.get() { "W".to_string() } else { t::bottom_bar::words(locale.get()).to_string() }}</span>
@@ -130,8 +90,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 8l5 5 5-5" />
                                 </svg>
                             </span>
-                        }
-                        .into_any()
+                        }.into_any()
                     } else {
                         view! {
                             <span class="h-8 w-8 rounded-md border border-default bg-panel text-secondary flex items-center justify-center">
@@ -139,8 +98,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5-5 5 5" />
                                 </svg>
                             </span>
-                        }
-                        .into_any()
+                        }.into_any()
                     }}
                 </button>
             </div>
@@ -149,7 +107,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                 <div class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
                     <Show when=move || load_state.get() != "ready">
                         <div class="shrink-0 px-2 h-7 rounded-md bg-sidebar border border-default flex items-center">
-                            {load_status}
+                            <LoadStatus load_state=load_state load_progress=load_progress load_eta_ms=load_eta_ms is_narrow=is_narrow locale=locale />
                         </div>
                     </Show>
                     <div class="shrink-0 text-[10px] text-muted font-mono px-1">
@@ -159,70 +117,9 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
 
                 <Show
                     when=move || is_narrow.get()
-                    fallback=move || {
-                        view! {
-                            <div class="flex items-center gap-1.5 px-1 py-1 rounded-lg bg-sidebar border border-default">
-                                <button class="h-7 min-w-7 px-1 rounded border border-default bg-panel text-secondary active:bg-hover" title=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
-                                    "«"
-                                </button>
-                                <button class="h-7 min-w-7 px-1 rounded border border-default bg-panel text-secondary active:bg-hover" title=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
-                                    "‹"
-                                </button>
-                                <input
-                                    name="mobile-time-travel"
-                                    type="range"
-                                    min="0"
-                                    max=move || max_ver.get().to_string()
-                                    value=move || curr_ver.get().to_string()
-                                    on:input=move |ev| {
-                                        let val = event_target_value(&ev).parse::<u64>().unwrap_or(0);
-                                        set_ver.set(val);
-                                    }
-                                    class="flex-1 min-w-16 h-1 bg-active rounded-lg appearance-none cursor-pointer accent-accent"
-                                    title=move || t::bottom_bar::time_travel(locale.get())
-                                />
-                                <button class="h-7 min-w-7 px-1 rounded border border-default bg-panel text-secondary active:bg-hover" title=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
-                                    "›"
-                                </button>
-                                <button class="h-7 min-w-7 px-1 rounded border border-default bg-panel text-secondary active:bg-hover" title=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
-                                    "»"
-                                </button>
-                            </div>
-                        }
-                    }
+                    fallback=move || view! { <PlaybackWide curr_ver=curr_ver max_ver=max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale /> }
                 >
-                    <div class="rounded-lg bg-sidebar border border-default px-1 py-1 flex flex-col gap-1">
-                        <div class="flex items-center justify-between gap-1">
-                            <button class="h-6 min-w-6 px-1 rounded border border-default bg-panel text-secondary active:bg-hover text-[10px]" title=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
-                                "«"
-                            </button>
-                            <button class="h-6 min-w-6 px-1 rounded border border-default bg-panel text-secondary active:bg-hover text-[10px]" title=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
-                                "‹"
-                            </button>
-                            <span class="text-[9px] text-muted font-mono px-0.5 min-w-12 text-center">
-                                {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
-                            </span>
-                            <button class="h-6 min-w-6 px-1 rounded border border-default bg-panel text-secondary active:bg-hover text-[10px]" title=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
-                                "›"
-                            </button>
-                            <button class="h-6 min-w-6 px-1 rounded border border-default bg-panel text-secondary active:bg-hover text-[10px]" title=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
-                                "»"
-                            </button>
-                        </div>
-                        <input
-                            name="mobile-time-travel-narrow"
-                            type="range"
-                            min="0"
-                            max=move || max_ver.get().to_string()
-                            value=move || curr_ver.get().to_string()
-                            on:input=move |ev| {
-                                let val = event_target_value(&ev).parse::<u64>().unwrap_or(0);
-                                set_ver.set(val);
-                            }
-                            class="w-full h-1 bg-active rounded-lg appearance-none cursor-pointer accent-accent"
-                            title=move || t::bottom_bar::time_travel(locale.get())
-                        />
-                    </div>
+                    <PlaybackNarrow curr_ver=curr_ver max_ver=max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale />
                 </Show>
             </Show>
         </footer>

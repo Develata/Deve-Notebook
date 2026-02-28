@@ -41,9 +41,7 @@ impl BruteForceGuard {
     pub fn is_blocked(&self, ip: &IpAddr) -> bool {
         let records = self.records.lock().unwrap_or_else(|e| e.into_inner());
         match records.get(ip) {
-            Some(r) if r.failures >= MAX_FAILURES => {
-                r.last_failure.elapsed() < BAN_DURATION
-            }
+            Some(r) if r.failures >= MAX_FAILURES => r.last_failure.elapsed() < BAN_DURATION,
             _ => false,
         }
     }

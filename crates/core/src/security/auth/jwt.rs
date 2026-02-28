@@ -9,9 +9,7 @@
 //! - 签名密钥来自环境变量 `AUTH_SECRET`，禁止硬编码
 
 use anyhow::{Result, anyhow};
-use jsonwebtoken::{
-    DecodingKey, EncodingKey, Header, Validation, Algorithm,
-};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 /// JWT 有效期: 24 小时 (秒)
@@ -64,11 +62,7 @@ pub fn issue_token(secret: &str, token_version: u32) -> Result<String> {
 /// # 后置条件
 /// - 成功时返回解码后的 Claims
 /// - 过期 / 签名无效 / 版本不匹配均返回 Err
-pub fn validate_token(
-    secret: &str,
-    token: &str,
-    current_version: u32,
-) -> Result<Claims> {
+pub fn validate_token(secret: &str, token: &str, current_version: u32) -> Result<Claims> {
     let key = DecodingKey::from_secret(secret.as_bytes());
     let mut validation = Validation::new(Algorithm::HS256);
     validation.set_required_spec_claims(&["sub", "exp", "iat"]);

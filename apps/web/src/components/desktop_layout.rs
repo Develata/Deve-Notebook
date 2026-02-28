@@ -2,8 +2,8 @@
 //! # Desktop Layout
 
 use crate::components::activity_bar::SidebarView;
-use crate::components::chat::ChatPanel;
 use crate::components::dashboard::Dashboard;
+use crate::components::desktop_chat_panel::DesktopChatPanel;
 use crate::components::diff_view::DiffView;
 use crate::components::header::Header;
 use crate::editor::Editor;
@@ -138,34 +138,11 @@ pub fn DesktopLayout(
                 }}
             </div>
 
-            {move || if chat_visible.get() {
-                view! {
-                    <div class="flex items-stretch ml-4">
-                        <div
-                            class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
-                            on:pointerdown=move |ev| {
-                                if let Some(target) = ev.target()
-                                    && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                                {
-                                    let _ = el.set_pointer_capture(ev.pointer_id());
-                                }
-                                start_resize_right.run(ev)
-                            }
-                        >
-                            <div class="w-[1px] h-8 bg-active group-hover:bg-accent transition-colors"></div>
-                        </div>
-                        <div
-                            class="flex-none bg-panel shadow-sm border border-default rounded-lg overflow-hidden flex flex-col"
-                            style=move || format!("width: {}px", right_width.get())
-                        >
-                            <ChatPanel on_close=Callback::new(move |_| ()) />
-                        </div>
-                    </div>
-                }
-                .into_any()
-            } else {
-                view! {}.into_any()
-            }}
+            <DesktopChatPanel
+                chat_visible=chat_visible
+                right_width=right_width
+                start_resize_right=start_resize_right
+            />
         </main>
     }
 }

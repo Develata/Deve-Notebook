@@ -54,10 +54,7 @@ mod tests {
         let args_json = format!(r#"{{"path":"{}"}}"#, path_str);
 
         let result = plugin
-            .call(
-                "run_tool",
-                vec!["read_file".into(), args_json.into()],
-            )
+            .call("run_tool", vec!["read_file".into(), args_json.into()])
             .expect("run_tool should work");
 
         let content = result.into_string().unwrap();
@@ -68,10 +65,7 @@ mod tests {
     fn test_execute_tool_unknown() {
         let plugin = load_ai_chat();
         let result = plugin
-            .call(
-                "run_tool",
-                vec!["nonexistent_tool".into(), "{}".into()],
-            )
+            .call("run_tool", vec!["nonexistent_tool".into(), "{}".into()])
             .expect("run_tool should return error string, not panic");
 
         let content = result.into_string().unwrap();
@@ -106,11 +100,7 @@ mod tests {
         let result = plugin
             .call(
                 "chat",
-                vec![
-                    "test-req-id".into(),
-                    "Hello".into(),
-                    rhai::Dynamic::UNIT,
-                ],
+                vec!["test-req-id".into(), "Hello".into(), rhai::Dynamic::UNIT],
             )
             .expect("chat should not panic");
 

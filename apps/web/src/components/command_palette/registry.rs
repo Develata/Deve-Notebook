@@ -77,8 +77,10 @@ pub fn create_static_commands(
             id: "merge_peer".to_string(),
             title: (t::command_palette::merge_peer)(locale).to_string(),
             action: Callback::new(move |_| {
-                let branch = use_context::<crate::hooks::use_core::BranchContext>().expect("branch ctx");
-                let sync = use_context::<crate::hooks::use_core::SyncMergeContext>().expect("sync ctx");
+                let branch =
+                    use_context::<crate::hooks::use_core::BranchContext>().expect("branch ctx");
+                let sync =
+                    use_context::<crate::hooks::use_core::SyncMergeContext>().expect("sync ctx");
                 if let Some(peer_id) = branch.active_branch.get_untracked() {
                     sync.on_merge_peer.run(peer_id.to_string());
                     set_show.set(false);

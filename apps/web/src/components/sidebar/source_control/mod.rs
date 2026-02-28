@@ -12,6 +12,7 @@
 pub mod change_item;
 pub mod changes;
 pub mod commit;
+pub mod context_menu;
 pub mod history;
 pub mod repositories;
 
@@ -20,6 +21,7 @@ pub mod unstaged_section;
 
 use self::changes::Changes;
 use self::commit::Commit;
+use self::context_menu::SectionMenu;
 use self::history::History;
 use crate::components::icons::*;
 use leptos::prelude::*;
@@ -71,50 +73,13 @@ pub fn SourceControlView() -> impl IntoView {
                     </button>
 
                     // Context Menu
-                    {move || if show_menu.get() {
-                        view! {
-                            <div
-                                class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1"
-                                on:click=move |e| e.stop_propagation()
-                            >
-                                <div
-                                    class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
-                                    on:click=move |_| { show_repos.update(|v| *v = !*v); }
-                                >
-                                    <span>{move || t::source_control::repositories(locale.get())}</span>
-                                    {move || if show_repos.get() {
-                                        view! { <Check class="w-3 h-3" /> }.into_any()
-                                    } else {
-                                        view! {}.into_any()
-                                    }}
-                                </div>
-                                <div
-                                    class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
-                                    on:click=move |_| { show_changes.update(|v| *v = !*v); }
-                                >
-                                    <span>{move || t::source_control::changes(locale.get())}</span>
-                                    {move || if show_changes.get() {
-                                        view! { <Check class="w-3 h-3" /> }.into_any()
-                                    } else {
-                                        view! {}.into_any()
-                                    }}
-                                </div>
-                                <div
-                                    class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
-                                    on:click=move |_| { show_graph.update(|v| *v = !*v); }
-                                >
-                                    <span>{move || t::source_control::graph(locale.get())}</span>
-                                    {move || if show_graph.get() {
-                                        view! { <Check class="w-3 h-3" /> }.into_any()
-                                    } else {
-                                        view! {}.into_any()
-                                    }}
-                                </div>
-                            </div>
-                        }.into_any()
-                    } else {
-                        view! {}.into_any()
-                    }}
+                    <SectionMenu
+                        show_menu=show_menu
+                        show_repos=show_repos
+                        show_changes=show_changes
+                        show_graph=show_graph
+                        locale=locale
+                    />
                  </div>
             </div>
 

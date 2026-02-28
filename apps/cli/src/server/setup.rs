@@ -67,8 +67,8 @@ pub(super) fn spawn_file_watcher(
     tokio::task::spawn_blocking(move || {
         use deve_core::watcher::FsEventType;
 
-        let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path)
-            .with_callback(move |event| match event {
+        let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path).with_callback(
+            move |event| match event {
                 FsEventType::DocChange(msgs) => {
                     for msg in msgs {
                         if let Ok(nodes) = repo.list_local_nodes(None)
@@ -84,7 +84,8 @@ pub(super) fn spawn_file_watcher(
                 FsEventType::DirChange => {
                     tracing::warn!("DirChange detected: ignore without Node update");
                 }
-            });
+            },
+        );
 
         if let Err(e) = watcher.watch() {
             tracing::error!("Watcher failed: {:?}", e);

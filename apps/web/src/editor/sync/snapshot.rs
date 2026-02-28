@@ -2,9 +2,9 @@
 //! Snapshot 消息处理: 接收文档快照并渐进式应用 delta ops
 
 use super::context::SyncContext;
+use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteContent, applyRemoteOpsBatch, getEditorContent};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
-use crate::editor::EditorStats;
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;

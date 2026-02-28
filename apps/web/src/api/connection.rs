@@ -166,9 +166,7 @@ fn build_ws_url(port: u16) -> String {
     let hostname = location
         .hostname()
         .unwrap_or_else(|_| "localhost".to_string());
-    let protocol = location
-        .protocol()
-        .unwrap_or_else(|_| "http:".to_string());
+    let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
     format!("{}://{}:{}/ws", ws_scheme, hostname, port)
 }

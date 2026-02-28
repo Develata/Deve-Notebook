@@ -1,10 +1,10 @@
-﻿// apps\web\src\components\sidebar
+// apps\web\src\components\sidebar
 //! # ExtensionsView 组件 (ExtensionsView Component)
 //!
 //! 扩展视图的占位符。计划在第三阶段实现插件系统。
 
-use leptos::prelude::*;
 use crate::components::icons::Puzzle;
+use leptos::prelude::*;
 
 #[component]
 pub fn ExtensionsView() -> impl IntoView {

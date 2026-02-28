@@ -5,6 +5,8 @@ use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 
+type EventClosure = Rc<RefCell<Option<Closure<dyn FnMut(web_sys::Event)>>>>;
+
 pub fn on_drag_over(set_is_drag_over: WriteSignal<bool>) -> impl Fn(web_sys::DragEvent) {
     move |ev: web_sys::DragEvent| {
         ev.prevent_default();
@@ -44,8 +46,7 @@ pub fn on_drop(
                     let set_input = set_input;
 
                     // 使用 Rc<RefCell> 自清理模式，避免 .forget() 导致的内存泄漏
-                    let onload_slot: Rc<RefCell<Option<Closure<dyn FnMut(web_sys::Event)>>>> =
-                        Rc::new(RefCell::new(None));
+                    let onload_slot: EventClosure = Rc::new(RefCell::new(None));
                     let onload_slot_c = onload_slot.clone();
 
                     let onload = Closure::wrap(Box::new(move |_e: web_sys::Event| {

@@ -4,13 +4,13 @@
 //! 侧边栏的主要文件浏览器视图。
 //! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
 
+use crate::components::icons::Plus;
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::types::FileActionsContext;
-use crate::hooks::use_core::{DocContext, BranchContext};
+use crate::hooks::use_core::{BranchContext, DocContext};
 use crate::i18n::t;
 use deve_core::models::DocId;
 use leptos::prelude::*;
-use crate::components::icons::Plus;
 
 use crate::components::dropdown::AnchorRect;
 use crate::components::main_layout::SearchControl;
@@ -86,7 +86,8 @@ pub fn ExplorerView(
 
     // Derived active repo label
     let active_repo_label = Signal::derive(move || {
-        branch.current_repo
+        branch
+            .current_repo
             .get()
             .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
     });

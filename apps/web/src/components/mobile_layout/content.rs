@@ -4,7 +4,7 @@
 use crate::components::dashboard::Dashboard;
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

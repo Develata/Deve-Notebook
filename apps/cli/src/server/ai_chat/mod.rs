@@ -22,15 +22,15 @@ use anyhow::{Result, anyhow};
 use config::ChatConfig;
 use deve_core::plugin::runtime::chat_stream::{
     ChatStreamHandler, ChatStreamRequest, ChatStreamResponse, ChatStreamSink,
-    set_chat_stream_handler,
 };
+use deve_core::plugin::runtime::provider::register_provider;
 use serde_json::json;
 use std::sync::Arc;
 use stream::execute_stream;
 
 pub fn init_chat_stream_handler() -> Result<()> {
     let handler = Arc::new(AiChatStreamHandler);
-    set_chat_stream_handler(handler)
+    register_provider(handler)
 }
 
 struct AiChatStreamHandler;

@@ -15,6 +15,7 @@ use rhai::Dynamic;
 
 pub mod chat_stream;
 pub mod host;
+pub mod provider;
 pub mod rhai_v1;
 pub mod tools;
 

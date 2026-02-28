@@ -72,11 +72,7 @@ pub fn spawn_broadcaster(state: Arc<AppState>) {
 /// 存储指标: DB 文件大小 + 文档数
 fn storage_metrics(state: &AppState) -> (u64, u32) {
     let db_size = db_file_size(&state.vault_path);
-    let doc_count = state
-        .repo
-        .list_docs()
-        .map(|v| v.len() as u32)
-        .unwrap_or(0);
+    let doc_count = state.repo.list_docs().map(|v| v.len() as u32).unwrap_or(0);
     (db_size, doc_count)
 }
 
@@ -132,23 +128,37 @@ mod linux {
 
     /// 瞬时 CPU 使用率 (/proc/stat 两次采样, 间隔 100ms)
     pub fn cpu_usage() -> f32 {
-        let Some(s1) = read_cpu_stat() else { return 0.0 };
+        let Some(s1) = read_cpu_stat() else {
+            return 0.0;
+        };
         std::thread::sleep(std::time::Duration::from_millis(100));
-        let Some(s2) = read_cpu_stat() else { return 0.0 };
+        let Some(s2) = read_cpu_stat() else {
+            return 0.0;
+        };
         let total_d = s2.total.saturating_sub(s1.total);
         let idle_d = s2.idle.saturating_sub(s1.idle);
-        if total_d == 0 { return 0.0; }
+        if total_d == 0 {
+            return 0.0;
+        }
         ((total_d - idle_d) as f32 / total_d as f32) * 100.0
     }
 
-    struct CpuStat { total: u64, idle: u64 }
+    struct CpuStat {
+        total: u64,
+        idle: u64,
+    }
 
     fn read_cpu_stat() -> Option<CpuStat> {
         let content = fs::read_to_string("/proc/stat").ok()?;
         let line = content.lines().next()?;
-        let vals: Vec<u64> = line.split_whitespace().skip(1)
-            .filter_map(|s| s.parse().ok()).collect();
-        if vals.len() < 4 { return None; }
+        let vals: Vec<u64> = line
+            .split_whitespace()
+            .skip(1)
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        if vals.len() < 4 {
+            return None;
+        }
         let idle = vals[3];
         let total: u64 = vals.iter().sum();
         Some(CpuStat { total, idle })

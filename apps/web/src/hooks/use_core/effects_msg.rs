@@ -124,12 +124,23 @@ pub fn handle_remaining(
     set_system_metrics: WriteSignal<Option<super::contexts::SystemMetricsData>>,
 ) {
     if let ServerMessage::SystemMetrics {
-        cpu_usage_percent, memory_used_mb, active_connections,
-        ops_processed, uptime_secs, db_size_bytes, doc_count,
-    } = msg {
+        cpu_usage_percent,
+        memory_used_mb,
+        active_connections,
+        ops_processed,
+        uptime_secs,
+        db_size_bytes,
+        doc_count,
+    } = msg
+    {
         set_system_metrics.set(Some(super::contexts::SystemMetricsData {
-            cpu_usage_percent, memory_used_mb, active_connections,
-            ops_processed, uptime_secs, db_size_bytes, doc_count,
+            cpu_usage_percent,
+            memory_used_mb,
+            active_connections,
+            ops_processed,
+            uptime_secs,
+            db_size_bytes,
+            doc_count,
         }));
     }
 }
