@@ -5,7 +5,7 @@
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
-> **Native-First**: Mobile 端 **MUST** 以原生 UI 为标准实现（非 WebView）。
+> **Tauri-Based**: Mobile 端采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
 > **Offline-First**: Mobile 端 **MUST** 在无网络环境下保持完整可用。
 
 > **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
@@ -146,58 +146,58 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 
 ## 7. 实现策略 (Implementation Strategy)
 
-### 4.1 原生 UI 方案 (Native UI)
-*   **Rule**: Mobile **MUST** 使用原生 UI 实现（非 WebView）。
+### 4.1 移动端 UI 方案
+*   **Rule**: Mobile 采用 **Tauri v2 Mobile** 作为外壳（WKWebView / Android WebView），前端代码与 Web 端共享，配合原生层访问摄像头/文件系统/推送等系统 API。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致，行为不以 Web 端为准。
 
-### 4.2 内嵌服务 (Embedded Service)
+### 7.2 内嵌服务 (Embedded Service)
 *   **Rule**: 后端服务 **MUST** 内嵌到安装包中，应用启动时自动拉起。
 *   **Local API**: 前端通过本机回环接口访问内嵌服务，禁止依赖公网。
 
-### 4.2.1 服务启动流程 (Service Boot)
+### 7.2.1 服务启动流程 (Service Boot)
 *   **Rule**: App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
 *   **Port**: 端口 **MUST** 使用本机随机可用端口并保存在运行时内存中。
 *   **Lifecycle**: App 进入后台时 **SHOULD** 降低服务资源占用；恢复前台时自动唤醒。
 *   **Port Conflict**: 若端口占用，**MUST** 自动回退到新的可用端口并重新绑定。
 
-### 4.2.2 本地通信策略 (Local IPC)
+### 7.2.2 本地通信策略 (Local IPC)
 *   **Default**: 本机回环 HTTP/WS（`127.0.0.1`）优先。
 *   **Fallback**: 若平台限制端口访问，**MUST** 提供进程内通道 (IPC) 替代方案。
 *   **Security**: 本地通信 **MUST** 禁止跨进程未授权访问。
 *   **Auth**: IPC **MUST** 具备进程级鉴权与会话绑定。
 
-### 4.2.3 端口绑定安全 (Port Binding Security)
+### 7.2.3 端口绑定安全 (Port Binding Security)
 *   **Rule**: 服务端 **MUST** 仅监听 `127.0.0.1`。
 *   **Firewall**: **SHOULD** 显式阻断非回环访问。
 
-### 4.3 离线优先 (Offline-First)
+### 7.3 离线优先 (Offline-First)
 *   **Rule**: 无网络时 **MUST** 提供完整读写能力。
 *   **Sync**: 网络恢复后执行增量同步，失败时不影响本地编辑。
 
-### 4.3.1 数据持久化 (Persistence)
+### 7.3.1 数据持久化 (Persistence)
 *   **Rule**: 所有内容 **MUST** 落盘到本地数据库与 Vault。
 *   **Crash Safety**: 崩溃后 **MUST** 可恢复到最后一次持久化状态。
 *   **Migration**: 数据结构升级 **MUST** 支持自动迁移，失败时 **MUST** 回滚。
 
-### 4.3.2 加密策略 (Encryption)
+### 7.3.2 加密策略 (Encryption)
 *   **At-Rest**: 本地存储 **MUST** 支持加密（密钥绑定设备安全模块）。
 *   **In-Memory**: 解密后的明文 **SHOULD** 尽量短时保留。
 *   **Key Rotation**: **MUST** 支持密钥轮换与失效，轮换过程不得破坏现有数据。
 *   **Recovery**: **MUST** 提供密钥恢复策略，避免单点损坏。
 
-### 4.3.3 备份与导出 (Backup & Export)
+### 7.3.3 备份与导出 (Backup & Export)
 *   **Backup**: **MUST** 支持本地加密备份。
 *   **Export**: **SHOULD** 支持单文档/全量导出。
 
-### 4.3.4 权限与审计 (Permissions & Audit)
+### 7.3.4 权限与审计 (Permissions & Audit)
 *   **Rule**: 本地操作 **MUST** 具备最小权限原则。
 *   **Audit**: **SHOULD** 记录关键操作日志（创建/删除/导出/恢复）。
 
-### 4.3.5 恢复演练 (Recovery Drill)
+### 7.3.5 恢复演练 (Recovery Drill)
 *   **Rule**: 版本升级 **SHOULD** 提供可执行的恢复演练流程。
 *   **Goal**: 发生故障时可快速回退到稳定版本。
 
-### 4.4 体积与性能约束 (Size & Performance)
+### 7.4 体积与性能约束 (Size & Performance)
 *   **Size**: 体积 **MUST** 可控，避免引入重型依赖。
 *   **Perf**: 输入延迟与滚动流畅性必须优先保障。
 

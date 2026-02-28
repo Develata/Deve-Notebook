@@ -17,6 +17,10 @@
 | `AUTH_USER`                      | `admin`          | 默认超管用户名.                                                     |
 | `AUTH_PASS`                      | `password`       | 默认超管密码 (首次启动时生效).                                      |
 | `AUTH_ALLOW_ANONYMOUS_LOCALHOST` | `false`          | 是否允许 Localhost / LAN 免密访问 (`true` / `false`).               |
+| `CORS_ALLOWED_ORIGINS`           | *(none)*         | 额外允许的 CORS Origin 列表 (逗号分隔). 不设则仅允许 localhost.     |
+| **TLS (可选)**                   |                  |                                                                     |
+| `TLS_CERT_PATH`                  | *(none)*         | PEM 证书路径. 设置后启用 HTTPS.                                     |
+| `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
 | **Paths**                        |                  |                                                                     |
 | `DEVE_DATA_DIR`                  | `~/.deve-note`   | 数据存储根目录.                                                     |
 

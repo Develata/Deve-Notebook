@@ -10,7 +10,8 @@
 ### Web Client (服务器面板)
 * **定位**：Web 端**不是**一个独立的 P2P 节点，而是 **Server 节点的远程操作面板 (Remote Dashboard)**。
 * **数据源**：Web 端直接通过 WebSocket 读写 Server 的内存/数据库。Web 端显示的 "Local" 即为 Server 的 `Local Branch` (ledger/local/)。
-* **存储**：**Stateless / RAM-Only (纯内存)**。Web 端严禁使用 IndexedDB/LocalStorage 存储业务数据。它只是 Server 状态的“易失性投影”。
+* **存储**：**Stateless / RAM-Only (纯内存)**。Web 端严禁使用 IndexedDB/LocalStorage 存储**业务数据**（文档内容、操作日志、同步状态等）。它只是 Server 状态的"易失性投影"。
+    * **例外**: 纯 UI 偏好（布局宽度、主题选择等）**MAY** 使用 `localStorage`，因其不影响 Ledger 真源且断连后无害。
 * **连接约束**：Web 端必须保持与 Server 的 WebSocket 连接才能工作。**断连即锁屏**，严禁离线编辑。
 
 ### 主节点 / 代理节点 (Main / Proxy)
@@ -38,7 +39,7 @@
 ### OpenDoc 性能策略 (Snapshot-First + Progressive Prefetch)
 *   **Snapshot-First**: 打开文档优先返回最近快照 + 增量 Ops。
 *   **Client Prefetch**: 客户端按自适应批次应用增量 Ops。
-*   **Search Gate**: 预加载完成前禁用全文搜索。
+*   **Search Gate**: 见 [03_rendering.md §大文档渲染策略](./03_rendering.md)。
 
 ### Peer Identity & Handshake (身份与握手)
 
@@ -78,6 +79,17 @@
 
 *   **Flow Control**: 支持断点续传与背压。
 
+### WebSocket Reconnection (重连策略)
+
+*   **Strategy**: Exponential Backoff with Jitter。
+*   **Intervals**: 1s → 2s → 4s → 8s → 16s → 30s (cap)。
+*   **Max Retries**: 无限 (用户手动关闭才停止)。
+*   **UI Feedback**:
+    *   断连后立即显示 "Reconnecting..." 遮罩。
+    *   每次重连尝试更新计数器 "Retry #N..."。
+    *   重连成功后自动请求增量同步 (SyncHello)。
+*   **State Recovery**: 重连成功后 MUST 发送 `SyncHello` 获取离线期间的变更。
+
 ### Edge Cases & Safety Strategy (边界与安全)
 
 *   **Snapshot Sync (Fast Forward)**:
@@ -106,9 +118,6 @@
     4.  C 传输 A 的数据给 B。
 *   **Case 2: A & B are Strangers (No Handshake)**
     1.  C 发送 Gossip Offer (`I have updates for A, C`).
-    2.  B 检查本地 Trusted List，发现 **不认识 A** (未握手)。
-    3.  B **MUST Ignore** A's offer (Strict Filtering).
-    4.  C **MUST NOT** 传输 A 的数据给 B (Payload Blocking).
     2.  B 检查本地 Trusted List，发现 **不认识 A** (未握手)。
     3.  B **MUST Ignore** A's offer (Strict Filtering).
     4.  C **MUST NOT** 传输 A 的数据给 B (Payload Blocking).

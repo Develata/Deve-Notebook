@@ -35,7 +35,10 @@
         *   `DOC_OPS`: `u128 -> [u64]` (Multimap, 允许快速检索单一文档的所有变更 Seq)
     *   **Atomic Sequence (原子序号)**:
         *   `PEER_DOC_SEQ`: `(DocId, PeerId) -> u64`。用于生成严格单调递增的 `OpSeq`，防止并发冲突。
-*   **Virtual Backup**: TBD.
+*   **Virtual Backup**: 系统 MAY 为当前活跃 Repo 自动创建 `.redb` 文件的只读快照。
+    *   **Frequency**: 每日自动 (可配) 或手动触发 (`deve backup`).
+    *   **Storage**: `ledger/backups/<repo_name>-<timestamp>.redb`.
+    *   **Retention**: 默认保留最近 3 份；超出按 FIFO 删除.
 *   **Virtual Backup**: 针对每个 Repo Instance (`.redb`) 可存在对应的只读快照。
 
 ## Repository Manager (仓库管理器)

@@ -63,6 +63,12 @@ struct SystemMetrics {
 *   **Disconnect Lockdown**: 当 WebSocket 断开时，UI **MUST** 立即被遮罩层锁定，禁止任何写操作，并显示 "Reconnecting..."。
 *   **RAM-Only**: Dashboard 数据 **MUST NOT** 持久化到 IndexedDB。
 
+### 2.4 Dashboard 路由与权限
+*   **Route**: `/` (根路径，无 DocId 参数时)。
+*   **Auth**: Dashboard **MUST** 要求已认证身份。未认证访问跳转 Login。
+*   **Data Channel**: 通过现有 WebSocket 连接推送 `ServerMessage::SystemMetrics`。
+*   **Fallback**: WebSocket 断开时，Metrics 冻结并显示 "Disconnected" 状态。
+
 ## 3. 外部协同流程 (External Edit Flow)
 
 专门针对“用户在服务器端直接修改文件”的场景。

@@ -13,7 +13,9 @@
 | **Icons**    | **Lucide Icons**         | Verified          | 统一 SVG 图标集。                   |
 | **Storage**  | **Redb** (Native)        | Verified          | 嵌入式 KV 数据库 (Zero-copy).       |
 | **Auth**     | **Argon2 + Ed25519**     | Verified          | 身份认证与节点签名。                |
-| **Diff**     | **Dissimilar**           | Verified          | 文本差异计算算法。                  |
+| **Diff**     | **Dissimilar**           | Verified          | 文本差异计算算法 (Myers)。              |
+|              | **similar**              | Verified          | 辅助 Diff 计算。                        |
+|              | ~~Loro~~                 | TBD (远期预研)    | CRDT 框架，当前不依赖。                |
 | **CLI**      | **Clap v4**              | Verified          | 命令行解析。                        |
 | **Async**    | **Tokio v1**             | Verified          | 异步运行时。                        |
 | **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
@@ -34,8 +36,26 @@
 ## 性能预算与配置 (Performance & Profiles)
 
 ### High/Low Profile
-*   **Low-Spec (512MB)**: CSR Only, No Search Index, Snapshot Pruning.
-*   **Standard (1GB+)**: SSR, Search, Graph.
+*   **Low-Spec (≤768MB)**: CSR Only, No Search Index, Snapshot Pruning.
+*   **Standard (≥1GB)**: SSR, Search, Graph.
+
+### Profile → Feature Matrix
+
+| Feature | `low-spec` (≤768MB) | `standard` (≥1GB) |
+|:---|:---|:---|
+| CSR | ✅ | ✅ |
+| SSR | ❌ | ✅ |
+| Full-Text Search (Tantivy) | ❌ | ✅ |
+| Graph Visualization | ❌ | ✅ |
+| Snapshot Depth default | 10 | 100 |
+| MEM_CACHE_MB default | 32 | 128 |
+| Plugin Podman | ❌ | ✅ |
+
+## WASM 内存约束
+
+*   **Budget**: 前端 WASM 堆目标 < 64MB (Mobile), < 128MB (Desktop)。
+*   **Large Doc Strategy**: 超过 100KB 的文档使用分段加载，不将全文存入 WASM 堆。
+*   **Monitoring**: 通过 `wasm_bindgen::memory()` 跟踪实际用量并在 DevTools 输出。
 
 ## 本章相关命令
 

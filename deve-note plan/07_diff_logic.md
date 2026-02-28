@@ -18,7 +18,8 @@
 ## 和解策略 (Reconciliation Strategy)
 
 *   **Store C -> Store B (Remote Merge)**：
-    *   **Auto Mode (CRDT)**: 利用 Loro 的 Op-based Merge 自动解决非冲突变更。
+    *   **Auto Mode (CRDT)**: 利用自研 Op Log 的 Operation-based Merge 自动解决非冲突变更。
+        *   **技术选型**: 文本 Diff 使用 `dissimilar` (Myers) + `similar` crate，不依赖外部 CRDT 框架。Loro 为远期预研方向 (TBD)。
     *   **Manual Mode (Git-style)**: 若检测到同一文本块 (Hunk) 存在竞争性修改，标记为 **Conflict**，必须人工介入。
     *   **Atomic Persistence (原子持久化)**:
         *   **Immediate Commit**: 合并过程本质上是后端生成一系列 Ops 并顺序追加到 Local Ledger 的过程。系统 **MUST** 保证每生成一个 Op 即持久化（模拟写入），**不会** 存在“内存中合并了一半未保存”的中间状态。
@@ -66,7 +67,7 @@
 *   **Snapshot-First**: 打开文档时优先读取最新快照，再仅重放快照之后的 Ops。
 *   **UTF-16 Index Cache**: 为 UTF-16 索引引入断点缓存，降低定位成本。
 *   **Progressive Prefetch**: 先渲染首屏 + 缓冲区，其余内容后台分批预加载。
-*   **Search Gate**: 预加载完成前，全文搜索必须禁用，完成后自动启用。
+*   **Search Gate**: 见 [03_rendering.md §大文档渲染策略](./03_rendering.md)。
 
 ## 本章相关命令
 

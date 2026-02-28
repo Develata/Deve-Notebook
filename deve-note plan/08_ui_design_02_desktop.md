@@ -5,7 +5,7 @@
 
 本节定义了 Desktop 端的“驾驶舱”布局规范与交互逻辑。
 
-> **Native-First**: Desktop 端 **MUST** 以原生 UI 为标准实现。
+> **Tauri-Based**: Desktop 端采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
 > **Offline-First**: Desktop 端 **MUST** 在无网络环境下保持完整可用。
 
 > **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
@@ -94,9 +94,10 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
 ## 4. 实现策略 (Implementation Strategy)
 
-### 4.1 原生 UI 方案 (Native UI)
-*   **Rule**: Desktop **MUST** 采用原生 UI 实现。
+### 4.1 跨平台 UI 方案
+*   **Rule**: Desktop 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致。
+*   **Note**: "原生 UI" 在此指用户体验层面（窗口管理、菜单栏、系统托盘等），而非技术实现层面。
 
 ### 4.2 内嵌服务 (Embedded Service)
 *   **Rule**: 后端服务 **MUST** 内嵌并由桌面端进程拉起。

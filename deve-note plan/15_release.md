@@ -70,7 +70,7 @@
 *   **PATCH**: 做了向下兼容的问题修正 (e.g., 修复渲染 Bug).
 
 > [!IMPORTANT]
-> **Data Compatibility**: 任何涉及 `Ledger` 或 `Vault` 存储结构的变更，**MUST** 提供数据迁移脚本 (Migration)，并在 Major 版本中发布。
+> **Data Compatibility**: 任何涉及 `Ledger` 或 `Vault` 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 04_storage.md）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。
 
 ## 4. Open Source License (开源协议)
 
@@ -86,7 +86,7 @@
 ```bash
 docker run -d \
   --name deve-server \
-  -p 3000:3000 \
+  -p 3001:3001 \
   -v $(pwd)/data:/data \
   -e DEVE_VAULT_PATH=/data/vault \
   ghcr.io/develata/deve-server:latest
@@ -101,11 +101,11 @@ services:
     container_name: deve-server
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3001"
     volumes:
       - ./data:/data
     environment:
-      - DEVE_BIND_ADDR=0.0.0.0:3000
+      - DEVE_BIND_ADDR=0.0.0.0:3001
       - DEVE_VAULT_PATH=/data/vault
 ```
 
