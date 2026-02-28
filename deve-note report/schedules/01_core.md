@@ -52,6 +52,6 @@
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).
 - [x] **JWT Auth**: 无状态 Token 验证.
 - [x] **WebSocket Auth**: 握手阶段验证 Ticket.
-- [ ] **Argon2**: 密码哈希存储 (目前仅明文或简单哈希，需确认).
-- [ ] **Rate Limiting**: 接口限流.
-- [ ] **Localhost Policy**: `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 配置支持.
+- [x] **Argon2**: Argon2id 密码哈希 (`security/auth/password.rs`), 含常数时间验证.
+- [x] **Rate Limiting**: 滑动窗口限流 (`server/rate_limit.rs`, 200 req/60s), 惰性 GC.
+- [x] **Localhost Policy**: `AUTH_ALLOW_ANONYMOUS_LOCALHOST` (`auth/config.rs` + `middleware.rs` + `ws/mod.rs`).

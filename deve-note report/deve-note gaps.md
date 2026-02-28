@@ -14,20 +14,26 @@
 
 ### 1.2 3-Way Merge Engine
 *   **Plan**: `07_diff_logic.md` 要求实现 Myers Diff 和 3-Way Merge，并明确了 "Atomic Persistence" (原子持久化) 要求。
-*   **Implementation**: `crates/core/src/ledger/merge.rs` 仅实现了框架 (`MergeEngine`)。
+*   **Implementation**: `crates/core/src/ledger/merge.rs` 实现了框架 (`MergeEngine`)。
     *   `find_lca`: 实现了基础的 VersionVector 交集计算。
     *   `reconstruct_state_at`: 实现了基于 Ops 的状态重建。
-    *   `merge_commits`: **仅有占位符逻辑**。目前的实现是 "If local == remote return success"，缺乏真正的 Diff3 算法集成。
-*   **Critical Gap**: **缺少真正的 Diff3 实现**。如果不解决，无法处理任何并发修改。需集成 `diff3` crate 或移植相关算法。
+    *   `merge_commits`: **仅有占位符逻辑**。
+    *   **Merge UI**: `01_core.md` 中 MergeModal / MergePanel 已完成 ✅.
+*   **Critical Gap**: **Diff3 算法仍未集成**。UI 层已就绪，但核心合并逻辑仍为占位符。
 
 ## 2. P2P 网络 (P2P Network)
 
-### 2.1 身份认证 (Authentication)
+### 2.1 身份认证 (Authentication) — ✅ 已解决
 *   **Plan**: `09_auth.md` 要求 Argon2 + Ed25519 双重认证。
 *   **Implementation**:
-    *   `apps/cli/src/server/ws.rs` 实现了基础的 WebSocket 握手。
-    *   `crates/core/src/security` 包含 `keypair.rs` (Ed25519)。
-    *   **Gap**: **Argon2 密码验证逻辑缺失**。目前仅校验了 PeerId 签名，未实现 Admin Password (`AUTH_SECRET`) 的全链路校验。
+    *   `crates/core/src/security/auth/password.rs` — Argon2id 哈希 + 常数时间验证.
+    *   `crates/core/src/security/auth/config.rs` — `AuthConfig` 环境变量加载 (`AUTH_SECRET`, `AUTH_ALLOW_ANONYMOUS_LOCALHOST`).
+    *   `apps/cli/src/server/auth/handlers.rs` — Login (Argon2 验证 + JWT 签发 + HttpOnly Cookie), Logout, Me.
+    *   `apps/cli/src/server/auth/middleware.rs` — JWT Cookie 认证 + localhost 免密策略.
+    *   `apps/cli/src/server/auth/brute_force.rs` — IP 级暴力破解防护 (5 次失败封禁 15 分钟).
+    *   `apps/cli/src/server/auth/headers.rs` — 安全响应头 (CSP, X-Frame-Options).
+    *   `apps/cli/src/server/rate_limit.rs` — 滑动窗口限流 (200 req/60s).
+*   **Gap**: **无**。Auth 全链路已完整覆盖。
 
 ### 2.2 同步协议 (Sync Protocol)
 *   **Plan**: `05_network.md` 定义了 `SyncHello` -> `SyncOffer` -> `SyncRequest` -> `SyncPush` 的完整流。
@@ -50,8 +56,8 @@
 
 | 模块 | 优先级 | 建议行动 |
 | :--- | :--- | :--- |
-| **Merge Engine** | **Critical** | 引入 `diff3` 算法，替换 `merge.rs` 中的占位逻辑。 |
+| **Merge Engine** | **Critical** | 引入 `diff3` 算法，替换 `merge.rs` 中的占位逻辑。UI 层已就绪。 |
 | **Sync Gossip** | **High** | 完善 `SyncManager`，实现主动推送差异的定时任务。 |
 | **Mobile UI** | **Medium** | 在 `apps/web` 中引入 Drawer 组件，适配小屏幕布局。 |
-| **Auth** | **Medium** | 在 WebSocket 握手中加入 `AUTH_SECRET` 校验。 |
+| **Auth** | ~~Medium~~ **✅ Resolved** | Argon2 + JWT + Rate Limiting + Brute Force + Localhost Policy 全部就绪。 |
 | **Plugins** | **Low** | 暂时搁置 WASM，优先完善 Rhai 脚本支持。 |

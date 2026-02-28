@@ -76,6 +76,12 @@
   - **`plugin/`** `[Plugins]`
     - **`runtime.rs`**: **Rhai/Wasm 运行时**
       - **逻辑**: 集成 `rhai` (根据 Cargo.toml) 或 WASM 运行时 (代码中提及 `wasmtime` 但 `Cargo.toml` 只有 `rhai`?). *注: Cargo.toml 仅显示 rhai, verify required.*
+  - **`security/`** `[Auth]`
+    - **`keypair.rs`**: **Ed25519 身份密钥** — PeerId 生成 (`SHA256(PubKey)[0..12]`).
+    - **`auth/`**: **认证核心模块 (重构后)**
+      - **`password.rs`**: Argon2id 密码哈希 + 常数时间验证, 含单元测试.
+      - **`config.rs`**: `AuthConfig` — 从环境变量加载 (`AUTH_SECRET`, `AUTH_PASS`, `AUTH_ALLOW_ANONYMOUS_LOCALHOST`), 含 `dev_default()`.
+      - **`jwt.rs`**: JWT 签发/验证 (HMAC-SHA256), Token 版本号支持强制失效.
 
 ## 📂 apps/cli (后端服务)
 
@@ -90,6 +96,14 @@
   - **`server/`**
     - **`ws.rs`**: **WebSocket 网关** `[Network]`
       - **逻辑**: 处理连接生命周期，PeerId 分配，消息路由 (Broadcast/MPSC)。
+    - **`rate_limit.rs`**: **接口限流** `[Auth]`
+      - **逻辑**: 滑动窗口计数器 (200 req/60s), 惰性 GC (阈值 1024), fail-open 策略。
+    - **`auth/`**: **认证子系统** `[Auth]`
+      - **`mod.rs`**: 模块入口, 导出 4 个子模块。
+      - **`handlers.rs`**: HTTP 端点 — `POST /api/auth/login` (Argon2 验证 + JWT + HttpOnly Cookie), `logout`, `me`.
+      - **`middleware.rs`**: JWT Cookie 认证中间件, 支持 `allow_anonymous_localhost` 免密策略.
+      - **`brute_force.rs`**: IP 级暴力破解防护 (5 次失败封禁 15 分钟, 惰性 GC 阈值 512).
+      - **`headers.rs`**: 安全响应头 (`X-Content-Type-Options`, `X-Frame-Options`, `CSP`).
     - **`handlers/`**: **消息处理器**
       - **`document.rs`**: 处理 `Edit`, `Open` 等协作消息。
       - **`sync.rs`**: 处理 `SyncHello`, `SyncPush`。
