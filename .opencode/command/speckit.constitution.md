@@ -50,7 +50,7 @@ $ARGUMENTS
    - 读取 `.specify/templates/plan-template.md`，确保 Constitution Check/规则与新原则一致。
    - 读取 `.specify/templates/spec-template.md`，若宪章新增/移除强制章节或约束，需同步调整。
    - 读取 `.specify/templates/tasks-template.md`，确保任务分类反映新原则（如可观测性、版本化、测试纪律）。
-   - 读取 `.specify/templates/commands/*.md`（包含当前文件），确认无过时引用（如仅适配某一 agent 的硬编码）在需通用处残留。
+   - 读取 `.opencode/command/*.md`、`.codex/prompts/*.md`、`.claude/commands/*.md`（包含当前文件），确认无过时引用（如仅适配某一 agent 的硬编码）在需通用处残留。
    - 读取运行时指导文档（如 `README.md`、`docs/quickstart.md`、agent 指引），同步更新原则引用。
 
 5. 生成 Sync Impact Report（写入宪章文件顶部 HTML 注释）：
@@ -59,6 +59,7 @@ $ARGUMENTS
    - 新增章节
    - 删除章节
    - 需要更新的模板（✅ 已更新 / ⚠ 待更新）及路径
+   - speckit 三目录同步结果（已执行 `pwsh -File .specify/scripts/powershell/sync-speckit.ps1` 与 `pwsh -File .specify/scripts/powershell/check-speckit-sync.ps1`）
    - 若有延后占位符，列出后续 TODO
 
 6. 最终输出前校验：
@@ -66,6 +67,7 @@ $ARGUMENTS
    - 版本号与报告一致。
    - 日期格式必须为 ISO：`YYYY-MM-DD`。
    - 原则应可声明、可测试、避免模糊语言（必要时将 should 收敛为 MUST/SHOULD 并给出理由）。
+   - **铁律**：每次修改 `.opencode/command`、`.codex/prompts`、`.claude/commands` 任一 speckit 文件后，必须先运行 `pwsh -File .specify/scripts/powershell/sync-speckit.ps1` 完成同步，再运行 `pwsh -File .specify/scripts/powershell/check-speckit-sync.ps1` 校验通过，方可结束本次变更。
 
 7. 将完成后的宪章回写到 `.specify/memory/constitution.md`（覆盖写）。
 

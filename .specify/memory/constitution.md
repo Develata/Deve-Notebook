@@ -1,10 +1,10 @@
 <!--
 Sync Impact Report
-- Version change: 0.0.0 -> 1.0.0
-- Modified principles: template placeholders -> concrete project principles
-- Added sections: 资源与工程约束, 工作流与质量门禁, Governance
+- Version change: 1.0.0 -> 1.0.1
+- Modified principles: 新增 VI. 多 Agent 指令一致性（MUST）
+- Added sections: none
 - Removed sections: none
-- Templates requiring updates: ⚠ pending `.specify/templates/plan-template.md`, `.specify/templates/spec-template.md`, `.specify/templates/tasks-template.md`
+- Templates requiring updates: ✅ `.opencode/command/speckit.constitution.md`（并同步至 `.codex/prompts/` 与 `.claude/commands/`）
 - Deferred TODOs: none
 -->
 
@@ -35,6 +35,11 @@ Invariants、Pre-conditions、Post-conditions。规则表述应可被测试验�
 Rust 工程必须满足 `cargo fmt` 与 `cargo clippy --all-targets --all-features -- -D warnings`。
 测试应优先按 feature 相关最小范围执行，避免无谓全量回归。未通过质量门禁不得标记为完成。
 
+### VI. 多 Agent 指令一致性（Multi-Agent Prompt Parity, MUST）
+`.opencode/command` 为 speckit 指令单一事实源（SOT）。每次修改 `.opencode/command`、`.codex/prompts`、`.claude/commands`
+任一 speckit 文件后，必须先运行 `pwsh -File .specify/scripts/powershell/sync-speckit.ps1` 完成同步，再运行
+`pwsh -File .specify/scripts/powershell/check-speckit-sync.ps1` 校验通过，方可结束变更或进入合并流程。
+
 ## 资源与工程约束
 
 - Language baseline: Rust Edition 2024（新代码默认遵循）。
@@ -55,6 +60,8 @@ Rust 工程必须满足 `cargo fmt` 与 `cargo clippy --all-targets --all-featur
    - 至少执行与改动直接相关的测试；Rust 改动需执行 clippy 门禁。
 5. Review Traceability（MUST）
    - PR/Review 应能回答：改动对应哪个上游约束、哪个 feature 需求、是否有偏差与回灌记录。
+6. Prompt Sync Gate（MUST）
+   - 涉及 speckit 指令文件改动时，必须附带同步与校验结果；未通过 `check-speckit-sync.ps1` 不得合并。
 
 ## Governance
 
@@ -66,4 +73,4 @@ Rust 工程必须满足 `cargo fmt` 与 `cargo clippy --all-targets --all-featur
 - 每次修订必须记录：变更原因、影响范围、需要同步的模板/流程文件。
 - 合规检查点至少覆盖：规格分层、资源约束、质量门禁、可追溯性。
 
-**Version**: 1.0.0 | **Ratified**: 2026-02-26 | **Last Amended**: 2026-02-26
+**Version**: 1.1.0 | **Ratified**: 2026-02-26 | **Last Amended**: 2026-03-03
