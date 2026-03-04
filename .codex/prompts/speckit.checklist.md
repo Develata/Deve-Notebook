@@ -129,7 +129,8 @@ $ARGUMENTS
 
    **可追溯性要求**：
    - 至少 80% 条目应包含可追溯引用
-   - 引用可为 `[Spec §X.Y]` 或 `[Gap]/[Ambiguity]/[Conflict]/[Assumption]`
+   - 引用可为 `[Spec §X.Y]`、`[Gap]`、`[Ambiguity]`、`[Conflict]`、`[Assumption]`
+   - 若 spec 包含 Upstream Alignment 节，则相关条目应引用验收清单 ID（如 `[Upstream: STOR-001]`、`[Upstream: DIFF-003]`）
    - 若无 ID 体系，加入条目：`Is a requirement & acceptance criteria ID scheme established? [Traceability]`
 
    **问题收敛策略**：

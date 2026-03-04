@@ -69,9 +69,15 @@ $ARGUMENTS
 
 3. 读取 `.specify/templates/spec-template.md`，理解必需章节。
 
-4. 按如下流程执行：
+4. **上游追溯**（Constitution 原则 IV 强制）：
+   - 读取 `deve-note plan/deve-note plan.md` 索引，定位与当前 feature 最相关的上游文件（如 `04_storage.md`、`05_network.md`）。
+   - 读取 `deve-note plan/验收清单.md`，提取与本 feature 相关的验收条目 ID（如 `STOR-001`、`DIFF-003`）。
+   - 若有匹配的验收用例文件（`deve-note plan/acceptance-cases/`），提取关键验收场景。
+   - 将追溯结果填入 spec 的 `Upstream Alignment` 节。
 
-   1. 解析用户描述
+5. 按如下流程执行：
+
+   1. 解析用户描述（结合上游追溯结果）
       - 若为空：报错 `No feature description provided`
    2. 提取关键概念
       - 识别：actors、actions、data、constraints
@@ -93,11 +99,12 @@ $ARGUMENTS
       - 同时包含量化指标（时间/性能/容量）与质量指标（满意度/完成率）
       - 每条都应可在不看实现细节时验证
    7. 若涉及数据，识别 Key Entities
-   8. 返回 `SUCCESS`（spec 已可进入规划）
+   8. 填充 `Upstream Alignment`：上游文件引用 + 验收条目 ID + Out of Scope
+   9. 返回 `SUCCESS`（spec 已可进入规划）
 
-5. 按模板结构将规格写入 `SPEC_FILE`：替换占位符为具体内容，保持章节顺序与标题层级不变。
+6. 按模板结构将规格写入 `SPEC_FILE`：替换占位符为具体内容，保持章节顺序与标题层级不变。
 
-6. **规格质量校验**：首版 spec 写入后，按质量标准验证。
+7. **规格质量校验**：首版 spec 写入后，按质量标准验证。
 
    a. **创建质量检查表**：在 `FEATURE_DIR/checklists/requirements.md` 生成 checklist，结构如下：
 
@@ -114,7 +121,7 @@ $ARGUMENTS
    - [ ] Focused on user value and business needs
    - [ ] Written for non-technical stakeholders
    - [ ] All mandatory sections completed
-
+   - [ ] Upstream Alignment references valid deve-note plan/ entries
    ## Requirement Completeness
 
    - [ ] No [NEEDS CLARIFICATION] markers remain
@@ -125,6 +132,7 @@ $ARGUMENTS
    - [ ] Edge cases are identified
    - [ ] Scope is clearly bounded
    - [ ] Dependencies and assumptions identified
+   - [ ] 验收清单条目 ID 已映射（若上游存在相关条目）
 
    ## Feature Readiness
 
@@ -142,7 +150,7 @@ $ARGUMENTS
 
    c. **处理结果**：
 
-   - **若全部通过**：标记 checklist 完成并进入步骤 7。
+   - **若全部通过**：标记 checklist 完成并进入步骤 8。
 
    - **若存在失败项（不含 [NEEDS CLARIFICATION]）**：
      1. 列出失败项与具体问题
@@ -187,7 +195,7 @@ $ARGUMENTS
 
    d. **更新 checklist**：每轮校验后都更新 checklist 的通过/失败状态。
 
-7. 汇报完成结果：分支名、spec 路径、checklist 结果、以及下一步建议（`/speckit.clarify` 或 `/speckit.plan`）。
+8. 汇报完成结果：分支名、spec 路径、checklist 结果、上游追溯映射摘要、以及下一步建议（`/speckit.clarify` 或 `/speckit.plan`）。
 
 **注意**：脚本会先创建并切换分支，同时初始化 spec 文件，然后才写入内容。
 
@@ -235,16 +243,6 @@ Success criteria 必须满足：
 3. **用户导向**：描述用户/业务结果，不写系统内部指标
 4. **可验证**：不依赖实现细节即可测试
 
-**好的例子**：
+**好的例子**：`Users can complete checkout in under 3 minutes`、`System supports 10,000 concurrent users`、`95% of searches return results in under 1 second`
 
-- `Users can complete checkout in under 3 minutes`
-- `System supports 10,000 concurrent users`
-- `95% of searches return results in under 1 second`
-- `Task completion rate improves by 40%`
-
-**不好的例子**（实现导向）：
-
-- `API response time is under 200ms`
-- `Database can handle 1000 TPS`
-- `React components render efficiently`
-- `Redis cache hit rate above 80%`
+**不好的例子**（实现导向）：`API response time is under 200ms`、`Database can handle 1000 TPS`、`React components render efficiently`

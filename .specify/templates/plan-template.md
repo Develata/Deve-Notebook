@@ -32,10 +32,13 @@
 
 ## Upstream Traceability
 
-- 上游知识条目：[`deve-note plan/...`](填写具体文件)
+- 上游知识条目：[`deve-note plan/XX_xxx.md`](填写具体文件，可多个)
+- 验收条目引用（从 spec Upstream Alignment 节继承）：
+  - `STOR-001`: [本 plan 如何满足此约束]
+  - `DIFF-003`: [本 plan 如何满足此约束]
 - 关键约束引用：
-  - [约束1]
-  - [约束2]
+  - [约束1：具体描述]
+  - [约束2：具体描述]
 - 偏差预案（若有）：[触发条件 -> 记录到 `deve-note report/...`]
 
 ## Project Structure

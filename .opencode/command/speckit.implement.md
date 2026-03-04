@@ -130,6 +130,13 @@ $ARGUMENTS
    - 检查实现结果与原始规格一致
    - 验证测试通过且覆盖满足要求
    - 确认实现符合技术计划
+   - **Rust 质量门禁**（Constitution 原则 V 强制）：
+     1. `cargo fmt --check`（格式化校验）
+     2. `cargo clippy --all-targets --all-features -- -D warnings`（静态检查）
+     3. 定向测试：`cargo test --package <包名> --lib <测试函数名> -- --nocapture`
+     4. 若涉及复杂算法（同步/存储/图结构），确认代码注释包含 Invariants/Pre-conditions/Post-conditions
+     5. 单文件行数检查：新建或修改的文件不得超过 250 行
+   - 质量门禁未通过不得标记任务为完成
    - 输出最终状态与完成摘要
 
 说明：该命令默认 `tasks.md` 已完整可执行。若任务缺失或不完整，先建议执行 `/speckit.tasks` 重新生成。

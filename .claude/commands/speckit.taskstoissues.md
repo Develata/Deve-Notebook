@@ -24,7 +24,36 @@ git config --get remote.origin.url
 > [!CAUTION]
 > 仅当 remote 是 GitHub URL 时，才可继续后续步骤。
 
-1. 对任务列表中的每个任务，使用 GitHub MCP server 在与该 remote 对应的仓库中创建 issue。
+4. 若 `FEATURE_DIR` 包含 `spec.md`，读取其 Upstream Alignment 节，提取验收条目 ID（如 `STOR-001`、`DIFF-003`）供后续 issue 引用。
+
+5. 对任务列表中的每个任务，使用 GitHub MCP server 在与该 remote 对应的仓库中创建 issue。每个 issue 必须包含：
+
+   **标题格式**：`[Phase N] Task description`
+
+   **Body 结构**：
+   ```markdown
+   ## Context
+   - Feature: [branch name]
+   - Phase: [phase number]
+   - Dependencies: [task IDs this depends on]
+
+   ## Description
+   [task description from tasks.md]
+
+   ## Acceptance Criteria
+   [derived from spec requirements + upstream acceptance IDs]
+
+   ## Upstream Traceability
+   - 验收条目: [e.g. STOR-001, DIFF-003]
+   - 上游文件: [e.g. deve-note plan/04_storage.md]
+   ```
+
+   **Labels**：根据任务类型自动添加：
+   - Phase 标签：`phase:0-research`、`phase:1-design`、`phase:2-impl`等
+   - 类型标签：`type:setup`、`type:test`、`type:core`、`type:integration`、`type:polish`
+   - 若任务标记为 `[P]`，添加 `parallel` 标签
+
+   **Milestone**：若仓库已有与 feature branch 同名的 milestone，关联之；否则不创建新 milestone。
 
 > [!CAUTION]
 > 在任何情况下，都**不得**在与 remote URL 不匹配的仓库中创建 issue。

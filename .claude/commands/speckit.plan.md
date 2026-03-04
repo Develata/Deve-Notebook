@@ -22,18 +22,19 @@ $ARGUMENTS
 
 1. **准备**：在仓库根目录执行 `.specify/scripts/powershell/setup-plan.ps1 -Json`，解析 JSON 中的 `FEATURE_SPEC`、`IMPL_PLAN`、`SPECS_DIR`、`BRANCH`。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义（或尽量改双引号）。
 
-2. **加载上下文**：读取 `FEATURE_SPEC` 与 `.specify/memory/constitution.md`，并加载 `IMPL_PLAN` 模板（已复制到目标目录）。
+2. **加载上下文**：读取 `FEATURE_SPEC` 与 `.specify/memory/constitution.md`，并加载 `IMPL_PLAN` 模板（已复制到目标目录）。同时读取 spec 中的 Upstream Alignment 节，确定相关的 `deve-note plan/` 条目与验收 ID。
 
 3. **执行计划工作流**：按照 `IMPL_PLAN` 模板结构完成：
    - 填写 Technical Context（未知项标记为 `NEEDS CLARIFICATION`）
    - 依据 constitution 填写 Constitution Check
    - 评估各类 gate（若存在无法合理豁免的违规则报 ERROR）
+   - 填写 Upstream Traceability：引用 spec 中映射的 `deve-note plan/` 文件与验收条目 ID（如 `STOR-001`、`DIFF-003`），若设计与上游偏差需在模板 Complexity Tracking 节记录
    - Phase 0：生成 `research.md`（解决所有 `NEEDS CLARIFICATION`）
    - Phase 1：生成 `data-model.md`、`contracts/`、`quickstart.md`
    - Phase 1：运行 agent context 更新脚本
    - 设计完成后重新评估 Constitution Check
 
-4. **停止并汇报**：在完成 Phase 2 规划后结束命令。汇报当前分支、`IMPL_PLAN` 路径与已生成制品。
+4. **停止并汇报**：在完成 Phase 2 规划后结束命令。汇报当前分支、`IMPL_PLAN` 路径、已生成制品、以及上游追溯映射摘要。
 
 ## 阶段说明
 

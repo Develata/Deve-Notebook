@@ -7,8 +7,12 @@
 
 ## Upstream Alignment *(mandatory)*
 
-- 上游依据：[`deve-note plan/...`](必填)
+- 上游依据：[`deve-note plan/XX_xxx.md`](必填，列出所有相关的上游文件)
 - 长期原则引用：[`AGENTS.md`](必填)
+- 验收条目映射：
+  - [`STOR-001`] -> FR-00X: [brief mapping]
+  - [`DIFF-003`] -> FR-00Y: [brief mapping]
+  - (从 `deve-note plan/验收清单.md` 提取相关 ID，映射到本 spec 的 FR/NFR)
 - 本 feature 的非目标（Out of Scope）：[明确列出]
 
 ## User Scenarios & Testing *(mandatory)*

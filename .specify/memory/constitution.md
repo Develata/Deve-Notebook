@@ -1,10 +1,10 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 -> 1.0.1
-- Modified principles: 新增 VI. 多 Agent 指令一致性（MUST）
+- Version change: 1.1.0 -> 1.2.0
+- Modified principles: IV. 规格分层治理 — 新增追溯格式规范（上游文件引用、验收条目 ID、spec/plan 必填节要求）
 - Added sections: none
 - Removed sections: none
-- Templates requiring updates: ✅ `.opencode/command/speckit.constitution.md`（并同步至 `.codex/prompts/` 与 `.claude/commands/`）
+- Templates requiring updates: ✅ spec-template.md、plan-template.md、speckit.specify.md、speckit.analyze.md、speckit.plan.md、speckit.implement.md、speckit.taskstoissues.md、speckit.checklist.md
 - Deferred TODOs: none
 -->
 
@@ -30,6 +30,11 @@ Invariants、Pre-conditions、Post-conditions。规则表述应可被测试验�
 `spec-kit` 是下游 feature 执行流水线（spec/plan/tasks/implement）；
 `deve-note report/` 是复盘与偏差回灌。
 任何 feature 任务必须可追溯到上游约束；执行偏差必须回写 report 并决定是否反哺 plan/模板。
+追溯格式规范：
+- 上游文件引用：`deve-note plan/XX_xxx.md §章节名`（如 `deve-note plan/04_storage.md §三库隔离`）
+- 验收条目引用：使用 `deve-note plan/验收清单.md` 中的 ID（如 `STOR-001`、`DIFF-003`、`RENDER-BLOCK-001`）
+- spec 的 Upstream Alignment 节必须包含：上游文件列表 + 验收条目 ID 映射 + Out of Scope
+- plan 的 Upstream Traceability 节必须继承 spec 的映射并说明设计如何满足约束
 
 ### V. 质量门禁先于交付（Quality Gates, MUST）
 Rust 工程必须满足 `cargo fmt` 与 `cargo clippy --all-targets --all-features -- -D warnings`。
@@ -73,4 +78,4 @@ Rust 工程必须满足 `cargo fmt` 与 `cargo clippy --all-targets --all-featur
 - 每次修订必须记录：变更原因、影响范围、需要同步的模板/流程文件。
 - 合规检查点至少覆盖：规格分层、资源约束、质量门禁、可追溯性。
 
-**Version**: 1.1.0 | **Ratified**: 2026-02-26 | **Last Amended**: 2026-03-03
+**Version**: 1.2.0 | **Ratified**: 2026-02-26 | **Last Amended**: 2026-03-03

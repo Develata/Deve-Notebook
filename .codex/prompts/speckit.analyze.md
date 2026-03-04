@@ -67,6 +67,7 @@ $ARGUMENTS
 **来自 constitution：**
 
 - 加载 `.specify/memory/constitution.md` 进行原则校验
+- 加载 `deve-note plan/验收清单.md` 作为上游验收基线
 
 ### 3. 构建语义模型
 
@@ -102,6 +103,12 @@ $ARGUMENTS
 - 任何与 MUST 原则冲突的需求或计划项
 - 宪章要求的章节或质量门禁缺失
 
+#### E-bis. 上游追溯检测
+
+- spec 的 Upstream Alignment 是否引用了有效的 `deve-note plan/` 条目
+- 验收条目 ID（如 `STOR-001`、`DIFF-003`）是否与 `验收清单.md` 匹配
+- plan 的 Upstream Traceability 节是否填写（非占位符）
+- 若 feature 涉及存储/同步/渲染等核心领域，是否引用了对应的 plan 文件
 #### E. 覆盖缺口
 
 - 没有任何任务覆盖的需求
@@ -119,10 +126,10 @@ $ARGUMENTS
 
 使用以下启发式：
 
-- **CRITICAL**：违反宪章 MUST、核心规格制品缺失、或关键需求零覆盖并阻塞基线功能
+- **CRITICAL**：违反宪章 MUST、核心规格制品缺失、关键需求零覆盖并阻塞基线功能、上游追溯完全缺失
 - **HIGH**：需求重复/冲突、安全或性能语义歧义、验收标准不可测试
 - **MEDIUM**：术语漂移、非功能任务覆盖缺失、边界场景欠规格
-- **LOW**：措辞优化、轻微冗余且不影响执行顺序
+- **LOW**：措辞优化、轻微冗余且不影响执行顺序、上游引用格式不规范
 
 ### 6. 生成紧凑分析报告
 
