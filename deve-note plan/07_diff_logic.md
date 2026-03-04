@@ -15,19 +15,30 @@
     *   **Left**: 本地当前状态 (Local Branch)。
     *   **Right**: 远端传入状态 (Remote Branch)。
 
-## 和解策略 (Reconciliation Strategy)
+## Two Diff Domains (两层 Diff 域)
 
-*   **Store C -> Store B (Remote Merge)**：
-    *   **Auto Mode (CRDT)**: 利用自研 Op Log 的 Operation-based Merge 自动解决非冲突变更。
-        *   **技术选型**: 文本 Diff 使用 `dissimilar` (Myers) + `similar` crate，不依赖外部 CRDT 框架。Loro 为远期预研方向 (TBD)。
-    *   **Manual Mode (Git-style)**: 若检测到同一文本块 (Hunk) 存在竞争性修改，标记为 **Conflict**，必须人工介入。
-    *   **Atomic Persistence (原子持久化)**:
-        *   **Immediate Commit**: 合并过程本质上是后端生成一系列 Ops 并顺序追加到 Local Ledger 的过程。系统 **MUST** 保证每生成一个 Op 即持久化（模拟写入），**不会** 存在“内存中合并了一半未保存”的中间状态。
-        *   **Interruption Handling (中断处理)**: 若合并过程中发生异常（如浏览器关闭、网络断开），已持久化的 Ops 永久生效，未处理的 Diff 保持未合并状态。
-        *   **Resumption (自然续传)**: 系统重启后，Local Ledger 的 Vector Clock 已推进。再次发起合并时，系统将基于新的 Base 重新计算剩余 Diff，自然完成续传，无需特殊的回滚或恢复逻辑。
-*   **Store A -> Store B (Local Watcher)**：
-    *   **Mechanism**: Watcher 监测到文件修改 -> 计算 $Diff(Content_{disk}, Content_{ledger})$ -> 生成 Ops 追加到 Ledger。
-    *   **Anti-Thrashing**: 必须实现 300ms+ 防抖 (Debounce) 和 Hash 校验，防止循环触发。
+*   **Domain 2 — Working Directory（工作区域）**：
+    *   Watcher 监控 Vault (Store A) 的 markdown 文件变化。
+    *   检测到变更后，**MUST** 写入 `pending_fs_ops` 表（存储于 `.notegit/pending`），**MUST NOT** 直接生成 Ops 入 Ledger。
+    *   通过 WebSocket `FsChangeDetected` 消息实时通知前端，前端显示在 "Changes" 列表。
+    *   用户可执行 Stage → 变更进入 "Staged Changes"（写入 `.notegit/staged` 表）。
+
+*   **Domain 1 — Staging & Commit（暂存与提交）**：
+    *   用户点击 Commit 后，系统：
+        1. 将 Staged 文件与 Ledger 最新快照对比，生成 Ops（Insert/Delete）。
+        2. 将 Ops **追加到 Ledger**（唯一真值源），分配 `GlobalSeq`。
+        3. 创建 Commit 记录，锚定到当前 `ledger_seq`，形成版本历史。
+        4. 清空 Staging 区和 `pending_fs_ops` 中已处理的条目。
+    *   此时变更从 Domain 2 正式转入 Domain 1（Committed）。
+
+*   **手动确认原则（Git-like Workflow）**：
+    *   **Watcher Invariant**: Watcher 检测到的后台 Vault 变更 **MUST NOT** 自动入 Ledger；必须等待用户 Stage → Commit。
+    *   **Frontend Exception**: 前端编辑器生成的变更 **MAY** 直接入 Ledger（绕过 Working Directory），或遵循相同的 Stage → Commit 流程（用户可配置）。
+    *   此设计严格类比 Git 的三阶段：Working Directory (`pending_fs_ops`) → Staging Area (`.notegit/staged`) → Commit (Ledger + `.notegit/commits`)。
+
+*   **Conflict Detection**: 
+    *   若 `pending_fs_ops` 与 Ledger 已存在变更冲突（如同一位置被前端和后台同时修改），系统 **MUST** 提示用户选择 "Keep File System" 或 "Keep Ledger"。
+
 
 ## 合并流程 (Merging Flow)
 

@@ -55,6 +55,32 @@
 
 实现单向数据流与原子持久化策略：
 
+*   **Core Data Model (核心数据模型)**：
+    *   **Definition**: 对任意 Repo，权威状态定义为有序操作日志：
+        *   $DB = \mathrm{OrderedLog}\langle LedgerEntry \rangle$
+    *   **Interpretation**: `LedgerEntry` 包含 `(Op, PeerId, OpSeq, GlobalSeq)`，全局序号 `GlobalSeq` 决定落盘线性顺序，`PeerId + OpSeq` 用于因果/缺失检测。
+    *   **Pending FS Ops**: 系统维护 `pending_fs_ops` 表，存储 Watcher 检测到的但尚未 Commit 的文件系统变更（类比 Git Working Directory）。
+    *   **Projection Rule**: Store A ($W_{user}$) 上的任意文件内容 **MUST** 可由 `Replay(DB)` 唯一导出；文件系统仅是投影，不是权威源。
+    *   **Ordering Rule**: 同一 Repo 内操作落盘顺序 **MUST** 由 `GlobalSeq` 决定，任何并发写入 **MUST** 在落盘前被线性化。
+    *   **Version Control**: Commit 锚定到特定 `ledger_seq`，形成版本历史链（类比 Git commit）。
+    *   **Metadata Directory**: 系统使用 `.notegit/` 目录存储元数据（类比 `.git/`，包含 config、hooks、refs 等）。
+        *   **Location**: `.notegit/` 位于 `/data/ledger/` 根目录。
+        *   **Watcher Ignore**: `.notegit/` **MUST** 被 Watcher 忽略（不触发变更检测）。
+        *   **Backup Policy**: `.notegit/` **SHOULD** 随 Ledger 一起备份，但 **MUST NOT** 跨设备同步（peer-specific 配置）。
+    *   **Definition**: 对任意 Repo，权威状态定义为有序操作集合：
+        *   $DB = \mathrm{Set}\langle (Op, Time) \rangle$
+    *   **Interpretation**: `Op` 表示最小可重放变更单元，`Time` 表示全序比较键（由 `PeerId + OpSeq` 复合构成）。
+    *   **Projection Rule**: Store A ($W_{user}$) 上的任意文件内容 **MUST** 可由 `Replay(DB)` 唯一导出；文件系统仅是投影，不是权威源。
+    *   **Ordering Rule**: 同一 Repo 内操作顺序 **MUST** 由 `Time` 决定，任何并发写入 **MUST** 在落盘前被线性化。
+    *   **Version Control**: Commit 锚定到特定 `ledger_seq`，形成版本历史链（类比 Git commit）。
+    *   **Metadata Directory**: 系统使用 `.notegit/` 目录存储元数据（类比 `.git/`，包含 config、hooks、refs 等）。
+
+*   **Ledger-First Strategy (账本优先策略)**:
+    *   前端编辑器生成的变更 **MUST** 直接作为 `Op` 写入 Store B (Ledger)。
+    *   Watcher 检测到的后台 Vault 变更 **MUST NOT** 直接入 Ledger；**MUST** 先写入 `pending_fs_ops`，等待用户手动 Commit。
+    *   绝不允许绕过 Ledger 直接修改 Store A (Vault) 文件。
+
+
 *   **Ledger-First Strategy (账本优先策略)**:
     *   所有的变更 (Edit, Discard, etc.) **MUST** 首先作为 `Op` 写入 Store B (Ledger)。
     *   绝不允许绕过 Ledger 直接修改 Store A (Vault) 文件，唯一的例外是外部编辑器的 `Watcher` 触发 Ingestion。

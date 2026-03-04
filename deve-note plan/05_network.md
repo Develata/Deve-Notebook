@@ -7,6 +7,15 @@
 * **机制**：这三方拥有独立的 `PeerID` 和 **Local Branch** (数据集合)，通过 Gossip 协议交换 Repo Instances。
 * **Server 角色**：Server 在 P2P 网络中充当 **Always-on Relay Peer** (全天候中继/备份节点)。
 
+### Mobile P2P Strategy (移动端 P2P 参与策略)
+
+* **Foreground Participation**: iOS/Android 客户端在前台运行时 **MUST** 作为完整 P2P Peer 参与 Gossip、握手与增量同步。
+* **Background Degrade**: iOS/Android 进入后台后 **MUST** 立即降级为 **Light Peer**，停止主动 Gossip 轮询与高频广播。
+* **Pull-on-Resume**: 移动端回到前台时 **MUST** 触发一次 `SyncHello`，并按 Vector Clock 执行缺失补齐。
+* **Write Boundary**: Light Peer 状态下 **MUST** 禁止发起长时合并与大批量重放，仅保留必要心跳/唤醒能力。
+* **Durability Guarantee**: 后台窗口期产生的跨端更新 **MUST** 由 Server（Always-on Relay）托管，移动端前台恢复后再增量拉取。
+* **Power Policy**: 在系统电量/网络受限场景下，移动端 **MAY** 延迟非关键同步任务，但不得破坏向量时钟一致性。
+
 ### Web Client (服务器面板)
 * **定位**：Web 端**不是**一个独立的 P2P 节点，而是 **Server 节点的远程操作面板 (Remote Dashboard)**。
 * **数据源**：Web 端直接通过 WebSocket 读写 Server 的内存/数据库。Web 端显示的 "Local" 即为 Server 的 `Local Branch` (ledger/local/)。
@@ -142,3 +151,4 @@
 ## 本章相关配置
 
 *   `SYNC_MODE`: `auto` (Default, 后台自动拉取与合并) | `manual` (StrictMode, 仅交换 Vector，需显式 Fetch/Merge)。
+    *   **Mobile Override**: 移动端（iOS/Android）后台状态下，`SYNC_MODE` 设置 **MUST** 被强制覆盖为 `light-peer` 模式：仅被动接收 Server Relay 推送的更新，禁止主动 Gossip/合并。
