@@ -19,7 +19,7 @@
 - [x] **Atomic Persistence**: `Op -> Ledger -> Snapshot -> Disk` 写入流程.
 - [x] **Path Normalization**: 强制使用 Linux 风格正斜杠 (`/`).
 - [x] **Watcher**: 文件变更监听 (>500ms Debounce).
-- [ ] **`.notegit/` Directory**: 元数据目录物理创建 (config/hooks/refs).
+- [x] **`.notegit/` Directory**: 元数据目录物理创建 (config/hooks/refs).
 
 ## 2. 网络与同步 (Network - Plan 05)
 - [x] **Peer Identity**: 基于 Ed25519 的身份 ID 生成 (`SHA256(PubKey)[0..12]`).
@@ -60,16 +60,16 @@
     - [x] `FsChangeDetected` WebSocket 消息 + `FsPendingChange` 事件类型.
     - [x] `.notegit` 加入 Watcher 忽略列表.
     - [x] `cargo clippy` 零警告, `cargo test` 73/73 通过.
-- [ ] **Phase 2.1 — `scan.rs` 审计**: `scan_vault` 也走 `pending_fs_ops` 路径.
-- [ ] **Phase 2.2 — `.notegit/` 目录创建**: init 时创建物理目录.
-- [ ] **Phase 2.3 — Stage 接线**: `pending_fs_ops` → staging 表真正写入.
-- [ ] **Phase 2.4 — Commit 接线 (核心)**:
-    - [ ] Staged 与 Ledger 快照对比 → 生成 Ops.
-    - [ ] Ops 追加 Ledger (分配 GlobalSeq).
-    - [ ] CommitInfo 锚定 ledger_seq + parent_id 链式历史.
-    - [ ] 清空 staging + 已处理 pending_fs_ops.
-- [ ] **Phase 2.5 — Commit Diff**: 对比任意两个 commit (按 ledger_seq 范围).
-- [ ] **Phase 2.6 — 前端 Source Control**: Changes 列表 + Stage/Commit UI.
+- [x] **Phase 2.1 — `scan.rs` 审计**: `scan_vault` 也走 `pending_fs_ops` 路径.
+- [x] **Phase 2.2 — `.notegit/` 目录创建**: init 时创建物理目录.
+- [x] **Phase 2.3 — Stage 接线**: `pending_fs_ops` → staging 表真正写入.
+- [x] **Phase 2.4 — Commit 接线 (核心)**:
+    - [x] Staged 与 Ledger 快照对比 → 生成 Ops.
+    - [x] Ops 追加 Ledger (分配 GlobalSeq).
+    - [x] CommitInfo 锚定 ledger_seq + parent_id 链式历史.
+    - [x] 清空 staging + 已处理 pending_fs_ops.
+- [x] **Phase 2.5 — Commit Diff**: 对比任意两个 commit (按 ledger_seq 范围).
+- [x] **Phase 2.6 — 前端 Source Control**: FsChangeDetected + CommitDiffResult WS 消息处理.
 
 ## 5. 认证与安全 (Auth - Plan 09)
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).
