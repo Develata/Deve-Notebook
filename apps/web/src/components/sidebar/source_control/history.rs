@@ -7,6 +7,7 @@
 use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
+use crate::utils::time::format_relative;
 use leptos::prelude::*;
 
 #[component]
@@ -53,7 +54,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                                                 </div>
                                                 <div class="flex items-center gap-2 text-[11px] text-muted">
                                                     <span class="font-mono bg-hover px-1 rounded text-secondary">{commit.id[0..7].to_string()}</span>
-                                                    <span>{commit.timestamp}</span> // TODO: Format relative time
+                                                    <span>{format_relative(commit.timestamp)}</span>
                                                 </div>
                                             </div>
                                         </div>

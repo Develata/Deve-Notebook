@@ -70,6 +70,12 @@
     - [x] 清空 staging + 已处理 pending_fs_ops.
 - [x] **Phase 2.5 — Commit Diff**: 对比任意两个 commit (按 ledger_seq 范围).
 - [x] **Phase 2.6 — 前端 Source Control**: FsChangeDetected + CommitDiffResult WS 消息处理.
+- [x] **Phase 3.1 — Bug Fix**: `DiscardAck` 缺失 `schedule_refresh()` 修复.
+- [x] **Phase 3.2 — Refactor**: `staging.rs` 拆分 → `discard.rs` (172行→81+107行).
+- [x] **Phase 3.3 — 相对时间**: History 组件时间戳格式化 ("3 分钟前").
+- [x] **Phase 3.4 — 集成测试**: Source Control 生命周期测试 (pending/staging/commit).
+- [x] **Phase 3.5 — pending_fs 对齐**: `detect_unstaged_changes` 改为读取 `pending_fs_ops` 表.
+- [ ] Phase 4+ — AI 提交消息生成, 提交下拉菜单, CommitDiff 视图, 冲突检测, 行内 Diff.
 
 ## 5. 认证与安全 (Auth - Plan 09)
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).

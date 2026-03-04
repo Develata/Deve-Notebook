@@ -196,6 +196,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 }
                 ServerMessage::DiscardAck { path } => {
                     leptos::logging::log!("已放弃变更: {}", path);
+                    schedule_refresh();
                 }
                 ServerMessage::CommitAck { commit_id, .. } => {
                     leptos::logging::log!("已提交: {}", commit_id);

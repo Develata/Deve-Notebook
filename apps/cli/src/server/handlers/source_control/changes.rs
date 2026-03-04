@@ -1,8 +1,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::models::RepoType;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
 use std::sync::Arc;
@@ -29,33 +27,27 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
         }
     };
 
-    let unstaged = detect_unstaged_changes(state, session);
+    let unstaged = detect_unstaged_changes(state);
 
     ch.unicast(ServerMessage::ChangesList { staged, unstaged });
 }
 
 /// 检测未暂存的变更
 ///
-/// 使用 session 的 active_db 或回退到 active_repo
-fn detect_unstaged_changes(state: &Arc<AppState>, session: &WsSession) -> Vec<ChangeEntry> {
-    let mut changes = Vec::new();
-
-    // 使用 session 锁定的数据库，或回退到默认逻辑
-    let docs = if let Some(handle) = session.get_active_db() {
-        deve_core::ledger::metadata::list_docs(&handle.db)
-    } else {
-        let repo_id = crate::server::handlers::get_repo_id(state);
-        state.repo.list_docs(&RepoType::Local(repo_id))
-    };
-
-    let docs = match docs {
+/// 从 pending_fs_ops 表读取 Watcher/Scan 检测到的变更，
+/// 过滤掉已在暂存区中的路径。
+///
+/// **Invariant**: pending_fs_ops 是 Working Directory 的单一事实源。
+fn detect_unstaged_changes(state: &Arc<AppState>) -> Vec<ChangeEntry> {
+    let pending = match state.repo.list_pending_fs() {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to list docs: {:?}", e);
-            return changes;
+            tracing::error!("Failed to list pending fs ops: {:?}", e);
+            return Vec::new();
         }
     };
 
+    // 获取已暂存路径集合，用于过滤
     let staged_paths: std::collections::HashSet<String> = state
         .repo
         .list_staged()
@@ -64,34 +56,11 @@ fn detect_unstaged_changes(state: &Arc<AppState>, session: &WsSession) -> Vec<Ch
         .map(|e| deve_core::utils::path::to_forward_slash(&e.path))
         .collect();
 
-    for (doc_id, path) in docs {
-        let normalized = deve_core::utils::path::to_forward_slash(&path);
-        if staged_paths.contains(&normalized) {
-            continue;
-        }
-
-        let current = match state.repo.get_local_ops(doc_id) {
-            Ok(ops) => {
-                let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-                Some(deve_core::state::reconstruct_content(&entries))
-            }
-            Err(e) => {
-                tracing::error!("Failed to get local ops for {}: {:?}", path, e);
-                // On error, we shouldn't treat it as "empty/deleted", better to skip detecting change for this file
-                // to avoid false positives.
-                continue;
-            }
-        };
-
-        let committed = state.repo.get_committed_content(doc_id).ok().flatten();
-
-        if let Some(status) = state
-            .repo
-            .detect_change(committed.as_deref(), current.as_deref())
-        {
-            changes.push(ChangeEntry { path, status });
-        }
-    }
-
-    changes
+    pending
+        .into_iter()
+        .filter(|e| {
+            let normalized = deve_core::utils::path::to_forward_slash(&e.path);
+            !staged_paths.contains(&normalized)
+        })
+        .collect()
 }
