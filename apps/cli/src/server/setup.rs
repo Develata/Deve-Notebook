@@ -84,6 +84,10 @@ pub(super) fn spawn_file_watcher(
                 FsEventType::DirChange => {
                     tracing::warn!("DirChange detected: ignore without Node update");
                 }
+                FsEventType::FsPendingChange { path, change_type } => {
+                    tracing::info!("FsPendingChange: {} ({})", path, change_type);
+                    let _ = tx.send(ServerMessage::FsChangeDetected { path, change_type });
+                }
             },
         );
 

@@ -46,3 +46,8 @@ pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo
 // (DocId (u128), PeerId (&str)) -> MaxSeq (u64)
 // Used for atomic sequence generation and O(1) retrieval.
 pub const PEER_DOC_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("peer_doc_seq");
+
+// Path String -> PendingFsEntry (Bytes - JSON)
+// 存储 Watcher 检测到但用户尚未确认的文件系统变更
+// Key: 相对路径, Value: PendingFsEntry 序列化字节
+pub const PENDING_FS_OPS: TableDefinition<&str, &[u8]> = TableDefinition::new("pending_fs_ops");

@@ -9,6 +9,12 @@ pub trait Repository: Send + Sync {
     fn list_docs(&self) -> Result<Vec<(DocId, String)>>;
     fn get_doc_content(&self, doc_id: DocId) -> Result<String>;
 
+    // --- Pending (Working Directory) ---
+    fn list_pending_fs(&self) -> Result<Vec<ChangeEntry>>;
+    fn stage_pending(&self, path: &str) -> Result<()>;
+    fn discard_pending(&self, path: &str) -> Result<()>;
+
+    // --- Staging & Commit ---
     fn list_changes(&self) -> Result<Vec<ChangeEntry>>;
     fn diff_doc_path(&self, path: &str) -> Result<String>;
     fn stage_file(&self, path: &str) -> Result<()>;

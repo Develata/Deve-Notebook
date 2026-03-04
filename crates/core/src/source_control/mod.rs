@@ -8,6 +8,7 @@
 //! - `staging`: 暂存区管理函数 [仅后端]
 //! - `commits`: 提交管理函数 [仅后端]
 //! - `changes`: 变更检测函数 [仅后端]
+//! - `pending_fs`: 待确认文件变更管理 (Working Directory) [仅后端]
 
 pub mod api;
 pub mod diff;
@@ -21,6 +22,8 @@ pub mod commits;
 pub mod snapshot_paths;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod staging;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pending_fs;
 
 // 重新导出常用类型
 pub use api::SourceControlApi;

@@ -8,6 +8,8 @@ use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
 use crate::protocol::ServerMessage;
+use crate::source_control::pending_fs::{self, PendingFsEntry};
+use crate::source_control::ChangeStatus;
 use crate::sync::recovery;
 use crate::vfs::Vfs;
 use anyhow::Result;
@@ -33,31 +35,18 @@ impl<'a> FsEventHandler<'a> {
     pub fn handle_event(
         &self,
         path_str: &str,
-        sync_mgr: &crate::sync::SyncManager,
+        _sync_mgr: &crate::sync::SyncManager,
     ) -> Result<Vec<ServerMessage>> {
         let file_path = self.vault_root.join(path_str);
 
         // CASE 1: File Deleted (or moved out of scope)
         if !file_path.exists() {
-            if let Some(doc_id) = self.repo.get_docid(path_str)? {
-                warn!(
-                    "Handler: File gone: {}. Marking as deleted in Ledger.",
-                    path_str
-                );
-
-                // 1. Remove from Path Mapping (metadata) to prevent "Ghost Files"
-                // This ensures next scan won't see it as a valid entry
+            if let Some(_doc_id) = self.repo.get_docid(path_str)? {
+                warn!("Handler: File gone: {}. Recording as pending delete.", path_str);
                 self.repo.delete_doc(path_str)?;
-
-                // 2. Broadcast Deletion to Peers
-                // TODO: Protocol needs DocDeleted message.
-                // Currently we just update local state. The sync engine should propagate
-                // this as a "Tombstone" op if we are doing CRDT deletions.
-                // But for now, ensuring metadata is clean prevents local issues.
-
-                // 删除事件同时返回 DocList，用于前端刷新文件树
-                let mut msgs = vec![ServerMessage::DocDeleted { doc_id }];
-                msgs.extend(self.gen_list()?);
+                self.upsert_pending(path_str, ChangeStatus::Deleted)?;
+                let mut msgs = self.gen_list()?;
+                msgs.push(self.fs_change_msg(path_str, "deleted"));
                 return Ok(msgs);
             }
             return Ok(vec![]);
@@ -79,11 +68,12 @@ impl<'a> FsEventHandler<'a> {
                 return self.gen_list();
             }
 
-            // 2b. Same Path => Content Update
-            if sync_mgr.reconcile_doc(doc_id)? {
-                return self.gen_list();
-            }
-            return Ok(vec![]);
+            // 2b. Same Path => Content Update (记录为 pending，不自动 ingest)
+            info!("Handler: Content update detected for {}", path_str);
+            self.upsert_pending(path_str, ChangeStatus::Modified)?;
+            let mut msgs = self.gen_list()?;
+            msgs.push(self.fs_change_msg(path_str, "modified"));
+            return Ok(msgs);
         }
 
         // CASE 3: Unknown Inode (New File or Atomic Save)
@@ -93,13 +83,13 @@ impl<'a> FsEventHandler<'a> {
                 "Handler: Inode change (Atomic Save?) for {}. Rebinding.",
                 path_str
             );
-            // RISK (Low): If user did "Delete A -> Create New A" quickly, we might bind New A content to Old A history.
-            // Accepted trade-off for supporting Vim/Editor atomic saves (Write New + Rename).
+            // RISK (Low): Delete A -> Create New A quickly may rebind.
             self.repo.bind_inode(&inode, existing_id)?;
-            if sync_mgr.reconcile_doc(existing_id)? {
-                // Content updated
-            }
-            return self.gen_list();
+            // 内容更新记录为 pending（不自动 reconcile）
+            self.upsert_pending(path_str, ChangeStatus::Modified)?;
+            let mut msgs = self.gen_list()?;
+            msgs.push(self.fs_change_msg(path_str, "modified"));
+            return Ok(msgs);
         }
 
         // 3b. Check Content for UUID (Recovery)
@@ -111,43 +101,54 @@ impl<'a> FsEventHandler<'a> {
                 "Handler: Recovery UUID found. Resurrecting {:?} from {} to {}",
                 recovered_id, old_path, path_str
             );
-
             if old_path != path_str {
                 self.repo.rename_doc(&old_path, path_str)?;
             }
             self.repo.bind_inode(&inode, recovered_id)?;
-            let _ = sync_mgr.reconcile_doc(recovered_id);
-            return self.gen_list();
+            self.upsert_pending(path_str, ChangeStatus::Modified)?;
+            let mut msgs = self.gen_list()?;
+            msgs.push(self.fs_change_msg(path_str, "modified"));
+            return Ok(msgs);
         }
 
-        // 3c. Truly New File
+        // 3c. Truly New File — 创建元数据，但内容不 ingest 到 Ledger
         info!("Handler: New file detected: {}", path_str);
         let doc_id = self.repo.create_docid(path_str)?;
         self.repo.bind_inode(&inode, doc_id)?;
-
-        // Initial ingest
-        if !content.is_empty() {
-            let now = chrono::Utc::now().timestamp_millis();
-            let op = crate::models::Op::Insert {
-                pos: 0,
-                content: content.into(),
-            };
-            let entry = crate::models::LedgerEntry {
-                doc_id,
-                op,
-                timestamp: now,
-                peer_id: crate::models::PeerId::new("local_watcher"),
-                seq: 0,
-            };
-            self.repo.append_local_op(&entry)?;
-            info!("Handler: Ingested initial content.");
-        }
-
-        self.gen_list()
+        self.upsert_pending(path_str, ChangeStatus::Added)?;
+        let mut msgs = self.gen_list()?;
+        msgs.push(self.fs_change_msg(path_str, "added"));
+        Ok(msgs)
     }
 
     fn gen_list(&self) -> Result<Vec<ServerMessage>> {
         let docs = self.repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
         Ok(vec![ServerMessage::DocList { docs }])
+    }
+
+    /// 将文件变更记录到 pending_fs_ops 表
+    fn upsert_pending(&self, path_str: &str, status: ChangeStatus) -> Result<()> {
+        let hash = if status == ChangeStatus::Deleted {
+            String::new()
+        } else {
+            let file_path = self.vault_root.join(path_str);
+            let content = std::fs::read_to_string(&file_path).unwrap_or_default();
+            pending_fs::content_hash(&content)
+        };
+        let entry = PendingFsEntry {
+            path: path_str.to_string(),
+            change_type: status,
+            content_hash: hash,
+            detected_at: chrono::Utc::now().timestamp_millis(),
+        };
+        pending_fs::upsert(&self.repo.local_db, &entry)
+    }
+
+    /// 构造 FsChangeDetected 消息
+    fn fs_change_msg(&self, path: &str, change_type: &str) -> ServerMessage {
+        ServerMessage::FsChangeDetected {
+            path: path.to_string(),
+            change_type: change_type.to_string(),
+        }
     }
 }

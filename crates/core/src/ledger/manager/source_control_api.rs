@@ -6,6 +6,18 @@ use crate::source_control::{ChangeEntry, CommitInfo, SourceControlApi};
 use anyhow::Result;
 
 impl SourceControlApi for RepoManager {
+    fn list_pending_fs(&self) -> Result<Vec<ChangeEntry>> {
+        self.list_pending_fs()
+    }
+
+    fn stage_pending(&self, path: &str) -> Result<()> {
+        self.stage_pending(path)
+    }
+
+    fn discard_pending(&self, path: &str) -> Result<()> {
+        self.discard_pending(path)
+    }
+
     fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
         self.list_changes()
     }

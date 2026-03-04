@@ -7,7 +7,7 @@ use crate::ledger::RepoManager;
 use crate::ledger::source_control;
 use crate::models::DocId;
 use crate::source_control::snapshot_paths;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate};
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, pending_fs};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
@@ -81,5 +81,33 @@ impl RepoManager {
                 None
             }
         })
+    }
+
+    // === Pending FS Ops (Working Directory) ===
+
+    /// 获取所有待确认的文件变更
+    pub fn list_pending_fs(&self) -> Result<Vec<ChangeEntry>> {
+        let entries = pending_fs::list_all(&self.local_db)?;
+        Ok(entries
+            .into_iter()
+            .map(|e| ChangeEntry {
+                path: e.path,
+                status: e.change_type,
+            })
+            .collect())
+    }
+
+    /// 将待确认变更移入暂存区 (Working Dir → Staging)
+    ///
+    /// **流程**: pending_fs_ops 中移除 + staged_files 中插入
+    pub fn stage_pending(&self, path: &str) -> Result<()> {
+        pending_fs::remove(&self.local_db, path)?;
+        source_control::stage_file(&self.local_db, path)?;
+        Ok(())
+    }
+
+    /// 丢弃待确认变更
+    pub fn discard_pending(&self, path: &str) -> Result<()> {
+        pending_fs::remove(&self.local_db, path)
     }
 }

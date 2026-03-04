@@ -59,6 +59,47 @@ impl Repository for RemoteSourceControlApi {
         Ok(res)
     }
 
+    fn list_pending_fs(&self) -> Result<Vec<ChangeEntry>> {
+        let url = format!("{}/api/sc/pending", self.base_url);
+        let res = block_on_safe(async {
+            self.client
+                .get(&url)
+                .send()
+                .await?
+                .json::<Vec<ChangeEntry>>()
+                .await
+        })?;
+        Ok(res)
+    }
+
+    fn stage_pending(&self, path: &str) -> Result<()> {
+        let url = format!("{}/api/sc/stage-pending", self.base_url);
+        block_on_safe(async {
+            self.client
+                .post(&url)
+                .json(&serde_json::json!({"path": path}))
+                .send()
+                .await?
+                .error_for_status()?;
+            Ok::<(), reqwest::Error>(())
+        })?;
+        Ok(())
+    }
+
+    fn discard_pending(&self, path: &str) -> Result<()> {
+        let url = format!("{}/api/sc/discard-pending", self.base_url);
+        block_on_safe(async {
+            self.client
+                .post(&url)
+                .json(&serde_json::json!({"path": path}))
+                .send()
+                .await?
+                .error_for_status()?;
+            Ok::<(), reqwest::Error>(())
+        })?;
+        Ok(())
+    }
+
     fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
         let url = format!("{}/api/sc/status", self.base_url);
         let res = block_on_safe(async {

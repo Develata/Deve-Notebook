@@ -172,6 +172,17 @@ pub enum ServerMessage {
         failed_paths: Vec<String>,
     },
 
+    // === Pending FS Change Notification (文件变更通知) ===
+    /// Watcher 检测到文件变更，通知前端刷新 pending 列表
+    ///
+    /// **Invariant**: 不触发自动 ingest，仅用于 UI 更新。
+    FsChangeDetected {
+        /// 变更的相对路径 (forward-slash)
+        path: String,
+        /// 变更类型描述
+        change_type: String,
+    },
+
     // === E2EE Key Exchange (密钥交换) ===
     /// 服务端向已认证客户端提供 RepoKey
     ///

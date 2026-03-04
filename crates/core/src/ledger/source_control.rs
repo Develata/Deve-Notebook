@@ -11,7 +11,8 @@
 use crate::ledger::range;
 use crate::models::DocId;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, changes, commits, staging,
+    ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, changes, commits, pending_fs,
+    staging,
 };
 use anyhow::Result;
 use redb::Database;
@@ -21,6 +22,7 @@ pub fn init_tables(db: &Database) -> Result<()> {
     staging::init_table(db)?;
     commits::init_table(db)?;
     changes::init_table(db)?;
+    pending_fs::init_table(db)?;
     Ok(())
 }
 

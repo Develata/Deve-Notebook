@@ -24,6 +24,11 @@ pub enum FsEventType {
     DocChange(Vec<crate::protocol::ServerMessage>),
     /// 目录结构变更 (需要重新扫描树)
     DirChange,
+    /// 文件变更已记录到 pending_fs_ops (不自动 ingest)
+    FsPendingChange {
+        path: String,
+        change_type: String,
+    },
 }
 
 pub struct Watcher {
@@ -83,7 +88,10 @@ impl Watcher {
                 let path_str = crate::utils::path::to_forward_slash(&rel.to_string_lossy());
 
                 // 忽略系统目录
-                if path_str.starts_with(".git") || path_str.starts_with(".deve") {
+                if path_str.starts_with(".git")
+                    || path_str.starts_with(".deve")
+                    || path_str.starts_with(".notegit")
+                {
                     continue;
                 }
 
