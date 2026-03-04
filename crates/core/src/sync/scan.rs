@@ -2,6 +2,8 @@
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
+use crate::source_control::ChangeStatus;
+use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::utils::path::{path_to_forward_slash, to_forward_slash};
 use crate::vfs::Vfs;
 use anyhow::Result;
@@ -11,10 +13,10 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 use walkdir::WalkDir;
 
-/// Performs a full scan of the vault.
-/// 1. Registers new files in Ledger.
-/// 2. Binds Inodes.
-/// 3. Removes ghost entries from Ledger.
+/// 全量扫描 Vault 目录。
+/// 1. 注册新文件的 DocID 并绑定 Inode。
+/// 2. 将磁盘上发现的文件记录为 pending_fs_ops（供 Stage → Commit 流程使用）。
+/// 3. 清理 Ledger 中的幽灵条目（磁盘上已不存在的文件），并记录 Deleted pending。
 pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Result<()> {
     info!("SyncScan: Starting full scan of {:?}", vault_root);
 
@@ -35,8 +37,9 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                     on_disk_paths.insert(path_str.clone());
 
                     // Ensure DocID exists
-                    let doc_id = if let Some(id) = repo.get_docid(&path_str)? {
-                        id
+                    let is_new = repo.get_docid(&path_str)?.is_none();
+                    let doc_id = if !is_new {
+                        repo.get_docid(&path_str)?.unwrap()
                     } else {
                         if let Err(e) = repo.create_docid(&path_str) {
                             error!("Failed to register {}: {:?}", path_str, e);
@@ -48,6 +51,13 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                     // Bind Inode
                     if let Ok(Some(inode)) = vfs.get_inode(&path_str) {
                         let _ = repo.bind_inode(&inode, doc_id);
+                    }
+
+                    // 记录到 pending_fs_ops（新文件 Added，已有文件 Modified）
+                    let status = if is_new { ChangeStatus::Added } else { ChangeStatus::Modified };
+                    let hash = upsert_scan_pending(repo, vault_root, &path_str, status);
+                    if let Err(e) = hash {
+                        warn!("SyncScan: pending upsert 失败 {}: {:?}", path_str, e);
                     }
                 }
             }
@@ -70,29 +80,57 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
         let normalized_path = to_forward_slash(&path);
         if !on_disk_paths.contains(&normalized_path) {
             info!(
-                "SyncScan: 检测到幽灵文件: {}（规范化后: {}），正在删除...",
+                "SyncScan: 检测到幽灵文件: {}（规范化后: {}），记录 Deleted pending...",
                 path, normalized_path
             );
 
-            // SECURITY WARNING: Direct deletion based on scan result has a risk of metadata loss
-            // if the FS is temporarily unavailable (e.g. unmounted drive).
-            // Current assumption: Local disk availability is high.
-            // Future improvement: Add a "Tombstone" state or second confirmation before physical deletion.
+            // 记录 Deleted 到 pending_fs_ops（用户可在 UI 中确认）
+            let entry = PendingFsEntry {
+                path: normalized_path.clone(),
+                change_type: ChangeStatus::Deleted,
+                content_hash: String::new(),
+                detected_at: chrono::Utc::now().timestamp_millis(),
+            };
+            if let Err(e) = pending_fs::upsert(&repo.local_db, &entry) {
+                warn!("SyncScan: pending upsert (deleted) 失败 {}: {:?}", path, e);
+            }
 
-            // 尝试使用原始路径删除
+            // 清理 Ledger 中的元数据
             if let Err(e) = repo.delete_doc(&path) {
                 warn!("使用原始路径删除失败 {}: {:?}", path, e);
             }
-            // 如果路径不同，也尝试用规范化路径删除
             if normalized_path != path
                 && let Err(e) = repo.delete_doc(&normalized_path)
             {
                 warn!("使用规范化路径删除失败 {}: {:?}", normalized_path, e);
             }
-            info!("SyncScan: 幽灵文件删除完成: {}", path);
+            info!("SyncScan: 幽灵文件处理完成: {}", path);
         }
     }
 
     info!("SyncScan: Scan complete.");
     Ok(())
+}
+
+/// 辅助函数：将扫描发现的文件记录到 pending_fs_ops
+fn upsert_scan_pending(
+    repo: &Arc<RepoManager>,
+    vault_root: &Path,
+    path_str: &str,
+    status: ChangeStatus,
+) -> Result<()> {
+    let hash = if status == ChangeStatus::Deleted {
+        String::new()
+    } else {
+        let file_path = vault_root.join(path_str);
+        let content = std::fs::read_to_string(&file_path).unwrap_or_default();
+        pending_fs::content_hash(&content)
+    };
+    let entry = PendingFsEntry {
+        path: path_str.to_string(),
+        change_type: status,
+        content_hash: hash,
+        detected_at: chrono::Utc::now().timestamp_millis(),
+    };
+    pending_fs::upsert(&repo.local_db, &entry)
 }

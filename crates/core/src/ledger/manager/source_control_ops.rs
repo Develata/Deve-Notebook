@@ -58,8 +58,21 @@ impl RepoManager {
         source_control::detect_change(committed, current)
     }
 
-    /// 提交已暂存文件 (内部快照策略)
+    /// 提交已暂存文件 (新三阶段工作流)
+    ///
+    /// **流程**: 读取暂存文件 → 读磁盘内容 → diff 快照 → 生成 Op → 追加 Ledger → 快照更新 → 创建提交
+    /// **Invariant**: vault_root 必须已设置，否则回退到旧逻辑。
     pub fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
+        // 新流程：有 vault_root 时，从磁盘读取内容并生成 Op
+        if let Some(vault_root) = &self.vault_root {
+            return self.commit_staged_with_ops(message, vault_root.clone());
+        }
+        // 回退：旧逻辑 (从 Ledger 重建内容)
+        self.commit_staged_legacy(message)
+    }
+
+    /// 旧版提交逻辑 (从 Ledger 重建内容，兼容用)
+    fn commit_staged_legacy(&self, message: &str) -> Result<CommitInfo> {
         source_control::create_commit_with_updates(&self.local_db, message, |path| {
             let normalized = to_forward_slash(path);
             if let Ok(Some(doc_id)) =
@@ -99,10 +112,14 @@ impl RepoManager {
 
     /// 将待确认变更移入暂存区 (Working Dir → Staging)
     ///
-    /// **流程**: pending_fs_ops 中移除 + staged_files 中插入
+    /// **流程**: 读取 pending 状态 → pending_fs_ops 中移除 → staged_files 中插入（带状态）
     pub fn stage_pending(&self, path: &str) -> Result<()> {
+        // 先读取变更状态，再移除
+        let status = pending_fs::get(&self.local_db, path)?
+            .map(|e| e.change_type)
+            .unwrap_or(ChangeStatus::Modified);
         pending_fs::remove(&self.local_db, path)?;
-        source_control::stage_file(&self.local_db, path)?;
+        source_control::stage_file_with_status(&self.local_db, path, status)?;
         Ok(())
     }
 

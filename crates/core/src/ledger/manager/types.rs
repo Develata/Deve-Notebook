@@ -33,4 +33,6 @@ pub struct RepoManager {
     pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>>,
     /// 快照保留深度
     pub snapshot_depth: usize,
+    /// Vault 根目录 (用于 commit 时读取磁盘文件内容)
+    pub(crate) vault_root: Option<PathBuf>,
 }

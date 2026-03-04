@@ -177,6 +177,7 @@ pub fn init(
         extra_local_dbs: RwLock::new(HashMap::new()),
         shadow_dbs: RwLock::new(HashMap::new()),
         snapshot_depth,
+        vault_root: None,
     })
 }
 

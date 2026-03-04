@@ -28,7 +28,7 @@ pub async fn run(
     }
 
     // 1. 初始化 RepoManager
-    let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
+    let mut repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
         Ok(r) => r,
         Err(e) => {
             let msg = e.to_string();
@@ -38,6 +38,7 @@ pub async fn run(
             return Err(e);
         }
     };
+    repo.set_vault_root(&vault_path);
     let repo_arc = Arc::new(repo);
 
     // 启动时通过 SyncManager 自动扫描

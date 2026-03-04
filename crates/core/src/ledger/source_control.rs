@@ -31,6 +31,11 @@ pub fn stage_file(db: &Database, path: &str) -> Result<()> {
     staging::stage(db, path)
 }
 
+/// 暂存指定文件（带变更状态）
+pub fn stage_file_with_status(db: &Database, path: &str, status: ChangeStatus) -> Result<()> {
+    staging::stage_with_status(db, path, status)
+}
+
 /// 取消暂存指定文件
 pub fn unstage_file(db: &Database, path: &str) -> Result<()> {
     staging::unstage(db, path)
@@ -38,15 +43,10 @@ pub fn unstage_file(db: &Database, path: &str) -> Result<()> {
 
 /// 获取已暂存的文件列表 (含正确的变更状态)
 pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
-    let paths = staging::list_staged(db)?;
-    Ok(paths
+    let entries = staging::list_staged_with_status(db)?;
+    Ok(entries
         .into_iter()
-        .map(|path| {
-            // 检查是否有快照 (无快照 = Added, 有快照 = Modified)
-            // 注意: Deleted 状态在暂存时不常见，暂不处理
-            let status = ChangeStatus::Modified; // 默认: Modified
-            ChangeEntry { path, status }
-        })
+        .map(|(path, status)| ChangeEntry { path, status })
         .collect())
 }
 

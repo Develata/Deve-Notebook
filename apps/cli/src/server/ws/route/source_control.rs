@@ -35,6 +35,9 @@ pub(super) async fn route_source_control(
         ClientMessage::GetCommitHistory { limit } => {
             source_control::handle_get_commit_history(state, ch, limit).await;
         }
+        ClientMessage::GetCommitDiff { commit_a, commit_b } => {
+            source_control::handle_get_commit_diff(state, ch, commit_a, commit_b).await;
+        }
         ClientMessage::GetDocDiff { path } => {
             source_control::handle_get_doc_diff(state, ch, session, path).await;
         }

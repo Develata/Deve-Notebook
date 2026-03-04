@@ -28,12 +28,16 @@ pub fn init_table(db: &Database) -> Result<()> {
 }
 
 /// 创建新提交
+///
+/// **Invariant**: parent_id 自动从最新提交中推导，构成单链提交历史。
 pub fn create(db: &Database, message: &str, doc_count: u32, ledger_seq: u64) -> Result<CommitInfo> {
     let commit_id = uuid::Uuid::new_v4().to_string();
     let timestamp = chrono::Utc::now().timestamp_millis();
+    let parent_id = get_latest_id(db)?;
 
     let info = CommitInfo {
         id: commit_id.clone(),
+        parent_id,
         message: message.to_string(),
         timestamp,
         doc_count,
@@ -53,7 +57,7 @@ pub fn create(db: &Database, message: &str, doc_count: u32, ledger_seq: u64) -> 
     }
     write_txn.commit()?;
 
-    tracing::info!("Created commit: {} - {}", commit_id, message);
+    tracing::info!("Created commit: {} (parent: {:?}) - {}", commit_id, info.parent_id, message);
     Ok(info)
 }
 
@@ -67,6 +71,29 @@ fn next_seq_inner(table: &redb::Table<u64, &str>) -> Result<u64> {
         }
     }
     Ok(max_seq + 1)
+}
+
+/// 获取最新提交的 ID（作为新提交的 parent_id）
+pub fn get_latest_id(db: &Database) -> Result<Option<String>> {
+    let read_txn = db.begin_read()?;
+    let order_table = read_txn.open_table(COMMITS_ORDER_TABLE)?;
+    // 找到最大序号对应的 commit_id
+    let mut max_seq = 0u64;
+    let mut found = false;
+    for entry in order_table.iter()? {
+        let (seq, _) = entry?;
+        if seq.value() > max_seq || !found {
+            max_seq = seq.value();
+            found = true;
+        }
+    }
+    if !found {
+        return Ok(None);
+    }
+    match order_table.get(max_seq)? {
+        Some(guard) => Ok(Some(guard.value().to_string())),
+        None => Ok(None),
+    }
 }
 
 /// 获取提交历史 (最新的在前)

@@ -46,3 +46,22 @@ pub async fn handle_get_commit_history(state: &Arc<AppState>, ch: &DualChannel, 
         }
     }
 }
+
+/// 获取两个提交之间的差异
+pub async fn handle_get_commit_diff(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    commit_a: Option<String>,
+    commit_b: String,
+) {
+    match state.repo.diff_commits(commit_a.as_deref(), &commit_b) {
+        Ok(diffs) => {
+            tracing::info!("Returning diff with {} file changes", diffs.len());
+            ch.unicast(ServerMessage::CommitDiffResult { diffs });
+        }
+        Err(e) => {
+            tracing::error!("Failed to get commit diff: {:?}", e);
+            ch.send_error(e.to_string());
+        }
+    }
+}

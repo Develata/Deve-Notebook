@@ -3,7 +3,7 @@
 
 use crate::models::{DocId, Op, PeerId, VersionVector};
 use crate::security::EncryptedOp;
-use crate::source_control::{ChangeEntry, CommitInfo};
+use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,6 +138,10 @@ pub enum ServerMessage {
         new_content: String,
     },
 
+    /// 提交间差异响应 (SC-003)
+    ///
+    /// 包含两个提交之间所有变更文件的旧/新内容。
+    CommitDiffResult { diffs: Vec<CommitFileDiff> },
     /// 文档删除通知
     DocDeleted { doc_id: DocId },
     /// 放弃变更确认

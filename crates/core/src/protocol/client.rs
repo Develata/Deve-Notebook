@@ -128,6 +128,15 @@ pub enum ClientMessage {
     /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
     UnstageFiles { paths: Vec<String> },
 
+    /// 对比两个提交之间的差异 (SC-003)
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    GetCommitDiff {
+        /// 较早提交 ID (None = 空状态)
+        commit_a: Option<String>,
+        /// 较新提交 ID
+        commit_b: String,
+    },
     // === E2EE Key Exchange (密钥交换) ===
     /// 请求当前仓库的 RepoKey (通过已认证的 WSS 通道)
     ///

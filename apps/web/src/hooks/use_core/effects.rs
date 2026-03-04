@@ -221,6 +221,14 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                         set_nodes.update(|nodes| apply_tree_delta(nodes, delta));
                     });
                 }
+                ServerMessage::FsChangeDetected { path, change_type } => {
+                    leptos::logging::log!("文件变更: {} ({})", path, change_type);
+                    schedule_refresh();
+                }
+                ServerMessage::CommitDiffResult { diffs } => {
+                    leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
+                    // TODO: 存储到信号供 CommitDiff 视图消费
+                }
                 other => effects_msg::handle_remaining(other, set_system_metrics),
             }
         }

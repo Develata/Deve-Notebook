@@ -5,7 +5,7 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::metadata;
-use crate::source_control::ChangeEntry;
+use crate::source_control::{ChangeEntry, CommitFileDiff};
 use crate::source_control::diff;
 use crate::source_control::snapshot_paths;
 use crate::state::reconstruct_content;
@@ -69,5 +69,22 @@ impl RepoManager {
 
         let old = committed.as_deref().unwrap_or("");
         Ok(diff::unified_diff(old, &current, &normalized))
+    }
+
+    /// 对比两个提交之间的文件差异 (SC-003)
+    ///
+    /// **参数**:
+    /// - `commit_a_id`: 较早提交 ID (None = 空状态，即查看首次提交的全量变更)
+    /// - `commit_b_id`: 较新提交 ID
+    pub fn diff_commits(
+        &self,
+        commit_a_id: Option<&str>,
+        commit_b_id: &str,
+    ) -> Result<Vec<CommitFileDiff>> {
+        crate::source_control::commit_diff::compare_commits(
+            &self.local_db,
+            commit_a_id,
+            commit_b_id,
+        )
     }
 }

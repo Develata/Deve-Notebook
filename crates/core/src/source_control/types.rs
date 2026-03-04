@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 pub struct CommitInfo {
     /// 提交 ID (UUID)
     pub id: String,
+    /// 父提交 ID（构成提交链，首次提交为 None）
+    #[serde(default)]
+    pub parent_id: Option<String>,
     /// 提交消息
     pub message: String,
     /// 提交时间戳 (毫秒)
@@ -42,4 +45,19 @@ pub struct ChangeEntry {
     pub path: String,
     /// 变更状态
     pub status: ChangeStatus,
+}
+
+/// 提交间文件差异
+///
+/// 表示两个提交之间单个文件的变更内容。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitFileDiff {
+    /// 文件路径
+    pub path: String,
+    /// 变更状态 (Added / Modified / Deleted)
+    pub status: ChangeStatus,
+    /// 旧版本内容 (commit_a 时刻)
+    pub old_content: String,
+    /// 新版本内容 (commit_b 时刻)
+    pub new_content: String,
 }

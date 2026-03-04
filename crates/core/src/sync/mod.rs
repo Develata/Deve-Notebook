@@ -44,6 +44,12 @@ pub struct SyncManager {
 #[cfg(not(target_arch = "wasm32"))]
 impl SyncManager {
     pub fn new(repo: Arc<RepoManager>, vault_root: PathBuf) -> Self {
+        // 创建 .notegit/ 目录结构（类似 .git）
+        let notegit_dir = vault_root.join(".notegit");
+        if let Err(e) = std::fs::create_dir_all(&notegit_dir) {
+            warn!("Failed to create .notegit/ directory: {:?}", e);
+        }
+
         let vfs = Vfs::new(&vault_root);
         Self {
             repo,
