@@ -1,6 +1,7 @@
 # 核心架构进度 (Core Architecture Schedule)
 
 > 涵盖计划: 04_storage, 05_network, 06_repository, 07_diff_logic, 09_auth
+> 最近更新: 2026-03-04
 
 ## 1. 存储层 (Storage - Plan 04)
 - [x] **Store A (Vault)**: 本地 Markdown 工作区投影 ($W_{user}$).
@@ -14,9 +15,11 @@
     - [x] `INODE_TO_DOCID`: `u128 -> u128` (Rename tracking).
     - [x] `LEDGER_OPS`: 全局有序日志.
     - [x] `SNAPSHOT_INDEX` / `SNAPSHOT_DATA`: 快照双表结构.
+    - [x] `PENDING_FS_OPS`: 待确认文件变更表 (`&str -> &[u8]`).
 - [x] **Atomic Persistence**: `Op -> Ledger -> Snapshot -> Disk` 写入流程.
 - [x] **Path Normalization**: 强制使用 Linux 风格正斜杠 (`/`).
 - [x] **Watcher**: 文件变更监听 (>500ms Debounce).
+- [ ] **`.notegit/` Directory**: 元数据目录物理创建 (config/hooks/refs).
 
 ## 2. 网络与同步 (Network - Plan 05)
 - [x] **Peer Identity**: 基于 Ed25519 的身份 ID 生成 (`SHA256(PubKey)[0..12]`).
@@ -47,6 +50,26 @@
     - [x] **MergeModal**: 待处理操作列表与确认/丢弃按钮.
     - [x] **MergePanel**: 自动/手动模式切换.
 - [x] **Cross-Branch Diff**: 支持 Local vs Remote 的差异计算.
+
+### 4b. Git-like 三阶段工作流 (Three-Stage Workflow)
+- [x] **Phase 1 — Pending Pipeline (后端管道)**:
+    - [x] `PENDING_FS_OPS` redb 表定义 (`schema.rs`).
+    - [x] `pending_fs.rs` CRUD 模块 (upsert/list/get/remove/clear).
+    - [x] `SourceControlApi` + `Repository` trait 扩展 (list/stage/discard).
+    - [x] `handler.rs` 重构: Watcher 变更 → `pending_fs::upsert()` (不再自动入 Ledger).
+    - [x] `FsChangeDetected` WebSocket 消息 + `FsPendingChange` 事件类型.
+    - [x] `.notegit` 加入 Watcher 忽略列表.
+    - [x] `cargo clippy` 零警告, `cargo test` 73/73 通过.
+- [ ] **Phase 2.1 — `scan.rs` 审计**: `scan_vault` 也走 `pending_fs_ops` 路径.
+- [ ] **Phase 2.2 — `.notegit/` 目录创建**: init 时创建物理目录.
+- [ ] **Phase 2.3 — Stage 接线**: `pending_fs_ops` → staging 表真正写入.
+- [ ] **Phase 2.4 — Commit 接线 (核心)**:
+    - [ ] Staged 与 Ledger 快照对比 → 生成 Ops.
+    - [ ] Ops 追加 Ledger (分配 GlobalSeq).
+    - [ ] CommitInfo 锚定 ledger_seq + parent_id 链式历史.
+    - [ ] 清空 staging + 已处理 pending_fs_ops.
+- [ ] **Phase 2.5 — Commit Diff**: 对比任意两个 commit (按 ledger_seq 范围).
+- [ ] **Phase 2.6 — 前端 Source Control**: Changes 列表 + Stage/Commit UI.
 
 ## 5. 认证与安全 (Auth - Plan 09)
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).

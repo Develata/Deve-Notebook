@@ -1,6 +1,7 @@
 # 扩展系统进度 (Extensions Schedule)
 
 > 涵盖计划: 11_plugins
+> 最近更新: 2026-03-04
 
 ## 1. 插件运行时 (Plugin Runtime)
 - [x] **Engine A (Application)**:
@@ -16,9 +17,13 @@
 - [x] **Provider API**: OpenAI 兼容 SSE 流式 + ToolCalling + ai-chat 内置 Rhai 插件.
 - [ ] **Context Injection**: 选中代码自动注入.
 
-## 3. Git 集成 (Git Integration)
-- [x] **Git Hook**: Rhai host API (sc_status/sc_diff/sc_stage/sc_commit).
-- [ ] **UI Actions**: 绑定 Sync/Push 按钮事件.
+## 3. Source Control 集成 (Git-like Integration)
+- [x] **Rhai Host API**: sc_status/sc_diff/sc_stage/sc_commit.
+- [x] **Backend Pipeline**: Watcher → pending_fs_ops → FsChangeDetected (Phase 1 完成).
+- [ ] **Stage 接线**: pending_fs → staging 表真正写入.
+- [ ] **Commit 接线**: Staged → Op 生成 → Ledger append → CommitInfo.
+- [ ] **UI Actions**: 绑定 Stage/Unstage/Commit 按钮事件到前端.
+- [ ] **Changes 列表**: 前端显示 pending_fs_ops 变更 (SC-006).
 
 ## 4. Agent Bridge (外部 CLI 集成)
 - [x] **Subprocess spawner**: 外部 CLI 进程桥 (默认 opencode).
