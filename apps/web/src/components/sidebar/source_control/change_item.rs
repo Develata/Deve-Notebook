@@ -7,7 +7,7 @@
 use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{t, Locale};
-use deve_core::source_control::{ChangeEntry, ChangeStatus};
+use deve_core::source_control::{ChangeEntry, ChangeStatus, ConflictResolution};
 use leptos::prelude::*;
 
 /// 变更条目组件
@@ -20,6 +20,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
+    let has_conflict = entry.has_conflict;
     let full_path = entry.path.clone();
     let path_parts: Vec<&str> = full_path.split('/').collect();
     let filename = path_parts.last().unwrap_or(&"?").to_string();
@@ -35,6 +36,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let path_for_unstage = full_path.clone();
     let path_for_open = full_path.clone();
     let path_for_discard = full_path.clone();
+    let path_keep_fs = full_path.clone();
+    let path_keep_ledger = full_path.clone();
 
     // 状态图标和颜色
     let (icon_char, color_cls) = match entry.status {
@@ -45,7 +48,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     view! {
         <div
-            class="flex items-center px-4 py-0.5 hover:bg-hover text-[13px] group cursor-pointer h-[22px] text-primary"
+            class=format!("flex items-center px-4 py-0.5 hover:bg-hover text-[13px] group cursor-pointer h-[22px] {}", if has_conflict { "text-warning bg-warning/5" } else { "text-primary" })
             on:click=move |_| {
                 // 点击任何条目都打开 diff 视图 (与 VS Code 行为一致)
                 core.on_get_doc_diff.run(full_path.clone());
@@ -73,6 +76,24 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                     on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(path_for_unstage.clone()); }
                                 >
                                 <Minus class="w-3.5 h-3.5" />
+                            </button>
+                        }.into_any()
+                    } else if has_conflict {
+                        // 冲突状态: Keep FS / Keep Ledger / Stage
+                        view! {
+                            <button
+                                class="p-0.5 hover:bg-active rounded text-warning"
+                                title="Keep File System"
+                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((path_keep_fs.clone(), ConflictResolution::KeepFs)); }
+                            >
+                                <Upload class="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                class="p-0.5 hover:bg-active rounded text-warning"
+                                title="Keep Ledger"
+                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((path_keep_ledger.clone(), ConflictResolution::KeepLedger)); }
+                            >
+                                <Download class="w-3.5 h-3.5" />
                             </button>
                         }.into_any()
                     } else {
@@ -103,7 +124,12 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     }}
                 </div>
 
-                // 状态标记 (M/A/D)
+                // 冲突指示 + 状态标记
+                {if has_conflict {
+                    view! { <AlertTriangle class="w-3 h-3 text-warning mr-0.5" /> }.into_any()
+                } else {
+                    view! {}.into_any()
+                }}
                 <span class=format!("{} text-[11px] font-bold w-3 text-center", color_cls)>
                     {icon_char}
                 </span>

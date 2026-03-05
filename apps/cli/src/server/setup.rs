@@ -86,7 +86,7 @@ pub(super) fn spawn_file_watcher(
                 }
                 FsEventType::FsPendingChange { path, change_type } => {
                     tracing::info!("FsPendingChange: {} ({})", path, change_type);
-                    let _ = tx.send(ServerMessage::FsChangeDetected { path, change_type });
+                    let _ = tx.send(ServerMessage::FsChangeDetected { path, change_type, has_conflict: false });
                 }
             },
         );

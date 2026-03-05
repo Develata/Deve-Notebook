@@ -5,7 +5,7 @@
 
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId};
-use deve_core::source_control::{ChangeEntry, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
@@ -93,6 +93,8 @@ pub struct CoreSignals {
     pub set_commit_history: WriteSignal<Vec<CommitInfo>>,
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
 
     // 文件树 (增量更新)
     pub tree_nodes: ReadSignal<Vec<FileNode>>,
@@ -131,6 +133,7 @@ pub fn init_signals() -> CoreSignals {
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
+    let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
     let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
     let (system_metrics, set_system_metrics) = signal(None::<SystemMetricsData>);
 
@@ -186,6 +189,8 @@ pub fn init_signals() -> CoreSignals {
         set_commit_history,
         diff_content,
         set_diff_content,
+        commit_diff_result,
+        set_commit_diff_result,
         tree_nodes,
         set_tree_nodes,
         system_metrics,

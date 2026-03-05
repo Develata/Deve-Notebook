@@ -21,6 +21,7 @@ mod tests {
             change_type: ChangeStatus::Modified,
             content_hash: pending_fs::content_hash("hello"),
             detected_at: 1,
+            has_conflict: false,
         };
         let (all, left) = repo
             .run_on_local_repo(repo.local_repo_name(), |db| {
@@ -93,6 +94,7 @@ mod tests {
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("new"),
                     detected_at: 2,
+                    has_conflict: false,
                 },
             )
         })

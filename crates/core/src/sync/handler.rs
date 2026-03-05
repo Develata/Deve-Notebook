@@ -126,7 +126,7 @@ impl<'a> FsEventHandler<'a> {
         Ok(vec![ServerMessage::DocList { docs }])
     }
 
-    /// 将文件变更记录到 pending_fs_ops 表
+    /// 将文件变更记录到 pending_fs_ops 表，并检测冲突
     fn upsert_pending(&self, path_str: &str, status: ChangeStatus) -> Result<()> {
         let hash = if status == ChangeStatus::Deleted {
             String::new()
@@ -135,20 +135,36 @@ impl<'a> FsEventHandler<'a> {
             let content = std::fs::read_to_string(&file_path).unwrap_or_default();
             pending_fs::content_hash(&content)
         };
+        // 实时冲突检测: 检查 FS 与 Ledger 是否均偏离已提交快照
+        let has_conflict = if let Ok(Some(doc_id)) = self.repo.get_docid(path_str) {
+            crate::source_control::conflict::check_conflict(
+                &self.repo.local_db, doc_id, &hash,
+            ).unwrap_or(false)
+        } else {
+            false
+        };
         let entry = PendingFsEntry {
             path: path_str.to_string(),
             change_type: status,
             content_hash: hash,
             detected_at: chrono::Utc::now().timestamp_millis(),
+            has_conflict,
         };
         pending_fs::upsert(&self.repo.local_db, &entry)
     }
 
     /// 构造 FsChangeDetected 消息
     fn fs_change_msg(&self, path: &str, change_type: &str) -> ServerMessage {
+        // 读取已存储的 pending entry 以获取冲突状态
+        let has_conflict = pending_fs::get(&self.repo.local_db, path)
+            .ok()
+            .flatten()
+            .map(|e| e.has_conflict)
+            .unwrap_or(false);
         ServerMessage::FsChangeDetected {
             path: path.to_string(),
             change_type: change_type.to_string(),
+            has_conflict,
         }
     }
 }

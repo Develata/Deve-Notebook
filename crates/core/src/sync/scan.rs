@@ -90,6 +90,7 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                 change_type: ChangeStatus::Deleted,
                 content_hash: String::new(),
                 detected_at: chrono::Utc::now().timestamp_millis(),
+                has_conflict: false,
             };
             if let Err(e) = pending_fs::upsert(&repo.local_db, &entry) {
                 warn!("SyncScan: pending upsert (deleted) 失败 {}: {:?}", path, e);
@@ -131,6 +132,7 @@ fn upsert_scan_pending(
         change_type: status,
         content_hash: hash,
         detected_at: chrono::Utc::now().timestamp_millis(),
+        has_conflict: false,
     };
     pending_fs::upsert(&repo.local_db, &entry)
 }

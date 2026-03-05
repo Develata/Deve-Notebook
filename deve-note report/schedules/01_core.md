@@ -75,7 +75,11 @@
 - [x] **Phase 3.3 — 相对时间**: History 组件时间戳格式化 ("3 分钟前").
 - [x] **Phase 3.4 — 集成测试**: Source Control 生命周期测试 (pending/staging/commit).
 - [x] **Phase 3.5 — pending_fs 对齐**: `detect_unstaged_changes` 改为读取 `pending_fs_ops` 表.
-- [ ] Phase 4+ — AI 提交消息生成, 提交下拉菜单, CommitDiff 视图, 冲突检测, 行内 Diff.
+- [x] **Phase 4.1 — CommitDiff 视图**: 点击提交内联展开文件差异列表 (VS Code 风格).
+- [x] **Phase 4.2 — Commit 下拉菜单**: 下拉含 "Commit" + "Commit & Push" (Phase 5 禁用) + AI Sparkle 按钮 (Phase 5).
+- [x] **Phase 4.3 — 实时冲突检测**: Watcher 写入 `pending_fs` 时立即检测 FS 与 Ledger 分歧, `has_conflict` 标志 + UI 警告图标 + 解决按钮.
+- [x] **Phase 4.4 — AI 提交消息占位**: AI Sparkle 按钮 (disabled) + tooltip "Phase 5".
+- [ ] Phase 5+ — AI 提交消息生成, Commit & Push, 行内 Diff, Ledger 完整内容对比.
 
 ## 5. 认证与安全 (Auth - Plan 09)
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).

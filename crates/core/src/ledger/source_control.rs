@@ -46,7 +46,7 @@ pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
     let entries = staging::list_staged_with_status(db)?;
     Ok(entries
         .into_iter()
-        .map(|(path, status)| ChangeEntry { path, status })
+        .map(|(path, status)| ChangeEntry { path, status, has_conflict: false })
         .collect())
 }
 

@@ -75,6 +75,9 @@ pub fn provide_sub_contexts(state: &CoreState) {
         diff_content: state.diff_content,
         set_diff_content: state.set_diff_content,
         on_get_doc_diff: state.on_get_doc_diff,
+        commit_diff_result: state.commit_diff_result,
+        on_resolve_conflict: state.on_resolve_conflict,
+        on_get_commit_diff: state.on_get_commit_diff,
     });
     provide_context(BranchContext {
         active_branch: state.active_branch,

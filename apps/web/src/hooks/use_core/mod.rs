@@ -18,6 +18,7 @@ pub mod contexts;
 pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
+pub mod effects_sc;
 mod provide;
 pub mod state;
 pub mod types;
@@ -160,6 +161,9 @@ pub fn use_core() -> CoreState {
         diff_content: signals.diff_content,
         set_diff_content: signals.set_diff_content,
         on_get_doc_diff: sc_callbacks.on_get_doc_diff,
+        commit_diff_result: signals.commit_diff_result,
+        on_resolve_conflict: sc_callbacks.on_resolve_conflict,
+        on_get_commit_diff: sc_callbacks.on_get_commit_diff,
         on_merge_peer: sync_callbacks.on_merge_peer,
         tree_nodes: signals.tree_nodes,
         chat_messages: signals.chat_messages,

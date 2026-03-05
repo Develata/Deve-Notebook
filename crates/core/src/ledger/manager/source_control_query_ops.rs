@@ -30,7 +30,7 @@ impl RepoManager {
             let current = reconstruct_content(&entries);
 
             if let Some(status) = self.detect_change(committed.as_deref(), Some(&current)) {
-                changes.push(ChangeEntry { path, status });
+                changes.push(ChangeEntry { path, status, has_conflict: false });
             }
         }
 
@@ -40,7 +40,7 @@ impl RepoManager {
             }
             let committed = self.get_committed_content(doc_id)?;
             if let Some(status) = self.detect_change(committed.as_deref(), None) {
-                changes.push(ChangeEntry { path, status });
+                changes.push(ChangeEntry { path, status, has_conflict: false });
             }
         }
 

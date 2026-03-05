@@ -185,8 +185,21 @@ pub enum ServerMessage {
         path: String,
         /// 变更类型描述
         change_type: String,
+        /// 是否存在冲突 (FS 与 Ledger 均有未提交变更)
+        #[serde(default)]
+        has_conflict: bool,
     },
 
+
+    /// 冲突解决确认
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    ConflictResolved {
+        /// 文件路径
+        path: String,
+        /// 采用的解决策略
+        resolution: String,
+    },
     // === E2EE Key Exchange (密钥交换) ===
     /// 服务端向已认证客户端提供 RepoKey
     ///

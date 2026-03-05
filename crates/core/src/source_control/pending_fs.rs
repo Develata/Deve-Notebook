@@ -29,6 +29,9 @@ pub struct PendingFsEntry {
     pub content_hash: String,
     /// 检测时间戳 (毫秒)
     pub detected_at: i64,
+    /// 是否存在冲突 (FS 与 Ledger 均有未提交变更)
+    #[serde(default)]
+    pub has_conflict: bool,
 }
 
 /// 初始化 pending_fs_ops 表

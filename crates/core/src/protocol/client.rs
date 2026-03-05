@@ -143,4 +143,12 @@ pub enum ClientMessage {
     /// **Pre-condition**: 客户端已通过 JWT 认证。
     /// **Post-condition**: 服务端回复 `ServerMessage::KeyProvide`。
     RequestKey,
+
+    /// 解决文件冲突 (FS vs Ledger)
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    ResolveConflict {
+        path: String,
+        resolution: crate::source_control::ConflictResolution,
+    },
 }

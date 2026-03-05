@@ -36,6 +36,17 @@ pub enum ChangeStatus {
     Deleted,
 }
 
+/// 冲突解决策略
+///
+/// 当文件同时在 FS 和 Ledger 中有未提交变更时，用户可选择保留哪一方。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConflictResolution {
+    /// 保留文件系统版本 (FS 覆盖 Ledger)
+    KeepFs,
+    /// 保留 Ledger 版本 (Ledger 写回磁盘)
+    KeepLedger,
+}
+
 /// 变更条目
 ///
 /// 表示单个文件的变更信息。
@@ -45,6 +56,9 @@ pub struct ChangeEntry {
     pub path: String,
     /// 变更状态
     pub status: ChangeStatus,
+    /// 是否存在冲突 (仅 unstaged 条目可能为 true)
+    #[serde(default)]
+    pub has_conflict: bool,
 }
 
 /// 提交间文件差异

@@ -106,6 +106,7 @@ impl RepoManager {
             .map(|e| ChangeEntry {
                 path: e.path,
                 status: e.change_type,
+                has_conflict: e.has_conflict,
             })
             .collect())
     }

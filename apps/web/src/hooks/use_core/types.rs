@@ -5,7 +5,7 @@
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId, VersionVector};
-use deve_core::source_control::{ChangeEntry, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
@@ -123,6 +123,9 @@ pub struct CoreState {
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<String>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub on_resolve_conflict: Callback<(String, ConflictResolution)>,
+    pub on_get_commit_diff: Callback<(Option<String>, String)>,
     pub on_merge_peer: Callback<String>,
 
     // 文件树 (增量更新)

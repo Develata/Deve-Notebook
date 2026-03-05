@@ -5,6 +5,7 @@
 
 use crate::api::WsService;
 use deve_core::protocol::ClientMessage;
+use deve_core::source_control::ConflictResolution;
 use leptos::prelude::*;
 
 /// Source Control 回调结构体
@@ -18,6 +19,8 @@ pub struct SourceControlCallbacks {
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
     pub on_get_doc_diff: Callback<String>,
+    pub on_resolve_conflict: Callback<(String, ConflictResolution)>,
+    pub on_get_commit_diff: Callback<(Option<String>, String)>,
 }
 
 /// 创建 Source Control 回调
@@ -74,6 +77,16 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
         ws7.send(ClientMessage::DiscardFile { path });
     });
 
+    let ws8 = ws.clone();
+    let on_resolve_conflict = Callback::new(move |(path, resolution): (String, ConflictResolution)| {
+        ws8.send(ClientMessage::ResolveConflict { path, resolution });
+    });
+
+    let ws9 = ws.clone();
+    let on_get_commit_diff = Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
+        ws9.send(ClientMessage::GetCommitDiff { commit_a, commit_b });
+    });
+
     SourceControlCallbacks {
         on_get_changes,
         on_stage_file,
@@ -84,5 +97,7 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
         on_commit,
         on_get_history,
         on_get_doc_diff,
+        on_resolve_conflict,
+        on_get_commit_diff,
     }
 }

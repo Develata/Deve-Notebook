@@ -11,7 +11,7 @@ use super::state::PluginResponse;
 use super::types::ChatMessage;
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId};
-use deve_core::source_control::{ChangeEntry, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
@@ -94,6 +94,9 @@ pub struct SourceControlContext {
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<String>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub on_resolve_conflict: Callback<(String, ConflictResolution)>,
+    pub on_get_commit_diff: Callback<(Option<String>, String)>,
 }
 
 /// 分支 / 仓库上下文

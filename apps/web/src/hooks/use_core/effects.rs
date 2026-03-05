@@ -2,7 +2,7 @@
 //! # 响应式效果 (Effects)
 //!
 //! 定义握手逻辑和消息处理 Effect。
-//! 复杂消息处理器已拆分到 `effects_msg.rs`。
+//! SC 相关消息已拆分到 `effects_sc.rs`。
 
 use crate::api::{ConnectionStatus, WsService};
 use deve_core::models::{PeerId, VersionVector};
@@ -14,10 +14,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use super::apply::apply_tree_delta;
-use super::diff_session::DiffSessionWire;
 use super::effects_msg;
+use super::effects_sc;
 use super::state::CoreSignals;
-
 /// 设置握手 Effect
 ///
 /// 在连接成功后发送 P2P 握手消息及初始请求。
@@ -82,6 +81,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_unstaged_changes = signals.set_unstaged_changes;
     let set_commit_history = signals.set_commit_history;
     let set_diff_content = signals.set_diff_content;
+    let set_commit_diff_result = signals.set_commit_diff_result;
     let set_tree_nodes = signals.set_tree_nodes;
     let set_active_branch = signals.set_active_branch;
     let set_current_repo = signals.set_current_repo;
@@ -179,59 +179,21 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);
                 }
-                ServerMessage::ChangesList { staged, unstaged } => {
-                    set_staged_changes.set(staged);
-                    set_unstaged_changes.set(unstaged);
+                other_sc => {
+                    if !effects_sc::handle_sc_message(
+                        &other_sc,
+                        set_staged_changes,
+                        set_unstaged_changes,
+                        set_commit_history,
+                        set_diff_content,
+                        set_commit_diff_result,
+                        &schedule_refresh,
+                        &ws_rx,
+                    ) {
+                        effects_msg::handle_remaining(other_sc, set_system_metrics);
+                    }
                 }
-                ServerMessage::CommitHistory { commits } => {
-                    set_commit_history.set(commits);
                 }
-                ServerMessage::StageAck { path } => {
-                    leptos::logging::log!("已暂存: {}", path);
-                    schedule_refresh();
-                }
-                ServerMessage::UnstageAck { path } => {
-                    leptos::logging::log!("已取消暂存: {}", path);
-                    schedule_refresh();
-                }
-                ServerMessage::DiscardAck { path } => {
-                    leptos::logging::log!("已放弃变更: {}", path);
-                    schedule_refresh();
-                }
-                ServerMessage::CommitAck { commit_id, .. } => {
-                    leptos::logging::log!("已提交: {}", commit_id);
-                    ws_rx.send(ClientMessage::GetChanges);
-                    ws_rx.send(ClientMessage::GetCommitHistory { limit: 50 });
-                }
-                ServerMessage::DocDiff {
-                    path,
-                    old_content,
-                    new_content,
-                } => {
-                    leptos::logging::log!("收到 Diff: {}", path);
-                    set_diff_content.set(Some(DiffSessionWire::new(
-                        path,
-                        old_content,
-                        new_content,
-                    )));
-                }
-                ServerMessage::TreeUpdate(delta) => {
-                    leptos::logging::log!("收到 TreeUpdate");
-                    let set_nodes = set_tree_nodes;
-                    request_animation_frame(move || {
-                        set_nodes.update(|nodes| apply_tree_delta(nodes, delta));
-                    });
-                }
-                ServerMessage::FsChangeDetected { path, change_type } => {
-                    leptos::logging::log!("文件变更: {} ({})", path, change_type);
-                    schedule_refresh();
-                }
-                ServerMessage::CommitDiffResult { diffs } => {
-                    leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
-                    // TODO: 存储到信号供 CommitDiff 视图消费
-                }
-                other => effects_msg::handle_remaining(other, set_system_metrics),
-            }
         }
     });
 }

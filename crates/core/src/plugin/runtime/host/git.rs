@@ -52,6 +52,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 changes.push(crate::source_control::ChangeEntry {
                     path: format!("... and {} more files", total - max_changes),
                     status: crate::source_control::ChangeStatus::Modified,
+                    has_conflict: false,
                 });
             }
             let json = serde_json::to_value(&changes).map_err(|e| e.to_string())?;
