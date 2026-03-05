@@ -6,10 +6,10 @@
 ## 1. 插件运行时 (Plugin Runtime)
 - [x] **Engine A (Application)**:
     - [x] **Rhai**: 集成脚本引擎 (RhaiRuntime + FileModuleResolver + 16 host funcs).
-    - [ ] **WASM**: 集成 Extism/Wasmtime.
+    - [ ] **WASM**: 集成 Extism/Wasmtime. *(延期到 Phase 7: 可行但需多周开发)*
     - [x] **Manifest**: 插件清单解析 (PluginManifest + Capability 5 权限类型).
-- [ ] **Engine B (Computation)**:
-    - [ ] **Podman**: 容器运行时集成.
+- [ ] **Engine B (Computation)**: *(延期到 Phase 8+)*
+    - [ ] **Podman**: 容器运行时集成. *(需 rootless 容器编排)*
     - [ ] **Socket Bridge**: WebSocket 转发.
 
 ## 2. AI 集成 (AI Integration)

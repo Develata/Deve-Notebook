@@ -47,6 +47,7 @@ pub mod security;
 pub mod session;
 mod setup;
 pub mod source_control_proxy;
+pub mod static_files;
 pub mod ws;
 
 #[allow(dead_code)] // repo_key: 为未来加密功能预留
@@ -196,6 +197,7 @@ pub async fn start_server(
     let app = Router::new()
         .merge(protected)
         .merge(public)
+        .merge(static_files::static_fallback())
         .with_state(app_state)
         .layer(axum::middleware::from_fn(auth::headers::security_headers))
         .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware))

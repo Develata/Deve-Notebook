@@ -1,0 +1,35 @@
+# 编译产物和依赖
+target/
+node_modules/
+.cargo/
+
+# 版本控制
+.git/
+.gitignore
+.github/
+
+# 文档和笔记
+deve-note plan/
+deve-note report/
+docs/
+*.md
+
+# IDE 和工具
+.vscode/
+.codex/
+.claude/
+.specify/
+.trae/
+.opencode/
+
+# 前端构建输出
+apps/web/dist/
+apps/web/node_modules/
+
+# 配置文件（本地）
+.env
+
+# 其他
+repomix-output.xml
+test_tools/
+Vault_old/
