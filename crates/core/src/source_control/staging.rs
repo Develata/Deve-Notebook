@@ -22,10 +22,21 @@ pub struct StagedEntry {
 }
 
 /// 初始化暂存区表
+///
+/// **Migration**: 旧版 schema 为 `Table<&str, i64>` (仅存时间戳)。
+/// 若检测到旧表类型，先删除再重建为 `Table<&str, &[u8]>` (JSON bytes)。
+/// 暂存区数据为临时态，丢失不影响完整性。
 pub fn init_table(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
-    {
-        let _ = write_txn.open_table(STAGED_TABLE)?;
+    // 尝试以新 schema 打开；若失败则为旧版 schema，需迁移
+    match write_txn.open_table(STAGED_TABLE) {
+        Ok(_) => {}
+        Err(_) => {
+            // 旧表 schema 不兼容，删除后重建
+            tracing::warn!("Migrating staged_files table from old schema (i64) to new (&[u8])");
+            write_txn.delete_table(STAGED_TABLE)?;
+            let _ = write_txn.open_table(STAGED_TABLE)?;
+        }
     }
     write_txn.commit()?;
     Ok(())

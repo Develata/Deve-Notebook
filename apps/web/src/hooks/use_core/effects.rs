@@ -179,6 +179,12 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);
                 }
+                ServerMessage::TreeUpdate(delta) => {
+                    // 应用文件树增量更新
+                    set_tree_nodes.update(|nodes| {
+                        apply_tree_delta(nodes, delta);
+                    });
+                }
                 other_sc => {
                     if !effects_sc::handle_sc_message(
                         &other_sc,
