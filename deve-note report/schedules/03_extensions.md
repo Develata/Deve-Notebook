@@ -15,7 +15,7 @@
 ## 2. AI 集成 (AI Integration)
 - [x] **Chat UI**: 右侧边栏 AI 面板 + 动态插件选择 (ai_mode signal).
 - [x] **Provider API**: OpenAI 兼容 SSE 流式 + ToolCalling + ai-chat 内置 Rhai 插件.
-- [ ] **Context Injection**: 选中代码自动注入.
+- [x] **Context Injection**: 选中代码自动注入 (JS→FFI→Rhai/AgentBridge).
 
 ## 3. Source Control 集成 (Git-like Integration)
 - [x] **Rhai Host API**: sc_status/sc_diff/sc_stage/sc_commit.

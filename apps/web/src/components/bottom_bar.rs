@@ -7,7 +7,7 @@ use crate::api::ConnectionStatus;
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::EditorContext;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -56,7 +56,7 @@ pub fn BottomBar(
                         set_ver.set(val);
                     }
                     class="w-32 h-1 bg-active rounded-lg appearance-none cursor-pointer accent-accent"
-                    title="Time Travel"
+                    title=move || t::bottom_bar::time_travel(locale.get())
                 />
             </div>
         }

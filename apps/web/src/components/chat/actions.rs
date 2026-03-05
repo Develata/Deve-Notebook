@@ -1,5 +1,6 @@
 // apps/web/src/components/chat/actions.rs
 use crate::editor::ffi::getEditorContent;
+use crate::editor::ffi::get_editor_selection;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
@@ -38,7 +39,15 @@ pub fn make_send_text(
             })
             .unwrap_or_default();
 
-        let context = serde_json::json!({ "current_file": current_doc_path });
+        // 获取编辑器选区 (若有)
+        let sel_json = get_editor_selection();
+        let selection: serde_json::Value =
+            serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
+
+        let context = serde_json::json!({
+            "current_file": current_doc_path,
+            "selection": selection,
+        });
         let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
         let plugin_id = core.ai_mode.get_untracked();
         core.on_plugin_call

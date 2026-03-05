@@ -126,6 +126,10 @@ fn chat(req_id, user_msg, context) {
         if ctx["current_file"] != () && ctx["current_file"] != "" {
             system += "\n\nThe user is currently editing: " + ctx["current_file"];
         }
+        if ctx["selection"] != () && ctx["selection"]["text"] != () {
+            let sel_text = ctx["selection"]["text"];
+            system += "\n\nSelected code:\n```\n" + sel_text + "\n```";
+        }
     }
 
     let history = [

@@ -12,6 +12,7 @@ mod storage_card;
 mod sync_card;
 
 use crate::hooks::use_core::DashboardContext;
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 use self::actions_card::ActionsCard;
@@ -22,12 +23,13 @@ use self::sync_card::SyncCard;
 #[component]
 pub fn Dashboard() -> impl IntoView {
     let ctx = expect_context::<DashboardContext>();
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     view! {
         <div class="flex items-center justify-center h-full p-6">
             <div class="w-full max-w-md space-y-4">
                 <h2 class="text-lg font-bold text-primary text-center mb-4">
-                    "Server Dashboard"
+                    {move || t::dashboard::title(locale.get())}
                 </h2>
                 {move || match ctx.metrics.get() {
                     Some(m) => view! {
@@ -40,7 +42,7 @@ pub fn Dashboard() -> impl IntoView {
                     }.into_any(),
                     None => view! {
                         <div class="text-center text-muted text-sm py-8">
-                            "Waiting for server metrics..."
+                            {move || t::dashboard::waiting_metrics(locale.get())}
                         </div>
                         <ActionsCard />
                     }.into_any(),

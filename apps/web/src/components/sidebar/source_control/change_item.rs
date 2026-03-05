@@ -83,14 +83,14 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                         view! {
                             <button
                                 class="p-0.5 hover:bg-active rounded text-warning"
-                                title="Keep File System"
+                                title=move || t::source_control::keep_file_system(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((path_keep_fs.clone(), ConflictResolution::KeepFs)); }
                             >
                                 <Upload class="w-3.5 h-3.5" />
                             </button>
                             <button
                                 class="p-0.5 hover:bg-active rounded text-warning"
-                                title="Keep Ledger"
+                                title=move || t::source_control::keep_ledger(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((path_keep_ledger.clone(), ConflictResolution::KeepLedger)); }
                             >
                                 <Download class="w-3.5 h-3.5" />

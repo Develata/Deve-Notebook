@@ -68,18 +68,29 @@ pub async fn handle_agent_chat(ch: &DualChannel, req_id: String, args: Vec<serde
 /// - `args[0]` 作为纯字符串 (简化调用)
 fn extract_user_message(args: &[serde_json::Value]) -> String {
     // 原 ai-chat 约定: chat(req_id, user_message, context)
-    if args.len() >= 2
+    let msg = if args.len() >= 2
         && let Some(s) = args[1].as_str()
     {
-        return s.to_string();
-    }
-    // 简化: 第一个参数即为消息
-    if let Some(first) = args.first()
+        s.to_string()
+    } else if let Some(first) = args.first()
         && let Some(s) = first.as_str()
     {
-        return s.to_string();
+        s.to_string()
+    } else {
+        return String::new();
+    };
+
+    if let Some(ctx) = args.get(2)
+        && let Some(sel_text) = ctx
+            .get("selection")
+            .and_then(|s| s.get("text"))
+            .and_then(|t| t.as_str())
+        && !sel_text.is_empty()
+    {
+        return format!("{}\n\n---\nSelected code:\n```\n{}\n```", msg, sel_text);
     }
-    String::new()
+
+    msg
 }
 
 /// 启动外部 CLI 并将 stdout 流式推送到前端。

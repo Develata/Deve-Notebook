@@ -95,7 +95,8 @@ pub fn Commit() -> impl IntoView {
                                 .collect::<Vec<_>>()
                                 .join("\n");
                             let prompt = format!(
-                                "Generate a concise git commit message for these staged changes:\n{}",
+                                "{}\n{}",
+                                t::source_control::generate_prompt(locale.get()),
                                 joined_paths
                             );
                             let args = vec![

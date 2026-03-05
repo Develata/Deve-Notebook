@@ -146,3 +146,24 @@ pub fn branch_main(locale: Locale) -> &'static str {
         Locale::Zh => "主分支*",
     }
 }
+
+pub fn keep_file_system(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Keep File System",
+        Locale::Zh => "保留文件系统版本",
+    }
+}
+
+pub fn keep_ledger(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Keep Ledger",
+        Locale::Zh => "保留账本版本",
+    }
+}
+
+pub fn generate_prompt(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Generate a concise git commit message for these staged changes:",
+        Locale::Zh => "为以下暂存的更改生成简洁的 Git 提交信息：",
+    }
+}

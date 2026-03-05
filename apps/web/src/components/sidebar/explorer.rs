@@ -8,7 +8,7 @@ use crate::components::icons::Plus;
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::{BranchContext, DocContext};
-use crate::i18n::t;
+use crate::i18n::{t, Locale};
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -22,7 +22,7 @@ pub fn ExplorerView(
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
-    let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let search_control = expect_context::<SearchControl>();
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
@@ -107,7 +107,7 @@ pub fn ExplorerView(
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                    <button
                         class="p-1 rounded hover:bg-hover text-secondary"
-                        title="New Doc"
+                        title=move || t::sidebar::new_doc(locale.get())
                         on:click=move |_| request_create.run(None)
                     >
                         <Plus />

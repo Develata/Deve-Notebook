@@ -136,7 +136,26 @@ export function destroyEditor() {
 }
 
 // --- Re-export for window bindings ---
-export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly };
+function getEditorSelection() {
+  const view = ctx.activeView;
+  if (!view) {
+    return JSON.stringify(null);
+  }
+
+  const main = view.state.selection.main;
+  if (main.from === main.to) {
+    return JSON.stringify(null);
+  }
+
+  let text = view.state.sliceDoc(main.from, main.to);
+  if (text.length > 2000) {
+    text = text.slice(0, 2000);
+  }
+
+  return JSON.stringify({ from: main.from, to: main.to, text });
+}
+
+export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly, getEditorSelection };
 export { updateGutterDiff };
 
 // --- 暴露到全局作用域供 WASM 调用 ---
@@ -150,3 +169,4 @@ globalThis.applyRemoteOpsBatch = applyRemoteOpsBatch;
 window.scrollGlobal = scrollGlobal;
 window.setReadOnly = setReadOnly;
 window.updateGutterDiff = updateGutterDiff;
+window.getEditorSelection = getEditorSelection;

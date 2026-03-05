@@ -4,6 +4,7 @@
 //! 显示数据库大小和文档数量。
 
 use crate::hooks::use_core::SystemMetricsData;
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 /// 将字节数格式化为人类可读单位 (KB / MB / GB)
@@ -21,18 +22,20 @@ fn format_bytes(bytes: u64) -> String {
 
 #[component]
 pub fn StorageCard(metrics: SystemMetricsData) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
+
     view! {
         <div class="bg-panel rounded-lg border border-default p-4">
-            <h3 class="text-sm font-semibold text-secondary mb-3">"Storage"</h3>
+            <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::storage(locale.get())}</h3>
             <div class="space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs text-muted">"DB Size"</span>
+                    <span class="text-xs text-muted">{move || t::dashboard::db_size(locale.get())}</span>
                     <span class="text-sm font-mono font-semibold text-primary">
                         {format_bytes(metrics.db_size_bytes)}
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-xs text-muted">"Documents"</span>
+                    <span class="text-xs text-muted">{move || t::dashboard::documents(locale.get())}</span>
                     <span class="text-sm font-mono font-semibold text-primary">
                         {metrics.doc_count.to_string()}
                     </span>

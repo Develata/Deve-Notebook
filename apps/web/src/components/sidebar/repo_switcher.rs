@@ -1,6 +1,6 @@
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::BranchContext;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 
 #[component]
@@ -26,7 +26,7 @@ pub fn RepoSwitcher() -> impl IntoView {
                     e.stop_propagation();
                     set_show_menu.update(|v| *v = !*v);
                 }
-                title="Switch Repository"
+                title=move || t::sidebar::switch_repository(locale.get())
              >
                  <ChevronRight />
              </div>

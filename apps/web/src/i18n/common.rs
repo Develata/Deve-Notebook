@@ -97,3 +97,17 @@ pub fn spectator_status(locale: Locale) -> &'static str {
         Locale::Zh => "旁观者模式 - 只读",
     }
 }
+
+pub fn disconnected(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Disconnected",
+        Locale::Zh => "已断开连接",
+    }
+}
+
+pub fn reconnecting(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Reconnecting to server... please wait.",
+        Locale::Zh => "正在重连服务器...请稍候。",
+    }
+}

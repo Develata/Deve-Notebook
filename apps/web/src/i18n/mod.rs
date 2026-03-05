@@ -21,6 +21,7 @@ pub mod chat;
 pub mod command_palette;
 pub mod common;
 pub mod context_menu;
+pub mod dashboard;
 pub mod diff;
 pub mod header;
 pub mod merge;
@@ -64,6 +65,7 @@ pub mod t {
     pub use super::command_palette;
     pub use super::common;
     pub use super::context_menu;
+    pub use super::dashboard;
     pub use super::diff;
     pub use super::header;
     pub use super::merge;

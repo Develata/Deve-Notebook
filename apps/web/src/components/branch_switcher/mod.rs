@@ -67,13 +67,13 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
                 }
             }
             on:click=onclick
-            title="Switch Branch (Ctrl+Shift+L)"
+            title=move || t::sidebar::switch_branch_hint(locale.get())
         >
             // Git 分支图标
             <GitBranch class="w-3.5 h-3.5"/>
             <span class=move || if compact { "truncate max-w-[60px]" } else { "" }>{current_branch}</span>
             {move || if is_spectator() && !compact {
-                view! { <span class="text-[10px] bg-amber-100 text-amber-700 px-1 rounded font-normal">"READ"</span> }.into_any()
+                view! { <span class="text-[10px] bg-amber-100 text-amber-700 px-1 rounded font-normal">{t::sidebar::read_badge(locale.get())}</span> }.into_any()
             } else {
                 view! {}.into_any()
             }}

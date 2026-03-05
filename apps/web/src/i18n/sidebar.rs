@@ -107,3 +107,38 @@ pub fn local_master_branch(locale: Locale) -> &'static str {
         Locale::Zh => "本地 (主分支)",
     }
 }
+
+pub fn extensions_desc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Extension system under development",
+        Locale::Zh => "扩展系统开发中",
+    }
+}
+
+pub fn switch_repository(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switch Repository",
+        Locale::Zh => "切换仓库",
+    }
+}
+
+pub fn switch_branch_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switch Branch (Ctrl+Shift+L)",
+        Locale::Zh => "切换分支 (Ctrl+Shift+L)",
+    }
+}
+
+pub fn new_doc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "New Doc",
+        Locale::Zh => "新建文档",
+    }
+}
+
+pub fn read_badge(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "READ",
+        Locale::Zh => "只读",
+    }
+}

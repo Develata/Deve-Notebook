@@ -57,6 +57,12 @@ unsafe extern "C" {
     /// 更新行内 Diff Gutter 指示器
     #[wasm_bindgen(js_namespace = window, js_name = updateGutterDiff)]
     pub fn update_gutter_diff(ranges_json: &str);
+
+    /// 获取当前编辑器选区信息 (JSON)
+    ///
+    /// 返回 `"null"` 表示无选区; 否则返回 `{from, to, text}` JSON
+    #[wasm_bindgen(js_namespace = window, js_name = getEditorSelection)]
+    pub fn get_editor_selection() -> String;
 }
 
 /// Delta 结构 (从 JS 传入)
