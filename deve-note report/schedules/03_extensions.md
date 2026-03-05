@@ -20,10 +20,10 @@
 ## 3. Source Control 集成 (Git-like Integration)
 - [x] **Rhai Host API**: sc_status/sc_diff/sc_stage/sc_commit.
 - [x] **Backend Pipeline**: Watcher → pending_fs_ops → FsChangeDetected (Phase 1 完成).
-- [ ] **Stage 接线**: pending_fs → staging 表真正写入.
-- [ ] **Commit 接线**: Staged → Op 生成 → Ledger append → CommitInfo.
-- [ ] **UI Actions**: 绑定 Stage/Unstage/Commit 按钮事件到前端.
-- [ ] **Changes 列表**: 前端显示 pending_fs_ops 变更 (SC-006).
+- [x] **Stage 接线**: pending_fs → staging 表真正写入.
+- [x] **Commit 接线**: Staged → Op 生成 → Ledger append → CommitInfo.
+- [x] **UI Actions**: 绑定 Stage/Unstage/Commit 按钮事件到前端.
+- [x] **Changes 列表**: 前端显示 pending_fs_ops 变更 (SC-006).
 
 ## 4. Agent Bridge (外部 CLI 集成)
 - [x] **Subprocess spawner**: 外部 CLI 进程桥 (默认 opencode).

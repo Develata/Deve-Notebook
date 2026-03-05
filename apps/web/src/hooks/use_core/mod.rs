@@ -164,6 +164,7 @@ pub fn use_core() -> CoreState {
         commit_diff_result: signals.commit_diff_result,
         on_resolve_conflict: sc_callbacks.on_resolve_conflict,
         on_get_commit_diff: sc_callbacks.on_get_commit_diff,
+        on_commit_and_push: sc_callbacks.on_commit_and_push,
         on_merge_peer: sync_callbacks.on_merge_peer,
         tree_nodes: signals.tree_nodes,
         chat_messages: signals.chat_messages,

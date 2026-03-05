@@ -79,7 +79,7 @@
 - [x] **Phase 4.2 — Commit 下拉菜单**: 下拉含 "Commit" + "Commit & Push" (Phase 5 禁用) + AI Sparkle 按钮 (Phase 5).
 - [x] **Phase 4.3 — 实时冲突检测**: Watcher 写入 `pending_fs` 时立即检测 FS 与 Ledger 分歧, `has_conflict` 标志 + UI 警告图标 + 解决按钮.
 - [x] **Phase 4.4 — AI 提交消息占位**: AI Sparkle 按钮 (disabled) + tooltip "Phase 5".
-- [ ] Phase 5+ — AI 提交消息生成, Commit & Push, 行内 Diff, Ledger 完整内容对比.
+- [x] **Phase 5 — AI 提交消息生成, Commit & Push, 行内 Diff, Ledger 完整内容对比**.
 
 ## 5. 认证与安全 (Auth - Plan 09)
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).

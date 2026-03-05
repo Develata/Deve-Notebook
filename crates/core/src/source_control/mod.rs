@@ -13,6 +13,7 @@
 
 pub mod api;
 pub mod diff;
+pub mod line_diff;
 pub mod types;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -33,6 +34,7 @@ pub mod conflict;
 // 重新导出常用类型
 pub use api::SourceControlApi;
 pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
+pub use line_diff::ChangeRange;
 
 /// 提交时对快照的更新策略
 pub enum SnapshotUpdate {

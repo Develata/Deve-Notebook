@@ -21,6 +21,7 @@ pub struct SourceControlCallbacks {
     pub on_get_doc_diff: Callback<String>,
     pub on_resolve_conflict: Callback<(String, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
+    pub on_commit_and_push: Callback<String>,
 }
 
 /// 创建 Source Control 回调
@@ -78,13 +79,20 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
     });
 
     let ws8 = ws.clone();
-    let on_resolve_conflict = Callback::new(move |(path, resolution): (String, ConflictResolution)| {
-        ws8.send(ClientMessage::ResolveConflict { path, resolution });
-    });
+    let on_resolve_conflict =
+        Callback::new(move |(path, resolution): (String, ConflictResolution)| {
+            ws8.send(ClientMessage::ResolveConflict { path, resolution });
+        });
 
     let ws9 = ws.clone();
-    let on_get_commit_diff = Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
-        ws9.send(ClientMessage::GetCommitDiff { commit_a, commit_b });
+    let on_get_commit_diff =
+        Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
+            ws9.send(ClientMessage::GetCommitDiff { commit_a, commit_b });
+        });
+
+    let ws10 = ws.clone();
+    let on_commit_and_push = Callback::new(move |message: String| {
+        ws10.send(ClientMessage::CommitAndPush { message });
     });
 
     SourceControlCallbacks {
@@ -99,5 +107,6 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
         on_get_doc_diff,
         on_resolve_conflict,
         on_get_commit_diff,
+        on_commit_and_push,
     }
 }

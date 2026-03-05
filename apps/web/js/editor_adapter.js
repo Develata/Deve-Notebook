@@ -31,6 +31,7 @@ import { listMarkerPlugin } from "./extensions/list_marker.js";
 import { blockquoteBorderPlugin } from "./extensions/blockquote_border.js";
 import { codeToolbarPlugin } from "./extensions/code_toolbar.js"; // [NEW]
 import { hyperlinkClickPlugin } from "./extensions/hyperlink_click.js"; // [NEW] Ctrl+Click 链接跳转
+import { gutterDiffExtension, updateGutterDiff } from "./extensions/gutter_diff.js";
 
 // --- 共享状态与远程操作 (从子模块导入) ---
 import { ctx } from "./editor_state.js";
@@ -104,6 +105,7 @@ export function initCodeMirror(element, onDelta) {
         blockquoteBorderPlugin,
         codeToolbarPlugin,
         hyperlinkClickPlugin,
+        gutterDiffExtension,
 
         EditorView.updateListener.of((v) => {
           if (ctx.isRemote) return;
@@ -135,6 +137,7 @@ export function destroyEditor() {
 
 // --- Re-export for window bindings ---
 export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly };
+export { updateGutterDiff };
 
 // --- 暴露到全局作用域供 WASM 调用 ---
 window.setupCodeMirror = initCodeMirror;
@@ -146,3 +149,4 @@ window.applyRemoteOpsBatch = applyRemoteOpsBatch;
 globalThis.applyRemoteOpsBatch = applyRemoteOpsBatch;
 window.scrollGlobal = scrollGlobal;
 window.setReadOnly = setReadOnly;
+window.updateGutterDiff = updateGutterDiff;

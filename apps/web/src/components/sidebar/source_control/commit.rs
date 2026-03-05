@@ -6,19 +6,22 @@
 //! - Blue "Commit" button with dropdown (Commit & Push 占位)
 
 use crate::components::icons::*;
-use crate::hooks::use_core::SourceControlContext;
-use crate::i18n::{Locale, t};
+use crate::hooks::use_core::{ChatContext, SourceControlContext};
+use crate::i18n::{t, Locale};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 #[component]
 pub fn Commit() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
+    let chat_ctx = expect_context::<ChatContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     let (msg, set_msg) = signal(String::new());
+    let (is_generating, set_is_generating) = signal(false);
     let dropdown_open = RwSignal::new(false);
-
+    let active_req_id = RwSignal::new(None::<String>);
+    let saw_streaming = RwSignal::new(false);
 
     // 是否有暂存文件 (VS Code allows commiting all if none staged, but we keep it safe for now)
     let has_staged = move || !core.staged_changes.get().is_empty();
@@ -37,6 +40,31 @@ pub fn Commit() -> impl IntoView {
         }
     };
 
+    Effect::new(move |_| {
+        let req_id = active_req_id.get();
+        let is_streaming = chat_ctx.is_streaming.get();
+        if let Some(req_id) = req_id {
+            if let Some(content) = chat_ctx
+                .messages
+                .get()
+                .iter()
+                .rev()
+                .find(|m| m.req_id.as_deref() == Some(req_id.as_str()))
+                .map(|m| m.content.clone())
+            {
+                set_msg.set(content);
+            }
+            if is_streaming {
+                saw_streaming.set(true);
+            }
+            if saw_streaming.get_untracked() && !is_streaming {
+                set_is_generating.set(false);
+                saw_streaming.set(false);
+                active_req_id.set(None);
+            }
+        }
+    });
+
     view! {
         <div class="px-2 pb-3 pt-1">
             <div class="flex flex-col gap-2">
@@ -51,14 +79,50 @@ pub fn Commit() -> impl IntoView {
                         disabled=move || !has_staged()
                     />
                     <button
-                        class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 opacity-60 cursor-not-allowed"
-                        title="AI 生成提交信息 — Phase 5"
-                        disabled=true
+                        class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title=move || t::source_control::generate_commit_message(locale.get())
+                        disabled=move || !has_staged() || is_generating.get()
+                        on:click=move |_| {
+                            if !has_staged() {
+                                return;
+                            }
+                            let req_id = uuid::Uuid::new_v4().to_string();
+                            let joined_paths = core
+                                .staged_changes
+                                .get()
+                                .into_iter()
+                                .map(|entry| entry.path)
+                                .collect::<Vec<_>>()
+                                .join("\n");
+                            let prompt = format!(
+                                "Generate a concise git commit message for these staged changes:\n{}",
+                                joined_paths
+                            );
+                            let args = vec![
+                                serde_json::json!(req_id),
+                                serde_json::json!(prompt),
+                                serde_json::json!(""),
+                            ];
+                            active_req_id.set(Some(req_id.clone()));
+                            saw_streaming.set(false);
+                            set_is_generating.set(true);
+                            chat_ctx.on_plugin_call.run((
+                                req_id,
+                                "agent-bridge".to_string(),
+                                "chat".to_string(),
+                                args,
+                            ));
+                        }
                     >
                          <Sparkles class="w-3 h-3" />
-                         {move || t::source_control::generate(locale.get())}
+                         {move || {
+                             if is_generating.get() {
+                                 t::source_control::generating(locale.get())
+                             } else {
+                                 t::source_control::generate(locale.get())
+                             }
+                         }}
                     </button>
-                    // Sparkles icon might be better, using star for now or custom svg
                 </div>
 
                 <div class="flex relative">
@@ -89,12 +153,16 @@ pub fn Commit() -> impl IntoView {
                                     {move || t::source_control::commit(locale.get())}
                                 </button>
                                 <button
-                                    class="w-full text-left px-3 py-1.5 text-muted cursor-not-allowed flex items-center gap-2 opacity-50"
-                                    disabled=true
-                                    title="Phase 5"
+                                    class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled=move || !has_staged() || msg.get().trim().is_empty()
+                                    on:click=move |_| {
+                                        dropdown_open.set(false);
+                                        core.on_commit_and_push.run(msg.get());
+                                        set_msg.set(String::new());
+                                    }
                                 >
                                     <Upload class="w-3.5 h-3.5" />
-                                    "Commit & Push"
+                                    {move || t::source_control::commit_and_push(locale.get())}
                                 </button>
                             </div>
                         }.into_any()

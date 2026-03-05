@@ -151,4 +151,9 @@ pub enum ClientMessage {
         path: String,
         resolution: crate::source_control::ConflictResolution,
     },
+
+    /// 提交并推送到所有连接的 Peer (Phase 5)
+    ///
+    /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。
+    CommitAndPush { message: String },
 }

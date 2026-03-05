@@ -12,6 +12,7 @@ use super::diff_session::DiffSessionWire;
 /// 处理 Source Control 相关消息
 ///
 /// **返回**: `true` 表示消息已处理, `false` 表示非 SC 消息。
+#[allow(clippy::too_many_arguments)]
 pub fn handle_sc_message(
     msg: &ServerMessage,
     set_staged: WriteSignal<Vec<ChangeEntry>>,
@@ -58,6 +59,12 @@ pub fn handle_sc_message(
                 old_content.clone(),
                 new_content.clone(),
             )));
+            // 计算行级差异并推送到 CodeMirror Gutter
+            let ranges =
+                deve_core::source_control::line_diff::compute_line_ranges(old_content, new_content);
+            if let Ok(json) = serde_json::to_string(&ranges) {
+                crate::editor::ffi::update_gutter_diff(&json);
+            }
         }
         ServerMessage::FsChangeDetected {
             path,

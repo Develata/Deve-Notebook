@@ -126,6 +126,20 @@ pub fn generate(locale: Locale) -> &'static str {
     }
 }
 
+pub fn commit_and_push(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Commit & Push",
+        Locale::Zh => "提交并推送",
+    }
+}
+
+pub fn generating(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Generating...",
+        Locale::Zh => "生成中...",
+    }
+}
+
 pub fn branch_main(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "main*",

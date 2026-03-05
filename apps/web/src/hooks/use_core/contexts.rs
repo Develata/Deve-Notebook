@@ -97,6 +97,7 @@ pub struct SourceControlContext {
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
     pub on_resolve_conflict: Callback<(String, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
+    pub on_commit_and_push: Callback<String>,
 }
 
 /// 分支 / 仓库上下文
