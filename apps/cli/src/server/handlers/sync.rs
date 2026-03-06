@@ -86,8 +86,6 @@ pub async fn handle_sync_hello(
     }
 
     // 5. 推送数据 (I have data you need)
-
-    // 5. 推送数据 (I have data you need)
     let mut ops_to_push = Vec::new();
     for req in result.to_send {
         if let Ok(response) = engine.get_ops_for_sync(&req) {

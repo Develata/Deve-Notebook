@@ -17,6 +17,9 @@ pub mod node;
 mod ops;
 
 #[cfg(not(target_arch = "wasm32"))]
+mod from_docs;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod manager;
 
 // 重导出常用类型
