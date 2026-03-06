@@ -13,15 +13,21 @@ use deve_core::protocol::ServerMessage;
 use super::types::{ChatMessage, PeerSession};
 
 /// 处理 DocList 消息
+///
+/// `explicit_home` 为 true 时表示用户显式点击了 Home，
+/// 此时不应自动选中第一篇文档，以保持 Dashboard 页面稳定。
 pub fn handle_doc_list(
     list: Vec<(DocId, String)>,
     set_docs: WriteSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     set_current_doc: WriteSignal<Option<DocId>>,
+    explicit_home: ReadSignal<bool>,
 ) {
     leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
     set_docs.set(list.clone());
+    // 仅在未选中文档且用户未显式导航至 Home 时自动选中首篇
     if current_doc.get_untracked().is_none()
+        && !explicit_home.get_untracked()
         && let Some(first) = list.first()
     {
         set_current_doc.set(Some(first.0));

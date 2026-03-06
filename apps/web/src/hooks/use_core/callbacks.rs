@@ -28,8 +28,10 @@ pub struct DocCallbacks {
 pub fn create_doc_callbacks(
     ws: &WsService,
     set_current_doc: WriteSignal<Option<DocId>>,
+    set_explicit_home: WriteSignal<bool>,
 ) -> DocCallbacks {
     let on_doc_select = Callback::new(move |id: DocId| {
+        set_explicit_home.set(false);
         set_current_doc.set(Some(id));
     });
 

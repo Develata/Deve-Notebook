@@ -36,7 +36,7 @@ pub fn spawn_connection_manager(
             let url = urls
                 .get(url_idx)
                 .cloned()
-                .unwrap_or_else(|| build_ws_url(3001));
+                .unwrap_or_else(build_same_origin_ws_url);
             set_status.set(ConnectionStatus::Connecting);
             leptos::logging::log!("WS: Connecting to {}...", url);
 
@@ -154,33 +154,33 @@ async fn process_incoming_messages(
     }
 }
 
-/// 根据当前主机名和协议构建 WebSocket URL
-///
-/// 自动检测 HTTPS 并升级为 wss://
-fn build_ws_url(port: u16) -> String {
+/// 根据当前来源构建 WebSocket URL；自动检测 HTTPS 并升级为 wss://。
+/// 默认使用同源 WebSocket 路径 (/ws)，由反向代理或 trunk 代理转发
+fn build_same_origin_ws_url() -> String {
     let window = match web_sys::window() {
         Some(w) => w,
-        None => return format!("ws://localhost:{}/ws", port),
+        None => return "ws://localhost:3001/ws".to_string(),
     };
     let location = window.location();
-    let hostname = location
-        .hostname()
-        .unwrap_or_else(|_| "localhost".to_string());
+    let host = location.host().unwrap_or_else(|_| "localhost:3001".to_string());
     let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
-    format!("{}://{}:{}/ws", ws_scheme, hostname, port)
+    format!("{}://{}/ws", ws_scheme, host)
 }
 
 fn build_ws_urls() -> Vec<String> {
-    let mut urls = Vec::new();
     if let Some(port) = query_port() {
-        urls.push(build_ws_url(port));
-        return urls;
+        let window = match web_sys::window() {
+            Some(w) => w,
+            None => return vec![format!("ws://localhost:{}/ws", port)],
+        };
+        let location = window.location();
+        let hostname = location.hostname().unwrap_or_else(|_| "localhost".to_string());
+        let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
+        let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
+        return vec![format!("{}://{}:{}/ws", ws_scheme, hostname, port)];
     }
-    for p in 3001..=3005 {
-        urls.push(build_ws_url(p));
-    }
-    urls
+    vec![build_same_origin_ws_url()]
 }
 
 fn query_port() -> Option<u16> {

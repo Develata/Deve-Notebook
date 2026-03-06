@@ -49,7 +49,7 @@ pub fn use_core() -> CoreState {
     effects::setup_handshake_effect(&ws, identity, repo_vector, signals.degraded_sync_mode);
     effects::setup_message_effect(&ws, &signals);
 
-    let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc);
+    let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc, signals.set_explicit_home);
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
     let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
     let misc_callbacks =
@@ -124,6 +124,7 @@ pub fn use_core() -> CoreState {
         on_commit_and_push: sc_callbacks.on_commit_and_push,
         on_merge_peer: sync_callbacks.on_merge_peer,
         tree_nodes: signals.tree_nodes,
+        set_explicit_home: signals.set_explicit_home,
         chat_messages: signals.chat_messages,
         set_chat_messages: signals.set_chat_messages,
         is_chat_streaming: signals.is_chat_streaming,

@@ -106,7 +106,11 @@ pub fn MainLayout() -> impl IntoView {
         }
     });
     let set_doc = core.set_current_doc;
-    let on_home = Callback::new(move |_| set_doc.set(None));
+    let set_explicit_home = core.set_explicit_home;
+    let on_home = Callback::new(move |_| {
+        set_explicit_home.set(true);
+        set_doc.set(None);
+    });
 
     let core_for_layout = core.clone();
 

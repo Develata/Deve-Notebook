@@ -131,8 +131,8 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_is_chat_streaming = signals.set_is_chat_streaming;
     let set_system_metrics = signals.set_system_metrics;
     let current_repo = signals.current_repo;
+    let explicit_home = signals.explicit_home;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
-
     // 当浏览器缺少 WebCrypto / IndexedDB，或身份恢复失败时会进入降级模式。
     // UI 必须把只读约束显式暴露出来，避免用户误以为当前仍可编辑或发起写入同步。
     Effect::new(move |_| {
@@ -161,7 +161,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
-                    effects_msg::handle_doc_list(list, set_docs, current_doc, set_current_doc);
+                    effects_msg::handle_doc_list(list, set_docs, current_doc, set_current_doc, explicit_home);
                 }
                 ServerMessage::SyncHello {
                     peer_id, vector, ..

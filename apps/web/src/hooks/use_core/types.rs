@@ -132,6 +132,9 @@ pub struct CoreState {
 
     // 文件树 (增量更新)
     pub tree_nodes: ReadSignal<Vec<FileNode>>,
+
+    // 用户显式导航至 Home（阻止 DocList 自动选中首篇文档）
+    pub set_explicit_home: WriteSignal<bool>,
 }
 
 impl CoreState {
