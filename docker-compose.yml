@@ -2,8 +2,6 @@
 # 用途：开发和部署环境的单服务配置
 # 目标环境：768MB VPS（内存限制留出 OS 运行空间）
 
-version: '3.8'
-
 services:
   # Deve 笔记服务器主服务
   deve-server:
@@ -36,6 +34,8 @@ services:
     restart: unless-stopped
     
     # 资源限制：内存上限 512MB（低资源环境优化）
+    # mem_limit: compose v2 兼容；deploy.resources: Swarm 兼容
+    mem_limit: 512m
     deploy:
       resources:
         limits:
@@ -43,7 +43,7 @@ services:
     
     # 健康检查（与 Dockerfile 保持一致）
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:3001/api/node/role"]
+      test: ["CMD", "curl", "-sf", "http://localhost:3001/api/node/role"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -19,14 +19,14 @@ RUN cargo chef prepare --recipe-path recipe.json
 # 阶段 3: deps — 编译后端依赖（缓存层）
 FROM chef AS deps
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json --package deve_cli --package deve_core
 
 # 阶段 4: frontend — 编译前端资源
 FROM chef AS frontend
 COPY . .
 WORKDIR /app/apps/web
 # npm 构建：编译 editor.bundle.js，复制 KaTeX 到 public/
-RUN npm ci && npm run build
+RUN npm ci --ignore-scripts && npm run build
 # Trunk 构建：生成 Leptos WASM（输出到 apps/web/dist/）
 RUN trunk build --release
 
@@ -38,9 +38,9 @@ RUN cargo build --release --package deve_cli && \
 
 # 阶段 6: runtime — 精简运行时镜像
 FROM debian:bookworm-slim AS runtime
-# 仅安装 ca-certificates（纯 Rust 加密库，无需 openssl）
+# 安装 ca-certificates 和 curl（健康检查用，纯 Rust 加密库无需 openssl）
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
 # 创建非 root 用户
@@ -68,7 +68,7 @@ USER appuser
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD wget -q -O- http://localhost:3001/api/node/role || exit 1
+    CMD curl -sf http://localhost:3001/api/node/role || exit 1
 
 # 启动命令
 CMD ["deve_cli", "serve", "--port", "3001"]
