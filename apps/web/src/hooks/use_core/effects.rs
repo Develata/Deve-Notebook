@@ -88,11 +88,14 @@ pub fn setup_handshake_effect(
                     let vector_json = serde_json::to_string(&vector).unwrap_or_default();
                     let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
                     let _ = note_handshake(&identity.repo_id).await;
+                    // Parse repo_id string to Uuid for protocol
+                    let repo_uuid = uuid::Uuid::parse_str(&identity.repo_id).unwrap_or_else(|_| uuid::Uuid::nil());
                     ws.send(ClientMessage::SyncHello {
                         peer_id,
                         pub_key: identity.public_key.clone(),
                         signature,
                         vector,
+                        repo_id: repo_uuid,
                     });
                 }
                 Err(err) => leptos::logging::error!("WebCrypto 握手签名失败: {}", err),

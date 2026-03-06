@@ -3,6 +3,7 @@
 //!
 //! 定义 `use_core` 所需的所有响应式信号。
 
+use crate::api::ConnectionStatus;
 use crate::editor::EditorStats;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::{DocId, PeerId};
@@ -117,7 +118,10 @@ pub struct CoreSignals {
 }
 
 /// 初始化所有核心信号
-pub fn init_signals() -> CoreSignals {
+///
+/// ## 参数
+/// - `connection_status`: WebSocket 连接状态，用于 WebLightPeer 在线依赖判定。
+pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSignals {
     let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());
     let (current_doc, set_current_doc) = signal(None::<DocId>);
     let (stats, set_stats) = signal(EditorStats::default());
@@ -137,12 +141,15 @@ pub fn init_signals() -> CoreSignals {
     let (current_repo, set_current_repo) = signal(None::<String>);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (repo_list, set_repo_list) = signal(Vec::new());
-    let (doc_version, set_doc_version) = signal(0u64);
+let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
     let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
-    let (sync_banner, set_sync_banner) = signal(None::<String>);
-    let is_spectator =
-        Memo::new(move |_| active_branch.get().is_some() || degraded_sync_mode.get().is_some());
+let (sync_banner, set_sync_banner) = signal(None::<String>);
+// WebLightPeer 在线依赖：断连时强制只读
+let is_spectator = Memo::new(move |_| {
+let disconnected = connection_status.get() != ConnectionStatus::Connected;
+active_branch.get().is_some() || degraded_sync_mode.get().is_some() || disconnected
+});
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());

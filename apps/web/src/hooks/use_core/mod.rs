@@ -29,7 +29,7 @@ pub fn use_core() -> CoreState {
     let ws = WsService::new();
     provide_context(ws.clone());
 
-    let signals = state::init_signals();
+    let signals = state::init_signals(ws.status);
     let status_signal_for_text = ws.status;
     let degraded_for_text = signals.degraded_sync_mode;
     let status_text = Signal::derive(move || {
