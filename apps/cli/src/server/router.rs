@@ -25,6 +25,49 @@ use deve_core::security::AuthConfig;
 pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfig>) -> Router {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
 
+    // 速率限制器分层：
+    // - 登录端点：5 次/分钟/IP (防暴力破解)
+    // - API 端点：120 次/分钟/IP
+    let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
+    let api_limiter = rate_limit::RateLimiter::new(120, std::time::Duration::from_secs(60));
+
+    // 需要认证的路由 (JWT Cookie 中间件保护)
+    let protected = Router::new()
+        .route("/ws", get(ws::ws_handler))
+        .route("/api/sc/status", get(handlers::source_control::http::status))
+        .route("/api/sc/diff", get(handlers::source_control::http::diff))
+        .route("/api/sc/stage", post(handlers::source_control::http::stage))
+        .route("/api/sc/commit", post(handlers::source_control::http::commit))
+        .route("/api/repo/docs", get(handlers::repo::http::list_docs))
+        .route("/api/repo/doc", get(handlers::repo::http::doc_content))
+        .route("/api/auth/logout", post(auth::handlers::logout))
+        .route("/api/auth/me", get(auth::handlers::me))
+        .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
+
+    // 公开路由：登录使用独立限流
+    let login_route = Router::new()
+        .route("/api/auth/login", post(auth::handlers::login))
+        .layer(axum::Extension(login_limiter))
+        .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware));
+
+    let public = Router::new()
+        .route("/api/node/role", get(node_role_http::role));
+
+    Router::new()
+        .merge(protected)
+        .merge(public)
+        .merge(login_route)
+        .merge(static_files::static_fallback())
+        .with_state(app_state)
+        .layer(axum::middleware::from_fn(auth::headers::security_headers))
+        .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware))
+        .layer(axum::Extension(auth_config))
+        .layer(axum::Extension(brute_force))
+        .layer(axum::Extension(api_limiter))
+        .layer(setup::build_cors_layer(port))
+}
+    let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
+
     // 速率限制: 每 IP 每分钟最多 200 次请求
     let limiter = rate_limit::RateLimiter::new(200, std::time::Duration::from_secs(60));
 

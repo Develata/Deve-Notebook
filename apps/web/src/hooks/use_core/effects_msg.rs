@@ -14,6 +14,21 @@ use super::types::{ChatMessage, PeerSession};
 
 /// 处理 DocList 消息
 ///
+/// 不再自动选中第一篇文档，以保持 Dashboard 页面稳定。
+/// 用户需要显式点击文档才能选中。
+pub fn handle_doc_list(
+    list: Vec<(DocId, String)>,
+    set_docs: WriteSignal<Vec<(DocId, String)>>,
+    _current_doc: ReadSignal<Option<DocId>>,
+    _set_current_doc: WriteSignal<Option<DocId>>,
+    _explicit_home: ReadSignal<bool>,
+) {
+    leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
+    set_docs.set(list);
+    // 注意：不再自动选中第一篇文档
+    // 用户需要显式点击文档或使用搜索功能
+}
+///
 /// `explicit_home` 为 true 时表示用户显式点击了 Home，
 /// 此时不应自动选中第一篇文档，以保持 Dashboard 页面稳定。
 pub fn handle_doc_list(
