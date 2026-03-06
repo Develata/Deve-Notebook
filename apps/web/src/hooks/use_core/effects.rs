@@ -106,6 +106,8 @@ pub fn setup_handshake_effect(
 /// 设置消息处理 Effect。
 pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let ws_rx = ws.clone();
+    let degraded_sync_mode = signals.degraded_sync_mode;
+    let set_sync_banner = signals.set_sync_banner;
     let set_docs = signals.set_docs;
     let current_doc = signals.current_doc;
     let set_current_doc = signals.set_current_doc;
@@ -130,6 +132,15 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_system_metrics = signals.set_system_metrics;
     let current_repo = signals.current_repo;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
+
+    // 当浏览器缺少 WebCrypto / IndexedDB，或身份恢复失败时会进入降级模式。
+    // UI 必须把只读约束显式暴露出来，避免用户误以为当前仍可编辑或发起写入同步。
+    Effect::new(move |_| {
+        let banner = degraded_sync_mode.get().map(|mode| {
+            format!("存储受限（{}），当前处于只读模式", mode.reason)
+        });
+        set_sync_banner.set(banner);
+    });
 
     Effect::new(move |_| {
         let schedule_refresh = {
