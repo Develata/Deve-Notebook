@@ -140,12 +140,17 @@ pub async fn me(Extension(claims): Extension<deve_core::security::Claims>) -> im
     })
 }
 
+/// Cookie 安全策略：默认要求 HTTPS，因此未设置 `HTTPS_ENABLED` 时也会写入 `Secure`。
+/// 仅在显式配置 `HTTPS_ENABLED=false` 或 `0` 的本地 HTTP 场景下关闭 `Secure`；始终保持 `HttpOnly` 与 `SameSite::Strict`。
 fn build_auth_cookie(token: &str) -> [(String, String); 1] {
+    let https_enabled = std::env::var("HTTPS_ENABLED")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(true);
     let cookie = Cookie::build((COOKIE_NAME, token.to_string()))
         .path("/")
         .http_only(true)
         .same_site(SameSite::Strict)
-        .secure(false) // Nginx 终止 TLS 后内部 HTTP
+        .secure(https_enabled)
         .build();
     [("Set-Cookie".into(), cookie.to_string())]
 }

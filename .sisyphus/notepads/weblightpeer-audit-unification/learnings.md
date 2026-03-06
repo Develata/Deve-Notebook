@@ -91,3 +91,27 @@
 - `DEVE_ENV` 缺省值固定为 `production`
 - 非 `development` 模式下，缺少任一认证密钥都返回统一错误 `Production mode requires AUTH_SECRET and AUTH_PASS`
 - `development` 模式下，仅在缺失密钥时记录警告并回退到 `dev_default()`
+
+## [2026-03-06 T5b] Cookie 安全属性环境驱动
+
+**关键发现**:
+- 登录 Cookie 的 `Secure` 不能硬编码为 `false`，否则在 HTTPS 代理与直连 HTTPS 下都会偏离验收要求
+- 这里最稳的缺省值应是 fail-closed：`HTTPS_ENABLED` 未配置时按 `true` 处理，避免生产遗漏配置导致降级
+- `HttpOnly` 与 `SameSite::Strict` 应保持显式设置，避免未来重构时被链式调用顺序或默认值误伤
+
+**实现约定**:
+- `HTTPS_ENABLED` 的真值仅接受 `true` 与 `1`
+- `HTTPS_ENABLED` 缺省时，认证 Cookie 写入 `Secure`
+- 登录 Cookie 固定包含 `HttpOnly; SameSite=Strict`，删除 Cookie 继续保持 `HttpOnly; SameSite=Strict; Max-Age=0`
+
+## [2026-03-06 T5b] Cookie 安全策略环境驱动
+
+**关键发现**:
+- Cookie `Secure` 属性必须可配置，因为本地开发HTTP场景与生产HTTPS场景需求不同
+- 默认值应保守（`true`），这样即使忘记配置，生产环境也不会意外暴露明文cookie
+- `HttpOnly` 与 `SameSite::Strict` 无需配置——它们应始终启用以防XSS与CSRF
+
+**实现约定**:
+- `HTTPS_ENABLED` 默认 `true`
+- 仅显式设置 `HTTPS_ENABLED=false` 时才关闭 `Secure` 属性
+- `HttpOnly` 与 `SameSite::Strict` 硬编码为 `true` / `Strict`
