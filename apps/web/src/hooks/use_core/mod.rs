@@ -41,6 +41,9 @@ pub fn use_core() -> CoreState {
         }
     });
 
+    // 浏览器 peer identity 现在必须经由 storage_runtime 间接初始化：
+    // `localStorage` 只允许承载 UI 偏好，而 repo-scoped identity 需要走
+    // `WebCrypto + IndexedDB`，这样才能满足 T3 定义的存储分层与降级语义。
     let (identity, repo_vector) = init_storage_runtime(&signals);
 
     effects::setup_handshake_effect(&ws, identity, repo_vector, signals.degraded_sync_mode);
