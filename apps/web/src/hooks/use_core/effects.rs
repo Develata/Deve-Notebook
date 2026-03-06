@@ -136,9 +136,9 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     // 当浏览器缺少 WebCrypto / IndexedDB，或身份恢复失败时会进入降级模式。
     // UI 必须把只读约束显式暴露出来，避免用户误以为当前仍可编辑或发起写入同步。
     Effect::new(move |_| {
-        let banner = degraded_sync_mode.get().map(|mode| {
-            format!("存储受限（{}），当前处于只读模式", mode.reason)
-        });
+        let banner = degraded_sync_mode
+            .get()
+            .map(|mode| format!("存储受限（{}），当前处于只读模式", mode.reason));
         set_sync_banner.set(banner);
     });
 

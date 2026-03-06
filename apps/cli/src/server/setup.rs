@@ -6,49 +6,51 @@ use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::protocol::ServerMessage;
 use deve_core::tree::TreeManager;
 
+use axum::http::{Method, header};
 use std::sync::Arc;
 use std::sync::RwLock;
 use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-/// 构建 CORS 层。
-///
-/// 安全策略：生产环境默认拒绝一切跨域请求，必须显式设置 `ALLOWED_ORIGINS`。
-/// 仅在 `DEVE_ENV=development` 且未提供 `ALLOWED_ORIGINS` 时，才回退为本地前端来源。
+/// 按环境变量构建 CORS 层；默认不信任任何跨站来源，禁止生产硬编码 localhost。
 pub(super) fn build_cors_layer(_port: u16) -> CorsLayer {
-    let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
-    let allowed_origins = std::env::var("ALLOWED_ORIGINS").ok();
-    let origins = match (env.as_str(), allowed_origins.as_deref()) {
-        (_, Some(origins)) => origins
-            .split(',')
-            .map(str::trim)
-            .filter(|origin| !origin.is_empty())
-            .map(str::to_owned)
-            .collect::<Vec<_>>(),
-        ("development", None) => {
-            tracing::warn!("Development mode: allowing localhost CORS origins");
-            vec![
-                "http://localhost:8080".to_string(),
-                "http://127.0.0.1:8080".to_string(),
-            ]
-        }
-        _ => panic!("Production mode requires ALLOWED_ORIGINS"),
-    };
-    if origins.is_empty() {
-        panic!("ALLOWED_ORIGINS must contain at least one origin");
+    let origins = allowed_origins_from_env();
+    if is_development() && !origins.is_empty() {
+        tracing::warn!("WARNING: CORS development allow list active");
     }
-    if origins.iter().any(|origin| origin == "*") {
-        panic!("ALLOWED_ORIGINS must not contain wildcard '*'");
-    }
-    let origins = origins
-        .into_iter()
-        .map(|origin| origin.parse())
-        .collect::<Result<Vec<axum::http::HeaderValue>, _>>()
-        .unwrap_or_else(|err| panic!("Invalid CORS origin: {err}"));
+
     CorsLayer::new()
         .allow_origin(AllowOrigin::list(origins))
-        .allow_methods(tower_http::cors::Any)
-        .allow_headers(tower_http::cors::Any)
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([
+            header::ACCEPT,
+            header::AUTHORIZATION,
+            header::CONTENT_TYPE,
+            header::ORIGIN,
+        ])
+        .allow_credentials(true)
+}
+
+/// 从 `ALLOWED_ORIGINS` 解析允许的跨站来源列表，使用逗号分隔。
+fn allowed_origins_from_env() -> Vec<axum::http::HeaderValue> {
+    std::env::var("ALLOWED_ORIGINS")
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|origin| !origin.is_empty() && *origin != "*")
+        .filter_map(|origin| match origin.parse() {
+            Ok(value) => Some(value),
+            Err(err) => {
+                tracing::warn!(origin, ?err, "Ignoring invalid CORS origin");
+                None
+            }
+        })
+        .collect()
+}
+
+/// 判断当前是否为显式开发模式；未设置时默认按生产环境处理。
+fn is_development() -> bool {
+    matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
 }
 
 pub(super) fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {

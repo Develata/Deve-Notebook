@@ -11,6 +11,7 @@ use axum::{
 use std::sync::Arc;
 
 use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
+use deve_core::security::AuthConfig;
 
 /// 构建完整的 Axum 应用路由
 ///
@@ -21,9 +22,7 @@ use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_
 ///
 /// ## 中间件层叠顺序（外 → 内）
 /// CORS → 速率限制 → 安全头 → Extension 注入
-pub fn build_app(app_state: Arc<AppState>, port: u16) -> Router {
-    let auth_config = load_auth_config();
-    let auth_config = Arc::new(auth_config);
+pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfig>) -> Router {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
 
     // 速率限制: 每 IP 每分钟最多 200 次请求
@@ -66,17 +65,23 @@ pub fn build_app(app_state: Arc<AppState>, port: u16) -> Router {
         .layer(setup::build_cors_layer(port))
 }
 
-/// 加载认证配置: 优先环境变量，回退到 dev 默认
-fn load_auth_config() -> deve_core::security::AuthConfig {
-    match deve_core::security::AuthConfig::from_env() {
+/// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。
+pub(super) fn load_auth_config() -> AuthConfig {
+    let dev_default = matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
+        && (std::env::var("AUTH_SECRET").is_err() || std::env::var("AUTH_PASS").is_err());
+
+    match AuthConfig::from_env() {
         Ok(cfg) => {
-            tracing::info!("Auth config loaded from env (user={})", cfg.username);
+            if dev_default {
+                tracing::warn!("WARNING: Development mode with default credentials");
+            } else {
+                tracing::info!("Auth config loaded from env (user={})", cfg.username);
+            }
             cfg
         }
-        Err(_) => {
-            tracing::warn!("⚠ Auth: env vars not set, using dev defaults (admin/admin)");
-            deve_core::security::AuthConfig::dev_default()
-                .expect("Dev auth config should always succeed")
+        Err(err) => {
+            tracing::error!("{err}");
+            std::process::exit(1);
         }
     }
 }

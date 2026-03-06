@@ -78,6 +78,7 @@ pub async fn start_server(
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
+    let auth_config = Arc::new(router::load_auth_config());
     let mcp_manager = Arc::new(setup::load_mcp_manager(&vault_path));
     let _ = host::set_mcp_manager(mcp_manager.clone());
     // Create broadcast channel for WS server
@@ -159,7 +160,7 @@ pub async fn start_server(
     // 启动系统指标广播任务 (每 5 秒)
     metrics::spawn_broadcaster(app_state.clone());
 
-    let app = router::build_app(app_state, port);
+    let app = router::build_app(app_state, port, auth_config);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Server running on ws://{}", addr);
 

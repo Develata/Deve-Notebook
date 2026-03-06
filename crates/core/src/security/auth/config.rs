@@ -8,9 +8,9 @@
 //! - `AUTH_USER`: 用户名 (默认 "admin")
 //! - `AUTH_PASS`: Argon2 哈希后的密码
 //! - `AUTH_ALLOW_ANONYMOUS_LOCALHOST`: 是否允许 localhost 免密
+//! - `DEVE_ENV`: 部署环境 (`production` / `development`)
 
 use anyhow::{Result, anyhow};
-use tracing::warn;
 
 /// 认证配置 (不可变，加载后冻结)
 #[derive(Debug, Clone)]
@@ -28,24 +28,18 @@ pub struct AuthConfig {
 }
 
 impl AuthConfig {
-    /// 从环境变量加载配置
-    ///
-    /// # 环境驱动行为
-    /// - `DEVE_ENV` 默认为 `production`
-    /// - 生产模式缺少密钥时必须失败关闭
-    /// - 开发模式缺少密钥时才允许回退到 `dev_default()`
+    /// 从环境变量加载配置；默认按生产模式 fail-closed，只有显式开发模式允许 dev auth。
     pub fn from_env() -> Result<Self> {
         let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
         let secret = std::env::var("AUTH_SECRET").ok();
         let password_hash = std::env::var("AUTH_PASS").ok();
 
         if secret.is_none() || password_hash.is_none() {
-            if env == "development" {
-                warn!("WARNING: Development mode with default credentials");
+            if env.eq_ignore_ascii_case("development") {
                 return Self::dev_default();
             }
             return Err(anyhow!(
-                "Production mode requires AUTH_SECRET and AUTH_PASS"
+                "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
             ));
         }
 
@@ -61,9 +55,7 @@ impl AuthConfig {
         let username = std::env::var("AUTH_USER").unwrap_or_else(|_| "admin".into());
         let password_hash = password_hash.expect("checked above");
 
-        let allow_anon = std::env::var("AUTH_ALLOW_ANONYMOUS_LOCALHOST")
-            .map(|v| v == "true" || v == "1")
-            .unwrap_or(false);
+        let allow_anon = env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false);
 
         let token_version = std::env::var("AUTH_TOKEN_VERSION")
             .ok()
@@ -79,10 +71,7 @@ impl AuthConfig {
         })
     }
 
-    /// 创建用于开发/测试的默认配置
-    ///
-    /// 使用固定密钥和明文 "admin" 密码的哈希。
-    /// **MUST NOT** 用于生产环境。
+    /// 创建用于显式开发模式的默认配置，禁止作为生产环境静默回退。
     pub fn dev_default() -> Result<Self> {
         let password_hash = super::password::hash_password("admin")?;
         Ok(Self {
@@ -93,6 +82,18 @@ impl AuthConfig {
             token_version: 1,
         })
     }
+}
+
+/// 解析布尔环境变量，供认证契约统一读取环境驱动开关。
+fn env_flag(name: &str, default: bool) -> bool {
+    std::env::var(name)
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(default)
 }
 
 #[cfg(test)]

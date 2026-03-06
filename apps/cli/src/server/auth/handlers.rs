@@ -143,25 +143,35 @@ pub async fn me(Extension(claims): Extension<deve_core::security::Claims>) -> im
 /// Cookie 安全策略：默认要求 HTTPS，因此未设置 `HTTPS_ENABLED` 时也会写入 `Secure`。
 /// 仅在显式配置 `HTTPS_ENABLED=false` 或 `0` 的本地 HTTP 场景下关闭 `Secure`；始终保持 `HttpOnly` 与 `SameSite::Strict`。
 fn build_auth_cookie(token: &str) -> [(String, String); 1] {
-    let https_enabled = std::env::var("HTTPS_ENABLED")
-        .map(|v| v == "true" || v == "1")
-        .unwrap_or(true);
     let cookie = Cookie::build((COOKIE_NAME, token.to_string()))
         .path("/")
         .http_only(true)
         .same_site(SameSite::Strict)
-        .secure(https_enabled)
+        .secure(https_enabled())
         .build();
     [("Set-Cookie".into(), cookie.to_string())]
 }
 
+/// 登出 Cookie 继承与登录相同的环境驱动安全属性，避免浏览器保留弱属性旧值。
 fn build_removal_cookie() -> [(String, String); 1] {
-    // max-age=0 立即过期，清除 Cookie
+    let secure = if https_enabled() { "; Secure" } else { "" };
     let value = format!(
-        "{}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0",
-        COOKIE_NAME
+        "{}=; Path=/; HttpOnly; SameSite=Strict{}; Max-Age=0",
+        COOKIE_NAME, secure
     );
     [("Set-Cookie".into(), value)]
+}
+
+/// 从 `HTTPS_ENABLED` 读取 Cookie Secure 开关；未设置时默认按生产 HTTPS 处理。
+fn https_enabled() -> bool {
+    std::env::var("HTTPS_ENABLED")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(true)
 }
 
 fn build_empty_cookie() -> [(String, String); 1] {
