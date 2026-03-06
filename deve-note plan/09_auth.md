@@ -156,7 +156,11 @@
 
 ## 本章相关配置
 
-*   `AUTH_SECRET`: 用于签发 Session/JWT 的密钥。
-*   `AUTH_USER`: 默认用户名 (env only).
-*   `AUTH_PASS`: 默认密码 (env only).
-*   `AUTH_ALLOW_ANONYMOUS_LOCALHOST`: 是否允许通过 `localhost` 或 `127.0.0.1` 访问时免密登录。
+*   `AUTH_SECRET`: JWT 签名密钥 (MUST >= 32 字节)。生产环境必须显式设置。
+*   `AUTH_USER`: 用户名 (默认 "admin")。
+*   `AUTH_PASS`: 密码的 Argon2 哈希 (PHC 格式)。生产环境必须显式设置。
+*   `AUTH_ALLOW_ANONYMOUS_LOCALHOST`: 布尔。是否允许 localhost 免密访问 (默认 false)。
+*   `AUTH_TOKEN_VERSION`: 整数。Token 版本号，修改密码后递增以撤销已签发 JWT。
+*   `DEVE_ENV`: production | development。控制安全策略分支 (默认 production)。
+*   `HTTPS_ENABLED`: 布尔。控制 Cookie Secure 属性 (默认 true)。
+*   `ALLOWED_ORIGINS`: 逗号分隔的 CORS 白名单。生产环境必须显式设置。

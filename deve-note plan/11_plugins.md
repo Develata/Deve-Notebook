@@ -33,13 +33,20 @@
 *   **ABI Lifecycle**: Manifest -> Install -> Activate -> Events.
 *   **Manifest (清单)**: 结构体位于 `crates/core/src/plugin/manifest.rs`.
     *   Fields: `id`, `name`, `version`, `entry` (脚本入口路径).
-    *   **Capabilities (权限能力)**:
-        *   `allow_net`: 域名白名单 (精确匹配).
-        *   `allow_fs_read` / `allow_fs_write`: 路径白名单 (前缀匹配, 自动标准化).
-        *   `allow_env`: 环境变量白名单.
+    *   **Capabilities (权限能力)** — Default Deny，插件仅获得声明的权限:
+        *   `allow_net`: `Vec<String>` — 网络域名白名单 (精确匹配)。
+        *   `allow_fs_read` / `allow_fs_write`: `Vec<PathBuf>` — 文件路径白名单 (前缀匹配, 自动标准化, 防遍历)。
+        *   `allow_env`: `Vec<String>` — 环境变量白名单。
+        *   `allow_source_control`: `bool` — 是否允许 Git 操作。
+        *   `allow_search`: `bool` — 是否允许使用 glob/grep 搜索 API。
+        *   `allow_skill`: `bool` — 是否允许读取 Skill 列表与内容。
+        *   `allow_mcp`: `bool` — 是否允许调用 MCP 工具。
+        *   `allow_project_tree`: `bool` — 是否允许获取项目目录树。
 *   **Host Functions**: 受控 API，必须 Capability 校验 (default deny)。
 *   **RPC Bridge**: 前端 `client.call` -> WebSocket -> 后端插件。
-*   **Resource Quotas**: CPU/Mem/Timeout 可配。
+*   **Resource Quotas**:
+    *   **Rhai**: `max_operations = 100,000` — 防止无限循环；`max_expr_depths = 128` — 防止栈溢出。
+    *   **WASM/Podman**: CPU/Mem/Timeout 可配。
 
 ### 4. Git 推送 (Git Integration)
 *   **机制**：调用 Host Functions 中的 `git_sync.rhai`。
