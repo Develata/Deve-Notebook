@@ -67,3 +67,10 @@ config.toml
 
 # Temp
 deve_cli_running.exe
+
+# Rust Analyzer flycheck artifacts
+**/target/rust-analyzer/
+
+# Sisyphus agent workspace
+.sisyphus/evidence/
+.sisyphus/trunk-out/
