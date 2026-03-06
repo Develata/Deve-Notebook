@@ -1,4 +1,4 @@
-﻿// apps/cli/src/server/handlers/merge.rs
+// apps/cli/src/server/handlers/merge.rs
 //! # 手动合并处理器 (Manual Merge Handler)
 //!
 //! 处理手动同步模式相关操作：
@@ -6,14 +6,32 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::session::WsSession;
 use deve_core::config::SyncMode;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
+/// 从会话获取绑定的 repo_id
+fn get_session_repo_id(session: &WsSession) -> Option<uuid::Uuid> {
+    session.bound_repo_id
+}
+
 /// 获取当前同步模式
-pub async fn handle_get_sync_mode(state: &Arc<AppState>, ch: &DualChannel) {
+pub async fn handle_get_sync_mode(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+) {
+    let repo_id = match get_session_repo_id(session) {
+        Some(id) => id,
+        None => {
+            ch.send_error("No repository bound to session".to_string());
+            return;
+        }
+    };
+    
     let mode = {
-        let engine = match state.sync_engine.get_or_create(uuid::Uuid::nil()) {
+        let engine = match state.sync_engine.get_or_create(repo_id) {
             Some(e) => e,
             None => {
                 ch.send_error("Failed to get or create sync engine".to_string());
@@ -32,7 +50,20 @@ pub async fn handle_get_sync_mode(state: &Arc<AppState>, ch: &DualChannel) {
 }
 
 /// 设置同步模式
-pub async fn handle_set_sync_mode(state: &Arc<AppState>, ch: &DualChannel, mode: String) {
+pub async fn handle_set_sync_mode(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    mode: String,
+) {
+    let repo_id = match get_session_repo_id(session) {
+        Some(id) => id,
+        None => {
+            ch.send_error("No repository bound to session".to_string());
+            return;
+        }
+    };
+
     let new_mode = match mode.to_lowercase().as_str() {
         "auto" => SyncMode::Auto,
         "manual" => SyncMode::Manual,
@@ -43,7 +74,7 @@ pub async fn handle_set_sync_mode(state: &Arc<AppState>, ch: &DualChannel, mode:
     };
 
     {
-        let mut engine = match state.sync_engine.get_or_create(uuid::Uuid::nil()) {
+        let mut engine = match state.sync_engine.get_or_create(repo_id) {
             Some(e) => e,
             None => {
                 ch.send_error("Failed to get or create sync engine".to_string());
@@ -64,9 +95,21 @@ pub async fn handle_set_sync_mode(state: &Arc<AppState>, ch: &DualChannel, mode:
 }
 
 /// 获取待合并操作及其预览
-pub async fn handle_get_pending_ops(state: &Arc<AppState>, ch: &DualChannel) {
+pub async fn handle_get_pending_ops(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+) {
+    let repo_id = match get_session_repo_id(session) {
+        Some(id) => id,
+        None => {
+            ch.send_error("No repository bound to session".to_string());
+            return;
+        }
+    };
+
     let pending_count = {
-        let engine = match state.sync_engine.get_or_create(uuid::Uuid::nil()) {
+        let engine = match state.sync_engine.get_or_create(repo_id) {
             Some(e) => e,
             None => {
                 ch.send_error("Failed to get or create sync engine".to_string());
@@ -94,9 +137,21 @@ pub async fn handle_get_pending_ops(state: &Arc<AppState>, ch: &DualChannel) {
 }
 
 /// 确认合并所有待处理的操作
-pub async fn handle_confirm_merge(state: &Arc<AppState>, ch: &DualChannel) {
+pub async fn handle_confirm_merge(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+) {
+    let repo_id = match get_session_repo_id(session) {
+        Some(id) => id,
+        None => {
+            ch.send_error("No repository bound to session".to_string());
+            return;
+        }
+    };
+
     let result = {
-        let mut engine = match state.sync_engine.get_or_create(uuid::Uuid::nil()) {
+        let mut engine = match state.sync_engine.get_or_create(repo_id) {
             Some(e) => e,
             None => {
                 ch.send_error("Failed to get or create sync engine".to_string());
@@ -121,9 +176,21 @@ pub async fn handle_confirm_merge(state: &Arc<AppState>, ch: &DualChannel) {
 }
 
 /// 丢弃所有待处理的操作
-pub async fn handle_discard_pending(state: &Arc<AppState>, ch: &DualChannel) {
+pub async fn handle_discard_pending(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+) {
+    let repo_id = match get_session_repo_id(session) {
+        Some(id) => id,
+        None => {
+            ch.send_error("No repository bound to session".to_string());
+            return;
+        }
+    };
+
     {
-        let mut engine = match state.sync_engine.get_or_create(uuid::Uuid::nil()) {
+        let mut engine = match state.sync_engine.get_or_create(repo_id) {
             Some(e) => e,
             None => {
                 ch.send_error("Failed to get or create sync engine".to_string());
@@ -141,6 +208,7 @@ pub async fn handle_discard_pending(state: &Arc<AppState>, ch: &DualChannel) {
 pub async fn handle_merge_peer(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    _session: &WsSession,
     peer_id: String,
     doc_id: deve_core::models::DocId,
 ) {

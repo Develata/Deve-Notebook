@@ -26,7 +26,20 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
         .clone()
         .unwrap_or_else(|| state.repo.local_repo_name().to_string());
 
+    // 获取真实 repo UUID
+    let repo_uuid = state
+        .repo
+        .get_repo_info()
+        .ok()
+        .flatten()
+        .map(|info| info.uuid.to_string())
+        .unwrap_or_default();
+
     // 发送 RepoSwitched 让前端知道当前仓库 (用于初始化及切换后同步)
+    ch.unicast(ServerMessage::RepoSwitched {
+        name: current_repo.clone(),
+        uuid: repo_uuid,
+    });
     ch.unicast(ServerMessage::RepoSwitched {
         name: current_repo.clone(),
         uuid: String::new(), // TODO: Fetch UUID

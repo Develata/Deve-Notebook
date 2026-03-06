@@ -7,12 +7,58 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::session::WsSession;
+use deve_core::models::PeerId;
+use crate::server::channel::DualChannel;
 use deve_core::models::PeerId;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
 
 /// 处理 P2P 握手请求
+pub async fn handle_sync_hello(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    peer_id: PeerId,
+    pub_key: Vec<u8>,
+    signature: Vec<u8>,
+    remote_vector: deve_core::models::VersionVector,
+    repo_id: deve_core::models::RepoId,
+) {
+    tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
+
+    // 1. 获取 SyncEngine (使用消息中的 repo_id)
+    let mut engine = match state.sync_engine.get_or_create(repo_id) {
+        Some(e) => e,
+        None => {
+            ch.send_error("Failed to get or create sync engine".to_string());
+            return;
+        }
+    };
+    let local_peer_id = engine.local_peer_id.clone();
+    let local_vector = engine.version_vector().clone();
+    
+    // 2. 执行握手逻辑 (Verify Client)
+    let result = match engine.handshake(
+        repo_id,
+        peer_id.clone(),
+        &pub_key,
+        &signature,
+        remote_vector,
+    ) {
+        Ok(res) => res,
+        Err(e) => {
+            tracing::error!("Handshake failed with {}: {}", peer_id, e);
+            ch.send_error(format!("Handshake failed: {}", e));
+            return;
+        }
+    };
+
+    // 3. 握手成功：绑定会话到该 peer 和 repo
+    session.set_authenticated(peer_id.clone());
+    session.bind_repo(repo_id);
+    tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 pub async fn handle_sync_hello(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -104,7 +150,22 @@ pub async fn handle_sync_hello(
     }
 }
 
-/// 处理数据请求 (对方想要数据)
+pub async fn handle_sync_request(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    repo_id: deve_core::models::RepoId,
+    requests: Vec<(PeerId, (u64, u64))>,
+) {
+    // 校验 repo 与会话绑定一致
+    if !session.is_repo_bound(&repo_id) {
+        tracing::warn!("SyncRequest repo mismatch: session bound to {:?}, got {}", 
+            session.bound_repo_id, repo_id);
+        ch.send_error("Repository not bound to session".to_string());
+        return;
+    }
+
+    // 获取或创建指定仓库的 SyncEngine
 pub async fn handle_sync_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -139,7 +200,46 @@ pub async fn handle_sync_request(
         ch.unicast(push_msg);
     }
 }
-/// 处理数据推送 (对方发送数据)
+pub async fn handle_sync_push(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    repo_id: deve_core::models::RepoId,
+    ops: Vec<deve_core::security::EncryptedOp>,
+) {
+    // 校验 repo 与会话绑定一致
+    if !session.is_repo_bound(&repo_id) {
+        tracing::warn!("SyncPush repo mismatch: session bound to {:?}, got {}", 
+            session.bound_repo_id, repo_id);
+        ch.send_error("Repository not bound to session".to_string());
+        return;
+    }
+
+    // 获取来源 peer ID (优先使用会话认证的 peer，否则拒绝)
+    let source_peer = match &session.authenticated_peer_id {
+        Some(peer_id) => peer_id.clone(),
+        None => {
+            tracing::error!("SyncPush without authenticated peer");
+            ch.send_error("Not authenticated".to_string());
+            return;
+        }
+    };
+
+    // 获取或创建指定仓库的 SyncEngine
+    let mut engine = match state.sync_engine.get_or_create(repo_id) {
+        Some(e) => e,
+        None => {
+            ch.send_error("Failed to get or create sync engine".to_string());
+            return;
+        }
+    };
+
+    // repo_id 从消息中提取，不再从全局状态获取
+    let response = sync_proto::SyncResponse {
+        peer_id: source_peer,
+        repo_id,
+        ops,
+    };
 pub async fn handle_sync_push(
     state: &Arc<AppState>,
     ch: &DualChannel,

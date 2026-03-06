@@ -11,6 +11,22 @@
 
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
+use deve_core::models::RepoId;
+    /// 当前绑定的仓库 ID (在 SyncHello 成功后设置)
+    ///
+    /// 用于后续同步消息的 repo 一致性校验。
+    pub bound_repo_id: Option<RepoId>,
+            bound_repo_id: None,
+    /// 绑定仓库 ID (在握手成功后调用)
+    pub fn bind_repo(&mut self, repo_id: RepoId) {
+        self.bound_repo_id = Some(repo_id);
+    }
+
+    /// 检查给定 repo_id 是否与会话绑定一致
+    pub fn is_repo_bound(&self, repo_id: &RepoId) -> bool {
+        self.bound_repo_id.as_ref() == Some(repo_id)
+    }
+use deve_core::models::PeerId;
 
 /// WebSocket 会话状态
 ///

@@ -13,7 +13,40 @@ use std::rc::Rc;
 
 use super::state::CoreSignals;
 
-fn repo_scope(repo: Option<String>) -> String {
+/// 验证并提取有效的 UUID 格式的 repo_id。
+/// 如果不是有效的 UUID，返回 None 表示应等待服务端提供真实 ID。
+fn repo_scope(repo: Option<String>) -> Option<String> {
+    repo.filter(|value| {
+        // 必须是有效的 UUID 格式才认为是真实 repo_id
+        !value.is_empty() && uuid::Uuid::parse_str(value).is_ok()
+    })
+}
+/// 初始化浏览器身份与 repo 级向量缓存。
+/// 仅当 repo_id 是有效 UUID 时才执行，避免使用 "default" 等字符串。
+pub fn init_storage_runtime(
+    signals: &CoreSignals,
+) -> (
+    ReadSignal<Option<StoredPeerIdentity>>,
+    ReadSignal<VersionVector>,
+) {
+    let (identity, set_identity) = signal(None::<StoredPeerIdentity>);
+    let (repo_vector, set_repo_vector) = signal(VersionVector::new());
+    let last_repo = Rc::new(RefCell::new(None::<String>));
+    let current_repo = signals.current_repo;
+    let set_degraded_sync_mode = signals.set_degraded_sync_mode;
+    let set_sync_banner = signals.set_sync_banner;
+    Effect::new(move |_| {
+        // 必须等到有有效的 UUID 格式的 repo_id
+        let Some(repo_id) = repo_scope(current_repo.get()) else {
+            leptos::logging::log!("Storage: waiting for valid repo UUID, current: {:?}", current_repo.get());
+            return;
+        };
+        if last_repo.borrow().as_deref() == Some(repo_id.as_str()) {
+            return;
+        }
+        *last_repo.borrow_mut() = Some(repo_id.clone());
+        set_identity.set(None);
+        set_repo_vector.set(VersionVector::new());
     repo.filter(|value| !value.is_empty())
         .unwrap_or_else(|| "default".to_string())
 }
@@ -94,6 +127,10 @@ pub fn init_storage_runtime(
             };
 
             let metadata = load_repo_metadata(&repo_id).await.unwrap_or_default();
+            // 检查 repo 是否已变更（比较 Option<String> 与 String）
+            if repo_scope(current_repo.get_untracked()).as_deref() != Some(repo_id.as_str()) {
+                return;
+            }
             if repo_scope(current_repo.get_untracked()) != repo_id {
                 return;
             }

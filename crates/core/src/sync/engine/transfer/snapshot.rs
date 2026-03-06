@@ -1,4 +1,24 @@
 use super::SyncEngine;
+use crate::ledger::listing::RepoListing;
+use crate::models::{LedgerEntry, Op, RepoType};
+use crate::sync::protocol::{SyncResponse, SyncSnapshotRequest};
+use crate::sync::rebuild;
+use anyhow::Result;
+    /// 获取快照数据 (用于全量同步)。
+    ///
+    /// Invariants:
+    /// - 快照的 `seq` 反映源端对该文档的最新已知序列号。
+    /// - 快照内容由"最新快照 + 增量操作"重建得出。
+    /// - 必须按请求的 `repo_id` 获取数据，不能默认使用本地主仓库。
+    pub fn get_snapshot_for_sync(&self, request: &SyncSnapshotRequest) -> Result<SyncResponse> {
+        let repo_key = self
+            .repo_key
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
+
+        // 按请求的 repo_id 获取数据，支持多仓库隔离
+        let repo_type = RepoType::Local(request.repo_id);
+        let docs = self.repo.list_docs(&repo_type)?;
 use crate::models::{LedgerEntry, Op};
 use crate::sync::protocol::{SyncResponse, SyncSnapshotRequest};
 use crate::sync::rebuild;
