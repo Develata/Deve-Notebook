@@ -17,6 +17,7 @@ use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::engine::SyncEngine;
+use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::tree::TreeManager;
 
 use std::net::SocketAddr;
@@ -54,7 +55,7 @@ pub struct AppState {
     pub tx: broadcast::Sender<ServerMessage>,
     pub vault_path: std::path::PathBuf,
     pub plugins: Vec<Box<dyn PluginRuntime>>,
-    pub sync_engine: Arc<RwLock<SyncEngine>>,
+    pub sync_engine: Arc<RepoScopedSyncEngine>,
     /// 文件树管理器 (增量更新)
     pub tree_manager: Arc<RwLock<TreeManager>>,
     #[cfg(feature = "search")]
@@ -117,14 +118,13 @@ pub async fn start_server(
     // Load or generate Repo Key (Shared Secret)
     let repo_key = security::load_or_generate_repo_key(&deve_dir)?;
 
-    // Initialize SyncEngine (Relay Mode -> Auto)
-    let sync_engine = Arc::new(RwLock::new(SyncEngine::new(
+    // Initialize RepoScopedSyncEngine (Relay Mode -> Auto)
+    let sync_engine = Arc::new(RepoScopedSyncEngine::new(
         peer_id.clone(),
         repo.clone(),
         deve_core::config::SyncMode::Auto,
         repo_key.clone(),
-    )));
-
+    ));
     // 初始化文件树管理器 (从 Ledger Node 表加载)
     let tree_manager = {
         let mut tm = TreeManager::new();

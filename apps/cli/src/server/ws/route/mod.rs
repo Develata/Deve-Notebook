@@ -26,8 +26,9 @@ pub(crate) async fn route_message(
             pub_key,
             signature,
             vector,
+            repo_id,
         } => {
-            sync::handle_sync_hello(state, ch, peer_id, pub_key, signature, vector).await;
+            sync::handle_sync_hello(state, ch, peer_id, pub_key, signature, vector, repo_id).await;
         }
         other => docs::route_docs(state, ch, session, other).await,
     }
