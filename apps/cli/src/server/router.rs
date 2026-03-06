@@ -5,12 +5,12 @@
 //! 从 `mod.rs` 拆分以保持单文件行数在 130 行目标以内。
 
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use std::sync::Arc;
 
-use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
+use super::{auth, handlers, node_role_http, rate_limit, setup, static_files, ws, AppState};
 use deve_core::security::AuthConfig;
 
 /// 构建完整的 Axum 应用路由
@@ -66,17 +66,17 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
 }
 
 /// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。
-/// debug 构建自动进入开发模式（无需设置 DEVE_ENV）。
+/// 开发模式必须显式设置 DEVE_ENV=development（不再自动根据构建模式切换）。
 pub(super) fn load_auth_config() -> AuthConfig {
-    let explicit_dev = matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"));
-    let is_debug_build = cfg!(debug_assertions);
-    let dev_default = (explicit_dev || is_debug_build)
+    let is_dev_mode =
+        matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"));
+    let using_dev_defaults = is_dev_mode
         && (std::env::var("AUTH_SECRET").is_err() || std::env::var("AUTH_PASS").is_err());
 
     match AuthConfig::from_env() {
         Ok(cfg) => {
-            if dev_default {
-                tracing::warn!("WARNING: Development mode with default credentials");
+            if using_dev_defaults {
+                tracing::warn!("WARNING: Development mode with default credentials (set AUTH_SECRET and AUTH_PASS for production)");
             } else {
                 tracing::info!("Auth config loaded from env (user={})", cfg.username);
             }

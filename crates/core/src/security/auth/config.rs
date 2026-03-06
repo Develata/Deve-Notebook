@@ -29,6 +29,23 @@ pub struct AuthConfig {
 
 impl AuthConfig {
     /// 从环境变量加载配置；默认按生产模式 fail-closed。
+    /// 开发模式触发条件：`DEVE_ENV=development`（必须显式设置）。
+    /// 注意：不再自动根据 debug/release 构建模式切换。
+    pub fn from_env() -> Result<Self> {
+        let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
+        let is_dev_mode = env.eq_ignore_ascii_case("development");
+        let secret = std::env::var("AUTH_SECRET").ok();
+        let password_hash = std::env::var("AUTH_PASS").ok();
+
+        if secret.is_none() || password_hash.is_none() {
+            if is_dev_mode {
+                tracing::warn!("DEVE_ENV=development detected → using dev defaults (INSECURE for production)");
+                return Self::dev_default();
+            }
+            return Err(anyhow!(
+                "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
+            ));
+        }
     /// 开发模式触发条件（任一）：`DEVE_ENV=development` 或 `cfg!(debug_assertions)`（debug 构建）。
     pub fn from_env() -> Result<Self> {
         let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
