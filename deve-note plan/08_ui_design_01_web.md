@@ -92,6 +92,27 @@ Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
 *   **Persistence**: 伸缩宽度 **MUST** 通过 `localStorage` 持久化。
 *   **Outer Gutter**: 主区域左右边距 **MUST** 支持拖拽调整，并持久化。
 
+## 5.1 WebLightPeer 状态呈现 (Sync State Presentation)
+
+Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能力、降级状态与 repo-scoped peer 行为。
+
+*   **Connection Indicator**:
+    *   绿色：`Connected + Synced`，表示当前 repo 的 peer identity 已完成握手且 vector 最新。
+    *   黄色：`Reconnecting`，显示退避重试中与最近一次失败原因。
+    *   灰色：`Read-only`，表示进入 `DegradedSyncMode` 或尚未完成 peer registration。
+*   **Status Copy**:
+    *   UI **MUST** 同时区分 `session token` 状态与 `peer identity` 状态，例如“已登录 / Peer 未注册”。
+    *   Repo 切换时 **MUST** 显示 `Handshaking repo...`，直到新的 repo-scoped peer identity 完成注册。
+*   **DegradedSyncMode Banner**:
+    *   当 IndexedDB 或 WebCrypto 不可用时，顶部 **MUST** 显示只读横幅，明确原因是浏览器持久存储不可用。
+    *   横幅文案 **SHOULD** 说明：允许查看与拉取，禁止编辑提交与 `SyncPush`。
+*   **Editing Guardrails**:
+    *   只读模式下编辑器、创建按钮、同步推送按钮 **MUST** 禁用或隐藏。
+    *   若仅 user session 有效但 peer identity 缺失，UI **MUST** 允许重试注册，而不是静默失败。
+*   **Repo Switch Flow**:
+    *   用户切换 repo 时，旧 repo 的同步状态立即清空，新 repo 进入握手态。
+    *   若新 repo 无法恢复 IndexedDB identity，则 UI 显示“临时只读 peer”并阻止写入，直到注册成功。
+
 ## 6. 实现策略边界 (Implementation Boundaries)
 
 *   **Rule**: Web 端仅作为服务器 UI，不承载移动/桌面端原生实现细节。

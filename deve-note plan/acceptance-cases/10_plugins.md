@@ -14,15 +14,26 @@
     - stdout_contains: "demo.wasm"
 
 - case_id: PLUG-002
-  goal: Capabilities 默认拒绝。
+  goal: Capability Gates 强制执行 (H4 收口)。
   preconditions:
-    - 插件未声明 allow_net
+    - 插件 manifest 未声明 "search" capability
   steps:
-    - run: deve plugin call demo.rhai net_test
+    - run: deve plugin call demo.rhai search_docs "test"
   assertions:
-    - stdout_contains: "capability denied"
+    - stdout_contains: "Capability denied: search"
+    - log_contains: "Security: blocked unauthorized host function call"
 
 - case_id: PLUG-003
+  goal: Rhai 运行时限制 (H4 收口)。
+  preconditions:
+    - 插件脚本包含无限循环 while(true) {}
+  steps:
+    - run: deve plugin call demo.rhai infinite_loop
+  assertions:
+    - stdout_contains_any: ["Execution quota exceeded", "Timeout"]
+    - log_contains: "Rhai runtime terminated due to resource limits"
+
+- case_id: PLUG-004
   goal: WASM 不直接操作 DOM。
   preconditions:
     - wasm 插件尝试 DOM 操作
@@ -31,7 +42,7 @@
   assertions:
     - stdout_contains: "dom access denied"
 
-- case_id: PLUG-004
+- case_id: PLUG-005
   goal: Podman Rootless/No Net/Ephemeral。
   preconditions:
     - Podman 可用
@@ -42,7 +53,7 @@
     - log_contains: "network disabled"
     - log_contains: "container removed"
 
-- case_id: PLUG-005
+- case_id: PLUG-006
   goal: AI 插件上下文安全。
   preconditions:
     - AI 插件请求上下文
@@ -51,7 +62,7 @@
   assertions:
     - stdout_contains_any: ["permission required", "context denied"]
 
-- case_id: PLUG-006
+- case_id: PLUG-007
   goal: KaTeX 扩展按配置加载。
   preconditions:
     - config.tex_extensions 为空

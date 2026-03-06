@@ -27,7 +27,7 @@
 
 **DashboardSession** — 浏览器用户会话。通过 JWT Cookie 认证，与 peer identity 分离。
 
-**PeerIdentity** — 节点身份。每个 repo 独立的 Ed25519 keypair，存储于 IndexedDB。
+**PeerIdentity** — 节点身份。每个 repo 独立的 Ed25519 keypair；私钥保留在 WebCrypto 非导出 `CryptoKey` 中，公钥与注册元数据持久化于 IndexedDB。
 
 **RepoScopedVector** — 仓库作用域版本向量。WebLightPeer 为每个 repo 维护独立 vector。
 
@@ -54,14 +54,40 @@
 **INV-4: Auth Layering**
 - User session (JWT Cookie) 与 peer identity (Ed25519 keypair) 是独立的两层认证
 - User session 验证用户访问权限，peer identity 验证同步数据来源
+
+### Auth Layering Flows (分层认证流程)
+
+**Layer 1: User Session（用户会话）**
+- 目的：回答“谁在访问 Dashboard / API”。
+- 流程：`POST /api/auth/login` -> Server 签发 `session token` -> 浏览器以 `HttpOnly Cookie` 持有。
+- 作用域：全局，覆盖该浏览器访问的所有 repos。
+- 撤销：登出、Cookie 过期、密码修改、`token_version` 增加。
+- 禁止：`session token` 不得充当 `peer identity`，也不得替代同步签名。
+
+**Layer 2: Peer Identity（浏览器 Peer 身份）**
+- 目的：回答“同步数据来自哪个 browser peer / repo”。
+- 流程：浏览器在进入 repo 后生成或恢复 repo-scoped keypair，然后通过 `SyncHello` 完成 peer registration。
+- 存储：私钥留在 `WebCrypto`，公钥、peer metadata 与 repo 状态在 IndexedDB。
+- 作用域：严格 repo-scoped；切换 repo 必须切换对应 peer identity。
+- 禁止：peer identity 不授予 UI/API 访问权限，不能绕过登录 Cookie。
+
+**Separation Rationale（分离理由）**
+- 获取 `session token` 的攻击者只能伪装“已登录用户”，仍无法伪造同步签名。
+- 泄露某个 repo 的 `peer identity` 公钥不会自动提升为 Dashboard 登录态。
+- 用户重新登录不会替换既有 trusted peer；删除浏览器 identity 也不会让服务端会话失效。
+
+**Independent Flows（独立流程）**
+1. 用户登录：输入凭据 -> Server 校验 -> 返回 `session token` Cookie。
+2. 浏览器 peer 注册：打开某个 repo -> 恢复或生成 `peer identity` -> 发送 `SyncHello` -> Server 记录信任关系。
+3. 若步骤 1 失败，则拒绝 repo 数据访问；若步骤 2 失败，则允许只读查看但禁止写入同步。
 ## 访问控制 (Access Control)
 
 *   **Model**: **Single-User / Owner-Only**。
     *   **Algorithm**: `Argon2` (Pass hash) + `Ed25519` (Node Identity).
     *   **PeerID**: 基于公钥生成的唯一标识 (Hash of Public Key).
         *   **Implementation**: `SHA256(PublicKey)[0..12]` (Hex string).
-        *   **Key Storage**: Private Key (Seed) stored in `vault/.deve/identity.key`.
-    *   **Verification**: 握手消息 (Hello) 必须包含 Ed25519 签名，由接收方使用 PubKey 验证。
+        *   **Key Storage**: Native full peer 的 Private Key (Seed) stored in `vault/.deve/identity.key`；浏览器 WebLightPeer **MUST NOT** 写入该文件，而是使用 `WebCrypto + IndexedDB`。
+        *   **Verification**: 握手消息 (Hello) 必须包含 Ed25519 签名，由接收方使用 PubKey 验证。
 *   **Localhost Policy**:
     *   当通过 `localhost` 或 `127.0.0.1` 访问时，**MAY** 允许免密登录或自动填充默认凭据（Dev Mode），但必须有明确的配置开关 `AUTH_ALLOW_ANONYMOUS_LOCALHOST`。
 

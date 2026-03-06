@@ -12,17 +12,27 @@
     - ui_assert: editing_disabled true
 
 - case_id: NET-002
-  goal: Main/Proxy 角色切换与端口策略。
+  goal: 生产连接必须走 relative /ws 或单一配置端点。
   preconditions:
-    - 3001 端口已占用
+    - 生产环境部署
   steps:
-    - run: deve serve
-    - run: curl http://127.0.0.1:3002/api/node/role
+    - browser_open: "/"
   assertions:
-    - stdout_contains: "role"
-    - stdout_contains: "proxy"
+    - ws_url_eq: "/ws"
+    - log_not_contains: "Scanning ports"
 
 - case_id: NET-003
+  goal: Main/Proxy 角色切换不改变浏览器路由契约。
+  preconditions:
+    - 同源服务暴露 `/ws`
+  steps:
+    - ws_connect: "relative /ws"
+    - run: curl http://127.0.0.1/api/node/role
+  assertions:
+    - ws_connect_success: true
+    - stdout_contains: "role"
+
+- case_id: NET-004
   goal: 协议格式区分。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
@@ -32,7 +42,18 @@
     - packet_format_eq: ["server", "bincode"]
     - packet_format_eq: ["client", "json"]
 
-- case_id: NET-004
+- case_id: NET-005
+  goal: WebLightPeer repo-scoped 握手。
+  preconditions:
+    - 用户打开 Repo A
+  steps:
+    - ws_connect: "relative /ws"
+    - ws_send: { type: "SyncHello", repo_id: "11111111-1111-1111-1111-111111111111", peer_pubkey: "pub_a", vector: { seq: 7 } }
+  assertions:
+    - ws_receive_contains: "SyncAck"
+    - ws_receive_contains: "11111111-1111-1111-1111-111111111111"
+
+- case_id: NET-006
   goal: OpenDoc Snapshot-First。
   preconditions:
     - 文档有快照与增量 Ops
@@ -41,61 +62,53 @@
   assertions:
     - ws_receive_order: ["Snapshot", "NewOp"]
 
-- case_id: NET-005
-  goal: TOFU 握手。
-  preconditions:
-    - 两个全新 Peer
-  steps:
-    - ws_connect: "peer_a"
-    - ws_connect: "peer_b"
-  assertions:
-    - log_contains: "Key Pair"
-    - log_contains: "Handshake"
-
-- case_id: NET-006
-  goal: E2EE + Envelope Pattern。
-  preconditions:
-    - 触发同步
-  steps:
-    - net_capture: true
-  assertions:
-    - packet_header_contains: ["VectorClock", "PeerID", "RepoID"]
-    - packet_body_encrypted: true
-
 - case_id: NET-007
-  goal: Vector Gossip 缺失 Ops。
+  goal: Vector Gossip 缺失 Ops 必须 repo-scoped。
   preconditions:
-    - A 的 VC 大于 B
+    - Repo A 中 A 的 VC 大于 B
   steps:
-    - ws_send: { type: "SyncRequest", from: "B", to: "A" }
+    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { seq: 3 } }
   assertions:
     - ws_payload_contains_only_missing_ops true
+    - ws_payload_contains: "11111111-1111-1111-1111-111111111111"
 
 - case_id: NET-008
-  goal: Snapshot Sync 覆盖模式。
+  goal: Snapshot fallback 必须保留 repo_id。
   preconditions:
     - OpSeq 差异超过阈值
   steps:
-    - ws_send: { type: "SyncRequest" }
+    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { seq: 0 } }
   assertions:
     - ws_receive_contains: "Snapshot"
+    - ws_receive_contains: "11111111-1111-1111-1111-111111111111"
     - ws_receive_not_contains: "OpsRange"
 
 - case_id: NET-009
+  goal: 多仓库切换必须重新握手并隔离状态。
+  preconditions:
+    - 浏览器已先后打开 Repo A 与 Repo B
+  steps:
+    - ws_send: { type: "SyncHello", repo_id: "11111111-1111-1111-1111-111111111111", peer_pubkey: "pub_a", vector: { seq: 7 } }
+    - ws_send: { type: "SyncHello", repo_id: "22222222-2222-2222-2222-222222222222", peer_pubkey: "pub_b", vector: { seq: 1 } }
+  assertions:
+    - ws_receive_contains: "22222222-2222-2222-2222-222222222222"
+    - ws_receive_not_contains: "reuse_repo_a_vector"
+
+- case_id: NET-010
   goal: 恶意数据隔离。
   preconditions:
     - Remote 分支有破坏性 Ops
   steps:
-    - ws_send: { type: "SyncPush", peer: "malicious" }
+    - ws_send: { type: "SyncPush", peer: "malicious", repo_id: "11111111-1111-1111-1111-111111111111" }
   assertions:
     - fs_changes_only_under: "ledger/remotes/malicious"
 
-- case_id: NET-010
+- case_id: NET-011
   goal: 间接同步信任边界。
   preconditions:
     - B 未与 A 握手
   steps:
-    - ws_send: { type: "GossipOffer", from: "C", about: "A" }
+    - ws_send: { type: "GossipOffer", from: "C", about: "A", repo_id: "11111111-1111-1111-1111-111111111111" }
   assertions:
     - ws_receive_not_contains: "FetchRequest"
 ```

@@ -19,6 +19,7 @@
 ### WebLightPeer (受限同步端点)
 * **定位**：Web 端被定义为 **WebLightPeer**。它不是 Full Peer，而是一个受限的同步端点。
 * **数据源**：支持在线增量拉取与受限推送。它拥有 repo-scoped identity 与 vector，但无完整本地 ledger。
+* **状态边界**：浏览器 peer 状态严格按 `repo_id` 分桶；切换仓库等价于切换独立的 identity、vector、cache 与连接上下文。
 * **存储模型**：从 `localStorage` 升级为分层存储。
     * **UI 偏好**：使用 `localStorage`。
     * **Peer Identity & Metadata**：使用 `IndexedDB` 存储 repo-scoped vector、cache metadata 与身份材料。
@@ -64,42 +65,48 @@
 ### 主节点 / 代理节点 (Main / Proxy)
 * **动机**：Redb 为独占锁模型，同一时间只允许一个进程持锁。
 * **策略**：当 `deve_cli serve` 检测到端口被占用或数据库已锁定时，自动降级为 **Proxy 模式**。
-    * **Main**：持锁进程，监听主端口 (默认 3001)，负责真实读写。
-    * **Proxy**：不触碰数据库，通过 HTTP 转发访问主节点。
-* **端口策略**：Proxy 自动选择主端口 + 1 的空闲端口 (如 3002)。
+    * **Main**：持锁进程，监听配置的主端点，负责真实读写。
+    * **Proxy**：不触碰数据库，通过同源 HTTP/WS 转发访问主节点。
+* **路由契约**：浏览器 **MUST** 优先连接当前 origin 下的 `relative /ws`；Proxy 模式必须保持该相对路径可用，而不是要求前端感知后端真实端口。
+* **端口策略**：本地开发环境 **MAY** 暴露显式端口用于诊断；生产环境 **MUST** 通过单一配置端点或反向代理提供稳定入口。
 * **探测接口**：`GET /api/node/role` 返回 `{ role, ws_port, main_port }`。
-* **前端行为**：默认尝试连接 3001..3005；也支持 `?ws_port=xxxx` 强制指定。
+* **前端行为**：生产环境默认使用 `relative /ws` 或显式配置的单一 WS 端点；端口探测仅允许作为本地开发兜底，不得作为规范默认行为。
 
 ## 连接与协议 (Connection & Protocol)
 
 ### WebSocket 协议类型 (Protocol Types)
 *   **Format (格式)**: 节点间 (Server-to-Server) 使用 **Bincode** 以确保性能；客户端与服务端 (Client-Server) 使用 **JSON** 以便调试。
 *   **ClientMessage (客户端消息)**:
-    *   `SyncHello`, `SyncRequest`, `SyncPush`: P2P 同步协议消息。
+    *   `SyncHello`, `SyncRequest`, `SyncPush`: P2P 同步协议消息；凡进入同步路径的消息 **MUST** 携带可确定路由的 `repo_id`。
     *   `Edit`, `Cursor`, `OpenDoc`, `CreateDoc`: 编辑器操作消息。
     *   `PluginCall`: 远程插件调用请求。
 *   **ServerMessage (服务端消息)**:
     *   `TreeDelta`: 文件树增量更新。
     *   `NewOp`: 实时协作操作事件。
-    *   `Snapshot`: 完整文档内容快照。
+    *   `Snapshot`: 完整文档内容快照；必须显式绑定到单个 `repo_id`。
 
 ### OpenDoc 性能策略 (Snapshot-First + Progressive Prefetch)
 *   **Snapshot-First**: 打开文档优先返回最近快照 + 增量 Ops。
 *   **Client Prefetch**: 客户端按自适应批次应用增量 Ops。
 *   **Search Gate**: 见 [03_rendering.md §大文档渲染策略](./03_rendering.md)。
 
-### Peer Identity & Handshake (身份与握手)
+### WebLightPeer Handshake (身份与握手)
 
-*   **Setup (初始化)**: 用户在设置中配置 `Name` (e.g., "My iPad")。
-*   **First Handshake (TOFU)**:
-    1.  Peer A 连接 Peer B。
-    2.  双方自动生成并交换 **Key Pair**。
-    3.  **Binding**: 此后，Key Pair 成为识别对象的唯一凭证 (True Name)。
-    4.  **ID Assignment**: 系统为每个验证通过的 Key Pair 分配唯一的 **IdSeq (PeerUUID)**，内部以此指代 (e.g., `peer_a`, `peer_b`)。
-*   **Reconnection**: 后续连接通过 PubKey 验证，无需人工干预。
+*   **Setup (初始化)**: 用户会话建立后，浏览器为当前 `repo_id` 读取或生成独立的 Ed25519 keypair，并恢复该 repo 的 vector 与 cache metadata。
+*   **Repo-Scoped Identity**: `repo_id_a` 与 `repo_id_b` 必须映射到不同的 peer state；切换 repo 时不得复用前一个仓库的 identity、vector 或订阅。
+*   **Handshake Flow**:
+    1.  WebLightPeer 通过 `relative /ws`（或显式配置端点）建立连接，并声明自身角色为受限同步端点。
+    2.  客户端发送 `SyncHello { repo_id, peer_pubkey, vector, session_proof }`；其中 `repo_id` 是服务器路由与权限校验的主键。
+    3.  Server 校验用户会话、仓库访问权限与 `repo_id` 对应的路由上下文，随后绑定该连接到单个 repo。
+    4.  Server 返回 `SyncAck { repo_id, server_vector, mode }`，明确后续同步窗口与回退策略。
+    5.  后续 `SyncRequest`、`SyncPush`、`Snapshot` 与实时广播均 **MUST** 沿用同一 `repo_id`，否则服务器必须拒绝或断开连接。
+*   **Deterministic Routing (确定性路由)**:
+    *   `SyncHello` **MUST** 提供 `repo_id` 与当前 vector，确保 Server 能决定是走增量同步还是快照回退。
+    *   `SyncRequest` **MUST** 至少携带 `{ repo_id, known_vector }`；禁止依赖连接外的隐式默认 repo。
+    *   `Snapshot` **MUST** 携带其所属 `repo_id` 与生成时的 server vector；协议示例不得使用空 repo 占位符。
 *   **Secure Keystore (安全信任列表)**:
     *   所谓 "Trusted List" 实质上是 **Verified Peer Keystore**。
-    *   **Content**: 包含 `{ PeerID, PubKey, SharedRepoKeys, HandshakeSignature }`。
+    *   **Content**: 包含 `{ repo_id, PeerID, PubKey, SharedRepoKeys, HandshakeSignature }`。
     *   **Tamper-Proof**: 若 B 本地篡改列表添加了 A 的 ID，但 B **缺失** A 在握手时加密传输的 `SharedRepoKeys`，则 B 无法解密 A 的数据。
 
 ### Sync Process (同步流程)
@@ -117,12 +124,13 @@
 *   **Logic**: **Vector Gossip**。
     *   **Trigger**: 同步仅在 **Vector Clock Comparison** 发现差异时触发 (e.g., $VC_A > VC_B$)。这确保了包含操作序列数的 Header 是决定传输的唯一依据。
     *   **Mechanism (Operation-Based)**:
-        1.  **Compare**: $VC_B$ (B's State) vs $VC_A$ (A's State).
-        2.  **Calculate**: A 计算出 B 缺失的操作序列 (Missing Ops = $Ops[VC_B.Seq+1 ... VC_A.Seq]$)。
+        1.  **Compare**: Server 在 `repo_id` 作用域内比较 $VC_B$ (B's State) vs $VC_A$ (A's State)。
+        2.  **Calculate**: A 计算出 B 在该 repo 中缺失的操作序列 (Missing Ops = $Ops[VC_B.Seq+1 ... VC_A.Seq]$)。
         3.  **Send**: A 仅发送这些缺失的 **Operations** (Payload)，而非整个文件或文件 Diff。
         4.  **Apply**: B 接收 Ops 并追加到本地的 Remote Branch 中。
         5.  **Update VC**: B 成功写入后，**MUST** 更新本地记录的 $VC_{PeerA}$ 至最新 Seq。这将作为下一次比对的基准。
     *   **Direct Write**: B 作为镜像端，**MUST** 直接接受来自 A 的已校验数据（无需本地冲突消解，因为 B 是只读的）。
+*   **Web Request Contract**: WebLightPeer 发起的 `SyncRequest`/`SyncPush` 必须显式带上 `repo_id`，以便 Proxy/Main/Relay 在零解密前提下完成确定性路由。
 
 *   **Flow Control**: 支持断点续传与背压。
 
@@ -131,18 +139,20 @@
 *   **Strategy**: Exponential Backoff with Jitter。
 *   **Intervals**: 1s → 2s → 4s → 8s → 16s → 30s (cap)。
 *   **Max Retries**: 无限 (用户手动关闭才停止)。
+*   **Endpoint Rule**: 重连目标优先保持为 `relative /ws`；仅在显式配置了单一外部 WS 地址时才覆盖同源路径。
 *   **UI Feedback**:
     *   断连后立即显示 "Reconnecting..." 遮罩。
     *   每次重连尝试更新计数器 "Retry #N..."。
     *   重连成功后自动请求增量同步 (SyncHello)。
-*   **State Recovery**: 重连成功后 MUST 发送 `SyncHello` 获取离线期间的变更。
+*   **State Recovery**: 重连成功后 MUST 重新发送当前 repo 的 `SyncHello` 获取离线期间的变更；若用户已切换 repo，则必须以新 `repo_id` 重建连接上下文。
 
 ### Edge Cases & Safety Strategy (边界与安全)
 
 *   **Snapshot Sync (Fast Forward)**:
     *   **Scenario**: 当 OpSeq 差异过大 (e.g., GAP > 1000) 或 Peer 首次接入时。
     *   **Strategy**: 自动切换为 **Direct Overwrite** 模式。
-    *   **Action**: A 发送当前状态的完整快照 (Snapshot)，B 直接覆盖对应的 Remote Branch。这比重放 100 万条日志更高效 (解决算力/带宽平衡问题)。
+    *   **Action**: A 发送当前 `repo_id` 状态的完整快照 (`Snapshot { repo_id, server_vector, payload }`)，B 直接覆盖对应的 Remote Branch。这比重放 100 万条日志更高效 (解决算力/带宽平衡问题)。
+    *   **Guardrail**: Snapshot 回退只允许在已知 repo 路由上发生；禁止使用空 repo 占位符或跨 repo 复用快照。
 
 *   **Strategy Selection (策略选择 - Why Ops?)**:
     *   **Q: 对于小文件，直接覆盖是否更优？**

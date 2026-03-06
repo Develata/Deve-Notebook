@@ -169,6 +169,45 @@
 *   **Implementation**:
     *   核心库提供 `crates/core/src/utils/path.rs` 标准模块，包含 `to_forward_slash` 和 `to_native` 方法，所有路径操作 **MUST** 通过此模块进行，严禁手动通过字符串替换 (`replace`) 处理。
 
+## Browser Storage Layering (浏览器存储分层)
+
+WebLightPeer 的浏览器侧存储必须按安全等级与恢复语义分层，禁止再以单一 `localStorage` 承担身份、会话与缓存职责。
+
+*   **UI prefs (`localStorage`)**:
+    *   **Allowed**: 主题、侧栏宽度、语言、最近展开面板等纯前端偏好。
+    *   **Forbidden**: `peer identity`、`session token`、repo vector、离线缓存内容。
+    *   **Recovery**: 用户清理浏览器站点数据后可直接重建，不影响 Server ledger 真值。
+*   **User Session (`JWT Cookie`)**:
+    *   **Primitive**: `HttpOnly + Secure + SameSite=Strict` Cookie。
+    *   **Allowed**: 用户访问权限、登录态续存、服务端 API / WebSocket 握手鉴权。
+    *   **Forbidden**: 作为 `peer identity` 使用；不得承载 repo-scoped vector 或离线缓存。
+    *   **Recovery**: Cookie 过期、登出或密码修改后，客户端必须重新登录获取新的 session token。
+*   **Peer Identity (`WebCrypto + IndexedDB`)**:
+    *   **Primitive**: 浏览器首次进入某个 `repo_id` 时，调用 `WebCrypto.subtle.generateKey(...)` 生成 repo-scoped Ed25519 keypair，私钥 **MUST** 设为 `extractable: false`。
+    *   **Allowed**: `peer identity` 公钥、key handle、注册状态、最后一次握手元数据持久化在 IndexedDB `peer_identity` store。
+    *   **Forbidden**: 私钥原始字节、seed 或可导出密钥材料写入 `localStorage`、URL、Cookie、日志。
+    *   **Recovery**: 若 IndexedDB 中仍存在对应 `CryptoKey`/metadata，则恢复原 browser peer；若 identity 丢失，则必须重新生成 keypair 并重新执行 trust registration。
+*   **Offline Cache (`IndexedDB`)**:
+    *   **Allowed**: repo-scoped vector clock、最近访问文档摘要、只读缓存、同步检查点与 UI 预热数据。
+    *   **Forbidden**: 认证 cookie、私钥材料、跨 repo 共用缓存桶。
+    *   **Recovery**: 配额清理或用户手动删除后可从 Server 增量重建；缓存缺失不得改变权威账本。
+
+### Trust Registration Flow (信任注册流程)
+
+1. 浏览器已具备有效 user session，但首次打开某个 repo 时仍视为“未注册 peer identity”。
+2. WebLightPeer 查询 IndexedDB 的 `peer_identity` store；若不存在该 `repo_id` 记录，则调用 `WebCrypto` 生成新的 repo-scoped keypair。
+3. 私钥保持为不可导出的 `CryptoKey`；公钥、`peer_id`、注册时间与握手状态写入 IndexedDB。
+4. 浏览器发送 `SyncHello { repo_id, peer_pubkey, vector }` 到 Server，请求将该 browser peer 纳入 repo trust set。
+5. Server 以 session token 验证“谁在访问”，再以 `peer identity` 公钥记录“哪个节点在同步”，两者缺一不可但职责不同。
+6. 注册成功后，后续 `SyncRequest`/`SyncPush` 仅使用该 repo-scoped peer identity 参与签名与验证。
+
+### Recovery Semantics (恢复语义)
+
+*   **IndexedDB + WebCrypto 可用**: 进入正常 WebLightPeer 模式，允许 repo-scoped 拉取与受限推送。
+*   **仅 Cookie 可用，IndexedDB 不可用**: 进入 `DegradedSyncMode`。用户仍可保留登录态，但因无法持久化 peer identity 与 offline cache，UI **MUST** 切换为只读并禁止 `SyncPush`。
+*   **Cookie 失效但 IndexedDB identity 仍在**: 必须重新登录；既有 peer identity 不自动授予 API 访问权限。
+*   **用户清除站点数据**: `UI prefs`、peer identity、offline cache 全部丢失；下次访问必须重新登录并重新执行 browser peer 注册。
+
 ## 本章相关命令
 
 * 无。

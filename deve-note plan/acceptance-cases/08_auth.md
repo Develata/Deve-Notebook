@@ -2,34 +2,70 @@
 
 ```markdown
 - case_id: AUTH-001
-  goal: 12-Factor Auth 环境变量注入。
+  goal: 生产环境 Fail-Closed 启动 (C1 收口)。
   preconditions:
+    - DEVE_ENV=production (或未设置)
+    - 未设置 AUTH_SECRET 或 AUTH_PASS
+  steps:
+    - run: deve serve
+  assertions:
+    - exit_code_not_eq: 0
+    - log_contains: "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
+    - log_not_contains: "generated random secret"
+
+- case_id: AUTH-002
+  goal: 显式开发模式启动 (C1 收口)。
+  preconditions:
+    - DEVE_ENV=development
     - 未设置 AUTH_SECRET
   steps:
     - run: deve serve
   assertions:
-    - log_contains_any: ["AUTH_SECRET missing", "generated random secret"]
-
-- case_id: AUTH-002
-  goal: 公网强制 HTTPS。
-  preconditions:
-    - 服务绑定公网地址
-  steps:
-    - run: curl -I http://public.example.com
-  assertions:
-    - http_status_in: [301, 302, 307, 308]
-    - header_contains: "Location: https://"
+    - exit_code_eq: 0
+    - log_contains: "WARNING: Development mode with default credentials"
 
 - case_id: AUTH-003
-  goal: Localhost 可选免密。
+  goal: Cookie Secure 策略 (H1 收口)。
   preconditions:
-    - AUTH_ALLOW_ANONYMOUS_LOCALHOST=true
+    - HTTPS_ENABLED=true
   steps:
-    - run: curl -I http://127.0.0.1:3000
+    - run: curl -i -X POST http://localhost:3000/api/login -d "..."
   assertions:
-    - http_status_eq: 200
+    - header_contains: "Set-Cookie: token=...; Secure; SameSite=Strict; HttpOnly"
 
 - case_id: AUTH-004
+  goal: CORS 环境驱动配置 (H1 收口)。
+  preconditions:
+    - DEVE_ENV=production
+    - ALLOWED_ORIGINS="https://app.deve.com"
+  steps:
+    - run: curl -I -H "Origin: http://localhost:8080" http://localhost:3000/api/health
+  assertions:
+    - http_status_eq: 403
+    - log_not_contains: "Access-Control-Allow-Origin: *"
+
+- case_id: AUTH-005
+  goal: 精确 Cookie 名称匹配 (M1 收口)。
+  preconditions:
+    - 请求携带 token_csrf 或 token_backup cookie
+  steps:
+    - run: curl -b "token_csrf=bad" http://localhost:3000/api/me
+  assertions:
+    - http_status_eq: 401
+    - log_contains: "Invalid auth cookie name"
+
+- case_id: AUTH-006
+  goal: localStorage Panic 防护 (M2 收口)。
+  preconditions:
+    - 浏览器禁用 localStorage 或存储空间满
+  steps:
+    - browser_disable_local_storage: true
+    - browser_open: "/"
+  assertions:
+    - ui_assert: app_running true
+    - log_contains: "WARNING: localStorage unavailable, falling back to memory"
+
+- case_id: AUTH-007
   goal: CSRF 防护。
   preconditions:
     - 登录态存在
@@ -38,7 +74,7 @@
   assertions:
     - http_status_in: [401, 403]
 
-- case_id: AUTH-005
+- case_id: AUTH-008
   goal: Rate Limiting 生效。
   preconditions:
     - 登录接口可访问
@@ -47,7 +83,7 @@
   assertions:
     - http_status_in: [429]
 
-- case_id: AUTH-006
+- case_id: AUTH-009
   goal: JWT payload 最小化。
   preconditions:
     - 登录成功获得 JWT
@@ -56,7 +92,7 @@
   assertions:
     - jwt_claims_eq: ["sub", "exp"]
 
-- case_id: AUTH-007
+- case_id: AUTH-010
   goal: WebSocket 握手鉴权。
   preconditions:
     - 无有效 Token

@@ -19,3 +19,63 @@
 - INV-2: Online Dependency
 - INV-3: Storage Separation
 - INV-4: Auth Layering
+
+---
+
+## [2026-03-06 T2] 网络协议 Repo-Scoped 重写
+
+**关键发现**:
+- 原网络契约把 `3001..3005` 端口探测写成默认前端行为，这适合本地调试，但不适合作为生产路由规范
+- 旧协议对 `SyncHello` / `SyncRequest` / `Snapshot` 的 repo 上下文约束不够强，无法保证多仓库下的确定性路由
+- Proxy 模式的真正稳定面向浏览器契约应是同源 `relative /ws`，而不是暴露后端实际端口选择逻辑
+
+**协议更新**:
+- WebLightPeer 握手改为显式 `repo_id` 驱动，Server 在握手阶段即绑定单个 repo 路由上下文
+- 重连流程要求重新发送当前 repo 的 `SyncHello`，repo 切换时必须重建 identity/vector/connection context
+- Snapshot fallback 保留，但 `Snapshot { repo_id, server_vector, payload }` 必须与具体 repo 绑定，禁止空 repo 占位符
+
+**验收更新**:
+- 生产验收改为校验 `relative /ws` 或单一配置端点，不再把端口扫描当作规范行为
+- 新增多仓库切换重新握手与状态隔离验收
+- SyncRequest / SyncPush / GossipOffer 示例全部补齐 repo-scoped 上下文
+
+## [2026-03-06 T3] 浏览器存储与信任模型定义
+
+**关键发现**:
+- 原存储模型虽已提出分层方向，但 `04_storage.md` 尚未给出四类浏览器存储的允许/禁止边界与恢复语义
+- 必须把 `session token` 与 `peer identity` 写成两条独立流程，否则会误导实现把登录 Cookie 当成同步节点身份
+- 浏览器私钥的正确约束不是“把字节放进 IndexedDB”，而是“私钥材料保持在 WebCrypto 非导出对象内，IndexedDB 仅保存可恢复句柄与元数据”
+
+**存储分层**:
+- `localStorage`: `UI prefs`，仅限主题、布局、语言等无害前端偏好
+- `JWT Cookie`: 用户会话，负责 Dashboard/API/WebSocket 的访问鉴权
+- `IndexedDB`: `peer identity` metadata 与 `offline cache`
+- `WebCrypto`: 不可导出的 browser peer 私钥
+
+**降级策略**:
+- IndexedDB 或 WebCrypto 不可用时进入 `DegradedSyncMode`
+- 允许保留登录态与只读拉取，但禁止编辑、写入同步与持久化 peer 注册
+
+## [2026-03-06 T4] 验收套件重写
+
+**关键发现**:
+- 原验收用例假设生产回退默认凭据（与 C1 冲突）
+- 原验收用例编码 3001..3005 扫描为规范行为（与 H1 冲突）
+- 原验收用例未覆盖 multi-repo isolation（与 H3 冲突）
+- 原验收用例未覆盖 plugin capability enforcement（与 H4 冲突）
+- 原验收用例未考虑 dashboard 根状态稳定性（与 H5 冲突）
+
+**验收更新**:
+- Auth: 新增 fail-closed 启动、explicit dev mode、cookie secure 策略、CORS 环境驱动、精确 cookie 名称匹配、localStorage panic 防护
+- Network: 新增 WebLightPeer repo-scoped handshake、multi-repo isolation、relative WS 连接、dashboard root state stability
+- Plugin: 新增 capability gates enforcement、Rhai runtime limits
+
+**审计覆盖**:
+- C1: AC-AUTH-01, AC-AUTH-02
+- H1: AC-AUTH-03, AC-AUTH-04, AC-NET-02
+- H2: AC-NET-03
+- H3: AC-NET-03, AC-NET-04
+- H4: AC-PLUG-02, AC-PLUG-03
+- H5: AC-NET-05
+- M1: AC-AUTH-05
+- M2: AC-AUTH-06
