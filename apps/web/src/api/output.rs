@@ -175,6 +175,43 @@ async fn flush_queue(
 /// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
 fn is_write_message(msg: &ClientMessage) -> bool {
     match msg {
+        // 编辑操作
+        ClientMessage::Edit { .. } => true,
+        ClientMessage::CreateDoc { .. } => true,
+        ClientMessage::RenameDoc { .. } => true,
+        ClientMessage::DeleteDoc { .. } => true,
+        ClientMessage::CopyDoc { .. } => true,
+        ClientMessage::MoveDoc { .. } => true,
+        // 同步操作
+        ClientMessage::SyncPush { .. } => true,
+        ClientMessage::SyncPushSnapshot { .. } => true,
+        // 版本控制操作
+        ClientMessage::Commit { .. } => true,
+        ClientMessage::CommitAndPush { .. } => true,
+        ClientMessage::StageFile { .. } => true,
+        ClientMessage::StageFiles { .. } => true,
+        ClientMessage::UnstageFile { .. } => true,
+        ClientMessage::UnstageFiles { .. } => true,
+        ClientMessage::DiscardFile { .. } => true,
+        ClientMessage::ResolveConflict { .. } => true,
+        // 分支操作
+        ClientMessage::DeletePeer { .. } => true,
+        ClientMessage::SwitchBranch { .. } => true,
+        ClientMessage::SwitchRepo { .. } => true,
+        // 合并操作
+        ClientMessage::ConfirmMerge => true,
+        ClientMessage::DiscardPending => true,
+        ClientMessage::SetSyncMode { .. } => true,
+        // 插件调用视为写入（可能有副作用）
+        ClientMessage::PluginCall { .. } => true,
+        // 其他为查询类消息
+        _ => false,
+    }
+}
+/// 
+/// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
+fn is_write_message(msg: &ClientMessage) -> bool {
+    match msg {
         ClientMessage::Edit { .. } => true,
         ClientMessage::SyncPush { .. } => true,
         ClientMessage::CreateDoc { .. } => true,
