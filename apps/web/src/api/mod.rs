@@ -122,7 +122,7 @@ impl WsService {
 
         // 启动两个异步任务
         spawn_connection_manager(set_status, set_msg, set_endpoint, set_node_role, link_tx);
-        spawn_output_manager(rx, link_rx);
+        spawn_output_manager(rx, link_rx, status);
 
         // 启动心跳任务 (30秒间隔)
         let tx_clone = tx.clone();

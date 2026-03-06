@@ -17,8 +17,10 @@ use futures::stream::SplitSink;
 use futures::{SinkExt, StreamExt};
 use gloo_net::websocket::{Message, futures::WebSocket};
 use leptos::task::spawn_local;
+use leptos::prelude::*;
 use std::collections::VecDeque;
 
+use super::ConnectionStatus;
 /// 离线队列最大容量
 /// 防止网络断开时内存无限增长
 const MAX_QUEUE_SIZE: usize = 500;
@@ -32,9 +34,15 @@ pub enum OutputEvent {
 }
 
 /// 启动输出管理器任务
+///
+/// ## WebLightPeer 在线依赖
+/// 当连接断开时，禁止写入类消息入队（只读模式）。
+/// 允许的消息：ListDocs, ListRepos, SyncHello, GetChanges 等查询类。
+/// 禁止的消息：Edit, SyncPush, CommitAndPush, CreateDoc 等写入类。
 pub fn spawn_output_manager(
-    rx: UnboundedReceiver<ClientMessage>,
+rx: UnboundedReceiver<ClientMessage>,
     link_rx: UnboundedReceiver<SplitSink<WebSocket, Message>>,
+    connection_status: ReadSignal<ConnectionStatus>,
 ) {
     spawn_local(async move {
         let mut current_sink: Option<SplitSink<WebSocket, Message>> = None;
@@ -52,8 +60,14 @@ pub fn spawn_output_manager(
                     handle_new_link(sink, &mut current_sink, &mut queue).await;
                 }
                 OutputEvent::Client(msg) => {
-                    handle_client_message(*msg, &mut current_sink, &mut queue).await;
-                }
+                    // WebLightPeer: 断连时禁止写入类消息
+                    if connection_status.get() != ConnectionStatus::Connected 
+                        && is_write_message(&msg) {
+                        leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
+                        continue;
+                    }
+handle_client_message(*msg, &mut current_sink, &mut queue).await;
+}
             }
         }
     });
@@ -153,5 +167,29 @@ async fn flush_queue(
                 break;
             }
         }
+    }
+}
+
+/// 判断消息是否为写入类操作
+/// 
+/// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
+fn is_write_message(msg: &ClientMessage) -> bool {
+    match msg {
+        ClientMessage::Edit { .. } => true,
+        ClientMessage::SyncPush { .. } => true,
+        ClientMessage::CreateDoc { .. } => true,
+        ClientMessage::RenameDoc { .. } => true,
+        ClientMessage::DeleteDoc { .. } => true,
+        ClientMessage::CopyDoc { .. } => true,
+        ClientMessage::MoveDoc { .. } => true,
+        ClientMessage::CommitAndPush { .. } => true,
+        ClientMessage::StageFile { .. } => true,
+        ClientMessage::StageFiles { .. } => true,
+        ClientMessage::UnstageFile { .. } => true,
+        ClientMessage::UnstageFiles { .. } => true,
+        ClientMessage::DiscardFile { .. } => true,
+        ClientMessage::ConfirmMerge => true,
+        ClientMessage::DiscardPending => true,
+        _ => false, // 其他为查询类消息
     }
 }
