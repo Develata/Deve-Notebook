@@ -8,6 +8,7 @@
 //! - `headers`: 安全响应头中间件
 
 pub mod brute_force;
+pub mod cookie;
 pub mod handlers;
 pub mod headers;
 pub mod middleware;

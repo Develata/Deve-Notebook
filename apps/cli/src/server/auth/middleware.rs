@@ -20,8 +20,6 @@ use std::sync::Arc;
 
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
-const COOKIE_NAME: &str = "token";
-
 /// JWT 认证中间件
 ///
 /// 工作流程:
@@ -48,7 +46,11 @@ pub async fn auth_middleware(
     }
 
     // 提取 Cookie
-    let token = extract_cookie_token(&req);
+    let token = req
+        .headers()
+        .get("cookie")
+        .and_then(|v| v.to_str().ok())
+        .and_then(super::cookie::extract_token_from_cookie_header);
     let token = match token {
         Some(t) => t,
         None => return unauthorized("Missing auth token"),
@@ -72,20 +74,6 @@ fn is_localhost(ip: &IpAddr) -> bool {
         IpAddr::V4(v4) => v4.is_loopback(),
         IpAddr::V6(v6) => v6.is_loopback(),
     }
-}
-
-fn extract_cookie_token(req: &Request<Body>) -> Option<String> {
-    let header = req.headers().get("cookie")?.to_str().ok()?;
-    for pair in header.split(';') {
-        let pair = pair.trim();
-        if let Some(value) = pair.strip_prefix(COOKIE_NAME) {
-            let value = value.trim_start_matches('=');
-            if !value.is_empty() {
-                return Some(value.to_string());
-            }
-        }
-    }
-    None
 }
 
 fn unauthorized(msg: &str) -> Response {
