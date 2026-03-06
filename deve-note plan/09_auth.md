@@ -10,14 +10,50 @@
         *   **Localhost/LAN**: **MAY** 允许 HTTP (开发/内网环境)，但需注意现代浏览器在非 HTTPS 环境下禁用 Crypto/Clipboard API 的限制。
     *   **Anti-CSRF**：必须实施抗 CSRF 策略。
     *   **Rate Limiting**：必须实施速率限制。
-*   **Protocol (机制)**:
-    *   **JWT (JSON Web Token)**: 采用 Stateless JWT 进行身份凭证管理。
-        *   **Payload**: 仅需包含 `sub: "admin"` 和 `exp`。
-        *   **Storage**: 建议存储于 `HttpOnly Cookie` 以防御 XSS。
-    *   **WebSocket Auth**: 必须并在握手阶段 (Handshake) 验证 Ticket/Token，拒绝未授权连接。
-    *   **Session**: 提供基于 Redis 或内存的会话管理机制（可选，视 JWT 策略而定）。
+* **Protocol (机制)**:
+    * **Auth Layering (分层认证)**: 明确区分 **User Session** 与 **Peer Identity**。
+        * **User Session (JWT)**: 验证用户访问权限。采用 Stateless JWT，存储于 `HttpOnly Cookie`。Payload 包含 `sub: "admin"`, `exp`, `ver`。
+        * **Peer Identity (Ed25519)**: 验证同步数据来源。每个 repo 独立的 keypair，存储于浏览器安全存储（WebCrypto/IndexedDB）。
+    * **WebSocket Auth**: 握手阶段必须验证 JWT Token；同步阶段验证 Peer Identity 签名。
+    * **Session**: 提供基于 Redis 或内存的会话管理机制（可选，视 JWT 策略而定）。
     *   **2FA (Two-Factor Auth)**: **MAY** 支持 TOTP (Google Authenticator) 以增强安全性。
 
+### 术语表 (Terminology)
+
+**WebLightPeer** — 受限同步端点。浏览器作为轻量级 peer 参与同步，但受以下约束：
+  - 无完整本地 ledger（仅在线状态下的 repo-scoped cache）
+  - 无后台长期 gossip（依赖 Server Always-on Relay）
+  - 仅 repo-scoped 同步（每个 repo 独立 identity/vector）
+
+**DashboardSession** — 浏览器用户会话。通过 JWT Cookie 认证，与 peer identity 分离。
+
+**PeerIdentity** — 节点身份。每个 repo 独立的 Ed25519 keypair，存储于 IndexedDB。
+
+**RepoScopedVector** — 仓库作用域版本向量。WebLightPeer 为每个 repo 维护独立 vector。
+
+**OfflineCache** — 离线缓存。IndexedDB 中存储的 repo-scoped metadata 与最近访问文档。
+
+**DegradedSyncMode** — 降级同步模式。当 IndexedDB 不可用时，WebLightPeer 进入只读模式。
+
+### 不变量 (Invariants)
+
+**INV-1: Repo Scope Isolation**
+- WebLightPeer 的 identity、vector、cache 必须按 repo_id 隔离
+- 不允许跨 repo 共享 peer identity 或 vector state
+
+**INV-2: Online Dependency**
+- WebLightPeer 必须保持与 Server 的 WebSocket 连接才能工作
+- 断连后进入只读模式，禁止离线编辑（与 Full Peer 不同）
+
+**INV-3: Storage Separation**
+- UI 偏好 → localStorage
+- Peer identity 私钥 → WebCrypto secure storage
+- Repo-scoped cache metadata → IndexedDB
+- 业务数据 → Server ledger（WebLightPeer 不持久化文档内容）
+
+**INV-4: Auth Layering**
+- User session (JWT Cookie) 与 peer identity (Ed25519 keypair) 是独立的两层认证
+- User session 验证用户访问权限，peer identity 验证同步数据来源
 ## 访问控制 (Access Control)
 
 *   **Model**: **Single-User / Owner-Only**。

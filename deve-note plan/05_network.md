@@ -16,12 +16,50 @@
 * **Durability Guarantee**: 后台窗口期产生的跨端更新 **MUST** 由 Server（Always-on Relay）托管，移动端前台恢复后再增量拉取。
 * **Power Policy**: 在系统电量/网络受限场景下，移动端 **MAY** 延迟非关键同步任务，但不得破坏向量时钟一致性。
 
-### Web Client (服务器面板)
-* **定位**：Web 端**不是**一个独立的 P2P 节点，而是 **Server 节点的远程操作面板 (Remote Dashboard)**。
-* **数据源**：Web 端直接通过 WebSocket 读写 Server 的内存/数据库。Web 端显示的 "Local" 即为 Server 的 `Local Branch` (ledger/local/)。
-* **存储**：**Stateless / RAM-Only (纯内存)**。Web 端严禁使用 IndexedDB/LocalStorage 存储**业务数据**（文档内容、操作日志、同步状态等）。它只是 Server 状态的"易失性投影"。
-    * **例外**: 纯 UI 偏好（布局宽度、主题选择等）**MAY** 使用 `localStorage`，因其不影响 Ledger 真源且断连后无害。
-* **连接约束**：Web 端必须保持与 Server 的 WebSocket 连接才能工作。**断连即锁屏**，严禁离线编辑。
+### WebLightPeer (受限同步端点)
+* **定位**：Web 端被定义为 **WebLightPeer**。它不是 Full Peer，而是一个受限的同步端点。
+* **数据源**：支持在线增量拉取与受限推送。它拥有 repo-scoped identity 与 vector，但无完整本地 ledger。
+* **存储模型**：从 `localStorage` 升级为分层存储。
+    * **UI 偏好**：使用 `localStorage`。
+    * **Peer Identity & Metadata**：使用 `IndexedDB` 存储 repo-scoped vector、cache metadata 与身份材料。
+    * **私钥材料**：使用 `WebCrypto` 安全存储。
+* **连接约束**：必须保持与 Server 的 WebSocket 连接。断连后进入只读模式，禁止离线编辑。
+### 术语表 (Terminology)
+
+**WebLightPeer** — 受限同步端点。浏览器作为轻量级 peer 参与同步，但受以下约束：
+  - 无完整本地 ledger（仅在线状态下的 repo-scoped cache）
+  - 无后台长期 gossip（依赖 Server Always-on Relay）
+  - 仅 repo-scoped 同步（每个 repo 独立 identity/vector）
+
+**DashboardSession** — 浏览器用户会话。通过 JWT Cookie 认证，与 peer identity 分离。
+
+**PeerIdentity** — 节点身份。每个 repo 独立的 Ed25519 keypair，存储于 IndexedDB。
+
+**RepoScopedVector** — 仓库作用域版本向量。WebLightPeer 为每个 repo 维护独立 vector。
+
+**OfflineCache** — 离线缓存。IndexedDB 中存储的 repo-scoped metadata 与最近访问文档。
+
+**DegradedSyncMode** — 降级同步模式。当 IndexedDB 不可用时，WebLightPeer 进入只读模式。
+
+### 不变量 (Invariants)
+
+**INV-1: Repo Scope Isolation**
+- WebLightPeer 的 identity、vector、cache 必须按 repo_id 隔离
+- 不允许跨 repo 共享 peer identity 或 vector state
+
+**INV-2: Online Dependency**
+- WebLightPeer 必须保持与 Server 的 WebSocket 连接才能工作
+- 断连后进入只读模式，禁止离线编辑（与 Full Peer 不同）
+
+**INV-3: Storage Separation**
+- UI 偏好 → localStorage
+- Peer identity 私钥 → WebCrypto secure storage
+- Repo-scoped cache metadata → IndexedDB
+- 业务数据 → Server ledger（WebLightPeer 不持久化文档内容）
+
+**INV-4: Auth Layering**
+- User session (JWT Cookie) 与 peer identity (Ed25519 keypair) 是独立的两层认证
+- User session 验证用户访问权限，peer identity 验证同步数据来源
 
 ### 主节点 / 代理节点 (Main / Proxy)
 * **动机**：Redb 为独占锁模型，同一时间只允许一个进程持锁。
