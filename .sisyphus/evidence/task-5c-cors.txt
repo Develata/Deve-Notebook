@@ -1,0 +1,125 @@
+# T5c CORS Environment-Driven Evidence
+
+## Task Reference
+- **Task ID**: T5c
+- **Audit Issue**: H1 (High) — 反向代理/HTTPS/login 流程未闭环
+- **Acceptance Case**: AC-AUTH-04 — CORS 安全配置
+- **Session**: `ses_33d7f9507ffeRL2pi6ibaV92E9`
+- **Category**: quick
+- **File Modified**: `apps/cli/src/server/setup.rs` (98→117 lines)
+
+## Implementation Summary
+
+### Core Changes
+1. **环境驱动 CORS 策略**：
+   - Production 模式：必须显式设置 `ALLOWED_ORIGINS` 环境变量，否则 panic 阻止启动
+   - Development 模式：未提供 `ALLOWED_ORIGINS` 时，回退为 `http://localhost:8080,http://127.0.0.1:8080` 并发出 `warn!` 日志
+
+2. **验证逻辑**：
+   - 拒绝空列表
+   - 拒绝通配符 `*`
+   - 拒绝无效 origin（解析失败时 panic）
+
+3. **废弃行为**：
+   - 移除 `port..=port+4` 端口扫描逻辑（3001..3005）
+   - 移除硬编码 localhost origins
+
+### Environment Variables
+- `DEVE_ENV` — 环境类型（默认 `"production"`）
+- `ALLOWED_ORIGINS` — 逗号分隔的允许来源列表（生产必填）
+
+### Fail-Closed Behavior
+
+**Production Mode (DEVE_ENV=production or unset)**:
+```bash
+# Missing ALLOWED_ORIGINS → panic
+DEVE_ENV=production cargo run --bin deve_cli -- serve
+# Error: Production mode requires ALLOWED_ORIGINS
+
+# Valid configuration
+DEVE_ENV=production ALLOWED_ORIGINS=https://app.example.com cargo run --bin deve_cli -- serve
+# ✓ Server starts with restricted CORS
+```
+
+**Development Mode (DEVE_ENV=development)**:
+```bash
+# Missing ALLOWED_ORIGINS → fallback with warning
+DEVE_ENV=development cargo run --bin deve_cli -- serve
+# WARN: Development mode: allowing localhost CORS origins
+# ✓ Server starts with localhost:8080,127.0.0.1:8080
+
+# Explicit origins override fallback
+DEVE_ENV=development ALLOWED_ORIGINS=http://localhost:3000 cargo run --bin deve_cli -- serve
+# ✓ Server starts with http://localhost:3000 only
+```
+
+### Acceptance Mapping
+
+**AC-AUTH-04 (CORS 安全配置)**:
+- ✅ 生产环境必须显式配置 `ALLOWED_ORIGINS`
+- ✅ 拒绝通配符 `*`
+- ✅ 拒绝无效 origin
+- ✅ 开发环境提供安全默认值（localhost）
+- ✅ 开发环境回退时发出警告日志
+
+## Code Review
+
+### Function Signature
+```rust
+pub(super) fn build_cors_layer(_port: u16) -> CorsLayer
+```
+- Port parameter retained for API compatibility but unused (marked `_port`)
+- Future removal tracked in cleanup tasks
+
+### Security Properties
+1. **Fail-Closed**: Production 模式下，缺失配置直接 panic 阻止启动
+2. **No Implicit Defaults**: 生产环境无隐式默认值
+3. **Explicit Validation**: 多级验证（空列表、通配符、解析错误）
+4. **Audit Trail**: Development 回退时必须记录警告日志
+
+### Chinese Documentation
+```rust
+/// 构建 CORS 层。
+///
+/// 安全策略：生产环境默认拒绝一切跨域请求，必须显式设置 `ALLOWED_ORIGINS`。
+/// 仅在 `DEVE_ENV=development` 且未提供 `ALLOWED_ORIGINS` 时，才回退为本地前端来源。
+```
+
+## Verification Checklist
+
+- [x] Line count: 117 lines (< 130 target, < 250 fuse)
+- [x] Fail-closed: Production panics without ALLOWED_ORIGINS
+- [x] Chinese docs: Complete with security policy
+- [x] Development fallback: Localhost with warning
+- [x] Validation: Rejects empty, wildcard, invalid
+- [x] Environment variables: DEVE_ENV, ALLOWED_ORIGINS
+- [x] Logic correctness: Matches T5c specification
+- [x] No dependency changes: Pure logic refactor
+- [x] API compatibility: _port parameter retained
+
+## Related Files
+
+**Modified**:
+- `apps/cli/src/server/setup.rs` (98→117 lines)
+
+**Related (unchanged)**:
+- `crates/core/src/security/auth/config.rs` (T5a: auth fail-closed)
+- `apps/cli/src/server/auth/handlers.rs` (T5b: cookie secure)
+
+**Downstream Impact**:
+- `apps/cli/src/server/mod.rs` — setup::build_cors_layer 调用处
+- `apps/cli/src/main.rs` — 启动流程未变
+- Deployment docs — 需要在 Wave 3 T11 中同步 ALLOWED_ORIGINS 环境变量文档
+
+## Next Steps
+
+1. ✅ Commit T5c changes
+2. → Append to learnings notepad
+3. → Update Boulder state (mark T5c complete)
+4. → Launch T6 (browser identity substrate)
+
+---
+
+**Verification Status**: ✅ PASS
+**Reviewer**: Atlas (orchestrator)
+**Date**: 2026-03-06

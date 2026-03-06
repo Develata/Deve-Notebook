@@ -115,3 +115,32 @@
 - `HTTPS_ENABLED` 默认 `true`
 - 仅显式设置 `HTTPS_ENABLED=false` 时才关闭 `Secure` 属性
 - `HttpOnly` 与 `SameSite::Strict` 硬编码为 `true` / `Strict`
+
+---
+
+## [2026-03-06 T5c] CORS 环境驱动配置
+
+**关键发现**:
+- CORS 允许来源不能硬编码为 `port..=port+4` 的 localhost 扫描列表，这会在反向代理或多前端场景下彻底失效
+- 生产环境最安全的策略是"显式白名单，拒绝任何默认"——`ALLOWED_ORIGINS` 缺失时立即 panic，绝不容忍隐式回退
+- 开发模式的回退必须伴随警告日志（`tracing::warn!`），确保开发者理解当前使用非生产配置
+- 拒绝通配符 `*`：这是常见 CORS 配置错误，必须在启动时就校验并 panic
+
+**实现约定**:
+- `ALLOWED_ORIGINS` 接收逗号分隔的完整 origin 字符串（如 `https://app.example.com,https://admin.example.com`）
+- Production 模式（`DEVE_ENV=production` 或缺省）必须提供显式 `ALLOWED_ORIGINS`，否则 panic
+- Development 模式（`DEVE_ENV=development`）未提供 `ALLOWED_ORIGINS` 时，回退为 `http://localhost:8080,http://127.0.0.1:8080` 并记录警告
+- 校验逻辑：拒绝空列表、拒绝通配符 `*`、拒绝无效 origin（`HeaderValue::parse` 失败）
+
+**验收映射**:
+- AC-AUTH-04 (CORS 安全配置) ✅ 完全覆盖
+- 消除 3001..3005 端口扫描行为（与 T2 network 契约对齐）
+- 为反向代理/HTTPS 生产部署提供可验证的确定性 CORS 策略
+
+**性能考虑**:
+- `ALLOWED_ORIGINS` 解析发生在服务器启动时，运行时零开销
+- 显式 `panic!` 在启动阶段保证 fail-fast，避免运行时 CORS 拒绝的隐蔽故障
+
+**后续协调**:
+- T6 浏览器身份实现时，前端连接逻辑应使用同源相对 `/ws` 路径（与 T2 协议契约一致）
+- T11 文档同步时，需将 `ALLOWED_ORIGINS` 环境变量写入部署文档
