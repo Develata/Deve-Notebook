@@ -66,8 +66,11 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
 }
 
 /// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。
+/// debug 构建自动进入开发模式（无需设置 DEVE_ENV）。
 pub(super) fn load_auth_config() -> AuthConfig {
-    let dev_default = matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
+    let explicit_dev = matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"));
+    let is_debug_build = cfg!(debug_assertions);
+    let dev_default = (explicit_dev || is_debug_build)
         && (std::env::var("AUTH_SECRET").is_err() || std::env::var("AUTH_PASS").is_err());
 
     match AuthConfig::from_env() {

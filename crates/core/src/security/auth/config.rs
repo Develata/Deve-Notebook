@@ -28,14 +28,20 @@ pub struct AuthConfig {
 }
 
 impl AuthConfig {
-    /// 从环境变量加载配置；默认按生产模式 fail-closed，只有显式开发模式允许 dev auth。
+    /// 从环境变量加载配置；默认按生产模式 fail-closed。
+    /// 开发模式触发条件（任一）：`DEVE_ENV=development` 或 `cfg!(debug_assertions)`（debug 构建）。
     pub fn from_env() -> Result<Self> {
         let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
+        let explicit_dev = env.eq_ignore_ascii_case("development");
+        let is_debug_build = cfg!(debug_assertions);
         let secret = std::env::var("AUTH_SECRET").ok();
         let password_hash = std::env::var("AUTH_PASS").ok();
 
         if secret.is_none() || password_hash.is_none() {
-            if env.eq_ignore_ascii_case("development") {
+            if explicit_dev || is_debug_build {
+                if is_debug_build && !explicit_dev {
+                    tracing::info!("Debug build detected → auto dev mode (set DEVE_ENV=production to override)");
+                }
                 return Self::dev_default();
             }
             return Err(anyhow!(
