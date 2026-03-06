@@ -4,7 +4,7 @@
 //! 显示数据库大小和文档数量。
 
 use crate::hooks::use_core::SystemMetricsData;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 /// 将字节数格式化为人类可读单位 (KB / MB / GB)

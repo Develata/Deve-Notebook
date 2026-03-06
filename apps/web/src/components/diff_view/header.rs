@@ -1,5 +1,5 @@
 use crate::components::icons::X;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

@@ -2,7 +2,7 @@
 //! # Mobile Header
 
 use crate::components::icons::{Book, Home, Terminal};
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

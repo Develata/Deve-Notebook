@@ -25,10 +25,7 @@ pub enum FsEventType {
     /// 目录结构变更 (需要重新扫描树)
     DirChange,
     /// 文件变更已记录到 pending_fs_ops (不自动 ingest)
-    FsPendingChange {
-        path: String,
-        change_type: String,
-    },
+    FsPendingChange { path: String, change_type: String },
 }
 
 pub struct Watcher {

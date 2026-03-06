@@ -6,7 +6,7 @@
 
 use crate::components::icons::X;
 use crate::components::settings_sections::{AiBackendSection, SyncModeSection};
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

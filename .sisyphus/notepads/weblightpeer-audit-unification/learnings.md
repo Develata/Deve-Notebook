@@ -144,3 +144,34 @@
 **后续协调**:
 - T6 浏览器身份实现时，前端连接逻辑应使用同源相对 `/ws` 路径（与 T2 协议契约一致）
 - T11 文档同步时，需将 `ALLOWED_ORIGINS` 环境变量写入部署文档
+
+---
+
+## [2026-03-06 T6a] 浏览器存储骨架落位
+
+**关键发现**:
+- `apps/web/src/storage/` 骨架应先只承载类型边界与中文文档，避免在未接入 `use_core` 前引入级联编译错误
+- `PrefsStorage` 与 `IdentityStorage` 的职责边界必须先固定：前者只包裹 `localStorage` 偏好，后者只负责 `IndexedDB + WebCrypto` 的 repo-scoped identity 占位
+- 骨架阶段用 `todo!()` 保留 API 形状，比提前写伪实现更稳妥，可避免错误的浏览器安全语义固化
+
+**实现约定**:
+- `StorageError` 统一承载 `Unavailable`、`InvalidInput`、`Backend` 三类前端存储错误边界
+- `PeerIdentity` 暂以 `public_key: Vec<u8>` 与 `metadata: serde_json::Value` 作为跨层占位，等待 T6b 接入真实 JS bridge
+
+
+## [2026-03-06 T6] 浏览器身份持久化基座
+
+**关键发现**:
+- 现有 `use_core` 把浏览器 peer 私钥字节直接塞进 `localStorage`，既破坏存储分层，也会在受限上下文触发 panic。
+- 通过 `wasm-bindgen` 内联 JS 桥接可把 IndexedDB/WebCrypto 的异步复杂度封装在单独模块内，Rust 侧只保留公钥、repo metadata 与降级判定。
+- `trunk build` 在默认 `apps/web/dist` 路径会因 Windows 文件系统移动 `.stage/js` 目录报 `os error 5`，改为输出到工作区临时目录可稳定完成构建验证。
+
+**实现约定**:
+- `apps/web/src/storage/mod.rs` 定义 `StorageCapabilities`、`DegradedSyncMode`、`RepoMetadata` 与统一 `StorageError`。
+- `apps/web/src/storage/js_bridge.rs` 负责 WebCrypto Ed25519 生成/签名、IndexedDB 三类 store（`peer_identity` / `repo_meta` / `offline_cache`）与能力探测。
+- `use_core` 通过 `storage_runtime` 初始化 repo-scoped identity 和向量缓存；握手 effect 改为读取 WebCrypto 签名结果，不再依赖 Rust `IdentityKeyPair`。
+
+**降级行为**:
+- 只要 WebCrypto、IndexedDB 或 Ed25519 任一不可用，就设置 `DegradedSyncMode`，顶部横幅说明“允许查看与拉取，禁止 Peer 注册、编辑提交与 SyncPush”。
+- 降级态仍请求 `ListDocs` / `ListRepos`，因此 dashboard 与只读拉取不受阻塞。
+- `is_spectator` 现在同时覆盖远端影子分支与浏览器持久存储降级，确保编辑入口自动进入只读保护。

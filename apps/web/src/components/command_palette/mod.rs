@@ -12,7 +12,7 @@ pub use types::Command;
 
 use self::registry::{create_static_commands, filter_commands};
 use crate::components::icons::{ArrowRight, Search, Zap};
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
@@ -52,11 +52,7 @@ pub fn CommandPalette(
             return 0;
         }
         let current = selected_index.get();
-        if current >= count {
-            0
-        } else {
-            current
-        }
+        if current >= count { 0 } else { current }
     };
 
     // 键盘导航

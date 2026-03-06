@@ -15,7 +15,7 @@
 use crate::components::icons::GitBranch;
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::BranchContext;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
@@ -40,11 +40,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
         }
         Some(peer) => {
             let s = peer.to_string();
-            if compact {
-                compact_branch_name(&s)
-            } else {
-                s
-            }
+            if compact { compact_branch_name(&s) } else { s }
         }
     };
 

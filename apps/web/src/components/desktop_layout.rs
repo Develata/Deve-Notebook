@@ -37,6 +37,8 @@ pub fn DesktopLayout(
         _do_resize,
         _is_resizing,
     ) = layout;
+    let banner_toggle = core.clone();
+    let banner_text = core.clone();
 
     view! {
         <Header
@@ -45,6 +47,11 @@ pub fn DesktopLayout(
             on_open=on_open
             on_command=on_command
         />
+        <Show when=move || banner_toggle.sync_banner.get().is_some()>
+            <div class="mx-4 mt-2 rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-xs font-medium text-amber-950">
+                {move || banner_text.sync_banner.get().unwrap_or_default()}
+            </div>
+        </Show>
         <main
             class="flex-1 w-full flex overflow-hidden relative"
             style=move || {

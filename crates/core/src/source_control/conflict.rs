@@ -53,10 +53,7 @@ pub fn check_conflict(
 /// 从 Ledger 获取文档当前内容 (通过 doc_content 表)
 ///
 /// 这里复用 Ledger 的文档存储，而非重新组装 Op。
-fn get_ledger_content(
-    db: &Database,
-    doc_id: crate::models::DocId,
-) -> Result<Option<String>> {
+fn get_ledger_content(db: &Database, doc_id: crate::models::DocId) -> Result<Option<String>> {
     // 利用快照表获取已提交内容作为 baseline
     // 实际 Ledger 内容需通过 repo.get_doc_content() 获取
     // 但此处仅访问 db，复用 SNAPSHOTS_TABLE 已足够：

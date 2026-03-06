@@ -4,7 +4,7 @@
 //! 扩展视图的占位符。计划在第三阶段实现插件系统。
 
 use crate::components::icons::Puzzle;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

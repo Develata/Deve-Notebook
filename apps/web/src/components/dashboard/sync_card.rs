@@ -4,7 +4,7 @@
 //! 显示已连接的 Peer 数量和已处理的操作总数。
 
 use crate::hooks::use_core::SystemMetricsData;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

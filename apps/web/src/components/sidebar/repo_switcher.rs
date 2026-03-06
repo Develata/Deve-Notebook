@@ -1,6 +1,6 @@
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::BranchContext;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

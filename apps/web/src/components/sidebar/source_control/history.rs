@@ -7,8 +7,8 @@ use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use crate::utils::time::format_relative;
-use leptos::prelude::*;
 use deve_core::source_control::ChangeStatus;
+use leptos::prelude::*;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {

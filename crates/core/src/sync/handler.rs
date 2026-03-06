@@ -8,8 +8,8 @@ use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
 use crate::models::RepoType;
 use crate::protocol::ServerMessage;
-use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::source_control::ChangeStatus;
+use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::sync::recovery;
 use crate::vfs::Vfs;
 use anyhow::Result;
@@ -42,7 +42,10 @@ impl<'a> FsEventHandler<'a> {
         // CASE 1: File Deleted (or moved out of scope)
         if !file_path.exists() {
             if let Some(_doc_id) = self.repo.get_docid(path_str)? {
-                warn!("Handler: File gone: {}. Recording as pending delete.", path_str);
+                warn!(
+                    "Handler: File gone: {}. Recording as pending delete.",
+                    path_str
+                );
                 self.repo.delete_doc(path_str)?;
                 self.upsert_pending(path_str, ChangeStatus::Deleted)?;
                 let mut msgs = self.gen_list()?;
@@ -137,9 +140,8 @@ impl<'a> FsEventHandler<'a> {
         };
         // 实时冲突检测: 检查 FS 与 Ledger 是否均偏离已提交快照
         let has_conflict = if let Ok(Some(doc_id)) = self.repo.get_docid(path_str) {
-            crate::source_control::conflict::check_conflict(
-                &self.repo.local_db, doc_id, &hash,
-            ).unwrap_or(false)
+            crate::source_control::conflict::check_conflict(&self.repo.local_db, doc_id, &hash)
+                .unwrap_or(false)
         } else {
             false
         };

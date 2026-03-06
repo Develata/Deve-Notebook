@@ -1,6 +1,6 @@
 // apps/web/src/components/chat/actions.rs
-use crate::editor::ffi::getEditorContent;
 use crate::editor::ffi::get_editor_selection;
+use crate::editor::ffi::getEditorContent;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;

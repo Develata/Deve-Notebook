@@ -4,7 +4,7 @@
 //! 显示 CPU 使用率、内存占用和服务器运行时间。
 
 use crate::hooks::use_core::SystemMetricsData;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 /// 将秒数格式化为 "Xd Xh Xm" 可读格式

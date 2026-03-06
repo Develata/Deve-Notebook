@@ -5,12 +5,12 @@
 //! 从 `mod.rs` 拆分以保持单文件行数在 130 行目标以内。
 
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use std::sync::Arc;
 
-use super::{auth, handlers, node_role_http, rate_limit, setup, static_files, ws, AppState};
+use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
 
 /// 构建完整的 Axum 应用路由
 ///

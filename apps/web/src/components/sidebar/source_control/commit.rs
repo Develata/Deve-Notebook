@@ -7,7 +7,7 @@
 
 use crate::components::icons::*;
 use crate::hooks::use_core::{ChatContext, SourceControlContext};
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 

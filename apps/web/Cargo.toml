@@ -34,6 +34,7 @@ sublime_fuzzy = "0.7.0"
 leptos-use = "0.18.0"
 similar = "2.7.0"
 pulldown-cmark = "0.10"
+wasm-bindgen-futures = "0.4.64"
 
 # 注: WASM 专用 profile 已在 workspace root (Cargo.toml) 中配置:
 # - opt-level = "z", codegen-units = 1, strip = true

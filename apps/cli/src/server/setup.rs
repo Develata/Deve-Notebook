@@ -27,7 +27,10 @@ pub(super) fn build_cors_layer(_port: u16) -> CorsLayer {
             .collect::<Vec<_>>(),
         ("development", None) => {
             tracing::warn!("Development mode: allowing localhost CORS origins");
-            vec!["http://localhost:8080".to_string(), "http://127.0.0.1:8080".to_string()]
+            vec![
+                "http://localhost:8080".to_string(),
+                "http://127.0.0.1:8080".to_string(),
+            ]
         }
         _ => panic!("Production mode requires ALLOWED_ORIGINS"),
     };
@@ -105,7 +108,11 @@ pub(super) fn spawn_file_watcher(
                 }
                 FsEventType::FsPendingChange { path, change_type } => {
                     tracing::info!("FsPendingChange: {} ({})", path, change_type);
-                    let _ = tx.send(ServerMessage::FsChangeDetected { path, change_type, has_conflict: false });
+                    let _ = tx.send(ServerMessage::FsChangeDetected {
+                        path,
+                        change_type,
+                        has_conflict: false,
+                    });
                 }
             },
         );

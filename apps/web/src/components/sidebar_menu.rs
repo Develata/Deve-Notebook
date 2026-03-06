@@ -7,7 +7,7 @@ use leptos::prelude::*;
 
 use crate::components::dropdown::{Align, AnchorRect, Dropdown};
 use crate::components::icons;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 
 /// 菜单操作类型
 #[derive(Clone, Copy, Debug, PartialEq)]

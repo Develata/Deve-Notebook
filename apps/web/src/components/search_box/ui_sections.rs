@@ -1,9 +1,9 @@
 use crate::components::icons::{GitBranch, Search, Terminal};
+use crate::components::search_box::SearchUiMode;
 use crate::components::search_box::result_item::result_item;
 use crate::components::search_box::types::SearchResult;
-use crate::components::search_box::SearchUiMode;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use std::sync::Arc;
 

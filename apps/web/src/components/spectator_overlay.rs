@@ -6,7 +6,7 @@
 
 use crate::components::icons::Lock;
 use crate::hooks::use_core::EditorContext;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 /// 旁观者模式覆盖层

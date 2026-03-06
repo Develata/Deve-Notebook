@@ -4,6 +4,7 @@
 //! 定义 `use_core` 所需的所有响应式信号。
 
 use crate::editor::EditorStats;
+use crate::storage::DegradedSyncMode;
 use deve_core::models::{DocId, PeerId};
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use deve_core::tree::FileNode;
@@ -103,6 +104,12 @@ pub struct CoreSignals {
     // Dashboard 系统指标
     pub system_metrics: ReadSignal<Option<SystemMetricsData>>,
     pub set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
+
+    // 浏览器存储降级
+    pub degraded_sync_mode: ReadSignal<Option<DegradedSyncMode>>,
+    pub set_degraded_sync_mode: WriteSignal<Option<DegradedSyncMode>>,
+    pub sync_banner: ReadSignal<Option<String>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
 }
 
 /// 初始化所有核心信号
@@ -128,7 +135,10 @@ pub fn init_signals() -> CoreSignals {
     let (repo_list, set_repo_list) = signal(Vec::new());
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
-    let is_spectator = Memo::new(move |_| active_branch.get().is_some());
+    let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
+    let (sync_banner, set_sync_banner) = signal(None::<String>);
+    let is_spectator =
+        Memo::new(move |_| active_branch.get().is_some() || degraded_sync_mode.get().is_some());
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
@@ -195,5 +205,9 @@ pub fn init_signals() -> CoreSignals {
         set_tree_nodes,
         system_metrics,
         set_system_metrics,
+        degraded_sync_mode,
+        set_degraded_sync_mode,
+        sync_banner,
+        set_sync_banner,
     }
 }

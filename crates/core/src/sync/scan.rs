@@ -54,7 +54,11 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
                     }
 
                     // 记录到 pending_fs_ops（新文件 Added，已有文件 Modified）
-                    let status = if is_new { ChangeStatus::Added } else { ChangeStatus::Modified };
+                    let status = if is_new {
+                        ChangeStatus::Added
+                    } else {
+                        ChangeStatus::Modified
+                    };
                     let hash = upsert_scan_pending(repo, vault_root, &path_str, status);
                     if let Err(e) = hash {
                         warn!("SyncScan: pending upsert 失败 {}: {:?}", path_str, e);

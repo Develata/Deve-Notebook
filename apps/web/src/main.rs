@@ -27,6 +27,7 @@ mod editor;
 mod hooks;
 mod i18n;
 mod shortcuts;
+mod storage;
 mod utils;
 use app::App;
 use leptos::prelude::*;

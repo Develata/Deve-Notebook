@@ -62,7 +62,10 @@ fn resolve_keep_ledger(state: &Arc<AppState>, path: &str) -> anyhow::Result<()> 
         .get_docid(path)?
         .ok_or_else(|| anyhow::anyhow!("Document not found: {}", path))?;
 
-    let committed = state.repo.get_committed_content(doc_id)?.unwrap_or_default();
+    let committed = state
+        .repo
+        .get_committed_content(doc_id)?
+        .unwrap_or_default();
 
     // 将 Ledger 内容写回磁盘
     let disk_path = state.vault_path.join(path);

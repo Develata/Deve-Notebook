@@ -8,6 +8,7 @@ pub mod locator;
 pub mod maintenance;
 pub mod types;
 
+mod commit_ops;
 mod merge_ops;
 mod metadata_ops;
 mod ops_ops;
@@ -16,4 +17,3 @@ mod snapshot_ops;
 mod source_control_api;
 mod source_control_ops;
 mod source_control_query_ops;
-mod commit_ops;

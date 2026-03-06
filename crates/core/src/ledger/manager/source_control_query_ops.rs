@@ -5,9 +5,9 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::metadata;
-use crate::source_control::{ChangeEntry, CommitFileDiff};
 use crate::source_control::diff;
 use crate::source_control::snapshot_paths;
+use crate::source_control::{ChangeEntry, CommitFileDiff};
 use crate::state::reconstruct_content;
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
@@ -30,7 +30,11 @@ impl RepoManager {
             let current = reconstruct_content(&entries);
 
             if let Some(status) = self.detect_change(committed.as_deref(), Some(&current)) {
-                changes.push(ChangeEntry { path, status, has_conflict: false });
+                changes.push(ChangeEntry {
+                    path,
+                    status,
+                    has_conflict: false,
+                });
             }
         }
 
@@ -40,7 +44,11 @@ impl RepoManager {
             }
             let committed = self.get_committed_content(doc_id)?;
             if let Some(status) = self.detect_change(committed.as_deref(), None) {
-                changes.push(ChangeEntry { path, status, has_conflict: false });
+                changes.push(ChangeEntry {
+                    path,
+                    status,
+                    has_conflict: false,
+                });
             }
         }
 

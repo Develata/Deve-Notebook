@@ -4,7 +4,7 @@
 //! Floating button to toggle the document outline panel.
 
 use crate::components::icons::PanelLeft;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

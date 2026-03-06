@@ -4,7 +4,7 @@
 //! 侧边栏视图类型，在 ActivityBar、Sidebar、Layout 等组件间共享。
 
 use crate::components::icons;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Hash)]

@@ -35,6 +35,7 @@ pub struct CoreState {
     pub current_doc: ReadSignal<Option<DocId>>,
     pub set_current_doc: WriteSignal<Option<DocId>>,
     pub status_text: Signal<String>,
+    pub sync_banner: Signal<Option<String>>,
     pub stats: ReadSignal<EditorStats>,
 
     // P2P 状态

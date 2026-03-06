@@ -9,7 +9,7 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::range;
-use crate::source_control::{changes, commits, staging, ChangeStatus, CommitInfo};
+use crate::source_control::{ChangeStatus, CommitInfo, changes, commits, staging};
 use crate::sync::reconcile;
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;

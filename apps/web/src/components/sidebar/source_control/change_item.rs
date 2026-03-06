@@ -6,7 +6,7 @@
 
 use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use deve_core::source_control::{ChangeEntry, ChangeStatus, ConflictResolution};
 use leptos::prelude::*;
 

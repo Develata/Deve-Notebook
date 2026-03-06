@@ -5,65 +5,105 @@
 //! SC 相关消息已拆分到 `effects_sc.rs`。
 
 use crate::api::{ConnectionStatus, WsService};
+use crate::storage::DegradedSyncMode;
+use crate::storage::identity::{
+    StoredPeerIdentity, note_handshake, save_repo_vector, sign_sync_hello,
+};
 use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::rc::Rc;
-use std::sync::Arc;
 
 use super::apply::apply_tree_delta;
 use super::effects_msg;
 use super::effects_sc;
 use super::state::CoreSignals;
-/// 设置握手 Effect
-///
-/// 在连接成功后发送 P2P 握手消息及初始请求。
+
+/// 设置握手 Effect。
 pub fn setup_handshake_effect(
     ws: &WsService,
-    key_pair: Arc<deve_core::security::IdentityKeyPair>,
-    peer_id: PeerId,
+    identity: ReadSignal<Option<StoredPeerIdentity>>,
+    repo_vector: ReadSignal<VersionVector>,
+    degraded: ReadSignal<Option<DegradedSyncMode>>,
 ) {
     let ws_clone = ws.clone();
     let status_signal = ws.status;
-    let pid = peer_id.clone();
-    let kp_clone = key_pair.clone();
+    let endpoint_signal = ws.endpoint;
+    let last_mode = Rc::new(RefCell::new(None::<String>));
 
     Effect::new(move |_| {
-        if status_signal.get() == ConnectionStatus::Connected {
+        if status_signal.get() != ConnectionStatus::Connected {
+            *last_mode.borrow_mut() = None;
+            return;
+        }
+
+        let Some(mode_key) = degraded
+            .get()
+            .as_ref()
+            .map(|_| format!("{}::degraded", endpoint_signal.get()))
+            .or_else(|| {
+                identity
+                    .get()
+                    .as_ref()
+                    .map(|id| format!("{}::{}", endpoint_signal.get(), id.repo_id))
+            })
+        else {
+            return;
+        };
+        if last_mode.borrow().as_deref() == Some(mode_key.as_str()) {
+            return;
+        }
+        *last_mode.borrow_mut() = Some(mode_key);
+
+        let ws = ws_clone.clone();
+        let maybe_mode = degraded.get();
+        let maybe_identity = identity.get();
+        let vector = repo_vector.get();
+        spawn_local(async move {
+            if let Some(mode) = maybe_mode {
+                leptos::logging::warn!("{}", mode.banner_text());
+                ws.send(ClientMessage::ListDocs);
+                ws.send(ClientMessage::ListRepos);
+                return;
+            }
+            let Some(identity) = maybe_identity else {
+                return;
+            };
+
             leptos::logging::log!("已连接! 发送 SyncHello...");
-
-            // 确定性序列化: 转换为 BTreeMap (排序键)
-            let local_vector = VersionVector::new();
-            let sorted_map: std::collections::BTreeMap<_, _> = local_vector.iter().collect();
+            let sorted_map: BTreeMap<_, _> = vector.iter().collect();
             let vec_bytes = serde_json::to_vec(&sorted_map).unwrap_or_default();
-
             let mut msg = Vec::new();
             msg.extend_from_slice(b"deve-handshake");
-            msg.extend_from_slice(pid.as_str().as_bytes());
+            msg.extend_from_slice(identity.peer_id.as_bytes());
             msg.extend_from_slice(&vec_bytes);
 
-            let signature = kp_clone.sign(&msg);
-
-            // 发送 P2P 握手
-            ws_clone.send(ClientMessage::SyncHello {
-                peer_id: pid.clone(),
-                pub_key: kp_clone.public_key_bytes().to_vec(),
-                signature,
-                vector: local_vector,
-            });
-            // 请求文档列表
-            ws_clone.send(ClientMessage::ListDocs);
-            // 请求仓库列表
-            ws_clone.send(ClientMessage::ListRepos);
-        }
+            match sign_sync_hello(&identity, &msg).await {
+                Ok(signature) => {
+                    let peer_id = PeerId::new(&identity.peer_id);
+                    let vector_json = serde_json::to_string(&vector).unwrap_or_default();
+                    let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
+                    let _ = note_handshake(&identity.repo_id).await;
+                    ws.send(ClientMessage::SyncHello {
+                        peer_id,
+                        pub_key: identity.public_key.clone(),
+                        signature,
+                        vector,
+                    });
+                }
+                Err(err) => leptos::logging::error!("WebCrypto 握手签名失败: {}", err),
+            }
+            ws.send(ClientMessage::ListDocs);
+            ws.send(ClientMessage::ListRepos);
+        });
     });
 }
 
-/// 设置消息处理 Effect
-///
-/// 订阅 WebSocket 消息并更新对应信号。
+/// 设置消息处理 Effect。
 pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let ws_rx = ws.clone();
     let set_docs = signals.set_docs;
@@ -88,6 +128,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_chat_messages = signals.set_chat_messages;
     let set_is_chat_streaming = signals.set_is_chat_streaming;
     let set_system_metrics = signals.set_system_metrics;
+    let current_repo = signals.current_repo;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
 
     Effect::new(move |_| {
@@ -114,15 +155,21 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::SyncHello {
                     peer_id, vector, ..
                 } => {
-                    effects_msg::handle_sync_hello(peer_id, vector, set_peers);
+                    effects_msg::handle_sync_hello(peer_id, vector.clone(), set_peers);
+                    let repo_id = current_repo
+                        .get_untracked()
+                        .unwrap_or_else(|| "default".to_string());
+                    spawn_local(async move {
+                        let vector_json = serde_json::to_string(&vector).unwrap_or_default();
+                        let _ = save_repo_vector(&repo_id, &vector_json).await;
+                        let _ = note_handshake(&repo_id).await;
+                    });
                 }
                 ServerMessage::PluginResponse {
                     req_id,
                     result,
                     error,
-                } => {
-                    set_plugin_response.set(Some((req_id, result, error)));
-                }
+                } => set_plugin_response.set(Some((req_id, result, error))),
                 ServerMessage::ChatChunk {
                     req_id,
                     delta,
@@ -136,12 +183,8 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                         set_is_chat_streaming,
                     );
                 }
-                ServerMessage::SearchResults { results } => {
-                    set_search_results.set(results);
-                }
-                ServerMessage::SyncModeStatus { mode } => {
-                    set_sync_mode.set(mode);
-                }
+                ServerMessage::SearchResults { results } => set_search_results.set(results),
+                ServerMessage::SyncModeStatus { mode } => set_sync_mode.set(mode),
                 ServerMessage::PendingOpsInfo { count, previews } => {
                     set_pending_ops_count.set(count);
                     set_pending_ops_previews.set(previews);
@@ -156,14 +199,8 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     set_pending_ops_count.set(0);
                     set_pending_ops_previews.set(vec![]);
                 }
-                ServerMessage::ShadowList { shadows } => {
-                    leptos::logging::log!("收到 {} 个影子库", shadows.len());
-                    set_shadow_repos.set(shadows);
-                }
-                ServerMessage::RepoList { repos } => {
-                    leptos::logging::log!("收到 {} 个仓库", repos.len());
-                    set_repo_list.set(repos);
-                }
+                ServerMessage::ShadowList { shadows } => set_shadow_repos.set(shadows),
+                ServerMessage::RepoList { repos } => set_repo_list.set(repos),
                 ServerMessage::BranchSwitched { peer_id, success } => {
                     effects_msg::handle_branch_switched(
                         &ws_rx,
@@ -180,10 +217,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);
                 }
                 ServerMessage::TreeUpdate(delta) => {
-                    // 应用文件树增量更新
-                    set_tree_nodes.update(|nodes| {
-                        apply_tree_delta(nodes, delta);
-                    });
+                    set_tree_nodes.update(|nodes| apply_tree_delta(nodes, delta));
                 }
                 other_sc => {
                     if !effects_sc::handle_sc_message(
@@ -199,7 +233,7 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                         effects_msg::handle_remaining(other_sc, set_system_metrics);
                     }
                 }
-                }
+            }
         }
     });
 }

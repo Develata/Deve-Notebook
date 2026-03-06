@@ -9,7 +9,7 @@ use super::footer_status::{LoadStatus, StatusView};
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::components::icons::{ChevronDown, ChevronUp};
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use web_sys::UiEvent;
 

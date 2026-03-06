@@ -5,7 +5,7 @@ mod tests {
     use deve_core::ledger::RepoManager;
     use deve_core::source_control::pending_fs::{self, PendingFsEntry};
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
-    use tempfile::{tempdir, TempDir};
+    use tempfile::{TempDir, tempdir};
 
     fn new_repo() -> (TempDir, RepoManager) {
         let dir = tempdir().expect("create tempdir");
@@ -43,9 +43,11 @@ mod tests {
         repo.stage_file("notes/a.md").expect("stage a");
         repo.stage_file("notes/b.md").expect("stage b");
         let staged = repo.list_staged().expect("list staged");
-        assert!(staged
-            .iter()
-            .any(|e| e.path == "notes/a.md" && e.status == ChangeStatus::Modified));
+        assert!(
+            staged
+                .iter()
+                .any(|e| e.path == "notes/a.md" && e.status == ChangeStatus::Modified)
+        );
         assert!(staged.iter().any(|e| e.path == "notes/b.md"));
         repo.unstage_file("notes/b.md").expect("unstage b");
         let staged2 = repo.list_staged().expect("list staged after unstage");
@@ -103,10 +105,11 @@ mod tests {
         assert_eq!(pending.len(), 1);
         assert_eq!(pending[0].path, path);
         repo.stage_pending(path).expect("stage pending");
-        assert!(repo
-            .list_pending_fs()
-            .expect("pending after stage")
-            .is_empty());
+        assert!(
+            repo.list_pending_fs()
+                .expect("pending after stage")
+                .is_empty()
+        );
         let staged = repo.list_staged().expect("staged after pending->staged");
         assert_eq!(staged.len(), 1);
         assert_eq!(staged[0].path, path);

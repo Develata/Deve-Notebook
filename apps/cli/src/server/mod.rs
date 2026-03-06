@@ -39,10 +39,10 @@ pub mod node_role_http;
 pub mod plugin_host;
 pub mod prewarm;
 mod rate_limit;
+mod router;
 pub mod security;
 pub mod session;
 mod setup;
-mod router;
 pub mod source_control_proxy;
 pub mod static_files;
 pub mod ws;
@@ -171,7 +171,6 @@ pub async fn start_server(
     .await?;
     Ok(())
 }
-
 
 pub async fn start_plugin_host_only(
     plugins: Vec<Box<dyn PluginRuntime>>,

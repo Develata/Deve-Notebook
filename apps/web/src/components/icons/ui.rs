@@ -6,7 +6,10 @@ use leptos::prelude::*;
 // ────── Status ──────
 
 icon!(Zap, view! { <path d="M13 2 3 14h9l-1 10 10-12h-9l1-10z"/> });
-icon!(AlertTriangle, view! { <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/> });
+icon!(
+    AlertTriangle,
+    view! { <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/> }
+);
 
 icon!(
     Lock,

@@ -1,6 +1,6 @@
 // apps/web/src/components/disconnect_overlay.rs
 use crate::api::ConnectionStatus;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

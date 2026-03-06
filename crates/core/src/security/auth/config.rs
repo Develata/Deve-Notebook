@@ -9,7 +9,7 @@
 //! - `AUTH_PASS`: Argon2 哈希后的密码
 //! - `AUTH_ALLOW_ANONYMOUS_LOCALHOST`: 是否允许 localhost 免密
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use tracing::warn;
 
 /// 认证配置 (不可变，加载后冻结)

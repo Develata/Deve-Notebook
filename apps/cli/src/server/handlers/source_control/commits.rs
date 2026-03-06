@@ -79,7 +79,10 @@ pub async fn handle_commit_and_push(state: &Arc<AppState>, ch: &DualChannel, mes
         Some((doc_id, content))
     };
 
-    match state.repo.create_commit_with_snapshots(&message, get_content) {
+    match state
+        .repo
+        .create_commit_with_snapshots(&message, get_content)
+    {
         Ok(info) => {
             tracing::info!("Commit & Push: {} - {}", info.id, info.message);
             // 广播提交成功 (CRDT 同步由 SyncHello 握手触发)

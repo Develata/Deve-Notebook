@@ -4,7 +4,7 @@
 //! 提供 "New Doc" 和 "Sync Now" 按钮。
 
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]

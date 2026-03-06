@@ -58,7 +58,8 @@ pub fn compute_line_ranges(old: &str, new: &str) -> Vec<ChangeRange> {
 /// 合并连续同类型变更为单个范围
 fn push_or_extend(ranges: &mut Vec<ChangeRange>, kind: &str, line: u32) {
     if let Some(last) = ranges.last_mut()
-        && last.kind == kind && last.end_line >= line.saturating_sub(1)
+        && last.kind == kind
+        && last.end_line >= line.saturating_sub(1)
     {
         last.end_line = line;
         return;

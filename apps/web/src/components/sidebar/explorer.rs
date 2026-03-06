@@ -8,7 +8,7 @@ use crate::components::icons::Plus;
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::types::FileActionsContext;
 use crate::hooks::use_core::{BranchContext, DocContext};
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::prelude::*;
 

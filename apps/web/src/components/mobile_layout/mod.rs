@@ -69,6 +69,8 @@ pub fn MobileLayout(
     };
     let current_doc = core.current_doc;
     let diff_content = core.diff_content;
+    let banner_toggle = core.clone();
+    let banner_text = core.clone();
 
     let close_drawers = Callback::new(move |_| {
         set_show_sidebar.set(false);
@@ -126,6 +128,12 @@ pub fn MobileLayout(
                 on_open=on_open
                 on_command=on_command
             />
+
+            <Show when=move || banner_toggle.sync_banner.get().is_some()>
+                <div class="mx-3 mt-2 rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-[11px] font-medium text-amber-950">
+                    {move || banner_text.sync_banner.get().unwrap_or_default()}
+                </div>
+            </Show>
 
             <MobileContent core=core.clone() drawer_open=drawer_open />
 

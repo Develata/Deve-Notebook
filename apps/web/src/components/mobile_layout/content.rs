@@ -16,7 +16,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
             class:pointer-events-none=move || drawer_open.get()
             class:opacity-80=move || drawer_open.get()
         >
-            <Show when=move || core.is_spectator.get()>
+            <Show when=move || core.is_spectator.get() && core.sync_banner.get().is_none()>
                 <div class="h-6 px-3 flex items-center text-[11px] font-medium text-orange-900 bg-orange-200 border-b border-orange-300">
                     {move || t::common::read_only_mode(locale.get())}
                 </div>

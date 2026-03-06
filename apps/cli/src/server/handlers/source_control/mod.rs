@@ -4,15 +4,15 @@
 
 pub mod changes;
 pub mod commits;
+pub mod conflict;
 pub mod diff;
 pub mod discard;
 pub mod http;
 pub mod staging;
-pub mod conflict;
 
 pub use changes::*;
 pub use commits::*;
+pub use conflict::*;
 pub use diff::*;
 pub use discard::*;
 pub use staging::*;
-pub use conflict::*;

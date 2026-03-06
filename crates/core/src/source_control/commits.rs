@@ -57,7 +57,12 @@ pub fn create(db: &Database, message: &str, doc_count: u32, ledger_seq: u64) -> 
     }
     write_txn.commit()?;
 
-    tracing::info!("Created commit: {} (parent: {:?}) - {}", commit_id, info.parent_id, message);
+    tracing::info!(
+        "Created commit: {} (parent: {:?}) - {}",
+        commit_id,
+        info.parent_id,
+        message
+    );
     Ok(info)
 }
 

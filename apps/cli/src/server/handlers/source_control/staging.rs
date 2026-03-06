@@ -78,4 +78,3 @@ fn normalized_unique_paths(paths: Vec<String>) -> Vec<String> {
         .filter(|p| seen.insert(p.clone()))
         .collect()
 }
-

@@ -12,7 +12,7 @@ mod storage_card;
 mod sync_card;
 
 use crate::hooks::use_core::DashboardContext;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 use self::actions_card::ActionsCard;

@@ -11,8 +11,7 @@
 use crate::ledger::range;
 use crate::models::DocId;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, changes, commits, pending_fs,
-    staging,
+    ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, changes, commits, pending_fs, staging,
 };
 use anyhow::Result;
 use redb::Database;
@@ -46,7 +45,11 @@ pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
     let entries = staging::list_staged_with_status(db)?;
     Ok(entries
         .into_iter()
-        .map(|(path, status)| ChangeEntry { path, status, has_conflict: false })
+        .map(|(path, status)| ChangeEntry {
+            path,
+            status,
+            has_conflict: false,
+        })
         .collect())
 }
 

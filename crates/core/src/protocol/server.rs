@@ -190,7 +190,6 @@ pub enum ServerMessage {
         has_conflict: bool,
     },
 
-
     /// 冲突解决确认
     ///
     /// 注意: 协议枚举必须追加新变体，避免破坏 bincode 兼容性。

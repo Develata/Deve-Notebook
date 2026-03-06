@@ -19,22 +19,22 @@ pub mod types;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod changes;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod commit_diff;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod commits;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod conflict;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pending_fs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod snapshot_paths;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod staging;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod pending_fs;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod commit_diff;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod conflict;
 
 // 重新导出常用类型
 pub use api::SourceControlApi;
-pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
 pub use line_diff::ChangeRange;
+pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
 
 /// 提交时对快照的更新策略
 pub enum SnapshotUpdate {
