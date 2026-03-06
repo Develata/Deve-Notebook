@@ -9,26 +9,32 @@
 //! 2. glob 搜索遵守 .gitignore 规则（通过 ignore crate）
 //! 3. grep 仅搜索文本文件（跳过二进制文件）
 
-use ignore::WalkBuilder;
+use crate::plugin::manifest::Capability;
 use ignore::overrides::OverrideBuilder;
+use ignore::WalkBuilder;
 use regex::Regex;
 use rhai::{Engine, EvalAltResult};
+use std::sync::Arc;
 
 /// 最大返回结果数（768 MB 内存安全阈值）
 const MAX_RESULTS: usize = 200;
 
 /// 注册搜索相关 API
-pub fn register_search_api(engine: &mut Engine) {
-    register_search_files(engine);
-    register_grep_files(engine);
+pub fn register_search_api(engine: &mut Engine, caps: Arc<Capability>) {
+    register_search_files(engine, caps.clone());
+    register_grep_files(engine, caps);
 }
 
 /// API: search_files(pattern: &str) -> String
 /// 使用 ignore crate 的 OverrideBuilder 进行 glob 匹配
-fn register_search_files(engine: &mut Engine) {
+fn register_search_files(engine: &mut Engine, caps: Arc<Capability>) {
+    let caps_search = caps.clone();
     engine.register_fn(
         "search_files",
-        |pattern: &str| -> Result<String, Box<EvalAltResult>> {
+        move |pattern: &str| -> Result<String, Box<EvalAltResult>> {
+            if !caps_search.check_search() {
+                return Err("Permission denied: search access not allowed by manifest.".into());
+            }
             let root = std::env::current_dir().map_err(|e| e.to_string())?;
 
             let mut ovr = OverrideBuilder::new(&root);
@@ -61,10 +67,14 @@ fn register_search_files(engine: &mut Engine) {
 }
 
 /// API: grep_files(pattern: &str, path: &str) -> String
-fn register_grep_files(engine: &mut Engine) {
+fn register_grep_files(engine: &mut Engine, caps: Arc<Capability>) {
+    let caps_grep = caps.clone();
     engine.register_fn(
         "grep_files",
-        |pattern: &str, path: &str| -> Result<String, Box<EvalAltResult>> {
+        move |pattern: &str, path: &str| -> Result<String, Box<EvalAltResult>> {
+            if !caps_grep.check_search() {
+                return Err("Permission denied: search access not allowed by manifest.".into());
+            }
             let root = std::env::current_dir().map_err(|e| e.to_string())?;
             let search_root = if path.is_empty() {
                 root.clone()

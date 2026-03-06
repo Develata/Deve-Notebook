@@ -52,10 +52,16 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
         },
     );
 
-    // API: get_project_tree() -> String
+    // API: get_project_tree() -> String (需要 allow_project_tree 权限)
+    let caps_tree = caps.clone();
     engine.register_fn(
         "get_project_tree",
         move || -> Result<String, Box<EvalAltResult>> {
+            if !caps_tree.check_project_tree() {
+                return Err(
+                    "Permission denied: project tree access not allowed by manifest.".into(),
+                );
+            }
             let root = std::env::current_dir().map_err(|e| e.to_string())?;
             let tree = crate::context::DirectoryTree::generate(&root);
             Ok(tree.structure)

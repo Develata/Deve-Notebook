@@ -82,10 +82,10 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
         git::register_git_api(engine, caps.clone());
         chat::register_chat_api(engine, caps.clone());
         util::register_util_api(engine, caps.clone());
-        skill::register_skill_api(engine);
-        search::register_search_api(engine);
+        skill::register_skill_api(engine, caps.clone());
+        search::register_search_api(engine, caps.clone());
         let manager = mcp_manager().unwrap_or_else(|| Arc::new(McpManager::new()));
-        mcp::register_mcp_api(engine, manager);
+        mcp::register_mcp_api(engine, caps.clone(), manager);
     }
 
     // 通用 API (跨平台)

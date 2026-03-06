@@ -36,6 +36,14 @@ pub struct Capability {
     pub allow_env: Vec<String>,
     #[serde(default)]
     pub allow_source_control: bool,
+    #[serde(default)]
+    pub allow_search: bool,
+    #[serde(default)]
+    pub allow_skill: bool,
+    #[serde(default)]
+    pub allow_mcp: bool,
+    #[serde(default)]
+    pub allow_project_tree: bool,
 }
 
 impl Capability {
@@ -90,6 +98,26 @@ impl Capability {
     /// Check if source control access is allowed.
     pub fn check_source_control(&self) -> bool {
         self.allow_source_control
+    }
+
+    /// Check if search access is allowed. (检查搜索权限)
+    pub fn check_search(&self) -> bool {
+        self.allow_search
+    }
+
+    /// Check if skill access is allowed. (检查技能权限)
+    pub fn check_skill(&self) -> bool {
+        self.allow_skill
+    }
+
+    /// Check if MCP access is allowed. (检查 MCP 权限)
+    pub fn check_mcp(&self) -> bool {
+        self.allow_mcp
+    }
+
+    /// Check if project tree access is allowed. (检查项目树权限)
+    pub fn check_project_tree(&self) -> bool {
+        self.allow_project_tree
     }
 }
 

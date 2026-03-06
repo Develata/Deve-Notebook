@@ -4,9 +4,11 @@
 //! **功能**: 暴露 SkillManager 给 Rhai 脚本使用。
 //! **说明**: 技能文件为 Markdown，按需加载以节省 Tokens。
 
+use crate::plugin::manifest::Capability;
 use crate::skill::SkillManager;
 use rhai::{Engine, EvalAltResult};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn skill_dirs() -> Vec<PathBuf> {
     vec![
@@ -39,11 +41,15 @@ fn load_skill_by_name(name: &str) -> Option<crate::skill::Skill> {
 }
 
 /// 注册 Skill API
-pub fn register_skill_api(engine: &mut Engine) {
+pub fn register_skill_api(engine: &mut Engine, caps: Arc<Capability>) {
     // API: list_skills() -> Array<Map>
+    let caps_list = caps.clone();
     engine.register_fn(
         "list_skills",
         move || -> Result<rhai::Dynamic, Box<EvalAltResult>> {
+            if !caps_list.check_skill() {
+                return Err("Permission denied: skill access not allowed by manifest.".into());
+            }
             let skills = list_all_skills();
             let items: Vec<serde_json::Value> = skills
                 .into_iter()
@@ -60,9 +66,13 @@ pub fn register_skill_api(engine: &mut Engine) {
     );
 
     // API: get_skill(name: &str) -> Map | ()
+    let caps_get = caps.clone();
     engine.register_fn(
         "get_skill",
         move |name: &str| -> Result<rhai::Dynamic, Box<EvalAltResult>> {
+            if !caps_get.check_skill() {
+                return Err("Permission denied: skill access not allowed by manifest.".into());
+            }
             match load_skill_by_name(name) {
                 Some(skill) => {
                     let json = serde_json::json!({
