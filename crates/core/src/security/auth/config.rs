@@ -9,7 +9,8 @@
 //! - `AUTH_PASS`: Argon2 哈希后的密码
 //! - `AUTH_ALLOW_ANONYMOUS_LOCALHOST`: 是否允许 localhost 免密
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
+use tracing::warn;
 
 /// 认证配置 (不可变，加载后冻结)
 #[derive(Debug, Clone)]
@@ -29,11 +30,26 @@ pub struct AuthConfig {
 impl AuthConfig {
     /// 从环境变量加载配置
     ///
-    /// # 后置条件
-    /// - `AUTH_SECRET` 必须存在且 >= 32 字节
-    /// - `AUTH_PASS` 必须存在 (Argon2 哈希)
+    /// # 环境驱动行为
+    /// - `DEVE_ENV` 默认为 `production`
+    /// - 生产模式缺少密钥时必须失败关闭
+    /// - 开发模式缺少密钥时才允许回退到 `dev_default()`
     pub fn from_env() -> Result<Self> {
-        let secret = std::env::var("AUTH_SECRET").map_err(|_| anyhow!("AUTH_SECRET not set"))?;
+        let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
+        let secret = std::env::var("AUTH_SECRET").ok();
+        let password_hash = std::env::var("AUTH_PASS").ok();
+
+        if secret.is_none() || password_hash.is_none() {
+            if env == "development" {
+                warn!("WARNING: Development mode with default credentials");
+                return Self::dev_default();
+            }
+            return Err(anyhow!(
+                "Production mode requires AUTH_SECRET and AUTH_PASS"
+            ));
+        }
+
+        let secret = secret.expect("checked above");
 
         if secret.len() < 32 {
             return Err(anyhow!(
@@ -43,8 +59,7 @@ impl AuthConfig {
         }
 
         let username = std::env::var("AUTH_USER").unwrap_or_else(|_| "admin".into());
-
-        let password_hash = std::env::var("AUTH_PASS").map_err(|_| anyhow!("AUTH_PASS not set"))?;
+        let password_hash = password_hash.expect("checked above");
 
         let allow_anon = std::env::var("AUTH_ALLOW_ANONYMOUS_LOCALHOST")
             .map(|v| v == "true" || v == "1")

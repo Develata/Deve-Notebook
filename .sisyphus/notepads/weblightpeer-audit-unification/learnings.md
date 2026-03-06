@@ -79,3 +79,15 @@
 - H5: AC-NET-05
 - M1: AC-AUTH-05
 - M2: AC-AUTH-06
+
+## [2026-03-06 T5a] Auth 启动 fail-closed 配置
+
+**关键发现**:
+- 认证配置层必须先区分 `DEVE_ENV`，否则缺失生产密钥时会意外滑落到开发默认凭据，破坏 fail-closed 原则
+- 更稳妥的判定顺序是先检查 `AUTH_SECRET` / `AUTH_PASS` 是否齐备，再决定是报错还是仅在显式 `development` 下回退
+- 一旦显式提供密钥，应无条件优先使用环境值，这样开发/生产都能共享同一条正常加载路径
+
+**实现约定**:
+- `DEVE_ENV` 缺省值固定为 `production`
+- 非 `development` 模式下，缺少任一认证密钥都返回统一错误 `Production mode requires AUTH_SECRET and AUTH_PASS`
+- `development` 模式下，仅在缺失密钥时记录警告并回退到 `dev_default()`
