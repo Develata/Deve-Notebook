@@ -70,6 +70,7 @@ pub mod transfer;
 /// - `version_vector` 中的所有序列号单调递增。
 /// - `pending_ops` 仅在 `Manual` 模式下累积未应用的操作。
 /// - `repo_key` 用于加密/解密传输的 Ops (可选)。
+#[derive(Clone)]
 pub struct SyncEngine {
     pub local_peer_id: PeerId,
     pub repo: std::sync::Arc<crate::ledger::RepoManager>,
@@ -78,7 +79,6 @@ pub struct SyncEngine {
     pub pending_ops: crate::sync::buffer::PendingOpsBuffer,
     pub repo_key: Option<crate::security::RepoKey>, // Encryption Key
 }
-
 impl SyncEngine {
     /// 创建新的同步引擎实例。
     ///

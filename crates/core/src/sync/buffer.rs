@@ -15,7 +15,7 @@
 use crate::sync::protocol::SyncResponse;
 
 /// 待合并操作缓冲区
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PendingOpsBuffer {
     /// 暂存的操作响应队列
     queue: Vec<SyncResponse>,
