@@ -111,3 +111,79 @@ pub fn reconnecting(locale: Locale) -> &'static str {
         Locale::Zh => "正在重连服务器...请稍候。",
     }
 }
+
+// === Login related ===
+pub fn app_name(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Deve Notebook",
+        Locale::Zh => "Deve 笔记",
+    }
+}
+
+pub fn login_subtitle(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Sign in to continue",
+        Locale::Zh => "登录以继续",
+    }
+}
+
+pub fn username(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Username",
+        Locale::Zh => "用户名",
+    }
+}
+
+pub fn password(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Password",
+        Locale::Zh => "密码",
+    }
+}
+
+pub fn username_placeholder(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Enter username",
+        Locale::Zh => "输入用户名",
+    }
+}
+
+pub fn password_placeholder(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Enter password",
+        Locale::Zh => "输入密码",
+    }
+}
+
+pub fn login_button(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Sign In",
+        Locale::Zh => "登录",
+    }
+}
+
+pub fn logging_in(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Signing in...",
+        Locale::Zh => "登录中...",
+    }
+}
+
+pub fn login_failed(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Invalid username or password",
+        Locale::Zh => "用户名或密码错误",
+    }
+}
+
+pub fn login_error(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Login error",
+        Locale::Zh => "登录错误",
+    }
+}
+    match locale {
+        Locale::En => "Reconnecting to server... please wait.",
+        Locale::Zh => "正在重连服务器...请稍候。",
+    }
+}

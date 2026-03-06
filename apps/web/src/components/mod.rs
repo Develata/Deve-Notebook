@@ -20,6 +20,7 @@ pub mod activity_bar;
 pub mod branch_switcher;
 pub mod chat; // [NEW] AI Chat
 pub mod disconnect_overlay;
+pub mod login;
 pub mod main_layout;
 pub mod merge_modal;
 pub mod merge_modal_slot;
