@@ -3,7 +3,14 @@ target = "index.html"
 no_sri = true
 
 [serve]
-addresses = ["0.0.0.0"]
+addresses = ["127.0.0.1", "0.0.0.0"]
 port = 8080
 open = true
 ws_protocol = "ws"
+
+[[proxy]]
+backend = "http://127.0.0.1:3001/api/"
+
+[[proxy]]
+backend = "ws://127.0.0.1:3001/ws"
+ws = true

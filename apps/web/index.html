@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Deve-Note</title>
+    <script>
+      const host = window.location.hostname;
+      if (host === "0.0.0.0" || host === "::" || host === "[::]") {
+        const next = new URL(window.location.href);
+        next.hostname = "localhost";
+        window.location.replace(next.toString());
+      }
+    </script>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
     <!-- 编辑器样式模块 (按依赖顺序加载) -->
     <link data-trunk rel="css" href="style/_variables.css" />

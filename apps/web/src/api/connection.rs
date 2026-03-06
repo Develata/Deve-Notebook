@@ -19,6 +19,9 @@ use leptos::task::spawn_local;
 use super::ConnectionStatus;
 use super::backoff::BackoffStrategy;
 
+/// 本地开发后端默认端口；仅在 debug 构建中作为兜底候选。
+const DEV_WS_PORT: u16 = 3001;
+
 /// 启动连接管理器任务
 pub fn spawn_connection_manager(
     set_status: WriteSignal<ConnectionStatus>,
@@ -159,7 +162,7 @@ async fn process_incoming_messages(
 fn build_same_origin_ws_url() -> String {
     let window = match web_sys::window() {
         Some(w) => w,
-        None => return "ws://localhost:3001/ws".to_string(),
+        None => return format!("ws://localhost:{DEV_WS_PORT}/ws"),
     };
     let location = window.location();
     let host = location.host().unwrap_or_else(|_| "localhost:3001".to_string());
@@ -169,18 +172,45 @@ fn build_same_origin_ws_url() -> String {
 }
 
 fn build_ws_urls() -> Vec<String> {
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => return vec![format!("ws://localhost:{DEV_WS_PORT}/ws")],
+    };
+    let location = window.location();
+    let hostname = normalize_hostname(location.hostname().unwrap_or_else(|_| "localhost".to_string()));
+    let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
+    let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
+    let mut urls = Vec::new();
+
     if let Some(port) = query_port() {
-        let window = match web_sys::window() {
-            Some(w) => w,
-            None => return vec![format!("ws://localhost:{}/ws", port)],
-        };
-        let location = window.location();
-        let hostname = location.hostname().unwrap_or_else(|_| "localhost".to_string());
-        let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
-        let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
-        return vec![format!("{}://{}:{}/ws", ws_scheme, hostname, port)];
+        push_ws_url(&mut urls, format!("{}://{}:{}/ws", ws_scheme, hostname, port));
     }
-    vec![build_same_origin_ws_url()]
+
+    push_ws_url(&mut urls, build_same_origin_ws_url());
+
+    if cfg!(debug_assertions) {
+        push_ws_url(
+            &mut urls,
+            format!("{}://{}:{}/ws", ws_scheme, hostname, DEV_WS_PORT),
+        );
+        push_ws_url(&mut urls, format!("{}://localhost:{}/ws", ws_scheme, DEV_WS_PORT));
+        push_ws_url(&mut urls, format!("{}://127.0.0.1:{}/ws", ws_scheme, DEV_WS_PORT));
+    }
+
+    urls
+}
+
+fn normalize_hostname(hostname: String) -> String {
+    match hostname.as_str() {
+        "" | "0.0.0.0" | "::" | "[::]" => "localhost".to_string(),
+        _ => hostname,
+    }
+}
+
+fn push_ws_url(urls: &mut Vec<String>, url: String) {
+    if !urls.iter().any(|current| current == &url) {
+        urls.push(url);
+    }
 }
 
 fn query_port() -> Option<u16> {
