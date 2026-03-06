@@ -80,6 +80,23 @@
 - M1: AC-AUTH-05
 - M2: AC-AUTH-06
 
+## [2026-03-06 T5] Auth 启动与部署契约 fail-closed
+
+**关键发现**:
+- `AuthConfig::from_env()` 必须把 `DEVE_ENV` 未设置视为 `production`，否则启动层很容易继续沿用 `dev_default()` 形成静默回退
+- 登录 Cookie 与登出 Cookie 必须共享同一套 `HTTPS_ENABLED` 驱动属性；只修登录而不修登出会留下浏览器端属性不一致的边界缺口
+- `tower_http::cors` 在 `allow_credentials(true)` 下不能再搭配 `allow_headers(Any)`，否则开发模式启动会 panic；必须改为显式 header 白名单
+
+**环境变量约定**:
+- `DEVE_ENV=production|development`：控制 fail-closed 与显式开发模式分支，默认 `production`
+- `AUTH_SECRET` + `AUTH_PASS`：生产启动必需；缺任一项即记录 `ERROR: Production mode requires AUTH_SECRET and AUTH_PASS` 并退出
+- `HTTPS_ENABLED`：控制认证 Cookie 与登出清理 Cookie 是否带 `Secure`，默认 `true`
+- `ALLOWED_ORIGINS`：逗号分隔的 CORS allow list；未设置时默认拒绝跨域，开发模式也不再隐式注入 localhost
+
+**边界情况**:
+- 手动 QA 若通过 `cargo run` 执行，在 Windows 上需要把 `TMP`/`TEMP` 指到 `E:\gitclone\Deve-Notebook\target\tmp`，否则可能被 `C:` 临时目录空间耗尽阻塞
+- rust-analyzer 的宏展开曾因 `C:` 临时目录不足报 `serde_derive` 扩展失败；清理用户临时目录后，编译/验证恢复正常，但 LSP 进程可能仍保留旧错误缓存
+
 ## [2026-03-06 T5a] Auth 启动 fail-closed 配置
 
 **关键发现**:
@@ -175,3 +192,44 @@
 - 只要 WebCrypto、IndexedDB 或 Ed25519 任一不可用，就设置 `DegradedSyncMode`，顶部横幅说明“允许查看与拉取，禁止 Peer 注册、编辑提交与 SyncPush”。
 - 降级态仍请求 `ListDocs` / `ListRepos`，因此 dashboard 与只读拉取不受阻塞。
 - `is_spectator` 现在同时覆盖远端影子分支与浏览器持久存储降级，确保编辑入口自动进入只读保护。
+
+---
+
+## [2026-03-06 T6c] use_core 存储集成
+
+**关键发现**:
+- T6a 已经完成了实际的集成工作（`init_storage_runtime` 调用已就位），T6c 只需补充文档注释
+- 原 `load_or_generate_identity()` 与 `IDENTITY_KEY_STORAGE` 常量已在 T6a 中被移除
+- `init_storage_runtime(&signals)` 返回 `(identity, repo_vector)` 元组，直接传递给 effects
+
+**实现约定**:
+- 中文注释必须解释"为何"而非"做什么"：重点说明 localStorage 的职责边界与 WebCrypto 的安全属性
+- `use_core()` 保持单一职责：组装信号、初始化存储、设置效果、构造状态对象
+- 降级模式的 UI 提示推迟到 T6d（effects.rs 层处理 banner 显示）
+
+**后续协调**:
+- T6d 需在 `effects.rs` 检测 `degraded_sync_mode` 信号并触发 UI banner
+- T7 需确保 `init_storage_runtime` 返回的 `repo_vector` 能正确传递给 `SyncHello` 握手
+
+---
+
+## [2026-03-06 T6d] 降级模式 UI 提示
+
+**关键发现**:
+- `DegradedSyncMode` 有 `reason: String` 字段和 `banner_text()` 方法，但 banner 应保持简洁
+- Effect 直接使用 `format!("存储受限（{}），当前处于只读模式", mode.reason)` 而非调用 `banner_text()`
+- 降级检测 Effect 必须放在 `setup_message_effect` 而非 `setup_handshake_effect`，因为 signals 在 message effect 中可用
+
+**实现约定**:
+- Effect 监听 `degraded_sync_mode.get()`，根据 `Some(mode)` / `None` 动态设置 `sync_banner`
+- 中文 banner 文本格式：`"存储受限（{reason}），当前处于只读模式"`
+- 注释强调"为何需要 UI 可见警告"：避免用户误以为仍可编辑
+
+**用户体验考虑**:
+- Banner 应常驻可见（顶部），而非 toast 消失通知
+- 降级原因文本需清晰但简洁（详细说明可放在设置或帮助页面）
+- 未来可考虑添加"了解更多"链接指向 FAQ
+
+**后续协调**:
+- T7 需确保降级模式下，`SyncHello` 仍能发送但 `SyncPush` 被禁止
+- T8 需确保登录 UI 不受降级影响（JWT Cookie 独立于 peer identity）

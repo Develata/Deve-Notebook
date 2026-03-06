@@ -16,7 +16,7 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
 
-        // 当前仍以主仓库为来源；request.repo_id 仅用于回包标识。
+        // request.repo_id 用于回包标识与路由校验；当前以本地主仓库为数据源。
         let repo_name = self.repo.local_repo_name();
         let docs = self.repo.list_local_docs(Some(repo_name))?;
 

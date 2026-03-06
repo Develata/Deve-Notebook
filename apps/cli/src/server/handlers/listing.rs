@@ -39,7 +39,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
     } else {
         // 回退: 使用 active_branch/active_repo 字符串
         if let Some(peer_id) = &session.active_branch {
-            let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), uuid::Uuid::nil());
+            let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), super::get_repo_id(state));
             state.repo.list_docs(&repo_type)
         } else {
             state.repo.list_local_docs(session.active_repo.as_deref())
@@ -74,7 +74,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
                 let _ = node_meta::migrate_nodes_from_docs(&handle.db);
                 node_meta::list_nodes(&handle.db)
             } else if let Some(peer_id) = &session.active_branch {
-                let repo_type = RepoType::Remote(peer_id.clone(), uuid::Uuid::nil());
+                let repo_type = RepoType::Remote(peer_id.clone(), super::get_repo_id(state));
                 state.repo.list_nodes(&repo_type)
             } else {
                 state.repo.list_local_nodes(session.active_repo.as_deref())

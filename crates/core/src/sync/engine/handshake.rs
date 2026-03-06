@@ -1,7 +1,7 @@
 // crates\core\src\sync\engine
 use super::SyncEngine;
 use crate::config::SyncMode;
-use crate::models::PeerId;
+use crate::models::{PeerId, RepoId};
 use crate::security::hashing::sha256_hex;
 use crate::security::keypair::verify_signature;
 use crate::sync::protocol::{self, HandshakeResult};
@@ -10,16 +10,18 @@ use anyhow::{Result, anyhow};
 
 impl SyncEngine {
     /// 计算与远端 Peer 的差异 (Internal)
+    ///
+    /// 仓库路由必须显式携带 `repo_id`，否则多仓库同步会退化为错误的空仓库占位路由。
     pub fn compute_diff(
         &self,
         remote_vector: &VersionVector,
+        repo_id: RepoId,
     ) -> (
         Vec<protocol::SyncRequest>,
         Vec<protocol::SyncRequest>,
         Vec<protocol::SyncSnapshotRequest>,
     ) {
-        // TODO: Pass actual RepoId
-        protocol::compute_diff_requests(&self.version_vector, remote_vector, uuid::Uuid::nil())
+        protocol::compute_diff_requests(&self.version_vector, remote_vector, repo_id)
     }
 
     /// 执行完整的握手流程 (Secure)
@@ -29,6 +31,7 @@ impl SyncEngine {
     /// 2. 验证 Signature 是否有效 (防止中间人篡改 Vector)。
     pub fn handshake(
         &mut self,
+        repo_id: RepoId,
         remote_peer_id: PeerId,
         pub_key: &[u8],
         signature: &[u8],
@@ -66,7 +69,7 @@ impl SyncEngine {
         remote_vector.normalize();
 
         // 3. Compute Diff
-        let (to_send, to_request, snapshot_requests) = self.compute_diff(&remote_vector);
+        let (to_send, to_request, snapshot_requests) = self.compute_diff(&remote_vector, repo_id);
 
         Ok(HandshakeResult {
             to_send,

@@ -27,9 +27,16 @@ pub async fn handle_sync_hello(
     let mut engine = state.sync_engine.write().unwrap_or_else(|e| e.into_inner());
     let local_peer_id = engine.local_peer_id.clone();
     let local_vector = engine.version_vector().clone();
+    let repo_id = super::get_repo_id(state);
 
     // 2. 执行握手逻辑 (Verify Client)
-    let result = match engine.handshake(peer_id.clone(), &pub_key, &signature, remote_vector) {
+    let result = match engine.handshake(
+        repo_id,
+        peer_id.clone(),
+        &pub_key,
+        &signature,
+        remote_vector,
+    ) {
         Ok(res) => res,
         Err(e) => {
             tracing::error!("Handshake failed with {}: {}", peer_id, e);

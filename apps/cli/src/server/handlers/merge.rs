@@ -116,10 +116,13 @@ pub async fn handle_merge_peer(
 ) {
     let repo = &state.repo;
 
-    // 1. Get Repo ID
+    // 1. Get Repo ID — 禁止 nil 占位，缺少仓库信息时必须显式失败
     let repo_id = match repo.get_repo_info() {
         Ok(Some(info)) => info.uuid,
-        Ok(None) => uuid::Uuid::nil(),
+        Ok(None) => {
+            ch.send_error("Repo info not found; cannot merge without repo identity".to_string());
+            return;
+        }
         Err(e) => {
             ch.send_error(format!("Failed to get repo info: {}", e));
             return;
