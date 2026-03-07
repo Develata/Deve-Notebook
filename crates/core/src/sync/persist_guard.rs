@@ -8,8 +8,13 @@ use tracing::debug;
 const PERSISTED_WRITE_TTL: Duration = Duration::from_secs(2);
 const PERSISTED_WRITE_MATCH_BUDGET: u8 = 4;
 
+enum PersistedAction {
+    Write { content_hash: String },
+    Delete,
+}
+
 struct PersistedWrite {
-    content_hash: String,
+    action: PersistedAction,
     recorded_at: Instant,
     remaining_hits: u8,
 }
@@ -26,16 +31,16 @@ impl PersistGuard {
     }
 
     pub(super) fn record(&self, path: &str, content: &str) {
-        let mut guard = self.recent_writes.lock().unwrap();
-        guard.retain(|_, entry| entry.recorded_at.elapsed() <= PERSISTED_WRITE_TTL);
-        guard.insert(
-            path.to_string(),
-            PersistedWrite {
+        self.insert(
+            path,
+            PersistedAction::Write {
                 content_hash: pending_fs::content_hash(content),
-                recorded_at: Instant::now(),
-                remaining_hits: PERSISTED_WRITE_MATCH_BUDGET,
             },
         );
+    }
+
+    pub(super) fn record_delete(&self, path: &str) {
+        self.insert(path, PersistedAction::Delete);
     }
 
     pub(super) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
@@ -47,24 +52,52 @@ impl PersistGuard {
             guard.remove(path);
             return false;
         }
-        let file_path = vault_root.join(path);
-        let Ok(content) = std::fs::read_to_string(&file_path) else {
-            guard.remove(path);
-            return false;
+
+        let matched = match &entry.action {
+            PersistedAction::Write { content_hash } => {
+                let Ok(content) = std::fs::read_to_string(vault_root.join(path)) else {
+                    guard.remove(path);
+                    return false;
+                };
+                if pending_fs::content_hash(&content) != *content_hash {
+                    guard.remove(path);
+                    return false;
+                }
+                true
+            }
+            PersistedAction::Delete => {
+                if vault_root.join(path).exists() {
+                    guard.remove(path);
+                    return false;
+                }
+                true
+            }
         };
-        if pending_fs::content_hash(&content) != entry.content_hash {
-            guard.remove(path);
-            return false;
-        }
+
         if entry.remaining_hits > 1 {
             entry.remaining_hits -= 1;
         } else {
             guard.remove(path);
         }
-        debug!(
-            "SyncManager: ignored self-persisted watcher event for {}",
-            path
+        if matched {
+            debug!(
+                "SyncManager: ignored self-persisted watcher event for {}",
+                path
+            );
+        }
+        matched
+    }
+
+    fn insert(&self, path: &str, action: PersistedAction) {
+        let mut guard = self.recent_writes.lock().unwrap();
+        guard.retain(|_, entry| entry.recorded_at.elapsed() <= PERSISTED_WRITE_TTL);
+        guard.insert(
+            path.to_string(),
+            PersistedWrite {
+                action,
+                recorded_at: Instant::now(),
+                remaining_hits: PERSISTED_WRITE_MATCH_BUDGET,
+            },
         );
-        true
     }
 }

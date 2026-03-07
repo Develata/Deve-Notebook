@@ -144,6 +144,11 @@ pub async fn handle_switch_branch(
             }
         } else {
             session.clear_active_db();
+            if let Err(e) = state.sync_manager.materialize_local_repo(&repo_name) {
+                tracing::error!("Failed to materialize local repo {}: {:?}", repo_name, e);
+                ch.send_error(format!("Failed to switch repo workspace: {}", e));
+                return;
+            }
         }
         // RepoSwitched 通知由 handle_list_docs 统一发送
     } else {
@@ -206,6 +211,11 @@ pub async fn handle_switch_repo(
         } else {
             // 本地 repo 统一走 repo-scoped 访问路径，不再为 session 额外加锁。
             session.clear_active_db();
+            if let Err(e) = state.sync_manager.materialize_local_repo(&name) {
+                tracing::error!("Failed to materialize local repo {}: {:?}", name, e);
+                ch.send_error(format!("Failed to switch repo workspace: {}", e));
+                return;
+            }
         }
 
         // 4. 刷新文档列表 (包含 RepoSwitched 通知)

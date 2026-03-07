@@ -143,6 +143,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                         uuid,
                         set_current_repo,
                         set_current_repo_id,
+                        set_current_doc,
                     );
                 }
                 ServerMessage::EditRejected { reason } => {

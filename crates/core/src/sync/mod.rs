@@ -5,6 +5,8 @@ pub mod engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
 #[cfg(not(target_arch = "wasm32"))]
+mod materialize;
+#[cfg(not(target_arch = "wasm32"))]
 mod persist_guard;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
@@ -199,6 +201,16 @@ impl SyncManager {
     /// Invariant: 仅忽略近期由 SyncManager 自己写回、且内容哈希完全一致的事件。
     pub fn should_ignore_fs_event(&self, path_str: &str) -> bool {
         self.persist_guard.should_ignore(&self.vault_root, path_str)
+    }
+
+    /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
+    pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
+        materialize::materialize_local_repo(
+            &self.repo,
+            &self.vault_root,
+            &self.persist_guard,
+            repo_name,
+        )
     }
 
     pub fn local_repo_id(&self) -> Option<RepoId> {

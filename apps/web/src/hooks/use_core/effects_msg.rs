@@ -94,9 +94,11 @@ pub fn handle_repo_switched(
     uuid: String,
     set_current_repo: WriteSignal<Option<String>>,
     set_current_repo_id: WriteSignal<Option<String>>,
+    set_current_doc: WriteSignal<Option<DocId>>,
 ) {
     set_current_repo.set(Some(name));
     set_current_repo_id.set((!uuid.is_empty()).then_some(uuid));
+    set_current_doc.set(None);
 }
 
 /// 处理剩余的通用消息。
