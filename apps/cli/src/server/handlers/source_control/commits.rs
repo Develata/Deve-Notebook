@@ -28,6 +28,7 @@ pub async fn handle_commit(
         Ok(info) => {
             tracing::info!("Created commit: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {
+                repo_id: Some(scope.repo_id),
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });
@@ -115,6 +116,7 @@ pub async fn handle_commit_and_push(
         Ok(info) => {
             tracing::info!("Commit & Push: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {
+                repo_id: Some(scope.repo_id),
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });

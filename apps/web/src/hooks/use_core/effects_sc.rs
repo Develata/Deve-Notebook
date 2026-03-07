@@ -45,6 +45,12 @@ pub fn handle_sc_message(
             schedule_refresh();
         }
         ServerMessage::CommitAck { commit_id, .. } => {
+            let ServerMessage::CommitAck { repo_id, .. } = msg else {
+                unreachable!();
+            };
+            if !matches_current_repo(repo_id, current_repo_id) {
+                return true;
+            }
             leptos::logging::log!("已提交: {}", commit_id);
             ws.send(ClientMessage::GetChanges);
             ws.send(ClientMessage::GetCommitHistory { limit: 50 });
@@ -94,7 +100,7 @@ pub fn handle_sc_message(
     true
 }
 
-fn matches_current_repo(
+pub(super) fn matches_current_repo(
     repo_id: &Option<uuid::Uuid>,
     current_repo_id: ReadSignal<Option<String>>,
 ) -> bool {

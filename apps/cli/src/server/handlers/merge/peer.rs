@@ -37,7 +37,7 @@ pub(super) async fn handle_merge_peer(
         .merge_peer_in_local_repo(&scope.repo_name, &peer_id, &scope.repo_id, doc_id)
     {
         Ok(MergeResult::Success(content)) => {
-            write_merged_content(state, ch, &scope.repo_name, doc_id, &content);
+            write_merged_content(state, ch, &scope.repo_name, scope.repo_id, doc_id, &content);
         }
         Ok(MergeResult::Conflict { local, remote, .. }) => {
             send_merge_conflict(state, ch, &scope.repo_name, doc_id, local, remote);
@@ -50,6 +50,7 @@ fn write_merged_content(
     state: &Arc<AppState>,
     ch: &DualChannel,
     repo_name: &str,
+    repo_id: deve_core::models::RepoId,
     doc_id: DocId,
     content: &str,
 ) {
@@ -62,7 +63,10 @@ fn write_merged_content(
         return;
     }
     tracing::info!("Merge Success for doc {} ({})", doc_id, path);
-    ch.broadcast(ServerMessage::MergeComplete { merged_count: 1 });
+    ch.broadcast(ServerMessage::MergeComplete {
+        repo_id: Some(repo_id),
+        merged_count: 1,
+    });
 }
 
 fn send_merge_conflict(

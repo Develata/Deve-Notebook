@@ -59,18 +59,26 @@ impl BroadcastFilter {
         };
 
         match msg {
-            ServerMessage::FsChangeDetected { repo_id, .. } => {
-                if scope.on_remote_branch {
-                    return false;
-                }
-                match (scope.active_repo_id, repo_id) {
-                    (Some(active_repo_id), Some(message_repo_id)) => {
-                        active_repo_id == *message_repo_id
-                    }
-                    _ => true,
-                }
+            ServerMessage::FsChangeDetected { repo_id, .. }
+            | ServerMessage::CommitAck { repo_id, .. }
+            | ServerMessage::MergeComplete { repo_id, .. } => {
+                matches_repo(scope.active_repo_id, scope.on_remote_branch, repo_id)
             }
             _ => true,
         }
+    }
+}
+
+fn matches_repo(
+    active_repo_id: Option<RepoId>,
+    on_remote_branch: bool,
+    message_repo_id: &Option<RepoId>,
+) -> bool {
+    if on_remote_branch {
+        return false;
+    }
+    match (active_repo_id, message_repo_id) {
+        (Some(active_repo_id), Some(message_repo_id)) => active_repo_id == *message_repo_id,
+        _ => true,
     }
 }

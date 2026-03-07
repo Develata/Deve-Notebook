@@ -29,7 +29,13 @@ pub(super) async fn handle_open_doc(
             }
         }
     } else {
-        load_snapshot_from_repo(state, session, doc_id)
+        match load_snapshot_from_repo(state, session, doc_id) {
+            Ok(payload) => payload,
+            Err(e) => {
+                ch.send_error(e.to_string());
+                empty_payload()
+            }
+        }
     };
 
     tracing::info!(
@@ -54,10 +60,9 @@ fn load_snapshot_from_repo(
     state: &Arc<AppState>,
     session: &WsSession,
     doc_id: DocId,
-) -> SnapshotPayload {
-    let repo_name = resolve_session_repo(state, session)
-        .map(|scope| scope.repo_name)
-        .unwrap_or_else(|_| state.repo.local_repo_name().to_string());
+) -> anyhow::Result<SnapshotPayload> {
+    let scope = resolve_session_repo(state, session)?;
+    let repo_name = scope.repo_name;
     tracing::warn!(
         "No active_db in session, falling back to resolved local repo {}",
         repo_name
@@ -69,15 +74,9 @@ fn load_snapshot_from_repo(
         tracing::error!("SyncManager reconcile failed: {:?}", e);
     }
 
-    match state.repo.run_on_local_repo(&repo_name, |db| {
+    state.repo.run_on_local_repo(&repo_name, |db| {
         build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
-    }) {
-        Ok(payload) => payload,
-        Err(e) => {
-            tracing::error!("Failed to read snapshot from repo {}: {:?}", repo_name, e);
-            empty_payload()
-        }
-    }
+    })
 }
 
 fn empty_payload() -> SnapshotPayload {

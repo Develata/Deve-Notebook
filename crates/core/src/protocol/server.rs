@@ -86,7 +86,11 @@ pub enum ServerMessage {
         previews: Vec<(String, String, String)>,
     },
     /// 合并完成
-    MergeComplete { merged_count: u32 },
+    MergeComplete {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
+        merged_count: u32,
+    },
     /// 待合并操作已丢弃
     PendingDiscarded,
 
@@ -121,6 +125,8 @@ pub enum ServerMessage {
     UnstageAck { path: String },
     /// 提交成功响应
     CommitAck {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         /// 提交 ID
         commit_id: String,
         /// 提交时间戳

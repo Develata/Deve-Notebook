@@ -73,18 +73,25 @@ pub fn setup(
             match sign_sync_hello(&identity, &msg).await {
                 Ok(signature) => {
                     let peer_id = PeerId::new(&identity.peer_id);
-                    let vector_json = serde_json::to_string(&vector).unwrap_or_default();
-                    let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
-                    let _ = note_handshake(&identity.repo_id).await;
-                    let repo_id = uuid::Uuid::parse_str(&identity.repo_id)
-                        .unwrap_or_else(|_| uuid::Uuid::nil());
-                    ws.send(ClientMessage::SyncHello {
-                        peer_id,
-                        pub_key: identity.public_key.clone(),
-                        signature,
-                        vector,
-                        repo_id,
-                    });
+                    match uuid::Uuid::parse_str(&identity.repo_id) {
+                        Ok(repo_id) => {
+                            let vector_json = serde_json::to_string(&vector).unwrap_or_default();
+                            let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
+                            let _ = note_handshake(&identity.repo_id).await;
+                            ws.send(ClientMessage::SyncHello {
+                                peer_id,
+                                pub_key: identity.public_key.clone(),
+                                signature,
+                                vector,
+                                repo_id,
+                            });
+                        }
+                        Err(err) => leptos::logging::error!(
+                            "跳过 SyncHello: 非法 repo_id {} ({})",
+                            identity.repo_id,
+                            err
+                        ),
+                    }
                 }
                 Err(err) => leptos::logging::error!("WebCrypto 握手签名失败: {}", err),
             }

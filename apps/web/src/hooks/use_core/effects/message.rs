@@ -116,7 +116,13 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     set_pending_ops_count.set(count);
                     set_pending_ops_previews.set(previews);
                 }
-                ServerMessage::MergeComplete { merged_count } => {
+                ServerMessage::MergeComplete {
+                    repo_id,
+                    merged_count,
+                } => {
+                    if !effects_sc::matches_current_repo(&repo_id, current_repo_id) {
+                        return;
+                    }
                     leptos::logging::log!("已合并 {} 个操作", merged_count);
                     set_pending_ops_count.set(0);
                     set_pending_ops_previews.set(vec![]);

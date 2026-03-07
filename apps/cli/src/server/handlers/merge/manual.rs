@@ -8,10 +8,11 @@ use std::sync::Arc;
 
 fn sync_mode_label(mode: SyncMode) -> String {
     if matches!(mode, SyncMode::Auto) {
-        "auto".to_string()
+        "auto"
     } else {
-        "manual".to_string()
+        "manual"
     }
+    .to_string()
 }
 
 fn load_engine(state: &Arc<AppState>, ch: &DualChannel, repo_id: RepoId) -> Option<SyncEngine> {
@@ -103,6 +104,7 @@ pub(super) async fn handle_confirm_merge(
         Ok(count) => {
             tracing::info!("Merged {} pending operations", count);
             ch.broadcast(ServerMessage::MergeComplete {
+                repo_id: Some(repo_id),
                 merged_count: count as u32,
             });
         }
