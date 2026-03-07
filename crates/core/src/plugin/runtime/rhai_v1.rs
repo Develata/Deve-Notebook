@@ -8,10 +8,10 @@
 //! 通过 FileModuleResolver 支持 `import "module_name"` 语法，
 //! 允许插件拆分为多个 .rhai 文件。(仅非 WASM 环境)
 
-use super::{host, PluginRuntime};
+use super::{PluginRuntime, host};
 use crate::plugin::manifest::PluginManifest;
-use anyhow::{anyhow, Result};
-use rhai::{Dynamic, Engine, Scope, AST};
+use anyhow::{Result, anyhow};
+use rhai::{AST, Dynamic, Engine, Scope};
 use std::path::PathBuf;
 use std::sync::Mutex;
 

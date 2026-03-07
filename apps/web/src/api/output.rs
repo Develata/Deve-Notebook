@@ -16,8 +16,8 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::stream::SplitSink;
 use futures::{SinkExt, StreamExt};
 use gloo_net::websocket::{Message, futures::WebSocket};
-use leptos::task::spawn_local;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
 use super::ConnectionStatus;
@@ -61,8 +61,9 @@ pub fn spawn_output_manager(
                 }
                 OutputEvent::Client(msg) => {
                     // WebLightPeer: 断连时禁止写入类消息
-                    if connection_status.get() != ConnectionStatus::Connected 
-                        && is_write_message(&msg) {
+                    if connection_status.get() != ConnectionStatus::Connected
+                        && is_write_message(&msg)
+                    {
                         leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
                         continue;
                     }
@@ -171,7 +172,7 @@ async fn flush_queue(
 }
 
 /// 判断消息是否为写入类操作
-/// 
+///
 /// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
 fn is_write_message(msg: &ClientMessage) -> bool {
     match msg {

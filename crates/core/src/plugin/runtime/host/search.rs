@@ -10,8 +10,8 @@
 //! 3. grep 仅搜索文本文件（跳过二进制文件）
 
 use crate::plugin::manifest::Capability;
-use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
+use ignore::overrides::OverrideBuilder;
 use regex::Regex;
 use rhai::{Engine, EvalAltResult};
 use std::sync::Arc;

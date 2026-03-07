@@ -165,7 +165,9 @@ fn build_same_origin_ws_url() -> String {
         None => return format!("ws://localhost:{DEV_WS_PORT}/ws"),
     };
     let location = window.location();
-    let host = location.host().unwrap_or_else(|_| "localhost:3001".to_string());
+    let host = location
+        .host()
+        .unwrap_or_else(|_| "localhost:3001".to_string());
     let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
     format!("{}://{}/ws", ws_scheme, host)
@@ -177,13 +179,20 @@ fn build_ws_urls() -> Vec<String> {
         None => return vec![format!("ws://localhost:{DEV_WS_PORT}/ws")],
     };
     let location = window.location();
-    let hostname = normalize_hostname(location.hostname().unwrap_or_else(|_| "localhost".to_string()));
+    let hostname = normalize_hostname(
+        location
+            .hostname()
+            .unwrap_or_else(|_| "localhost".to_string()),
+    );
     let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
     let mut urls = Vec::new();
 
     if let Some(port) = query_port() {
-        push_ws_url(&mut urls, format!("{}://{}:{}/ws", ws_scheme, hostname, port));
+        push_ws_url(
+            &mut urls,
+            format!("{}://{}:{}/ws", ws_scheme, hostname, port),
+        );
     }
 
     push_ws_url(&mut urls, build_same_origin_ws_url());
@@ -193,8 +202,14 @@ fn build_ws_urls() -> Vec<String> {
             &mut urls,
             format!("{}://{}:{}/ws", ws_scheme, hostname, DEV_WS_PORT),
         );
-        push_ws_url(&mut urls, format!("{}://localhost:{}/ws", ws_scheme, DEV_WS_PORT));
-        push_ws_url(&mut urls, format!("{}://127.0.0.1:{}/ws", ws_scheme, DEV_WS_PORT));
+        push_ws_url(
+            &mut urls,
+            format!("{}://localhost:{}/ws", ws_scheme, DEV_WS_PORT),
+        );
+        push_ws_url(
+            &mut urls,
+            format!("{}://127.0.0.1:{}/ws", ws_scheme, DEV_WS_PORT),
+        );
     }
 
     urls
