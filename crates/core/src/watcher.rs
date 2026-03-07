@@ -104,6 +104,10 @@ impl Watcher {
                     continue;
                 }
 
+                if self.sync_manager.should_ignore_fs_event(&path_str) {
+                    continue;
+                }
+
                 match self.sync_manager.handle_fs_event(&path_str) {
                     Ok(msgs) if !msgs.is_empty() => {
                         if let Some(cb) = &self.on_event {

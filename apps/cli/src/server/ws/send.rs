@@ -36,7 +36,7 @@ pub(crate) fn spawn_unicast_sender_task(
             };
 
             if let Err(e) = sender.send(Message::Binary(bytes)).await {
-                tracing::warn!("Failed to send message to WS: {:?}", e);
+                tracing::debug!("WS sender closed while sending message: {:?}", e);
                 break;
             }
         }

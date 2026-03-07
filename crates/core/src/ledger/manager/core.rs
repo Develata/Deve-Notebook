@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::ledger::node_meta;
 use crate::ledger::schema::*;
-use crate::ledger::{init, metadata, range};
+use crate::ledger::{init, metadata, range, source_control};
 use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
 
 impl RepoManager {
@@ -56,6 +56,7 @@ impl RepoManager {
         }
 
         let db = Database::create(&db_path)?;
+        source_control::init_tables(&db)?;
 
         // Cache it
         {

@@ -20,21 +20,27 @@ pub(super) async fn handle_open_doc(
     );
 
     let start = Instant::now();
-    let (content, base_seq, delta_ops, version) = if let Some(handle) = session.get_active_db() {
-        match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth) {
+    let (content, base_seq, delta_ops, version) = match session.get_active_db() {
+        Some(handle) => match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth)
+        {
             Ok(payload) => payload,
             Err(e) => {
                 tracing::error!("Failed to build snapshot from active_db: {:?}", e);
                 empty_payload()
             }
-        }
-    } else {
-        match load_snapshot_from_repo(state, session, doc_id) {
-            Ok(payload) => payload,
-            Err(e) => {
-                ch.send_error(e.to_string());
-                empty_payload()
+        },
+        None if session.active_branch.is_none() => {
+            match load_snapshot_from_local_repo(state, session, doc_id) {
+                Ok(payload) => payload,
+                Err(e) => {
+                    ch.send_error(e.to_string());
+                    empty_payload()
+                }
             }
+        }
+        None => {
+            ch.send_error("Remote repository database is not locked".to_string());
+            empty_payload()
         }
     };
 
@@ -56,17 +62,13 @@ pub(super) async fn handle_open_doc(
     });
 }
 
-fn load_snapshot_from_repo(
+fn load_snapshot_from_local_repo(
     state: &Arc<AppState>,
     session: &WsSession,
     doc_id: DocId,
 ) -> anyhow::Result<SnapshotPayload> {
     let scope = resolve_session_repo(state, session)?;
     let repo_name = scope.repo_name;
-    tracing::warn!(
-        "No active_db in session, falling back to resolved local repo {}",
-        repo_name
-    );
     if let Err(e) = state
         .sync_manager
         .reconcile_doc_in_local_repo(&repo_name, doc_id)

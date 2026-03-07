@@ -4,6 +4,8 @@ pub mod buffer;
 pub mod engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
+#[cfg(not(target_arch = "wasm32"))]
+mod persist_guard;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod rebuild;
@@ -30,6 +32,8 @@ use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
 #[cfg(not(target_arch = "wasm32"))]
+use persist_guard::PersistGuard;
+#[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
@@ -37,12 +41,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing::{info, warn};
-
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
     repo: Arc<RepoManager>,
     vault_root: PathBuf,
     vfs: Vfs,
+    persist_guard: PersistGuard,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -59,6 +63,7 @@ impl SyncManager {
             repo,
             vault_root,
             vfs,
+            persist_guard: PersistGuard::new(),
         }
     }
 
@@ -106,7 +111,6 @@ impl SyncManager {
     pub fn persist_doc(&self, doc_id: DocId) -> Result<()> {
         self.persist_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
     }
-
     pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
         if let Some(path_str) = self
             .repo
@@ -115,14 +119,12 @@ impl SyncManager {
             let file_path = self.vault_root.join(&path_str);
             let rebuilt = rebuild::rebuild_local_doc_in_repo(&self.repo, repo_name, doc_id)?;
 
-            // Write
             if let Some(parent) = file_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
             std::fs::write(&file_path, &rebuilt.content)?;
+            self.persist_guard.record(&path_str, &rebuilt.content);
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
-
-            // Adaptive Snapshot Policy
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
             let policy = SnapshotPolicy::default();
             let doc_len = rebuilt.content.encode_utf16().count();
@@ -189,10 +191,14 @@ impl SyncManager {
         Ok(seqs)
     }
 
-    // --- The Main Logic: Orchestration ---
     pub fn handle_fs_event(&self, path_str: &str) -> Result<Vec<crate::protocol::ServerMessage>> {
         let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, &self.vault_root);
         handler.handle_event(path_str, self)
+    }
+
+    /// Invariant: 仅忽略近期由 SyncManager 自己写回、且内容哈希完全一致的事件。
+    pub fn should_ignore_fs_event(&self, path_str: &str) -> bool {
+        self.persist_guard.should_ignore(&self.vault_root, path_str)
     }
 
     pub fn local_repo_id(&self) -> Option<RepoId> {
