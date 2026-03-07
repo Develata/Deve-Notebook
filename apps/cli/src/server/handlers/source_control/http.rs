@@ -10,34 +10,53 @@ use std::sync::Arc;
 
 use crate::server::AppState;
 use crate::server::plugin_host::PluginHostState;
+use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::plugin::runtime::host;
 use deve_core::source_control::{ChangeEntry, CommitInfo};
+
+#[derive(Deserialize, Default)]
+pub struct RepoQuery {
+    #[serde(flatten)]
+    pub repo: RepoSelector,
+}
 
 #[derive(Deserialize)]
 pub struct DiffQuery {
     pub path: String,
+    #[serde(flatten)]
+    pub repo: RepoSelector,
 }
 
 #[derive(Deserialize)]
 pub struct PathPayload {
     pub path: String,
+    #[serde(flatten)]
+    pub repo: RepoSelector,
 }
 
 #[derive(Deserialize)]
 pub struct CommitPayload {
     pub message: String,
+    #[serde(flatten)]
+    pub repo: RepoSelector,
 }
 
-pub async fn status(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    match state.repo.list_changes() {
+pub async fn status(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
+    match Repository::list_changes_in_repo(state.repo.as_ref(), &q.repo) {
         Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
 
-pub async fn status_plugin_host(State(_state): State<Arc<PluginHostState>>) -> impl IntoResponse {
+pub async fn status_plugin_host(
+    State(_state): State<Arc<PluginHostState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
     match host::repository() {
-        Ok(repo) => match repo.list_changes() {
+        Ok(repo) => match repo.list_changes_in_repo(&q.repo) {
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         },
@@ -49,7 +68,7 @@ pub async fn diff(
     State(state): State<Arc<AppState>>,
     Query(q): Query<DiffQuery>,
 ) -> impl IntoResponse {
-    match state.repo.diff_doc_path(&q.path) {
+    match Repository::diff_doc_path_in_repo(state.repo.as_ref(), &q.repo, &q.path) {
         Ok(diff) => diff.into_response(),
         Err(e) => (StatusCode::NOT_FOUND, e.to_string()).into_response(),
     }
@@ -60,7 +79,7 @@ pub async fn diff_plugin_host(
     Query(q): Query<DiffQuery>,
 ) -> impl IntoResponse {
     match host::repository() {
-        Ok(repo) => match repo.diff_doc_path(&q.path) {
+        Ok(repo) => match repo.diff_doc_path_in_repo(&q.repo, &q.path) {
             Ok(diff) => diff.into_response(),
             Err(e) => (StatusCode::NOT_FOUND, e.to_string()).into_response(),
         },
@@ -72,7 +91,7 @@ pub async fn stage(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
-    match state.repo.stage_file(&payload.path) {
+    match Repository::stage_file_in_repo(state.repo.as_ref(), &payload.repo, &payload.path) {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
     }
@@ -83,7 +102,7 @@ pub async fn stage_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     match host::repository() {
-        Ok(repo) => match repo.stage_file(&payload.path) {
+        Ok(repo) => match repo.stage_file_in_repo(&payload.repo, &payload.path) {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
             Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
         },
@@ -95,7 +114,7 @@ pub async fn commit(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CommitPayload>,
 ) -> impl IntoResponse {
-    match state.repo.commit_staged(&payload.message) {
+    match Repository::commit_staged_in_repo(state.repo.as_ref(), &payload.repo, &payload.message) {
         Ok(info) => Json::<CommitInfo>(info).into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
     }
@@ -106,7 +125,7 @@ pub async fn commit_plugin_host(
     Json(payload): Json<CommitPayload>,
 ) -> impl IntoResponse {
     match host::repository() {
-        Ok(repo) => match repo.commit_staged(&payload.message) {
+        Ok(repo) => match repo.commit_staged_in_repo(&payload.repo, &payload.message) {
             Ok(info) => Json::<CommitInfo>(info).into_response(),
             Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
         },

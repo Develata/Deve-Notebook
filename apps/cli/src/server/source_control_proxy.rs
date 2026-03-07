@@ -2,7 +2,7 @@
 //! # Source Control Remote Proxy
 
 use anyhow::Result;
-use deve_core::ledger::traits::Repository;
+use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::source_control::{ChangeEntry, CommitInfo};
 
@@ -17,6 +17,19 @@ impl RemoteSourceControlApi {
             base_url,
             client: reqwest::Client::new(),
         }
+    }
+
+    fn with_repo_query(
+        mut req: reqwest::RequestBuilder,
+        repo: &RepoSelector,
+    ) -> reqwest::RequestBuilder {
+        if let Some(repo_id) = repo.repo_id {
+            req = req.query(&[("repo_id", repo_id.to_string())]);
+        }
+        if let Some(repo_name) = &repo.repo_name {
+            req = req.query(&[("repo_name", repo_name)]);
+        }
+        req
     }
 }
 
@@ -33,10 +46,13 @@ where
 
 impl Repository for RemoteSourceControlApi {
     fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
+        self.list_docs_in_repo(&RepoSelector::default())
+    }
+
+    fn list_docs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<(DocId, String)>> {
         let url = format!("{}/api/repo/docs", self.base_url);
         let res = block_on_safe(async {
-            self.client
-                .get(&url)
+            Self::with_repo_query(self.client.get(&url), repo)
                 .send()
                 .await?
                 .json::<Vec<(DocId, String)>>()
@@ -46,10 +62,13 @@ impl Repository for RemoteSourceControlApi {
     }
 
     fn get_doc_content(&self, doc_id: DocId) -> Result<String> {
+        self.get_doc_content_in_repo(&RepoSelector::default(), doc_id)
+    }
+
+    fn get_doc_content_in_repo(&self, repo: &RepoSelector, doc_id: DocId) -> Result<String> {
         let url = format!("{}/api/repo/doc", self.base_url);
         let res = block_on_safe(async {
-            self.client
-                .get(&url)
+            Self::with_repo_query(self.client.get(&url), repo)
                 .query(&[("doc_id", doc_id.to_string())])
                 .send()
                 .await?
@@ -101,10 +120,13 @@ impl Repository for RemoteSourceControlApi {
     }
 
     fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
+        self.list_changes_in_repo(&RepoSelector::default())
+    }
+
+    fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
         let url = format!("{}/api/sc/status", self.base_url);
         let res = block_on_safe(async {
-            self.client
-                .get(&url)
+            Self::with_repo_query(self.client.get(&url), repo)
                 .send()
                 .await?
                 .json::<Vec<ChangeEntry>>()
@@ -114,10 +136,13 @@ impl Repository for RemoteSourceControlApi {
     }
 
     fn diff_doc_path(&self, path: &str) -> Result<String> {
+        self.diff_doc_path_in_repo(&RepoSelector::default(), path)
+    }
+
+    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<String> {
         let url = format!("{}/api/sc/diff", self.base_url);
         let res = block_on_safe(async {
-            self.client
-                .get(&url)
+            Self::with_repo_query(self.client.get(&url), repo)
                 .query(&[("path", path)])
                 .send()
                 .await?
@@ -128,11 +153,19 @@ impl Repository for RemoteSourceControlApi {
     }
 
     fn stage_file(&self, path: &str) -> Result<()> {
+        self.stage_file_in_repo(&RepoSelector::default(), path)
+    }
+
+    fn stage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
         let url = format!("{}/api/sc/stage", self.base_url);
         block_on_safe(async {
             self.client
                 .post(&url)
-                .json(&serde_json::json!({"path": path}))
+                .json(&serde_json::json!({
+                    "path": path,
+                    "repo_id": repo.repo_id.map(|id| id.to_string()),
+                    "repo_name": repo.repo_name.clone(),
+                }))
                 .send()
                 .await?
                 .error_for_status()?;
@@ -142,11 +175,19 @@ impl Repository for RemoteSourceControlApi {
     }
 
     fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
+        self.commit_staged_in_repo(&RepoSelector::default(), message)
+    }
+
+    fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
         let url = format!("{}/api/sc/commit", self.base_url);
         let res = block_on_safe(async {
             self.client
                 .post(&url)
-                .json(&serde_json::json!({"message": message}))
+                .json(&serde_json::json!({
+                    "message": message,
+                    "repo_id": repo.repo_id.map(|id| id.to_string()),
+                    "repo_name": repo.repo_name.clone(),
+                }))
                 .send()
                 .await?
                 .error_for_status()?
