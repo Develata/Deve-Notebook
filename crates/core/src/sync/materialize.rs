@@ -12,16 +12,17 @@ pub(super) fn prepare_local_workspaces(
     vault_root: &Path,
     guard: &PersistGuard,
 ) -> Result<()> {
+    migrate_legacy_flat_entries(repo, vault_root)?;
     for repo_name in repo.list_repos(None)? {
         materialize_local_repo(repo, vault_root, guard, &repo_name)?;
     }
-    archive_legacy_flat_entries(repo, vault_root)
+    Ok(())
 }
 
 /// 将指定本地 repo 的文档视图投影到 `vault/<repo_name>/`。
 ///
 /// Invariants:
-/// - 仅在 repo 工作区首次缺失时执行 bootstrap；已有工作区绝不覆盖用户文件。
+/// - 仅补齐缺失文件；已有工作区绝不覆盖用户文件。
 /// - 不会删除其他 repo 的工作区内容，也不会吞掉未入库的 working tree 变更。
 pub(super) fn materialize_local_repo(
     repo: &RepoManager,
@@ -30,14 +31,13 @@ pub(super) fn materialize_local_repo(
     repo_name: &str,
 ) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
-    let bootstrap = !repo_root.exists();
     std::fs::create_dir_all(&repo_root)?;
-    if !bootstrap {
-        return Ok(());
-    }
 
     for (doc_id, repo_path) in repo.list_local_docs(Some(repo_name))? {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
+        if file_path.exists() {
+            continue;
+        }
         let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
         if let Some(parent) = file_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -52,10 +52,12 @@ pub(super) fn materialize_local_repo(
     Ok(())
 }
 
-fn archive_legacy_flat_entries(repo: &RepoManager, vault_root: &Path) -> Result<()> {
+fn migrate_legacy_flat_entries(repo: &RepoManager, vault_root: &Path) -> Result<()> {
     let repo_names: HashSet<String> = repo.list_repos(None)?.into_iter().collect();
-    let archive_root = vault_root.join(".deve").join("legacy-flat");
-    std::fs::create_dir_all(&archive_root)?;
+    let default_root = repo.local_repo_workspace_root(repo.local_repo_name())?;
+    std::fs::create_dir_all(&default_root)?;
+    let conflict_root = vault_root.join(".deve").join("legacy-flat-conflicts");
+    std::fs::create_dir_all(&conflict_root)?;
 
     for entry in std::fs::read_dir(vault_root)? {
         let entry = entry?;
@@ -64,16 +66,48 @@ fn archive_legacy_flat_entries(repo: &RepoManager, vault_root: &Path) -> Result<
             continue;
         }
         let src = entry.path();
-        let dst = unique_archive_path(&archive_root, &name);
-        if let Err(err) = std::fs::rename(&src, &dst) {
-            tracing::warn!(
-                "Legacy workspace archive failed {:?} -> {:?}: {:?}",
-                src,
-                dst,
-                err
-            );
-        }
+        let dst = default_root.join(&name);
+        move_legacy_entry(&src, &dst, &conflict_root)?;
     }
+    Ok(())
+}
+
+fn move_legacy_entry(src: &Path, dst: &Path, conflict_root: &Path) -> Result<()> {
+    if !dst.exists() {
+        if let Some(parent) = dst.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::rename(src, dst)?;
+        return Ok(());
+    }
+
+    if src.is_dir() && dst.is_dir() {
+        for entry in std::fs::read_dir(src)? {
+            let entry = entry?;
+            let child_src = entry.path();
+            let child_dst = dst.join(entry.file_name());
+            move_legacy_entry(&child_src, &child_dst, conflict_root)?;
+        }
+        let _ = std::fs::remove_dir(src);
+        return Ok(());
+    }
+
+    if src.is_file() && dst.is_file() && std::fs::read(src)? == std::fs::read(dst)? {
+        std::fs::remove_file(src)?;
+        return Ok(());
+    }
+
+    let name = src
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("legacy");
+    let archive = unique_archive_path(conflict_root, name);
+    std::fs::rename(src, &archive)?;
+    tracing::warn!(
+        "Legacy flat workspace conflict archived {:?} -> {:?}",
+        src,
+        archive
+    );
     Ok(())
 }
 
