@@ -6,13 +6,13 @@ pub mod engine;
 pub mod handler;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod repo_scoped;
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod rebuild;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod reconcile;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod repo_scoped;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scan;
 #[cfg(not(target_arch = "wasm32"))]

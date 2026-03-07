@@ -9,29 +9,29 @@ use serde::{Deserialize, Serialize};
 pub enum ClientMessage {
     /// 心跳 Ping
     Ping,
-/// P2P 握手请求 (Hello)
-///
-/// **参数**:
-/// - `peer_id`: 发起方节点 ID。
-/// - `pub_key`: 发起方身份公钥 (Ed25519)。
-/// - `signature`: 握手签名 (防止伪造)。
+    /// P2P 握手请求 (Hello)
+    ///
+    /// **参数**:
+    /// - `peer_id`: 发起方节点 ID。
+    /// - `pub_key`: 发起方身份公钥 (Ed25519)。
+    /// - `signature`: 握手签名 (防止伪造)。
     /// - `vector`: 发起方当前的 Version Vector。
     /// - `repo_id`: 目标仓库 ID (严格 repo-scoped 路由)。
-SyncHello {
-peer_id: PeerId,
-pub_key: Vec<u8>,
-signature: Vec<u8>,
+    SyncHello {
+        peer_id: PeerId,
+        pub_key: Vec<u8>,
+        signature: Vec<u8>,
         vector: VersionVector,
         repo_id: crate::models::RepoId,
-},
-/// 请求缺失的操作记录
+    },
+    /// 请求缺失的操作记录
     SyncRequest {
         /// 目标仓库 ID
         repo_id: crate::models::RepoId,
-/// 请求列表 [(PeerId, StartSeq, EndSeq)]
-/// 注意: Range<u64> 默认不可序列化，因此使用 (u64, u64) 元组。
-requests: Vec<(PeerId, (u64, u64))>,
-},
+        /// 请求列表 [(PeerId, StartSeq, EndSeq)]
+        /// 注意: Range<u64> 默认不可序列化，因此使用 (u64, u64) 元组。
+        requests: Vec<(PeerId, (u64, u64))>,
+    },
     /// 请求快照 (差异过大时)
     SyncSnapshotRequest {
         peer_id: PeerId,

@@ -58,10 +58,10 @@ impl RepoScopedSyncEngine {
     /// - `None` - 如果锁被污染
     pub fn get_or_create(&self, repo_id: RepoId) -> Option<SyncEngine> {
         // 先尝试读取
-        if let Ok(engines) = self.engines.read() {
-            if let Some(engine) = engines.get(&repo_id) {
-                return Some(engine.clone());
-            }
+        if let Ok(engines) = self.engines.read()
+            && let Some(engine) = engines.get(&repo_id)
+        {
+            return Some(engine.clone());
         }
 
         // 需要创建新的 engine
@@ -83,7 +83,7 @@ impl RepoScopedSyncEngine {
 
     pub fn get(&self, repo_id: RepoId) -> Option<SyncEngine> {
         let engines = self.engines.read().ok()?;
-        engines.get(&repo_id).map(|e| e.clone())
+        engines.get(&repo_id).cloned()
     }
 
     /// 获取或创建指定仓库的 SyncEngine（可变引用）

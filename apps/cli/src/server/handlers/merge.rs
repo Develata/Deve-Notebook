@@ -17,11 +17,7 @@ fn get_session_repo_id(session: &WsSession) -> Option<uuid::Uuid> {
 }
 
 /// 获取当前同步模式
-pub async fn handle_get_sync_mode(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &WsSession,
-) {
+pub async fn handle_get_sync_mode(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
     let repo_id = match get_session_repo_id(session) {
         Some(id) => id,
         None => {
@@ -29,7 +25,7 @@ pub async fn handle_get_sync_mode(
             return;
         }
     };
-    
+
     let mode = {
         let engine = match state.sync_engine.get_or_create(repo_id) {
             Some(e) => e,
@@ -95,11 +91,7 @@ pub async fn handle_set_sync_mode(
 }
 
 /// 获取待合并操作及其预览
-pub async fn handle_get_pending_ops(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &WsSession,
-) {
+pub async fn handle_get_pending_ops(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
     let repo_id = match get_session_repo_id(session) {
         Some(id) => id,
         None => {
@@ -137,11 +129,7 @@ pub async fn handle_get_pending_ops(
 }
 
 /// 确认合并所有待处理的操作
-pub async fn handle_confirm_merge(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &WsSession,
-) {
+pub async fn handle_confirm_merge(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
     let repo_id = match get_session_repo_id(session) {
         Some(id) => id,
         None => {
@@ -176,11 +164,7 @@ pub async fn handle_confirm_merge(
 }
 
 /// 丢弃所有待处理的操作
-pub async fn handle_discard_pending(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &WsSession,
-) {
+pub async fn handle_discard_pending(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
     let repo_id = match get_session_repo_id(session) {
         Some(id) => id,
         None => {
