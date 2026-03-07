@@ -5,9 +5,7 @@
 //! 分离处理：删除、重命名、内容更新、新文件。
 
 use crate::ledger::RepoManager;
-use crate::ledger::listing::RepoListing;
 use crate::models::RepoId;
-use crate::models::RepoType;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
@@ -128,7 +126,7 @@ impl<'a> FsEventHandler<'a> {
     }
 
     fn gen_list(&self) -> Result<Vec<ServerMessage>> {
-        let docs = self.repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
+        let docs = self.repo.list_local_docs(None)?;
         Ok(vec![ServerMessage::DocList { docs }])
     }
 

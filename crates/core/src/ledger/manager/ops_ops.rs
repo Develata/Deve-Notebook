@@ -69,7 +69,7 @@ impl RepoManager {
 
     /// 从本地库读取操作（便捷方法）
     pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        self.get_ops(&RepoType::Local(uuid::Uuid::nil()), doc_id)
+        ops::get_ops_from_db(&self.local_db, doc_id)
     }
 
     pub fn get_local_ops_in_local_repo(

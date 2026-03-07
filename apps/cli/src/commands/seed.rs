@@ -10,8 +10,7 @@
 
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{PeerId, RepoType};
+use deve_core::models::PeerId;
 use std::path::PathBuf;
 
 /// Seed 命令入口
@@ -31,11 +30,13 @@ pub fn run(ledger_dir: &PathBuf, target_peer: String, snapshot_depth: usize) -> 
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let peer_id = PeerId::new(&target_peer);
 
-    // Default Repo ID (Nil)
-    let repo_id = uuid::Uuid::nil();
+    let repo_id = repo
+        .get_repo_info()?
+        .map(|info| info.uuid)
+        .ok_or_else(|| anyhow::anyhow!("Local repo metadata missing"))?;
 
     // 1. 列出所有本地文档
-    let docs = repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
+    let docs = repo.list_local_docs(None)?;
     tracing::info!("找到 {} 个本地文档待 Seed。", docs.len());
 
     let mut total_ops = 0;

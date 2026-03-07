@@ -1,8 +1,7 @@
 // apps\cli\src\commands
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{DocId, LedgerEntry, RepoType};
+use deve_core::models::{DocId, LedgerEntry};
 use serde::Serialize;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -27,7 +26,7 @@ struct ExportEntry {
 /// 数据备份、迁移或分析。
 pub fn run(ledger_dir: &PathBuf, output: Option<String>, snapshot_depth: usize) -> Result<()> {
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    let docs = repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?;
+    let docs = repo.list_local_docs(None)?;
 
     let mut writer: Box<dyn Write> = if let Some(path) = output {
         let file = File::create(path)?;

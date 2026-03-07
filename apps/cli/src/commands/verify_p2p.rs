@@ -13,7 +13,7 @@
 
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoType};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use std::fs;
 use std::path::Path;
 use tracing::{info, warn};
@@ -74,9 +74,11 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
 
     // 4. Sync A -> B
     info!("--- Step 2: Sync A -> B ---");
-    // Use default repo_id for local
-    let repo_id = uuid::Uuid::nil();
-    let ops_a = repo_a.get_ops(&RepoType::Local(repo_id), doc_id)?;
+    let repo_id = repo_a
+        .get_repo_info()?
+        .map(|info| info.uuid)
+        .ok_or_else(|| anyhow::anyhow!("Repo A metadata missing"))?;
+    let ops_a = repo_a.get_local_ops(doc_id)?;
     info!("Extracted {} ops from Peer A", ops_a.len());
 
     let mut applied_count = 0;
@@ -138,7 +140,7 @@ trait ContentResolver {
 
 impl ContentResolver for RepoManager {
     fn resolve_local_content(&self, doc_id: DocId) -> Result<String> {
-        let ops = self.get_ops(&RepoType::Local(uuid::Uuid::nil()), doc_id)?;
+        let ops = self.get_local_ops(doc_id)?;
         let entries: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
         Ok(deve_core::state::reconstruct_content(&entries))
     }

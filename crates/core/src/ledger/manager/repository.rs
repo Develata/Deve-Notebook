@@ -2,23 +2,15 @@
 //! # Repository Trait 实现 (RepoManager)
 
 use crate::ledger::RepoManager;
-use crate::ledger::listing::RepoListing;
 use crate::ledger::traits::{RepoSelector, Repository};
 use crate::models::DocId;
-use crate::models::RepoType;
 use crate::source_control::{ChangeEntry, CommitInfo};
 use crate::state::reconstruct_content;
 use anyhow::Result;
 
 impl Repository for RepoManager {
     fn list_docs(&self) -> Result<Vec<(DocId, String)>> {
-        let repo_id = self
-            .get_repo_info()
-            .ok()
-            .flatten()
-            .map(|info| info.uuid)
-            .unwrap_or_else(uuid::Uuid::nil);
-        RepoListing::list_docs(self, &RepoType::Local(repo_id))
+        self.list_local_docs(None)
     }
 
     fn list_docs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<(DocId, String)>> {

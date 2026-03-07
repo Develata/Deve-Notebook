@@ -11,8 +11,7 @@
 //! VFS 层抽象了文件系统操作，提供在文件重命名后仍保持稳定的标识符。
 
 use crate::ledger::RepoManager;
-use crate::ledger::listing::RepoListing;
-use crate::models::{FileNodeId, RepoType};
+use crate::models::FileNodeId;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
@@ -86,7 +85,7 @@ impl Vfs {
 
         // 2. Scan Ledger -> Remove Ghosts
         // Optimization: In a real system, we might query the DB for all paths first.
-        let known_docs = repo.list_docs(&RepoType::Local(uuid::Uuid::nil()))?; // Returns (DocId, String)
+        let known_docs = repo.list_local_docs(None)?; // Returns (DocId, String)
         let mut removed_count = 0;
 
         for (_id, path) in known_docs {

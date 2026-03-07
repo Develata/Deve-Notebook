@@ -1,10 +1,8 @@
 // apps\cli\src\bin
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{LedgerEntry, Op, PeerId, RepoType};
+use deve_core::models::{LedgerEntry, Op, PeerId};
 use std::path::PathBuf;
-use uuid::Uuid;
 
 fn main() -> Result<()> {
     let ledger_dir = PathBuf::from("ledger");
@@ -27,18 +25,15 @@ fn inject_conflict(
     content: &str,
 ) -> Result<()> {
     let peer_id = PeerId::new(peer_name);
-    // 动态获取 Repo ID，回退到 Uuid::nil()
     let repo_id = repo
-        .get_repo_info()
-        .ok()
-        .flatten()
+        .get_repo_info()?
         .map(|info| info.uuid)
-        .unwrap_or_else(Uuid::nil);
+        .ok_or_else(|| anyhow::anyhow!("Local repo metadata missing"))?;
 
     println!("Scanning local docs to find {}...", filename);
 
     // Use Local repo to find the DocId since Shadow Repos don't store path metadata
-    let local_docs = repo.list_docs(&RepoType::Local(repo_id))?;
+    let local_docs = repo.list_local_docs(None)?;
 
     let mut found = false;
     for (doc_id, path) in local_docs {
