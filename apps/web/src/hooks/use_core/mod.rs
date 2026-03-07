@@ -13,6 +13,7 @@ pub mod effects_msg;
 pub mod effects_sc;
 mod provide;
 pub mod state;
+mod state_init;
 mod storage_runtime;
 pub mod types;
 
