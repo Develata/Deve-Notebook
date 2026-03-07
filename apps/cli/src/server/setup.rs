@@ -48,10 +48,9 @@ fn allowed_origins_from_env() -> Vec<axum::http::HeaderValue> {
         .collect()
 }
 
-/// 判断当前是否为开发模式；显式 `DEVE_ENV=development` 或 debug 构建均视为开发环境。
+/// 判断当前是否为开发模式；仅显式 `DEVE_ENV=development` 视为开发环境。
 fn is_development() -> bool {
-    let explicit = matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"));
-    explicit || cfg!(debug_assertions)
+    matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
 }
 
 pub(super) fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {

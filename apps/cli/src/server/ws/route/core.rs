@@ -53,12 +53,8 @@ pub(super) async fn route_core(
         ClientMessage::SyncSnapshotRequest { peer_id, repo_id } => {
             sync::handle_sync_snapshot_request(state, ch, peer_id, repo_id).await;
         }
-ClientMessage::SyncPushSnapshot {
-peer_id,
-repo_id,
-ops,
-} => {
-sync::handle_sync_push_snapshot(state, ch, peer_id, repo_id, ops).await;
+        ClientMessage::SyncPushSnapshot { peer_id, repo_id, ops } => {
+            sync::handle_sync_push_snapshot(state, ch, peer_id, repo_id, ops).await;
         }
         ClientMessage::SyncRequest { repo_id, requests } => {
             sync::handle_sync_request(state, ch, session, repo_id, requests).await;
@@ -66,12 +62,7 @@ sync::handle_sync_push_snapshot(state, ch, peer_id, repo_id, ops).await;
         ClientMessage::SyncPush { repo_id, ops } => {
             sync::handle_sync_push(state, ch, session, repo_id, ops).await;
         }
-            sync::handle_sync_request(state, ch, repo_id, requests).await;
-        }
-        ClientMessage::SyncPush { repo_id, ops } => {
-            sync::handle_sync_push(state, ch, repo_id, ops).await;
-        }
-ClientMessage::Ping => {
+        ClientMessage::Ping => {
             ch.unicast(deve_core::protocol::ServerMessage::Pong);
         }
         ClientMessage::RequestKey => {

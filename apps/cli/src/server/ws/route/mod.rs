@@ -20,6 +20,7 @@ pub(crate) async fn route_message(
     msg: ClientMessage,
 ) {
     metrics::increment_ops();
+    match msg {
         ClientMessage::SyncHello {
             peer_id,
             pub_key,
@@ -28,15 +29,6 @@ pub(crate) async fn route_message(
             repo_id,
         } => {
             sync::handle_sync_hello(state, ch, session, peer_id, pub_key, signature, vector, repo_id).await;
-        }
-        ClientMessage::SyncHello {
-            peer_id,
-            pub_key,
-            signature,
-            vector,
-            repo_id,
-        } => {
-            sync::handle_sync_hello(state, ch, peer_id, pub_key, signature, vector, repo_id).await;
         }
         other => docs::route_docs(state, ch, session, other).await,
     }

@@ -21,7 +21,18 @@ pub async fn run(
     vault_path: PathBuf,
     port: u16,
     snapshot_depth: usize,
+    dev: bool,
 ) -> anyhow::Result<()> {
+    if dev {
+        if std::env::var("DEVE_ENV").is_err() {
+            // 仅对当前 serve 进程显式开启开发模式；不恢复全局隐式 debug 授权。
+            unsafe {
+                std::env::set_var("DEVE_ENV", "development");
+            }
+        }
+        tracing::warn!("Serve dev mode enabled via --dev");
+    }
+
     let bind_addr = format!("0.0.0.0:{}", port);
     if TcpListener::bind(&bind_addr).is_err() {
         return start_proxy_mode(port).await;

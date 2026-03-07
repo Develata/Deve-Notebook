@@ -40,7 +40,7 @@ pub enum OutputEvent {
 /// 允许的消息：ListDocs, ListRepos, SyncHello, GetChanges 等查询类。
 /// 禁止的消息：Edit, SyncPush, CommitAndPush, CreateDoc 等写入类。
 pub fn spawn_output_manager(
-rx: UnboundedReceiver<ClientMessage>,
+    rx: UnboundedReceiver<ClientMessage>,
     link_rx: UnboundedReceiver<SplitSink<WebSocket, Message>>,
     connection_status: ReadSignal<ConnectionStatus>,
 ) {
@@ -66,8 +66,8 @@ rx: UnboundedReceiver<ClientMessage>,
                         leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
                         continue;
                     }
-handle_client_message(*msg, &mut current_sink, &mut queue).await;
-}
+                    handle_client_message(*msg, &mut current_sink, &mut queue).await;
+                }
             }
         }
     });
@@ -206,27 +206,5 @@ fn is_write_message(msg: &ClientMessage) -> bool {
         ClientMessage::PluginCall { .. } => true,
         // 其他为查询类消息
         _ => false,
-    }
-}
-/// 
-/// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
-fn is_write_message(msg: &ClientMessage) -> bool {
-    match msg {
-        ClientMessage::Edit { .. } => true,
-        ClientMessage::SyncPush { .. } => true,
-        ClientMessage::CreateDoc { .. } => true,
-        ClientMessage::RenameDoc { .. } => true,
-        ClientMessage::DeleteDoc { .. } => true,
-        ClientMessage::CopyDoc { .. } => true,
-        ClientMessage::MoveDoc { .. } => true,
-        ClientMessage::CommitAndPush { .. } => true,
-        ClientMessage::StageFile { .. } => true,
-        ClientMessage::StageFiles { .. } => true,
-        ClientMessage::UnstageFile { .. } => true,
-        ClientMessage::UnstageFiles { .. } => true,
-        ClientMessage::DiscardFile { .. } => true,
-        ClientMessage::ConfirmMerge => true,
-        ClientMessage::DiscardPending => true,
-        _ => false, // 其他为查询类消息
     }
 }

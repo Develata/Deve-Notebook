@@ -5,12 +5,12 @@
 //! 从 `mod.rs` 拆分以保持单文件行数在 130 行目标以内。
 
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use std::sync::Arc;
 
-use super::{auth, handlers, node_role_http, rate_limit, setup, static_files, ws, AppState};
+use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
 use deve_core::security::AuthConfig;
 
 /// 构建完整的 Axum 应用路由
@@ -66,47 +66,6 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
         .layer(axum::Extension(api_limiter))
         .layer(setup::build_cors_layer(port))
 }
-    let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
-
-    // 速率限制: 每 IP 每分钟最多 200 次请求
-    let limiter = rate_limit::RateLimiter::new(200, std::time::Duration::from_secs(60));
-
-    // 需要认证的路由 (JWT Cookie 中间件保护)
-    let protected = Router::new()
-        .route("/ws", get(ws::ws_handler))
-        .route(
-            "/api/sc/status",
-            get(handlers::source_control::http::status),
-        )
-        .route("/api/sc/diff", get(handlers::source_control::http::diff))
-        .route("/api/sc/stage", post(handlers::source_control::http::stage))
-        .route(
-            "/api/sc/commit",
-            post(handlers::source_control::http::commit),
-        )
-        .route("/api/repo/docs", get(handlers::repo::http::list_docs))
-        .route("/api/repo/doc", get(handlers::repo::http::doc_content))
-        .route("/api/auth/logout", post(auth::handlers::logout))
-        .route("/api/auth/me", get(auth::handlers::me))
-        .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
-
-    // 公开路由 (无需认证)
-    let public = Router::new()
-        .route("/api/auth/login", post(auth::handlers::login))
-        .route("/api/node/role", get(node_role_http::role));
-
-    Router::new()
-        .merge(protected)
-        .merge(public)
-        .merge(static_files::static_fallback())
-        .with_state(app_state)
-        .layer(axum::middleware::from_fn(auth::headers::security_headers))
-        .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware))
-        .layer(axum::Extension(auth_config))
-        .layer(axum::Extension(brute_force))
-        .layer(axum::Extension(limiter))
-        .layer(setup::build_cors_layer(port))
-}
 
 /// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。
 /// 开发模式必须显式设置 DEVE_ENV=development（不再自动根据构建模式切换）。
@@ -126,7 +85,7 @@ pub(super) fn load_auth_config() -> AuthConfig {
             cfg
         }
         Err(err) => {
-            tracing::error!("{err}");
+            tracing::error!("{err} (local dev: use `deve_cli serve --dev` or set DEVE_ENV=development)");
             std::process::exit(1);
         }
     }

@@ -3,19 +3,16 @@
 //!
 //! 处理服务器消息并更新对应信号。
 
-use crate::api::WsService;
 use deve_core::models::{DocId, PeerId};
-use deve_core::protocol::ClientMessage;
+use deve_core::protocol::ServerMessage;
 use leptos::prelude::*;
 
-use deve_core::protocol::ServerMessage;
-
+use super::contexts::SystemMetricsData;
 use super::types::{ChatMessage, PeerSession};
 
-/// 处理 DocList 消息
+/// 处理 DocList 消息。
 ///
-/// 不再自动选中第一篇文档，以保持 Dashboard 页面稳定。
-/// 用户需要显式点击文档才能选中。
+/// 为保持 Dashboard 根页面稳定，不再自动选中首篇文档。
 pub fn handle_doc_list(
     list: Vec<(DocId, String)>,
     set_docs: WriteSignal<Vec<(DocId, String)>>,
@@ -25,31 +22,9 @@ pub fn handle_doc_list(
 ) {
     leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
     set_docs.set(list);
-    // 注意：不再自动选中第一篇文档
-    // 用户需要显式点击文档或使用搜索功能
-}
-///
-/// `explicit_home` 为 true 时表示用户显式点击了 Home，
-/// 此时不应自动选中第一篇文档，以保持 Dashboard 页面稳定。
-pub fn handle_doc_list(
-    list: Vec<(DocId, String)>,
-    set_docs: WriteSignal<Vec<(DocId, String)>>,
-    current_doc: ReadSignal<Option<DocId>>,
-    set_current_doc: WriteSignal<Option<DocId>>,
-    explicit_home: ReadSignal<bool>,
-) {
-    leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
-    set_docs.set(list.clone());
-    // 仅在未选中文档且用户未显式导航至 Home 时自动选中首篇
-    if current_doc.get_untracked().is_none()
-        && !explicit_home.get_untracked()
-        && let Some(first) = list.first()
-    {
-        set_current_doc.set(Some(first.0));
-    }
 }
 
-/// 处理 SyncHello 消息
+/// 处理 SyncHello 消息。
 pub fn handle_sync_hello(
     peer_id: PeerId,
     vector: deve_core::models::VersionVector,
@@ -59,7 +34,7 @@ pub fn handle_sync_hello(
         map.insert(
             peer_id.clone(),
             PeerSession {
-                id: peer_id.clone(),
+                id: peer_id,
                 vector,
                 last_seen: js_sys::Date::now() as u64,
             },
@@ -67,7 +42,7 @@ pub fn handle_sync_hello(
     });
 }
 
-/// 处理 ChatChunk 消息 (流式 AI 响应)
+/// 处理 AI 聊天流增量。
 pub fn handle_chat_chunk(
     req_id: String,
     delta: Option<String>,
@@ -75,86 +50,56 @@ pub fn handle_chat_chunk(
     set_chat_messages: WriteSignal<Vec<ChatMessage>>,
     set_is_chat_streaming: WriteSignal<bool>,
 ) {
-    if let Some(text) = delta {
-        set_chat_messages.update(|msgs| {
-            if let Some(msg) = msgs
+    if let Some(delta) = delta.filter(|text| !text.is_empty()) {
+        set_chat_messages.update(|messages| {
+            if let Some(existing) = messages
                 .iter_mut()
                 .rev()
-                .find(|m| m.req_id.as_deref() == Some(&req_id))
+                .find(|msg| msg.req_id.as_deref() == Some(req_id.as_str()))
             {
-                msg.content.push_str(&text);
+                existing.content.push_str(&delta);
             } else {
-                msgs.push(ChatMessage {
+                messages.push(ChatMessage {
                     role: "assistant".to_string(),
-                    content: text,
+                    content: delta,
                     req_id: Some(req_id.clone()),
                     ts_ms: js_sys::Date::now() as u64,
                 });
             }
         });
-        set_is_chat_streaming.set(true);
     }
+
     if finish_reason.is_some() {
         set_is_chat_streaming.set(false);
     }
 }
 
-/// 处理 BranchSwitched 消息
+/// 处理分支切换确认。
 pub fn handle_branch_switched(
-    ws: &WsService,
     peer_id: Option<String>,
     success: bool,
-    current_doc: ReadSignal<Option<DocId>>,
     set_active_branch: WriteSignal<Option<PeerId>>,
 ) {
-    leptos::logging::log!("分支已切换到 {:?}, 成功: {}", peer_id, success);
-    if success {
-        let new_val = peer_id.clone().map(PeerId::new);
-        set_active_branch.set(new_val);
-
-        if let Some(doc_id) = current_doc.get_untracked() {
-            ws.send(ClientMessage::OpenDoc { doc_id });
-        }
+    if !success {
+        leptos::logging::warn!("分支切换失败");
+        return;
     }
+
+    set_active_branch.set(peer_id.map(PeerId::new));
 }
 
-/// 处理 RepoSwitched 消息
-pub fn handle_repo_switched(
-    ws: &WsService,
-    name: String,
-    current_doc: ReadSignal<Option<DocId>>,
-    set_current_repo: WriteSignal<Option<String>>,
-) {
-    leptos::logging::log!("仓库已切换到: {}", name);
+/// 处理仓库切换确认。
+pub fn handle_repo_switched(name: String, set_current_repo: WriteSignal<Option<String>>) {
     set_current_repo.set(Some(name));
-
-    if let Some(doc_id) = current_doc.get_untracked() {
-        ws.send(ClientMessage::OpenDoc { doc_id });
-    }
-
-    ws.send(ClientMessage::GetChanges);
-    ws.send(ClientMessage::GetCommitHistory { limit: 50 });
 }
 
-/// 处理 effects.rs 主 match 未覆盖的剩余消息
-///
-/// 当前仅处理 `SystemMetrics`，其余忽略。
-/// 随着消息类型增加，可继续在此扩展。
+/// 处理剩余的通用消息。
 pub fn handle_remaining(
     msg: ServerMessage,
-    set_system_metrics: WriteSignal<Option<super::contexts::SystemMetricsData>>,
+    set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
 ) {
-    if let ServerMessage::SystemMetrics {
-        cpu_usage_percent,
-        memory_used_mb,
-        active_connections,
-        ops_processed,
-        uptime_secs,
-        db_size_bytes,
-        doc_count,
-    } = msg
-    {
-        set_system_metrics.set(Some(super::contexts::SystemMetricsData {
+    match msg {
+        ServerMessage::SystemMetrics {
             cpu_usage_percent,
             memory_used_mb,
             active_connections,
@@ -162,6 +107,19 @@ pub fn handle_remaining(
             uptime_secs,
             db_size_bytes,
             doc_count,
-        }));
+        } => {
+            set_system_metrics.set(Some(SystemMetricsData {
+                cpu_usage_percent,
+                memory_used_mb,
+                active_connections,
+                ops_processed,
+                uptime_secs,
+                db_size_bytes,
+                doc_count,
+            }));
+        }
+        other => {
+            leptos::logging::log!("未处理的服务端消息: {:?}", other);
+        }
     }
 }

@@ -12,21 +12,6 @@
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use deve_core::models::RepoId;
-    /// 当前绑定的仓库 ID (在 SyncHello 成功后设置)
-    ///
-    /// 用于后续同步消息的 repo 一致性校验。
-    pub bound_repo_id: Option<RepoId>,
-            bound_repo_id: None,
-    /// 绑定仓库 ID (在握手成功后调用)
-    pub fn bind_repo(&mut self, repo_id: RepoId) {
-        self.bound_repo_id = Some(repo_id);
-    }
-
-    /// 检查给定 repo_id 是否与会话绑定一致
-    pub fn is_repo_bound(&self, repo_id: &RepoId) -> bool {
-        self.bound_repo_id.as_ref() == Some(repo_id)
-    }
-use deve_core::models::PeerId;
 
 /// WebSocket 会话状态
 ///
@@ -38,6 +23,11 @@ pub struct WsSession {
     ///
     /// 在 SyncHello 握手成功后设置，用于后续 SyncPush 验证。
     pub authenticated_peer_id: Option<PeerId>,
+
+    /// 当前绑定的仓库 ID (在 SyncHello 成功后设置)
+    ///
+    /// 用于后续同步消息的 repo 一致性校验。
+    pub bound_repo_id: Option<RepoId>,
 
     /// 当前活动分支
     ///
@@ -67,6 +57,16 @@ impl WsSession {
     /// 设置已认证的 Peer ID
     pub fn set_authenticated(&mut self, peer_id: PeerId) {
         self.authenticated_peer_id = Some(peer_id);
+    }
+
+    /// 绑定仓库 ID (在握手成功后调用)
+    pub fn bind_repo(&mut self, repo_id: RepoId) {
+        self.bound_repo_id = Some(repo_id);
+    }
+
+    /// 检查给定 repo_id 是否与会话绑定一致
+    pub fn is_repo_bound(&self, repo_id: &RepoId) -> bool {
+        self.bound_repo_id.as_ref() == Some(repo_id)
     }
 
     /// 切换活动分支

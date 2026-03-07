@@ -1,4 +1,4 @@
-// apps\web\src\i18n
+// apps/web/src/i18n/common.rs
 //! # I18n Common Module (通用翻译)
 //!
 //! 包含跨模块使用的通用翻译字符串。
@@ -180,10 +180,5 @@ pub fn login_error(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Login error",
         Locale::Zh => "登录错误",
-    }
-}
-    match locale {
-        Locale::En => "Reconnecting to server... please wait.",
-        Locale::Zh => "正在重连服务器...请稍候。",
     }
 }

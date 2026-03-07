@@ -9,8 +9,6 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::PeerId;
-use crate::server::channel::DualChannel;
-use deve_core::models::PeerId;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
@@ -59,45 +57,8 @@ pub async fn handle_sync_hello(
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
-pub async fn handle_sync_hello(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    peer_id: PeerId,
-    pub_key: Vec<u8>,
-    signature: Vec<u8>,
-    remote_vector: deve_core::models::VersionVector,
-    repo_id: deve_core::models::RepoId,
-) {
-    tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
 
-    // 1. 获取 SyncEngine (使用消息中的 repo_id)
-    let mut engine = match state.sync_engine.get_or_create(repo_id) {
-        Some(e) => e,
-        None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
-            return;
-        }
-    };
-    let local_peer_id = engine.local_peer_id.clone();
-    let local_vector = engine.version_vector().clone();
-    // 2. 执行握手逻辑 (Verify Client)
-    let result = match engine.handshake(
-        repo_id,
-        peer_id.clone(),
-        &pub_key,
-        &signature,
-        remote_vector,
-    ) {
-        Ok(res) => res,
-        Err(e) => {
-            tracing::error!("Handshake failed with {}: {}", peer_id, e);
-            // 使用单播发送错误
-            ch.send_error(format!("Handshake failed: {}", e));
-            return;
-        }
-    };
-
-    // 3. 构建并发送回执 Hello (Mutual Auth: Sign our response)
+    // 4. 构建并发送回执 Hello (Mutual Auth: Sign our response)
     let vec_bytes = serde_json::to_vec(&local_vector).unwrap_or_default();
     let mut msg = Vec::new();
     msg.extend_from_slice(b"deve-handshake");
@@ -115,7 +76,7 @@ pub async fn handle_sync_hello(
     // 单播回复给发起方
     ch.unicast(hello_msg);
 
-    // 4. 发送请求 (I need data)
+    // 5. 发送请求 (I need data)
     if !result.to_request.is_empty() {
         let requests: Vec<(PeerId, (u64, u64))> = result
             .to_request
@@ -127,7 +88,7 @@ pub async fn handle_sync_hello(
         ch.unicast(request_msg);
     }
 
-    // 4.1 发送快照请求 (I need snapshot)
+    // 6. 发送快照请求 (I need snapshot)
     for req in result.snapshot_requests {
         let msg = ServerMessage::SyncSnapshotRequest {
             peer_id: req.peer_id,
@@ -136,7 +97,7 @@ pub async fn handle_sync_hello(
         ch.unicast(msg);
     }
 
-    // 5. 推送数据 (I have data you need)
+    // 7. 推送数据 (I have data you need)
     let mut ops_to_push = Vec::new();
     for req in result.to_send {
         if let Ok(response) = engine.get_ops_for_sync(&req) {
@@ -150,6 +111,7 @@ pub async fn handle_sync_hello(
     }
 }
 
+/// 处理数据请求 (对方想要数据)
 pub async fn handle_sync_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -166,14 +128,7 @@ pub async fn handle_sync_request(
     }
 
     // 获取或创建指定仓库的 SyncEngine
-pub async fn handle_sync_request(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    repo_id: deve_core::models::RepoId,
-    requests: Vec<(PeerId, (u64, u64))>,
-) {
-    // 获取或创建指定仓库的 SyncEngine
-    let mut engine = match state.sync_engine.get_or_create(repo_id) {
+    let engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
         None => {
             ch.send_error("Failed to get or create sync engine".to_string());
@@ -200,6 +155,8 @@ pub async fn handle_sync_request(
         ch.unicast(push_msg);
     }
 }
+
+/// 处理数据推送 (对方发送数据)
 pub async fn handle_sync_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -237,27 +194,6 @@ pub async fn handle_sync_push(
     // repo_id 从消息中提取，不再从全局状态获取
     let response = sync_proto::SyncResponse {
         peer_id: source_peer,
-        repo_id,
-        ops,
-    };
-pub async fn handle_sync_push(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    repo_id: deve_core::models::RepoId,
-    ops: Vec<deve_core::security::EncryptedOp>,
-) {
-    // 获取或创建指定仓库的 SyncEngine
-    let mut engine = match state.sync_engine.get_or_create(repo_id) {
-        Some(e) => e,
-        None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
-            return;
-        }
-    };
-
-    // repo_id 从消息中提取，不再从全局状态获取
-    let response = sync_proto::SyncResponse {
-        peer_id: PeerId::new("unknown"),
         repo_id,
         ops,
     };

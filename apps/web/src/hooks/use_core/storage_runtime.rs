@@ -21,35 +21,6 @@ fn repo_scope(repo: Option<String>) -> Option<String> {
         !value.is_empty() && uuid::Uuid::parse_str(value).is_ok()
     })
 }
-/// 初始化浏览器身份与 repo 级向量缓存。
-/// 仅当 repo_id 是有效 UUID 时才执行，避免使用 "default" 等字符串。
-pub fn init_storage_runtime(
-    signals: &CoreSignals,
-) -> (
-    ReadSignal<Option<StoredPeerIdentity>>,
-    ReadSignal<VersionVector>,
-) {
-    let (identity, set_identity) = signal(None::<StoredPeerIdentity>);
-    let (repo_vector, set_repo_vector) = signal(VersionVector::new());
-    let last_repo = Rc::new(RefCell::new(None::<String>));
-    let current_repo = signals.current_repo;
-    let set_degraded_sync_mode = signals.set_degraded_sync_mode;
-    let set_sync_banner = signals.set_sync_banner;
-    Effect::new(move |_| {
-        // 必须等到有有效的 UUID 格式的 repo_id
-        let Some(repo_id) = repo_scope(current_repo.get()) else {
-            leptos::logging::log!("Storage: waiting for valid repo UUID, current: {:?}", current_repo.get());
-            return;
-        };
-        if last_repo.borrow().as_deref() == Some(repo_id.as_str()) {
-            return;
-        }
-        *last_repo.borrow_mut() = Some(repo_id.clone());
-        set_identity.set(None);
-        set_repo_vector.set(VersionVector::new());
-    repo.filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "default".to_string())
-}
 
 fn set_degraded(
     set_mode: WriteSignal<Option<DegradedSyncMode>>,
@@ -69,6 +40,7 @@ fn clear_degraded(
 }
 
 /// 初始化浏览器身份与 repo 级向量缓存。
+/// 仅当 repo_id 是有效 UUID 时才执行，避免使用 "default" 等字符串。
 pub fn init_storage_runtime(
     signals: &CoreSignals,
 ) -> (
@@ -81,17 +53,25 @@ pub fn init_storage_runtime(
     let current_repo = signals.current_repo;
     let set_degraded_sync_mode = signals.set_degraded_sync_mode;
     let set_sync_banner = signals.set_sync_banner;
+    
     Effect::new(move |_| {
-        let repo_id = repo_scope(current_repo.get());
+        // 必须等到有有效的 UUID 格式的 repo_id
+        let Some(repo_id) = repo_scope(current_repo.get()) else {
+            leptos::logging::log!("Storage: waiting for valid repo UUID, current: {:?}", current_repo.get());
+            return;
+        };
+        
         if last_repo.borrow().as_deref() == Some(repo_id.as_str()) {
             return;
         }
+        
         *last_repo.borrow_mut() = Some(repo_id.clone());
         set_identity.set(None);
         set_repo_vector.set(VersionVector::new());
 
         let set_identity = set_identity;
         let set_repo_vector = set_repo_vector;
+        
         spawn_local(async move {
             match probe_capabilities().await {
                 Ok(capabilities) => {
@@ -127,26 +107,29 @@ pub fn init_storage_runtime(
             };
 
             let metadata = load_repo_metadata(&repo_id).await.unwrap_or_default();
-            // 检查 repo 是否已变更（比较 Option<String> 与 String）
+            
+            // 检查 repo 是否已变更
             if repo_scope(current_repo.get_untracked()).as_deref() != Some(repo_id.as_str()) {
                 return;
             }
-            if repo_scope(current_repo.get_untracked()) != repo_id {
-                return;
-            }
+            
             let vector = metadata
                 .vector_json
                 .as_deref()
                 .and_then(|json| serde_json::from_str(json).ok())
                 .unwrap_or_default();
+                
             clear_degraded(set_degraded_sync_mode, set_sync_banner);
             set_repo_vector.set(vector);
             set_identity.set(Some(identity.clone()));
+            
             if let Err(err) = touch_offline_cache(&repo_id, "bootstrap").await {
                 leptos::logging::warn!("离线缓存触点更新失败: {}", err);
             }
+            
             leptos::logging::log!("Frontend PeerId: {}", identity.peer_id);
         });
     });
+    
     (identity, repo_vector)
 }

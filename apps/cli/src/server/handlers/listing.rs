@@ -35,14 +35,10 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
         .map(|info| info.uuid.to_string())
         .unwrap_or_default();
 
-    // 发送 RepoSwitched 让前端知道当前仓库 (用于初始化及切换后同步)
+    // 发送一次 RepoSwitched，让前端同步当前仓库上下文。
     ch.unicast(ServerMessage::RepoSwitched {
         name: current_repo.clone(),
         uuid: repo_uuid,
-    });
-    ch.unicast(ServerMessage::RepoSwitched {
-        name: current_repo.clone(),
-        uuid: String::new(), // TODO: Fetch UUID
     });
 
     // 使用 session 锁定的数据库，或回退到默认逻辑

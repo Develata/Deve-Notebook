@@ -89,7 +89,8 @@ pub fn setup_handshake_effect(
                     let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
                     let _ = note_handshake(&identity.repo_id).await;
                     // Parse repo_id string to Uuid for protocol
-                    let repo_uuid = uuid::Uuid::parse_str(&identity.repo_id).unwrap_or_else(|_| uuid::Uuid::nil());
+                    let repo_uuid = uuid::Uuid::parse_str(&identity.repo_id)
+                        .unwrap_or_else(|_| uuid::Uuid::nil());
                     ws.send(ClientMessage::SyncHello {
                         peer_id,
                         pub_key: identity.public_key.clone(),
@@ -164,7 +165,13 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
-                    effects_msg::handle_doc_list(list, set_docs, current_doc, set_current_doc, explicit_home);
+                    effects_msg::handle_doc_list(
+                        list,
+                        set_docs,
+                        current_doc,
+                        set_current_doc,
+                        explicit_home,
+                    );
                 }
                 ServerMessage::SyncHello {
                     peer_id, vector, ..
@@ -216,16 +223,10 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::ShadowList { shadows } => set_shadow_repos.set(shadows),
                 ServerMessage::RepoList { repos } => set_repo_list.set(repos),
                 ServerMessage::BranchSwitched { peer_id, success } => {
-                    effects_msg::handle_branch_switched(
-                        &ws_rx,
-                        peer_id,
-                        success,
-                        current_doc,
-                        set_active_branch,
-                    );
+                    effects_msg::handle_branch_switched(peer_id, success, set_active_branch);
                 }
                 ServerMessage::RepoSwitched { name, uuid: _ } => {
-                    effects_msg::handle_repo_switched(&ws_rx, name, current_doc, set_current_repo);
+                    effects_msg::handle_repo_switched(name, set_current_repo);
                 }
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);

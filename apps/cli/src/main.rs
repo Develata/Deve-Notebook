@@ -46,6 +46,8 @@ enum Commands {
     Serve {
         #[arg(short, long, default_value_t = 3001)]
         port: u16,
+        #[arg(long)]
+        dev: bool,
     },
     /// Export ledger to JSONL
     Export {
@@ -95,8 +97,8 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Dump { path }) => {
             commands::dump::run(&ledger_dir, path, config.snapshot_depth)?
         }
-        Some(Commands::Serve { port }) => {
-            commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth).await?
+        Some(Commands::Serve { port, dev }) => {
+            commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth, dev).await?
         }
         Some(Commands::Export { output }) => {
             commands::export::run(&ledger_dir, output, config.snapshot_depth)?

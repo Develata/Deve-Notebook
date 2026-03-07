@@ -16,7 +16,6 @@ use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
-use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::tree::TreeManager;
 

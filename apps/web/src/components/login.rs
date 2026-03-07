@@ -3,9 +3,11 @@
 //!
 //! 处理用户认证，包括登录表单、401 状态显示。
 
-use crate::i18n::{Locale, t};
+use crate::i18n::Locale;
+use crate::i18n::common;
 use gloo_net::http::Request;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use serde::{Deserialize, Serialize};
 
 /// 登录请求体
@@ -29,7 +31,7 @@ struct LoginResponse {
 }
 
 /// 认证状态
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum AuthState {
     /// 未认证
     Unauthenticated,
@@ -56,7 +58,7 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
     };
 
     // 执行登录
-    let do_login = move |_| {
+    let do_login = move |_: leptos::ev::MouseEvent| {
         let user = username.get();
         let pass = password.get();
         
@@ -78,12 +80,12 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
                 }
                 Ok(false) => {
                     set_auth_state.set(AuthState::Failed(
-                        t::common::login_failed(locale.get()).to_string()
+                        common::login_failed(locale.get()).to_string()
                     ));
                 }
                 Err(e) => {
                     set_auth_state.set(AuthState::Failed(format!("{}: {}", 
-                        t::common::login_error(locale.get()), 
+                        common::login_error(locale.get()), 
                         e
                     )));
                 }
@@ -95,10 +97,10 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
         <div class="fixed inset-0 bg-bg flex items-center justify-center z-50">
             <div class="w-full max-w-sm p-8 bg-bg-panel rounded-lg shadow-lg border border-border">
                 <h1 class="text-2xl font-bold text-center text-primary mb-2">
-                    {move || t::common::app_name(locale.get())}
+                    {move || common::app_name(locale.get())}
                 </h1>
                 <p class="text-sm text-muted text-center mb-6">
-                    {move || t::common::login_subtitle(locale.get())}
+                    {move || common::login_subtitle(locale.get())}
                 </p>
 
                 // 错误信息显示
@@ -112,38 +114,28 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
                     // 用户名输入
                     <div>
                         <label class="block text-xs font-medium text-muted mb-1">
-                            {move || t::common::username(locale.get())}
+                            {move || common::username(locale.get())}
                         </label>
                         <input
                             type="text"
                             class="w-full px-3 py-2 bg-bg border border-border rounded text-primary text-sm focus:outline-none focus:border-accent"
                             prop:value=move || username.get()
                             on:input=move |e| set_username.set(event_target_value(&e))
-                            on:keypress=move |e: leptos::ev::KeyboardEvent| {
-                                if e.key() == "Enter" {
-                                    do_login(());
-                                }
-                            }
-                            placeholder=move || t::common::username_placeholder(locale.get())
+                            placeholder=move || common::username_placeholder(locale.get())
                         />
                     </div>
 
                     // 密码输入
                     <div>
                         <label class="block text-xs font-medium text-muted mb-1">
-                            {move || t::common::password(locale.get())}
+                            {move || common::password(locale.get())}
                         </label>
                         <input
                             type="password"
                             class="w-full px-3 py-2 bg-bg border border-border rounded text-primary text-sm focus:outline-none focus:border-accent"
                             prop:value=move || password.get()
                             on:input=move |e| set_password.set(event_target_value(&e))
-                            on:keypress=move |e: leptos::ev::KeyboardEvent| {
-                                if e.key() == "Enter" {
-                                    do_login(());
-                                }
-                            }
-                            placeholder=move || t::common::password_placeholder(locale.get())
+                            placeholder=move || common::password_placeholder(locale.get())
                         />
                     </div>
 
@@ -158,12 +150,11 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
                             }
                         )
                         on:click=do_login
-                        disabled=move || is_loading.get() || username.get().is_empty() || password.get().is_empty()
                     >
                         {move || if is_loading.get() {
-                            t::common::logging_in(locale.get()).to_string()
+                            common::logging_in(locale.get()).to_string()
                         } else {
-                            t::common::login_button(locale.get()).to_string()
+                            common::login_button(locale.get()).to_string()
                         }}
                     </button>
                 </div>
@@ -211,6 +202,7 @@ pub async fn check_auth_status() -> Result<bool, String> {
 }
 
 /// 登出
+#[allow(dead_code)]
 pub async fn logout() -> Result<(), String> {
     let response = Request::post("/api/auth/logout")
         .send()
