@@ -70,6 +70,7 @@ impl SyncManager {
     }
 
     pub fn scan(&self) -> Result<()> {
+        materialize::prepare_local_workspaces(&self.repo, &self.vault_root, &self.persist_guard)?;
         scan::scan_vault(&self.repo, &self.vfs, &self.vault_root)
     }
 
@@ -82,7 +83,7 @@ impl SyncManager {
             .repo
             .get_path_by_docid_in_local_repo(repo_name, doc_id)?
         {
-            let file_path = self.vault_root.join(&path_str);
+            let file_path = self.repo.local_repo_workspace_path(repo_name, &path_str)?;
 
             if file_path.exists() {
                 let disk_content = std::fs::read_to_string(&file_path)?;
@@ -118,14 +119,19 @@ impl SyncManager {
             .repo
             .get_path_by_docid_in_local_repo(repo_name, doc_id)?
         {
-            let file_path = self.vault_root.join(&path_str);
+            let file_path = self.repo.local_repo_workspace_path(repo_name, &path_str)?;
             let rebuilt = rebuild::rebuild_local_doc_in_repo(&self.repo, repo_name, doc_id)?;
 
             if let Some(parent) = file_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
             std::fs::write(&file_path, &rebuilt.content)?;
-            self.persist_guard.record(&path_str, &rebuilt.content);
+            self.persist_guard.record(
+                &self
+                    .repo
+                    .local_repo_workspace_relative(repo_name, &path_str),
+                &rebuilt.content,
+            );
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
             let policy = SnapshotPolicy::default();
@@ -194,8 +200,16 @@ impl SyncManager {
     }
 
     pub fn handle_fs_event(&self, path_str: &str) -> Result<Vec<crate::protocol::ServerMessage>> {
-        let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, &self.vault_root);
-        handler.handle_event(path_str, self)
+        let Some((repo_name, repo_id, repo_path)) =
+            self.repo.resolve_local_workspace_path(path_str)?
+        else {
+            return Ok(vec![]);
+        };
+        if repo_path.is_empty() {
+            return Ok(vec![]);
+        }
+        let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, &repo_name, repo_id);
+        handler.handle_event(&repo_path)
     }
 
     /// Invariant: 仅忽略近期由 SyncManager 自己写回、且内容哈希完全一致的事件。
@@ -211,6 +225,14 @@ impl SyncManager {
             &self.persist_guard,
             repo_name,
         )
+    }
+
+    pub fn resolve_dir_change(&self, path_str: &str) -> Result<Option<(RepoId, String)>> {
+        let Some((_, repo_id, repo_path)) = self.repo.resolve_local_workspace_path(path_str)?
+        else {
+            return Ok(None);
+        };
+        Ok(Some((repo_id, repo_path)))
     }
 
     pub fn local_repo_id(&self) -> Option<RepoId> {

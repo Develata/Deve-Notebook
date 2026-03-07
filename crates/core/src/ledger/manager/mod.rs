@@ -7,6 +7,7 @@ pub mod core;
 pub mod locator;
 pub mod maintenance;
 pub mod types;
+mod workspace;
 
 mod commit_ops;
 mod merge_ops;

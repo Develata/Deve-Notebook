@@ -74,11 +74,11 @@ impl RepoManager {
     fn commit_file_ops_in_local_repo(
         &self,
         repo_name: &str,
-        vault_root: &std::path::Path,
+        _vault_root: &std::path::Path,
         normalized_path: &str,
     ) -> Result<()> {
         let doc_id = self.resolve_or_create_docid_in_local_repo(repo_name, normalized_path)?;
-        let disk_path = vault_root.join(normalized_path);
+        let disk_path = self.local_repo_workspace_path(repo_name, normalized_path)?;
         let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default();
         let existing_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
         let entries: Vec<_> = existing_ops.into_iter().map(|(_, e)| e).collect();

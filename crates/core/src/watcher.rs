@@ -22,8 +22,11 @@ use tracing::{error, info};
 pub enum FsEventType {
     /// 文档变更 (ServerMessage 列表)
     DocChange(Vec<crate::protocol::ServerMessage>),
-    /// 目录结构变更 (需要重新扫描树)
-    DirChange,
+    /// 目录结构变更 (repo-scoped)
+    DirChange {
+        repo_id: crate::models::RepoId,
+        path: String,
+    },
     /// 文件变更已记录到 pending_fs_ops (不自动 ingest)
     FsPendingChange { path: String, change_type: String },
 }
@@ -77,8 +80,6 @@ impl Watcher {
         events: &[notify_debouncer_mini::DebouncedEvent],
         root: &std::path::Path,
     ) {
-        let mut dir_changed = false;
-
         for event in events {
             let path = &event.path;
             if let Ok(rel) = path.strip_prefix(root) {
@@ -95,7 +96,15 @@ impl Watcher {
                 // 目录事件检测 (路径存在且是目录，或不存在但无扩展名)
                 let is_dir = path.is_dir() || (!path.exists() && path.extension().is_none());
                 if is_dir {
-                    dir_changed = true;
+                    if let Ok(Some((repo_id, repo_path))) =
+                        self.sync_manager.resolve_dir_change(&path_str)
+                        && let Some(cb) = &self.on_event
+                    {
+                        cb(FsEventType::DirChange {
+                            repo_id,
+                            path: repo_path,
+                        });
+                    }
                     continue;
                 }
 
@@ -118,11 +127,6 @@ impl Watcher {
                     _ => {}
                 }
             }
-        }
-
-        // 目录结构变更，通知重新扫描
-        if dir_changed && let Some(cb) = &self.on_event {
-            cb(FsEventType::DirChange);
         }
     }
 }

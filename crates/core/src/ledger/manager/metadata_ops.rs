@@ -41,6 +41,14 @@ impl RepoManager {
         metadata::get_docid_by_inode(&self.local_db, inode)
     }
 
+    pub fn get_docid_by_inode_in_local_repo(
+        &self,
+        repo_name: &str,
+        inode: &crate::models::FileNodeId,
+    ) -> Result<Option<DocId>> {
+        self.run_on_local_repo(repo_name, |db| metadata::get_docid_by_inode(db, inode))
+    }
+
     pub fn get_docid_in_local_repo(&self, repo_name: &str, path: &str) -> Result<Option<DocId>> {
         self.run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))
     }
@@ -48,6 +56,15 @@ impl RepoManager {
     /// 绑定 Inode 到 DocId
     pub fn bind_inode(&self, inode: &crate::models::FileNodeId, doc_id: DocId) -> Result<()> {
         metadata::bind_inode(&self.local_db, inode, doc_id)
+    }
+
+    pub fn bind_inode_in_local_repo(
+        &self,
+        repo_name: &str,
+        inode: &crate::models::FileNodeId,
+        doc_id: DocId,
+    ) -> Result<()> {
+        self.run_on_local_repo(repo_name, |db| metadata::bind_inode(db, inode, doc_id))
     }
 
     /// 重命名文档
