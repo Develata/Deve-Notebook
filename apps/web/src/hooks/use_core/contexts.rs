@@ -6,6 +6,7 @@
 //! 待后续组件全部迁移后自然消除。
 #![allow(dead_code)]
 
+pub use super::dashboard_context::{DashboardContext, SystemMetricsData};
 use super::diff_session::DiffSessionWire;
 use super::state::PluginResponse;
 use super::types::ChatMessage;
@@ -114,24 +115,4 @@ pub struct BranchContext {
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,
-}
-
-/// 系统指标快照 (来自服务端 SystemMetrics 推送)
-///
-/// **Invariant**: 仅存于 RAM 信号中, 不持久化到 IndexedDB。
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct SystemMetricsData {
-    pub cpu_usage_percent: f32,
-    pub memory_used_mb: u64,
-    pub active_connections: u32,
-    pub ops_processed: u64,
-    pub uptime_secs: u64,
-    pub db_size_bytes: u64,
-    pub doc_count: u32,
-}
-
-/// 仪表盘上下文 (Dashboard 组件消费)
-#[derive(Clone)]
-pub struct DashboardContext {
-    pub metrics: ReadSignal<Option<SystemMetricsData>>,
 }
