@@ -75,15 +75,16 @@
 ## 连接与协议 (Connection & Protocol)
 
 ### WebSocket 协议类型 (Protocol Types)
-*   **Format (格式)**: 节点间 (Server-to-Server) 使用 **Bincode** 以确保性能；客户端与服务端 (Client-Server) 使用 **JSON** 以便调试。
+*   **Format (格式)**: 节点间 (Server-to-Server) 与服务端下行 (Server-to-Client) 默认使用 **Bincode**；浏览器上行 (Client-to-Server) 以 Bincode 为优先格式，同时保留 JSON 文本兼容入口用于调试与旧客户端。
 *   **ClientMessage (客户端消息)**:
     *   `SyncHello`, `SyncRequest`, `SyncPush`: P2P 同步协议消息；凡进入同步路径的消息 **MUST** 携带可确定路由的 `repo_id`。
     *   `Edit`, `Cursor`, `OpenDoc`, `CreateDoc`: 编辑器操作消息。
     *   `PluginCall`: 远程插件调用请求。
 *   **ServerMessage (服务端消息)**:
-    *   `TreeDelta`: 文件树增量更新。
+    *   `TreeUpdate(TreeDelta)`: 文件树增量更新。
+    *   `FsChangeDetected`: 文件系统变更通知，提示客户端按当前 session repo 重新拉取列表/状态。
     *   `NewOp`: 实时协作操作事件。
-    *   `Snapshot`: 完整文档内容快照；必须显式绑定到单个 `repo_id`。
+    *   `Snapshot`: OpenDoc 文档快照，绑定于当前 session repo；同步回退快照则使用显式 `repo_id` 的 `SyncSnapshotRequest` / `SyncPushSnapshot`。
 
 ### OpenDoc 性能策略 (Snapshot-First + Progressive Prefetch)
 *   **Snapshot-First**: 打开文档优先返回最近快照 + 增量 Ops。
@@ -98,8 +99,8 @@
     1.  WebLightPeer 通过 `relative /ws`（或显式配置端点）建立连接，并声明自身角色为受限同步端点。
     2.  客户端发送 `SyncHello { repo_id, peer_pubkey, vector, session_proof }`；其中 `repo_id` 是服务器路由与权限校验的主键。
     3.  Server 校验用户会话、仓库访问权限与 `repo_id` 对应的路由上下文，随后绑定该连接到单个 repo。
-    4.  Server 返回 `SyncAck { repo_id, server_vector, mode }`，明确后续同步窗口与回退策略。
-    5.  后续 `SyncRequest`、`SyncPush`、`Snapshot` 与实时广播均 **MUST** 沿用同一 `repo_id`，否则服务器必须拒绝或断开连接。
+    4.  Server 返回 `ServerMessage::SyncHello { peer_id, pub_key, signature, vector }` 作为握手回执，并按 diff 结果追加 `SyncRequest` / `SyncSnapshotRequest` / `SyncPush`。
+    5.  后续 `SyncRequest`、`SyncPush`、`SyncSnapshotRequest`、`SyncPushSnapshot` 与实时同步广播均 **MUST** 沿用同一 `repo_id`，否则服务器必须拒绝或断开连接。
 *   **Deterministic Routing (确定性路由)**:
     *   `SyncHello` **MUST** 提供 `repo_id` 与当前 vector，确保 Server 能决定是走增量同步还是快照回退。
     *   `SyncRequest` **MUST** 至少携带 `{ repo_id, known_vector }`；禁止依赖连接外的隐式默认 repo。

@@ -133,7 +133,7 @@
 *   **Login Endpoint** (`POST /api/auth/login`): 5 次/分钟/IP。
 *   **API Endpoints**: 120 次/分钟/IP (Authenticated)。
 *   **WebSocket**: 200 条消息/分钟/连接。
-*   **Implementation**: `tower_governor` 或 `tower::limit::RateLimitLayer`。
+*   **Implementation**: 当前实现为自研内存限流器：HTTP 侧使用 per-IP 滑动窗口，WebSocket 侧使用每连接 60 秒窗口消息计数。
 
 ## TLS 配置
 

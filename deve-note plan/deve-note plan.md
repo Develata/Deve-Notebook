@@ -2,7 +2,7 @@
 
 **版本**: 0.0.1
 **核心理念**: Git-Flow P2P Architecture, Trinity Isolation, Remote Dashboard.
-**当前状态**: Phase 2 (Design) Refined. Ready for Implementation.
+**当前状态**: Phase 3-4 (Implementation In Progress). 设计文档持续追认当前工作树。
 
 本文档已模块化，请参阅以下子文档获取详细规划：
 
@@ -42,8 +42,8 @@
     *   **例外 — JS Bridge**: `apps/web/js/` 下的 JavaScript Bridge 文件因 FFI 性质，行数限制放宽至 target < 200 行, hard limit 400 行。
     *   **豁免 — 构建产物**: `*.bundle.js`、`dist/`、`target/` 等构建产物不受行数限制约束。此规则仅针对 **源文件 (Source Files)**。
 *   **中文注释**: 每个模块/组件 SHOULD 包含中文文档注释。
-*   **I18n 支持**: 所有用户可见文本 MUST 使用 `t::xxx::yyy()` 进行国际化。
-*   **错误码**: 所有错误码 MUST 使用 `Error::xxx::yyy()` 进行国际化。
+*   **I18n 支持**: 所有用户可见文本 MUST 通过 `crate::i18n::t::xxx::yyy()` facade 获取，禁止直接把自然语言写进组件协议层。
+*   **错误码**: 后端 MUST 返回结构化错误码 (e.g. `AUTH_INVALID_PASSWORD`)，前端据此映射到 `t::...` 文案；自然语言错误不得作为稳定协议契约。
 
 ### Appendix: Acceptance Test Cases
 *   **[Acceptance Cases Index](./acceptance-cases/00_index.md)**: 验收用例集。

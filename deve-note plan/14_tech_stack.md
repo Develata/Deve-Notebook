@@ -8,7 +8,7 @@
 | **Frontend** | **Leptos v0.7**          | Verified          | 信号驱动 (Signals)，性能极致。      |
 | **UI**       | **Tailwind CSS**         | Verified          | 原子化 CSS。                        |
 | **Router**   | **leptos_router**        | Verified          | 前端路由管理。                      |
-| **I18n**     | **leptos_i18n**          | Verified          | 编译时类型安全校验。                |
+| **I18n**     | **自研 `Locale + t::*`** | Verified          | 轻量、零代码生成、调用面稳定。      |
 | **Editor**   | **CodeMirror 6**         | Verified          | 核心编辑器，Headless 模式。         |
 | **Icons**    | **Lucide Icons**         | Verified          | 统一 SVG 图标集。                   |
 | **Storage**  | **Redb** (Native)        | Verified          | 嵌入式 KV 数据库 (Zero-copy).       |
@@ -21,7 +21,7 @@
 | **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
 | **Graph**    | **d3-force + Pixi.js**   | Planned           | 高性能图谱渲染 (Web Canvas).        |
 | **Search**   | **Tantivy** (Rust)       | Planned           | 全文检索、模糊搜索 (Backend).       |
-| **Sync**     | **Axum + Tower**         | Planned (Partial) | HTTP/WebSocket 背压与流控。         |
+| **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
 | **Build**    | **Tauri v2**             | Planned           | 跨平台外壳 (Mobile/Desktop)。       |
 | **Plugins**  | **Rhai + WASM (Extism)** | Planned           | 双层插件体系 (Scripting + Binary)。 |
 

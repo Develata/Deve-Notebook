@@ -1,7 +1,7 @@
 # 核心架构进度 (Core Architecture Schedule)
 
 > 涵盖计划: 04_storage, 05_network, 06_repository, 07_diff_logic, 09_auth
-> 最近更新: 2026-03-04
+> 最近更新: 2026-03-07
 
 ## 1. 存储层 (Storage - Plan 04)
 - [x] **Store A (Vault)**: 本地 Markdown 工作区投影 ($W_{user}$).
@@ -24,7 +24,7 @@
 ## 2. 网络与同步 (Network - Plan 05)
 - [x] **Peer Identity**: 基于 Ed25519 的身份 ID 生成 (`SHA256(PubKey)[0..12]`).
 - [x] **Handshake (TOFU)**: 首次连接交换公钥并验证签名.
-- [x] **Protocol Format**: 节点间使用 Bincode，客户端使用 JSON.
+- [x] **Protocol Format**: 节点间与服务端下行使用 Bincode；浏览器上行兼容 Bincode / JSON.
 - [x] **E2EE Encryption**: 传输层 `RepoKey` 加密 (AES-256-GCM).
 - [x] **Vector Clock**: 实现逻辑时钟与差异计算.
 - [x] **Gossip Sync**: 基于 VC 的增量 Ops 同步.
@@ -84,7 +84,7 @@
 ## 5. 认证与安全 (Auth - Plan 09)
 - [x] **No Init UI**: 配置通过环境变量注入 (`AUTH_SECRET`).
 - [x] **JWT Auth**: 无状态 Token 验证.
-- [x] **WebSocket Auth**: 握手阶段验证 Ticket.
+- [x] **WebSocket Auth**: 升级阶段验证 JWT Cookie；同步阶段再验证 Peer Identity.
 - [x] **Argon2**: Argon2id 密码哈希 (`security/auth/password.rs`), 含常数时间验证.
-- [x] **Rate Limiting**: 滑动窗口限流 (`server/rate_limit.rs`, 200 req/60s), 惰性 GC.
+- [x] **Rate Limiting**: 登录 5 次/分钟/IP、API 120 次/分钟/IP、WebSocket 200 条消息/分钟/连接。
 - [x] **Localhost Policy**: `AUTH_ALLOW_ANONYMOUS_LOCALHOST` (`auth/config.rs` + `middleware.rs` + `ws/mod.rs`).
