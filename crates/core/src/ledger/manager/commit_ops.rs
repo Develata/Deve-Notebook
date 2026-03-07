@@ -29,76 +29,92 @@ impl RepoManager {
         message: &str,
         vault_root: PathBuf,
     ) -> Result<CommitInfo> {
-        let staged = staging::list_staged_with_status(&self.local_db)?;
+        self.commit_staged_with_ops_in_local_repo(self.local_repo_name(), message, vault_root)
+    }
+
+    pub(crate) fn commit_staged_with_ops_in_local_repo(
+        &self,
+        repo_name: &str,
+        message: &str,
+        vault_root: PathBuf,
+    ) -> Result<CommitInfo> {
+        let staged = self.run_on_local_repo(repo_name, staging::list_staged_with_status)?;
         if staged.is_empty() {
             anyhow::bail!("Nothing to commit: staging area is empty");
         }
 
         let doc_count = staged.len() as u32;
-
         for (path, status) in &staged {
             let normalized = to_forward_slash(path);
             match status {
                 ChangeStatus::Added | ChangeStatus::Modified => {
-                    self.commit_file_ops(&vault_root, &normalized)?;
+                    self.commit_file_ops_in_local_repo(repo_name, &vault_root, &normalized)?;
                 }
                 ChangeStatus::Deleted => {
-                    self.commit_delete_snapshot(&normalized)?;
+                    self.commit_delete_snapshot_in_local_repo(repo_name, &normalized)?;
                 }
             }
         }
 
-        // 获取追加 Op 后的最大序列号
-        let ledger_seq = range::get_max_seq(&self.local_db)?;
-        let commit = commits::create(&self.local_db, message, doc_count, ledger_seq)?;
-        staging::clear(&self.local_db)?;
-
-        tracing::info!("Committed {} files: {}", doc_count, message);
+        let commit = self.run_on_local_repo(repo_name, |db| {
+            let ledger_seq = range::get_max_seq(db)?;
+            let commit = commits::create(db, message, doc_count, ledger_seq)?;
+            staging::clear(db)?;
+            Ok(commit)
+        })?;
+        tracing::info!(
+            "Committed {} files in {}: {}",
+            doc_count,
+            repo_name,
+            message
+        );
         Ok(commit)
     }
 
-    /// 为单个 Added/Modified 文件生成 Op 并追加 Ledger + 保存快照
-    ///
-    /// **流程**: 解析 doc_id → 读磁盘内容 → 取快照(旧内容) → reconcile → 追加 Op → 保存快照
-    fn commit_file_ops(&self, vault_root: &std::path::Path, normalized_path: &str) -> Result<()> {
-        let doc_id = self.resolve_or_create_docid(normalized_path)?;
+    fn commit_file_ops_in_local_repo(
+        &self,
+        repo_name: &str,
+        vault_root: &std::path::Path,
+        normalized_path: &str,
+    ) -> Result<()> {
+        let doc_id = self.resolve_or_create_docid_in_local_repo(repo_name, normalized_path)?;
         let disk_path = vault_root.join(normalized_path);
-        let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default(); // 文件不存在视为空
-
-        // 获取已有 Ledger ops 用于 reconcile
-        let existing_ops = self.get_local_ops(doc_id)?;
+        let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default();
+        let existing_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
         let entries: Vec<_> = existing_ops.into_iter().map(|(_, e)| e).collect();
-
-        // 计算需要追加的 Op (使磁盘内容与 Ledger 状态一致)
         let new_ops = reconcile::compute_reconcile_ops(doc_id, &entries, &disk_content)?;
 
-        // 追加到 Ledger
         for op_entry in &new_ops {
-            self.append_local_op(op_entry)?;
+            self.append_local_op_in_local_repo(repo_name, op_entry)?;
         }
 
-        // 保存快照 (提交后的最新内容)
-        changes::save_snapshot(&self.local_db, doc_id, normalized_path, &disk_content)?;
-        Ok(())
+        self.run_on_local_repo(repo_name, |db| {
+            changes::save_snapshot(db, doc_id, normalized_path, &disk_content)
+        })
     }
 
-    /// 处理 Deleted 文件：删除快照
-    fn commit_delete_snapshot(&self, normalized_path: &str) -> Result<()> {
+    fn commit_delete_snapshot_in_local_repo(
+        &self,
+        repo_name: &str,
+        normalized_path: &str,
+    ) -> Result<()> {
         use crate::source_control::snapshot_paths;
-        if let Some(doc_id) = snapshot_paths::find_snapshot_doc_id(&self.local_db, normalized_path)?
-        {
-            changes::remove_snapshot(&self.local_db, doc_id)?;
-        }
-        Ok(())
+        self.run_on_local_repo(repo_name, |db| {
+            if let Some(doc_id) = snapshot_paths::find_snapshot_doc_id(db, normalized_path)? {
+                changes::remove_snapshot(db, doc_id)?;
+            }
+            Ok(())
+        })
     }
 
-    /// 解析路径对应的 DocId，不存在则创建
-    fn resolve_or_create_docid(&self, normalized_path: &str) -> Result<crate::models::DocId> {
-        use crate::ledger::metadata;
-        if let Some(doc_id) = metadata::get_docid(&self.local_db, normalized_path)? {
+    fn resolve_or_create_docid_in_local_repo(
+        &self,
+        repo_name: &str,
+        normalized_path: &str,
+    ) -> Result<crate::models::DocId> {
+        if let Some(doc_id) = self.get_docid_in_local_repo(repo_name, normalized_path)? {
             return Ok(doc_id);
         }
-        // 新文件：创建 DocId 绑定
-        metadata::create_docid(&self.local_db, normalized_path)
+        self.create_docid_in_local_repo(repo_name, normalized_path)
     }
 }

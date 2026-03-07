@@ -2,7 +2,7 @@ use anyhow::Result;
 use redb::Database;
 
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
-use crate::models::PeerId;
+use crate::models::{PeerId, RepoId};
 
 impl RepoManager {
     /// 获取指定分支下指定仓库的 URL
@@ -100,6 +100,84 @@ impl RepoManager {
         }
 
         Ok(None)
+    }
+
+    pub fn find_local_repo_name_by_id(&self, target_id: RepoId) -> Result<Option<String>> {
+        if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
+            && info.uuid == target_id
+        {
+            return Ok(Some(self.local_repo_name.clone()));
+        }
+
+        let local_dir = self.ledger_dir.join("local");
+        if !local_dir.exists() {
+            return Ok(None);
+        }
+
+        for entry in std::fs::read_dir(local_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
+                continue;
+            }
+            let file_stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
+            if file_stem == self.local_repo_name {
+                continue;
+            }
+            let is_match = self
+                .run_on_local_repo(file_stem, |db| {
+                    Ok(Self::read_repo_info_from_db(db)?.map(|info| info.uuid) == Some(target_id))
+                })
+                .unwrap_or(false);
+            if is_match {
+                return Ok(Some(file_stem.to_string()));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Invariant: 进入本地 DB 写路径前，repo selector 必须被解析为单一 repo 名称。
+    pub fn resolve_local_repo_name(
+        &self,
+        repo_id: Option<RepoId>,
+        repo_name: Option<&str>,
+    ) -> Result<String> {
+        let by_id = match repo_id {
+            Some(repo_id) => Some(
+                self.find_local_repo_name_by_id(repo_id)?
+                    .ok_or_else(|| anyhow::anyhow!("Local repo not found for UUID {}", repo_id))?,
+            ),
+            None => None,
+        };
+        let by_name = match repo_name {
+            Some(repo_name) => {
+                let normalized = repo_name.trim_end_matches(".redb");
+                self.get_repo_info_for(None, Some(normalized))?
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Local repo not found for name {}", normalized)
+                    })?;
+                Some(normalized.to_string())
+            }
+            None => None,
+        };
+
+        if let (Some(from_id), Some(from_name)) = (&by_id, &by_name)
+            && from_id != from_name
+        {
+            anyhow::bail!(
+                "Repo selector mismatch: repo_id resolved to {}, repo_name resolved to {}",
+                from_id,
+                from_name
+            );
+        }
+
+        Ok(by_id
+            .or(by_name)
+            .unwrap_or_else(|| self.local_repo_name.clone()))
     }
 
     /// 解析指定 branch/repo_name 对应仓库的元数据。
