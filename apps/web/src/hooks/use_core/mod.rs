@@ -49,7 +49,8 @@ pub fn use_core() -> CoreState {
     effects::setup_handshake_effect(&ws, identity, repo_vector, signals.degraded_sync_mode);
     effects::setup_message_effect(&ws, &signals);
 
-    let doc_callbacks = callbacks::create_doc_callbacks(&ws, signals.set_current_doc, signals.set_explicit_home);
+    let doc_callbacks =
+        callbacks::create_doc_callbacks(&ws, signals.set_current_doc, signals.set_explicit_home);
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
     let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
     let misc_callbacks =
@@ -95,6 +96,8 @@ pub fn use_core() -> CoreState {
         on_switch_branch: switch_callbacks.on_switch_branch,
         current_repo: signals.current_repo,
         set_current_repo: signals.set_current_repo,
+        current_repo_id: signals.current_repo_id,
+        set_current_repo_id: signals.set_current_repo_id,
         on_switch_repo: switch_callbacks.on_switch_repo,
         shadow_repos: signals.shadow_repos,
         on_list_shadows: sync_callbacks.on_list_shadows,

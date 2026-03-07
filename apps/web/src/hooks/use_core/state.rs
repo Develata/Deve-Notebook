@@ -74,6 +74,8 @@ pub struct CoreSignals {
     pub set_active_branch: WriteSignal<Option<PeerId>>,
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
+    pub current_repo_id: ReadSignal<Option<String>>,
+    pub set_current_repo_id: WriteSignal<Option<String>>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub set_shadow_repos: WriteSignal<Vec<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
@@ -139,17 +141,18 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::new());
     let (active_branch, set_active_branch) = signal(None::<PeerId>);
     let (current_repo, set_current_repo) = signal(None::<String>);
+    let (current_repo_id, set_current_repo_id) = signal(None::<String>);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (repo_list, set_repo_list) = signal(Vec::new());
-let (doc_version, set_doc_version) = signal(0u64);
+    let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
     let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
-let (sync_banner, set_sync_banner) = signal(None::<String>);
-// WebLightPeer 在线依赖：断连时强制只读
-let is_spectator = Memo::new(move |_| {
-let disconnected = connection_status.get() != ConnectionStatus::Connected;
-active_branch.get().is_some() || degraded_sync_mode.get().is_some() || disconnected
-});
+    let (sync_banner, set_sync_banner) = signal(None::<String>);
+    // WebLightPeer 在线依赖：断连时强制只读
+    let is_spectator = Memo::new(move |_| {
+        let disconnected = connection_status.get() != ConnectionStatus::Connected;
+        active_branch.get().is_some() || degraded_sync_mode.get().is_some() || disconnected
+    });
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
@@ -194,6 +197,8 @@ active_branch.get().is_some() || degraded_sync_mode.get().is_some() || disconnec
         set_active_branch,
         current_repo,
         set_current_repo,
+        current_repo_id,
+        set_current_repo_id,
         shadow_repos,
         set_shadow_repos,
         repo_list,

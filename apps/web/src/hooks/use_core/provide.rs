@@ -86,6 +86,8 @@ pub fn provide_sub_contexts(state: &CoreState) {
         on_switch_branch: state.on_switch_branch,
         current_repo: state.current_repo,
         set_current_repo: state.set_current_repo,
+        current_repo_id: state.current_repo_id,
+        set_current_repo_id: state.set_current_repo_id,
         on_switch_repo: state.on_switch_repo,
         shadow_repos: state.shadow_repos,
         on_list_shadows: state.on_list_shadows,

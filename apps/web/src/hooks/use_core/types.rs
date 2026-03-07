@@ -91,6 +91,8 @@ pub struct CoreState {
     // 仓库状态 (Repo -> .redb File)
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
+    pub current_repo_id: ReadSignal<Option<String>>,
+    pub set_current_repo_id: WriteSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
 
     // 分支切换状态

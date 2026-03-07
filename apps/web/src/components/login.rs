@@ -27,7 +27,9 @@ enum LoginStatus {
 
 #[derive(Deserialize, Debug)]
 struct LoginResponse {
-    status: LoginStatus,
+    success: Option<bool>,
+    error: Option<String>,
+    status: Option<LoginStatus>,
 }
 
 /// 认证状态
@@ -45,7 +47,10 @@ pub enum AuthState {
 
 /// 登录页面组件
 #[component]
-pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<AuthState>) -> impl IntoView {
+pub fn LoginPage(
+    auth_state: ReadSignal<AuthState>,
+    set_auth_state: WriteSignal<AuthState>,
+) -> impl IntoView {
     let (username, set_username) = signal(String::new());
     let (password, set_password) = signal(String::new());
     let (is_loading, set_is_loading) = signal(false);
@@ -61,7 +66,7 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
     let do_login = move |_: leptos::ev::MouseEvent| {
         let user = username.get();
         let pass = password.get();
-        
+
         if user.is_empty() || pass.is_empty() {
             set_auth_state.set(AuthState::Failed("请输入用户名和密码".to_string()));
             return;
@@ -73,19 +78,20 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
         spawn_local(async move {
             let result = attempt_login(user, pass).await;
             set_is_loading.set(false);
-            
+
             match result {
                 Ok(true) => {
                     set_auth_state.set(AuthState::Authenticated);
                 }
                 Ok(false) => {
                     set_auth_state.set(AuthState::Failed(
-                        common::login_failed(locale.get()).to_string()
+                        common::login_failed(locale.get()).to_string(),
                     ));
                 }
                 Err(e) => {
-                    set_auth_state.set(AuthState::Failed(format!("{}: {}", 
-                        common::login_error(locale.get()), 
+                    set_auth_state.set(AuthState::Failed(format!(
+                        "{}: {}",
+                        common::login_error(locale.get()),
                         e
                     )));
                 }
@@ -166,7 +172,7 @@ pub fn LoginPage(auth_state: ReadSignal<AuthState>, set_auth_state: WriteSignal<
 /// 尝试登录
 async fn attempt_login(username: String, password: String) -> Result<bool, String> {
     let request = LoginRequest { username, password };
-    
+
     let response = Request::post("/api/auth/login")
         .header("Content-Type", "application/json")
         .json(&request)
@@ -188,7 +194,17 @@ async fn attempt_login(username: String, password: String) -> Result<bool, Strin
         .await
         .map_err(|e| format!("解析响应失败: {}", e))?;
 
-    Ok(matches!(result.status, LoginStatus::Success))
+    if let Some(success) = result.success {
+        return Ok(success);
+    }
+
+    if let Some(status) = result.status {
+        return Ok(matches!(status, LoginStatus::Success));
+    }
+
+    Err(result
+        .error
+        .unwrap_or_else(|| "登录响应缺少 success/status 字段".to_string()))
 }
 
 /// 检查当前认证状态

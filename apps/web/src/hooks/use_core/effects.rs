@@ -131,10 +131,11 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
     let set_tree_nodes = signals.set_tree_nodes;
     let set_active_branch = signals.set_active_branch;
     let set_current_repo = signals.set_current_repo;
+    let set_current_repo_id = signals.set_current_repo_id;
     let set_chat_messages = signals.set_chat_messages;
     let set_is_chat_streaming = signals.set_is_chat_streaming;
     let set_system_metrics = signals.set_system_metrics;
-    let current_repo = signals.current_repo;
+    let current_repo_id = signals.current_repo_id;
     let explicit_home = signals.explicit_home;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
     // 当浏览器缺少 WebCrypto / IndexedDB，或身份恢复失败时会进入降级模式。
@@ -177,9 +178,10 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                     peer_id, vector, ..
                 } => {
                     effects_msg::handle_sync_hello(peer_id, vector.clone(), set_peers);
-                    let repo_id = current_repo
-                        .get_untracked()
-                        .unwrap_or_else(|| "default".to_string());
+                    let repo_id = current_repo_id.get_untracked().unwrap_or_default();
+                    if repo_id.is_empty() {
+                        return;
+                    }
                     spawn_local(async move {
                         let vector_json = serde_json::to_string(&vector).unwrap_or_default();
                         let _ = save_repo_vector(&repo_id, &vector_json).await;
@@ -225,8 +227,13 @@ pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::BranchSwitched { peer_id, success } => {
                     effects_msg::handle_branch_switched(peer_id, success, set_active_branch);
                 }
-                ServerMessage::RepoSwitched { name, uuid: _ } => {
-                    effects_msg::handle_repo_switched(name, set_current_repo);
+                ServerMessage::RepoSwitched { name, uuid } => {
+                    effects_msg::handle_repo_switched(
+                        name,
+                        uuid,
+                        set_current_repo,
+                        set_current_repo_id,
+                    );
                 }
                 ServerMessage::EditRejected { reason } => {
                     leptos::logging::warn!("编辑被拒绝: {}", reason);

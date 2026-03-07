@@ -74,6 +74,7 @@ pub fn handle_sc_message(
             let conflict_tag = if *has_conflict { " [冲突]" } else { "" };
             leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
             schedule_refresh();
+            ws.send(ClientMessage::ListDocs);
         }
         ServerMessage::CommitDiffResult { diffs } => {
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());

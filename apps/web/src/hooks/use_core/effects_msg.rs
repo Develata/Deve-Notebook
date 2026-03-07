@@ -89,8 +89,14 @@ pub fn handle_branch_switched(
 }
 
 /// 处理仓库切换确认。
-pub fn handle_repo_switched(name: String, set_current_repo: WriteSignal<Option<String>>) {
+pub fn handle_repo_switched(
+    name: String,
+    uuid: String,
+    set_current_repo: WriteSignal<Option<String>>,
+    set_current_repo_id: WriteSignal<Option<String>>,
+) {
     set_current_repo.set(Some(name));
+    set_current_repo_id.set((!uuid.is_empty()).then_some(uuid));
 }
 
 /// 处理剩余的通用消息。

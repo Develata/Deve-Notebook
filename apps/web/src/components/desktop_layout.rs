@@ -127,7 +127,11 @@ pub fn DesktopLayout(
                     if let Some(session) = core.diff_content.get() {
                         return view! {
                             <DiffView
-                                repo_scope=core.current_repo.get().unwrap_or_default()
+                                repo_scope=core
+                                    .current_repo_id
+                                    .get()
+                                    .or_else(|| core.current_repo.get())
+                                    .unwrap_or_default()
                                 path=session.path
                                 old_content=session.old_content
                                 new_content=session.new_content
