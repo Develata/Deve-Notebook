@@ -10,7 +10,6 @@ const PERSISTED_WRITE_MATCH_BUDGET: u8 = 4;
 
 enum PersistedAction {
     Write { content_hash: String },
-    Delete,
 }
 
 struct PersistedWrite {
@@ -39,10 +38,6 @@ impl PersistGuard {
         );
     }
 
-    pub(super) fn record_delete(&self, path: &str) {
-        self.insert(path, PersistedAction::Delete);
-    }
-
     pub(super) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
         let mut guard = self.recent_writes.lock().unwrap();
         let Some(entry) = guard.get_mut(path) else {
@@ -60,13 +55,6 @@ impl PersistGuard {
                     return false;
                 };
                 if pending_fs::content_hash(&content) != *content_hash {
-                    guard.remove(path);
-                    return false;
-                }
-                true
-            }
-            PersistedAction::Delete => {
-                if vault_root.join(path).exists() {
                     guard.remove(path);
                     return false;
                 }

@@ -2,11 +2,9 @@ use super::persist_guard::PersistGuard;
 use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
-use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 
 /// 启动时确保所有本地 repo 都拥有独立的 `vault/<repo_name>/` 工作区。
 pub(super) fn prepare_local_workspaces(
@@ -23,8 +21,8 @@ pub(super) fn prepare_local_workspaces(
 /// 将指定本地 repo 的文档视图投影到 `vault/<repo_name>/`。
 ///
 /// Invariants:
-/// - 同一 repo 的 `.md` 集合与该 repo 的 Ledger 完全一致。
-/// - 不会删除其他 repo 的工作区内容。
+/// - 仅在 repo 工作区首次缺失时执行 bootstrap；已有工作区绝不覆盖用户文件。
+/// - 不会删除其他 repo 的工作区内容，也不会吞掉未入库的 working tree 变更。
 pub(super) fn materialize_local_repo(
     repo: &RepoManager,
     _vault_root: &Path,
@@ -32,17 +30,15 @@ pub(super) fn materialize_local_repo(
     repo_name: &str,
 ) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
+    let bootstrap = !repo_root.exists();
     std::fs::create_dir_all(&repo_root)?;
+    if !bootstrap {
+        return Ok(());
+    }
 
-    let docs = repo.list_local_docs(Some(repo_name))?;
-    let desired: HashSet<String> = docs.iter().map(|(_, path)| path.clone()).collect();
-
-    for (doc_id, repo_path) in docs {
+    for (doc_id, repo_path) in repo.list_local_docs(Some(repo_name))? {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
         let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
-        if std::fs::read_to_string(&file_path).unwrap_or_default() == rebuilt.content {
-            continue;
-        }
         if let Some(parent) = file_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -51,22 +47,6 @@ pub(super) fn materialize_local_repo(
             &rebuilt.content,
         );
         std::fs::write(&file_path, rebuilt.content)?;
-    }
-
-    for entry in WalkDir::new(&repo_root).into_iter().filter_map(Result::ok) {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Ok(rel) = path.strip_prefix(&repo_root) else {
-            continue;
-        };
-        let repo_path = to_forward_slash(&rel.to_string_lossy());
-        if !repo_path.ends_with(".md") || desired.contains(&repo_path) {
-            continue;
-        }
-        guard.record_delete(&repo.local_repo_workspace_relative(repo_name, &repo_path));
-        std::fs::remove_file(path)?;
     }
 
     Ok(())
