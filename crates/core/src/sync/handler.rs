@@ -6,6 +6,7 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
+use crate::models::RepoId;
 use crate::models::RepoType;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
@@ -21,6 +22,7 @@ pub struct FsEventHandler<'a> {
     pub repo: &'a Arc<RepoManager>,
     pub vfs: &'a Vfs,
     pub vault_root: &'a Path,
+    repo_id: Option<RepoId>,
 }
 
 impl<'a> FsEventHandler<'a> {
@@ -29,6 +31,7 @@ impl<'a> FsEventHandler<'a> {
             repo,
             vfs,
             vault_root,
+            repo_id: repo.get_repo_info().ok().flatten().map(|info| info.uuid),
         }
     }
 
@@ -164,6 +167,7 @@ impl<'a> FsEventHandler<'a> {
             .map(|e| e.has_conflict)
             .unwrap_or(false);
         ServerMessage::FsChangeDetected {
+            repo_id: self.repo_id,
             path: path.to_string(),
             change_type: change_type.to_string(),
             has_conflict,

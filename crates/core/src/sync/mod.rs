@@ -24,6 +24,8 @@ use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::models::DocId;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::models::RepoId;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
@@ -191,5 +193,13 @@ impl SyncManager {
     pub fn handle_fs_event(&self, path_str: &str) -> Result<Vec<crate::protocol::ServerMessage>> {
         let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, &self.vault_root);
         handler.handle_event(path_str, self)
+    }
+
+    pub fn local_repo_id(&self) -> Option<RepoId> {
+        self.repo
+            .get_repo_info()
+            .ok()
+            .flatten()
+            .map(|info| info.uuid)
     }
 }

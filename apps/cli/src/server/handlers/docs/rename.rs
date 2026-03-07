@@ -128,7 +128,7 @@ pub async fn handle_rename_doc(
 
             // 6. 刷新文档列表
             handle_list_docs(state, ch, session).await;
-            notify_fs_refresh(ch, &dst_name, "renamed");
+            notify_fs_refresh(ch, scope.repo_id, &dst_name, "renamed");
         }
     } else {
         tracing::warn!("重命名失败: 源不存在: {:?}", src);

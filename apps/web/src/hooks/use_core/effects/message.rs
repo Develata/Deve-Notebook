@@ -153,6 +153,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                         set_commit_history,
                         set_diff_content,
                         set_commit_diff_result,
+                        current_repo_id,
                         &schedule_refresh,
                         &ws_rx,
                     ) {

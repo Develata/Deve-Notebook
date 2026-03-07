@@ -20,6 +20,7 @@ pub fn handle_sc_message(
     set_history: WriteSignal<Vec<CommitInfo>>,
     set_diff: WriteSignal<Option<DiffSessionWire>>,
     set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
+    current_repo_id: ReadSignal<Option<String>>,
     schedule_refresh: &dyn Fn(),
     ws: &crate::api::WsService,
 ) -> bool {
@@ -67,10 +68,14 @@ pub fn handle_sc_message(
             }
         }
         ServerMessage::FsChangeDetected {
+            repo_id,
             path,
             change_type,
             has_conflict,
         } => {
+            if !matches_current_repo(repo_id, current_repo_id) {
+                return true;
+            }
             let conflict_tag = if *has_conflict { " [冲突]" } else { "" };
             leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
             schedule_refresh();
@@ -87,4 +92,15 @@ pub fn handle_sc_message(
         _ => return false,
     }
     true
+}
+
+fn matches_current_repo(
+    repo_id: &Option<uuid::Uuid>,
+    current_repo_id: ReadSignal<Option<String>>,
+) -> bool {
+    match (repo_id, current_repo_id.get_untracked()) {
+        (Some(repo_id), Some(current_repo_id)) => current_repo_id == repo_id.to_string(),
+        (Some(_), None) => true,
+        (None, _) => true,
+    }
 }

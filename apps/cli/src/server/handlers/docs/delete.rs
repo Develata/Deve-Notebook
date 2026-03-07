@@ -89,5 +89,5 @@ pub async fn handle_delete_doc(
 
     // 5. 刷新文档列表
     handle_list_docs(state, ch, session).await;
-    notify_fs_refresh(ch, &path, "deleted");
+    notify_fs_refresh(ch, scope.repo_id, &path, "deleted");
 }

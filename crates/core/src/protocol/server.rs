@@ -1,7 +1,7 @@
 // crates\core\src\protocol
 //! # Server Messages (服务端消息)
 
-use crate::models::{DocId, Op, PeerId, VersionVector};
+use crate::models::{DocId, Op, PeerId, RepoId, VersionVector};
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
@@ -181,6 +181,9 @@ pub enum ServerMessage {
     ///
     /// **Invariant**: 不触发自动 ingest，仅用于 UI 更新。
     FsChangeDetected {
+        /// 变更所属仓库；缺失时视为遗留/全局刷新事件
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         /// 变更的相对路径 (forward-slash)
         path: String,
         /// 变更类型描述
