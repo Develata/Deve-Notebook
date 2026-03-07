@@ -23,57 +23,66 @@ impl RepoManager {
         repo_id: &RepoId,
         doc_id: DocId,
     ) -> Result<MergeResult> {
-        // 1. 获取操作
-        let local_ops = self.get_local_ops(doc_id)?;
+        self.merge_peer_in_local_repo(self.local_repo_name(), peer_id, repo_id, doc_id)
+    }
+
+    /// 合并指定 Peer 的分支到目标本地仓库。
+    ///
+    /// Invariants:
+    /// - `repo_name` 与 `repo_id` 必须描述同一个本地 repo 作用域。
+    /// - base/local/remote 三方内容都必须从同一个 doc_id 的确定性日志重建。
+    pub fn merge_peer_in_local_repo(
+        &self,
+        repo_name: &str,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        doc_id: DocId,
+    ) -> Result<MergeResult> {
+        let local_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
         let remote_ops = match self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id) {
             Ok(ops) => ops,
             Err(_) => return Ok(MergeResult::Success(String::new())),
         };
-
-        // 2. 计算 Version Vectors
-        let mut local_vv = VersionVector::new();
-        for (_, entry) in &local_ops {
-            local_vv.update(entry.peer_id.clone(), entry.seq);
-        }
-
-        let mut remote_vv = VersionVector::new();
-        for (_, entry) in &remote_ops {
-            remote_vv.update(entry.peer_id.clone(), entry.seq);
-        }
-
-        // 3. 计算 LCA
-        let lca_vv = MergeEngine::find_lca(&local_vv, &remote_vv);
-
-        // 4. 重建内容
-        let all_local_entries: Vec<LedgerEntry> =
-            local_ops.iter().map(|(_, e)| e.clone()).collect();
-
-        // 合并操作池 (去重优化)
-        let mut pooled_entries: Vec<LedgerEntry> =
-            Vec::with_capacity(local_ops.len() + remote_ops.len());
-        pooled_entries.extend(local_ops.iter().map(|(_, e)| e.clone()));
-        pooled_entries.extend(remote_ops.iter().map(|(_, e)| e.clone()));
-
-        // 按 (PeerId, Seq) 排序以对齐重复项
-        pooled_entries.sort_by(|a, b| a.peer_id.cmp(&b.peer_id).then_with(|| a.seq.cmp(&b.seq)));
-
-        // 去重: 移除连续的 (PeerId, Seq) 相同的条目
-        pooled_entries.dedup_by(|a, b| a.peer_id == b.peer_id && a.seq == b.seq);
-
-        let base_content = MergeEngine::reconstruct_state_at(doc_id, &pooled_entries, &lca_vv);
-        let local_content =
-            MergeEngine::reconstruct_state_at(doc_id, &all_local_entries, &local_vv);
-
-        let all_remote_entries: Vec<LedgerEntry> =
-            remote_ops.iter().map(|(_, e)| e.clone()).collect();
-        let remote_content =
-            MergeEngine::reconstruct_state_at(doc_id, &all_remote_entries, &remote_vv);
-
-        // 5. 执行三方合并
-        Ok(MergeEngine::merge_commits(
-            &base_content,
-            &local_content,
-            &remote_content,
-        ))
+        Ok(merge_ops(doc_id, local_ops, remote_ops))
     }
+}
+
+fn merge_ops(
+    doc_id: DocId,
+    local_ops: Vec<(u64, LedgerEntry)>,
+    remote_ops: Vec<(u64, LedgerEntry)>,
+) -> MergeResult {
+    let local_vv = build_version_vector(&local_ops);
+    let remote_vv = build_version_vector(&remote_ops);
+    let lca_vv = MergeEngine::find_lca(&local_vv, &remote_vv);
+
+    let all_local_entries: Vec<LedgerEntry> = local_ops.iter().map(|(_, e)| e.clone()).collect();
+    let all_remote_entries: Vec<LedgerEntry> = remote_ops.iter().map(|(_, e)| e.clone()).collect();
+    let pooled_entries = dedup_entries(local_ops, remote_ops);
+
+    let base_content = MergeEngine::reconstruct_state_at(doc_id, &pooled_entries, &lca_vv);
+    let local_content = MergeEngine::reconstruct_state_at(doc_id, &all_local_entries, &local_vv);
+    let remote_content = MergeEngine::reconstruct_state_at(doc_id, &all_remote_entries, &remote_vv);
+
+    MergeEngine::merge_commits(&base_content, &local_content, &remote_content)
+}
+
+fn build_version_vector(entries: &[(u64, LedgerEntry)]) -> VersionVector {
+    let mut vector = VersionVector::new();
+    for (_, entry) in entries {
+        vector.update(entry.peer_id.clone(), entry.seq);
+    }
+    vector
+}
+
+fn dedup_entries(
+    local_ops: Vec<(u64, LedgerEntry)>,
+    remote_ops: Vec<(u64, LedgerEntry)>,
+) -> Vec<LedgerEntry> {
+    let mut pooled_entries = Vec::with_capacity(local_ops.len() + remote_ops.len());
+    pooled_entries.extend(local_ops.into_iter().map(|(_, entry)| entry));
+    pooled_entries.extend(remote_ops.into_iter().map(|(_, entry)| entry));
+    pooled_entries.sort_by(|a, b| a.peer_id.cmp(&b.peer_id).then_with(|| a.seq.cmp(&b.seq)));
+    pooled_entries.dedup_by(|a, b| a.peer_id == b.peer_id && a.seq == b.seq);
+    pooled_entries
 }
