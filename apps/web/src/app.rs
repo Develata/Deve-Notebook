@@ -27,7 +27,7 @@ pub fn App() -> impl IntoView {
 
     // 认证状态
     let (auth_state, set_auth_state) = signal(AuthState::Unauthenticated);
-    
+
     // 启动时检查认证状态
     spawn_local(async move {
         match check_auth_status().await {
@@ -43,8 +43,8 @@ pub fn App() -> impl IntoView {
     view! {
         {move || match auth_state.get() {
             AuthState::Authenticated => view! { <MainLayout/> }.into_any(),
-            _ => view! { 
-                <LoginPage auth_state=auth_state.into() set_auth_state=set_auth_state/>
+            _ => view! {
+                <LoginPage auth_state=auth_state set_auth_state=set_auth_state/>
             }.into_any(),
         }}
     }

@@ -34,10 +34,16 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
     // 需要认证的路由 (JWT Cookie 中间件保护)
     let protected = Router::new()
         .route("/ws", get(ws::ws_handler))
-        .route("/api/sc/status", get(handlers::source_control::http::status))
+        .route(
+            "/api/sc/status",
+            get(handlers::source_control::http::status),
+        )
         .route("/api/sc/diff", get(handlers::source_control::http::diff))
         .route("/api/sc/stage", post(handlers::source_control::http::stage))
-        .route("/api/sc/commit", post(handlers::source_control::http::commit))
+        .route(
+            "/api/sc/commit",
+            post(handlers::source_control::http::commit),
+        )
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .route("/api/auth/logout", post(auth::handlers::logout))
@@ -48,10 +54,11 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
     let login_route = Router::new()
         .route("/api/auth/login", post(auth::handlers::login))
         .layer(axum::Extension(login_limiter))
-        .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware));
+        .layer(axum::middleware::from_fn(
+            auth::middleware::login_rate_limit_middleware,
+        ));
 
-    let public = Router::new()
-        .route("/api/node/role", get(node_role_http::role));
+    let public = Router::new().route("/api/node/role", get(node_role_http::role));
 
     Router::new()
         .merge(protected)
@@ -78,14 +85,18 @@ pub(super) fn load_auth_config() -> AuthConfig {
     match AuthConfig::from_env() {
         Ok(cfg) => {
             if using_dev_defaults {
-                tracing::warn!("WARNING: Development mode with default credentials (set AUTH_SECRET and AUTH_PASS for production)");
+                tracing::warn!(
+                    "WARNING: Development mode with default credentials (set AUTH_SECRET and AUTH_PASS for production)"
+                );
             } else {
                 tracing::info!("Auth config loaded from env (user={})", cfg.username);
             }
             cfg
         }
         Err(err) => {
-            tracing::error!("{err} (local dev: use `deve_cli serve --dev` or set DEVE_ENV=development)");
+            tracing::error!(
+                "{err} (local dev: use `deve_cli serve --dev` or set DEVE_ENV=development)"
+            );
             std::process::exit(1);
         }
     }

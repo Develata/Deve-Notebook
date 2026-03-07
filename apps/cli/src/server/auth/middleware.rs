@@ -8,7 +8,7 @@
 //! - localhost 免密仅在 `AUTH_ALLOW_ANONYMOUS_LOCALHOST=true` 时生效
 
 use axum::{
-    Extension,
+    Extension, Json,
     body::Body,
     extract::ConnectInfo,
     http::{Request, StatusCode},
@@ -18,6 +18,8 @@ use axum::{
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
+use crate::server::rate_limit::RateLimiter;
+use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, LoginResponse};
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
 /// JWT 认证中间件
@@ -53,7 +55,7 @@ pub async fn auth_middleware(
         .and_then(super::cookie::extract_token_from_cookie_header);
     let token = match token {
         Some(t) => t,
-        None => return unauthorized("Missing auth token"),
+        None => return unauthorized(AuthErrorCode::TokenMissing),
     };
 
     // 验证 JWT
@@ -64,9 +66,27 @@ pub async fn auth_middleware(
         }
         Err(e) => {
             tracing::debug!("JWT rejected: {:?}", e);
-            unauthorized("Invalid or expired token")
+            unauthorized(AuthErrorCode::TokenExpired)
         }
     }
+}
+
+pub async fn login_rate_limit_middleware(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(limiter): Extension<RateLimiter>,
+    req: Request<Body>,
+    next: Next,
+) -> Response {
+    if !limiter.check_and_record_ip(addr.ip()) {
+        tracing::warn!("Rate limit exceeded for IP: {}", addr.ip());
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            [("Retry-After", limiter.retry_after_secs().to_string())],
+            Json(LoginResponse::failure(AuthErrorCode::RateLimited)),
+        )
+            .into_response();
+    }
+    next.run(req).await
 }
 
 fn is_localhost(ip: &IpAddr) -> bool {
@@ -76,6 +96,6 @@ fn is_localhost(ip: &IpAddr) -> bool {
     }
 }
 
-fn unauthorized(msg: &str) -> Response {
-    (StatusCode::UNAUTHORIZED, msg.to_string()).into_response()
+fn unauthorized(code: AuthErrorCode) -> Response {
+    (StatusCode::UNAUTHORIZED, Json(AuthErrorResponse::new(code))).into_response()
 }

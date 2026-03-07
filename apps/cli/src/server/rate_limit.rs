@@ -66,7 +66,7 @@ impl RateLimiter {
     /// # Post-conditions
     /// - 过期时间戳已被清除
     /// - 若允许，当前时间戳已记录
-    fn check_and_record(&self, ip: IpAddr) -> bool {
+    pub fn check_and_record_ip(&self, ip: IpAddr) -> bool {
         let now = Instant::now();
         let cutoff = now - self.window;
 
@@ -95,6 +95,10 @@ impl RateLimiter {
         record.timestamps.push(now);
         true
     }
+
+    pub const fn retry_after_secs(&self) -> u64 {
+        self.window.as_secs()
+    }
 }
 
 /// Axum 中间件函数: 对每个请求执行 per-IP 速率限制
@@ -106,7 +110,7 @@ pub async fn rate_limit_middleware(
     req: Request<Body>,
     next: Next,
 ) -> Response {
-    if !limiter.check_and_record(addr.ip()) {
+    if !limiter.check_and_record_ip(addr.ip()) {
         tracing::warn!("Rate limit exceeded for IP: {}", addr.ip());
         let retry_after = limiter.window.as_secs().to_string();
         return (
@@ -129,9 +133,9 @@ mod tests {
         let limiter = RateLimiter::new(3, Duration::from_secs(60));
         let ip: IpAddr = "127.0.0.1".parse().unwrap();
 
-        assert!(limiter.check_and_record(ip));
-        assert!(limiter.check_and_record(ip));
-        assert!(limiter.check_and_record(ip));
+        assert!(limiter.check_and_record_ip(ip));
+        assert!(limiter.check_and_record_ip(ip));
+        assert!(limiter.check_and_record_ip(ip));
     }
 
     #[test]
@@ -139,9 +143,9 @@ mod tests {
         let limiter = RateLimiter::new(2, Duration::from_secs(60));
         let ip: IpAddr = "10.0.0.1".parse().unwrap();
 
-        assert!(limiter.check_and_record(ip));
-        assert!(limiter.check_and_record(ip));
-        assert!(!limiter.check_and_record(ip)); // 第 3 次被拒
+        assert!(limiter.check_and_record_ip(ip));
+        assert!(limiter.check_and_record_ip(ip));
+        assert!(!limiter.check_and_record_ip(ip)); // 第 3 次被拒
     }
 
     #[test]
@@ -150,9 +154,9 @@ mod tests {
         let ip_a: IpAddr = "10.0.0.1".parse().unwrap();
         let ip_b: IpAddr = "10.0.0.2".parse().unwrap();
 
-        assert!(limiter.check_and_record(ip_a));
-        assert!(!limiter.check_and_record(ip_a));
-        assert!(limiter.check_and_record(ip_b)); // 不同 IP 独立计数
+        assert!(limiter.check_and_record_ip(ip_a));
+        assert!(!limiter.check_and_record_ip(ip_a));
+        assert!(limiter.check_and_record_ip(ip_b)); // 不同 IP 独立计数
     }
 
     #[test]
@@ -160,10 +164,10 @@ mod tests {
         let limiter = RateLimiter::new(1, Duration::from_millis(50));
         let ip: IpAddr = "10.0.0.1".parse().unwrap();
 
-        assert!(limiter.check_and_record(ip));
-        assert!(!limiter.check_and_record(ip));
+        assert!(limiter.check_and_record_ip(ip));
+        assert!(!limiter.check_and_record_ip(ip));
 
         std::thread::sleep(Duration::from_millis(60));
-        assert!(limiter.check_and_record(ip)); // 窗口过期后恢复
+        assert!(limiter.check_and_record_ip(ip)); // 窗口过期后恢复
     }
 }

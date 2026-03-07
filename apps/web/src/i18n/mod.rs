@@ -24,6 +24,7 @@ pub mod context_menu;
 pub mod dashboard;
 pub mod diff;
 pub mod header;
+pub mod login;
 pub mod merge;
 pub mod playback;
 pub mod search;

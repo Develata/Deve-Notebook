@@ -15,6 +15,7 @@
 //!   - Ack（确认）, NewOp（新操作）, Snapshot（快照）
 //!   - History（历史）, DocList（文档列表）, Error（错误）
 
+pub mod auth;
 pub mod client;
 pub mod server;
 

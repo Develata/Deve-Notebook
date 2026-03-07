@@ -39,7 +39,9 @@ impl AuthConfig {
 
         if secret.is_none() || password_hash.is_none() {
             if is_dev_mode {
-                tracing::warn!("DEVE_ENV=development detected → using dev defaults (INSECURE for production)");
+                tracing::warn!(
+                    "DEVE_ENV=development detected → using dev defaults (INSECURE for production)"
+                );
                 return Self::dev_default();
             }
             return Err(anyhow!(
