@@ -6,6 +6,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::repo_scope::{resolve_session_repo, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
 use anyhow::anyhow;
 use deve_core::ledger::node_meta;
@@ -33,6 +34,13 @@ pub async fn handle_rename_doc(
         tracing::debug!("Rename ignored: session is readonly (remote branch)");
         return;
     }
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
 
     let src = join_normalized(&state.vault_path, &old_path);
 
@@ -75,38 +83,46 @@ pub async fn handle_rename_doc(
 
             // 4. 更新 Ledger
             if dst.is_dir() {
-                if let Err(e) = state.repo.rename_folder(&old_path, &dst_name) {
+                if let Err(e) =
+                    state
+                        .repo
+                        .rename_folder_in_local_repo(&scope.repo_name, &old_path, &dst_name)
+                {
                     tracing::error!("Ledger 文件夹重命名失败: {:?}", e);
                 }
-            } else if let Err(e) = state.repo.rename_doc(&old_path, &dst_name) {
+            } else if let Err(e) =
+                state
+                    .repo
+                    .rename_doc_in_local_repo(&scope.repo_name, &old_path, &dst_name)
+            {
                 tracing::error!("Ledger 文档重命名失败: {:?}", e);
             }
 
             // 5. 更新 TreeManager 并广播 Delta
-            if let Ok((node_id, meta)) =
-                state
-                    .repo
-                    .run_on_local_repo(state.repo.local_repo_name(), |db| {
-                        let node_id = node_meta::get_node_id(db, &dst_name)?
-                            .ok_or_else(|| anyhow!("Node not found: {}", dst_name))?;
-                        let meta = node_meta::get_node_meta(db, node_id)?
-                            .ok_or_else(|| anyhow!("Node meta missing"))?;
-                        Ok((node_id, meta))
-                    })
-            {
-                if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
+            if let Ok((node_id, meta)) = run_on_resolved_local_repo(state, &scope, |db| {
+                let node_id = node_meta::get_node_id(db, &dst_name)?
+                    .ok_or_else(|| anyhow!("Node not found: {}", dst_name))?;
+                let meta = node_meta::get_node_meta(db, node_id)?
+                    .ok_or_else(|| anyhow!("Node meta missing"))?;
+                Ok((node_id, meta))
+            }) {
+                if let Err(e) = broadcast_parent_dirs(
+                    state,
+                    ch,
+                    scope.repo_id,
+                    &scope.repo_name,
+                    meta.parent_id,
+                ) {
                     tracing::error!("广播父目录失败: {:?}", e);
                 }
-                let delta = state
-                    .tree_manager
-                    .write()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .update_node(
+                let delta = state.tree_manager.with_tree_mut(scope.repo_id, |tm| {
+                    tm.update_node(
                         node_id,
                         meta.parent_id,
                         meta.name.clone(),
                         meta.path.clone(),
-                    );
+                    )
+                });
                 ch.unicast(ServerMessage::TreeUpdate(delta));
             }
 

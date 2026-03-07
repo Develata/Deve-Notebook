@@ -5,6 +5,7 @@ use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::repo_scope::{resolve_session_repo, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
 use deve_core::ledger::node_meta;
 use deve_core::protocol::ServerMessage;
@@ -30,17 +31,20 @@ pub async fn handle_delete_doc(
         tracing::debug!("Delete ignored: session is readonly (remote branch)");
         return;
     }
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
 
     tracing::info!("handle_delete_doc: path={}", path);
     let target = join_normalized(&state.vault_path, &path);
     let is_dir = target.is_dir();
 
     // 1. 获取 NodeId (用于 TreeDelta)
-    let node_id = state
-        .repo
-        .run_on_local_repo(state.repo.local_repo_name(), |db| {
-            node_meta::get_node_id(db, &path)
-        })
+    let node_id = run_on_resolved_local_repo(state, &scope, |db| node_meta::get_node_id(db, &path))
         .ok()
         .flatten();
 
@@ -64,11 +68,14 @@ pub async fn handle_delete_doc(
 
     // 3. 更新 Ledger
     if is_dir {
-        match state.repo.delete_folder(&path) {
+        match state
+            .repo
+            .delete_folder_in_local_repo(&scope.repo_name, &path)
+        {
             Ok(count) => tracing::info!("已从 Ledger 删除 {} 个文档 (文件夹: {})", count, path),
             Err(e) => tracing::error!("Ledger 文件夹删除失败: {:?}", e),
         }
-    } else if let Err(e) = state.repo.delete_doc(&path) {
+    } else if let Err(e) = state.repo.delete_doc_in_local_repo(&scope.repo_name, &path) {
         tracing::error!("Ledger 文档删除失败: {:?}", e);
     }
 
@@ -76,9 +83,7 @@ pub async fn handle_delete_doc(
     if let Some(node_id) = node_id {
         let delta = state
             .tree_manager
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(node_id);
+            .with_tree_mut(scope.repo_id, |tm| tm.remove(node_id));
         ch.unicast(ServerMessage::TreeUpdate(delta));
     }
 

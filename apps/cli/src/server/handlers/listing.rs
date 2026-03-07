@@ -11,6 +11,7 @@ use deve_core::ledger::node_meta;
 use deve_core::models::PeerId;
 use deve_core::models::RepoType;
 use deve_core::protocol::ServerMessage;
+use deve_core::tree::TreeDelta;
 use std::sync::Arc;
 
 /// 处理 ListDocs 请求 - 列出当前激活仓库中的所有文档
@@ -32,17 +33,25 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
         .ok()
         .flatten();
     session.active_repo = Some(current_repo.clone());
-    session.active_repo_id = repo_info.as_ref().map(|info| info.uuid);
-    let repo_uuid = repo_info
-        .as_ref()
-        .map(|info| info.uuid.to_string())
-        .unwrap_or_default();
+    let repo_id = repo_info.as_ref().map(|info| info.uuid);
+    session.active_repo_id = repo_id;
+    let repo_uuid = repo_id.map(|id| id.to_string()).unwrap_or_default();
 
     // 发送一次 RepoSwitched，让前端同步当前仓库上下文。
     ch.unicast(ServerMessage::RepoSwitched {
         name: current_repo.clone(),
         uuid: repo_uuid,
     });
+
+    let Some(repo_id) = repo_id else {
+        if session.active_branch.is_some() && session.get_active_db().is_none() {
+            ch.unicast(ServerMessage::DocList { docs: vec![] });
+            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::init(Vec::new())));
+            return;
+        }
+        ch.send_error(format!("Repository UUID not resolved for {}", current_repo));
+        return;
+    };
 
     // 使用 session 锁定的数据库，或回退到默认逻辑
     let docs = if let Some(handle) = session.get_active_db() {
@@ -51,10 +60,6 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
     } else {
         // 回退: 使用 active_branch/active_repo 字符串
         if let Some(peer_id) = &session.active_branch {
-            let Some(repo_id) = session.active_repo_id else {
-                ch.send_error(format!("Repository UUID not resolved for {}", current_repo));
-                return;
-            };
             let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), repo_id);
             state.repo.list_docs(&repo_type)
         } else {
@@ -77,11 +82,8 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
             if let Some(handle) = session.get_active_db()
                 && handle.readonly
             {
-                if let Ok(mut tm) = state.tree_manager.write() {
-                    tm.init_from_docs(docs_list);
-                    let delta = tm.build_init_delta();
-                    ch.unicast(ServerMessage::TreeUpdate(delta));
-                }
+                let delta = state.tree_manager.reset_from_docs(repo_id, docs_list);
+                ch.unicast(ServerMessage::TreeUpdate(delta));
                 return;
             }
 
@@ -90,21 +92,14 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
                 let _ = node_meta::migrate_nodes_from_docs(&handle.db);
                 node_meta::list_nodes(&handle.db)
             } else if let Some(peer_id) = &session.active_branch {
-                let Some(repo_id) = session.active_repo_id else {
-                    ch.send_error(format!("Repository UUID not resolved for {}", current_repo));
-                    return;
-                };
                 let repo_type = RepoType::Remote(peer_id.clone(), repo_id);
                 state.repo.list_nodes(&repo_type)
             } else {
                 state.repo.list_local_nodes(session.active_repo.as_deref())
             };
 
-            if let Ok(nodes) = nodes
-                && let Ok(mut tm) = state.tree_manager.write()
-            {
-                tm.init_from_nodes(nodes);
-                let delta = tm.build_init_delta();
+            if let Ok(nodes) = nodes {
+                let delta = state.tree_manager.reset_from_nodes(repo_id, nodes);
                 ch.unicast(ServerMessage::TreeUpdate(delta));
             }
         }

@@ -17,15 +17,14 @@ use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use deve_core::tree::TreeManager;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::sync::RwLock;
 use tokio::sync::broadcast;
 
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
+use tree_state::RepoTreeRegistry;
 
 pub mod agent_bridge;
 pub mod ai_chat;
@@ -39,12 +38,14 @@ pub mod node_role_http;
 pub mod plugin_host;
 pub mod prewarm;
 mod rate_limit;
+mod repo_scope;
 mod router;
 pub mod security;
 pub mod session;
 mod setup;
 pub mod source_control_proxy;
 pub mod static_files;
+mod tree_state;
 pub mod ws;
 
 #[allow(dead_code)] // repo_key: 为未来加密功能预留
@@ -55,8 +56,8 @@ pub struct AppState {
     pub vault_path: std::path::PathBuf,
     pub plugins: Vec<Box<dyn PluginRuntime>>,
     pub sync_engine: Arc<RepoScopedSyncEngine>,
-    /// 文件树管理器 (增量更新)
-    pub tree_manager: Arc<RwLock<TreeManager>>,
+    /// Repo-scoped 文件树状态。
+    pub tree_manager: Arc<RepoTreeRegistry>,
     #[cfg(feature = "search")]
     pub search_service: Option<SearchService>,
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
@@ -124,14 +125,7 @@ pub async fn start_server(
         deve_core::config::SyncMode::Auto,
         repo_key.clone(),
     ));
-    // 初始化文件树管理器 (从 Ledger Node 表加载)
-    let tree_manager = {
-        let mut tm = TreeManager::new();
-        if let Ok(nodes) = repo.list_local_nodes(None) {
-            tm.init_from_nodes(nodes);
-        }
-        Arc::new(RwLock::new(tm))
-    };
+    let tree_manager = Arc::new(RepoTreeRegistry::new());
 
     // SPAWN WATCHER
     setup::spawn_file_watcher(sync_manager.clone(), vault_path.clone(), tx.clone());

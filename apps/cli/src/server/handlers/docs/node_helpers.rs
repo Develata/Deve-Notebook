@@ -5,27 +5,29 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use anyhow::Result;
 use deve_core::ledger::node_meta;
-use deve_core::models::{NodeId, NodeKind, NodeMeta};
+use deve_core::models::{NodeId, NodeKind, NodeMeta, RepoId};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-pub fn broadcast_dir_chain(state: &Arc<AppState>, ch: &DualChannel, node_id: NodeId) -> Result<()> {
+pub fn broadcast_dir_chain(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    repo_id: RepoId,
+    repo_name: &str,
+    node_id: NodeId,
+) -> Result<()> {
     let chain = state
         .repo
-        .run_on_local_repo(state.repo.local_repo_name(), |db| {
-            collect_dir_chain(db, node_id)
-        })?;
+        .run_on_local_repo(repo_name, |db| collect_dir_chain(db, node_id))?;
 
-    let mut tm = state
-        .tree_manager
-        .write()
-        .unwrap_or_else(|e| e.into_inner());
     for (id, meta) in chain.into_iter().rev() {
-        if tm.has_node(id) {
-            continue;
+        let delta = state.tree_manager.with_tree_mut(repo_id, |tm| {
+            (!tm.has_node(id))
+                .then(|| tm.add_folder(id, meta.path.clone(), meta.parent_id, meta.name.clone()))
+        });
+        if let Some(delta) = delta {
+            ch.unicast(ServerMessage::TreeUpdate(delta));
         }
-        let delta = tm.add_folder(id, meta.path.clone(), meta.parent_id, meta.name.clone());
-        ch.unicast(ServerMessage::TreeUpdate(delta));
     }
     Ok(())
 }
@@ -33,10 +35,12 @@ pub fn broadcast_dir_chain(state: &Arc<AppState>, ch: &DualChannel, node_id: Nod
 pub fn broadcast_parent_dirs(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    repo_id: RepoId,
+    repo_name: &str,
     parent_id: Option<NodeId>,
 ) -> Result<()> {
     if let Some(parent_id) = parent_id {
-        broadcast_dir_chain(state, ch, parent_id)?;
+        broadcast_dir_chain(state, ch, repo_id, repo_name, parent_id)?;
     }
     Ok(())
 }

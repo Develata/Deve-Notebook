@@ -5,6 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
 use deve_core::models::{LedgerEntry, Op};
 use deve_core::protocol::ServerMessage;
@@ -132,16 +133,20 @@ pub async fn handle_open_doc(
             }
         }
     } else {
-        // 回退: 使用默认本地库
-        tracing::warn!("No active_db in session, falling back to main local repo");
-        let repo_name = state.repo.local_repo_name();
+        let repo_name = resolve_session_repo(state, session)
+            .map(|scope| scope.repo_name)
+            .unwrap_or_else(|_| state.repo.local_repo_name().to_string());
+        tracing::warn!(
+            "No active_db in session, falling back to resolved local repo {}",
+            repo_name
+        );
 
         // Reconcile logic for main repo
         if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
             tracing::error!("SyncManager reconcile failed: {:?}", e);
         }
 
-        let res: anyhow::Result<SnapshotPayload> = state.repo.run_on_local_repo(repo_name, |db| {
+        let res: anyhow::Result<SnapshotPayload> = state.repo.run_on_local_repo(&repo_name, |db| {
             build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
         });
 

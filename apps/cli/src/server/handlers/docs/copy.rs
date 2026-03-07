@@ -9,6 +9,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::{broadcast_dir_chain, broadcast_parent_dirs};
 use crate::server::handlers::listing::handle_list_docs;
+use crate::server::repo_scope::{ResolvedRepo, resolve_session_repo, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
 use anyhow::anyhow;
 use deve_core::ledger::node_meta;
@@ -38,6 +39,13 @@ pub async fn handle_copy_doc(
         tracing::debug!("Copy ignored: session is readonly (remote branch)");
         return;
     }
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
 
     let src = join_normalized(&state.vault_path, &src_path);
     let dst = join_normalized(&state.vault_path, &dest_path);
@@ -75,13 +83,10 @@ pub async fn handle_copy_doc(
             return;
         }
         // 批量注册 Ledger 并更新 TreeManager
-        register_and_broadcast_copied_docs(state, ch, &dst, &dest_path);
-        if let Ok(report) = state
-            .repo
-            .run_on_local_repo(state.repo.local_repo_name(), |db| {
-                deve_core::ledger::node_check::check_node_consistency(db)
-            })
-            && !report.is_clean()
+        register_and_broadcast_copied_docs(state, ch, &scope, &dst, &dest_path);
+        if let Ok(report) = run_on_resolved_local_repo(state, &scope, |db| {
+            deve_core::ledger::node_check::check_node_consistency(db)
+        }) && !report.is_clean()
         {
             tracing::warn!(
                 "Node consistency after copy: missing={} orphan={}",
@@ -98,30 +103,34 @@ pub async fn handle_copy_doc(
             return;
         }
         // 注册单个文档并更新 TreeManager
-        if let Ok(doc_id) = state.repo.create_docid(&dest_path) {
+        if let Ok(doc_id) = state
+            .repo
+            .create_docid_in_local_repo(&scope.repo_name, &dest_path)
+        {
             tracing::info!("已复制 {} -> {} (DocId: {})", src_path, dest_path, doc_id);
             let node_id = NodeId::from_doc_id(doc_id);
-            if let Ok(meta) = state
-                .repo
-                .run_on_local_repo(state.repo.local_repo_name(), |db| {
-                    node_meta::get_node_meta(db, node_id)
-                        .and_then(|m| m.ok_or_else(|| anyhow!("File node meta missing")))
-                })
-            {
-                if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
+            if let Ok(meta) = run_on_resolved_local_repo(state, &scope, |db| {
+                node_meta::get_node_meta(db, node_id)
+                    .and_then(|m| m.ok_or_else(|| anyhow!("File node meta missing")))
+            }) {
+                if let Err(e) = broadcast_parent_dirs(
+                    state,
+                    ch,
+                    scope.repo_id,
+                    &scope.repo_name,
+                    meta.parent_id,
+                ) {
                     tracing::error!("广播父目录失败: {:?}", e);
                 }
-                let delta = state
-                    .tree_manager
-                    .write()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .add_file(
+                let delta = state.tree_manager.with_tree_mut(scope.repo_id, |tm| {
+                    tm.add_file(
                         node_id,
                         meta.path.clone(),
                         meta.parent_id,
                         meta.name.clone(),
                         doc_id,
-                    );
+                    )
+                });
                 ch.unicast(ServerMessage::TreeUpdate(delta));
             }
         } else {
@@ -137,6 +146,7 @@ pub async fn handle_copy_doc(
 fn register_and_broadcast_copied_docs(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    scope: &ResolvedRepo,
     dst: &std::path::Path,
     dest_path: &str,
 ) {
@@ -144,26 +154,26 @@ fn register_and_broadcast_copied_docs(
 
     if let Ok(dirs) = collect_dirs(dst, base) {
         for dir_path in dirs {
-            let created = state
-                .repo
-                .run_on_local_repo(state.repo.local_repo_name(), |db| {
-                    if let Some(existing) = node_meta::get_node_id(db, &dir_path)? {
-                        let meta = node_meta::get_node_meta(db, existing)?
-                            .ok_or_else(|| anyhow!("Node meta missing"))?;
-                        if meta.kind != deve_core::models::NodeKind::Dir {
-                            return Err(anyhow!("Path is not a directory: {}", dir_path));
-                        }
-                        return Ok(Some((existing, meta)));
+            let created = run_on_resolved_local_repo(state, scope, |db| {
+                if let Some(existing) = node_meta::get_node_id(db, &dir_path)? {
+                    let meta = node_meta::get_node_meta(db, existing)?
+                        .ok_or_else(|| anyhow!("Node meta missing"))?;
+                    if meta.kind != deve_core::models::NodeKind::Dir {
+                        return Err(anyhow!("Path is not a directory: {}", dir_path));
                     }
-                    let node_id = node_meta::create_dir_node(db, &dir_path)?;
-                    let meta = node_meta::get_node_meta(db, node_id)?
-                        .ok_or_else(|| anyhow!("Dir node meta missing"))?;
-                    Ok(Some((node_id, meta)))
-                });
+                    return Ok(Some((existing, meta)));
+                }
+                let node_id = node_meta::create_dir_node(db, &dir_path)?;
+                let meta = node_meta::get_node_meta(db, node_id)?
+                    .ok_or_else(|| anyhow!("Dir node meta missing"))?;
+                Ok(Some((node_id, meta)))
+            });
 
             match created {
                 Ok(Some((node_id, _meta))) => {
-                    if let Err(e) = broadcast_dir_chain(state, ch, node_id) {
+                    if let Err(e) =
+                        broadcast_dir_chain(state, ch, scope.repo_id, &scope.repo_name, node_id)
+                    {
                         tracing::error!("广播目录链失败: {:?}", e);
                     }
                 }
@@ -181,32 +191,34 @@ fn register_and_broadcast_copied_docs(
         Ok(files) => {
             let count = files.len();
             for rel_path in files {
-                if let Ok(doc_id) = state.repo.create_docid(&rel_path) {
+                if let Ok(doc_id) = state
+                    .repo
+                    .create_docid_in_local_repo(&scope.repo_name, &rel_path)
+                {
                     tracing::debug!("注册复制文档: {} (DocId: {})", rel_path, doc_id);
                     let node_id = NodeId::from_doc_id(doc_id);
-                    if let Ok(meta) =
-                        state
-                            .repo
-                            .run_on_local_repo(state.repo.local_repo_name(), |db| {
-                                node_meta::get_node_meta(db, node_id).and_then(|m| {
-                                    m.ok_or_else(|| anyhow!("File node meta missing"))
-                                })
-                            })
-                    {
-                        if let Err(e) = broadcast_parent_dirs(state, ch, meta.parent_id) {
+                    if let Ok(meta) = run_on_resolved_local_repo(state, scope, |db| {
+                        node_meta::get_node_meta(db, node_id)
+                            .and_then(|m| m.ok_or_else(|| anyhow!("File node meta missing")))
+                    }) {
+                        if let Err(e) = broadcast_parent_dirs(
+                            state,
+                            ch,
+                            scope.repo_id,
+                            &scope.repo_name,
+                            meta.parent_id,
+                        ) {
                             tracing::error!("广播父目录失败: {:?}", e);
                         }
-                        let delta = state
-                            .tree_manager
-                            .write()
-                            .unwrap_or_else(|e| e.into_inner())
-                            .add_file(
+                        let delta = state.tree_manager.with_tree_mut(scope.repo_id, |tm| {
+                            tm.add_file(
                                 node_id,
                                 meta.path.clone(),
                                 meta.parent_id,
                                 meta.name.clone(),
                                 doc_id,
-                            );
+                            )
+                        });
                         ch.unicast(ServerMessage::TreeUpdate(delta));
                     }
                 } else {
