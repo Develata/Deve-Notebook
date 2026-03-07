@@ -15,13 +15,13 @@ pub(super) async fn route_source_control(
             source_control::handle_get_changes(state, ch, session).await;
         }
         ClientMessage::StageFile { path } => {
-            source_control::handle_stage_file(state, ch, path).await;
+            source_control::handle_stage_file(state, ch, session, path).await;
         }
         ClientMessage::StageFiles { paths } => {
             source_control::handle_stage_files(state, ch, session, paths).await;
         }
         ClientMessage::UnstageFile { path } => {
-            source_control::handle_unstage_file(state, ch, path).await;
+            source_control::handle_unstage_file(state, ch, session, path).await;
         }
         ClientMessage::UnstageFiles { paths } => {
             source_control::handle_unstage_files(state, ch, session, paths).await;
@@ -30,19 +30,19 @@ pub(super) async fn route_source_control(
             source_control::handle_discard_file(state, ch, session, path).await;
         }
         ClientMessage::Commit { message } => {
-            source_control::handle_commit(state, ch, message).await;
+            source_control::handle_commit(state, ch, session, message).await;
         }
         ClientMessage::GetCommitHistory { limit } => {
-            source_control::handle_get_commit_history(state, ch, limit).await;
+            source_control::handle_get_commit_history(state, ch, session, limit).await;
         }
         ClientMessage::GetCommitDiff { commit_a, commit_b } => {
-            source_control::handle_get_commit_diff(state, ch, commit_a, commit_b).await;
+            source_control::handle_get_commit_diff(state, ch, session, commit_a, commit_b).await;
         }
         ClientMessage::ResolveConflict { path, resolution } => {
             source_control::handle_resolve_conflict(state, ch, session, path, resolution).await;
         }
         ClientMessage::CommitAndPush { message } => {
-            source_control::handle_commit_and_push(state, ch, message).await;
+            source_control::handle_commit_and_push(state, ch, session, message).await;
         }
         ClientMessage::GetDocDiff { path } => {
             source_control::handle_get_doc_diff(state, ch, session, path).await;

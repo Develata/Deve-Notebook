@@ -7,6 +7,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ConflictResolution;
@@ -24,9 +25,13 @@ pub async fn handle_resolve_conflict(
     resolution: ConflictResolution,
 ) {
     let normalized = deve_core::utils::path::to_forward_slash(&path);
+    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
     let result = match resolution {
-        ConflictResolution::KeepFs => resolve_keep_fs(state, &normalized),
-        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &normalized),
+        ConflictResolution::KeepFs => resolve_keep_fs(state, &scope, &normalized),
+        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &scope, &normalized),
     };
 
     match result {
@@ -50,22 +55,35 @@ pub async fn handle_resolve_conflict(
     }
 }
 
-/// KeepFs: 将 FS 版本暂存 (Working Dir → Staging)
-fn resolve_keep_fs(state: &Arc<AppState>, path: &str) -> anyhow::Result<()> {
-    state.repo.stage_pending(path)
+fn resolve_keep_fs(
+    state: &Arc<AppState>,
+    scope: &crate::server::repo_scope::ResolvedRepo,
+    path: &str,
+) -> anyhow::Result<()> {
+    run_on_resolved_local_repo(state, scope, |db| {
+        deve_core::source_control::pending_fs::get(db, path)?
+            .ok_or_else(|| anyhow::anyhow!("Pending change not found: {}", path))?;
+        let status = deve_core::source_control::pending_fs::get(db, path)?
+            .map(|e| e.change_type)
+            .unwrap_or(deve_core::source_control::ChangeStatus::Modified);
+        deve_core::source_control::pending_fs::remove(db, path)?;
+        deve_core::ledger::source_control::stage_file_with_status(db, path, status)
+    })
 }
 
-/// KeepLedger: 将 Ledger 已提交内容写回磁盘，移除 pending 条目
-fn resolve_keep_ledger(state: &Arc<AppState>, path: &str) -> anyhow::Result<()> {
-    let doc_id = state
-        .repo
-        .get_docid(path)?
-        .ok_or_else(|| anyhow::anyhow!("Document not found: {}", path))?;
-
-    let committed = state
-        .repo
-        .get_committed_content(doc_id)?
-        .unwrap_or_default();
+fn resolve_keep_ledger(
+    state: &Arc<AppState>,
+    scope: &crate::server::repo_scope::ResolvedRepo,
+    path: &str,
+) -> anyhow::Result<()> {
+    let committed = run_on_resolved_local_repo(state, scope, |db| {
+        let doc_id = deve_core::ledger::metadata::get_docid(db, path)?
+            .ok_or_else(|| anyhow::anyhow!("Document not found: {}", path))?;
+        Ok(
+            deve_core::source_control::changes::get_committed_content(db, doc_id)?
+                .unwrap_or_default(),
+        )
+    })?;
 
     // 将 Ledger 内容写回磁盘
     let disk_path = state.vault_path.join(path);
@@ -75,5 +93,7 @@ fn resolve_keep_ledger(state: &Arc<AppState>, path: &str) -> anyhow::Result<()> 
     std::fs::write(&disk_path, &committed)?;
 
     // 移除 pending 条目
-    state.repo.discard_pending(path)
+    run_on_resolved_local_repo(state, scope, |db| {
+        deve_core::source_control::pending_fs::remove(db, path)
+    })
 }

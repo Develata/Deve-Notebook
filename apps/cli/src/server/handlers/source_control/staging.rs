@@ -1,14 +1,26 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 /// 暂存指定文件
-pub async fn handle_stage_file(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+pub async fn handle_stage_file(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    path: String,
+) {
     let path = deve_core::utils::path::to_forward_slash(&path);
-    match state.repo.stage_file(&path) {
+    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
+    match run_on_resolved_local_repo(state, &scope, |db| {
+        deve_core::ledger::source_control::stage_file(db, &path)
+    }) {
         Ok(()) => {
             tracing::info!("Staged file: {}", path);
             ch.unicast(ServerMessage::StageAck { path });
@@ -21,9 +33,20 @@ pub async fn handle_stage_file(state: &Arc<AppState>, ch: &DualChannel, path: St
 }
 
 /// 取消暂存指定文件
-pub async fn handle_unstage_file(state: &Arc<AppState>, ch: &DualChannel, path: String) {
+pub async fn handle_unstage_file(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    path: String,
+) {
     let path = deve_core::utils::path::to_forward_slash(&path);
-    match state.repo.unstage_file(&path) {
+    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
+    match run_on_resolved_local_repo(state, &scope, |db| {
+        deve_core::ledger::source_control::unstage_file(db, &path)
+    }) {
         Ok(()) => {
             tracing::info!("Unstaged file: {}", path);
             ch.unicast(ServerMessage::UnstageAck { path });
@@ -42,12 +65,20 @@ pub async fn handle_stage_files(
     session: &WsSession,
     paths: Vec<String>,
 ) {
-    for path in normalized_unique_paths(paths) {
-        if let Err(e) = state.repo.stage_file(&path) {
-            tracing::error!("Failed to stage file {}: {:?}", path, e);
-            ch.send_error(e.to_string());
-            return;
+    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
+    let paths = normalized_unique_paths(paths);
+    if let Err(e) = run_on_resolved_local_repo(state, &scope, |db| {
+        for path in &paths {
+            deve_core::ledger::source_control::stage_file(db, path)?;
         }
+        Ok(())
+    }) {
+        tracing::error!("Failed to stage files: {:?}", e);
+        ch.send_error(e.to_string());
+        return;
     }
     super::changes::handle_get_changes(state, ch, session).await;
 }
@@ -59,12 +90,20 @@ pub async fn handle_unstage_files(
     session: &WsSession,
     paths: Vec<String>,
 ) {
-    for path in normalized_unique_paths(paths) {
-        if let Err(e) = state.repo.unstage_file(&path) {
-            tracing::error!("Failed to unstage file {}: {:?}", path, e);
-            ch.send_error(e.to_string());
-            return;
+    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
+    let paths = normalized_unique_paths(paths);
+    if let Err(e) = run_on_resolved_local_repo(state, &scope, |db| {
+        for path in &paths {
+            deve_core::ledger::source_control::unstage_file(db, path)?;
         }
+        Ok(())
+    }) {
+        tracing::error!("Failed to unstage files: {:?}", e);
+        ch.send_error(e.to_string());
+        return;
     }
     super::changes::handle_get_changes(state, ch, session).await;
 }

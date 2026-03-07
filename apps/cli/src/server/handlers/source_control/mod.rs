@@ -8,6 +8,7 @@ pub mod conflict;
 pub mod diff;
 pub mod discard;
 pub mod http;
+mod repo_scope;
 pub mod staging;
 
 pub use changes::*;
