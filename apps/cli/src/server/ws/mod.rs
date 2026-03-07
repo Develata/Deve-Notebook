@@ -1,22 +1,17 @@
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
-use bincode::Options;
 use futures::StreamExt;
 use std::sync::Arc;
-use std::time::Instant;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::protocol::ClientMessage;
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
+mod filter;
+mod receive;
 mod route;
 pub(crate) mod send;
-
-/// Bincode 消息大小限制 (防止 DoS 攻击)
-/// 16 MB 足以处理大型文档快照
-const MAX_BINCODE_SIZE: u64 = 16 * 1024 * 1024;
 
 /// HTTP/WebSocket 入口 (含鉴权)。
 ///
@@ -65,6 +60,7 @@ pub async fn handle_socket(
     peer_id: String,
 ) {
     let (sender, mut receiver) = socket.split();
+    let mut session = WsSession::new();
 
     // 为每个连接创建有界单播队列，避免慢客户端导致无界内存增长。
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
@@ -74,16 +70,12 @@ pub async fn handle_socket(
 
     // 订阅广播并尝试转发到单播队列（带背压/丢弃策略）。
     let broadcast_rx = state.tx.subscribe();
-    send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone());
+    let broadcast_filter = send::BroadcastFilter::for_session(&session);
+    send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), broadcast_filter.clone());
 
     let ch = DualChannel::new(state.tx.clone(), unicast_tx);
 
     tracing::info!("Client connected: {}", peer_id);
-
-    let mut session = WsSession::new();
-
-    // Bincode 配置: 带大小限制防止内存耗尽攻击
-    let bincode_config = bincode::options().with_limit(MAX_BINCODE_SIZE);
 
     while let Some(msg) = receiver.next().await {
         let msg = match msg {
@@ -94,40 +86,19 @@ pub async fn handle_socket(
             }
         };
 
-        match msg {
-            // 优先处理二进制消息 (Bincode)
-            axum::extract::ws::Message::Binary(bin) => {
-                if !session.record_incoming_message(Instant::now()) {
-                    ch.send_error("WebSocket rate limit exceeded".to_string());
-                    tracing::warn!("WS message rate limit exceeded: {}", peer_id);
-                    break;
-                }
-                match bincode_config.deserialize::<ClientMessage>(&bin) {
-                    Ok(client_msg) => {
-                        route::route_message(&state, &ch, &mut session, client_msg).await
-                    }
-                    Err(e) => tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len()),
-                }
-            }
-            // 向后兼容: JSON 文本消息
-            axum::extract::ws::Message::Text(text) => {
-                if !session.record_incoming_message(Instant::now()) {
-                    ch.send_error("WebSocket rate limit exceeded".to_string());
-                    tracing::warn!("WS message rate limit exceeded: {}", peer_id);
-                    break;
-                }
-                match serde_json::from_str::<ClientMessage>(&text) {
-                    Ok(client_msg) => {
-                        route::route_message(&state, &ch, &mut session, client_msg).await
-                    }
-                    Err(_) => tracing::warn!("Failed to parse client message: {}", text),
-                }
-            }
-            axum::extract::ws::Message::Close(_) => {
-                tracing::info!("Client disconnected: {}", peer_id);
-                break;
-            }
-            _ => {}
+        if matches!(
+            receive::handle_incoming_message(
+                &state,
+                &ch,
+                &mut session,
+                msg,
+                &broadcast_filter,
+                &peer_id,
+            )
+            .await,
+            receive::SocketFlow::Break
+        ) {
+            break;
         }
     }
 }

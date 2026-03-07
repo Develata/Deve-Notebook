@@ -79,7 +79,11 @@ async fn handle_socket(
     send::spawn_unicast_sender_task(sender, unicast_rx);
 
     let broadcast_rx = state.tx.subscribe();
-    send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone());
+    send::spawn_broadcast_forwarder(
+        broadcast_rx,
+        unicast_tx.clone(),
+        send::BroadcastFilter::allow_all(),
+    );
     let ch = DualChannel::new(state.tx.clone(), unicast_tx);
 
     tracing::info!("Plugin host client connected: {}", peer_id);

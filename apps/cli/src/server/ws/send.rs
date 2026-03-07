@@ -1,3 +1,4 @@
+pub(crate) use super::filter::BroadcastFilter;
 use axum::extract::ws::{Message, WebSocket};
 use deve_core::protocol::ServerMessage;
 use futures::SinkExt;
@@ -46,11 +47,15 @@ pub(crate) fn spawn_unicast_sender_task(
 pub(crate) fn spawn_broadcast_forwarder(
     mut broadcast_rx: broadcast::Receiver<ServerMessage>,
     unicast_tx: mpsc::Sender<ServerMessage>,
+    filter: BroadcastFilter,
 ) {
     tokio::spawn(async move {
         loop {
             match broadcast_rx.recv().await {
                 Ok(msg) => {
+                    if !filter.should_forward(&msg) {
+                        continue;
+                    }
                     if let Err(e) = unicast_tx.try_send(msg) {
                         match e {
                             TrySendError::Full(_) => {
