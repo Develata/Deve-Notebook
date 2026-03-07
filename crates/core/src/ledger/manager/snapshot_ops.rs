@@ -14,8 +14,28 @@ impl RepoManager {
         snapshot::save_snapshot(&self.local_db, doc_id, seq, content, self.snapshot_depth)
     }
 
+    pub fn save_snapshot_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        seq: u64,
+        content: &str,
+    ) -> Result<()> {
+        self.run_on_local_repo(repo_name, |db| {
+            snapshot::save_snapshot(db, doc_id, seq, content, self.snapshot_depth)
+        })
+    }
+
     /// 读取文档的最新快照 (仅限本地库)
     pub fn load_latest_snapshot(&self, doc_id: DocId) -> Result<Option<(u64, String)>> {
         snapshot::load_latest_snapshot(&self.local_db, doc_id)
+    }
+
+    pub fn load_latest_snapshot_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+    ) -> Result<Option<(u64, String)>> {
+        self.run_on_local_repo(repo_name, |db| snapshot::load_latest_snapshot(db, doc_id))
     }
 }

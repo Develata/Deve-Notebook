@@ -16,6 +16,14 @@ impl RepoManager {
         ops::append_op_to_db(&self.local_db, entry)
     }
 
+    pub fn append_local_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        entry: &LedgerEntry,
+    ) -> Result<u64> {
+        self.run_on_local_repo(repo_name, |db| ops::append_op_to_db(db, entry))
+    }
+
     /// 原子生成序号并追加操作 (推荐用于本地编辑)
     ///
     /// 自动计算下一个 Local Sequence，避免竞态条件。
@@ -27,6 +35,18 @@ impl RepoManager {
         op_entry_builder: impl FnMut(u64) -> LedgerEntry,
     ) -> Result<(u64, u64)> {
         ops::append_generated_op(&self.local_db, doc_id, peer_id, op_entry_builder)
+    }
+
+    pub fn append_generated_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        peer_id: PeerId,
+        op_entry_builder: impl FnMut(u64) -> LedgerEntry,
+    ) -> Result<(u64, u64)> {
+        self.run_on_local_repo(repo_name, move |db| {
+            ops::append_generated_op(db, doc_id, peer_id, op_entry_builder)
+        })
     }
 
     /// 从指定仓库读取操作
@@ -50,5 +70,13 @@ impl RepoManager {
     /// 从本地库读取操作（便捷方法）
     pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         self.get_ops(&RepoType::Local(uuid::Uuid::nil()), doc_id)
+    }
+
+    pub fn get_local_ops_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+    ) -> Result<Vec<(u64, LedgerEntry)>> {
+        self.run_on_local_repo(repo_name, |db| ops::get_ops_from_db(db, doc_id))
     }
 }

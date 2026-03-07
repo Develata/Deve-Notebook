@@ -22,10 +22,19 @@ pub(crate) struct RebuildResult {
 /// Post-conditions:
 /// - 返回内容等价于从空状态依次应用该文档全部操作后的结果。
 pub(crate) fn rebuild_local_doc(repo: &RepoManager, doc_id: DocId) -> Result<RebuildResult> {
-    let (base_seq, base_content) = match repo.load_latest_snapshot(doc_id)? {
-        Some((seq, content)) => (seq, content),
-        None => (0, String::new()),
-    };
+    rebuild_local_doc_in_repo(repo, repo.local_repo_name(), doc_id)
+}
+
+pub(crate) fn rebuild_local_doc_in_repo(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: DocId,
+) -> Result<RebuildResult> {
+    let (base_seq, base_content) =
+        match repo.load_latest_snapshot_in_local_repo(repo_name, doc_id)? {
+            Some((seq, content)) => (seq, content),
+            None => (0, String::new()),
+        };
 
     let mut entries = Vec::new();
     if !base_content.is_empty() {
@@ -42,7 +51,9 @@ pub(crate) fn rebuild_local_doc(repo: &RepoManager, doc_id: DocId) -> Result<Reb
     }
 
     let mut max_seq = base_seq;
-    let delta_entries = ops::get_ops_from_db_after(&repo.local_db, doc_id, base_seq)?;
+    let delta_entries = repo.run_on_local_repo(repo_name, |db| {
+        ops::get_ops_from_db_after(db, doc_id, base_seq)
+    })?;
     for (seq, entry) in delta_entries {
         max_seq = max_seq.max(seq);
         entries.push(entry);

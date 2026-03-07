@@ -15,11 +15,7 @@ use std::time::Instant;
 /// 快照结果类型: (content, base_seq, delta_ops, version)
 type SnapshotPayload = (String, u64, Vec<(u64, Op)>, u64);
 
-/// 处理编辑请求
-///
-/// **只读模式处理**:
-/// 当 session 处于只读模式 (remotes 分支) 时，静默忽略编辑请求。
-/// // TODO: Frontend will hide edit buttons when readonly
+/// 处理编辑请求。
 pub async fn handle_edit(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -28,25 +24,21 @@ pub async fn handle_edit(
     op: deve_core::models::Op,
     client_id: u64,
 ) {
-    // 只读模式检查: 静默忽略编辑请求
     if session.is_readonly() {
         tracing::debug!("Edit ignored: session is readonly (remote branch)");
         return;
     }
-
-    // 获取本地 Peer ID
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
     let local_peer_id = state.identity_key.peer_id();
-
-    // 2. 构造并追加操作 (Atomic Generation & Persist)
-    // 使用 sync_manager.apply_local_op 自动处理序号生成和持久化
     let op_clone = op.clone();
-
-    // 我们需要克隆 peer_id 用于构建 closure
     let peer_id_clone = local_peer_id.clone();
-
-    match state.sync_manager.apply_local_op(
+    match state.sync_manager.apply_local_op_in_local_repo(
+        &scope.repo_name,
         doc_id,
-        local_peer_id.clone(),
+        local_peer_id,
         move |seq| LedgerEntry {
             doc_id,
             op: op_clone.clone(),
@@ -54,19 +46,15 @@ pub async fn handle_edit(
             peer_id: peer_id_clone.clone(),
             seq,
         },
-        true, // 自动写入 Vault
+        true,
     ) {
         Ok((_global_seq, local_seq)) => {
-            // 3. 广播新操作给所有连接的客户端
-            // BUG FIX: 必须广播 Local Seq (CrDT Version)，而不是 Global Seq
             ch.broadcast(ServerMessage::NewOp {
                 doc_id,
                 op,
                 seq: local_seq,
                 client_id,
             });
-
-            // 4. 发送 Ack
             ch.unicast(ServerMessage::Ack {
                 doc_id,
                 seq: local_seq,
@@ -97,14 +85,7 @@ pub async fn handle_request_history(
     }
 }
 
-/// 打开文档
-///
-/// **参数**:
-/// - `session`: WebSocket 会话，包含锁定的数据库
-///
-/// **逻辑**:
-/// 使用 session 中锁定的 active_db 直接读取操作日志，
-/// 支持本地和远程分支的统一读取。
+/// 打开文档。
 pub async fn handle_open_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -120,11 +101,9 @@ pub async fn handle_open_doc(
 
     let start = Instant::now();
 
-    // 优先使用 session 锁定的数据库
     let (snapshot_content, base_seq, delta_ops, version) = if let Some(handle) =
         session.get_active_db()
     {
-        // 直接从锁定的数据库读取
         match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth) {
             Ok(payload) => payload,
             Err(e) => {
@@ -140,9 +119,10 @@ pub async fn handle_open_doc(
             "No active_db in session, falling back to resolved local repo {}",
             repo_name
         );
-
-        // Reconcile logic for main repo
-        if let Err(e) = state.sync_manager.reconcile_doc(doc_id) {
+        if let Err(e) = state
+            .sync_manager
+            .reconcile_doc_in_local_repo(&repo_name, doc_id)
+        {
             tracing::error!("SyncManager reconcile failed: {:?}", e);
         }
 
@@ -168,7 +148,6 @@ pub async fn handle_open_doc(
         start.elapsed().as_millis()
     );
 
-    // 单播快照给请求者
     ch.unicast(ServerMessage::Snapshot {
         doc_id,
         content: snapshot_content,

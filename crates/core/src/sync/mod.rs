@@ -65,12 +65,19 @@ impl SyncManager {
     }
 
     pub fn reconcile_doc(&self, doc_id: DocId) -> Result<bool> {
-        if let Some(path_str) = self.repo.get_path_by_docid(doc_id)? {
+        self.reconcile_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
+    }
+
+    pub fn reconcile_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<bool> {
+        if let Some(path_str) = self
+            .repo
+            .get_path_by_docid_in_local_repo(repo_name, doc_id)?
+        {
             let file_path = self.vault_root.join(&path_str);
 
             if file_path.exists() {
                 let disk_content = std::fs::read_to_string(&file_path)?;
-                let ops = self.repo.get_local_ops(doc_id)?;
+                let ops = self.repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
 
                 let fix_ops = reconcile::compute_reconcile_ops(
                     doc_id,
@@ -85,7 +92,7 @@ impl SyncManager {
                         path_str
                     );
                     for entry in fix_ops {
-                        self.repo.append_local_op(&entry)?;
+                        self.repo.append_local_op_in_local_repo(repo_name, &entry)?;
                     }
                     return Ok(true);
                 }
@@ -95,9 +102,16 @@ impl SyncManager {
     }
 
     pub fn persist_doc(&self, doc_id: DocId) -> Result<()> {
-        if let Some(path_str) = self.repo.get_path_by_docid(doc_id)? {
+        self.persist_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
+    }
+
+    pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
+        if let Some(path_str) = self
+            .repo
+            .get_path_by_docid_in_local_repo(repo_name, doc_id)?
+        {
             let file_path = self.vault_root.join(&path_str);
-            let rebuilt = rebuild::rebuild_local_doc(&self.repo, doc_id)?;
+            let rebuilt = rebuild::rebuild_local_doc_in_repo(&self.repo, repo_name, doc_id)?;
 
             // Write
             if let Some(parent) = file_path.parent() {
@@ -112,9 +126,12 @@ impl SyncManager {
             let doc_len = rebuilt.content.encode_utf16().count();
             if rebuilt.max_seq > 0
                 && policy.should_snapshot(doc_len, delta, 0)
-                && let Err(e) = self
-                    .repo
-                    .save_snapshot(doc_id, rebuilt.max_seq, &rebuilt.content)
+                && let Err(e) = self.repo.save_snapshot_in_local_repo(
+                    repo_name,
+                    doc_id,
+                    rebuilt.max_seq,
+                    &rebuilt.content,
+                )
             {
                 warn!(
                     "SyncManager: Failed to save snapshot for {}: {:?}",
@@ -133,23 +150,37 @@ impl SyncManager {
         op_entry_builder: impl FnMut(u64) -> crate::models::LedgerEntry,
         persist: bool,
     ) -> Result<(u64, u64)> {
-        // 1. Append Op to Ledger
-        let seqs = crate::ledger::ops::append_generated_op(
-            &self.repo.local_db,
+        self.apply_local_op_in_local_repo(
+            self.repo.local_repo_name(),
+            doc_id,
+            peer_id,
+            op_entry_builder,
+            persist,
+        )
+    }
+
+    /// Invariant: 追加 Op、重建文档与保存快照必须命中同一 `repo_name`。
+    pub fn apply_local_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        peer_id: crate::models::PeerId,
+        op_entry_builder: impl FnMut(u64) -> crate::models::LedgerEntry,
+        persist: bool,
+    ) -> Result<(u64, u64)> {
+        let seqs = self.repo.append_generated_op_in_local_repo(
+            repo_name,
             doc_id,
             peer_id,
             op_entry_builder,
         )?;
 
-        // 2. Optional Persist
-        if persist && let Err(e) = self.persist_doc(doc_id) {
+        if persist && let Err(e) = self.persist_doc_in_local_repo(repo_name, doc_id) {
             tracing::error!(
                 "SyncManager: Failed to persist doc {} after op: {:?}",
                 doc_id,
                 e
             );
-            // We don't rollback the op, but we log headers error.
-            // In a perfect world we might want transactionality across FS and DB, but that's hard.
             return Err(e);
         }
 

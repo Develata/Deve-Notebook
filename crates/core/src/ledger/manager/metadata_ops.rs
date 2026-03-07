@@ -28,6 +28,14 @@ impl RepoManager {
         metadata::get_path_by_docid(&self.local_db, doc_id)
     }
 
+    pub fn get_path_by_docid_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+    ) -> Result<Option<String>> {
+        self.run_on_local_repo(repo_name, |db| metadata::get_path_by_docid(db, doc_id))
+    }
+
     /// 根据 Inode 获取 DocId
     pub fn get_docid_by_inode(&self, inode: &crate::models::FileNodeId) -> Result<Option<DocId>> {
         metadata::get_docid_by_inode(&self.local_db, inode)
