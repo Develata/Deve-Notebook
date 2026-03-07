@@ -5,16 +5,27 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
+pub struct SyncHelloInput {
+    pub peer_id: PeerId,
+    pub pub_key: Vec<u8>,
+    pub signature: Vec<u8>,
+    pub remote_vector: VersionVector,
+    pub repo_id: RepoId,
+}
+
 pub(super) async fn handle(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    peer_id: PeerId,
-    pub_key: Vec<u8>,
-    signature: Vec<u8>,
-    remote_vector: VersionVector,
-    repo_id: RepoId,
+    hello: SyncHelloInput,
 ) {
+    let SyncHelloInput {
+        peer_id,
+        pub_key,
+        signature,
+        remote_vector,
+        repo_id,
+    } = hello;
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
 
     let mut engine = match state.sync_engine.get_or_create(repo_id) {

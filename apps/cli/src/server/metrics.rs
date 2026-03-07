@@ -123,7 +123,7 @@ mod linux {
 
     fn parse_meminfo_kb(line: &str, prefix: &str) -> Option<u64> {
         let rest = line.strip_prefix(prefix)?;
-        rest.trim().split_whitespace().next()?.parse().ok()
+        rest.split_whitespace().next()?.parse().ok()
     }
 
     /// 瞬时 CPU 使用率 (/proc/stat 两次采样, 间隔 100ms)

@@ -29,7 +29,16 @@ pub(crate) async fn route_message(
             repo_id,
         } => {
             sync::handle_sync_hello(
-                state, ch, session, peer_id, pub_key, signature, vector, repo_id,
+                state,
+                ch,
+                session,
+                sync::SyncHelloInput {
+                    peer_id,
+                    pub_key,
+                    signature,
+                    remote_vector: vector,
+                    repo_id,
+                },
             )
             .await;
         }

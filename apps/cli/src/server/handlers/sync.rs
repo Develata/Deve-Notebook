@@ -10,31 +10,19 @@ mod transfer;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::models::{PeerId, RepoId};
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
+
+pub use hello::SyncHelloInput;
 
 pub async fn handle_sync_hello(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    peer_id: PeerId,
-    pub_key: Vec<u8>,
-    signature: Vec<u8>,
-    remote_vector: VersionVector,
-    repo_id: RepoId,
+    hello: SyncHelloInput,
 ) {
-    hello::handle(
-        state,
-        ch,
-        session,
-        peer_id,
-        pub_key,
-        signature,
-        remote_vector,
-        repo_id,
-    )
-    .await;
+    hello::handle(state, ch, session, hello).await;
 }
 
 pub async fn handle_sync_request(
