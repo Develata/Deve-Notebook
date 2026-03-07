@@ -1,7 +1,7 @@
 use anyhow::Result;
 use redb::Database;
 
-use crate::ledger::manager::types::RepoManager;
+use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 
 impl RepoManager {
@@ -100,5 +100,36 @@ impl RepoManager {
         }
 
         Ok(None)
+    }
+
+    /// 解析指定 branch/repo_name 对应仓库的元数据。
+    ///
+    /// Invariant:
+    /// - 所有后续读写/同步算子都应先解析到真实 UUID，再进入底层执行。
+    pub fn get_repo_info_for(
+        &self,
+        branch: Option<&PeerId>,
+        repo_name: Option<&str>,
+    ) -> Result<Option<RepoInfo>> {
+        let name = repo_name
+            .unwrap_or(&self.local_repo_name)
+            .trim_end_matches(".redb");
+        if let Some(peer_id) = branch {
+            let db_path = self
+                .remotes_dir()
+                .join(peer_id.to_filename())
+                .join(format!("{}.redb", name));
+            if !db_path.exists() {
+                return Ok(None);
+            }
+            let db = Database::create(&db_path)?;
+            return Self::read_repo_info_from_db(&db);
+        }
+
+        if name == self.local_repo_name {
+            return Self::read_repo_info_from_db(&self.local_db);
+        }
+
+        self.run_on_local_repo(name, Self::read_repo_info_from_db)
     }
 }

@@ -1,7 +1,7 @@
 // apps/cli/src/server/handlers/docs/rename.rs
 //! # 重命名/移动文档处理器
 
-use super::validate_path;
+use super::{notify_fs_refresh, validate_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
@@ -23,7 +23,7 @@ use std::sync::Arc;
 pub async fn handle_rename_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     old_path: String,
     new_path: String,
 ) {
@@ -107,11 +107,12 @@ pub async fn handle_rename_doc(
                         meta.name.clone(),
                         meta.path.clone(),
                     );
-                ch.broadcast(ServerMessage::TreeUpdate(delta));
+                ch.unicast(ServerMessage::TreeUpdate(delta));
             }
 
             // 6. 刷新文档列表
             handle_list_docs(state, ch, session).await;
+            notify_fs_refresh(ch, &dst_name, "renamed");
         }
     } else {
         tracing::warn!("重命名失败: 源不存在: {:?}", src);
@@ -123,7 +124,7 @@ pub async fn handle_rename_doc(
 pub async fn handle_move_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     src_path: String,
     dest_path: String,
 ) {

@@ -1,14 +1,11 @@
 // apps/cli/src/server/setup.rs
 //! 服务器启动辅助: CORS 配置、MCP 加载、文件监视器
 
-use deve_core::ledger::RepoManager;
 use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::protocol::ServerMessage;
-use deve_core::tree::TreeManager;
 
 use axum::http::{Method, header};
 use std::sync::Arc;
-use std::sync::RwLock;
 use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -82,10 +79,8 @@ pub(super) fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {
 
 /// 启动文件系统监视器 (blocking task)
 pub(super) fn spawn_file_watcher(
-    repo: Arc<RepoManager>,
     sync_manager: Arc<deve_core::sync::SyncManager>,
     vault_path: std::path::PathBuf,
-    tree_manager: Arc<RwLock<TreeManager>>,
     tx: broadcast::Sender<ServerMessage>,
 ) {
     tokio::task::spawn_blocking(move || {
@@ -95,18 +90,18 @@ pub(super) fn spawn_file_watcher(
             move |event| match event {
                 FsEventType::DocChange(msgs) => {
                     for msg in msgs {
-                        if let Ok(nodes) = repo.list_local_nodes(None)
-                            && let Ok(mut tm) = tree_manager.write()
-                        {
-                            tm.init_from_nodes(nodes);
-                            let delta = tm.build_init_delta();
-                            let _ = tx.send(ServerMessage::TreeUpdate(delta));
+                        if matches!(msg, ServerMessage::FsChangeDetected { .. }) {
+                            let _ = tx.send(msg);
                         }
-                        let _ = tx.send(msg);
                     }
                 }
                 FsEventType::DirChange => {
-                    tracing::warn!("DirChange detected: ignore without Node update");
+                    tracing::warn!("DirChange detected: triggering session-scoped refresh");
+                    let _ = tx.send(ServerMessage::FsChangeDetected {
+                        path: String::new(),
+                        change_type: "dir_changed".to_string(),
+                        has_conflict: false,
+                    });
                 }
                 FsEventType::FsPendingChange { path, change_type } => {
                     tracing::info!("FsPendingChange: {} ({})", path, change_type);

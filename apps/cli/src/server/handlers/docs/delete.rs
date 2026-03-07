@@ -1,6 +1,7 @@
 // apps/cli/src/server/handlers/docs/delete.rs
 //! # 删除文档处理器
 
+use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
@@ -20,7 +21,7 @@ use std::sync::Arc;
 pub async fn handle_delete_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     path: String,
 ) {
     // 只读模式检查: 静默忽略删除请求
@@ -78,9 +79,10 @@ pub async fn handle_delete_doc(
             .write()
             .unwrap_or_else(|e| e.into_inner())
             .remove(node_id);
-        ch.broadcast(ServerMessage::TreeUpdate(delta));
+        ch.unicast(ServerMessage::TreeUpdate(delta));
     }
 
     // 5. 刷新文档列表
     handle_list_docs(state, ch, session).await;
+    notify_fs_refresh(ch, &path, "deleted");
 }

@@ -1,7 +1,7 @@
 // apps/cli/src/server/handlers/docs/create.rs
 //! # 创建文档处理器
 
-use super::validate_path;
+use super::{notify_fs_refresh, validate_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::{broadcast_dir_chain, broadcast_parent_dirs};
@@ -25,7 +25,7 @@ use std::sync::Arc;
 pub async fn handle_create_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     name: String,
 ) {
     // 只读模式检查: 静默忽略创建请求
@@ -96,6 +96,8 @@ pub async fn handle_create_doc(
         {
             tracing::error!("广播目录链失败: {:?}", e);
         }
+        handle_list_docs(state, ch, session).await;
+        notify_fs_refresh(ch, folder_path, "dir-added");
     } else if path.exists() {
         // 文件已存在，仅注册到 Ledger
         let doc_id = match state.repo.get_docid(&filename) {
@@ -135,10 +137,11 @@ pub async fn handle_create_doc(
                     meta.name.clone(),
                     doc_id,
                 );
-            ch.broadcast(ServerMessage::TreeUpdate(delta));
+            ch.unicast(ServerMessage::TreeUpdate(delta));
         }
         // 刷新文档列表
         handle_list_docs(state, ch, session).await;
+        notify_fs_refresh(ch, &filename, "added");
     } else if let Err(e) = std::fs::write(&path, "") {
         tracing::error!("创建文件失败: {:?}", e);
         ch.send_error(format!("Failed to create file: {}", e));
@@ -162,9 +165,10 @@ pub async fn handle_create_doc(
                 meta.name.clone(),
                 doc_id,
             );
-            ch.broadcast(ServerMessage::TreeUpdate(delta));
+            ch.unicast(ServerMessage::TreeUpdate(delta));
         }
         // 刷新文档列表
         handle_list_docs(state, ch, session).await;
+        notify_fs_refresh(ch, &filename, "added");
     }
 }

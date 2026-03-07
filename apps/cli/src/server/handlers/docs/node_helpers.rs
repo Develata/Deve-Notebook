@@ -25,7 +25,7 @@ pub fn broadcast_dir_chain(state: &Arc<AppState>, ch: &DualChannel, node_id: Nod
             continue;
         }
         let delta = tm.add_folder(id, meta.path.clone(), meta.parent_id, meta.name.clone());
-        ch.broadcast(ServerMessage::TreeUpdate(delta));
+        ch.unicast(ServerMessage::TreeUpdate(delta));
     }
     Ok(())
 }

@@ -3,6 +3,7 @@ use axum::response::IntoResponse;
 use bincode::Options;
 use futures::StreamExt;
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -96,6 +97,11 @@ pub async fn handle_socket(
         match msg {
             // 优先处理二进制消息 (Bincode)
             axum::extract::ws::Message::Binary(bin) => {
+                if !session.record_incoming_message(Instant::now()) {
+                    ch.send_error("WebSocket rate limit exceeded".to_string());
+                    tracing::warn!("WS message rate limit exceeded: {}", peer_id);
+                    break;
+                }
                 match bincode_config.deserialize::<ClientMessage>(&bin) {
                     Ok(client_msg) => {
                         route::route_message(&state, &ch, &mut session, client_msg).await
@@ -105,6 +111,11 @@ pub async fn handle_socket(
             }
             // 向后兼容: JSON 文本消息
             axum::extract::ws::Message::Text(text) => {
+                if !session.record_incoming_message(Instant::now()) {
+                    ch.send_error("WebSocket rate limit exceeded".to_string());
+                    tracing::warn!("WS message rate limit exceeded: {}", peer_id);
+                    break;
+                }
                 match serde_json::from_str::<ClientMessage>(&text) {
                     Ok(client_msg) => {
                         route::route_message(&state, &ch, &mut session, client_msg).await

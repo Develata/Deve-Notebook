@@ -13,6 +13,29 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
 
+fn require_bound_peer(
+    ch: &DualChannel,
+    session: &WsSession,
+    repo_id: deve_core::models::RepoId,
+) -> Option<PeerId> {
+    if !session.is_repo_bound(&repo_id) {
+        tracing::warn!(
+            "Sync repo mismatch: session bound to {:?}, got {}",
+            session.bound_repo_id,
+            repo_id
+        );
+        ch.send_error("Repository not bound to session".to_string());
+        return None;
+    }
+
+    let Some(peer_id) = session.authenticated_peer_id.clone() else {
+        tracing::error!("Sync message without authenticated peer");
+        ch.send_error("Not authenticated".to_string());
+        return None;
+    };
+    Some(peer_id)
+}
+
 /// 处理 P2P 握手请求
 pub async fn handle_sync_hello(
     state: &Arc<AppState>,
@@ -36,7 +59,7 @@ pub async fn handle_sync_hello(
     };
     let local_peer_id = engine.local_peer_id.clone();
     let local_vector = engine.version_vector().clone();
-    
+
     // 2. 执行握手逻辑 (Verify Client)
     let result = match engine.handshake(
         repo_id,
@@ -121,8 +144,11 @@ pub async fn handle_sync_request(
 ) {
     // 校验 repo 与会话绑定一致
     if !session.is_repo_bound(&repo_id) {
-        tracing::warn!("SyncRequest repo mismatch: session bound to {:?}, got {}", 
-            session.bound_repo_id, repo_id);
+        tracing::warn!(
+            "SyncRequest repo mismatch: session bound to {:?}, got {}",
+            session.bound_repo_id,
+            repo_id
+        );
         ch.send_error("Repository not bound to session".to_string());
         return;
     }
@@ -164,22 +190,8 @@ pub async fn handle_sync_push(
     repo_id: deve_core::models::RepoId,
     ops: Vec<deve_core::security::EncryptedOp>,
 ) {
-    // 校验 repo 与会话绑定一致
-    if !session.is_repo_bound(&repo_id) {
-        tracing::warn!("SyncPush repo mismatch: session bound to {:?}, got {}", 
-            session.bound_repo_id, repo_id);
-        ch.send_error("Repository not bound to session".to_string());
+    let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
         return;
-    }
-
-    // 获取来源 peer ID (优先使用会话认证的 peer，否则拒绝)
-    let source_peer = match &session.authenticated_peer_id {
-        Some(peer_id) => peer_id.clone(),
-        None => {
-            tracing::error!("SyncPush without authenticated peer");
-            ch.send_error("Not authenticated".to_string());
-            return;
-        }
     };
 
     // 获取或创建指定仓库的 SyncEngine
@@ -205,7 +217,10 @@ pub async fn handle_sync_push(
         Err(e) => {
             tracing::error!("Failed to apply ops for repo {}: {:?}", repo_id, e);
             // 使用单播发送错误给当前客户端
-            ch.send_error(format!("Failed to apply sync ops for repo {}: {}", repo_id, e));
+            ch.send_error(format!(
+                "Failed to apply sync ops for repo {}: {}",
+                repo_id, e
+            ));
         }
     }
 }
@@ -214,9 +229,14 @@ pub async fn handle_sync_push(
 pub async fn handle_sync_snapshot_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    peer_id: PeerId,
+    session: &WsSession,
+    _peer_id: PeerId,
     repo_id: deve_core::models::RepoId,
 ) {
+    let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
+        return;
+    };
+
     // 获取或创建指定仓库的 SyncEngine
     let engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
@@ -225,10 +245,10 @@ pub async fn handle_sync_snapshot_request(
             return;
         }
     };
-    tracing::info!("Handling SnapshotRequest from {}", peer_id);
+    tracing::info!("Handling SnapshotRequest from {}", source_peer);
 
     let request = deve_core::sync::protocol::SyncSnapshotRequest {
-        peer_id: peer_id.clone(),
+        peer_id: source_peer.clone(),
         repo_id,
     };
 
@@ -237,7 +257,7 @@ pub async fn handle_sync_snapshot_request(
             tracing::info!(
                 "Sending snapshot with {} ops to {}",
                 response.ops.len(),
-                peer_id
+                source_peer
             );
             let msg = ServerMessage::SyncPushSnapshot {
                 peer_id: engine.local_peer_id.clone(), // I am the source
@@ -247,7 +267,7 @@ pub async fn handle_sync_snapshot_request(
             ch.unicast(msg);
         }
         Err(e) => {
-            tracing::error!("Failed to generate snapshot for {}: {:?}", peer_id, e);
+            tracing::error!("Failed to generate snapshot for {}: {:?}", source_peer, e);
             ch.send_error(format!("Failed to generate snapshot: {}", e));
         }
     }
@@ -257,10 +277,15 @@ pub async fn handle_sync_snapshot_request(
 pub async fn handle_sync_push_snapshot(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    peer_id: PeerId,
+    session: &WsSession,
+    _peer_id: PeerId,
     repo_id: deve_core::models::RepoId,
     ops: Vec<deve_core::security::EncryptedOp>,
 ) {
+    let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
+        return;
+    };
+
     // 获取或创建指定仓库的 SyncEngine
     let mut engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
@@ -269,10 +294,14 @@ pub async fn handle_sync_push_snapshot(
             return;
         }
     };
-    tracing::info!("Handling PushSnapshot from {} ({} ops)", peer_id, ops.len());
+    tracing::info!(
+        "Handling PushSnapshot from {} ({} ops)",
+        source_peer,
+        ops.len()
+    );
 
     let response = deve_core::sync::protocol::SyncResponse {
-        peer_id: peer_id.clone(),
+        peer_id: source_peer.clone(),
         repo_id,
         ops,
     };
@@ -281,12 +310,12 @@ pub async fn handle_sync_push_snapshot(
         Ok(seq) => {
             tracing::info!(
                 "Applied snapshot from {}. Updated VV to seq {}",
-                peer_id,
+                source_peer,
                 seq
             );
         }
         Err(e) => {
-            tracing::error!("Failed to apply snapshot from {}: {:?}", peer_id, e);
+            tracing::error!("Failed to apply snapshot from {}: {:?}", source_peer, e);
             ch.send_error(format!("Failed to apply snapshot: {}", e));
         }
     }

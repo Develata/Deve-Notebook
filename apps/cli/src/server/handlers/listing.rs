@@ -19,19 +19,22 @@ use std::sync::Arc;
 /// 优先使用 session 中锁定的 active_db 列出文档。
 /// 这确保文件树与当前选中的 repo 保持一致。
 /// 同时发送 RepoSwitched 通知前端当前仓库名称。
-pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
+pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
     // 确定当前仓库名称
     let current_repo = session
         .active_repo
         .clone()
         .unwrap_or_else(|| state.repo.local_repo_name().to_string());
 
-    // 获取真实 repo UUID
-    let repo_uuid = state
+    let repo_info = state
         .repo
-        .get_repo_info()
+        .get_repo_info_for(session.active_branch.as_ref(), Some(&current_repo))
         .ok()
-        .flatten()
+        .flatten();
+    session.active_repo = Some(current_repo.clone());
+    session.active_repo_id = repo_info.as_ref().map(|info| info.uuid);
+    let repo_uuid = repo_info
+        .as_ref()
         .map(|info| info.uuid.to_string())
         .unwrap_or_default();
 
@@ -48,7 +51,11 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
     } else {
         // 回退: 使用 active_branch/active_repo 字符串
         if let Some(peer_id) = &session.active_branch {
-            let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), super::get_repo_id(state));
+            let Some(repo_id) = session.active_repo_id else {
+                ch.send_error(format!("Repository UUID not resolved for {}", current_repo));
+                return;
+            };
+            let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), repo_id);
             state.repo.list_docs(&repo_type)
         } else {
             state.repo.list_local_docs(session.active_repo.as_deref())
@@ -83,7 +90,11 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
                 let _ = node_meta::migrate_nodes_from_docs(&handle.db);
                 node_meta::list_nodes(&handle.db)
             } else if let Some(peer_id) = &session.active_branch {
-                let repo_type = RepoType::Remote(peer_id.clone(), super::get_repo_id(state));
+                let Some(repo_id) = session.active_repo_id else {
+                    ch.send_error(format!("Repository UUID not resolved for {}", current_repo));
+                    return;
+                };
+                let repo_type = RepoType::Remote(peer_id.clone(), repo_id);
                 state.repo.list_nodes(&repo_type)
             } else {
                 state.repo.list_local_nodes(session.active_repo.as_deref())

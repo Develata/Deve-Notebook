@@ -51,10 +51,14 @@ pub(super) async fn route_core(
             sync::handle_delete_peer(state, ch, peer_id).await;
         }
         ClientMessage::SyncSnapshotRequest { peer_id, repo_id } => {
-            sync::handle_sync_snapshot_request(state, ch, peer_id, repo_id).await;
+            sync::handle_sync_snapshot_request(state, ch, session, peer_id, repo_id).await;
         }
-        ClientMessage::SyncPushSnapshot { peer_id, repo_id, ops } => {
-            sync::handle_sync_push_snapshot(state, ch, peer_id, repo_id, ops).await;
+        ClientMessage::SyncPushSnapshot {
+            peer_id,
+            repo_id,
+            ops,
+        } => {
+            sync::handle_sync_push_snapshot(state, ch, session, peer_id, repo_id, ops).await;
         }
         ClientMessage::SyncRequest { repo_id, requests } => {
             sync::handle_sync_request(state, ch, session, repo_id, requests).await;

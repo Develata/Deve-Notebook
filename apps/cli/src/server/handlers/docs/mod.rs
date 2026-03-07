@@ -22,6 +22,7 @@ pub use delete::handle_delete_doc;
 pub use rename::{handle_move_doc, handle_rename_doc};
 
 use crate::server::channel::DualChannel;
+use deve_core::protocol::ServerMessage;
 
 /// 目录深度限制 (防止文件系统资源耗尽)
 pub const MAX_DEPTH: usize = 10;
@@ -51,4 +52,12 @@ pub fn validate_path(path: &str, ch: &DualChannel) -> bool {
     }
 
     true
+}
+
+pub fn notify_fs_refresh(ch: &DualChannel, path: &str, change_type: &str) {
+    ch.broadcast(ServerMessage::FsChangeDetected {
+        path: path.to_string(),
+        change_type: change_type.to_string(),
+        has_conflict: false,
+    });
 }

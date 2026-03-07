@@ -117,7 +117,12 @@ pub async fn handle_switch_branch(
     // 4. 执行 Repo 切换并锁定数据库
     if let Some(repo_name) = target_repo {
         tracing::info!("Auto-switching to repo: {}", repo_name);
-        session.switch_repo(repo_name.clone());
+        let repo_info = state
+            .repo
+            .get_repo_info_for(session.active_branch.as_ref(), Some(&repo_name))
+            .ok()
+            .flatten();
+        session.switch_repo(repo_name.clone(), repo_info.as_ref().map(|info| info.uuid));
 
         // 锁定数据库
         match state
@@ -134,13 +139,14 @@ pub async fn handle_switch_branch(
             }
             Err(e) => {
                 tracing::error!("Failed to lock database: {:?}", e);
-                // 继续，但不设置 active_db
+                session.clear_active_db();
             }
         }
         // RepoSwitched 通知由 handle_list_docs 统一发送
     } else {
         // If no repo found (e.g. empty branch), clear active db
-        session.active_db = None;
+        session.clear_active_db();
+        session.clear_active_repo();
     }
 
     // 5. 刷新列表
@@ -171,7 +177,12 @@ pub async fn handle_switch_repo(
 
     if repos.contains(&name) {
         // 2. 切换 Session Repo 状态
-        session.switch_repo(name.clone());
+        let repo_info = state
+            .repo
+            .get_repo_info_for(branch.as_ref(), Some(&name))
+            .ok()
+            .flatten();
+        session.switch_repo(name.clone(), repo_info.as_ref().map(|info| info.uuid));
         tracing::info!("Client switched to repo: {} (Branch: {:?})", name, branch);
 
         // 3. 锁定数据库 (对于非主库)
@@ -189,7 +200,7 @@ pub async fn handle_switch_repo(
                 // 对于主库，open_database 会返回错误（因为 RepoManager 已持有）
                 // 这是正常的，我们清除 active_db 让后续操作通过 run_on_local_repo 访问
                 tracing::debug!("Database lock skipped (main repo): {:?}", e);
-                session.active_db = None;
+                session.clear_active_db();
             }
         }
 

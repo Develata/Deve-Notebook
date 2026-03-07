@@ -4,7 +4,7 @@
 //! 支持单文件和目录的复制操作。
 
 use super::copy_utils::{collect_dirs, collect_md_files, copy_dir_recursive};
-use super::validate_path;
+use super::{notify_fs_refresh, validate_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::{broadcast_dir_chain, broadcast_parent_dirs};
@@ -29,7 +29,7 @@ use std::sync::Arc;
 pub async fn handle_copy_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     src_path: String,
     dest_path: String,
 ) {
@@ -122,7 +122,7 @@ pub async fn handle_copy_doc(
                         meta.name.clone(),
                         doc_id,
                     );
-                ch.broadcast(ServerMessage::TreeUpdate(delta));
+                ch.unicast(ServerMessage::TreeUpdate(delta));
             }
         } else {
             tracing::error!("Ledger 注册复制文档失败");
@@ -130,6 +130,7 @@ pub async fn handle_copy_doc(
     }
 
     handle_list_docs(state, ch, session).await;
+    notify_fs_refresh(ch, &dest_path, "copied");
 }
 
 /// 批量注册复制目录下的所有 `.md` 文件到 Ledger，并更新 TreeManager
@@ -206,7 +207,7 @@ fn register_and_broadcast_copied_docs(
                                 meta.name.clone(),
                                 doc_id,
                             );
-                        ch.broadcast(ServerMessage::TreeUpdate(delta));
+                        ch.unicast(ServerMessage::TreeUpdate(delta));
                     }
                 } else {
                     tracing::warn!("Ledger 注册失败: {}", rel_path);

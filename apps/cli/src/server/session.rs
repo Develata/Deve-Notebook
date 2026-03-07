@@ -12,12 +12,15 @@
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use deve_core::models::RepoId;
+use std::time::{Duration, Instant};
+
+const WS_MESSAGE_WINDOW: Duration = Duration::from_secs(60);
+const WS_MAX_MESSAGES_PER_WINDOW: u16 = 200;
 
 /// WebSocket 会话状态
 ///
 /// 每个 WebSocket 连接维护独立的会话状态实例。
 #[allow(dead_code)] // 为 P2P 握手和分支切换预留的字段
-#[derive(Default)]
 pub struct WsSession {
     /// 已认证的对端 Peer ID
     ///
@@ -41,10 +44,36 @@ pub struct WsSession {
     /// - `Some(name)`: 指定名称的仓库 (.redb)
     pub active_repo: Option<String>,
 
+    /// 当前活动仓库 ID（UUID-first）
+    pub active_repo_id: Option<RepoId>,
+
     /// 当前锁定的数据库句柄
     ///
     /// 在切换 branch/repo 时更新，所有后续操作使用此句柄
     pub active_db: Option<DatabaseHandle>,
+
+    /// WebSocket 固定时间窗限流状态。
+    ///
+    /// Invariant:
+    /// - 每个连接独立计数。
+    /// - 60 秒窗口内最多允许 200 条客户端消息。
+    pub message_window_started_at: Instant,
+    pub message_count_in_window: u16,
+}
+
+impl Default for WsSession {
+    fn default() -> Self {
+        Self {
+            authenticated_peer_id: None,
+            bound_repo_id: None,
+            active_branch: None,
+            active_repo: None,
+            active_repo_id: None,
+            active_db: None,
+            message_window_started_at: Instant::now(),
+            message_count_in_window: 0,
+        }
+    }
 }
 
 #[allow(dead_code)] // 为 P2P 握手和分支切换预留
@@ -77,13 +106,23 @@ impl WsSession {
     }
 
     /// 切换活动仓库
-    pub fn switch_repo(&mut self, repo_name: String) {
+    pub fn switch_repo(&mut self, repo_name: String, repo_id: Option<RepoId>) {
         self.active_repo = Some(repo_name);
+        self.active_repo_id = repo_id;
     }
 
     /// 设置活动数据库句柄
     pub fn set_active_db(&mut self, handle: DatabaseHandle) {
         self.active_db = Some(handle);
+    }
+
+    pub fn clear_active_db(&mut self) {
+        self.active_db = None;
+    }
+
+    pub fn clear_active_repo(&mut self) {
+        self.active_repo = None;
+        self.active_repo_id = None;
     }
 
     /// 检查是否在影子分支 (只读模式)
@@ -94,5 +133,19 @@ impl WsSession {
     /// 获取活动数据库引用 (如果已锁定)
     pub fn get_active_db(&self) -> Option<&DatabaseHandle> {
         self.active_db.as_ref()
+    }
+
+    pub fn record_incoming_message(&mut self, now: Instant) -> bool {
+        if now.duration_since(self.message_window_started_at) >= WS_MESSAGE_WINDOW {
+            self.message_window_started_at = now;
+            self.message_count_in_window = 0;
+        }
+
+        if self.message_count_in_window >= WS_MAX_MESSAGES_PER_WINDOW {
+            return false;
+        }
+
+        self.message_count_in_window += 1;
+        true
     }
 }
