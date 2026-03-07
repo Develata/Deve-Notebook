@@ -1,7 +1,7 @@
 use super::copy_dir_on_disk;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{ResolvedRepo, run_on_resolved_local_repo};
+use crate::server::repo_scope::{ResolvedRepo, local_repo_path, run_on_resolved_local_repo};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -15,12 +15,14 @@ pub(super) fn copy_dir(
     src_path: &str,
     dest_path: &str,
 ) {
-    if !copy_dir_on_disk(
-        ch,
-        &deve_core::utils::path::join_normalized(&state.vault_path, src_path),
-        dst,
-        src_path,
-    ) {
+    let src = match local_repo_path(state, scope, src_path) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
+    if !copy_dir_on_disk(ch, &src, dst, src_path) {
         return;
     }
     register_copied_docs(state, ch, scope, dst, dest_path);

@@ -1,4 +1,4 @@
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::{ResolvedRepo, local_repo_path, resolve_session_repo};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::MergeResult;
 use deve_core::models::{DocId, PeerId};
@@ -37,7 +37,7 @@ pub(super) async fn handle_merge_peer(
         .merge_peer_in_local_repo(&scope.repo_name, &peer_id, &scope.repo_id, doc_id)
     {
         Ok(MergeResult::Success(content)) => {
-            write_merged_content(state, ch, &scope.repo_name, scope.repo_id, doc_id, &content);
+            write_merged_content(state, ch, &scope, doc_id, &content);
         }
         Ok(MergeResult::Conflict { local, remote, .. }) => {
             send_merge_conflict(state, ch, &scope.repo_name, doc_id, local, remote);
@@ -49,22 +49,24 @@ pub(super) async fn handle_merge_peer(
 fn write_merged_content(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    repo_name: &str,
-    repo_id: deve_core::models::RepoId,
+    scope: &ResolvedRepo,
     doc_id: DocId,
     content: &str,
 ) {
-    let Some(path) = resolve_doc_path(state, ch, repo_name, doc_id) else {
+    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id) else {
         return;
     };
-    let abs_path = state.vault_path.join(&path);
+    let abs_path = match local_repo_path(state, scope, &path) {
+        Ok(path) => path,
+        Err(err) => return ch.send_error(err.to_string()),
+    };
     if let Err(e) = std::fs::write(&abs_path, content) {
         ch.send_error(format!("Failed to write merged content: {}", e));
         return;
     }
     tracing::info!("Merge Success for doc {} ({})", doc_id, path);
     ch.broadcast(ServerMessage::MergeComplete {
-        repo_id: Some(repo_id),
+        repo_id: Some(scope.repo_id),
         merged_count: 1,
     });
 }

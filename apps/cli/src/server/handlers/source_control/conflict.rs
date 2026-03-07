@@ -7,7 +7,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
+use crate::server::repo_scope::{local_repo_path, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ConflictResolution;
@@ -86,7 +86,7 @@ fn resolve_keep_ledger(
     })?;
 
     // 将 Ledger 内容写回磁盘
-    let disk_path = state.vault_path.join(path);
+    let disk_path = local_repo_path(state, scope, path)?;
     if let Some(parent) = disk_path.parent() {
         std::fs::create_dir_all(parent)?;
     }

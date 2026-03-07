@@ -6,9 +6,8 @@ use super::create_folder::handle_folder_create;
 use super::validate_path;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::{local_repo_path, resolve_session_repo};
 use crate::server::session::WsSession;
-use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
 
 /// 处理创建文档请求
@@ -43,7 +42,13 @@ pub async fn handle_create_doc(
         return;
     }
 
-    let path = join_normalized(&state.vault_path, &filename);
+    let path = match local_repo_path(state, &scope, &filename) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
 
     if let Err(e) = ensure_parent_dirs(&path) {
         tracing::error!("创建目录失败: {:?}", e);

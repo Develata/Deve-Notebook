@@ -2,7 +2,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::copy_utils::{collect_dirs, collect_md_files};
 use crate::server::handlers::docs::node_helpers::{broadcast_dir_chain, broadcast_parent_dirs};
-use crate::server::repo_scope::{ResolvedRepo, run_on_resolved_local_repo};
+use crate::server::repo_scope::{ResolvedRepo, local_repo_root, run_on_resolved_local_repo};
 use anyhow::anyhow;
 use deve_core::ledger::node_meta;
 use deve_core::models::{NodeId, NodeKind};
@@ -17,9 +17,15 @@ pub(super) fn register_copied_docs(
     dst: &Path,
     dest_path: &str,
 ) {
-    let base = &state.vault_path;
-    register_dirs(state, ch, scope, dst, base);
-    register_files(state, ch, scope, dst, base, dest_path);
+    let base = match local_repo_root(state, scope) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
+    register_dirs(state, ch, scope, dst, &base);
+    register_files(state, ch, scope, dst, &base, dest_path);
 }
 
 fn register_dirs(

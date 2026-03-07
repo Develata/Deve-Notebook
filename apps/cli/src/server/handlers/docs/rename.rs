@@ -6,12 +6,13 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::{resolve_session_repo, run_on_resolved_local_repo};
+use crate::server::repo_scope::{
+    local_repo_path, resolve_session_repo, run_on_resolved_local_repo,
+};
 use crate::server::session::WsSession;
 use anyhow::anyhow;
 use deve_core::ledger::node_meta;
 use deve_core::protocol::ServerMessage;
-use deve_core::utils::path::join_normalized;
 use std::sync::Arc;
 
 /// 处理重命名文档请求
@@ -42,7 +43,13 @@ pub async fn handle_rename_doc(
         }
     };
 
-    let src = join_normalized(&state.vault_path, &old_path);
+    let src = match local_repo_path(state, &scope, &old_path) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
 
     // 1. 确保目标路径以 .md 结尾 (如果源是 .md)
     let mut dst_name = new_path.clone();
@@ -60,7 +67,13 @@ pub async fn handle_rename_doc(
         return;
     }
 
-    let dst = join_normalized(&state.vault_path, &dst_name);
+    let dst = match local_repo_path(state, &scope, &dst_name) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
 
     if dst.exists() {
         tracing::error!("重命名失败: 目标已存在: {:?}", dst);

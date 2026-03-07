@@ -83,7 +83,6 @@ pub(super) fn spawn_file_watcher(
     vault_path: std::path::PathBuf,
     tx: broadcast::Sender<ServerMessage>,
 ) {
-    let local_repo_id = sync_manager.local_repo_id();
     tokio::task::spawn_blocking(move || {
         use deve_core::watcher::FsEventType;
 
@@ -96,11 +95,11 @@ pub(super) fn spawn_file_watcher(
                         }
                     }
                 }
-                FsEventType::DirChange => {
-                    tracing::warn!("DirChange detected: triggering session-scoped refresh");
+                FsEventType::DirChange { repo_id, path } => {
+                    tracing::info!("DirChange detected: repo-scoped refresh ({})", path);
                     let _ = tx.send(ServerMessage::FsChangeDetected {
-                        repo_id: local_repo_id,
-                        path: String::new(),
+                        repo_id: Some(repo_id),
+                        path,
                         change_type: "dir_changed".to_string(),
                         has_conflict: false,
                     });
@@ -108,7 +107,7 @@ pub(super) fn spawn_file_watcher(
                 FsEventType::FsPendingChange { path, change_type } => {
                     tracing::info!("FsPendingChange: {} ({})", path, change_type);
                     let _ = tx.send(ServerMessage::FsChangeDetected {
-                        repo_id: local_repo_id,
+                        repo_id: None,
                         path,
                         change_type,
                         has_conflict: false,

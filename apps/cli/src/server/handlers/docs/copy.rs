@@ -9,7 +9,7 @@ use super::{notify_fs_refresh, validate_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::{ResolvedRepo, local_repo_path, resolve_session_repo};
 use crate::server::session::WsSession;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -34,7 +34,7 @@ pub async fn handle_copy_doc(
         Ok(scope) => scope,
         Err(err) => return ch.send_error(err.to_string()),
     };
-    let paths = match prepare_copy_paths(state, ch, &src_path, &dest_path) {
+    let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path) {
         Some(paths) => paths,
         None => return,
     };
@@ -54,11 +54,24 @@ pub async fn handle_copy_doc(
 fn prepare_copy_paths(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    scope: &ResolvedRepo,
     src_path: &str,
     dest_path: &str,
 ) -> Option<CopyPaths> {
-    let src = deve_core::utils::path::join_normalized(&state.vault_path, src_path);
-    let dst = deve_core::utils::path::join_normalized(&state.vault_path, dest_path);
+    let src = match local_repo_path(state, scope, src_path) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return None;
+        }
+    };
+    let dst = match local_repo_path(state, scope, dest_path) {
+        Ok(path) => path,
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return None;
+        }
+    };
     if !src.exists() {
         tracing::error!("复制失败: 源不存在: {:?}", src);
         ch.send_error(format!("Source not found: {}", src_path));
