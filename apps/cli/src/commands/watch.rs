@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -20,15 +20,18 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 ///
 /// **阻塞行为**:
 /// 此函数会阻塞直到收到 Ctrl+C 信号。
-pub fn run(ledger_dir: &PathBuf, vault_path: &PathBuf, snapshot_depth: usize) -> Result<()> {
+pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Result<()> {
     // 1. 初始化 RepoManager
-    let repo = Arc::new(RepoManager::init(ledger_dir, snapshot_depth, None, None)?);
+    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    repo.set_vault_root(vault_path);
+    let repo = Arc::new(repo);
 
     // 2. 初始化 SyncManager
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new(
         repo.clone(),
-        vault_path.clone(),
+        vault_path.to_path_buf(),
     ));
+    sync_manager.scan()?;
 
     // 3. 注册 Ctrl+C 信号处理 (必须在 watcher.watch() 之前)
     ctrlc::set_handler(move || {
@@ -38,7 +41,7 @@ pub fn run(ledger_dir: &PathBuf, vault_path: &PathBuf, snapshot_depth: usize) ->
     .expect("无法设置 Ctrl+C 处理器");
 
     // 4. 创建并启动 Watcher
-    let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path.clone());
+    let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path.to_path_buf());
     println!("启动 Watcher: {:?}", vault_path);
     println!("按 Ctrl+C 停止...");
     watcher.watch()?;

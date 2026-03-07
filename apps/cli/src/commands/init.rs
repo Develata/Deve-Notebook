@@ -1,6 +1,6 @@
 ﻿// apps\cli\src\commands
 use deve_core::ledger::RepoManager;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 初始化命令
 ///
@@ -13,15 +13,15 @@ use std::path::PathBuf;
 /// * `path`: 指定的初始化根目录, config.toml 和 .env 将生成在此目录下
 /// * `snapshot_depth`: 快照深度配置
 pub fn run(
-    ledger_dir: &PathBuf,
-    vault_path: &PathBuf,
+    ledger_dir: &Path,
+    vault_path: &Path,
     path: PathBuf,
     snapshot_depth: usize,
 ) -> anyhow::Result<()> {
     println!("Initializing ledger at {:?}...", ledger_dir);
     // 1. 初始化 RepoManager (创建目录结构)
     let _ = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    std::fs::create_dir_all(vault_path)?;
+    std::fs::create_dir_all(vault_path.join("default"))?;
 
     // 2. Generate default config.toml
     let config_path = path.join("config.toml");
