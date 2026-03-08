@@ -6,6 +6,7 @@ pub mod dump;
 pub mod export;
 pub mod init;
 pub mod node_check;
+pub mod repair;
 pub mod scan;
 pub mod seed;
 pub mod serve;

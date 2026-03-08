@@ -66,6 +66,15 @@ enum Commands {
         #[arg(long)]
         repair: bool,
     },
+    /// Repair known local corruption from backups and quarantine invalid shadows
+    Repair {
+        #[arg(long, default_value = "Vault_old/vault")]
+        backup: PathBuf,
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long = "path")]
+        paths: Vec<String>,
+    },
 }
 
 #[tokio::main]
@@ -110,6 +119,18 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::NodeCheck { repair }) => {
             commands::node_check::run(&ledger_dir, config.snapshot_depth, repair)?
         }
+        Some(Commands::Repair {
+            backup,
+            repo,
+            paths,
+        }) => commands::repair::run(
+            &ledger_dir,
+            &vault_path,
+            &backup,
+            config.snapshot_depth,
+            repo.as_deref(),
+            &paths,
+        )?,
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
 
