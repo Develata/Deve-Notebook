@@ -11,6 +11,7 @@ pub(super) async fn handle_open_doc(
     ch: &DualChannel,
     session: &WsSession,
     doc_id: DocId,
+    request_id: u64,
 ) {
     tracing::info!(
         "OpenDoc Request for DocID: {}, Branch: {:?}, Repo: {:?}",
@@ -55,6 +56,7 @@ pub(super) async fn handle_open_doc(
 
     ch.unicast(ServerMessage::Snapshot {
         doc_id,
+        request_id,
         content,
         base_seq,
         version,

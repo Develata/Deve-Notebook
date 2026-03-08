@@ -18,9 +18,7 @@ pub async fn handle_stage_file(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match run_on_resolved_local_repo(state, &scope, |db| {
-        deve_core::ledger::source_control::stage_file(db, &path)
-    }) {
+    match state.repo.stage_file_in_local_repo(&scope.repo_name, &path) {
         Ok(()) => {
             tracing::info!("Staged file: {}", path);
             ch.unicast(ServerMessage::StageAck { path });
@@ -70,15 +68,12 @@ pub async fn handle_stage_files(
         Err(e) => return ch.send_error(e.to_string()),
     };
     let paths = normalized_unique_paths(paths);
-    if let Err(e) = run_on_resolved_local_repo(state, &scope, |db| {
-        for path in &paths {
-            deve_core::ledger::source_control::stage_file(db, path)?;
+    for path in &paths {
+        if let Err(e) = state.repo.stage_file_in_local_repo(&scope.repo_name, path) {
+            tracing::error!("Failed to stage files: {:?}", e);
+            ch.send_error(e.to_string());
+            return;
         }
-        Ok(())
-    }) {
-        tracing::error!("Failed to stage files: {:?}", e);
-        ch.send_error(e.to_string());
-        return;
     }
     super::changes::handle_get_changes(state, ch, session).await;
 }

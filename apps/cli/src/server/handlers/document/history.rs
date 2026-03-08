@@ -9,6 +9,7 @@ pub(super) async fn handle_request_history(
     ch: &DualChannel,
     session: &WsSession,
     doc_id: DocId,
+    request_id: u64,
 ) {
     let Ok(scope) = resolve_session_repo(state, session) else {
         return;
@@ -21,6 +22,10 @@ pub(super) async fn handle_request_history(
             .into_iter()
             .map(|(seq, entry)| (seq, entry.op))
             .collect();
-        ch.unicast(ServerMessage::History { doc_id, ops });
+        ch.unicast(ServerMessage::History {
+            doc_id,
+            request_id,
+            ops,
+        });
     }
 }

@@ -20,7 +20,13 @@ pub(super) async fn handle_edit(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    let local_peer_id = state.identity_key.peer_id();
+    let local_peer_id = match session.authenticated_peer_id.clone() {
+        Some(peer_id) => peer_id,
+        None => {
+            ch.send_error("Browser peer not authenticated for edit".to_string());
+            return;
+        }
+    };
     let op_clone = op.clone();
     let peer_id_clone = local_peer_id.clone();
     match state.sync_manager.apply_local_op_in_local_repo(

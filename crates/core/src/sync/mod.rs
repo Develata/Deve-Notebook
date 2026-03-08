@@ -122,13 +122,14 @@ impl SyncManager {
             if let Some(parent) = file_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::write(&file_path, &rebuilt.content)?;
-            self.persist_guard.record(
-                &self
-                    .repo
-                    .local_repo_workspace_relative(repo_name, &path_str),
-                &rebuilt.content,
-            );
+            let relative_path = self
+                .repo
+                .local_repo_workspace_relative(repo_name, &path_str);
+            self.persist_guard.record(&relative_path, &rebuilt.content);
+            if let Err(err) = std::fs::write(&file_path, &rebuilt.content) {
+                self.persist_guard.clear(&relative_path);
+                return Err(err.into());
+            }
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
             let policy = SnapshotPolicy::default();

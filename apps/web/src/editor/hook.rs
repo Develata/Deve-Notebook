@@ -43,6 +43,7 @@ pub fn use_editor(
     // 文档的本地状态
     let (content, set_content) = signal("".to_string());
     let (local_version, set_local_version) = signal(0u64);
+    let (open_request_id, set_open_request_id) = signal(0u64);
     let set_load_state = core.set_load_state;
     let set_load_progress = core.set_load_progress;
     let set_load_eta_ms = core.set_load_eta_ms;
@@ -64,17 +65,19 @@ pub fn use_editor(
     let ws_clone = ws.clone();
     let set_doc_ver = core.set_doc_version;
     Effect::new(move |_| {
+        let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
         applyRemoteContent("");
         set_read_only(true);
         set_content.set(String::new());
         set_local_version.set(0);
+        set_open_request_id.set(request_id);
         set_history.set(Vec::new());
         set_doc_ver.set(0);
         set_playback_version.set(0);
         set_load_state.set("loading".to_string());
         set_load_progress.set((0, 0));
         set_load_eta_ms.set(0);
-        ws_clone.send(ClientMessage::OpenDoc { doc_id });
+        ws_clone.send(ClientMessage::OpenDoc { doc_id, request_id });
     });
 
     // E2EE: 连接成功后请求 RepoKey
@@ -98,6 +101,7 @@ pub fn use_editor(
             let ctx = sync::context::SyncContext {
                 doc_id,
                 client_id,
+                open_request_id,
                 ws: &ws_clone_2,
                 set_content,
                 local_version,

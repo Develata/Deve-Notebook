@@ -69,8 +69,14 @@ const manualBasicSetup = [
  */
 function changeSetToDeltas(changes) {
   const deltas = [];
+  let offset = 0;
   changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-    deltas.push({ from: fromA, to: toA, insert: inserted.toString() });
+    deltas.push({
+      from: fromA + offset,
+      to: toA + offset,
+      insert: inserted.toString(),
+    });
+    offset += (toB - fromB) - (toA - fromA);
   });
   return deltas;
 }

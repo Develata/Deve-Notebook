@@ -19,6 +19,7 @@ use leptos::prelude::*;
 /// - local_version 推进到最新 seq
 pub(super) fn handle_snapshot(
     ctx: &SyncContext,
+    request_id: u64,
     new_content: String,
     base_seq: u64,
     version: u64,
@@ -59,9 +60,13 @@ pub(super) fn handle_snapshot(
     let set_content = ctx.set_content;
     let set_playback_version = ctx.set_playback_version;
     let set_load_state = ctx.set_load_state;
+    let open_request_id = ctx.open_request_id;
     let on_stats = ctx.on_stats;
 
     let apply_batch = std::rc::Rc::new(move |batch: &[(u64, Op)]| {
+        if open_request_id.get_untracked() != request_id {
+            return;
+        }
         let ops_only: Vec<Op> = batch.iter().map(|(_, op)| op.clone()).collect();
         if let Ok(json) = serde_json::to_string(&ops_only) {
             applyRemoteOpsBatch(&json);
@@ -91,6 +96,9 @@ pub(super) fn handle_snapshot(
     };
 
     let on_done = std::rc::Rc::new(move || {
+        if open_request_id.get_untracked() != request_id {
+            return;
+        }
         let txt = getEditorContent();
         emit_stats(on_stats, &txt);
         set_content.set(txt);
@@ -103,7 +111,7 @@ pub(super) fn handle_snapshot(
             doc_id,
             (now_ms() - load_start) as u64
         );
-        ws.send(ClientMessage::RequestHistory { doc_id });
+        ws.send(ClientMessage::RequestHistory { doc_id, request_id });
     });
 
     apply_ops_in_batches(
@@ -131,8 +139,10 @@ fn finalize_load(ctx: &SyncContext, version: u64, load_start: f64) {
         ctx.doc_id,
         (now_ms() - load_start) as u64
     );
-    ctx.ws
-        .send(ClientMessage::RequestHistory { doc_id: ctx.doc_id });
+    ctx.ws.send(ClientMessage::RequestHistory {
+        doc_id: ctx.doc_id,
+        request_id: ctx.open_request_id.get_untracked(),
+    });
 }
 
 fn emit_stats(on_stats: Option<Callback<EditorStats>>, text: &str) {

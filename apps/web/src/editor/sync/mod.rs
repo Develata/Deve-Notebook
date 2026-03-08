@@ -19,6 +19,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {
         ServerMessage::Snapshot {
             doc_id: msg_doc_id,
+            request_id,
             content,
             base_seq,
             version,
@@ -27,13 +28,17 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             if msg_doc_id != ctx.doc_id {
                 return;
             }
-            snapshot::handle_snapshot(ctx, content, base_seq, version, delta_ops);
+            if request_id != ctx.open_request_id.get_untracked() {
+                return;
+            }
+            snapshot::handle_snapshot(ctx, request_id, content, base_seq, version, delta_ops);
         }
         ServerMessage::History {
             doc_id: msg_doc_id,
+            request_id,
             ops,
         } => {
-            if msg_doc_id != ctx.doc_id {
+            if msg_doc_id != ctx.doc_id || request_id != ctx.open_request_id.get_untracked() {
                 return;
             }
             leptos::logging::log!("Received History: {} ops", ops.len());

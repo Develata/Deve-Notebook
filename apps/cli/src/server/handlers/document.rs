@@ -26,8 +26,9 @@ pub async fn handle_request_history(
     ch: &DualChannel,
     session: &WsSession,
     doc_id: DocId,
+    request_id: u64,
 ) {
-    history::handle_request_history(state, ch, session, doc_id).await;
+    history::handle_request_history(state, ch, session, doc_id, request_id).await;
 }
 
 pub async fn handle_open_doc(
@@ -35,6 +36,7 @@ pub async fn handle_open_doc(
     ch: &DualChannel,
     session: &WsSession,
     doc_id: DocId,
+    request_id: u64,
 ) {
-    open::handle_open_doc(state, ch, session, doc_id).await;
+    open::handle_open_doc(state, ch, session, doc_id, request_id).await;
 }

@@ -18,7 +18,7 @@ impl RepoManager {
     }
 
     pub fn stage_file_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| source_control::stage_file(db, path))
+        self.stage_pending_in_local_repo(repo_name, path)
     }
 
     /// 取消暂存指定文件

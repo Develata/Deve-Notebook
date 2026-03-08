@@ -56,11 +56,11 @@ pub enum ClientMessage {
         client_id: u64,
     },
     /// 请求文档的完整操作历史
-    RequestHistory { doc_id: DocId },
+    RequestHistory { doc_id: DocId, request_id: u64 },
     /// 请求所有已知文档的列表
     ListDocs,
     /// 请求打开指定文档 (获取快照)
-    OpenDoc { doc_id: DocId },
+    OpenDoc { doc_id: DocId, request_id: u64 },
     /// 请求创建新文档
     CreateDoc { name: String },
     /// 重命名文档

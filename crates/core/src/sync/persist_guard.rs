@@ -38,6 +38,11 @@ impl PersistGuard {
         );
     }
 
+    pub(super) fn clear(&self, path: &str) {
+        let mut guard = self.recent_writes.lock().unwrap();
+        guard.remove(path);
+    }
+
     pub(super) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
         let mut guard = self.recent_writes.lock().unwrap();
         let Some(entry) = guard.get_mut(path) else {

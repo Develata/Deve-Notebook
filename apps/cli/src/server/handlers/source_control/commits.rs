@@ -16,15 +16,10 @@ pub async fn handle_commit(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match run_on_resolved_local_repo(state, &scope, |db| {
-        deve_core::ledger::source_control::create_commit(db, &message, |path| {
-            let normalized = deve_core::utils::path::to_forward_slash(path);
-            let doc_id = deve_core::ledger::metadata::get_docid(db, &normalized).ok()??;
-            let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id).ok()?;
-            let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-            Some((doc_id, deve_core::state::reconstruct_content(&entries)))
-        })
-    }) {
+    match state
+        .repo
+        .commit_staged_in_local_repo(&scope.repo_name, &message)
+    {
         Ok(info) => {
             tracing::info!("Created commit: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {
@@ -104,15 +99,10 @@ pub async fn handle_commit_and_push(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match run_on_resolved_local_repo(state, &scope, |db| {
-        deve_core::ledger::source_control::create_commit(db, &message, |path| {
-            let normalized = deve_core::utils::path::to_forward_slash(path);
-            let doc_id = deve_core::ledger::metadata::get_docid(db, &normalized).ok()??;
-            let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id).ok()?;
-            let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-            Some((doc_id, deve_core::state::reconstruct_content(&entries)))
-        })
-    }) {
+    match state
+        .repo
+        .commit_staged_in_local_repo(&scope.repo_name, &message)
+    {
         Ok(info) => {
             tracing::info!("Commit & Push: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {

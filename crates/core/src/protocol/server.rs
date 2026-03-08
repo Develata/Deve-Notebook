@@ -53,13 +53,18 @@ pub enum ServerMessage {
     /// 服务端发送文档完整内容 (初始加载)
     Snapshot {
         doc_id: DocId,
+        request_id: u64,
         content: String,
         base_seq: u64,
         version: u64,
         delta_ops: Vec<(u64, Op)>,
     },
     /// 服务端发送完整操作历史 (用于回放)
-    History { doc_id: DocId, ops: Vec<(u64, Op)> },
+    History {
+        doc_id: DocId,
+        request_id: u64,
+        ops: Vec<(u64, Op)>,
+    },
     /// 服务端发送文档列表
     DocList { docs: Vec<(DocId, String)> },
     /// 插件调用响应
