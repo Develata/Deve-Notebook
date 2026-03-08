@@ -6,9 +6,7 @@
 use crate::ledger::RepoManager;
 use crate::ledger::source_control;
 use crate::models::DocId;
-use crate::source_control::snapshot_paths;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, pending_fs};
-use crate::utils::path::to_forward_slash;
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, pending_fs};
 use anyhow::Result;
 
 impl RepoManager {
@@ -39,18 +37,6 @@ impl RepoManager {
         self.run_on_local_repo(repo_name, source_control::list_staged)
     }
 
-    /// 创建提交 (保存快照)
-    pub fn create_commit_with_snapshots<F>(
-        &self,
-        message: &str,
-        get_content: F,
-    ) -> Result<CommitInfo>
-    where
-        F: Fn(&str) -> Option<(DocId, String)>,
-    {
-        source_control::create_commit(&self.local_db, message, get_content)
-    }
-
     /// 获取提交历史
     pub fn list_commits(&self, limit: u32) -> Result<Vec<CommitInfo>> {
         source_control::list_commits(&self.local_db, limit)
@@ -70,10 +56,10 @@ impl RepoManager {
         source_control::detect_change(committed, current)
     }
 
-    /// 提交已暂存文件 (新三阶段工作流)
+    /// 提交已暂存文件（三阶段工作流的唯一入口）
     ///
     /// **流程**: 读取暂存文件 → 读磁盘内容 → diff 快照 → 生成 Op → 追加 Ledger → 快照更新 → 创建提交
-    /// **Invariant**: vault_root 必须已设置，否则回退到旧逻辑。
+    /// **Invariant**: `vault_root` 必须存在；不存在即为配置错误，而不是兼容回退场景。
     pub fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
         self.commit_staged_in_local_repo(self.local_repo_name(), message)
     }
@@ -83,47 +69,13 @@ impl RepoManager {
         repo_name: &str,
         message: &str,
     ) -> Result<CommitInfo> {
-        if let Some(vault_root) = &self.vault_root {
-            if repo_name == self.local_repo_name() {
-                return self.commit_staged_with_ops(message, vault_root.clone());
-            }
-            return self.commit_staged_with_ops_in_local_repo(
-                repo_name,
-                message,
-                vault_root.clone(),
-            );
+        let Some(vault_root) = &self.vault_root else {
+            anyhow::bail!("vault_root is required for staged commits");
+        };
+        if repo_name == self.local_repo_name() {
+            return self.commit_staged_with_ops(message, vault_root.clone());
         }
-        // 回退：旧逻辑 (从 Ledger 重建内容)
-        self.commit_staged_legacy_in_local_repo(repo_name, message)
-    }
-
-    /// 旧版提交逻辑 (从 Ledger 重建内容，兼容用)
-    fn commit_staged_legacy_in_local_repo(
-        &self,
-        repo_name: &str,
-        message: &str,
-    ) -> Result<CommitInfo> {
-        self.run_on_local_repo(repo_name, |db| {
-            source_control::create_commit_with_updates(db, message, |path| {
-                let normalized = to_forward_slash(path);
-                if let Ok(Some(doc_id)) = crate::ledger::metadata::get_docid(db, &normalized) {
-                    let ops = crate::ledger::ops::get_ops_from_db(db, doc_id).ok()?;
-                    let entries: Vec<_> = ops.into_iter().map(|(_, entry)| entry).collect();
-                    let content = crate::state::reconstruct_content(&entries);
-                    Some(SnapshotUpdate::Save {
-                        doc_id,
-                        path: normalized,
-                        content,
-                    })
-                } else if let Ok(Some(doc_id)) =
-                    snapshot_paths::find_snapshot_doc_id(db, &normalized)
-                {
-                    Some(SnapshotUpdate::Delete { doc_id })
-                } else {
-                    None
-                }
-            })
-        })
+        self.commit_staged_with_ops_in_local_repo(repo_name, message, vault_root.clone())
     }
 
     // === Pending FS Ops (Working Directory) ===

@@ -8,11 +8,8 @@
 //! - 提交管理 (create/list commits)
 //! - 变更检测 (获取未提交的文件)
 
-use crate::ledger::range;
 use crate::models::DocId;
-use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, SnapshotUpdate, changes, commits, pending_fs, staging,
-};
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, changes, commits, pending_fs, staging};
 use anyhow::Result;
 use redb::Database;
 
@@ -51,64 +48,6 @@ pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
             has_conflict: false,
         })
         .collect())
-}
-
-/// 创建提交
-///
-/// **流程**:
-/// 1. 获取暂存区的文件
-/// 2. 保存每个文件的内容快照
-/// 3. 创建提交记录
-/// 4. 清空暂存区
-pub fn create_commit(
-    db: &Database,
-    message: &str,
-    get_content: impl Fn(&str) -> Option<(DocId, String)>,
-) -> Result<CommitInfo> {
-    create_commit_with_updates(db, message, |path| {
-        get_content(path).map(|(doc_id, content)| SnapshotUpdate::Save {
-            doc_id,
-            path: path.to_string(),
-            content,
-        })
-    })
-}
-
-/// 创建提交并应用快照更新
-///
-/// **Invariant**: 每个暂存路径至多对应一个快照更新动作。
-/// **Pre-condition**: 暂存区非空。
-/// **Post-condition**: 快照与提交记录同步更新，暂存区被清空。
-pub fn create_commit_with_updates(
-    db: &Database,
-    message: &str,
-    resolve_update: impl Fn(&str) -> Option<SnapshotUpdate>,
-) -> Result<CommitInfo> {
-    let staged = staging::list_staged(db)?;
-    let doc_count = staged.len() as u32;
-
-    if doc_count == 0 {
-        anyhow::bail!("Nothing to commit: staging area is empty");
-    }
-
-    for path in &staged {
-        if let Some(update) = resolve_update(path) {
-            match update {
-                SnapshotUpdate::Save {
-                    doc_id,
-                    path,
-                    content,
-                } => changes::save_snapshot(db, doc_id, &path, &content)?,
-                SnapshotUpdate::Delete { doc_id } => changes::remove_snapshot(db, doc_id)?,
-            }
-        }
-    }
-
-    let ledger_seq = range::get_max_seq(db)?;
-    let commit = commits::create(db, message, doc_count, ledger_seq)?;
-    staging::clear(db)?;
-
-    Ok(commit)
 }
 
 /// 获取提交历史

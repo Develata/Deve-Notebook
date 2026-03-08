@@ -35,15 +35,3 @@ pub mod staging;
 pub use api::SourceControlApi;
 pub use line_diff::ChangeRange;
 pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
-
-/// 提交时对快照的更新策略
-pub enum SnapshotUpdate {
-    /// 保存最新内容
-    Save {
-        doc_id: crate::models::DocId,
-        path: String,
-        content: String,
-    },
-    /// 删除快照 (表示文件被删除)
-    Delete { doc_id: crate::models::DocId },
-}
