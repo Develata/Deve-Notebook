@@ -54,7 +54,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
     let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
     let (system_metrics, set_system_metrics) = signal(None::<SystemMetricsData>);
-    let (explicit_home, set_explicit_home) = signal(false);
+    let (_, set_explicit_home) = signal(false);
 
     CoreSignals {
         docs,
@@ -120,7 +120,6 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_degraded_sync_mode,
         sync_banner,
         set_sync_banner,
-        explicit_home,
         set_explicit_home,
     }
 }

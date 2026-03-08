@@ -217,11 +217,7 @@ impl SyncManager {
 
     /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
     pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
-        materialize::materialize_local_repo(
-            &self.repo,
-            &self.persist_guard,
-            repo_name,
-        )
+        materialize::materialize_local_repo(&self.repo, &self.persist_guard, repo_name)
     }
 
     pub fn resolve_dir_change(&self, path_str: &str) -> Result<Option<(RepoId, String)>> {

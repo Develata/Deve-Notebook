@@ -115,7 +115,5 @@ pub struct CoreSignals {
     pub sync_banner: ReadSignal<Option<String>>,
     pub set_sync_banner: WriteSignal<Option<String>>,
 
-    // 用户显式导航至 Home（阻止 DocList 自动选中首篇文档）
-    pub explicit_home: ReadSignal<bool>,
     pub set_explicit_home: WriteSignal<bool>,
 }

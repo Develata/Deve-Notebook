@@ -18,7 +18,6 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
     let degraded_sync_mode = signals.degraded_sync_mode;
     let set_sync_banner = signals.set_sync_banner;
     let set_docs = signals.set_docs;
-    let current_doc = signals.current_doc;
     let set_current_doc = signals.set_current_doc;
     let set_peers = signals.set_peers;
     let set_plugin_response = signals.set_plugin_response;

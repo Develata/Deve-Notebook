@@ -41,7 +41,10 @@ pub async fn handle_unstage_file(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match state.repo.unstage_file_in_local_repo(&scope.repo_name, &path) {
+    match state
+        .repo
+        .unstage_file_in_local_repo(&scope.repo_name, &path)
+    {
         Ok(()) => {
             tracing::info!("Unstaged file: {}", path);
             ch.unicast(ServerMessage::UnstageAck { path });
@@ -88,7 +91,10 @@ pub async fn handle_unstage_files(
     };
     let paths = normalized_unique_paths(paths);
     for path in &paths {
-        if let Err(e) = state.repo.unstage_file_in_local_repo(&scope.repo_name, path) {
+        if let Err(e) = state
+            .repo
+            .unstage_file_in_local_repo(&scope.repo_name, path)
+        {
             tracing::error!("Failed to unstage files: {:?}", e);
             ch.send_error(e.to_string());
             return;
