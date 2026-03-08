@@ -33,6 +33,7 @@
 13. **[Settings Summary](./13_settings.md)**: 环境变量与配置文件汇总.
 14. **[Technology Stack](./14_tech_stack.md)**: **Redb + CodeMirror 6**, Native/Mobile 差异化选型.
 15. **[Release Strategy](./15_release.md)**: License (MIT), Release Channels & CI/CD Pipelines.
+16. **[Web Thin Client & Ledger Confirmation](./16_web_thin_client_ledger.md)**: Web 薄客户端写入模型、Ack 确认链与 repo-scoped write readiness.
 
 ---
 

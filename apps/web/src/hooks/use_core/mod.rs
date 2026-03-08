@@ -50,7 +50,13 @@ pub fn use_core() -> CoreState {
     // `WebCrypto + IndexedDB`，这样才能满足 T3 定义的存储分层与降级语义。
     let (identity, repo_vector) = init_storage_runtime(&signals);
 
-    effects::setup_handshake_effect(&ws, identity, repo_vector, signals.degraded_sync_mode);
+    effects::setup_handshake_effect(
+        &ws,
+        identity,
+        repo_vector,
+        signals.degraded_sync_mode,
+        signals.set_handshake_ready,
+    );
     effects::setup_message_effect(&ws, &signals);
 
     let doc_callbacks =

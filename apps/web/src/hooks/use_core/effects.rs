@@ -18,8 +18,9 @@ pub fn setup_handshake_effect(
     identity: ReadSignal<Option<StoredPeerIdentity>>,
     repo_vector: ReadSignal<VersionVector>,
     degraded: ReadSignal<Option<DegradedSyncMode>>,
+    set_handshake_ready: WriteSignal<bool>,
 ) {
-    handshake::setup(ws, identity, repo_vector, degraded);
+    handshake::setup(ws, identity, repo_vector, degraded, set_handshake_ready);
 }
 
 /// 设置消息处理 Effect。

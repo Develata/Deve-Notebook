@@ -17,6 +17,7 @@ pub fn setup(
     identity: ReadSignal<Option<StoredPeerIdentity>>,
     repo_vector: ReadSignal<VersionVector>,
     degraded: ReadSignal<Option<DegradedSyncMode>>,
+    set_handshake_ready: WriteSignal<bool>,
 ) {
     let ws_clone = ws.clone();
     let status_signal = ws.status;
@@ -26,6 +27,7 @@ pub fn setup(
     Effect::new(move |_| {
         if status_signal.get() != ConnectionStatus::Connected {
             *last_mode.borrow_mut() = None;
+            set_handshake_ready.set(false);
             return;
         }
 
@@ -46,6 +48,7 @@ pub fn setup(
             return;
         }
         *last_mode.borrow_mut() = Some(mode_key);
+        set_handshake_ready.set(false);
 
         let ws = ws_clone.clone();
         let maybe_mode = degraded.get();

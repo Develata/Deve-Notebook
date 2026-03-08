@@ -38,6 +38,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
         playback_version: state.playback_version,
         set_playback_version: state.set_playback_version,
         is_spectator: state.is_spectator,
+        handshake_ready: state.handshake_ready,
     });
     provide_context(ChatContext {
         messages: state.chat_messages,

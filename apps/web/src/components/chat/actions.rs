@@ -1,6 +1,7 @@
 // apps/web/src/components/chat/actions.rs
 use crate::editor::ffi::get_editor_selection;
 use crate::editor::ffi::getEditorContent;
+use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::CoreState;
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
@@ -104,6 +105,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             doc_id,
             op,
             client_id,
+            client_op_id: next_client_op_id(),
         });
     })
 }

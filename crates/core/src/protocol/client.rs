@@ -54,6 +54,7 @@ pub enum ClientMessage {
         doc_id: DocId,
         op: Op,
         client_id: u64,
+        client_op_id: u64,
     },
     /// 请求文档的完整操作历史
     RequestHistory { doc_id: DocId, request_id: u64 },

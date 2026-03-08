@@ -40,6 +40,7 @@ pub struct CoreState {
 
     // P2P 状态
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
+    pub handshake_ready: ReadSignal<bool>,
 
     pub on_doc_select: Callback<DocId>,
     pub on_doc_create: Callback<String>,

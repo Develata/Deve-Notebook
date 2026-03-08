@@ -49,6 +49,7 @@ pub struct EditorContext {
     pub playback_version: ReadSignal<u64>,
     pub set_playback_version: WriteSignal<u64>,
     pub is_spectator: Signal<bool>,
+    pub handshake_ready: ReadSignal<bool>,
 }
 
 /// AI 聊天与插件上下文

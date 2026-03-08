@@ -21,8 +21,9 @@ pub(super) async fn route_core(
             doc_id,
             op,
             client_id,
+            client_op_id,
         } => {
-            document::handle_edit(state, ch, session, doc_id, op, client_id).await;
+            document::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
         }
         ClientMessage::ListDocs => {
             listing::handle_list_docs(state, ch, session).await;

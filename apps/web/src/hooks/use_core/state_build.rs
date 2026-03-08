@@ -56,6 +56,7 @@ pub(super) fn build_core_state(
         sync_banner: signals.sync_banner.into(),
         stats: signals.stats,
         peers: signals.peers,
+        handshake_ready: signals.handshake_ready,
         on_doc_select: doc.on_doc_select,
         on_doc_create: doc.on_doc_create,
         on_doc_rename: doc.on_doc_rename,

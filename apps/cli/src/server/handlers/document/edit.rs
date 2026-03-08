@@ -11,6 +11,7 @@ pub(super) async fn handle_edit(
     doc_id: DocId,
     op: Op,
     client_id: u64,
+    client_op_id: u64,
 ) {
     if session.is_readonly() {
         tracing::debug!("Edit ignored: session is readonly (remote branch)");
@@ -52,6 +53,7 @@ pub(super) async fn handle_edit(
             ch.unicast(ServerMessage::Ack {
                 doc_id,
                 seq: local_seq,
+                client_op_id,
             });
         }
         Err(e) => {

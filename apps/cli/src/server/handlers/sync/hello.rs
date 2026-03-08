@@ -65,6 +65,7 @@ pub(super) async fn handle(
     let my_sig = state.identity_key.sign(&msg);
     ch.unicast(ServerMessage::SyncHello {
         peer_id: local_peer_id,
+        repo_id,
         pub_key: state.identity_key.public_key_bytes().to_vec(),
         signature: my_sig,
         vector: local_vector,

@@ -11,10 +11,15 @@ pub enum ServerMessage {
     /// 心跳 Pong
     Pong,
     /// 服务端确认操作已持久化
-    Ack { doc_id: DocId, seq: u64 },
+    Ack {
+        doc_id: DocId,
+        seq: u64,
+        client_op_id: u64,
+    },
     /// P2P: 服务端 Hello (响应客户端 Hello)
     SyncHello {
         peer_id: PeerId,
+        repo_id: RepoId,
         pub_key: Vec<u8>,
         signature: Vec<u8>,
         vector: VersionVector,

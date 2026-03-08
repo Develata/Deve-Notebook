@@ -37,6 +37,8 @@ pub struct CoreSignals {
     // P2P 状态
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     pub set_peers: WriteSignal<HashMap<PeerId, PeerSession>>,
+    pub handshake_ready: ReadSignal<bool>,
+    pub set_handshake_ready: WriteSignal<bool>,
 
     // 插件
     pub plugin_response: ReadSignal<PluginResponse>,

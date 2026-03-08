@@ -12,6 +12,7 @@
 
 use super::EditorStats;
 use super::ffi::{Delta, applyRemoteContent, destroyEditor, set_read_only, setupCodeMirror};
+use super::op_id::next_client_op_id;
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
@@ -150,6 +151,7 @@ pub fn use_editor(
                             doc_id,
                             op: op.clone(),
                             client_id,
+                            client_op_id: next_client_op_id(),
                         });
                     }
                 }
@@ -199,7 +201,8 @@ pub fn use_editor(
         let is_pb = ver < local;
         let spectator = core.is_spectator.get_untracked();
         let loading = core.load_state.get_untracked() != "ready";
-        let should_readonly = is_pb || spectator || loading;
+        let handshake_ready = core.handshake_ready.get_untracked();
+        let should_readonly = is_pb || spectator || loading || !handshake_ready;
         set_read_only(should_readonly);
     });
 

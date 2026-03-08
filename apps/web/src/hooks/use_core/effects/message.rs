@@ -20,6 +20,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
     let set_docs = signals.set_docs;
     let set_current_doc = signals.set_current_doc;
     let set_peers = signals.set_peers;
+    let set_handshake_ready = signals.set_handshake_ready;
     let set_plugin_response = signals.set_plugin_response;
     let set_search_results = signals.set_search_results;
     let set_sync_mode = signals.set_sync_mode;
@@ -71,17 +72,24 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     effects_msg::handle_doc_list(list, set_docs);
                 }
                 ServerMessage::SyncHello {
-                    peer_id, vector, ..
+                    peer_id,
+                    repo_id,
+                    vector,
+                    ..
                 } => {
                     effects_msg::handle_sync_hello(peer_id, vector.clone(), set_peers);
-                    let repo_id = current_repo_id.get_untracked().unwrap_or_default();
-                    if repo_id.is_empty() {
-                        return;
+                    let repo_id_str = repo_id.to_string();
+                    let matches_current = match current_repo_id.get_untracked() {
+                        Some(current) => current == repo_id_str,
+                        None => true,
+                    };
+                    if matches_current {
+                        set_handshake_ready.set(true);
                     }
                     spawn_local(async move {
                         let vector_json = serde_json::to_string(&vector).unwrap_or_default();
-                        let _ = save_repo_vector(&repo_id, &vector_json).await;
-                        let _ = note_handshake(&repo_id).await;
+                        let _ = save_repo_vector(&repo_id_str, &vector_json).await;
+                        let _ = note_handshake(&repo_id_str).await;
                     });
                 }
                 ServerMessage::PluginResponse {
@@ -130,6 +138,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     effects_msg::handle_branch_switched(peer_id, success, set_active_branch);
                 }
                 ServerMessage::RepoSwitched { name, uuid } => {
+                    set_handshake_ready.set(false);
                     effects_msg::handle_repo_switched(
                         name,
                         uuid,
@@ -143,6 +152,10 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                 }
                 ServerMessage::TreeUpdate(delta) => {
                     set_tree_nodes.update(|nodes| apply_tree_delta(nodes, delta));
+                }
+                ServerMessage::Ack { .. } => {}
+                ServerMessage::Error(error) => {
+                    leptos::logging::error!("Server error: {}", error);
                 }
                 other_sc => {
                     if !effects_sc::handle_sc_message(

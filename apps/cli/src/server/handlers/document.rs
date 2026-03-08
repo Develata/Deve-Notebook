@@ -16,8 +16,9 @@ pub async fn handle_edit(
     doc_id: DocId,
     op: Op,
     client_id: u64,
+    client_op_id: u64,
 ) {
-    edit::handle_edit(state, ch, session, doc_id, op, client_id).await;
+    edit::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
 }
 
 #[allow(dead_code)]

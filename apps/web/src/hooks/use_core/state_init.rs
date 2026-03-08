@@ -23,6 +23,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (current_doc, set_current_doc) = signal(None::<DocId>);
     let (stats, set_stats) = signal(EditorStats::default());
     let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
+    let (handshake_ready, set_handshake_ready) = signal(false);
     let (plugin_response, set_plugin_response) = signal(PluginResponse::default());
     let (chat_messages, set_chat_messages) = signal(Vec::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
@@ -65,6 +66,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_stats,
         peers,
         set_peers,
+        handshake_ready,
+        set_handshake_ready,
         plugin_response,
         set_plugin_response,
         chat_messages,
