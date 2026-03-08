@@ -68,15 +68,7 @@ fn load_snapshot_from_local_repo(
     doc_id: DocId,
 ) -> anyhow::Result<SnapshotPayload> {
     let scope = resolve_session_repo(state, session)?;
-    let repo_name = scope.repo_name;
-    if let Err(e) = state
-        .sync_manager
-        .reconcile_doc_in_local_repo(&repo_name, doc_id)
-    {
-        tracing::error!("SyncManager reconcile failed: {:?}", e);
-    }
-
-    state.repo.run_on_local_repo(&repo_name, |db| {
+    state.repo.run_on_local_repo(&scope.repo_name, |db| {
         build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
     })
 }

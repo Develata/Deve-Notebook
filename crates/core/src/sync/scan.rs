@@ -36,6 +36,9 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
             continue;
         };
         let repo_path = path_to_forward_slash(rel);
+        if crate::utils::notegit::is_internal_repo_path(&repo_path) {
+            continue;
+        }
         on_disk.insert(repo_path.clone());
         scan_disk_file(repo, vfs, repo_name, &repo_path)?;
     }
@@ -53,6 +56,14 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
         docs.len()
     );
     for (_doc_id, repo_path) in docs {
+        if crate::utils::notegit::is_internal_repo_path(&repo_path) {
+            warn!(
+                "SyncScan: Repo {} 清理误入账本的内部路径: {}",
+                repo_name, repo_path
+            );
+            repo.delete_doc_in_local_repo(repo_name, &repo_path)?;
+            continue;
+        }
         if on_disk.contains(&repo_path) {
             continue;
         }

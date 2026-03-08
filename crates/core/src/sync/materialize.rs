@@ -35,6 +35,14 @@ pub(super) fn materialize_local_repo(
     std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
 
     for (doc_id, repo_path) in repo.list_local_docs(Some(repo_name))? {
+        if crate::utils::notegit::is_internal_repo_path(&repo_path) {
+            tracing::warn!(
+                "Skip materializing internal repo metadata path: {}/{}",
+                repo_name,
+                repo_path
+            );
+            continue;
+        }
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
         if file_path.exists() {
             continue;

@@ -21,8 +21,13 @@ pub async fn handle_edit(
 }
 
 #[allow(dead_code)]
-pub async fn handle_request_history(state: &Arc<AppState>, ch: &DualChannel, doc_id: DocId) {
-    history::handle_request_history(state, ch, doc_id).await;
+pub async fn handle_request_history(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    doc_id: DocId,
+) {
+    history::handle_request_history(state, ch, session, doc_id).await;
 }
 
 pub async fn handle_open_doc(

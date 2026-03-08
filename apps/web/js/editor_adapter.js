@@ -83,10 +83,10 @@ export function initCodeMirror(element, onDelta) {
 
   try {
     const startState = EditorState.create({
-      doc: "# Loading...",
+      doc: "",
       extensions: [
         ...manualBasicSetup,
-        ctx.readOnlyCompartment.of(EditorState.readOnly.of(false)),
+        ctx.readOnlyCompartment.of(EditorState.readOnly.of(true)),
         EditorView.lineWrapping,
         markdown({
           base: markdownLanguage,

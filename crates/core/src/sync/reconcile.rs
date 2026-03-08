@@ -1,46 +1,51 @@
 // crates\core\src\sync
-use crate::models::{DocId, LedgerEntry};
+use crate::ledger::RepoManager;
+use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use crate::state;
 use anyhow::Result;
 use tracing::info;
 
-/// Compares Ledger state with Disk content.
-/// Returns a list of Ops required to make the Ledger match the Disk.
-/// Returns None if content is identical.
-pub fn compute_reconcile_ops(
-    doc_id: DocId,
+/// Compares Ledger state with target content.
+/// Returns a diff patch that can be appended with generated local seq.
+pub fn compute_reconcile_patch(
     ledger_ops: &[LedgerEntry],
-    disk_content: &str,
-) -> Result<Vec<LedgerEntry>> {
+    target_content: &str,
+) -> Result<Vec<Op>> {
     let ledger_content = state::reconstruct_content(ledger_ops);
 
     // Normalize newlines for comparison
-    let disk_norm = disk_content.replace("\r\n", "\n");
+    let target_norm = target_content.replace("\r\n", "\n");
     let ledger_norm = ledger_content.replace("\r\n", "\n");
 
-    if disk_norm == ledger_norm {
+    if target_norm == ledger_norm {
         return Ok(Vec::new());
     }
 
-    info!("Reconcile: Content mismatch detected for doc {}", doc_id);
+    Ok(state::compute_diff(&ledger_norm, &target_norm))
+}
 
-    let diff_ops = state::compute_diff(&ledger_norm, &disk_norm);
-
-    if diff_ops.is_empty() {
-        return Ok(Vec::new());
+pub fn append_patch_in_local_repo(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: DocId,
+    peer_label: &str,
+    ops: &[Op],
+) -> Result<()> {
+    let peer_id = PeerId::new(peer_label);
+    for op in ops {
+        let op = op.clone();
+        let peer_id = peer_id.clone();
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        repo.append_generated_op_in_local_repo(repo_name, doc_id, peer_id.clone(), move |seq| {
+            LedgerEntry {
+                doc_id,
+                op: op.clone(),
+                timestamp,
+                peer_id: peer_id.clone(),
+                seq,
+            }
+        })?;
     }
-
-    let now = chrono::Utc::now().timestamp_millis();
-    let entries = diff_ops
-        .into_iter()
-        .map(|op| LedgerEntry {
-            doc_id,
-            op,
-            timestamp: now,
-            peer_id: crate::models::PeerId::new("local_watcher"), // Placeholder for local watcher
-            seq: 0, // Placeholder, watcher ops might need real seq management later
-        })
-        .collect();
-
-    Ok(entries)
+    info!("Reconcile: Applied {} ops for doc {}", ops.len(), doc_id);
+    Ok(())
 }

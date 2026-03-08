@@ -83,8 +83,7 @@ impl SyncManager {
                 let disk_content = std::fs::read_to_string(&file_path)?;
                 let ops = self.repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
 
-                let fix_ops = reconcile::compute_reconcile_ops(
-                    doc_id,
+                let fix_ops = reconcile::compute_reconcile_patch(
                     &ops.into_iter().map(|(_, e)| e).collect::<Vec<_>>(),
                     &disk_content,
                 )?;
@@ -95,9 +94,13 @@ impl SyncManager {
                         fix_ops.len(),
                         path_str
                     );
-                    for entry in fix_ops {
-                        self.repo.append_local_op_in_local_repo(repo_name, &entry)?;
-                    }
+                    reconcile::append_patch_in_local_repo(
+                        self.repo.as_ref(),
+                        repo_name,
+                        doc_id,
+                        "local_reconcile",
+                        &fix_ops,
+                    )?;
                     return Ok(true);
                 }
             }

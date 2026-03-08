@@ -82,11 +82,8 @@ impl RepoManager {
         let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default();
         let existing_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
         let entries: Vec<_> = existing_ops.into_iter().map(|(_, e)| e).collect();
-        let new_ops = reconcile::compute_reconcile_ops(doc_id, &entries, &disk_content)?;
-
-        for op_entry in &new_ops {
-            self.append_local_op_in_local_repo(repo_name, op_entry)?;
-        }
+        let patch = reconcile::compute_reconcile_patch(&entries, &disk_content)?;
+        reconcile::append_patch_in_local_repo(self, repo_name, doc_id, "local_commit", &patch)?;
 
         self.run_on_local_repo(repo_name, |db| {
             changes::save_snapshot(db, doc_id, normalized_path, &disk_content)

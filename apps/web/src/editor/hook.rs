@@ -11,7 +11,7 @@
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
 use super::EditorStats;
-use super::ffi::{Delta, destroyEditor, set_read_only, setupCodeMirror};
+use super::ffi::{Delta, applyRemoteContent, destroyEditor, set_read_only, setupCodeMirror};
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
@@ -64,7 +64,9 @@ pub fn use_editor(
     let ws_clone = ws.clone();
     let set_doc_ver = core.set_doc_version;
     Effect::new(move |_| {
-        set_content.set("Loading...".to_string());
+        applyRemoteContent("");
+        set_read_only(true);
+        set_content.set(String::new());
         set_local_version.set(0);
         set_history.set(Vec::new());
         set_doc_ver.set(0);

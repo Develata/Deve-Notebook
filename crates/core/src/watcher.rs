@@ -87,9 +87,7 @@ impl Watcher {
 
                 // 忽略系统目录
                 if path_str.starts_with(".git")
-                    || path_str
-                        .split('/')
-                        .any(|segment| segment == ".deve" || segment == ".notegit")
+                    || crate::utils::notegit::is_internal_repo_path(&path_str)
                 {
                     continue;
                 }
