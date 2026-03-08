@@ -2,6 +2,7 @@ use super::{IdentityKeyPair, RepoKey};
 use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
+use tracing::warn;
 
 fn write_key_file(path: &Path, data: &[u8]) -> Result<()> {
     std::fs::write(path, data)?;
@@ -21,6 +22,7 @@ pub fn load_or_generate_identity_key_at(dir: &Path) -> Result<Arc<IdentityKeyPai
         if let Some(kp) = IdentityKeyPair::from_bytes(&bytes) {
             return Ok(Arc::new(kp));
         }
+        warn!("Corrupt identity key at {:?}, generating new keypair", path);
     }
     let kp = IdentityKeyPair::generate();
     write_key_file(&path, &kp.to_bytes())?;
@@ -35,6 +37,7 @@ pub fn load_or_generate_repo_key_at(dir: &Path) -> Result<RepoKey> {
         if let Some(key) = RepoKey::from_bytes(&bytes) {
             return Ok(key);
         }
+        warn!("Corrupt repo key at {:?}, generating new key", path);
     }
     let key = RepoKey::generate();
     write_key_file(&path, &key.to_bytes())?;

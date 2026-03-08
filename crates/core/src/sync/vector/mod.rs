@@ -132,12 +132,16 @@ impl VersionVector {
     }
 
     /// 对内部数组进行排序与去重 (保持最大 seq)
+    ///
+    /// **注意**: `dedup_by(|a, b|)` 中 `a` 是待移除元素，`b` 是保留元素。
+    /// 必须将较大的 seq 转移到 `b`，否则高版本号会丢失。
     pub fn normalize(&mut self) {
         self.clock.sort_by(|(a, _), (b, _)| a.cmp(b));
         self.clock.dedup_by(|(a_peer, a_seq), (b_peer, b_seq)| {
             if a_peer == b_peer {
-                if *b_seq > *a_seq {
-                    *a_seq = *b_seq;
+                // a 将被移除，b 将被保留 — 确保 b 持有最大值
+                if *a_seq > *b_seq {
+                    *b_seq = *a_seq;
                 }
                 true
             } else {

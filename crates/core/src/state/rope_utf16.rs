@@ -113,11 +113,12 @@ impl Utf16IndexCache {
         for chunk in rope.chunks() {
             for ch in chunk.chars() {
                 let next = ch.len_utf16() as u32;
-                if utf16.is_multiple_of(step) {
-                    self.checkpoints.push((utf16, char_idx));
-                }
                 utf16 += next;
                 char_idx += 1;
+                // 跳过 utf16=0 (已在初始 push 中处理)
+                if utf16 > 0 && utf16.is_multiple_of(step) {
+                    self.checkpoints.push((utf16, char_idx));
+                }
             }
         }
     }
