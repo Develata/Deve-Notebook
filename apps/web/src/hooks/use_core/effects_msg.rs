@@ -13,13 +13,7 @@ use super::types::{ChatMessage, PeerSession};
 /// 处理 DocList 消息。
 ///
 /// 为保持 Dashboard 根页面稳定，不再自动选中首篇文档。
-pub fn handle_doc_list(
-    list: Vec<(DocId, String)>,
-    set_docs: WriteSignal<Vec<(DocId, String)>>,
-    _current_doc: ReadSignal<Option<DocId>>,
-    _set_current_doc: WriteSignal<Option<DocId>>,
-    _explicit_home: ReadSignal<bool>,
-) {
+pub fn handle_doc_list(list: Vec<(DocId, String)>, set_docs: WriteSignal<Vec<(DocId, String)>>) {
     leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
     set_docs.set(list);
 }

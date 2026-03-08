@@ -41,7 +41,6 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
     let set_is_chat_streaming = signals.set_is_chat_streaming;
     let set_system_metrics = signals.set_system_metrics;
     let current_repo_id = signals.current_repo_id;
-    let explicit_home = signals.explicit_home;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
 
     Effect::new(move |_| {
@@ -70,13 +69,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
         if let Some(msg) = ws_rx.msg.get() {
             match msg {
                 ServerMessage::DocList { docs: list } => {
-                    effects_msg::handle_doc_list(
-                        list,
-                        set_docs,
-                        current_doc,
-                        set_current_doc,
-                        explicit_home,
-                    );
+                    effects_msg::handle_doc_list(list, set_docs);
                 }
                 ServerMessage::SyncHello {
                     peer_id, vector, ..

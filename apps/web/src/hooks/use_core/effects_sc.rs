@@ -44,10 +44,9 @@ pub fn handle_sc_message(
             leptos::logging::log!("已放弃变更: {}", path);
             schedule_refresh();
         }
-        ServerMessage::CommitAck { commit_id, .. } => {
-            let ServerMessage::CommitAck { repo_id, .. } = msg else {
-                unreachable!();
-            };
+        ServerMessage::CommitAck {
+            commit_id, repo_id, ..
+        } => {
             if !matches_current_repo(repo_id, current_repo_id) {
                 return true;
             }
