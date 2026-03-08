@@ -113,9 +113,10 @@ pub fn clear(db: &Database) -> Result<()> {
     Ok(())
 }
 
-/// 计算内容的 SHA-256 哈希前缀 (hex, 16 字节 = 32 hex chars)
+/// 计算内容的 SipHash 指纹 (64-bit, hex 编码)
 ///
-/// 用于快速判断文件内容是否真正变化（防抖）。
+/// 用于快速判断文件内容是否真正变化（防抖 / 冲突检测）。
+/// 注意：非密码学安全哈希，仅用于本地去重。
 pub fn content_hash(content: &str) -> String {
     use std::hash::{DefaultHasher, Hash, Hasher};
     let mut hasher = DefaultHasher::new();
