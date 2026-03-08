@@ -14,3 +14,8 @@ backend = "http://127.0.0.1:3001/api/"
 [[proxy]]
 backend = "ws://127.0.0.1:3001/ws"
 ws = true
+
+[[hooks]]
+stage = "pre_build"
+command = "node"
+command_arguments = ["builder.js"]
