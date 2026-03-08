@@ -1,21 +1,29 @@
 use std::path::{Path, PathBuf};
 
-pub fn dir(vault_root: &Path) -> PathBuf {
-    vault_root.join(".notegit")
+pub fn repo_dir(repo_root: &Path) -> PathBuf {
+    repo_root.join(".notegit")
 }
 
-pub fn keys_dir(vault_root: &Path) -> PathBuf {
-    dir(vault_root).join("keys")
+pub fn repo_keys_dir(repo_root: &Path) -> PathBuf {
+    repo_dir(repo_root).join("keys")
 }
 
-pub fn mcp_config_path(vault_root: &Path) -> PathBuf {
-    dir(vault_root).join("mcp.json")
+pub fn repo_legacy_flat_dir(repo_root: &Path) -> PathBuf {
+    repo_dir(repo_root).join("legacy-flat")
 }
 
-pub fn legacy_flat_dir(vault_root: &Path) -> PathBuf {
-    dir(vault_root).join("legacy-flat")
+pub fn repo_legacy_flat_conflicts_dir(repo_root: &Path) -> PathBuf {
+    repo_dir(repo_root).join("legacy-flat-conflicts")
 }
 
-pub fn legacy_flat_conflicts_dir(vault_root: &Path) -> PathBuf {
-    dir(vault_root).join("legacy-flat-conflicts")
+pub fn host_dir(ledger_root: &Path) -> PathBuf {
+    ledger_root.join(".host")
+}
+
+pub fn host_keys_dir(ledger_root: &Path) -> PathBuf {
+    host_dir(ledger_root).join("keys")
+}
+
+pub fn host_mcp_config_path(ledger_root: &Path) -> PathBuf {
+    host_dir(ledger_root).join("mcp.json")
 }

@@ -50,9 +50,9 @@ fn is_development() -> bool {
     matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
 }
 
-pub(super) fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {
+pub(super) fn load_mcp_manager(ledger_dir: &std::path::Path) -> McpManager {
     let mut manager = McpManager::new();
-    let cfg_path = deve_core::utils::notegit::mcp_config_path(vault_path);
+    let cfg_path = deve_core::utils::notegit::host_mcp_config_path(ledger_dir);
     if !cfg_path.exists() {
         return manager;
     }

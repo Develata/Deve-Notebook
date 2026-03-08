@@ -23,7 +23,6 @@ pub struct RepoScopedSyncEngine {
     local_peer_id: PeerId,
     repo: Arc<crate::ledger::RepoManager>,
     sync_mode: crate::config::SyncMode,
-    repo_key: Option<crate::security::RepoKey>,
     engines: RwLock<HashMap<RepoId, SyncEngine>>,
 }
 
@@ -37,13 +36,11 @@ impl RepoScopedSyncEngine {
         local_peer_id: PeerId,
         repo: Arc<crate::ledger::RepoManager>,
         sync_mode: crate::config::SyncMode,
-        repo_key: Option<crate::security::RepoKey>,
     ) -> Self {
         Self {
             local_peer_id,
             repo,
             sync_mode,
-            repo_key,
             engines: RwLock::new(HashMap::new()),
         }
     }
@@ -75,7 +72,7 @@ impl RepoScopedSyncEngine {
             self.local_peer_id.clone(),
             self.repo.clone(),
             self.sync_mode,
-            self.repo_key.clone(),
+            self.load_repo_key(repo_id),
         );
         engines.insert(repo_id, engine.clone());
         Some(engine)
@@ -98,7 +95,7 @@ impl RepoScopedSyncEngine {
                 self.local_peer_id.clone(),
                 self.repo.clone(),
                 self.sync_mode,
-                self.repo_key.clone(),
+                self.load_repo_key(repo_id),
             )
         });
 
@@ -144,6 +141,12 @@ impl RepoScopedSyncEngine {
             engines.clear();
         }
     }
+
+    fn load_repo_key(&self, repo_id: RepoId) -> Option<crate::security::RepoKey> {
+        let repo_name = self.repo.find_local_repo_name_by_id(repo_id).ok()??;
+        let key_dir = self.repo.local_repo_notegit_keys_root(&repo_name).ok()?;
+        crate::security::load_or_generate_repo_key_at(&key_dir).ok()
+    }
 }
 
 impl Clone for RepoScopedSyncEngine {
@@ -157,7 +160,6 @@ impl Clone for RepoScopedSyncEngine {
             local_peer_id: self.local_peer_id.clone(),
             repo: self.repo.clone(),
             sync_mode: self.sync_mode,
-            repo_key: self.repo_key.clone(),
             engines: RwLock::new(engines),
         }
     }

@@ -1,4 +1,4 @@
-﻿// apps\cli\src\commands
+// apps\cli\src\commands
 use deve_core::ledger::RepoManager;
 use std::path::{Path, PathBuf};
 
@@ -22,7 +22,10 @@ pub fn run(
     // 1. 初始化 RepoManager (创建目录结构)
     let _ = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     std::fs::create_dir_all(vault_path.join("default"))?;
-    std::fs::create_dir_all(deve_core::utils::notegit::keys_dir(vault_path))?;
+    std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(
+        &vault_path.join("default"),
+    ))?;
+    std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(ledger_dir))?;
 
     // 2. Generate default config.toml
     let config_path = path.join("config.toml");

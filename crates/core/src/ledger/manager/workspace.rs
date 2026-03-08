@@ -26,6 +26,19 @@ impl RepoManager {
         Ok(join_normalized(&repo_root, repo_path))
     }
 
+    /// 返回指定本地 repo 的运行时元数据目录：`vault/<repo_name>/.notegit/`
+    pub fn local_repo_notegit_root(&self, repo_name: &str) -> Result<PathBuf> {
+        Ok(crate::utils::notegit::repo_dir(
+            &self.local_repo_workspace_root(repo_name)?,
+        ))
+    }
+
+    pub fn local_repo_notegit_keys_root(&self, repo_name: &str) -> Result<PathBuf> {
+        Ok(crate::utils::notegit::repo_keys_dir(
+            &self.local_repo_workspace_root(repo_name)?,
+        ))
+    }
+
     /// 构造 Watcher / PersistGuard 使用的 Vault 根相对路径。
     pub fn local_repo_workspace_relative(&self, repo_name: &str, repo_path: &str) -> String {
         let repo_name = repo_name.trim_end_matches(".redb");

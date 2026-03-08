@@ -17,9 +17,11 @@ pub mod cipher;
 pub mod hashing;
 pub mod keypair;
 pub mod permission;
+pub mod storage;
 
 // Re-exports
 #[cfg(not(target_arch = "wasm32"))]
 pub use self::auth::{AuthConfig, Claims};
 pub use self::cipher::{EncryptedOp, RepoKey};
 pub use self::keypair::IdentityKeyPair;
+pub use self::storage::{load_or_generate_identity_key_at, load_or_generate_repo_key_at};

@@ -49,12 +49,10 @@ pub mod static_files;
 mod tree_state;
 pub mod ws;
 
-#[allow(dead_code)] // repo_key: 为未来加密功能预留
 pub struct AppState {
     pub repo: Arc<RepoManager>,
     pub sync_manager: Arc<deve_core::sync::SyncManager>,
     pub tx: broadcast::Sender<ServerMessage>,
-    pub vault_path: std::path::PathBuf,
     pub plugins: Vec<Box<dyn PluginRuntime>>,
     pub sync_engine: Arc<RepoScopedSyncEngine>,
     /// Repo-scoped 文件树状态。
@@ -62,7 +60,6 @@ pub struct AppState {
     #[cfg(feature = "search")]
     pub search_service: Option<SearchService>,
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
-    pub repo_key: Option<deve_core::security::RepoKey>,
 }
 
 pub async fn start_server(
@@ -80,9 +77,9 @@ pub async fn start_server(
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
-    let notegit_dir = notegit::prepare(&vault_path)?;
+    let host_dir = notegit::prepare(repo.as_ref(), &vault_path)?;
     let auth_config = Arc::new(router::load_auth_config());
-    let mcp_manager = Arc::new(setup::load_mcp_manager(&vault_path));
+    let mcp_manager = Arc::new(setup::load_mcp_manager(repo.ledger_dir()));
     let _ = host::set_mcp_manager(mcp_manager.clone());
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
@@ -110,19 +107,15 @@ pub async fn start_server(
     };
 
     // Load or generate Identity Key
-    let key_pair = security::load_or_generate_identity_key(&notegit_dir)?;
+    let key_pair = security::load_or_generate_identity_key(&host_dir)?;
     let peer_id = key_pair.peer_id();
     tracing::info!("Server PeerID: {}", peer_id);
-
-    // Load or generate Repo Key (Shared Secret)
-    let repo_key = security::load_or_generate_repo_key(&notegit_dir)?;
 
     // Initialize RepoScopedSyncEngine (Relay Mode -> Auto)
     let sync_engine = Arc::new(RepoScopedSyncEngine::new(
         peer_id.clone(),
         repo.clone(),
         deve_core::config::SyncMode::Auto,
-        repo_key.clone(),
     ));
     let tree_manager = Arc::new(RepoTreeRegistry::new());
 
@@ -133,14 +126,12 @@ pub async fn start_server(
         repo: repo.clone(),
         sync_manager,
         tx,
-        vault_path,
         plugins,
         sync_engine,
         tree_manager,
         #[cfg(feature = "search")]
         search_service,
         identity_key: key_pair,
-        repo_key,
     });
 
     // 启动系统指标广播任务 (每 5 秒)

@@ -1,98 +1,28 @@
 // apps/cli/src/server/security.rs
 //! # 安全密钥管理模块
 //!
-//! 管理 Identity Key 和 Repo Key 的加载与生成。
+//! 管理宿主 Identity Key 的加载与生成。
 //!
 //! ## 不变量 (Invariants)
 //! - Identity Key 必须始终存在 (首次启动时自动生成)
 //! - Repo Key 可选，但一旦生成必须保持一致性
 
-use deve_core::security::{IdentityKeyPair, RepoKey};
+use deve_core::security::IdentityKeyPair;
 use std::path::Path;
 use std::sync::Arc;
-
-/// 将密钥安全写入文件 (Unix 上设置权限为 0600)
-///
-/// # 不变量
-/// - 密钥文件仅 Owner 可读写。
-fn write_key_file(path: &Path, data: &[u8]) -> anyhow::Result<()> {
-    std::fs::write(path, data)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let perms = std::fs::Permissions::from_mode(0o600);
-        std::fs::set_permissions(path, perms)?;
-    }
-    Ok(())
-}
 
 /// 加载或生成 Identity Key
 ///
 /// # 前置条件
-/// - `notegit_dir` 必须是有效的 `.notegit` 目录路径
+/// - `host_key_dir` 必须是有效的宿主密钥目录路径
 ///
 /// # 后置条件
 /// - 返回的 `IdentityKeyPair` 已持久化到 `identity.key`
-pub fn load_or_generate_identity_key(notegit_dir: &Path) -> anyhow::Result<Arc<IdentityKeyPair>> {
-    let keys_dir = notegit_dir.join("keys");
-    std::fs::create_dir_all(&keys_dir)?;
-    let key_pair_path = keys_dir.join("identity.key");
-
-    if key_pair_path.exists() {
-        // 从文件加载已有密钥
-        let bytes = std::fs::read(&key_pair_path)?;
-        match IdentityKeyPair::from_bytes(&bytes) {
-            Some(kp) => {
-                tracing::info!("Loaded IdentityKey from {:?}", key_pair_path);
-                Ok(Arc::new(kp))
-            }
-            None => {
-                tracing::warn!("Invalid identity.key file, regenerating...");
-                let kp = IdentityKeyPair::generate();
-                write_key_file(&key_pair_path, &kp.to_bytes())?;
-                Ok(Arc::new(kp))
-            }
-        }
-    } else {
-        // 生成新密钥并保存
-        let kp = IdentityKeyPair::generate();
-        write_key_file(&key_pair_path, &kp.to_bytes())?;
-        tracing::info!("Generated and saved new IdentityKey to {:?}", key_pair_path);
-        Ok(Arc::new(kp))
-    }
-}
-
-/// 加载或生成 Repo Key (共享密钥)
-///
-/// # 前置条件
-/// - `notegit_dir` 必须是有效的 `.notegit` 目录路径
-///
-/// # 后置条件
-/// - 如果成功，返回的 `RepoKey` 已持久化到 `repo.key`
-pub fn load_or_generate_repo_key(notegit_dir: &Path) -> anyhow::Result<Option<RepoKey>> {
-    let keys_dir = notegit_dir.join("keys");
-    std::fs::create_dir_all(&keys_dir)?;
-    let repo_key_path = keys_dir.join("repo.key");
-
-    if repo_key_path.exists() {
-        let bytes = std::fs::read(&repo_key_path)?;
-        match RepoKey::from_bytes(&bytes) {
-            Some(key) => {
-                tracing::info!("Loaded RepoKey from {:?}", repo_key_path);
-                Ok(Some(key))
-            }
-            None => {
-                tracing::warn!("Invalid repo.key file, regenerating...");
-                let key = RepoKey::generate();
-                write_key_file(&repo_key_path, &key.to_bytes())?;
-                Ok(Some(key))
-            }
-        }
-    } else {
-        // 生成新密钥并保存
-        let key = RepoKey::generate();
-        write_key_file(&repo_key_path, &key.to_bytes())?;
-        tracing::info!("Generated and saved new RepoKey to {:?}", repo_key_path);
-        Ok(Some(key))
-    }
+pub fn load_or_generate_identity_key(host_key_dir: &Path) -> anyhow::Result<Arc<IdentityKeyPair>> {
+    let kp = deve_core::security::load_or_generate_identity_key_at(host_key_dir)?;
+    tracing::info!(
+        "IdentityKey ready at {:?}",
+        host_key_dir.join("identity.key")
+    );
+    Ok(kp)
 }

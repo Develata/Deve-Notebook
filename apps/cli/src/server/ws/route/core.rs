@@ -70,7 +70,7 @@ pub(super) async fn route_core(
             ch.unicast(deve_core::protocol::ServerMessage::Pong);
         }
         ClientMessage::RequestKey => {
-            key_exchange::handle_request_key(state, ch).await;
+            key_exchange::handle_request_key(state, ch, session).await;
         }
         other => {
             tracing::debug!("Unhandled client message: {:?}", other);

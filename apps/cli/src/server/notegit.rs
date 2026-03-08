@@ -1,54 +1,88 @@
 use anyhow::Result;
+use deve_core::ledger::RepoManager;
 use std::path::{Path, PathBuf};
 
-pub fn prepare(vault_root: &Path) -> Result<PathBuf> {
-    let notegit_dir = deve_core::utils::notegit::dir(vault_root);
-    std::fs::create_dir_all(deve_core::utils::notegit::keys_dir(vault_root))?;
-    migrate_legacy_deve(vault_root, &notegit_dir)?;
-    Ok(notegit_dir)
+pub fn prepare(repo: &RepoManager, vault_root: &Path) -> Result<PathBuf> {
+    let host_dir = deve_core::utils::notegit::host_dir(repo.ledger_dir());
+    let host_keys_dir = deve_core::utils::notegit::host_keys_dir(repo.ledger_dir());
+    let main_repo_root = repo.local_repo_workspace_root(repo.local_repo_name())?;
+    std::fs::create_dir_all(&host_keys_dir)?;
+    std::fs::create_dir_all(deve_core::utils::notegit::repo_keys_dir(&main_repo_root))?;
+    std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(&main_repo_root))?;
+    migrate_legacy_root(&vault_root.join(".notegit"), &host_dir, &main_repo_root)?;
+    migrate_legacy_root(&vault_root.join(".deve"), &host_dir, &main_repo_root)?;
+    Ok(host_keys_dir)
 }
 
-fn migrate_legacy_deve(vault_root: &Path, notegit_dir: &Path) -> Result<()> {
-    let legacy_dir = vault_root.join(".deve");
-    if !legacy_dir.exists() {
+fn migrate_legacy_root(src_root: &Path, host_dir: &Path, main_repo_root: &Path) -> Result<()> {
+    if !src_root.exists() {
         return Ok(());
     }
-
-    let conflict_dir = notegit_dir.join("legacy-deve-conflicts");
+    let conflict_dir = host_dir.join("legacy-root-conflicts");
     std::fs::create_dir_all(&conflict_dir)?;
-    for (name, dst) in [
-        (
-            "identity.key",
-            notegit_dir.join("keys").join("identity.key"),
-        ),
-        ("repo.key", notegit_dir.join("keys").join("repo.key")),
-        ("mcp.json", notegit_dir.join("mcp.json")),
-        (
-            "legacy-flat",
-            deve_core::utils::notegit::legacy_flat_dir(vault_root),
-        ),
-        (
-            "legacy-flat-conflicts",
-            deve_core::utils::notegit::legacy_flat_conflicts_dir(vault_root),
-        ),
-        ("active_repo", notegit_dir.join("active_repo")),
-        ("peer_id", notegit_dir.join("peer_id")),
-    ] {
-        let src = legacy_dir.join(name);
-        if src.exists() {
-            merge_entry(&src, &dst, &conflict_dir)?;
+    for entry in std::fs::read_dir(src_root)? {
+        let entry = entry?;
+        let src = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name == "keys" && src.is_dir() {
+            migrate_keys_dir(&src, host_dir, main_repo_root, &conflict_dir)?;
+            continue;
         }
+        let Some(dst) = entry_target(&name, host_dir, main_repo_root) else {
+            archive_unknown(&src, &conflict_dir)?;
+            continue;
+        };
+        merge_entry(&src, &dst, &conflict_dir)?;
     }
+    let _ = std::fs::remove_dir(src_root);
+    Ok(())
+}
 
-    if legacy_dir.exists() {
-        for entry in std::fs::read_dir(&legacy_dir)? {
-            let entry = entry?;
-            let src = entry.path();
-            let dst = notegit_dir.join(entry.file_name());
-            merge_entry(&src, &dst, &conflict_dir)?;
-        }
-        let _ = std::fs::remove_dir(&legacy_dir);
+fn migrate_keys_dir(
+    src_dir: &Path,
+    host_dir: &Path,
+    main_repo_root: &Path,
+    conflict_dir: &Path,
+) -> Result<()> {
+    for entry in std::fs::read_dir(src_dir)? {
+        let entry = entry?;
+        let src = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        let Some(dst) = entry_target(&name, host_dir, main_repo_root) else {
+            archive_unknown(&src, conflict_dir)?;
+            continue;
+        };
+        merge_entry(&src, &dst, conflict_dir)?;
     }
+    let _ = std::fs::remove_dir(src_dir);
+    Ok(())
+}
+
+fn entry_target(name: &str, host_dir: &Path, main_repo_root: &Path) -> Option<PathBuf> {
+    match name {
+        "identity.key" => {
+            Some(deve_core::utils::notegit::host_keys_dir(host_dir.parent()?).join("identity.key"))
+        }
+        "repo.key" => {
+            Some(deve_core::utils::notegit::repo_keys_dir(main_repo_root).join("repo.key"))
+        }
+        "mcp.json" => Some(host_dir.join("mcp.json")),
+        "legacy-flat" => Some(deve_core::utils::notegit::repo_legacy_flat_dir(
+            main_repo_root,
+        )),
+        "legacy-flat-conflicts" => Some(deve_core::utils::notegit::repo_legacy_flat_conflicts_dir(
+            main_repo_root,
+        )),
+        "active_repo" | "peer_id" => Some(host_dir.join(name)),
+        _ => None,
+    }
+}
+
+fn archive_unknown(src: &Path, conflict_dir: &Path) -> Result<()> {
+    let name = src.file_name().and_then(|v| v.to_str()).unwrap_or("legacy");
+    let archived = unique_conflict_path(conflict_dir, name);
+    std::fs::rename(src, &archived)?;
+    tracing::warn!("Legacy runtime entry archived {:?} -> {:?}", src, archived);
     Ok(())
 }
 
@@ -79,7 +113,7 @@ fn merge_entry(src: &Path, dst: &Path, conflict_dir: &Path) -> Result<()> {
     let name = src.file_name().and_then(|v| v.to_str()).unwrap_or("legacy");
     let archived = unique_conflict_path(conflict_dir, name);
     std::fs::rename(src, &archived)?;
-    tracing::warn!("Legacy .deve entry archived {:?} -> {:?}", src, archived);
+    tracing::warn!("Legacy runtime entry archived {:?} -> {:?}", src, archived);
     Ok(())
 }
 

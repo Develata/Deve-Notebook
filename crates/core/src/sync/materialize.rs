@@ -32,6 +32,7 @@ pub(super) fn materialize_local_repo(
 ) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
+    std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
 
     for (doc_id, repo_path) in repo.list_local_docs(Some(repo_name))? {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
@@ -56,7 +57,7 @@ fn migrate_legacy_flat_entries(repo: &RepoManager, vault_root: &Path) -> Result<
     let repo_names: HashSet<String> = repo.list_repos(None)?.into_iter().collect();
     let default_root = repo.local_repo_workspace_root(repo.local_repo_name())?;
     std::fs::create_dir_all(&default_root)?;
-    let conflict_root = crate::utils::notegit::legacy_flat_conflicts_dir(vault_root);
+    let conflict_root = crate::utils::notegit::repo_legacy_flat_conflicts_dir(&default_root);
     std::fs::create_dir_all(&conflict_root)?;
 
     for entry in std::fs::read_dir(vault_root)? {

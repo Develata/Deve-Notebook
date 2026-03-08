@@ -8,6 +8,8 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::resolve_session_repo;
+use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -15,18 +17,41 @@ use std::sync::Arc;
 ///
 /// **Pre-condition**: 客户端已通过 JWT 认证 (middleware 保证)。
 /// **Post-condition**: 成功时单播 `KeyProvide`，失败时单播 `KeyDenied`。
-pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel) {
-    match &state.repo_key {
-        Some(key) => {
-            tracing::info!("Providing RepoKey to authenticated client");
+pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            ch.unicast(ServerMessage::KeyDenied {
+                reason: err.to_string(),
+            });
+            return;
+        }
+    };
+
+    let key_dir = match state.repo.local_repo_notegit_keys_root(&scope.repo_name) {
+        Ok(dir) => dir,
+        Err(err) => {
+            ch.unicast(ServerMessage::KeyDenied {
+                reason: err.to_string(),
+            });
+            return;
+        }
+    };
+
+    match deve_core::security::load_or_generate_repo_key_at(&key_dir) {
+        Ok(key) => {
+            tracing::info!(
+                "Providing RepoKey to authenticated client for {}",
+                scope.repo_name
+            );
             ch.unicast(ServerMessage::KeyProvide {
                 repo_key: key.to_bytes().to_vec(),
             });
         }
-        None => {
-            tracing::warn!("RepoKey requested but not configured");
+        Err(err) => {
+            tracing::warn!("RepoKey request failed for {}: {:?}", scope.repo_name, err);
             ch.unicast(ServerMessage::KeyDenied {
-                reason: "Server has no RepoKey configured".into(),
+                reason: err.to_string(),
             });
         }
     }
