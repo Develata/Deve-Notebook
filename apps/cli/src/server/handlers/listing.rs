@@ -5,6 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::{bootstrap_local_repo, resolve_session_repo};
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_meta;
@@ -21,37 +22,34 @@ use std::sync::Arc;
 /// 这确保文件树与当前选中的 repo 保持一致。
 /// 同时发送 RepoSwitched 通知前端当前仓库名称。
 pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
-    // 确定当前仓库名称
-    let current_repo = session
-        .active_repo
-        .clone()
-        .unwrap_or_else(|| state.repo.local_repo_name().to_string());
-
-    let repo_info = state
-        .repo
-        .get_repo_info_for(session.active_branch.as_ref(), Some(&current_repo))
-        .ok()
-        .flatten();
-    session.active_repo = Some(current_repo.clone());
-    let repo_id = repo_info.as_ref().map(|info| info.uuid);
-    session.active_repo_id = repo_id;
-    let repo_uuid = repo_id.map(|id| id.to_string()).unwrap_or_default();
+    let resolved = if session.active_branch.is_none() {
+        bootstrap_local_repo(state, session)
+    } else {
+        resolve_session_repo(state, session)
+    };
+    let (current_repo, repo_id) = match resolved {
+        Ok(scope) => {
+            session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+            (scope.repo_name, scope.repo_id)
+        }
+        Err(_err) if session.active_branch.is_some() && session.active_repo.is_none() => {
+            session.clear_active_repo();
+            ch.unicast(ServerMessage::DocList { docs: vec![] });
+            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::init(Vec::new())));
+            return;
+        }
+        Err(err) => {
+            ch.send_error(err.to_string());
+            return;
+        }
+    };
+    let repo_uuid = repo_id.to_string();
 
     // 发送一次 RepoSwitched，让前端同步当前仓库上下文。
     ch.unicast(ServerMessage::RepoSwitched {
         name: current_repo.clone(),
         uuid: repo_uuid,
     });
-
-    let Some(repo_id) = repo_id else {
-        if session.active_branch.is_some() && session.get_active_db().is_none() {
-            ch.unicast(ServerMessage::DocList { docs: vec![] });
-            ch.unicast(ServerMessage::TreeUpdate(TreeDelta::init(Vec::new())));
-            return;
-        }
-        ch.send_error(format!("Repository UUID not resolved for {}", current_repo));
-        return;
-    };
 
     // 使用 session 锁定的数据库，或回退到默认逻辑
     let docs = if let Some(handle) = session.get_active_db() {
@@ -63,7 +61,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
             let repo_type = deve_core::models::RepoType::Remote(peer_id.clone(), repo_id);
             state.repo.list_docs(&repo_type)
         } else {
-            state.repo.list_local_docs(session.active_repo.as_deref())
+            state.repo.list_local_docs(Some(&current_repo))
         }
     };
 
@@ -95,7 +93,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
                 let repo_type = RepoType::Remote(peer_id.clone(), repo_id);
                 state.repo.list_nodes(&repo_type)
             } else {
-                state.repo.list_local_nodes(session.active_repo.as_deref())
+                state.repo.list_local_nodes(Some(&current_repo))
             };
 
             if let Ok(nodes) = nodes {

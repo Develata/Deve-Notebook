@@ -1,6 +1,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
+use crate::server::repo_scope::{resolve_session_repo, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
@@ -54,6 +54,10 @@ async fn handle_remote_diff(
     session: &WsSession,
     path: String,
 ) {
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(e) => return ch.send_error(e.to_string()),
+    };
     // 从 Remote DB 获取文档内容 (右侧)
     let new_content = match get_remote_doc_content(session, &path) {
         Some(content) => content,
@@ -64,10 +68,9 @@ async fn handle_remote_diff(
     };
 
     // 1. 获取 Remote Repo URL
-    let repo_name = session.active_repo.as_deref().unwrap_or("default");
     let remote_url = match state
         .repo
-        .get_repo_url(session.active_branch.as_ref(), repo_name)
+        .get_repo_url(session.active_branch.as_ref(), &scope.repo_name)
     {
         Ok(url) => url,
         Err(e) => {

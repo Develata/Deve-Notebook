@@ -47,13 +47,15 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
 
     let repo_b = RepoManager::init(&peer_b_ledger, snapshot_depth, None, None)?;
     info!("Repo B initialized (Virtual Peer: {})", peer_b_id);
+    let repo_a_name = repo_a.local_repo_name().to_string();
+    let repo_b_name = repo_b.local_repo_name().to_string();
 
     // 3. Peer A creates a doc
     info!("--- Step 1: Peer A creates document ---");
     let doc_path = "hello.md";
     let doc_content = "Hello from Peer A";
 
-    let doc_id = repo_a.create_docid(doc_path)?;
+    let doc_id = repo_a.create_docid_in_local_repo(&repo_a_name, doc_path)?;
     let op = Op::Insert {
         pos: 0,
         content: doc_content.into(),
@@ -66,7 +68,7 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
         seq: 1,
     };
 
-    let seq = repo_a.append_local_op(&entry)?;
+    let seq = repo_a.append_local_op_in_local_repo(&repo_a_name, &entry)?;
     info!(
         "Peer A created doc: {} ({}) at seq {}",
         doc_path, doc_id, seq
@@ -75,10 +77,10 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     // 4. Sync A -> B
     info!("--- Step 2: Sync A -> B ---");
     let repo_id = repo_a
-        .get_repo_info()?
+        .get_repo_info_for(None, Some(&repo_a_name))?
         .map(|info| info.uuid)
         .ok_or_else(|| anyhow::anyhow!("Repo A metadata missing"))?;
-    let ops_a = repo_a.get_local_ops(doc_id)?;
+    let ops_a = repo_a.get_local_ops_in_local_repo(&repo_a_name, doc_id)?;
     info!("Extracted {} ops from Peer A", ops_a.len());
 
     let mut applied_count = 0;
@@ -120,7 +122,7 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     }
 
     // 6. Verify Isolation
-    let content_b_local = repo_b.resolve_local_content(doc_id)?;
+    let content_b_local = repo_b.resolve_local_content(&repo_b_name, doc_id)?;
     if content_b_local.is_empty() {
         info!("✅ SUCCESS: Peer B's Local Repo is isolated (empty).");
     } else {
@@ -135,12 +137,12 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
 }
 
 trait ContentResolver {
-    fn resolve_local_content(&self, doc_id: DocId) -> Result<String>;
+    fn resolve_local_content(&self, repo_name: &str, doc_id: DocId) -> Result<String>;
 }
 
 impl ContentResolver for RepoManager {
-    fn resolve_local_content(&self, doc_id: DocId) -> Result<String> {
-        let ops = self.get_local_ops(doc_id)?;
+    fn resolve_local_content(&self, repo_name: &str, doc_id: DocId) -> Result<String> {
+        let ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
         let entries: Vec<LedgerEntry> = ops.into_iter().map(|(_, e)| e).collect();
         Ok(deve_core::state::reconstruct_content(&entries))
     }

@@ -25,15 +25,16 @@ fn inject_conflict(
     content: &str,
 ) -> Result<()> {
     let peer_id = PeerId::new(peer_name);
+    let repo_name = repo.local_repo_name().to_string();
     let repo_id = repo
-        .get_repo_info()?
+        .get_repo_info_for(None, Some(&repo_name))?
         .map(|info| info.uuid)
         .ok_or_else(|| anyhow::anyhow!("Local repo metadata missing"))?;
 
     println!("Scanning local docs to find {}...", filename);
 
     // Use Local repo to find the DocId since Shadow Repos don't store path metadata
-    let local_docs = repo.list_local_docs(None)?;
+    let local_docs = repo.list_local_docs(Some(&repo_name))?;
 
     let mut found = false;
     for (doc_id, path) in local_docs {

@@ -18,22 +18,74 @@ pub struct ResolvedRepo {
     pub branch: Option<PeerId>,
 }
 
-pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
-    let repo_name = session
-        .active_repo
-        .clone()
+/// 仅允许首次本地引导时回退到主本地库。
+///
+/// Invariants:
+/// - 只在 `active_branch == None` 时允许默认回退。
+/// - 引导完成后，后续路径应统一通过 `resolve_session_repo`。
+pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
+    if session.active_branch.is_some() {
+        return Err(anyhow!(
+            "Cannot bootstrap local repo while on remote branch"
+        ));
+    }
+    let repo_name = resolve_repo_name_from_session(state, session)?
         .unwrap_or_else(|| state.repo.local_repo_name().to_string());
-    let branch = session.active_branch.clone();
-    let repo_id = session.active_repo_id.or_else(|| {
-        state
-            .repo
-            .get_repo_info_for(branch.as_ref(), Some(&repo_name))
-            .ok()
-            .flatten()
-            .map(|info| info.uuid)
-    });
-    let repo_id =
-        repo_id.ok_or_else(|| anyhow!("Repository UUID not resolved for {}", repo_name))?;
+    resolve_repo_by_name(state, None, session.active_repo_id, repo_name)
+}
+
+pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
+    let repo_name = resolve_repo_name_from_session(state, session)?
+        .ok_or_else(|| anyhow!("Active repository not selected for current session"))?;
+    resolve_repo_by_name(
+        state,
+        session.active_branch.clone(),
+        session.active_repo_id,
+        repo_name,
+    )
+}
+
+fn resolve_repo_name_from_session(
+    state: &Arc<AppState>,
+    session: &WsSession,
+) -> Result<Option<String>> {
+    if let Some(repo_name) = session.active_repo.clone() {
+        return Ok(Some(repo_name));
+    }
+    let Some(repo_id) = session.active_repo_id else {
+        return Ok(None);
+    };
+    if session.active_branch.is_some() {
+        return Err(anyhow!(
+            "Remote session lost repo name for bound repo {}",
+            repo_id
+        ));
+    }
+    state.repo.find_local_repo_name_by_id(repo_id)
+}
+
+fn resolve_repo_by_name(
+    state: &Arc<AppState>,
+    branch: Option<PeerId>,
+    expected_repo_id: Option<RepoId>,
+    repo_name: String,
+) -> Result<ResolvedRepo> {
+    let branch_ref = branch.as_ref();
+    let info = state
+        .repo
+        .get_repo_info_for(branch_ref, Some(&repo_name))?
+        .ok_or_else(|| anyhow!("Repository UUID not resolved for {}", repo_name))?;
+    let repo_id = info.uuid;
+    if let Some(expected_repo_id) = expected_repo_id
+        && expected_repo_id != repo_id
+    {
+        return Err(anyhow!(
+            "Session repo mismatch: expected {}, resolved {} for {}",
+            expected_repo_id,
+            repo_id,
+            repo_name
+        ));
+    }
     Ok(ResolvedRepo {
         repo_id,
         repo_name,
