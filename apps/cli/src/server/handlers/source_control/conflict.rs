@@ -61,13 +61,10 @@ fn resolve_keep_fs(
     path: &str,
 ) -> anyhow::Result<()> {
     run_on_resolved_local_repo(state, scope, |db| {
-        deve_core::source_control::pending_fs::get(db, path)?
+        let entry = deve_core::source_control::pending_fs::get(db, path)?
             .ok_or_else(|| anyhow::anyhow!("Pending change not found: {}", path))?;
-        let status = deve_core::source_control::pending_fs::get(db, path)?
-            .map(|e| e.change_type)
-            .unwrap_or(deve_core::source_control::ChangeStatus::Modified);
         deve_core::source_control::pending_fs::remove(db, path)?;
-        deve_core::ledger::source_control::stage_file_with_status(db, path, status)
+        deve_core::ledger::source_control::stage_pending_entry(db, &entry)
     })
 }
 

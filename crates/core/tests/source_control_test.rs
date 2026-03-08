@@ -9,8 +9,33 @@ mod tests {
 
     fn new_repo() -> (TempDir, RepoManager) {
         let dir = tempdir().expect("create tempdir");
-        let repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
+        let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
+        repo.set_vault_root(dir.path().join("vault"));
         (dir, repo)
+    }
+
+    fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus, content: &str) {
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: path.into(),
+                    change_type: status,
+                    content_hash: pending_fs::content_hash(content),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })
+        .expect("seed pending entry");
+    }
+
+    fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
+        let abs = dir.path().join("vault").join("default").join(path);
+        if let Some(parent) = abs.parent() {
+            std::fs::create_dir_all(parent).expect("create workspace parent");
+        }
+        std::fs::write(abs, content).expect("write workspace file");
     }
 
     #[test]
@@ -40,6 +65,8 @@ mod tests {
     #[test]
     fn test_staging_lifecycle() {
         let (_dir, repo) = new_repo();
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Modified, "a");
+        seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "b");
         repo.stage_file("notes/a.md").expect("stage a");
         repo.stage_file("notes/b.md").expect("stage b");
         let staged = repo.list_staged().expect("list staged");
@@ -48,16 +75,28 @@ mod tests {
                 .iter()
                 .any(|e| e.path == "notes/a.md" && e.status == ChangeStatus::Modified)
         );
-        assert!(staged.iter().any(|e| e.path == "notes/b.md"));
+        assert!(
+            staged
+                .iter()
+                .any(|e| e.path == "notes/b.md" && e.status == ChangeStatus::Added)
+        );
         repo.unstage_file("notes/b.md").expect("unstage b");
         let staged2 = repo.list_staged().expect("list staged after unstage");
         assert_eq!(staged2.len(), 1);
         assert_eq!(staged2[0].path, "notes/a.md");
+        let pending = repo.list_pending_fs().expect("pending after unstage");
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].path, "notes/b.md");
+        assert_eq!(pending[0].status, ChangeStatus::Added);
     }
 
     #[test]
     fn test_commit_flow() {
-        let (_dir, repo) = new_repo();
+        let (dir, repo) = new_repo();
+        write_workspace_file(&dir, "notes/a.md", "hello");
+        write_workspace_file(&dir, "notes/b.md", "world");
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+        seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_file("notes/a.md").expect("stage a");
         repo.stage_file("notes/b.md").expect("stage b");
         let c = repo.commit_staged("test commit").expect("commit staged");
@@ -65,15 +104,19 @@ mod tests {
         assert_eq!(c.message, "test commit");
         assert_eq!(c.doc_count, 2);
         assert!(c.parent_id.is_none());
-        assert_eq!(c.ledger_seq, 0);
+        assert!(c.ledger_seq > 0);
         assert!(repo.list_staged().expect("staged after commit").is_empty());
     }
 
     #[test]
     fn test_commit_history_chain() {
-        let (_dir, repo) = new_repo();
+        let (dir, repo) = new_repo();
+        write_workspace_file(&dir, "notes/a.md", "hello");
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_file("notes/a.md").expect("stage a");
         let c1 = repo.commit_staged("c1").expect("commit 1");
+        write_workspace_file(&dir, "notes/b.md", "world");
+        seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_file("notes/b.md").expect("stage b");
         let c2 = repo.commit_staged("c2").expect("commit 2");
         let commits = repo.list_commits(10).expect("list commits");

@@ -1,6 +1,5 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::collections::HashSet;
@@ -42,9 +41,7 @@ pub async fn handle_unstage_file(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match run_on_resolved_local_repo(state, &scope, |db| {
-        deve_core::ledger::source_control::unstage_file(db, &path)
-    }) {
+    match state.repo.unstage_file_in_local_repo(&scope.repo_name, &path) {
         Ok(()) => {
             tracing::info!("Unstaged file: {}", path);
             ch.unicast(ServerMessage::UnstageAck { path });
@@ -90,15 +87,12 @@ pub async fn handle_unstage_files(
         Err(e) => return ch.send_error(e.to_string()),
     };
     let paths = normalized_unique_paths(paths);
-    if let Err(e) = run_on_resolved_local_repo(state, &scope, |db| {
-        for path in &paths {
-            deve_core::ledger::source_control::unstage_file(db, path)?;
+    for path in &paths {
+        if let Err(e) = state.repo.unstage_file_in_local_repo(&scope.repo_name, path) {
+            tracing::error!("Failed to unstage files: {:?}", e);
+            ch.send_error(e.to_string());
+            return;
         }
-        Ok(())
-    }) {
-        tracing::error!("Failed to unstage files: {:?}", e);
-        ch.send_error(e.to_string());
-        return;
     }
     super::changes::handle_get_changes(state, ch, session).await;
 }

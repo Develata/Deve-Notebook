@@ -9,7 +9,9 @@
 //! - 变更检测 (获取未提交的文件)
 
 use crate::models::DocId;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, changes, commits, pending_fs, staging};
+use crate::source_control::{
+    ChangeEntry, ChangeStatus, CommitInfo, changes, commits, pending_fs, staging,
+};
 use anyhow::Result;
 use redb::Database;
 
@@ -22,19 +24,12 @@ pub fn init_tables(db: &Database) -> Result<()> {
     Ok(())
 }
 
-/// 暂存指定文件
-pub fn stage_file(db: &Database, path: &str) -> Result<()> {
-    staging::stage(db, path)
+pub fn stage_pending_entry(db: &Database, entry: &pending_fs::PendingFsEntry) -> Result<()> {
+    staging::stage_pending_entry(db, entry)
 }
 
-/// 暂存指定文件（带变更状态）
-pub fn stage_file_with_status(db: &Database, path: &str, status: ChangeStatus) -> Result<()> {
-    staging::stage_with_status(db, path, status)
-}
-
-/// 取消暂存指定文件
-pub fn unstage_file(db: &Database, path: &str) -> Result<()> {
-    staging::unstage(db, path)
+pub fn take_staged_entry(db: &Database, path: &str) -> Result<Option<staging::StagedEntry>> {
+    staging::take_staged(db, path)
 }
 
 /// 获取已暂存的文件列表 (含正确的变更状态)
