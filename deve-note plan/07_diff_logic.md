@@ -33,8 +33,9 @@
 
 *   **手动确认原则（Git-like Workflow）**：
     *   **Watcher Invariant**: Watcher 检测到的后台 Vault 变更 **MUST NOT** 自动入 Ledger；必须等待用户 Stage → Commit。
-    *   **Frontend Exception**: 前端编辑器生成的变更 **MAY** 直接入 Ledger（绕过 Working Directory），或遵循相同的 Stage → Commit 流程（用户可配置）。
-    *   此设计严格类比 Git 的三阶段：Working Directory (`pending_fs_ops`) → Staging Area (`.notegit/staged`) → Commit (Ledger + `.notegit/commits`)。
+    *   **Frontend Rule**: 内置前端编辑器生成的变更 **MUST** 直接入 Ledger，并通过 `pending overlay -> Ack -> confirmed` 收敛；默认 **MUST NOT** 进入 `pending_fs_ops` / Staging。
+    *   **Scope Boundary**: 本章的 Git-like 三阶段仅适用于外部文件系统变更；不适用于默认 Web Thin Client 写路径。
+    *   此设计对外部编辑严格类比 Git 的三阶段：Working Directory (`pending_fs_ops`) → Staging Area (`.notegit/staged`) → Commit (Ledger + `.notegit/commits`)。
 
 *   **Conflict Detection**: 
     *   若 `pending_fs_ops` 与 Ledger 已存在变更冲突（如同一位置被前端和后台同时修改），系统 **MUST** 提示用户选择 "Keep File System" 或 "Keep Ledger"。
