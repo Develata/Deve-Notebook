@@ -11,7 +11,7 @@
 //! - 其他平台: 安全降级 (CPU=0, 内存=0)
 
 use crate::server::AppState;
-use deve_core::ledger::traits::Repository;
+use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -72,8 +72,18 @@ pub fn spawn_broadcaster(state: Arc<AppState>) {
 /// 存储指标: DB 文件大小 + 文档数
 fn storage_metrics(state: &AppState) -> (u64, u32) {
     let db_size = db_file_size(state.repo.ledger_dir());
-    let doc_count = state.repo.list_docs().map(|v| v.len() as u32).unwrap_or(0);
+    let doc_count = local_doc_count(state).unwrap_or(0);
     (db_size, doc_count)
+}
+
+fn local_doc_count(state: &AppState) -> anyhow::Result<u32> {
+    // Invariant: doc_count 统计所有本地 repo 的文档总数，而不是默认主库的投影。
+    let mut total = 0u32;
+    for repo_name in state.repo.list_repos(None)? {
+        let count = state.repo.list_local_docs(Some(&repo_name))?.len();
+        total = total.saturating_add(count as u32);
+    }
+    Ok(total)
 }
 
 /// 计算 ledger 目录下所有 .redb 文件总大小
