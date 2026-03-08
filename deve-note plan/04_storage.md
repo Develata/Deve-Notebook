@@ -63,17 +63,19 @@
     *   **Projection Rule**: Store A ($W_{user}$) 上的任意文件内容 **MUST** 可由 `Replay(DB)` 唯一导出；文件系统仅是投影，不是权威源。
     *   **Ordering Rule**: 同一 Repo 内操作落盘顺序 **MUST** 由 `GlobalSeq` 决定，任何并发写入 **MUST** 在落盘前被线性化。
     *   **Version Control**: Commit 锚定到特定 `ledger_seq`，形成版本历史链（类比 Git commit）。
-    *   **Metadata Directory**: 系统使用 `vault/.notegit/` 目录存储运行时元数据（类比 `.git/`，包含 keys、config、迁移归档等）。
-        *   **Location**: `.notegit/` 位于 Vault 根目录。
+    *   **Metadata Directory**: 系统使用 `vault/<repo_name>/.notegit/` 目录存储 repo-scoped 运行时元数据（类比 `.git/`，包含 repo keys、迁移归档等）。
+        *   **Location**: `.notegit/` 位于对应 Repo 工作区根目录下。
         *   **Watcher Ignore**: `.notegit/` **MUST** 被 Watcher 忽略（不触发变更检测）。
-        *   **Backup Policy**: `.notegit/` **SHOULD** 随 Ledger 一起备份，但 **MUST NOT** 跨设备同步（peer-specific 配置）。
+        *   **Backup Policy**: `.notegit/` **SHOULD** 随对应 Repo 一起备份，但 **MUST NOT** 被跨 Repo 复用。
+    *   **Host Runtime Directory**: 宿主级身份与配置存储于 `ledger/.host/`。
+        *   **Content**: `identity.key`、`mcp.json` 等 host-scoped 状态。
     *   **Definition**: 对任意 Repo，权威状态定义为有序操作集合：
         *   $DB = \mathrm{Set}\langle (Op, Time) \rangle$
     *   **Interpretation**: `Op` 表示最小可重放变更单元，`Time` 表示全序比较键（由 `PeerId + OpSeq` 复合构成）。
     *   **Projection Rule**: Store A ($W_{user}$) 上的任意文件内容 **MUST** 可由 `Replay(DB)` 唯一导出；文件系统仅是投影，不是权威源。
     *   **Ordering Rule**: 同一 Repo 内操作顺序 **MUST** 由 `Time` 决定，任何并发写入 **MUST** 在落盘前被线性化。
     *   **Version Control**: Commit 锚定到特定 `ledger_seq`，形成版本历史链（类比 Git commit）。
-    *   **Metadata Directory**: 系统使用 `vault/.notegit/` 目录存储运行时元数据（类比 `.git/`，包含 keys、config、迁移归档等）。
+    *   **Metadata Directory**: 系统使用 `vault/<repo_name>/.notegit/` 目录存储 repo-scoped 运行时元数据。
 
 *   **Ledger-First Strategy (账本优先策略)**:
     *   前端编辑器生成的变更 **MUST** 直接作为 `Op` 写入 Store B (Ledger)。

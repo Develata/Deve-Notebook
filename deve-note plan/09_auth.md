@@ -86,7 +86,7 @@
     *   **Algorithm**: `Argon2` (Pass hash) + `Ed25519` (Node Identity).
     *   **PeerID**: 基于公钥生成的唯一标识 (Hash of Public Key).
         *   **Implementation**: `SHA256(PublicKey)[0..12]` (Hex string).
-        *   **Key Storage**: Native full peer 的 Private Key (Seed) stored in `vault/.notegit/keys/identity.key`；共享 RepoKey stored in `vault/.notegit/keys/repo.key`；浏览器 WebLightPeer **MUST NOT** 写入这些文件，而是使用 `WebCrypto + IndexedDB`。
+        *   **Key Storage**: Native full peer 的 Private Key (Seed) stored in `ledger/.host/keys/identity.key`；每个本地 Repo 的共享 RepoKey stored in `vault/<repo_name>/.notegit/keys/repo.key`；浏览器 WebLightPeer **MUST NOT** 写入这些文件，而是使用 `WebCrypto + IndexedDB`。
         *   **Verification**: 握手消息 (Hello) 必须包含 Ed25519 签名，由接收方使用 PubKey 验证。
 *   **Localhost Policy**:
     *   当通过 `localhost` 或 `127.0.0.1` 访问时，**MAY** 允许免密登录或自动填充默认凭据（Dev Mode），但必须有明确的配置开关 `AUTH_ALLOW_ANONYMOUS_LOCALHOST`。
