@@ -16,6 +16,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+mod admin_api;
 mod commands;
 mod server;
 
@@ -71,6 +72,8 @@ enum Commands {
     NodeCheck {
         #[arg(long)]
         repair: bool,
+        #[arg(long)]
+        repo: Option<String>,
     },
     /// Repair known local corruption from backups and quarantine invalid shadows
     Repair {
@@ -122,8 +125,8 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(&ledger_dir, peer, repo, config.snapshot_depth)?
         }
-        Some(Commands::NodeCheck { repair }) => {
-            commands::node_check::run(&ledger_dir, config.snapshot_depth, repair)?
+        Some(Commands::NodeCheck { repair, repo }) => {
+            commands::node_check::run(&ledger_dir, config.snapshot_depth, repair, repo)?
         }
         Some(Commands::Repair {
             backup,

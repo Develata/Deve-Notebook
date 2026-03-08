@@ -1,40 +1,79 @@
 // apps/cli/src/commands/node_check.rs
 //! # Node 一致性检查命令
 
+use crate::admin_api::NodeCheckResponse;
+use crate::commands::live_proxy;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_check::{check_node_consistency, repair_missing_nodes};
 use std::path::PathBuf;
 
-pub fn run(ledger_dir: &PathBuf, snapshot_depth: usize, repair: bool) -> Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    let report = repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        if repair {
-            repair_missing_nodes(db)
-        } else {
-            check_node_consistency(db)
+pub fn run(
+    ledger_dir: &PathBuf,
+    snapshot_depth: usize,
+    repair: bool,
+    repo_name: Option<String>,
+) -> Result<()> {
+    let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
+        Ok(repo) => repo,
+        Err(err) if live_proxy::is_db_lock_error(&err) => {
+            let reports = live_proxy::node_check(ledger_dir, repo_name.as_deref(), repair)?;
+            return print_reports(&reports);
         }
-    })?;
+        Err(err) => return Err(err),
+    };
+    let reports = collect_reports(&repo, repo_name.as_deref(), repair)?;
+    print_reports(&reports)
+}
 
-    println!(
-        "node_check: missing_nodes={} orphan_nodes={}",
-        report.missing_nodes.len(),
-        report.orphan_nodes.len()
-    );
+fn collect_reports(
+    repo: &RepoManager,
+    target_repo: Option<&str>,
+    repair: bool,
+) -> Result<Vec<NodeCheckResponse>> {
+    let repo_names = match target_repo {
+        Some(name) => vec![repo.resolve_local_repo_name(None, Some(name))?],
+        None => repo.list_repos(None)?,
+    };
+    let mut reports = Vec::with_capacity(repo_names.len());
+    for repo_name in repo_names {
+        let report = repo.run_on_local_repo(&repo_name, |db| {
+            if repair {
+                repair_missing_nodes(db)
+            } else {
+                check_node_consistency(db)
+            }
+        })?;
+        reports.push(NodeCheckResponse {
+            repo_name,
+            missing_nodes: report.missing_nodes,
+            orphan_nodes: report.orphan_nodes,
+        });
+    }
+    Ok(reports)
+}
 
-    if !report.missing_nodes.is_empty() {
-        println!("missing_nodes:");
-        for (doc_id, path) in report.missing_nodes {
-            println!("  {} {}", doc_id, path);
+fn print_reports(reports: &[NodeCheckResponse]) -> Result<()> {
+    for report in reports {
+        println!(
+            "node_check[{}]: missing_nodes={} orphan_nodes={}",
+            report.repo_name,
+            report.missing_nodes.len(),
+            report.orphan_nodes.len()
+        );
+        if !report.missing_nodes.is_empty() {
+            println!("missing_nodes:");
+            for (doc_id, path) in &report.missing_nodes {
+                println!("  {} {}", doc_id, path);
+            }
+        }
+        if !report.orphan_nodes.is_empty() {
+            println!("orphan_nodes:");
+            for (node_id, path) in &report.orphan_nodes {
+                println!("  {} {}", node_id, path);
+            }
         }
     }
-
-    if !report.orphan_nodes.is_empty() {
-        println!("orphan_nodes:");
-        for (node_id, path) in report.orphan_nodes {
-            println!("  {} {}", node_id, path);
-        }
-    }
-
     Ok(())
 }

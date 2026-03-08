@@ -48,6 +48,9 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .route("/api/auth/logout", post(auth::handlers::logout))
         .route("/api/auth/me", get(auth::handlers::me))
+        .route("/api/admin/dump", get(handlers::admin::dump))
+        .route("/api/admin/export", get(handlers::admin::export))
+        .route("/api/admin/node-check", get(handlers::admin::node_check))
         .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
 
     // 公开路由：登录使用独立限流

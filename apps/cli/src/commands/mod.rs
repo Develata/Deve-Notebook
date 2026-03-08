@@ -5,6 +5,7 @@
 pub mod dump;
 pub mod export;
 pub mod init;
+pub mod live_proxy;
 pub mod node_check;
 pub mod repair;
 pub mod scan;

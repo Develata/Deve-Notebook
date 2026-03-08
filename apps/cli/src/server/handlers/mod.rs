@@ -2,6 +2,7 @@
 //! 消息处理器模块
 //!
 //! 包含各类 ClientMessage 的处理逻辑，按功能领域划分。
+pub mod admin;
 pub mod docs;
 pub mod document;
 pub mod key_exchange;

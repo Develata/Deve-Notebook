@@ -78,6 +78,9 @@ pub async fn start_server(
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
     let host_dir = notegit::prepare(repo.as_ref(), &vault_path)?;
+    if let Some(host_root) = host_dir.parent() {
+        let _ = std::fs::write(host_root.join("main_port"), port.to_string());
+    }
     let auth_config = Arc::new(router::load_auth_config());
     let mcp_manager = Arc::new(setup::load_mcp_manager(repo.ledger_dir()));
     let _ = host::set_mcp_manager(mcp_manager.clone());
