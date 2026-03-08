@@ -10,7 +10,7 @@ pub mod update;
 pub use core::{
     create_dir_node, ensure_dir_chain, ensure_file_node, get_node_id, get_node_meta, upsert_node,
 };
-pub use migrate::{list_nodes, migrate_nodes_from_docs};
+pub use migrate::list_nodes;
 pub use update::{delete_path_prefix, remove_node_by_path, rename_path_prefix};
 
 pub(crate) fn split_path(path: &str) -> (&str, &str) {

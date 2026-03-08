@@ -30,7 +30,6 @@ use std::sync::RwLock;
 
 use super::RepoManager;
 use super::node_check;
-use super::node_meta;
 use super::schema::*;
 use super::source_control;
 
@@ -119,10 +118,10 @@ pub fn init(
                     }
                 }
                 Err(_) => {
-                    // 没有元数据表 (旧版本?) -> 视为匹配 (复用)
-                    // 或者视为脏数据? 假设复用。
-                    local_db = db;
-                    break;
+                    anyhow::bail!(
+                        "Repo metadata is missing in {:?}; unsupported ledger layout",
+                        db_path
+                    );
                 }
             }
         } else {
@@ -140,10 +139,7 @@ pub fn init(
     // 5. 初始化 Source Control 表
     source_control::init_tables(&local_db)?;
 
-    // 6. Node 元数据迁移 (若为空则从 Doc 表重建)
-    node_meta::migrate_nodes_from_docs(&local_db)?;
-
-    // 7. Node 表一致性修复 (仅补齐缺失节点)
+    // 6. Node 表一致性修复 (仅补齐缺失节点)
     let report = node_check::repair_missing_nodes(&local_db)?;
     if !report.orphan_nodes.is_empty() {
         tracing::warn!("Orphan nodes detected: {}", report.orphan_nodes.len());

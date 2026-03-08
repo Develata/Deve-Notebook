@@ -52,7 +52,6 @@ impl RepoListing for RepoManager {
                 let db = peer_repos.get(repo_id).ok_or_else(|| {
                     anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
                 })?;
-                node_meta::migrate_nodes_from_docs(db)?;
                 node_meta::list_nodes(db)
             }
         }

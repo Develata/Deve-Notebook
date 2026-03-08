@@ -87,7 +87,6 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
 
             // 重新初始化 TreeManager 并发送完整树 (从 Node 表)
             let nodes = if let Some(handle) = session.get_active_db() {
-                let _ = node_meta::migrate_nodes_from_docs(&handle.db);
                 node_meta::list_nodes(&handle.db)
             } else if let Some(peer_id) = &session.active_branch {
                 let repo_type = RepoType::Remote(peer_id.clone(), repo_id);
