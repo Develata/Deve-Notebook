@@ -16,7 +16,12 @@ use std::path::PathBuf;
 /// Seed 命令入口
 ///
 /// 将 Local Repo 的操作复制到 Shadow Repo 以模拟远端数据。
-pub fn run(ledger_dir: &PathBuf, target_peer: String, snapshot_depth: usize) -> Result<()> {
+pub fn run(
+    ledger_dir: &PathBuf,
+    target_peer: String,
+    repo_name: Option<String>,
+    snapshot_depth: usize,
+) -> Result<()> {
     tracing::info!("Starting Seed Command...");
     tracing::info!("Ledger Dir: {:?}", ledger_dir);
     tracing::info!("Target Peer: {}", target_peer);
@@ -28,15 +33,16 @@ pub fn run(ledger_dir: &PathBuf, target_peer: String, snapshot_depth: usize) -> 
     tracing::warn!("======================================================");
 
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo_name = repo.resolve_local_repo_name(None, repo_name.as_deref())?;
     let peer_id = PeerId::new(&target_peer);
 
     let repo_id = repo
-        .get_repo_info()?
+        .get_repo_info_for(None, Some(&repo_name))?
         .map(|info| info.uuid)
         .ok_or_else(|| anyhow::anyhow!("Local repo metadata missing"))?;
 
     // 1. 列出所有本地文档
-    let docs = repo.list_local_docs(None)?;
+    let docs = repo.list_local_docs(Some(&repo_name))?;
     tracing::info!("找到 {} 个本地文档待 Seed。", docs.len());
 
     let mut total_ops = 0;
@@ -45,7 +51,7 @@ pub fn run(ledger_dir: &PathBuf, target_peer: String, snapshot_depth: usize) -> 
         tracing::info!("Seeding 文档: {} ({})", path, doc_id);
 
         // 2. 获取本地操作
-        let ops = repo.get_local_ops(doc_id)?;
+        let ops = repo.get_local_ops_in_local_repo(&repo_name, doc_id)?;
 
         // 3. 写入远端 Shadow
         for (_, entry) in ops {

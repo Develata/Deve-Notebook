@@ -24,9 +24,15 @@ struct ExportEntry {
 ///
 /// **用途**:
 /// 数据备份、迁移或分析。
-pub fn run(ledger_dir: &PathBuf, output: Option<String>, snapshot_depth: usize) -> Result<()> {
+pub fn run(
+    ledger_dir: &PathBuf,
+    output: Option<String>,
+    repo_name: Option<String>,
+    snapshot_depth: usize,
+) -> Result<()> {
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    let docs = repo.list_local_docs(None)?;
+    let repo_name = repo.resolve_local_repo_name(None, repo_name.as_deref())?;
+    let docs = repo.list_local_docs(Some(&repo_name))?;
 
     let mut writer: Box<dyn Write> = if let Some(path) = output {
         let file = File::create(path)?;
@@ -36,7 +42,7 @@ pub fn run(ledger_dir: &PathBuf, output: Option<String>, snapshot_depth: usize) 
     };
 
     for (doc_id, path) in docs {
-        let ops_with_seq = repo.get_local_ops(doc_id)?;
+        let ops_with_seq = repo.get_local_ops_in_local_repo(&repo_name, doc_id)?;
         let ops: Vec<LedgerEntry> = ops_with_seq.into_iter().map(|(_, op)| op).collect();
 
         let entry = ExportEntry { doc_id, path, ops };

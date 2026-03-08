@@ -41,6 +41,8 @@ enum Commands {
     Dump {
         #[arg(short, long)]
         path: String,
+        #[arg(long)]
+        repo: Option<String>,
     },
     /// Start the backend server
     Serve {
@@ -53,6 +55,8 @@ enum Commands {
     Export {
         #[arg(short, long)]
         output: Option<String>,
+        #[arg(long)]
+        repo: Option<String>,
     },
     /// Verify P2P Sync Logic (Simulation)
     VerifyP2P,
@@ -60,6 +64,8 @@ enum Commands {
     Seed {
         #[arg(short, long)]
         peer: String,
+        #[arg(long)]
+        repo: Option<String>,
     },
     /// Check node consistency
     NodeCheck {
@@ -103,18 +109,18 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Watch) => {
             commands::watch::run(&ledger_dir, &vault_path, config.snapshot_depth)?
         }
-        Some(Commands::Dump { path }) => {
-            commands::dump::run(&ledger_dir, path, config.snapshot_depth)?
+        Some(Commands::Dump { path, repo }) => {
+            commands::dump::run(&ledger_dir, path, repo, config.snapshot_depth)?
         }
         Some(Commands::Serve { port, dev }) => {
             commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth, dev).await?
         }
-        Some(Commands::Export { output }) => {
-            commands::export::run(&ledger_dir, output, config.snapshot_depth)?
+        Some(Commands::Export { output, repo }) => {
+            commands::export::run(&ledger_dir, output, repo, config.snapshot_depth)?
         }
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
-        Some(Commands::Seed { peer }) => {
-            commands::seed::run(&ledger_dir, peer, config.snapshot_depth)?
+        Some(Commands::Seed { peer, repo }) => {
+            commands::seed::run(&ledger_dir, peer, repo, config.snapshot_depth)?
         }
         Some(Commands::NodeCheck { repair }) => {
             commands::node_check::run(&ledger_dir, config.snapshot_depth, repair)?
