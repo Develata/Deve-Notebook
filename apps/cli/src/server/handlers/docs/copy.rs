@@ -5,7 +5,7 @@ mod file_copy;
 mod register;
 
 use super::copy_utils::copy_dir_recursive;
-use super::{notify_fs_refresh, validate_path};
+use super::{notify_fs_refresh, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
@@ -82,7 +82,12 @@ fn prepare_copy_paths(
         ch.send_error(format!("Destination exists: {}", dest_path));
         return None;
     }
-    if !validate_path(dest_path, ch) {
+    let valid = if src.is_dir() {
+        validate_folder_path(dest_path, ch)
+    } else {
+        validate_file_path(dest_path, ch)
+    };
+    if !valid {
         return None;
     }
     if let Some(parent) = dst.parent() {

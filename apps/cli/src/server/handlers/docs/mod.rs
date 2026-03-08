@@ -36,7 +36,15 @@ pub const MAX_DEPTH: usize = 10;
 /// - 不包含 `..` (目录遍历)
 /// - 不以 `/` 或 `\` 开头 (绝对路径)
 /// - 目录深度不超过 `MAX_DEPTH`
-pub fn validate_path(path: &str, ch: &DualChannel) -> bool {
+pub fn validate_file_path(path: &str, ch: &DualChannel) -> bool {
+    validate_path_kind(path, true, ch)
+}
+
+pub fn validate_folder_path(path: &str, ch: &DualChannel) -> bool {
+    validate_path_kind(path, false, ch)
+}
+
+fn validate_path_kind(path: &str, allow_file_leaf: bool, ch: &DualChannel) -> bool {
     // 防止目录遍历攻击
     if path.contains("..") || path.starts_with('/') || path.starts_with('\\') {
         tracing::error!("路径校验失败 (遍历攻击): {}", path);
@@ -52,6 +60,31 @@ pub fn validate_path(path: &str, ch: &DualChannel) -> bool {
             MAX_DEPTH
         ));
         return false;
+    }
+
+    let trimmed = path.trim_end_matches('/');
+    let segments: Vec<_> = trimmed
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    if segments.is_empty() {
+        ch.send_error("Invalid empty path".to_string());
+        return false;
+    }
+
+    for (index, segment) in segments.iter().enumerate() {
+        if *segment == ".notegit" || *segment == ".deve" {
+            tracing::error!("路径校验失败 (保留目录): {}", path);
+            ch.send_error(format!("Reserved internal path: {}", path));
+            return false;
+        }
+        let is_leaf = index + 1 == segments.len();
+        let md_dir = segment.ends_with(".md") && (!allow_file_leaf || !is_leaf);
+        if md_dir {
+            tracing::error!("路径校验失败 (.md 目录): {}", path);
+            ch.send_error(format!("Markdown directory is forbidden: {}", path));
+            return false;
+        }
     }
 
     true

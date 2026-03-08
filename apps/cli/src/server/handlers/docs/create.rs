@@ -3,7 +3,7 @@
 
 use super::create_file::handle_file_create;
 use super::create_folder::handle_folder_create;
-use super::validate_path;
+use super::{validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{local_repo_path, resolve_session_repo};
@@ -38,7 +38,12 @@ pub async fn handle_create_doc(
 
     let filename = normalize_name(name);
 
-    if !validate_path(&filename, ch) {
+    let valid = if filename.ends_with('/') {
+        validate_folder_path(&filename, ch)
+    } else {
+        validate_file_path(&filename, ch)
+    };
+    if !valid {
         return;
     }
 

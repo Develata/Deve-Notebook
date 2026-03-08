@@ -1,7 +1,7 @@
 // apps/cli/src/server/handlers/docs/rename.rs
 //! # 重命名/移动文档处理器
 
-use super::{notify_fs_refresh, validate_path};
+use super::{notify_fs_refresh, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
@@ -58,7 +58,12 @@ pub async fn handle_rename_doc(
     }
 
     // 2. 路径校验
-    if !validate_path(&dst_name, ch) {
+    let valid = if src.is_dir() {
+        validate_folder_path(&dst_name, ch)
+    } else {
+        validate_file_path(&dst_name, ch)
+    };
+    if !valid {
         return;
     }
 

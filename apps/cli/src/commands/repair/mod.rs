@@ -1,6 +1,7 @@
 mod path_fix;
 mod restore;
 mod shadow;
+mod weird_paths;
 
 use anyhow::Result;
 use deve_core::ledger::{RepoManager, listing::RepoListing};
@@ -27,12 +28,13 @@ pub fn run(
         None => repo.list_repos(None)?,
     };
     let fixed_paths = path_fix::repair_repo_prefixed_paths(&repo, &repo_names)?;
+    let quarantined_md_dirs = weird_paths::quarantine_md_dirs(&repo, &repo_names)?;
     let restored =
         restore::restore_docs_from_backup(&repo, &sync_manager, backup_root, &repo_names, paths)?;
 
     println!(
-        "repair: quarantined_nil_shadows={} fixed_repo_paths={} restored_docs={}",
-        quarantined, fixed_paths, restored
+        "repair: quarantined_nil_shadows={} fixed_repo_paths={} quarantined_md_dirs={} restored_docs={}",
+        quarantined, fixed_paths, quarantined_md_dirs, restored
     );
     Ok(())
 }
