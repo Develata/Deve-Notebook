@@ -93,7 +93,7 @@ pub async fn start_server(
 
     #[cfg(feature = "search")]
     let search_service = {
-        let index_path = vault_path.join(".deve_search_index");
+        let index_path = host_dir.join("search-index");
         match SearchService::new_on_disk(&index_path) {
             Ok(s) => {
                 tracing::info!("Search service initialized at {:?}", index_path);
