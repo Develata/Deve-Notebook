@@ -71,14 +71,14 @@ pub fn spawn_broadcaster(state: Arc<AppState>) {
 
 /// 存储指标: DB 文件大小 + 文档数
 fn storage_metrics(state: &AppState) -> (u64, u32) {
-    let db_size = db_file_size(&state.vault_path);
+    let db_size = db_file_size(state.repo.ledger_dir());
     let doc_count = state.repo.list_docs().map(|v| v.len() as u32).unwrap_or(0);
     (db_size, doc_count)
 }
 
 /// 计算 ledger 目录下所有 .redb 文件总大小
-fn db_file_size(vault_path: &std::path::Path) -> u64 {
-    let local_dir = vault_path.join(".deve").join("ledger").join("local");
+fn db_file_size(ledger_dir: &std::path::Path) -> u64 {
+    let local_dir = ledger_dir.join("local");
     std::fs::read_dir(local_dir)
         .into_iter()
         .flatten()

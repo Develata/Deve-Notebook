@@ -52,7 +52,7 @@ fn is_development() -> bool {
 
 pub(super) fn load_mcp_manager(vault_path: &std::path::Path) -> McpManager {
     let mut manager = McpManager::new();
-    let cfg_path = vault_path.join(".deve").join("mcp.json");
+    let cfg_path = deve_core::utils::notegit::mcp_config_path(vault_path);
     if !cfg_path.exists() {
         return manager;
     }

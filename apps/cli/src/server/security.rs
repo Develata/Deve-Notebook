@@ -29,12 +29,14 @@ fn write_key_file(path: &Path, data: &[u8]) -> anyhow::Result<()> {
 /// 加载或生成 Identity Key
 ///
 /// # 前置条件
-/// - `deve_dir` 必须是有效的 `.deve` 目录路径
+/// - `notegit_dir` 必须是有效的 `.notegit` 目录路径
 ///
 /// # 后置条件
 /// - 返回的 `IdentityKeyPair` 已持久化到 `identity.key`
-pub fn load_or_generate_identity_key(deve_dir: &Path) -> anyhow::Result<Arc<IdentityKeyPair>> {
-    let key_pair_path = deve_dir.join("identity.key");
+pub fn load_or_generate_identity_key(notegit_dir: &Path) -> anyhow::Result<Arc<IdentityKeyPair>> {
+    let keys_dir = notegit_dir.join("keys");
+    std::fs::create_dir_all(&keys_dir)?;
+    let key_pair_path = keys_dir.join("identity.key");
 
     if key_pair_path.exists() {
         // 从文件加载已有密钥
@@ -63,12 +65,14 @@ pub fn load_or_generate_identity_key(deve_dir: &Path) -> anyhow::Result<Arc<Iden
 /// 加载或生成 Repo Key (共享密钥)
 ///
 /// # 前置条件
-/// - `deve_dir` 必须是有效的 `.deve` 目录路径
+/// - `notegit_dir` 必须是有效的 `.notegit` 目录路径
 ///
 /// # 后置条件
 /// - 如果成功，返回的 `RepoKey` 已持久化到 `repo.key`
-pub fn load_or_generate_repo_key(deve_dir: &Path) -> anyhow::Result<Option<RepoKey>> {
-    let repo_key_path = deve_dir.join("repo.key");
+pub fn load_or_generate_repo_key(notegit_dir: &Path) -> anyhow::Result<Option<RepoKey>> {
+    let keys_dir = notegit_dir.join("keys");
+    std::fs::create_dir_all(&keys_dir)?;
+    let repo_key_path = keys_dir.join("repo.key");
 
     if repo_key_path.exists() {
         let bytes = std::fs::read(&repo_key_path)?;

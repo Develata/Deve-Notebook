@@ -35,6 +35,7 @@ pub mod mcp;
 pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;
+mod notegit;
 pub mod plugin_host;
 pub mod prewarm;
 mod rate_limit;
@@ -79,6 +80,7 @@ pub async fn start_server(
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
+    let notegit_dir = notegit::prepare(&vault_path)?;
     let auth_config = Arc::new(router::load_auth_config());
     let mcp_manager = Arc::new(setup::load_mcp_manager(&vault_path));
     let _ = host::set_mcp_manager(mcp_manager.clone());
@@ -108,15 +110,12 @@ pub async fn start_server(
     };
 
     // Load or generate Identity Key
-    let deve_dir = vault_path.join(".deve");
-    std::fs::create_dir_all(&deve_dir)?;
-
-    let key_pair = security::load_or_generate_identity_key(&deve_dir)?;
+    let key_pair = security::load_or_generate_identity_key(&notegit_dir)?;
     let peer_id = key_pair.peer_id();
     tracing::info!("Server PeerID: {}", peer_id);
 
     // Load or generate Repo Key (Shared Secret)
-    let repo_key = security::load_or_generate_repo_key(&deve_dir)?;
+    let repo_key = security::load_or_generate_repo_key(&notegit_dir)?;
 
     // Initialize RepoScopedSyncEngine (Relay Mode -> Auto)
     let sync_engine = Arc::new(RepoScopedSyncEngine::new(

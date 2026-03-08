@@ -22,6 +22,7 @@ pub fn run(
     // 1. 初始化 RepoManager (创建目录结构)
     let _ = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     std::fs::create_dir_all(vault_path.join("default"))?;
+    std::fs::create_dir_all(deve_core::utils::notegit::keys_dir(vault_path))?;
 
     // 2. Generate default config.toml
     let config_path = path.join("config.toml");

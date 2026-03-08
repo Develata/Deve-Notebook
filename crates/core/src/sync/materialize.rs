@@ -56,7 +56,7 @@ fn migrate_legacy_flat_entries(repo: &RepoManager, vault_root: &Path) -> Result<
     let repo_names: HashSet<String> = repo.list_repos(None)?.into_iter().collect();
     let default_root = repo.local_repo_workspace_root(repo.local_repo_name())?;
     std::fs::create_dir_all(&default_root)?;
-    let conflict_root = vault_root.join(".deve").join("legacy-flat-conflicts");
+    let conflict_root = crate::utils::notegit::legacy_flat_conflicts_dir(vault_root);
     std::fs::create_dir_all(&conflict_root)?;
 
     for entry in std::fs::read_dir(vault_root)? {
