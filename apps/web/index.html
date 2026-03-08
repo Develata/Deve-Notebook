@@ -153,6 +153,8 @@
           scrollGlobal,
           setReadOnly,
           destroyEditor,
+          updateGutterDiff,
+          getEditorSelection,
         } = module;
 
         // --- BINDING: Expose Module Functions to Global Scope for Rust FFI ---
@@ -175,6 +177,8 @@
         window.scrollGlobal = scrollGlobal;
         window.setReadOnly = setReadOnly;
         window.destroyEditor = destroyEditor;
+        window.updateGutterDiff = updateGutterDiff || (() => {});
+        window.getEditorSelection = getEditorSelection || (() => "null");
         // -------------------------------------------------------------------
 
         if (typeof initCodeMirror !== "function") {
@@ -194,6 +198,12 @@
           try {
             // Initialize. The View is now managed internally by the adapter.
             initCodeMirror(element, onUpdate);
+            // Force a safe post-init baseline even when a stale bundle is loaded.
+            // Invariants:
+            // - editor must start readonly before Snapshot arrives
+            // - placeholder text must not leak into ledger writes
+            setReadOnly(true);
+            applyRemoteContent("");
           } catch (e) {
             window.logToOverlay("Init call failed: " + e.message, true);
             throw e;
