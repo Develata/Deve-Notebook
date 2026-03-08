@@ -219,7 +219,6 @@ impl SyncManager {
     pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
         materialize::materialize_local_repo(
             &self.repo,
-            &self.vault_root,
             &self.persist_guard,
             repo_name,
         )

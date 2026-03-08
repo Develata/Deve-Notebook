@@ -73,7 +73,7 @@ fn validate_path_kind(path: &str, allow_file_leaf: bool, ch: &DualChannel) -> bo
     }
 
     for (index, segment) in segments.iter().enumerate() {
-        if *segment == ".notegit" || *segment == ".deve" {
+        if *segment == ".notegit" {
             tracing::error!("路径校验失败 (保留目录): {}", path);
             ch.send_error(format!("Reserved internal path: {}", path));
             return false;
