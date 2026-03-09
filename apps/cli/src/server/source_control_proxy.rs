@@ -1,11 +1,17 @@
 // apps/cli/src/server/source_control_proxy.rs
 //! # Source Control Remote Proxy
 
+#[path = "source_control_proxy_commits.rs"]
+mod commits;
+#[path = "source_control_proxy_mutations.rs"]
+mod mutations;
+#[path = "source_control_proxy_queries.rs"]
+mod queries;
+
 use anyhow::Result;
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
-use serde_json::json;
 
 pub struct RemoteSourceControlApi {
     base_url: String,
@@ -47,150 +53,43 @@ where
 
 impl Repository for RemoteSourceControlApi {
     fn list_docs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<(DocId, String)>> {
-        let url = format!("{}/api/repo/docs", self.base_url);
-        let res = block_on_safe(async {
-            Self::with_repo_query(self.client.get(&url), repo)
-                .send()
-                .await?
-                .json::<Vec<(DocId, String)>>()
-                .await
-        })?;
-        Ok(res)
+        queries::list_docs(self, repo)
     }
 
     fn get_doc_content_in_repo(&self, repo: &RepoSelector, doc_id: DocId) -> Result<String> {
-        let url = format!("{}/api/repo/doc", self.base_url);
-        let res = block_on_safe(async {
-            Self::with_repo_query(self.client.get(&url), repo)
-                .query(&[("doc_id", doc_id.to_string())])
-                .send()
-                .await?
-                .text()
-                .await
-        })?;
-        Ok(res)
+        queries::get_doc_content(self, repo, doc_id)
     }
 
     fn list_pending_fs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        let url = format!("{}/api/sc/pending", self.base_url);
-        let res = block_on_safe(async {
-            Self::with_repo_query(self.client.get(&url), repo)
-                .send()
-                .await?
-                .json::<Vec<ChangeEntry>>()
-                .await
-        })?;
-        Ok(res)
+        queries::list_pending(self, repo)
     }
 
     fn stage_pending_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        let url = format!("{}/api/sc/stage-pending", self.base_url);
-        block_on_safe(async {
-            self.client
-                .post(&url)
-                .json(&json!({
-                    "path": path,
-                    "repo_id": repo.repo_id.map(|id| id.to_string()),
-                    "repo_name": repo.repo_name.clone(),
-                }))
-                .send()
-                .await?
-                .error_for_status()?;
-            Ok::<(), reqwest::Error>(())
-        })?;
-        Ok(())
+        mutations::stage_pending(self, repo, path)
     }
 
     fn discard_pending_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        let url = format!("{}/api/sc/discard-pending", self.base_url);
-        block_on_safe(async {
-            self.client
-                .post(&url)
-                .json(&json!({
-                    "path": path,
-                    "repo_id": repo.repo_id.map(|id| id.to_string()),
-                    "repo_name": repo.repo_name.clone(),
-                }))
-                .send()
-                .await?
-                .error_for_status()?;
-            Ok::<(), reqwest::Error>(())
-        })?;
-        Ok(())
+        mutations::discard_pending(self, repo, path)
     }
 
     fn unstage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        let url = format!("{}/api/sc/unstage", self.base_url);
-        block_on_safe(async {
-            self.client
-                .post(&url)
-                .json(&json!({
-                    "path": path,
-                    "repo_id": repo.repo_id.map(|id| id.to_string()),
-                    "repo_name": repo.repo_name.clone(),
-                }))
-                .send()
-                .await?
-                .error_for_status()?;
-            Ok::<(), reqwest::Error>(())
-        })?;
-        Ok(())
+        mutations::unstage_file(self, repo, path)
     }
 
     fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        let url = format!("{}/api/sc/status", self.base_url);
-        let res = block_on_safe(async {
-            Self::with_repo_query(self.client.get(&url), repo)
-                .send()
-                .await?
-                .json::<Vec<ChangeEntry>>()
-                .await
-        })?;
-        Ok(res)
+        queries::list_changes(self, repo)
     }
 
     fn diff_doc_path_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<String> {
-        let url = format!("{}/api/sc/diff", self.base_url);
-        let res = block_on_safe(async {
-            Self::with_repo_query(self.client.get(&url), repo)
-                .query(&[("path", path)])
-                .send()
-                .await?
-                .text()
-                .await
-        })?;
-        Ok(res)
+        queries::diff_doc_path(self, repo, path)
     }
 
     fn stage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        let url = format!("{}/api/sc/stage", self.base_url);
-        block_on_safe(async {
-            self.client
-                .post(&url)
-                .json(&json!({
-                    "path": path,
-                    "repo_id": repo.repo_id.map(|id| id.to_string()),
-                    "repo_name": repo.repo_name.clone(),
-                }))
-                .send()
-                .await?
-                .error_for_status()?;
-            Ok::<(), reqwest::Error>(())
-        })?;
-        Ok(())
+        mutations::stage_file(self, repo, path)
     }
 
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
-        let url = format!("{}/api/sc/commits", self.base_url);
-        let res = block_on_safe(async {
-            Self::with_repo_query(self.client.get(&url), repo)
-                .query(&[("limit", limit.to_string())])
-                .send()
-                .await?
-                .json::<Vec<CommitInfo>>()
-                .await
-        })?;
-        Ok(res)
+        commits::list_commits(self, repo, limit)
     }
 
     fn diff_commits_in_repo(
@@ -199,34 +98,10 @@ impl Repository for RemoteSourceControlApi {
         commit_a_id: Option<&str>,
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>> {
-        let url = format!("{}/api/sc/commit-diff", self.base_url);
-        let res = block_on_safe(async {
-            let mut req = Self::with_repo_query(self.client.get(&url), repo)
-                .query(&[("commit_b", commit_b_id)]);
-            if let Some(commit_a) = commit_a_id {
-                req = req.query(&[("commit_a", commit_a)]);
-            }
-            req.send().await?.json::<Vec<CommitFileDiff>>().await
-        })?;
-        Ok(res)
+        commits::diff_commits(self, repo, commit_a_id, commit_b_id)
     }
 
     fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
-        let url = format!("{}/api/sc/commit", self.base_url);
-        let res = block_on_safe(async {
-            self.client
-                .post(&url)
-                .json(&json!({
-                    "message": message,
-                    "repo_id": repo.repo_id.map(|id| id.to_string()),
-                    "repo_name": repo.repo_name.clone(),
-                }))
-                .send()
-                .await?
-                .error_for_status()?
-                .json::<CommitInfo>()
-                .await
-        })?;
-        Ok(res)
+        commits::commit_staged(self, repo, message)
     }
 }
