@@ -4,6 +4,7 @@
 //! **功能**: 提供 Git-like 源代码控制能力。
 //! **安全**: 需通过 Capability 的 source_control 检查。
 
+use crate::ledger::traits::RepoSelector;
 use crate::plugin::manifest::Capability;
 use rhai::{Engine, EvalAltResult};
 use std::sync::Arc;
@@ -36,7 +37,6 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
     let caps_stage = caps.clone();
     let caps_commit = caps.clone();
 
-    // API: sc_status() -> Dynamic (变更列表)
     engine.register_fn(
         "sc_status",
         move || -> Result<rhai::Dynamic, Box<EvalAltResult>> {
@@ -44,7 +44,10 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: source control access not allowed.".into());
             }
             let repo = super::repository().map_err(|e| e.to_string())?;
-            let mut changes = repo.list_changes().map_err(|e| e.to_string())?;
+            let selector = RepoSelector::default();
+            let mut changes = repo
+                .list_changes_in_repo(&selector)
+                .map_err(|e| e.to_string())?;
             let max_changes = 50usize;
             if changes.len() > max_changes {
                 let total = changes.len();
@@ -60,7 +63,6 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
         },
     );
 
-    // API: sc_diff(path: &str) -> String
     engine.register_fn(
         "sc_diff",
         move |path: &str| -> Result<String, Box<EvalAltResult>> {
@@ -68,12 +70,14 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: source control access not allowed.".into());
             }
             let repo = super::repository().map_err(|e| e.to_string())?;
-            let diff = repo.diff_doc_path(path).map_err(|e| e.to_string())?;
+            let selector = RepoSelector::default();
+            let diff = repo
+                .diff_doc_path_in_repo(&selector, path)
+                .map_err(|e| e.to_string())?;
             Ok(truncate_text(&diff, 200, 240))
         },
     );
 
-    // API: sc_stage(path: &str)
     engine.register_fn(
         "sc_stage",
         move |path: &str| -> Result<(), Box<EvalAltResult>> {
@@ -81,11 +85,12 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: source control access not allowed.".into());
             }
             let repo = super::repository().map_err(|e| e.to_string())?;
-            repo.stage_file(path).map_err(|e| e.to_string().into())
+            let selector = RepoSelector::default();
+            repo.stage_pending_in_repo(&selector, path)
+                .map_err(|e| e.to_string().into())
         },
     );
 
-    // API: sc_commit(message: &str) -> Dynamic
     engine.register_fn(
         "sc_commit",
         move |message: &str| -> Result<rhai::Dynamic, Box<EvalAltResult>> {
@@ -93,7 +98,10 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: source control access not allowed.".into());
             }
             let repo = super::repository().map_err(|e| e.to_string())?;
-            let commit = repo.commit_staged(message).map_err(|e| e.to_string())?;
+            let selector = RepoSelector::default();
+            let commit = repo
+                .commit_staged_in_repo(&selector, message)
+                .map_err(|e| e.to_string())?;
             let json = serde_json::to_value(&commit).map_err(|e| e.to_string())?;
             rhai::serde::to_dynamic(&json).map_err(|e| e.to_string().into())
         },

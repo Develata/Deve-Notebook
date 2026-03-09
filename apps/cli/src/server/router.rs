@@ -25,21 +25,29 @@ use deve_core::security::AuthConfig;
 pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfig>) -> Router {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
 
-    // 速率限制器分层：
-    // - 登录端点：5 次/分钟/IP (防暴力破解)
-    // - API 端点：120 次/分钟/IP
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
     let api_limiter = rate_limit::RateLimiter::new(120, std::time::Duration::from_secs(60));
 
-    // 需要认证的路由 (JWT Cookie 中间件保护)
     let protected = Router::new()
         .route("/ws", get(ws::ws_handler))
+        .route(
+            "/api/sc/pending",
+            get(handlers::source_control::http::pending),
+        )
         .route(
             "/api/sc/status",
             get(handlers::source_control::http::status),
         )
         .route("/api/sc/diff", get(handlers::source_control::http::diff))
         .route("/api/sc/stage", post(handlers::source_control::http::stage))
+        .route(
+            "/api/sc/stage-pending",
+            post(handlers::source_control::http::stage),
+        )
+        .route(
+            "/api/sc/discard-pending",
+            post(handlers::source_control::http::discard_pending),
+        )
         .route(
             "/api/sc/commit",
             post(handlers::source_control::http::commit),
@@ -53,7 +61,6 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
         .route("/api/admin/node-check", get(handlers::admin::node_check))
         .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
 
-    // 公开路由：登录使用独立限流
     let login_route = Router::new()
         .route("/api/auth/login", post(auth::handlers::login))
         .layer(axum::Extension(login_limiter))

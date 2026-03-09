@@ -39,6 +39,10 @@ pub async fn start_plugin_host_only(
         .route("/api/repo/docs", get(repo::http::list_docs_plugin_host))
         .route("/api/repo/doc", get(repo::http::doc_content_plugin_host))
         .route(
+            "/api/sc/pending",
+            get(source_control::http::pending_plugin_host),
+        )
+        .route(
             "/api/sc/status",
             get(source_control::http::status_plugin_host),
         )
@@ -46,6 +50,14 @@ pub async fn start_plugin_host_only(
         .route(
             "/api/sc/stage",
             post(source_control::http::stage_plugin_host),
+        )
+        .route(
+            "/api/sc/stage-pending",
+            post(source_control::http::stage_plugin_host),
+        )
+        .route(
+            "/api/sc/discard-pending",
+            post(source_control::http::discard_pending_plugin_host),
         )
         .route(
             "/api/sc/commit",

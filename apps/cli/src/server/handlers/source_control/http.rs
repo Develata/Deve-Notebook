@@ -41,6 +41,29 @@ pub struct CommitPayload {
     pub repo: RepoSelector,
 }
 
+pub async fn pending(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
+    match Repository::list_pending_fs_in_repo(state.repo.as_ref(), &q.repo) {
+        Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+pub async fn pending_plugin_host(
+    State(_state): State<Arc<PluginHostState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
+    match host::repository() {
+        Ok(repo) => match repo.list_pending_fs_in_repo(&q.repo) {
+            Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        },
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
 pub async fn status(
     State(state): State<Arc<AppState>>,
     Query(q): Query<RepoQuery>,
@@ -91,7 +114,7 @@ pub async fn stage(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
-    match Repository::stage_file_in_repo(state.repo.as_ref(), &payload.repo, &payload.path) {
+    match Repository::stage_pending_in_repo(state.repo.as_ref(), &payload.repo, &payload.path) {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
     }
@@ -102,7 +125,30 @@ pub async fn stage_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     match host::repository() {
-        Ok(repo) => match repo.stage_file_in_repo(&payload.repo, &payload.path) {
+        Ok(repo) => match repo.stage_pending_in_repo(&payload.repo, &payload.path) {
+            Ok(_) => StatusCode::NO_CONTENT.into_response(),
+            Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        },
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+pub async fn discard_pending(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<PathPayload>,
+) -> impl IntoResponse {
+    match Repository::discard_pending_in_repo(state.repo.as_ref(), &payload.repo, &payload.path) {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+    }
+}
+
+pub async fn discard_pending_plugin_host(
+    State(_state): State<Arc<PluginHostState>>,
+    Json(payload): Json<PathPayload>,
+) -> impl IntoResponse {
+    match host::repository() {
+        Ok(repo) => match repo.discard_pending_in_repo(&payload.repo, &payload.path) {
             Ok(_) => StatusCode::NO_CONTENT.into_response(),
             Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
         },
