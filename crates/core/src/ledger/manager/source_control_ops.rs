@@ -55,7 +55,15 @@ impl RepoManager {
 
     /// 获取提交历史
     pub fn list_commits(&self, limit: u32) -> Result<Vec<CommitInfo>> {
-        source_control::list_commits(&self.local_db, limit)
+        self.list_commits_in_local_repo(self.local_repo_name(), limit)
+    }
+
+    pub fn list_commits_in_local_repo(
+        &self,
+        repo_name: &str,
+        limit: u32,
+    ) -> Result<Vec<CommitInfo>> {
+        self.run_on_local_repo(repo_name, |db| source_control::list_commits(db, limit))
     }
 
     /// 获取文档的已提交内容 (用于 Diff)

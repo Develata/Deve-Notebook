@@ -39,18 +39,33 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
             get(handlers::source_control::http::status),
         )
         .route("/api/sc/diff", get(handlers::source_control::http::diff))
-        .route("/api/sc/stage", post(handlers::source_control::http::stage))
+        .route(
+            "/api/sc/commits",
+            get(handlers::source_control::http_commits::commit_history),
+        )
+        .route(
+            "/api/sc/commit-diff",
+            get(handlers::source_control::http_commits::commit_diff),
+        )
+        .route(
+            "/api/sc/stage",
+            post(handlers::source_control::http_mutations::stage),
+        )
         .route(
             "/api/sc/stage-pending",
-            post(handlers::source_control::http::stage),
+            post(handlers::source_control::http_mutations::stage),
+        )
+        .route(
+            "/api/sc/unstage",
+            post(handlers::source_control::http_mutations::unstage),
         )
         .route(
             "/api/sc/discard-pending",
-            post(handlers::source_control::http::discard_pending),
+            post(handlers::source_control::http_mutations::discard_pending),
         )
         .route(
             "/api/sc/commit",
-            post(handlers::source_control::http::commit),
+            post(handlers::source_control::http_mutations::commit),
         )
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))

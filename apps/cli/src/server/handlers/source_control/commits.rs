@@ -1,6 +1,5 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
@@ -44,9 +43,8 @@ pub async fn handle_get_commit_history(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match run_on_resolved_local_repo(state, &scope, |db| {
-        deve_core::ledger::source_control::list_commits(db, limit)
-    }) {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::list_commit_history(state.repo.as_ref(), &selector, limit) {
         Ok(commits) => {
             tracing::info!("Returning {} commits", commits.len());
             ch.unicast(ServerMessage::CommitHistory { commits });
@@ -70,9 +68,13 @@ pub async fn handle_get_commit_diff(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match run_on_resolved_local_repo(state, &scope, |db| {
-        deve_core::source_control::commit_diff::compare_commits(db, commit_a.as_deref(), &commit_b)
-    }) {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::diff_commits(
+        state.repo.as_ref(),
+        &selector,
+        commit_a.as_deref(),
+        &commit_b,
+    ) {
         Ok(diffs) => {
             tracing::info!("Returning diff with {} file changes", diffs.len());
             ch.unicast(ServerMessage::CommitDiffResult { diffs });

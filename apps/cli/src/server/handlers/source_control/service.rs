@@ -1,7 +1,7 @@
 use crate::server::repo_scope::ResolvedRepo;
 use anyhow::Result;
 use deve_core::ledger::traits::{RepoSelector, Repository};
-use deve_core::source_control::{ChangeEntry, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use std::collections::HashSet;
 
 pub fn selector_from_scope(scope: &ResolvedRepo) -> RepoSelector {
@@ -50,6 +50,41 @@ pub fn discard_pending(
     let path = deve_core::utils::path::to_forward_slash(path);
     repo.discard_pending_in_repo(selector, &path)?;
     Ok(path)
+}
+
+pub fn unstage_file(repo: &dyn Repository, selector: &RepoSelector, path: &str) -> Result<String> {
+    let path = deve_core::utils::path::to_forward_slash(path);
+    repo.unstage_file_in_repo(selector, &path)?;
+    Ok(path)
+}
+
+pub fn unstage_many(
+    repo: &dyn Repository,
+    selector: &RepoSelector,
+    paths: Vec<String>,
+) -> Result<Vec<String>> {
+    let paths = normalized_unique_paths(paths);
+    for path in &paths {
+        repo.unstage_file_in_repo(selector, path)?;
+    }
+    Ok(paths)
+}
+
+pub fn list_commit_history(
+    repo: &dyn Repository,
+    selector: &RepoSelector,
+    limit: u32,
+) -> Result<Vec<CommitInfo>> {
+    repo.list_commits_in_repo(selector, limit)
+}
+
+pub fn diff_commits(
+    repo: &dyn Repository,
+    selector: &RepoSelector,
+    commit_a_id: Option<&str>,
+    commit_b_id: &str,
+) -> Result<Vec<CommitFileDiff>> {
+    repo.diff_commits_in_repo(selector, commit_a_id, commit_b_id)
 }
 
 pub fn commit_staged(

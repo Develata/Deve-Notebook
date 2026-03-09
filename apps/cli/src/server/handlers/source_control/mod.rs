@@ -8,6 +8,8 @@ pub mod conflict;
 pub mod diff;
 pub mod discard;
 pub mod http;
+pub mod http_commits;
+pub mod http_mutations;
 mod repo_scope;
 mod service;
 pub mod staging;

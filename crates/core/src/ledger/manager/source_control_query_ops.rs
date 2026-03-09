@@ -101,10 +101,19 @@ impl RepoManager {
         commit_a_id: Option<&str>,
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>> {
-        crate::source_control::commit_diff::compare_commits(
-            &self.local_db,
-            commit_a_id,
-            commit_b_id,
-        )
+        self.diff_commits_in_local_repo(self.local_repo_name(), commit_a_id, commit_b_id)
+    }
+
+    pub fn diff_commits_in_local_repo(
+        &self,
+        repo_name: &str,
+        commit_a_id: Option<&str>,
+        commit_b_id: &str,
+    ) -> Result<Vec<CommitFileDiff>> {
+        let commit_a = commit_a_id.map(str::to_owned);
+        let commit_b = commit_b_id.to_owned();
+        self.run_on_local_repo(repo_name, |db| {
+            crate::source_control::commit_diff::compare_commits(db, commit_a.as_deref(), &commit_b)
+        })
     }
 }

@@ -2,7 +2,6 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 /// 暂存指定文件
@@ -36,16 +35,13 @@ pub async fn handle_unstage_file(
     session: &WsSession,
     path: String,
 ) {
-    let path = deve_core::utils::path::to_forward_slash(&path);
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match state
-        .repo
-        .unstage_file_in_local_repo(&scope.repo_name, &path)
-    {
-        Ok(()) => {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::unstage_file(state.repo.as_ref(), &selector, &path) {
+        Ok(path) => {
             tracing::info!("Unstaged file: {}", path);
             ch.unicast(ServerMessage::UnstageAck { path });
         }
@@ -88,26 +84,12 @@ pub async fn handle_unstage_files(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    let paths = normalized_unique_paths(paths);
-    for path in &paths {
-        if let Err(e) = state
-            .repo
-            .unstage_file_in_local_repo(&scope.repo_name, path)
-        {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::unstage_many(state.repo.as_ref(), &selector, paths) {
+        Ok(_) => super::changes::handle_get_changes(state, ch, session).await,
+        Err(e) => {
             tracing::error!("Failed to unstage files: {:?}", e);
             ch.send_error(e.to_string());
-            return;
         }
     }
-    super::changes::handle_get_changes(state, ch, session).await;
-}
-
-fn normalized_unique_paths(paths: Vec<String>) -> Vec<String> {
-    let mut seen = HashSet::new();
-    paths
-        .into_iter()
-        .map(|p| deve_core::utils::path::to_forward_slash(&p))
-        .filter(|p| !p.is_empty())
-        .filter(|p| seen.insert(p.clone()))
-        .collect()
 }
