@@ -16,7 +16,7 @@ use super::op_id::next_client_op_id;
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
-use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::{EditorContext, pending};
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use deve_core::security::RepoKey;
@@ -48,6 +48,7 @@ pub fn use_editor(
     let set_load_state = core.set_load_state;
     let set_load_progress = core.set_load_progress;
     let set_load_eta_ms = core.set_load_eta_ms;
+    let set_pending_local_edits = core.set_pending_local_edits;
 
     // 回放状态
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
@@ -105,6 +106,7 @@ pub fn use_editor(
                 open_request_id,
                 ws: &ws_clone_2,
                 set_content,
+                pending_local_edits: core.pending_local_edits,
                 local_version,
                 set_local_version,
                 set_history,
@@ -147,11 +149,20 @@ pub fn use_editor(
                 for delta in deltas {
                     let ops = delta.to_ops();
                     for op in ops {
+                        let client_op_id = next_client_op_id();
+                        set_pending_local_edits.update(|pending_edits| {
+                            pending::push_pending_edit(
+                                pending_edits,
+                                doc_id,
+                                client_op_id,
+                                op.clone(),
+                            );
+                        });
                         ws_for_update.send(ClientMessage::Edit {
                             doc_id,
                             op: op.clone(),
                             client_id,
-                            client_op_id: next_client_op_id(),
+                            client_op_id,
                         });
                     }
                 }

@@ -5,6 +5,7 @@ use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteContent, applyRemoteOpsBatch, getEditorContent};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
+use crate::hooks::use_core::pending;
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -62,6 +63,7 @@ pub(super) fn handle_snapshot(
     let set_load_state = ctx.set_load_state;
     let open_request_id = ctx.open_request_id;
     let on_stats = ctx.on_stats;
+    let pending_local_edits = ctx.pending_local_edits;
 
     let apply_batch = std::rc::Rc::new(move |batch: &[(u64, Op)]| {
         if open_request_id.get_untracked() != request_id {
@@ -99,6 +101,7 @@ pub(super) fn handle_snapshot(
         if open_request_id.get_untracked() != request_id {
             return;
         }
+        replay_pending_overlay(doc_id, pending_local_edits);
         let txt = getEditorContent();
         emit_stats(on_stats, &txt);
         set_content.set(txt);
@@ -131,6 +134,10 @@ pub(super) fn handle_snapshot(
 fn finalize_load(ctx: &SyncContext, version: u64, load_start: f64) {
     ctx.set_local_version.set(version);
     ctx.set_playback_version.set(version);
+    replay_pending_overlay(ctx.doc_id, ctx.pending_local_edits);
+    let txt = getEditorContent();
+    emit_stats(ctx.on_stats, &txt);
+    ctx.set_content.set(txt);
     ctx.set_load_state.set("ready".to_string());
     ctx.set_load_progress.set((0, 0));
     ctx.set_load_eta_ms.set(0);
@@ -143,6 +150,19 @@ fn finalize_load(ctx: &SyncContext, version: u64, load_start: f64) {
         doc_id: ctx.doc_id,
         request_id: ctx.open_request_id.get_untracked(),
     });
+}
+
+fn replay_pending_overlay(
+    doc_id: deve_core::models::DocId,
+    pending_local_edits: ReadSignal<crate::hooks::use_core::pending::PendingLocalEdits>,
+) {
+    let ops = pending::cloned_ops_for_doc(&pending_local_edits.get_untracked(), doc_id);
+    if ops.is_empty() {
+        return;
+    }
+    if let Ok(json) = serde_json::to_string(&ops) {
+        applyRemoteOpsBatch(&json);
+    }
 }
 
 fn emit_stats(on_stats: Option<Callback<EditorStats>>, text: &str) {

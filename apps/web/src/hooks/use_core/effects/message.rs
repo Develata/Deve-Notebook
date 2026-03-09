@@ -10,6 +10,7 @@ use std::rc::Rc;
 use super::super::apply::apply_tree_delta;
 use super::super::effects_msg;
 use super::super::effects_sc;
+use super::super::pending;
 use super::super::state::CoreSignals;
 
 /// 设置消息处理 Effect。
@@ -21,6 +22,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
     let set_current_doc = signals.set_current_doc;
     let set_peers = signals.set_peers;
     let set_handshake_ready = signals.set_handshake_ready;
+    let set_pending_local_edits = signals.set_pending_local_edits;
     let set_plugin_response = signals.set_plugin_response;
     let set_search_results = signals.set_search_results;
     let set_sync_mode = signals.set_sync_mode;
@@ -153,7 +155,15 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                 ServerMessage::TreeUpdate(delta) => {
                     set_tree_nodes.update(|nodes| apply_tree_delta(nodes, delta));
                 }
-                ServerMessage::Ack { .. } => {}
+                ServerMessage::Ack {
+                    doc_id,
+                    client_op_id,
+                    ..
+                } => {
+                    set_pending_local_edits.update(|pending_edits| {
+                        let _ = pending::ack_pending_edit(pending_edits, doc_id, client_op_id);
+                    });
+                }
                 ServerMessage::Error(error) => {
                     leptos::logging::error!("Server error: {}", error);
                 }

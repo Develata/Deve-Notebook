@@ -3,6 +3,7 @@
 
 use crate::api::WsService;
 use crate::editor::EditorStats;
+use crate::hooks::use_core::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op};
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
@@ -20,6 +21,7 @@ pub struct SyncContext<'a> {
     pub ws: &'a WsService,
     // 内容信号
     pub set_content: WriteSignal<String>,
+    pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     // 版本追踪
     pub local_version: ReadSignal<u64>,
     pub set_local_version: WriteSignal<u64>,
