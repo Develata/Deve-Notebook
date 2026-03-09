@@ -12,6 +12,7 @@ pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
 pub mod effects_sc;
+pub mod pending;
 mod provide;
 pub mod state;
 mod state_build;

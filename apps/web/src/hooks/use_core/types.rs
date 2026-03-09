@@ -11,6 +11,7 @@ use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::diff_session::DiffSessionWire;
+use super::pending::PendingLocalEdits;
 use super::state::PluginResponse;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +42,8 @@ pub struct CoreState {
     // P2P 状态
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     pub handshake_ready: ReadSignal<bool>,
+    pub pending_local_edits: ReadSignal<PendingLocalEdits>,
+    pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
 
     pub on_doc_select: Callback<DocId>,
     pub on_doc_create: Callback<String>,

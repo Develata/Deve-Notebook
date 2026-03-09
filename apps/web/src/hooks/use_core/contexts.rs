@@ -8,6 +8,7 @@
 
 pub use super::dashboard_context::{DashboardContext, SystemMetricsData};
 use super::diff_session::DiffSessionWire;
+use super::pending::PendingLocalEdits;
 use super::state::PluginResponse;
 use super::types::ChatMessage;
 use crate::editor::EditorStats;
@@ -50,6 +51,8 @@ pub struct EditorContext {
     pub set_playback_version: WriteSignal<u64>,
     pub is_spectator: Signal<bool>,
     pub handshake_ready: ReadSignal<bool>,
+    pub pending_local_edits: ReadSignal<PendingLocalEdits>,
+    pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
 }
 
 /// AI 聊天与插件上下文

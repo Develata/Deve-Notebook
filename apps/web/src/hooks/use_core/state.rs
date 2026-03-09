@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 use super::contexts::SystemMetricsData;
 use super::diff_session::DiffSessionWire;
+use super::pending::PendingLocalEdits;
 use super::types::{ChatMessage, PeerSession};
 
 pub use super::state_init::init_signals;
@@ -39,6 +40,8 @@ pub struct CoreSignals {
     pub set_peers: WriteSignal<HashMap<PeerId, PeerSession>>,
     pub handshake_ready: ReadSignal<bool>,
     pub set_handshake_ready: WriteSignal<bool>,
+    pub pending_local_edits: ReadSignal<PendingLocalEdits>,
+    pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
 
     // 插件
     pub plugin_response: ReadSignal<PluginResponse>,

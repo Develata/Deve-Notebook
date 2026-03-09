@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use super::contexts::SystemMetricsData;
 use super::diff_session::DiffSessionWire;
+use super::pending::PendingLocalEdits;
 use super::state::{CoreSignals, PluginResponse};
 use super::types::PeerSession;
 
@@ -24,6 +25,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (stats, set_stats) = signal(EditorStats::default());
     let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
     let (handshake_ready, set_handshake_ready) = signal(false);
+    let (pending_local_edits, set_pending_local_edits) = signal(PendingLocalEdits::new());
     let (plugin_response, set_plugin_response) = signal(PluginResponse::default());
     let (chat_messages, set_chat_messages) = signal(Vec::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
@@ -68,6 +70,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_peers,
         handshake_ready,
         set_handshake_ready,
+        pending_local_edits,
+        set_pending_local_edits,
         plugin_response,
         set_plugin_response,
         chat_messages,
