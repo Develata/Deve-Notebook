@@ -12,13 +12,13 @@ pub async fn handle_stage_file(
     session: &WsSession,
     path: String,
 ) {
-    let path = deve_core::utils::path::to_forward_slash(&path);
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match state.repo.stage_file_in_local_repo(&scope.repo_name, &path) {
-        Ok(()) => {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::stage_pending(state.repo.as_ref(), &selector, &path) {
+        Ok(path) => {
             tracing::info!("Staged file: {}", path);
             ch.unicast(ServerMessage::StageAck { path });
         }
@@ -67,15 +67,14 @@ pub async fn handle_stage_files(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    let paths = normalized_unique_paths(paths);
-    for path in &paths {
-        if let Err(e) = state.repo.stage_file_in_local_repo(&scope.repo_name, path) {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::stage_pending_many(state.repo.as_ref(), &selector, paths) {
+        Ok(_) => super::changes::handle_get_changes(state, ch, session).await,
+        Err(e) => {
             tracing::error!("Failed to stage files: {:?}", e);
             ch.send_error(e.to_string());
-            return;
         }
     }
-    super::changes::handle_get_changes(state, ch, session).await;
 }
 
 /// 批量取消暂存文件

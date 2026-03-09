@@ -9,6 +9,7 @@ pub mod diff;
 pub mod discard;
 pub mod http;
 mod repo_scope;
+mod service;
 pub mod staging;
 
 pub use changes::*;

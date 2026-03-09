@@ -16,10 +16,8 @@ pub async fn handle_commit(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match state
-        .repo
-        .commit_staged_in_local_repo(&scope.repo_name, &message)
-    {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::commit_staged(state.repo.as_ref(), &selector, &message) {
         Ok(info) => {
             tracing::info!("Created commit: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {
@@ -85,10 +83,8 @@ pub async fn handle_get_commit_diff(
         }
     }
 }
+
 /// 提交并推送到所有已连接的 Peer
-///
-/// **流程**: 创建本地提交，成功后广播 CommitAck。
-/// P2P 同步由现有的 SyncHello 握手机制自动触发。
 pub async fn handle_commit_and_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -99,10 +95,8 @@ pub async fn handle_commit_and_push(
         Ok(scope) => scope,
         Err(e) => return ch.send_error(e.to_string()),
     };
-    match state
-        .repo
-        .commit_staged_in_local_repo(&scope.repo_name, &message)
-    {
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::commit_staged(state.repo.as_ref(), &selector, &message) {
         Ok(info) => {
             tracing::info!("Commit & Push: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {

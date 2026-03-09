@@ -7,8 +7,6 @@ use deve_core::source_control::ChangeEntry;
 use std::sync::Arc;
 
 /// 获取变更列表 (暂存区 + 未暂存)
-///
-/// 使用 session 上下文确定当前仓库
 pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
     if session.is_readonly() {
         ch.unicast(ServerMessage::ChangesList {
@@ -34,31 +32,18 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
         }
     };
     let unstaged = detect_unstaged_changes(state, &scope);
-
     ch.unicast(ServerMessage::ChangesList { staged, unstaged });
 }
 
 /// 检测未暂存的变更
-///
-/// 从 pending_fs_ops 表读取 Watcher/Scan 检测到的变更，
-/// 过滤掉已在暂存区中的路径。
 ///
 /// **Invariant**: pending_fs_ops 是当前本地 repo 的 Working Directory 单一事实源。
 fn detect_unstaged_changes(
     state: &Arc<AppState>,
     scope: &crate::server::repo_scope::ResolvedRepo,
 ) -> Vec<ChangeEntry> {
-    let pending = match run_on_resolved_local_repo(state, scope, |db| {
-        let entries = deve_core::source_control::pending_fs::list_all(db)?;
-        Ok(entries
-            .into_iter()
-            .map(|e| ChangeEntry {
-                path: e.path,
-                status: e.change_type,
-                has_conflict: e.has_conflict,
-            })
-            .collect::<Vec<_>>())
-    }) {
+    let selector = super::service::selector_from_scope(scope);
+    let pending = match super::service::list_pending(state.repo.as_ref(), &selector) {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to list pending fs ops: {:?}", e);
@@ -75,9 +60,6 @@ fn detect_unstaged_changes(
 
     pending
         .into_iter()
-        .filter(|e| {
-            let normalized = deve_core::utils::path::to_forward_slash(&e.path);
-            !staged_paths.contains(&normalized)
-        })
+        .filter(|e| !staged_paths.contains(&deve_core::utils::path::to_forward_slash(&e.path)))
         .collect()
 }
