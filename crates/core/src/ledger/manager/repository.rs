@@ -51,11 +51,6 @@ impl Repository for RepoManager {
         self.diff_doc_path_in_local_repo(&repo_name, path)
     }
 
-    fn stage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        let repo_name = self.resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())?;
-        self.stage_file_in_local_repo(&repo_name, path)
-    }
-
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
         let repo_name = self.resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())?;
         self.list_commits_in_local_repo(&repo_name, limit)

@@ -27,14 +27,6 @@ pub(super) fn unstage_file(
     post_path(api, repo, "/api/sc/unstage", path)
 }
 
-pub(super) fn stage_file(
-    api: &RemoteSourceControlApi,
-    repo: &RepoSelector,
-    path: &str,
-) -> Result<()> {
-    post_path(api, repo, "/api/sc/stage", path)
-}
-
 fn post_path(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,

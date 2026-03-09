@@ -10,15 +10,6 @@ use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, pending_fs};
 use anyhow::Result;
 
 impl RepoManager {
-    /// 暂存指定文件
-    pub fn stage_file(&self, path: &str) -> Result<()> {
-        self.stage_file_in_local_repo(self.local_repo_name(), path)
-    }
-
-    pub fn stage_file_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.stage_pending_in_local_repo(repo_name, path)
-    }
-
     /// 取消暂存指定文件
     pub fn unstage_file(&self, path: &str) -> Result<()> {
         self.unstage_file_in_local_repo(self.local_repo_name(), path)

@@ -29,10 +29,6 @@ pub(super) fn build_router(state: Arc<PluginHostState>) -> Router {
             get(source_control::http_commits::commit_diff_plugin_host),
         )
         .route(
-            "/api/sc/stage",
-            post(source_control::http_mutations::stage_plugin_host),
-        )
-        .route(
             "/api/sc/stage-pending",
             post(source_control::http_mutations::stage_plugin_host),
         )

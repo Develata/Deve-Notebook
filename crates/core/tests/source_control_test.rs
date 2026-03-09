@@ -67,8 +67,8 @@ mod tests {
         let (_dir, repo) = new_repo();
         seed_pending(&repo, "notes/a.md", ChangeStatus::Modified, "a");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "b");
-        repo.stage_file("notes/a.md").expect("stage a");
-        repo.stage_file("notes/b.md").expect("stage b");
+        repo.stage_pending("notes/a.md").expect("stage a");
+        repo.stage_pending("notes/b.md").expect("stage b");
         let staged = repo.list_staged().expect("list staged");
         assert!(
             staged
@@ -97,8 +97,8 @@ mod tests {
         write_workspace_file(&dir, "notes/b.md", "world");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
-        repo.stage_file("notes/a.md").expect("stage a");
-        repo.stage_file("notes/b.md").expect("stage b");
+        repo.stage_pending("notes/a.md").expect("stage a");
+        repo.stage_pending("notes/b.md").expect("stage b");
         let c = repo.commit_staged("test commit").expect("commit staged");
         assert!(!c.id.is_empty());
         assert_eq!(c.message, "test commit");
@@ -113,11 +113,11 @@ mod tests {
         let (dir, repo) = new_repo();
         write_workspace_file(&dir, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
-        repo.stage_file("notes/a.md").expect("stage a");
+        repo.stage_pending("notes/a.md").expect("stage a");
         let c1 = repo.commit_staged("c1").expect("commit 1");
         write_workspace_file(&dir, "notes/b.md", "world");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
-        repo.stage_file("notes/b.md").expect("stage b");
+        repo.stage_pending("notes/b.md").expect("stage b");
         let c2 = repo.commit_staged("c2").expect("commit 2");
         let commits = repo.list_commits(10).expect("list commits");
         assert_eq!(commits.len(), 2);

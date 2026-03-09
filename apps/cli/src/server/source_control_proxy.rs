@@ -84,10 +84,6 @@ impl Repository for RemoteSourceControlApi {
         queries::diff_doc_path(self, repo, path)
     }
 
-    fn stage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        mutations::stage_file(self, repo, path)
-    }
-
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
         commits::list_commits(self, repo, limit)
     }

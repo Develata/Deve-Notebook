@@ -24,7 +24,6 @@ use deve_core::security::AuthConfig;
 /// CORS → 速率限制 → 安全头 → Extension 注入
 pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfig>) -> Router {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
-
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
     let api_limiter = rate_limit::RateLimiter::new(120, std::time::Duration::from_secs(60));
 
@@ -46,10 +45,6 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
         .route(
             "/api/sc/commit-diff",
             get(handlers::source_control::http_commits::commit_diff),
-        )
-        .route(
-            "/api/sc/stage",
-            post(handlers::source_control::http_mutations::stage),
         )
         .route(
             "/api/sc/stage-pending",

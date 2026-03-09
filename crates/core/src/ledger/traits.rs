@@ -23,7 +23,6 @@ pub trait Repository: Send + Sync {
     fn unstage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()>;
     fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>>;
     fn diff_doc_path_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<String>;
-    fn stage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()>;
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>>;
     fn diff_commits_in_repo(
         &self,
