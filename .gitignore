@@ -54,7 +54,6 @@ apps/web/public/katex/
 
 # Environment
 .env
-.env.*
 
 # Misc
 tmp/
