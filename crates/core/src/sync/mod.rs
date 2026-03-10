@@ -81,7 +81,8 @@ impl SyncManager {
     pub fn reconcile_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<bool> {
         if let Some(path_str) = self
             .repo
-            .get_path_by_docid_in_local_repo(repo_name, doc_id)?
+            .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+            .map(|meta| meta.path)
         {
             let file_path = self.repo.local_repo_workspace_path(repo_name, &path_str)?;
 
@@ -120,7 +121,8 @@ impl SyncManager {
     pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
         if let Some(path_str) = self
             .repo
-            .get_path_by_docid_in_local_repo(repo_name, doc_id)?
+            .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+            .map(|meta| meta.path)
         {
             let file_path = self.repo.local_repo_workspace_path(repo_name, &path_str)?;
             let rebuilt = rebuild::rebuild_local_doc_in_repo(&self.repo, repo_name, doc_id)?;
