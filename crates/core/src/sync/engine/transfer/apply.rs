@@ -18,10 +18,12 @@ impl SyncEngine {
             let seq = enc_op.seq;
             let entry = repo_key.decrypt(&enc_op)?;
 
-            if !reset_docs.contains(&entry.doc_id) {
+            if let Some(doc_id) = entry.doc_id
+                && !reset_docs.contains(&doc_id)
+            {
                 self.repo
-                    .reset_shadow_doc(&response.peer_id, &response.repo_id, &entry.doc_id)?;
-                reset_docs.insert(entry.doc_id);
+                    .reset_shadow_doc(&response.peer_id, &response.repo_id, &doc_id)?;
+                reset_docs.insert(doc_id);
             }
 
             self.repo

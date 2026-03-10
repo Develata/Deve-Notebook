@@ -50,7 +50,7 @@ fn apply_decrypted_entry(ctx: &SyncContext, entry: deve_core::models::LedgerEntr
         return;
     }
 
-    if entry.doc_id != ctx.doc_id {
+    if entry.doc_id != Some(ctx.doc_id) {
         return;
     }
     let Some(op) = entry.cloned_content_op() else {

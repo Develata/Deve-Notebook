@@ -60,15 +60,17 @@ fn append_generated_op_inner(
     let bytes = bincode::serialize(&entry)?;
 
     ops.insert(new_global_seq, bytes.as_slice())?;
-    doc_ops.insert(entry.doc_id.as_u128(), new_global_seq)?;
+    if let Some(doc_id) = entry.doc_id {
+        doc_ops.insert(doc_id.as_u128(), new_global_seq)?;
+    }
     if let Some(node_id) = entry.structure_node_id() {
         node_ops.insert(node_id.as_u128(), new_global_seq)?;
     }
     if let Some((client_id, client_op_id)) = client_ref {
-        client_ops.insert(
-            (entry.doc_id.as_u128(), client_id, client_op_id),
-            new_global_seq,
-        )?;
+        let doc_id = entry
+            .doc_id
+            .ok_or_else(|| anyhow::anyhow!("client op missing doc id"))?;
+        client_ops.insert((doc_id.as_u128(), client_id, client_op_id), new_global_seq)?;
     }
     peer_seqs.insert(key, next_local_seq)?;
     drop(peer_seqs);

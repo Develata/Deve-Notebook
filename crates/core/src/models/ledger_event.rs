@@ -100,7 +100,7 @@ impl LedgerEvent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LedgerEntry {
-    pub doc_id: DocId,
+    pub doc_id: Option<DocId>,
     pub event: LedgerEvent,
     pub timestamp: i64,
     pub peer_id: PeerId,
@@ -120,7 +120,7 @@ impl LedgerEntry {
         client_op_id: Option<u64>,
     ) -> Self {
         Self {
-            doc_id,
+            doc_id: Some(doc_id),
             event: LedgerEvent::content(op),
             timestamp,
             peer_id,
@@ -130,15 +130,9 @@ impl LedgerEntry {
         }
     }
 
-    pub fn new_structure(
-        doc_id: DocId,
-        op: StructureOp,
-        timestamp: i64,
-        peer_id: PeerId,
-        seq: u64,
-    ) -> Self {
+    pub fn new_structure(op: StructureOp, timestamp: i64, peer_id: PeerId, seq: u64) -> Self {
         Self {
-            doc_id,
+            doc_id: op.doc_id(),
             event: LedgerEvent::structure(op),
             timestamp,
             peer_id,

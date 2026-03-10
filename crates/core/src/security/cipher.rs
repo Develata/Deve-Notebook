@@ -100,7 +100,7 @@ impl RepoKey {
 /// - `nonce`: 用于 AES-GCM 解密的随机数。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedOp {
-    pub doc_id: DocId,
+    pub doc_id: Option<DocId>,
     pub seq: u64,
     pub ciphertext: Vec<u8>,
     pub nonce: Vec<u8>,

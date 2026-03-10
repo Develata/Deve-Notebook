@@ -1,11 +1,11 @@
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};
-use crate::models::{DocId, LedgerEntry, PeerId, StructureOp};
+use crate::models::{LedgerEntry, PeerId, StructureOp};
 use anyhow::Result;
 use redb::{Database, ReadableMultimapTable, ReadableTable};
 
 /// Invariants:
-/// - synthetic doc id 只允许存在于 Node 结构事件的 ledger append 桥接层。
-/// - 结构事件的真实身份仍然由 `StructureOp::node_id()` 决定。
+/// - 结构事件的真实身份由 `StructureOp` payload 决定。
+/// - 目录结构事件不得再伪造 doc id 参与 doc 路由。
 pub fn append_generated_structure_op(
     db: &Database,
     peer_id: PeerId,
@@ -13,7 +13,6 @@ pub fn append_generated_structure_op(
     timestamp: i64,
 ) -> Result<(u64, u64)> {
     let node_id = structure.node_id();
-    let doc_id = DocId::from_u128(node_id.as_u128());
     let peer_key = peer_id.as_str().to_string();
     let write_txn = db.begin_write()?;
     let mut node_seqs = write_txn.open_table(NODE_PEER_SEQ)?;
@@ -23,14 +22,16 @@ pub fn append_generated_structure_op(
     } else {
         scan_node_peer_seq(&write_txn, node_id.as_u128(), &peer_id)? + 1
     };
-    let entry = LedgerEntry::new_structure(doc_id, structure, timestamp, peer_id, next_local_seq);
+    let entry = LedgerEntry::new_structure(structure, timestamp, peer_id, next_local_seq);
     let mut ops = write_txn.open_table(LEDGER_OPS)?;
     let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
     let mut node_ops = write_txn.open_multimap_table(NODE_OPS)?;
     let global_seq = ops.last()?.map(|(k, _)| k.value() + 1).unwrap_or(1);
     let bytes = bincode::serialize(&entry)?;
     ops.insert(global_seq, bytes.as_slice())?;
-    doc_ops.insert(doc_id.as_u128(), global_seq)?;
+    if let Some(doc_id) = entry.doc_id {
+        doc_ops.insert(doc_id.as_u128(), global_seq)?;
+    }
     node_ops.insert(node_id.as_u128(), global_seq)?;
     node_seqs.insert(key, next_local_seq)?;
     drop(node_seqs);

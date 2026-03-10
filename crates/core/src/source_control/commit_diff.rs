@@ -43,9 +43,12 @@ pub fn compare_commits(
     let path_map = build_path_map(db)?;
 
     for (_seq, entry) in &ops_range {
+        let Some(doc_id) = entry.doc_id else {
+            continue;
+        };
         affected_docs
-            .entry(entry.doc_id)
-            .or_insert_with(|| path_map.get(&entry.doc_id).cloned().unwrap_or_default());
+            .entry(doc_id)
+            .or_insert_with(|| path_map.get(&doc_id).cloned().unwrap_or_default());
     }
 
     // 对每个受影响的 doc，重建两个时刻的内容
