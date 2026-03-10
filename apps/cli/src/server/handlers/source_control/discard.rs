@@ -111,6 +111,8 @@ fn apply_reverse_ops(
                 seq,
                 op: op.clone(),
                 timestamp: chrono::Utc::now().timestamp_millis(),
+                client_id: None,
+                client_op_id: None,
             },
             false,
         )?;

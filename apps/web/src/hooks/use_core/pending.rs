@@ -1,4 +1,5 @@
 use deve_core::models::{DocId, Op};
+use deve_core::protocol::ConfirmedOp;
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -64,7 +65,7 @@ pub fn cloned_pending_edits_for_doc(
 pub fn reconcile_with_history(
     pending: &mut PendingLocalEdits,
     doc_id: DocId,
-    history: &[(u64, Op)],
+    history: &[ConfirmedOp],
 ) -> usize {
     let (removed, empty) = {
         let Some(edits) = pending.get_mut(&doc_id) else {
@@ -81,7 +82,7 @@ pub fn reconcile_with_history(
     removed
 }
 
-fn unresolved_edits(edits: &[PendingLocalEdit], history: &[(u64, Op)]) -> Vec<PendingLocalEdit> {
+fn unresolved_edits(edits: &[PendingLocalEdit], history: &[ConfirmedOp]) -> Vec<PendingLocalEdit> {
     let mut cursor = history.len();
     let mut kept = Vec::new();
 
@@ -97,11 +98,18 @@ fn unresolved_edits(edits: &[PendingLocalEdit], history: &[(u64, Op)]) -> Vec<Pe
     kept
 }
 
-fn find_history_match(edit: &PendingLocalEdit, history: &[(u64, Op)]) -> Option<usize> {
+fn find_history_match(edit: &PendingLocalEdit, history: &[ConfirmedOp]) -> Option<usize> {
     history
         .iter()
         .enumerate()
         .rev()
-        .find(|(_, (seq, op))| *seq > edit.base_version && *op == edit.op)
+        .find(|(_, entry)| {
+            entry.seq > edit.base_version
+                && entry.origin
+                    == Some(deve_core::protocol::ClientOrigin {
+                        client_id: edit.client_id,
+                        client_op_id: edit.client_op_id,
+                    })
+        })
         .map(|(idx, _)| idx)
 }

@@ -2,16 +2,16 @@ use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOpsBatch, getEditorContent};
 use crate::hooks::use_core::pending;
-use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
+use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 
-pub(super) fn handle_history(ctx: &SyncContext, ops: Vec<(u64, Op)>) {
-    let merged = merge_history_tail(ops, ctx.history.get_untracked());
-    ctx.set_history.set(merged.clone());
+pub(super) fn handle_history(ctx: &SyncContext, ops: Vec<ConfirmedOp>) {
     ctx.set_pending_local_edits.update(|pending_edits| {
-        let _ = pending::reconcile_with_history(pending_edits, ctx.doc_id, &merged);
+        let _ = pending::reconcile_with_history(pending_edits, ctx.doc_id, &ops);
     });
+    ctx.set_history
+        .set(merge_history_tail(&ops, ctx.history.get_untracked()));
     replay_pending_overlay(ctx);
 
     let txt = getEditorContent();
@@ -25,15 +25,18 @@ pub(super) fn handle_history(ctx: &SyncContext, ops: Vec<(u64, Op)>) {
     resend_pending_edits(ctx);
 }
 
-fn merge_history_tail(mut history: Vec<(u64, Op)>, live_history: Vec<(u64, Op)>) -> Vec<(u64, Op)> {
-    let mut last_seq = history.last().map(|(seq, _)| *seq).unwrap_or(0);
-    for (seq, op) in live_history {
-        if seq > last_seq {
-            history.push((seq, op));
-            last_seq = seq;
+fn merge_history_tail(
+    history: &[ConfirmedOp],
+    mut live_history: Vec<(u64, deve_core::models::Op)>,
+) -> Vec<(u64, deve_core::models::Op)> {
+    let mut last_seq = live_history.last().map(|(seq, _)| *seq).unwrap_or(0);
+    for entry in history {
+        if entry.seq > last_seq {
+            live_history.push((entry.seq, entry.op.clone()));
+            last_seq = entry.seq;
         }
     }
-    history
+    live_history
 }
 
 fn replay_pending_overlay(ctx: &SyncContext) {

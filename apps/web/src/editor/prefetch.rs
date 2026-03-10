@@ -1,4 +1,3 @@
-use deve_core::models::Op;
 use gloo_timers::callback::Timeout;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -10,12 +9,12 @@ pub struct PrefetchConfig {
 }
 
 /// 批量应用操作的回调类型
-pub type ApplyBatchFn = Rc<dyn Fn(&[(u64, Op)])>;
+pub type ApplyBatchFn<T> = Rc<dyn Fn(&[T])>;
 
-pub fn apply_ops_in_batches(
-    ops: Vec<(u64, Op)>,
+pub fn apply_ops_in_batches<T: 'static>(
+    ops: Vec<T>,
     config: PrefetchConfig,
-    apply_batch: ApplyBatchFn,
+    apply_batch: ApplyBatchFn<T>,
     on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
@@ -42,10 +41,10 @@ struct BatchState {
     target_ms: f64,
 }
 
-fn schedule_batch(
-    ops: Rc<Vec<(u64, Op)>>,
+fn schedule_batch<T: 'static>(
+    ops: Rc<Vec<T>>,
     state: Rc<RefCell<BatchState>>,
-    apply_batch: ApplyBatchFn,
+    apply_batch: ApplyBatchFn<T>,
     on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {
@@ -53,10 +52,10 @@ fn schedule_batch(
     Timeout::new(0, task).forget();
 }
 
-fn run_batch(
-    ops: Rc<Vec<(u64, Op)>>,
+fn run_batch<T: 'static>(
+    ops: Rc<Vec<T>>,
     state: Rc<RefCell<BatchState>>,
-    apply_batch: ApplyBatchFn,
+    apply_batch: ApplyBatchFn<T>,
     on_progress: Rc<dyn Fn(usize, usize, f64)>,
     on_done: Rc<dyn Fn()>,
 ) {

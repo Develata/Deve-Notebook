@@ -26,6 +26,8 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
             timestamp: 1000,
             peer_id: peer_id.clone(),
             seq,
+            client_id: Some(42),
+            client_op_id: Some(9),
         },
     )?;
 
@@ -40,5 +42,7 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
             content: "hello".into(),
         }
     );
+    assert_eq!(found.1.client_id, Some(42));
+    assert_eq!(found.1.client_op_id, Some(9));
     Ok(())
 }

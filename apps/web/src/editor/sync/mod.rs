@@ -1,8 +1,5 @@
 // apps/web/src/editor/sync/mod.rs
-//! # Sync Logic (同步逻辑)
-//!
-//! 处理来自 WebSocket 的 `ServerMessage`，分发至各子模块。
-//! 拆分为 context (参数打包) / snapshot (快照处理) / decrypt (E2EE) 子模块。
+//! 处理编辑器相关的同步消息。
 
 pub mod context;
 mod decrypt;
@@ -48,14 +45,12 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         }
         ServerMessage::NewOp {
             doc_id: msg_doc_id,
-            op,
-            seq,
-            client_id: origin_id,
+            entry,
         } => {
             if msg_doc_id != ctx.doc_id {
                 return;
             }
-            handle_new_op(ctx, op, seq, origin_id);
+            handle_new_op(ctx, entry);
         }
         ServerMessage::SyncHello {
             peer_id, vector: _, ..
@@ -93,15 +88,13 @@ fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
     }
 }
 
-fn handle_new_op(ctx: &SyncContext, op: deve_core::models::Op, seq: u64, origin_id: u64) {
-    let current_ver = ctx.local_version.get_untracked();
-    if seq <= current_ver {
+fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
+    if entry.seq <= ctx.local_version.get_untracked() {
         return;
     }
-
-    // 过滤回显 (Echoes)
-    if origin_id != ctx.client_id {
-        if let Ok(json) = serde_json::to_string(&op) {
+    let echoed = entry.origin.as_ref().map(|origin| origin.client_id) == Some(ctx.client_id);
+    if !echoed {
+        if let Ok(json) = serde_json::to_string(&entry.op) {
             applyRemoteOp(&json);
         }
         let txt = getEditorContent();
@@ -114,11 +107,9 @@ fn handle_new_op(ctx: &SyncContext, op: deve_core::models::Op, seq: u64, origin_
         }
         ctx.set_content.set(txt);
     }
-    ctx.set_local_version.set(seq);
-    ctx.set_history.update(|h| h.push((seq, op)));
-
-    // 如果处于 "head" (实时) 状态，自动推进回放
+    ctx.set_local_version.set(entry.seq);
+    ctx.set_history.update(|h| h.push((entry.seq, entry.op)));
     if !ctx.is_playback.get_untracked() {
-        ctx.set_playback_version.set(seq);
+        ctx.set_playback_version.set(entry.seq);
     }
 }

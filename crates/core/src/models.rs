@@ -187,6 +187,8 @@ pub struct LedgerEntry {
     pub peer_id: PeerId,
     /// Peer-specific causal sequence number (must be monotonic per peer)
     pub seq: u64,
+    pub client_id: Option<u64>,
+    pub client_op_id: Option<u64>,
 }
 
 /// 跨平台文件系统标识符

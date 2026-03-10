@@ -47,6 +47,8 @@ pub(crate) fn rebuild_local_doc_in_repo(
             timestamp: 0,
             peer_id: PeerId::new("snapshot"),
             seq: base_seq,
+            client_id: None,
+            client_op_id: None,
         });
     }
 

@@ -39,6 +39,8 @@ impl SyncEngine {
                 timestamp: chrono::Utc::now().timestamp_millis(),
                 peer_id: self.local_peer_id.clone(),
                 seq: latest_seq,
+                client_id: None,
+                client_op_id: None,
             };
 
             ops.push(repo_key.encrypt(&entry, latest_seq)?);

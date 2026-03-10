@@ -123,6 +123,8 @@ mod tests {
             timestamp: 12345,
             peer_id: crate::models::PeerId::new("test-peer"),
             seq: 1,
+            client_id: None,
+            client_op_id: None,
         };
 
         // Encrypt

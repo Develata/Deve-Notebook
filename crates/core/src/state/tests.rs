@@ -7,6 +7,8 @@ fn entry(op: Op) -> LedgerEntry {
         timestamp: 0,
         peer_id: PeerId::new("test"),
         seq: 0,
+        client_id: None,
+        client_op_id: None,
     }
 }
 

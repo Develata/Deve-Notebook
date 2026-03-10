@@ -66,6 +66,8 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
         timestamp: chrono::Utc::now().timestamp_millis(),
         peer_id: peer_a_id.clone(),
         seq: 1,
+        client_id: None,
+        client_op_id: None,
     };
 
     let seq = repo_a.append_local_op_in_local_repo(&repo_a_name, &entry)?;

@@ -127,6 +127,8 @@ mod tests {
                 timestamp: 1000,
                 peer_id: peer_id.clone(),
                 seq: 1,
+                client_id: None,
+                client_op_id: None,
             };
 
             // Direct write for testing

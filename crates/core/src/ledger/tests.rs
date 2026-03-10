@@ -72,6 +72,8 @@ fn test_local_and_shadow_isolation() -> Result<()> {
         timestamp: 1000,
         peer_id: peer_id.clone(),
         seq: 1,
+        client_id: None,
+        client_op_id: None,
     };
     repo.append_local_op(&local_entry)?;
 
@@ -85,6 +87,8 @@ fn test_local_and_shadow_isolation() -> Result<()> {
         timestamp: 2000,
         peer_id: peer_id.clone(),
         seq: 1,
+        client_id: None,
+        client_op_id: None,
     };
     repo.append_remote_op(&peer_id, &repo_id, &remote_entry)?;
 
@@ -132,6 +136,8 @@ fn test_snapshot_pruning() -> Result<()> {
             timestamp: 1000 + (*seq as i64),
             peer_id: peer_id.clone(),
             seq: *seq,
+            client_id: None,
+            client_op_id: None,
         };
         repo.append_local_op(&entry)?;
         repo.save_snapshot(doc_id, *seq, content)?;

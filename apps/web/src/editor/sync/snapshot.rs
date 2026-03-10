@@ -5,10 +5,10 @@ use super::context::SyncContext;
 use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use crate::editor::ffi::{applyRemoteContent, applyRemoteOpsBatch};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
-use deve_core::models::Op;
+use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 
-type BatchHandler = std::rc::Rc<dyn Fn(&[(u64, Op)])>;
+type BatchHandler = std::rc::Rc<dyn Fn(&[ConfirmedOp])>;
 type ProgressHandler = std::rc::Rc<dyn Fn(usize, usize, f64)>;
 
 /// 处理 ServerMessage::Snapshot
@@ -25,7 +25,7 @@ pub(super) fn handle_snapshot(
     new_content: String,
     base_seq: u64,
     version: u64,
-    delta_ops: Vec<(u64, Op)>,
+    delta_ops: Vec<ConfirmedOp>,
 ) {
     let load_start = now_ms();
 
@@ -78,20 +78,20 @@ fn build_apply_batch(ctx: &SyncContext, request_id: u64) -> BatchHandler {
     let open_request_id = ctx.open_request_id;
     let set_local_version = ctx.set_local_version;
     let set_history = ctx.set_history;
-    std::rc::Rc::new(move |batch: &[(u64, Op)]| {
+    std::rc::Rc::new(move |batch: &[ConfirmedOp]| {
         if open_request_id.get_untracked() != request_id {
             return;
         }
-        let ops_only: Vec<Op> = batch.iter().map(|(_, op)| op.clone()).collect();
+        let ops_only: Vec<_> = batch.iter().map(|entry| entry.op.clone()).collect();
         if let Ok(json) = serde_json::to_string(&ops_only) {
             applyRemoteOpsBatch(&json);
         }
-        if let Some((seq, _)) = batch.last() {
-            set_local_version.set(*seq);
+        if let Some(entry) = batch.last() {
+            set_local_version.set(entry.seq);
         }
         set_history.update(|history| {
-            for (seq, op) in batch {
-                history.push((*seq, op.clone()));
+            for entry in batch {
+                history.push((entry.seq, entry.op.clone()));
             }
         });
     })

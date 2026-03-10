@@ -42,6 +42,8 @@ pub fn handle_playback_change(
             timestamp: 0, // 时间戳对于重建无关紧要
             peer_id: deve_core::models::PeerId::new("playback"),
             seq: 0,
+            client_id: None,
+            client_op_id: None,
         })
         .collect();
 

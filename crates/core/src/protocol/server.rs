@@ -1,8 +1,9 @@
 // crates\core\src\protocol
 //! 服务端 WebSocket 消息协议。
 
+use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
-use crate::models::{DocId, Op, PeerId, RepoId, VersionVector};
+use crate::models::{DocId, PeerId, RepoId, VersionVector};
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
@@ -48,9 +49,7 @@ pub enum ServerMessage {
     },
     NewOp {
         doc_id: DocId,
-        op: Op,
-        seq: u64,
-        client_id: u64,
+        entry: ConfirmedOp,
     },
     Snapshot {
         doc_id: DocId,
@@ -58,12 +57,12 @@ pub enum ServerMessage {
         content: String,
         base_seq: u64,
         version: u64,
-        delta_ops: Vec<(u64, Op)>,
+        delta_ops: Vec<ConfirmedOp>,
     },
     History {
         doc_id: DocId,
         request_id: u64,
-        ops: Vec<(u64, Op)>,
+        ops: Vec<ConfirmedOp>,
     },
     DocList {
         docs: Vec<(DocId, String)>,

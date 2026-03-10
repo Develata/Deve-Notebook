@@ -43,6 +43,8 @@ pub fn append_patch_in_local_repo(
                 timestamp,
                 peer_id: peer_id.clone(),
                 seq,
+                client_id: None,
+                client_op_id: None,
             }
         })?;
     }

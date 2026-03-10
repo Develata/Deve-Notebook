@@ -56,6 +56,8 @@ fn inject_conflict(
                 timestamp: chrono::Utc::now().timestamp_millis(),
                 peer_id: peer_id.clone(),
                 seq: 99999, // High sequence number to simulate "latest"
+                client_id: None,
+                client_op_id: None,
             };
 
             repo.append_remote_op(&peer_id, &repo_id, &entry)?;

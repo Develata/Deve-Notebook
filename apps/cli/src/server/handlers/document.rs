@@ -1,5 +1,6 @@
 //! 文档消息处理器入口。
 
+mod confirmed;
 mod edit;
 mod history;
 mod open;

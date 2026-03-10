@@ -1,7 +1,7 @@
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, LedgerEntry, Op};
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 pub(super) async fn handle_edit(
@@ -70,6 +70,8 @@ pub(super) async fn handle_edit(
             timestamp: chrono::Utc::now().timestamp_millis(),
             peer_id: peer_id_clone.clone(),
             seq,
+            client_id: Some(client_id),
+            client_op_id: Some(client_op_id),
         },
     ) {
         Ok((_global_seq, local_seq)) => {
@@ -86,9 +88,14 @@ pub(super) async fn handle_edit(
             }
             ch.broadcast(ServerMessage::NewOp {
                 doc_id,
-                op,
-                seq: local_seq,
-                client_id,
+                entry: ConfirmedOp::new(
+                    local_seq,
+                    op,
+                    Some(ClientOrigin {
+                        client_id,
+                        client_op_id,
+                    }),
+                ),
             });
             ch.unicast(ServerMessage::Ack {
                 doc_id,

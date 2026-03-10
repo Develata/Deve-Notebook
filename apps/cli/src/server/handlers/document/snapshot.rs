@@ -1,6 +1,8 @@
-use deve_core::models::{DocId, LedgerEntry, Op};
+use super::confirmed;
+use deve_core::models::{DocId, LedgerEntry};
+use deve_core::protocol::ConfirmedOp;
 
-pub(super) type SnapshotPayload = (String, u64, Vec<(u64, Op)>, u64);
+pub(super) type SnapshotPayload = (String, u64, Vec<ConfirmedOp>, u64);
 
 pub(super) fn build_snapshot_payload(
     db: &redb::Database,
@@ -11,13 +13,8 @@ pub(super) fn build_snapshot_payload(
     let has_snapshot = snapshot.is_some();
     let (base_seq, content) = snapshot.unwrap_or((0, String::new()));
 
-    let delta_entries = deve_core::ledger::ops::get_ops_from_db_after(db, doc_id, base_seq)?;
-    let mut version = base_seq;
-    let mut delta_ops = Vec::new();
-    for (seq, entry) in delta_entries {
-        version = version.max(seq);
-        delta_ops.push((seq, entry.op));
-    }
+    let delta_ops = confirmed::load_doc_ops_after(db, doc_id, base_seq)?;
+    let version = delta_ops.last().map(|entry| entry.seq).unwrap_or(base_seq);
 
     if !has_snapshot || (content.is_empty() && base_seq == 0 && !delta_ops.is_empty()) {
         return rebuild_full_snapshot(db, doc_id, snapshot_depth);

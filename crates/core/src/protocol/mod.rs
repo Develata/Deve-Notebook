@@ -17,9 +17,11 @@
 
 pub mod auth;
 pub mod client;
+pub mod confirmed_op;
 pub mod error;
 pub mod server;
 
 pub use client::ClientMessage;
+pub use confirmed_op::{ClientOrigin, ConfirmedOp};
 pub use error::{ServerError, ServerErrorCode};
 pub use server::ServerMessage;
