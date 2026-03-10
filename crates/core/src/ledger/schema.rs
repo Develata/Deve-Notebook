@@ -25,6 +25,9 @@ pub const LEDGER_OPS: TableDefinition<u64, &[u8]> = TableDefinition::new("ledger
 // DocId (u128) -> Vec<u64> (Sequence Numbers) - Secondary Index
 pub const DOC_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("doc_ops");
 
+// NodeId (u128) -> Vec<u64> (Structure Fact Sequence Numbers)
+pub const NODE_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("node_ops");
+
 // DocId (u128) -> (Sequence (u64), Content (String)) - We might store multiple snapshots?
 // Ideally: (DocId, Seq) -> Content.
 // But Redb doesn't support Composite Key easily without serialization.

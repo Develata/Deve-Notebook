@@ -1,5 +1,5 @@
-use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEvent, StructureOp};
+use deve_core::ledger::{RepoManager, ops};
+use deve_core::models::{LedgerEvent, NodeId, StructureOp};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
@@ -24,15 +24,17 @@ fn seed_pending(repo: &RepoManager, entry: PendingFsEntry) {
         .expect("seed pending entry");
 }
 
-fn structure_ops(repo: &RepoManager, doc_id: DocId) -> Vec<StructureOp> {
-    repo.get_local_ops(doc_id)
-        .expect("load ops")
-        .into_iter()
-        .filter_map(|(_, entry)| match entry.event {
-            LedgerEvent::Structure(op) => Some(op),
-            LedgerEvent::Content(_) => None,
-        })
-        .collect()
+fn structure_ops(repo: &RepoManager, node_id: NodeId) -> Vec<StructureOp> {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        ops::get_structure_ops_for_node_from_db(db, node_id)
+    })
+    .expect("load ops")
+    .into_iter()
+    .filter_map(|(_, entry)| match entry.event {
+        LedgerEvent::Structure(op) => Some(op),
+        LedgerEvent::Content(_) => None,
+    })
+    .collect()
 }
 
 #[test]
@@ -58,7 +60,7 @@ fn commit_emits_create_and_rename_structure_facts() {
         .expect("lookup")
         .expect("doc id");
     assert!(
-        structure_ops(&repo, doc_id)
+        structure_ops(&repo, NodeId::from_doc_id(doc_id))
             .iter()
             .any(|op| matches!(op, StructureOp::CreateFile { .. }))
     );
@@ -93,8 +95,12 @@ fn commit_emits_create_and_rename_structure_facts() {
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("notes/b.md").expect("stage rename add");
     repo.commit_staged("rename").expect("commit rename");
-    assert!(structure_ops(&repo, doc_id).iter().any(|op| matches!(
-        op,
-        StructureOp::RenameNode { new_name, .. } if new_name == "b.md"
-    )));
+    assert!(
+        structure_ops(&repo, NodeId::from_doc_id(doc_id))
+            .iter()
+            .any(|op| matches!(
+                op,
+                StructureOp::RenameNode { new_name, .. } if new_name == "b.md"
+            ))
+    );
 }

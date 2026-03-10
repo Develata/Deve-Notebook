@@ -42,6 +42,18 @@ pub enum StructureOp {
     },
 }
 
+impl StructureOp {
+    pub fn node_id(&self) -> NodeId {
+        match self {
+            Self::CreateFile { node_id, .. }
+            | Self::CreateDir { node_id, .. }
+            | Self::RenameNode { node_id, .. }
+            | Self::MoveNode { node_id, .. }
+            | Self::DeleteNode { node_id } => *node_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LedgerEvent {
     Content(ContentOp),
@@ -128,5 +140,12 @@ impl LedgerEntry {
 
     pub fn cloned_content_op(&self) -> Option<ContentOp> {
         self.event.clone().into_content_op()
+    }
+
+    pub fn structure_node_id(&self) -> Option<NodeId> {
+        match &self.event {
+            LedgerEvent::Structure(op) => Some(op.node_id()),
+            LedgerEvent::Content(_) => None,
+        }
     }
 }

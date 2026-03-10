@@ -1,5 +1,5 @@
-use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEvent, StructureOp};
+use deve_core::ledger::{RepoManager, ops};
+use deve_core::models::{LedgerEvent, NodeId, StructureOp};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
@@ -64,7 +64,9 @@ fn delete_commit_emits_delete_structure_fact() {
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.commit_staged("delete").expect("commit delete");
     let facts = repo
-        .get_local_ops(doc_id)
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            ops::get_structure_ops_for_node_from_db(db, NodeId::from_doc_id(doc_id))
+        })
         .expect("load ops")
         .into_iter()
         .filter_map(|(_, entry)| match entry.event {

@@ -1,5 +1,5 @@
-use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEvent, StructureOp};
+use deve_core::ledger::{RepoManager, ops};
+use deve_core::models::{LedgerEvent, NodeId, StructureOp};
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -9,15 +9,17 @@ fn new_repo() -> (TempDir, RepoManager) {
     (dir, repo)
 }
 
-fn dir_ops(repo: &RepoManager, doc_id: DocId) -> Vec<StructureOp> {
-    repo.get_local_ops(doc_id)
-        .expect("load dir ops")
-        .into_iter()
-        .filter_map(|(_, entry)| match entry.event {
-            LedgerEvent::Structure(op) => Some(op),
-            LedgerEvent::Content(_) => None,
-        })
-        .collect()
+fn dir_ops(repo: &RepoManager, node_id: NodeId) -> Vec<StructureOp> {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        ops::get_structure_ops_for_node_from_db(db, node_id)
+    })
+    .expect("load dir ops")
+    .into_iter()
+    .filter_map(|(_, entry)| match entry.event {
+        LedgerEvent::Structure(op) => Some(op),
+        LedgerEvent::Content(_) => None,
+    })
+    .collect()
 }
 
 #[test]
@@ -26,12 +28,7 @@ fn dir_create_and_rename_emit_structure_facts() {
     let node_id = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir structure");
-    let event_doc_id = DocId::from_u128(node_id.as_u128());
-    let ops = dir_ops(&repo, event_doc_id);
-    assert!(
-        ops.iter()
-            .any(|op| matches!(op, StructureOp::CreateDir { name, .. } if name == "notes"))
-    );
+    let ops = dir_ops(&repo, node_id);
     assert!(
         ops.iter()
             .any(|op| matches!(op, StructureOp::CreateDir { name, .. } if name == "sub"))
@@ -44,7 +41,7 @@ fn dir_create_and_rename_emit_structure_facts() {
         "test",
     )
     .expect("rename dir structure");
-    let ops = dir_ops(&repo, event_doc_id);
+    let ops = dir_ops(&repo, node_id);
     assert!(
         ops.iter()
             .any(|op| matches!(op, StructureOp::MoveNode { .. }))
@@ -60,11 +57,10 @@ fn dir_delete_emits_delete_structure_fact() {
     let node_id = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir structure");
-    let event_doc_id = DocId::from_u128(node_id.as_u128());
     repo.apply_dir_delete_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("delete dir structure");
     assert!(
-        dir_ops(&repo, event_doc_id)
+        dir_ops(&repo, node_id)
             .iter()
             .any(|op| matches!(op, StructureOp::DeleteNode { .. }))
     );

@@ -188,6 +188,7 @@ pub fn init(
 /// - `INODE_TO_NODEID`: Inode -> NodeId 映射 (文件节点)
 /// - `LEDGER_OPS`: 操作日志表
 /// - `DOC_OPS`: 文档操作索引
+/// - `NODE_OPS`: 结构事实节点索引
 /// - `SNAPSHOT_INDEX`: 快照索引
 /// - `SNAPSHOT_DATA`: 快照数据
 fn init_core_tables(db: &Database) -> Result<()> {
@@ -201,6 +202,7 @@ fn init_core_tables(db: &Database) -> Result<()> {
         let _ = write_txn.open_table(INODE_TO_NODEID)?;
         let _ = write_txn.open_table(LEDGER_OPS)?;
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
+        let _ = write_txn.open_multimap_table(NODE_OPS)?;
         let _ = write_txn.open_table(CLIENT_OP_INDEX)?;
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
