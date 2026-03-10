@@ -52,6 +52,15 @@ pub(super) async fn handle(
         }
     };
 
+    if let Err(err) = state.repo.ensure_shadow_repo_binding(&peer_id, repo_id) {
+        tracing::warn!(
+            "Failed to align shadow repo metadata for peer {} repo {}: {:?}",
+            peer_id,
+            repo_id,
+            err
+        );
+    }
+
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
