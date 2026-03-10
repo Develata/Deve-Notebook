@@ -2,13 +2,12 @@
 //!
 //! Invariants:
 //! - Watcher 传入的路径必须先被解析为 `(repo_name, repo_id, repo_path)`。
-//! - 本地文件事件只能修改对应 repo 的 metadata / pending / tree 状态。
+//! - 外部文件事件只能更新 pending side table；不得提前改写权威 Ledger / Path 映射。
 
 use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
-use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::sync::recovery;
 use crate::vfs::Vfs;
 use anyhow::Result;
@@ -83,45 +82,56 @@ impl<'a> FsEventHandler<'a> {
                 recovered_id, old_path, repo_path
             );
             if old_path != repo_path {
-                self.repo
-                    .rename_doc_in_local_repo(self.repo_name, &old_path, repo_path)?;
+                self.bind_inode(&inode, recovered_id)?;
+                return self.record_external_rename(&old_path, repo_path);
             }
-            self.repo
-                .bind_inode_in_local_repo(self.repo_name, &inode, recovered_id)?;
+            self.bind_inode(&inode, recovered_id)?;
             self.sync_modified_pending(repo_path, recovered_id)?;
             return self.modified_refresh(repo_path);
         }
 
         info!("Handler: New file detected: {}", repo_path);
-        let doc_id = self
-            .repo
-            .create_docid_in_local_repo(self.repo_name, repo_path)?;
-        self.repo
-            .bind_inode_in_local_repo(self.repo_name, &inode, doc_id)?;
-        self.upsert_pending(repo_path, ChangeStatus::Added)?;
+        super::pending::upsert(self.repo, self.repo_name, repo_path, ChangeStatus::Added)?;
         let mut msgs = self.gen_list()?;
-        msgs.push(self.fs_change_msg(repo_path, "added"));
+        msgs.push(super::pending::message(
+            self.repo,
+            self.repo_name,
+            self.repo_id,
+            repo_path,
+            "added",
+        ));
         Ok(msgs)
     }
 
     fn handle_delete(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
-        if self
+        let had_pending_add =
+            super::pending::has_pending_added(self.repo, self.repo_name, repo_path)?;
+        let has_tracked_doc = self
             .repo
-            .get_docid_in_local_repo(self.repo_name, repo_path)?
-            .is_none()
-        {
+            .resolve_workdir_doc_id_in_local_repo(self.repo_name, repo_path)?
+            .is_some();
+
+        if !has_tracked_doc && !had_pending_add {
             return Ok(vec![]);
+        }
+        if had_pending_add && !has_tracked_doc {
+            super::pending::clear(self.repo, self.repo_name, repo_path)?;
+            return self.modified_refresh(repo_path);
         }
 
         warn!(
             "Handler: File gone: {}. Recording as pending delete.",
             repo_path
         );
-        self.repo
-            .delete_doc_in_local_repo(self.repo_name, repo_path)?;
-        self.upsert_pending(repo_path, ChangeStatus::Deleted)?;
+        super::pending::upsert(self.repo, self.repo_name, repo_path, ChangeStatus::Deleted)?;
         let mut msgs = self.gen_list()?;
-        msgs.push(self.fs_change_msg(repo_path, "deleted"));
+        msgs.push(super::pending::message(
+            self.repo,
+            self.repo_name,
+            self.repo_id,
+            repo_path,
+            "deleted",
+        ));
         Ok(msgs)
     }
 
@@ -136,9 +146,7 @@ impl<'a> FsEventHandler<'a> {
             && known_path != repo_path
         {
             info!("Handler: Rename detected {} -> {}", known_path, repo_path);
-            self.repo
-                .rename_doc_in_local_repo(self.repo_name, &known_path, repo_path)?;
-            return self.gen_list();
+            return self.record_external_rename(&known_path, repo_path);
         }
 
         info!("Handler: Content update detected for {}", repo_path);
@@ -148,7 +156,13 @@ impl<'a> FsEventHandler<'a> {
 
     fn modified_refresh(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
         let mut msgs = self.gen_list()?;
-        msgs.push(self.fs_change_msg(repo_path, "modified"));
+        msgs.push(super::pending::message(
+            self.repo,
+            self.repo_name,
+            self.repo_id,
+            repo_path,
+            "modified",
+        ));
         Ok(msgs)
     }
 
@@ -164,60 +178,26 @@ impl<'a> FsEventHandler<'a> {
         let disk_content = std::fs::read_to_string(&file_path).unwrap_or_default();
         let rebuilt = rebuild::rebuild_local_doc_in_repo(self.repo, self.repo_name, doc_id)?;
         if rebuilt.content == disk_content {
-            return self.repo.run_on_local_repo(self.repo_name, |db| {
-                let _ = pending_fs::remove(db, repo_path);
-                Ok(())
-            });
+            return super::pending::clear(self.repo, self.repo_name, repo_path);
         }
-        self.upsert_pending(repo_path, ChangeStatus::Modified)
+        super::pending::upsert(self.repo, self.repo_name, repo_path, ChangeStatus::Modified)
     }
 
-    fn upsert_pending(&self, repo_path: &str, status: ChangeStatus) -> Result<()> {
-        let hash = if status == ChangeStatus::Deleted {
-            String::new()
-        } else {
-            let file_path = self
-                .repo
-                .local_repo_workspace_path(self.repo_name, repo_path)?;
-            let content = std::fs::read_to_string(&file_path).unwrap_or_default();
-            pending_fs::content_hash(&content)
-        };
+    fn record_external_rename(&self, old_path: &str, new_path: &str) -> Result<Vec<ServerMessage>> {
+        super::pending::upsert(self.repo, self.repo_name, old_path, ChangeStatus::Deleted)?;
+        super::pending::upsert(self.repo, self.repo_name, new_path, ChangeStatus::Added)?;
+        Ok(vec![
+            super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted"),
+            super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added"),
+        ])
+    }
 
-        let has_conflict = match self
-            .repo
-            .get_docid_in_local_repo(self.repo_name, repo_path)?
-        {
-            Some(doc_id) => self.repo.run_on_local_repo(self.repo_name, |db| {
-                crate::source_control::conflict::check_conflict(db, doc_id, &hash)
-            })?,
-            None => false,
-        };
-
-        let entry = PendingFsEntry {
-            path: repo_path.to_string(),
-            change_type: status,
-            content_hash: hash,
-            detected_at: chrono::Utc::now().timestamp_millis(),
-            has_conflict,
-        };
+    fn bind_inode(
+        &self,
+        inode: &crate::models::FileNodeId,
+        doc_id: crate::models::DocId,
+    ) -> Result<()> {
         self.repo
-            .run_on_local_repo(self.repo_name, |db| pending_fs::upsert(db, &entry))
-    }
-
-    fn fs_change_msg(&self, path: &str, change_type: &str) -> ServerMessage {
-        let has_conflict = self
-            .repo
-            .run_on_local_repo(self.repo_name, |db| {
-                Ok(pending_fs::get(db, path)?
-                    .map(|e| e.has_conflict)
-                    .unwrap_or(false))
-            })
-            .unwrap_or(false);
-        ServerMessage::FsChangeDetected {
-            repo_id: Some(self.repo_id),
-            path: path.to_string(),
-            change_type: change_type.to_string(),
-            has_conflict,
-        }
+            .bind_inode_in_local_repo(self.repo_name, inode, doc_id)
     }
 }

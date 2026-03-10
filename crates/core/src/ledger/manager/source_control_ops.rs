@@ -139,6 +139,6 @@ impl RepoManager {
     }
 
     pub fn discard_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| pending_fs::remove(db, path))
+        self.discard_pending_workdir_in_local_repo(repo_name, path)
     }
 }

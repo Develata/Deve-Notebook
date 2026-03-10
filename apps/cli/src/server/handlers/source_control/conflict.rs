@@ -76,17 +76,12 @@ fn resolve_keep_ledger(
     scope: &crate::server::repo_scope::ResolvedRepo,
     path: &str,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    let committed = run_on_resolved_local_repo(state, scope, |db| {
-        let doc_id = deve_core::ledger::metadata::get_docid(db, path)?
-            .ok_or_else(|| anyhow::anyhow!("Document not found: {}", path))?;
-        Ok(
-            deve_core::source_control::changes::get_committed_content(db, doc_id)?
-                .unwrap_or_default(),
-        )
-    })
-    .map_err(|e| {
-        super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
-    })?;
+    let (projected, _) = state
+        .repo
+        .workdir_diff_inputs_in_local_repo(&scope.repo_name, path)
+        .map_err(|e| {
+            super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
+        })?;
 
     // 将 Ledger 内容写回磁盘
     let disk_path = local_repo_path(state, scope, path)
@@ -95,7 +90,7 @@ fn resolve_keep_ledger(
         std::fs::create_dir_all(parent)
             .map_err(|e| super::errors::storage_persist_failed(e.to_string()))?;
     }
-    std::fs::write(&disk_path, &committed)
+    std::fs::write(&disk_path, &projected)
         .map_err(|e| super::errors::storage_persist_failed(e.to_string()))?;
 
     // 移除 pending 条目

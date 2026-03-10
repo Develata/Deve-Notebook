@@ -3,7 +3,6 @@ mod remote;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
@@ -26,26 +25,22 @@ pub async fn handle_get_doc_diff(
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let (old_content, new_content) = match run_on_resolved_local_repo(state, &scope, |db| {
-        let doc_id = deve_core::ledger::metadata::get_docid(db, &path)?
-            .ok_or_else(|| anyhow::anyhow!("Document not found: {}", path))?;
-        let old_content = deve_core::source_control::changes::get_committed_content(db, doc_id)?
-            .unwrap_or_default();
-        let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
-        let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-        Ok((old_content, deve_core::state::reconstruct_content(&entries)))
-    }) {
+    let normalized = deve_core::utils::path::to_forward_slash(&path);
+    let (old_content, new_content) = match state
+        .repo
+        .workdir_diff_inputs_in_local_repo(&scope.repo_name, &normalized)
+    {
         Ok(payload) => payload,
         Err(e) => {
             return super::errors::send_ws(
                 ch,
-                super::errors::map_repo_error(super::errors::ScOp::DiffDoc(path.clone()), e),
+                super::errors::map_repo_error(super::errors::ScOp::DiffDoc(normalized.clone()), e),
             );
         }
     };
 
     ch.unicast(ServerMessage::DocDiff {
-        path,
+        path: normalized,
         old_content,
         new_content,
     });

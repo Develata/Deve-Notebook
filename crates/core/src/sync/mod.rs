@@ -7,6 +7,8 @@ pub mod handler;
 #[cfg(not(target_arch = "wasm32"))]
 mod materialize;
 #[cfg(not(target_arch = "wasm32"))]
+mod pending;
+#[cfg(not(target_arch = "wasm32"))]
 mod persist_guard;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]

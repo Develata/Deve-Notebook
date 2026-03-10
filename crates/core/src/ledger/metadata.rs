@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 //! # 元数据映射模块 (Metadata Mapping)
 //!
 //! 管理 Path/DocId/Inode 之间的映射关系。
@@ -36,6 +36,36 @@ pub fn create_docid(db: &Database, path: &str) -> Result<DocId> {
     write_txn.commit()?;
     node_meta::ensure_file_node(db, &normalized, id)?;
     Ok(id)
+}
+
+pub fn set_doc_path(db: &Database, doc_id: DocId, path: &str) -> Result<()> {
+    let normalized = to_forward_slash(path);
+    let write_txn = db.begin_write()?;
+    {
+        let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+        let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+
+        if let Some(existing) = p2d.get(&*normalized)?.map(|v| v.value())
+            && existing != doc_id.as_u128()
+        {
+            return Err(anyhow::anyhow!(
+                "Path already bound to another document: {}",
+                normalized
+            ));
+        }
+
+        if let Some(old_path) = d2p.get(doc_id.as_u128())?.map(|v| v.value().to_string())
+            && old_path != normalized
+        {
+            p2d.remove(&*old_path)?;
+        }
+
+        p2d.insert(&*normalized, doc_id.as_u128())?;
+        d2p.insert(doc_id.as_u128(), &*normalized)?;
+    }
+    write_txn.commit()?;
+    node_meta::ensure_file_node(db, &normalized, doc_id)?;
+    Ok(())
 }
 
 pub fn get_path_by_docid(db: &Database, doc_id: DocId) -> Result<Option<String>> {

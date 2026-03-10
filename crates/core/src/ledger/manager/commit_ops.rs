@@ -100,6 +100,7 @@ impl RepoManager {
             if let Some(doc_id) = snapshot_paths::find_snapshot_doc_id(db, normalized_path)? {
                 changes::remove_snapshot(db, doc_id)?;
             }
+            crate::ledger::metadata::delete_doc(db, normalized_path)?;
             Ok(())
         })
     }

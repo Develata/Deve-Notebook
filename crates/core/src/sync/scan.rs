@@ -69,7 +69,12 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
         }
         info!("SyncScan: Repo {} 检测到幽灵文件: {}", repo_name, repo_path);
         upsert_scan_pending(repo, repo_name, &repo_path, ChangeStatus::Deleted)?;
-        repo.delete_doc_in_local_repo(repo_name, &repo_path)?;
+    }
+
+    for pending in repo.list_pending_fs_in_local_repo(repo_name)? {
+        if pending.status == ChangeStatus::Added && !on_disk.contains(&pending.path) {
+            clear_scan_pending(repo, repo_name, &pending.path)?;
+        }
     }
     Ok(())
 }
@@ -81,18 +86,13 @@ fn scan_disk_file(
     repo_path: &str,
 ) -> Result<()> {
     let existing = repo.get_docid_in_local_repo(repo_name, repo_path)?;
-    let doc_id = match existing {
-        Some(doc_id) => doc_id,
-        None => repo.create_docid_in_local_repo(repo_name, repo_path)?,
+    let Some(doc_id) = existing else {
+        return upsert_scan_pending(repo, repo_name, repo_path, ChangeStatus::Added);
     };
 
     let root_rel = repo.local_repo_workspace_relative(repo_name, repo_path);
     if let Ok(Some(inode)) = vfs.get_inode(&root_rel) {
         repo.bind_inode_in_local_repo(repo_name, &inode, doc_id)?;
-    }
-
-    if existing.is_none() {
-        return upsert_scan_pending(repo, repo_name, repo_path, ChangeStatus::Added);
     }
 
     let disk_path = repo.local_repo_workspace_path(repo_name, repo_path)?;

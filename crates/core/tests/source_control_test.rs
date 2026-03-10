@@ -5,6 +5,9 @@ mod tests {
     use deve_core::ledger::RepoManager;
     use deve_core::source_control::pending_fs::{self, PendingFsEntry};
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
+    use deve_core::sync::scan;
+    use deve_core::vfs::Vfs;
+    use std::sync::Arc;
     use tempfile::{TempDir, tempdir};
 
     fn new_repo() -> (TempDir, RepoManager) {
@@ -36,6 +39,10 @@ mod tests {
             std::fs::create_dir_all(parent).expect("create workspace parent");
         }
         std::fs::write(abs, content).expect("write workspace file");
+    }
+
+    fn workspace_path(dir: &TempDir, path: &str) -> std::path::PathBuf {
+        dir.path().join("vault").join("default").join(path)
     }
 
     #[test]
@@ -157,5 +164,84 @@ mod tests {
         assert_eq!(staged.len(), 1);
         assert_eq!(staged[0].path, path);
         assert_eq!(staged[0].status, ChangeStatus::Added);
+    }
+
+    #[test]
+    fn test_discard_pending_modified_restores_ledger_projection() {
+        let (dir, repo) = new_repo();
+        write_workspace_file(&dir, "notes/a.md", "hello");
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+        repo.stage_pending("notes/a.md").expect("stage a");
+        repo.commit_staged("initial").expect("commit a");
+
+        write_workspace_file(&dir, "notes/a.md", "world");
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Modified, "world");
+        repo.discard_pending("notes/a.md")
+            .expect("discard modified");
+
+        let content =
+            std::fs::read_to_string(workspace_path(&dir, "notes/a.md")).expect("read restored");
+        assert_eq!(content, "hello");
+        assert!(
+            repo.list_pending_fs()
+                .expect("pending after discard")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_discard_pending_added_cleans_legacy_mapping() {
+        let (dir, repo) = new_repo();
+        write_workspace_file(&dir, "notes/new.md", "temp");
+        seed_pending(&repo, "notes/new.md", ChangeStatus::Added, "temp");
+        repo.create_docid("notes/new.md")
+            .expect("legacy provisional docid");
+
+        repo.discard_pending("notes/new.md").expect("discard added");
+
+        assert!(!workspace_path(&dir, "notes/new.md").exists());
+        assert!(
+            repo.get_docid("notes/new.md")
+                .expect("lookup docid")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_diff_doc_path_reads_workspace_content() {
+        let (dir, repo) = new_repo();
+        write_workspace_file(&dir, "notes/a.md", "hello");
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+        repo.stage_pending("notes/a.md").expect("stage a");
+        repo.commit_staged("initial").expect("commit a");
+
+        write_workspace_file(&dir, "notes/a.md", "world");
+        let diff = repo.diff_doc_path("notes/a.md").expect("workdir diff");
+        assert!(diff.contains("-hello"));
+        assert!(diff.contains("+world"));
+    }
+
+    #[test]
+    fn test_scan_marks_deleted_without_dropping_doc_mapping() {
+        let (dir, repo) = new_repo();
+        write_workspace_file(&dir, "notes/a.md", "hello");
+        seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+        repo.stage_pending("notes/a.md").expect("stage a");
+        repo.commit_staged("initial").expect("commit a");
+        std::fs::remove_file(workspace_path(&dir, "notes/a.md")).expect("remove workspace file");
+
+        let repo = Arc::new(repo);
+        let vfs = Vfs::new(dir.path().join("vault"));
+        scan::scan_vault(&repo, &vfs, &dir.path().join("vault")).expect("scan vault");
+
+        assert!(
+            repo.get_docid("notes/a.md")
+                .expect("docid lookup")
+                .is_some()
+        );
+        let pending = repo.list_pending_fs().expect("pending after scan");
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].path, "notes/a.md");
+        assert_eq!(pending[0].status, ChangeStatus::Deleted);
     }
 }
