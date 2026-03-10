@@ -97,3 +97,21 @@ fn append_remote_structure_updates_shadow_projection() {
         2
     );
 }
+
+#[test]
+fn remote_repo_info_falls_back_to_repo_id_when_metadata_missing() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+
+    repo.ensure_shadow_db(&peer_id, &repo_id)
+        .expect("ensure shadow db");
+
+    let info = repo
+        .get_repo_info_for(Some(&peer_id), Some(&repo_id.to_string()))
+        .expect("read remote repo info")
+        .expect("fallback repo info");
+    assert_eq!(info.uuid, repo_id);
+    assert_eq!(info.name, repo_id.to_string());
+    assert_eq!(info.url, None);
+}

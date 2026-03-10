@@ -22,6 +22,7 @@ mod ops_ops;
 mod ops_structure;
 mod repo_db;
 mod repo_info;
+mod repo_lookup;
 mod repository;
 mod snapshot_ops;
 mod source_control_api;

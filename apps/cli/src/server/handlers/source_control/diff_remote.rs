@@ -34,8 +34,18 @@ pub(super) async fn handle_remote_diff(
         .get_repo_url(session.active_branch.as_ref(), &scope.repo_name)
         .ok()
         .flatten();
-    let local_repo_name =
-        remote_url.and_then(|url| state.repo.find_local_repo_name_by_url(&url).ok().flatten());
+    let local_repo_name = session
+        .active_repo_id
+        .and_then(|repo_id| {
+            state
+                .repo
+                .find_local_repo_name_by_id(repo_id)
+                .ok()
+                .flatten()
+        })
+        .or_else(|| {
+            remote_url.and_then(|url| state.repo.find_local_repo_name_by_url(&url).ok().flatten())
+        });
     let old_content = get_local_counterpart(state, &path, local_repo_name);
 
     ch.unicast(ServerMessage::DocDiff {
