@@ -6,7 +6,7 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::{doc_lookup, metadata, node_meta};
-use crate::models::DocId;
+use crate::models::{DocId, NodeMeta};
 use anyhow::Result;
 
 impl RepoManager {
@@ -41,6 +41,18 @@ impl RepoManager {
             Some(path) => Ok(Some(path)),
             None => metadata::get_path_by_docid(db, doc_id),
         })
+    }
+
+    pub fn get_file_meta_for_doc(&self, doc_id: DocId) -> Result<Option<NodeMeta>> {
+        node_meta::file_meta_for_doc(&self.local_db, doc_id)
+    }
+
+    pub fn get_file_meta_for_doc_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+    ) -> Result<Option<NodeMeta>> {
+        self.run_on_local_repo(repo_name, |db| node_meta::file_meta_for_doc(db, doc_id))
     }
 
     /// 根据 Inode 获取 DocId

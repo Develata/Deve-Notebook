@@ -3,6 +3,8 @@ use crate::models::{DocId, NodeId, NodeKind, NodeMeta, StructureOp};
 use anyhow::{Result, anyhow};
 use redb::Database;
 
+use super::structure_projection_support::{child_path, ensure_doc_match, load_meta};
+
 #[cfg(test)]
 #[path = "projection_cleanup_test.rs"]
 mod tests;
@@ -107,34 +109,7 @@ fn rename_path(db: &Database, meta: &NodeMeta, new_path: String) -> Result<()> {
         return Ok(());
     }
     match meta.doc_id {
-        Some(doc_id) => metadata::set_doc_path(db, doc_id, &new_path),
+        Some(_) => metadata::rename_doc(db, &meta.path, &new_path),
         None => node_meta::rename_path_prefix(db, &meta.path, &new_path),
     }
-}
-
-fn child_path(db: &Database, parent_id: Option<NodeId>, name: &str) -> Result<String> {
-    if let Some(parent_id) = parent_id {
-        let parent = load_meta(db, parent_id, None)?;
-        return Ok(format!("{}/{}", parent.path, name));
-    }
-    Ok(name.to_string())
-}
-
-fn load_meta(db: &Database, node_id: NodeId, doc_id: Option<DocId>) -> Result<NodeMeta> {
-    let meta = node_meta::get_node_meta(db, node_id)?
-        .ok_or_else(|| anyhow!("node meta missing for {}", node_id))?;
-    ensure_doc_match(node_id, meta.doc_id, doc_id)?;
-    Ok(meta)
-}
-
-fn ensure_doc_match(node_id: NodeId, actual: Option<DocId>, expected: Option<DocId>) -> Result<()> {
-    if actual != expected {
-        return Err(anyhow!(
-            "structure doc mismatch for {}: actual={:?}, expected={:?}",
-            node_id,
-            actual,
-            expected
-        ));
-    }
-    Ok(())
 }

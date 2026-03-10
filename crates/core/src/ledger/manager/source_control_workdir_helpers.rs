@@ -39,7 +39,8 @@ pub(super) fn discard_tracked_add(
         std::fs::remove_file(&file_path)?;
     }
     let canonical_path = repo
-        .get_path_by_docid_in_local_repo(repo_name, doc_id)?
+        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+        .map(|meta| meta.path)
         .ok_or_else(|| anyhow::anyhow!("Document not found: {}", doc_id))?;
     let canonical_abs = repo.local_repo_workspace_path(repo_name, &canonical_path)?;
     if let Some(parent) = canonical_abs.parent() {

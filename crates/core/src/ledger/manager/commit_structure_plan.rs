@@ -17,8 +17,7 @@ pub(super) fn plan_file_upsert(
 ) -> Result<StructuredCommitTarget> {
     let doc_id = resolve_doc_id(repo, repo_name, path, doc_id_hint)?;
     let (mut ops, parent_id, name) = plan_parent_chain(repo, repo_name, path)?;
-    let current_path = repo.get_path_by_docid_in_local_repo(repo_name, doc_id)?;
-    if current_path.is_none() {
+    let Some(meta) = current_meta(repo, repo_name, doc_id)? else {
         ops.push(StructureOp::CreateFile {
             node_id: NodeId::from_doc_id(doc_id),
             doc_id,
@@ -26,8 +25,7 @@ pub(super) fn plan_file_upsert(
             name,
         });
         return Ok(StructuredCommitTarget { doc_id, ops });
-    }
-    let meta = current_meta(repo, repo_name, doc_id)?;
+    };
     if meta.parent_id != parent_id {
         ops.push(StructureOp::MoveNode {
             node_id: NodeId::from_doc_id(doc_id),
@@ -84,11 +82,8 @@ fn current_meta(
     repo: &RepoManager,
     repo_name: &str,
     doc_id: DocId,
-) -> Result<crate::models::NodeMeta> {
-    repo.run_on_local_repo(repo_name, |db| {
-        node_meta::get_node_meta(db, NodeId::from_doc_id(doc_id))?
-            .ok_or_else(|| anyhow!("node meta missing for tracked doc {}", doc_id))
-    })
+) -> Result<Option<crate::models::NodeMeta>> {
+    repo.get_file_meta_for_doc_in_local_repo(repo_name, doc_id)
 }
 
 fn plan_parent_chain(

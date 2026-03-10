@@ -32,7 +32,7 @@ pub fn list_file_docs(db: &Database) -> Result<Vec<(DocId, String)>> {
     Ok(docs)
 }
 
-pub fn path_for_doc(db: &Database, doc_id: DocId) -> Result<Option<String>> {
+pub fn file_meta_for_doc(db: &Database, doc_id: DocId) -> Result<Option<NodeMeta>> {
     ensure_node_tables(db)?;
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(NODEID_TO_META)?;
@@ -43,7 +43,11 @@ pub fn path_for_doc(db: &Database, doc_id: DocId) -> Result<Option<String>> {
     if meta.kind != NodeKind::File || meta.doc_id != Some(doc_id) {
         return Ok(None);
     }
-    Ok(Some(meta.path))
+    Ok(Some(meta))
+}
+
+pub fn path_for_doc(db: &Database, doc_id: DocId) -> Result<Option<String>> {
+    Ok(file_meta_for_doc(db, doc_id)?.map(|meta| meta.path))
 }
 
 fn ensure_node_tables(db: &Database) -> Result<()> {

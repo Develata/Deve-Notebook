@@ -1,4 +1,5 @@
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::node_meta;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use tempfile::TempDir;
 
@@ -28,6 +29,13 @@ fn doc_path_lookup_prefers_node_projection_over_stale_metadata() {
     })
     .expect("poison metadata path only");
 
+    let meta = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            node_meta::file_meta_for_doc(db, doc_id)
+        })
+        .expect("load node meta")
+        .expect("existing file meta");
+    assert_eq!(meta.path, "notes/a.md");
     assert_eq!(
         repo.get_path_by_docid_in_local_repo(repo.local_repo_name(), doc_id)
             .expect("resolve path"),

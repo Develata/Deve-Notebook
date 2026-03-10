@@ -138,13 +138,13 @@ impl<'a> FsEventHandler<'a> {
         repo_path: &str,
         doc_id: crate::models::DocId,
     ) -> Result<Vec<ServerMessage>> {
-        if let Some(known_path) = self
+        if let Some(meta) = self
             .repo
-            .get_path_by_docid_in_local_repo(self.repo_name, doc_id)?
-            && known_path != repo_path
+            .get_file_meta_for_doc_in_local_repo(self.repo_name, doc_id)?
+            && meta.path != repo_path
         {
-            info!("Handler: Rename detected {} -> {}", known_path, repo_path);
-            return self.record_external_rename(&known_path, repo_path, doc_id);
+            info!("Handler: Rename detected {} -> {}", meta.path, repo_path);
+            return self.record_external_rename(&meta.path, repo_path, doc_id);
         }
 
         info!("Handler: Content update detected for {}", repo_path);

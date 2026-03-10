@@ -36,3 +36,4 @@ mod source_control_workdir;
 mod source_control_workdir_helpers;
 mod structure_ops;
 pub(crate) mod structure_projection;
+mod structure_projection_support;

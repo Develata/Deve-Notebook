@@ -25,9 +25,9 @@ pub(super) fn scan_disk_file(
     if let Some(inode) = inode
         && let Some(doc_id) = repo.get_docid_by_inode_in_local_repo(repo_name, &inode)?
     {
-        let known_path = repo.get_path_by_docid_in_local_repo(repo_name, doc_id)?;
-        if known_path.as_deref() != Some(repo_path)
-            && let Some(old_path) = known_path
+        let meta = repo.get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?;
+        if meta.as_ref().map(|item| item.path.as_str()) != Some(repo_path)
+            && let Some(old_path) = meta.map(|item| item.path)
         {
             pending_rename::upsert_external_rename(repo, repo_name, &old_path, repo_path, doc_id)?;
             return Ok(Some(doc_id));
