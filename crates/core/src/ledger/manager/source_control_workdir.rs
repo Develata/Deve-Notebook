@@ -13,6 +13,7 @@ use anyhow::Result;
 
 use super::source_control_workdir_helpers::{
     clear_pending_for_doc, discard_added, discard_tracked_add, rebuild_doc_projection,
+    restore_doc_projection_at_path,
 };
 
 impl RepoManager {
@@ -97,12 +98,7 @@ impl RepoManager {
                         .resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)?
                         .ok_or_else(|| anyhow::anyhow!("Document not found: {}", normalized))?,
                 };
-                let content = rebuild_doc_projection(self, repo_name, doc_id)?;
-                let file_path = self.local_repo_workspace_path(repo_name, &normalized)?;
-                if let Some(parent) = file_path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                std::fs::write(file_path, content)?;
+                restore_doc_projection_at_path(self, repo_name, doc_id, &normalized)?;
                 self.run_on_local_repo(repo_name, |db| {
                     clear_pending_for_doc(db, doc_id, &normalized)
                 })?;

@@ -42,15 +42,22 @@ pub(super) fn discard_tracked_add(
         .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
         .map(|meta| meta.path)
         .ok_or_else(|| anyhow::anyhow!("Document not found: {}", doc_id))?;
-    let canonical_abs = repo.local_repo_workspace_path(repo_name, &canonical_path)?;
-    if let Some(parent) = canonical_abs.parent() {
+    restore_doc_projection_at_path(repo, repo_name, doc_id, &canonical_path)?;
+    repo.run_on_local_repo(repo_name, |db| clear_pending_for_doc(db, doc_id, path))
+}
+
+pub(super) fn restore_doc_projection_at_path(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: DocId,
+    path: &str,
+) -> Result<()> {
+    let file_path = repo.local_repo_workspace_path(repo_name, path)?;
+    if let Some(parent) = file_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(
-        canonical_abs,
-        rebuild_doc_projection(repo, repo_name, doc_id)?,
-    )?;
-    repo.run_on_local_repo(repo_name, |db| clear_pending_for_doc(db, doc_id, path))
+    std::fs::write(&file_path, rebuild_doc_projection(repo, repo_name, doc_id)?)?;
+    repo.bind_workspace_inode_in_local_repo(repo_name, path, doc_id)
 }
 
 pub(super) fn clear_pending_for_doc(db: &redb::Database, doc_id: DocId, path: &str) -> Result<()> {
