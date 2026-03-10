@@ -24,37 +24,11 @@ pub trait RepoListing {
 
 impl RepoListing for RepoManager {
     fn list_docs(&self, repo_type: &RepoType) -> Result<Vec<(DocId, String)>> {
-        match repo_type {
-            RepoType::Local(_) => metadata::list_docs(&self.local_db),
-            RepoType::Remote(peer_id, repo_id) => {
-                self.ensure_shadow_db(peer_id, repo_id)?;
-                let dbs = self.shadow_dbs.read().unwrap();
-                let peer_repos = dbs
-                    .get(peer_id)
-                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-                let db = peer_repos.get(repo_id).ok_or_else(|| {
-                    anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
-                })?;
-                metadata::list_docs(db)
-            }
-        }
+        self.run_on_repo_db(repo_type, metadata::list_docs)
     }
 
     fn list_nodes(&self, repo_type: &RepoType) -> Result<Vec<(NodeId, NodeMeta)>> {
-        match repo_type {
-            RepoType::Local(_) => node_meta::list_nodes(&self.local_db),
-            RepoType::Remote(peer_id, repo_id) => {
-                self.ensure_shadow_db(peer_id, repo_id)?;
-                let dbs = self.shadow_dbs.read().unwrap();
-                let peer_repos = dbs
-                    .get(peer_id)
-                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-                let db = peer_repos.get(repo_id).ok_or_else(|| {
-                    anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
-                })?;
-                node_meta::list_nodes(db)
-            }
-        }
+        self.run_on_repo_db(repo_type, node_meta::list_nodes)
     }
 
     fn list_repos(&self, peer_id: Option<&PeerId>) -> Result<Vec<String>> {

@@ -2,9 +2,8 @@ use anyhow::{Result, anyhow};
 use redb::Database;
 use std::path::{Path, PathBuf};
 
-use crate::ledger::manager::types::{RepoInfo, RepoManager};
+use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
-use crate::ledger::schema::*;
 use crate::ledger::{init, metadata, range, source_control};
 use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
 
@@ -113,34 +112,12 @@ impl RepoManager {
     /// 获取本地库指定序列号范围的操作 (用于 P2P 同步增量推送)
     pub fn get_local_ops_in_range(
         &self,
-        _repo_id: &RepoId,
+        repo_id: &RepoId,
         start_seq: u64,
         end_seq: u64,
     ) -> Result<Vec<(u64, LedgerEntry)>> {
-        range::get_ops_in_range(&self.local_db, start_seq, end_seq)
-    }
-
-    /// 获取本地仓库的元数据信息 (UUID, Name, URL)
-    pub fn get_repo_info(&self) -> Result<Option<RepoInfo>> {
-        Self::read_repo_info_from_db(&self.local_db)
-    }
-
-    /// 从指定数据库读取 RepoInfo
-    pub(crate) fn read_repo_info_from_db(db: &Database) -> Result<Option<RepoInfo>> {
-        let read_txn = db.begin_read()?;
-        // Try open table, if not exists return None
-        let table = match read_txn.open_table(REPO_METADATA) {
-            Ok(t) => t,
-            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
-            Err(e) => return Err(e.into()),
-        };
-
-        if let Some(guard) = table.get(&0)? {
-            let value = guard.value();
-            let info: RepoInfo = bincode::deserialize(value)?;
-            Ok(Some(info))
-        } else {
-            Ok(None)
-        }
+        self.run_on_local_repo_id(repo_id, |db| {
+            range::get_ops_in_range(db, start_seq, end_seq)
+        })
     }
 }

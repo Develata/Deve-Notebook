@@ -77,20 +77,7 @@ impl RepoManager {
     }
 
     pub fn get_ops(&self, repo_type: &RepoType, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        match repo_type {
-            RepoType::Local(_) => ops::get_ops_from_db(&self.local_db, doc_id),
-            RepoType::Remote(peer_id, repo_id) => {
-                self.ensure_shadow_db(peer_id, repo_id)?;
-                let dbs = self.shadow_dbs.read().unwrap();
-                let peer_repos = dbs
-                    .get(peer_id)
-                    .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
-                let db = peer_repos.get(repo_id).ok_or_else(|| {
-                    anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id)
-                })?;
-                ops::get_ops_from_db(db, doc_id)
-            }
-        }
+        self.run_on_repo_db(repo_type, |db| ops::get_ops_from_db(db, doc_id))
     }
 
     pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {

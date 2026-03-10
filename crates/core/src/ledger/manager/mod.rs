@@ -20,6 +20,8 @@ mod metadata_ops;
 mod metadata_repair_ops;
 mod ops_ops;
 mod ops_structure;
+mod repo_db;
+mod repo_info;
 mod repository;
 mod snapshot_ops;
 mod source_control_api;

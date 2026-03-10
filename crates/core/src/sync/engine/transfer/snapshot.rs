@@ -1,6 +1,5 @@
 use super::SyncEngine;
-use crate::ledger::listing::RepoListing;
-use crate::models::{LedgerEntry, Op, RepoType};
+use crate::models::{LedgerEntry, Op};
 use crate::sync::protocol::{SyncResponse, SyncSnapshotRequest};
 use crate::sync::rebuild;
 use anyhow::Result;
@@ -18,13 +17,15 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
 
-        // 按请求的 repo_id 获取数据，支持多仓库隔离
-        let repo_type = RepoType::Local(request.repo_id);
-        let docs = self.repo.list_docs(&repo_type)?;
+        let repo_name = self
+            .repo
+            .find_local_repo_name_by_id(request.repo_id)?
+            .ok_or_else(|| anyhow::anyhow!("Local repo not found for UUID {}", request.repo_id))?;
+        let docs = self.repo.list_local_docs(Some(&repo_name))?;
 
         let mut ops = Vec::new();
         for (doc_id, _) in docs {
-            let rebuilt = rebuild::rebuild_local_doc(&self.repo, doc_id)?;
+            let rebuilt = rebuild::rebuild_local_doc_in_repo(&self.repo, &repo_name, doc_id)?;
             if rebuilt.content.is_empty() {
                 continue;
             }
