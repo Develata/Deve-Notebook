@@ -16,7 +16,7 @@ use leptos::prelude::*;
 /// - `repo_key` 仅在内存中持有，页面卸载时清除 (NEVER persisted)
 pub struct SyncContext<'a> {
     pub doc_id: DocId,
-    pub client_id: u64,
+    pub client_id: Option<u64>,
     pub open_request_id: ReadSignal<u64>,
     pub ws: &'a WsService,
     // 内容信号

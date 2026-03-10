@@ -92,7 +92,7 @@ pub fn handle_message<F>(
             let repo_id = repo_id.to_string();
             if signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str()) {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
-                ws.mark_writer_ready(repo_id);
+                ws.mark_writer_ready(repo_id, peer_id.as_str());
             }
         }
         ServerMessage::TreeUpdate(delta) => {

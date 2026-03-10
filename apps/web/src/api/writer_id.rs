@@ -1,0 +1,29 @@
+pub fn derive_writer_client_id(peer_id: &str) -> u64 {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in peer_id.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+#[cfg(test)]
+mod tests {
+    use super::derive_writer_client_id;
+
+    #[test]
+    fn stable_for_same_peer() {
+        assert_eq!(
+            derive_writer_client_id("browser-peer-a"),
+            derive_writer_client_id("browser-peer-a")
+        );
+    }
+
+    #[test]
+    fn differs_for_different_peers() {
+        assert_ne!(
+            derive_writer_client_id("browser-peer-a"),
+            derive_writer_client_id("browser-peer-b")
+        );
+    }
+}

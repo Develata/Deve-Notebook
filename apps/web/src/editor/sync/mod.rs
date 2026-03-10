@@ -92,7 +92,7 @@ fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
     if entry.seq <= ctx.local_version.get_untracked() {
         return;
     }
-    let echoed = entry.origin.as_ref().map(|origin| origin.client_id) == Some(ctx.client_id);
+    let echoed = entry.origin.as_ref().map(|origin| origin.client_id) == ctx.client_id;
     if !echoed {
         if let Ok(json) = serde_json::to_string(&entry.op) {
             applyRemoteOp(&json);

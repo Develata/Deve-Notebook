@@ -26,7 +26,6 @@ pub fn make_send_text(
         if let Some(cb) = on_req_id.as_ref() {
             cb.run(req_id.clone());
         }
-
         let current_doc_path = core
             .current_doc
             .get_untracked()
@@ -107,7 +106,13 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             pos,
             content: code.into(),
         };
-        let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
+        let Some(client_id) = core
+            .ws
+            .writer_client_id_for(core.current_repo_id.get_untracked().as_deref())
+        else {
+            leptos::logging::warn!("Apply code aborted: writer client id unavailable.");
+            return;
+        };
         let client_op_id = next_client_op_id();
         core.set_pending_local_edits.update(|pending_edits| {
             pending::push_pending_edit(

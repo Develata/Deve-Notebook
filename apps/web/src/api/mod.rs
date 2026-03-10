@@ -25,6 +25,7 @@ mod auth_probe;
 mod backoff;
 mod connection;
 mod output;
+mod writer_id;
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use futures::channel::mpsc::{UnboundedSender, unbounded};
@@ -35,6 +36,7 @@ use leptos::task::spawn_local;
 
 use self::connection::spawn_connection_manager;
 use self::output::spawn_output_manager;
+use self::writer_id::derive_writer_client_id;
 
 // ============================================================================
 // Types
@@ -92,6 +94,8 @@ pub struct WsService {
     set_status: WriteSignal<ConnectionStatus>,
     pub writer_ready_repo_id: ReadSignal<Option<String>>,
     set_writer_ready_repo_id: WriteSignal<Option<String>>,
+    pub writer_client_id: ReadSignal<Option<u64>>,
+    set_writer_client_id: WriteSignal<Option<u64>>,
 
     /// 当前连接的端点 (ws url)
     pub endpoint: ReadSignal<String>,
@@ -119,6 +123,7 @@ impl WsService {
     pub fn new() -> Self {
         let (status, set_status) = signal(ConnectionStatus::Disconnected);
         let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(None::<String>);
+        let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
         let (msg, set_msg) = signal(None);
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
@@ -149,6 +154,8 @@ impl WsService {
             set_status,
             writer_ready_repo_id,
             set_writer_ready_repo_id,
+            writer_client_id,
+            set_writer_client_id,
             endpoint,
             node_role,
             msg,
@@ -166,22 +173,38 @@ impl WsService {
     }
 
     pub fn mark_unauthorized(&self) {
-        self.set_writer_ready_repo_id.set(None);
+        self.clear_writer_ready();
         self.set_status.set(ConnectionStatus::Unauthorized);
     }
 
-    pub fn mark_writer_ready(&self, repo_id: impl Into<String>) {
+    pub fn mark_writer_ready(&self, repo_id: impl Into<String>, peer_id: &str) {
         self.set_writer_ready_repo_id.set(Some(repo_id.into()));
+        self.set_writer_client_id
+            .set(Some(derive_writer_client_id(peer_id)));
     }
 
     pub fn clear_writer_ready(&self) {
         self.set_writer_ready_repo_id.set(None);
+        self.set_writer_client_id.set(None);
     }
 
     pub fn writer_ready_for(&self, repo_id: Option<&str>) -> bool {
         match (self.writer_ready_repo_id.get_untracked(), repo_id) {
             (Some(ready_repo_id), Some(repo_id)) => ready_repo_id == repo_id,
             _ => false,
+        }
+    }
+
+    pub fn writer_client_id_for(&self, repo_id: Option<&str>) -> Option<u64> {
+        match (
+            self.writer_ready_repo_id.get_untracked(),
+            self.writer_client_id.get_untracked(),
+            repo_id,
+        ) {
+            (Some(ready_repo_id), Some(client_id), Some(repo_id)) if ready_repo_id == repo_id => {
+                Some(client_id)
+            }
+            _ => None,
         }
     }
 }

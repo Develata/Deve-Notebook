@@ -11,18 +11,17 @@
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
 use super::EditorStats;
-use super::ffi::{Delta, applyRemoteContent, destroyEditor, set_read_only, setupCodeMirror};
-use super::op_id::next_client_op_id;
+use super::delta_input::{DeltaInputCtx, build_on_delta};
+use super::ffi::{applyRemoteContent, destroyEditor, set_read_only, setupCodeMirror};
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
-use crate::hooks::use_core::{EditorContext, pending};
+use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use deve_core::security::RepoKey;
 use leptos::html::Div;
 use leptos::prelude::*;
-use wasm_bindgen::prelude::*;
 
 #[allow(dead_code)] // 为回放功能预留的字段
 pub struct EditorState {
@@ -59,9 +58,6 @@ pub fn use_editor(
 
     // E2EE: RepoKey 信号 (RAM-only, 页面卸载时自动清除)
     let (repo_key, set_repo_key) = signal(None::<RepoKey>);
-
-    // 生成会话 client_id
-    let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
 
     // 初始请求: 打开文档
     let ws_clone = ws.clone();
@@ -106,7 +102,8 @@ pub fn use_editor(
         if let Some(msg) = ws_clone_2.msg.get() {
             let ctx = sync::context::SyncContext {
                 doc_id,
-                client_id,
+                client_id: ws_clone_2
+                    .writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
                 open_request_id,
                 ws: &ws_clone_2,
                 set_content,
@@ -134,64 +131,16 @@ pub fn use_editor(
     Effect::new(move |_| {
         if let Some(element) = editor_ref.get() {
             let raw_element: &web_sys::HtmlElement = &element;
-            let ws_for_update = ws_editor.clone();
-
-            // Delta 回调: 接收 JSON 格式的变更数组
-            let on_delta = Closure::wrap(Box::new(move |delta_json: String| {
-                // 回放模式时忽略
-                if is_playback.get_untracked() {
-                    return;
-                }
-
-                // 解析 Delta 数组
-                let deltas: Vec<Delta> = match serde_json::from_str(&delta_json) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        leptos::logging::error!("Delta 解析失败: {:?}", e);
-                        return;
-                    }
-                };
-
-                // 转换 Delta 为 Op 并发送
-                for delta in deltas {
-                    let ops = delta.to_ops();
-                    for op in ops {
-                        let client_op_id = next_client_op_id();
-                        set_pending_local_edits.update(|pending_edits| {
-                            pending::push_pending_edit(
-                                pending_edits,
-                                doc_id,
-                                client_id,
-                                client_op_id,
-                                local_version.get_untracked(),
-                                op.clone(),
-                            );
-                        });
-                        ws_for_update.send(ClientMessage::Edit {
-                            doc_id,
-                            op: op.clone(),
-                            client_id,
-                            client_op_id,
-                        });
-                    }
-                }
-
-                // 更新本地内容信号
-                let txt = super::ffi::getEditorContent();
-
-                // 计算统计信息
-                if let Some(cb) = on_stats {
-                    let lines = txt.lines().count();
-                    let words = txt.split_whitespace().count();
-                    cb.run(EditorStats {
-                        chars: txt.len(),
-                        words,
-                        lines,
-                    });
-                }
-
-                set_content.set(txt);
-            }) as Box<dyn FnMut(String)>);
+            let on_delta = build_on_delta(DeltaInputCtx {
+                doc_id,
+                ws: ws_editor.clone(),
+                current_repo_id: core.current_repo_id,
+                is_playback,
+                set_pending_local_edits,
+                local_version,
+                on_stats,
+                set_content,
+            });
 
             setupCodeMirror(raw_element, &on_delta);
             // Store the closure so it gets dropped on cleanup instead of leaking
