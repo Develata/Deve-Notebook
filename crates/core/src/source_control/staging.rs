@@ -6,10 +6,19 @@
 //! **存储结构**:
 //! - Table: `staged_files` - 存储已暂存的文件路径及其变更元数据
 
+#[path = "staging_index.rs"]
+mod index;
+#[path = "staging_query.rs"]
+mod query;
+
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs::PendingFsEntry;
 use anyhow::Result;
+pub use query::{
+    get_staged, is_staged, list_staged, list_staged_entries, list_staged_entries_for_doc,
+    list_staged_with_status,
+};
 use redb::{Database, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +41,10 @@ pub struct StagedEntry {
 /// 初始化暂存区表
 pub fn init_table(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
-    let _ = write_txn.open_table(STAGED_TABLE)?;
+    {
+        let _ = write_txn.open_table(STAGED_TABLE)?;
+        index::init_table(&write_txn)?;
+    }
     write_txn.commit()?;
     Ok(())
 }
@@ -50,16 +62,6 @@ pub fn stage_pending_entry(db: &Database, entry: &PendingFsEntry) -> Result<()> 
     stage_entry(db, &entry.path, &staged)
 }
 
-/// 读取单条暂存记录
-pub fn get_staged(db: &Database, path: &str) -> Result<Option<StagedEntry>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(STAGED_TABLE)?;
-    match table.get(path)? {
-        Some(guard) => Ok(Some(serde_json::from_slice(guard.value())?)),
-        None => Ok(None),
-    }
-}
-
 /// 移除并返回单条暂存记录
 pub fn take_staged(db: &Database, path: &str) -> Result<Option<StagedEntry>> {
     let existing = get_staged(db, path)?;
@@ -69,6 +71,11 @@ pub fn take_staged(db: &Database, path: &str) -> Result<Option<StagedEntry>> {
     let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(STAGED_TABLE)?;
+        index::remove(
+            &write_txn,
+            existing.as_ref().and_then(|entry| entry.doc_id),
+            path,
+        )?;
         table.remove(path)?;
     }
     write_txn.commit()?;
@@ -80,43 +87,21 @@ fn stage_entry(db: &Database, path: &str, entry: &StagedEntry) -> Result<()> {
     let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(STAGED_TABLE)?;
+        let previous = table
+            .get(path)?
+            .map(|guard| serde_json::from_slice::<StagedEntry>(guard.value()))
+            .transpose()?;
+        index::replace(
+            &write_txn,
+            previous.as_ref().and_then(|item| item.doc_id),
+            entry.doc_id,
+            path,
+        )?;
         table.insert(path, bytes.as_slice())?;
     }
     write_txn.commit()?;
     tracing::info!("Staged file: {} ({:?})", path, entry.status);
     Ok(())
-}
-
-/// 获取所有已暂存的文件 (路径列表)
-pub fn list_staged(db: &Database) -> Result<Vec<String>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(STAGED_TABLE)?;
-    let mut paths = Vec::new();
-    for entry in table.iter()? {
-        let (key, _value) = entry?;
-        paths.push(key.value().to_string());
-    }
-    Ok(paths)
-}
-
-/// 获取所有已暂存的文件（带变更状态）
-pub fn list_staged_with_status(db: &Database) -> Result<Vec<(String, ChangeStatus)>> {
-    Ok(list_staged_entries(db)?
-        .into_iter()
-        .map(|(path, entry)| (path, entry.status))
-        .collect())
-}
-
-pub fn list_staged_entries(db: &Database) -> Result<Vec<(String, StagedEntry)>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(STAGED_TABLE)?;
-    let mut entries = Vec::new();
-    for item in table.iter()? {
-        let (key, value) = item?;
-        let path = key.value().to_string();
-        entries.push((path, serde_json::from_slice::<StagedEntry>(value.value())?));
-    }
-    Ok(entries)
 }
 
 /// 清空暂存区 (提交后调用)
@@ -125,15 +110,10 @@ pub fn clear(db: &Database) -> Result<()> {
     {
         write_txn.delete_table(STAGED_TABLE)?;
         let _ = write_txn.open_table(STAGED_TABLE)?;
+        write_txn.delete_multimap_table(crate::ledger::schema::STAGED_DOC_INDEX)?;
+        index::init_table(&write_txn)?;
     }
     write_txn.commit()?;
     tracing::info!("Cleared staging area");
     Ok(())
-}
-
-/// 检查文件是否已暂存
-pub fn is_staged(db: &Database, path: &str) -> Result<bool> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(STAGED_TABLE)?;
-    Ok(table.get(path)?.is_some())
 }

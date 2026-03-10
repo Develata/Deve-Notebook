@@ -57,7 +57,7 @@ pub(super) fn discard_tracked_add(
 
 pub(super) fn clear_pending_for_doc(db: &redb::Database, doc_id: DocId, path: &str) -> Result<()> {
     let mut paths = vec![path.to_string()];
-    for entry in pending_fs::list_all(db)? {
+    for entry in pending_fs::list_for_doc(db, doc_id)? {
         if entry.doc_id == Some(doc_id) && !paths.iter().any(|item| item == &entry.path) {
             paths.push(entry.path);
         }

@@ -10,10 +10,16 @@
 //! **存储结构**:
 //! - Table: `pending_fs_ops` (path -> PendingFsEntry 序列化字节)
 
+#[path = "pending_fs_index.rs"]
+mod index;
+#[path = "pending_fs_query.rs"]
+mod query;
+
 use crate::ledger::schema::PENDING_FS_OPS;
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use anyhow::Result;
+pub use query::{get, list_all, list_for_doc};
 use redb::{Database, ReadableTable};
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +52,7 @@ pub fn init_table(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
     {
         let _ = write_txn.open_table(PENDING_FS_OPS)?;
+        index::init_table(&write_txn)?;
     }
     write_txn.commit()?;
     Ok(())
@@ -59,6 +66,16 @@ pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
     let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+        let previous = table
+            .get(entry.path.as_str())?
+            .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+            .transpose()?;
+        index::replace(
+            &write_txn,
+            previous.as_ref().and_then(|item| item.doc_id),
+            entry.doc_id,
+            &entry.path,
+        )?;
         table.insert(entry.path.as_str(), bytes.as_slice())?;
     }
     write_txn.commit()?;
@@ -70,37 +87,16 @@ pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
     Ok(())
 }
 
-/// 获取所有待确认变更
-pub fn list_all(db: &Database) -> Result<Vec<PendingFsEntry>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(PENDING_FS_OPS)?;
-    let mut entries = Vec::new();
-    for item in table.iter()? {
-        let (_key, value) = item?;
-        let entry: PendingFsEntry = serde_json::from_slice(value.value())?;
-        entries.push(entry);
-    }
-    Ok(entries)
-}
-
-/// 获取单条待确认变更
-pub fn get(db: &Database, path: &str) -> Result<Option<PendingFsEntry>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(PENDING_FS_OPS)?;
-    match table.get(path)? {
-        Some(guard) => {
-            let entry: PendingFsEntry = serde_json::from_slice(guard.value())?;
-            Ok(Some(entry))
-        }
-        None => Ok(None),
-    }
-}
-
 /// 移除单条待确认变更（Stage 或 Discard 后调用）
 pub fn remove(db: &Database, path: &str) -> Result<()> {
     let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+        let previous = table
+            .get(path)?
+            .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+            .transpose()?;
+        index::remove(&write_txn, previous.and_then(|entry| entry.doc_id), path)?;
         table.remove(path)?;
     }
     write_txn.commit()?;
@@ -114,6 +110,8 @@ pub fn clear(db: &Database) -> Result<()> {
     {
         write_txn.delete_table(PENDING_FS_OPS)?;
         let _ = write_txn.open_table(PENDING_FS_OPS)?;
+        write_txn.delete_multimap_table(crate::ledger::schema::PENDING_FS_DOC_INDEX)?;
+        index::init_table(&write_txn)?;
     }
     write_txn.commit()?;
     tracing::info!("Cleared all pending FS ops");

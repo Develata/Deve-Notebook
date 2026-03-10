@@ -56,3 +56,7 @@ pub const CLIENT_OP_INDEX: TableDefinition<(u128, u64, u64), u64> =
 // 存储 Watcher 检测到但用户尚未确认的文件系统变更
 // Key: 相对路径, Value: PendingFsEntry 序列化字节
 pub const PENDING_FS_OPS: TableDefinition<&str, &[u8]> = TableDefinition::new("pending_fs_ops");
+pub const PENDING_FS_DOC_INDEX: MultimapTableDefinition<u128, &str> =
+    MultimapTableDefinition::new("pending_fs_doc_index");
+pub const STAGED_DOC_INDEX: MultimapTableDefinition<u128, &str> =
+    MultimapTableDefinition::new("staged_doc_index");
