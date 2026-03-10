@@ -38,18 +38,18 @@ pub(crate) fn rebuild_local_doc_in_repo(
 
     let mut entries = Vec::new();
     if !base_content.is_empty() {
-        entries.push(LedgerEntry {
+        entries.push(LedgerEntry::new_content(
             doc_id,
-            op: Op::Insert {
+            Op::Insert {
                 pos: 0,
                 content: base_content.into(),
             },
-            timestamp: 0,
-            peer_id: PeerId::new("snapshot"),
-            seq: base_seq,
-            client_id: None,
-            client_op_id: None,
-        });
+            0,
+            PeerId::new("snapshot"),
+            base_seq,
+            None,
+            None,
+        ));
     }
 
     let mut max_seq = base_seq;

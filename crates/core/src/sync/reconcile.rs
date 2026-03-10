@@ -37,15 +37,15 @@ pub fn append_patch_in_local_repo(
         let peer_id = peer_id.clone();
         let timestamp = chrono::Utc::now().timestamp_millis();
         repo.append_generated_op_in_local_repo(repo_name, doc_id, peer_id.clone(), move |seq| {
-            LedgerEntry {
+            LedgerEntry::new_content(
                 doc_id,
-                op: op.clone(),
+                op.clone(),
                 timestamp,
-                peer_id: peer_id.clone(),
+                peer_id.clone(),
                 seq,
-                client_id: None,
-                client_op_id: None,
-            }
+                None,
+                None,
+            )
         })?;
     }
     info!("Reconcile: Applied {} ops for doc {}", ops.len(), doc_id);

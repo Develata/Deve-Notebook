@@ -63,33 +63,33 @@ fn test_local_and_shadow_isolation() -> Result<()> {
     let repo_id = Uuid::new_v4();
 
     // 写入本地库 (Active Default Repo)
-    let local_entry = LedgerEntry {
+    let local_entry = LedgerEntry::new_content(
         doc_id,
-        op: crate::models::Op::Insert {
+        crate::models::Op::Insert {
             pos: 0,
             content: "local content".into(),
         },
-        timestamp: 1000,
-        peer_id: peer_id.clone(),
-        seq: 1,
-        client_id: None,
-        client_op_id: None,
-    };
+        1000,
+        peer_id.clone(),
+        1,
+        None,
+        None,
+    );
     repo.append_local_op(&local_entry)?;
 
     // 写入影子库
-    let remote_entry = LedgerEntry {
+    let remote_entry = LedgerEntry::new_content(
         doc_id,
-        op: crate::models::Op::Insert {
+        crate::models::Op::Insert {
             pos: 0,
             content: "remote content".into(),
         },
-        timestamp: 2000,
-        peer_id: peer_id.clone(),
-        seq: 1,
-        client_id: None,
-        client_op_id: None,
-    };
+        2000,
+        peer_id.clone(),
+        1,
+        None,
+        None,
+    );
     repo.append_remote_op(&peer_id, &repo_id, &remote_entry)?;
 
     // 验证隔离性
@@ -127,18 +127,18 @@ fn test_snapshot_pruning() -> Result<()> {
     let ops = [(1, "a"), (2, "ab"), (3, "abc")];
 
     for (seq, content) in ops.iter() {
-        let entry = LedgerEntry {
+        let entry = LedgerEntry::new_content(
             doc_id,
-            op: crate::models::Op::Insert {
+            crate::models::Op::Insert {
                 pos: (seq - 1) as u32,
                 content: content.chars().last().unwrap().to_string().into(),
             },
-            timestamp: 1000 + (*seq as i64),
-            peer_id: peer_id.clone(),
-            seq: *seq,
-            client_id: None,
-            client_op_id: None,
-        };
+            1000 + (*seq as i64),
+            peer_id.clone(),
+            *seq,
+            None,
+            None,
+        );
         repo.append_local_op(&entry)?;
         repo.save_snapshot(doc_id, *seq, content)?;
     }

@@ -42,7 +42,7 @@ pub(super) async fn handle_edit(
             .repo
             .find_client_op_in_local_repo(&scope.repo_name, doc_id, client_id, client_op_id)
     {
-        if entry.op != op {
+        if entry.content_op() != Some(&op) {
             ch.send_protocol_error(ServerError::with_detail(
                 ServerErrorCode::SyncEditRejected,
                 "client_op_id conflicts with a different op",
@@ -64,14 +64,16 @@ pub(super) async fn handle_edit(
         local_peer_id,
         client_id,
         client_op_id,
-        move |seq| LedgerEntry {
-            doc_id,
-            op: op_clone.clone(),
-            timestamp: chrono::Utc::now().timestamp_millis(),
-            peer_id: peer_id_clone.clone(),
-            seq,
-            client_id: Some(client_id),
-            client_op_id: Some(client_op_id),
+        move |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                op_clone.clone(),
+                chrono::Utc::now().timestamp_millis(),
+                peer_id_clone.clone(),
+                seq,
+                Some(client_id),
+                Some(client_op_id),
+            )
         },
     ) {
         Ok((_global_seq, local_seq)) => {

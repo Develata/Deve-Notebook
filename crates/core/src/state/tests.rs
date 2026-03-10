@@ -1,15 +1,7 @@
-use crate::models::{DocId, LedgerEntry, Op, PeerId};
+use crate::models::{DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp};
 
 fn entry(op: Op) -> LedgerEntry {
-    LedgerEntry {
-        doc_id: DocId::new(),
-        op,
-        timestamp: 0,
-        peer_id: PeerId::new("test"),
-        seq: 0,
-        client_id: None,
-        client_op_id: None,
-    }
+    LedgerEntry::new_content(DocId::new(), op, 0, PeerId::new("test"), 0, None, None)
 }
 
 #[test]
@@ -54,4 +46,36 @@ fn compute_diff_uses_utf16_positions() {
         }
         _ => panic!("expected insert op"),
     }
+}
+
+#[test]
+fn reconstruct_ignores_structure_events() {
+    let doc_id = DocId::new();
+    let ops = vec![
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "abc".into(),
+            },
+            0,
+            PeerId::new("test"),
+            1,
+            None,
+            None,
+        ),
+        LedgerEntry::new_structure(
+            doc_id,
+            StructureOp::RenameNode {
+                node_id: NodeId::from_doc_id(doc_id),
+                new_name: "renamed.md".to_string(),
+            },
+            1,
+            PeerId::new("test"),
+            2,
+        ),
+    ];
+
+    let content = crate::state::reconstruct_content(&ops);
+    assert_eq!(content, "abc");
 }

@@ -48,7 +48,13 @@ fn print_dump(dump: &DumpResponse) -> anyhow::Result<()> {
     println!("DocId: {}", dump.doc_id);
     println!("Found {} ops:", dump.ops.len());
     for (index, (seq, entry)) in dump.ops.iter().enumerate() {
-        println!("[{}] Seq:{} {} {:?}", index, seq, entry.timestamp, entry.op);
+        println!(
+            "[{}] Seq:{} {} {:?}",
+            index,
+            seq,
+            entry.timestamp,
+            entry.content_op()
+        );
     }
     println!("\nReconstructed Content:\n---\n{}\n---", dump.content);
     Ok(())

@@ -30,18 +30,18 @@ impl SyncEngine {
             }
 
             let latest_seq = rebuilt.max_seq;
-            let entry = LedgerEntry {
+            let entry = LedgerEntry::new_content(
                 doc_id,
-                op: Op::Insert {
+                Op::Insert {
                     pos: 0,
                     content: rebuilt.content.into(),
                 },
-                timestamp: chrono::Utc::now().timestamp_millis(),
-                peer_id: self.local_peer_id.clone(),
-                seq: latest_seq,
-                client_id: None,
-                client_op_id: None,
-            };
+                chrono::Utc::now().timestamp_millis(),
+                self.local_peer_id.clone(),
+                latest_seq,
+                None,
+                None,
+            );
 
             ops.push(repo_key.encrypt(&entry, latest_seq)?);
         }

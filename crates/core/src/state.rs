@@ -39,7 +39,10 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
 
     for entry in ops {
         op_count = op_count.wrapping_add(1);
-        match &entry.op {
+        let Some(op) = entry.content_op() else {
+            continue;
+        };
+        match op {
             Op::Insert { pos, content: text } => {
                 let char_idx = cache.locate(&content, *pos);
                 let utf16_delta = text.encode_utf16().count() as u32;
@@ -76,7 +79,6 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
                 }
             }
         }
-
         if op_count.is_multiple_of(256) && !cache.validate_sample(&content) {
             cache = Utf16IndexCache::build(&content, adaptive_step(total_utf16));
         }

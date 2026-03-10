@@ -17,17 +17,19 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
         peer_id.clone(),
         42,
         9,
-        |seq| LedgerEntry {
-            doc_id,
-            op: crate::models::Op::Insert {
-                pos: 0,
-                content: "hello".into(),
-            },
-            timestamp: 1000,
-            peer_id: peer_id.clone(),
-            seq,
-            client_id: Some(42),
-            client_op_id: Some(9),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                crate::models::Op::Insert {
+                    pos: 0,
+                    content: "hello".into(),
+                },
+                1000,
+                peer_id.clone(),
+                seq,
+                Some(42),
+                Some(9),
+            )
         },
     )?;
 
@@ -36,11 +38,11 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
         .expect("client op should be indexed");
     assert_eq!(found.1.seq, 1);
     assert_eq!(
-        found.1.op,
-        crate::models::Op::Insert {
+        found.1.content_op(),
+        Some(&crate::models::Op::Insert {
             pos: 0,
             content: "hello".into(),
-        }
+        })
     );
     assert_eq!(found.1.client_id, Some(42));
     assert_eq!(found.1.client_op_id, Some(9));

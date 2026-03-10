@@ -18,9 +18,10 @@ pub(super) fn load_doc_ops_after(
 fn project_entries(entries: Vec<(u64, LedgerEntry)>) -> Vec<ConfirmedOp> {
     entries
         .into_iter()
-        .map(|(seq, entry)| {
+        .filter_map(|(seq, entry)| {
+            let op = entry.cloned_content_op()?;
             let origin = origin_of(&entry);
-            ConfirmedOp::new(seq, entry.op, origin)
+            Some(ConfirmedOp::new(seq, op, origin))
         })
         .collect()
 }

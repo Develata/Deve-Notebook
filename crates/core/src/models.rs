@@ -21,7 +21,11 @@ use smol_str::SmolStr;
 use std::fmt;
 use uuid::Uuid;
 
+#[path = "models/ledger_event.rs"]
+mod ledger_event;
+
 pub use crate::sync::vector::VersionVector;
+pub use ledger_event::{ContentOp, LedgerEntry, LedgerEvent, Op, StructureOp};
 
 /// 节点唯一标识符 (Peer ID)
 ///
@@ -156,39 +160,6 @@ pub struct NodeMeta {
     pub parent_id: Option<NodeId>,
     pub path: String,
     pub doc_id: Option<DocId>,
-}
-
-/// 操作类型
-///
-/// ## 内存优化
-///
-/// 1. `Insert` 变体使用 `SmolStr` 代替 `String`：
-///    - 短插入 (< 23 字节) 零堆分配
-///    - 典型用例：单字符输入、短词插入
-///
-/// 2. 索引使用 `u32` 代替 `usize` (UTF-16 code unit 索引)：
-///    - 节省 8 字节/操作 (64-bit 平台)
-///    - 4GB 文档大小限制对文本编辑器来说是无限的
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Op {
-    Insert { pos: u32, content: SmolStr },
-    Delete { pos: u32, len: u32 },
-}
-
-/// 账本条目 (Ledger Entry)
-///
-/// 存储在 `ledger_ops` 表中的原子操作记录。
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LedgerEntry {
-    pub doc_id: DocId,
-    pub op: Op,
-    pub timestamp: i64,
-    /// Origin Peer ID (who created this op)
-    pub peer_id: PeerId,
-    /// Peer-specific causal sequence number (must be monotonic per peer)
-    pub seq: u64,
-    pub client_id: Option<u64>,
-    pub client_op_id: Option<u64>,
 }
 
 /// 跨平台文件系统标识符

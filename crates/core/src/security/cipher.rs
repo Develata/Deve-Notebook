@@ -114,18 +114,18 @@ mod tests {
     #[test]
     fn test_encrypt_decrypt() {
         let key = RepoKey::generate();
-        let entry = LedgerEntry {
-            doc_id: DocId::new(),
-            op: Op::Insert {
+        let entry = LedgerEntry::new_content(
+            DocId::new(),
+            Op::Insert {
                 pos: 0,
                 content: "Secret".into(),
             },
-            timestamp: 12345,
-            peer_id: crate::models::PeerId::new("test-peer"),
-            seq: 1,
-            client_id: None,
-            client_op_id: None,
-        };
+            12345,
+            crate::models::PeerId::new("test-peer"),
+            1,
+            None,
+            None,
+        );
 
         // Encrypt
         let enc = key.encrypt(&entry, 100).unwrap();

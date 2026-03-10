@@ -47,18 +47,18 @@ fn inject_conflict(
             found = true;
 
             // Create Op
-            let entry = LedgerEntry {
+            let entry = LedgerEntry::new_content(
                 doc_id,
-                op: Op::Insert {
+                Op::Insert {
                     pos: 0,
                     content: format!("CONFLICT_START{}CONFLICT_END\n", content).into(),
                 },
-                timestamp: chrono::Utc::now().timestamp_millis(),
-                peer_id: peer_id.clone(),
-                seq: 99999, // High sequence number to simulate "latest"
-                client_id: None,
-                client_op_id: None,
-            };
+                chrono::Utc::now().timestamp_millis(),
+                peer_id.clone(),
+                99999,
+                None,
+                None,
+            );
 
             repo.append_remote_op(&peer_id, &repo_id, &entry)?;
             println!("Success: Injected op into {}", peer_name);

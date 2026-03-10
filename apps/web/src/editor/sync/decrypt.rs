@@ -5,7 +5,7 @@
 //!
 //! ## Invariants
 //! - 若无 RepoKey，加密操作将被跳过并记录警告
-//! - 解密后的 LedgerEntry.op 与 NewOp 走相同的应用路径
+//! - 解密后的内容事件与 `NewOp` 走相同的应用路径
 
 use super::context::SyncContext;
 use crate::editor::EditorStats;
@@ -53,9 +53,12 @@ fn apply_decrypted_entry(ctx: &SyncContext, entry: deve_core::models::LedgerEntr
     if entry.doc_id != ctx.doc_id {
         return;
     }
+    let Some(op) = entry.cloned_content_op() else {
+        return;
+    };
 
     // 应用远程操作到编辑器
-    if let Ok(json) = serde_json::to_string(&entry.op) {
+    if let Ok(json) = serde_json::to_string(&op) {
         applyRemoteOp(&json);
     }
 
@@ -69,7 +72,7 @@ fn apply_decrypted_entry(ctx: &SyncContext, entry: deve_core::models::LedgerEntr
     }
     ctx.set_content.set(txt);
     ctx.set_local_version.set(seq);
-    ctx.set_history.update(|h| h.push((seq, entry.op)));
+    ctx.set_history.update(|h| h.push((seq, op)));
 
     if !ctx.is_playback.get_untracked() {
         ctx.set_playback_version.set(seq);

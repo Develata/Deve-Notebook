@@ -118,18 +118,18 @@ mod tests {
             let db = peer_repos.get(&repo_id).unwrap();
 
             let doc_id = DocId::new();
-            let entry = LedgerEntry {
+            let entry = LedgerEntry::new_content(
                 doc_id,
-                op: Op::Insert {
+                Op::Insert {
                     pos: 0,
                     content: "test".into(),
                 },
-                timestamp: 1000,
-                peer_id: peer_id.clone(),
-                seq: 1,
-                client_id: None,
-                client_op_id: None,
-            };
+                1000,
+                peer_id.clone(),
+                1,
+                None,
+                None,
+            );
 
             // Direct write for testing
             let write_txn = db.begin_write()?;
