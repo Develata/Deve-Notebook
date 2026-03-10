@@ -82,9 +82,14 @@ pub fn use_editor(
         ws_clone.send(ClientMessage::OpenDoc { doc_id, request_id });
     });
 
-    // E2EE: 连接成功后请求 RepoKey
+    // E2EE: 仅在当前 repo 握手完成后请求 RepoKey
     let ws_key = ws.clone();
+    let handshake_ready_for_key = core.handshake_ready;
     Effect::new(move |_| {
+        if !handshake_ready_for_key.get() {
+            set_repo_key.set(None);
+            return;
+        }
         if ws_key.status.get() == ConnectionStatus::Connected {
             ws_key.send(ClientMessage::RequestKey);
         }
