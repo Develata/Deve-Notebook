@@ -1,11 +1,11 @@
 // crates/core/src/ledger/manager/commit_ops.rs
-//! # 提交时 Op 生成逻辑 (Commit-time Op Generation)
+//! # 提交时 Ledger Facts 生成逻辑
 //!
-//! 实现三阶段工作流的提交核心：读磁盘内容 → diff 快照 → 生成 Op → 追加 Ledger。
+//! 实现三阶段工作流的提交核心：读磁盘内容 → 对比快照 → 生成 Ledger Facts → 追加 Ledger。
 //!
-//! **Invariant**: 只有经过 Stage 的文件才会在提交时生成 Op 并写入 Ledger。
+//! **Invariant**: 只有经过 Stage 的文件才会在提交时生成 Ledger Facts 并写入 Ledger。
 //! **Pre-condition**: `vault_root` 已设置，暂存区非空。
-//! **Post-condition**: Ledger 包含新 Op，快照已更新，提交记录已创建，暂存区已清空。
+//! **Post-condition**: Ledger 包含新的 Content/Structure Facts，快照已更新，提交记录已创建，暂存区已清空。
 
 use crate::ledger::RepoManager;
 use crate::ledger::manager::commit_plan;
@@ -15,12 +15,12 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 impl RepoManager {
-    /// 三阶段工作流提交：从磁盘读取内容 → 生成 Op → 追加 Ledger → 创建提交
+    /// 三阶段工作流提交：从磁盘读取内容 → 生成 Ledger Facts → 追加 Ledger → 创建提交
     ///
     /// **流程**:
     /// 1. 列出暂存文件及其变更状态
-    /// 2. 对每个 Added/Modified 文件：读磁盘 → diff 快照 → 生成 Op → 追加 Ledger
-    /// 3. 对每个 Deleted 文件：删除快照
+    /// 2. 对每个 Added/Modified 文件：先生成 Structure Facts，再追加文本 Content Facts
+    /// 3. 对每个 Deleted 文件：追加删除结构事实并清理快照
     /// 4. 创建 CommitInfo (parent_id 自动推导)
     /// 5. 清空暂存区
     pub(crate) fn commit_staged_with_ops(
