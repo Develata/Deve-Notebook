@@ -4,11 +4,28 @@
 //! 包含 RepoManager 的单元测试和集成测试。
 
 use super::*;
+use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use crate::ledger::{node_check, node_meta};
 use crate::models::{DocId, LedgerEntry, PeerId, RepoType};
 use anyhow::Result;
 use tempfile::TempDir;
 use uuid::Uuid;
+
+fn seed_metadata_only_doc(repo: &RepoManager, path: &str) -> Result<DocId> {
+    let doc_id = DocId::new();
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write_txn = db.begin_write()?;
+        {
+            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+            p2d.insert(path, doc_id.as_u128())?;
+            d2p.insert(doc_id.as_u128(), path)?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    })?;
+    Ok(doc_id)
+}
 
 /// 测试 RepoManager 初始化
 ///
@@ -169,7 +186,7 @@ fn test_node_migration_and_consistency() -> Result<()> {
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
 
     let path = "notes/alpha.md";
-    let doc_id = repo.create_docid(path)?;
+    let doc_id = seed_metadata_only_doc(&repo, path)?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         node_meta::ensure_file_node(db, path, doc_id)?;
         Ok(())
@@ -208,7 +225,7 @@ fn test_node_repair_missing() -> Result<()> {
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
 
     let path = "notes/repair.md";
-    let doc_id = repo.create_docid(path)?;
+    let doc_id = seed_metadata_only_doc(&repo, path)?;
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         node_meta::remove_node_by_path(db, path)?;

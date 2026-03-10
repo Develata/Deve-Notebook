@@ -22,22 +22,6 @@ pub fn get_docid(db: &Database, path: &str) -> Result<Option<DocId>> {
     }
 }
 
-pub fn create_docid(db: &Database, path: &str) -> Result<DocId> {
-    let normalized = to_forward_slash(path);
-    let id = DocId::new();
-    let write_txn = db.begin_write()?;
-    {
-        let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
-        let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
-
-        p2d.insert(&*normalized, id.as_u128())?;
-        d2p.insert(id.as_u128(), &*normalized)?;
-    }
-    write_txn.commit()?;
-    node_meta::ensure_file_node(db, &normalized, id)?;
-    Ok(id)
-}
-
 pub fn set_doc_path(db: &Database, doc_id: DocId, path: &str) -> Result<()> {
     let normalized = to_forward_slash(path);
     let write_txn = db.begin_write()?;

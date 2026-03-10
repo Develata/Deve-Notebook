@@ -196,24 +196,6 @@ mod tests {
     }
 
     #[test]
-    fn test_discard_pending_added_cleans_legacy_mapping() {
-        let (dir, repo) = new_repo();
-        write_workspace_file(&dir, "notes/new.md", "temp");
-        seed_pending(&repo, "notes/new.md", ChangeStatus::Added, "temp");
-        repo.create_docid("notes/new.md")
-            .expect("legacy provisional docid");
-
-        repo.discard_pending("notes/new.md").expect("discard added");
-
-        assert!(!workspace_path(&dir, "notes/new.md").exists());
-        assert!(
-            repo.get_docid("notes/new.md")
-                .expect("lookup docid")
-                .is_none()
-        );
-    }
-
-    #[test]
     fn test_diff_doc_path_reads_workspace_content() {
         let (dir, repo) = new_repo();
         write_workspace_file(&dir, "notes/a.md", "hello");

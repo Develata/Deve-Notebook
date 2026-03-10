@@ -1,3 +1,4 @@
+use deve_core::models::DocId;
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
@@ -12,7 +13,7 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
 #[test]
 fn watcher_ignores_uuid_frontmatter_as_identity_source() {
     let (dir, repo) = new_repo();
-    let doc_id = repo.create_docid("notes/old.md").expect("seed doc id");
+    let doc_id = DocId::new();
     let file = dir
         .path()
         .join("vault")

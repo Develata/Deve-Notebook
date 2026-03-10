@@ -5,7 +5,7 @@
 //! repair/rebuild 使用的映射直写接口已拆到 `metadata_repair_ops`。
 
 use crate::ledger::RepoManager;
-use crate::ledger::{doc_lookup, inode_index, metadata, node_meta};
+use crate::ledger::{doc_lookup, inode_index, node_meta};
 use crate::models::{DocId, NodeMeta};
 use anyhow::Result;
 
@@ -13,15 +13,6 @@ impl RepoManager {
     /// 根据路径获取 DocId
     pub fn get_docid(&self, path: &str) -> Result<Option<DocId>> {
         doc_lookup::resolve_doc_id(&self.local_db, path)
-    }
-
-    /// 创建新的 DocId
-    pub fn create_docid(&self, path: &str) -> Result<DocId> {
-        metadata::create_docid(&self.local_db, path)
-    }
-
-    pub fn create_docid_in_local_repo(&self, repo_name: &str, path: &str) -> Result<DocId> {
-        self.run_on_local_repo(repo_name, |db| metadata::create_docid(db, path))
     }
 
     /// 根据 DocId 获取路径
