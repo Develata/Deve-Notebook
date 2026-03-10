@@ -12,7 +12,7 @@ use std::path::PathBuf;
 ///
 /// **功能**:
 /// 将整个 Ledger 的数据导出为 JSON 格式 (Line-delimited JSON)。
-/// 每个文档一行 JSON 对象。
+/// 每条 Ledger fact 一行 JSON 对象。
 ///
 /// **用途**:
 /// 数据备份、迁移或分析。

@@ -1,0 +1,37 @@
+use deve_core::sync::SyncManager;
+use tempfile::TempDir;
+
+fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
+    let dir = TempDir::new().expect("create tempdir");
+    let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
+        .expect("init repo");
+    repo.set_vault_root(dir.path().join("vault"));
+    (dir, std::sync::Arc::new(repo))
+}
+
+#[test]
+fn watcher_ignores_uuid_frontmatter_as_identity_source() {
+    let (dir, repo) = new_repo();
+    let doc_id = repo.create_docid("notes/old.md").expect("seed doc id");
+    let file = dir
+        .path()
+        .join("vault")
+        .join("default")
+        .join("notes/new.md");
+    std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&file, format!("uuid: {doc_id}\nbody")).expect("write file");
+
+    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    sync.handle_fs_event("default/notes/new.md")
+        .expect("handle fs event");
+
+    let pending = repo
+        .list_pending_fs_in_local_repo(repo.local_repo_name())
+        .expect("load pending");
+    let new_file = pending
+        .iter()
+        .find(|entry| entry.path == "notes/new.md")
+        .expect("new file pending");
+    assert!(new_file.doc_id.is_none());
+    assert!(pending.iter().all(|entry| entry.path != "notes/old.md"));
+}

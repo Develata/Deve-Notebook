@@ -8,7 +8,6 @@ use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
-use crate::sync::recovery;
 use crate::vfs::Vfs;
 use anyhow::Result;
 use std::sync::Arc;
@@ -68,25 +67,6 @@ impl<'a> FsEventHandler<'a> {
             self.repo
                 .bind_inode_in_local_repo(self.repo_name, &inode, existing_id)?;
             self.sync_modified_pending(repo_path, existing_id)?;
-            return self.modified_refresh(repo_path);
-        }
-
-        let content = std::fs::read_to_string(&file_path)?;
-        if let Some(recovered_id) = recovery::try_recover_from_content(&content)
-            && let Some(old_path) = self
-                .repo
-                .get_path_by_docid_in_local_repo(self.repo_name, recovered_id)?
-        {
-            info!(
-                "Handler: Recovery UUID found. Resurrecting {:?} from {} to {}",
-                recovered_id, old_path, repo_path
-            );
-            if old_path != repo_path {
-                self.bind_inode(&inode, recovered_id)?;
-                return self.record_external_rename(&old_path, repo_path, recovered_id);
-            }
-            self.bind_inode(&inode, recovered_id)?;
-            self.sync_modified_pending(repo_path, recovered_id)?;
             return self.modified_refresh(repo_path);
         }
 
@@ -230,14 +210,5 @@ impl<'a> FsEventHandler<'a> {
             super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted"),
             super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added"),
         ])
-    }
-
-    fn bind_inode(
-        &self,
-        inode: &crate::models::FileNodeId,
-        doc_id: crate::models::DocId,
-    ) -> Result<()> {
-        self.repo
-            .bind_inode_in_local_repo(self.repo_name, inode, doc_id)
     }
 }
