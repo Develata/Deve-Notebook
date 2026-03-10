@@ -5,7 +5,7 @@
 //! repair/rebuild 使用的映射直写接口已拆到 `metadata_repair_ops`。
 
 use crate::ledger::RepoManager;
-use crate::ledger::{doc_lookup, metadata, node_meta};
+use crate::ledger::{doc_lookup, inode_index, metadata, node_meta};
 use crate::models::{DocId, NodeMeta};
 use anyhow::Result;
 
@@ -51,7 +51,7 @@ impl RepoManager {
 
     /// 根据 Inode 获取 DocId
     pub fn get_docid_by_inode(&self, inode: &crate::models::FileNodeId) -> Result<Option<DocId>> {
-        metadata::get_docid_by_inode(&self.local_db, inode)
+        inode_index::get_docid(&self.local_db, inode)
     }
 
     pub fn get_docid_by_inode_in_local_repo(
@@ -59,7 +59,7 @@ impl RepoManager {
         repo_name: &str,
         inode: &crate::models::FileNodeId,
     ) -> Result<Option<DocId>> {
-        self.run_on_local_repo(repo_name, |db| metadata::get_docid_by_inode(db, inode))
+        self.run_on_local_repo(repo_name, |db| inode_index::get_docid(db, inode))
     }
 
     pub fn get_docid_in_local_repo(&self, repo_name: &str, path: &str) -> Result<Option<DocId>> {
@@ -68,7 +68,7 @@ impl RepoManager {
 
     /// 绑定 Inode 到 DocId
     pub fn bind_inode(&self, inode: &crate::models::FileNodeId, doc_id: DocId) -> Result<()> {
-        metadata::bind_inode(&self.local_db, inode, doc_id)
+        inode_index::bind_docid(&self.local_db, inode, doc_id)
     }
 
     pub fn bind_inode_in_local_repo(
@@ -77,7 +77,7 @@ impl RepoManager {
         inode: &crate::models::FileNodeId,
         doc_id: DocId,
     ) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| metadata::bind_inode(db, inode, doc_id))
+        self.run_on_local_repo(repo_name, |db| inode_index::bind_docid(db, inode, doc_id))
     }
 
     pub fn bind_workspace_inode_in_local_repo(

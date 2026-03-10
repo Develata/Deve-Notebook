@@ -12,6 +12,7 @@
 //!
 //! - `schema`: 数据库表定义
 //! - `init`: 初始化逻辑
+//! - `inode_index`: Watcher identity side table
 //! - `metadata`: Path/DocId 映射
 //! - `node_meta`: NodeId/Path/Meta 映射
 //! - `node_check`: Node 表一致性检查
@@ -30,6 +31,7 @@
 pub mod database;
 pub mod doc_lookup;
 pub mod init;
+pub mod inode_index;
 pub mod listing;
 mod manager;
 pub mod merge;
