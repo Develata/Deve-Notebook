@@ -22,7 +22,7 @@
 *   **功能清单**：
     1.  `init`: 初始化 Ledger 和 Vault。
     2.  `watch`: 启动文件监听，能够正确处理 `vim`/`vscode`/`nano` 的保存行为（含重命名/原子写入）。
-    3.  `append`: 通过 API 追加 Ops，验证 Vault 能否正确更新。
+    3.  `append`: 通过 API 追加 `LedgerEntry / Ledger Facts`，验证 Vault 能否正确更新。
 *   **验收标准**：
     *   **受控和解闭环**：`VS Code 修改 -> Watcher -> pending_fs_ops -> Stage / Commit -> Ledger -> Vault 更新` 必须稳定，无死循环。
     *   **重命名测试**：在此阶段必须解决“文件重命名被识别为删除+新建”导致的 DocId 丢失问题（实现 Inode/FileID 追踪）。
@@ -69,4 +69,3 @@
 ## 本章相关配置
 
 *   `.deveignore`: 用于定义核心忽略的文件规则。
-

@@ -32,11 +32,11 @@
     *   `NODEID_TO_META`: `u128 -> NodeMeta` (统一节点元数据)
     *   `PATH_TO_NODEID`: `&str -> u128` (路径解析)
     *   `INODE_TO_NODEID`: `u128 -> u128` (重命名追踪, 文件节点)
-    *   **Op Log (操作日志)**:
+    *   **Ledger Log (账本事实日志)**:
         *   `LEDGER_OPS`: `u64 -> &[u8]` (全局有序日志, Key=SeqNo, Value=Bincode Serialized Entry)
         *   `DOC_OPS`: `u128 -> [u64]` (Multimap, 允许快速检索单一文档的所有变更 Seq)
     *   **Atomic Sequence (原子序号)**:
-        *   `PEER_DOC_SEQ`: `(DocId, PeerId) -> u64`。用于生成严格单调递增的 `OpSeq`，防止并发冲突。
+        *   `PEER_DOC_SEQ`: `(DocId, PeerId) -> u64`。用于生成严格单调递增的 `LedgerSeq`，防止并发冲突。
 *   **Repo Runtime Directory**: 系统使用 `vault/<repo_name>/.notegit/` 存储 repo-scoped 运行时元数据（repo keys、pending/staged side tables、迁移归档等）。
     *   **Location**: `.notegit/` 位于对应 Repo 工作区根目录下。
     *   **Watcher Ignore**: `.notegit/` **MUST** 被 Watcher 忽略（不触发变更检测）。
@@ -60,7 +60,7 @@
 
 ## Single Authoritative Model (唯一权威模型)
 
-对任意 Repo $r$，系统的权威状态 **MUST** 定义为单一有序操作日志：
+对任意 Repo $r$，系统的权威状态 **MUST** 定义为单一有序账本事实日志：
 
 ```text
 L_r = OrderedLog<LedgerEntry>
@@ -88,6 +88,25 @@ Workspace_r = P_r ⊕ D_r
 
 其中 `D_r` 表示已被系统跟踪的工作区偏差（由 `pending_fs_ops_r` / `staging_r` 物化），它只影响“当前工作区表现”，不影响“已确认业务事实”。
 
+### Ledger Facts Partition（账本事实分层）
+
+对任意 Repo `r`，`L_r` 中的权威事实 **MUST** 至少分为两层：
+
+*   **Content Facts**：针对 `DocId` 的文本内容变化（例如 Insert / Delete）。
+*   **Structure Facts**：针对 `NodeId` / `DocId` 的结构变化（例如 CreateFile、CreateDir、RenameNode、MoveNode、DeleteNode）。
+
+因此，`Path Mapping`、`NodeMeta`、`Tree` 与 `Vault Projection` 的权威来源都不是“直接写表”，而是：
+
+```text
+Ledger Facts -> State Fold -> Structure/Content Projection -> Vault / Tree / Path Cache
+```
+
+其中：
+
+*   `metadata` / `PATH_TO_DOCID` / `DOCID_TO_PATH` / `NODEID_TO_META` 是 projection storage 或 projection cache。
+*   业务层 **MUST NOT** 把 `metadata::rename_doc / set_doc_path / delete_doc` 当作主写路径。
+*   这些 API 仅允许被 projection rebuild、repair 或 migration 过程调用。
+
 ### Non-Negotiable Invariants (硬不变量)
 
 1. 只有向 `L_r` 追加 `LedgerEntry` 才能改变 Repo 的权威状态。
@@ -95,6 +114,7 @@ Workspace_r = P_r ⊕ D_r
 3. `pending_fs_ops_r` 与 `staging_r` 是 workflow side table，不是第二真值源。
 4. 同一 Repo 内所有落账本写入 **MUST** 在追加前被线性化，并由 `GlobalSeq` 决定落盘顺序。
 5. 任意时刻若 `Workspace_r != P_r`，系统 **MUST** 能通过 `pending_fs_ops_r` / `staging_r` 解释这种偏差；无法解释则视为状态漂移故障。
+6. 路径与树结构相关的业务事实 **MUST NOT** 通过 metadata table 直写完成；必须先形成 Structure Facts，再由 projection 导出。
 
 ## Ledger-First Write Paths (账本优先写路径)
 
@@ -105,7 +125,9 @@ Workspace_r = P_r ⊕ D_r
     1. 产生写入意图 (`Edit Intent`)。
     2. 校验 user auth、repo binding、writer identity。
     3. 直接将变更编码为 `LedgerEntry` 追加到 `L_r`。
-    4. 更新快照或重放尾部 Ops，得到新的 `P_r`。
+        *   文本编辑 -> `Content Facts`
+        *   `Create / Rename / Move / Delete` -> `Structure Facts`
+    4. 更新快照或重放尾部 Ledger Facts，得到新的 `P_r`。
     5. 将新的规范投影写回 Vault，并返回确认消息给调用方。
 *   **Invariant**: 内置编辑路径 **MUST NOT** 先改 Vault 再“回填” Ledger。
 *   **Web Note**: Web Thin Client 的 `pending overlay -> Ack -> confirmed` 确认链详见 [16_web_thin_client_ledger.md](./16_web_thin_client_ledger.md)。
@@ -118,8 +140,8 @@ Workspace_r = P_r ⊕ D_r
     2. 事件经 Debouncer、路径规范化与 Inode / FileID 关联后，写入或更新 `pending_fs_ops_r`。
     3. 系统向 UI 暴露 Working Directory 差异，但不改变已确认业务状态。
 *   **Strict Rule**: Watcher 检测到的 `Create / Modify / Delete / Rename` **MUST NOT** 直接生成 Ledger Append。
-*   **Delete Rule**: 删除只能先生成 pending delete 候选；最终删除必须体现在显式 Ledger delete/tombstone op 中。
-*   **Rename Rule**: 重命名/移动必须先保持 `NodeId` 稳定并记录 pending rename 候选；最终路径变更以 Ledger 中的显式 mapping update 为准。
+*   **Delete Rule**: 删除只能先生成 pending delete 候选；最终删除必须体现在显式删除结构事实（如 `DeleteNode` 或等价 tombstone fact）中。
+*   **Rename Rule**: 重命名/移动必须先保持 `NodeId` 稳定并记录 pending rename 候选；最终路径变更以 Ledger 中的显式 Structure Facts 为准，而不是 metadata 直写。
 
 ### Path C - Stage -> Commit (手动确认入账本)
 
@@ -128,8 +150,10 @@ Workspace_r = P_r ⊕ D_r
     *   Stage 是 repo-scoped 的真实迁移，不是单纯 UI 隐藏或布尔标记。
 *   **Commit**:
     1. 以当前 `ledger_head` 为基准读取 `P_r`。
-    2. 将 `staging_r` 中的文件内容与 `P_r` 对比，生成显式 Ops（Insert / Delete / Move / Tombstone 等）。
-    3. 将生成的 Ops 追加到 `L_r`，分配新的 `GlobalSeq`。
+    2. 将 `staging_r` 中的文件内容与 `P_r` 对比，生成显式 Ledger Facts。
+        *   文本变化 -> `Content Facts`
+        *   rename / move / create / delete -> `Structure Facts`
+    3. 将生成的 Ledger Facts 追加到 `L_r`，分配新的 `GlobalSeq`。
     4. 创建 Commit 记录，并锚定到结果 `ledger_seq`。
     5. 清空本次已消费的 `staging_r` 与 `pending_fs_ops_r` 条目。
     6. 重建或增量更新 `P_r`，再持久化回 Vault。
@@ -141,15 +165,16 @@ Workspace_r = P_r ⊕ D_r
 *   **Canonical System-Owned Path**: 所有系统自发写盘路径 **MUST** 满足：
 
 ```text
-Op -> Ledger -> Snapshot -> Projection -> Vault
+Intent -> Ledger Facts -> Snapshot / Tree Projection -> Vault
 ```
 
 *   **Projection Authority**: Vault 中由系统写入的内容必须来自 `P_r`，不得直接依据临时 UI 状态或 side table 拼接结果。
+*   **Projection Write Rule**: `metadata`、`path mapping`、`tree cache` 与 `NodeMeta` **MUST** 由 projection builder 写入；业务 handler 不得将其当作最终真值直接修改。
 *   **Atomic Persistence**:
     *   `SyncManager` / Projection Manager 负责协调 Ledger Append 与投影写入。
     *   当 Ledger Append 成功而投影写入失败时，系统 **MUST** 记录可恢复故障，并支持从 Ledger 重新构建 Vault。
 *   **Batch Optimization**:
-    *   对批量操作，系统 **SHOULD** 先批量追加 Ops，再执行一次投影持久化，以减少 I/O 放大。
+    *   对批量操作，系统 **SHOULD** 先批量追加 Ledger Facts，再执行一次投影持久化，以减少 I/O 放大。
 
 ## Clean File Policy (纯净文件策略)
 
@@ -157,7 +182,7 @@ Op -> Ledger -> Snapshot -> Projection -> Vault
     *   **Storage Location**: `NodeId <-> Path/Inode` 的映射表 **MUST** 存储在 **Store B (Local Repo)** 的专用 Table/Bucket 中，严禁存储在 Markdown 文件内。
 *   **Zero Injection (零注入原则)**: 系统 **MUST NOT** 向用户创建的 Markdown 文件中注入任何元数据（如 YAML Frontmatter 中的 UUID）。
 *   **Metadata Source (元数据溯源)**: 即使文件中存在用户手写的 Frontmatter，系统也 **MUST** 视其为普通文本内容 (Payload)。
-    *   **No Impact**: 投影中的 Frontmatter 修改 **MUST NOT** 反向影响 Ledger 中的系统元数据（如 Creation Time, UUID 等）。Ledger 的元数据仅由权威 Ops 变更。
+    *   **No Impact**: 投影中的 Frontmatter 修改 **MUST NOT** 反向影响 Ledger 中的系统元数据（如 Creation Time, UUID 等）。Ledger 的元数据仅由权威 Ledger Facts 变更。
 
 ## Inode/DocId Mapping & Watcher Service (映射与监听)
 
@@ -167,7 +192,7 @@ Op -> Ledger -> Snapshot -> Projection -> Vault
     *   **Create / Modify**: 监测到 Markdown 文件新增或内容变更 -> 生成 pending create/modify 候选，写入 `pending_fs_ops_r`。
     *   **Delete**: 监测到文件被移除 -> 生成 pending delete 候选，等待用户 Stage / Commit 或 Discard。
     *   **Rename / Move**: 利用 OS 提供的 Inode / FileID 追踪重命名，保持 `NodeId` 不变，并记录 pending rename 候选。
-*   **Authoritative Mapping Rule**: `DocId <-> Path` 的权威映射仍位于 Ledger / Store B 中；Watcher 只能帮助识别候选变更，不能直接宣告权威路径已改变。
+*   **Authoritative Mapping Rule**: `DocId <-> Path` 的权威映射仍位于 Ledger / Store B 中；Watcher 只能帮助识别候选变更，不能直接宣告权威路径已改变。映射表本身视为 Structure Facts 的 projection 结果，而不是可独立写入的第二真值。
 *   **External Tools Support**: 必须兼容 VS Code、Vim、Nano 等外部编辑器的原子写入 (Atomic Write) 和重命名行为。
 *   **Constraints**:
     *   **Idempotency (幂等性)**: 重复的信号触发 **MUST** 产生相同的候选结果状态。
@@ -213,6 +238,7 @@ Op -> Ledger -> Snapshot -> Projection -> Vault
     *   任何节点均有且仅有一个 `NodeId`。
     *   树结构由 `parent_id` 关系完全决定。
     *   文件内容仅对 `kind=File` 生效。
+    *   对 `Node` 的重命名、移动、创建、删除必须先形成 Structure Facts，再由 projection 更新 `path` 与 `path_cache`。
 
 ## Cross-Platform Path Strategy (跨平台路径策略)
 
@@ -220,7 +246,7 @@ Op -> Ledger -> Snapshot -> Projection -> Vault
 
 *   **Canonical Internal Format (内部权威格式)**:
     *   **Rule**: 所有存储在 Ledger、KV Database、Memory Cache 中的路径字符串，**MUST** 统一使用 Linux 风格的正斜杠 (`/`) 分隔符。
-    *   **Scope**: `DocId <-> Path` 映射表、Op Logs、Protocol Messages (Sync / Gossip)。
+    *   **Scope**: `DocId <-> Path` 映射表、Ledger Logs、Protocol Messages (Sync / Gossip)。
     *   **Example**: `folder/subfolder/file.md` (Valid), `folder\subfolder\file.md` (Invalid).
 *   **Normalization Boundary (规范化边界)**:
     *   **Ingestion (输入)**: 当从 OS 文件系统读取路径时（Watcher events, File Dialogs），**MUST** 立即调用规范化函数 (`to_forward_slash`) 转换为内部格式。

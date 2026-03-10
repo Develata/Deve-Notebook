@@ -83,12 +83,12 @@
 *   **ServerMessage (服务端消息)**:
     *   `TreeUpdate(TreeDelta)`: 文件树增量更新。
     *   `FsChangeDetected`: 文件系统变更通知，提示客户端按当前 session repo 重新拉取列表/状态。
-    *   `NewOp`: 实时协作操作事件。
+    *   `NewOp`: 实时协作文档内容事件。
     *   `Snapshot`: OpenDoc 文档快照，绑定于当前 session repo；同步回退快照则使用显式 `repo_id` 的 `SyncSnapshotRequest` / `SyncPushSnapshot`。
 
 ### OpenDoc 性能策略 (Snapshot-First + Progressive Prefetch)
-*   **Snapshot-First**: 打开文档优先返回最近快照 + 增量 Ops。
-*   **Client Prefetch**: 客户端按自适应批次应用增量 Ops。
+*   **Snapshot-First**: 打开文档优先返回最近快照 + 增量 `Content Facts`。
+*   **Client Prefetch**: 客户端按自适应批次应用增量 `Content Facts`。
 *   **Search Gate**: 见 [03_rendering.md §大文档渲染策略](./03_rendering.md)。
 
 ### WebLightPeer Handshake (身份与握手)
@@ -123,12 +123,12 @@
     *   **Impact**: AES-NI 硬件加速下，Payload 加密对 CPU 开销几乎可忽略，且不阻塞 Gossip 逻辑运算。
 
 *   **Logic**: **Vector Gossip**。
-    *   **Trigger**: 同步仅在 **Vector Clock Comparison** 发现差异时触发 (e.g., $VC_A > VC_B$)。这确保了包含操作序列数的 Header 是决定传输的唯一依据。
-    *   **Mechanism (Operation-Based)**:
+    *   **Trigger**: 同步仅在 **Vector Clock Comparison** 发现差异时触发 (e.g., $VC_A > VC_B$)。这确保了包含账本序列数的 Header 是决定传输的唯一依据。
+    *   **Mechanism (Ledger-Fact-Based)**:
         1.  **Compare**: Server 在 `repo_id` 作用域内比较 $VC_B$ (B's State) vs $VC_A$ (A's State)。
-        2.  **Calculate**: A 计算出 B 在该 repo 中缺失的操作序列 (Missing Ops = $Ops[VC_B.Seq+1 ... VC_A.Seq]$)。
-        3.  **Send**: A 仅发送这些缺失的 **Operations** (Payload)，而非整个文件或文件 Diff。
-        4.  **Apply**: B 接收 Ops 并追加到本地的 Remote Branch 中。
+        2.  **Calculate**: A 计算出 B 在该 repo 中缺失的账本事实序列 (Missing Facts = $Facts[VC_B.Seq+1 ... VC_A.Seq]$)。
+        3.  **Send**: A 仅发送这些缺失的 **Ledger Facts** (Payload)，而非整个文件或文件 Diff。
+        4.  **Apply**: B 接收 Ledger Facts 并追加到本地的 Remote Branch 中。
         5.  **Update VC**: B 成功写入后，**MUST** 更新本地记录的 $VC_{PeerA}$ 至最新 Seq。这将作为下一次比对的基准。
     *   **Direct Write**: B 作为镜像端，**MUST** 直接接受来自 A 的已校验数据（无需本地冲突消解，因为 B 是只读的）。
 *   **Web Request Contract**: WebLightPeer 发起的 `SyncRequest`/`SyncPush` 必须显式带上 `repo_id`，以便 Proxy/Main/Relay 在零解密前提下完成确定性路由。
@@ -151,21 +151,21 @@
 ### Edge Cases & Safety Strategy (边界与安全)
 
 *   **Snapshot Sync (Fast Forward)**:
-    *   **Scenario**: 当 OpSeq 差异过大 (e.g., GAP > 1000) 或 Peer 首次接入时。
+    *   **Scenario**: 当 `LedgerSeq` 差异过大 (e.g., GAP > 1000) 或 Peer 首次接入时。
     *   **Strategy**: 自动切换为 **Direct Overwrite** 模式。
     *   **Action**: A 发送当前 `repo_id` 状态的完整快照 (`Snapshot { repo_id, server_vector, payload }`)，B 直接覆盖对应的 Remote Branch。这比重放 100 万条日志更高效 (解决算力/带宽平衡问题)。
     *   **Guardrail**: Snapshot 回退只允许在已知 repo 路由上发生；禁止使用空 repo 占位符或跨 repo 复用快照。
 
-*   **Strategy Selection (策略选择 - Why Ops?)**:
+*   **Strategy Selection (策略选择 - Why Incremental Facts?)**:
     *   **Q: 对于小文件，直接覆盖是否更优？**
-    *   **A**: 对于 **低频同步**，直接覆盖可行。但对于 **实时协作 (Real-time)**，Ops 依然占优：
-        *   **Bandwidth**: 修改一个字符，Ops 仅需几十字节；Snapshot 需传输整个文件 (e.g., 10KB)。Ops 带宽占用低 2-3 个数量级。
-        *   **Granularity**: Ops 保留了 "操作意图" (Insert/Delete)，这是后续实现自动合并 (CRDT) 和历史回溯 (Time Travel) 的基础。直接覆盖会丢失这些上下文。
+    *   **A**: 对于 **低频同步**，直接覆盖可行。但对于 **实时协作 (Real-time)**，增量事实依然占优：
+        *   **Bandwidth**: 修改一个字符，`Content Facts` 仅需几十字节；Snapshot 需传输整个文件 (e.g., 10KB)。增量事实带宽占用低 2-3 个数量级。
+        *   **Granularity**: `Content Facts` 保留了文本操作意图（例如 Insert/Delete），`Structure Facts` 保留了 rename/move/create/delete 等结构意图；直接覆盖会丢失这些上下文。
 
 *   **Malicious Defense & Rollback (恶意防御与回滚)**:
-    *   **Isolation**: 远端传来的恶意 Ops (e.g., "Delete All") 仅会影响 `ledger/remotes/peer_a/`，**绝不会** 自动污染用户的 `ledger/local/`。
+    *   **Isolation**: 远端传来的恶意 Ledger Facts（例如批量删除结构事实）仅会影响 `ledger/remotes/peer_a/`，**绝不会** 自动污染用户的 `ledger/local/`。
     *   **Undo Capability**: 若用户不小心合并了恶意分支，Local Ledger 本身支持 **Time Travel (Undo/Redo)**。用户可随时回滚 Local Branch 到任意历史状态。
-    *   **OpSeq Limitation**: OpSeq 为 64-bit 整数，即使每秒写入 100万次，也需 58 万年才会溢出。
+    *   **LedgerSeq Limitation**: `LedgerSeq` 为 64-bit 整数，即使每秒写入 100万次，也需 58 万年才会溢出。
 
 ### Indirect Sync & Trust Boundary (间接同步与信任边界)
 

@@ -9,11 +9,12 @@
     *   **Physical Storage (Repo Instance)**:
         *   **Filename**: `branch_path/<repo_name>.redb` (Human Readable).
         *   **Collision Handling**: 若同一 Branch 下存在同名文件但 URL 不同，系统 **MUST** 自动重命名新文件 (e.g., `wiki.redb` -> `wiki-1.redb`) 以避免覆盖。
-    *   **Retrieval Constraint (Resolution First)**:
+*   **Retrieval Constraint (Resolution First)**:
         *   **Input Acceptance**: 后端接口 **MAY** 接受 `Url` `Name` 或 `UUID` 作为输入参数。
         *   **Execution Safety**: 但在执行具体业务逻辑前 (Before Execution)，系统 **MUST** 将非 UUID 参数解析为 `InstanceUUID`。
         *   **Rule**: 任何文件读写、合并、同步操作的底层算子，**MUST** 操作 `UUID`。名字解析必须在算子调用前完成。
         *   **Note**: 严禁直接复用 UUID，必须保证每个物理 `.redb` 文件拥有全局唯一的 FileId。
+        *   **Structure Write Rule**: `RenameDoc / MoveDoc / DeleteDoc / CreateDoc` 的最终业务事实 **MUST** 以 `NodeId / DocId` 为主键进入 Ledger；不得通过 path 表或 metadata 直写完成。
 *   **P2P Connection Strategy (连接策略)**:
     *   **Match**: URL 相同 -> 同一仓库协作 (显示 Shadow Branches)。
     *   **Mismatch**: URL 不同 -> **Multi-Root Workspace** (侧边栏分列显示 Local Repos + Peer Repos)。
@@ -44,6 +45,10 @@
         }
         ```
     *   **Advantages**: NodeId 作为主键，路径仅缓存；重命名与移动只需更新子树缓存。
+*   **Authority Rule**:
+    *   `Tree State Manager` 是结构 projection 的内存视图，不是权威写源。
+    *   `path_cache` 仅是 projection cache，不能作为最终业务主键。
+    *   `TreeDelta` **SHOULD** 由 Structure Facts 应用后的 projection 差异导出，而不是通过 handler 直接篡改元数据表得到。
 *   **TreeDelta Generation**:
     *   **Add**: `TreeDelta::add_node` (File/Dir).
     *   **Remove**: `TreeDelta::remove_node`. 自动递归删除子节点。
@@ -52,6 +57,11 @@
 *   **Sorting Logic**:
     *   构建树视图 (`build_tree_from_root`) 时，严格遵循：**Folder First** > **Alphabetical (Case-Insensitive)**。
 *   **Initialization**: 服务启动时，通过 Node 表全量加载并构建树 (不依赖 FS 扫描)。
+*   **Write Path Contract**:
+    *   `CreateDoc` -> 追加 `CreateFile/CreateDir` 等 Structure Facts，再刷新 tree projection。
+    *   `RenameDoc` -> 追加 `RenameNode`，不得直接改 path 表。
+    *   `MoveDoc` -> 追加 `MoveNode`，不得直接改 path 表。
+    *   `DeleteDoc` -> 追加 `DeleteNode`，不得直接删 metadata 映射。
 
 ## 严格分支策略 (Strict Branching Policy)
 

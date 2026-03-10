@@ -9,26 +9,29 @@
 
 *   **Text Diff**: 采用 **Myers Algorithm** (implemented via `similar` crate).
     *   **Index Standard**: 全链路统一为 **UTF-16 code unit** 索引（与 JS/CodeMirror 一致）。
-    *   **Atomicity**: `Op::Insert` 和 `Op::Delete` 均基于 UTF-16 位置而非字节位置 (Byte Pos)。
+    *   **Atomicity**: `ContentOp::Insert` 和 `ContentOp::Delete` 均基于 UTF-16 位置而非字节位置 (Byte Pos)。
+    *   **Scope Note**: Text Diff 仅描述 `Content Facts`；不负责表达 rename / move / create / delete 这类结构变化。
 *   **Structural Merge**: 采用 **3-Way Merge** 策略。
     *   **Base**: 两个分支的最近共同祖先 (LCA - Lowest Common Ancestor)。
     *   **Left**: 本地当前状态 (Local Branch)。
     *   **Right**: 远端传入状态 (Remote Branch)。
+    *   **Structure Source**: 目录树、rename、move、delete、create 的冲突与合并必须基于 `Structure Facts` 判断，而不是仅依赖 path 字符串比对。
 
 ## Two Diff Domains (两层 Diff 域)
 
 *   **Domain 2 — Working Directory（工作区域）**：
     *   Watcher 监控 Vault (Store A) 的 markdown 文件变化。
-    *   检测到变更后，**MUST** 写入 `pending_fs_ops` 表（存储于 `.notegit/pending`），**MUST NOT** 直接生成 Ops 入 Ledger。
+    *   检测到变更后，**MUST** 写入 `pending_fs_ops` 表（存储于 `.notegit/pending`），**MUST NOT** 直接生成 Ledger Facts 入 Ledger。
     *   通过 WebSocket `FsChangeDetected` 消息实时通知前端，前端显示在 "Changes" 列表。
     *   用户可执行 Stage → 变更进入 "Staged Changes"（写入 `.notegit/staged` 表）。
 
 *   **Domain 1 — Staging & Commit（暂存与提交）**：
     *   用户点击 Commit 后，系统：
-        1. 将 Staged 文件与 Ledger 最新快照对比，生成 Ops（Insert/Delete）。
-        2. 将 Ops **追加到 Ledger**（唯一真值源），分配 `GlobalSeq`。
-        3. 创建 Commit 记录，锚定到当前 `ledger_seq`，形成版本历史。
-        4. 清空 Staging 区和 `pending_fs_ops` 中已处理的条目。
+        1. 将 Staged 文件与 Ledger 最新快照对比，生成 Ledger Facts。
+        2. 文本内容变化 -> `Content Facts`；rename / move / create / delete -> `Structure Facts`。
+        3. 将这些 Ledger Facts **追加到 Ledger**（唯一真值源），分配 `GlobalSeq`。
+        4. 创建 Commit 记录，锚定到当前 `ledger_seq`，形成版本历史。
+        5. 清空 Staging 区和 `pending_fs_ops` 中已处理的条目。
     *   此时变更从 Domain 2 正式转入 Domain 1（Committed）。
 
 *   **手动确认原则（Git-like Workflow）**：
@@ -36,6 +39,7 @@
     *   **Frontend Rule**: 内置前端编辑器生成的变更 **MUST** 直接入 Ledger，并通过 `pending overlay -> Ack -> confirmed` 收敛；默认 **MUST NOT** 进入 `pending_fs_ops` / Staging。
     *   **Scope Boundary**: 本章的 Git-like 三阶段仅适用于外部文件系统变更；不适用于默认 Web Thin Client 写路径。
     *   此设计对外部编辑严格类比 Git 的三阶段：Working Directory (`pending_fs_ops`) → Staging Area (`.notegit/staged`) → Commit (Ledger + `.notegit/commits`)。
+    *   **Structure Rule**: rename / move / create / delete 在 Commit 阶段 **MUST** 转换为结构事实，而不是通过 metadata/path 映射表的副作用完成。
 
 *   **Conflict Detection**: 
     *   若 `pending_fs_ops` 与 Ledger 已存在变更冲突（如同一位置被前端和后台同时修改），系统 **MUST** 提示用户选择 "Keep File System" 或 "Keep Ledger"。
@@ -76,7 +80,7 @@
 
 > 目标：首屏 < 200ms 可见，完整可编辑时间最短化。
 
-*   **Snapshot-First**: 打开文档时优先读取最新快照，再仅重放快照之后的 Ops。
+*   **Snapshot-First**: 打开文档时优先读取最新快照，再仅重放快照之后的 `Content Facts`。
 *   **UTF-16 Index Cache**: 为 UTF-16 索引引入断点缓存，降低定位成本。
 *   **Progressive Prefetch**: 先渲染首屏 + 缓冲区，其余内容后台分批预加载。
 *   **Search Gate**: 见 [03_rendering.md §大文档渲染策略](./03_rendering.md)。

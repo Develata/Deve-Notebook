@@ -143,7 +143,7 @@ Unauthorized != Disconnected
 4. 为 `History / NewOp / Snapshot delta` 补齐 origin metadata，避免长期依赖内容匹配做 reconcile。
 5. 文件切换前检查未确认写入；不得静默丢弃。
 6. 统一 WS / HTTP / Watcher / SC 的最终 ledger 写入口。
-7. 删除语义改为显式 tombstone / delete op。
+7. 删除语义改为显式删除结构事实（如 `DeleteNode` 或等价 tombstone fact）。
 
 ## 8. Forbidden Patterns
 
@@ -160,7 +160,7 @@ Unauthorized != Disconnected
 
 - 现有 `ledger-first` 设计原则保持不变。
 - 本文档是对 `01_terminology.md`、`04_storage.md`、`05_network.md`、`07_diff_logic.md` 在 Web 写入模型上的收敛说明。
-- 若未来协议需要新增 `OpRejected`、`WriteReady` 等更细粒度消息，应视为对本文档的自然延伸，而不是另起架构。
+- 若未来协议需要新增 `EditRejected`、`WriteReady` 等更细粒度消息，应视为对本文档的自然延伸，而不是另起架构。
 
 ## 10. Success Criteria
 

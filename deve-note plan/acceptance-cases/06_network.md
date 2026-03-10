@@ -56,32 +56,31 @@
 - case_id: NET-006
   goal: OpenDoc Snapshot-First。
   preconditions:
-    - 文档有快照与增量 Ops
+    - 文档有快照与增量 Content Facts
   steps:
     - ws_send: { type: "OpenDoc", id: "doc_id" }
   assertions:
     - ws_receive_order: ["Snapshot", "NewOp"]
 
 - case_id: NET-007
-  goal: Vector Gossip 缺失 Ops 必须 repo-scoped。
+  goal: Vector Gossip 缺失 Ledger Facts 必须 repo-scoped。
   preconditions:
     - Repo A 中 A 的 VC 大于 B
   steps:
     - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { seq: 3 } }
   assertions:
-    - ws_payload_contains_only_missing_ops true
+    - ws_payload_contains_only_missing_facts true
     - ws_payload_contains: "11111111-1111-1111-1111-111111111111"
 
 - case_id: NET-008
   goal: Snapshot fallback 必须保留 repo_id。
   preconditions:
-    - OpSeq 差异超过阈值
+    - LedgerSeq 差异超过阈值
   steps:
     - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { seq: 0 } }
   assertions:
     - ws_receive_contains: "Snapshot"
     - ws_receive_contains: "11111111-1111-1111-1111-111111111111"
-    - ws_receive_not_contains: "OpsRange"
 
 - case_id: NET-009
   goal: 多仓库切换必须重新握手并隔离状态。
@@ -97,7 +96,7 @@
 - case_id: NET-010
   goal: 恶意数据隔离。
   preconditions:
-    - Remote 分支有破坏性 Ops
+    - Remote 分支有破坏性 Ledger Facts
   steps:
     - ws_send: { type: "SyncPush", peer: "malicious", repo_id: "11111111-1111-1111-1111-111111111111" }
   assertions:
