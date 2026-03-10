@@ -17,21 +17,23 @@ use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 
 fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus, content: &str) {
-    repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        pending_fs::upsert(
-            db,
-            &PendingFsEntry {
-                path: path.into(),
-                renamed_from: None,
-                doc_id: None,
-                change_type: status,
-                content_hash: pending_fs::content_hash(content),
-                detected_at: 1,
-                has_conflict: false,
-            },
-        )
-    })
-    .expect("seed pending entry");
+    seed_pending_entry(
+        repo,
+        PendingFsEntry {
+            path: path.into(),
+            renamed_from: None,
+            doc_id: None,
+            change_type: status,
+            content_hash: pending_fs::content_hash(content),
+            detected_at: 1,
+            has_conflict: false,
+        },
+    );
+}
+
+fn seed_pending_entry(repo: &RepoManager, entry: PendingFsEntry) {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| pending_fs::upsert(db, &entry))
+        .expect("seed pending entry");
 }
 
 fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
@@ -121,6 +123,54 @@ async fn test_proxy_commit_queries_roundtrip() -> anyhow::Result<()> {
     assert_eq!(diffs.len(), 1);
     assert_eq!(diffs[0].path, "notes/b.md");
     assert_eq!(diffs[0].status, ChangeStatus::Added);
+    task.abort();
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Result<()> {
+    let (dir, repo, proxy, task) = spawn_proxy_server().await?;
+    let selector = RepoSelector::default();
+    write_workspace_file(&dir, "notes/a.md", "hello");
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    proxy.stage_pending_in_repo(&selector, "notes/a.md")?;
+    proxy.commit_staged_in_repo(&selector, "initial")?;
+    let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
+
+    write_workspace_file(&dir, "notes/b.md", "hello");
+    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))?;
+    seed_pending_entry(
+        &repo,
+        PendingFsEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: Some(doc_id),
+            change_type: ChangeStatus::Deleted,
+            content_hash: String::new(),
+            detected_at: 1,
+            has_conflict: false,
+        },
+    );
+    seed_pending_entry(
+        &repo,
+        PendingFsEntry {
+            path: "notes/b.md".into(),
+            renamed_from: Some("notes/a.md".into()),
+            doc_id: Some(doc_id),
+            change_type: ChangeStatus::Added,
+            content_hash: pending_fs::content_hash("hello"),
+            detected_at: 1,
+            has_conflict: false,
+        },
+    );
+
+    let pending = proxy.list_pending_fs_in_repo(&selector)?;
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, "notes/b.md");
+    assert_eq!(pending[0].renamed_from.as_deref(), Some("notes/a.md"));
+
+    proxy.stage_pending_in_repo(&selector, "notes/b.md")?;
+    assert!(proxy.list_pending_fs_in_repo(&selector)?.is_empty());
     task.abort();
     Ok(())
 }

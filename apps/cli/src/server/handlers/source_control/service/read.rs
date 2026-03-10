@@ -7,6 +7,7 @@ pub fn list_pending(
     selector: &RepoSelector,
 ) -> super::ScResult<Vec<ChangeEntry>> {
     repo.list_pending_fs_in_repo(selector)
+        .map(super::super::present::collapse_rename_candidates)
         .map_err(|e| errors::map_repo_error(ScOp::ListPending, e))
 }
 
@@ -15,6 +16,7 @@ pub fn list_changes(
     selector: &RepoSelector,
 ) -> super::ScResult<Vec<ChangeEntry>> {
     repo.list_changes_in_repo(selector)
+        .map(super::super::present::collapse_rename_candidates)
         .map_err(|e| errors::map_repo_error(ScOp::ListChanges, e))
 }
 

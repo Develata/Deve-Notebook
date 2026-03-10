@@ -24,7 +24,7 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
         &scope,
         deve_core::ledger::source_control::list_staged,
     ) {
-        Ok(list) => list,
+        Ok(list) => super::present::collapse_rename_candidates(list),
         Err(e) => {
             tracing::error!("Failed to list staged files: {:?}", e);
             return super::errors::send_ws(

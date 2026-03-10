@@ -22,8 +22,14 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     let has_conflict = entry.has_conflict;
     let full_path = entry.path.clone();
+    let renamed_from = entry.renamed_from.clone();
     let path_parts: Vec<&str> = full_path.split('/').collect();
     let filename = path_parts.last().unwrap_or(&"?").to_string();
+    let display_name = renamed_from
+        .as_ref()
+        .and_then(|old_path| old_path.rsplit('/').next())
+        .map(|old_name| format!("{} -> {}", old_name, filename))
+        .unwrap_or_else(|| filename.clone());
 
     // 目录路径 (不含文件名)
     let directory = if path_parts.len() > 1 {
@@ -42,6 +48,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     // 状态图标和颜色
     let (icon_char, color_cls) = match entry.status {
         ChangeStatus::Modified => ("M", "text-modified"),
+        ChangeStatus::Added if renamed_from.is_some() => ("R", "text-added"),
         ChangeStatus::Added => ("A", "text-added"),
         ChangeStatus::Deleted => ("D", "text-deleted"),
     };
@@ -58,7 +65,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 // 文件图标
                 <FileText class=format!("w-3.5 h-3.5 min-w-3.5 {}", if filename.ends_with(".rs") { "text-[var(--color-file-rust)]" } else { "text-muted" }) />
 
-                <span class="truncate">{filename}</span>
+                <span class="truncate">{display_name}</span>
                 <span class="text-xs text-muted truncate shrink-0 ml-1">
                     {directory}
                 </span>

@@ -9,8 +9,10 @@ pub fn stage_pending(
     path: &str,
 ) -> super::ScResult<String> {
     let path = deve_core::utils::path::to_forward_slash(path);
-    repo.stage_pending_in_repo(selector, &path)
-        .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
+    for related_path in related_pending_paths(repo, selector, &path)? {
+        repo.stage_pending_in_repo(selector, &related_path)
+            .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
+    }
     Ok(path)
 }
 
@@ -19,12 +21,14 @@ pub fn stage_pending_many(
     selector: &RepoSelector,
     paths: Vec<String>,
 ) -> super::ScResult<Vec<String>> {
-    let paths = normalized_unique_paths(paths);
-    for path in &paths {
-        repo.stage_pending_in_repo(selector, path)
-            .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
+    let visible_paths = normalized_unique_paths(paths);
+    for path in &visible_paths {
+        for related_path in related_pending_paths(repo, selector, path)? {
+            repo.stage_pending_in_repo(selector, &related_path)
+                .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
+        }
     }
-    Ok(paths)
+    Ok(visible_paths)
 }
 
 pub fn discard_pending(
@@ -44,8 +48,10 @@ pub fn unstage_file(
     path: &str,
 ) -> super::ScResult<String> {
     let path = deve_core::utils::path::to_forward_slash(path);
-    repo.unstage_file_in_repo(selector, &path)
-        .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
+    for related_path in related_staged_paths(repo, selector, &path)? {
+        repo.unstage_file_in_repo(selector, &related_path)
+            .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
+    }
     Ok(path)
 }
 
@@ -54,12 +60,14 @@ pub fn unstage_many(
     selector: &RepoSelector,
     paths: Vec<String>,
 ) -> super::ScResult<Vec<String>> {
-    let paths = normalized_unique_paths(paths);
-    for path in &paths {
-        repo.unstage_file_in_repo(selector, path)
-            .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
+    let visible_paths = normalized_unique_paths(paths);
+    for path in &visible_paths {
+        for related_path in related_staged_paths(repo, selector, path)? {
+            repo.unstage_file_in_repo(selector, &related_path)
+                .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
+        }
     }
-    Ok(paths)
+    Ok(visible_paths)
 }
 
 pub fn commit_staged(
@@ -79,4 +87,24 @@ fn normalized_unique_paths(paths: Vec<String>) -> Vec<String> {
         .filter(|p| !p.is_empty())
         .filter(|p| seen.insert(p.clone()))
         .collect()
+}
+
+fn related_pending_paths(
+    repo: &dyn Repository,
+    selector: &RepoSelector,
+    path: &str,
+) -> super::ScResult<Vec<String>> {
+    repo.list_pending_fs_in_repo(selector)
+        .map(|entries| super::super::present::expand_related_paths(&entries, path))
+        .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.to_string()), e))
+}
+
+fn related_staged_paths(
+    repo: &dyn Repository,
+    selector: &RepoSelector,
+    path: &str,
+) -> super::ScResult<Vec<String>> {
+    repo.list_changes_in_repo(selector)
+        .map(|entries| super::super::present::expand_related_paths(&entries, path))
+        .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.to_string()), e))
 }
