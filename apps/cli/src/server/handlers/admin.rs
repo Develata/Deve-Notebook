@@ -1,4 +1,5 @@
-use crate::admin_api::{DumpResponse, ExportEntry, NodeCheckResponse};
+use crate::admin_api::{DumpResponse, NodeCheckResponse};
+use crate::export_entries;
 use crate::server::AppState;
 use axum::Json;
 use axum::extract::{Query, State};
@@ -74,29 +75,14 @@ pub async fn export(
         Ok(name) => name,
         Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
     };
-    let Ok(docs) = state.repo.list_local_docs(Some(&repo_name)) else {
-        return (
+    match export_entries::build(&state.repo, &repo_name) {
+        Ok(entries) => Json(entries).into_response(),
+        Err(_) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to list local docs".to_string(),
+            "Failed to export ledger facts".to_string(),
         )
-            .into_response();
-    };
-    let mut entries = Vec::with_capacity(docs.len());
-    for (doc_id, path) in docs {
-        let Ok(ops) = state.repo.get_local_ops_in_local_repo(&repo_name, doc_id) else {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to load local ops".to_string(),
-            )
-                .into_response();
-        };
-        entries.push(ExportEntry {
-            doc_id,
-            path,
-            ops: ops.into_iter().map(|(_, entry)| entry).collect(),
-        });
+            .into_response(),
     }
-    Json(entries).into_response()
 }
 
 pub async fn node_check(

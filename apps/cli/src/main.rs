@@ -18,6 +18,7 @@ use std::path::PathBuf;
 
 mod admin_api;
 mod commands;
+mod export_entries;
 mod server;
 
 #[derive(Parser, Debug)]

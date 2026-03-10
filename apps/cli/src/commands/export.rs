@@ -1,9 +1,9 @@
 // apps\cli\src\commands
 use crate::admin_api::ExportEntry;
 use crate::commands::live_proxy;
+use crate::export_entries;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::models::LedgerEntry;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -31,16 +31,7 @@ pub fn run(
         Err(err) => return Err(err),
     };
     let repo_name = repo.resolve_local_repo_name(None, repo_name.as_deref())?;
-    let docs = repo.list_local_docs(Some(&repo_name))?;
-    let mut entries = Vec::with_capacity(docs.len());
-
-    for (doc_id, path) in docs {
-        let ops_with_seq = repo.get_local_ops_in_local_repo(&repo_name, doc_id)?;
-        let ops: Vec<LedgerEntry> = ops_with_seq.into_iter().map(|(_, op)| op).collect();
-        entries.push(ExportEntry { doc_id, path, ops });
-    }
-
-    write_entries(output, &entries)
+    write_entries(output, &export_entries::build(&repo, &repo_name)?)
 }
 
 fn write_entries(output: Option<String>, entries: &[ExportEntry]) -> Result<()> {

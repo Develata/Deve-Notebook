@@ -10,9 +10,9 @@ pub struct DumpResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportEntry {
-    pub doc_id: DocId,
-    pub path: String,
-    pub ops: Vec<LedgerEntry>,
+    pub global_seq: u64,
+    pub current_path: Option<String>,
+    pub entry: LedgerEntry,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
