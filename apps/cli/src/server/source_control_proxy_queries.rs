@@ -2,6 +2,7 @@ use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::DocId;
+use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeEntry;
 
 pub(super) fn list_docs(
@@ -52,15 +53,16 @@ pub(super) fn list_changes(
 pub(super) fn diff_doc_path(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,
-    path: &str,
+    target: &ScPathTarget,
 ) -> Result<String> {
     let url = format!("{}/api/sc/diff", api.base_url);
     let res = super::block_on_safe(async {
-        http::send_text(
-            RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
-                .query(&[("path", path)]),
-        )
-        .await
+        let mut req = RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+            .query(&[("path", target.path.clone())]);
+        if let Some(doc_id) = target.doc_id {
+            req = req.query(&[("doc_id", doc_id.to_string())]);
+        }
+        http::send_text(req).await
     })?;
     Ok(res)
 }

@@ -1,5 +1,6 @@
 use super::super::errors::{self, ScOp};
 use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 
 pub fn list_pending(
@@ -20,13 +21,13 @@ pub fn list_changes(
         .map_err(|e| errors::map_repo_error(ScOp::ListChanges, e))
 }
 
-pub fn diff_doc_path(
+pub fn diff_doc_target(
     repo: &dyn Repository,
     selector: &RepoSelector,
-    path: &str,
+    target: &ScPathTarget,
 ) -> super::ScResult<String> {
-    let path = deve_core::utils::path::to_forward_slash(path);
-    repo.diff_doc_path_in_repo(selector, &path)
+    let path = super::resolve_path(&list_changes(repo, selector)?, target);
+    repo.diff_doc_path_in_repo(selector, target)
         .map_err(|e| errors::map_repo_error(ScOp::DiffDoc(path), e))
 }
 

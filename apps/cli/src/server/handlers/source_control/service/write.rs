@@ -13,7 +13,7 @@ pub fn stage_pending(
         .map_err(|e| errors::map_repo_error(ScOp::StagePending(target.path.clone()), e))?;
     let path = super::resolve_path(&entries, target);
     for related_path in super::related_paths(&entries, target) {
-        repo.stage_pending_in_repo(selector, &related_path)
+        repo.stage_pending_in_repo(selector, &ScPathTarget::from_path(related_path))
             .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
     }
     Ok(path)
@@ -30,7 +30,7 @@ pub fn stage_pending_many(
     let visible_paths = super::resolve_paths(&entries, targets);
     for path in &visible_paths {
         for related_path in super::related_paths(&entries, &ScPathTarget::from_path(path.clone())) {
-            repo.stage_pending_in_repo(selector, &related_path)
+            repo.stage_pending_in_repo(selector, &ScPathTarget::from_path(related_path))
                 .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
         }
     }
@@ -46,7 +46,7 @@ pub fn discard_pending(
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::DiscardPending(target.path.clone()), e))?;
     let path = super::resolve_path(&entries, target);
-    repo.discard_pending_in_repo(selector, &path)
+    repo.discard_pending_in_repo(selector, &ScPathTarget::from_path(path.clone()))
         .map_err(|e| errors::map_repo_error(ScOp::DiscardPending(path.clone()), e))?;
     Ok(path)
 }
@@ -61,7 +61,7 @@ pub fn unstage_file(
         .map_err(|e| errors::map_repo_error(ScOp::Unstage(target.path.clone()), e))?;
     let path = super::resolve_path(&entries, target);
     for related_path in super::related_paths(&entries, target) {
-        repo.unstage_file_in_repo(selector, &related_path)
+        repo.unstage_file_in_repo(selector, &ScPathTarget::from_path(related_path))
             .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
     }
     Ok(path)
@@ -78,7 +78,7 @@ pub fn unstage_many(
     let visible_paths = super::resolve_paths(&entries, targets);
     for path in &visible_paths {
         for related_path in super::related_paths(&entries, &ScPathTarget::from_path(path.clone())) {
-            repo.unstage_file_in_repo(selector, &related_path)
+            repo.unstage_file_in_repo(selector, &ScPathTarget::from_path(related_path))
                 .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
         }
     }

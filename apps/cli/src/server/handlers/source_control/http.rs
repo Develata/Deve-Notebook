@@ -12,6 +12,7 @@ use crate::server::handlers::source_control::service;
 use crate::server::plugin_host::PluginHostState;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::runtime::host;
+use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeEntry;
 
 #[derive(Deserialize, Default)]
@@ -23,8 +24,19 @@ pub struct RepoQuery {
 #[derive(Deserialize)]
 pub struct DiffQuery {
     pub path: String,
+    #[serde(default)]
+    pub doc_id: Option<deve_core::models::DocId>,
     #[serde(flatten)]
     pub repo: RepoSelector,
+}
+
+impl DiffQuery {
+    fn target(&self) -> ScPathTarget {
+        ScPathTarget {
+            path: self.path.clone(),
+            doc_id: self.doc_id,
+        }
+    }
 }
 
 pub async fn pending(
@@ -77,7 +89,7 @@ pub async fn diff(
     State(state): State<Arc<AppState>>,
     Query(q): Query<DiffQuery>,
 ) -> impl IntoResponse {
-    match service::diff_doc_path(state.repo.as_ref(), &q.repo, &q.path) {
+    match service::diff_doc_target(state.repo.as_ref(), &q.repo, &q.target()) {
         Ok(diff) => diff.into_response(),
         Err(e) => super::errors::http(e),
     }
@@ -88,7 +100,7 @@ pub async fn diff_plugin_host(
     Query(q): Query<DiffQuery>,
 ) -> impl IntoResponse {
     match host::repository() {
-        Ok(repo) => match service::diff_doc_path(repo.as_ref(), &q.repo, &q.path) {
+        Ok(repo) => match service::diff_doc_target(repo.as_ref(), &q.repo, &q.target()) {
             Ok(diff) => diff.into_response(),
             Err(e) => super::errors::http(e),
         },

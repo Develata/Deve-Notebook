@@ -19,5 +19,6 @@ mod snapshot_ops;
 mod source_control_api;
 mod source_control_ops;
 mod source_control_query_ops;
+mod source_control_target;
 mod source_control_workdir;
 mod source_control_workdir_helpers;

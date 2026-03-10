@@ -3,6 +3,7 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::traits::RepoSelector;
+use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, SourceControlApi};
 use anyhow::Result;
 
@@ -12,19 +13,19 @@ impl SourceControlApi for RepoManager {
         self.list_pending_fs_in_local_repo(&repo_name)
     }
 
-    fn stage_pending_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
+    fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
         let repo_name = self.resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())?;
-        self.stage_pending_in_local_repo(&repo_name, path)
+        self.stage_pending_target_in_local_repo(&repo_name, target)
     }
 
-    fn discard_pending_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
+    fn discard_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
         let repo_name = self.resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())?;
-        self.discard_pending_in_local_repo(&repo_name, path)
+        self.discard_pending_target_in_local_repo(&repo_name, target)
     }
 
-    fn unstage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
+    fn unstage_file_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
         let repo_name = self.resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())?;
-        self.unstage_file_in_local_repo(&repo_name, path)
+        self.unstage_file_target_in_local_repo(&repo_name, target)
     }
 
     fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
@@ -32,9 +33,9 @@ impl SourceControlApi for RepoManager {
         self.list_changes_in_local_repo(&repo_name)
     }
 
-    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<String> {
+    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<String> {
         let repo_name = self.resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())?;
-        self.diff_doc_path_in_local_repo(&repo_name, path)
+        self.diff_doc_target_in_local_repo(&repo_name, target)
     }
 
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {

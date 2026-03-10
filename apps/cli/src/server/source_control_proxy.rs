@@ -13,6 +13,7 @@ mod queries;
 use anyhow::Result;
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
+use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 
 pub struct RemoteSourceControlApi {
@@ -66,24 +67,24 @@ impl Repository for RemoteSourceControlApi {
         queries::list_pending(self, repo)
     }
 
-    fn stage_pending_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        mutations::stage_pending(self, repo, path)
+    fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
+        mutations::stage_pending(self, repo, target)
     }
 
-    fn discard_pending_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        mutations::discard_pending(self, repo, path)
+    fn discard_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
+        mutations::discard_pending(self, repo, target)
     }
 
-    fn unstage_file_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<()> {
-        mutations::unstage_file(self, repo, path)
+    fn unstage_file_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
+        mutations::unstage_file(self, repo, target)
     }
 
     fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
         queries::list_changes(self, repo)
     }
 
-    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, path: &str) -> Result<String> {
-        queries::diff_doc_path(self, repo, path)
+    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<String> {
+        queries::diff_doc_path(self, repo, target)
     }
 
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
