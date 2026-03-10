@@ -10,4 +10,4 @@ pub mod access;
 pub mod management;
 
 pub use access::ShadowRepo;
-pub use management::{ensure_shadow_db, list_shadows_on_disk};
+pub use management::{ensure_shadow_db, list_shadows_on_disk, load_shadow_db};

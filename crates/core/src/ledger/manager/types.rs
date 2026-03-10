@@ -3,7 +3,7 @@ use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// 仓库元数据信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ pub struct RepoManager {
     /// 其他本地库缓存 (name -> Database)
     pub(crate) extra_local_dbs: RwLock<HashMap<String, Database>>,
     /// 远端影子库集合 (peer_id -> repo_id -> Database) - 懒加载
-    pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>>,
+    pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
     /// 快照保留深度
     pub snapshot_depth: usize,
     /// Vault 根目录 (用于 commit 时读取磁盘文件内容)

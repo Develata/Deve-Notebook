@@ -78,10 +78,11 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
 
     // 4. Sync A -> B
     info!("--- Step 2: Sync A -> B ---");
-    let repo_id = repo_a
+    let repo_info = repo_a
         .get_repo_info_for(None, Some(&repo_a_name))?
-        .map(|info| info.uuid)
         .ok_or_else(|| anyhow::anyhow!("Repo A metadata missing"))?;
+    repo_b.ensure_shadow_repo_info(&peer_a_id, &repo_info)?;
+    let repo_id = repo_info.uuid;
     let ops_a = repo_a.get_local_ops_in_local_repo(&repo_a_name, doc_id)?;
     info!("Extracted {} ops from Peer A", ops_a.len());
 

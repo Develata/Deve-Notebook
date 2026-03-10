@@ -98,7 +98,7 @@ mod tests {
     use crate::ledger::shadow::management::ensure_shadow_db;
     use crate::models::{Op, StructureOp};
     use std::collections::HashMap;
-    use std::sync::RwLock;
+    use std::sync::{Arc, RwLock};
     use tempfile::TempDir;
     use uuid::Uuid;
 
@@ -108,7 +108,7 @@ mod tests {
         let remotes_dir = tmp_dir.path().join("remotes");
         std::fs::create_dir_all(&remotes_dir)?;
 
-        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>> =
+        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>> =
             RwLock::new(HashMap::new());
         let peer_id = PeerId::new("test_peer");
         let repo_id = Uuid::new_v4();
@@ -168,7 +168,7 @@ mod tests {
         let remotes_dir = tmp_dir.path().join("remotes");
         std::fs::create_dir_all(&remotes_dir)?;
 
-        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>> =
+        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>> =
             RwLock::new(HashMap::new());
         let peer_id = PeerId::new("test_peer");
         let repo_id = Uuid::new_v4();

@@ -26,10 +26,11 @@ fn inject_conflict(
 ) -> Result<()> {
     let peer_id = PeerId::new(peer_name);
     let repo_name = repo.local_repo_name().to_string();
-    let repo_id = repo
+    let repo_info = repo
         .get_repo_info_for(None, Some(&repo_name))?
-        .map(|info| info.uuid)
         .ok_or_else(|| anyhow::anyhow!("Local repo metadata missing"))?;
+    repo.ensure_shadow_repo_info(&peer_id, &repo_info)?;
+    let repo_id = repo_info.uuid;
 
     println!("Scanning local docs to find {}...", filename);
 

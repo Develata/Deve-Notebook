@@ -44,6 +44,6 @@ impl RepoManager {
         let db = peer_repos
             .get(repo_id)
             .ok_or_else(|| anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
-        f(db)
+        f(db.as_ref())
     }
 }

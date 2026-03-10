@@ -20,6 +20,8 @@ mod metadata_ops;
 mod metadata_repair_ops;
 mod ops_ops;
 mod ops_structure;
+mod remote_repo_allocate;
+mod remote_repo_scan;
 mod repo_db;
 mod repo_info;
 mod repo_lookup;

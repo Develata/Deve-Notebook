@@ -6,6 +6,7 @@
 //!
 //! **核心功能清单**:
 //! - `ensure_shadow_db`: 确保指定 Peer 的数据库存在且表结构完整。
+//! - `load_shadow_db`: 按显式路径打开/初始化影子库。
 //! - `list_shadows_on_disk`: 扫描磁盘发现已有的影子库。
 //!
 //! **类型**: Core MUST (核心必选)
@@ -16,14 +17,27 @@ use anyhow::{Context, Result};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// 确保指定 Peer 的特定影子库已加载。
 pub fn ensure_shadow_db(
     remotes_dir: &Path,
-    shadow_dbs: &RwLock<HashMap<PeerId, HashMap<RepoId, Database>>>,
+    shadow_dbs: &RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
     peer_id: &PeerId,
     repo_id: &RepoId,
+) -> Result<()> {
+    let db_path = remotes_dir
+        .join(peer_id.to_filename())
+        .join(format!("{}.redb", repo_id));
+    load_shadow_db(remotes_dir, shadow_dbs, peer_id, repo_id, &db_path)
+}
+
+pub fn load_shadow_db(
+    remotes_dir: &Path,
+    shadow_dbs: &RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
+    peer_id: &PeerId,
+    repo_id: &RepoId,
+    db_path: &Path,
 ) -> Result<()> {
     // Check if already loaded (Read Lock)
     {
@@ -51,9 +65,7 @@ pub fn ensure_shadow_db(
     std::fs::create_dir_all(&peer_dir)
         .with_context(|| format!("Failed to create shadow directory for peer: {}", peer_id))?;
 
-    // Create or open the shadow database: remotes/<peer_id>/<repo_id>.redb
-    let db_path = peer_dir.join(format!("{}.redb", repo_id));
-    let db = Database::create(&db_path).with_context(|| {
+    let db = Database::create(db_path).with_context(|| {
         format!(
             "Failed to create shadow database for peer {} repo {}",
             peer_id, repo_id
@@ -83,7 +95,9 @@ pub fn ensure_shadow_db(
     write_txn.commit()?;
 
     // Store in map
-    dbs.entry(peer_id.clone()).or_default().insert(*repo_id, db);
+    dbs.entry(peer_id.clone())
+        .or_default()
+        .insert(*repo_id, Arc::new(db));
 
     Ok(())
 }

@@ -1,10 +1,16 @@
 use anyhow::Result;
-use redb::Database;
 
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 
 impl RepoManager {
+    pub fn get_local_repo_info_by_id(&self, repo_id: uuid::Uuid) -> Result<Option<RepoInfo>> {
+        let Some(repo_name) = self.find_local_repo_name_by_id(repo_id)? else {
+            return Ok(None);
+        };
+        self.get_repo_info_for(None, Some(&repo_name))
+    }
+
     pub fn get_repo_url(&self, branch: Option<&PeerId>, repo_name: &str) -> Result<Option<String>> {
         Ok(self
             .get_repo_info_for(branch, Some(repo_name))?
@@ -68,26 +74,32 @@ impl RepoManager {
     }
 
     fn read_remote_repo_info(&self, peer_id: &PeerId, repo_name: &str) -> Result<Option<RepoInfo>> {
-        if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
-            let info = self.run_on_shadow_repo(peer_id, &repo_id, Self::read_repo_info_from_db)?;
-            if info.is_some() {
-                return Ok(info);
+        if let Some(entry) = self.resolve_remote_repo_entry(peer_id, repo_name)? {
+            if let Some(info) = entry.info {
+                return Ok(Some(info));
             }
+            if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem) {
+                return Ok(Some(RepoInfo {
+                    uuid: repo_id,
+                    name: entry.stem,
+                    url: None,
+                }));
+            }
+        }
+        if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
             return Ok(Some(RepoInfo {
                 uuid: repo_id,
                 name: repo_name.to_string(),
                 url: None,
             }));
         }
-
         let db_path = self
             .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", repo_name));
-        if !db_path.exists() {
-            return Ok(None);
+        if db_path.exists() {
+            return Self::read_repo_info_from_path(&db_path);
         }
-        let db = Database::create(&db_path)?;
-        Self::read_repo_info_from_db(&db)
+        Ok(None)
     }
 }

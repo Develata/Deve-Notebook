@@ -13,6 +13,7 @@ use crate::models::PeerId;
 use anyhow::Result;
 use redb::Database;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 /// 全局缓存：已打开的数据库 (path -> Arc<Database>)
@@ -67,12 +68,47 @@ impl RepoManager {
             }
             // 远端影子库 (只读)
             Some(peer_id) => {
-                let db = self.get_or_open_shadow_db(peer_id, name)?;
+                let resolved = self.resolve_remote_repo_entry(peer_id, name)?;
+                let repo_name = resolved
+                    .as_ref()
+                    .and_then(|entry| entry.info.as_ref().map(|info| info.name.clone()))
+                    .unwrap_or_else(|| name.to_string());
+                let loaded = resolved
+                    .as_ref()
+                    .and_then(|entry| {
+                        entry
+                            .info
+                            .as_ref()
+                            .map(|info| info.uuid)
+                            .or_else(|| uuid::Uuid::parse_str(&entry.stem).ok())
+                    })
+                    .and_then(|repo_id| {
+                        self.shadow_dbs
+                            .read()
+                            .unwrap()
+                            .get(peer_id)
+                            .and_then(|repos| repos.get(&repo_id))
+                            .cloned()
+                    });
+                if let Some(db) = loaded {
+                    return Ok(DatabaseHandle {
+                        db,
+                        readonly: true,
+                        branch: Some(peer_id.clone()),
+                        repo_name,
+                    });
+                }
+                let db_path = resolved.map(|entry| entry.path).unwrap_or_else(|| {
+                    self.remotes_dir()
+                        .join(peer_id.to_filename())
+                        .join(format!("{}.redb", name))
+                });
+                let db = self.get_or_open_db_at(&db_path)?;
                 Ok(DatabaseHandle {
                     db,
                     readonly: true, // 远端分支始终只读
                     branch: Some(peer_id.clone()),
-                    repo_name: name.to_string(),
+                    repo_name,
                 })
             }
         }
@@ -80,13 +116,13 @@ impl RepoManager {
 
     /// 获取或打开本地数据库 (返回 Arc)
     fn get_or_open_local_db(&self, name: &str) -> Result<Arc<Database>> {
-        let db_path = self.ledger_dir.join("local").join(format!("{}.redb", name));
+        let cache_key = self.ledger_dir.join("local").join(format!("{}.redb", name));
 
         // 1. 检查全局缓存
         {
             let cache = OPENED_DBS.read().unwrap();
-            if let Some(arc_db) = cache.get(&db_path) {
-                tracing::debug!("Database cache hit: {:?}", db_path);
+            if let Some(arc_db) = cache.get(cache_key.as_path()) {
+                tracing::debug!("Database cache hit: {:?}", cache_key);
                 return Ok(arc_db.clone());
             }
         }
@@ -98,7 +134,7 @@ impl RepoManager {
             .join("local")
             .join(format!("{}.redb", self.local_repo_name));
 
-        if db_path == main_db_path {
+        if cache_key == main_db_path {
             // 主库已经被 self.local_db 持有
             // 我们需要返回一个指向它的 Arc，但 self.local_db 不是 Arc
             // 解决方案：使用 run_on_local_repo 闭包模式而不是直接返回引用
@@ -116,58 +152,50 @@ impl RepoManager {
         }
 
         // 3. 检查文件是否存在
-        if !db_path.exists() {
+        if !cache_key.exists() {
             return Err(anyhow::anyhow!("Repository not found: {}", name));
         }
 
         // 4. 打开新数据库并缓存
-        let db = Database::create(&db_path)?;
+        let db = Database::create(&cache_key)?;
         let arc_db = Arc::new(db);
 
         {
             let mut cache = OPENED_DBS.write().unwrap();
-            cache.insert(db_path.clone(), arc_db.clone());
+            cache.insert(cache_key.clone(), arc_db.clone());
         }
 
-        tracing::info!("Opened and cached database: {:?}", db_path);
+        tracing::info!("Opened and cached database: {:?}", cache_key);
         Ok(arc_db)
     }
 
     /// 获取或打开影子数据库 (返回 Arc)
-    fn get_or_open_shadow_db(&self, peer_id: &PeerId, name: &str) -> Result<Arc<Database>> {
-        let db_path = self
-            .remotes_dir()
-            .join(peer_id.to_filename())
-            .join(format!("{}.redb", name));
+    fn get_or_open_db_at(&self, db_path: &Path) -> Result<Arc<Database>> {
+        Self::get_cached_database(db_path)
+    }
 
-        // 1. 检查全局缓存
+    fn get_cached_database(db_path: &Path) -> Result<Arc<Database>> {
         {
             let cache = OPENED_DBS.read().unwrap();
-            if let Some(arc_db) = cache.get(&db_path) {
-                tracing::debug!("Shadow database cache hit: {:?}", db_path);
+            if let Some(arc_db) = cache.get(db_path) {
+                tracing::debug!("Database cache hit: {:?}", db_path);
                 return Ok(arc_db.clone());
             }
         }
 
-        // 2. 检查文件是否存在
         if !db_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Shadow repository not found: {}/{}",
-                peer_id,
-                name
-            ));
+            return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
         }
 
-        // 3. 打开新数据库并缓存
-        let db = Database::create(&db_path)?;
+        let db = Database::create(db_path)?;
         let arc_db = Arc::new(db);
 
         {
             let mut cache = OPENED_DBS.write().unwrap();
-            cache.insert(db_path.clone(), arc_db.clone());
+            cache.insert(db_path.to_path_buf(), arc_db.clone());
         }
 
-        tracing::info!("Opened and cached shadow database: {:?}", db_path);
+        tracing::info!("Opened and cached database: {:?}", db_path);
         Ok(arc_db)
     }
 }

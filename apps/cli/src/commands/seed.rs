@@ -1,4 +1,4 @@
-﻿// apps/cli/src/commands/seed.rs
+// apps/cli/src/commands/seed.rs
 //! # Seed 命令
 //!
 //! 将 Local Repo 的所有操作复制到指定 Peer 的 Shadow Repo。
@@ -36,10 +36,11 @@ pub fn run(
     let repo_name = repo.resolve_local_repo_name(None, repo_name.as_deref())?;
     let peer_id = PeerId::new(&target_peer);
 
-    let repo_id = repo
+    let repo_info = repo
         .get_repo_info_for(None, Some(&repo_name))?
-        .map(|info| info.uuid)
         .ok_or_else(|| anyhow::anyhow!("Local repo metadata missing"))?;
+    repo.ensure_shadow_repo_info(&peer_id, &repo_info)?;
+    let repo_id = repo_info.uuid;
 
     // 1. 列出所有本地文档
     let docs = repo.list_local_docs(Some(&repo_name))?;
@@ -62,7 +63,11 @@ pub fn run(
 
     tracing::info!("✅ Seed 完成。");
     tracing::info!("共复制 {} 个 Ops", total_ops);
-    tracing::info!("Shadow Repo: remotes/{}/{}.redb", target_peer, repo_id);
+    tracing::info!(
+        "Shadow Repo: remotes/{}/{}.redb",
+        target_peer,
+        repo_info.name
+    );
 
     Ok(())
 }

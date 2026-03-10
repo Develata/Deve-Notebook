@@ -32,10 +32,10 @@ impl RepoListing for RepoManager {
     }
 
     fn list_repos(&self, peer_id: Option<&PeerId>) -> Result<Vec<String>> {
-        let target_dir = match peer_id {
-            None => self.ledger_dir.join("local"),
-            Some(pid) => self.remotes_dir().join(pid.to_filename()),
-        };
+        if let Some(peer_id) = peer_id {
+            return self.list_remote_repo_names(peer_id);
+        }
+        let target_dir = self.ledger_dir.join("local");
 
         if !target_dir.exists() {
             return Ok(vec![]);
