@@ -17,6 +17,8 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
             "Browser peer is not ready for writing"
         }
         (Locale::Zh, ServerErrorCode::SyncPeerUnauthenticated) => "浏览器写入身份尚未完成认证",
+        (Locale::En, ServerErrorCode::SyncDecryptFailed) => "Decryption failed",
+        (Locale::Zh, ServerErrorCode::SyncDecryptFailed) => "数据解密失败",
         (Locale::En, ServerErrorCode::ScRepoNotSelected) => "Repository not selected",
         (Locale::Zh, ServerErrorCode::ScRepoNotSelected) => "当前未选择激活仓库",
         (Locale::En, ServerErrorCode::ScRemoteBranchReadonly) => "Remote branch is read-only",

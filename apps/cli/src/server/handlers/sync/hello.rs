@@ -5,6 +5,8 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
+use super::errors;
+
 pub struct SyncHelloInput {
     pub peer_id: PeerId,
     pub pub_key: Vec<u8>,
@@ -31,7 +33,7 @@ pub(super) async fn handle(
     let mut engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
         None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
+            errors::engine_unavailable(ch);
             return;
         }
     };
@@ -47,7 +49,7 @@ pub(super) async fn handle(
         Ok(res) => res,
         Err(e) => {
             tracing::error!("Handshake failed with {}: {}", peer_id, e);
-            ch.send_error(format!("Handshake failed: {}", e));
+            errors::request_failed(ch, format!("Handshake failed: {}", e));
             return;
         }
     };

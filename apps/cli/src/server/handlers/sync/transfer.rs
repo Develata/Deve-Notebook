@@ -7,6 +7,7 @@ use deve_core::security::EncryptedOp;
 use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
 
+use super::errors;
 use super::guard::require_bound_peer;
 
 pub(super) async fn handle_request(
@@ -29,7 +30,7 @@ pub(super) async fn handle_request(
     let engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
         None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
+            errors::engine_unavailable(ch);
             return;
         }
     };
@@ -65,7 +66,7 @@ pub(super) async fn handle_push(
     let mut engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
         None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
+            errors::engine_unavailable(ch);
             return;
         }
     };
@@ -80,10 +81,10 @@ pub(super) async fn handle_push(
         Ok(count) => tracing::info!("Applied {} ops for repo {}", count, repo_id),
         Err(e) => {
             tracing::error!("Failed to apply ops for repo {}: {:?}", repo_id, e);
-            ch.send_error(format!(
-                "Failed to apply sync ops for repo {}: {}",
-                repo_id, e
-            ));
+            errors::sync_apply_failed(
+                ch,
+                format!("Failed to apply sync ops for repo {}: {}", repo_id, e),
+            );
         }
     }
 }

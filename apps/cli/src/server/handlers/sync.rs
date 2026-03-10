@@ -2,6 +2,7 @@
 
 #![allow(dead_code)]
 
+mod errors;
 mod guard;
 mod hello;
 mod snapshot;
@@ -90,7 +91,7 @@ pub async fn handle_delete_peer(state: &Arc<AppState>, ch: &DualChannel, peer_id
         }
         Err(e) => {
             tracing::error!("Failed to delete peer branch {}: {:?}", peer_id, e);
-            ch.send_error(format!("Failed to delete peer: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to delete peer: {}", e));
         }
     }
 }

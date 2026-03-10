@@ -6,6 +6,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
+use super::errors;
 use super::guard::require_bound_peer;
 
 pub(super) async fn handle_request(
@@ -22,7 +23,7 @@ pub(super) async fn handle_request(
     let engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
         None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
+            errors::engine_unavailable(ch);
             return;
         }
     };
@@ -48,7 +49,7 @@ pub(super) async fn handle_request(
         }
         Err(e) => {
             tracing::error!("Failed to generate snapshot for {}: {:?}", source_peer, e);
-            ch.send_error(format!("Failed to generate snapshot: {}", e));
+            errors::request_failed(ch, format!("Failed to generate snapshot: {}", e));
         }
     }
 }
@@ -68,7 +69,7 @@ pub(super) async fn handle_push(
     let mut engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
         None => {
-            ch.send_error("Failed to get or create sync engine".to_string());
+            errors::engine_unavailable(ch);
             return;
         }
     };
@@ -92,7 +93,7 @@ pub(super) async fn handle_push(
         ),
         Err(e) => {
             tracing::error!("Failed to apply snapshot from {}: {:?}", source_peer, e);
-            ch.send_error(format!("Failed to apply snapshot: {}", e));
+            errors::sync_apply_failed(ch, format!("Failed to apply snapshot: {}", e));
         }
     }
 }

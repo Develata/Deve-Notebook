@@ -14,6 +14,8 @@ pub enum ServerErrorCode {
     SyncRepoUnbound,
     #[serde(rename = "SYNC_PEER_UNAUTHENTICATED")]
     SyncPeerUnauthenticated,
+    #[serde(rename = "SYNC_DECRYPT_FAILED")]
+    SyncDecryptFailed,
     #[serde(rename = "SC_REPO_NOT_SELECTED")]
     ScRepoNotSelected,
     #[serde(rename = "SC_REMOTE_BRANCH_READONLY")]
