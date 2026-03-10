@@ -103,7 +103,11 @@ fn commit_emits_create_and_rename_structure_facts() {
             .iter()
             .any(|op| matches!(
                 op,
-                StructureOp::RenameNode { new_name, .. } if new_name == "b.md"
+                StructureOp::RenameNode {
+                    doc_id: Some(renamed),
+                    new_name,
+                    ..
+                } if *renamed == doc_id && new_name == "b.md"
             ))
     );
 }

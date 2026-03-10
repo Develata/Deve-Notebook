@@ -74,9 +74,11 @@ fn delete_commit_emits_delete_structure_fact() {
             LedgerEvent::Content(_) => None,
         })
         .collect::<Vec<_>>();
-    assert!(
-        facts
-            .iter()
-            .any(|op| matches!(op, StructureOp::DeleteNode { .. }))
-    );
+    assert!(facts.iter().any(|op| matches!(
+        op,
+        StructureOp::DeleteNode {
+            doc_id: Some(deleted),
+            ..
+        } if *deleted == doc_id
+    )));
 }

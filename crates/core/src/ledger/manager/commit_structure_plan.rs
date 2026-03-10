@@ -31,12 +31,14 @@ pub(super) fn plan_file_upsert(
     if meta.parent_id != parent_id {
         ops.push(StructureOp::MoveNode {
             node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
             new_parent_id: parent_id,
         });
     }
     if meta.name != name {
         ops.push(StructureOp::RenameNode {
             node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
             new_name: name,
         });
     }
@@ -59,6 +61,7 @@ pub(super) fn plan_delete(
         doc_id,
         ops: vec![StructureOp::DeleteNode {
             node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
         }],
     }))
 }

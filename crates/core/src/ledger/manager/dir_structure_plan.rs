@@ -51,12 +51,14 @@ pub(super) fn plan_rename(
     if meta.parent_id != parent_id {
         ops.push(StructureOp::MoveNode {
             node_id,
+            doc_id: None,
             new_parent_id: parent_id,
         });
     }
     if meta.name != name {
         ops.push(StructureOp::RenameNode {
             node_id,
+            doc_id: None,
             new_name: name,
         });
     }
@@ -74,6 +76,9 @@ pub(super) fn plan_delete(
     };
     Ok(Some(StructuredDirTarget {
         node_id,
-        ops: vec![StructureOp::DeleteNode { node_id }],
+        ops: vec![StructureOp::DeleteNode {
+            node_id,
+            doc_id: None,
+        }],
     }))
 }

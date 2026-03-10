@@ -32,14 +32,17 @@ pub enum StructureOp {
     },
     RenameNode {
         node_id: NodeId,
+        doc_id: Option<DocId>,
         new_name: String,
     },
     MoveNode {
         node_id: NodeId,
+        doc_id: Option<DocId>,
         new_parent_id: Option<NodeId>,
     },
     DeleteNode {
         node_id: NodeId,
+        doc_id: Option<DocId>,
     },
 }
 
@@ -50,7 +53,17 @@ impl StructureOp {
             | Self::CreateDir { node_id, .. }
             | Self::RenameNode { node_id, .. }
             | Self::MoveNode { node_id, .. }
-            | Self::DeleteNode { node_id } => *node_id,
+            | Self::DeleteNode { node_id, .. } => *node_id,
+        }
+    }
+
+    pub fn doc_id(&self) -> Option<DocId> {
+        match self {
+            Self::CreateFile { doc_id, .. } => Some(*doc_id),
+            Self::CreateDir { .. } => None,
+            Self::RenameNode { doc_id, .. }
+            | Self::MoveNode { doc_id, .. }
+            | Self::DeleteNode { doc_id, .. } => *doc_id,
         }
     }
 }

@@ -23,18 +23,23 @@ pub(super) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
             parent_id,
             name,
         } => apply_create_dir(db, *node_id, *parent_id, name),
-        StructureOp::RenameNode { node_id, new_name } => {
-            let meta = load_meta(db, *node_id)?;
+        StructureOp::RenameNode {
+            node_id,
+            doc_id,
+            new_name,
+        } => {
+            let meta = load_meta(db, *node_id, *doc_id)?;
             rename_path(db, &meta, child_path(db, meta.parent_id, new_name)?)
         }
         StructureOp::MoveNode {
             node_id,
+            doc_id,
             new_parent_id,
         } => {
-            let meta = load_meta(db, *node_id)?;
+            let meta = load_meta(db, *node_id, *doc_id)?;
             rename_path(db, &meta, child_path(db, *new_parent_id, &meta.name)?)
         }
-        StructureOp::DeleteNode { node_id } => delete_node(db, *node_id),
+        StructureOp::DeleteNode { node_id, doc_id } => delete_node(db, *node_id, *doc_id),
     }
 }
 
@@ -85,10 +90,11 @@ fn apply_create_dir(
     node_meta::upsert_node(db, node_id, &meta)
 }
 
-fn delete_node(db: &Database, node_id: NodeId) -> Result<()> {
+fn delete_node(db: &Database, node_id: NodeId, doc_id: Option<DocId>) -> Result<()> {
     let Some(meta) = node_meta::get_node_meta(db, node_id)? else {
         return Ok(());
     };
+    ensure_doc_match(node_id, meta.doc_id, doc_id)?;
     if meta.doc_id.is_some() {
         metadata::delete_doc(db, &meta.path)
     } else {
@@ -108,13 +114,27 @@ fn rename_path(db: &Database, meta: &NodeMeta, new_path: String) -> Result<()> {
 
 fn child_path(db: &Database, parent_id: Option<NodeId>, name: &str) -> Result<String> {
     if let Some(parent_id) = parent_id {
-        let parent = load_meta(db, parent_id)?;
+        let parent = load_meta(db, parent_id, None)?;
         return Ok(format!("{}/{}", parent.path, name));
     }
     Ok(name.to_string())
 }
 
-fn load_meta(db: &Database, node_id: NodeId) -> Result<NodeMeta> {
-    node_meta::get_node_meta(db, node_id)?
-        .ok_or_else(|| anyhow!("node meta missing for {}", node_id))
+fn load_meta(db: &Database, node_id: NodeId, doc_id: Option<DocId>) -> Result<NodeMeta> {
+    let meta = node_meta::get_node_meta(db, node_id)?
+        .ok_or_else(|| anyhow!("node meta missing for {}", node_id))?;
+    ensure_doc_match(node_id, meta.doc_id, doc_id)?;
+    Ok(meta)
+}
+
+fn ensure_doc_match(node_id: NodeId, actual: Option<DocId>, expected: Option<DocId>) -> Result<()> {
+    if actual != expected {
+        return Err(anyhow!(
+            "structure doc mismatch for {}: actual={:?}, expected={:?}",
+            node_id,
+            actual,
+            expected
+        ));
+    }
+    Ok(())
 }

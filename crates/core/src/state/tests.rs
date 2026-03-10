@@ -68,6 +68,7 @@ fn reconstruct_ignores_structure_events() {
             doc_id,
             StructureOp::RenameNode {
                 node_id: NodeId::from_doc_id(doc_id),
+                doc_id: Some(doc_id),
                 new_name: "renamed.md".to_string(),
             },
             1,
