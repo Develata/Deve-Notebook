@@ -18,6 +18,8 @@ use std::path::PathBuf;
 
 mod admin_api;
 mod commands;
+mod dispatch;
+mod dump_support;
 mod export_entries;
 mod server;
 
@@ -29,7 +31,7 @@ struct Args {
 }
 
 #[derive(Subcommand, Debug)]
-enum Commands {
+pub(crate) enum Commands {
     /// Initialize a new Deve-Note vault
     Init {
         #[arg(short, long, default_value = ".")]
@@ -103,46 +105,6 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Starting Deve-Note with profile: {:?}", config.profile);
 
-    match args.command {
-        Some(Commands::Init { path }) => {
-            commands::init::run(&ledger_dir, &vault_path, path, config.snapshot_depth)?
-        }
-        Some(Commands::Scan) => {
-            commands::scan::run(&ledger_dir, &vault_path, config.snapshot_depth)?
-        }
-        Some(Commands::Watch) => {
-            commands::watch::run(&ledger_dir, &vault_path, config.snapshot_depth)?
-        }
-        Some(Commands::Dump { path, repo }) => {
-            commands::dump::run(&ledger_dir, path, repo, config.snapshot_depth)?
-        }
-        Some(Commands::Serve { port, dev }) => {
-            commands::serve::run(&ledger_dir, vault_path, port, config.snapshot_depth, dev).await?
-        }
-        Some(Commands::Export { output, repo }) => {
-            commands::export::run(&ledger_dir, output, repo, config.snapshot_depth)?
-        }
-        Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
-        Some(Commands::Seed { peer, repo }) => {
-            commands::seed::run(&ledger_dir, peer, repo, config.snapshot_depth)?
-        }
-        Some(Commands::NodeCheck { repair, repo }) => {
-            commands::node_check::run(&ledger_dir, config.snapshot_depth, repair, repo)?
-        }
-        Some(Commands::Repair {
-            backup,
-            repo,
-            paths,
-        }) => commands::repair::run(
-            &ledger_dir,
-            &vault_path,
-            &backup,
-            config.snapshot_depth,
-            repo.as_deref(),
-            &paths,
-        )?,
-        None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
-    }
-
+    dispatch::run(args.command, &config, &ledger_dir, &vault_path).await?;
     Ok(())
 }
