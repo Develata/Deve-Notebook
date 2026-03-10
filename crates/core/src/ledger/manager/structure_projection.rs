@@ -1,13 +1,9 @@
-use crate::ledger::{metadata, node_meta, ops};
+use crate::ledger::{metadata, node_meta};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta, StructureOp};
 use anyhow::{Result, anyhow};
 use redb::Database;
 
 use super::structure_projection_support::{child_path, ensure_doc_match, load_meta};
-
-#[cfg(test)]
-#[path = "projection_cleanup_test.rs"]
-mod tests;
 
 /// Invariants:
 /// - 这里只做 Structure Facts -> projection 的受控折叠。
@@ -43,38 +39,6 @@ pub(crate) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
         }
         StructureOp::DeleteNode { node_id, doc_id } => delete_node(db, *node_id, *doc_id),
     }
-}
-
-/// Pre-conditions:
-/// - `path` 已规范化为 forward-slash。
-///
-/// Post-conditions:
-/// - 仅当该路径对应实体在 Ledger 中完全没有事实时，才移除孤立 projection。
-///
-/// Invariants:
-/// - 业务路径不得直接删 metadata；只能调用 projection helper 做孤儿清理。
-pub(super) fn drop_transient_file_path(db: &Database, path: &str) -> Result<()> {
-    if let Some(node_id) = node_meta::get_node_id(db, path)?
-        && let Some(meta) = node_meta::get_node_meta(db, node_id)?
-    {
-        let has_structure = !ops::get_structure_ops_for_node_from_db(db, node_id)?.is_empty();
-        let has_content = match meta.doc_id {
-            Some(doc_id) => ops::count_ops_from_db(db, doc_id)? > 0,
-            None => false,
-        };
-        if has_structure || has_content {
-            return Ok(());
-        }
-        return if meta.doc_id.is_some() {
-            metadata::delete_doc(db, path)
-        } else {
-            metadata::delete_folder(db, path).map(|_| ())
-        };
-    }
-    if metadata::get_docid(db, path)?.is_some() {
-        metadata::delete_doc(db, path)?;
-    }
-    Ok(())
 }
 
 fn apply_create_file(

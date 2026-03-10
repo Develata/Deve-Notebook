@@ -1,4 +1,4 @@
-use super::drop_transient_file_path;
+use super::drop_unanchored_projection_path;
 use crate::ledger::RepoManager;
 use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use crate::models::DocId;
@@ -29,7 +29,7 @@ fn drops_legacy_projection_without_ledger_facts() {
     .expect("seed metadata-only mapping");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        drop_transient_file_path(db, "notes/new.md")
+        drop_unanchored_projection_path(db, "notes/new.md")
     })
     .expect("drop transient projection");
 
@@ -48,7 +48,7 @@ fn keeps_empty_file_projection_backed_by_structure_facts() {
         .expect("create empty file structure");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        drop_transient_file_path(db, "notes/empty.md")
+        drop_unanchored_projection_path(db, "notes/empty.md")
     })
     .expect("drop transient projection");
 

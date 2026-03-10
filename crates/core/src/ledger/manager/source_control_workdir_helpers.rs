@@ -4,7 +4,7 @@ use crate::source_control::pending_fs;
 use crate::state::reconstruct_content;
 use anyhow::Result;
 
-use super::structure_projection::drop_transient_file_path;
+use super::projection_cleanup::drop_unanchored_projection_path;
 
 pub(super) fn rebuild_doc_projection(
     repo: &RepoManager,
@@ -23,7 +23,7 @@ pub(super) fn discard_added(repo: &RepoManager, repo_name: &str, path: &str) -> 
     }
     repo.run_on_local_repo(repo_name, |db| {
         pending_fs::remove(db, path)?;
-        drop_transient_file_path(db, path)?;
+        drop_unanchored_projection_path(db, path)?;
         Ok(())
     })
 }
