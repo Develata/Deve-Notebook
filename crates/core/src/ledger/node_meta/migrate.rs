@@ -32,6 +32,20 @@ pub fn list_file_docs(db: &Database) -> Result<Vec<(DocId, String)>> {
     Ok(docs)
 }
 
+pub fn path_for_doc(db: &Database, doc_id: DocId) -> Result<Option<String>> {
+    ensure_node_tables(db)?;
+    let read_txn = db.begin_read()?;
+    let table = read_txn.open_table(NODEID_TO_META)?;
+    let Some(meta_bytes) = table.get(NodeId::from_doc_id(doc_id).as_u128())? else {
+        return Ok(None);
+    };
+    let meta: NodeMeta = bincode::deserialize(meta_bytes.value())?;
+    if meta.kind != NodeKind::File || meta.doc_id != Some(doc_id) {
+        return Ok(None);
+    }
+    Ok(Some(meta.path))
+}
+
 fn ensure_node_tables(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
     {

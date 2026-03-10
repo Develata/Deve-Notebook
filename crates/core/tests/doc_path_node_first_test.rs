@@ -1,0 +1,36 @@
+use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
+use tempfile::TempDir;
+
+fn new_repo() -> (TempDir, RepoManager) {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    (dir, repo)
+}
+
+#[test]
+fn doc_path_lookup_prefers_node_projection_over_stale_metadata() {
+    let (_dir, repo) = new_repo();
+    let doc_id = repo
+        .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
+        .expect("create file structure");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write_txn = db.begin_write()?;
+        {
+            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+            p2d.remove("notes/a.md")?;
+            p2d.insert("stale/a.md", doc_id.as_u128())?;
+            d2p.insert(doc_id.as_u128(), "stale/a.md")?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    })
+    .expect("poison metadata path only");
+
+    assert_eq!(
+        repo.get_path_by_docid_in_local_repo(repo.local_repo_name(), doc_id)
+            .expect("resolve path"),
+        Some("notes/a.md".to_string())
+    );
+}
