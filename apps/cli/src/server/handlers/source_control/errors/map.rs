@@ -11,7 +11,6 @@ pub enum ScOp {
     CommitHistory,
     CommitDiff(String),
     Commit,
-    ResolveConflict(String),
 }
 
 pub fn map_repo_scope_error(error: Error) -> ServerError {
@@ -75,9 +74,6 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
         ScOp::Commit if detail.to_ascii_lowercase().contains("nothing to commit") => {
             ServerError::new(ServerErrorCode::ScNothingToCommit)
         }
-        ScOp::ResolveConflict(path) if detail.contains("Pending change not found") => {
-            ServerError::with_detail(ServerErrorCode::ScConflictTargetMissing, path)
-        }
         ScOp::ListPending
         | ScOp::ListChanges
         | ScOp::CommitHistory
@@ -86,10 +82,7 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
         | ScOp::Unstage(_)
         | ScOp::DiffDoc(_)
         | ScOp::CommitDiff(_)
-        | ScOp::Commit
-        | ScOp::ResolveConflict(_) => {
-            ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
-        }
+        | ScOp::Commit => ServerError::with_detail(ServerErrorCode::RequestFailed, detail),
     }
 }
 

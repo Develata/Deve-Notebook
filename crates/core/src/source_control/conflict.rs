@@ -8,7 +8,8 @@
 //!
 //! **算法复杂度**: O(1) per fs event — 仅需两次哈希比较。
 
-use crate::source_control::changes::{self, SNAPSHOTS_TABLE};
+use crate::ledger::ops;
+use crate::source_control::changes;
 use crate::source_control::pending_fs;
 use anyhow::Result;
 use redb::Database;
@@ -50,23 +51,12 @@ pub fn check_conflict(
     Ok(fs_diverged && ledger_diverged)
 }
 
-/// 从 Ledger 获取文档当前内容 (通过 doc_content 表)
-///
-/// 这里复用 Ledger 的文档存储，而非重新组装 Op。
+/// 从 Ledger 重建文档当前内容。
 fn get_ledger_content(db: &Database, doc_id: crate::models::DocId) -> Result<Option<String>> {
-    // 利用快照表获取已提交内容作为 baseline
-    // 实际 Ledger 内容需通过 repo.get_doc_content() 获取
-    // 但此处仅访问 db，复用 SNAPSHOTS_TABLE 已足够：
-    // 如果 Ledger 有未提交编辑，其内容与快照不同
-    //
-    // 注意: 当前架构下 Ledger 编辑通过 Op 累积，
-    // 直接内容存储在 doc_contents 表中
-    let doc_id_str = doc_id.to_string();
-    let read_txn = db.begin_read()?;
-    // 尝试读取文档内容表 (与快照表不同)
-    let table = read_txn.open_table(SNAPSHOTS_TABLE)?;
-    match table.get(doc_id_str.as_str())? {
-        Some(guard) => Ok(Some(guard.value().to_string())),
-        None => Ok(None),
+    let entries = ops::get_ops_from_db(db, doc_id)?;
+    if entries.is_empty() {
+        return Ok(None);
     }
+    let facts: Vec<_> = entries.into_iter().map(|(_, entry)| entry).collect();
+    Ok(Some(crate::state::reconstruct_content(&facts)))
 }

@@ -7,7 +7,6 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::{ScPathTarget, ServerMessage};
@@ -36,7 +35,7 @@ pub async fn handle_resolve_conflict(
     };
     let normalized = super::service::resolve_path(&pending, &target);
     let result = match resolution {
-        ConflictResolution::KeepFs => resolve_keep_fs(state, &scope, &normalized),
+        ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &normalized),
         ConflictResolution::KeepLedger => resolve_keep_ledger(state, &selector, &normalized),
     };
 
@@ -63,18 +62,15 @@ pub async fn handle_resolve_conflict(
 
 fn resolve_keep_fs(
     state: &Arc<AppState>,
-    scope: &crate::server::repo_scope::ResolvedRepo,
+    selector: &RepoSelector,
     path: &str,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    run_on_resolved_local_repo(state, scope, |db| {
-        let entry = deve_core::source_control::pending_fs::get(db, path)?
-            .ok_or_else(|| anyhow::anyhow!("Pending change not found: {}", path))?;
-        deve_core::source_control::pending_fs::remove(db, path)?;
-        deve_core::ledger::source_control::stage_pending_entry(db, &entry)
-    })
-    .map_err(|e| {
-        super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
-    })
+    super::service::stage_pending(
+        state.repo.as_ref(),
+        selector,
+        &ScPathTarget::from_path(path.to_string()),
+    )
+    .map(|_| ())
 }
 
 fn resolve_keep_ledger(
