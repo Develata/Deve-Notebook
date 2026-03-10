@@ -7,8 +7,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{local_repo_path, run_on_resolved_local_repo};
+use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::ConflictResolution;
 use std::sync::Arc;
@@ -36,7 +37,7 @@ pub async fn handle_resolve_conflict(
     let normalized = super::service::resolve_path(&pending, &target);
     let result = match resolution {
         ConflictResolution::KeepFs => resolve_keep_fs(state, &scope, &normalized),
-        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &scope, &normalized),
+        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &selector, &normalized),
     };
 
     match result {
@@ -78,31 +79,13 @@ fn resolve_keep_fs(
 
 fn resolve_keep_ledger(
     state: &Arc<AppState>,
-    scope: &crate::server::repo_scope::ResolvedRepo,
+    selector: &RepoSelector,
     path: &str,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    let (projected, _) = state
-        .repo
-        .workdir_diff_inputs_in_local_repo(&scope.repo_name, path)
-        .map_err(|e| {
-            super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
-        })?;
-
-    // 将 Ledger 内容写回磁盘
-    let disk_path = local_repo_path(state, scope, path)
-        .map_err(|e| super::errors::request_failed(e.to_string()))?;
-    if let Some(parent) = disk_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| super::errors::storage_persist_failed(e.to_string()))?;
-    }
-    std::fs::write(&disk_path, &projected)
-        .map_err(|e| super::errors::storage_persist_failed(e.to_string()))?;
-
-    // 移除 pending 条目
-    run_on_resolved_local_repo(state, scope, |db| {
-        deve_core::source_control::pending_fs::remove(db, path)
-    })
-    .map_err(|e| {
-        super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
-    })
+    super::service::discard_pending(
+        state.repo.as_ref(),
+        selector,
+        &ScPathTarget::from_path(path.to_string()),
+    )
+    .map(|_| ())
 }

@@ -24,10 +24,6 @@ pub fn request_failed(detail: impl Into<String>) -> ServerError {
     ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
 }
 
-pub fn storage_persist_failed(detail: impl Into<String>) -> ServerError {
-    ServerError::with_detail(ServerErrorCode::StoragePersistFailed, detail)
-}
-
 fn status(code: ServerErrorCode) -> StatusCode {
     match code {
         ServerErrorCode::ScDocNotFound | ServerErrorCode::ScCommitNotFound => StatusCode::NOT_FOUND,
