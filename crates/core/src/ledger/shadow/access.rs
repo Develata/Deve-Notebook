@@ -14,7 +14,7 @@
 
 use crate::ledger::schema::*;
 use crate::ledger::{ops, range};
-use crate::models::{DocId, LedgerEntry, PeerId, RepoId};
+use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId};
 use anyhow::Result;
 use redb::Database;
 
@@ -46,6 +46,11 @@ impl<'a> ShadowRepo<'a> {
     /// 获取指定文档的所有操作 (只读)
     pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         ops::get_ops_from_db(self.db, doc_id)
+    }
+
+    /// 获取指定节点的所有结构事实 (只读)
+    pub fn get_structure_ops(&self, node_id: NodeId) -> Result<Vec<(u64, LedgerEntry)>> {
+        ops::get_structure_ops_for_node_from_db(self.db, node_id)
     }
 
     /// 获取指定文档的操作数量
@@ -89,9 +94,9 @@ impl<'a> ShadowRepo<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger::schema::{DOC_OPS, LEDGER_OPS};
+    use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS};
     use crate::ledger::shadow::management::ensure_shadow_db;
-    use crate::models::Op;
+    use crate::models::{Op, StructureOp};
     use std::collections::HashMap;
     use std::sync::RwLock;
     use tempfile::TempDir;
@@ -154,6 +159,50 @@ mod tests {
         let max_seq = shadow_repo.get_global_max_seq()?;
         assert_eq!(max_seq, 1);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_shadow_repo_reads_structure_ops() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let remotes_dir = tmp_dir.path().join("remotes");
+        std::fs::create_dir_all(&remotes_dir)?;
+
+        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Database>>> =
+            RwLock::new(HashMap::new());
+        let peer_id = PeerId::new("test_peer");
+        let repo_id = Uuid::new_v4();
+        ensure_shadow_db(&remotes_dir, &shadow_dbs, &peer_id, &repo_id)?;
+
+        let node_id = NodeId::new();
+        let entry = LedgerEntry::new_structure(
+            StructureOp::CreateDir {
+                node_id,
+                parent_id: None,
+                name: "notes".into(),
+            },
+            1000,
+            peer_id.clone(),
+            1,
+        );
+        {
+            let dbs = shadow_dbs.read().unwrap();
+            let db = dbs.get(&peer_id).unwrap().get(&repo_id).unwrap();
+            let write_txn = db.begin_write()?;
+            let bytes = bincode::serialize(&entry)?;
+            write_txn
+                .open_table(LEDGER_OPS)?
+                .insert(1u64, bytes.as_slice())?;
+            write_txn
+                .open_multimap_table(NODE_OPS)?
+                .insert(node_id.as_u128(), 1u64)?;
+            write_txn.commit()?;
+        }
+
+        let dbs = shadow_dbs.read().unwrap();
+        let db = dbs.get(&peer_id).unwrap().get(&repo_id).unwrap();
+        let shadow_repo = ShadowRepo::new(peer_id, repo_id, db);
+        assert_eq!(shadow_repo.get_structure_ops(node_id)?.len(), 1);
         Ok(())
     }
 }
