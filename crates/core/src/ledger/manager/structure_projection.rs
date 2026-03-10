@@ -1,7 +1,11 @@
-use crate::ledger::{metadata, node_meta};
+use crate::ledger::{metadata, node_meta, ops};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta, StructureOp};
 use anyhow::{Result, anyhow};
 use redb::Database;
+
+#[cfg(test)]
+#[path = "projection_cleanup_test.rs"]
+mod tests;
 
 /// Invariants:
 /// - 这里只做 Structure Facts -> projection 的受控折叠。
@@ -31,6 +35,24 @@ pub(super) fn apply(db: &Database, doc_id: DocId, op: &StructureOp) -> Result<()
         }
         StructureOp::DeleteNode { node_id } => delete_node(db, *node_id),
     }
+}
+
+/// Pre-conditions:
+/// - `path` 已规范化为 forward-slash。
+///
+/// Post-conditions:
+/// - 仅当该路径对应实体在 Ledger 中完全没有事实时，才移除孤立 projection。
+///
+/// Invariants:
+/// - 业务路径不得直接删 metadata；只能调用 projection helper 做孤儿清理。
+pub(super) fn drop_transient_file_path(db: &Database, path: &str) -> Result<()> {
+    let Some(doc_id) = metadata::get_docid(db, path)? else {
+        return Ok(());
+    };
+    if ops::count_ops_from_db(db, doc_id)? > 0 {
+        return Ok(());
+    }
+    metadata::delete_doc(db, path)
 }
 
 fn apply_create_file(

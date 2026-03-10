@@ -1,9 +1,10 @@
 use crate::ledger::RepoManager;
-use crate::ledger::metadata;
 use crate::models::DocId;
 use crate::source_control::pending_fs;
 use crate::state::reconstruct_content;
 use anyhow::Result;
+
+use super::structure_projection::drop_transient_file_path;
 
 pub(super) fn rebuild_doc_projection(
     repo: &RepoManager,
@@ -22,11 +23,7 @@ pub(super) fn discard_added(repo: &RepoManager, repo_name: &str, path: &str) -> 
     }
     repo.run_on_local_repo(repo_name, |db| {
         pending_fs::remove(db, path)?;
-        if let Some(doc_id) = metadata::get_docid(db, path)?
-            && crate::source_control::changes::get_committed_content(db, doc_id)?.is_none()
-        {
-            metadata::delete_doc(db, path)?;
-        }
+        drop_transient_file_path(db, path)?;
         Ok(())
     })
 }
