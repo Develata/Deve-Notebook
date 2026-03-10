@@ -113,11 +113,12 @@ fn commit_preserves_doc_id_for_rename_candidate() {
     );
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("notes/b.md").expect("stage add");
-    repo.commit_staged("rename").expect("commit rename");
+    let commit = repo.commit_staged("rename").expect("commit rename");
 
     assert_eq!(
         repo.get_docid("notes/b.md").expect("new path"),
         Some(doc_id)
     );
     assert!(repo.get_docid("notes/a.md").expect("old path").is_none());
+    assert_eq!(commit.doc_count, 1);
 }

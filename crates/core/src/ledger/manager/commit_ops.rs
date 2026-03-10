@@ -8,9 +8,9 @@
 //! **Post-condition**: Ledger 包含新 Op，快照已更新，提交记录已创建，暂存区已清空。
 
 use crate::ledger::RepoManager;
+use crate::ledger::manager::commit_plan;
 use crate::ledger::range;
-use crate::source_control::{ChangeStatus, CommitInfo, commits, staging};
-use crate::utils::path::to_forward_slash;
+use crate::source_control::{CommitInfo, commits, staging};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -37,31 +37,24 @@ impl RepoManager {
         message: &str,
         vault_root: PathBuf,
     ) -> Result<CommitInfo> {
-        let mut staged = self.run_on_local_repo(repo_name, staging::list_staged_entries)?;
+        let staged = self.run_on_local_repo(repo_name, staging::list_staged_entries)?;
         if staged.is_empty() {
             anyhow::bail!("Nothing to commit: staging area is empty");
         }
-        staged.sort_by_key(|(_, entry)| matches!(entry.status, ChangeStatus::Deleted));
+        let mut targets = commit_plan::build_targets(staged);
+        targets.sort_by_key(|target| target.delete_only);
 
-        let doc_count = staged.len() as u32;
-        for (path, entry) in &staged {
-            let normalized = to_forward_slash(path);
-            match entry.status {
-                ChangeStatus::Added | ChangeStatus::Modified => {
-                    self.commit_file_ops_in_local_repo(
-                        repo_name,
-                        &vault_root,
-                        &normalized,
-                        entry.doc_id,
-                    )?;
-                }
-                ChangeStatus::Deleted => {
-                    self.commit_delete_snapshot_in_local_repo(
-                        repo_name,
-                        &normalized,
-                        entry.doc_id,
-                    )?;
-                }
+        let doc_count = targets.len() as u32;
+        for target in &targets {
+            if target.delete_only {
+                self.commit_delete_snapshot_in_local_repo(repo_name, &target.path, target.doc_id)?;
+            } else {
+                self.commit_file_ops_in_local_repo(
+                    repo_name,
+                    &vault_root,
+                    &target.path,
+                    target.doc_id,
+                )?;
             }
         }
 

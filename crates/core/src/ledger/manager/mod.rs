@@ -11,6 +11,7 @@ mod workspace;
 
 mod commit_apply;
 mod commit_ops;
+mod commit_plan;
 mod merge_ops;
 mod metadata_ops;
 mod ops_ops;
