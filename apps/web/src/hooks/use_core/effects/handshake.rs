@@ -31,6 +31,7 @@ pub fn setup(
     Effect::new(move |_| {
         if status_signal.get() != ConnectionStatus::Connected {
             *last_mode.borrow_mut() = None;
+            ws_clone.clear_writer_ready();
             set_handshake_ready.set(false);
             return;
         }
@@ -53,6 +54,7 @@ pub fn setup(
             return;
         }
         *last_mode.borrow_mut() = Some(mode_key);
+        ws_clone.clear_writer_ready();
         set_handshake_ready.set(false);
 
         let ws = ws_clone.clone();
@@ -67,6 +69,7 @@ pub fn setup(
                 if is_reconnect_bootstrap {
                     restore_session_scope(&ws, repo_name.clone(), branch.clone());
                 }
+                ws.clear_writer_ready();
                 set_handshake_ready.set(true);
                 return;
             }
@@ -94,11 +97,16 @@ pub fn setup(
                             let vector_json = serde_json::to_string(&vector).unwrap_or_default();
                             let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
                             let _ = note_handshake(&identity.repo_id).await;
+                            let writer_peer_id = peer_id.clone();
                             ws.send(ClientMessage::SyncHello {
                                 peer_id,
                                 pub_key: identity.public_key.clone(),
                                 signature,
                                 vector,
+                                repo_id,
+                            });
+                            ws.send(ClientMessage::RegisterWriter {
+                                peer_id: writer_peer_id,
                                 repo_id,
                             });
                         }

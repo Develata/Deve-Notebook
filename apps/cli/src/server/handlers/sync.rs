@@ -6,6 +6,7 @@ mod guard;
 mod hello;
 mod snapshot;
 mod transfer;
+mod writer;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -23,6 +24,15 @@ pub async fn handle_sync_hello(
     hello: SyncHelloInput,
 ) {
     hello::handle(state, ch, session, hello).await;
+}
+
+pub fn handle_register_writer(
+    ch: &DualChannel,
+    session: &mut WsSession,
+    repo_id: RepoId,
+    peer_id: PeerId,
+) {
+    writer::handle(ch, session, repo_id, peer_id);
 }
 
 pub async fn handle_sync_request(

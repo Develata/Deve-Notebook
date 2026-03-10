@@ -1,16 +1,6 @@
-// apps\web\src\editor
-//! # Editor Component (Editor 组件)
-//!
-//! **架构作用**:
-//! 编辑器的主 UI 容器。
-//! 整合了 CodeMirror (通过 `hook.rs`)，大纲视图 (`Outline`)，以及旁观者模式/历史回放的状态展示。
-//!
-//! **核心功能清单**:
-//! - `Editor`: 主组件。
-//! - 渲染 CodeMirror 的挂载点。
-//! - 显示 "Spectator Mode" (旁观者模式) 提示。
-//! - 管理大纲视图的显示/隐藏。
+//! Editor 主容器，负责挂载 CodeMirror、只读闸门与大纲侧栏。
 
+use crate::api::WsService;
 use crate::components::icons::PanelLeft;
 use crate::components::layout_context::EditorContentContext;
 use crate::hooks::use_core::EditorContext;
@@ -40,54 +30,36 @@ pub fn Editor(
     #[prop(optional)] embedded: bool,
 ) -> impl IntoView {
     let editor_ref = NodeRef::<Div>::new();
-
-    // 使用 hook 逻辑
     let state = hook::use_editor(doc_id, editor_ref, on_stats);
-
-    // 解包状态
     let local_version = state.local_version;
     let playback_version = state.playback_version;
     let content = state.content;
-
-    // 获取 CoreState 用于 Spectator 模式
     let core = expect_context::<EditorContext>();
-
+    let ws = use_context::<WsService>().expect("WsService should be provided");
     provide_context(EditorContentContext { content });
-
-    // 监听 is_spectator 信号，切换编辑器只读状态
     Effect::new(move |_| {
         let spectator = core.is_spectator.get();
         let is_pb = playback_version.get() < local_version.get_untracked();
         let loading = core.load_state.get() != "ready";
         let handshake_ready = core.handshake_ready.get();
-        let should_readonly = spectator || is_pb || loading || !handshake_ready;
+        let writer_ready = ws.writer_ready_repo_id.get() == core.current_repo_id.get();
+        let should_readonly = spectator || is_pb || loading || !handshake_ready || !writer_ready;
         ffi::set_read_only(should_readonly);
     });
-
-    // 大纲状态 (嵌入模式下默认禁用且不显示，否则使用持久化状态)
     let (outline_pref, set_outline_pref) = use_outline();
     let show_outline = Signal::derive(move || !embedded && outline_pref.get());
     let on_toggle_outline = Callback::new(move |_| set_outline_pref.update(|b| *b = !*b));
-
-    let on_scroll = Callback::new(move |line: usize| {
-        ffi::scroll_global(line);
-    });
+    let on_scroll = Callback::new(move |line: usize| ffi::scroll_global(line));
 
     view! {
-        // 主容器: 相对定位用于回放定位，100% 尺寸
         <div class="relative w-full h-full flex flex-col overflow-hidden">
-            // 内容区域 (Flex Row)
             <div class="flex-1 flex overflow-hidden relative">
-                // 编辑器包装器
                 <div class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div
                         node_ref=editor_ref
                         class="absolute inset-0"
                         class:bg-gray-100=move || playback_version.get() < local_version.get()
                     ></div>
-
-                    // 旁观者模式徽章 (嵌入模式不显示, 或者 DiffMode 可能不需要?)
-                    // 嵌入模式下我们通常不需要 spectator badge, 因为 Diff View 本身有上下文
                     {move || if !embedded && playback_version.get() < local_version.get() {
                         view! {
                             <div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
@@ -97,8 +69,6 @@ pub fn Editor(
                     } else {
                         view! {}.into_any()
                     }}
-
-                     // 切换大纲按钮 (嵌入模式下隐藏)
                      {if !embedded {
                          view! {
                              <button
@@ -113,8 +83,6 @@ pub fn Editor(
                          view! {}.into_any()
                      }}
                 </div>
-
-                // 大纲侧边栏 (嵌入模式下不渲染)
                 {if !embedded {
                     view! {
                         <div
@@ -131,7 +99,6 @@ pub fn Editor(
                     view! {}.into_any()
                 }}
             </div>
-
         </div>
     }
 }

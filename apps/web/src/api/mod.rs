@@ -90,6 +90,8 @@ pub struct WsService {
     /// 当前连接状态 (响应式信号)
     pub status: ReadSignal<ConnectionStatus>,
     set_status: WriteSignal<ConnectionStatus>,
+    pub writer_ready_repo_id: ReadSignal<Option<String>>,
+    set_writer_ready_repo_id: WriteSignal<Option<String>>,
 
     /// 当前连接的端点 (ws url)
     pub endpoint: ReadSignal<String>,
@@ -116,6 +118,7 @@ impl WsService {
     /// - Heartbeat Task (30秒心跳)
     pub fn new() -> Self {
         let (status, set_status) = signal(ConnectionStatus::Disconnected);
+        let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(None::<String>);
         let (msg, set_msg) = signal(None);
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
@@ -144,6 +147,8 @@ impl WsService {
         Self {
             status,
             set_status,
+            writer_ready_repo_id,
+            set_writer_ready_repo_id,
             endpoint,
             node_role,
             msg,
@@ -161,6 +166,22 @@ impl WsService {
     }
 
     pub fn mark_unauthorized(&self) {
+        self.set_writer_ready_repo_id.set(None);
         self.set_status.set(ConnectionStatus::Unauthorized);
+    }
+
+    pub fn mark_writer_ready(&self, repo_id: impl Into<String>) {
+        self.set_writer_ready_repo_id.set(Some(repo_id.into()));
+    }
+
+    pub fn clear_writer_ready(&self) {
+        self.set_writer_ready_repo_id.set(None);
+    }
+
+    pub fn writer_ready_for(&self, repo_id: Option<&str>) -> bool {
+        match (self.writer_ready_repo_id.get_untracked(), repo_id) {
+            (Some(ready_repo_id), Some(repo_id)) => ready_repo_id == repo_id,
+            _ => false,
+        }
     }
 }

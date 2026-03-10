@@ -1,10 +1,10 @@
-// apps/web/src/components/chat/actions.rs
 use crate::editor::ffi::get_editor_selection;
 use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::{CoreState, pending};
+use crate::i18n::{Locale, t};
 use deve_core::models::Op;
-use deve_core::protocol::ClientMessage;
+use deve_core::protocol::{ClientMessage, ServerErrorCode};
 use leptos::prelude::*;
 
 pub fn make_send_text(
@@ -18,7 +18,6 @@ pub fn make_send_text(
         if msg.is_empty() || is_streaming.get() {
             return;
         }
-
         let req_id = uuid::Uuid::new_v4().to_string();
         core.append_chat_message("user", &msg, None);
         if let Some(cb) = on_user_text.as_ref() {
@@ -39,12 +38,8 @@ pub fn make_send_text(
                     .map(|(_, path)| path.clone())
             })
             .unwrap_or_default();
-
-        // 获取编辑器选区 (若有)
         let sel_json = get_editor_selection();
-        let selection: serde_json::Value =
-            serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
-
+        let selection = serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
         let context = serde_json::json!({
             "current_file": current_doc_path,
             "selection": selection,
@@ -83,11 +78,23 @@ pub fn make_send_message(
 }
 
 pub fn make_on_apply(core: CoreState) -> Callback<String> {
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     Callback::new(move |code: String| {
         let Some(doc_id) = core.current_doc.get_untracked() else {
             leptos::logging::warn!("No active doc to apply code.");
             return;
         };
+        if !core
+            .ws
+            .writer_ready_for(core.current_repo_id.get_untracked().as_deref())
+        {
+            let message = t::server_error::message(
+                locale.get_untracked(),
+                ServerErrorCode::SyncPeerUnauthenticated,
+            );
+            let _ = web_sys::window().and_then(|window| window.alert_with_message(message).ok());
+            return;
+        }
         let utf16_len = getEditorContent().encode_utf16().count();
         let pos = match u32::try_from(utf16_len) {
             Ok(v) => v,

@@ -30,7 +30,7 @@ pub(super) async fn handle_edit(
             return;
         }
     };
-    let local_peer_id = match session.authenticated_peer_id.clone() {
+    let local_peer_id = match session.writer_peer_id_for(&scope.repo_id) {
         Some(peer_id) => peer_id,
         None => {
             ch.send_protocol_error(ServerError::new(ServerErrorCode::SyncPeerUnauthenticated));

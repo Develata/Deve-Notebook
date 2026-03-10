@@ -38,6 +38,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
         playback_version: state.playback_version,
         set_playback_version: state.set_playback_version,
         is_spectator: state.is_spectator,
+        current_repo_id: state.current_repo_id,
         handshake_ready: state.handshake_ready,
         pending_local_edits: state.pending_local_edits,
         set_pending_local_edits: state.set_pending_local_edits,

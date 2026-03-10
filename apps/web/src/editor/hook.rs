@@ -130,10 +130,11 @@ pub fn use_editor(
     });
 
     // 编辑器初始化 (Delta 模式)
+    let ws_editor = ws.clone();
     Effect::new(move |_| {
         if let Some(element) = editor_ref.get() {
             let raw_element: &web_sys::HtmlElement = &element;
-            let ws_for_update = ws.clone();
+            let ws_for_update = ws_editor.clone();
 
             // Delta 回调: 接收 JSON 格式的变更数组
             let on_delta = Closure::wrap(Box::new(move |delta_json: String| {
@@ -211,6 +212,7 @@ pub fn use_editor(
     });
 
     // 回放逻辑
+    let ws_playback = ws.clone();
     Effect::new(move |_| {
         let ver = playback_version.get();
         let local = local_version.get_untracked();
@@ -221,7 +223,9 @@ pub fn use_editor(
         let spectator = core.is_spectator.get_untracked();
         let loading = core.load_state.get_untracked() != "ready";
         let handshake_ready = core.handshake_ready.get_untracked();
-        let should_readonly = is_pb || spectator || loading || !handshake_ready;
+        let writer_ready =
+            ws_playback.writer_ready_for(core.current_repo_id.get_untracked().as_deref());
+        let should_readonly = is_pb || spectator || loading || !handshake_ready || !writer_ready;
         set_read_only(should_readonly);
     });
 

@@ -70,6 +70,9 @@ pub(super) async fn route_core(
         ClientMessage::SyncPush { repo_id, ops } => {
             sync::handle_sync_push(state, ch, session, repo_id, ops).await;
         }
+        ClientMessage::RegisterWriter { peer_id, repo_id } => {
+            sync::handle_register_writer(ch, session, repo_id, peer_id);
+        }
         ClientMessage::Ping => {
             ch.unicast(deve_core::protocol::ServerMessage::Pong);
         }

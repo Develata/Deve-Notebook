@@ -50,6 +50,7 @@ pub struct EditorContext {
     pub playback_version: ReadSignal<u64>,
     pub set_playback_version: WriteSignal<u64>,
     pub is_spectator: Signal<bool>,
+    pub current_repo_id: ReadSignal<Option<String>>,
     pub handshake_ready: ReadSignal<bool>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,

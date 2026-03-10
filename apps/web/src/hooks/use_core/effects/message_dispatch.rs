@@ -73,6 +73,7 @@ pub fn handle_message<F>(
             effects_msg::handle_branch_switched(peer_id, success, signals.set_active_branch);
         }
         ServerMessage::RepoSwitched { name, uuid } => {
+            ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
             effects_msg::handle_repo_switched(
                 name,
@@ -86,6 +87,13 @@ pub fn handle_message<F>(
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
             handle_protocol_error(ws, locale, &error);
+        }
+        ServerMessage::WriteReady { peer_id, repo_id } => {
+            let repo_id = repo_id.to_string();
+            if signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str()) {
+                leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
+                ws.mark_writer_ready(repo_id);
+            }
         }
         ServerMessage::TreeUpdate(delta) => {
             signals

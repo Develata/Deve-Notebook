@@ -6,6 +6,7 @@
 //!
 //! **状态内容**:
 //! - `authenticated_peer_id`: P2P 握手后的对端 ID
+//! - `writer_identity`: 浏览器写入身份（repo-scoped）
 //! - `active_branch`: 当前活动分支 (None = 本地, Some = 影子库)
 //! - `active_db`: 当前锁定的数据库句柄
 
@@ -16,6 +17,12 @@ use std::time::{Duration, Instant};
 
 const WS_MESSAGE_WINDOW: Duration = Duration::from_secs(60);
 const WS_MAX_MESSAGES_PER_WINDOW: u16 = 200;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WriterIdentity {
+    pub peer_id: PeerId,
+    pub repo_id: RepoId,
+}
 
 /// WebSocket 会话状态
 ///
@@ -31,6 +38,13 @@ pub struct WsSession {
     ///
     /// 用于后续同步消息的 repo 一致性校验。
     pub bound_repo_id: Option<RepoId>,
+
+    /// 浏览器写入身份。
+    ///
+    /// Invariant:
+    /// - 仅在当前连接已完成 repo-scoped sync handshake 后才可注册。
+    /// - repo 切换或 peer 变更后必须失效。
+    pub writer_identity: Option<WriterIdentity>,
 
     /// 当前活动分支
     ///
@@ -66,6 +80,7 @@ impl Default for WsSession {
         Self {
             authenticated_peer_id: None,
             bound_repo_id: None,
+            writer_identity: None,
             active_branch: None,
             active_repo: None,
             active_repo_id: None,
@@ -85,12 +100,35 @@ impl WsSession {
 
     /// 设置已认证的 Peer ID
     pub fn set_authenticated(&mut self, peer_id: PeerId) {
+        if self.authenticated_peer_id.as_ref() != Some(&peer_id) {
+            self.writer_identity = None;
+        }
         self.authenticated_peer_id = Some(peer_id);
     }
 
     /// 绑定仓库 ID (在握手成功后调用)
     pub fn bind_repo(&mut self, repo_id: RepoId) {
+        if self.bound_repo_id != Some(repo_id) {
+            self.writer_identity = None;
+        }
         self.bound_repo_id = Some(repo_id);
+    }
+
+    pub fn set_writer_identity(&mut self, repo_id: RepoId, peer_id: PeerId) {
+        self.writer_identity = Some(WriterIdentity { peer_id, repo_id });
+    }
+
+    pub fn writer_peer_id_for(&self, repo_id: &RepoId) -> Option<PeerId> {
+        self.writer_identity
+            .as_ref()
+            .filter(|writer| &writer.repo_id == repo_id)
+            .map(|writer| writer.peer_id.clone())
+    }
+
+    pub fn clear_sync_binding(&mut self) {
+        self.authenticated_peer_id = None;
+        self.bound_repo_id = None;
+        self.writer_identity = None;
     }
 
     /// 检查给定 repo_id 是否与会话绑定一致
