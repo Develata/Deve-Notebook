@@ -5,8 +5,8 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::plugin_response::{send_plugin_request_failed, send_plugin_result};
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use tokio::task::block_in_place;
 
@@ -55,25 +55,13 @@ pub async fn handle_plugin_call_with_plugins(
             Ok(result) => {
                 let json_result: serde_json::Value =
                     rhai::serde::from_dynamic(&result).unwrap_or(serde_json::Value::Null);
-                ch.unicast(ServerMessage::PluginResponse {
-                    req_id,
-                    result: Some(json_result),
-                    error: None,
-                });
+                send_plugin_result(ch, req_id, json_result);
             }
             Err(e) => {
-                ch.unicast(ServerMessage::PluginResponse {
-                    req_id,
-                    result: None,
-                    error: Some(format!("Runtime Error: {}", e)),
-                });
+                send_plugin_request_failed(ch, &req_id, format!("Plugin runtime error: {}", e));
             }
         }
     } else {
-        ch.unicast(ServerMessage::PluginResponse {
-            req_id,
-            result: None,
-            error: Some(format!("Plugin '{}' not found", plugin_id)),
-        });
+        send_plugin_request_failed(ch, &req_id, format!("Plugin not found: {}", plugin_id));
     }
 }

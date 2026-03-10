@@ -20,7 +20,11 @@ use super::types::{ChatMessage, PeerSession};
 pub use super::state_init::init_signals;
 
 /// 插件响应类型别名
-pub type PluginResponse = Option<(String, Option<serde_json::Value>, Option<String>)>;
+pub type PluginResponse = Option<(
+    String,
+    Option<serde_json::Value>,
+    Option<deve_core::protocol::ServerError>,
+)>;
 
 /// 核心状态信号集合
 ///

@@ -70,7 +70,7 @@ pub enum ServerMessage {
     PluginResponse {
         req_id: String,
         result: Option<serde_json::Value>,
-        error: Option<String>,
+        error: Option<ServerError>,
     },
     SearchResults {
         results: Vec<(String, String, f32)>,

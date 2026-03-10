@@ -9,6 +9,7 @@ use crate::components::chat::input_area::InputArea;
 use crate::components::chat::message_list::MessageList;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
+use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;
 
 #[component]
@@ -18,14 +19,14 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     let (input, set_input) = signal(String::new());
     let (is_drag_over, set_is_drag_over) = signal(false);
     let (last_prompt, set_last_prompt) = signal(String::new());
-    let (error_msg, set_error_msg) = signal(None::<String>);
+    let (error_code, set_error_code) = signal(None::<ServerErrorCode>);
     let (pending_reqs, set_pending_reqs) = signal(Vec::<String>::new());
 
     let messages = core.chat_messages;
     let is_streaming = core.is_chat_streaming;
 
     let on_req_id = Callback::new(move |req_id: String| {
-        set_error_msg.set(None);
+        set_error_code.set(None);
         set_pending_reqs.update(|v| v.push(req_id));
     });
     let on_user_text = Callback::new(move |msg: String| {
@@ -58,7 +59,10 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
         }
         set_pending_reqs.update(|v| v.retain(|id| id != &req_id));
         if let Some(err) = error {
-            set_error_msg.set(Some(err));
+            if let Some(detail) = err.detail.as_deref() {
+                leptos::logging::warn!("Plugin request {} failed: {}", req_id, detail);
+            }
+            set_error_code.set(Some(err.code));
         }
     });
 
@@ -84,11 +88,14 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
                 on_apply=on_apply
                 mobile=mobile
             />
-            <Show when=move || error_msg.get().is_some()>
+            <Show when=move || error_code.get().is_some()>
                 <div class="mx-2 mb-2 rounded border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-700 flex items-center justify-between gap-2">
                     <div class="min-w-0 truncate">
                         {move || {
-                            let suffix = error_msg.get().unwrap_or_default();
+                            let suffix = error_code
+                                .get()
+                                .map(|code| t::server_error::message(locale.get(), code))
+                                .unwrap_or("");
                             format!("{}: {}", t::chat::send_failed(locale.get()), suffix)
                         }}
                     </div>

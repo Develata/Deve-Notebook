@@ -37,6 +37,7 @@ pub mod node_role;
 pub mod node_role_http;
 mod notegit;
 pub mod plugin_host;
+pub mod plugin_response;
 pub mod prewarm;
 mod rate_limit;
 mod repo_scope;
