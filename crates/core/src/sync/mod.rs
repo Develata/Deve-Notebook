@@ -20,6 +20,8 @@ pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod rebuild;
 #[cfg(not(target_arch = "wasm32"))]
+mod rebuild_projection;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod reconcile;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod repo_scoped;
@@ -228,5 +230,10 @@ impl SyncManager {
     /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
     pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
         materialize::materialize_local_repo(&self.repo, &self.persist_guard, repo_name)
+    }
+
+    /// 显式强制重建指定 repo 的 Vault projection。
+    pub fn rebuild_projection_local_repo(&self, repo_name: &str) -> Result<()> {
+        rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)
     }
 }

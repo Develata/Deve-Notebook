@@ -34,7 +34,7 @@ pub fn run(
     let restored =
         restore::restore_docs_from_backup(&repo, &sync_manager, backup_root, &repo_names, paths)?;
     let rebuilt_repos = if rebuild_projection {
-        rebuild::materialize_repos(&sync_manager, &repo_names)?
+        rebuild::rebuild_repos(&sync_manager, &repo_names)?
     } else {
         0
     };
