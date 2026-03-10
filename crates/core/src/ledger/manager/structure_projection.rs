@@ -14,9 +14,10 @@ pub(super) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
     match op {
         StructureOp::CreateFile {
             node_id,
+            doc_id,
             parent_id,
             name,
-        } => apply_create_file(db, *node_id, *parent_id, name),
+        } => apply_create_file(db, *node_id, *doc_id, *parent_id, name),
         StructureOp::CreateDir {
             node_id,
             parent_id,
@@ -58,10 +59,10 @@ pub(super) fn drop_transient_file_path(db: &Database, path: &str) -> Result<()> 
 fn apply_create_file(
     db: &Database,
     node_id: NodeId,
+    doc_id: DocId,
     parent_id: Option<NodeId>,
     name: &str,
 ) -> Result<()> {
-    let doc_id = DocId::from_u128(node_id.as_u128());
     if node_id != NodeId::from_doc_id(doc_id) {
         return Err(anyhow!("CreateFile node/doc mismatch for {}", doc_id));
     }

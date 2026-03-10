@@ -21,6 +21,7 @@ pub(super) fn plan_file_upsert(
     if current_path.is_none() {
         ops.push(StructureOp::CreateFile {
             node_id: NodeId::from_doc_id(doc_id),
+            doc_id,
             parent_id,
             name,
         });

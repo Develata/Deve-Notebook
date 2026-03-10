@@ -21,6 +21,7 @@ pub type Op = ContentOp;
 pub enum StructureOp {
     CreateFile {
         node_id: NodeId,
+        doc_id: DocId,
         parent_id: Option<NodeId>,
         name: String,
     },

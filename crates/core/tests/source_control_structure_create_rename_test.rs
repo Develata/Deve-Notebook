@@ -62,7 +62,10 @@ fn commit_emits_create_and_rename_structure_facts() {
     assert!(
         structure_ops(&repo, NodeId::from_doc_id(doc_id))
             .iter()
-            .any(|op| matches!(op, StructureOp::CreateFile { .. }))
+            .any(|op| matches!(
+                op,
+                StructureOp::CreateFile { doc_id: created, .. } if *created == doc_id
+            ))
     );
 
     write_workspace_file(&dir, "notes/b.md", "hello");
