@@ -6,6 +6,7 @@
 pub mod apply;
 pub mod callbacks;
 pub mod callbacks_sc;
+mod callbacks_sc_target;
 mod callbacks_switch;
 pub mod contexts;
 mod dashboard_context;
@@ -73,7 +74,11 @@ pub fn use_core() -> CoreState {
         signals.set_explicit_home,
     );
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
-    let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
+    let sc_callbacks = callbacks::create_source_control_callbacks(
+        &ws,
+        signals.staged_changes,
+        signals.unstaged_changes,
+    );
     let misc_callbacks =
         callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
     let switch_callbacks = callbacks::create_switch_callbacks(

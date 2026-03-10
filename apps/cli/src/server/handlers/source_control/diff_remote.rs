@@ -3,20 +3,21 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 pub(super) async fn handle_remote_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &WsSession,
-    path: String,
+    target: ScPathTarget,
 ) {
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
     };
-    let new_content = match get_remote_doc_content(session, &path) {
+    let path = deve_core::utils::path::to_forward_slash(&target.path);
+    let new_content = match get_remote_doc_content(session, &target) {
         Some(content) => content,
         None => {
             return errors::send_ws_code(
@@ -43,9 +44,13 @@ pub(super) async fn handle_remote_diff(
     });
 }
 
-fn get_remote_doc_content(session: &WsSession, path: &str) -> Option<String> {
+fn get_remote_doc_content(session: &WsSession, target: &ScPathTarget) -> Option<String> {
     let db = session.get_active_db()?;
-    let doc_id = deve_core::ledger::metadata::get_docid(&db.db, path).ok()??;
+    let doc_id = target.doc_id.or_else(|| {
+        deve_core::ledger::metadata::get_docid(&db.db, &target.path)
+            .ok()
+            .flatten()
+    })?;
     let ops = deve_core::ledger::ops::get_ops_from_db(&db.db, doc_id).ok()?;
     let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
     Some(deve_core::state::reconstruct_content(&entries))

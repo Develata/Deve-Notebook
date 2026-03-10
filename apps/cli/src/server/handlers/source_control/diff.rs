@@ -4,6 +4,7 @@ mod remote;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
+use deve_core::protocol::ScPathTarget;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -15,17 +16,22 @@ pub async fn handle_get_doc_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &WsSession,
-    path: String,
+    target: ScPathTarget,
 ) {
     if session.is_readonly() {
-        remote::handle_remote_diff(state, ch, session, path).await;
+        remote::handle_remote_diff(state, ch, session, target).await;
         return;
     }
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let normalized = deve_core::utils::path::to_forward_slash(&path);
+    let selector = super::service::selector_from_scope(&scope);
+    let entries = match super::service::list_changes(state.repo.as_ref(), &selector) {
+        Ok(entries) => entries,
+        Err(e) => return super::errors::send_ws(ch, e),
+    };
+    let normalized = super::service::resolve_path(&entries, &target);
     let (old_content, new_content) = match state
         .repo
         .workdir_diff_inputs_in_local_repo(&scope.repo_name, &normalized)

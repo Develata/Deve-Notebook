@@ -2,6 +2,7 @@
 //! 客户端 WebSocket 消息协议。
 
 use crate::models::{DocId, Op, PeerId, VersionVector};
+use crate::protocol::ScPathTarget;
 use crate::security::EncryptedOp;
 use serde::{Deserialize, Serialize};
 
@@ -99,10 +100,10 @@ pub enum ClientMessage {
     },
     GetChanges,
     StageFile {
-        path: String,
+        target: ScPathTarget,
     },
     UnstageFile {
-        path: String,
+        target: ScPathTarget,
     },
     Commit {
         message: String,
@@ -115,16 +116,16 @@ pub enum ClientMessage {
         doc_id: DocId,
     },
     GetDocDiff {
-        path: String,
+        target: ScPathTarget,
     },
     DiscardFile {
-        path: String,
+        target: ScPathTarget,
     },
     StageFiles {
-        paths: Vec<String>,
+        targets: Vec<ScPathTarget>,
     },
     UnstageFiles {
-        paths: Vec<String>,
+        targets: Vec<ScPathTarget>,
     },
     GetCommitDiff {
         commit_a: Option<String>,
@@ -132,7 +133,7 @@ pub enum ClientMessage {
     },
     RequestKey,
     ResolveConflict {
-        path: String,
+        target: ScPathTarget,
         resolution: crate::source_control::ConflictResolution,
     },
     CommitAndPush {

@@ -1,5 +1,7 @@
 #[path = "service/read.rs"]
 mod read;
+#[path = "service/target.rs"]
+mod target;
 #[path = "service/write.rs"]
 mod write;
 
@@ -17,4 +19,5 @@ pub fn selector_from_scope(scope: &ResolvedRepo) -> RepoSelector {
 }
 
 pub use read::*;
+pub use target::*;
 pub use write::*;

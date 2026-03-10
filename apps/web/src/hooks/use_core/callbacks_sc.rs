@@ -1,14 +1,12 @@
-// apps/web/src/hooks/use_core/callbacks_sc.rs
-//! # Source Control 回调函数
-//!
-//! 处理 Git 风格的版本控制操作回调。
-
 use crate::api::WsService;
+use crate::hooks::use_core::callbacks_sc_target::{
+    resolve_target, resolve_target_any, resolve_targets,
+};
 use deve_core::protocol::ClientMessage;
+use deve_core::source_control::ChangeEntry;
 use deve_core::source_control::ConflictResolution;
 use leptos::prelude::*;
 
-/// Source Control 回调结构体
 pub struct SourceControlCallbacks {
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<String>,
@@ -24,8 +22,11 @@ pub struct SourceControlCallbacks {
     pub on_commit_and_push: Callback<String>,
 }
 
-/// 创建 Source Control 回调
-pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks {
+pub fn create_source_control_callbacks(
+    ws: &WsService,
+    staged_changes: ReadSignal<Vec<ChangeEntry>>,
+    unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
+) -> SourceControlCallbacks {
     let ws1 = ws.clone();
     let on_get_changes = Callback::new(move |_: ()| {
         ws1.send(ClientMessage::GetChanges);
@@ -33,28 +34,34 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
 
     let ws2 = ws.clone();
     let on_stage_file = Callback::new(move |path: String| {
-        ws2.send(ClientMessage::StageFile { path });
+        ws2.send(ClientMessage::StageFile {
+            target: resolve_target(unstaged_changes, &path),
+        });
     });
 
     let ws3 = ws.clone();
     let on_unstage_file = Callback::new(move |path: String| {
-        ws3.send(ClientMessage::UnstageFile { path });
+        ws3.send(ClientMessage::UnstageFile {
+            target: resolve_target(staged_changes, &path),
+        });
     });
 
     let ws3b = ws.clone();
     let on_stage_files = Callback::new(move |paths: Vec<String>| {
-        if paths.is_empty() {
+        let targets = resolve_targets(unstaged_changes, paths);
+        if targets.is_empty() {
             return;
         }
-        ws3b.send(ClientMessage::StageFiles { paths });
+        ws3b.send(ClientMessage::StageFiles { targets });
     });
 
     let ws3c = ws.clone();
     let on_unstage_files = Callback::new(move |paths: Vec<String>| {
-        if paths.is_empty() {
+        let targets = resolve_targets(staged_changes, paths);
+        if targets.is_empty() {
             return;
         }
-        ws3c.send(ClientMessage::UnstageFiles { paths });
+        ws3c.send(ClientMessage::UnstageFiles { targets });
     });
 
     let ws4 = ws.clone();
@@ -69,19 +76,25 @@ pub fn create_source_control_callbacks(ws: &WsService) -> SourceControlCallbacks
 
     let ws6 = ws.clone();
     let on_get_doc_diff = Callback::new(move |path: String| {
-        ws6.send(ClientMessage::GetDocDiff { path });
+        ws6.send(ClientMessage::GetDocDiff {
+            target: resolve_target_any(staged_changes, unstaged_changes, &path),
+        });
     });
 
     let ws7 = ws.clone();
     let on_discard_file = Callback::new(move |path: String| {
-        leptos::logging::log!("on_discard_file callback triggered for: {}", path);
-        ws7.send(ClientMessage::DiscardFile { path });
+        ws7.send(ClientMessage::DiscardFile {
+            target: resolve_target(unstaged_changes, &path),
+        });
     });
 
     let ws8 = ws.clone();
     let on_resolve_conflict =
         Callback::new(move |(path, resolution): (String, ConflictResolution)| {
-            ws8.send(ClientMessage::ResolveConflict { path, resolution });
+            ws8.send(ClientMessage::ResolveConflict {
+                target: resolve_target(unstaged_changes, &path),
+                resolution,
+            });
         });
 
     let ws9 = ws.clone();

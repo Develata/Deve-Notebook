@@ -9,7 +9,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{local_repo_path, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::ConflictResolution;
 use std::sync::Arc;
 
@@ -21,14 +21,19 @@ pub async fn handle_resolve_conflict(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &WsSession,
-    path: String,
+    target: ScPathTarget,
     resolution: ConflictResolution,
 ) {
-    let normalized = deve_core::utils::path::to_forward_slash(&path);
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
+    let selector = super::service::selector_from_scope(&scope);
+    let pending = match super::service::list_pending(state.repo.as_ref(), &selector) {
+        Ok(entries) => entries,
+        Err(e) => return super::errors::send_ws(ch, e),
+    };
+    let normalized = super::service::resolve_path(&pending, &target);
     let result = match resolution {
         ConflictResolution::KeepFs => resolve_keep_fs(state, &scope, &normalized),
         ConflictResolution::KeepLedger => resolve_keep_ledger(state, &scope, &normalized),
