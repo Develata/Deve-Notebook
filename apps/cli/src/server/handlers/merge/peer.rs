@@ -99,9 +99,9 @@ fn resolve_doc_path(
 ) -> Option<String> {
     match state
         .repo
-        .get_path_by_docid_in_local_repo(repo_name, doc_id)
+        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)
     {
-        Ok(Some(path)) => Some(path),
+        Ok(Some(meta)) => Some(meta.path),
         Ok(None) => {
             ch.send_error("Doc path not found for merged document".to_string());
             None
