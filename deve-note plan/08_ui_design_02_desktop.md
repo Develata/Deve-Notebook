@@ -126,7 +126,7 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 ### 4.3.1 数据持久化 (Persistence)
 *   **Rule**: 所有内容 **MUST** 落盘到本地数据库与 Vault。
 *   **Crash Safety**: 崩溃后 **MUST** 可恢复到最后一次持久化状态。
-*   **Migration**: 数据结构升级 **MUST** 支持自动迁移，失败时 **MUST** 回滚。
+*   **Migration Boundary**: 桌面端 UI **MUST NOT** 自行定义存储迁移语义；涉及 Ledger / Vault Schema 的升级必须遵循 `04_storage.md` 的 `Copy & Rebuild` 策略，失败时进入显式恢复流程而不是静默自动回滚。
 
 ### 4.3.2 加密策略 (Encryption)
 *   **At-Rest**: 本地存储 **MUST** 支持加密（密钥绑定设备安全模块）。

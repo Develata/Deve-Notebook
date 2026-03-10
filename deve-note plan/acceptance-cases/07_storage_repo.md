@@ -50,10 +50,10 @@
 - case_id: STORE-005
   goal: Ledger-First 与原子持久化。
   preconditions:
-    - watch 运行中
+    - 存在一个可编辑文档 <doc>
   steps:
-    - run: powershell -Command "'x' | Set-Content ${DEVE_DATA_DIR}/vault/atomic.md"
-    - run: deve dump --doc atomic.md --field seq
+    - run: deve doc edit --id <doc> --set "x"
+    - run: deve dump --doc <doc> --field seq
   assertions:
     - ledger_seq_increases true
     - vault_content_eq: "x"
@@ -76,8 +76,9 @@
     - run: powershell -Command "'a' | Set-Content ${DEVE_DATA_DIR}/vault/a.md"
     - run: powershell -Command "Remove-Item ${DEVE_DATA_DIR}/vault/a.md"
   assertions:
-    - ledger_op_appended: "create"
-    - ledger_op_appended: "delete"
+    - pending_fs_ops_contains: "create"
+    - pending_fs_ops_contains: "delete"
+    - ledger_op_not_appended: "a.md"
 
 - case_id: STORE-008
   goal: 数据恢复策略。

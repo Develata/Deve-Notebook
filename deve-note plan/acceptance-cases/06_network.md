@@ -2,7 +2,7 @@
 
 ```markdown
 - case_id: NET-001
-  goal: Web 端断连锁屏。
+  goal: Web 端网络断连时锁屏并进入重连态。
   preconditions:
     - 已连接 WS
   steps:
@@ -40,7 +40,7 @@
     - net_capture: true
   assertions:
     - packet_format_eq: ["server", "bincode"]
-    - packet_format_eq: ["client", "json"]
+    - packet_format_any_of: ["client", "bincode", "json"]
 
 - case_id: NET-005
   goal: WebLightPeer repo-scoped 握手。
@@ -50,7 +50,7 @@
     - ws_connect: "relative /ws"
     - ws_send: { type: "SyncHello", repo_id: "11111111-1111-1111-1111-111111111111", peer_pubkey: "pub_a", vector: { seq: 7 } }
   assertions:
-    - ws_receive_contains: "SyncAck"
+    - ws_receive_contains: "SyncHello"
     - ws_receive_contains: "11111111-1111-1111-1111-111111111111"
 
 - case_id: NET-006
@@ -121,4 +121,15 @@
     - run: rg -n "Error\\(String\\)" "crates/core/src/protocol/server.rs" "apps/web/src/hooks/use_core/effects/message.rs"
   assertions:
     - stdout_not_contains: "Error(String)"
+
+- case_id: NET-013
+  goal: 认证失效必须进入 Unauthorized，而不是普通重连。
+  preconditions:
+    - 已建立登录态与 WS 连接
+  steps:
+    - run: curl -s -X POST http://127.0.0.1:3000/api/auth/logout
+    - browser_wait_ws_event: true
+  assertions:
+    - ui_assert: login_screen_visible true
+    - ui_assert: overlay_text_not_eq "Reconnecting..."
 ```

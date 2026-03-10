@@ -98,4 +98,15 @@
     - ws_connect: "ws://127.0.0.1:3000/ws"
   assertions:
     - ws_connection_denied true
+
+- case_id: AUTH-011
+  goal: session expired 与 disconnected 必须分离。
+  preconditions:
+    - 已登录并建立 WS 连接
+  steps:
+    - run: curl -s -X POST http://127.0.0.1:3000/api/auth/logout
+    - browser_wait_ws_event: true
+  assertions:
+    - ui_assert: login_screen_visible true
+    - ui_assert: overlay_text_not_eq "Reconnecting..."
 ```

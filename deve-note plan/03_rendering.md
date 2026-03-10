@@ -2,7 +2,7 @@
 
 ## 编辑器内核 (The Editor Kernel)
 
-*   **Input Layer**: 采用 `ContentEditable` (Web) 或 CodeMirror 6 (Desktop) 作为输入捕获层。
+*   **Input Layer**: Web / Desktop 编辑器输入层统一采用 `CodeMirror 6`；移动端在共享前端代码基础上遵循同一模型。
 *   **State Layer**: 绑定自研 Op-based 状态 (Ledger)，作为单一真值源。
 *   **Projection Layer (投影层)**: 负责将 Ledger 状态不仅呈现为 **Vault** 中的物理文件，还实时渲染为可视化的视图。支持 Block Mode, Source Mode, 和 Live Preview 三种。
 *   **Technology Stack**:

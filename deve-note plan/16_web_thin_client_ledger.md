@@ -84,16 +84,24 @@ State_auth = L_confirmed
 - `Source Control` 用户态错误 MUST 使用独立 `SC_*` 目录。
 - 仅 DB/Vault/FS 持久化失败可继续落到 `STORAGE_*`。
 
+### 4.5 Reconcile Identity
+
+为保证 `pending overlay` 在快照、历史回放与重连后仍能精确收敛：
+
+- `Ack` / `History` / `NewOp` / `Snapshot delta` SHOULD 携带 `client_id + client_op_id` 或等价确认标识。
+- 前端 MAY 基于内容做临时比对，但 MUST NOT 将“内容相同”当成长期正确的唯一判定方式。
+
 ## 5. Frontend State Machine
 
 Web 编辑器必须至少区分以下状态：
 
 1. `Disconnected`
-2. `SnapshotLoading`
-3. `HandshakePending(repo_id)`
-4. `EditableConfirmed(repo_id)`
-5. `PendingAck(doc_id, client_op_id set)`
-6. `Resyncing`
+2. `Unauthorized`
+3. `SnapshotLoading`
+4. `HandshakePending(repo_id)`
+5. `EditableConfirmed(repo_id)`
+6. `PendingAck(doc_id, client_op_id set)`
+7. `Resyncing`
 
 其中可写条件必须是：
 
@@ -103,6 +111,14 @@ Editable iff SnapshotReady && HandshakeReady(current_repo)
 
 而不是仅凭 Snapshot Ready。
 
+并且：
+
+```text
+Unauthorized != Disconnected
+```
+
+`Unauthorized` 需要重新登录；`Disconnected` 才允许指数退避重连。
+
 ## 6. Backend State Machine
 
 服务端对浏览器写入必须区分：
@@ -111,6 +127,7 @@ Editable iff SnapshotReady && HandshakeReady(current_repo)
 - `repo binding`
 - `browser writer identity`
 - `P2P sync peer identity`
+- `network disconnected` 与 `session expired`
 
 长期目标是：
 
@@ -123,9 +140,10 @@ Editable iff SnapshotReady && HandshakeReady(current_repo)
 1. 为每个编辑操作引入 `client_op_id`，并让 `Ack` 回显它。
 2. 让握手完成状态显式化、repo-scoped 化，并作为编辑器写闸门的一部分。
 3. 前端建立 `pending local op -> acked op` 的精确集合，而不是只改 DOM。
-4. 文件切换前检查未确认写入；不得静默丢弃。
-5. 统一 WS / HTTP / Watcher / SC 的最终 ledger 写入口。
-6. 删除语义改为显式 tombstone / delete op。
+4. 为 `History / NewOp / Snapshot delta` 补齐 origin metadata，避免长期依赖内容匹配做 reconcile。
+5. 文件切换前检查未确认写入；不得静默丢弃。
+6. 统一 WS / HTTP / Watcher / SC 的最终 ledger 写入口。
+7. 删除语义改为显式 tombstone / delete op。
 
 ## 8. Forbidden Patterns
 
@@ -151,5 +169,6 @@ Editable iff SnapshotReady && HandshakeReady(current_repo)
 1. Web 切文件不再出现“改动消失但无提示”。
 2. Web 重连后不会把旧仓库握手错误地当成当前仓库可写。
 3. 前端能精确区分 `pending` 与 `confirmed` 本地改动。
-4. 所有最终业务事实都可由 Ledger 唯一追溯。
-5. Source Control 与编辑器写入都回到同一权威模型。
+4. `Unauthorized` 与 `Disconnected` 在 UI 与状态机中被明确区分。
+5. 所有最终业务事实都可由 Ledger 唯一追溯。
+6. Source Control 与编辑器写入都回到同一权威模型。

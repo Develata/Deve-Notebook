@@ -16,70 +16,51 @@
         * **Peer Identity (Ed25519)**: 验证同步数据来源。每个 repo 独立的 keypair，存储于浏览器安全存储（WebCrypto/IndexedDB）。
     * **WebSocket Auth**: 握手阶段必须验证 JWT Token；同步阶段验证 Peer Identity 签名。
     * **Session**: 提供基于 Redis 或内存的会话管理机制（可选，视 JWT 策略而定）。
-    *   **2FA (Two-Factor Auth)**: **MAY** 支持 TOTP (Google Authenticator) 以增强安全性。
+    * **2FA (Two-Factor Auth)**: **MAY** 支持 TOTP (Google Authenticator) 以增强安全性。
 
-### 术语表 (Terminology)
+## 章节边界 (Scope Boundary)
 
-**WebLightPeer** — 受限同步端点。浏览器作为轻量级 peer 参与同步，但受以下约束：
-  - 无完整本地 ledger（仅在线状态下的 repo-scoped cache）
-  - 无后台长期 gossip（依赖 Server Always-on Relay）
-  - 仅 repo-scoped 同步（每个 repo 独立 identity/vector）
+本章只负责：
 
-**DashboardSession** — 浏览器用户会话。通过 JWT Cookie 认证，与 peer identity 分离。
+*   `user session` 的建立、续期、撤销与失效处理。
+*   `WebSocket` / `HTTP` 入口的鉴权语义。
+*   `Unauthorized` 与 `Disconnected` 的区分。
 
-**PeerIdentity** — 节点身份。每个 repo 独立的 Ed25519 keypair；私钥保留在 WebCrypto 非导出 `CryptoKey` 中，公钥与注册元数据持久化于 IndexedDB。
+以下内容不在本章定义权威规则：
 
-**RepoScopedVector** — 仓库作用域版本向量。WebLightPeer 为每个 repo 维护独立 vector。
+*   WebLightPeer 的 repo-scoped cache / storage 分层：见 `04_storage.md` 与 `05_network.md`。
+*   Web 薄客户端的 pending overlay / ack / write readiness：见 `16_web_thin_client_ledger.md`。
 
-**OfflineCache** — 离线缓存。IndexedDB 中存储的 repo-scoped metadata 与最近访问文档。
+## Auth-Specific Invariants (认证不变量)
 
-**DegradedSyncMode** — 降级同步模式。当 IndexedDB 不可用时，WebLightPeer 进入只读模式。
+1. `User session` 与 `peer identity` 是两层独立状态机，任何一层成功都不能替代另一层。
+2. `session expired / token missing` **MUST** 进入 `Unauthorized`，而不是继续显示普通断网重连。
+3. `session valid + peer identity missing` 只允许只读与重新注册，不允许写入。
+4. `peer identity ready + session invalid` 仍然不得访问 API / WS 写路径。
 
-### 不变量 (Invariants)
-
-**INV-1: Repo Scope Isolation**
-- WebLightPeer 的 identity、vector、cache 必须按 repo_id 隔离
-- 不允许跨 repo 共享 peer identity 或 vector state
-
-**INV-2: Online Dependency**
-- WebLightPeer 必须保持与 Server 的 WebSocket 连接才能工作
-- 断连后进入只读模式，禁止离线编辑（与 Full Peer 不同）
-
-**INV-3: Storage Separation**
-- UI 偏好 → localStorage
-- Peer identity 私钥 → WebCrypto secure storage
-- Repo-scoped cache metadata → IndexedDB
-- 业务数据 → Server ledger（WebLightPeer 不持久化文档内容）
-
-**INV-4: Auth Layering**
-- User session (JWT Cookie) 与 peer identity (Ed25519 keypair) 是独立的两层认证
-- User session 验证用户访问权限，peer identity 验证同步数据来源
-
-### Auth Layering Flows (分层认证流程)
+## Auth Layering Flows (分层认证流程)
 
 **Layer 1: User Session（用户会话）**
-- 目的：回答“谁在访问 Dashboard / API”。
-- 流程：`POST /api/auth/login` -> Server 签发 `session token` -> 浏览器以 `HttpOnly Cookie` 持有。
-- 作用域：全局，覆盖该浏览器访问的所有 repos。
-- 撤销：登出、Cookie 过期、密码修改、`token_version` 增加。
-- 禁止：`session token` 不得充当 `peer identity`，也不得替代同步签名。
+
+*   目的：回答“谁在访问 Dashboard / API”。
+*   流程：`POST /api/auth/login` -> Server 签发 `session token` -> 浏览器以 `HttpOnly Cookie` 持有。
+*   作用域：全局，覆盖该浏览器访问的所有 repos。
+*   撤销：登出、Cookie 过期、密码修改、`token_version` 增加。
+*   禁止：`session token` 不得充当 `peer identity`，也不得替代同步签名。
 
 **Layer 2: Peer Identity（浏览器 Peer 身份）**
-- 目的：回答“同步数据来自哪个 browser peer / repo”。
-- 流程：浏览器在进入 repo 后生成或恢复 repo-scoped keypair，然后通过 `SyncHello` 完成 peer registration。
-- 存储：私钥留在 `WebCrypto`，公钥、peer metadata 与 repo 状态在 IndexedDB。
-- 作用域：严格 repo-scoped；切换 repo 必须切换对应 peer identity。
-- 禁止：peer identity 不授予 UI/API 访问权限，不能绕过登录 Cookie。
 
-**Separation Rationale（分离理由）**
-- 获取 `session token` 的攻击者只能伪装“已登录用户”，仍无法伪造同步签名。
-- 泄露某个 repo 的 `peer identity` 公钥不会自动提升为 Dashboard 登录态。
-- 用户重新登录不会替换既有 trusted peer；删除浏览器 identity 也不会让服务端会话失效。
+*   目的：回答“同步数据来自哪个 browser peer / repo”。
+*   流程：浏览器在进入 repo 后生成或恢复 repo-scoped keypair，然后通过 `SyncHello` 完成 peer registration。
+*   存储：私钥留在 `WebCrypto`，公钥、peer metadata 与 repo 状态在 IndexedDB。
+*   作用域：严格 repo-scoped；切换 repo 必须切换对应 peer identity。
+*   禁止：peer identity 不授予 UI/API 访问权限，不能绕过登录 Cookie。
 
-**Independent Flows（独立流程）**
-1. 用户登录：输入凭据 -> Server 校验 -> 返回 `session token` Cookie。
-2. 浏览器 peer 注册：打开某个 repo -> 恢复或生成 `peer identity` -> 发送 `SyncHello` -> Server 记录信任关系。
-3. 若步骤 1 失败，则拒绝 repo 数据访问；若步骤 2 失败，则允许只读查看但禁止写入同步。
+## Unauthorized vs Disconnected (认证失效与断网分离)
+
+*   **Disconnected**：网络、代理或服务暂时不可达。客户端 **MAY** 自动重连，并在恢复后重新握手当前 repo。
+*   **Unauthorized**：JWT 缺失、过期、撤销或服务端明确拒绝当前会话。客户端 **MUST** 立即退出写态，跳转登录页或显示认证失效界面。
+*   **Rule**：`401/403` 与 `AUTH_*` 错误码 **MUST NOT** 被重新包装成普通断网状态。
 ## 访问控制 (Access Control)
 
 *   **Model**: **Single-User / Owner-Only**。

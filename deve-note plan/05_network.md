@@ -142,10 +142,11 @@
 *   **Max Retries**: 无限 (用户手动关闭才停止)。
 *   **Endpoint Rule**: 重连目标优先保持为 `relative /ws`；仅在显式配置了单一外部 WS 地址时才覆盖同源路径。
 *   **UI Feedback**:
-    *   断连后立即显示 "Reconnecting..." 遮罩。
+    *   仅网络断连后显示 `Reconnecting...` 遮罩。
     *   每次重连尝试更新计数器 "Retry #N..."。
     *   重连成功后自动请求增量同步 (SyncHello)。
 *   **State Recovery**: 重连成功后 MUST 重新发送当前 repo 的 `SyncHello` 获取离线期间的变更；若用户已切换 repo，则必须以新 `repo_id` 重建连接上下文。
+*   **Auth Boundary**: 若服务端明确返回 `401/403` 或 `AUTH_*` 结构化错误，客户端 **MUST** 停止普通重连循环并转入 `Unauthorized` 处理；见 `09_auth.md`。
 
 ### Edge Cases & Safety Strategy (边界与安全)
 

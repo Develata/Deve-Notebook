@@ -22,7 +22,8 @@
     - run: powershell -Command "Start-Sleep -Milliseconds 500"
   assertions:
     - log_contains: "watch"  # Watcher 有事件日志
-    - ledger_op_appended: "test.md"  # 产生 Op（可通过 dump 验证）
+    - pending_fs_ops_contains: "test.md"  # 仅进入工作区待确认集合
+    - ledger_op_not_appended: "test.md"
 
 - case_id: POS-003
   goal: 双向闭环无死循环。
@@ -33,7 +34,7 @@
     - run: powershell -Command "Start-Sleep -Milliseconds 1000"
   assertions:
     - log_not_contains: "repeat-trigger"  # 不出现重复循环标记
-    - ledger_op_count_increases_by: 1
+    - pending_fs_ops_count_increases_by: 1
 
 - case_id: POS-004
   goal: 重命名不丢 DocId。

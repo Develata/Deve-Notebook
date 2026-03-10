@@ -14,6 +14,7 @@
 | **Linux**   | `.deb`, `.rpm`, `.AppImage` | x64                  | GPG                      |
 | **Server**  | OCI Image (Docker/Podman)   | x64, ARM64           | GHCR                     |
 | **iOS**     | `.ipa` (App Store)          | ARM64                | **Pending** (Not urgent) |
+| **Android** | `.apk` / `.aab`             | ARM64                | **Pending** (Not urgent) |
 | **Web**     | PWA (Static)                | Universal            | HTTPS                    |
 
 ### 1.2 Release Channels (发布通道)
@@ -122,4 +123,3 @@ services:
 - [ ] `CHANGELOG.md` 已更新。
 - [ ] 关键依赖 (Dependencies) 无高危审计漏洞 (`cargo audit`, `npm audit`).
 - [ ] 多平台 (Win/Mac/Linux) 冒烟测试通过。
-

@@ -1,6 +1,7 @@
 # 11b_ai_integration.md - AI 集成篇 (AI Integration)
 
-> AI 双通道架构为**原生功能**，桥接层极轻量 (< 5 MB)，不违背低资源原则。
+> AI 双通道架构为**第一方扩展能力（first-party bundled extension）**，不是 `Core MUST`。
+> 桥接层极轻量 (< 5 MB)，不违背低资源原则。
 > 真正占用内存的是外部 CLI 进程，且按需启动、用完即销毁。
 
 | 通道 | 定位 | 运行时开销 | 适用场景 |

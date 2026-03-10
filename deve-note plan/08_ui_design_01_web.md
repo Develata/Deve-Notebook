@@ -3,9 +3,9 @@
 > **Status**: Core Specification
 > **Target**: Server Dashboard & PWA
 
-本节定义了 Web 端作为 Server Dashboard 的特有功能与部署架构。
+本节定义了 Web 端作为 **Server Dashboard + WebLightPeer Thin Client** 的特有功能与部署架构。
 
-> **Scope Boundary**: Web 端仅作为服务器侧 UI。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §4.1 和 `08_ui_design_03_mobile.md` §7.1。
+> **Scope Boundary**: Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，但不承担 Native 端完整离线能力。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §4.1 和 `08_ui_design_03_mobile.md` §7.1。
 
 ## 规范性用语 (Normative Language)
 *   **MUST**: 绝对要求。
@@ -60,23 +60,24 @@ struct SystemMetrics {
 ```
 
 ### 2.3 安全约束 (Safety Constraints)
-*   **Disconnect Lockdown**: 当 WebSocket 断开时，UI **MUST** 立即被遮罩层锁定，禁止任何写操作，并显示 "Reconnecting..."。
+*   **Disconnect Lockdown**: 当网络断连时，UI **MUST** 立即被遮罩层锁定，禁止任何写操作，并显示重连状态。
+*   **Session Expiry Split**: 当 user session 失效或鉴权被拒绝时，UI **MUST NOT** 继续显示无限重连遮罩；必须切换到明确的登录失效 / 未认证状态。
 *   **RAM-Only**: Dashboard 数据 **MUST NOT** 持久化到 IndexedDB。
 
 ### 2.4 Dashboard 路由与权限
 *   **Route**: `/` (根路径，无 DocId 参数时)。
 *   **Auth**: Dashboard **MUST** 要求已认证身份。未认证访问跳转 Login。
 *   **Data Channel**: 通过现有 WebSocket 连接推送 `ServerMessage::SystemMetrics`。
-*   **Fallback**: WebSocket 断开时，Metrics 冻结并显示 "Disconnected" 状态。
+*   **Fallback**: 网络断连时，Metrics 冻结并显示 `Disconnected`；session 失效时，直接退出到登录页或认证失效界面。
 
 ## 3. 外部协同流程 (External Edit Flow)
 
-专门针对“用户在服务器端直接修改文件”的场景。
+专门针对“用户在服务器端直接修改文件”的场景；其职责是暴露工作区差异，而不是直接改写已确认编辑状态。
 
 1.  **Detection**: 后端 `notify` 监听到文件系统变更 $Event_{fs}$。
-2.  **Push**: 后端生成 `ExternalChange` 操作并通过 WS 推送。
-3.  **Merge**: 前端接收后，通过 CRDT 或简单的 "Last Writer Wins" 策略更新编辑器内容。
-4.  **Feedback**: 弹出 Toast 提示 "File updated on disk"。
+2.  **Record**: 变更经 Debouncer 与路径归一化后写入 repo-scoped `pending_fs_ops`，**MUST NOT** 直接入 Ledger。
+3.  **Push**: 后端通过 `FsChangeDetected` 提示前端刷新当前 repo 的 Changes / Staging 视图。
+4.  **Feedback**: 若当前文档受影响，前端显示“磁盘上检测到未确认变更”的可感知提示，但 **MUST NOT** 直接用外部文件内容覆盖编辑器中的 confirmed + pending overlay。
 
 ## 4. PWA 支持
 Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
@@ -102,6 +103,7 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
     *   灰色：`Read-only`，表示进入 `DegradedSyncMode` 或尚未完成 peer registration。
 *   **Status Copy**:
     *   UI **MUST** 同时区分 `session token` 状态与 `peer identity` 状态，例如“已登录 / Peer 未注册”。
+    *   UI **MUST** 同时区分 `network disconnected` 与 `session expired`；前者允许重连，后者要求重新登录。
     *   Repo 切换时 **MUST** 显示 `Handshaking repo...`，直到新的 repo-scoped peer identity 完成注册。
 *   **DegradedSyncMode Banner**:
     *   当 IndexedDB 或 WebCrypto 不可用时，顶部 **MUST** 显示只读横幅，明确原因是浏览器持久存储不可用。
@@ -115,5 +117,5 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
 
 ## 6. 实现策略边界 (Implementation Boundaries)
 
-*   **Rule**: Web 端仅作为服务器 UI，不承载移动/桌面端原生实现细节。
+*   **Rule**: Web 端承载 Dashboard 与 thin-client 写入界面，但不承载移动/桌面端原生实现细节。
 *   **Offline**: Web 端离线能力仅限 PWA 缓存，**MUST NOT** 替代内嵌服务。

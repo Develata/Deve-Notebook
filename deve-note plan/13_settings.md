@@ -15,9 +15,9 @@
 | **Network & Security**           |                  |                                                                     |
 | `AUTH_SECRET`                    | *(Random)*       | Session/JWT 签名密钥. **生产环境 MUST 设置**.                       |
 | `AUTH_USER`                      | `admin`          | 默认超管用户名.                                                     |
-| `AUTH_PASS`                      | `password`       | 默认超管密码 (首次启动时生效).                                      |
+| `AUTH_PASS`                      | *(none)*         | Argon2 哈希后的管理员密码（PHC 格式）。生产环境 MUST 设置。          |
 | `AUTH_ALLOW_ANONYMOUS_LOCALHOST` | `false`          | 是否允许 Localhost / LAN 免密访问 (`true` / `false`).               |
-| `CORS_ALLOWED_ORIGINS`           | *(none)*         | 额外允许的 CORS Origin 列表 (逗号分隔). 不设则仅允许 localhost.     |
+| `ALLOWED_ORIGINS`                | *(none)*         | 允许的 CORS Origin 列表 (逗号分隔). 生产环境 MUST 显式设置。        |
 | **TLS (可选)**                   |                  |                                                                     |
 | `TLS_CERT_PATH`                  | *(none)*         | PEM 证书路径. 设置后启用 HTTPS.                                     |
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
@@ -66,4 +66,3 @@
 | **Version Control**   | `Cmd+S` / `Ctrl+S`             | **Save**: 保存当前文件 (触发 Diff 计算) |
 |                       | `Cmd+Enter` / `Ctrl+Enter`     | **Commit**: 提交暂存区的更改            |
 |                       | `Cmd+A` / `Ctrl+A`             | **Select All**: 全选当前文件            |
-
