@@ -7,6 +7,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 #[cfg(feature = "search")]
 use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 #[cfg(feature = "search")]
@@ -22,15 +23,24 @@ pub async fn handle_search(state: &Arc<AppState>, ch: &DualChannel, query: Strin
                 ch.unicast(ServerMessage::SearchResults { results });
             }
             Err(e) => {
-                ch.send_error(format!("Search failed: {}", e));
+                ch.send_protocol_error(ServerError::with_detail(
+                    ServerErrorCode::RequestFailed,
+                    format!("Search failed: {}", e),
+                ));
             }
         }
     } else {
-        ch.send_error("Search feature not enabled".to_string());
+        ch.send_protocol_error(ServerError::with_detail(
+            ServerErrorCode::RequestFailed,
+            "Search feature not enabled",
+        ));
     }
 }
 
 #[cfg(not(feature = "search"))]
 pub async fn handle_search(_state: &Arc<AppState>, ch: &DualChannel, _query: String, _limit: u32) {
-    ch.send_error("Search feature not enabled".to_string());
+    ch.send_protocol_error(ServerError::with_detail(
+        ServerErrorCode::RequestFailed,
+        "Search feature not enabled",
+    ));
 }

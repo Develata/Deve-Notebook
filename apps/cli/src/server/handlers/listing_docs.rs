@@ -5,7 +5,7 @@ use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_meta;
 use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use deve_core::tree::TreeDelta;
 use std::sync::Arc;
 
@@ -26,7 +26,12 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
             ch.unicast(ServerMessage::TreeUpdate(TreeDelta::init(Vec::new())));
             return;
         }
-        Err(err) => return ch.send_error(err.to_string()),
+        Err(err) => {
+            return ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                err.to_string(),
+            ));
+        }
     };
 
     ch.unicast(ServerMessage::RepoSwitched {
@@ -44,13 +49,19 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
                 }
                 Err(err) => {
                     tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
-                    ch.send_error(format!("Failed to list nodes: {}", err));
+                    ch.send_protocol_error(ServerError::with_detail(
+                        ServerErrorCode::RequestFailed,
+                        format!("Failed to list nodes: {}", err),
+                    ));
                 }
             }
         }
         Err(err) => {
             tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
-            ch.send_error(format!("Failed to list docs: {}", err));
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                format!("Failed to list docs: {}", err),
+            ));
         }
     }
 }
