@@ -1,3 +1,4 @@
+use super::errors;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -27,19 +28,19 @@ pub(super) async fn handle_dir_rename(
     ) {
         Ok(Some(node_id)) => node_id,
         Ok(None) => {
-            ch.send_error(format!("Source not tracked: {}", old_path));
+            errors::storage_not_found(ch, format!("Source not tracked: {}", old_path));
             return;
         }
         Err(e) => {
             tracing::error!("目录重命名结构事实失败: {:?}", e);
-            ch.send_error(format!("Failed to rename folder: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to rename folder: {}", e));
             return;
         }
     };
     let dst = match local_repo_path(state, scope, dst_name) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
@@ -47,12 +48,12 @@ pub(super) async fn handle_dir_rename(
         && let Err(e) = std::fs::create_dir_all(parent)
     {
         tracing::error!("创建目标父目录失败: {:?}", e);
-        ch.send_error(format!("Failed to prepare destination: {}", e));
+        errors::storage_persist_failed(ch, format!("Failed to prepare destination: {}", e));
         return;
     }
     if let Err(e) = std::fs::rename(src, &dst) {
         tracing::error!("重命名失败 {} -> {}: {:?}", old_path, dst_name, e);
-        ch.send_error(format!("Failed to rename folder: {}", e));
+        errors::storage_persist_failed(ch, format!("Failed to rename folder: {}", e));
         return;
     }
     if let Ok((node_id, meta)) = run_on_resolved_local_repo(state, scope, |db| {

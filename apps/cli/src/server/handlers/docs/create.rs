@@ -3,6 +3,7 @@
 
 use super::create_file::handle_file_create;
 use super::create_folder::handle_folder_create;
+use super::errors;
 use super::{validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -31,7 +32,7 @@ pub async fn handle_create_doc(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
@@ -50,14 +51,14 @@ pub async fn handle_create_doc(
     let path = match local_repo_path(state, &scope, &filename) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
 
     if let Err(e) = ensure_parent_dirs(&path) {
         tracing::error!("创建目录失败: {:?}", e);
-        ch.send_error(format!("Failed to create directories: {}", e));
+        errors::storage_persist_failed(ch, format!("Failed to create directories: {}", e));
         return;
     }
 

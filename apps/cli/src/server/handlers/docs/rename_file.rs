@@ -1,3 +1,4 @@
+use super::errors;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -25,11 +26,11 @@ pub(super) async fn handle_file_rename(
     {
         Ok(Some(doc_id)) => doc_id,
         Ok(None) => {
-            ch.send_error(format!("Document not tracked: {}", src_path));
+            errors::storage_not_found(ch, format!("Document not tracked: {}", src_path));
             return;
         }
         Err(e) => {
-            ch.send_error(format!("Failed to resolve document: {}", e));
+            errors::request_failed(ch, format!("Failed to resolve document: {}", e));
             return;
         }
     };
@@ -40,7 +41,7 @@ pub(super) async fn handle_file_rename(
         "local_rename",
     ) {
         tracing::error!("重命名结构事实失败: {:?}", e);
-        ch.send_error(format!("Failed to rename file: {}", e));
+        errors::storage_persist_failed(ch, format!("Failed to rename file: {}", e));
         return;
     }
     if let Err(e) = state
@@ -48,12 +49,12 @@ pub(super) async fn handle_file_rename(
         .persist_doc_in_local_repo(&scope.repo_name, doc_id)
     {
         tracing::error!("重命名投影持久化失败: {:?}", e);
-        ch.send_error(format!("Failed to materialize renamed file: {}", e));
+        errors::storage_persist_failed(ch, format!("Failed to materialize renamed file: {}", e));
         return;
     }
     if let Err(e) = std::fs::remove_file(src_file) {
         tracing::error!("旧路径清理失败 {}: {:?}", src_path, e);
-        ch.send_error(format!("Failed to remove old file: {}", e));
+        errors::storage_persist_failed(ch, format!("Failed to remove old file: {}", e));
         return;
     }
     if let Ok((node_id, meta)) = run_on_resolved_local_repo(state, scope, |db| {

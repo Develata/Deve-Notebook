@@ -15,6 +15,7 @@ mod create;
 mod create_file;
 mod create_folder;
 mod delete;
+mod errors;
 mod file_register;
 mod node_helpers;
 mod rename;
@@ -51,17 +52,17 @@ fn validate_path_kind(path: &str, allow_file_leaf: bool, ch: &DualChannel) -> bo
     // 防止目录遍历攻击
     if path.contains("..") || path.starts_with('/') || path.starts_with('\\') {
         tracing::error!("路径校验失败 (遍历攻击): {}", path);
-        ch.send_error(format!("Invalid path: {}", path));
+        errors::request_failed(ch, format!("Invalid path: {}", path));
         return false;
     }
 
     // 检查目录深度
     if std::path::Path::new(path).components().count() > MAX_DEPTH {
         tracing::error!("路径校验失败 (深度超限): {}", path);
-        ch.send_error(format!(
-            "Directory depth limit exceeded (max {})",
-            MAX_DEPTH
-        ));
+        errors::request_failed(
+            ch,
+            format!("Directory depth limit exceeded (max {})", MAX_DEPTH),
+        );
         return false;
     }
 
@@ -71,21 +72,21 @@ fn validate_path_kind(path: &str, allow_file_leaf: bool, ch: &DualChannel) -> bo
         .filter(|segment| !segment.is_empty())
         .collect();
     if segments.is_empty() {
-        ch.send_error("Invalid empty path".to_string());
+        errors::request_failed(ch, "Invalid empty path");
         return false;
     }
 
     for (index, segment) in segments.iter().enumerate() {
         if *segment == ".notegit" {
             tracing::error!("路径校验失败 (保留目录): {}", path);
-            ch.send_error(format!("Reserved internal path: {}", path));
+            errors::request_failed(ch, format!("Reserved internal path: {}", path));
             return false;
         }
         let is_leaf = index + 1 == segments.len();
         let md_dir = segment.ends_with(".md") && (!allow_file_leaf || !is_leaf);
         if md_dir {
             tracing::error!("路径校验失败 (.md 目录): {}", path);
-            ch.send_error(format!("Markdown directory is forbidden: {}", path));
+            errors::request_failed(ch, format!("Markdown directory is forbidden: {}", path));
             return false;
         }
     }

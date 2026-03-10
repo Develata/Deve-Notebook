@@ -1,6 +1,7 @@
 // apps/cli/src/server/handlers/docs/rename.rs
 //! # 重命名/移动文档处理器
 
+use super::errors;
 use super::rename_dir::handle_dir_rename;
 use super::rename_file::handle_file_rename;
 use super::{validate_file_path, validate_folder_path};
@@ -33,7 +34,7 @@ pub async fn handle_rename_doc(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
@@ -41,7 +42,7 @@ pub async fn handle_rename_doc(
     let src = match local_repo_path(state, &scope, &old_path) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
@@ -70,14 +71,14 @@ pub async fn handle_rename_doc(
     let dst = match local_repo_path(state, &scope, &dst_name) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
 
     if dst.exists() {
         tracing::error!("重命名失败: 目标已存在: {:?}", dst);
-        ch.send_error(format!("Destination exists: {}", dst_name));
+        errors::storage_conflict(ch, format!("Destination exists: {}", dst_name));
         return;
     }
 
@@ -90,7 +91,7 @@ pub async fn handle_rename_doc(
         handle_dir_rename(state, ch, session, &scope, &old_path, &dst_name, &src).await;
     } else {
         tracing::warn!("重命名失败: 源不存在: {:?}", src);
-        ch.send_error(format!("Source not found: {}", old_path));
+        errors::storage_not_found(ch, format!("Source not found: {}", old_path));
     }
 }
 

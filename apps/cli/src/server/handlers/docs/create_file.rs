@@ -1,5 +1,6 @@
 //! 文件创建与已有文件注册逻辑。
 
+use super::errors;
 use super::file_register::{broadcast_file_tree_update, register_file_from_disk};
 use super::notify_fs_refresh;
 use crate::server::AppState;
@@ -21,7 +22,7 @@ pub async fn handle_file_create(
         Ok(doc_id) => doc_id,
         Err(e) => {
             tracing::error!("文件注册失败: {:?}", e);
-            ch.send_error(format!("Failed to register file: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to register file: {}", e));
             return;
         }
     };

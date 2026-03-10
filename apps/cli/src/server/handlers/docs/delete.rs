@@ -1,6 +1,7 @@
 // apps/cli/src/server/handlers/docs/delete.rs
 //! # 删除文档处理器
 
+use super::errors;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -35,7 +36,7 @@ pub async fn handle_delete_doc(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
@@ -44,7 +45,7 @@ pub async fn handle_delete_doc(
     let target = match local_repo_path(state, &scope, &path) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return;
         }
     };
@@ -63,14 +64,14 @@ pub async fn handle_delete_doc(
             "local_delete",
         ) {
             tracing::error!("目录删除结构事实失败: {:?}", e);
-            ch.send_error(format!("Failed to delete directory: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
             return;
         }
         if target.exists()
             && let Err(e) = std::fs::remove_dir_all(&target)
         {
             tracing::error!("删除目录失败 {}: {:?}", path, e);
-            ch.send_error(format!("Failed to delete directory: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
             return;
         }
     } else {
@@ -86,14 +87,14 @@ pub async fn handle_delete_doc(
             "local_delete",
         ) {
             tracing::error!("文件删除结构事实失败: {:?}", e);
-            ch.send_error(format!("Failed to delete file: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
             return;
         }
         if target.exists()
             && let Err(e) = std::fs::remove_file(&target)
         {
             tracing::error!("删除文件失败 {}: {:?}", path, e);
-            ch.send_error(format!("Failed to delete file: {}", e));
+            errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
             return;
         }
     }
