@@ -1,7 +1,10 @@
 //! 手动合并消息处理器入口。
 
+mod errors;
 mod manual;
+mod manual_support;
 mod peer;
+mod peer_support;
 mod scope;
 
 use crate::server::{AppState, channel::DualChannel, session::WsSession};

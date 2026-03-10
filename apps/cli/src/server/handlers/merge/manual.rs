@@ -1,26 +1,10 @@
+use super::errors;
+use super::manual_support::{load_engine, sync_mode_label};
 use super::scope::require_bound_repo_id;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::config::SyncMode;
-use deve_core::models::RepoId;
 use deve_core::protocol::ServerMessage;
-use deve_core::sync::engine::SyncEngine;
 use std::sync::Arc;
-
-fn sync_mode_label(mode: SyncMode) -> String {
-    if matches!(mode, SyncMode::Auto) {
-        "auto"
-    } else {
-        "manual"
-    }
-    .to_string()
-}
-
-fn load_engine(state: &Arc<AppState>, ch: &DualChannel, repo_id: RepoId) -> Option<SyncEngine> {
-    state.sync_engine.get_or_create(repo_id).or_else(|| {
-        ch.send_error("Failed to get or create sync engine".to_string());
-        None
-    })
-}
 
 pub(super) async fn handle_get_sync_mode(
     state: &Arc<AppState>,
@@ -50,7 +34,7 @@ pub(super) async fn handle_set_sync_mode(
     let new_mode = match mode.to_lowercase().as_str() {
         "auto" => SyncMode::Auto,
         "manual" => SyncMode::Manual,
-        _ => return ch.send_error(format!("Invalid sync mode: {}", mode)),
+        _ => return errors::request_failed(ch, format!("Invalid sync mode: {}", mode)),
     };
     let Some(mut engine) = load_engine(state, ch, repo_id) else {
         return;
@@ -110,7 +94,7 @@ pub(super) async fn handle_confirm_merge(
         }
         Err(e) => {
             tracing::error!("Merge failed: {:?}", e);
-            ch.send_error(format!("Merge failed: {}", e));
+            errors::request_failed(ch, format!("Merge failed: {}", e));
         }
     }
 }

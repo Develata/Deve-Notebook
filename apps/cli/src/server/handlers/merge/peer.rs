@@ -6,8 +6,9 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::reconcile;
 use std::sync::Arc;
 
-/// 处理远端影子分支并入当前本地仓库。
-///
+use super::errors;
+use super::peer_support::resolve_doc_path;
+
 /// Invariants:
 /// - 合并目标必须是当前会话解析出的本地 repo。
 /// - 远端影子分支内容绝不能写回到其他 repo 的 metadata/path 映射。
@@ -21,14 +22,17 @@ pub(super) async fn handle_merge_peer(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) if scope.branch.is_none() => scope,
         Ok(scope) => {
-            ch.send_error(format!(
-                "Merge requested on remote branch context: {}",
-                scope.repo_name
-            ));
+            errors::request_failed(
+                ch,
+                format!(
+                    "Merge requested on remote branch context: {}",
+                    scope.repo_name
+                ),
+            );
             return;
         }
         Err(e) => {
-            ch.send_error(e.to_string());
+            errors::request_failed(ch, e.to_string());
             return;
         }
     };
@@ -43,7 +47,7 @@ pub(super) async fn handle_merge_peer(
         Ok(MergeResult::Conflict { local, remote, .. }) => {
             send_merge_conflict(state, ch, &scope.repo_name, doc_id, local, remote);
         }
-        Err(e) => ch.send_error(format!("Merge failed: {}", e)),
+        Err(e) => errors::request_failed(ch, format!("Merge failed: {}", e)),
     }
 }
 
@@ -62,11 +66,18 @@ fn write_merged_content(
             .into_iter()
             .map(|(_, entry)| entry)
             .collect::<Vec<_>>(),
-        Err(err) => return ch.send_error(format!("Failed to load local merge state: {}", err)),
+        Err(err) => {
+            return errors::request_failed(
+                ch,
+                format!("Failed to load local merge state: {}", err),
+            );
+        }
     };
     let patch = match reconcile::compute_reconcile_patch(&entries, content) {
         Ok(patch) => patch,
-        Err(err) => return ch.send_error(format!("Failed to diff merged content: {}", err)),
+        Err(err) => {
+            return errors::request_failed(ch, format!("Failed to diff merged content: {}", err));
+        }
     };
     if let Err(err) = reconcile::append_patch_in_local_repo(
         &state.repo,
@@ -75,14 +86,14 @@ fn write_merged_content(
         "merge",
         &patch,
     ) {
-        ch.send_error(format!("Failed to append merged content: {}", err));
+        errors::storage_persist_failed(ch, format!("Failed to append merged content: {}", err));
         return;
     }
     if let Err(err) = state
         .sync_manager
         .persist_doc_in_local_repo(&scope.repo_name, doc_id)
     {
-        ch.send_error(format!("Failed to persist merged content: {}", err));
+        errors::storage_persist_failed(ch, format!("Failed to persist merged content: {}", err));
         return;
     }
     tracing::info!("Merge Success for doc {}", doc_id);
@@ -109,27 +120,5 @@ fn send_merge_conflict(
         old_content: local,
         new_content: remote,
     });
-    ch.send_error("Merge Conflict detected. Showing Diff View.".to_string());
-}
-
-fn resolve_doc_path(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    repo_name: &str,
-    doc_id: DocId,
-) -> Option<String> {
-    match state
-        .repo
-        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)
-    {
-        Ok(Some(meta)) => Some(meta.path),
-        Ok(None) => {
-            ch.send_error("Doc path not found for merged document".to_string());
-            None
-        }
-        Err(e) => {
-            ch.send_error(format!("Failed to resolve merged doc path: {}", e));
-            None
-        }
-    }
+    errors::storage_conflict(ch, "Merge Conflict detected. Showing Diff View.");
 }
