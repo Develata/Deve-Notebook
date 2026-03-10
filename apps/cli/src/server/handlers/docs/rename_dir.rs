@@ -19,6 +19,23 @@ pub(super) async fn handle_dir_rename(
     dst_name: &str,
     src: &std::path::Path,
 ) {
+    let node_id = match state.repo.apply_dir_rename_structure_in_local_repo(
+        &scope.repo_name,
+        old_path,
+        dst_name,
+        "local_rename",
+    ) {
+        Ok(Some(node_id)) => node_id,
+        Ok(None) => {
+            ch.send_error(format!("Source not tracked: {}", old_path));
+            return;
+        }
+        Err(e) => {
+            tracing::error!("目录重命名结构事实失败: {:?}", e);
+            ch.send_error(format!("Failed to rename folder: {}", e));
+            return;
+        }
+    };
     let dst = match local_repo_path(state, scope, dst_name) {
         Ok(path) => path,
         Err(err) => {
@@ -26,23 +43,19 @@ pub(super) async fn handle_dir_rename(
             return;
         }
     };
-    if let Some(parent) = dst.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if let Err(e) = std::fs::rename(src, dst) {
-        tracing::error!("重命名失败 {} -> {}: {:?}", old_path, dst_name, e);
-        ch.send_error(format!("Failed to rename: {}", e));
+    if let Some(parent) = dst.parent()
+        && let Err(e) = std::fs::create_dir_all(parent)
+    {
+        tracing::error!("创建目标父目录失败: {:?}", e);
+        ch.send_error(format!("Failed to prepare destination: {}", e));
         return;
     }
-    if let Err(e) = state
-        .repo
-        .rename_folder_in_local_repo(&scope.repo_name, old_path, dst_name)
-    {
-        tracing::error!("Ledger 文件夹重命名失败: {:?}", e);
+    if let Err(e) = std::fs::rename(src, &dst) {
+        tracing::error!("重命名失败 {} -> {}: {:?}", old_path, dst_name, e);
+        ch.send_error(format!("Failed to rename folder: {}", e));
+        return;
     }
     if let Ok((node_id, meta)) = run_on_resolved_local_repo(state, scope, |db| {
-        let node_id = node_meta::get_node_id(db, dst_name)?
-            .ok_or_else(|| anyhow!("Node not found: {}", dst_name))?;
         let meta =
             node_meta::get_node_meta(db, node_id)?.ok_or_else(|| anyhow!("Node meta missing"))?;
         Ok((node_id, meta))

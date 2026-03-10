@@ -57,19 +57,21 @@ pub async fn handle_delete_doc(
 
     // 3. 更新 Ledger
     if is_dir {
+        if let Err(e) = state.repo.apply_dir_delete_structure_in_local_repo(
+            &scope.repo_name,
+            &path,
+            "local_delete",
+        ) {
+            tracing::error!("目录删除结构事实失败: {:?}", e);
+            ch.send_error(format!("Failed to delete directory: {}", e));
+            return;
+        }
         if target.exists()
             && let Err(e) = std::fs::remove_dir_all(&target)
         {
             tracing::error!("删除目录失败 {}: {:?}", path, e);
             ch.send_error(format!("Failed to delete directory: {}", e));
             return;
-        }
-        match state
-            .repo
-            .delete_folder_in_local_repo(&scope.repo_name, &path)
-        {
-            Ok(count) => tracing::info!("已从 Ledger 删除 {} 个文档 (文件夹: {})", count, path),
-            Err(e) => tracing::error!("Ledger 文件夹删除失败: {:?}", e),
         }
     } else {
         let doc_id = state

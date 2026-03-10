@@ -1,8 +1,9 @@
 use crate::ledger::RepoManager;
-use crate::models::{DocId, PeerId, StructureOp};
+use crate::models::{DocId, NodeId, PeerId, StructureOp};
 use anyhow::Result;
 
 use super::commit_structure_plan;
+use super::dir_structure_plan;
 use super::structure_projection;
 
 impl RepoManager {
@@ -31,6 +32,60 @@ impl RepoManager {
         };
         self.append_structure_ops_in_local_repo(repo_name, plan.doc_id, peer_label, &plan.ops)?;
         Ok(Some(plan.doc_id))
+    }
+
+    pub fn apply_dir_create_structure_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+        peer_label: &str,
+    ) -> Result<NodeId> {
+        let plan = dir_structure_plan::plan_create(self, repo_name, path)?;
+        self.append_structure_ops_in_local_repo(
+            repo_name,
+            plan.event_doc_id,
+            peer_label,
+            &plan.ops,
+        )?;
+        Ok(plan.node_id)
+    }
+
+    pub fn apply_dir_rename_structure_in_local_repo(
+        &self,
+        repo_name: &str,
+        old_path: &str,
+        new_path: &str,
+        peer_label: &str,
+    ) -> Result<Option<NodeId>> {
+        let Some(plan) = dir_structure_plan::plan_rename(self, repo_name, old_path, new_path)?
+        else {
+            return Ok(None);
+        };
+        self.append_structure_ops_in_local_repo(
+            repo_name,
+            plan.event_doc_id,
+            peer_label,
+            &plan.ops,
+        )?;
+        Ok(Some(plan.node_id))
+    }
+
+    pub fn apply_dir_delete_structure_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+        peer_label: &str,
+    ) -> Result<Option<NodeId>> {
+        let Some(plan) = dir_structure_plan::plan_delete(self, repo_name, path)? else {
+            return Ok(None);
+        };
+        self.append_structure_ops_in_local_repo(
+            repo_name,
+            plan.event_doc_id,
+            peer_label,
+            &plan.ops,
+        )?;
+        Ok(Some(plan.node_id))
     }
 
     /// Invariants:

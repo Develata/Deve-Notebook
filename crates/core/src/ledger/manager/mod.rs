@@ -13,6 +13,8 @@ mod commit_apply;
 mod commit_ops;
 mod commit_plan;
 mod commit_structure_plan;
+mod dir_structure_plan;
+mod dir_structure_support;
 mod merge_ops;
 mod metadata_ops;
 mod ops_ops;
