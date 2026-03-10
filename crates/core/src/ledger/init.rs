@@ -139,10 +139,14 @@ pub fn init(
     // 5. 初始化 Source Control 表
     source_control::init_tables(&local_db)?;
 
-    // 6. Node 表一致性修复 (仅补齐缺失节点)
-    let report = node_check::repair_missing_nodes(&local_db)?;
-    if !report.orphan_nodes.is_empty() {
-        tracing::warn!("Orphan nodes detected: {}", report.orphan_nodes.len());
+    // 6. Node 表一致性检查（repair 需显式触发）
+    let report = node_check::check_node_consistency(&local_db)?;
+    if !report.is_clean() {
+        tracing::warn!(
+            "Node consistency drift detected: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
+            report.missing_nodes.len(),
+            report.orphan_nodes.len()
+        );
     }
 
     // 7. 写入 Metadata (如果是新库，或者旧库缺失)
