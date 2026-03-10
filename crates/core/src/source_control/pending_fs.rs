@@ -24,6 +24,9 @@ use serde::{Deserialize, Serialize};
 pub struct PendingFsEntry {
     /// 相对路径 (forward-slash)
     pub path: String,
+    /// 若该条目由 rename/move 产生，则记录旧路径
+    #[serde(default)]
+    pub renamed_from: Option<String>,
     /// 与当前候选绑定的稳定文档标识；纯新增文件允许为空
     #[serde(default)]
     pub doc_id: Option<DocId>,

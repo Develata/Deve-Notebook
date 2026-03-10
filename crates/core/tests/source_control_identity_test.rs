@@ -31,6 +31,7 @@ fn seed_pending(
             db,
             &PendingFsEntry {
                 path: path.into(),
+                renamed_from: None,
                 doc_id,
                 change_type: status,
                 content_hash: pending_fs::content_hash(content),
@@ -58,17 +59,33 @@ fn diff_uses_pending_doc_identity_for_renamed_file() {
     std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))
         .expect("remove old path");
     seed_pending(&repo, "notes/a.md", Some(doc_id), ChangeStatus::Deleted, "");
-    seed_pending(
-        &repo,
-        "notes/b.md",
-        Some(doc_id),
-        ChangeStatus::Added,
-        "hello renamed",
-    );
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: Some("notes/a.md".into()),
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("hello renamed"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed rename candidate");
 
     let diff = repo.diff_doc_path("notes/b.md").expect("diff renamed path");
     assert!(diff.contains("-hello"));
     assert!(diff.contains("+hello renamed"));
+    let pending = repo.list_pending_fs().expect("list pending");
+    assert_eq!(
+        pending
+            .iter()
+            .find(|entry| entry.path == "notes/b.md")
+            .and_then(|entry| entry.renamed_from.as_deref()),
+        Some("notes/a.md")
+    );
 }
 
 #[test]

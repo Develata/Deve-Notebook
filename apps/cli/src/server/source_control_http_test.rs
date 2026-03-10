@@ -22,6 +22,7 @@ fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus, content: &
             db,
             &PendingFsEntry {
                 path: path.into(),
+                renamed_from: None,
                 doc_id: None,
                 change_type: status,
                 content_hash: pending_fs::content_hash(content),

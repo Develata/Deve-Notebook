@@ -25,6 +25,7 @@ impl RepoManager {
                 db,
                 &pending_fs::PendingFsEntry {
                     path: path.clone(),
+                    renamed_from: staged.renamed_from,
                     doc_id: staged.doc_id,
                     change_type: staged.status,
                     content_hash: staged.content_hash,
@@ -108,6 +109,7 @@ impl RepoManager {
                 .into_iter()
                 .map(|e| ChangeEntry {
                     path: e.path,
+                    renamed_from: e.renamed_from,
                     doc_id: e.doc_id,
                     status: e.change_type,
                     has_conflict: e.has_conflict,

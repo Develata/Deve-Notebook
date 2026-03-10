@@ -38,6 +38,7 @@ pub(super) fn upsert(
     path: &str,
     status: ChangeStatus,
     doc_id_hint: Option<DocId>,
+    renamed_from: Option<&str>,
 ) -> Result<()> {
     let hash = if status == ChangeStatus::Deleted {
         String::new()
@@ -58,6 +59,7 @@ pub(super) fn upsert(
     };
     let entry = PendingFsEntry {
         path: path.to_string(),
+        renamed_from: renamed_from.map(str::to_string),
         doc_id,
         change_type: status,
         content_hash: hash,

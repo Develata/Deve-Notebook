@@ -39,6 +39,7 @@ pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
         .into_iter()
         .map(|(path, entry)| ChangeEntry {
             path,
+            renamed_from: entry.renamed_from,
             doc_id: entry.doc_id,
             status: entry.status,
             has_conflict: entry.has_conflict,

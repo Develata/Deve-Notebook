@@ -69,6 +69,7 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
             &repo_path,
             ChangeStatus::Deleted,
             Some(doc_id),
+            None,
         )?;
     }
 
@@ -88,7 +89,7 @@ fn scan_disk_file(
 ) -> Result<()> {
     let existing = repo.get_docid_in_local_repo(repo_name, repo_path)?;
     let Some(doc_id) = existing else {
-        return super::pending::upsert(repo, repo_name, repo_path, ChangeStatus::Added, None);
+        return super::pending::upsert(repo, repo_name, repo_path, ChangeStatus::Added, None, None);
     };
 
     let root_rel = repo.local_repo_workspace_relative(repo_name, repo_path);
@@ -108,6 +109,7 @@ fn scan_disk_file(
             repo_path,
             ChangeStatus::Modified,
             Some(doc_id),
+            None,
         )
     }
 }

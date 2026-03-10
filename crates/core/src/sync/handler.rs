@@ -97,6 +97,7 @@ impl<'a> FsEventHandler<'a> {
             repo_path,
             ChangeStatus::Added,
             None,
+            None,
         )?;
         let mut msgs = self.gen_list()?;
         msgs.push(super::pending::message(
@@ -135,6 +136,7 @@ impl<'a> FsEventHandler<'a> {
             repo_path,
             ChangeStatus::Deleted,
             tracked_doc_id,
+            None,
         )?;
         let mut msgs = self.gen_list()?;
         msgs.push(super::pending::message(
@@ -198,6 +200,7 @@ impl<'a> FsEventHandler<'a> {
             repo_path,
             ChangeStatus::Modified,
             Some(doc_id),
+            None,
         )
     }
 
@@ -213,6 +216,7 @@ impl<'a> FsEventHandler<'a> {
             old_path,
             ChangeStatus::Deleted,
             Some(doc_id),
+            None,
         )?;
         super::pending::upsert(
             self.repo,
@@ -220,6 +224,7 @@ impl<'a> FsEventHandler<'a> {
             new_path,
             ChangeStatus::Added,
             Some(doc_id),
+            Some(old_path),
         )?;
         Ok(vec![
             super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted"),

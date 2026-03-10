@@ -55,6 +55,9 @@ pub enum ConflictResolution {
 pub struct ChangeEntry {
     /// 文件路径
     pub path: String,
+    /// 若该条目表示重命名候选，则记录其旧路径
+    #[serde(default)]
+    pub renamed_from: Option<String>,
     /// 绑定的稳定文档标识；纯新增文件在提交前允许为空
     #[serde(default)]
     pub doc_id: Option<DocId>,

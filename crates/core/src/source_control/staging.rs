@@ -21,6 +21,8 @@ pub const STAGED_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("sta
 pub struct StagedEntry {
     pub timestamp: i64,
     #[serde(default)]
+    pub renamed_from: Option<String>,
+    #[serde(default)]
     pub doc_id: Option<DocId>,
     pub status: ChangeStatus,
     pub content_hash: String,
@@ -39,6 +41,7 @@ pub fn init_table(db: &Database) -> Result<()> {
 pub fn stage_pending_entry(db: &Database, entry: &PendingFsEntry) -> Result<()> {
     let staged = StagedEntry {
         timestamp: chrono::Utc::now().timestamp_millis(),
+        renamed_from: entry.renamed_from.clone(),
         doc_id: entry.doc_id,
         status: entry.change_type,
         content_hash: entry.content_hash.clone(),
