@@ -10,13 +10,13 @@ mod tests;
 /// Invariants:
 /// - 这里只做 Structure Facts -> projection 的受控折叠。
 /// - `metadata` 直写只能出现在本模块这类 projection internals。
-pub(super) fn apply(db: &Database, doc_id: DocId, op: &StructureOp) -> Result<()> {
+pub(super) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
     match op {
         StructureOp::CreateFile {
             node_id,
             parent_id,
             name,
-        } => apply_create_file(db, doc_id, *node_id, *parent_id, name),
+        } => apply_create_file(db, *node_id, *parent_id, name),
         StructureOp::CreateDir {
             node_id,
             parent_id,
@@ -57,11 +57,11 @@ pub(super) fn drop_transient_file_path(db: &Database, path: &str) -> Result<()> 
 
 fn apply_create_file(
     db: &Database,
-    doc_id: DocId,
     node_id: NodeId,
     parent_id: Option<NodeId>,
     name: &str,
 ) -> Result<()> {
+    let doc_id = DocId::from_u128(node_id.as_u128());
     if node_id != NodeId::from_doc_id(doc_id) {
         return Err(anyhow!("CreateFile node/doc mismatch for {}", doc_id));
     }

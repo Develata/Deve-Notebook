@@ -1,10 +1,9 @@
-use super::dir_structure_support::{dir_event_doc_id, load_meta, plan_parent_chain};
+use super::dir_structure_support::{load_meta, plan_parent_chain};
 use crate::ledger::RepoManager;
 use crate::ledger::node_meta;
-use crate::models::{DocId, NodeId, NodeKind, StructureOp};
+use crate::models::{NodeId, NodeKind, StructureOp};
 use anyhow::{Result, anyhow};
 pub(super) struct StructuredDirTarget {
-    pub event_doc_id: DocId,
     pub node_id: NodeId,
     pub ops: Vec<StructureOp>,
 }
@@ -22,7 +21,6 @@ pub(super) fn plan_create(
             return Err(anyhow!("target path is not a directory: {}", path));
         }
         return Ok(StructuredDirTarget {
-            event_doc_id: dir_event_doc_id(node_id),
             node_id,
             ops: Vec::new(),
         });
@@ -34,11 +32,7 @@ pub(super) fn plan_create(
         parent_id,
         name,
     });
-    Ok(StructuredDirTarget {
-        event_doc_id: dir_event_doc_id(node_id),
-        node_id,
-        ops,
-    })
+    Ok(StructuredDirTarget { node_id, ops })
 }
 
 pub(super) fn plan_rename(
@@ -66,11 +60,7 @@ pub(super) fn plan_rename(
             new_name: name,
         });
     }
-    Ok(Some(StructuredDirTarget {
-        event_doc_id: dir_event_doc_id(node_id),
-        node_id,
-        ops,
-    }))
+    Ok(Some(StructuredDirTarget { node_id, ops }))
 }
 
 pub(super) fn plan_delete(
@@ -83,7 +73,6 @@ pub(super) fn plan_delete(
         return Ok(None);
     };
     Ok(Some(StructuredDirTarget {
-        event_doc_id: dir_event_doc_id(node_id),
         node_id,
         ops: vec![StructureOp::DeleteNode { node_id }],
     }))

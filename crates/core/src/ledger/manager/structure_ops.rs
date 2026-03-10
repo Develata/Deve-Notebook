@@ -15,7 +15,7 @@ impl RepoManager {
         peer_label: &str,
     ) -> Result<DocId> {
         let plan = commit_structure_plan::plan_file_upsert(self, repo_name, path, doc_id_hint)?;
-        self.append_structure_ops_in_local_repo(repo_name, plan.doc_id, peer_label, &plan.ops)?;
+        self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
         Ok(plan.doc_id)
     }
 
@@ -30,7 +30,7 @@ impl RepoManager {
         else {
             return Ok(None);
         };
-        self.append_structure_ops_in_local_repo(repo_name, plan.doc_id, peer_label, &plan.ops)?;
+        self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
         Ok(Some(plan.doc_id))
     }
 
@@ -41,12 +41,7 @@ impl RepoManager {
         peer_label: &str,
     ) -> Result<NodeId> {
         let plan = dir_structure_plan::plan_create(self, repo_name, path)?;
-        self.append_structure_ops_in_local_repo(
-            repo_name,
-            plan.event_doc_id,
-            peer_label,
-            &plan.ops,
-        )?;
+        self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
         Ok(plan.node_id)
     }
 
@@ -61,12 +56,7 @@ impl RepoManager {
         else {
             return Ok(None);
         };
-        self.append_structure_ops_in_local_repo(
-            repo_name,
-            plan.event_doc_id,
-            peer_label,
-            &plan.ops,
-        )?;
+        self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
         Ok(Some(plan.node_id))
     }
 
@@ -79,12 +69,7 @@ impl RepoManager {
         let Some(plan) = dir_structure_plan::plan_delete(self, repo_name, path)? else {
             return Ok(None);
         };
-        self.append_structure_ops_in_local_repo(
-            repo_name,
-            plan.event_doc_id,
-            peer_label,
-            &plan.ops,
-        )?;
+        self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
         Ok(Some(plan.node_id))
     }
 
@@ -94,7 +79,6 @@ impl RepoManager {
     pub(super) fn append_structure_ops_in_local_repo(
         &self,
         repo_name: &str,
-        doc_id: DocId,
         peer_label: &str,
         ops: &[StructureOp],
     ) -> Result<()> {
@@ -103,12 +87,11 @@ impl RepoManager {
             let timestamp = chrono::Utc::now().timestamp_millis();
             self.append_generated_structure_event_in_local_repo(
                 repo_name,
-                doc_id,
                 peer_id.clone(),
                 op.clone(),
                 timestamp,
             )?;
-            self.run_on_local_repo(repo_name, |db| structure_projection::apply(db, doc_id, op))?;
+            self.run_on_local_repo(repo_name, |db| structure_projection::apply(db, op))?;
         }
         Ok(())
     }

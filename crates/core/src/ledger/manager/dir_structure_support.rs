@@ -1,13 +1,7 @@
 use crate::ledger::RepoManager;
 use crate::ledger::node_meta;
-use crate::models::{DocId, NodeId, NodeKind, StructureOp};
+use crate::models::{NodeId, NodeKind, StructureOp};
 use anyhow::{Result, anyhow};
-
-pub(super) fn dir_event_doc_id(node_id: NodeId) -> DocId {
-    // Route 2 过渡期：目录结构事件仍需落在 `LedgerEntry.doc_id` 上，
-    // 这里用目录的 `NodeId` 派生一个稳定的 synthetic doc id。
-    DocId::from_u128(node_id.as_u128())
-}
 
 pub(super) fn load_meta(
     repo: &RepoManager,
