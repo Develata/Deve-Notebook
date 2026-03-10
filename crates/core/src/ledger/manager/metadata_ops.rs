@@ -67,4 +67,25 @@ impl RepoManager {
     ) -> Result<()> {
         self.run_on_local_repo(repo_name, |db| metadata::bind_inode(db, inode, doc_id))
     }
+
+    pub fn bind_workspace_inode_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+        doc_id: DocId,
+    ) -> Result<()> {
+        let file_path = self.local_repo_workspace_path(repo_name, path)?;
+        if !file_path.exists() {
+            return Ok(());
+        }
+        let file_id = file_id::get_file_id(&file_path)?;
+        use crate::utils::hash::StableHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = StableHasher::new();
+        file_id.hash(&mut hasher);
+        let inode = crate::models::FileNodeId {
+            id: hasher.finish() as u128,
+        };
+        self.bind_inode_in_local_repo(repo_name, &inode, doc_id)
+    }
 }

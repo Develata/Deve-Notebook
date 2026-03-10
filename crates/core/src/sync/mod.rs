@@ -9,6 +9,10 @@ mod materialize;
 #[cfg(not(target_arch = "wasm32"))]
 mod pending;
 #[cfg(not(target_arch = "wasm32"))]
+mod pending_content;
+#[cfg(not(target_arch = "wasm32"))]
+mod pending_rename;
+#[cfg(not(target_arch = "wasm32"))]
 mod persist_guard;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
@@ -19,6 +23,8 @@ pub mod reconcile;
 pub mod repo_scoped;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scan;
+#[cfg(not(target_arch = "wasm32"))]
+mod scan_file;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod snapshot_policy;
 pub mod vector;
@@ -130,6 +136,8 @@ impl SyncManager {
                 self.persist_guard.clear(&relative_path);
                 return Err(err.into());
             }
+            self.repo
+                .bind_workspace_inode_in_local_repo(repo_name, &path_str, doc_id)?;
             info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
             let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
             let policy = SnapshotPolicy::default();

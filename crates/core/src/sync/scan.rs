@@ -1,6 +1,6 @@
-use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
+use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::path_to_forward_slash;
 use crate::vfs::Vfs;
@@ -25,6 +25,7 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
     let mut on_disk = HashSet::new();
+    let mut seen_docs = HashSet::<DocId>::new();
 
     for entry in WalkDir::new(&repo_root).into_iter().filter_map(Result::ok) {
         let path = entry.path();
@@ -39,7 +40,9 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
             continue;
         }
         on_disk.insert(repo_path.clone());
-        scan_disk_file(repo, vfs, repo_name, &repo_path)?;
+        if let Some(doc_id) = super::scan_file::scan_disk_file(repo, vfs, repo_name, &repo_path)? {
+            seen_docs.insert(doc_id);
+        }
     }
 
     info!(
@@ -59,7 +62,7 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
             warn!("SyncScan: Repo {} 跳过内部路径: {}", repo_name, repo_path);
             continue;
         }
-        if on_disk.contains(&repo_path) {
+        if seen_docs.contains(&doc_id) || on_disk.contains(&repo_path) {
             continue;
         }
         info!("SyncScan: Repo {} 检测到幽灵文件: {}", repo_name, repo_path);
@@ -79,39 +82,6 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
         }
     }
     Ok(())
-}
-
-fn scan_disk_file(
-    repo: &Arc<RepoManager>,
-    vfs: &Vfs,
-    repo_name: &str,
-    repo_path: &str,
-) -> Result<()> {
-    let existing = repo.get_docid_in_local_repo(repo_name, repo_path)?;
-    let Some(doc_id) = existing else {
-        return super::pending::upsert(repo, repo_name, repo_path, ChangeStatus::Added, None, None);
-    };
-
-    let root_rel = repo.local_repo_workspace_relative(repo_name, repo_path);
-    if let Ok(Some(inode)) = vfs.get_inode(&root_rel) {
-        repo.bind_inode_in_local_repo(repo_name, &inode, doc_id)?;
-    }
-
-    let disk_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-    let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default();
-    let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
-    if rebuilt.content == disk_content {
-        clear_scan_pending(repo, repo_name, repo_path)
-    } else {
-        super::pending::upsert(
-            repo,
-            repo_name,
-            repo_path,
-            ChangeStatus::Modified,
-            Some(doc_id),
-            None,
-        )
-    }
 }
 
 fn clear_scan_pending(repo: &Arc<RepoManager>, repo_name: &str, repo_path: &str) -> Result<()> {

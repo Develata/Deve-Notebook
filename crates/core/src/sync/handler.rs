@@ -4,7 +4,6 @@
 //! - Watcher 传入的路径必须先被解析为 `(repo_name, repo_id, repo_path)`。
 //! - 外部文件事件只能更新 pending side table；不得提前改写权威 Ledger / Path 映射。
 
-use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
@@ -66,7 +65,12 @@ impl<'a> FsEventHandler<'a> {
             info!("Handler: Inode change (Atomic Save?) for {}", repo_path);
             self.repo
                 .bind_inode_in_local_repo(self.repo_name, &inode, existing_id)?;
-            self.sync_modified_pending(repo_path, existing_id)?;
+            super::pending_content::sync_modified_pending(
+                self.repo,
+                self.repo_name,
+                repo_path,
+                existing_id,
+            )?;
             return self.modified_refresh(repo_path);
         }
 
@@ -144,7 +148,12 @@ impl<'a> FsEventHandler<'a> {
         }
 
         info!("Handler: Content update detected for {}", repo_path);
-        self.sync_modified_pending(repo_path, doc_id)?;
+        super::pending_content::sync_modified_pending(
+            self.repo,
+            self.repo_name,
+            repo_path,
+            doc_id,
+        )?;
         self.modified_refresh(repo_path)
     }
 
@@ -165,46 +174,18 @@ impl<'a> FsEventHandler<'a> {
         Ok(vec![ServerMessage::DocList { docs }])
     }
 
-    fn sync_modified_pending(&self, repo_path: &str, doc_id: crate::models::DocId) -> Result<()> {
-        let file_path = self
-            .repo
-            .local_repo_workspace_path(self.repo_name, repo_path)?;
-        let disk_content = std::fs::read_to_string(&file_path).unwrap_or_default();
-        let rebuilt = rebuild::rebuild_local_doc_in_repo(self.repo, self.repo_name, doc_id)?;
-        if rebuilt.content == disk_content {
-            return super::pending::clear(self.repo, self.repo_name, repo_path);
-        }
-        super::pending::upsert(
-            self.repo,
-            self.repo_name,
-            repo_path,
-            ChangeStatus::Modified,
-            Some(doc_id),
-            None,
-        )
-    }
-
     fn record_external_rename(
         &self,
         old_path: &str,
         new_path: &str,
         doc_id: crate::models::DocId,
     ) -> Result<Vec<ServerMessage>> {
-        super::pending::upsert(
+        super::pending_rename::upsert_external_rename(
             self.repo,
             self.repo_name,
             old_path,
-            ChangeStatus::Deleted,
-            Some(doc_id),
-            None,
-        )?;
-        super::pending::upsert(
-            self.repo,
-            self.repo_name,
             new_path,
-            ChangeStatus::Added,
-            Some(doc_id),
-            Some(old_path),
+            doc_id,
         )?;
         Ok(vec![
             super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted"),

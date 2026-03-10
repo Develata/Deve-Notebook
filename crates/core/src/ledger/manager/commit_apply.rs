@@ -25,7 +25,8 @@ impl RepoManager {
         reconcile::append_patch_in_local_repo(self, repo_name, doc_id, "local_commit", &patch)?;
         self.run_on_local_repo(repo_name, |db| {
             changes::save_snapshot(db, doc_id, normalized_path, &disk_content)
-        })
+        })?;
+        self.bind_workspace_inode_in_local_repo(repo_name, normalized_path, doc_id)
     }
 
     pub(super) fn commit_delete_snapshot_in_local_repo(

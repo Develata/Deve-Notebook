@@ -53,6 +53,7 @@ pub(super) fn materialize_local_repo(
             &rebuilt.content,
         );
         std::fs::write(&file_path, rebuilt.content)?;
+        repo.bind_workspace_inode_in_local_repo(repo_name, &repo_path, doc_id)?;
     }
 
     Ok(())
