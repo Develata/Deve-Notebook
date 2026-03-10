@@ -9,8 +9,7 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::range;
-use crate::source_control::{ChangeStatus, CommitInfo, changes, commits, staging};
-use crate::sync::reconcile;
+use crate::source_control::{ChangeStatus, CommitInfo, commits, staging};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 use std::path::PathBuf;
@@ -38,20 +37,30 @@ impl RepoManager {
         message: &str,
         vault_root: PathBuf,
     ) -> Result<CommitInfo> {
-        let staged = self.run_on_local_repo(repo_name, staging::list_staged_with_status)?;
+        let mut staged = self.run_on_local_repo(repo_name, staging::list_staged_entries)?;
         if staged.is_empty() {
             anyhow::bail!("Nothing to commit: staging area is empty");
         }
+        staged.sort_by_key(|(_, entry)| matches!(entry.status, ChangeStatus::Deleted));
 
         let doc_count = staged.len() as u32;
-        for (path, status) in &staged {
+        for (path, entry) in &staged {
             let normalized = to_forward_slash(path);
-            match status {
+            match entry.status {
                 ChangeStatus::Added | ChangeStatus::Modified => {
-                    self.commit_file_ops_in_local_repo(repo_name, &vault_root, &normalized)?;
+                    self.commit_file_ops_in_local_repo(
+                        repo_name,
+                        &vault_root,
+                        &normalized,
+                        entry.doc_id,
+                    )?;
                 }
                 ChangeStatus::Deleted => {
-                    self.commit_delete_snapshot_in_local_repo(repo_name, &normalized)?;
+                    self.commit_delete_snapshot_in_local_repo(
+                        repo_name,
+                        &normalized,
+                        entry.doc_id,
+                    )?;
                 }
             }
         }
@@ -69,50 +78,5 @@ impl RepoManager {
             message
         );
         Ok(commit)
-    }
-
-    fn commit_file_ops_in_local_repo(
-        &self,
-        repo_name: &str,
-        _vault_root: &std::path::Path,
-        normalized_path: &str,
-    ) -> Result<()> {
-        let doc_id = self.resolve_or_create_docid_in_local_repo(repo_name, normalized_path)?;
-        let disk_path = self.local_repo_workspace_path(repo_name, normalized_path)?;
-        let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default();
-        let existing_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
-        let entries: Vec<_> = existing_ops.into_iter().map(|(_, e)| e).collect();
-        let patch = reconcile::compute_reconcile_patch(&entries, &disk_content)?;
-        reconcile::append_patch_in_local_repo(self, repo_name, doc_id, "local_commit", &patch)?;
-
-        self.run_on_local_repo(repo_name, |db| {
-            changes::save_snapshot(db, doc_id, normalized_path, &disk_content)
-        })
-    }
-
-    fn commit_delete_snapshot_in_local_repo(
-        &self,
-        repo_name: &str,
-        normalized_path: &str,
-    ) -> Result<()> {
-        use crate::source_control::snapshot_paths;
-        self.run_on_local_repo(repo_name, |db| {
-            if let Some(doc_id) = snapshot_paths::find_snapshot_doc_id(db, normalized_path)? {
-                changes::remove_snapshot(db, doc_id)?;
-            }
-            crate::ledger::metadata::delete_doc(db, normalized_path)?;
-            Ok(())
-        })
-    }
-
-    fn resolve_or_create_docid_in_local_repo(
-        &self,
-        repo_name: &str,
-        normalized_path: &str,
-    ) -> Result<crate::models::DocId> {
-        if let Some(doc_id) = self.get_docid_in_local_repo(repo_name, normalized_path)? {
-            return Ok(doc_id);
-        }
-        self.create_docid_in_local_repo(repo_name, normalized_path)
     }
 }

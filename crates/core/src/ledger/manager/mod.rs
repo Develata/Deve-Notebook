@@ -9,6 +9,7 @@ pub mod maintenance;
 pub mod types;
 mod workspace;
 
+mod commit_apply;
 mod commit_ops;
 mod merge_ops;
 mod metadata_ops;
@@ -19,3 +20,4 @@ mod source_control_api;
 mod source_control_ops;
 mod source_control_query_ops;
 mod source_control_workdir;
+mod source_control_workdir_helpers;

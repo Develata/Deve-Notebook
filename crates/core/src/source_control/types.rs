@@ -3,6 +3,7 @@
 //!
 //! 定义版本控制相关的数据结构，用于暂存区和提交历史。
 
+use crate::models::DocId;
 use serde::{Deserialize, Serialize};
 
 /// 提交信息结构体
@@ -54,6 +55,9 @@ pub enum ConflictResolution {
 pub struct ChangeEntry {
     /// 文件路径
     pub path: String,
+    /// 绑定的稳定文档标识；纯新增文件在提交前允许为空
+    #[serde(default)]
+    pub doc_id: Option<DocId>,
     /// 变更状态
     pub status: ChangeStatus,
     /// 是否存在冲突 (仅 unstaged 条目可能为 true)

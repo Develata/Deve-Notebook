@@ -83,7 +83,7 @@ impl<'a> FsEventHandler<'a> {
             );
             if old_path != repo_path {
                 self.bind_inode(&inode, recovered_id)?;
-                return self.record_external_rename(&old_path, repo_path);
+                return self.record_external_rename(&old_path, repo_path, recovered_id);
             }
             self.bind_inode(&inode, recovered_id)?;
             self.sync_modified_pending(repo_path, recovered_id)?;
@@ -91,7 +91,13 @@ impl<'a> FsEventHandler<'a> {
         }
 
         info!("Handler: New file detected: {}", repo_path);
-        super::pending::upsert(self.repo, self.repo_name, repo_path, ChangeStatus::Added)?;
+        super::pending::upsert(
+            self.repo,
+            self.repo_name,
+            repo_path,
+            ChangeStatus::Added,
+            None,
+        )?;
         let mut msgs = self.gen_list()?;
         msgs.push(super::pending::message(
             self.repo,
@@ -106,10 +112,10 @@ impl<'a> FsEventHandler<'a> {
     fn handle_delete(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
         let had_pending_add =
             super::pending::has_pending_added(self.repo, self.repo_name, repo_path)?;
-        let has_tracked_doc = self
+        let tracked_doc_id = self
             .repo
-            .resolve_workdir_doc_id_in_local_repo(self.repo_name, repo_path)?
-            .is_some();
+            .resolve_canonical_doc_id_in_local_repo(self.repo_name, repo_path)?;
+        let has_tracked_doc = tracked_doc_id.is_some();
 
         if !has_tracked_doc && !had_pending_add {
             return Ok(vec![]);
@@ -123,7 +129,13 @@ impl<'a> FsEventHandler<'a> {
             "Handler: File gone: {}. Recording as pending delete.",
             repo_path
         );
-        super::pending::upsert(self.repo, self.repo_name, repo_path, ChangeStatus::Deleted)?;
+        super::pending::upsert(
+            self.repo,
+            self.repo_name,
+            repo_path,
+            ChangeStatus::Deleted,
+            tracked_doc_id,
+        )?;
         let mut msgs = self.gen_list()?;
         msgs.push(super::pending::message(
             self.repo,
@@ -146,7 +158,7 @@ impl<'a> FsEventHandler<'a> {
             && known_path != repo_path
         {
             info!("Handler: Rename detected {} -> {}", known_path, repo_path);
-            return self.record_external_rename(&known_path, repo_path);
+            return self.record_external_rename(&known_path, repo_path, doc_id);
         }
 
         info!("Handler: Content update detected for {}", repo_path);
@@ -180,12 +192,35 @@ impl<'a> FsEventHandler<'a> {
         if rebuilt.content == disk_content {
             return super::pending::clear(self.repo, self.repo_name, repo_path);
         }
-        super::pending::upsert(self.repo, self.repo_name, repo_path, ChangeStatus::Modified)
+        super::pending::upsert(
+            self.repo,
+            self.repo_name,
+            repo_path,
+            ChangeStatus::Modified,
+            Some(doc_id),
+        )
     }
 
-    fn record_external_rename(&self, old_path: &str, new_path: &str) -> Result<Vec<ServerMessage>> {
-        super::pending::upsert(self.repo, self.repo_name, old_path, ChangeStatus::Deleted)?;
-        super::pending::upsert(self.repo, self.repo_name, new_path, ChangeStatus::Added)?;
+    fn record_external_rename(
+        &self,
+        old_path: &str,
+        new_path: &str,
+        doc_id: crate::models::DocId,
+    ) -> Result<Vec<ServerMessage>> {
+        super::pending::upsert(
+            self.repo,
+            self.repo_name,
+            old_path,
+            ChangeStatus::Deleted,
+            Some(doc_id),
+        )?;
+        super::pending::upsert(
+            self.repo,
+            self.repo_name,
+            new_path,
+            ChangeStatus::Added,
+            Some(doc_id),
+        )?;
         Ok(vec![
             super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted"),
             super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added"),

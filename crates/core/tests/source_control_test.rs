@@ -23,6 +23,7 @@ mod tests {
                 db,
                 &PendingFsEntry {
                     path: path.into(),
+                    doc_id: None,
                     change_type: status,
                     content_hash: pending_fs::content_hash(content),
                     detected_at: 1,
@@ -50,6 +51,7 @@ mod tests {
         let (_dir, repo) = new_repo();
         let entry = PendingFsEntry {
             path: "notes/a.md".into(),
+            doc_id: None,
             change_type: ChangeStatus::Modified,
             content_hash: pending_fs::content_hash("hello"),
             detected_at: 1,
@@ -143,6 +145,7 @@ mod tests {
                 db,
                 &PendingFsEntry {
                     path: path.into(),
+                    doc_id: None,
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("new"),
                     detected_at: 2,

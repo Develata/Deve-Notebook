@@ -11,6 +11,7 @@
 //! - Table: `pending_fs_ops` (path -> PendingFsEntry 序列化字节)
 
 use crate::ledger::schema::PENDING_FS_OPS;
+use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use anyhow::Result;
 use redb::{Database, ReadableTable};
@@ -23,6 +24,9 @@ use serde::{Deserialize, Serialize};
 pub struct PendingFsEntry {
     /// 相对路径 (forward-slash)
     pub path: String,
+    /// 与当前候选绑定的稳定文档标识；纯新增文件允许为空
+    #[serde(default)]
+    pub doc_id: Option<DocId>,
     /// 变更类型
     pub change_type: ChangeStatus,
     /// 内容 SHA-256 哈希 (16 字节前缀，hex 编码)

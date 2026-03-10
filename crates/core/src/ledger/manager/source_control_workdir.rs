@@ -7,10 +7,13 @@
 use crate::ledger::RepoManager;
 use crate::ledger::metadata;
 use crate::models::DocId;
-use crate::source_control::{ChangeStatus, pending_fs, snapshot_paths};
-use crate::state::reconstruct_content;
+use crate::source_control::{ChangeStatus, pending_fs, snapshot_paths, staging};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
+
+use super::source_control_workdir_helpers::{
+    clear_pending_for_doc, discard_added, discard_tracked_add, rebuild_doc_projection,
+};
 
 impl RepoManager {
     pub fn workdir_diff_inputs_in_local_repo(
@@ -35,7 +38,7 @@ impl RepoManager {
         Ok((old_content, new_content))
     }
 
-    pub(crate) fn resolve_workdir_doc_id_in_local_repo(
+    pub(crate) fn resolve_canonical_doc_id_in_local_repo(
         &self,
         repo_name: &str,
         path: &str,
@@ -46,6 +49,29 @@ impl RepoManager {
                 return Ok(by_path);
             }
             snapshot_paths::find_snapshot_doc_id(db, path)
+        })
+    }
+
+    pub(crate) fn resolve_workdir_doc_id_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+    ) -> Result<Option<DocId>> {
+        if let Some(doc_id) = self.resolve_canonical_doc_id_in_local_repo(repo_name, path)? {
+            return Ok(Some(doc_id));
+        }
+        self.run_on_local_repo(repo_name, |db| {
+            if let Some(entry) = pending_fs::get(db, path)?
+                && entry.doc_id.is_some()
+            {
+                return Ok(entry.doc_id);
+            }
+            if let Some(entry) = staging::get_staged(db, path)?
+                && entry.doc_id.is_some()
+            {
+                return Ok(entry.doc_id);
+            }
+            Ok(None)
         })
     }
 
@@ -60,11 +86,17 @@ impl RepoManager {
             .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", normalized))?;
 
         match entry.change_type {
-            ChangeStatus::Added => discard_added(self, repo_name, &normalized)?,
+            ChangeStatus::Added => match entry.doc_id {
+                Some(doc_id) => discard_tracked_add(self, repo_name, &normalized, doc_id)?,
+                None => discard_added(self, repo_name, &normalized)?,
+            },
             ChangeStatus::Modified | ChangeStatus::Deleted => {
-                let doc_id = self
-                    .resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)?
-                    .ok_or_else(|| anyhow::anyhow!("Document not found: {}", normalized))?;
+                let doc_id = match entry.doc_id {
+                    Some(doc_id) => doc_id,
+                    None => self
+                        .resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)?
+                        .ok_or_else(|| anyhow::anyhow!("Document not found: {}", normalized))?,
+                };
                 let content = rebuild_doc_projection(self, repo_name, doc_id)?;
                 let file_path = self.local_repo_workspace_path(repo_name, &normalized)?;
                 if let Some(parent) = file_path.parent() {
@@ -73,33 +105,11 @@ impl RepoManager {
                 std::fs::write(file_path, content)?;
                 self.run_on_local_repo(repo_name, |db| {
                     metadata::set_doc_path(db, doc_id, &normalized)?;
-                    pending_fs::remove(db, &normalized)
+                    clear_pending_for_doc(db, doc_id, &normalized)
                 })?;
             }
         }
 
         Ok(())
     }
-}
-
-fn rebuild_doc_projection(repo: &RepoManager, repo_name: &str, doc_id: DocId) -> Result<String> {
-    let ops = repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
-    let entries: Vec<_> = ops.into_iter().map(|(_, entry)| entry).collect();
-    Ok(reconstruct_content(&entries))
-}
-
-fn discard_added(repo: &RepoManager, repo_name: &str, path: &str) -> Result<()> {
-    let file_path = repo.local_repo_workspace_path(repo_name, path)?;
-    if file_path.exists() {
-        std::fs::remove_file(&file_path)?;
-    }
-    repo.run_on_local_repo(repo_name, |db| {
-        pending_fs::remove(db, path)?;
-        if let Some(doc_id) = metadata::get_docid(db, path)?
-            && crate::source_control::changes::get_committed_content(db, doc_id)?.is_none()
-        {
-            metadata::delete_doc(db, path)?;
-        }
-        Ok(())
-    })
 }

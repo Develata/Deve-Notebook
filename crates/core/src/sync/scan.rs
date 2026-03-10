@@ -2,7 +2,6 @@ use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
 use crate::source_control::ChangeStatus;
-use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::utils::path::path_to_forward_slash;
 use crate::vfs::Vfs;
 use anyhow::Result;
@@ -55,20 +54,22 @@ fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Resul
         repo_name,
         docs.len()
     );
-    for (_doc_id, repo_path) in docs {
+    for (doc_id, repo_path) in docs {
         if crate::utils::notegit::is_internal_repo_path(&repo_path) {
-            warn!(
-                "SyncScan: Repo {} 清理误入账本的内部路径: {}",
-                repo_name, repo_path
-            );
-            repo.delete_doc_in_local_repo(repo_name, &repo_path)?;
+            warn!("SyncScan: Repo {} 跳过内部路径: {}", repo_name, repo_path);
             continue;
         }
         if on_disk.contains(&repo_path) {
             continue;
         }
         info!("SyncScan: Repo {} 检测到幽灵文件: {}", repo_name, repo_path);
-        upsert_scan_pending(repo, repo_name, &repo_path, ChangeStatus::Deleted)?;
+        super::pending::upsert(
+            repo,
+            repo_name,
+            &repo_path,
+            ChangeStatus::Deleted,
+            Some(doc_id),
+        )?;
     }
 
     for pending in repo.list_pending_fs_in_local_repo(repo_name)? {
@@ -87,7 +88,7 @@ fn scan_disk_file(
 ) -> Result<()> {
     let existing = repo.get_docid_in_local_repo(repo_name, repo_path)?;
     let Some(doc_id) = existing else {
-        return upsert_scan_pending(repo, repo_name, repo_path, ChangeStatus::Added);
+        return super::pending::upsert(repo, repo_name, repo_path, ChangeStatus::Added, None);
     };
 
     let root_rel = repo.local_repo_workspace_relative(repo_name, repo_path);
@@ -101,43 +102,16 @@ fn scan_disk_file(
     if rebuilt.content == disk_content {
         clear_scan_pending(repo, repo_name, repo_path)
     } else {
-        upsert_scan_pending(repo, repo_name, repo_path, ChangeStatus::Modified)
+        super::pending::upsert(
+            repo,
+            repo_name,
+            repo_path,
+            ChangeStatus::Modified,
+            Some(doc_id),
+        )
     }
 }
 
 fn clear_scan_pending(repo: &Arc<RepoManager>, repo_name: &str, repo_path: &str) -> Result<()> {
-    repo.run_on_local_repo(repo_name, |db| {
-        let _ = pending_fs::remove(db, repo_path);
-        Ok(())
-    })
-}
-
-fn upsert_scan_pending(
-    repo: &Arc<RepoManager>,
-    repo_name: &str,
-    repo_path: &str,
-    status: ChangeStatus,
-) -> Result<()> {
-    let hash = if status == ChangeStatus::Deleted {
-        String::new()
-    } else {
-        let file_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-        let content = std::fs::read_to_string(&file_path).unwrap_or_default();
-        pending_fs::content_hash(&content)
-    };
-    let entry = PendingFsEntry {
-        path: repo_path.to_string(),
-        change_type: status,
-        content_hash: hash,
-        detected_at: chrono::Utc::now().timestamp_millis(),
-        has_conflict: false,
-    };
-    repo.run_on_local_repo(repo_name, |db| pending_fs::upsert(db, &entry))
-        .map_err(|err| {
-            warn!(
-                "SyncScan: pending upsert 失败 {}:{} {:?}",
-                repo_name, repo_path, err
-            );
-            err
-        })
+    super::pending::clear(repo, repo_name, repo_path)
 }

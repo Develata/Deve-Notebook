@@ -34,13 +34,14 @@ pub fn take_staged_entry(db: &Database, path: &str) -> Result<Option<staging::St
 
 /// 获取已暂存的文件列表 (含正确的变更状态)
 pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
-    let entries = staging::list_staged_with_status(db)?;
+    let entries = staging::list_staged_entries(db)?;
     Ok(entries
         .into_iter()
-        .map(|(path, status)| ChangeEntry {
+        .map(|(path, entry)| ChangeEntry {
             path,
-            status,
-            has_conflict: false,
+            doc_id: entry.doc_id,
+            status: entry.status,
+            has_conflict: entry.has_conflict,
         })
         .collect())
 }

@@ -1,4 +1,4 @@
-﻿// crates\core\src\source_control
+// crates\core\src\source_control
 //! # 暂存区管理 (Staging Manager)
 //!
 //! 管理文件的暂存状态，持久化到数据库。
@@ -6,6 +6,7 @@
 //! **存储结构**:
 //! - Table: `staged_files` - 存储已暂存的文件路径及其变更元数据
 
+use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs::PendingFsEntry;
 use anyhow::Result;
@@ -19,6 +20,8 @@ pub const STAGED_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("sta
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StagedEntry {
     pub timestamp: i64,
+    #[serde(default)]
+    pub doc_id: Option<DocId>,
     pub status: ChangeStatus,
     pub content_hash: String,
     pub has_conflict: bool,
@@ -36,6 +39,7 @@ pub fn init_table(db: &Database) -> Result<()> {
 pub fn stage_pending_entry(db: &Database, entry: &PendingFsEntry) -> Result<()> {
     let staged = StagedEntry {
         timestamp: chrono::Utc::now().timestamp_millis(),
+        doc_id: entry.doc_id,
         status: entry.change_type,
         content_hash: entry.content_hash.clone(),
         has_conflict: entry.has_conflict,
@@ -94,14 +98,20 @@ pub fn list_staged(db: &Database) -> Result<Vec<String>> {
 
 /// 获取所有已暂存的文件（带变更状态）
 pub fn list_staged_with_status(db: &Database) -> Result<Vec<(String, ChangeStatus)>> {
+    Ok(list_staged_entries(db)?
+        .into_iter()
+        .map(|(path, entry)| (path, entry.status))
+        .collect())
+}
+
+pub fn list_staged_entries(db: &Database) -> Result<Vec<(String, StagedEntry)>> {
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(STAGED_TABLE)?;
     let mut entries = Vec::new();
     for item in table.iter()? {
         let (key, value) = item?;
         let path = key.value().to_string();
-        let status = serde_json::from_slice::<StagedEntry>(value.value())?.status;
-        entries.push((path, status));
+        entries.push((path, serde_json::from_slice::<StagedEntry>(value.value())?));
     }
     Ok(entries)
 }

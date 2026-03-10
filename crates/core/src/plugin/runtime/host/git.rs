@@ -54,6 +54,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 changes.truncate(max_changes);
                 changes.push(crate::source_control::ChangeEntry {
                     path: format!("... and {} more files", total - max_changes),
+                    doc_id: None,
                     status: crate::source_control::ChangeStatus::Modified,
                     has_conflict: false,
                 });
