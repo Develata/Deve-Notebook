@@ -14,7 +14,7 @@ use super::RepoManager;
 use super::ops;
 use super::range;
 use super::shadow;
-use crate::models::{DocId, LedgerEntry, PeerId, RepoId, RepoType};
+use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId, RepoType};
 
 impl RepoManager {
     /// 确保指定 Peer 的影子库已加载到内存
@@ -58,6 +58,25 @@ impl RepoManager {
         doc_id: DocId,
     ) -> Result<Vec<(u64, LedgerEntry)>> {
         self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id)
+    }
+
+    pub fn get_shadow_structure_ops(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        node_id: NodeId,
+    ) -> Result<Vec<(u64, LedgerEntry)>> {
+        self.ensure_shadow_db(peer_id, repo_id)?;
+
+        let dbs = self.shadow_dbs.read().unwrap();
+        let peer_repos = dbs
+            .get(peer_id)
+            .ok_or_else(|| anyhow::anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
+        let db = peer_repos
+            .get(repo_id)
+            .ok_or_else(|| anyhow::anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
+
+        ops::get_structure_ops_for_node_from_db(db, node_id)
     }
 
     /// 获取指定影子库的全局最大序列号

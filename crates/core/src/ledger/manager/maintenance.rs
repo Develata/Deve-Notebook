@@ -1,6 +1,6 @@
 use crate::ledger::manager::types::RepoManager;
-use crate::ledger::schema::DOC_OPS;
-use crate::models::{DocId, PeerId, RepoId};
+use crate::ledger::schema::{DOC_OPS, NODE_OPS};
+use crate::models::{DocId, NodeId, PeerId, RepoId};
 use anyhow::{Context, Result};
 
 impl RepoManager {
@@ -32,6 +32,31 @@ impl RepoManager {
             table.remove_all(&doc_id.as_u128())?;
         }
 
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// 重置指定 Shadow 节点的结构事实索引 (物理清空)
+    pub fn reset_shadow_node(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        node_id: &NodeId,
+    ) -> Result<()> {
+        self.ensure_shadow_db(peer_id, repo_id)?;
+
+        let guard = self.shadow_dbs.read().unwrap();
+        let peer_map = guard
+            .get(peer_id)
+            .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
+        let db = peer_map
+            .get(repo_id)
+            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
+
+        let write_txn = db.begin_write()?;
+        write_txn
+            .open_multimap_table(NODE_OPS)?
+            .remove_all(&node_id.as_u128())?;
         write_txn.commit()?;
         Ok(())
     }

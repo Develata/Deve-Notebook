@@ -1,4 +1,5 @@
 use super::SyncEngine;
+use crate::models::NodeId;
 use crate::sync::protocol::SyncResponse;
 use anyhow::Result;
 use std::collections::HashSet;
@@ -13,6 +14,7 @@ impl SyncEngine {
 
         let mut max_seq = 0u64;
         let mut reset_docs: HashSet<crate::models::DocId> = HashSet::new();
+        let mut reset_nodes: HashSet<NodeId> = HashSet::new();
 
         for enc_op in response.ops {
             let seq = enc_op.seq;
@@ -24,6 +26,13 @@ impl SyncEngine {
                 self.repo
                     .reset_shadow_doc(&response.peer_id, &response.repo_id, &doc_id)?;
                 reset_docs.insert(doc_id);
+            }
+            if let Some(node_id) = entry.structure_node_id()
+                && !reset_nodes.contains(&node_id)
+            {
+                self.repo
+                    .reset_shadow_node(&response.peer_id, &response.repo_id, &node_id)?;
+                reset_nodes.insert(node_id);
             }
 
             self.repo
