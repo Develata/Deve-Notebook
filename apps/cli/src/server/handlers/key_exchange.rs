@@ -10,7 +10,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 /// 处理客户端的 RepoKey 请求
@@ -21,9 +21,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.unicast(ServerMessage::KeyDenied {
-                reason: err.to_string(),
-            });
+            send_key_denied(ch, ServerErrorCode::SyncRepoUnbound, err.to_string());
             return;
         }
     };
@@ -31,9 +29,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
     let key_dir = match state.repo.local_repo_notegit_keys_root(&scope.repo_name) {
         Ok(dir) => dir,
         Err(err) => {
-            ch.unicast(ServerMessage::KeyDenied {
-                reason: err.to_string(),
-            });
+            send_key_denied(ch, ServerErrorCode::StoragePersistFailed, err.to_string());
             return;
         }
     };
@@ -50,9 +46,13 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         }
         Err(err) => {
             tracing::warn!("RepoKey request failed for {}: {:?}", scope.repo_name, err);
-            ch.unicast(ServerMessage::KeyDenied {
-                reason: err.to_string(),
-            });
+            send_key_denied(ch, ServerErrorCode::StoragePersistFailed, err.to_string());
         }
     }
+}
+
+fn send_key_denied(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
+    ch.unicast(ServerMessage::KeyDenied {
+        error: ServerError::with_detail(code, detail),
+    });
 }

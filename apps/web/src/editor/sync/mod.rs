@@ -64,8 +64,9 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         ServerMessage::KeyProvide { repo_key } => {
             handle_key_provide(ctx, &repo_key);
         }
-        ServerMessage::KeyDenied { reason } => {
-            leptos::logging::warn!("KeyDenied: {}", reason);
+        ServerMessage::KeyDenied { error } => {
+            ctx.set_repo_key.set(None);
+            leptos::logging::warn!("KeyDenied: code={:?} detail={:?}", error.code, error.detail);
         }
         _ => {}
     }

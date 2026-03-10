@@ -173,7 +173,7 @@ pub enum ServerMessage {
         repo_key: Vec<u8>,
     },
     KeyDenied {
-        reason: String,
+        error: ServerError,
     },
     SystemMetrics {
         cpu_usage_percent: f32,
