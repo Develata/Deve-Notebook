@@ -86,6 +86,8 @@ pub(crate) enum Commands {
         repo: Option<String>,
         #[arg(long = "path")]
         paths: Vec<String>,
+        #[arg(long)]
+        rebuild_projection: bool,
     },
 }
 

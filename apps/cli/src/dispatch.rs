@@ -43,6 +43,7 @@ pub async fn run(
             backup,
             repo,
             paths,
+            rebuild_projection,
         }) => commands::repair::run(
             ledger_dir,
             vault_path,
@@ -50,6 +51,7 @@ pub async fn run(
             config.snapshot_depth,
             repo.as_deref(),
             &paths,
+            rebuild_projection,
         )?,
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }

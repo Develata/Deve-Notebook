@@ -1,4 +1,5 @@
 mod path_fix;
+mod rebuild;
 mod restore;
 mod shadow;
 mod weird_paths;
@@ -16,6 +17,7 @@ pub fn run(
     snapshot_depth: usize,
     target_repo: Option<&str>,
     paths: &[String],
+    rebuild_projection: bool,
 ) -> Result<()> {
     let quarantined = shadow::quarantine_nil_shadow_repos(&ledger_dir.join("remotes"))?;
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
@@ -31,10 +33,15 @@ pub fn run(
     let quarantined_md_dirs = weird_paths::quarantine_md_dirs(&repo, &repo_names)?;
     let restored =
         restore::restore_docs_from_backup(&repo, &sync_manager, backup_root, &repo_names, paths)?;
+    let rebuilt_repos = if rebuild_projection {
+        rebuild::materialize_repos(&sync_manager, &repo_names)?
+    } else {
+        0
+    };
 
     println!(
-        "repair: quarantined_nil_shadows={} fixed_repo_paths={} quarantined_md_dirs={} restored_docs={}",
-        quarantined, fixed_paths, quarantined_md_dirs, restored
+        "repair: quarantined_nil_shadows={} fixed_repo_paths={} quarantined_md_dirs={} restored_docs={} rebuilt_repos={}",
+        quarantined, fixed_paths, quarantined_md_dirs, restored, rebuilt_repos
     );
     Ok(())
 }
