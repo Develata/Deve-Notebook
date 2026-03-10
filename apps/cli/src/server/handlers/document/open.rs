@@ -2,7 +2,7 @@ use super::snapshot::{SnapshotPayload, build_snapshot_payload};
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -34,13 +34,19 @@ pub(super) async fn handle_open_doc(
             match load_snapshot_from_local_repo(state, session, doc_id) {
                 Ok(payload) => payload,
                 Err(e) => {
-                    ch.send_error(e.to_string());
+                    ch.send_protocol_error(ServerError::with_detail(
+                        ServerErrorCode::RequestFailed,
+                        e.to_string(),
+                    ));
                     empty_payload()
                 }
             }
         }
         None => {
-            ch.send_error("Remote repository database is not locked".to_string());
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                "Remote repository database is not locked",
+            ));
             empty_payload()
         }
     };

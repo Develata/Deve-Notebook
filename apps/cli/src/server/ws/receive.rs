@@ -7,6 +7,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::protocol::ClientMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode};
 
 use super::route;
 use super::send::BroadcastFilter;
@@ -89,7 +90,10 @@ fn record_message(session: &mut WsSession, ch: &DualChannel, peer_id: &str) -> b
     if session.record_incoming_message(Instant::now()) {
         return true;
     }
-    ch.send_error("WebSocket rate limit exceeded".to_string());
+    ch.send_protocol_error(ServerError::with_detail(
+        ServerErrorCode::RequestFailed,
+        "WebSocket rate limit exceeded",
+    ));
     tracing::warn!("WS message rate limit exceeded: {}", peer_id);
     false
 }
