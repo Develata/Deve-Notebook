@@ -18,6 +18,7 @@ mod dir_structure_support;
 mod merge_ops;
 mod metadata_ops;
 mod ops_ops;
+mod ops_structure;
 mod repository;
 mod snapshot_ops;
 mod source_control_api;
