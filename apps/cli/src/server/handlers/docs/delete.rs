@@ -55,26 +55,15 @@ pub async fn handle_delete_doc(
         .ok()
         .flatten();
 
-    // 2. 执行文件系统删除
-    if target.exists() {
-        if is_dir {
-            if let Err(e) = std::fs::remove_dir_all(&target) {
-                tracing::error!("删除目录失败 {}: {:?}", path, e);
-                ch.send_error(format!("Failed to delete directory: {}", e));
-                return;
-            }
-        } else if let Err(e) = std::fs::remove_file(&target) {
-            tracing::error!("删除文件失败 {}: {:?}", path, e);
-            ch.send_error(format!("Failed to delete file: {}", e));
-            return;
-        }
-    } else {
-        tracing::warn!("待删除文件不存在: {:?}", target);
-        ch.send_error("Target not found, removing from ledger".to_string());
-    }
-
     // 3. 更新 Ledger
     if is_dir {
+        if target.exists()
+            && let Err(e) = std::fs::remove_dir_all(&target)
+        {
+            tracing::error!("删除目录失败 {}: {:?}", path, e);
+            ch.send_error(format!("Failed to delete directory: {}", e));
+            return;
+        }
         match state
             .repo
             .delete_folder_in_local_repo(&scope.repo_name, &path)
@@ -82,8 +71,29 @@ pub async fn handle_delete_doc(
             Ok(count) => tracing::info!("已从 Ledger 删除 {} 个文档 (文件夹: {})", count, path),
             Err(e) => tracing::error!("Ledger 文件夹删除失败: {:?}", e),
         }
-    } else if let Err(e) = state.repo.delete_doc_in_local_repo(&scope.repo_name, &path) {
-        tracing::error!("Ledger 文档删除失败: {:?}", e);
+    } else {
+        let doc_id = state
+            .repo
+            .get_docid_in_local_repo(&scope.repo_name, &path)
+            .ok()
+            .flatten();
+        if let Err(e) = state.repo.apply_file_delete_structure_in_local_repo(
+            &scope.repo_name,
+            &path,
+            doc_id,
+            "local_delete",
+        ) {
+            tracing::error!("文件删除结构事实失败: {:?}", e);
+            ch.send_error(format!("Failed to delete file: {}", e));
+            return;
+        }
+        if target.exists()
+            && let Err(e) = std::fs::remove_file(&target)
+        {
+            tracing::error!("删除文件失败 {}: {:?}", path, e);
+            ch.send_error(format!("Failed to delete file: {}", e));
+            return;
+        }
     }
 
     // 4. 更新 TreeManager 并广播 Delta

@@ -1,18 +1,13 @@
 // apps/cli/src/server/handlers/docs/rename.rs
 //! # 重命名/移动文档处理器
 
-use super::{notify_fs_refresh, validate_file_path, validate_folder_path};
+use super::rename_dir::handle_dir_rename;
+use super::rename_file::handle_file_rename;
+use super::{validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
-use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::{
-    local_repo_path, resolve_session_repo, run_on_resolved_local_repo,
-};
+use crate::server::repo_scope::{local_repo_path, resolve_session_repo};
 use crate::server::session::WsSession;
-use anyhow::anyhow;
-use deve_core::ledger::node_meta;
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 /// 处理重命名文档请求
@@ -88,66 +83,11 @@ pub async fn handle_rename_doc(
 
     // 3. 执行重命名
     if src.exists() {
-        // 确保目标父目录存在
-        if let Some(parent) = dst.parent() {
-            let _ = std::fs::create_dir_all(parent);
+        if !src.is_dir() {
+            handle_file_rename(state, ch, session, &scope, &old_path, &dst_name, &src).await;
+            return;
         }
-
-        if let Err(e) = std::fs::rename(&src, &dst) {
-            tracing::error!("重命名失败 {} -> {}: {:?}", old_path, dst_name, e);
-            ch.send_error(format!("Failed to rename: {}", e));
-        } else {
-            tracing::info!("已重命名 {} -> {}", old_path, dst_name);
-
-            // 4. 更新 Ledger
-            if dst.is_dir() {
-                if let Err(e) =
-                    state
-                        .repo
-                        .rename_folder_in_local_repo(&scope.repo_name, &old_path, &dst_name)
-                {
-                    tracing::error!("Ledger 文件夹重命名失败: {:?}", e);
-                }
-            } else if let Err(e) =
-                state
-                    .repo
-                    .rename_doc_in_local_repo(&scope.repo_name, &old_path, &dst_name)
-            {
-                tracing::error!("Ledger 文档重命名失败: {:?}", e);
-            }
-
-            // 5. 更新 TreeManager 并广播 Delta
-            if let Ok((node_id, meta)) = run_on_resolved_local_repo(state, &scope, |db| {
-                let node_id = node_meta::get_node_id(db, &dst_name)?
-                    .ok_or_else(|| anyhow!("Node not found: {}", dst_name))?;
-                let meta = node_meta::get_node_meta(db, node_id)?
-                    .ok_or_else(|| anyhow!("Node meta missing"))?;
-                Ok((node_id, meta))
-            }) {
-                if let Err(e) = broadcast_parent_dirs(
-                    state,
-                    ch,
-                    scope.repo_id,
-                    &scope.repo_name,
-                    meta.parent_id,
-                ) {
-                    tracing::error!("广播父目录失败: {:?}", e);
-                }
-                let delta = state.tree_manager.with_tree_mut(scope.repo_id, |tm| {
-                    tm.update_node(
-                        node_id,
-                        meta.parent_id,
-                        meta.name.clone(),
-                        meta.path.clone(),
-                    )
-                });
-                ch.unicast(ServerMessage::TreeUpdate(delta));
-            }
-
-            // 6. 刷新文档列表
-            handle_list_docs(state, ch, session).await;
-            notify_fs_refresh(ch, scope.repo_id, &dst_name, "renamed");
-        }
+        handle_dir_rename(state, ch, session, &scope, &old_path, &dst_name, &src).await;
     } else {
         tracing::warn!("重命名失败: 源不存在: {:?}", src);
         ch.send_error(format!("Source not found: {}", old_path));

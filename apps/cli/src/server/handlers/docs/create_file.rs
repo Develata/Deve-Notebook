@@ -11,6 +11,8 @@ use anyhow::anyhow;
 use deve_core::ledger::node_meta;
 use deve_core::models::{DocId, NodeId};
 use deve_core::protocol::ServerMessage;
+use deve_core::state;
+use deve_core::sync::reconcile;
 use std::sync::Arc;
 
 pub async fn handle_file_create(
@@ -21,61 +23,76 @@ pub async fn handle_file_create(
     path: &std::path::Path,
     filename: &str,
 ) {
-    let doc_id = if path.exists() {
-        match register_existing_file(state, scope, filename) {
-            Some(doc_id) => doc_id,
-            None => return,
-        }
-    } else if let Err(e) = std::fs::write(path, "") {
-        tracing::error!("创建文件失败: {:?}", e);
-        ch.send_error(format!("Failed to create file: {}", e));
+    if path.exists() && !path.is_file() {
+        tracing::error!("目标路径不是文件: {:?}", path);
+        ch.send_error("Target path is not a file".to_string());
         return;
-    } else {
-        match state
-            .repo
-            .create_docid_in_local_repo(&scope.repo_name, filename)
-        {
-            Ok(doc_id) => {
-                tracing::info!("已创建文档: {} ({})", filename, doc_id);
-                doc_id
-            }
+    }
+
+    let existing_doc_id = match state
+        .repo
+        .get_docid_in_local_repo(&scope.repo_name, filename)
+    {
+        Ok(doc_id) => doc_id,
+        Err(e) => {
+            tracing::error!("DocId 获取失败: {:?}", e);
+            ch.send_error(format!("Failed to resolve doc id: {}", e));
+            return;
+        }
+    };
+    let disk_content = if path.exists() {
+        match std::fs::read_to_string(path) {
+            Ok(content) => Some(content),
             Err(e) => {
-                tracing::error!("Ledger 注册失败: {:?}", e);
+                tracing::error!("读取现有文件失败: {:?}", e);
+                ch.send_error(format!("Failed to read existing file: {}", e));
                 return;
             }
         }
+    } else {
+        None
+    };
+    let doc_id = match state.repo.apply_file_structure_in_local_repo(
+        &scope.repo_name,
+        filename,
+        existing_doc_id,
+        "local_create",
+    ) {
+        Ok(doc_id) => doc_id,
+        Err(e) => {
+            tracing::error!("Structure Facts 追加失败: {:?}", e);
+            ch.send_error(format!("Failed to register file: {}", e));
+            return;
+        }
+    };
+
+    if let Some(content) = disk_content {
+        if existing_doc_id.is_none()
+            && !content.is_empty()
+            && let Err(e) = reconcile::append_patch_in_local_repo(
+                state.repo.as_ref(),
+                &scope.repo_name,
+                doc_id,
+                "local_create",
+                &state::compute_diff("", &content),
+            )
+        {
+            tracing::error!("导入现有文件内容失败: {:?}", e);
+            ch.send_error(format!("Failed to import existing file: {}", e));
+            return;
+        }
+    } else if let Err(e) = state
+        .sync_manager
+        .persist_doc_in_local_repo(&scope.repo_name, doc_id)
+    {
+        tracing::error!("投影创建文件失败: {:?}", e);
+        ch.send_error(format!("Failed to materialize file: {}", e));
+        return;
     };
 
     push_file_tree_update(state, ch, scope, doc_id);
     handle_list_docs(state, ch, session).await;
     notify_fs_refresh(ch, scope.repo_id, filename, "added");
-}
-
-fn register_existing_file(
-    state: &Arc<AppState>,
-    scope: &ResolvedRepo,
-    filename: &str,
-) -> Option<DocId> {
-    match state
-        .repo
-        .get_docid_in_local_repo(&scope.repo_name, filename)
-    {
-        Ok(Some(doc_id)) => Some(doc_id),
-        Ok(None) => match state
-            .repo
-            .create_docid_in_local_repo(&scope.repo_name, filename)
-        {
-            Ok(doc_id) => Some(doc_id),
-            Err(e) => {
-                tracing::error!("Ledger 注册失败: {:?}", e);
-                None
-            }
-        },
-        Err(e) => {
-            tracing::error!("DocId 获取失败: {:?}", e);
-            None
-        }
-    }
 }
 
 fn push_file_tree_update(

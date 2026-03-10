@@ -17,6 +17,8 @@ mod create_folder;
 mod delete;
 mod node_helpers;
 mod rename;
+mod rename_dir;
+mod rename_file;
 
 pub use copy::handle_copy_doc;
 pub use create::handle_create_doc;
