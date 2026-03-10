@@ -15,6 +15,7 @@ mod create;
 mod create_file;
 mod create_folder;
 mod delete;
+mod file_register;
 mod node_helpers;
 mod rename;
 mod rename_dir;

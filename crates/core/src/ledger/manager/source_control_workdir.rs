@@ -104,7 +104,6 @@ impl RepoManager {
                 }
                 std::fs::write(file_path, content)?;
                 self.run_on_local_repo(repo_name, |db| {
-                    metadata::set_doc_path(db, doc_id, &normalized)?;
                     clear_pending_for_doc(db, doc_id, &normalized)
                 })?;
             }
