@@ -3,6 +3,7 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
+use deve_core::ledger::{metadata, node_meta};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -46,11 +47,9 @@ pub(super) async fn handle_remote_diff(
 
 fn get_remote_doc_content(session: &WsSession, target: &ScPathTarget) -> Option<String> {
     let db = session.get_active_db()?;
-    let doc_id = target.doc_id.or_else(|| {
-        deve_core::ledger::metadata::get_docid(&db.db, &target.path)
-            .ok()
-            .flatten()
-    })?;
+    let doc_id = target
+        .doc_id
+        .or_else(|| resolve_doc_id(&db.db, &target.path))?;
     let ops = deve_core::ledger::ops::get_ops_from_db(&db.db, doc_id).ok()?;
     let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
     Some(deve_core::state::reconstruct_content(&entries))
@@ -62,7 +61,7 @@ fn get_local_counterpart(state: &Arc<AppState>, path: &str, repo_name: Option<St
             state
                 .repo
                 .run_on_local_repo(&name, |db| {
-                    let Some(doc_id) = deve_core::ledger::metadata::get_docid(db, path)? else {
+                    let Some(doc_id) = resolve_doc_id(db, path) else {
                         return Ok(None);
                     };
                     let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
@@ -73,4 +72,13 @@ fn get_local_counterpart(state: &Arc<AppState>, path: &str, repo_name: Option<St
                 .flatten()
         })
         .unwrap_or_default()
+}
+
+fn resolve_doc_id(db: &redb::Database, path: &str) -> Option<deve_core::models::DocId> {
+    node_meta::get_node_id(db, path)
+        .ok()
+        .flatten()
+        .and_then(|node_id| node_meta::get_node_meta(db, node_id).ok().flatten())
+        .and_then(|meta| meta.doc_id)
+        .or_else(|| metadata::get_docid(db, path).ok().flatten())
 }

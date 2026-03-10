@@ -4,7 +4,7 @@
 //! - 每个 `RepoId` 拥有独立的 `TreeManager`。
 //! - 任一会话只能读写其当前 repo 对应的树状态。
 
-use deve_core::models::{DocId, NodeId, NodeMeta, RepoId};
+use deve_core::models::{NodeId, NodeMeta, RepoId};
 use deve_core::tree::{TreeDelta, TreeManager};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -23,13 +23,6 @@ impl RepoTreeRegistry {
     pub fn reset_from_nodes(&self, repo_id: RepoId, nodes: Vec<(NodeId, NodeMeta)>) -> TreeDelta {
         self.with_tree_mut(repo_id, |tree| {
             tree.init_from_nodes(nodes);
-            tree.build_init_delta()
-        })
-    }
-
-    pub fn reset_from_docs(&self, repo_id: RepoId, docs: Vec<(DocId, String)>) -> TreeDelta {
-        self.with_tree_mut(repo_id, |tree| {
-            tree.init_from_docs(docs);
             tree.build_init_delta()
         })
     }
