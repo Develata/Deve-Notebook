@@ -21,6 +21,7 @@
     "@lezer/markdown": "^1.6.3",
     "crelt": "^1.0.6",
     "katex": "^0.16.27",
+    "mermaid": "^11.13.0",
     "style-mod": "^4.1.3",
     "w3c-keyname": "^2.2.8"
   },
