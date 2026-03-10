@@ -1,6 +1,8 @@
 // crates\core\src\sync
 pub mod buffer;
 #[cfg(not(target_arch = "wasm32"))]
+mod dir_change;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
@@ -33,8 +35,6 @@ pub mod vector;
 use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::models::DocId;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::models::RepoId;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
@@ -226,21 +226,5 @@ impl SyncManager {
     /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
     pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
         materialize::materialize_local_repo(&self.repo, &self.persist_guard, repo_name)
-    }
-
-    pub fn resolve_dir_change(&self, path_str: &str) -> Result<Option<(RepoId, String)>> {
-        let Some((_, repo_id, repo_path)) = self.repo.resolve_local_workspace_path(path_str)?
-        else {
-            return Ok(None);
-        };
-        Ok(Some((repo_id, repo_path)))
-    }
-
-    pub fn local_repo_id(&self) -> Option<RepoId> {
-        self.repo
-            .get_repo_info()
-            .ok()
-            .flatten()
-            .map(|info| info.uuid)
     }
 }

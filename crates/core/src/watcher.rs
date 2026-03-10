@@ -96,7 +96,7 @@ impl Watcher {
                 let is_dir = path.is_dir() || (!path.exists() && path.extension().is_none());
                 if is_dir {
                     if let Ok(Some((repo_id, repo_path))) =
-                        self.sync_manager.resolve_dir_change(&path_str)
+                        self.sync_manager.handle_dir_change(&path_str)
                         && let Some(cb) = &self.on_event
                     {
                         cb(FsEventType::DirChange {
