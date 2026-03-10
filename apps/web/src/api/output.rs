@@ -83,8 +83,8 @@ async fn handle_new_link(
     leptos::logging::log!("OutputLoop: 收到新连接。刷新 {} 条消息。", queue.len() + 1);
     *current_sink = Some(sink);
 
-    // 注入 ListDocs 到队首以刷新状态
-    queue.push_front(ClientMessage::ListDocs);
+    // 注入 Ping 到队首，以无副作用方式确认新连接已可收发。
+    queue.push_front(ClientMessage::Ping);
 
     // 刷新队列
     flush_queue(current_sink, queue).await;

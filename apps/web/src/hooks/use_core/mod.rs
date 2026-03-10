@@ -6,12 +6,14 @@
 pub mod apply;
 pub mod callbacks;
 pub mod callbacks_sc;
+mod callbacks_switch;
 pub mod contexts;
 mod dashboard_context;
 pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
 pub mod effects_sc;
+pub mod navigation;
 pub mod pending;
 mod provide;
 pub mod state;
@@ -56,17 +58,32 @@ pub fn use_core() -> CoreState {
         identity,
         repo_vector,
         signals.degraded_sync_mode,
+        signals.current_repo,
+        signals.active_branch,
         signals.set_handshake_ready,
     );
     effects::setup_message_effect(&ws, &signals);
 
-    let doc_callbacks =
-        callbacks::create_doc_callbacks(&ws, signals.set_current_doc, signals.set_explicit_home);
+    let doc_callbacks = callbacks::create_doc_callbacks(
+        &ws,
+        signals.current_doc,
+        signals.pending_local_edits,
+        signals.set_pending_navigation,
+        signals.set_current_doc,
+        signals.set_explicit_home,
+    );
     let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
     let sc_callbacks = callbacks::create_source_control_callbacks(&ws);
     let misc_callbacks =
         callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
-    let switch_callbacks = callbacks::create_switch_callbacks(&ws);
+    let switch_callbacks = callbacks::create_switch_callbacks(
+        &ws,
+        signals.current_doc,
+        signals.pending_local_edits,
+        signals.set_pending_navigation,
+        signals.current_repo,
+        signals.active_branch,
+    );
 
     let state = build_core_state(
         ws,

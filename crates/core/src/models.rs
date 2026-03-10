@@ -169,7 +169,7 @@ pub struct NodeMeta {
 /// 2. 索引使用 `u32` 代替 `usize` (UTF-16 code unit 索引)：
 ///    - 节省 8 字节/操作 (64-bit 平台)
 ///    - 4GB 文档大小限制对文本编辑器来说是无限的
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Op {
     Insert { pos: u32, content: SmolStr },
     Delete { pos: u32, len: u32 },

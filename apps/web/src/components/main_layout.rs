@@ -1,12 +1,15 @@
 // apps/web/src/components/main_layout.rs
 //! # Main Layout
 
+use crate::api::ConnectionStatus;
 use crate::components::activity_bar::SidebarView;
 use crate::components::desktop_layout::DesktopLayout;
 use crate::components::disconnect_overlay::DisconnectedOverlay;
 pub use crate::components::layout_context::{ChatControl, SearchControl};
 use crate::components::merge_modal_slot::MergeModalSlot;
 use crate::components::mobile_layout::MobileLayout;
+use crate::components::pending_navigation_modal::PendingNavigationModal;
+use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_ctrl_key::use_ctrl_key;
 use crate::hooks::use_layout::use_layout;
@@ -16,9 +19,16 @@ use leptos::prelude::*;
 use web_sys::UiEvent;
 
 #[component]
-pub fn MainLayout() -> impl IntoView {
+pub fn MainLayout(on_session_expired: Callback<()>) -> impl IntoView {
     let _locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let core = use_core();
+    let ws_status = core.ws.status;
+
+    Effect::new(move |_| {
+        if ws_status.get() == ConnectionStatus::Unauthorized {
+            on_session_expired.run(());
+        }
+    });
 
     let (
         sidebar_width,
@@ -107,9 +117,21 @@ pub fn MainLayout() -> impl IntoView {
     });
     let set_doc = core.set_current_doc;
     let set_explicit_home = core.set_explicit_home;
+    let current_doc = core.current_doc;
+    let pending_local_edits = core.pending_local_edits;
+    let set_pending_navigation = core.set_pending_navigation;
     let on_home = Callback::new(move |_| {
-        set_explicit_home.set(true);
-        set_doc.set(None);
+        let action = Callback::new(move |_: ()| {
+            set_explicit_home.set(true);
+            set_doc.set(None);
+        });
+        let _ = guard_navigation(
+            current_doc.get_untracked(),
+            &pending_local_edits.get_untracked(),
+            set_pending_navigation,
+            NavigationTarget::Home,
+            action,
+        );
     });
 
     let core_for_layout = core.clone();
@@ -145,6 +167,10 @@ pub fn MainLayout() -> impl IntoView {
             />
 
             <MergeModalSlot />
+            <PendingNavigationModal
+                pending=core.pending_navigation
+                set_pending=core.set_pending_navigation
+            />
 
             {move || if is_mobile.get() {
                 view! {

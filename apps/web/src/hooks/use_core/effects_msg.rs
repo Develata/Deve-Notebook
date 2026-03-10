@@ -86,13 +86,19 @@ pub fn handle_branch_switched(
 pub fn handle_repo_switched(
     name: String,
     uuid: String,
+    current_repo: ReadSignal<Option<String>>,
+    current_repo_id: ReadSignal<Option<String>>,
     set_current_repo: WriteSignal<Option<String>>,
     set_current_repo_id: WriteSignal<Option<String>>,
     set_current_doc: WriteSignal<Option<DocId>>,
 ) {
+    let same_repo = current_repo_id.get_untracked().as_deref() == Some(uuid.as_str())
+        || current_repo.get_untracked().as_deref() == Some(name.as_str());
     set_current_repo.set(Some(name));
     set_current_repo_id.set((!uuid.is_empty()).then_some(uuid));
-    set_current_doc.set(None);
+    if !same_repo {
+        set_current_doc.set(None);
+    }
 }
 
 /// 处理剩余的通用消息。

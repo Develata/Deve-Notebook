@@ -22,10 +22,12 @@ pub struct SyncContext<'a> {
     // 内容信号
     pub set_content: WriteSignal<String>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
+    pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
     // 版本追踪
     pub local_version: ReadSignal<u64>,
     pub set_local_version: WriteSignal<u64>,
     // 历史记录
+    pub history: ReadSignal<Vec<(u64, Op)>>,
     pub set_history: WriteSignal<Vec<(u64, Op)>>,
     // 回放控制
     pub is_playback: ReadSignal<bool>,

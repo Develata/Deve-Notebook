@@ -6,7 +6,9 @@
 
 pub mod context;
 mod decrypt;
+mod history;
 mod snapshot;
+mod snapshot_finish;
 
 use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
@@ -42,7 +44,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
                 return;
             }
             leptos::logging::log!("Received History: {} ops", ops.len());
-            ctx.set_history.set(ops);
+            history::handle_history(ctx, ops);
         }
         ServerMessage::NewOp {
             doc_id: msg_doc_id,

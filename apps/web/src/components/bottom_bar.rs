@@ -28,6 +28,9 @@ pub fn BottomBar(
         let (color, text) = match status.get() {
             ConnectionStatus::Connected => ("bg-green-500", t::bottom_bar::ready(locale.get())),
             ConnectionStatus::Connecting => ("bg-yellow-500", t::bottom_bar::syncing(locale.get())),
+            ConnectionStatus::Unauthorized => {
+                ("bg-amber-500", t::bottom_bar::unauthorized(locale.get()))
+            }
             ConnectionStatus::Disconnected => ("bg-red-500", t::bottom_bar::offline(locale.get())),
         };
 

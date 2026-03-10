@@ -10,6 +10,10 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
+pub use super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
+use super::navigation::{NavigationTarget, PendingNavigation, guard_navigation};
+use super::pending::PendingLocalEdits;
+
 // Re-export from submodule
 #[allow(unused_imports)] // SourceControlCallbacks 为外部模块预留
 pub use super::callbacks_sc::{SourceControlCallbacks, create_source_control_callbacks};
@@ -27,12 +31,29 @@ pub struct DocCallbacks {
 /// 创建文档操作回调
 pub fn create_doc_callbacks(
     ws: &WsService,
+    current_doc: ReadSignal<Option<DocId>>,
+    pending_local_edits: ReadSignal<PendingLocalEdits>,
+    set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     set_current_doc: WriteSignal<Option<DocId>>,
     set_explicit_home: WriteSignal<bool>,
 ) -> DocCallbacks {
     let on_doc_select = Callback::new(move |id: DocId| {
-        set_explicit_home.set(false);
-        set_current_doc.set(Some(id));
+        if current_doc.get_untracked() == Some(id) {
+            set_explicit_home.set(false);
+            set_current_doc.set(Some(id));
+            return;
+        }
+        let action = Callback::new(move |_: ()| {
+            set_explicit_home.set(false);
+            set_current_doc.set(Some(id));
+        });
+        let _ = guard_navigation(
+            current_doc.get_untracked(),
+            &pending_local_edits.get_untracked(),
+            set_pending_navigation,
+            NavigationTarget::Doc,
+            action,
+        );
     });
 
     let ws_for_create = ws.clone();
@@ -189,31 +210,5 @@ pub fn create_misc_callbacks(
         on_stats,
         on_plugin_call,
         on_search,
-    }
-}
-
-/// 切换操作回调
-pub struct SwitchCallbacks {
-    pub on_switch_branch: Callback<Option<String>>,
-    pub on_switch_repo: Callback<String>,
-}
-
-/// 创建切换回调
-pub fn create_switch_callbacks(ws: &WsService) -> SwitchCallbacks {
-    let ws_branch = ws.clone();
-    let on_switch_branch = Callback::new(move |peer_id: Option<String>| {
-        leptos::logging::log!("触发 SwitchBranch 回调: {:?}", peer_id);
-        ws_branch.send(ClientMessage::SwitchBranch { peer_id });
-    });
-
-    let ws_repo = ws.clone();
-    let on_switch_repo = Callback::new(move |name: String| {
-        leptos::logging::log!("触发 SwitchRepo 回调: {}", name);
-        ws_repo.send(ClientMessage::SwitchRepo { name });
-    });
-
-    SwitchCallbacks {
-        on_switch_branch,
-        on_switch_repo,
     }
 }

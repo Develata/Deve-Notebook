@@ -65,6 +65,7 @@ pub fn ensure_shadow_db(
     {
         let _ = write_txn.open_table(LEDGER_OPS)?;
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
+        let _ = write_txn.open_table(CLIENT_OP_INDEX)?;
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
 

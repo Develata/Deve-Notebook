@@ -49,6 +49,27 @@ impl RepoManager {
         })
     }
 
+    pub fn append_generated_client_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        peer_id: PeerId,
+        client_id: u64,
+        client_op_id: u64,
+        op_entry_builder: impl FnMut(u64) -> LedgerEntry,
+    ) -> Result<(u64, u64)> {
+        self.run_on_local_repo(repo_name, move |db| {
+            ops::append_generated_client_op(
+                db,
+                doc_id,
+                peer_id,
+                client_id,
+                client_op_id,
+                op_entry_builder,
+            )
+        })
+    }
+
     /// 从指定仓库读取操作
     pub fn get_ops(&self, repo_type: &RepoType, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         match repo_type {
@@ -78,5 +99,17 @@ impl RepoManager {
         doc_id: DocId,
     ) -> Result<Vec<(u64, LedgerEntry)>> {
         self.run_on_local_repo(repo_name, |db| ops::get_ops_from_db(db, doc_id))
+    }
+
+    pub fn find_client_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        client_id: u64,
+        client_op_id: u64,
+    ) -> Result<Option<(u64, LedgerEntry)>> {
+        self.run_on_local_repo(repo_name, |db| {
+            ops::find_client_op_in_db(db, doc_id, client_id, client_op_id)
+        })
     }
 }

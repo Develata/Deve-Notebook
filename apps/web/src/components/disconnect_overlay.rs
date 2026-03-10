@@ -10,7 +10,9 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
     view! {
         {move || {
             let status = status.get();
-            if status != ConnectionStatus::Connected {
+            if matches!(status, ConnectionStatus::Connected | ConnectionStatus::Unauthorized) {
+                view! {}.into_any()
+            } else {
                 view! {
                     <div class="fixed inset-0 z-[9999] bg-panel/80 backdrop-blur-sm flex flex-col items-center justify-center">
                         <div class="bg-panel p-8 rounded-xl shadow-lg border border-default text-center">
@@ -25,10 +27,7 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
                             </div>
                         </div>
                     </div>
-                }
-                .into_any()
-            } else {
-                view! {}.into_any()
+                }.into_any()
             }
         }}
     }

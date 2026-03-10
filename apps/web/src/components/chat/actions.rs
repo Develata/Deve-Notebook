@@ -2,7 +2,7 @@
 use crate::editor::ffi::get_editor_selection;
 use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::{CoreState, pending};
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -101,11 +101,22 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             content: code.into(),
         };
         let client_id = (js_sys::Math::random() * 1_000_000.0) as u64;
+        let client_op_id = next_client_op_id();
+        core.set_pending_local_edits.update(|pending_edits| {
+            pending::push_pending_edit(
+                pending_edits,
+                doc_id,
+                client_id,
+                client_op_id,
+                core.doc_version.get_untracked(),
+                op.clone(),
+            );
+        });
         core.ws.send(ClientMessage::Edit {
             doc_id,
             op,
             client_id,
-            client_op_id: next_client_op_id(),
+            client_op_id,
         });
     })
 }

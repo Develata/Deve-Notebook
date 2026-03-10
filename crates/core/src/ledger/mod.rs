@@ -52,4 +52,6 @@ pub use manager::types::*; // Export RepoManager and RepoInfo // Export core imp
 // But we might want to export the module for some reason? No, usually not.
 
 #[cfg(test)]
+mod client_op_tests;
+#[cfg(test)]
 mod tests;

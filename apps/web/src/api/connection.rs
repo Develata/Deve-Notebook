@@ -17,6 +17,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 use super::ConnectionStatus;
+use super::auth_probe::{AuthProbe, probe_auth_status};
 use super::backoff::BackoffStrategy;
 
 /// 本地开发后端默认端口；仅在 debug 构建中作为兜底候选。
@@ -65,6 +66,10 @@ pub fn spawn_connection_manager(
                 }
                 Err(e) => {
                     leptos::logging::error!("WS Open Error: {:?}", e);
+                    if matches!(probe_auth_status().await, AuthProbe::Invalid) {
+                        set_status.set(ConnectionStatus::Unauthorized);
+                        return;
+                    }
                     if url_idx + 1 < urls.len() {
                         url_idx += 1;
                         continue;
@@ -72,6 +77,10 @@ pub fn spawn_connection_manager(
                 }
             }
 
+            if matches!(probe_auth_status().await, AuthProbe::Invalid) {
+                set_status.set(ConnectionStatus::Unauthorized);
+                return;
+            }
             set_status.set(ConnectionStatus::Disconnected);
             backoff.wait().await;
             url_idx = 0;

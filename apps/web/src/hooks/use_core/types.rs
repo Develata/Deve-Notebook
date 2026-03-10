@@ -11,6 +11,7 @@ use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::diff_session::DiffSessionWire;
+use super::navigation::PendingNavigation;
 use super::pending::PendingLocalEdits;
 use super::state::PluginResponse;
 
@@ -44,6 +45,8 @@ pub struct CoreState {
     pub handshake_ready: ReadSignal<bool>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
+    pub pending_navigation: ReadSignal<Option<PendingNavigation>>,
+    pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 
     pub on_doc_select: Callback<DocId>,
     pub on_doc_create: Callback<String>,

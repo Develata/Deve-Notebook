@@ -66,7 +66,11 @@ pub fn use_editor(
     // 初始请求: 打开文档
     let ws_clone = ws.clone();
     let set_doc_ver = core.set_doc_version;
+    let handshake_ready = core.handshake_ready;
     Effect::new(move |_| {
+        if !handshake_ready.get() {
+            return;
+        }
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
         applyRemoteContent("");
         set_read_only(true);
@@ -107,8 +111,10 @@ pub fn use_editor(
                 ws: &ws_clone_2,
                 set_content,
                 pending_local_edits: core.pending_local_edits,
+                set_pending_local_edits,
                 local_version,
                 set_local_version,
+                history,
                 set_history,
                 is_playback,
                 set_playback_version,
@@ -154,7 +160,9 @@ pub fn use_editor(
                             pending::push_pending_edit(
                                 pending_edits,
                                 doc_id,
+                                client_id,
                                 client_op_id,
+                                local_version.get_untracked(),
                                 op.clone(),
                             );
                         });

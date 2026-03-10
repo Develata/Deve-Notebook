@@ -59,6 +59,8 @@ pub(super) fn build_core_state(
         handshake_ready: signals.handshake_ready,
         pending_local_edits: signals.pending_local_edits,
         set_pending_local_edits: signals.set_pending_local_edits,
+        pending_navigation: signals.pending_navigation,
+        set_pending_navigation: signals.set_pending_navigation,
         on_doc_select: doc.on_doc_select,
         on_doc_create: doc.on_doc_create,
         on_doc_rename: doc.on_doc_rename,

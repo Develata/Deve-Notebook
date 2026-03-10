@@ -42,7 +42,11 @@ pub fn App() -> impl IntoView {
 
     view! {
         {move || match auth_state.get() {
-            AuthState::Authenticated => view! { <MainLayout/> }.into_any(),
+            AuthState::Authenticated => view! {
+                <MainLayout
+                    on_session_expired=Callback::new(move |_| set_auth_state.set(AuthState::Unauthenticated))
+                />
+            }.into_any(),
             _ => view! {
                 <LoginPage auth_state=auth_state set_auth_state=set_auth_state/>
             }.into_any(),

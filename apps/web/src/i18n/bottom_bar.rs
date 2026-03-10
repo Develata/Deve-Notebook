@@ -45,6 +45,13 @@ pub fn offline(locale: Locale) -> &'static str {
     }
 }
 
+pub fn unauthorized(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Session Expired",
+        Locale::Zh => "会话已过期",
+    }
+}
+
 pub fn toggle_status_details(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Toggle status details",

@@ -11,12 +11,16 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+use super::handshake_bootstrap::restore_session_scope;
+
 /// 设置握手 Effect。
 pub fn setup(
     ws: &WsService,
     identity: ReadSignal<Option<StoredPeerIdentity>>,
     repo_vector: ReadSignal<VersionVector>,
     degraded: ReadSignal<Option<DegradedSyncMode>>,
+    current_repo: ReadSignal<Option<String>>,
+    active_branch: ReadSignal<Option<PeerId>>,
     set_handshake_ready: WriteSignal<bool>,
 ) {
     let ws_clone = ws.clone();
@@ -44,6 +48,7 @@ pub fn setup(
         else {
             return;
         };
+        let is_reconnect_bootstrap = last_mode.borrow().is_none();
         if last_mode.borrow().as_deref() == Some(mode_key.as_str()) {
             return;
         }
@@ -54,16 +59,24 @@ pub fn setup(
         let maybe_mode = degraded.get();
         let maybe_identity = identity.get();
         let vector = repo_vector.get();
+        let repo_name = current_repo.get();
+        let branch = active_branch.get();
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());
-                ws.send(ClientMessage::ListDocs);
-                ws.send(ClientMessage::ListRepos);
+                if is_reconnect_bootstrap {
+                    restore_session_scope(&ws, repo_name.clone(), branch.clone());
+                }
+                set_handshake_ready.set(true);
                 return;
             }
             let Some(identity) = maybe_identity else {
                 return;
             };
+
+            if is_reconnect_bootstrap {
+                restore_session_scope(&ws, repo_name.clone(), branch.clone());
+            }
 
             leptos::logging::log!("已连接! 发送 SyncHello...");
             let sorted_map: BTreeMap<_, _> = vector.iter().collect();
@@ -98,8 +111,6 @@ pub fn setup(
                 }
                 Err(err) => leptos::logging::error!("WebCrypto 握手签名失败: {}", err),
             }
-            ws.send(ClientMessage::ListDocs);
-            ws.send(ClientMessage::ListRepos);
         });
     });
 }
