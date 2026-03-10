@@ -5,7 +5,7 @@ mod file_copy;
 mod register;
 
 use super::copy_utils::copy_dir_recursive;
-use super::{notify_fs_refresh, validate_file_path, validate_folder_path};
+use super::{errors, notify_fs_refresh, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
@@ -32,19 +32,22 @@ pub async fn handle_copy_doc(
     }
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
-        Err(err) => return ch.send_error(err.to_string()),
+        Err(err) => return errors::request_failed(ch, err.to_string()),
     };
     let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path) {
         Some(paths) => paths,
         None => return,
     };
 
-    if paths.src.is_dir() {
-        dir_copy::copy_dir(state, ch, &scope, &paths.dst, &src_path, &dest_path);
+    let copied = if paths.src.is_dir() {
+        dir_copy::copy_dir(state, ch, &scope, &paths.dst, &src_path, &dest_path)
     } else {
         file_copy::copy_file(
             state, ch, &scope, &paths.src, &paths.dst, &src_path, &dest_path,
-        );
+        )
+    };
+    if !copied {
+        return;
     }
 
     handle_list_docs(state, ch, session).await;
@@ -61,25 +64,25 @@ fn prepare_copy_paths(
     let src = match local_repo_path(state, scope, src_path) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return None;
         }
     };
     let dst = match local_repo_path(state, scope, dest_path) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
+            errors::request_failed(ch, err.to_string());
             return None;
         }
     };
     if !src.exists() {
         tracing::error!("复制失败: 源不存在: {:?}", src);
-        ch.send_error(format!("Source not found: {}", src_path));
+        errors::storage_not_found(ch, format!("Source not found: {}", src_path));
         return None;
     }
     if dst.exists() {
         tracing::error!("复制失败: 目标已存在: {:?}", dst);
-        ch.send_error(format!("Destination exists: {}", dest_path));
+        errors::storage_conflict(ch, format!("Destination exists: {}", dest_path));
         return None;
     }
     let valid = if src.is_dir() {
@@ -104,7 +107,7 @@ fn copy_dir_on_disk(
 ) -> bool {
     if let Err(e) = copy_dir_recursive(src, dst) {
         tracing::error!("目录复制失败 {} -> {:?}: {:?}", src_path, dst, e);
-        ch.send_error(format!("Directory copy failed: {}", e));
+        errors::storage_persist_failed(ch, format!("Directory copy failed: {}", e));
         return false;
     }
     true

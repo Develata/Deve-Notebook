@@ -1,3 +1,4 @@
+use super::super::errors;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::copy_utils::{collect_dirs, collect_md_files};
@@ -15,16 +16,16 @@ pub(super) fn register_copied_docs(
     scope: &ResolvedRepo,
     dst: &Path,
     dest_path: &str,
-) {
+) -> bool {
     let base = match local_repo_root(state, scope) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
-            return;
+            errors::request_failed(ch, err.to_string());
+            return false;
         }
     };
-    register_dirs(state, ch, scope, dst, &base);
-    register_files(state, ch, scope, dst, &base, dest_path);
+    register_dirs(state, ch, scope, dst, &base)
+        && register_files(state, ch, scope, dst, &base, dest_path)
 }
 
 fn register_dirs(
@@ -33,9 +34,14 @@ fn register_dirs(
     scope: &ResolvedRepo,
     dst: &Path,
     base: &Path,
-) {
-    let Ok(dirs) = collect_dirs(dst, base) else {
-        return;
+) -> bool {
+    let dirs = match collect_dirs(dst, base) {
+        Ok(dirs) => dirs,
+        Err(err) => {
+            tracing::error!("收集目录失败: {:?}", err);
+            errors::storage_persist_failed(ch, format!("Failed to collect copied dirs: {}", err));
+            return false;
+        }
     };
     for dir_path in dirs {
         match state.repo.apply_dir_create_structure_in_local_repo(
@@ -52,11 +58,12 @@ fn register_dirs(
             }
             Err(e) => {
                 tracing::error!("目录节点创建失败: {:?}", e);
-                ch.send_error(format!("Dir node creation failed: {}", e));
-                return;
+                errors::storage_persist_failed(ch, format!("Dir node creation failed: {}", e));
+                return false;
             }
         }
     }
+    true
 }
 
 fn register_files(
@@ -66,32 +73,48 @@ fn register_files(
     dst: &Path,
     base: &Path,
     dest_path: &str,
-) {
+) -> bool {
     match collect_md_files(dst, base) {
         Ok(files) => {
             let count = files.len();
             for rel_path in files {
-                register_file(state, ch, scope, &rel_path);
+                if !register_file(state, ch, scope, &rel_path) {
+                    return false;
+                }
             }
             tracing::info!("目录复制完成: {} 下注册 {} 个文档", dest_path, count);
+            true
         }
-        Err(e) => tracing::error!("收集 .md 文件失败: {:?}", e),
+        Err(e) => {
+            tracing::error!("收集 .md 文件失败: {:?}", e);
+            errors::storage_persist_failed(ch, format!("Failed to collect copied files: {}", e));
+            false
+        }
     }
 }
 
-fn register_file(state: &Arc<AppState>, ch: &DualChannel, scope: &ResolvedRepo, rel_path: &str) {
+fn register_file(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    scope: &ResolvedRepo,
+    rel_path: &str,
+) -> bool {
     let disk_path = match local_repo_root(state, scope) {
         Ok(root) => root.join(rel_path),
         Err(err) => {
-            ch.send_error(err.to_string());
-            return;
+            errors::request_failed(ch, err.to_string());
+            return false;
         }
     };
-    let Ok(doc_id) = register_file_from_disk(state, scope, &disk_path, rel_path, "local_copy")
-    else {
-        tracing::warn!("Ledger 注册失败: {}", rel_path);
-        return;
+    let doc_id = match register_file_from_disk(state, scope, &disk_path, rel_path, "local_copy") {
+        Ok(doc_id) => doc_id,
+        Err(err) => {
+            tracing::error!("Ledger 注册失败 {}: {:?}", rel_path, err);
+            errors::storage_persist_failed(ch, format!("Failed to register copied file: {}", err));
+            return false;
+        }
     };
     tracing::debug!("注册复制文档: {} (DocId: {})", rel_path, doc_id);
     broadcast_file_tree_update(state, ch, scope, doc_id);
+    true
 }

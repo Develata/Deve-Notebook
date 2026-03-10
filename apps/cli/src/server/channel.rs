@@ -92,14 +92,6 @@ impl DualChannel {
         }
     }
 
-    /// 发送通用错误响应 (自动使用单播)
-    pub fn send_error(&self, message: impl Into<String>) {
-        self.send_protocol_error(ServerError::with_detail(
-            ServerErrorCode::RequestFailed,
-            message,
-        ));
-    }
-
     pub fn send_protocol_error(&self, error: ServerError) {
         self.unicast(ServerMessage::ProtocolError { error });
     }

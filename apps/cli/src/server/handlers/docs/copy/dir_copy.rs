@@ -1,3 +1,4 @@
+use super::super::errors;
 use super::copy_dir_on_disk;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -14,18 +15,20 @@ pub(super) fn copy_dir(
     dst: &Path,
     src_path: &str,
     dest_path: &str,
-) {
+) -> bool {
     let src = match local_repo_path(state, scope, src_path) {
         Ok(path) => path,
         Err(err) => {
-            ch.send_error(err.to_string());
-            return;
+            errors::request_failed(ch, err.to_string());
+            return false;
         }
     };
     if !copy_dir_on_disk(ch, &src, dst, src_path) {
-        return;
+        return false;
     }
-    register_copied_docs(state, ch, scope, dst, dest_path);
+    if !register_copied_docs(state, ch, scope, dst, dest_path) {
+        return false;
+    }
     if let Ok(report) = run_on_resolved_local_repo(state, scope, |db| {
         deve_core::ledger::node_check::check_node_consistency(db)
     }) && !report.is_clean()
@@ -37,4 +40,5 @@ pub(super) fn copy_dir(
         );
     }
     tracing::info!("已复制目录 {} -> {}", src_path, dest_path);
+    true
 }
