@@ -36,9 +36,4 @@ fn doc_path_lookup_prefers_node_projection_over_stale_metadata() {
         .expect("load node meta")
         .expect("existing file meta");
     assert_eq!(meta.path, "notes/a.md");
-    assert_eq!(
-        repo.get_path_by_docid_in_local_repo(repo.local_repo_name(), doc_id)
-            .expect("resolve path"),
-        Some("notes/a.md".to_string())
-    );
 }

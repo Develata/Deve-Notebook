@@ -52,16 +52,6 @@ pub fn set_doc_path(db: &Database, doc_id: DocId, path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn get_path_by_docid(db: &Database, doc_id: DocId) -> Result<Option<String>> {
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(DOCID_TO_PATH)?;
-    if let Some(v) = table.get(doc_id.as_u128())? {
-        Ok(Some(v.value().to_string()))
-    } else {
-        Ok(None)
-    }
-}
-
 pub fn rename_doc(db: &Database, old_path: &str, new_path: &str) -> Result<()> {
     let old_normalized = to_forward_slash(old_path);
     let new_normalized = to_forward_slash(new_path);

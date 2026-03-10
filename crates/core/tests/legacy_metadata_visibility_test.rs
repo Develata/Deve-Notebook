@@ -30,8 +30,9 @@ fn metadata_only_path_mapping_is_hidden_from_business_lookup() {
         repo.get_docid("notes/legacy.md").expect("lookup by path"),
         None
     );
-    assert_eq!(
-        repo.get_path_by_docid(doc_id).expect("lookup by doc id"),
-        None
+    assert!(
+        repo.get_file_meta_for_doc(doc_id)
+            .expect("lookup by doc id")
+            .is_none()
     );
 }

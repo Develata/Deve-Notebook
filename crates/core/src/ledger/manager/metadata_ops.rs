@@ -15,19 +15,6 @@ impl RepoManager {
         doc_lookup::resolve_doc_id(&self.local_db, path)
     }
 
-    /// 根据 DocId 获取路径
-    pub fn get_path_by_docid(&self, doc_id: DocId) -> Result<Option<String>> {
-        node_meta::path_for_doc(&self.local_db, doc_id)
-    }
-
-    pub fn get_path_by_docid_in_local_repo(
-        &self,
-        repo_name: &str,
-        doc_id: DocId,
-    ) -> Result<Option<String>> {
-        self.run_on_local_repo(repo_name, |db| node_meta::path_for_doc(db, doc_id))
-    }
-
     pub fn get_file_meta_for_doc(&self, doc_id: DocId) -> Result<Option<NodeMeta>> {
         node_meta::file_meta_for_doc(&self.local_db, doc_id)
     }
