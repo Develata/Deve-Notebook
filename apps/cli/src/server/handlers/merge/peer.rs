@@ -1,8 +1,9 @@
-use crate::server::repo_scope::{ResolvedRepo, local_repo_path, resolve_session_repo};
+use crate::server::repo_scope::{ResolvedRepo, resolve_session_repo};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::MergeResult;
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::ServerMessage;
+use deve_core::sync::reconcile;
 use std::sync::Arc;
 
 /// 处理远端影子分支并入当前本地仓库。
@@ -53,18 +54,38 @@ fn write_merged_content(
     doc_id: DocId,
     content: &str,
 ) {
-    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id) else {
-        return;
+    let entries = match state
+        .repo
+        .get_local_ops_in_local_repo(&scope.repo_name, doc_id)
+    {
+        Ok(entries) => entries
+            .into_iter()
+            .map(|(_, entry)| entry)
+            .collect::<Vec<_>>(),
+        Err(err) => return ch.send_error(format!("Failed to load local merge state: {}", err)),
     };
-    let abs_path = match local_repo_path(state, scope, &path) {
-        Ok(path) => path,
-        Err(err) => return ch.send_error(err.to_string()),
+    let patch = match reconcile::compute_reconcile_patch(&entries, content) {
+        Ok(patch) => patch,
+        Err(err) => return ch.send_error(format!("Failed to diff merged content: {}", err)),
     };
-    if let Err(e) = std::fs::write(&abs_path, content) {
-        ch.send_error(format!("Failed to write merged content: {}", e));
+    if let Err(err) = reconcile::append_patch_in_local_repo(
+        &state.repo,
+        &scope.repo_name,
+        doc_id,
+        "merge",
+        &patch,
+    ) {
+        ch.send_error(format!("Failed to append merged content: {}", err));
         return;
     }
-    tracing::info!("Merge Success for doc {} ({})", doc_id, path);
+    if let Err(err) = state
+        .sync_manager
+        .persist_doc_in_local_repo(&scope.repo_name, doc_id)
+    {
+        ch.send_error(format!("Failed to persist merged content: {}", err));
+        return;
+    }
+    tracing::info!("Merge Success for doc {}", doc_id);
     ch.broadcast(ServerMessage::MergeComplete {
         repo_id: Some(scope.repo_id),
         merged_count: 1,
