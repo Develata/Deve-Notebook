@@ -22,7 +22,7 @@ pub(super) async fn handle_request(
             session.bound_repo_id,
             repo_id
         );
-        ch.send_error("Repository not bound to session".to_string());
+        ch.send_sync_repo_unbound();
         return;
     }
 

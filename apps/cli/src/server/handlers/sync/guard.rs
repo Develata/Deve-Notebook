@@ -13,13 +13,13 @@ pub(super) fn require_bound_peer(
             session.bound_repo_id,
             repo_id
         );
-        ch.send_error("Repository not bound to session".to_string());
+        ch.send_sync_repo_unbound();
         return None;
     }
 
     let Some(peer_id) = session.authenticated_peer_id.clone() else {
         tracing::error!("Sync message without authenticated peer");
-        ch.send_error("Not authenticated".to_string());
+        ch.send_sync_peer_unauthenticated();
         return None;
     };
     Some(peer_id)

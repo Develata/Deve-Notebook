@@ -1,4 +1,4 @@
-use super::RemoteSourceControlApi;
+use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::DocId;
@@ -10,11 +10,11 @@ pub(super) fn list_docs(
 ) -> Result<Vec<(DocId, String)>> {
     let url = format!("{}/api/repo/docs", api.base_url);
     let res = super::block_on_safe(async {
-        RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
-            .send()
-            .await?
-            .json::<Vec<(DocId, String)>>()
-            .await
+        http::send_json(RemoteSourceControlApi::with_repo_query(
+            api.client.get(&url),
+            repo,
+        ))
+        .await
     })?;
     Ok(res)
 }
@@ -26,12 +26,11 @@ pub(super) fn get_doc_content(
 ) -> Result<String> {
     let url = format!("{}/api/repo/doc", api.base_url);
     let res = super::block_on_safe(async {
-        RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
-            .query(&[("doc_id", doc_id.to_string())])
-            .send()
-            .await?
-            .text()
-            .await
+        http::send_text(
+            RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+                .query(&[("doc_id", doc_id.to_string())]),
+        )
+        .await
     })?;
     Ok(res)
 }
@@ -57,12 +56,11 @@ pub(super) fn diff_doc_path(
 ) -> Result<String> {
     let url = format!("{}/api/sc/diff", api.base_url);
     let res = super::block_on_safe(async {
-        RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
-            .query(&[("path", path)])
-            .send()
-            .await?
-            .text()
-            .await
+        http::send_text(
+            RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+                .query(&[("path", path)]),
+        )
+        .await
     })?;
     Ok(res)
 }
@@ -74,11 +72,11 @@ fn get_changes(
 ) -> Result<Vec<ChangeEntry>> {
     let url = format!("{}{}", api.base_url, route);
     let res = super::block_on_safe(async {
-        RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
-            .send()
-            .await?
-            .json::<Vec<ChangeEntry>>()
-            .await
+        http::send_json(RemoteSourceControlApi::with_repo_query(
+            api.client.get(&url),
+            repo,
+        ))
+        .await
     })?;
     Ok(res)
 }

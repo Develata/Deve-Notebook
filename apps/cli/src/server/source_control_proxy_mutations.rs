@@ -1,4 +1,4 @@
-use super::RemoteSourceControlApi;
+use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;
 use serde_json::json;
@@ -35,17 +35,12 @@ fn post_path(
 ) -> Result<()> {
     let url = format!("{}{}", api.base_url, route);
     super::block_on_safe(async {
-        api.client
-            .post(&url)
-            .json(&json!({
-                "path": path,
-                "repo_id": repo.repo_id.map(|id| id.to_string()),
-                "repo_name": repo.repo_name.clone(),
-            }))
-            .send()
-            .await?
-            .error_for_status()?;
-        Ok::<(), reqwest::Error>(())
+        http::send_empty(api.client.post(&url).json(&json!({
+            "path": path,
+            "repo_id": repo.repo_id.map(|id| id.to_string()),
+            "repo_name": repo.repo_name.clone(),
+        })))
+        .await
     })?;
     Ok(())
 }

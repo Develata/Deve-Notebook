@@ -28,6 +28,7 @@ pub mod login;
 pub mod merge;
 pub mod playback;
 pub mod search;
+pub mod server_error;
 pub mod settings;
 pub mod sidebar;
 pub mod source_control;
@@ -72,6 +73,7 @@ pub mod t {
     pub use super::merge;
     pub use super::playback;
     pub use super::search;
+    pub use super::server_error;
     pub use super::settings;
     pub use super::sidebar;
     pub use super::source_control;

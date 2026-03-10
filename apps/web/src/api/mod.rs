@@ -21,6 +21,7 @@
 //! `msg` 信号在每次收到 WebSocket 消息时更新。如果后端短时间内推送大量操作，
 //! 可能导致前端组件频繁重绘。若发现 UI 卡顿，建议在消费端 Effect 中加入防抖/节流。
 
+mod auth_probe;
 mod backoff;
 mod connection;
 mod output;
@@ -46,6 +47,8 @@ pub enum ConnectionStatus {
     Disconnected,
     /// 正在连接中
     Connecting,
+    /// 登录态已失效
+    Unauthorized,
     /// 已成功连接
     Connected,
 }
@@ -55,6 +58,7 @@ impl std::fmt::Display for ConnectionStatus {
         match self {
             ConnectionStatus::Disconnected => write!(f, "Disconnected"),
             ConnectionStatus::Connecting => write!(f, "Connecting..."),
+            ConnectionStatus::Unauthorized => write!(f, "Unauthorized"),
             ConnectionStatus::Connected => write!(f, "Connected"),
         }
     }
@@ -85,6 +89,7 @@ impl std::fmt::Display for ConnectionStatus {
 pub struct WsService {
     /// 当前连接状态 (响应式信号)
     pub status: ReadSignal<ConnectionStatus>,
+    set_status: WriteSignal<ConnectionStatus>,
 
     /// 当前连接的端点 (ws url)
     pub endpoint: ReadSignal<String>,
@@ -138,6 +143,7 @@ impl WsService {
 
         Self {
             status,
+            set_status,
             endpoint,
             node_role,
             msg,
@@ -152,5 +158,9 @@ impl WsService {
         if let Err(e) = self.tx.unbounded_send(msg) {
             leptos::logging::error!("消息入队失败: {:?}", e);
         }
+    }
+
+    pub fn mark_unauthorized(&self) {
+        self.set_status.set(ConnectionStatus::Unauthorized);
     }
 }

@@ -7,6 +7,7 @@ pub mod commits;
 pub mod conflict;
 pub mod diff;
 pub mod discard;
+mod errors;
 pub mod http;
 pub mod http_commits;
 pub mod http_mutations;

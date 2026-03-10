@@ -3,7 +3,6 @@
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -34,8 +33,8 @@ pub async fn stage(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     match service::stage_pending(state.repo.as_ref(), &payload.repo, &payload.path) {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -45,10 +44,10 @@ pub async fn stage_plugin_host(
 ) -> impl IntoResponse {
     match host::repository() {
         Ok(repo) => match service::stage_pending(repo.as_ref(), &payload.repo, &payload.path) {
-            Ok(_) => StatusCode::NO_CONTENT.into_response(),
-            Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+            Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }
 
@@ -57,8 +56,8 @@ pub async fn discard_pending(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     match service::discard_pending(state.repo.as_ref(), &payload.repo, &payload.path) {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -68,10 +67,10 @@ pub async fn discard_pending_plugin_host(
 ) -> impl IntoResponse {
     match host::repository() {
         Ok(repo) => match service::discard_pending(repo.as_ref(), &payload.repo, &payload.path) {
-            Ok(_) => StatusCode::NO_CONTENT.into_response(),
-            Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+            Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }
 
@@ -80,8 +79,8 @@ pub async fn unstage(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     match service::unstage_file(state.repo.as_ref(), &payload.repo, &payload.path) {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -91,10 +90,10 @@ pub async fn unstage_plugin_host(
 ) -> impl IntoResponse {
     match host::repository() {
         Ok(repo) => match service::unstage_file(repo.as_ref(), &payload.repo, &payload.path) {
-            Ok(_) => StatusCode::NO_CONTENT.into_response(),
-            Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+            Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }
 
@@ -104,7 +103,7 @@ pub async fn commit(
 ) -> impl IntoResponse {
     match service::commit_staged(state.repo.as_ref(), &payload.repo, &payload.message) {
         Ok(info) => Json::<CommitInfo>(info).into_response(),
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -115,8 +114,8 @@ pub async fn commit_plugin_host(
     match host::repository() {
         Ok(repo) => match service::commit_staged(repo.as_ref(), &payload.repo, &payload.message) {
             Ok(info) => Json::<CommitInfo>(info).into_response(),
-            Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }

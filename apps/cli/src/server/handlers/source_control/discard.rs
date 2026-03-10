@@ -8,6 +8,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
+use deve_core::protocol::ServerErrorCode;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -20,7 +21,7 @@ pub async fn handle_discard_file(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let (doc_id, committed_content, current_content) =
         match run_on_resolved_local_repo(state, &scope, |db| {
@@ -38,7 +39,12 @@ pub async fn handle_discard_file(
             ))
         }) {
             Ok(payload) => payload,
-            Err(e) => return ch.send_error(e.to_string()),
+            Err(e) => {
+                return super::errors::send_ws(
+                    ch,
+                    super::errors::map_repo_error(super::errors::ScOp::DiffDoc(path.clone()), e),
+                );
+            }
         };
 
     if current_content == committed_content {
@@ -52,8 +58,11 @@ pub async fn handle_discard_file(
     let ops = deve_core::state::compute_diff(&current_content, &committed_content);
 
     if let Err(e) = apply_reverse_ops(state, &scope.repo_name, doc_id, ops) {
-        ch.send_error(format!("Failed to discard: {}", e));
-        return;
+        tracing::error!("Failed to discard {}: {:?}", path, e);
+        return super::errors::send_ws(
+            ch,
+            super::errors::map_repo_error(super::errors::ScOp::DiscardPending(path.clone()), e),
+        );
     }
 
     // 统一持久化到 Vault
@@ -62,8 +71,11 @@ pub async fn handle_discard_file(
         .persist_doc_in_local_repo(&scope.repo_name, doc_id)
     {
         tracing::error!("持久化放弃内容失败: {:?}", e);
-        ch.send_error(format!("Failed to persist discard: {}", e));
-        return;
+        return super::errors::send_ws_code(
+            ch,
+            ServerErrorCode::StoragePersistFailed,
+            e.to_string(),
+        );
     }
 
     tracing::info!(

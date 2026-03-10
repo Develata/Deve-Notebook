@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::plugin::handle_plugin_call_with_plugins;
 use crate::server::ws::send;
-use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::protocol::{ClientMessage, ServerError, ServerErrorCode};
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -63,12 +63,12 @@ async fn handle_socket(
                     .await;
                 }
                 Ok(_) => {
-                    ch.unicast(ServerMessage::Error(
-                        "Plugin host only: unsupported message".into(),
+                    ch.send_protocol_error(ServerError::new(
+                        ServerErrorCode::PluginUnsupportedMessage,
                     ));
                 }
                 Err(_) => {
-                    ch.unicast(ServerMessage::Error("Invalid client message".into()));
+                    ch.send_protocol_error(ServerError::new(ServerErrorCode::PluginInvalidMessage));
                 }
             }
         }

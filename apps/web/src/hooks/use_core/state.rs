@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 use super::contexts::SystemMetricsData;
 use super::diff_session::DiffSessionWire;
+use super::navigation::PendingNavigation;
 use super::pending::PendingLocalEdits;
 use super::types::{ChatMessage, PeerSession};
 
@@ -24,6 +25,7 @@ pub type PluginResponse = Option<(String, Option<serde_json::Value>, Option<Stri
 /// 核心状态信号集合
 ///
 /// 包含所有 `use_core` 需要的响应式信号。
+#[derive(Clone, Copy)]
 pub struct CoreSignals {
     // 文档状态
     pub docs: ReadSignal<Vec<(DocId, String)>>,
@@ -42,6 +44,8 @@ pub struct CoreSignals {
     pub set_handshake_ready: WriteSignal<bool>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
+    pub pending_navigation: ReadSignal<Option<PendingNavigation>>,
+    pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 
     // 插件
     pub plugin_response: ReadSignal<PluginResponse>,

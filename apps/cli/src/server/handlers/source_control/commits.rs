@@ -13,7 +13,7 @@ pub async fn handle_commit(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::commit_staged(state.repo.as_ref(), &selector, &message) {
@@ -27,7 +27,7 @@ pub async fn handle_commit(
         }
         Err(e) => {
             tracing::error!("Failed to create commit: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -41,7 +41,7 @@ pub async fn handle_get_commit_history(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::list_commit_history(state.repo.as_ref(), &selector, limit) {
@@ -51,7 +51,7 @@ pub async fn handle_get_commit_history(
         }
         Err(e) => {
             tracing::error!("Failed to get commit history: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -66,7 +66,7 @@ pub async fn handle_get_commit_diff(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::diff_commits(
@@ -81,7 +81,7 @@ pub async fn handle_get_commit_diff(
         }
         Err(e) => {
             tracing::error!("Failed to get commit diff: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -95,7 +95,7 @@ pub async fn handle_commit_and_push(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::commit_staged(state.repo.as_ref(), &selector, &message) {
@@ -109,7 +109,7 @@ pub async fn handle_commit_and_push(
         }
         Err(e) => {
             tracing::error!("Commit & Push failed: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }

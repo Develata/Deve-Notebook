@@ -13,7 +13,7 @@ pub async fn handle_stage_file(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::stage_pending(state.repo.as_ref(), &selector, &path) {
@@ -23,7 +23,7 @@ pub async fn handle_stage_file(
         }
         Err(e) => {
             tracing::error!("Failed to stage file: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -37,7 +37,7 @@ pub async fn handle_unstage_file(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::unstage_file(state.repo.as_ref(), &selector, &path) {
@@ -47,7 +47,7 @@ pub async fn handle_unstage_file(
         }
         Err(e) => {
             tracing::error!("Failed to unstage file: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -61,14 +61,14 @@ pub async fn handle_stage_files(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::stage_pending_many(state.repo.as_ref(), &selector, paths) {
         Ok(_) => super::changes::handle_get_changes(state, ch, session).await,
         Err(e) => {
             tracing::error!("Failed to stage files: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -82,14 +82,14 @@ pub async fn handle_unstage_files(
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::unstage_many(state.repo.as_ref(), &selector, paths) {
         Ok(_) => super::changes::handle_get_changes(state, ch, session).await,
         Err(e) => {
             tracing::error!("Failed to unstage files: {:?}", e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }

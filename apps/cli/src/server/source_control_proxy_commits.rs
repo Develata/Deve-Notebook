@@ -1,4 +1,4 @@
-use super::RemoteSourceControlApi;
+use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::source_control::{CommitFileDiff, CommitInfo};
@@ -11,12 +11,11 @@ pub(super) fn list_commits(
 ) -> Result<Vec<CommitInfo>> {
     let url = format!("{}/api/sc/commits", api.base_url);
     let res = super::block_on_safe(async {
-        RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
-            .query(&[("limit", limit.to_string())])
-            .send()
-            .await?
-            .json::<Vec<CommitInfo>>()
-            .await
+        http::send_json(
+            RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+                .query(&[("limit", limit.to_string())]),
+        )
+        .await
     })?;
     Ok(res)
 }
@@ -34,7 +33,7 @@ pub(super) fn diff_commits(
         if let Some(commit_a) = commit_a_id {
             req = req.query(&[("commit_a", commit_a)]);
         }
-        req.send().await?.json::<Vec<CommitFileDiff>>().await
+        http::send_json(req).await
     })?;
     Ok(res)
 }
@@ -46,18 +45,12 @@ pub(super) fn commit_staged(
 ) -> Result<CommitInfo> {
     let url = format!("{}/api/sc/commit", api.base_url);
     let res = super::block_on_safe(async {
-        api.client
-            .post(&url)
-            .json(&json!({
-                "message": message,
-                "repo_id": repo.repo_id.map(|id| id.to_string()),
-                "repo_name": repo.repo_name.clone(),
-            }))
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<CommitInfo>()
-            .await
+        http::send_json(api.client.post(&url).json(&json!({
+            "message": message,
+            "repo_id": repo.repo_id.map(|id| id.to_string()),
+            "repo_name": repo.repo_name.clone(),
+        })))
+        .await
     })?;
     Ok(res)
 }

@@ -3,7 +3,6 @@
 
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -34,7 +33,7 @@ pub async fn pending(
 ) -> impl IntoResponse {
     match service::list_pending(state.repo.as_ref(), &q.repo) {
         Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -45,9 +44,9 @@ pub async fn pending_plugin_host(
     match host::repository() {
         Ok(repo) => match service::list_pending(repo.as_ref(), &q.repo) {
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
-            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }
 
@@ -57,7 +56,7 @@ pub async fn status(
 ) -> impl IntoResponse {
     match service::list_changes(state.repo.as_ref(), &q.repo) {
         Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -68,9 +67,9 @@ pub async fn status_plugin_host(
     match host::repository() {
         Ok(repo) => match service::list_changes(repo.as_ref(), &q.repo) {
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
-            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }
 
@@ -80,7 +79,7 @@ pub async fn diff(
 ) -> impl IntoResponse {
     match service::diff_doc_path(state.repo.as_ref(), &q.repo, &q.path) {
         Ok(diff) => diff.into_response(),
-        Err(e) => (StatusCode::NOT_FOUND, e.to_string()).into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -91,8 +90,8 @@ pub async fn diff_plugin_host(
     match host::repository() {
         Ok(repo) => match service::diff_doc_path(repo.as_ref(), &q.repo, &q.path) {
             Ok(diff) => diff.into_response(),
-            Err(e) => (StatusCode::NOT_FOUND, e.to_string()).into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }

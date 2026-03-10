@@ -1,5 +1,4 @@
 // apps/cli/src/server/source_control_http_test.rs
-#![cfg(test)]
 
 use super::source_control_proxy::RemoteSourceControlApi;
 use super::{AppState, router, security, tree_state::RepoTreeRegistry};

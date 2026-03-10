@@ -27,7 +27,7 @@ pub async fn handle_resolve_conflict(
     let normalized = deve_core::utils::path::to_forward_slash(&path);
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return ch.send_error(e.to_string()),
+        Err(e) => return super::errors::send_ws(ch, e),
     };
     let result = match resolution {
         ConflictResolution::KeepFs => resolve_keep_fs(state, &scope, &normalized),
@@ -50,7 +50,7 @@ pub async fn handle_resolve_conflict(
         }
         Err(e) => {
             tracing::error!("Failed to resolve conflict {}: {:?}", normalized, e);
-            ch.send_error(e.to_string());
+            super::errors::send_ws(ch, e);
         }
     }
 }
@@ -59,12 +59,15 @@ fn resolve_keep_fs(
     state: &Arc<AppState>,
     scope: &crate::server::repo_scope::ResolvedRepo,
     path: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), deve_core::protocol::ServerError> {
     run_on_resolved_local_repo(state, scope, |db| {
         let entry = deve_core::source_control::pending_fs::get(db, path)?
             .ok_or_else(|| anyhow::anyhow!("Pending change not found: {}", path))?;
         deve_core::source_control::pending_fs::remove(db, path)?;
         deve_core::ledger::source_control::stage_pending_entry(db, &entry)
+    })
+    .map_err(|e| {
+        super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
     })
 }
 
@@ -72,7 +75,7 @@ fn resolve_keep_ledger(
     state: &Arc<AppState>,
     scope: &crate::server::repo_scope::ResolvedRepo,
     path: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), deve_core::protocol::ServerError> {
     let committed = run_on_resolved_local_repo(state, scope, |db| {
         let doc_id = deve_core::ledger::metadata::get_docid(db, path)?
             .ok_or_else(|| anyhow::anyhow!("Document not found: {}", path))?;
@@ -80,17 +83,26 @@ fn resolve_keep_ledger(
             deve_core::source_control::changes::get_committed_content(db, doc_id)?
                 .unwrap_or_default(),
         )
+    })
+    .map_err(|e| {
+        super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
     })?;
 
     // 将 Ledger 内容写回磁盘
-    let disk_path = local_repo_path(state, scope, path)?;
+    let disk_path = local_repo_path(state, scope, path)
+        .map_err(|e| super::errors::request_failed(e.to_string()))?;
     if let Some(parent) = disk_path.parent() {
-        std::fs::create_dir_all(parent)?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| super::errors::storage_persist_failed(e.to_string()))?;
     }
-    std::fs::write(&disk_path, &committed)?;
+    std::fs::write(&disk_path, &committed)
+        .map_err(|e| super::errors::storage_persist_failed(e.to_string()))?;
 
     // 移除 pending 条目
     run_on_resolved_local_repo(state, scope, |db| {
         deve_core::source_control::pending_fs::remove(db, path)
+    })
+    .map_err(|e| {
+        super::errors::map_repo_error(super::errors::ScOp::ResolveConflict(path.to_string()), e)
     })
 }

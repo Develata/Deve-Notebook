@@ -3,7 +3,6 @@
 
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -42,7 +41,7 @@ pub async fn commit_history(
 ) -> impl IntoResponse {
     match service::list_commit_history(state.repo.as_ref(), &q.repo, q.limit) {
         Ok(commits) => Json::<Vec<CommitInfo>>(commits).into_response(),
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -53,9 +52,9 @@ pub async fn commit_history_plugin_host(
     match host::repository() {
         Ok(repo) => match service::list_commit_history(repo.as_ref(), &q.repo, q.limit) {
             Ok(commits) => Json::<Vec<CommitInfo>>(commits).into_response(),
-            Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+            Err(e) => super::errors::http(e),
         },
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }
 
@@ -70,7 +69,7 @@ pub async fn commit_diff(
         &q.commit_b,
     ) {
         Ok(diffs) => Json::<Vec<CommitFileDiff>>(diffs).into_response(),
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+        Err(e) => super::errors::http(e),
     }
 }
 
@@ -83,9 +82,9 @@ pub async fn commit_diff_plugin_host(
             match service::diff_commits(repo.as_ref(), &q.repo, q.commit_a.as_deref(), &q.commit_b)
             {
                 Ok(diffs) => Json::<Vec<CommitFileDiff>>(diffs).into_response(),
-                Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
+                Err(e) => super::errors::http(e),
             }
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
     }
 }

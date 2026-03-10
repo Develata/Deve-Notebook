@@ -1,0 +1,104 @@
+use crate::api::WsService;
+use deve_core::protocol::ServerMessage;
+use leptos::prelude::*;
+
+use super::super::apply::apply_tree_delta;
+use super::super::effects_msg;
+use super::super::effects_sc;
+use super::super::pending;
+use super::super::state::CoreSignals;
+use super::message_protocol::handle_protocol_error;
+use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
+
+pub fn handle_message<F>(
+    msg: ServerMessage,
+    ws: &WsService,
+    signals: CoreSignals,
+    locale: crate::i18n::Locale,
+    schedule_refresh: &F,
+) where
+    F: Fn(),
+{
+    match msg {
+        ServerMessage::DocList { docs } => effects_msg::handle_doc_list(docs, signals.set_docs),
+        ServerMessage::SyncHello {
+            peer_id,
+            repo_id,
+            vector,
+            ..
+        } => handle_sync_hello(peer_id, repo_id.to_string(), vector, signals),
+        ServerMessage::PluginResponse {
+            req_id,
+            result,
+            error,
+        } => signals
+            .set_plugin_response
+            .set(Some((req_id, result, error))),
+        ServerMessage::ChatChunk {
+            req_id,
+            delta,
+            finish_reason,
+        } => effects_msg::handle_chat_chunk(
+            req_id,
+            delta,
+            finish_reason,
+            signals.set_chat_messages,
+            signals.set_is_chat_streaming,
+        ),
+        ServerMessage::SearchResults { results } => signals.set_search_results.set(results),
+        ServerMessage::SyncModeStatus { mode } => signals.set_sync_mode.set(mode),
+        ServerMessage::PendingOpsInfo { count, previews } => {
+            signals.set_pending_ops_count.set(count);
+            signals.set_pending_ops_previews.set(previews);
+        }
+        ServerMessage::MergeComplete {
+            repo_id,
+            merged_count,
+        } => {
+            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+                return;
+            }
+            leptos::logging::log!("已合并 {} 个操作", merged_count);
+            signals.set_pending_ops_count.set(0);
+            signals.set_pending_ops_previews.set(vec![]);
+        }
+        ServerMessage::PendingDiscarded => {
+            leptos::logging::log!("待处理操作已丢弃");
+            signals.set_pending_ops_count.set(0);
+            signals.set_pending_ops_previews.set(vec![]);
+        }
+        ServerMessage::ShadowList { shadows } => signals.set_shadow_repos.set(shadows),
+        ServerMessage::RepoList { repos } => signals.set_repo_list.set(repos),
+        ServerMessage::BranchSwitched { peer_id, success } => {
+            effects_msg::handle_branch_switched(peer_id, success, signals.set_active_branch);
+        }
+        ServerMessage::RepoSwitched { name, uuid } => {
+            signals.set_handshake_ready.set(false);
+            effects_msg::handle_repo_switched(
+                name,
+                uuid,
+                signals.current_repo,
+                signals.current_repo_id,
+                signals.set_current_repo,
+                signals.set_current_repo_id,
+                signals.set_current_doc,
+            );
+        }
+        ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
+            handle_protocol_error(ws, locale, &error);
+        }
+        ServerMessage::TreeUpdate(delta) => {
+            signals
+                .set_tree_nodes
+                .update(|nodes| apply_tree_delta(nodes, delta));
+        }
+        ServerMessage::Ack {
+            doc_id,
+            client_op_id,
+            ..
+        } => signals.set_pending_local_edits.update(|pending_edits| {
+            let _ = pending::ack_pending_edit(pending_edits, doc_id, client_op_id);
+        }),
+        other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
+    }
+}

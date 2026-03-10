@@ -3,6 +3,8 @@
 
 #[path = "source_control_proxy_commits.rs"]
 mod commits;
+#[path = "source_control_proxy_http.rs"]
+mod http;
 #[path = "source_control_proxy_mutations.rs"]
 mod mutations;
 #[path = "source_control_proxy_queries.rs"]

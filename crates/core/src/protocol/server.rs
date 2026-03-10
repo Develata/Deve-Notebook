@@ -1,6 +1,7 @@
 // crates\core\src\protocol
 //! # Server Messages (服务端消息)
 
+use super::error::ServerError;
 use crate::models::{DocId, Op, PeerId, RepoId, VersionVector};
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
@@ -27,16 +28,13 @@ pub enum ServerMessage {
     /// P2P: 服务端向客户端请求数据
     SyncRequest { requests: Vec<(PeerId, (u64, u64))> },
     /// P2P: 服务端向客户端请求快照
-    SyncSnapshotRequest {
-        peer_id: PeerId,
-        repo_id: crate::models::RepoId,
-    },
+    SyncSnapshotRequest { peer_id: PeerId, repo_id: RepoId },
     /// P2P: 服务端推送数据给客户端 (批量)
     SyncPush { ops: Vec<EncryptedOp> },
     /// P2P: 服务端推送快照给客户端
     SyncPushSnapshot {
         peer_id: PeerId,
-        repo_id: crate::models::RepoId,
+        repo_id: RepoId,
         ops: Vec<EncryptedOp>,
     },
 
@@ -118,8 +116,8 @@ pub enum ServerMessage {
     RepoSwitched { name: String, uuid: String },
     /// 远端 Peer 删除确认
     PeerDeleted { peer_id: String },
-    /// 编辑请求被拒绝 (Shadow 分支只读)
-    EditRejected { reason: String },
+    /// 编辑请求被拒绝
+    EditRejected { error: ServerError },
 
     // === Source Control Responses (版本控制响应) ===
     /// 变更列表响应
@@ -168,8 +166,8 @@ pub enum ServerMessage {
     /// 用于高效同步文件树结构变更。
     TreeUpdate(crate::tree::TreeDelta),
 
-    /// 错误消息
-    Error(String),
+    /// 结构化协议错误
+    ProtocolError { error: ServerError },
 
     /// 批量暂存/取消暂存进度
     ///
