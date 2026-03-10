@@ -75,6 +75,15 @@ State_auth = L_confirmed
 - 写入闸门必须严格绑定当前仓库。
 - 旧仓库的延迟握手消息不得把新仓库误标成“可写”。
 
+### 4.4 Structured Error Contract
+
+错误协议必须满足：
+
+- `WebSocket` 与 `HTTP` MUST 共享同一错误码目录与同一 `code + optional detail` 结构。
+- `WebSocket` MUST 使用结构化 `ProtocolError { error }`；不得新增 `Error(String)` 作为实现目标。
+- `Source Control` 用户态错误 MUST 使用独立 `SC_*` 目录。
+- 仅 DB/Vault/FS 持久化失败可继续落到 `STORAGE_*`。
+
 ## 5. Frontend State Machine
 
 Web 编辑器必须至少区分以下状态：
@@ -124,7 +133,7 @@ Editable iff SnapshotReady && HandshakeReady(current_repo)
 
 - 把编辑器 DOM 当前内容当成已提交事实。
 - 只因快照加载完成就解除只读。
-- 用通用 `Error(String)` 日志替代写入确认协议。
+- 用通用 `Error(String)` 或 HTTP 裸文本错误替代结构化确认/错误协议。
 - 切文件时丢弃未确认本地改动而不提示。
 - 让 `pending_fs_ops`、metadata、snapshot 充当删除真源。
 - 让 WS 与 HTTP 走两套不同的 Commit 语义。

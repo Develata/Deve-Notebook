@@ -111,4 +111,14 @@
     - ws_send: { type: "GossipOffer", from: "C", about: "A", repo_id: "11111111-1111-1111-1111-111111111111" }
   assertions:
     - ws_receive_not_contains: "FetchRequest"
+
+- case_id: NET-012
+  goal: WebSocket 错误必须走结构化 ProtocolError。
+  preconditions:
+    - 连接已建立
+    - 触发 source control 错误（如暂存不存在的 pending）
+  steps:
+    - run: rg -n "Error\\(String\\)" "crates/core/src/protocol/server.rs" "apps/web/src/hooks/use_core/effects/message.rs"
+  assertions:
+    - stdout_not_contains: "Error(String)"
 ```
