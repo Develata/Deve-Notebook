@@ -28,6 +28,7 @@
 // ========== 子模块声明 ==========
 
 pub mod database;
+pub mod doc_lookup;
 pub mod init;
 pub mod listing;
 mod manager;

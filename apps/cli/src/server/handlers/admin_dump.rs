@@ -39,7 +39,7 @@ fn build_dump(
             None => None,
         };
         let doc_id = node_meta.as_ref().and_then(|meta| meta.doc_id).or_else(|| {
-            deve_core::ledger::metadata::get_docid(db, &path)
+            deve_core::ledger::doc_lookup::resolve_doc_id(db, &path)
                 .ok()
                 .flatten()
         });

@@ -3,7 +3,6 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
-use deve_core::ledger::{metadata, node_meta};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -85,10 +84,7 @@ fn get_local_counterpart(state: &Arc<AppState>, path: &str, repo_name: Option<St
 }
 
 fn resolve_doc_id(db: &redb::Database, path: &str) -> Option<deve_core::models::DocId> {
-    node_meta::get_node_id(db, path)
+    deve_core::ledger::doc_lookup::resolve_doc_id(db, path)
         .ok()
         .flatten()
-        .and_then(|node_id| node_meta::get_node_meta(db, node_id).ok().flatten())
-        .and_then(|meta| meta.doc_id)
-        .or_else(|| metadata::get_docid(db, path).ok().flatten())
 }
