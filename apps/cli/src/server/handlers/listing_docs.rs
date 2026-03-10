@@ -62,7 +62,7 @@ fn load_docs(
     repo_id: RepoId,
 ) -> anyhow::Result<Vec<(deve_core::models::DocId, String)>> {
     if let Some(handle) = session.get_active_db() {
-        return deve_core::ledger::metadata::list_docs(&handle.db);
+        return deve_core::ledger::node_meta::list_file_docs(&handle.db);
     }
     if let Some(peer_id) = &session.active_branch {
         return state

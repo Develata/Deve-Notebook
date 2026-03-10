@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
-use crate::ledger::{init, metadata, range, source_control};
+use crate::ledger::{init, range, source_control};
 use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
 
 impl RepoManager {
@@ -85,7 +85,7 @@ impl RepoManager {
         repo_name: Option<&str>,
     ) -> Result<Vec<(crate::models::DocId, String)>> {
         let name = repo_name.unwrap_or(&self.local_repo_name);
-        self.run_on_local_repo(name, metadata::list_docs)
+        self.run_on_local_repo(name, node_meta::list_file_docs)
     }
 
     /// 列出指定本地仓库的节点

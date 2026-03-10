@@ -3,7 +3,7 @@
 //!
 //! 提供 `RepoListing` trait，扩展 `RepoManager` 的列表查询能力。
 
-use crate::ledger::{RepoManager, metadata, node_meta};
+use crate::ledger::{RepoManager, node_meta};
 use crate::models::{DocId, NodeId, NodeMeta, PeerId, RepoType};
 use anyhow::Result;
 
@@ -24,7 +24,7 @@ pub trait RepoListing {
 
 impl RepoListing for RepoManager {
     fn list_docs(&self, repo_type: &RepoType) -> Result<Vec<(DocId, String)>> {
-        self.run_on_repo_db(repo_type, metadata::list_docs)
+        self.run_on_repo_db(repo_type, node_meta::list_file_docs)
     }
 
     fn list_nodes(&self, repo_type: &RepoType) -> Result<Vec<(NodeId, NodeMeta)>> {
