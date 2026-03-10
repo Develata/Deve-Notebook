@@ -54,13 +54,27 @@ pub(crate) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
 /// Invariants:
 /// - 业务路径不得直接删 metadata；只能调用 projection helper 做孤儿清理。
 pub(super) fn drop_transient_file_path(db: &Database, path: &str) -> Result<()> {
-    let Some(doc_id) = metadata::get_docid(db, path)? else {
-        return Ok(());
-    };
-    if ops::count_ops_from_db(db, doc_id)? > 0 {
-        return Ok(());
+    if let Some(node_id) = node_meta::get_node_id(db, path)?
+        && let Some(meta) = node_meta::get_node_meta(db, node_id)?
+    {
+        let has_structure = !ops::get_structure_ops_for_node_from_db(db, node_id)?.is_empty();
+        let has_content = match meta.doc_id {
+            Some(doc_id) => ops::count_ops_from_db(db, doc_id)? > 0,
+            None => false,
+        };
+        if has_structure || has_content {
+            return Ok(());
+        }
+        return if meta.doc_id.is_some() {
+            metadata::delete_doc(db, path)
+        } else {
+            metadata::delete_folder(db, path).map(|_| ())
+        };
     }
-    metadata::delete_doc(db, path)
+    if metadata::get_docid(db, path)?.is_some() {
+        metadata::delete_doc(db, path)?;
+    }
+    Ok(())
 }
 
 fn apply_create_file(

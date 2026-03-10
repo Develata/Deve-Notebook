@@ -1,5 +1,7 @@
 use super::drop_transient_file_path;
 use crate::ledger::RepoManager;
+use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
+use crate::models::DocId;
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -12,7 +14,19 @@ fn new_repo() -> (TempDir, RepoManager) {
 #[test]
 fn drops_legacy_projection_without_ledger_facts() {
     let (_dir, repo) = new_repo();
-    repo.create_docid("notes/new.md").expect("legacy doc id");
+    let doc_id = DocId::new();
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write_txn = db.begin_write()?;
+        {
+            let mut p2d = write_txn.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write_txn.open_table(DOCID_TO_PATH)?;
+            p2d.insert("notes/new.md", doc_id.as_u128())?;
+            d2p.insert(doc_id.as_u128(), "notes/new.md")?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    })
+    .expect("seed metadata-only mapping");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         drop_transient_file_path(db, "notes/new.md")
