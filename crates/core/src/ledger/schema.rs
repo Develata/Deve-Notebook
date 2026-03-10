@@ -1,4 +1,4 @@
-﻿// crates\core\src\ledger
+// crates\core\src\ledger
 use redb::{MultimapTableDefinition, TableDefinition};
 
 // DocId (u128) -> Path String
@@ -49,6 +49,9 @@ pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo
 // (DocId (u128), PeerId (&str)) -> MaxSeq (u64)
 // Used for atomic sequence generation and O(1) retrieval.
 pub const PEER_DOC_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("peer_doc_seq");
+
+// (NodeId (u128), PeerId (&str)) -> MaxSeq (u64)
+pub const NODE_PEER_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("node_peer_seq");
 
 // (DocId, ClientId, ClientOpId) -> GlobalSeq
 // 浏览器写入去重索引，用于 reconnect 后安全重发。

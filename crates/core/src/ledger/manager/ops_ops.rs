@@ -4,6 +4,7 @@
 //! 实现 `RepoManager` 的操作追加和读取方法。
 
 use crate::ledger::RepoManager;
+use crate::ledger::node_ops;
 use crate::ledger::ops;
 use crate::models::{DocId, LedgerEntry, PeerId, RepoType, StructureOp};
 use anyhow::Result;
@@ -66,21 +67,12 @@ impl RepoManager {
     pub fn append_generated_structure_event_in_local_repo(
         &self,
         repo_name: &str,
-        doc_id: DocId,
         peer_id: PeerId,
         structure: StructureOp,
         timestamp: i64,
     ) -> Result<(u64, u64)> {
         self.run_on_local_repo(repo_name, move |db| {
-            ops::append_generated_op(db, doc_id, peer_id.clone(), move |seq| {
-                LedgerEntry::new_structure(
-                    doc_id,
-                    structure.clone(),
-                    timestamp,
-                    peer_id.clone(),
-                    seq,
-                )
-            })
+            node_ops::append_generated_structure_op(db, peer_id, structure, timestamp)
         })
     }
 

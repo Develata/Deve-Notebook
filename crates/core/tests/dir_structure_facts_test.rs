@@ -10,16 +10,20 @@ fn new_repo() -> (TempDir, RepoManager) {
 }
 
 fn dir_ops(repo: &RepoManager, node_id: NodeId) -> Vec<StructureOp> {
+    dir_entries(repo, node_id)
+        .into_iter()
+        .filter_map(|(_, entry)| match entry.event {
+            LedgerEvent::Structure(op) => Some(op),
+            LedgerEvent::Content(_) => None,
+        })
+        .collect()
+}
+
+fn dir_entries(repo: &RepoManager, node_id: NodeId) -> Vec<(u64, deve_core::models::LedgerEntry)> {
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         ops::get_structure_ops_for_node_from_db(db, node_id)
     })
     .expect("load dir ops")
-    .into_iter()
-    .filter_map(|(_, entry)| match entry.event {
-        LedgerEvent::Structure(op) => Some(op),
-        LedgerEvent::Content(_) => None,
-    })
-    .collect()
 }
 
 #[test]
@@ -64,4 +68,30 @@ fn dir_delete_emits_delete_structure_fact() {
             .iter()
             .any(|op| matches!(op, StructureOp::DeleteNode { .. }))
     );
+}
+
+#[test]
+fn dir_structure_seq_is_monotonic_per_node() {
+    let (_dir, repo) = new_repo();
+    let node_id = repo
+        .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
+        .expect("create dir structure");
+    repo.apply_dir_rename_structure_in_local_repo(
+        repo.local_repo_name(),
+        "notes/sub",
+        "archive/sub-renamed",
+        "test",
+    )
+    .expect("rename dir structure");
+    repo.apply_dir_delete_structure_in_local_repo(
+        repo.local_repo_name(),
+        "archive/sub-renamed",
+        "test",
+    )
+    .expect("delete dir structure");
+    let seqs: Vec<_> = dir_entries(&repo, node_id)
+        .into_iter()
+        .map(|(_, entry)| entry.seq)
+        .collect();
+    assert_eq!(seqs, vec![1, 2, 3, 4]);
 }

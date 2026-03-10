@@ -33,6 +33,7 @@ pub mod listing;
 mod manager;
 pub mod merge;
 pub mod metadata;
+mod node_ops;
 pub mod node_check;
 pub mod node_meta;
 pub mod ops;
