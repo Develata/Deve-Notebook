@@ -1,10 +1,13 @@
-use deve_core::models::{DocId, LedgerEntry, NodeId};
+use deve_core::models::{DocId, LedgerEntry, NodeId, NodeMeta};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DumpResponse {
-    pub doc_id: DocId,
+    pub doc_id: Option<DocId>,
+    pub node_id: Option<NodeId>,
+    pub node_meta: Option<NodeMeta>,
     pub ops: Vec<(u64, LedgerEntry)>,
+    pub structure_ops: Vec<(u64, LedgerEntry)>,
     pub content: String,
 }
 

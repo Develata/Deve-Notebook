@@ -1,4 +1,4 @@
-use crate::admin_api::{DumpResponse, NodeCheckResponse};
+use crate::admin_api::NodeCheckResponse;
 use crate::export_entries;
 use crate::server::AppState;
 use axum::Json;
@@ -10,6 +10,11 @@ use deve_core::ledger::node_check::{check_node_consistency, repair_missing_nodes
 use deve_core::ledger::traits::RepoSelector;
 use serde::Deserialize;
 use std::sync::Arc;
+
+#[path = "admin_dump.rs"]
+mod admin_dump;
+
+pub use admin_dump::dump;
 
 #[derive(Deserialize)]
 pub struct DumpQuery {
@@ -24,44 +29,6 @@ pub struct NodeCheckQuery {
     pub repair: bool,
     #[serde(flatten)]
     pub repo: RepoSelector,
-}
-
-pub async fn dump(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<DumpQuery>,
-) -> impl IntoResponse {
-    let repo_name = match state
-        .repo
-        .resolve_local_repo_name(query.repo.repo_id, query.repo.repo_name.as_deref())
-    {
-        Ok(name) => name,
-        Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
-    };
-    let Some(doc_id) = state
-        .repo
-        .get_docid_in_local_repo(&repo_name, &query.path)
-        .ok()
-        .flatten()
-    else {
-        return (StatusCode::NOT_FOUND, "Path not found in Ledger.").into_response();
-    };
-    let Ok(ops) = state.repo.get_local_ops_in_local_repo(&repo_name, doc_id) else {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to load local ops".to_string(),
-        )
-            .into_response();
-    };
-    Json(DumpResponse {
-        doc_id,
-        content: deve_core::state::reconstruct_content(
-            &ops.iter()
-                .map(|(_, entry)| entry.clone())
-                .collect::<Vec<_>>(),
-        ),
-        ops,
-    })
-    .into_response()
 }
 
 pub async fn export(

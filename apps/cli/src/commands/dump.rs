@@ -1,4 +1,4 @@
-﻿// apps/cli/src/commands/dump.rs
+// apps/cli/src/commands/dump.rs
 //! # Dump 命令 (调试用)
 //!
 //! 打印指定文档的所有操作历史并重建内容
@@ -31,11 +31,14 @@ pub fn run(
     if let Some(doc_id) = repo.get_docid_in_local_repo(&repo_name, &path_str)? {
         let ops = repo.get_local_ops_in_local_repo(&repo_name, doc_id)?;
         let dump = DumpResponse {
-            doc_id,
+            doc_id: Some(doc_id),
+            node_id: Some(deve_core::models::NodeId::from_doc_id(doc_id)),
+            node_meta: None,
             content: deve_core::state::reconstruct_content(
                 &ops.iter().map(|(_, e)| e.clone()).collect::<Vec<_>>(),
             ),
             ops,
+            structure_ops: Vec::new(),
         };
         print_dump(&dump)?;
     } else {
@@ -45,11 +48,20 @@ pub fn run(
 }
 
 fn print_dump(dump: &DumpResponse) -> anyhow::Result<()> {
-    println!("DocId: {}", dump.doc_id);
-    println!("Found {} ops:", dump.ops.len());
+    println!("NodeId: {:?}", dump.node_id);
+    println!("DocId: {:?}", dump.doc_id);
+    println!("NodeMeta: {:?}", dump.node_meta);
+    println!("Found {} structure ops:", dump.structure_ops.len());
+    for (index, (seq, entry)) in dump.structure_ops.iter().enumerate() {
+        println!(
+            "[S{}] Seq:{} {} {:?}",
+            index, seq, entry.timestamp, entry.event
+        );
+    }
+    println!("Found {} content ops:", dump.ops.len());
     for (index, (seq, entry)) in dump.ops.iter().enumerate() {
         println!(
-            "[{}] Seq:{} {} {:?}",
+            "[C{}] Seq:{} {} {:?}",
             index,
             seq,
             entry.timestamp,
