@@ -25,7 +25,7 @@ pub(super) fn repair_repo_prefixed_paths(
             if stripped.is_empty() || repo.get_docid_in_local_repo(repo_name, stripped)?.is_some() {
                 continue;
             }
-            repo.rename_doc_in_local_repo(repo_name, &old_path, stripped)?;
+            repo.repair_rename_doc_mapping_in_local_repo(repo_name, &old_path, stripped)?;
             rename_workspace_file(repo, repo_name, &old_path, stripped)?;
             move_pending(repo, repo_name, &old_path, stripped)?;
             println!(

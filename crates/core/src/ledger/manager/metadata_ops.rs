@@ -1,7 +1,8 @@
 // crates/core/src/ledger/manager/metadata_ops.rs
-//! # Path/DocId 映射操作
+//! # Path/DocId 查询与绑定
 //!
-//! 实现 `RepoManager` 的路径与 DocId 映射相关方法。
+//! 实现 `RepoManager` 的只读查询与 identity 绑定方法。
+//! repair/rebuild 使用的映射直写接口已拆到 `metadata_repair_ops`。
 
 use crate::ledger::RepoManager;
 use crate::ledger::metadata;
@@ -65,53 +66,5 @@ impl RepoManager {
         doc_id: DocId,
     ) -> Result<()> {
         self.run_on_local_repo(repo_name, |db| metadata::bind_inode(db, inode, doc_id))
-    }
-
-    /// 重命名文档
-    pub fn rename_doc(&self, old_path: &str, new_path: &str) -> Result<()> {
-        metadata::rename_doc(&self.local_db, old_path, new_path)
-    }
-
-    pub fn rename_doc_in_local_repo(
-        &self,
-        repo_name: &str,
-        old_path: &str,
-        new_path: &str,
-    ) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| metadata::rename_doc(db, old_path, new_path))
-    }
-
-    /// 删除文档
-    pub fn delete_doc(&self, path: &str) -> Result<()> {
-        metadata::delete_doc(&self.local_db, path)
-    }
-
-    pub fn delete_doc_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| metadata::delete_doc(db, path))
-    }
-
-    /// 重命名文件夹
-    pub fn rename_folder(&self, old_prefix: &str, new_prefix: &str) -> Result<()> {
-        metadata::rename_folder(&self.local_db, old_prefix, new_prefix)
-    }
-
-    pub fn rename_folder_in_local_repo(
-        &self,
-        repo_name: &str,
-        old_prefix: &str,
-        new_prefix: &str,
-    ) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| {
-            metadata::rename_folder(db, old_prefix, new_prefix)
-        })
-    }
-
-    /// 删除文件夹
-    pub fn delete_folder(&self, prefix: &str) -> Result<usize> {
-        metadata::delete_folder(&self.local_db, prefix)
-    }
-
-    pub fn delete_folder_in_local_repo(&self, repo_name: &str, prefix: &str) -> Result<usize> {
-        self.run_on_local_repo(repo_name, |db| metadata::delete_folder(db, prefix))
     }
 }

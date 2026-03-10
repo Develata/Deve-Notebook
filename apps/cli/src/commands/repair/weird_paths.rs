@@ -69,7 +69,7 @@ fn quarantine_tree(
 
 fn remove_ledger_subtree(repo: &Arc<RepoManager>, repo_name: &str, rel: &Path) -> Result<()> {
     let prefix = path_to_forward_slash(rel);
-    repo.delete_folder_in_local_repo(repo_name, &prefix)?;
+    repo.repair_delete_folder_mapping_in_local_repo(repo_name, &prefix)?;
     repo.run_on_local_repo(repo_name, |db| {
         let entries = pending_fs::list_all(db)?;
         for entry in entries {

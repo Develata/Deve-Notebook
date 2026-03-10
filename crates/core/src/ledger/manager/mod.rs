@@ -17,6 +17,7 @@ mod dir_structure_plan;
 mod dir_structure_support;
 mod merge_ops;
 mod metadata_ops;
+mod metadata_repair_ops;
 mod ops_ops;
 mod ops_structure;
 mod repository;
