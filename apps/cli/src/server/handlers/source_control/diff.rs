@@ -1,5 +1,8 @@
 #[path = "diff_remote.rs"]
 mod remote;
+#[cfg(test)]
+#[path = "diff_remote_test.rs"]
+mod remote_test;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;

@@ -3,6 +3,7 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
+use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -45,7 +46,8 @@ pub(super) async fn handle_remote_diff(
         .or_else(|| {
             remote_url.and_then(|url| state.repo.find_local_repo_name_by_url(&url).ok().flatten())
         });
-    let old_content = get_local_counterpart(state, &path, local_repo_name);
+    let old_content =
+        local_counterpart_content(state.repo.as_ref(), &target, local_repo_name.as_deref());
 
     ch.unicast(ServerMessage::DocDiff {
         path,
@@ -64,21 +66,24 @@ fn get_remote_doc_content(session: &WsSession, target: &ScPathTarget) -> Option<
     Some(deve_core::state::reconstruct_content(&entries))
 }
 
-fn get_local_counterpart(state: &Arc<AppState>, path: &str, repo_name: Option<String>) -> String {
+pub(crate) fn local_counterpart_content(
+    repo: &RepoManager,
+    target: &ScPathTarget,
+    repo_name: Option<&str>,
+) -> String {
     repo_name
         .and_then(|name| {
-            state
-                .repo
-                .run_on_local_repo(&name, |db| {
-                    let Some(doc_id) = resolve_doc_id(db, path) else {
-                        return Ok(None);
-                    };
-                    let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
-                    let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-                    Ok(Some(deve_core::state::reconstruct_content(&entries)))
-                })
-                .ok()
-                .flatten()
+            repo.run_on_local_repo(name, |db| {
+                let Some(doc_id) = target.doc_id.or_else(|| resolve_doc_id(db, &target.path))
+                else {
+                    return Ok(None);
+                };
+                let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
+                let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+                Ok(Some(deve_core::state::reconstruct_content(&entries)))
+            })
+            .ok()
+            .flatten()
         })
         .unwrap_or_default()
 }
