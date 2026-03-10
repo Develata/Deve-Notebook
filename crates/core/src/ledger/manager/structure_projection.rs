@@ -10,7 +10,7 @@ mod tests;
 /// Invariants:
 /// - 这里只做 Structure Facts -> projection 的受控折叠。
 /// - `metadata` 直写只能出现在本模块这类 projection internals。
-pub(super) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
+pub(crate) fn apply(db: &Database, op: &StructureOp) -> Result<()> {
     match op {
         StructureOp::CreateFile {
             node_id,

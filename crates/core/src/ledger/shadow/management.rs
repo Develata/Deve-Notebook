@@ -63,6 +63,7 @@ pub fn ensure_shadow_db(
     // Initialize tables
     let write_txn = db.begin_write()?;
     {
+        let _ = write_txn.open_table(REPO_METADATA)?;
         let _ = write_txn.open_table(LEDGER_OPS)?;
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
         let _ = write_txn.open_multimap_table(NODE_OPS)?;
@@ -71,10 +72,13 @@ pub fn ensure_shadow_db(
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
 
-        // Metadata tables (for remote file listing)
+        // Projection tables (for remote file listing / tree view)
         let _ = write_txn.open_table(PATH_TO_DOCID)?;
         let _ = write_txn.open_table(DOCID_TO_PATH)?;
         let _ = write_txn.open_table(INODE_TO_DOCID)?;
+        let _ = write_txn.open_table(NODEID_TO_META)?;
+        let _ = write_txn.open_table(PATH_TO_NODEID)?;
+        let _ = write_txn.open_table(INODE_TO_NODEID)?;
     }
     write_txn.commit()?;
 

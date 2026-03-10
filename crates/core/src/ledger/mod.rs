@@ -41,6 +41,7 @@ pub mod range;
 pub mod schema;
 pub mod shadow;
 mod shadow_manager;
+mod shadow_transfer;
 pub mod snapshot;
 pub mod source_control;
 pub mod traits;

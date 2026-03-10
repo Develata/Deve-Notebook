@@ -1,5 +1,6 @@
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, NodeId, PeerId, StructureOp};
+use deve_core::ledger::listing::RepoListing;
+use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, RepoType, StructureOp};
 use tempfile::TempDir;
 use uuid::Uuid;
 
@@ -41,5 +42,58 @@ fn reset_shadow_node_clears_structure_index() {
         repo.get_shadow_structure_ops(&peer_id, &repo_id, node_id)
             .expect("reload structure ops")
             .is_empty()
+    );
+}
+
+#[test]
+fn append_remote_structure_updates_shadow_projection() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+    let dir_id = NodeId::new();
+    let doc_id = DocId::new();
+
+    repo.append_remote_op(
+        &peer_id,
+        &repo_id,
+        &LedgerEntry::new_structure(
+            StructureOp::CreateDir {
+                node_id: dir_id,
+                parent_id: None,
+                name: "notes".into(),
+            },
+            1,
+            peer_id.clone(),
+            1,
+        ),
+    )
+    .expect("append remote dir");
+    repo.append_remote_op(
+        &peer_id,
+        &repo_id,
+        &LedgerEntry::new_structure(
+            StructureOp::CreateFile {
+                node_id: NodeId::from_doc_id(doc_id),
+                doc_id,
+                parent_id: Some(dir_id),
+                name: "remote.md".into(),
+            },
+            2,
+            peer_id.clone(),
+            2,
+        ),
+    )
+    .expect("append remote file");
+
+    let repo_type = RepoType::Remote(peer_id, repo_id);
+    assert_eq!(
+        repo.list_docs(&repo_type).expect("list shadow docs"),
+        vec![(doc_id, "notes/remote.md".to_string())]
+    );
+    assert_eq!(
+        repo.list_nodes(&repo_type)
+            .expect("list shadow nodes")
+            .len(),
+        2
     );
 }
