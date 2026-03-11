@@ -18,7 +18,7 @@ pub(super) fn discard_pending_workdir(
             Some(doc_id) => discard_tracked_add(sync, repo_name, &normalized, doc_id),
             None => discard_added(sync, repo_name, &normalized),
         },
-        ChangeStatus::Modified | ChangeStatus::Deleted => {
+        ChangeStatus::Modified | ChangeStatus::Deleted | ChangeStatus::Renamed => {
             let doc_id = match entry.doc_id {
                 Some(doc_id) => doc_id,
                 None => sync

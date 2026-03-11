@@ -35,6 +35,8 @@ pub enum ChangeStatus {
     Added,
     /// 已删除
     Deleted,
+    /// 路径结构发生变化
+    Renamed,
 }
 
 /// 冲突解决策略
@@ -77,6 +79,9 @@ pub struct CommitFileDiff {
     pub path: String,
     /// 变更状态 (Added / Modified / Deleted)
     pub status: ChangeStatus,
+    /// 若该差异由结构路径变化触发，则记录旧路径
+    #[serde(default)]
+    pub previous_path: Option<String>,
     /// 旧版本内容 (commit_a 时刻)
     pub old_content: String,
     /// 新版本内容 (commit_b 时刻)

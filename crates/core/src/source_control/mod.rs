@@ -21,6 +21,8 @@ pub mod changes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod commit_diff;
 #[cfg(not(target_arch = "wasm32"))]
+mod commit_diff_paths;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod commits;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod conflict;

@@ -51,6 +51,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         ChangeStatus::Added if renamed_from.is_some() => ("R", "text-added"),
         ChangeStatus::Added => ("A", "text-added"),
         ChangeStatus::Deleted => ("D", "text-deleted"),
+        ChangeStatus::Renamed => ("R", "text-added"),
     };
 
     view! {

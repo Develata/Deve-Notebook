@@ -83,15 +83,20 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                                                         view! {
                                                             <div class="ml-2 mt-1 border-l border-active pl-2">
                                                                 {diffs.into_iter().map(|f| {
+                                                                    let path_label = f.previous_path
+                                                                        .as_ref()
+                                                                        .map(|old| format!("{old} -> {}", f.path))
+                                                                        .unwrap_or_else(|| f.path.clone());
                                                                     let (ch, cls) = match f.status {
                                                                         ChangeStatus::Modified => ("M", "text-modified"),
                                                                         ChangeStatus::Added => ("A", "text-added"),
                                                                         ChangeStatus::Deleted => ("D", "text-deleted"),
+                                                                        ChangeStatus::Renamed => ("R", "text-added"),
                                                                     };
                                                                     view! {
                                                                         <div class="flex items-center gap-1 text-[12px] text-secondary py-0.5 hover:bg-hover px-1 rounded cursor-pointer">
                                                                             <FileText class="w-3 h-3 text-muted" />
-                                                                            <span class="truncate flex-1">{f.path}</span>
+                                                                            <span class="truncate flex-1">{path_label}</span>
                                                                             <span class=format!("{cls} text-[10px] font-bold")>{ch}</span>
                                                                         </div>
                                                                     }
