@@ -40,6 +40,8 @@ pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;
 mod notegit;
+#[cfg(test)]
+mod open_doc_scope_test;
 pub mod plugin_host;
 pub mod plugin_response;
 pub mod prewarm;

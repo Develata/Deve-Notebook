@@ -91,7 +91,8 @@ pub fn handle_repo_switched(
     set_current_repo_id: WriteSignal<Option<String>>,
     set_current_doc: WriteSignal<Option<DocId>>,
 ) {
-    let same_repo = !uuid.is_empty() && current_repo_id.get_untracked().as_deref() == Some(uuid.as_str());
+    let same_repo =
+        !uuid.is_empty() && current_repo_id.get_untracked().as_deref() == Some(uuid.as_str());
     set_current_repo.set(Some(name));
     set_current_repo_id.set((!uuid.is_empty()).then_some(uuid));
     if !same_repo {
