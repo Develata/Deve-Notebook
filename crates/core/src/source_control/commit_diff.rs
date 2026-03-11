@@ -102,11 +102,10 @@ fn reconstruct_at_seq(db: &Database, doc_id: DocId, max_seq: u64) -> Result<Stri
     Ok(reconstruct_content(&filtered))
 }
 
-/// 构建 doc_id -> path 映射 (从 metadata + snapshot_paths)
+/// 构建 doc_id -> path 映射 (从 node projection + snapshot_paths)
 fn build_path_map(db: &Database) -> Result<HashMap<DocId, String>> {
     let mut map = HashMap::new();
-    // 优先从 docid_to_path 取
-    let docs = crate::ledger::metadata::list_docs(db)?;
+    let docs = crate::ledger::node_meta::list_file_docs(db)?;
     for (doc_id, path) in docs {
         map.insert(doc_id, path);
     }

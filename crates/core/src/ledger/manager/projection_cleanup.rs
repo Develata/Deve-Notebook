@@ -33,8 +33,6 @@ pub(super) fn drop_unanchored_projection_path(db: &Database, path: &str) -> Resu
             metadata::delete_folder(db, path).map(|_| ())
         };
     }
-    if metadata::get_docid(db, path)?.is_some() {
-        metadata::delete_doc(db, path)?;
-    }
+    metadata::delete_doc(db, path)?;
     Ok(())
 }
