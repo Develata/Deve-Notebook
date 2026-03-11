@@ -7,7 +7,7 @@ use deve_core::sync::reconcile;
 use std::sync::Arc;
 
 use super::errors;
-use super::peer_support::resolve_doc_path;
+use super::peer_support::{resolve_doc_path, resolve_local_merge_scope};
 
 /// Invariants:
 /// - 合并目标必须是当前会话解析出的本地 repo。
@@ -20,32 +20,27 @@ pub(super) async fn handle_merge_peer(
     doc_id: DocId,
 ) {
     let scope = match resolve_session_repo(state, session) {
-        Ok(scope) if scope.branch.is_none() => scope,
-        Ok(scope) => {
-            errors::request_failed(
-                ch,
-                format!(
-                    "Merge requested on remote branch context: {}",
-                    scope.repo_name
-                ),
-            );
-            return;
-        }
+        Ok(scope) => scope,
         Err(e) => {
             errors::request_failed(ch, e.to_string());
             return;
         }
     };
+    let Some(local_scope) = resolve_local_merge_scope(state, session, scope, ch) else {
+        return;
+    };
     let peer_id = PeerId::new(peer_id);
-    match state
-        .repo
-        .merge_peer_in_local_repo(&scope.repo_name, &peer_id, &scope.repo_id, doc_id)
-    {
+    match state.repo.merge_peer_in_local_repo(
+        &local_scope.repo_name,
+        &peer_id,
+        &local_scope.repo_id,
+        doc_id,
+    ) {
         Ok(MergeResult::Success(content)) => {
-            write_merged_content(state, ch, &scope, doc_id, &content);
+            write_merged_content(state, ch, &local_scope, doc_id, &content);
         }
         Ok(MergeResult::Conflict { local, remote, .. }) => {
-            send_merge_conflict(state, ch, &scope.repo_name, doc_id, local, remote);
+            send_merge_conflict(state, ch, &local_scope.repo_name, doc_id, local, remote);
         }
         Err(e) => errors::request_failed(ch, format!("Merge failed: {}", e)),
     }
