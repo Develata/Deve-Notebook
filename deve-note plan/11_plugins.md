@@ -42,6 +42,15 @@
         *   `allow_skill`: `bool` — 是否允许读取 Skill 列表与内容。
         *   `allow_mcp`: `bool` — 是否允许调用 MCP 工具。
         *   `allow_project_tree`: `bool` — 是否允许获取项目目录树。
+*   **Ledger-Managed Boundary (账本托管边界)**:
+    *   `allow_fs_write` **不是**“允许插件直接修改托管笔记”的总开关；它只授予对白名单路径的**原始文件写入尝试资格**。
+    *   插件运行时 **MUST NOT** 通过 `fs_write` 直接写入任何 **Ledger-Managed Projection Objects**：
+        *   `vault/<repo>/**/*.md`
+        *   `vault/<repo>/.notegit/**`
+        *   `ledger/**`
+    *   上述对象的规范状态由 `Ledger Facts -> Projection -> Vault` 决定；即使路径同时命中 `allow_fs_write` 白名单，也 **MUST** 被拒绝。
+    *   `fs_write` 允许的目标应限于 **Non-Ledger Assets**，例如导出文件、缓存、附件、临时产物或用户显式声明的普通输出目录。
+    *   若插件希望修改托管笔记内容，**MUST** 走 ledger-aware host functions（如未来的 note/source-control API），而不是原始文件 I/O。
 *   **Host Functions**: 受控 API，必须 Capability 校验 (default deny)。
 *   **RPC Bridge**: 前端 `client.call` -> WebSocket -> 后端插件。
 *   **Resource Quotas**:

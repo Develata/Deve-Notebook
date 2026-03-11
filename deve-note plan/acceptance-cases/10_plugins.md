@@ -74,4 +74,25 @@
   assertions:
     - ui_assert: chemistry_not_rendered_before true
     - ui_assert: chemistry_rendered_after true
+
+- case_id: PLUG-008
+  goal: 插件不得通过 fs_write 直接修改账本托管 Markdown。
+  preconditions:
+    - 插件 manifest 声明了目标 repo 路径的 allow_fs_write
+    - 目标文件位于 vault/default/notes/a.md
+  steps:
+    - run: deve plugin call demo.rhai fs_write_managed_md
+  assertions:
+    - stdout_contains_any: ["ledger-managed write denied", "managed markdown denied"]
+    - log_contains: "Plugin fs_write blocked on ledger-managed path"
+
+- case_id: PLUG-009
+  goal: 插件可写白名单内的非账本资产。
+  preconditions:
+    - 插件 manifest 声明 allow_fs_write 指向 vault/default/exports
+  steps:
+    - run: deve plugin call demo.rhai fs_write_export
+  assertions:
+    - stdout_contains_any: ["ok", "write success"]
+    - file_exists: "vault/default/exports/report.txt"
 ```
