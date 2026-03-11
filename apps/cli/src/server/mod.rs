@@ -45,6 +45,8 @@ pub mod plugin_response;
 pub mod prewarm;
 mod rate_limit;
 mod repo_scope;
+#[cfg(test)]
+mod repo_scope_test;
 mod router;
 pub mod security;
 pub mod session;

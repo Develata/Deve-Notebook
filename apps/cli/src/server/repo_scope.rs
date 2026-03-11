@@ -37,12 +37,28 @@ pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
 pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
     let repo_name = resolve_repo_name_from_session(state, session)?
         .ok_or_else(|| anyhow!("Active repository not selected for current session"))?;
-    resolve_repo_by_name(
+    match resolve_repo_by_name(
         state,
         session.active_branch.clone(),
         session.active_repo_id,
         repo_name,
-    )
+    ) {
+        Ok(scope) => Ok(scope),
+        Err(err)
+            if session.active_branch.is_none()
+                && session.active_repo.is_some()
+                && err.to_string().starts_with("Session repo mismatch:") =>
+        {
+            tracing::warn!("Recovering from stale local session repo_id: {}", err);
+            resolve_repo_by_name(
+                state,
+                None,
+                None,
+                session.active_repo.clone().unwrap_or_default(),
+            )
+        }
+        Err(err) => Err(err),
+    }
 }
 
 fn resolve_repo_name_from_session(
