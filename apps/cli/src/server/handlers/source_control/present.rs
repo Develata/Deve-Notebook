@@ -99,6 +99,20 @@ pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> St
                 })
                 .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
         })
+        .or_else(|| {
+            entries.iter().find(|entry| {
+                normalized(&entry.path) == path && entry.status != ChangeStatus::Deleted
+            })
+        })
+        .or_else(|| {
+            entries.iter().find(|entry| {
+                entry.status != ChangeStatus::Deleted
+                    && entry
+                        .renamed_from
+                        .as_ref()
+                        .is_some_and(|old_path| normalized(old_path) == path)
+            })
+        })
         .or_else(|| entries.iter().find(|entry| normalized(&entry.path) == path))
         .map(|entry| normalized(&entry.path))
         .unwrap_or(path)
@@ -130,6 +144,31 @@ mod tests {
         };
 
         assert_eq!(resolve_target_path(&entries, &target), "notes/new.md");
+    }
+
+    #[test]
+    fn resolve_target_matches_renamed_from_without_doc_id() {
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: None,
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
+
+        assert_eq!(
+            resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
+            "notes/new.md"
+        );
     }
 
     #[test]

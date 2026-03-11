@@ -102,9 +102,72 @@ fn resolve_from_entries(
     });
     by_doc
         .or_else(|| {
+            entries.iter().find(|entry| {
+                to_forward_slash(&entry.path) == path && entry.status != ChangeStatus::Deleted
+            })
+        })
+        .or_else(|| {
+            entries.iter().find(|entry| {
+                entry.status != ChangeStatus::Deleted
+                    && entry
+                        .renamed_from
+                        .as_ref()
+                        .is_some_and(|old_path| to_forward_slash(old_path) == path)
+            })
+        })
+        .or_else(|| {
             entries
                 .iter()
                 .find(|entry| to_forward_slash(&entry.path) == path)
         })
         .map(|entry| to_forward_slash(&entry.path))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_from_entries;
+    use crate::models::DocId;
+    use crate::source_control::{ChangeEntry, ChangeStatus};
+
+    #[test]
+    fn resolve_from_entries_matches_renamed_from_without_doc_id() {
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: None,
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
+
+        assert_eq!(
+            resolve_from_entries(&entries, "notes/old.md", None),
+            Some("notes/new.md".into())
+        );
+    }
+
+    #[test]
+    fn resolve_from_entries_prefers_doc_id_when_available() {
+        let doc_id = DocId(uuid::Uuid::nil());
+        let entries = vec![ChangeEntry {
+            path: "notes/new.md".into(),
+            renamed_from: Some("notes/old.md".into()),
+            doc_id: Some(doc_id),
+            status: ChangeStatus::Added,
+            has_conflict: false,
+        }];
+
+        assert_eq!(
+            resolve_from_entries(&entries, "notes/old.md", Some(doc_id)),
+            Some("notes/new.md".into())
+        );
+    }
 }
