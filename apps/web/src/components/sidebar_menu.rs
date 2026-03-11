@@ -80,6 +80,7 @@ fn menu_icon(action: MenuAction, class: &str) -> AnyView {
 
 #[component]
 pub fn SidebarMenu(
+    is_readonly: Signal<bool>,
     #[prop(into)] on_action: Callback<MenuAction>,
     #[prop(into)] on_close: Callback<()>,
     anchor: ReadSignal<Option<AnchorRect>>,
@@ -88,7 +89,13 @@ pub fn SidebarMenu(
     view! {
         <Dropdown anchor=anchor.into() on_close=on_close align=Align::Right offset=6.0>
             <div class="w-48 bg-panel rounded-md shadow-lg border border-default py-1 text-sm text-primary select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right">
-                {MENU_ITEMS.iter().map(|item| {
+                {MENU_ITEMS.iter().filter(|item| {
+                    !is_readonly.get()
+                        || matches!(
+                            item.action,
+                            MenuAction::Copy | MenuAction::OpenInNewWindow
+                        )
+                }).map(|item| {
                     let action = item.action;
                     let is_danger = item.is_danger;
                     let has_sep = item.separator_before;

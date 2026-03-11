@@ -102,6 +102,7 @@ pub fn DesktopLayout(
                         active_view=active_view
                         docs=core.docs
                         current_doc=core.current_doc
+                        is_readonly=core.is_spectator
                         on_select=core.on_doc_select
                         on_delete=core.on_doc_delete
                     />

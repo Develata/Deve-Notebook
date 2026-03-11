@@ -68,10 +68,14 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
 
     // 构建统一的操作处理程序
     let delete_req = actions.on_delete.clone();
+    let is_readonly = actions.is_readonly;
     let open_search = actions.on_open_search.clone();
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
         leptos::logging::log!("item.rs handle_action called: action={:?}", action);
+        if is_readonly.get() && !matches!(action, MenuAction::Copy | MenuAction::OpenInNewWindow) {
+            return;
+        }
         let path = path_for_action.clone();
         match action {
             MenuAction::Rename => {
@@ -130,6 +134,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                 // Actions (Visible on Hover via Opacity)
                 <crate::components::sidebar::components::ItemActions
                     is_folder=is_folder
+                    is_readonly=is_readonly
                     is_menu_open=is_menu_open
                     on_menu=Callback::new(trigger_menu)
                     on_create=Callback::new(trigger_create)
@@ -138,6 +143,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                 {move || if is_menu_open.get() {
                     view! {
                         <SidebarMenu
+                            is_readonly=is_readonly
                             on_action=handle_action
                             on_close=on_close_clone
                             anchor=menu_anchor

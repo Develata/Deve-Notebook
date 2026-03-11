@@ -32,6 +32,7 @@ pub fn FileIcon(
 #[component]
 pub fn ItemActions(
     #[prop(into)] is_folder: bool,
+    #[prop(into)] is_readonly: Signal<bool>,
     #[prop(into)] is_menu_open: Signal<bool>,
     #[prop(into)] on_menu: Callback<web_sys::MouseEvent>,
     #[prop(into)] on_create: Callback<web_sys::MouseEvent>,
@@ -50,7 +51,7 @@ pub fn ItemActions(
                 <EllipsisVertical />
             </button>
 
-            {if is_folder {
+            {if is_folder && !is_readonly.get() {
                 view! {
                     // 新建文件按钮 (仅文件夹显示)
                     <button

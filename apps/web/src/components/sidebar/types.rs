@@ -14,6 +14,7 @@ use crate::components::dropdown::AnchorRect;
 #[derive(Clone)]
 pub struct FileActionsContext {
     pub current_doc: ReadSignal<Option<DocId>>,
+    pub is_readonly: Signal<bool>,
     pub on_select: Callback<DocId>,
     pub on_create: Callback<Option<String>>,
     pub on_open_search: Callback<String>,

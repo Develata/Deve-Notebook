@@ -19,6 +19,7 @@ use crate::components::main_layout::SearchControl;
 pub fn ExplorerView(
     _docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
+    is_readonly: Signal<bool>,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
@@ -68,6 +69,7 @@ pub fn ExplorerView(
     // Create Context
     let actions = FileActionsContext {
         current_doc,
+        is_readonly,
         on_select,
         on_create: request_create.clone(),
         on_open_search: open_search.clone(),
@@ -104,15 +106,17 @@ pub fn ExplorerView(
                     </div>
                 </div>
 
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button
-                        class="p-1 rounded hover:bg-hover text-secondary"
-                        title=move || t::sidebar::new_doc(locale.get())
-                        on:click=move |_| request_create.run(None)
-                    >
-                        <Plus />
-                    </button>
-                </div>
+                <Show when=move || !is_readonly.get()>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button
+                            class="p-1 rounded hover:bg-hover text-secondary"
+                            title=move || t::sidebar::new_doc(locale.get())
+                            on:click=move |_| request_create.run(None)
+                        >
+                            <Plus />
+                        </button>
+                    </div>
+                </Show>
             </div>
 
             <div class="flex-1 overflow-y-auto py-2">

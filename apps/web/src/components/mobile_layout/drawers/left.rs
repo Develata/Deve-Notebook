@@ -181,6 +181,7 @@ pub fn LeftDrawer(
                             active_view=active_view
                             docs=core.docs
                             current_doc=core.current_doc
+                            is_readonly=core.is_spectator
                             on_select=Callback::new(move |id| {
                                 on_doc_select.run(id);
                                 on_close.run(())

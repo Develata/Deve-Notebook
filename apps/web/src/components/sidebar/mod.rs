@@ -34,6 +34,7 @@ pub fn Sidebar(
     active_view: ReadSignal<SidebarView>,
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
+    is_readonly: Signal<bool>,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
@@ -44,6 +45,7 @@ pub fn Sidebar(
                     <ExplorerView
                         _docs=docs
                         current_doc=current_doc
+                        is_readonly=is_readonly
                         on_select=on_select
                         on_delete=on_delete
                     />
