@@ -7,16 +7,17 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// 迭代式复制目录 (避免栈溢出)
+/// 迭代式复制目录中的非 Markdown 资产 (避免栈溢出)
 ///
 /// **不变量 (Invariants)**:
 /// - 源目录必须存在且为目录
 /// - 目标目录在复制前不存在
+/// - `.md` 文件必须由 Ledger 重建，不能直接把工作区文件当真值复制
 ///
 /// **实现**: 使用显式栈代替递归，O(depth) 堆内存，无栈溢出风险
 ///
 /// **复杂度**: O(n) 其中 n 为文件总数，栈深度 O(max_depth)
-pub fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
+pub fn copy_dir_assets_only(src: &Path, dst: &Path) -> io::Result<()> {
     let mut stack: Vec<(PathBuf, PathBuf)> = vec![(src.to_path_buf(), dst.to_path_buf())];
 
     while let Some((src_dir, dst_dir)) = stack.pop() {
@@ -29,16 +30,18 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
             let dst_path = dst_dir.join(entry.file_name());
 
             if file_type.is_dir() {
-                // 压入栈中，稍后处理 (迭代代替递归)
                 stack.push((src_path, dst_path));
-            } else if file_type.is_file() {
+            } else if file_type.is_file() && !is_markdown_path(&src_path) {
                 std::fs::copy(&src_path, &dst_path)?;
             }
-            // 忽略符号链接等其他类型 (安全考量)
         }
     }
 
     Ok(())
+}
+
+fn is_markdown_path(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| ext == "md")
 }
 
 /// 收集目录下所有 `.md` 文件的相对路径 (迭代式)
@@ -108,23 +111,26 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_copy_dir_recursive() {
+    fn test_copy_dir_assets_only_skips_markdown() {
         let tmp = tempdir().unwrap();
         let src = tmp.path().join("src_dir");
         let dst = tmp.path().join("dst_dir");
 
-        // 构建测试目录结构
         fs::create_dir_all(src.join("sub")).unwrap();
         fs::write(src.join("a.md"), "content a").unwrap();
+        fs::write(src.join("a.txt"), "asset a").unwrap();
         fs::write(src.join("sub/b.md"), "content b").unwrap();
+        fs::write(src.join("sub/c.png"), "asset c").unwrap();
 
-        // 执行复制
-        copy_dir_recursive(&src, &dst).unwrap();
+        copy_dir_assets_only(&src, &dst).unwrap();
 
-        // 验证
-        assert!(dst.join("a.md").exists());
-        assert!(dst.join("sub/b.md").exists());
-        assert_eq!(fs::read_to_string(dst.join("a.md")).unwrap(), "content a");
+        assert!(!dst.join("a.md").exists());
+        assert!(!dst.join("sub/b.md").exists());
+        assert_eq!(fs::read_to_string(dst.join("a.txt")).unwrap(), "asset a");
+        assert_eq!(
+            fs::read_to_string(dst.join("sub/c.png")).unwrap(),
+            "asset c"
+        );
     }
 
     #[test]
@@ -148,21 +154,21 @@ mod tests {
         let tmp = tempdir().unwrap();
         let mut current = tmp.path().to_path_buf();
 
-        // 创建 100 层深度的目录 (递归实现可能溢出，迭代不会)
         for i in 0..100 {
             current = current.join(format!("level_{}", i));
         }
         fs::create_dir_all(&current).unwrap();
         fs::write(current.join("deep.md"), "deep content").unwrap();
+        fs::write(current.join("deep.bin"), "deep asset").unwrap();
 
         let dst = tmp.path().join("dst");
-        copy_dir_recursive(&tmp.path().join("level_0"), &dst).unwrap();
+        copy_dir_assets_only(&tmp.path().join("level_0"), &dst).unwrap();
 
-        // 验证深层文件被复制
         let mut check_path = dst.clone();
         for i in 1..100 {
             check_path = check_path.join(format!("level_{}", i));
         }
-        assert!(check_path.join("deep.md").exists());
+        assert!(!check_path.join("deep.md").exists());
+        assert!(check_path.join("deep.bin").exists());
     }
 }

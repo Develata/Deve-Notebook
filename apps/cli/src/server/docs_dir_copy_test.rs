@@ -91,3 +91,31 @@ async fn copy_dir_recovers_from_missing_source_projection() -> anyhow::Result<()
     assert!(state.repo.get_docid("mirror/sub/b.md")?.is_some());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn copy_dir_uses_ledger_for_markdown_and_disk_for_assets() -> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    seed_file(&state, "notes/a.md", "ledger hello")?;
+    state
+        .sync_manager
+        .persist_doc_in_local_repo("default", state.repo.get_docid("notes/a.md")?.unwrap())?;
+    std::fs::write(
+        dir.path().join("vault/default/notes/a.md"),
+        "workspace stale",
+    )?;
+    std::fs::write(dir.path().join("vault/default/notes/logo.txt"), "asset")?;
+    let (uni_tx, _uni_rx) = mpsc::channel(32);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+    handle_copy_doc(&state, &ch, &mut session, "notes".into(), "mirror".into()).await;
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("vault/default/mirror/a.md"))?,
+        "ledger hello"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("vault/default/mirror/logo.txt"))?,
+        "asset"
+    );
+    Ok(())
+}

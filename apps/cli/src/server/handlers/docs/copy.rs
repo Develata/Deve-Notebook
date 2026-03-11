@@ -5,7 +5,7 @@ mod file_copy;
 mod prepare;
 mod register;
 
-use super::copy_utils::copy_dir_recursive;
+use super::copy_utils::copy_dir_assets_only;
 use super::errors;
 use super::notify_fs_refresh;
 use crate::server::AppState;
@@ -57,7 +57,7 @@ fn copy_dir_on_disk(
     dst: &std::path::Path,
     src_path: &str,
 ) -> bool {
-    if let Err(e) = copy_dir_recursive(src, dst) {
+    if let Err(e) = copy_dir_assets_only(src, dst) {
         tracing::error!("目录复制失败 {} -> {:?}: {:?}", src_path, dst, e);
         errors::storage_persist_failed(ch, format!("Directory copy failed: {}", e));
         return false;
