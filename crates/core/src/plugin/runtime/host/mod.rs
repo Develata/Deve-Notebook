@@ -22,6 +22,10 @@ mod git;
 #[cfg(not(target_arch = "wasm32"))]
 mod mcp;
 #[cfg(not(target_arch = "wasm32"))]
+mod note;
+#[cfg(not(target_arch = "wasm32"))]
+mod path_guard;
+#[cfg(not(target_arch = "wasm32"))]
 mod search;
 #[cfg(not(target_arch = "wasm32"))]
 mod skill;
@@ -31,16 +35,24 @@ use crate::plugin::manifest::PluginManifest;
 use rhai::Engine;
 
 #[cfg(not(target_arch = "wasm32"))]
+use crate::ledger::RepoManager;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::traits::Repository;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::mcp::McpManager;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::sync::SyncManager;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, OnceLock};
 
 #[cfg(not(target_arch = "wasm32"))]
 static REPOSITORY: OnceLock<Arc<dyn Repository>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
+static REPO_MANAGER: OnceLock<Arc<RepoManager>> = OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
 static MCP_MANAGER: OnceLock<Arc<McpManager>> = OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
+static SYNC_MANAGER: OnceLock<Arc<SyncManager>> = OnceLock::new();
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_repository(repo: Arc<dyn Repository>) -> Result<(), anyhow::Error> {
@@ -50,10 +62,24 @@ pub fn set_repository(repo: Arc<dyn Repository>) -> Result<(), anyhow::Error> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+pub fn set_repo_manager(repo: Arc<RepoManager>) -> Result<(), anyhow::Error> {
+    REPO_MANAGER
+        .set(repo)
+        .map_err(|_| anyhow::anyhow!("RepoManager already set"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn set_mcp_manager(manager: Arc<McpManager>) -> Result<(), anyhow::Error> {
     MCP_MANAGER
         .set(manager)
         .map_err(|_| anyhow::anyhow!("McpManager already set"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_sync_manager(manager: Arc<SyncManager>) -> Result<(), anyhow::Error> {
+    SYNC_MANAGER
+        .set(manager)
+        .map_err(|_| anyhow::anyhow!("SyncManager already set"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -65,8 +91,24 @@ pub fn repository() -> Result<Arc<dyn Repository>, anyhow::Error> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn repo_manager() -> Result<Arc<RepoManager>, anyhow::Error> {
+    REPO_MANAGER
+        .get()
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("RepoManager not configured"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn mcp_manager() -> Option<Arc<McpManager>> {
     MCP_MANAGER.get().cloned()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn sync_manager() -> Result<Arc<SyncManager>, anyhow::Error> {
+    SYNC_MANAGER
+        .get()
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("SyncManager not configured"))
 }
 
 /// 注册核心 API 到 Rhai 引擎
@@ -79,6 +121,7 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
 
         // 注册各领域 API (仅非 WASM 环境)
         fs::register_fs_api(engine, caps.clone());
+        note::register_note_api(engine, caps.clone());
         git::register_git_api(engine, caps.clone());
         chat::register_chat_api(engine, caps.clone());
         util::register_util_api(engine, caps.clone());

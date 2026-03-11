@@ -5,10 +5,11 @@
 //! **安全**: 所有操作需通过 Capability 检查。
 
 use crate::plugin::manifest::Capability;
-use crate::utils::path::path_to_forward_slash;
 use rhai::{Engine, EvalAltResult};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
+
+use super::path_guard::is_ledger_managed_write_target;
 
 /// 注册文件系统 API
 pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
@@ -72,62 +73,10 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
     );
 }
 
-fn is_ledger_managed_write_target(path: &Path) -> Result<bool, String> {
-    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    Ok(project_relative_path(&cwd, path).is_some_and(|rel| is_ledger_managed_relative_path(&rel)))
-}
-
-fn project_relative_path(cwd: &Path, path: &Path) -> Option<String> {
-    let cwd = normalize_host_path(cwd);
-    let path = normalize_host_path(&resolve_host_path(cwd.as_path(), path));
-    path.strip_prefix(&cwd).ok().map(path_to_forward_slash)
-}
-
-fn resolve_host_path(cwd: &Path, path: &Path) -> PathBuf {
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        cwd.join(path)
-    }
-}
-
-fn normalize_host_path(path: &Path) -> PathBuf {
-    let mut normalized = PathBuf::new();
-    for component in path.components() {
-        match component {
-            std::path::Component::Prefix(..) | std::path::Component::RootDir => {
-                normalized.push(component.as_os_str())
-            }
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                normalized.pop();
-            }
-            std::path::Component::Normal(segment) => normalized.push(segment),
-        }
-    }
-    normalized
-}
-
-fn is_ledger_managed_relative_path(rel_path: &str) -> bool {
-    let parts: Vec<_> = rel_path
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .collect();
-    if parts.first() == Some(&"ledger") {
-        return true;
-    }
-    if parts.len() >= 3 && parts[0] == "vault" {
-        if parts.iter().skip(2).any(|part| *part == ".notegit") {
-            return true;
-        }
-        return rel_path.ends_with(".md");
-    }
-    false
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::plugin::runtime::host::path_guard::split_managed_note_target;
     use std::sync::Mutex;
     use tempfile::tempdir;
 
@@ -135,15 +84,12 @@ mod tests {
 
     #[test]
     fn classifies_ledger_managed_relative_paths() {
-        assert!(is_ledger_managed_relative_path("vault/default/notes/a.md"));
-        assert!(is_ledger_managed_relative_path(
-            "vault/default/.notegit/pending/db"
-        ));
-        assert!(is_ledger_managed_relative_path("ledger/local/wiki.redb"));
-        assert!(!is_ledger_managed_relative_path(
-            "vault/default/exports/report.txt"
-        ));
-        assert!(!is_ledger_managed_relative_path("tmp/report.md"));
+        assert_eq!(
+            split_managed_note_target("vault/default/notes/a.md"),
+            Some(("default".into(), "notes/a.md".into()))
+        );
+        assert!(is_ledger_managed_write_target(Path::new("ledger/local/wiki.redb")).unwrap());
+        assert!(!is_ledger_managed_write_target(Path::new("tmp/report.md")).unwrap());
     }
 
     #[test]
