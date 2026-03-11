@@ -64,11 +64,15 @@ pub async fn handle_delete_doc(
             errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
             return;
         }
-        if target.abs_path.exists()
-            && let Err(e) = std::fs::remove_dir_all(&target.abs_path)
+        if let Err(e) = state
+            .sync_manager
+            .rebuild_projection_local_repo(&scope.repo_name)
         {
-            tracing::error!("删除目录失败 {}: {:?}", path, e);
-            errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
+            tracing::error!("目录删除后重建投影失败: {:?}", e);
+            errors::storage_persist_failed(
+                ch,
+                format!("Failed to rebuild deleted directory projection: {}", e),
+            );
             return;
         }
     } else {

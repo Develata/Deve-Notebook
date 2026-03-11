@@ -4,7 +4,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::{ResolvedRepo, local_repo_path, run_on_resolved_local_repo};
+use crate::server::repo_scope::{ResolvedRepo, run_on_resolved_local_repo};
 use crate::server::session::WsSession;
 use anyhow::anyhow;
 use deve_core::ledger::node_meta;
@@ -18,7 +18,6 @@ pub(super) async fn handle_dir_rename(
     scope: &ResolvedRepo,
     old_path: &str,
     dst_name: &str,
-    src: &std::path::Path,
 ) {
     let node_id = match state.repo.apply_dir_rename_structure_in_local_repo(
         &scope.repo_name,
@@ -37,27 +36,7 @@ pub(super) async fn handle_dir_rename(
             return;
         }
     };
-    if src.exists() {
-        let dst = match local_repo_path(state, scope, dst_name) {
-            Ok(path) => path,
-            Err(err) => {
-                errors::request_failed(ch, err.to_string());
-                return;
-            }
-        };
-        if let Some(parent) = dst.parent()
-            && let Err(e) = std::fs::create_dir_all(parent)
-        {
-            tracing::error!("创建目标父目录失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to prepare destination: {}", e));
-            return;
-        }
-        if let Err(e) = std::fs::rename(src, &dst) {
-            tracing::error!("重命名失败 {} -> {}: {:?}", old_path, dst_name, e);
-            errors::storage_persist_failed(ch, format!("Failed to rename folder: {}", e));
-            return;
-        }
-    } else if let Err(e) = state
+    if let Err(e) = state
         .sync_manager
         .rebuild_projection_local_repo(&scope.repo_name)
     {

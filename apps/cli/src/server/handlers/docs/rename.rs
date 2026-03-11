@@ -102,16 +102,7 @@ pub async fn handle_rename_doc(
         .await;
         return;
     }
-    handle_dir_rename(
-        state,
-        ch,
-        session,
-        &scope,
-        &old_path,
-        &dst_name,
-        &src.abs_path,
-    )
-    .await;
+    handle_dir_rename(state, ch, session, &scope, &old_path, &dst_name).await;
 }
 
 /// 处理移动文档请求 (委托给 rename)
