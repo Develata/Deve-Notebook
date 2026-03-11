@@ -32,6 +32,8 @@ repomix-output.xml
 !.codex/prompts/
 /target_codex*
 
+.omc/*
+
 
 
 # OS
