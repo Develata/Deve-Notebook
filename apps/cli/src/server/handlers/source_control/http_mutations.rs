@@ -74,7 +74,7 @@ pub async fn discard_pending(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
-    match service::discard_pending(state.repo.as_ref(), &payload.repo, &target) {
+    match super::local_discard::discard_via_sync_manager(&state, &payload.repo, &target) {
         Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => super::errors::http(e),
     }

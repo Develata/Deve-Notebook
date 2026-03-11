@@ -3,6 +3,8 @@ pub mod buffer;
 #[cfg(not(target_arch = "wasm32"))]
 mod dir_change;
 #[cfg(not(target_arch = "wasm32"))]
+mod discard_pending;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
@@ -78,6 +80,10 @@ impl SyncManager {
 
     pub fn reconcile_doc(&self, doc_id: DocId) -> Result<bool> {
         self.reconcile_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
+    }
+
+    pub fn discard_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
+        discard_pending::discard_pending_workdir(self, repo_name, path)
     }
 
     pub fn reconcile_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<bool> {

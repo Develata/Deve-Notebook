@@ -11,6 +11,7 @@ mod errors;
 pub mod http;
 pub mod http_commits;
 pub mod http_mutations;
+mod local_discard;
 mod present;
 mod repo_scope;
 mod service;

@@ -78,8 +78,8 @@ fn resolve_keep_ledger(
     selector: &RepoSelector,
     path: &str,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    super::service::discard_pending(
-        state.repo.as_ref(),
+    super::local_discard::discard_via_sync_manager(
+        state,
         selector,
         &ScPathTarget::from_path(path.to_string()),
     )
