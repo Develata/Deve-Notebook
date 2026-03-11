@@ -3,9 +3,9 @@ target = "index.html"
 no_sri = true
 
 [serve]
-addresses = ["127.0.0.1", "0.0.0.0"]
+addresses = ["0.0.0.0"]
 port = 8080
-open = true
+open = false
 ws_protocol = "ws"
 
 [[proxy]]
