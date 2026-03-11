@@ -9,7 +9,7 @@
 //! - `RepoKey`: 32 字节对称密钥。
 //! - `EncryptedOp`: 加密后的操作载荷结构。
 
-use crate::models::{DocId, LedgerEntry};
+use crate::models::{DocId, LedgerEntry, deserialize_ledger_entry};
 use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -86,7 +86,7 @@ impl RepoKey {
             .decrypt(nonce, enc.ciphertext.as_ref())
             .map_err(|_| anyhow::anyhow!("Decryption failed (Bad Key or Tampered Data)"))?;
 
-        let entry: LedgerEntry = bincode::deserialize(&plaintext)?;
+        let entry: LedgerEntry = deserialize_ledger_entry(&plaintext)?;
         Ok(entry)
     }
 }

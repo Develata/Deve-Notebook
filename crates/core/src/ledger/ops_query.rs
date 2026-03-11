@@ -1,5 +1,5 @@
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS};
-use crate::models::{DocId, LedgerEntry, NodeId};
+use crate::models::{DocId, LedgerEntry, NodeId, deserialize_ledger_entry};
 use anyhow::Result;
 use redb::Database;
 
@@ -11,7 +11,7 @@ pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerE
     for seq in doc_ops_table.get(doc_id.as_u128())? {
         let seq_val = seq?.value();
         if let Some(bytes) = ops_table.get(seq_val)? {
-            entries.push((seq_val, bincode::deserialize(bytes.value())?));
+            entries.push((seq_val, deserialize_ledger_entry(bytes.value())?));
         }
     }
     entries.sort_by_key(|k| k.0);
@@ -29,7 +29,7 @@ pub fn get_structure_ops_for_node_from_db(
     for seq in node_ops_table.get(node_id.as_u128())? {
         let seq = seq?.value();
         if let Some(bytes) = ops_table.get(seq)? {
-            entries.push((seq, bincode::deserialize(bytes.value())?));
+            entries.push((seq, deserialize_ledger_entry(bytes.value())?));
         }
     }
     entries.sort_by_key(|(seq, _)| *seq);
@@ -75,7 +75,7 @@ pub fn get_ops_from_db_after(
             continue;
         }
         if let Some(bytes) = ops_table.get(seq)? {
-            entries.push((seq, bincode::deserialize(bytes.value())?));
+            entries.push((seq, deserialize_ledger_entry(bytes.value())?));
         }
     }
     entries.sort_by_key(|(seq, _)| *seq);
@@ -104,5 +104,5 @@ pub fn find_client_op_in_db(
     let Some(bytes) = ops_table.get(global_seq)? else {
         return Ok(None);
     };
-    Ok(Some((global_seq, bincode::deserialize(bytes.value())?)))
+    Ok(Some((global_seq, deserialize_ledger_entry(bytes.value())?)))
 }

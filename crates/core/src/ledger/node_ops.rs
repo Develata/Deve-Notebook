@@ -1,5 +1,5 @@
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};
-use crate::models::{LedgerEntry, PeerId, StructureOp};
+use crate::models::{LedgerEntry, PeerId, StructureOp, deserialize_ledger_entry};
 use anyhow::Result;
 use redb::{Database, ReadableMultimapTable, ReadableTable};
 
@@ -53,7 +53,7 @@ fn scan_node_peer_seq(
     for seq in node_ops.get(node_id)? {
         let seq = seq?.value();
         if let Some(bytes) = ops.get(seq)? {
-            let entry: LedgerEntry = bincode::deserialize(bytes.value())?;
+            let entry: LedgerEntry = deserialize_ledger_entry(bytes.value())?;
             if entry.peer_id == *peer_id && entry.seq > max_seq {
                 max_seq = entry.seq;
             }

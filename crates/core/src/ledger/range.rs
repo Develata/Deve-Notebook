@@ -11,7 +11,7 @@
 //! **类型**: Core MUST (核心必选)
 
 use crate::ledger::schema::LEDGER_OPS;
-use crate::models::LedgerEntry;
+use crate::models::{LedgerEntry, deserialize_ledger_entry};
 use anyhow::{Context, Result};
 use redb::{Database, ReadableTable};
 
@@ -29,7 +29,7 @@ pub fn get_ops_in_range(
     for item in range {
         let (key, value) = item?;
         let seq = key.value();
-        let entry: LedgerEntry = bincode::deserialize(value.value())
+        let entry: LedgerEntry = deserialize_ledger_entry(value.value())
             .with_context(|| format!("Failed to deserialize op at seq {}", seq))?;
         result.push((seq, entry));
     }

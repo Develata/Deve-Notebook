@@ -21,10 +21,13 @@ use smol_str::SmolStr;
 use std::fmt;
 use uuid::Uuid;
 
+#[path = "models/ledger_decode.rs"]
+mod ledger_decode;
 #[path = "models/ledger_event.rs"]
 mod ledger_event;
 
 pub use crate::sync::vector::VersionVector;
+pub use ledger_decode::deserialize_ledger_entry;
 pub use ledger_event::{ContentOp, LedgerEntry, LedgerEvent, Op, StructureOp};
 
 /// 节点唯一标识符 (Peer ID)
