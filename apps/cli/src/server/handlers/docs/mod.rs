@@ -18,6 +18,7 @@ mod delete;
 mod errors;
 mod file_register;
 mod node_helpers;
+mod node_target;
 mod rename;
 mod rename_dir;
 mod rename_file;

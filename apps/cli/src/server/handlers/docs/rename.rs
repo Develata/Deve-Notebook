@@ -2,6 +2,7 @@
 //! # 重命名/移动文档处理器
 
 use super::errors;
+use super::node_target::resolve_node_target;
 use super::rename_dir::handle_dir_rename;
 use super::rename_file::handle_file_rename;
 use super::{validate_file_path, validate_folder_path};
@@ -9,6 +10,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{local_repo_path, resolve_session_repo};
 use crate::server::session::WsSession;
+use deve_core::models::NodeKind;
 use std::sync::Arc;
 
 /// 处理重命名文档请求
@@ -39,8 +41,12 @@ pub async fn handle_rename_doc(
         }
     };
 
-    let src = match local_repo_path(state, &scope, &old_path) {
-        Ok(path) => path,
+    let src = match resolve_node_target(state, &scope, &old_path) {
+        Ok(Some(target)) => target,
+        Ok(None) => {
+            errors::storage_not_found(ch, format!("Source not found: {}", old_path));
+            return;
+        }
         Err(err) => {
             errors::request_failed(ch, err.to_string());
             return;
@@ -49,12 +55,12 @@ pub async fn handle_rename_doc(
 
     // 1. 确保目标路径以 .md 结尾 (如果源是 .md)
     let mut dst_name = new_path.clone();
-    if !dst_name.ends_with(".md") && old_path.ends_with(".md") {
+    if src.kind == NodeKind::File && !dst_name.ends_with(".md") {
         dst_name.push_str(".md");
     }
 
     // 2. 路径校验
-    let valid = if src.is_dir() {
+    let valid = if src.kind == NodeKind::Dir {
         validate_folder_path(&dst_name, ch)
     } else {
         validate_file_path(&dst_name, ch)
@@ -83,16 +89,29 @@ pub async fn handle_rename_doc(
     }
 
     // 3. 执行重命名
-    if src.exists() {
-        if !src.is_dir() {
-            handle_file_rename(state, ch, session, &scope, &old_path, &dst_name, &src).await;
-            return;
-        }
-        handle_dir_rename(state, ch, session, &scope, &old_path, &dst_name, &src).await;
-    } else {
-        tracing::warn!("重命名失败: 源不存在: {:?}", src);
-        errors::storage_not_found(ch, format!("Source not found: {}", old_path));
+    if src.kind == NodeKind::File {
+        handle_file_rename(
+            state,
+            ch,
+            session,
+            &scope,
+            &old_path,
+            &dst_name,
+            &src.abs_path,
+        )
+        .await;
+        return;
     }
+    handle_dir_rename(
+        state,
+        ch,
+        session,
+        &scope,
+        &old_path,
+        &dst_name,
+        &src.abs_path,
+    )
+    .await;
 }
 
 /// 处理移动文档请求 (委托给 rename)

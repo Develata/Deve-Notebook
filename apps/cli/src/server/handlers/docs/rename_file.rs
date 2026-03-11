@@ -52,7 +52,9 @@ pub(super) async fn handle_file_rename(
         errors::storage_persist_failed(ch, format!("Failed to materialize renamed file: {}", e));
         return;
     }
-    if let Err(e) = std::fs::remove_file(src_file) {
+    if src_file.exists()
+        && let Err(e) = std::fs::remove_file(src_file)
+    {
         tracing::error!("旧路径清理失败 {}: {:?}", src_path, e);
         errors::storage_persist_failed(ch, format!("Failed to remove old file: {}", e));
         return;

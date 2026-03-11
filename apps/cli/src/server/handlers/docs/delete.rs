@@ -2,15 +2,14 @@
 //! # 删除文档处理器
 
 use super::errors;
+use super::node_target::resolve_node_target;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::{
-    local_repo_path, resolve_session_repo, run_on_resolved_local_repo,
-};
+use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
-use deve_core::ledger::node_meta;
+use deve_core::models::NodeKind;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
@@ -42,22 +41,20 @@ pub async fn handle_delete_doc(
     };
 
     tracing::info!("handle_delete_doc: path={}", path);
-    let target = match local_repo_path(state, &scope, &path) {
-        Ok(path) => path,
+    let target = match resolve_node_target(state, &scope, &path) {
+        Ok(Some(target)) => target,
+        Ok(None) => {
+            errors::storage_not_found(ch, format!("Source not found: {}", path));
+            return;
+        }
         Err(err) => {
             errors::request_failed(ch, err.to_string());
             return;
         }
     };
-    let is_dir = target.is_dir();
-
-    // 1. 获取 NodeId (用于 TreeDelta)
-    let node_id = run_on_resolved_local_repo(state, &scope, |db| node_meta::get_node_id(db, &path))
-        .ok()
-        .flatten();
 
     // 3. 更新 Ledger
-    if is_dir {
+    if target.kind == NodeKind::Dir {
         if let Err(e) = state.repo.apply_dir_delete_structure_in_local_repo(
             &scope.repo_name,
             &path,
@@ -67,31 +64,26 @@ pub async fn handle_delete_doc(
             errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
             return;
         }
-        if target.exists()
-            && let Err(e) = std::fs::remove_dir_all(&target)
+        if target.abs_path.exists()
+            && let Err(e) = std::fs::remove_dir_all(&target.abs_path)
         {
             tracing::error!("删除目录失败 {}: {:?}", path, e);
             errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
             return;
         }
     } else {
-        let doc_id = state
-            .repo
-            .get_docid_in_local_repo(&scope.repo_name, &path)
-            .ok()
-            .flatten();
         if let Err(e) = state.repo.apply_file_delete_structure_in_local_repo(
             &scope.repo_name,
             &path,
-            doc_id,
+            target.doc_id,
             "local_delete",
         ) {
             tracing::error!("文件删除结构事实失败: {:?}", e);
             errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
             return;
         }
-        if target.exists()
-            && let Err(e) = std::fs::remove_file(&target)
+        if target.abs_path.exists()
+            && let Err(e) = std::fs::remove_file(&target.abs_path)
         {
             tracing::error!("删除文件失败 {}: {:?}", path, e);
             errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
@@ -100,12 +92,10 @@ pub async fn handle_delete_doc(
     }
 
     // 4. 更新 TreeManager 并广播 Delta
-    if let Some(node_id) = node_id {
-        let delta = state
-            .tree_manager
-            .with_tree_mut(scope.repo_id, |tm| tm.remove(node_id));
-        ch.unicast(ServerMessage::TreeUpdate(delta));
-    }
+    let delta = state
+        .tree_manager
+        .with_tree_mut(scope.repo_id, |tm| tm.remove(target.node_id));
+    ch.unicast(ServerMessage::TreeUpdate(delta));
 
     // 5. 刷新文档列表
     handle_list_docs(state, ch, session).await;
