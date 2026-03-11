@@ -1,7 +1,6 @@
 use crate::ledger::RepoManager;
 use crate::ledger::node_meta;
 use crate::models::{DocId, NodeId, NodeKind, StructureOp};
-use crate::source_control::snapshot_paths;
 use anyhow::{Result, anyhow};
 
 pub(super) struct StructuredCommitTarget {
@@ -51,9 +50,7 @@ pub(super) fn plan_delete(
 ) -> Result<Option<StructuredCommitTarget>> {
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => repo.run_on_local_repo(repo_name, |db| {
-            snapshot_paths::find_snapshot_doc_id(db, path)
-        })?,
+        None => repo.resolve_canonical_doc_id_in_local_repo(repo_name, path)?,
     };
     Ok(doc_id.map(|doc_id| StructuredCommitTarget {
         doc_id,
