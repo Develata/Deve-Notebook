@@ -18,9 +18,27 @@ pub async fn handle_switch_branch(
     let mut force_repo_switch = None;
 
     if let Some(pid_str) = &peer_id {
-        let shadows = state.repo.list_shadows_on_disk().unwrap_or_default();
+        let shadows = match state.repo.list_shadows_on_disk() {
+            Ok(shadows) => shadows,
+            Err(err) => {
+                ch.send_protocol_error(ServerError::with_detail(
+                    ServerErrorCode::RequestFailed,
+                    format!("Failed to list shadows: {}", err),
+                ));
+                return;
+            }
+        };
         let is_valid_shadow = shadows.iter().any(|p| p.as_str() == pid_str);
-        let local_repos = state.repo.list_repos(None).unwrap_or_default();
+        let local_repos = match state.repo.list_repos(None) {
+            Ok(repos) => repos,
+            Err(err) => {
+                ch.send_protocol_error(ServerError::with_detail(
+                    ServerErrorCode::RequestFailed,
+                    format!("Failed to list local repos: {}", err),
+                ));
+                return;
+            }
+        };
         let is_local_repo = local_repos.contains(pid_str);
 
         if !is_valid_shadow && is_local_repo {
@@ -62,10 +80,16 @@ pub async fn handle_switch_branch(
     let target_repo = if let Some(forced) = force_repo_switch {
         Some(forced)
     } else {
-        let repos = state
-            .repo
-            .list_repos(session.active_branch.as_ref())
-            .unwrap_or_default();
+        let repos = match state.repo.list_repos(session.active_branch.as_ref()) {
+            Ok(repos) => repos,
+            Err(err) => {
+                ch.send_protocol_error(ServerError::with_detail(
+                    ServerErrorCode::RequestFailed,
+                    format!("Failed to list repos for branch switch: {}", err),
+                ));
+                return;
+            }
+        };
         let mut best_match = None;
         if let Some(url) = &current_repo_url {
             for repo_name in &repos {
@@ -147,7 +171,16 @@ pub async fn handle_switch_repo(
     );
 
     let branch = session.active_branch.clone();
-    let repos = state.repo.list_repos(branch.as_ref()).unwrap_or_default();
+    let repos = match state.repo.list_repos(branch.as_ref()) {
+        Ok(repos) => repos,
+        Err(err) => {
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                format!("Failed to list repos: {}", err),
+            ));
+            return;
+        }
+    };
 
     if repos.contains(&name) {
         session.clear_sync_binding();

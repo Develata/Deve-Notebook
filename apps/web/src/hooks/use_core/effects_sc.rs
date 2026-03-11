@@ -120,7 +120,10 @@ mod tests {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let (current_repo_id, _) = signal(None::<String>);
-        assert!(!matches_current_repo(&Some(uuid::Uuid::new_v4()), current_repo_id));
+        assert!(!matches_current_repo(
+            &Some(uuid::Uuid::new_v4()),
+            current_repo_id
+        ));
         assert!(matches_current_repo(&None, current_repo_id));
     }
 }
