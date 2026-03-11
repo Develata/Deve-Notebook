@@ -3,6 +3,8 @@ pub mod buffer;
 #[cfg(not(target_arch = "wasm32"))]
 mod dir_change;
 #[cfg(not(target_arch = "wasm32"))]
+mod dir_refresh_guard;
+#[cfg(not(target_arch = "wasm32"))]
 mod discard_pending;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod engine;
@@ -46,6 +48,8 @@ use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
 #[cfg(not(target_arch = "wasm32"))]
+use dir_refresh_guard::DirRefreshGuard;
+#[cfg(not(target_arch = "wasm32"))]
 use persist_guard::PersistGuard;
 #[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
@@ -60,6 +64,7 @@ pub struct SyncManager {
     repo: Arc<RepoManager>,
     vault_root: PathBuf,
     vfs: Vfs,
+    dir_refresh_guard: DirRefreshGuard,
     persist_guard: Arc<PersistGuard>,
 }
 
@@ -68,6 +73,7 @@ impl SyncManager {
     pub fn new(repo: Arc<RepoManager>, vault_root: PathBuf) -> Self {
         let vfs = Vfs::new(&vault_root);
         Self {
+            dir_refresh_guard: DirRefreshGuard::new(),
             persist_guard: repo.persist_guard.clone(),
             repo,
             vault_root,
