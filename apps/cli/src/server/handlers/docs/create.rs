@@ -56,12 +56,6 @@ pub async fn handle_create_doc(
         }
     };
 
-    if let Err(e) = ensure_parent_dirs(&path) {
-        tracing::error!("创建目录失败: {:?}", e);
-        errors::storage_persist_failed(ch, format!("Failed to create directories: {}", e));
-        return;
-    }
-
     if filename.ends_with('/') {
         handle_folder_create(state, ch, session, &scope, &path, &filename).await;
     } else {
@@ -74,11 +68,4 @@ fn normalize_name(mut name: String) -> String {
         name.push_str(".md");
     }
     name
-}
-
-fn ensure_parent_dirs(path: &std::path::Path) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    Ok(())
 }

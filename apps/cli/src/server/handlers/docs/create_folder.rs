@@ -36,11 +36,15 @@ pub async fn handle_folder_create(
             return;
         }
     };
-    if !path.exists()
-        && let Err(e) = std::fs::create_dir_all(path)
+    if let Err(e) = state
+        .sync_manager
+        .rebuild_projection_local_repo(&scope.repo_name)
     {
-        tracing::error!("创建文件夹失败: {:?}", e);
-        errors::storage_persist_failed(ch, format!("Failed to create folder: {}", e));
+        tracing::error!("目录创建后重建投影失败: {:?}", e);
+        errors::storage_persist_failed(
+            ch,
+            format!("Failed to rebuild created folder projection: {}", e),
+        );
         return;
     }
     if let Err(e) = broadcast_dir_chain(state, ch, scope.repo_id, &scope.repo_name, node_id) {
