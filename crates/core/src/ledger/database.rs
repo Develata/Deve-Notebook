@@ -21,6 +21,37 @@ use std::sync::{Arc, RwLock};
 static OPENED_DBS: std::sync::LazyLock<RwLock<HashMap<std::path::PathBuf, Arc<Database>>>> =
     std::sync::LazyLock::new(|| RwLock::new(HashMap::new()));
 
+pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
+    if !db_path.exists() {
+        return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
+    }
+    cached_or_create_database(db_path)
+}
+
+pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>> {
+    {
+        let cache = OPENED_DBS.read().unwrap();
+        if let Some(arc_db) = cache.get(db_path) {
+            tracing::debug!("Database cache hit: {:?}", db_path);
+            return Ok(arc_db.clone());
+        }
+    }
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let db = Database::create(db_path)?;
+    let arc_db = Arc::new(db);
+
+    {
+        let mut cache = OPENED_DBS.write().unwrap();
+        cache.insert(db_path.to_path_buf(), arc_db.clone());
+    }
+
+    tracing::info!("Opened and cached database: {:?}", db_path);
+    Ok(arc_db)
+}
+
 /// 数据库访问信息
 ///
 /// 包含数据库引用及其访问模式
@@ -171,31 +202,6 @@ impl RepoManager {
 
     /// 获取或打开影子数据库 (返回 Arc)
     fn get_or_open_db_at(&self, db_path: &Path) -> Result<Arc<Database>> {
-        Self::get_cached_database(db_path)
-    }
-
-    fn get_cached_database(db_path: &Path) -> Result<Arc<Database>> {
-        {
-            let cache = OPENED_DBS.read().unwrap();
-            if let Some(arc_db) = cache.get(db_path) {
-                tracing::debug!("Database cache hit: {:?}", db_path);
-                return Ok(arc_db.clone());
-            }
-        }
-
-        if !db_path.exists() {
-            return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
-        }
-
-        let db = Database::create(db_path)?;
-        let arc_db = Arc::new(db);
-
-        {
-            let mut cache = OPENED_DBS.write().unwrap();
-            cache.insert(db_path.to_path_buf(), arc_db.clone());
-        }
-
-        tracing::info!("Opened and cached database: {:?}", db_path);
-        Ok(arc_db)
+        cached_database(db_path)
     }
 }

@@ -78,3 +78,16 @@ fn dir_change_rescan_records_child_rename_candidates() {
             && entry.renamed_from.as_deref() == Some("notes/a.md")
     }));
 }
+
+#[test]
+fn dir_change_ignores_repo_root_refresh() {
+    let (_dir, repo, vault) = new_repo();
+    write_workspace_file(&vault, "notes/a.md", "hello");
+    let sync = SyncManager::new(repo, vault);
+
+    assert!(
+        sync.handle_dir_change("default")
+            .expect("handle repo root dir change")
+            .is_none()
+    );
+}

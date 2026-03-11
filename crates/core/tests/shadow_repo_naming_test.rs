@@ -61,3 +61,26 @@ fn remote_repo_listing_prefers_metadata_name() {
         .expect("open remote shadow by name");
     assert_eq!(handle.repo_name, "wiki");
 }
+
+#[test]
+fn remote_repo_listing_reuses_open_remote_database() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+    let info = RepoInfo {
+        uuid: repo_id,
+        name: "wiki".into(),
+        url: Some("urn:test:wiki".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&peer_id, &info)
+        .expect("prepare named shadow");
+    let handle = repo
+        .open_database(Some(&peer_id), "wiki")
+        .expect("open remote shadow first");
+    assert_eq!(handle.repo_name, "wiki");
+    assert_eq!(
+        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
+        vec!["wiki".to_string()]
+    );
+}

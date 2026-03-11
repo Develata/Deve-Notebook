@@ -11,6 +11,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use crate::ledger::database::cached_or_create_database;
 use crate::ledger::schema::*;
 use crate::models::{PeerId, RepoId};
 use anyhow::{Context, Result};
@@ -65,7 +66,7 @@ pub fn load_shadow_db(
     std::fs::create_dir_all(&peer_dir)
         .with_context(|| format!("Failed to create shadow directory for peer: {}", peer_id))?;
 
-    let db = Database::create(db_path).with_context(|| {
+    let db = cached_or_create_database(db_path).with_context(|| {
         format!(
             "Failed to create shadow database for peer {} repo {}",
             peer_id, repo_id
@@ -95,9 +96,7 @@ pub fn load_shadow_db(
     write_txn.commit()?;
 
     // Store in map
-    dbs.entry(peer_id.clone())
-        .or_default()
-        .insert(*repo_id, Arc::new(db));
+    dbs.entry(peer_id.clone()).or_default().insert(*repo_id, db);
 
     Ok(())
 }

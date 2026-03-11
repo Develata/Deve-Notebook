@@ -1,4 +1,5 @@
 use crate::ledger::RepoManager;
+use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::REPO_METADATA;
 use anyhow::Result;
@@ -25,8 +26,8 @@ impl RepoManager {
     }
 
     pub(crate) fn read_repo_info_from_path(path: &Path) -> Result<Option<RepoInfo>> {
-        let db = Database::create(path)?;
-        Self::read_repo_info_from_db(&db)
+        let db = cached_database(path)?;
+        Self::read_repo_info_from_db(db.as_ref())
     }
 
     pub(crate) fn write_repo_info_to_db(db: &Database, info: &RepoInfo) -> Result<()> {
