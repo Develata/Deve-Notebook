@@ -7,7 +7,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::PeerId;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 #[path = "listing_docs.rs"]
@@ -17,20 +17,17 @@ pub use listing_docs::handle_list_docs;
 
 /// 处理 ListShadows 请求 - 返回影子库列表 (远程分支)
 pub async fn handle_list_shadows(state: &Arc<AppState>, ch: &DualChannel) {
-    tracing::info!(
-        "Handling ListShadows request. Remotes dir: {:?}",
-        state.repo.remotes_dir()
-    );
     match state.repo.list_shadows_on_disk() {
         Ok(peers) => {
             let shadows: Vec<String> = peers.iter().map(|p| p.to_string()).collect();
-            tracing::info!("Found {} shadow repos: {:?}", shadows.len(), shadows);
-            // 单播给请求者
             ch.unicast(ServerMessage::ShadowList { shadows });
         }
         Err(e) => {
             tracing::error!("Failed to list shadow repos: {:?}", e);
-            ch.unicast(ServerMessage::ShadowList { shadows: vec![] });
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                format!("Failed to list shadow repos: {}", e),
+            ));
         }
     }
 }
@@ -43,12 +40,14 @@ pub async fn handle_list_repos(
 ) {
     match state.repo.list_repos(active_branch) {
         Ok(repos) => {
-            // 单播给请求者
             ch.unicast(ServerMessage::RepoList { repos });
         }
         Err(e) => {
             tracing::error!("Failed to list repos: {:?}", e);
-            ch.unicast(ServerMessage::RepoList { repos: vec![] });
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                format!("Failed to list repos: {}", e),
+            ));
         }
     }
 }
