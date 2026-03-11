@@ -11,6 +11,7 @@
 //! - `pending_fs`: 待确认文件变更管理 (Working Directory) [仅后端]
 //! - `commit_diff`: 提交间差异计算 [仅后端]
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod api;
 pub mod diff;
 pub mod line_diff;
@@ -34,6 +35,7 @@ pub mod snapshot_paths;
 pub mod staging;
 
 // 重新导出常用类型
+#[cfg(not(target_arch = "wasm32"))]
 pub use api::SourceControlApi;
 pub use line_diff::ChangeRange;
 pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
