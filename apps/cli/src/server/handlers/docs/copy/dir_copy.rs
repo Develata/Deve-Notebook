@@ -19,7 +19,7 @@ pub(super) fn copy_dir(
     if !copy_dir_on_disk(ch, src, dst, src_path) {
         return false;
     }
-    if !register_copied_docs(state, ch, scope, dst, dest_path) {
+    if !register_copied_docs(state, ch, scope, src, src_path, dst, dest_path) {
         return false;
     }
     if let Ok(report) = run_on_resolved_local_repo(state, scope, |db| {
