@@ -33,7 +33,7 @@ pub(super) fn scan_disk_file(
             return Ok(Some(doc_id));
         }
         repo.bind_inode_in_local_repo(repo_name, &inode, doc_id)?;
-        pending_content::sync_modified_pending(repo, repo_name, repo_path, doc_id)?;
+        let _ = pending_content::sync_modified_pending(repo, repo_name, repo_path, doc_id)?;
         return Ok(Some(doc_id));
     }
 
@@ -44,6 +44,6 @@ pub(super) fn scan_disk_file(
     if let Some(inode) = inode {
         repo.bind_inode_in_local_repo(repo_name, &inode, doc_id)?;
     }
-    pending_content::sync_modified_pending(repo, repo_name, repo_path, doc_id)?;
+    let _ = pending_content::sync_modified_pending(repo, repo_name, repo_path, doc_id)?;
     Ok(Some(doc_id))
 }

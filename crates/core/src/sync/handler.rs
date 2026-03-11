@@ -12,6 +12,8 @@ use anyhow::Result;
 use std::sync::Arc;
 use tracing::{info, warn};
 
+use super::pending_content::PendingSyncResult;
+
 pub struct FsEventHandler<'a> {
     repo: &'a Arc<RepoManager>,
     vfs: &'a Vfs,
@@ -65,13 +67,15 @@ impl<'a> FsEventHandler<'a> {
             info!("Handler: Inode change (Atomic Save?) for {}", repo_path);
             self.repo
                 .bind_inode_in_local_repo(self.repo_name, &inode, existing_id)?;
-            super::pending_content::sync_modified_pending(
+            return match super::pending_content::sync_modified_pending(
                 self.repo,
                 self.repo_name,
                 repo_path,
                 existing_id,
-            )?;
-            return self.modified_refresh(repo_path);
+            )? {
+                PendingSyncResult::Changed => self.modified_refresh(repo_path),
+                PendingSyncResult::Noop => Ok(vec![]),
+            };
         }
 
         info!("Handler: New file detected: {}", repo_path);
@@ -147,14 +151,18 @@ impl<'a> FsEventHandler<'a> {
             return self.record_external_rename(&meta.path, repo_path, doc_id);
         }
 
-        info!("Handler: Content update detected for {}", repo_path);
-        super::pending_content::sync_modified_pending(
+        match super::pending_content::sync_modified_pending(
             self.repo,
             self.repo_name,
             repo_path,
             doc_id,
-        )?;
-        self.modified_refresh(repo_path)
+        )? {
+            PendingSyncResult::Changed => {
+                info!("Handler: Content update detected for {}", repo_path);
+                self.modified_refresh(repo_path)
+            }
+            PendingSyncResult::Noop => Ok(vec![]),
+        }
     }
 
     fn modified_refresh(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {

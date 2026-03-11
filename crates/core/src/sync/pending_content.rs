@@ -8,27 +8,58 @@ use super::pending;
 use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::models::DocId;
+use crate::source_control::ChangeStatus;
+use crate::source_control::conflict;
+use crate::source_control::pending_fs;
 use anyhow::Result;
 use std::sync::Arc;
+
+pub(super) enum PendingSyncResult {
+    Noop,
+    Changed,
+}
 
 pub(super) fn sync_modified_pending(
     repo: &Arc<RepoManager>,
     repo_name: &str,
     repo_path: &str,
     doc_id: DocId,
-) -> Result<()> {
+) -> Result<PendingSyncResult> {
     let file_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
     let disk_content = std::fs::read_to_string(&file_path).unwrap_or_default();
     let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
+    let current = repo.run_on_local_repo(repo_name, |db| pending_fs::get(db, repo_path))?;
     if rebuilt.content == disk_content {
-        return pending::clear(repo, repo_name, repo_path);
+        return if current.is_some() {
+            pending::clear(repo, repo_name, repo_path)?;
+            Ok(PendingSyncResult::Changed)
+        } else {
+            Ok(PendingSyncResult::Noop)
+        };
+    }
+    let next_hash = pending_fs::content_hash(&disk_content);
+    let has_conflict = repo.run_on_local_repo(repo_name, |db| {
+        conflict::check_conflict(db, doc_id, &next_hash)
+    })?;
+    let unchanged = matches!(
+        current,
+        Some(entry)
+            if entry.change_type == ChangeStatus::Modified
+                && entry.doc_id == Some(doc_id)
+                && entry.renamed_from.is_none()
+                && entry.content_hash == next_hash
+                && entry.has_conflict == has_conflict
+    );
+    if unchanged {
+        return Ok(PendingSyncResult::Noop);
     }
     pending::upsert(
         repo,
         repo_name,
         repo_path,
-        crate::source_control::ChangeStatus::Modified,
+        ChangeStatus::Modified,
         Some(doc_id),
         None,
-    )
+    )?;
+    Ok(PendingSyncResult::Changed)
 }
