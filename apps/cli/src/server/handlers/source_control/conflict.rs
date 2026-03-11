@@ -33,10 +33,11 @@ pub async fn handle_resolve_conflict(
         Ok(entries) => entries,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let normalized = super::service::resolve_path(&pending, &target);
+    let resolved = super::service::resolve_target(&pending, &target);
+    let normalized = resolved.path.clone();
     let result = match resolution {
-        ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &normalized),
-        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &selector, &normalized),
+        ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &resolved),
+        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &selector, &resolved),
     };
 
     match result {
@@ -63,25 +64,15 @@ pub async fn handle_resolve_conflict(
 fn resolve_keep_fs(
     state: &Arc<AppState>,
     selector: &RepoSelector,
-    path: &str,
+    target: &ScPathTarget,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    super::service::stage_pending(
-        state.repo.as_ref(),
-        selector,
-        &ScPathTarget::from_path(path.to_string()),
-    )
-    .map(|_| ())
+    super::service::stage_pending(state.repo.as_ref(), selector, target).map(|_| ())
 }
 
 fn resolve_keep_ledger(
     state: &Arc<AppState>,
     selector: &RepoSelector,
-    path: &str,
+    target: &ScPathTarget,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    super::local_discard::discard_via_sync_manager(
-        state,
-        selector,
-        &ScPathTarget::from_path(path.to_string()),
-    )
-    .map(|_| ())
+    super::local_discard::discard_via_sync_manager(state, selector, target).map(|_| ())
 }

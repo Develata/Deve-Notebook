@@ -11,9 +11,10 @@ pub fn stage_pending(
     let entries = repo
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::StagePending(target.path.clone()), e))?;
-    let path = super::resolve_path(&entries, target);
-    for related_path in super::related_paths(&entries, target) {
-        repo.stage_pending_in_repo(selector, &ScPathTarget::from_path(related_path))
+    let resolved = super::resolve_target(&entries, target);
+    let path = resolved.path.clone();
+    for related_target in super::related_targets(&entries, &resolved) {
+        repo.stage_pending_in_repo(selector, &related_target)
             .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
     }
     Ok(path)
@@ -27,10 +28,15 @@ pub fn stage_pending_many(
     let entries = repo
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::ListPending, e))?;
-    let visible_paths = super::resolve_paths(&entries, targets);
-    for path in &visible_paths {
-        for related_path in super::related_paths(&entries, &ScPathTarget::from_path(path.clone())) {
-            repo.stage_pending_in_repo(selector, &ScPathTarget::from_path(related_path))
+    let resolved_targets = super::resolve_targets(&entries, targets);
+    let visible_paths: Vec<_> = resolved_targets
+        .iter()
+        .map(|target| target.path.clone())
+        .collect();
+    for target in &resolved_targets {
+        let path = target.path.clone();
+        for related_target in super::related_targets(&entries, target) {
+            repo.stage_pending_in_repo(selector, &related_target)
                 .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
         }
     }
@@ -45,8 +51,9 @@ pub fn discard_pending(
     let entries = repo
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::DiscardPending(target.path.clone()), e))?;
-    let path = super::resolve_path(&entries, target);
-    repo.discard_pending_in_repo(selector, &ScPathTarget::from_path(path.clone()))
+    let resolved = super::resolve_target(&entries, target);
+    let path = resolved.path.clone();
+    repo.discard_pending_in_repo(selector, &resolved)
         .map_err(|e| errors::map_repo_error(ScOp::DiscardPending(path.clone()), e))?;
     Ok(path)
 }
@@ -59,9 +66,10 @@ pub fn unstage_file(
     let entries = repo
         .list_changes_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::Unstage(target.path.clone()), e))?;
-    let path = super::resolve_path(&entries, target);
-    for related_path in super::related_paths(&entries, target) {
-        repo.unstage_file_in_repo(selector, &ScPathTarget::from_path(related_path))
+    let resolved = super::resolve_target(&entries, target);
+    let path = resolved.path.clone();
+    for related_target in super::related_targets(&entries, &resolved) {
+        repo.unstage_file_in_repo(selector, &related_target)
             .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
     }
     Ok(path)
@@ -75,10 +83,15 @@ pub fn unstage_many(
     let entries = repo
         .list_changes_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::ListChanges, e))?;
-    let visible_paths = super::resolve_paths(&entries, targets);
-    for path in &visible_paths {
-        for related_path in super::related_paths(&entries, &ScPathTarget::from_path(path.clone())) {
-            repo.unstage_file_in_repo(selector, &ScPathTarget::from_path(related_path))
+    let resolved_targets = super::resolve_targets(&entries, targets);
+    let visible_paths: Vec<_> = resolved_targets
+        .iter()
+        .map(|target| target.path.clone())
+        .collect();
+    for target in &resolved_targets {
+        let path = target.path.clone();
+        for related_target in super::related_targets(&entries, target) {
+            repo.unstage_file_in_repo(selector, &related_target)
                 .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
         }
     }

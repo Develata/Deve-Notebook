@@ -47,9 +47,32 @@ pub fn expand_related_paths(entries: &[ChangeEntry], path: &str) -> Vec<String> 
     paths
 }
 
-pub fn expand_related_target_paths(entries: &[ChangeEntry], target: &ScPathTarget) -> Vec<String> {
+pub fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathTarget {
     let path = resolve_target_path(entries, target);
-    expand_related_paths(entries, &path)
+    let doc_id = target.doc_id.or_else(|| {
+        entries
+            .iter()
+            .find(|entry| normalized(&entry.path) == path)
+            .and_then(|entry| entry.doc_id)
+    });
+    ScPathTarget { path, doc_id }
+}
+
+pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) -> Vec<ScPathTarget> {
+    let resolved = resolve_target(entries, target);
+    let mut targets = vec![];
+    for path in expand_related_paths(entries, &resolved.path) {
+        let doc_id = entries
+            .iter()
+            .find(|entry| normalized(&entry.path) == path)
+            .and_then(|entry| entry.doc_id)
+            .or(resolved.doc_id);
+        let candidate = ScPathTarget { path, doc_id };
+        if !targets.contains(&candidate) {
+            targets.push(candidate);
+        }
+    }
+    targets
 }
 
 pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> String {
@@ -107,5 +130,40 @@ mod tests {
         };
 
         assert_eq!(resolve_target_path(&entries, &target), "notes/new.md");
+    }
+
+    #[test]
+    fn expand_related_targets_preserves_doc_id_for_rename_pair() {
+        let doc_id = DocId(Uuid::nil());
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
+
+        assert_eq!(
+            expand_related_targets(&entries, &ScPathTarget::from_path("notes/new.md")),
+            vec![
+                ScPathTarget {
+                    path: "notes/new.md".into(),
+                    doc_id: Some(doc_id),
+                },
+                ScPathTarget {
+                    path: "notes/old.md".into(),
+                    doc_id: Some(doc_id),
+                },
+            ]
+        );
     }
 }
