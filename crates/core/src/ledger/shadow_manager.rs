@@ -12,6 +12,7 @@ use anyhow::{Result, anyhow};
 
 use super::RepoInfo;
 use super::RepoManager;
+use super::database::relocate_database_path;
 use super::ops;
 use super::shadow;
 use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId, RepoType};
@@ -47,8 +48,9 @@ impl RepoManager {
         let db_path = match self.resolve_remote_repo_entry(peer_id, &info.uuid.to_string())? {
             Some(entry) if entry.path == desired => entry.path,
             Some(entry) => {
-                self.detach_shadow_repo(peer_id, &info.uuid);
+                relocate_database_path(&entry.path, &desired);
                 std::fs::rename(&entry.path, &desired)?;
+                self.detach_shadow_repo(peer_id, &info.uuid);
                 desired
             }
             None => desired,
@@ -60,18 +62,12 @@ impl RepoManager {
             &info.uuid,
             &db_path,
         )?;
-        let mut stored = info.clone();
-        stored.name = db_path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or(&info.name)
-            .to_string();
         let dbs = self.shadow_dbs.read().unwrap();
         let db = dbs
             .get(peer_id)
             .and_then(|repos| repos.get(&info.uuid))
             .ok_or_else(|| anyhow!("Shadow DB not loaded for {}/{}", peer_id, info.uuid))?;
-        Self::write_repo_info_to_db(db, &stored)
+        Self::write_repo_info_to_db(db, info)
     }
 
     /// 列出所有已加载到内存的影子库

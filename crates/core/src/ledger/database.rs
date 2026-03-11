@@ -28,6 +28,13 @@ pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) {
         .insert(db_path.to_path_buf(), db);
 }
 
+pub(crate) fn relocate_database_path(old_path: &Path, new_path: &Path) {
+    let mut cache = OPENED_DBS.write().unwrap();
+    if let Some(db) = cache.remove(old_path) {
+        cache.insert(new_path.to_path_buf(), db);
+    }
+}
+
 pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
     if !db_path.exists() {
         return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));

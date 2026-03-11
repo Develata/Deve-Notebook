@@ -84,3 +84,40 @@ fn remote_repo_listing_reuses_open_remote_database() {
         vec!["wiki".to_string()]
     );
 }
+
+#[test]
+fn ensure_shadow_repo_info_realigns_name_for_same_uuid() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: repo_id,
+            name: "legacy".into(),
+            url: Some("urn:test:wiki".into()),
+        },
+    )
+    .expect("prepare legacy shadow");
+
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: repo_id,
+            name: "wiki".into(),
+            url: Some("urn:test:wiki".into()),
+        },
+    )
+    .expect("realign shadow name");
+
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    assert!(peer_dir.join("wiki.redb").exists());
+    assert!(!peer_dir.join("legacy.redb").exists());
+    let info = repo
+        .get_repo_info_for(Some(&peer_id), Some("wiki"))
+        .expect("lookup remote repo info")
+        .expect("remote repo info exists");
+    assert_eq!(info.name, "wiki");
+    assert_eq!(info.uuid, repo_id);
+}

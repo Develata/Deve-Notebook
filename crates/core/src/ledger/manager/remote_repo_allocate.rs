@@ -22,11 +22,13 @@ impl RepoManager {
             if !path.exists() {
                 return Ok(path);
             }
-            if Self::read_repo_info_from_path(&path)?
-                .map(|current| current.uuid == info.uuid)
-                .unwrap_or(false)
+            if let Some(current) = Self::read_repo_info_from_path(&path)?
+                && current.uuid == info.uuid
             {
-                return Ok(path);
+                if stem == base {
+                    return Ok(path);
+                }
+                continue;
             }
         }
         unreachable!("remote repo path allocator must terminate")
