@@ -1,0 +1,68 @@
+use deve_core::ledger::RepoManager;
+use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::sync::SyncManager;
+use std::sync::Arc;
+use tempfile::{TempDir, tempdir};
+
+fn new_repo() -> (TempDir, Arc<RepoManager>, std::path::PathBuf) {
+    let dir = tempdir().expect("create tempdir");
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
+    repo.set_vault_root(&vault);
+    (dir, Arc::new(repo), vault)
+}
+
+fn write_workspace_file(root: &std::path::Path, path: &str, content: &str) {
+    let abs = root.join("default").join(path);
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent).expect("create workspace parent");
+    }
+    std::fs::write(abs, content).expect("write workspace file");
+}
+
+fn seed_pending_add(repo: &RepoManager, path: &str, content: &str) {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: path.into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash(content),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed pending add");
+}
+
+#[test]
+fn commit_diff_reports_child_rename_after_directory_move() {
+    let (_dir, repo, vault) = new_repo();
+    write_workspace_file(&vault, "notes/a.md", "hello");
+    seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
+    repo.stage_pending("notes/a.md").expect("stage initial");
+    let first = repo.commit_staged("initial").expect("commit initial");
+
+    std::fs::rename(vault.join("default/notes"), vault.join("default/docs")).expect("rename dir");
+    let sync = SyncManager::new(repo.clone(), vault.clone());
+    sync.handle_dir_change("default/docs")
+        .expect("handle dir change")
+        .expect("repo-scoped result");
+    repo.stage_pending("notes/a.md").expect("stage delete");
+    repo.stage_pending("docs/a.md").expect("stage add");
+    let second = repo.commit_staged("rename dir").expect("commit rename");
+
+    let diffs = repo
+        .diff_commits(Some(&first.id), &second.id)
+        .expect("diff commits");
+    assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].status, ChangeStatus::Renamed);
+    assert_eq!(diffs[0].previous_path.as_deref(), Some("notes/a.md"));
+    assert_eq!(diffs[0].path, "docs/a.md");
+    assert_eq!(diffs[0].old_content, "hello");
+    assert_eq!(diffs[0].new_content, "hello");
+}
