@@ -64,3 +64,16 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
     assert!(sync.should_ignore_fs_event("default/notes/a.md"));
     Ok(())
 }
+
+#[test]
+fn projection_delete_marks_watcher_ignore() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo();
+    let file_path = dir.path().join("vault/default/notes/a.md");
+    std::fs::create_dir_all(file_path.parent().expect("parent"))?;
+    std::fs::write(&file_path, "temp")?;
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    sync.remove_projection_path_in_local_repo("default", "notes/a.md")?;
+    assert!(!file_path.exists());
+    assert!(sync.should_ignore_fs_event("default/notes/a.md"));
+    Ok(())
+}

@@ -86,10 +86,11 @@ pub async fn handle_delete_doc(
             errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
             return;
         }
-        if target.abs_path.exists()
-            && let Err(e) = std::fs::remove_file(&target.abs_path)
+        if let Err(e) = state
+            .sync_manager
+            .remove_projection_path_in_local_repo(&scope.repo_name, &path)
         {
-            tracing::error!("删除文件失败 {}: {:?}", path, e);
+            tracing::error!("删除文件投影失败 {}: {:?}", path, e);
             errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
             return;
         }

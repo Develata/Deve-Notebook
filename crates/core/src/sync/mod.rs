@@ -18,6 +18,8 @@ mod pending_content;
 mod pending_rename;
 #[cfg(not(target_arch = "wasm32"))]
 mod persist_guard;
+#[cfg(not(target_arch = "wasm32"))]
+mod projection_io;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod rebuild;
@@ -52,7 +54,7 @@ use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
-use tracing::{info, warn};
+use tracing::info;
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
     repo: Arc<RepoManager>,
@@ -127,47 +129,11 @@ impl SyncManager {
         self.persist_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
     }
     pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
-        if let Some(path_str) = self
-            .repo
-            .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
-            .map(|meta| meta.path)
-        {
-            let file_path = self.repo.local_repo_workspace_path(repo_name, &path_str)?;
-            let rebuilt = rebuild::rebuild_local_doc_in_repo(&self.repo, repo_name, doc_id)?;
+        projection_io::persist_doc(self, repo_name, doc_id)
+    }
 
-            if let Some(parent) = file_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            let relative_path = self
-                .repo
-                .local_repo_workspace_relative(repo_name, &path_str);
-            self.persist_guard.record(&relative_path, &rebuilt.content);
-            if let Err(err) = std::fs::write(&file_path, &rebuilt.content) {
-                self.persist_guard.clear(&relative_path);
-                return Err(err.into());
-            }
-            self.repo
-                .bind_workspace_inode_in_local_repo(repo_name, &path_str, doc_id)?;
-            info!("SyncManager: Persisted doc {} to {:?}", doc_id, file_path);
-            let delta = rebuilt.max_seq.saturating_sub(rebuilt.base_seq);
-            let policy = SnapshotPolicy::default();
-            let doc_len = rebuilt.content.encode_utf16().count();
-            if rebuilt.max_seq > 0
-                && policy.should_snapshot(doc_len, delta, 0)
-                && let Err(e) = self.repo.save_snapshot_in_local_repo(
-                    repo_name,
-                    doc_id,
-                    rebuilt.max_seq,
-                    &rebuilt.content,
-                )
-            {
-                warn!(
-                    "SyncManager: Failed to save snapshot for {}: {:?}",
-                    doc_id, e
-                );
-            }
-        }
-        Ok(())
+    pub fn remove_projection_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
+        projection_io::remove_projection_path(self, repo_name, path)
     }
 
     /// 应用操作并选择性持久化到 Vault

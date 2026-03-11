@@ -18,7 +18,6 @@ pub(super) async fn handle_file_rename(
     scope: &ResolvedRepo,
     src_path: &str,
     dst_path: &str,
-    src_file: &std::path::Path,
 ) {
     let doc_id = match state
         .repo
@@ -52,10 +51,11 @@ pub(super) async fn handle_file_rename(
         errors::storage_persist_failed(ch, format!("Failed to materialize renamed file: {}", e));
         return;
     }
-    if src_file.exists()
-        && let Err(e) = std::fs::remove_file(src_file)
+    if let Err(e) = state
+        .sync_manager
+        .remove_projection_path_in_local_repo(&scope.repo_name, src_path)
     {
-        tracing::error!("旧路径清理失败 {}: {:?}", src_path, e);
+        tracing::error!("旧路径投影清理失败 {}: {:?}", src_path, e);
         errors::storage_persist_failed(ch, format!("Failed to remove old file: {}", e));
         return;
     }

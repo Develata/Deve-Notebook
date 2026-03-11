@@ -90,16 +90,7 @@ pub async fn handle_rename_doc(
 
     // 3. 执行重命名
     if src.kind == NodeKind::File {
-        handle_file_rename(
-            state,
-            ch,
-            session,
-            &scope,
-            &old_path,
-            &dst_name,
-            &src.abs_path,
-        )
-        .await;
+        handle_file_rename(state, ch, session, &scope, &old_path, &dst_name).await;
         return;
     }
     handle_dir_rename(state, ch, session, &scope, &old_path, &dst_name).await;
