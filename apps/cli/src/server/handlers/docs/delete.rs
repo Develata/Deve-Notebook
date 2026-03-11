@@ -26,10 +26,9 @@ pub async fn handle_delete_doc(
     session: &mut WsSession,
     path: String,
 ) {
-    // 只读模式检查: 静默忽略删除请求
-    // TODO: Frontend will hide delete buttons when readonly
     if session.is_readonly() {
-        tracing::debug!("Delete ignored: session is readonly (remote branch)");
+        tracing::debug!("Delete rejected: session is readonly (remote branch)");
+        errors::remote_branch_readonly(ch);
         return;
     }
     let scope = match resolve_session_repo(state, session) {

@@ -93,7 +93,7 @@ pub fn SidebarMenu(
                     !is_readonly.get()
                         || matches!(
                             item.action,
-                            MenuAction::Copy | MenuAction::OpenInNewWindow
+                            MenuAction::OpenInNewWindow
                         )
                 }).map(|item| {
                     let action = item.action;

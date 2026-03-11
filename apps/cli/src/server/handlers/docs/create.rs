@@ -26,7 +26,8 @@ pub async fn handle_create_doc(
     name: String,
 ) {
     if session.is_readonly() {
-        tracing::debug!("Create ignored: session is readonly (remote branch)");
+        tracing::debug!("Create rejected: session is readonly (remote branch)");
+        errors::remote_branch_readonly(ch);
         return;
     }
     let scope = match resolve_session_repo(state, session) {

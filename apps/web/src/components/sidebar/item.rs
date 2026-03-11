@@ -73,7 +73,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let path_for_action = node.path.clone();
     let handle_action = Callback::new(move |action: MenuAction| {
         leptos::logging::log!("item.rs handle_action called: action={:?}", action);
-        if is_readonly.get() && !matches!(action, MenuAction::Copy | MenuAction::OpenInNewWindow) {
+        if is_readonly.get() && !matches!(action, MenuAction::OpenInNewWindow) {
             return;
         }
         let path = path_for_action.clone();

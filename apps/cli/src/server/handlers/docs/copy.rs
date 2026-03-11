@@ -24,7 +24,8 @@ pub async fn handle_copy_doc(
     dest_path: String,
 ) {
     if session.is_readonly() {
-        tracing::debug!("Copy ignored: session is readonly (remote branch)");
+        tracing::debug!("Copy rejected: session is readonly (remote branch)");
+        errors::remote_branch_readonly(ch);
         return;
     }
     let scope = match resolve_session_repo(state, session) {

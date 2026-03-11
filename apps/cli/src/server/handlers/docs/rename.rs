@@ -27,10 +27,9 @@ pub async fn handle_rename_doc(
     old_path: String,
     new_path: String,
 ) {
-    // 只读模式检查: 静默忽略重命名请求
-    // TODO: Frontend will hide rename buttons when readonly
     if session.is_readonly() {
-        tracing::debug!("Rename ignored: session is readonly (remote branch)");
+        tracing::debug!("Rename rejected: session is readonly (remote branch)");
+        errors::remote_branch_readonly(ch);
         return;
     }
     let scope = match resolve_session_repo(state, session) {
