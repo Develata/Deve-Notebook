@@ -13,11 +13,7 @@ pub fn build_dump(
             Some(id) => deve_core::ledger::node_meta::get_node_meta(db, id)?,
             None => None,
         };
-        let doc_id = node_meta.as_ref().and_then(|meta| meta.doc_id).or_else(|| {
-            deve_core::ledger::doc_lookup::resolve_doc_id(db, &path)
-                .ok()
-                .flatten()
-        });
+        let doc_id = node_meta.as_ref().and_then(|meta| meta.doc_id);
         Ok((node_id, node_meta, doc_id))
     })?;
     if node_id.is_none() && doc_id.is_none() {

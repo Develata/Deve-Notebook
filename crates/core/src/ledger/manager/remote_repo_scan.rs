@@ -1,3 +1,4 @@
+use crate::ledger::database::relocate_database_path;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::Result;
@@ -11,10 +12,34 @@ pub(crate) struct RemoteRepoEntry {
 }
 
 impl RepoManager {
+    fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
+        let peer_dir = self.remotes_dir().join(peer_id.to_filename());
+        if !peer_dir.exists() {
+            return Ok(());
+        }
+        let mut paths = std::fs::read_dir(&peer_dir)?
+            .filter_map(|entry| entry.ok().map(|e| e.path()))
+            .filter(|path| path.extension().and_then(|s| s.to_str()) == Some("redb"))
+            .collect::<Vec<_>>();
+        paths.sort();
+        for path in paths {
+            let Some(info) = Self::read_repo_info_from_path(&path)? else {
+                continue;
+            };
+            let desired = self.allocate_remote_repo_path(peer_id, &info)?;
+            if desired != path {
+                relocate_database_path(&path, &desired);
+                std::fs::rename(&path, &desired)?;
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn scan_remote_repo_entries(
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
+        self.repair_remote_repo_catalog(peer_id)?;
         let loaded = self.loaded_remote_repo_info(peer_id);
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
         if !peer_dir.exists() {
