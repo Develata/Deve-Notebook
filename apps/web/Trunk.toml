@@ -4,16 +4,20 @@ no_sri = true
 
 [serve]
 addresses = ["0.0.0.0"]
+prefer_address_family = "ipv4"
+disable_address_lookup = true
 port = 8080
 open = false
 ws_protocol = "ws"
 
 [[proxy]]
 backend = "http://127.0.0.1:3001/api/"
+no_system_proxy = true
 
 [[proxy]]
 backend = "ws://127.0.0.1:3001/ws"
 ws = true
+no_system_proxy = true
 
 [[hooks]]
 stage = "pre_build"
