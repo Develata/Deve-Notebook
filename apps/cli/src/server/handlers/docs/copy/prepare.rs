@@ -3,7 +3,7 @@ use super::super::{errors, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path};
-use deve_core::models::NodeKind;
+use deve_core::models::{DocId, NodeKind};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -11,6 +11,7 @@ pub(super) struct CopyPaths {
     pub src: PathBuf,
     pub dst: PathBuf,
     pub kind: NodeKind,
+    pub src_doc_id: Option<DocId>,
 }
 
 pub(super) fn prepare_copy_paths(
@@ -50,7 +51,8 @@ pub(super) fn prepare_copy_paths(
     if !valid {
         return None;
     }
-    if !src.abs_path.exists()
+    if src.kind == NodeKind::Dir
+        && !src.abs_path.exists()
         && let Err(err) = state
             .sync_manager
             .rebuild_projection_local_repo(&scope.repo_name)
@@ -58,7 +60,7 @@ pub(super) fn prepare_copy_paths(
         errors::storage_persist_failed(ch, format!("Failed to rebuild source projection: {}", err));
         return None;
     }
-    if !src.abs_path.exists() {
+    if src.kind == NodeKind::Dir && !src.abs_path.exists() {
         errors::storage_not_found(ch, format!("Source projection missing: {}", src_path));
         return None;
     }
@@ -69,5 +71,6 @@ pub(super) fn prepare_copy_paths(
         src: src.abs_path,
         dst,
         kind: src.kind,
+        src_doc_id: src.doc_id,
     })
 }

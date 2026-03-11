@@ -41,9 +41,7 @@ pub async fn handle_copy_doc(
             state, ch, &scope, &paths.src, &paths.dst, &src_path, &dest_path,
         )
     } else {
-        file_copy::copy_file(
-            state, ch, &scope, &paths.src, &paths.dst, &src_path, &dest_path,
-        )
+        file_copy::copy_file(state, ch, &scope, &paths, &src_path, &dest_path)
     };
     if !copied {
         return;
