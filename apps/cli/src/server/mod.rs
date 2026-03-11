@@ -50,6 +50,8 @@ pub mod security;
 pub mod session;
 mod setup;
 #[cfg(test)]
+mod source_control_commit_diff_test;
+#[cfg(test)]
 mod source_control_http_test;
 pub mod source_control_proxy;
 pub mod static_files;
