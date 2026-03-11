@@ -14,9 +14,9 @@ pub(super) async fn handle_edit(
     client_op_id: u64,
 ) {
     if session.is_readonly() {
-        tracing::debug!("Edit ignored: session is readonly (remote branch)");
+        tracing::debug!("Edit rejected: session is readonly (remote branch)");
         ch.unicast(ServerMessage::EditRejected {
-            error: ServerError::new(ServerErrorCode::SyncEditRejected),
+            error: ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
         });
         return;
     }

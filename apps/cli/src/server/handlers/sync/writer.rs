@@ -15,7 +15,7 @@ pub(super) fn handle(ch: &DualChannel, session: &mut WsSession, repo_id: RepoId,
 
 fn validate(session: &WsSession, repo_id: RepoId, peer_id: &PeerId) -> Result<(), ServerError> {
     if session.is_readonly() {
-        return Err(ServerError::new(ServerErrorCode::SyncEditRejected));
+        return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
     }
     if !session.is_repo_bound(&repo_id) {
         return Err(ServerError::new(ServerErrorCode::SyncRepoUnbound));
@@ -35,12 +35,32 @@ fn validate(session: &WsSession, repo_id: RepoId, peer_id: &PeerId) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+    use deve_core::ledger::database::DatabaseHandle;
+    use std::sync::Arc;
 
     #[test]
     fn rejects_unbound_repo() {
         let session = WsSession::new();
         let error = validate(&session, uuid::Uuid::nil(), &PeerId::new("browser")).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+    }
+
+    #[test]
+    fn rejects_readonly_writer_registration() {
+        let mut session = WsSession::new();
+        let repo_id = uuid::Uuid::new_v4();
+        let peer_id = PeerId::new("browser");
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
+        session.set_active_db(DatabaseHandle {
+            db,
+            readonly: true,
+            branch: Some(PeerId::new("remote")),
+            repo_name: "repo".into(),
+        });
+        session.set_authenticated(peer_id.clone());
+        let error = validate(&session, repo_id, &peer_id).unwrap_err();
+        assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
     }
 
     #[test]
