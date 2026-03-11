@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
-use redb::Database;
 use std::path::{Path, PathBuf};
 
+use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
 use crate::ledger::{init, range, source_control};
@@ -31,13 +31,13 @@ impl RepoManager {
     /// * `f`: 接收 &Database 的闭包.
     pub fn run_on_local_repo<F, R>(&self, repo_name: &str, f: F) -> Result<R>
     where
-        F: FnOnce(&Database) -> Result<R>,
+        F: FnOnce(&redb::Database) -> Result<R>,
     {
         // 1. Check Main Repo, strip extension if present
         let name = repo_name.trim_end_matches(".redb");
 
         if name == self.local_repo_name {
-            return f(&self.local_db);
+            return f(self.local_db.as_ref());
         }
 
         // 2. Check Cache
@@ -54,8 +54,8 @@ impl RepoManager {
             return Err(anyhow!("Repository not found: {}", name));
         }
 
-        let db = Database::create(&db_path)?;
-        source_control::init_tables(&db)?;
+        let db = cached_database(&db_path)?;
+        source_control::init_tables(db.as_ref())?;
 
         // Cache it
         {
@@ -68,7 +68,7 @@ impl RepoManager {
         // 4. Run closure
         let guard = self.extra_local_dbs.read().unwrap();
         if let Some(db) = guard.get(name) {
-            f(db)
+            f(db.as_ref())
         } else {
             Err(anyhow!("Failed into cache repo"))
         }

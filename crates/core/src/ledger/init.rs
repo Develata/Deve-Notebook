@@ -29,6 +29,7 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
+use super::database::register_database;
 use super::node_check;
 use super::schema::*;
 use super::source_control;
@@ -108,7 +109,7 @@ pub fn init(
                         };
 
                         if match_url {
-                            local_db = db;
+                            local_db = Arc::new(db);
                             break;
                         } else {
                             // URL 不匹配，这是另一个同名仓库 -> 继续循环尝试下一个名字
@@ -126,21 +127,27 @@ pub fn init(
             }
         } else {
             // 文件不存在，创建新库
-            local_db = Database::create(&db_path)
-                .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?;
+            local_db = Arc::new(
+                Database::create(&db_path)
+                    .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?,
+            );
             is_new_repo = true;
             break;
         }
     }
+    register_database(
+        &local_dir.join(format!("{}.redb", final_name)),
+        local_db.clone(),
+    );
 
     // 4. 初始化核心表
-    init_core_tables(&local_db)?;
+    init_core_tables(local_db.as_ref())?;
 
     // 5. 初始化 Source Control 表
-    source_control::init_tables(&local_db)?;
+    source_control::init_tables(local_db.as_ref())?;
 
     // 6. Node 表一致性检查（repair 需显式触发）
-    let report = node_check::check_node_consistency(&local_db)?;
+    let report = node_check::check_node_consistency(local_db.as_ref())?;
     if !report.is_clean() {
         tracing::warn!(
             "Node consistency drift detected: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
@@ -169,6 +176,8 @@ pub fn init(
         }
         write_txn.commit()?;
     }
+
+    super::RepoManager::repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref())?;
 
     Ok(RepoManager {
         ledger_dir,

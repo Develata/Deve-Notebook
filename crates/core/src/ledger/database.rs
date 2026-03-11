@@ -21,6 +21,13 @@ use std::sync::{Arc, RwLock};
 static OPENED_DBS: std::sync::LazyLock<RwLock<HashMap<std::path::PathBuf, Arc<Database>>>> =
     std::sync::LazyLock::new(|| RwLock::new(HashMap::new()));
 
+pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) {
+    OPENED_DBS
+        .write()
+        .unwrap()
+        .insert(db_path.to_path_buf(), db);
+}
+
 pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
     if !db_path.exists() {
         return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
@@ -166,20 +173,7 @@ impl RepoManager {
             .join(format!("{}.redb", self.local_repo_name));
 
         if cache_key == main_db_path {
-            // 主库已经被 self.local_db 持有
-            // 我们需要返回一个指向它的 Arc，但 self.local_db 不是 Arc
-            // 解决方案：使用 run_on_local_repo 闭包模式而不是直接返回引用
-            // 但现在的 API 期望 Arc<Database>...
-            //
-            // 临时方案：跳过主库的锁定检查，直接使用
-            // 这意味着对于主库，我们不存入缓存，每次通过 run_on_local_repo 访问
-            // 但这会让 open_database 对主库失败
-            //
-            // 更好的方案：通知调用者主库已可用，不需要重新打开
-            return Err(anyhow::anyhow!(
-                "Main local database is already managed by RepoManager. Use run_on_local_repo() for operations on '{}'",
-                name
-            ));
+            return Ok(self.local_db.clone());
         }
 
         // 3. 检查文件是否存在

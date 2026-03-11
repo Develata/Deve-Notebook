@@ -4,6 +4,14 @@ use crate::models::{DocId, NodeId, PeerId, RepoId};
 use anyhow::{Context, Result};
 
 impl RepoManager {
+    pub fn repair_local_repo_catalog(&self) -> Result<()> {
+        Self::repair_local_repo_metadata(
+            &self.ledger_dir,
+            &self.local_repo_name,
+            self.local_db.as_ref(),
+        )
+    }
+
     /// 重置指定 Shadow 文档的所有历史操作 (物理清空)
     ///
     /// **用途**: 当接收到 P2P Snapshot 时，旧的增量日志失效，需清空并重写。
