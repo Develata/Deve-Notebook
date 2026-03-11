@@ -5,7 +5,6 @@
 //! - 外部 Working Directory diff 的左侧永远来自当前 Ledger 投影，右侧来自磁盘文件。
 
 use crate::ledger::RepoManager;
-use crate::ledger::doc_lookup;
 use crate::models::DocId;
 use crate::source_control::{ChangeStatus, pending_fs, snapshot_paths, staging};
 use crate::utils::path::to_forward_slash;
@@ -44,11 +43,10 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
     ) -> Result<Option<DocId>> {
+        if let Some(doc_id) = self.get_tracked_docid_in_local_repo(repo_name, path)? {
+            return Ok(Some(doc_id));
+        }
         self.run_on_local_repo(repo_name, |db| {
-            let by_path = doc_lookup::resolve_doc_id(db, path)?;
-            if by_path.is_some() {
-                return Ok(by_path);
-            }
             snapshot_paths::find_snapshot_doc_id(db, path)
         })
     }

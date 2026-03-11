@@ -23,7 +23,7 @@ pub(super) fn register_file_from_disk(
     }
     let existing_doc_id = state
         .repo
-        .get_docid_in_local_repo(&scope.repo_name, rel_path)?;
+        .get_tracked_docid_in_local_repo(&scope.repo_name, rel_path)?;
     let disk_content = if path.exists() {
         Some(std::fs::read_to_string(path)?)
     } else {

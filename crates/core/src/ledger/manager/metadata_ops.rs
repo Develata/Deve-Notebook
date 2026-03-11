@@ -40,8 +40,24 @@ impl RepoManager {
         self.run_on_local_repo(repo_name, |db| inode_index::get_docid(db, inode))
     }
 
+    /// legacy path-mapping 查询；repair/兼容路径可用，运行时主链应优先走 node-first lookup。
     pub fn get_docid_in_local_repo(&self, repo_name: &str, path: &str) -> Result<Option<DocId>> {
         self.run_on_local_repo(repo_name, |db| doc_lookup::resolve_doc_id(db, path))
+    }
+
+    /// 运行时主链的 tracked doc 查询：
+    /// 先走 `path -> node_id -> node_meta.doc_id`，避免将旧 path mapping 当作权威真值。
+    pub fn get_tracked_docid_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+    ) -> Result<Option<DocId>> {
+        self.run_on_local_repo(repo_name, |db| {
+            let Some(node_id) = node_meta::get_node_id(db, path)? else {
+                return Ok(None);
+            };
+            Ok(node_meta::get_node_meta(db, node_id)?.and_then(|meta| meta.doc_id))
+        })
     }
 
     /// 绑定 Inode 到 DocId

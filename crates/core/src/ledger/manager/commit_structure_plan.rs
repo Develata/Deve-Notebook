@@ -74,7 +74,7 @@ fn resolve_doc_id(
         return Ok(doc_id);
     }
     Ok(repo
-        .get_docid_in_local_repo(repo_name, path)?
+        .get_tracked_docid_in_local_repo(repo_name, path)?
         .unwrap_or_else(DocId::new))
 }
 

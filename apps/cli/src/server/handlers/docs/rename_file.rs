@@ -22,7 +22,7 @@ pub(super) async fn handle_file_rename(
 ) {
     let doc_id = match state
         .repo
-        .get_docid_in_local_repo(&scope.repo_name, src_path)
+        .get_tracked_docid_in_local_repo(&scope.repo_name, src_path)
     {
         Ok(Some(doc_id)) => doc_id,
         Ok(None) => {
