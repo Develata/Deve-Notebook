@@ -30,6 +30,8 @@ pub mod agent_bridge;
 pub mod ai_chat;
 pub mod auth;
 pub mod channel;
+#[cfg(test)]
+mod docs_projection_repair_test;
 pub mod handlers;
 pub mod mcp;
 pub mod metrics;
