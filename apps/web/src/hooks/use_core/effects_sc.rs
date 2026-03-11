@@ -105,7 +105,22 @@ pub(super) fn matches_current_repo(
 ) -> bool {
     match (repo_id, current_repo_id.get_untracked()) {
         (Some(repo_id), Some(current_repo_id)) => current_repo_id == repo_id.to_string(),
-        (Some(_), None) => true,
+        (Some(_), None) => false,
         (None, _) => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_current_repo;
+    use leptos::prelude::*;
+
+    #[test]
+    fn ignores_repo_scoped_messages_before_repo_scope_is_ready() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (current_repo_id, _) = signal(None::<String>);
+        assert!(!matches_current_repo(&Some(uuid::Uuid::new_v4()), current_repo_id));
+        assert!(matches_current_repo(&None, current_repo_id));
     }
 }
