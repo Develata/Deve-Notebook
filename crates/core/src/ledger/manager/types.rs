@@ -1,4 +1,5 @@
 use crate::models::{PeerId, RepoId};
+use crate::sync::persist_guard::PersistGuard;
 use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,4 +36,6 @@ pub struct RepoManager {
     pub snapshot_depth: usize,
     /// Vault 根目录 (用于 commit 时读取磁盘文件内容)
     pub(crate) vault_root: Option<PathBuf>,
+    /// 受控 Projection 写回的 watcher 忽略表。
+    pub(crate) persist_guard: Arc<PersistGuard>,
 }

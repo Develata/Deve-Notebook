@@ -19,18 +19,18 @@ struct PersistedWrite {
     remaining_hits: u8,
 }
 
-pub(super) struct PersistGuard {
+pub(crate) struct PersistGuard {
     recent_writes: Mutex<HashMap<String, PersistedWrite>>,
 }
 
 impl PersistGuard {
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             recent_writes: Mutex::new(HashMap::new()),
         }
     }
 
-    pub(super) fn record(&self, path: &str, content: &str) {
+    pub(crate) fn record(&self, path: &str, content: &str) {
         self.insert(
             path,
             PersistedAction::Write {
@@ -39,16 +39,16 @@ impl PersistGuard {
         );
     }
 
-    pub(super) fn record_delete(&self, path: &str) {
+    pub(crate) fn record_delete(&self, path: &str) {
         self.insert(path, PersistedAction::Delete);
     }
 
-    pub(super) fn clear(&self, path: &str) {
+    pub(crate) fn clear(&self, path: &str) {
         let mut guard = self.recent_writes.lock().unwrap();
         guard.remove(path);
     }
 
-    pub(super) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
+    pub(crate) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
         let mut guard = self.recent_writes.lock().unwrap();
         let Some(entry) = guard.get_mut(path) else {
             return false;

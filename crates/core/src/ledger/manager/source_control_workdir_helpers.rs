@@ -19,7 +19,11 @@ pub(super) fn rebuild_doc_projection(
 pub(super) fn discard_added(repo: &RepoManager, repo_name: &str, path: &str) -> Result<()> {
     let file_path = repo.local_repo_workspace_path(repo_name, path)?;
     if file_path.exists() {
-        std::fs::remove_file(&file_path)?;
+        repo.record_projection_delete(repo_name, path);
+        if let Err(err) = std::fs::remove_file(&file_path) {
+            repo.clear_projection_guard(repo_name, path);
+            return Err(err.into());
+        }
     }
     repo.run_on_local_repo(repo_name, |db| {
         pending_fs::remove(db, path)?;
@@ -36,7 +40,11 @@ pub(super) fn discard_tracked_add(
 ) -> Result<()> {
     let file_path = repo.local_repo_workspace_path(repo_name, path)?;
     if file_path.exists() {
-        std::fs::remove_file(&file_path)?;
+        repo.record_projection_delete(repo_name, path);
+        if let Err(err) = std::fs::remove_file(&file_path) {
+            repo.clear_projection_guard(repo_name, path);
+            return Err(err.into());
+        }
     }
     let canonical_path = repo
         .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
@@ -53,10 +61,15 @@ pub(super) fn restore_doc_projection_at_path(
     path: &str,
 ) -> Result<()> {
     let file_path = repo.local_repo_workspace_path(repo_name, path)?;
+    let content = rebuild_doc_projection(repo, repo_name, doc_id)?;
     if let Some(parent) = file_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(&file_path, rebuild_doc_projection(repo, repo_name, doc_id)?)?;
+    repo.record_projection_write(repo_name, path, &content);
+    if let Err(err) = std::fs::write(&file_path, &content) {
+        repo.clear_projection_guard(repo_name, path);
+        return Err(err.into());
+    }
     repo.bind_workspace_inode_in_local_repo(repo_name, path, doc_id)
 }
 

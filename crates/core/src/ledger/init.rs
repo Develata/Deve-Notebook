@@ -26,7 +26,7 @@ use anyhow::{Context, Result};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
 use super::node_check;
@@ -178,6 +178,7 @@ pub fn init(
         shadow_dbs: RwLock::new(HashMap::new()),
         snapshot_depth,
         vault_root: None,
+        persist_guard: Arc::new(crate::sync::persist_guard::PersistGuard::new()),
     })
 }
 

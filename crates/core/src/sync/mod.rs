@@ -17,7 +17,7 @@ mod pending_content;
 #[cfg(not(target_arch = "wasm32"))]
 mod pending_rename;
 #[cfg(not(target_arch = "wasm32"))]
-mod persist_guard;
+pub(crate) mod persist_guard;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_io;
 pub mod protocol;
@@ -60,7 +60,7 @@ pub struct SyncManager {
     repo: Arc<RepoManager>,
     vault_root: PathBuf,
     vfs: Vfs,
-    persist_guard: PersistGuard,
+    persist_guard: Arc<PersistGuard>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -68,10 +68,10 @@ impl SyncManager {
     pub fn new(repo: Arc<RepoManager>, vault_root: PathBuf) -> Self {
         let vfs = Vfs::new(&vault_root);
         Self {
+            persist_guard: repo.persist_guard.clone(),
             repo,
             vault_root,
             vfs,
-            persist_guard: PersistGuard::new(),
         }
     }
 
@@ -196,7 +196,7 @@ impl SyncManager {
 
     /// Invariant: 仅忽略近期由 SyncManager 自己写回、且内容哈希完全一致的事件。
     pub fn should_ignore_fs_event(&self, path_str: &str) -> bool {
-        self.persist_guard.should_ignore(&self.vault_root, path_str)
+        self.repo.should_ignore_workspace_event(path_str)
     }
 
     /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
