@@ -38,3 +38,15 @@ fn ensure_shadow_repo_binding_copies_local_repo_metadata() {
             .exists()
     );
 }
+
+#[test]
+fn list_shadows_on_disk_ignores_hidden_dirs() {
+    let (_dir, repo) = new_repo();
+    std::fs::create_dir_all(repo.remotes_dir().join(".invalid")).expect("hidden dir");
+    std::fs::create_dir_all(repo.remotes_dir().join("peer-visible")).expect("peer dir");
+
+    assert_eq!(
+        repo.list_shadows_on_disk().expect("list shadows"),
+        vec![PeerId::new("peer-visible")]
+    );
+}

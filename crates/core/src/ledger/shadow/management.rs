@@ -106,24 +106,21 @@ pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
     let mut peers = Vec::new();
 
     if remotes_dir.exists() {
-        tracing::info!("Scanning remotes dir: {:?}", remotes_dir);
-        let entries = std::fs::read_dir(remotes_dir)?;
-        for entry in entries {
+        for entry in std::fs::read_dir(remotes_dir)? {
             let entry = entry?;
             let path = entry.path();
-            tracing::info!("Found entry: {:?}", path);
-            if path.is_dir() {
-                if let Some(stem) = path.file_name() {
-                    // Assuming dir name is PeerId (or encoded filename)
-                    peers.push(PeerId::new(&*stem.to_string_lossy()));
+            if !path.is_dir() {
+                continue;
+            }
+            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                if name.starts_with('.') || name.is_empty() {
+                    continue;
                 }
-            } else {
-                tracing::warn!("Entry is not a directory: {:?}", path);
+                peers.push(PeerId::new(name));
             }
         }
-    } else {
-        tracing::warn!("Remotes dir not found: {:?}", remotes_dir);
     }
 
+    peers.sort();
     Ok(peers)
 }

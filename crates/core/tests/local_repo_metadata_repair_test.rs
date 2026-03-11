@@ -1,3 +1,4 @@
+use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use tempfile::TempDir;
 
@@ -42,5 +43,9 @@ fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
     assert_eq!(
         repaired_wiki.url.as_deref(),
         Some(format!("urn:uuid:{}", repaired_wiki.uuid).as_str())
+    );
+    assert_eq!(
+        main.list_repos(None).expect("list local repos"),
+        vec!["main".to_string(), "wiki".to_string()]
     );
 }

@@ -35,6 +35,7 @@ impl RepoListing for RepoManager {
         if let Some(peer_id) = peer_id {
             return self.list_remote_repo_names(peer_id);
         }
+        self.repair_local_repo_catalog()?;
         let target_dir = self.ledger_dir.join("local");
 
         if !target_dir.exists() {
@@ -45,15 +46,22 @@ impl RepoListing for RepoManager {
         for entry in std::fs::read_dir(target_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file()
-                && path.extension().and_then(|s| s.to_str()) == Some("redb")
-                && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
-            {
-                repos.push(stem.to_string());
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb") {
+                let name = RepoManager::read_repo_info_from_path(&path)?
+                    .map(|info| info.name)
+                    .or_else(|| {
+                        path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .map(str::to_string)
+                    });
+                if let Some(name) = name {
+                    repos.push(name);
+                }
             }
         }
 
         repos.sort();
+        repos.dedup();
         Ok(repos)
     }
 
@@ -69,10 +77,13 @@ impl RepoListing for RepoManager {
             let path = entry.path();
             if path.is_dir()
                 && let Some(name) = path.file_name().and_then(|s| s.to_str())
+                && !name.starts_with('.')
+                && !name.is_empty()
             {
                 peers.push(PeerId::new(name));
             }
         }
+        peers.sort();
         Ok(peers)
     }
 }
