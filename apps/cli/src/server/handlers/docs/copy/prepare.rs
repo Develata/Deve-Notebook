@@ -64,9 +64,6 @@ pub(super) fn prepare_copy_paths(
         errors::storage_not_found(ch, format!("Source projection missing: {}", src_path));
         return None;
     }
-    if let Some(parent) = dst.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
     Some(CopyPaths {
         src: src.abs_path,
         dst,

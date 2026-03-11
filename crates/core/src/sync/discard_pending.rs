@@ -1,4 +1,4 @@
-use super::{SyncManager, rebuild};
+use super::{SyncManager, projection_io};
 use crate::source_control::{ChangeStatus, pending_fs};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
@@ -34,10 +34,7 @@ pub(super) fn discard_pending_workdir(
 }
 
 fn discard_added(sync: &SyncManager, repo_name: &str, path: &str) -> Result<()> {
-    let file_path = sync.repo.local_repo_workspace_path(repo_name, path)?;
-    if file_path.exists() {
-        std::fs::remove_file(file_path)?;
-    }
+    projection_io::remove_projection_path(sync, repo_name, path)?;
     sync.repo
         .discard_untracked_pending_add_in_local_repo(repo_name, path)
 }
@@ -48,10 +45,7 @@ fn discard_tracked_add(
     path: &str,
     doc_id: crate::models::DocId,
 ) -> Result<()> {
-    let file_path = sync.repo.local_repo_workspace_path(repo_name, path)?;
-    if file_path.exists() {
-        std::fs::remove_file(file_path)?;
-    }
+    projection_io::remove_projection_path(sync, repo_name, path)?;
     let canonical_path = sync
         .repo
         .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
@@ -68,17 +62,5 @@ fn restore_projection(
     doc_id: crate::models::DocId,
     path: &str,
 ) -> Result<()> {
-    let rebuilt = rebuild::rebuild_local_doc_in_repo(&sync.repo, repo_name, doc_id)?;
-    let file_path = sync.repo.local_repo_workspace_path(repo_name, path)?;
-    if let Some(parent) = file_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let relative_path = sync.repo.local_repo_workspace_relative(repo_name, path);
-    sync.persist_guard.record(&relative_path, &rebuilt.content);
-    if let Err(err) = std::fs::write(&file_path, &rebuilt.content) {
-        sync.persist_guard.clear(&relative_path);
-        return Err(err.into());
-    }
-    sync.repo
-        .bind_workspace_inode_in_local_repo(repo_name, path, doc_id)
+    projection_io::persist_doc_at_path(sync, repo_name, doc_id, path)
 }
