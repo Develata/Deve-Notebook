@@ -16,10 +16,8 @@ pub fn handle_sync_hello(
     signals: CoreSignals,
 ) {
     effects_msg::handle_sync_hello(peer_id, vector.clone(), signals.set_peers);
-    let matches_current = match signals.current_repo_id.get_untracked() {
-        Some(current) => current == repo_id,
-        None => true,
-    };
+    let matches_current =
+        signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str());
     if matches_current {
         signals.set_handshake_ready.set(true);
     }

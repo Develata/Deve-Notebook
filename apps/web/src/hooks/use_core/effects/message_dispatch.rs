@@ -78,7 +78,6 @@ pub fn handle_message<F>(
             effects_msg::handle_repo_switched(
                 name,
                 uuid,
-                signals.current_repo,
                 signals.current_repo_id,
                 signals.set_current_repo,
                 signals.set_current_repo_id,

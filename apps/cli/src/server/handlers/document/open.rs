@@ -27,7 +27,11 @@ pub(super) async fn handle_open_doc(
             Ok(payload) => payload,
             Err(e) => {
                 tracing::error!("Failed to build snapshot from active_db: {:?}", e);
-                empty_payload()
+                ch.send_protocol_error(ServerError::with_detail(
+                    ServerErrorCode::RequestFailed,
+                    e.to_string(),
+                ));
+                return;
             }
         },
         None if session.active_branch.is_none() => {
@@ -38,7 +42,7 @@ pub(super) async fn handle_open_doc(
                         ServerErrorCode::RequestFailed,
                         e.to_string(),
                     ));
-                    empty_payload()
+                    return;
                 }
             }
         }
@@ -47,7 +51,7 @@ pub(super) async fn handle_open_doc(
                 ServerErrorCode::RequestFailed,
                 "Remote repository database is not locked",
             ));
-            empty_payload()
+            return;
         }
     };
 
@@ -79,8 +83,4 @@ fn load_snapshot_from_local_repo(
     state.repo.run_on_local_repo(&scope.repo_name, |db| {
         build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
     })
-}
-
-fn empty_payload() -> SnapshotPayload {
-    (String::new(), 0, Vec::new(), 0)
 }

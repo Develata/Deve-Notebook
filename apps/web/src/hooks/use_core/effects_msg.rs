@@ -86,18 +86,47 @@ pub fn handle_branch_switched(
 pub fn handle_repo_switched(
     name: String,
     uuid: String,
-    current_repo: ReadSignal<Option<String>>,
     current_repo_id: ReadSignal<Option<String>>,
     set_current_repo: WriteSignal<Option<String>>,
     set_current_repo_id: WriteSignal<Option<String>>,
     set_current_doc: WriteSignal<Option<DocId>>,
 ) {
-    let same_repo = current_repo_id.get_untracked().as_deref() == Some(uuid.as_str())
-        || current_repo.get_untracked().as_deref() == Some(name.as_str());
+    let same_repo = !uuid.is_empty() && current_repo_id.get_untracked().as_deref() == Some(uuid.as_str());
     set_current_repo.set(Some(name));
     set_current_repo_id.set((!uuid.is_empty()).then_some(uuid));
     if !same_repo {
         set_current_doc.set(None);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::handle_repo_switched;
+    use deve_core::models::DocId;
+    use leptos::prelude::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn clears_doc_when_repo_uuid_changes_even_if_name_matches() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+
+        let (_, set_current_repo) = signal(Some("default".to_string()));
+        let (current_repo_id, set_current_repo_id) = signal(Some(Uuid::new_v4().to_string()));
+        let (current_doc, set_current_doc) = signal(Some(DocId::new()));
+        let next_repo_id = Uuid::new_v4().to_string();
+
+        handle_repo_switched(
+            "default".to_string(),
+            next_repo_id.clone(),
+            current_repo_id,
+            set_current_repo,
+            set_current_repo_id,
+            set_current_doc,
+        );
+
+        assert_eq!(current_repo_id.get_untracked(), Some(next_repo_id));
+        assert_eq!(current_doc.get_untracked(), None);
     }
 }
 
