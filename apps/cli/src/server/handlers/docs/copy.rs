@@ -2,22 +2,19 @@
 
 mod dir_copy;
 mod file_copy;
+mod prepare;
 mod register;
 
 use super::copy_utils::copy_dir_recursive;
-use super::{errors, notify_fs_refresh, validate_file_path, validate_folder_path};
+use super::errors;
+use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::{ResolvedRepo, local_repo_path, resolve_session_repo};
+use crate::server::repo_scope::resolve_session_repo;
 use crate::server::session::WsSession;
-use std::path::PathBuf;
+use prepare::prepare_copy_paths;
 use std::sync::Arc;
-
-struct CopyPaths {
-    src: PathBuf,
-    dst: PathBuf,
-}
 
 pub async fn handle_copy_doc(
     state: &Arc<AppState>,
@@ -39,8 +36,10 @@ pub async fn handle_copy_doc(
         None => return,
     };
 
-    let copied = if paths.src.is_dir() {
-        dir_copy::copy_dir(state, ch, &scope, &paths.dst, &src_path, &dest_path)
+    let copied = if paths.kind == deve_core::models::NodeKind::Dir {
+        dir_copy::copy_dir(
+            state, ch, &scope, &paths.src, &paths.dst, &src_path, &dest_path,
+        )
     } else {
         file_copy::copy_file(
             state, ch, &scope, &paths.src, &paths.dst, &src_path, &dest_path,
@@ -52,51 +51,6 @@ pub async fn handle_copy_doc(
 
     handle_list_docs(state, ch, session).await;
     notify_fs_refresh(ch, scope.repo_id, &dest_path, "copied");
-}
-
-fn prepare_copy_paths(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
-    src_path: &str,
-    dest_path: &str,
-) -> Option<CopyPaths> {
-    let src = match local_repo_path(state, scope, src_path) {
-        Ok(path) => path,
-        Err(err) => {
-            errors::request_failed(ch, err.to_string());
-            return None;
-        }
-    };
-    let dst = match local_repo_path(state, scope, dest_path) {
-        Ok(path) => path,
-        Err(err) => {
-            errors::request_failed(ch, err.to_string());
-            return None;
-        }
-    };
-    if !src.exists() {
-        tracing::error!("复制失败: 源不存在: {:?}", src);
-        errors::storage_not_found(ch, format!("Source not found: {}", src_path));
-        return None;
-    }
-    if dst.exists() {
-        tracing::error!("复制失败: 目标已存在: {:?}", dst);
-        errors::storage_conflict(ch, format!("Destination exists: {}", dest_path));
-        return None;
-    }
-    let valid = if src.is_dir() {
-        validate_folder_path(dest_path, ch)
-    } else {
-        validate_file_path(dest_path, ch)
-    };
-    if !valid {
-        return None;
-    }
-    if let Some(parent) = dst.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    Some(CopyPaths { src, dst })
 }
 
 fn copy_dir_on_disk(
