@@ -1,4 +1,4 @@
-use crate::server::repo_scope::{ResolvedRepo, resolve_session_repo};
+use crate::server::repo_scope::{ResolvedRepo, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::MergeResult;
 use deve_core::models::{DocId, PeerId};
@@ -15,11 +15,11 @@ use super::peer_support::{resolve_doc_path, resolve_local_merge_scope};
 pub(super) async fn handle_merge_peer(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     peer_id: String,
     doc_id: DocId,
 ) {
-    let scope = match resolve_session_repo(state, session) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
             errors::request_failed(ch, e.to_string());

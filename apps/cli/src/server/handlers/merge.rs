@@ -39,7 +39,7 @@ pub async fn handle_discard_pending(state: &Arc<AppState>, ch: &DualChannel, ses
 pub async fn handle_merge_peer(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     peer_id: String,
     doc_id: DocId,
 ) {
