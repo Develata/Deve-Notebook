@@ -25,7 +25,7 @@ impl RepoManager {
             if let Some(current) = Self::read_repo_info_from_path(&path)?
                 && current.uuid == info.uuid
             {
-                if stem == base {
+                if stem_matches_base(&stem, &base) {
                     return Ok(path);
                 }
                 continue;
@@ -41,4 +41,27 @@ fn normalized_repo_stem(name: &str, fallback: &str) -> String {
         return fallback.to_string();
     }
     trimmed.replace(['/', '\\'], "_")
+}
+
+fn stem_matches_base(stem: &str, base: &str) -> bool {
+    stem == base
+        || stem
+            .strip_prefix(base)
+            .and_then(|suffix| suffix.strip_prefix('-'))
+            .map(|suffix| suffix.chars().all(|ch| ch.is_ascii_digit()))
+            .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stem_matches_base;
+
+    #[test]
+    fn collision_suffix_is_treated_as_same_selector_family() {
+        assert!(stem_matches_base("wiki", "wiki"));
+        assert!(stem_matches_base("wiki-1", "wiki"));
+        assert!(stem_matches_base("wiki-23", "wiki"));
+        assert!(!stem_matches_base("legacy", "wiki"));
+        assert!(!stem_matches_base("wiki-copy", "wiki"));
+    }
 }

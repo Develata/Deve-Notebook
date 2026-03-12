@@ -10,13 +10,49 @@ pub(super) fn resolve_repo_by_name(
     expected_repo_id: Option<RepoId>,
     repo_name: String,
 ) -> Result<ResolvedRepo> {
-    let info = state
+    let info = match state
         .repo
         .get_repo_info_for(branch.as_ref(), Some(&repo_name))?
-        .ok_or_else(|| anyhow!("Repository UUID not resolved for {}", repo_name))?;
+    {
+        Some(info) => info,
+        None => {
+            if let Some(expected_repo_id) = expected_repo_id
+                && let Some(selector) =
+                    recover_repo_selector(state, branch.as_ref(), expected_repo_id)?
+            {
+                tracing::warn!(
+                    "Recovering repo selector from UUID after stale name miss: branch={:?}, stale_name={}, resolved_name={}",
+                    branch,
+                    repo_name,
+                    selector
+                );
+                return Ok(ResolvedRepo {
+                    repo_id: expected_repo_id,
+                    repo_name: selector,
+                    branch,
+                });
+            }
+            return Err(anyhow!("Repository UUID not resolved for {}", repo_name));
+        }
+    };
     if let Some(expected_repo_id) = expected_repo_id
         && expected_repo_id != info.uuid
     {
+        if branch.is_some()
+            && let Some(selector) = recover_repo_selector(state, branch.as_ref(), expected_repo_id)?
+        {
+            tracing::warn!(
+                "Recovering repo selector from UUID after mismatch: branch={:?}, stale_name={}, resolved_name={}",
+                branch,
+                repo_name,
+                selector
+            );
+            return Ok(ResolvedRepo {
+                repo_id: expected_repo_id,
+                repo_name: selector,
+                branch,
+            });
+        }
         return Err(anyhow!(
             "Session repo mismatch: expected {}, resolved {} for {}",
             expected_repo_id,
@@ -65,4 +101,15 @@ pub(super) fn resolve_repo_by_repo_id(
         repo_name: info.name,
         branch,
     })
+}
+
+fn recover_repo_selector(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    repo_id: RepoId,
+) -> Result<Option<String>> {
+    if let Some(peer_id) = branch {
+        return state.repo.find_remote_repo_selector_by_id(peer_id, repo_id);
+    }
+    state.repo.find_local_repo_name_by_id(repo_id)
 }

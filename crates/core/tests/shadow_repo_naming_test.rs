@@ -246,3 +246,36 @@ fn remote_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
             .any(|name| name != "wiki" && name.starts_with("wiki-"))
     );
 }
+
+#[test]
+fn remote_repo_selector_stays_stable_for_same_uuid_under_name_collision() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let first = RepoInfo {
+        uuid: Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-a".into()),
+    };
+    let second = RepoInfo {
+        uuid: Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-b".into()),
+    };
+    repo.ensure_shadow_repo_info(&peer_id, &first)
+        .expect("prepare first wiki shadow");
+    repo.ensure_shadow_repo_info(&peer_id, &second)
+        .expect("prepare second wiki shadow");
+
+    let before = repo
+        .find_remote_repo_selector_by_id(&peer_id, second.uuid)
+        .expect("lookup selector")
+        .expect("selector must exist");
+    repo.ensure_shadow_repo_info(&peer_id, &second)
+        .expect("rewrite same shadow info");
+    let after = repo
+        .find_remote_repo_selector_by_id(&peer_id, second.uuid)
+        .expect("lookup selector after rewrite")
+        .expect("selector must still exist");
+
+    assert_eq!(before, after);
+}

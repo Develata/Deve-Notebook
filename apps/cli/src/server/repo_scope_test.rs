@@ -169,11 +169,14 @@ fn resolve_session_repo_recovers_collision_safe_remote_selector_from_uuid() -> a
     session.active_repo_id = Some(second);
 
     let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+    let expected_selector = state
+        .repo
+        .find_remote_repo_selector_by_id(&peer_id, second)?
+        .expect("selector for duplicate remote repo");
 
     assert_eq!(resolved.branch, Some(peer_id));
     assert_eq!(resolved.repo_id, second);
-    assert_ne!(resolved.repo_name, "wiki");
-    assert!(resolved.repo_name.starts_with("wiki-"));
+    assert_eq!(resolved.repo_name, expected_selector);
     assert_eq!(
         session.active_repo.as_deref(),
         Some(resolved.repo_name.as_str())
