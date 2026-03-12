@@ -61,9 +61,10 @@ fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> SyncHelloIn
 
 fn seed_local_op(state: &Arc<AppState>) -> anyhow::Result<()> {
     let repo_name = state.repo.local_repo_name().to_string();
-    let doc_id = state
-        .repo
-        .apply_file_structure_in_local_repo(&repo_name, "notes/a.md", None, "test")?;
+    let doc_id =
+        state
+            .repo
+            .apply_file_structure_in_local_repo(&repo_name, "notes/a.md", None, "test")?;
     state.repo.append_generated_op_in_local_repo(
         &repo_name,
         doc_id,
