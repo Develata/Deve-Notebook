@@ -2,6 +2,8 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
 use crate::server::session::WsSession;
+#[path = "switcher_payload.rs"]
+mod switcher_payload;
 #[path = "switcher_prepare.rs"]
 mod switcher_prepare;
 
@@ -9,6 +11,7 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
+use self::switcher_payload::preload_branch_switch;
 use self::switcher_prepare::{
     commit_session_switch, prepare_repo_switch, select_target_repo, validate_or_force_local_repo,
 };
@@ -78,6 +81,16 @@ pub async fn handle_switch_branch(
         }
         None => None,
     };
+    let payload = match preload_branch_switch(state, target_branch_ref, prepared.as_ref()) {
+        Ok(payload) => payload,
+        Err(err) => {
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                format!("Failed to preload branch switch view: {}", err),
+            ));
+            return;
+        }
+    };
     commit_session_switch(session, final_branch.clone(), prepared);
     tracing::info!(
         "Session ActiveBranch updated to: {:?}",
@@ -95,8 +108,27 @@ pub async fn handle_switch_branch(
         peer_id: final_branch.clone(),
         success: true,
     });
-    listing::handle_list_docs(state, ch, session).await;
-    listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
+    ch.unicast(ServerMessage::RepoList {
+        branch: final_branch.clone(),
+        repos: payload.repo_list,
+    });
+    if let Some(repo_view) = payload.repo_view {
+        ch.unicast(ServerMessage::RepoSwitched {
+            name: repo_view.repo_name,
+            uuid: repo_view.repo_id.to_string(),
+        });
+        ch.unicast(ServerMessage::DocList {
+            repo_id: Some(repo_view.repo_id),
+            docs: repo_view.docs,
+        });
+        let delta = state
+            .tree_manager
+            .reset_from_nodes(repo_view.repo_id, repo_view.nodes);
+        ch.unicast(ServerMessage::TreeUpdate {
+            repo_id: Some(repo_view.repo_id),
+            delta,
+        });
+    }
 }
 
 pub async fn handle_switch_repo(

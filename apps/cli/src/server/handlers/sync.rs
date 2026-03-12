@@ -87,7 +87,7 @@ pub async fn handle_delete_peer(state: &Arc<AppState>, ch: &DualChannel, peer_id
             ch.broadcast(deve_core::protocol::ServerMessage::PeerDeleted {
                 peer_id: peer_id_str,
             });
-            crate::server::handlers::listing::handle_list_shadows(state, ch).await;
+            crate::server::handlers::listing::handle_list_shadows(state, ch, None).await;
         }
         Err(e) => {
             tracing::error!("Failed to delete peer branch {}: {:?}", peer_id, e);

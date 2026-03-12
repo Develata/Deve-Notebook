@@ -5,6 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -16,10 +17,21 @@ mod listing_docs;
 pub use listing_docs::handle_list_docs;
 
 /// 处理 ListShadows 请求 - 返回影子库列表 (远程分支)
-pub async fn handle_list_shadows(state: &Arc<AppState>, ch: &DualChannel) {
+pub async fn handle_list_shadows(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: Option<&WsSession>,
+) {
     match state.repo.list_shadows_on_disk() {
         Ok(peers) => {
-            let shadows: Vec<String> = peers.iter().map(|p| p.to_string()).collect();
+            let self_peer = session
+                .filter(|session| session.is_browser_session())
+                .and_then(|session| session.authenticated_peer_id.clone());
+            let shadows: Vec<String> = peers
+                .into_iter()
+                .filter(|peer| Some(peer.clone()) != self_peer)
+                .map(|peer| peer.to_string())
+                .collect();
             ch.unicast(ServerMessage::ShadowList { shadows });
         }
         Err(e) => {

@@ -1,19 +1,19 @@
 use crate::server::session::WsSession;
-use deve_core::models::RepoId;
+use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use std::sync::{Arc, RwLock};
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 struct SessionBroadcastScope {
     active_repo_id: Option<RepoId>,
-    on_remote_branch: bool,
+    active_branch: Option<PeerId>,
 }
 
 impl SessionBroadcastScope {
     fn from_session(session: &WsSession) -> Self {
         Self {
             active_repo_id: session.active_repo_id,
-            on_remote_branch: session.active_branch.is_some(),
+            active_branch: session.active_branch.clone(),
         }
     }
 }
@@ -61,24 +61,74 @@ impl BroadcastFilter {
         match msg {
             ServerMessage::FsChangeDetected { repo_id, .. }
             | ServerMessage::CommitAck { repo_id, .. }
-            | ServerMessage::MergeComplete { repo_id, .. } => {
-                matches_repo(scope.active_repo_id, scope.on_remote_branch, repo_id)
-            }
+            | ServerMessage::MergeComplete { repo_id, .. } => matches_scope(
+                scope.active_repo_id,
+                scope.active_branch.as_ref(),
+                repo_id,
+                None,
+                true,
+            ),
+            ServerMessage::NewOp {
+                repo_id, branch, ..
+            } => matches_scope(
+                Some(*repo_id),
+                scope.active_branch.as_ref(),
+                &Some(*repo_id),
+                branch.as_ref(),
+                false,
+            ),
             _ => true,
         }
     }
 }
 
-fn matches_repo(
+fn matches_scope(
     active_repo_id: Option<RepoId>,
-    on_remote_branch: bool,
+    active_branch: Option<&PeerId>,
     message_repo_id: &Option<RepoId>,
+    message_branch: Option<&PeerId>,
+    local_only: bool,
 ) -> bool {
-    if on_remote_branch {
+    if local_only && active_branch.is_some() {
         return false;
     }
-    match (active_repo_id, message_repo_id) {
-        (Some(active_repo_id), Some(message_repo_id)) => active_repo_id == *message_repo_id,
+    match (active_repo_id, message_repo_id, message_branch) {
+        (Some(active_repo_id), Some(message_repo_id), Some(branch)) => {
+            active_repo_id == *message_repo_id && active_branch == Some(branch)
+        }
+        (Some(active_repo_id), Some(message_repo_id), None) => {
+            active_repo_id == *message_repo_id && active_branch.is_none()
+        }
         _ => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BroadcastFilter;
+    use crate::server::session::WsSession;
+    use deve_core::models::{DocId, Op, PeerId};
+    use deve_core::protocol::{ConfirmedOp, ServerMessage};
+
+    #[test]
+    fn rejects_new_op_from_other_branch() {
+        let mut session = WsSession::new();
+        session.switch_branch(Some("peer-a".into()));
+        session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+        let filter = BroadcastFilter::for_session(&session);
+
+        assert!(!filter.should_forward(&ServerMessage::NewOp {
+            repo_id: uuid::Uuid::nil(),
+            branch: Some(PeerId::new("peer-b")),
+            doc_id: DocId::new(),
+            entry: ConfirmedOp::new(
+                1,
+                Op::Insert {
+                    pos: 0,
+                    content: "x".into()
+                },
+                None
+            ),
+        }));
     }
 }

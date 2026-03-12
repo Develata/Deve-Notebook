@@ -4,6 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -51,5 +52,40 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(session.active_branch, None);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Result<()> {
+    let state = build_state()?;
+    let local = state
+        .repo
+        .get_repo_info()?
+        .expect("local repo info must exist");
+    let peer_id = PeerId::new("peer-remote");
+    state
+        .repo
+        .ensure_shadow_repo_binding(&peer_id, local.uuid)?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string())).await;
+
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::BranchSwitched { success: true, .. })
+    ));
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::RepoList {
+            branch: Some(_),
+            ..
+        })
+    ));
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::RepoSwitched { .. })
+    ));
     Ok(())
 }

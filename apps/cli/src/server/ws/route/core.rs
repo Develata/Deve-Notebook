@@ -29,7 +29,7 @@ pub(super) async fn route_core(
             listing::handle_list_docs(state, ch, session).await;
         }
         ClientMessage::ListShadows => {
-            listing::handle_list_shadows(state, ch).await;
+            listing::handle_list_shadows(state, ch, Some(session)).await;
         }
         ClientMessage::ListRepos => {
             listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
