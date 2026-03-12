@@ -66,12 +66,16 @@ pub fn use_editor(
     let current_doc = core.current_doc;
     let current_repo_id = core.current_repo_id;
     let active_branch = core.active_branch;
+    let pending_branch_switch = core.pending_branch_switch;
+    let pending_repo_switch = core.pending_repo_switch;
     Effect::new(move |_| {
         if !can_open_doc(
             handshake_ready.get(),
             active_branch.get(),
             current_doc.get() == Some(doc_id),
             current_repo_id.get().is_some(),
+            pending_branch_switch.get().is_none(),
+            pending_repo_switch.get().is_none(),
         ) {
             return;
         }
@@ -188,9 +192,12 @@ pub fn use_editor(
         let spectator = core.is_spectator.get_untracked();
         let loading = core.load_state.get_untracked() != "ready";
         let handshake_ready = core.handshake_ready.get_untracked();
+        let switching = core.pending_branch_switch.get_untracked().is_some()
+            || core.pending_repo_switch.get_untracked().is_some();
         let writer_ready =
             ws_playback.writer_ready_for(core.current_repo_id.get_untracked().as_deref());
-        let should_readonly = is_pb || spectator || loading || !handshake_ready || !writer_ready;
+        let should_readonly =
+            is_pb || spectator || loading || switching || !handshake_ready || !writer_ready;
         set_read_only(should_readonly);
     });
 
@@ -212,8 +219,14 @@ fn can_open_doc(
     active_branch: Option<deve_core::models::PeerId>,
     doc_selected: bool,
     has_repo_scope: bool,
+    branch_switch_idle: bool,
+    repo_switch_idle: bool,
 ) -> bool {
-    has_repo_scope && doc_selected && (handshake_ready || active_branch.is_some())
+    branch_switch_idle
+        && repo_switch_idle
+        && has_repo_scope
+        && doc_selected
+        && (handshake_ready || active_branch.is_some())
 }
 
 #[cfg(test)]
@@ -223,11 +236,31 @@ mod tests {
 
     #[test]
     fn remote_branch_can_open_without_handshake() {
-        assert!(can_open_doc(false, Some(PeerId::new("peer-a")), true, true,));
+        assert!(can_open_doc(
+            false,
+            Some(PeerId::new("peer-a")),
+            true,
+            true,
+            true,
+            true,
+        ));
     }
 
     #[test]
     fn local_branch_still_requires_handshake() {
-        assert!(!can_open_doc(false, None, true, true));
+        assert!(!can_open_doc(false, None, true, true, true, true));
+    }
+
+    #[test]
+    fn pending_scope_switch_blocks_open_doc() {
+        assert!(!can_open_doc(true, None, true, true, false, true,));
+        assert!(!can_open_doc(
+            true,
+            Some(PeerId::new("peer-a")),
+            true,
+            true,
+            true,
+            false,
+        ));
     }
 }
