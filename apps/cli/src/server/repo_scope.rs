@@ -4,6 +4,9 @@
 //! - 进入底层 DB/Tree 算子前，必须先拿到真实 `RepoId`。
 //! - 本地写路径不得静默回退到进程默认主库。
 
+#[path = "repo_scope_lookup.rs"]
+mod lookup;
+
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
@@ -11,6 +14,8 @@ use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use redb::Database;
 use std::sync::Arc;
+
+use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
 
 #[derive(Clone)]
 pub struct ResolvedRepo {
@@ -38,24 +43,25 @@ pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
 pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
     let repo_name = resolve_repo_name_from_session(state, session)?
         .ok_or_else(|| anyhow!("Active repository not selected for current session"))?;
-    match resolve_repo_by_name(
-        state,
-        session.active_branch.clone(),
-        session.active_repo_id,
-        repo_name,
-    ) {
+    let branch = session.active_branch.clone();
+    match resolve_repo_by_name(state, branch.clone(), session.active_repo_id, repo_name) {
         Ok(scope) => Ok(scope),
-        Err(err)
-            if session.active_branch.is_none()
-                && session.active_repo.is_some()
-                && err.to_string().starts_with("Session repo mismatch:") =>
-        {
-            tracing::warn!("Recovering from stale local session repo_id: {}", err);
-            let repo_name = session
-                .active_repo
-                .clone()
-                .expect("stale local repo recovery requires active_repo");
-            resolve_repo_by_name(state, None, None, repo_name)
+        Err(err) if err.to_string().starts_with("Session repo mismatch:") => {
+            if branch.is_some()
+                && let Some(repo_id) = session.active_repo_id
+            {
+                tracing::warn!("Recovering remote session repo scope from UUID: {}", err);
+                return resolve_repo_by_repo_id(state, branch, repo_id);
+            }
+            if session.active_repo.is_some() {
+                tracing::warn!("Recovering from stale local session repo_id: {}", err);
+                let repo_name = session
+                    .active_repo
+                    .clone()
+                    .expect("stale local repo recovery requires active_repo");
+                return resolve_repo_by_name(state, None, None, repo_name);
+            }
+            Err(err)
         }
         Err(err) => Err(err),
     }
@@ -165,35 +171,6 @@ fn resolve_repo_name_from_session(
         ));
     }
     state.repo.find_local_repo_name_by_id(repo_id)
-}
-
-fn resolve_repo_by_name(
-    state: &Arc<AppState>,
-    branch: Option<PeerId>,
-    expected_repo_id: Option<RepoId>,
-    repo_name: String,
-) -> Result<ResolvedRepo> {
-    let branch_ref = branch.as_ref();
-    let info = state
-        .repo
-        .get_repo_info_for(branch_ref, Some(&repo_name))?
-        .ok_or_else(|| anyhow!("Repository UUID not resolved for {}", repo_name))?;
-    let repo_id = info.uuid;
-    if let Some(expected_repo_id) = expected_repo_id
-        && expected_repo_id != repo_id
-    {
-        return Err(anyhow!(
-            "Session repo mismatch: expected {}, resolved {} for {}",
-            expected_repo_id,
-            repo_id,
-            repo_name
-        ));
-    }
-    Ok(ResolvedRepo {
-        repo_id,
-        repo_name,
-        branch,
-    })
 }
 
 pub fn run_on_resolved_local_repo<F, R>(

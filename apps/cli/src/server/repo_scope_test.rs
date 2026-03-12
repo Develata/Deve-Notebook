@@ -106,6 +106,24 @@ fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<
 }
 
 #[test]
+fn resolve_session_repo_recovers_remote_scope_from_uuid_when_name_is_stale() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, remote_repo_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("stale-name".into(), Some(remote_repo_id));
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.branch, Some(peer_id));
+    assert_eq!(resolved.repo_id, remote_repo_id);
+    assert_eq!(resolved.repo_name, "shadow-notes");
+    assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
+    Ok(())
+}
+
+#[test]
 fn map_repo_scope_error_marks_selector_mismatch_as_context_invalid() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
