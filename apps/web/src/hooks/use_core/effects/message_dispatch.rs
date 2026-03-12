@@ -7,6 +7,9 @@ use super::super::effects_msg;
 use super::super::pending;
 use super::super::state::CoreSignals;
 use super::message_control;
+use super::message_dispatch_gate::{
+    accepts_plugin_response, accepts_search_results, accepts_unscoped_update,
+};
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 use super::message_scope::{repo_list_matches_scope, shadow_list_matches_scope};
@@ -43,9 +46,12 @@ pub fn handle_message<F>(
             result,
             error,
         } => {
-            if !accepts_unscoped_update(signals) {
+            if !accepts_plugin_response(&req_id, signals) {
                 return;
             }
+            signals
+                .set_plugin_request_ids
+                .update(|ids| ids.retain(|id| id != &req_id));
             signals
                 .set_plugin_response
                 .set(Some((req_id, result, error)));
@@ -185,57 +191,5 @@ pub fn handle_message<F>(
             });
         }
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
-    }
-}
-
-fn accepts_unscoped_update(signals: CoreSignals) -> bool {
-    signals.pending_branch_switch.get_untracked().is_none()
-        && signals.pending_repo_switch.get_untracked().is_none()
-}
-
-fn accepts_search_results(request_id: &str, signals: CoreSignals) -> bool {
-    accepts_unscoped_update(signals)
-        && signals.search_request_id.get_untracked().as_deref() == Some(request_id)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{accepts_search_results, accepts_unscoped_update};
-    use crate::api::ConnectionStatus;
-    use crate::hooks::use_core::PendingBranchTarget;
-    use crate::hooks::use_core::state::init_signals;
-    use leptos::prelude::*;
-
-    #[test]
-    fn rejects_unscoped_updates_while_repo_switch_pending() {
-        let runtime = leptos::reactive::owner::Owner::new();
-        runtime.set();
-        let (connection_status, _) = signal(ConnectionStatus::Connected);
-        let signals = init_signals(connection_status);
-        signals.set_pending_repo_switch.set(Some("test".into()));
-        assert!(!accepts_unscoped_update(signals));
-    }
-
-    #[test]
-    fn rejects_unscoped_updates_while_branch_switch_pending() {
-        let runtime = leptos::reactive::owner::Owner::new();
-        runtime.set();
-        let (connection_status, _) = signal(ConnectionStatus::Connected);
-        let signals = init_signals(connection_status);
-        signals
-            .set_pending_branch_switch
-            .set(Some(PendingBranchTarget::Local));
-        assert!(!accepts_unscoped_update(signals));
-    }
-
-    #[test]
-    fn rejects_search_results_when_request_id_is_stale() {
-        let runtime = leptos::reactive::owner::Owner::new();
-        runtime.set();
-        let (connection_status, _) = signal(ConnectionStatus::Connected);
-        let signals = init_signals(connection_status);
-        signals.set_search_request_id.set(Some("fresh".into()));
-        assert!(!accepts_search_results("stale", signals));
-        assert!(accepts_search_results("fresh", signals));
     }
 }

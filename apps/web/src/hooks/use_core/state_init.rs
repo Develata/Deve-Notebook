@@ -29,6 +29,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (pending_local_edits, set_pending_local_edits) = signal(PendingLocalEdits::new());
     let (pending_navigation, set_pending_navigation) = signal(None::<PendingNavigation>);
     let (plugin_response, set_plugin_response) = signal(PluginResponse::default());
+    let (plugin_request_ids, set_plugin_request_ids) = signal(Vec::<String>::new());
     let (chat_messages, set_chat_messages) = signal(Vec::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
     let (ai_mode, set_ai_mode) = signal("agent-bridge".to_string());
@@ -81,6 +82,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_pending_navigation,
         plugin_response,
         set_plugin_response,
+        plugin_request_ids,
+        set_plugin_request_ids,
         chat_messages,
         set_chat_messages,
         is_chat_streaming,

@@ -69,6 +69,7 @@ pub(super) fn build_core_state(
         on_doc_move: doc.on_doc_move,
         on_stats: misc.on_stats,
         plugin_last_response: signals.plugin_response,
+        plugin_request_ids: signals.plugin_request_ids,
         on_plugin_call: misc.on_plugin_call,
         search_results: signals.search_results,
         on_search: misc.on_search,

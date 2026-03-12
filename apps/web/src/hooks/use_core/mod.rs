@@ -89,6 +89,7 @@ pub fn use_core() -> CoreState {
         &ws,
         signals.set_stats,
         signals.load_state,
+        signals.set_plugin_request_ids,
         signals.set_search_request_id,
     );
     let switch_callbacks = callbacks::create_switch_callbacks(

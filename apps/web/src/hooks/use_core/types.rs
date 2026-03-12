@@ -100,6 +100,7 @@ pub struct CoreState {
 
     // 插件 RPC
     pub plugin_last_response: ReadSignal<PluginResponse>,
+    pub plugin_request_ids: ReadSignal<Vec<String>>,
     pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
 
     // AI Chat State

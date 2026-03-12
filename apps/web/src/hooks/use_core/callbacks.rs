@@ -177,6 +177,7 @@ pub fn create_misc_callbacks(
     ws: &WsService,
     set_stats: WriteSignal<crate::editor::EditorStats>,
     load_state: ReadSignal<String>,
+    set_plugin_request_ids: WriteSignal<Vec<String>>,
     set_search_request_id: WriteSignal<Option<String>>,
 ) -> MiscCallbacks {
     let on_stats = Callback::new(move |s| set_stats.set(s));
@@ -189,6 +190,11 @@ pub fn create_misc_callbacks(
             String,
             Vec<serde_json::Value>,
         )| {
+            set_plugin_request_ids.update(|ids| {
+                if !ids.iter().any(|id| id == &req_id) {
+                    ids.push(req_id.clone());
+                }
+            });
             ws_plugin.send(ClientMessage::PluginCall {
                 req_id,
                 plugin_id,

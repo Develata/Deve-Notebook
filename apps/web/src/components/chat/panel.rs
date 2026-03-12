@@ -50,6 +50,18 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     });
 
     Effect::new(move |_| {
+        let _ = (
+            core.current_repo.get(),
+            core.active_branch.get(),
+            core.pending_repo_switch.get(),
+            core.pending_branch_switch.get(),
+        );
+        set_pending_reqs.set(Vec::new());
+        set_error_code.set(None);
+        set_last_prompt.set(String::new());
+    });
+
+    Effect::new(move |_| {
         let Some((req_id, _result, error)) = core.plugin_last_response.get() else {
             return;
         };

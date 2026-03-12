@@ -54,6 +54,8 @@ pub struct CoreSignals {
     // 插件
     pub plugin_response: ReadSignal<PluginResponse>,
     pub set_plugin_response: WriteSignal<PluginResponse>,
+    pub plugin_request_ids: ReadSignal<Vec<String>>,
+    pub set_plugin_request_ids: WriteSignal<Vec<String>>,
 
     // AI Chat
     pub chat_messages: ReadSignal<Vec<ChatMessage>>,
