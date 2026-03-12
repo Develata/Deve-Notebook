@@ -88,6 +88,40 @@ fn remote_repo_listing_reuses_open_remote_database() {
 }
 
 #[test]
+fn remote_repo_lookup_prefers_local_metadata_name_for_uuid_legacy_shadow() {
+    let (dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let local = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("wiki"),
+        Some("urn:test:wiki"),
+    )
+    .expect("init local companion repo");
+    let info = local
+        .get_repo_info()
+        .expect("local info")
+        .expect("local repo exists");
+
+    repo.ensure_shadow_db(&peer_id, &info.uuid)
+        .expect("create legacy uuid shadow");
+
+    assert_eq!(
+        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
+        vec!["wiki".to_string()]
+    );
+    let remote_info = repo
+        .get_repo_info_for(Some(&peer_id), Some(&info.uuid.to_string()))
+        .expect("lookup shadow by uuid")
+        .expect("shadow info");
+    assert_eq!(remote_info.name, "wiki");
+    let handle = repo
+        .open_database(Some(&peer_id), &info.uuid.to_string())
+        .expect("open remote shadow by uuid");
+    assert_eq!(handle.repo_name, "wiki");
+}
+
+#[test]
 fn remote_repo_listing_repairs_legacy_remote_filename() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");

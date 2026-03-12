@@ -157,7 +157,8 @@ pub(super) fn matches_current_repo(
     match (repo_id, current_repo_id.get_untracked()) {
         (Some(repo_id), Some(current_repo_id)) => current_repo_id == repo_id.to_string(),
         (Some(_), None) => false,
-        (None, _) => true,
+        (None, None) => true,
+        (None, Some(_)) => false,
     }
 }
 

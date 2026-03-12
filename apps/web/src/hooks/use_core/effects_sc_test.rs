@@ -17,6 +17,14 @@ fn ignores_repo_scoped_messages_before_repo_scope_is_ready() {
 }
 
 #[test]
+fn rejects_repo_less_sc_messages_once_repo_scope_is_ready() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (current_repo_id, _) = signal(Some(uuid::Uuid::new_v4().to_string()));
+    assert!(!matches_current_repo(&None, current_repo_id));
+}
+
+#[test]
 fn ignores_repo_scoped_messages_from_other_branch() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();

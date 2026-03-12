@@ -79,27 +79,24 @@ impl RepoManager {
             if let Some(info) = entry.info {
                 return Ok(Some(info));
             }
-            if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem) {
-                return Ok(Some(RepoInfo {
-                    uuid: repo_id,
-                    name: entry.stem,
-                    url: None,
-                }));
+            if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem)
+                && let Some(local_info) = self.get_local_repo_info_by_id(repo_id)?
+            {
+                return Ok(Some(local_info));
             }
-        }
-        if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
-            return Ok(Some(RepoInfo {
-                uuid: repo_id,
-                name: repo_name.to_string(),
-                url: None,
-            }));
+            return Self::read_repo_info_from_path(&entry.path);
         }
         let db_path = self
             .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", repo_name));
         if db_path.exists() {
-            return Self::read_repo_info_from_path(&db_path);
+            if let Some(info) = Self::read_repo_info_from_path(&db_path)? {
+                return Ok(Some(info));
+            }
+            if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
+                return self.get_local_repo_info_by_id(repo_id);
+            }
         }
         Ok(None)
     }

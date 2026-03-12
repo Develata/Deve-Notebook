@@ -65,10 +65,20 @@ pub(super) fn validate_branch_target(
 
 pub(super) fn select_target_repo(
     state: &Arc<AppState>,
+    current_repo_id: Option<RepoId>,
+    current_repo_name: Option<&str>,
     current_repo_url: Option<String>,
     target_branch: Option<&PeerId>,
 ) -> anyhow::Result<Option<String>> {
     let repos = state.repo.list_repos(target_branch)?;
+    if let Some(repo_id) = current_repo_id
+        && let Some(info) = state
+            .repo
+            .get_repo_info_for(target_branch, Some(&repo_id.to_string()))?
+        && repos.contains(&info.name)
+    {
+        return Ok(Some(info.name));
+    }
     if let Some(url) = current_repo_url {
         for repo_name in &repos {
             if let Ok(Some(repo_url)) = state.repo.get_repo_url(target_branch, repo_name)
@@ -78,7 +88,12 @@ pub(super) fn select_target_repo(
             }
         }
     }
-    Ok(repos.first().cloned())
+    if let Some(repo_name) = current_repo_name
+        && repos.iter().any(|candidate| candidate == repo_name)
+    {
+        return Ok(Some(repo_name.to_string()));
+    }
+    Ok((repos.len() == 1).then(|| repos[0].clone()))
 }
 
 pub(super) fn prepare_repo_switch(

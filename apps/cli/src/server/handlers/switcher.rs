@@ -41,7 +41,13 @@ pub async fn handle_switch_branch(
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
 
-    let target_repo = match select_target_repo(state, current_repo_url, target_branch_ref) {
+    let target_repo = match select_target_repo(
+        state,
+        session.active_repo_id,
+        session.active_repo.as_deref(),
+        current_repo_url,
+        target_branch_ref,
+    ) {
         Ok(repo) => repo,
         Err(err) => {
             ch.send_protocol_error(ServerError::with_detail(
@@ -106,6 +112,7 @@ pub async fn handle_switch_branch(
     if let Some(repo_view) = payload.repo_view {
         let tree_branch = final_branch.clone().map(PeerId::new);
         ch.unicast(ServerMessage::RepoSwitched {
+            branch: final_branch.clone(),
             name: repo_view.repo_name,
             uuid: repo_view.repo_id.to_string(),
         });

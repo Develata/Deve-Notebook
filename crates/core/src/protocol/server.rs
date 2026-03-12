@@ -134,6 +134,8 @@ pub enum ServerMessage {
         success: bool,
     },
     RepoSwitched {
+        #[serde(default)]
+        branch: Option<String>,
         name: String,
         uuid: String,
     },

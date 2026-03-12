@@ -133,7 +133,14 @@ pub fn handle_message<F>(
                 );
             }
         }
-        ServerMessage::RepoSwitched { name, uuid } => {
+        ServerMessage::RepoSwitched { branch, name, uuid } => {
+            let current_branch = signals
+                .active_branch
+                .get_untracked()
+                .map(|id| id.to_string());
+            if branch != current_branch {
+                return;
+            }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
             if effects_msg::handle_repo_switched(

@@ -54,6 +54,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
     };
 
     ch.unicast(ServerMessage::RepoSwitched {
+        branch: session.active_branch.as_ref().map(ToString::to_string),
         name: repo_name.clone(),
         uuid: repo_id.to_string(),
     });

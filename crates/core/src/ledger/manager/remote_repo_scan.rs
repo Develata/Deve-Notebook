@@ -98,7 +98,12 @@ impl RepoManager {
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
         let mut repos = Vec::new();
         for entry in self.scan_remote_repo_entries(peer_id)? {
-            repos.push(entry.info.map(|info| info.name).unwrap_or(entry.stem));
+            let fallback = uuid::Uuid::parse_str(&entry.stem)
+                .ok()
+                .and_then(|repo_id| self.get_local_repo_info_by_id(repo_id).ok().flatten())
+                .map(|info| info.name)
+                .unwrap_or(entry.stem);
+            repos.push(entry.info.map(|info| info.name).unwrap_or(fallback));
         }
         repos.sort();
         repos.dedup();
@@ -116,6 +121,7 @@ impl RepoManager {
                 Self::read_repo_info_from_db(db)
                     .ok()
                     .flatten()
+                    .or_else(|| self.get_local_repo_info_by_id(*repo_id).ok().flatten())
                     .unwrap_or(RepoInfo {
                         uuid: *repo_id,
                         name: repo_id.to_string(),
