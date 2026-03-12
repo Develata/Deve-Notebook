@@ -103,6 +103,7 @@ pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals
 }
 
 fn clear_repo_scoped_runtime(signals: CoreSignals) {
+    signals.set_peers.set(Default::default());
     signals.set_sync_mode.set("auto".to_string());
     signals.set_pending_ops_count.set(0);
     signals.set_pending_ops_previews.set(Vec::new());
