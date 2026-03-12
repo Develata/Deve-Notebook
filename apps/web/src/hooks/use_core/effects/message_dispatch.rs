@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::*;
 
@@ -98,11 +99,11 @@ pub fn handle_message<F>(
         }
         ServerMessage::ShadowList { shadows } => signals.set_shadow_repos.set(shadows),
         ServerMessage::RepoList { branch, repos } => {
-            let current_branch = signals
-                .active_branch
-                .get_untracked()
-                .map(|id| id.to_string());
-            if branch == current_branch {
+            if repo_list_matches_scope(
+                branch,
+                signals.active_branch.get_untracked(),
+                signals.pending_branch_switch.get_untracked(),
+            ) {
                 signals.set_repo_list.set(repos);
             }
         }
@@ -220,5 +221,54 @@ pub fn handle_message<F>(
             });
         }
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
+    }
+}
+
+fn repo_list_matches_scope(
+    branch: Option<String>,
+    active_branch: Option<deve_core::models::PeerId>,
+    pending_branch_switch: Option<PendingBranchTarget>,
+) -> bool {
+    let expected_branch = pending_branch_switch
+        .map(|pending| match pending {
+            PendingBranchTarget::Local => None,
+            PendingBranchTarget::Shadow(peer_id) => Some(peer_id),
+        })
+        .unwrap_or_else(|| active_branch.map(|peer_id| peer_id.to_string()));
+    branch == expected_branch
+}
+
+#[cfg(test)]
+mod tests {
+    use super::repo_list_matches_scope;
+    use crate::hooks::use_core::PendingBranchTarget;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn repo_list_uses_pending_branch_scope_during_switch() {
+        assert!(!repo_list_matches_scope(
+            None,
+            None,
+            Some(PendingBranchTarget::Shadow("peer-a".into())),
+        ));
+        assert!(repo_list_matches_scope(
+            Some("peer-a".into()),
+            None,
+            Some(PendingBranchTarget::Shadow("peer-a".into())),
+        ));
+    }
+
+    #[test]
+    fn repo_list_uses_active_branch_without_pending_switch() {
+        assert!(repo_list_matches_scope(
+            Some("peer-a".into()),
+            Some(PeerId::new("peer-a")),
+            None,
+        ));
+        assert!(!repo_list_matches_scope(
+            Some("peer-b".into()),
+            Some(PeerId::new("peer-a")),
+            None,
+        ));
     }
 }
