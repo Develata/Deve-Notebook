@@ -26,6 +26,8 @@ pub fn create_source_control_callbacks(
     ws: &WsService,
     staged_changes: ReadSignal<Vec<ChangeEntry>>,
     unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
+    set_doc_diff_request_id: WriteSignal<Option<String>>,
+    set_commit_diff_request_id: WriteSignal<Option<String>>,
 ) -> SourceControlCallbacks {
     let ws1 = ws.clone();
     let on_get_changes = Callback::new(move |_: ()| {
@@ -76,7 +78,10 @@ pub fn create_source_control_callbacks(
 
     let ws6 = ws.clone();
     let on_get_doc_diff = Callback::new(move |path: String| {
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_doc_diff_request_id.set(Some(request_id.clone()));
         ws6.send(ClientMessage::GetDocDiff {
+            request_id,
             target: resolve_target_any(staged_changes, unstaged_changes, &path),
         });
     });
@@ -100,7 +105,13 @@ pub fn create_source_control_callbacks(
     let ws9 = ws.clone();
     let on_get_commit_diff =
         Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
-            ws9.send(ClientMessage::GetCommitDiff { commit_a, commit_b });
+            let request_id = uuid::Uuid::new_v4().to_string();
+            set_commit_diff_request_id.set(Some(request_id.clone()));
+            ws9.send(ClientMessage::GetCommitDiff {
+                request_id,
+                commit_a,
+                commit_b,
+            });
         });
 
     let ws10 = ws.clone();

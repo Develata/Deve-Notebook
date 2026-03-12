@@ -12,6 +12,7 @@ pub(super) async fn handle_remote_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    request_id: String,
     target: ScPathTarget,
 ) {
     let scope = match resolve_session_repo_and_sync(state, session) {
@@ -49,6 +50,7 @@ pub(super) async fn handle_remote_diff(
         };
 
     ch.unicast(ServerMessage::DocDiff {
+        request_id: Some(request_id),
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         path,

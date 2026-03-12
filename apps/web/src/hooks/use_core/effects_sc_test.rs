@@ -1,4 +1,7 @@
-use super::{clear_repo_scoped_state, matches_current_repo, matches_current_scope};
+use super::{
+    clear_repo_scoped_state, commit_diff_matches_request, doc_diff_matches_request,
+    matches_current_repo, matches_current_scope,
+};
 use crate::hooks::use_core::{PendingBranchTarget, diff_session::DiffSessionWire};
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
@@ -84,12 +87,15 @@ fn clear_repo_scoped_state_resets_source_control_view() {
         doc_count: 1,
         ledger_seq: 1,
     }]);
+    let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("doc-req".to_string()));
     let (diff, set_diff) = signal(Some(DiffSessionWire {
         path: "a.md".into(),
         old_content: "old".into(),
         new_content: "new".into(),
         opened_at_ms: 1,
     }));
+    let (commit_diff_request_id, set_commit_diff_request_id) =
+        signal(Some("commit-req".to_string()));
     let (commit_diff, set_commit_diff) = signal(vec![CommitFileDiff {
         path: "notes/a.md".into(),
         status: deve_core::source_control::ChangeStatus::Modified,
@@ -102,13 +108,43 @@ fn clear_repo_scoped_state_resets_source_control_view() {
         set_staged,
         set_unstaged,
         set_history,
+        set_doc_diff_request_id,
         set_diff,
+        set_commit_diff_request_id,
         set_commit_diff,
     );
 
     assert!(staged.get_untracked().is_empty());
     assert!(unstaged.get_untracked().is_empty());
     assert!(history.get_untracked().is_empty());
+    assert_eq!(doc_diff_request_id.get_untracked(), None);
     assert_eq!(diff.get_untracked(), None);
+    assert_eq!(commit_diff_request_id.get_untracked(), None);
     assert!(commit_diff.get_untracked().is_empty());
+}
+
+#[test]
+fn doc_diff_accepts_matching_request_or_system_diff() {
+    assert!(doc_diff_matches_request(
+        &Some("req-1".into()),
+        Some("req-1".into()),
+    ));
+    assert!(!doc_diff_matches_request(
+        &Some("stale".into()),
+        Some("req-1".into()),
+    ));
+    assert!(doc_diff_matches_request(&None, Some("req-1".into())));
+}
+
+#[test]
+fn commit_diff_requires_matching_request_id() {
+    assert!(commit_diff_matches_request(
+        &Some("req-1".into()),
+        Some("req-1".into()),
+    ));
+    assert!(!commit_diff_matches_request(
+        &Some("stale".into()),
+        Some("req-1".into()),
+    ));
+    assert!(!commit_diff_matches_request(&None, Some("req-1".into())));
 }

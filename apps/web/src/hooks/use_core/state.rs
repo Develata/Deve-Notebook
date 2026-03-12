@@ -121,8 +121,12 @@ pub struct CoreSignals {
     pub set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub set_commit_history: WriteSignal<Vec<CommitInfo>>,
+    pub doc_diff_request_id: ReadSignal<Option<String>>,
+    pub set_doc_diff_request_id: WriteSignal<Option<String>>,
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
+    pub commit_diff_request_id: ReadSignal<Option<String>>,
+    pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
     pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
 

@@ -89,6 +89,8 @@ pub fn use_core() -> CoreState {
         &ws,
         signals.staged_changes,
         signals.unstaged_changes,
+        signals.set_doc_diff_request_id,
+        signals.set_commit_diff_request_id,
     );
     let misc_callbacks = callbacks::create_misc_callbacks(
         &ws,

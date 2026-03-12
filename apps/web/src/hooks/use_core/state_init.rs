@@ -61,7 +61,9 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
     let (commit_history, set_commit_history) = signal(Vec::new());
+    let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
+    let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
     let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
     let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
     let (system_metrics, set_system_metrics) = signal(None::<SystemMetricsData>);
@@ -137,8 +139,12 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_unstaged_changes,
         commit_history,
         set_commit_history,
+        doc_diff_request_id,
+        set_doc_diff_request_id,
         diff_content,
         set_diff_content,
+        commit_diff_request_id,
+        set_commit_diff_request_id,
         commit_diff_result,
         set_commit_diff_result,
         tree_nodes,

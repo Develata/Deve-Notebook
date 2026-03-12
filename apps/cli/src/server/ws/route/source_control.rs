@@ -35,8 +35,15 @@ pub(super) async fn route_source_control(
         ClientMessage::GetCommitHistory { limit } => {
             source_control::handle_get_commit_history(state, ch, session, limit).await;
         }
-        ClientMessage::GetCommitDiff { commit_a, commit_b } => {
-            source_control::handle_get_commit_diff(state, ch, session, commit_a, commit_b).await;
+        ClientMessage::GetCommitDiff {
+            request_id,
+            commit_a,
+            commit_b,
+        } => {
+            source_control::handle_get_commit_diff(
+                state, ch, session, request_id, commit_a, commit_b,
+            )
+            .await;
         }
         ClientMessage::ResolveConflict { target, resolution } => {
             source_control::handle_resolve_conflict(state, ch, session, target, resolution).await;
@@ -44,8 +51,8 @@ pub(super) async fn route_source_control(
         ClientMessage::CommitAndPush { message } => {
             source_control::handle_commit_and_push(state, ch, session, message).await;
         }
-        ClientMessage::GetDocDiff { target } => {
-            source_control::handle_get_doc_diff(state, ch, session, target).await;
+        ClientMessage::GetDocDiff { request_id, target } => {
+            source_control::handle_get_doc_diff(state, ch, session, request_id, target).await;
         }
         other => super::core::route_core(state, ch, session, other).await,
     }

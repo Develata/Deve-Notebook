@@ -26,7 +26,11 @@ pub fn handle_sc_message(
     set_staged: WriteSignal<Vec<ChangeEntry>>,
     set_unstaged: WriteSignal<Vec<ChangeEntry>>,
     set_history: WriteSignal<Vec<CommitInfo>>,
+    doc_diff_request_id: ReadSignal<Option<String>>,
+    set_doc_diff_request_id: WriteSignal<Option<String>>,
     set_diff: WriteSignal<Option<DiffSessionWire>>,
+    commit_diff_request_id: ReadSignal<Option<String>>,
+    set_commit_diff_request_id: WriteSignal<Option<String>>,
     set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
     current_repo_id: ReadSignal<Option<String>>,
     active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
@@ -115,6 +119,7 @@ pub fn handle_sc_message(
             ws.send(ClientMessage::GetCommitHistory { limit: 50 });
         }
         ServerMessage::DocDiff {
+            request_id,
             repo_id,
             branch,
             path,
@@ -124,6 +129,10 @@ pub fn handle_sc_message(
             if !in_scope(repo_id, branch) {
                 return true;
             }
+            if !doc_diff_matches_request(request_id, doc_diff_request_id.get_untracked()) {
+                return true;
+            }
+            set_doc_diff_request_id.set(None);
             leptos::logging::log!("收到 Diff: {}", path);
             set_diff.set(Some(DiffSessionWire::new(
                 path.clone(),
@@ -153,6 +162,7 @@ pub fn handle_sc_message(
             ws.send(ClientMessage::ListDocs);
         }
         ServerMessage::CommitDiffResult {
+            request_id,
             repo_id,
             branch,
             diffs,
@@ -160,6 +170,10 @@ pub fn handle_sc_message(
             if !in_scope(repo_id, branch) {
                 return true;
             }
+            if !commit_diff_matches_request(request_id, commit_diff_request_id.get_untracked()) {
+                return true;
+            }
+            set_commit_diff_request_id.set(None);
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
             set_commit_diff.set(diffs.clone());
         }
@@ -178,6 +192,25 @@ pub fn handle_sc_message(
         _ => return false,
     }
     true
+}
+
+fn doc_diff_matches_request(
+    request_id: &Option<String>,
+    expected_request_id: Option<String>,
+) -> bool {
+    match request_id {
+        Some(request_id) => expected_request_id.as_deref() == Some(request_id.as_str()),
+        None => true,
+    }
+}
+
+fn commit_diff_matches_request(
+    request_id: &Option<String>,
+    expected_request_id: Option<String>,
+) -> bool {
+    request_id
+        .as_deref()
+        .is_some_and(|request_id| expected_request_id.as_deref() == Some(request_id))
 }
 
 fn matches_scope(
@@ -202,12 +235,16 @@ pub fn clear_repo_scoped_state(
     set_staged: WriteSignal<Vec<ChangeEntry>>,
     set_unstaged: WriteSignal<Vec<ChangeEntry>>,
     set_history: WriteSignal<Vec<CommitInfo>>,
+    set_doc_diff_request_id: WriteSignal<Option<String>>,
     set_diff: WriteSignal<Option<DiffSessionWire>>,
+    set_commit_diff_request_id: WriteSignal<Option<String>>,
     set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
 ) {
     set_staged.set(Vec::new());
     set_unstaged.set(Vec::new());
     set_history.set(Vec::new());
+    set_doc_diff_request_id.set(None);
     set_diff.set(None);
+    set_commit_diff_request_id.set(None);
     set_commit_diff.set(Vec::new());
 }

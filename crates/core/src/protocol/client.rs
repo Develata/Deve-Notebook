@@ -121,6 +121,7 @@ pub enum ClientMessage {
         doc_id: DocId,
     },
     GetDocDiff {
+        request_id: String,
         target: ScPathTarget,
     },
     DiscardFile {
@@ -133,6 +134,7 @@ pub enum ClientMessage {
         targets: Vec<ScPathTarget>,
     },
     GetCommitDiff {
+        request_id: String,
         commit_a: Option<String>,
         commit_b: String,
     },

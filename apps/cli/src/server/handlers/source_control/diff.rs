@@ -19,10 +19,11 @@ pub async fn handle_get_doc_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    request_id: String,
     target: ScPathTarget,
 ) {
     if session.is_readonly() {
-        remote::handle_remote_diff(state, ch, session, target).await;
+        remote::handle_remote_diff(state, ch, session, request_id, target).await;
         return;
     }
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
@@ -49,6 +50,7 @@ pub async fn handle_get_doc_diff(
     };
 
     ch.unicast(ServerMessage::DocDiff {
+        request_id: Some(request_id),
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         path: normalized,

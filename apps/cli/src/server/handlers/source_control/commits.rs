@@ -67,6 +67,7 @@ pub async fn handle_get_commit_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    request_id: String,
     commit_a: Option<String>,
     commit_b: String,
 ) {
@@ -78,6 +79,7 @@ pub async fn handle_get_commit_diff(
         Ok(diffs) => {
             tracing::info!("Returning diff with {} file changes", diffs.len());
             ch.unicast(ServerMessage::CommitDiffResult {
+                request_id: Some(request_id),
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
                 diffs,

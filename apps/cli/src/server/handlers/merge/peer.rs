@@ -114,6 +114,7 @@ fn send_merge_conflict(
     };
     tracing::warn!("Merge Conflict detected for doc {}", doc_id);
     ch.unicast(ServerMessage::DocDiff {
+        request_id: None,
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         path,

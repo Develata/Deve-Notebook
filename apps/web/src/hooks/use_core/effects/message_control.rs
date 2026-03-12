@@ -115,12 +115,16 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_shadow_list_request_id.set(None);
     signals.set_repo_list_request_id.set(None);
     signals.set_search_request_id.set(None);
+    signals.set_doc_diff_request_id.set(None);
+    signals.set_commit_diff_request_id.set(None);
     signals.set_search_results.set(Vec::new());
     effects_sc::clear_repo_scoped_state(
         signals.set_staged_changes,
         signals.set_unstaged_changes,
         signals.set_commit_history,
+        signals.set_doc_diff_request_id,
         signals.set_diff_content,
+        signals.set_commit_diff_request_id,
         signals.set_commit_diff_result,
     );
 }
@@ -132,7 +136,9 @@ fn request_repo_sync_state(ws: &WsService) {
 
 fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
     let request_id = uuid::Uuid::new_v4().to_string();
-    signals.set_shadow_list_request_id.set(Some(request_id.clone()));
+    signals
+        .set_shadow_list_request_id
+        .set(Some(request_id.clone()));
     ws.send(ClientMessage::ListShadows { request_id });
 }
 
