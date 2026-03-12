@@ -8,6 +8,7 @@ use crate::server::AppState;
 use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use redb::Database;
 use std::sync::Arc;
 
@@ -76,6 +77,27 @@ pub fn resolve_session_repo_and_sync(
         session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
     }
     Ok(scope)
+}
+
+pub fn map_repo_scope_error(error: anyhow::Error) -> ServerError {
+    let detail = error.to_string();
+    let lower = detail.to_ascii_lowercase();
+    if lower.contains("active repository not selected") {
+        return ServerError::with_detail(ServerErrorCode::SyncRepoUnbound, detail);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
+    }
+    ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
 }
 
 fn resolve_repo_name_from_session(
@@ -186,4 +208,8 @@ pub fn local_repo_root(state: &Arc<AppState>, repo: &ResolvedRepo) -> Result<std
         ));
     }
     state.repo.local_repo_workspace_root(&repo.repo_name)
+}
+
+fn contains_any(input: &str, patterns: &[&str]) -> bool {
+    patterns.iter().any(|pattern| input.contains(pattern))
 }

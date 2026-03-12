@@ -1,9 +1,12 @@
-use super::repo_scope::{resolve_session_repo, resolve_session_repo_and_sync};
+use super::repo_scope::{
+    map_repo_scope_error, resolve_session_repo, resolve_session_repo_and_sync,
+};
 use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
 use crate::server::security;
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
+use deve_core::protocol::ServerErrorCode;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -99,4 +102,12 @@ fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<
     assert_eq!(resolved.repo_name, "shadow-notes");
     assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
     Ok(())
+}
+
+#[test]
+fn map_repo_scope_error_marks_selector_mismatch_as_context_invalid() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
+    ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }

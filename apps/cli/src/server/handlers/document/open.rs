@@ -1,9 +1,9 @@
 use super::errors::{send_doc_error, send_repo_context_invalid};
 use super::snapshot::{SnapshotPayload, build_snapshot_payload};
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -25,10 +25,7 @@ pub(super) async fn handle_open_doc(
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                e.to_string(),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(e));
             return;
         }
     };

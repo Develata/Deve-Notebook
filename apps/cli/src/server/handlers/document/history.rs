@@ -1,9 +1,9 @@
 use super::confirmed;
 use super::errors::send_doc_error;
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 pub(super) async fn handle_request_history(
@@ -16,10 +16,7 @@ pub(super) async fn handle_request_history(
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to resolve repository scope: {}", err),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(err));
             return;
         }
     };

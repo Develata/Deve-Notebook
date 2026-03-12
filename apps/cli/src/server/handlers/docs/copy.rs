@@ -11,7 +11,7 @@ use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use prepare::prepare_copy_paths;
 use std::sync::Arc;
@@ -30,7 +30,10 @@ pub async fn handle_copy_doc(
     }
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
-        Err(err) => return errors::request_failed(ch, err.to_string()),
+        Err(err) => {
+            ch.send_protocol_error(map_repo_scope_error(err));
+            return;
+        }
     };
     let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path) {
         Some(paths) => paths,

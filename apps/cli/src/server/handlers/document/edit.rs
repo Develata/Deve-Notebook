@@ -1,4 +1,4 @@
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, LedgerEntry, Op};
 use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
@@ -23,10 +23,7 @@ pub(super) async fn handle_edit(
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::SyncEditRejected,
-                e.to_string(),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(e));
             return;
         }
     };

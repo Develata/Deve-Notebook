@@ -8,7 +8,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -21,7 +21,10 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            send_key_denied(ch, None, ServerErrorCode::SyncRepoUnbound, err.to_string());
+            ch.unicast(ServerMessage::KeyDenied {
+                repo_id: None,
+                error: map_repo_scope_error(err),
+            });
             return;
         }
     };

@@ -7,7 +7,7 @@ use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use deve_core::protocol::ServerMessage;
@@ -34,7 +34,7 @@ pub async fn handle_delete_doc(
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            ch.send_protocol_error(map_repo_scope_error(err));
             return;
         }
     };

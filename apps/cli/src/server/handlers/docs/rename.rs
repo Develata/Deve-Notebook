@@ -8,7 +8,9 @@ use super::rename_file::handle_file_rename;
 use super::{validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{local_repo_path, resolve_session_repo_and_sync};
+use crate::server::repo_scope::{
+    local_repo_path, map_repo_scope_error, resolve_session_repo_and_sync,
+};
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use std::sync::Arc;
@@ -35,7 +37,7 @@ pub async fn handle_rename_doc(
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            ch.send_protocol_error(map_repo_scope_error(err));
             return;
         }
     };
