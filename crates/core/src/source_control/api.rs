@@ -8,6 +8,7 @@ use anyhow::Result;
 
 pub trait SourceControlApi: Send + Sync {
     fn list_pending_fs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>>;
+    fn list_staged_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>>;
     fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()>;
     fn discard_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()>;
     fn unstage_file_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()>;

@@ -1,9 +1,9 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::run_on_resolved_local_repo;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::SourceControlApi;
 use std::sync::Arc;
 
 pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
@@ -19,11 +19,8 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let staged = match run_on_resolved_local_repo(
-        state,
-        &scope,
-        deve_core::ledger::source_control::list_staged,
-    ) {
+    let selector = super::service::selector_from_scope(&scope);
+    let staged = match state.repo.list_staged_in_repo(&selector) {
         Ok(list) => super::present::collapse_rename_candidates(list),
         Err(e) => {
             tracing::error!("Failed to list staged files: {:?}", e);
@@ -57,12 +54,13 @@ fn detect_unstaged_changes(
     let selector = super::service::selector_from_scope(scope);
     let pending = super::service::list_pending(state.repo.as_ref(), &selector)?;
 
-    let staged_paths: std::collections::HashSet<String> =
-        run_on_resolved_local_repo(state, scope, deve_core::ledger::source_control::list_staged)
-            .map_err(|e| super::errors::map_repo_error(super::errors::ScOp::ListChanges, e))?
-            .into_iter()
-            .map(|e| deve_core::utils::path::to_forward_slash(&e.path))
-            .collect();
+    let staged_paths: std::collections::HashSet<String> = state
+        .repo
+        .list_staged_in_repo(&selector)
+        .map_err(|e| super::errors::map_repo_error(super::errors::ScOp::ListChanges, e))?
+        .into_iter()
+        .map(|entry| deve_core::utils::path::to_forward_slash(&entry.path))
+        .collect();
 
     Ok(pending
         .into_iter()

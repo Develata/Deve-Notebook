@@ -14,6 +14,12 @@ impl SourceControlApi for RepoManager {
         self.list_pending_fs_in_local_repo(&repo_name)
     }
 
+    fn list_staged_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
+        let repo_name =
+            self.resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())?;
+        self.list_staged_in_local_repo(&repo_name)
+    }
+
     fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
         let repo_name =
             self.resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())?;
