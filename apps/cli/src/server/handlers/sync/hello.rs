@@ -119,6 +119,9 @@ pub(super) async fn handle(
     }
 
     if !ops_to_push.is_empty() {
-        ch.unicast(ServerMessage::SyncPush { ops: ops_to_push });
+        ch.unicast(ServerMessage::SyncPush {
+            repo_id,
+            ops: ops_to_push,
+        });
     }
 }

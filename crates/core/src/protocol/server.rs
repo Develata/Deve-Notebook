@@ -35,6 +35,7 @@ pub enum ServerMessage {
         repo_id: RepoId,
     },
     SyncPush {
+        repo_id: RepoId,
         ops: Vec<EncryptedOp>,
     },
     SyncPushSnapshot {

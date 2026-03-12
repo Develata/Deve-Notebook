@@ -71,8 +71,10 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             leptos::logging::log!("P2P Handshake from Peer: {}", peer_id);
         }
         ServerMessage::Pong => {}
-        ServerMessage::SyncPush { ops } => {
-            decrypt::handle_sync_push(ctx, &ops);
+        ServerMessage::SyncPush { repo_id, ops } => {
+            if matches_current_repo(ctx, Some(repo_id)) {
+                decrypt::handle_sync_push(ctx, &ops);
+            }
         }
         ServerMessage::KeyProvide { repo_id, repo_key } => {
             if matches_current_repo(ctx, Some(repo_id)) {
