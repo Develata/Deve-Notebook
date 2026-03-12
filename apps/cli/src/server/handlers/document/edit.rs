@@ -89,6 +89,7 @@ pub(super) async fn handle_edit(
                 return;
             }
             ch.broadcast(ServerMessage::NewOp {
+                repo_id: scope.repo_id,
                 doc_id,
                 entry: ConfirmedOp::new(
                     local_seq,

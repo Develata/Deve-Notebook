@@ -48,10 +48,12 @@ pub enum ServerMessage {
         finish_reason: Option<String>,
     },
     NewOp {
+        repo_id: RepoId,
         doc_id: DocId,
         entry: ConfirmedOp,
     },
     Snapshot {
+        repo_id: RepoId,
         doc_id: DocId,
         request_id: u64,
         content: String,
@@ -60,6 +62,7 @@ pub enum ServerMessage {
         delta_ops: Vec<ConfirmedOp>,
     },
     History {
+        repo_id: RepoId,
         doc_id: DocId,
         request_id: u64,
         ops: Vec<ConfirmedOp>,

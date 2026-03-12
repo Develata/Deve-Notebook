@@ -21,6 +21,16 @@ pub(super) async fn handle_open_doc(
     );
 
     let start = Instant::now();
+    let scope = match resolve_session_repo_and_sync(state, session) {
+        Ok(scope) => scope,
+        Err(e) => {
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                e.to_string(),
+            ));
+            return;
+        }
+    };
     let (content, base_seq, delta_ops, version) = match session.get_active_db() {
         Some(handle) => match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth)
         {
@@ -35,7 +45,7 @@ pub(super) async fn handle_open_doc(
             }
         },
         None if session.active_branch.is_none() => {
-            match load_snapshot_from_local_repo(state, session, doc_id) {
+            match load_snapshot_from_local_repo(state, &scope.repo_name, doc_id) {
                 Ok(payload) => payload,
                 Err(e) => {
                     ch.send_protocol_error(ServerError::with_detail(
@@ -65,6 +75,7 @@ pub(super) async fn handle_open_doc(
     );
 
     ch.unicast(ServerMessage::Snapshot {
+        repo_id: scope.repo_id,
         doc_id,
         request_id,
         content,
@@ -76,11 +87,10 @@ pub(super) async fn handle_open_doc(
 
 fn load_snapshot_from_local_repo(
     state: &Arc<AppState>,
-    session: &mut WsSession,
+    repo_name: &str,
     doc_id: DocId,
 ) -> anyhow::Result<SnapshotPayload> {
-    let scope = resolve_session_repo_and_sync(state, session)?;
-    state.repo.run_on_local_repo(&scope.repo_name, |db| {
+    state.repo.run_on_local_repo(repo_name, |db| {
         build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
     })
 }

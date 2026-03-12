@@ -18,6 +18,7 @@ use leptos::prelude::*;
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {
         ServerMessage::Snapshot {
+            repo_id,
             doc_id: msg_doc_id,
             request_id,
             content,
@@ -25,6 +26,9 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             version,
             delta_ops,
         } => {
+            if !matches_current_repo(ctx, Some(repo_id)) {
+                return;
+            }
             if msg_doc_id != ctx.doc_id {
                 return;
             }
@@ -34,10 +38,14 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             snapshot::handle_snapshot(ctx, request_id, content, base_seq, version, delta_ops);
         }
         ServerMessage::History {
+            repo_id,
             doc_id: msg_doc_id,
             request_id,
             ops,
         } => {
+            if !matches_current_repo(ctx, Some(repo_id)) {
+                return;
+            }
             if msg_doc_id != ctx.doc_id || request_id != ctx.open_request_id.get_untracked() {
                 return;
             }
@@ -45,9 +53,13 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             history::handle_history(ctx, ops);
         }
         ServerMessage::NewOp {
+            repo_id,
             doc_id: msg_doc_id,
             entry,
         } => {
+            if !matches_current_repo(ctx, Some(repo_id)) {
+                return;
+            }
             if msg_doc_id != ctx.doc_id {
                 return;
             }
