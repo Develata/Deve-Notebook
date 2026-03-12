@@ -36,6 +36,26 @@ pub(super) fn resolve_repo_by_repo_id(
     branch: Option<PeerId>,
     repo_id: RepoId,
 ) -> Result<ResolvedRepo> {
+    if let Some(peer_id) = branch.as_ref()
+        && let Some(selector) = state
+            .repo
+            .find_remote_repo_selector_by_id(peer_id, repo_id)?
+    {
+        return Ok(ResolvedRepo {
+            repo_id,
+            repo_name: selector,
+            branch,
+        });
+    }
+    if branch.is_none()
+        && let Some(repo_name) = state.repo.find_local_repo_name_by_id(repo_id)?
+    {
+        return Ok(ResolvedRepo {
+            repo_id,
+            repo_name,
+            branch,
+        });
+    }
     let info = state
         .repo
         .get_repo_info_for(branch.as_ref(), Some(&repo_id.to_string()))?

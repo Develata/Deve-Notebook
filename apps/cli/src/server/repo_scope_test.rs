@@ -149,6 +149,39 @@ fn resolve_session_repo_recovers_remote_scope_from_uuid_when_name_is_stale() -> 
 }
 
 #[test]
+fn resolve_session_repo_recovers_collision_safe_remote_selector_from_uuid() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    let first = uuid::Uuid::new_v4();
+    let second = uuid::Uuid::new_v4();
+    seed_remote_shadow(&state, &peer_id, first, "wiki")?;
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &deve_core::ledger::RepoInfo {
+            uuid: second,
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-b".into()),
+        },
+    )?;
+
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.active_repo_id = Some(second);
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.branch, Some(peer_id));
+    assert_eq!(resolved.repo_id, second);
+    assert_ne!(resolved.repo_name, "wiki");
+    assert!(resolved.repo_name.starts_with("wiki-"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(resolved.repo_name.as_str())
+    );
+    Ok(())
+}
+
+#[test]
 fn map_repo_scope_error_marks_selector_mismatch_as_context_invalid() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
