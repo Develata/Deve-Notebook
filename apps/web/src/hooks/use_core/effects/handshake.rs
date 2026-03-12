@@ -59,6 +59,14 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let vector = signals.repo_vector.get();
         let repo_name = signals.current_repo.get();
         let branch = signals.active_branch.get();
+        if branch.is_some() {
+            if is_reconnect_bootstrap {
+                restore_session_scope(&ws, repo_name.clone(), branch.clone());
+            }
+            ws.clear_writer_ready();
+            signals.set_handshake_ready.set(false);
+            return;
+        }
         let scope_nonce = scope_nonce.clone();
         if let Some(identity) = maybe_identity.as_ref()
             && maybe_mode.is_none()

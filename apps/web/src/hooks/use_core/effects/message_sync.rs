@@ -16,9 +16,11 @@ pub fn handle_sync_hello(
     signals: CoreSignals,
 ) {
     effects_msg::handle_sync_hello(peer_id, vector.clone(), signals.set_peers);
-    let matches_current =
-        signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str());
-    if matches_current {
+    if should_accept_sync_hello(
+        signals.current_repo_id.get_untracked(),
+        signals.active_branch.get_untracked(),
+        &repo_id,
+    ) {
         signals.set_handshake_ready.set(true);
     }
     spawn_local(async move {
@@ -30,6 +32,14 @@ pub fn handle_sync_hello(
         }
         let _ = note_handshake(&repo_id).await;
     });
+}
+
+fn should_accept_sync_hello(
+    current_repo_id: Option<String>,
+    active_branch: Option<PeerId>,
+    repo_id: &str,
+) -> bool {
+    active_branch.is_none() && current_repo_id.as_deref() == Some(repo_id)
 }
 
 pub fn handle_sc_or_remaining<F>(
@@ -52,5 +62,21 @@ pub fn handle_sc_or_remaining<F>(
         ws,
     ) {
         effects_msg::handle_remaining(msg, signals.set_system_metrics);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_accept_sync_hello;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn ignores_sync_hello_while_viewing_remote_branch() {
+        let repo_id = uuid::Uuid::new_v4().to_string();
+        assert!(!should_accept_sync_hello(
+            Some(repo_id.clone()),
+            Some(PeerId::new("peer-a")),
+            &repo_id,
+        ));
     }
 }

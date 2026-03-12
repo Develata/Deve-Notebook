@@ -65,11 +65,14 @@ pub fn use_editor(
     let handshake_ready = core.handshake_ready;
     let current_doc = core.current_doc;
     let current_repo_id = core.current_repo_id;
+    let active_branch = core.active_branch;
     Effect::new(move |_| {
-        if !handshake_ready.get()
-            || current_doc.get() != Some(doc_id)
-            || current_repo_id.get().is_none()
-        {
+        if !can_open_doc(
+            handshake_ready.get(),
+            active_branch.get(),
+            current_doc.get() == Some(doc_id),
+            current_repo_id.get().is_some(),
+        ) {
             return;
         }
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
@@ -88,8 +91,9 @@ pub fn use_editor(
     // E2EE: 仅在当前 repo 握手完成后请求 RepoKey
     let ws_key = ws.clone();
     let handshake_ready_for_key = core.handshake_ready;
+    let active_branch_for_key = core.active_branch;
     Effect::new(move |_| {
-        if !handshake_ready_for_key.get() {
+        if active_branch_for_key.get().is_some() || !handshake_ready_for_key.get() {
             set_repo_key.set(None);
             return;
         }
@@ -198,5 +202,30 @@ pub fn use_editor(
         playback_version,
         local_version,
         on_playback_change,
+    }
+}
+
+fn can_open_doc(
+    handshake_ready: bool,
+    active_branch: Option<deve_core::models::PeerId>,
+    doc_selected: bool,
+    has_repo_scope: bool,
+) -> bool {
+    has_repo_scope && doc_selected && (handshake_ready || active_branch.is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_open_doc;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn remote_branch_can_open_without_handshake() {
+        assert!(can_open_doc(false, Some(PeerId::new("peer-a")), true, true,));
+    }
+
+    #[test]
+    fn local_branch_still_requires_handshake() {
+        assert!(!can_open_doc(false, None, true, true));
     }
 }
