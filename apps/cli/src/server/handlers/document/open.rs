@@ -29,9 +29,11 @@ pub(super) async fn handle_open_doc(
             return;
         }
     };
-    let (content, base_seq, delta_ops, version) = match session
-        .active_db_for(session.active_branch.as_ref(), &scope.repo_name)
-    {
+    let (content, base_seq, delta_ops, version) = match session.active_db_for(
+        session.active_branch.as_ref(),
+        &scope.repo_name,
+        Some(scope.repo_id),
+    ) {
         Some(handle) => match build_snapshot_payload(&handle.db, doc_id, state.repo.snapshot_depth)
         {
             Ok(payload) => payload,

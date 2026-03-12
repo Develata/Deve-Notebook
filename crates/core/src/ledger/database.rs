@@ -10,6 +10,7 @@
 
 use super::RepoManager;
 use crate::models::PeerId;
+use crate::models::RepoId;
 use anyhow::Result;
 use redb::Database;
 use std::collections::HashMap;
@@ -77,6 +78,8 @@ pub struct DatabaseHandle {
     pub readonly: bool,
     /// 分支标识 (None = local, Some = remote)
     pub branch: Option<PeerId>,
+    /// 仓库 UUID（若已解析）
+    pub repo_id: Option<RepoId>,
     /// 仓库名称
     pub repo_name: String,
 }
@@ -104,10 +107,14 @@ impl RepoManager {
             // 本地分支 (可读写)
             None => {
                 let db = self.get_or_open_local_db(name)?;
+                let repo_id = self
+                    .get_repo_info_for(None, Some(name))?
+                    .map(|info| info.uuid);
                 Ok(DatabaseHandle {
                     db,
                     readonly: false,
                     branch: None,
+                    repo_id,
                     repo_name: name.to_string(),
                 })
             }
@@ -128,28 +135,27 @@ impl RepoManager {
                         })
                     })
                     .unwrap_or_else(|| name.to_string());
-                let loaded = resolved
-                    .as_ref()
-                    .and_then(|entry| {
-                        entry
-                            .info
-                            .as_ref()
-                            .map(|info| info.uuid)
-                            .or_else(|| uuid::Uuid::parse_str(&entry.stem).ok())
-                    })
-                    .and_then(|repo_id| {
-                        self.shadow_dbs
-                            .read()
-                            .unwrap()
-                            .get(peer_id)
-                            .and_then(|repos| repos.get(&repo_id))
-                            .cloned()
-                    });
+                let repo_id = resolved.as_ref().and_then(|entry| {
+                    entry
+                        .info
+                        .as_ref()
+                        .map(|info| info.uuid)
+                        .or_else(|| uuid::Uuid::parse_str(&entry.stem).ok())
+                });
+                let loaded = repo_id.and_then(|repo_id| {
+                    self.shadow_dbs
+                        .read()
+                        .unwrap()
+                        .get(peer_id)
+                        .and_then(|repos| repos.get(&repo_id))
+                        .cloned()
+                });
                 if let Some(db) = loaded {
                     return Ok(DatabaseHandle {
                         db,
                         readonly: true,
                         branch: Some(peer_id.clone()),
+                        repo_id,
                         repo_name,
                     });
                 }
@@ -163,6 +169,7 @@ impl RepoManager {
                     db,
                     readonly: true, // 远端分支始终只读
                     branch: Some(peer_id.clone()),
+                    repo_id,
                     repo_name,
                 })
             }

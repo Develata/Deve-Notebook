@@ -60,6 +60,7 @@ mod tests {
             db,
             readonly: true,
             branch: Some(PeerId::new("remote")),
+            repo_id: None,
             repo_name: "repo".into(),
         });
         session.set_authenticated(peer_id.clone());

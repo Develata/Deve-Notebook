@@ -187,9 +187,10 @@ impl WsSession {
         &self,
         branch: Option<&PeerId>,
         repo_name: &str,
+        repo_id: Option<RepoId>,
     ) -> Option<&DatabaseHandle> {
         self.active_db.as_ref().filter(|handle| {
-            handle.branch.as_ref() == branch && handle.repo_name.as_str() == repo_name
+            handle.branch.as_ref() == branch && active_db_matches_scope(handle, repo_name, repo_id)
         })
     }
 
@@ -208,38 +209,18 @@ impl WsSession {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-
-    #[test]
-    fn active_db_for_rejects_stale_scope() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let db = Arc::new(redb::Database::create(dir.path().join("repo.redb")).expect("db"));
-        let mut session = WsSession::new();
-        session.set_active_db(DatabaseHandle {
-            db,
-            readonly: true,
-            branch: Some(PeerId::new("peer-a")),
-            repo_name: "notes".into(),
-        });
-
-        assert!(
-            session
-                .active_db_for(Some(&PeerId::new("peer-a")), "notes")
-                .is_some()
-        );
-        assert!(
-            session
-                .active_db_for(Some(&PeerId::new("peer-b")), "notes")
-                .is_none()
-        );
-        assert!(session.active_db_for(None, "notes").is_none());
-        assert!(
-            session
-                .active_db_for(Some(&PeerId::new("peer-a")), "other")
-                .is_none()
-        );
+fn active_db_matches_scope(
+    handle: &DatabaseHandle,
+    repo_name: &str,
+    repo_id: Option<RepoId>,
+) -> bool {
+    match (repo_id, handle.repo_id) {
+        (Some(expected), Some(active)) => active == expected,
+        (Some(_), None) => handle.repo_name.as_str() == repo_name,
+        (None, _) => handle.repo_name.as_str() == repo_name,
     }
 }
+
+#[cfg(test)]
+#[path = "session_test.rs"]
+mod tests;

@@ -20,7 +20,7 @@ pub(super) async fn handle_request_history(
             return;
         }
     };
-    let ops = match load_doc_history(state, session, &scope.repo_name, doc_id) {
+    let ops = match load_doc_history(state, session, &scope.repo_name, scope.repo_id, doc_id) {
         Ok(ops) => ops,
         Err(err) => {
             send_doc_error(ch, "Failed to load document history", err);
@@ -40,9 +40,12 @@ fn load_doc_history(
     state: &Arc<AppState>,
     session: &WsSession,
     repo_name: &str,
+    repo_id: deve_core::models::RepoId,
     doc_id: DocId,
 ) -> anyhow::Result<Vec<deve_core::protocol::ConfirmedOp>> {
-    if let Some(handle) = session.active_db_for(session.active_branch.as_ref(), repo_name) {
+    if let Some(handle) =
+        session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))
+    {
         return confirmed::load_doc_ops(&handle.db, doc_id);
     }
     state

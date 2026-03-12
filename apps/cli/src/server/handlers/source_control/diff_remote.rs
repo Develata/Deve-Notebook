@@ -4,6 +4,7 @@ use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::ledger::RepoManager;
+use deve_core::models::RepoId;
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -18,16 +19,17 @@ pub(super) async fn handle_remote_diff(
         Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
     };
     let path = deve_core::utils::path::to_forward_slash(&target.path);
-    let new_content = match get_remote_doc_content(session, &scope.repo_name, &target) {
-        Some(content) => content,
-        None => {
-            return errors::send_ws_code(
-                ch,
-                ServerErrorCode::ScDocNotFound,
-                format!("Remote document not found: {}", path),
-            );
-        }
-    };
+    let new_content =
+        match get_remote_doc_content(session, &scope.repo_name, scope.repo_id, &target) {
+            Some(content) => content,
+            None => {
+                return errors::send_ws_code(
+                    ch,
+                    ServerErrorCode::ScDocNotFound,
+                    format!("Remote document not found: {}", path),
+                );
+            }
+        };
 
     let local_repo_name = match resolve_local_counterpart_repo(state, &scope) {
         Ok(Some(local_scope)) => Some(local_scope.repo_name),
@@ -58,9 +60,10 @@ pub(super) async fn handle_remote_diff(
 fn get_remote_doc_content(
     session: &WsSession,
     repo_name: &str,
+    repo_id: RepoId,
     target: &ScPathTarget,
 ) -> Option<String> {
-    let db = session.active_db_for(session.active_branch.as_ref(), repo_name)?;
+    let db = session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))?;
     let doc_id = target
         .doc_id
         .or_else(|| resolve_doc_id(&db.db, &target.path))?;
