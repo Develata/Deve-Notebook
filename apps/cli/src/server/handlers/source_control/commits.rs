@@ -1,7 +1,9 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
+use deve_core::ledger::source_control as ledger_source_control;
 use deve_core::protocol::ServerMessage;
+use deve_core::source_control;
 use std::sync::Arc;
 
 /// 创建提交 (保存快照)
@@ -40,12 +42,11 @@ pub async fn handle_get_commit_history(
     session: &mut WsSession,
     limit: u32,
 ) {
-    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+    let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::list_commit_history(state.repo.as_ref(), &selector, limit) {
+    match list_commit_history(state, &scope, limit) {
         Ok(commits) => {
             tracing::info!("Returning {} commits", commits.len());
             ch.unicast(ServerMessage::CommitHistory {
@@ -69,17 +70,11 @@ pub async fn handle_get_commit_diff(
     commit_a: Option<String>,
     commit_b: String,
 ) {
-    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+    let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::diff_commits(
-        state.repo.as_ref(),
-        &selector,
-        commit_a.as_deref(),
-        &commit_b,
-    ) {
+    match diff_commits(state, &scope, commit_a.as_deref(), &commit_b) {
         Ok(diffs) => {
             tracing::info!("Returning diff with {} file changes", diffs.len());
             ch.unicast(ServerMessage::CommitDiffResult {
@@ -93,6 +88,46 @@ pub async fn handle_get_commit_diff(
             super::errors::send_ws(ch, e);
         }
     }
+}
+
+fn list_commit_history(
+    state: &Arc<AppState>,
+    scope: &crate::server::repo_scope::ResolvedRepo,
+    limit: u32,
+) -> super::service::ScResult<Vec<deve_core::source_control::CommitInfo>> {
+    if let Some(peer_id) = &scope.branch {
+        return state
+            .repo
+            .open_database(Some(peer_id), &scope.repo_name)
+            .and_then(|handle| ledger_source_control::list_commits(&handle.db, limit))
+            .map_err(|e| super::errors::map_repo_error(super::errors::ScOp::CommitHistory, e));
+    }
+    let selector = super::service::selector_from_scope(scope);
+    super::service::list_commit_history(state.repo.as_ref(), &selector, limit)
+}
+
+fn diff_commits(
+    state: &Arc<AppState>,
+    scope: &crate::server::repo_scope::ResolvedRepo,
+    commit_a: Option<&str>,
+    commit_b: &str,
+) -> super::service::ScResult<Vec<deve_core::source_control::CommitFileDiff>> {
+    if let Some(peer_id) = &scope.branch {
+        return state
+            .repo
+            .open_database(Some(peer_id), &scope.repo_name)
+            .and_then(|handle| {
+                source_control::commit_diff::compare_commits(&handle.db, commit_a, commit_b)
+            })
+            .map_err(|e| {
+                super::errors::map_repo_error(
+                    super::errors::ScOp::CommitDiff(commit_b.to_string()),
+                    e,
+                )
+            });
+    }
+    let selector = super::service::selector_from_scope(scope);
+    super::service::diff_commits(state.repo.as_ref(), &selector, commit_a, commit_b)
 }
 
 /// 提交并推送到所有已连接的 Peer

@@ -51,8 +51,6 @@ pub fn handle_repo_switched(
     ) {
         return;
     }
-    ws.clear_writer_ready();
-    signals.set_handshake_ready.set(false);
     if effects_switch::handle_repo_switched(
         name,
         uuid,
@@ -66,6 +64,8 @@ pub fn handle_repo_switched(
             set_current_doc: signals.set_current_doc,
         },
     ) {
+        ws.clear_writer_ready();
+        signals.set_handshake_ready.set(false);
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
@@ -75,6 +75,12 @@ pub fn handle_repo_switched(
 }
 
 pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals) {
+    if signals.pending_branch_switch.get_untracked().is_some()
+        || signals.pending_repo_switch.get_untracked().is_some()
+    {
+        leptos::logging::warn!("忽略切换窗口内的 PeerDeleted: {}", peer_id);
+        return;
+    }
     signals
         .set_shadow_repos
         .update(|peers| peers.retain(|entry| entry != &peer_id));

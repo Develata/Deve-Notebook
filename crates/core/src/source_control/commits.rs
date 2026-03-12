@@ -75,7 +75,11 @@ fn next_seq_inner(table: &redb::Table<u64, &str>) -> Result<u64> {
 /// 获取最新提交的 ID（作为新提交的 parent_id）— O(log n) via `last()`
 pub fn get_latest_id(db: &Database) -> Result<Option<String>> {
     let read_txn = db.begin_read()?;
-    let order_table = read_txn.open_table(COMMITS_ORDER_TABLE)?;
+    let order_table = match read_txn.open_table(COMMITS_ORDER_TABLE) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+        Err(err) => return Err(err.into()),
+    };
     match order_table.last()? {
         Some((_, commit_id)) => Ok(Some(commit_id.value().to_string())),
         None => Ok(None),
@@ -85,8 +89,16 @@ pub fn get_latest_id(db: &Database) -> Result<Option<String>> {
 /// 获取提交历史 (最新的在前)
 pub fn list(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
     let read_txn = db.begin_read()?;
-    let order_table = read_txn.open_table(COMMITS_ORDER_TABLE)?;
-    let commits_table = read_txn.open_table(COMMITS_TABLE)?;
+    let order_table = match read_txn.open_table(COMMITS_ORDER_TABLE) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(Vec::new()),
+        Err(err) => return Err(err.into()),
+    };
+    let commits_table = match read_txn.open_table(COMMITS_TABLE) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(Vec::new()),
+        Err(err) => return Err(err.into()),
+    };
 
     // 收集所有序号并降序排列
     let mut seqs: Vec<u64> = order_table

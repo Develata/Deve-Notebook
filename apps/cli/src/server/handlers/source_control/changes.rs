@@ -8,9 +8,13 @@ use std::sync::Arc;
 
 pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
     if session.is_readonly() {
+        let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
+            Ok(scope) => scope,
+            Err(e) => return super::errors::send_ws(ch, e),
+        };
         ch.unicast(ServerMessage::ChangesList {
-            repo_id: session.active_repo_id,
-            branch: session.active_branch.clone(),
+            repo_id: Some(scope.repo_id),
+            branch: scope.branch,
             staged: vec![],
             unstaged: vec![],
         });

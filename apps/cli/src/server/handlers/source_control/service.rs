@@ -12,8 +12,8 @@ use deve_core::protocol::ServerError;
 pub type ScResult<T> = std::result::Result<T, ServerError>;
 
 /// Invariants:
-/// - Source Control 只在本地 branch 上执行。
-/// - 上游 `resolve_current_local_repo` 已负责将会话中的漂移 UUID 收敛到单一 repo。
+/// - Source Control 查询可以作用于 local 或 remote scope；写路径仍由上游 local-only resolver 保证。
+/// - 上游 resolver 已负责将会话中的漂移 UUID 收敛到单一 repo。
 /// - 下游 RepoSelector 必须同时携带 `repo_id + repo_name`，让底层 resolver 做一致性校验。
 pub fn selector_from_scope(scope: &ResolvedRepo) -> RepoSelector {
     RepoSelector {
