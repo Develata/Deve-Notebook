@@ -90,6 +90,10 @@ pub(super) async fn handle(
         vector: local_vector,
     });
 
+    if session.is_browser_session() {
+        return;
+    }
+
     if !result.to_request.is_empty() {
         let requests = result
             .to_request

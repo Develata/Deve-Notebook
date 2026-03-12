@@ -3,6 +3,8 @@ use super::{AppState, channel::DualChannel, security, tree_state::RepoTreeRegist
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::protocol::ServerMessage;
 use deve_core::security::IdentityKeyPair;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::sync::vector::VersionVector;
@@ -57,6 +59,44 @@ fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> SyncHelloIn
     }
 }
 
+fn seed_local_op(state: &Arc<AppState>) -> anyhow::Result<()> {
+    let repo_name = state.repo.local_repo_name().to_string();
+    let doc_id = state
+        .repo
+        .apply_file_structure_in_local_repo(&repo_name, "notes/a.md", None, "test")?;
+    state.repo.append_generated_op_in_local_repo(
+        &repo_name,
+        doc_id,
+        state.identity_key.peer_id(),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "hello".into(),
+                },
+                1,
+                PeerId::new("local"),
+                seq,
+                None,
+                None,
+            )
+        },
+    )?;
+    Ok(())
+}
+
+async fn collect_unicast_messages(
+    rx: &mut mpsc::Receiver<ServerMessage>,
+) -> anyhow::Result<Vec<ServerMessage>> {
+    let first = rx.recv().await.expect("at least one message");
+    let mut messages = vec![first];
+    while let Ok(msg) = rx.try_recv() {
+        messages.push(msg);
+    }
+    Ok(messages)
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_hello_creates_named_shadow_repo() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
@@ -92,5 +132,37 @@ async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> 
     let _ = uni_rx.recv().await;
 
     assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_hello_skips_sync_payload_messages() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    seed_local_op(&state)?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut uni_rx).await?;
+
+    assert!(
+        matches!(messages.first(), Some(ServerMessage::SyncHello { .. })),
+        "unexpected first message: {:?}",
+        messages.first()
+    );
+    assert!(!messages.iter().any(|msg| {
+        matches!(
+            msg,
+            ServerMessage::SyncRequest { .. }
+                | ServerMessage::SyncSnapshotRequest { .. }
+                | ServerMessage::SyncPush { .. }
+                | ServerMessage::SyncPushSnapshot { .. }
+        )
+    }));
     Ok(())
 }
