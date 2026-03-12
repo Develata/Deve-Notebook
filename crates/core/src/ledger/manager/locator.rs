@@ -3,6 +3,12 @@ use anyhow::Result;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 
+#[derive(Default)]
+struct LocalRepoCandidates {
+    by_id: Option<String>,
+    by_name: Option<String>,
+}
+
 impl RepoManager {
     pub fn find_local_repo_name_by_id(&self, target_id: RepoId) -> Result<Option<String>> {
         if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
@@ -42,12 +48,11 @@ impl RepoManager {
         Ok(None)
     }
 
-    /// Invariant: 进入本地 DB 写路径前，repo selector 必须被解析为单一 repo 名称。
-    pub fn resolve_local_repo_name(
+    fn resolve_local_repo_candidates(
         &self,
         repo_id: Option<RepoId>,
         repo_name: Option<&str>,
-    ) -> Result<String> {
+    ) -> Result<LocalRepoCandidates> {
         let by_id = match repo_id {
             Some(repo_id) => Some(
                 self.find_local_repo_name_by_id(repo_id)?
@@ -66,8 +71,11 @@ impl RepoManager {
             }
             None => None,
         };
+        Ok(LocalRepoCandidates { by_id, by_name })
+    }
 
-        if let (Some(from_id), Some(from_name)) = (&by_id, &by_name)
+    fn select_local_repo_name(&self, candidates: &LocalRepoCandidates) -> Result<String> {
+        if let (Some(from_id), Some(from_name)) = (&candidates.by_id, &candidates.by_name)
             && from_id != from_name
         {
             anyhow::bail!(
@@ -76,9 +84,40 @@ impl RepoManager {
                 from_name
             );
         }
-
-        Ok(by_id
-            .or(by_name)
+        Ok(candidates
+            .by_id
+            .clone()
+            .or_else(|| candidates.by_name.clone())
             .unwrap_or_else(|| self.local_repo_name.clone()))
+    }
+
+    /// Invariant: 进入本地 DB 写路径前，repo selector 必须被解析为单一 repo 名称。
+    pub fn resolve_local_repo_name(
+        &self,
+        repo_id: Option<RepoId>,
+        repo_name: Option<&str>,
+    ) -> Result<String> {
+        let initial = self.resolve_local_repo_candidates(repo_id, repo_name)?;
+        match self.select_local_repo_name(&initial) {
+            Ok(name) => Ok(name),
+            Err(err) => {
+                self.repair_local_repo_catalog()?;
+                let repaired = self.resolve_local_repo_candidates(repo_id, repo_name)?;
+                match self.select_local_repo_name(&repaired) {
+                    Ok(name) => Ok(name),
+                    Err(_) if repaired.by_name.is_some() => {
+                        let healed = repaired.by_name.expect("checked Some");
+                        tracing::warn!(
+                            "Healing stale local repo selector by name: repo_id={:?}, repo_name={:?}, chosen={}",
+                            repo_id,
+                            repo_name,
+                            healed
+                        );
+                        Ok(healed)
+                    }
+                    Err(_) => Err(err),
+                }
+            }
+        }
     }
 }
