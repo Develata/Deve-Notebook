@@ -87,6 +87,7 @@ pub(super) async fn handle_edit(
             }
             ch.broadcast(ServerMessage::NewOp {
                 repo_id: scope.repo_id,
+                branch: session.active_branch.clone(),
                 doc_id,
                 entry: ConfirmedOp::new(
                     local_seq,

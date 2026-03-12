@@ -23,6 +23,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         Err(err) => {
             ch.unicast(ServerMessage::KeyDenied {
                 repo_id: None,
+                branch: session.active_branch.clone(),
                 error: map_repo_scope_error(err),
             });
             return;
@@ -35,6 +36,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             send_key_denied(
                 ch,
                 Some(scope.repo_id),
+                session.active_branch.clone(),
                 ServerErrorCode::StoragePersistFailed,
                 err.to_string(),
             );
@@ -50,6 +52,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             );
             ch.unicast(ServerMessage::KeyProvide {
                 repo_id: scope.repo_id,
+                branch: session.active_branch.clone(),
                 repo_key: key.to_bytes().to_vec(),
             });
         }
@@ -58,6 +61,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             send_key_denied(
                 ch,
                 Some(scope.repo_id),
+                session.active_branch.clone(),
                 ServerErrorCode::StoragePersistFailed,
                 err.to_string(),
             );
@@ -68,11 +72,13 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
 fn send_key_denied(
     ch: &DualChannel,
     repo_id: Option<deve_core::models::RepoId>,
+    branch: Option<deve_core::models::PeerId>,
     code: ServerErrorCode,
     detail: impl Into<String>,
 ) {
     ch.unicast(ServerMessage::KeyDenied {
         repo_id,
+        branch,
         error: ServerError::with_detail(code, detail),
     });
 }

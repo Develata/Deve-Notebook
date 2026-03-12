@@ -7,7 +7,11 @@ pub(super) fn handle(ch: &DualChannel, session: &mut WsSession, repo_id: RepoId,
     match validate(session, repo_id, &peer_id) {
         Ok(()) => {
             session.set_writer_identity(repo_id, peer_id.clone());
-            ch.unicast(ServerMessage::WriteReady { peer_id, repo_id });
+            ch.unicast(ServerMessage::WriteReady {
+                peer_id,
+                repo_id,
+                branch: session.active_branch.clone(),
+            });
         }
         Err(error) => ch.send_protocol_error(error),
     }

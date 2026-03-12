@@ -123,6 +123,7 @@ pub(super) async fn handle(
     if !ops_to_push.is_empty() {
         ch.unicast(ServerMessage::SyncPush {
             repo_id,
+            branch: session.active_branch.clone(),
             ops: ops_to_push,
         });
     }

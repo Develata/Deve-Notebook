@@ -26,6 +26,8 @@ pub enum ServerMessage {
     WriteReady {
         peer_id: PeerId,
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
     },
     SyncRequest {
         requests: Vec<(PeerId, (u64, u64))>,
@@ -36,6 +38,8 @@ pub enum ServerMessage {
     },
     SyncPush {
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         ops: Vec<EncryptedOp>,
     },
     SyncPushSnapshot {
@@ -50,6 +54,8 @@ pub enum ServerMessage {
     },
     NewOp {
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         doc_id: DocId,
         entry: ConfirmedOp,
     },
@@ -206,11 +212,15 @@ pub enum ServerMessage {
     },
     KeyProvide {
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         repo_key: Vec<u8>,
     },
     KeyDenied {
         #[serde(default)]
         repo_id: Option<RepoId>,
+        #[serde(default)]
+        branch: Option<PeerId>,
         error: ServerError,
     },
     SystemMetrics {

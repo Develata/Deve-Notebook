@@ -4,7 +4,7 @@
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::pending::PendingLocalEdits;
-use deve_core::models::{DocId, Op};
+use deve_core::models::{DocId, Op, PeerId};
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
 
@@ -17,6 +17,7 @@ use leptos::prelude::*;
 pub struct SyncContext<'a> {
     pub doc_id: DocId,
     pub client_id: Option<u64>,
+    pub active_branch: ReadSignal<Option<PeerId>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub open_request_id: ReadSignal<u64>,
     pub ws: &'a WsService,

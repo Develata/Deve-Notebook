@@ -10,7 +10,7 @@ mod snapshot_finish;
 use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
 use context::SyncContext;
-use deve_core::models::RepoId;
+use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
@@ -54,10 +54,11 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         }
         ServerMessage::NewOp {
             repo_id,
+            branch,
             doc_id: msg_doc_id,
             entry,
         } => {
-            if !matches_current_repo(ctx, Some(repo_id)) {
+            if !matches_current_scope(ctx, Some(repo_id), branch) {
                 return;
             }
             if msg_doc_id != ctx.doc_id {
@@ -71,18 +72,30 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             leptos::logging::log!("P2P Handshake from Peer: {}", peer_id);
         }
         ServerMessage::Pong => {}
-        ServerMessage::SyncPush { repo_id, ops } => {
-            if matches_current_repo(ctx, Some(repo_id)) {
+        ServerMessage::SyncPush {
+            repo_id,
+            branch,
+            ops,
+        } => {
+            if matches_current_scope(ctx, Some(repo_id), branch) {
                 decrypt::handle_sync_push(ctx, &ops);
             }
         }
-        ServerMessage::KeyProvide { repo_id, repo_key } => {
-            if matches_current_repo(ctx, Some(repo_id)) {
+        ServerMessage::KeyProvide {
+            repo_id,
+            branch,
+            repo_key,
+        } => {
+            if matches_current_scope(ctx, Some(repo_id), branch) {
                 handle_key_provide(ctx, &repo_key);
             }
         }
-        ServerMessage::KeyDenied { repo_id, error } => {
-            if matches_current_repo(ctx, repo_id) {
+        ServerMessage::KeyDenied {
+            repo_id,
+            branch,
+            error,
+        } => {
+            if matches_current_scope(ctx, repo_id, branch) {
                 ctx.set_repo_key.set(None);
                 leptos::logging::warn!(
                     "KeyDenied: code={:?} detail={:?}",
@@ -120,6 +133,34 @@ fn matches_current_repo(ctx: &SyncContext, repo_id: Option<RepoId>) -> bool {
     }
 }
 
+fn matches_scope(
+    current_repo_id: Option<String>,
+    current_branch: Option<PeerId>,
+    repo_id: Option<RepoId>,
+    branch: Option<PeerId>,
+) -> bool {
+    match (repo_id, current_repo_id) {
+        (Some(repo_id), Some(current)) => {
+            current == repo_id.to_string() && branch == current_branch
+        }
+        (Some(_), None) => false,
+        (None, _) => branch == current_branch,
+    }
+}
+
+fn matches_current_scope(
+    ctx: &SyncContext,
+    repo_id: Option<RepoId>,
+    branch: Option<PeerId>,
+) -> bool {
+    matches_scope(
+        ctx.current_repo_id.get_untracked(),
+        ctx.active_branch.get_untracked(),
+        repo_id,
+        branch,
+    )
+}
+
 fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
     if entry.seq <= ctx.local_version.get_untracked() {
         return;
@@ -143,5 +184,33 @@ fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
     ctx.set_history.update(|h| h.push((entry.seq, entry.op)));
     if !ctx.is_playback.get_untracked() {
         ctx.set_playback_version.set(entry.seq);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_scope;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn matches_scope_rejects_same_repo_on_different_branch() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(!matches_scope(
+            Some(repo_id.to_string()),
+            Some(PeerId::new("peer-b")),
+            Some(repo_id),
+            Some(PeerId::new("peer-a")),
+        ));
+    }
+
+    #[test]
+    fn matches_scope_accepts_same_repo_and_branch() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(matches_scope(
+            Some(repo_id.to_string()),
+            Some(PeerId::new("peer-a")),
+            Some(repo_id),
+            Some(PeerId::new("peer-a")),
+        ));
     }
 }

@@ -153,9 +153,14 @@ pub fn handle_message<F>(
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
             handle_protocol_error(ws, locale, &error);
         }
-        ServerMessage::WriteReady { peer_id, repo_id } => {
+        ServerMessage::WriteReady {
+            peer_id,
+            repo_id,
+            branch,
+        } => {
             let repo_id = repo_id.to_string();
             if signals.active_branch.get_untracked().is_none()
+                && branch == signals.active_branch.get_untracked()
                 && signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str())
             {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
