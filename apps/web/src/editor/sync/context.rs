@@ -3,6 +3,7 @@
 
 use crate::api::WsService;
 use crate::editor::EditorStats;
+use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::security::RepoKey;
@@ -18,7 +19,9 @@ pub struct SyncContext<'a> {
     pub doc_id: DocId,
     pub client_id: Option<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
     pub open_request_id: ReadSignal<u64>,
     pub ws: &'a WsService,
     // 内容信号

@@ -117,7 +117,9 @@ pub fn use_editor(
                 client_id: ws_clone_2
                     .writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
                 active_branch: core.active_branch,
+                pending_branch_switch: core.pending_branch_switch,
                 current_repo_id: core.current_repo_id,
+                pending_repo_switch: core.pending_repo_switch,
                 open_request_id,
                 ws: &ws_clone_2,
                 set_content,

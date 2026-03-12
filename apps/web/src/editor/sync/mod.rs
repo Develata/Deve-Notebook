@@ -4,6 +4,7 @@
 pub mod context;
 mod decrypt;
 mod history;
+mod scope;
 mod snapshot;
 mod snapshot_finish;
 
@@ -14,6 +15,7 @@ use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
+use scope::matches_scope;
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {
@@ -137,22 +139,6 @@ fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
     }
 }
 
-fn matches_scope(
-    current_repo_id: Option<String>,
-    current_branch: Option<PeerId>,
-    repo_id: Option<RepoId>,
-    branch: Option<PeerId>,
-) -> bool {
-    match (repo_id, current_repo_id) {
-        (Some(repo_id), Some(current)) => {
-            current == repo_id.to_string() && branch == current_branch
-        }
-        (Some(_), None) => false,
-        (None, Some(_)) => false,
-        (None, None) => branch == current_branch,
-    }
-}
-
 fn matches_current_scope(
     ctx: &SyncContext,
     repo_id: Option<RepoId>,
@@ -160,7 +146,9 @@ fn matches_current_scope(
 ) -> bool {
     matches_scope(
         ctx.current_repo_id.get_untracked(),
+        ctx.pending_repo_switch.get_untracked(),
         ctx.active_branch.get_untracked(),
+        ctx.pending_branch_switch.get_untracked(),
         repo_id,
         branch,
     )
@@ -189,59 +177,5 @@ fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
     ctx.set_history.update(|h| h.push((entry.seq, entry.op)));
     if !ctx.is_playback.get_untracked() {
         ctx.set_playback_version.set(entry.seq);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::matches_scope;
-    use deve_core::models::PeerId;
-
-    #[test]
-    fn matches_scope_rejects_same_repo_on_different_branch() {
-        let repo_id = uuid::Uuid::new_v4();
-        assert!(!matches_scope(
-            Some(repo_id.to_string()),
-            Some(PeerId::new("peer-b")),
-            Some(repo_id),
-            Some(PeerId::new("peer-a")),
-        ));
-    }
-
-    #[test]
-    fn matches_scope_accepts_same_repo_and_branch() {
-        let repo_id = uuid::Uuid::new_v4();
-        assert!(matches_scope(
-            Some(repo_id.to_string()),
-            Some(PeerId::new("peer-a")),
-            Some(repo_id),
-            Some(PeerId::new("peer-a")),
-        ));
-    }
-
-    #[test]
-    fn matches_scope_rejects_same_repo_without_branch_when_remote_active() {
-        let repo_id = uuid::Uuid::new_v4();
-        assert!(!matches_scope(
-            Some(repo_id.to_string()),
-            Some(PeerId::new("peer-a")),
-            Some(repo_id),
-            None,
-        ));
-    }
-
-    #[test]
-    fn matches_scope_rejects_repo_less_message_once_repo_is_bound() {
-        assert!(!matches_scope(
-            Some(uuid::Uuid::new_v4().to_string()),
-            None,
-            None,
-            None,
-        ));
-    }
-
-    #[test]
-    fn matches_scope_accepts_repo_less_message_before_repo_binding() {
-        assert!(matches_scope(None, None, None, None));
     }
 }
