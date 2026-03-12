@@ -60,6 +60,8 @@ mod source_control_http_test;
 pub mod source_control_proxy;
 pub mod static_files;
 #[cfg(test)]
+mod switcher_branch_test;
+#[cfg(test)]
 mod sync_hello_test;
 mod tree_state;
 pub mod ws;

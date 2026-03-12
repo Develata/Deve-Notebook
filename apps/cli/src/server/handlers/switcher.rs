@@ -41,6 +41,14 @@ pub async fn handle_switch_branch(
         };
         let is_local_repo = local_repos.contains(pid_str);
 
+        if !is_valid_shadow && !is_local_repo {
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                format!("Shadow branch not found: {}", pid_str),
+            ));
+            return;
+        }
+
         if !is_valid_shadow && is_local_repo {
             tracing::warn!(
                 "Suspicious SwitchBranch: '{}' is a Local Repo but not a Shadow. Correcting to Local Mode.",
