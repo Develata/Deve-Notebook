@@ -1,7 +1,7 @@
 use crate::ledger::RepoManager;
 use crate::source_control::changes;
 use crate::sync::reconcile;
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 impl RepoManager {
     pub(super) fn commit_file_ops_in_local_repo(
@@ -18,7 +18,8 @@ impl RepoManager {
             "local_commit",
         )?;
         let disk_path = self.local_repo_workspace_path(repo_name, normalized_path)?;
-        let disk_content = std::fs::read_to_string(&disk_path).unwrap_or_default();
+        let disk_content = std::fs::read_to_string(&disk_path)
+            .with_context(|| format!("Failed to read staged workspace file {:?}", disk_path))?;
         let existing_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
         let entries: Vec<_> = existing_ops.into_iter().map(|(_, entry)| entry).collect();
         let patch = reconcile::compute_reconcile_patch(&entries, &disk_content)?;
