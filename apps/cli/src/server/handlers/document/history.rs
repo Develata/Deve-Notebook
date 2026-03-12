@@ -1,5 +1,5 @@
 use super::confirmed;
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub(super) async fn handle_request_history(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
     request_id: u64,
 ) {
@@ -31,13 +31,13 @@ pub(super) async fn handle_request_history(
 
 fn load_doc_history(
     state: &Arc<AppState>,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
 ) -> anyhow::Result<Vec<deve_core::protocol::ConfirmedOp>> {
     if let Some(handle) = session.get_active_db() {
         return confirmed::load_doc_ops(&handle.db, doc_id);
     }
-    let scope = resolve_session_repo(state, session)?;
+    let scope = resolve_session_repo_and_sync(state, session)?;
     state.repo.run_on_local_repo(&scope.repo_name, |db| {
         confirmed::load_doc_ops(db, doc_id)
     })

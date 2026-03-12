@@ -79,7 +79,7 @@ async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow
     let mut session = WsSession::new();
     session.switch_repo("test".into(), Some(test_repo_id));
 
-    handle_open_doc(&state, &ch, &session, doc_id, 7).await;
+    handle_open_doc(&state, &ch, &mut session, doc_id, 7).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { .. }) => {}

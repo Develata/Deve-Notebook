@@ -13,7 +13,7 @@ use std::sync::Arc;
 pub async fn handle_edit(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
     op: Op,
     client_id: u64,
@@ -26,7 +26,7 @@ pub async fn handle_edit(
 pub async fn handle_request_history(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
     request_id: u64,
 ) {
@@ -36,7 +36,7 @@ pub async fn handle_request_history(
 pub async fn handle_open_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
     request_id: u64,
 ) {

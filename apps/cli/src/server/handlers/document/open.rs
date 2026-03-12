@@ -1,5 +1,5 @@
 use super::snapshot::{SnapshotPayload, build_snapshot_payload};
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -9,7 +9,7 @@ use std::time::Instant;
 pub(super) async fn handle_open_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
     request_id: u64,
 ) {
@@ -76,10 +76,10 @@ pub(super) async fn handle_open_doc(
 
 fn load_snapshot_from_local_repo(
     state: &Arc<AppState>,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
 ) -> anyhow::Result<SnapshotPayload> {
-    let scope = resolve_session_repo(state, session)?;
+    let scope = resolve_session_repo_and_sync(state, session)?;
     state.repo.run_on_local_repo(&scope.repo_name, |db| {
         build_snapshot_payload(db, doc_id, state.repo.snapshot_depth)
     })

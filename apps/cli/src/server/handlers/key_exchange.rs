@@ -8,7 +8,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -17,8 +17,8 @@ use std::sync::Arc;
 ///
 /// **Pre-condition**: 客户端已通过 JWT 认证 (middleware 保证)。
 /// **Post-condition**: 成功时单播 `KeyProvide`，失败时单播 `KeyDenied`。
-pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
-    let scope = match resolve_session_repo(state, session) {
+pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
             send_key_denied(ch, ServerErrorCode::SyncRepoUnbound, err.to_string());

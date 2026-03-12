@@ -1,4 +1,4 @@
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, LedgerEntry, Op};
 use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub(super) async fn handle_edit(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     doc_id: DocId,
     op: Op,
     client_id: u64,
@@ -20,7 +20,7 @@ pub(super) async fn handle_edit(
         });
         return;
     }
-    let scope = match resolve_session_repo(state, session) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
             ch.send_protocol_error(ServerError::with_detail(
