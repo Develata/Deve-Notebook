@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ResolvedRepo {
     pub repo_id: RepoId,
     pub repo_name: String,
@@ -25,10 +25,7 @@ pub struct ResolvedRepo {
 }
 
 /// 仅允许首次本地引导时回退到主本地库。
-///
-/// Invariants:
-/// - 只在 `active_branch == None` 时允许默认回退。
-/// - 引导完成后，后续路径应统一通过 `resolve_session_repo`。
+/// Invariants: 只在 `active_branch == None` 时允许默认回退；引导完成后统一走 `resolve_session_repo`。
 pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
     if session.active_branch.is_some() {
         return Err(anyhow!(
@@ -68,10 +65,7 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
 }
 
 /// 解析并回写会话中的 repo 绑定，收敛 stale `active_repo_id/name`。
-///
-/// Invariants:
-/// - 任何基于会话的 repo-scoped 读写，在落到底层算子前都应尽量先调用本函数。
-/// - 若解析出的 `RepoId/RepoName` 与会话不一致，以解析结果为准回写会话。
+/// Invariants: 会话级 repo-scoped 读写应尽量先调用本函数；若解析结果与会话不一致，以解析结果为准。
 pub fn resolve_session_repo_and_sync(
     state: &Arc<AppState>,
     session: &mut WsSession,
@@ -86,12 +80,7 @@ pub fn resolve_session_repo_and_sync(
 }
 
 /// 将当前 resolved scope 收敛到本地可写仓库。
-///
-/// Invariants:
-/// - 已处于本地分支时直接返回当前 scope。
-/// - 远端影子仓库必须优先按 `RepoUUID` 匹配本地仓库。
-/// - 若 UUID 不可用，才允许按共享 URL 回退解析。
-/// - 无可写本地对应仓库时，调用方必须显式处理 `None`。
+/// Invariants: 已处于本地分支时直接返回当前 scope；远端影子仓库优先按 `RepoUUID` 匹配本地仓库，仅在 UUID 不可用时按 URL 回退；无可写本地对应仓库时显式返回 `None`。
 pub fn resolve_local_counterpart_repo(
     state: &Arc<AppState>,
     scope: &ResolvedRepo,
@@ -161,7 +150,11 @@ fn resolve_repo_name_from_session(
                 );
                 return Ok(Some(resolved));
             }
-            return Ok(Some(repo_name));
+            tracing::warn!(
+                "Dropping stale local session repo_name without recoverable UUID: {:?}",
+                session.active_repo
+            );
+            return Ok(None);
         }
         if let Some(repo_id) = session.active_repo_id {
             return state.repo.find_local_repo_name_by_id(repo_id);

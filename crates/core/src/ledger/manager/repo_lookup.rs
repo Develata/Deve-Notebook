@@ -18,6 +18,7 @@ impl RepoManager {
     }
 
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
+        self.repair_local_repo_catalog()?;
         if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
             && info.url.as_deref() == Some(target_url)
         {

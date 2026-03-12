@@ -11,6 +11,7 @@ struct LocalRepoCandidates {
 
 impl RepoManager {
     pub fn find_local_repo_name_by_id(&self, target_id: RepoId) -> Result<Option<String>> {
+        self.repair_local_repo_catalog()?;
         if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
             && info.uuid == target_id
         {

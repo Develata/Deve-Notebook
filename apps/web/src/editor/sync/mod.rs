@@ -83,6 +83,16 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
                 decrypt::handle_sync_push(ctx, &ops);
             }
         }
+        ServerMessage::SyncPushSnapshot {
+            repo_id,
+            branch,
+            ops,
+            ..
+        } => {
+            if matches_current_scope(ctx, Some(repo_id), branch) {
+                decrypt::handle_sync_push(ctx, &ops);
+            }
+        }
         ServerMessage::KeyProvide {
             repo_id,
             branch,
@@ -138,7 +148,8 @@ fn matches_scope(
             current == repo_id.to_string() && branch == current_branch
         }
         (Some(_), None) => false,
-        (None, _) => branch == current_branch,
+        (None, Some(_)) => false,
+        (None, None) => branch == current_branch,
     }
 }
 
@@ -217,5 +228,20 @@ mod tests {
             Some(repo_id),
             None,
         ));
+    }
+
+    #[test]
+    fn matches_scope_rejects_repo_less_message_once_repo_is_bound() {
+        assert!(!matches_scope(
+            Some(uuid::Uuid::new_v4().to_string()),
+            None,
+            None,
+            None,
+        ));
+    }
+
+    #[test]
+    fn matches_scope_accepts_repo_less_message_before_repo_binding() {
+        assert!(matches_scope(None, None, None, None));
     }
 }

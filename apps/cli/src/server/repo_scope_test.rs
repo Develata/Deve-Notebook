@@ -103,6 +103,16 @@ fn resolve_session_repo_recovers_local_repo_name_from_uuid() -> anyhow::Result<(
 }
 
 #[test]
+fn resolve_session_repo_rejects_unrecoverable_stale_local_repo_name() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let mut session = WsSession::new();
+    session.switch_repo("stale-name".into(), None);
+    let err = resolve_session_repo(&state, &session).expect_err("stale local repo must fail");
+    assert!(err.to_string().contains("Active repository not selected"));
+    Ok(())
+}
+
+#[test]
 fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
