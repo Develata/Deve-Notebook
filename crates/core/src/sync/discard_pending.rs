@@ -50,17 +50,17 @@ fn discard_tracked_add(
     doc_id: crate::models::DocId,
 ) -> Result<()> {
     projection_io::remove_projection_path(sync, repo_name, path)?;
-    let canonical_path = sync
-        .repo
-        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
-        .map(|meta| meta.path)
-        .ok_or_else(|| anyhow::anyhow!("Document not found: {}", doc_id))?;
+    let canonical_path = canonical_doc_path(sync, repo_name, doc_id)?;
     restore_projection(sync, repo_name, doc_id, &canonical_path)?;
     sync.repo
         .clear_pending_for_doc_in_local_repo(repo_name, doc_id, path)
 }
 
-fn canonical_doc_path(sync: &SyncManager, repo_name: &str, doc_id: crate::models::DocId) -> Result<String> {
+fn canonical_doc_path(
+    sync: &SyncManager,
+    repo_name: &str,
+    doc_id: crate::models::DocId,
+) -> Result<String> {
     sync.repo
         .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
         .map(|meta| meta.path)
