@@ -19,6 +19,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {
         ServerMessage::Snapshot {
             repo_id,
+            branch,
             doc_id: msg_doc_id,
             request_id,
             content,
@@ -26,7 +27,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             version,
             delta_ops,
         } => {
-            if !matches_current_repo(ctx, Some(repo_id)) {
+            if !matches_current_scope(ctx, Some(repo_id), branch) {
                 return;
             }
             if msg_doc_id != ctx.doc_id {
@@ -39,11 +40,12 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         }
         ServerMessage::History {
             repo_id,
+            branch,
             doc_id: msg_doc_id,
             request_id,
             ops,
         } => {
-            if !matches_current_repo(ctx, Some(repo_id)) {
+            if !matches_current_scope(ctx, Some(repo_id), branch) {
                 return;
             }
             if msg_doc_id != ctx.doc_id || request_id != ctx.open_request_id.get_untracked() {
@@ -125,14 +127,6 @@ fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
     }
 }
 
-fn matches_current_repo(ctx: &SyncContext, repo_id: Option<RepoId>) -> bool {
-    match (repo_id, ctx.current_repo_id.get_untracked()) {
-        (Some(repo_id), Some(current)) => current == repo_id.to_string(),
-        (Some(_), None) => false,
-        (None, _) => true,
-    }
-}
-
 fn matches_scope(
     current_repo_id: Option<String>,
     current_branch: Option<PeerId>,
@@ -211,6 +205,17 @@ mod tests {
             Some(PeerId::new("peer-a")),
             Some(repo_id),
             Some(PeerId::new("peer-a")),
+        ));
+    }
+
+    #[test]
+    fn matches_scope_rejects_same_repo_without_branch_when_remote_active() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(!matches_scope(
+            Some(repo_id.to_string()),
+            Some(PeerId::new("peer-a")),
+            Some(repo_id),
+            None,
         ));
     }
 }

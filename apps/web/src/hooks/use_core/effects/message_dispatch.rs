@@ -194,12 +194,24 @@ pub fn handle_message<F>(
                 .update(|nodes| apply_tree_delta(nodes, delta));
         }
         ServerMessage::Ack {
+            repo_id,
+            branch,
             doc_id,
             client_op_id,
             ..
-        } => signals.set_pending_local_edits.update(|pending_edits| {
-            let _ = pending::ack_pending_edit(pending_edits, doc_id, client_op_id);
-        }),
+        } => {
+            if !effects_sc::matches_current_scope(
+                &Some(repo_id),
+                &branch,
+                signals.current_repo_id,
+                signals.active_branch,
+            ) {
+                return;
+            }
+            signals.set_pending_local_edits.update(|pending_edits| {
+                let _ = pending::ack_pending_edit(pending_edits, doc_id, client_op_id);
+            });
+        }
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
     }
 }

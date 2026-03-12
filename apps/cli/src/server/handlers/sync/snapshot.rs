@@ -44,6 +44,7 @@ pub(super) async fn handle_request(
             ch.unicast(ServerMessage::SyncPushSnapshot {
                 peer_id: engine.local_peer_id.clone(),
                 repo_id: response.repo_id,
+                branch: session.active_branch.clone(),
                 ops: response.ops,
             });
         }

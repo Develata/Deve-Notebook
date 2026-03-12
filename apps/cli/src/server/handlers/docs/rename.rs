@@ -70,8 +70,8 @@ pub async fn handle_rename_doc(
         return;
     }
 
-    if old_path == dst_name {
-        tracing::info!("重命名忽略: 路径未变化: {}", old_path);
+    if src.repo_path == dst_name {
+        tracing::info!("重命名忽略: 路径未变化: {}", src.repo_path);
         return;
     }
 
@@ -91,10 +91,10 @@ pub async fn handle_rename_doc(
 
     // 3. 执行重命名
     if src.kind == NodeKind::File {
-        handle_file_rename(state, ch, session, &scope, &old_path, &dst_name).await;
+        handle_file_rename(state, ch, session, &scope, &src.repo_path, &dst_name).await;
         return;
     }
-    handle_dir_rename(state, ch, session, &scope, &old_path, &dst_name).await;
+    handle_dir_rename(state, ch, session, &scope, &src.repo_path, &dst_name).await;
 }
 
 /// 处理移动文档请求 (委托给 rename)

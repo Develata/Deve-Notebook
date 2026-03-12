@@ -56,7 +56,7 @@ pub async fn handle_delete_doc(
     if target.kind == NodeKind::Dir {
         if let Err(e) = state.repo.apply_dir_delete_structure_in_local_repo(
             &scope.repo_name,
-            &path,
+            &target.repo_path,
             "local_delete",
         ) {
             tracing::error!("目录删除结构事实失败: {:?}", e);
@@ -77,7 +77,7 @@ pub async fn handle_delete_doc(
     } else {
         if let Err(e) = state.repo.apply_file_delete_structure_in_local_repo(
             &scope.repo_name,
-            &path,
+            &target.repo_path,
             target.doc_id,
             "local_delete",
         ) {
@@ -87,9 +87,9 @@ pub async fn handle_delete_doc(
         }
         if let Err(e) = state
             .sync_manager
-            .remove_projection_path_in_local_repo(&scope.repo_name, &path)
+            .remove_projection_path_in_local_repo(&scope.repo_name, &target.repo_path)
         {
-            tracing::error!("删除文件投影失败 {}: {:?}", path, e);
+            tracing::error!("删除文件投影失败 {}: {:?}", target.repo_path, e);
             errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
             return;
         }
@@ -107,5 +107,5 @@ pub async fn handle_delete_doc(
 
     // 5. 刷新文档列表
     handle_list_docs(state, ch, session).await;
-    notify_fs_refresh(ch, scope.repo_id, &path, "deleted");
+    notify_fs_refresh(ch, scope.repo_id, &target.repo_path, "deleted");
 }

@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 pub enum ServerMessage {
     Pong,
     Ack {
+        repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         doc_id: DocId,
         seq: u64,
         client_op_id: u64,
@@ -30,6 +33,9 @@ pub enum ServerMessage {
         branch: Option<PeerId>,
     },
     SyncRequest {
+        repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         requests: Vec<(PeerId, (u64, u64))>,
     },
     SyncSnapshotRequest {
@@ -45,6 +51,8 @@ pub enum ServerMessage {
     SyncPushSnapshot {
         peer_id: PeerId,
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         ops: Vec<EncryptedOp>,
     },
     ChatChunk {
@@ -61,6 +69,8 @@ pub enum ServerMessage {
     },
     Snapshot {
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         doc_id: DocId,
         request_id: u64,
         content: String,
@@ -70,6 +80,8 @@ pub enum ServerMessage {
     },
     History {
         repo_id: RepoId,
+        #[serde(default)]
+        branch: Option<PeerId>,
         doc_id: DocId,
         request_id: u64,
         ops: Vec<ConfirmedOp>,

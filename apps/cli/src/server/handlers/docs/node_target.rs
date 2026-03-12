@@ -10,6 +10,7 @@ pub(super) struct NodeTarget {
     pub node_id: NodeId,
     pub kind: NodeKind,
     pub doc_id: Option<DocId>,
+    pub repo_path: String,
     pub abs_path: PathBuf,
 }
 
@@ -18,19 +19,23 @@ pub(super) fn resolve_node_target(
     scope: &ResolvedRepo,
     path: &str,
 ) -> Result<Option<NodeTarget>> {
-    let abs_path = local_repo_path(state, scope, path)?;
     let meta = run_on_resolved_local_repo(state, scope, |db| {
         let Some(node_id) = node_meta::get_node_id(db, path)? else {
             return Ok(None);
         };
         let meta =
             node_meta::get_node_meta(db, node_id)?.ok_or_else(|| anyhow!("Node meta missing"))?;
-        Ok(Some((node_id, meta.kind, meta.doc_id)))
+        Ok(Some((node_id, meta.kind, meta.doc_id, meta.path)))
     })?;
-    Ok(meta.map(|(node_id, kind, doc_id)| NodeTarget {
-        node_id,
-        kind,
-        doc_id,
-        abs_path,
+    Ok(meta.map(|(node_id, kind, doc_id, repo_path)| {
+        let abs_path = local_repo_path(state, scope, &repo_path)
+            .expect("canonical node path must resolve inside local repo");
+        NodeTarget {
+            node_id,
+            kind,
+            doc_id,
+            repo_path,
+            abs_path,
+        }
     }))
 }

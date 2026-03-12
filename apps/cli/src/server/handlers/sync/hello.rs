@@ -96,7 +96,11 @@ pub(super) async fn handle(
             .into_iter()
             .map(|req| (req.peer_id, req.range))
             .collect();
-        ch.unicast(ServerMessage::SyncRequest { requests });
+        ch.unicast(ServerMessage::SyncRequest {
+            repo_id,
+            branch: session.active_branch.clone(),
+            requests,
+        });
     }
 
     for req in result.snapshot_requests {
