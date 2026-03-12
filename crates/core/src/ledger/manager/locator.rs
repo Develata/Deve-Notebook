@@ -91,20 +91,51 @@ impl RepoManager {
             .unwrap_or_else(|| self.local_repo_name.clone()))
     }
 
+    fn resolve_local_repo_candidates_with_repair(
+        &self,
+        repo_id: Option<RepoId>,
+        repo_name: Option<&str>,
+    ) -> Result<LocalRepoCandidates> {
+        let initial = self.resolve_local_repo_candidates(repo_id, repo_name)?;
+        if self.select_local_repo_name(&initial).is_ok() {
+            return Ok(initial);
+        }
+        self.repair_local_repo_catalog()?;
+        self.resolve_local_repo_candidates(repo_id, repo_name)
+    }
+
     /// Invariant: 进入本地 DB 写路径前，repo selector 必须被解析为单一 repo 名称。
     pub fn resolve_local_repo_name(
         &self,
         repo_id: Option<RepoId>,
         repo_name: Option<&str>,
     ) -> Result<String> {
-        let initial = self.resolve_local_repo_candidates(repo_id, repo_name)?;
-        match self.select_local_repo_name(&initial) {
-            Ok(name) => Ok(name),
-            Err(err) => {
-                self.repair_local_repo_catalog()?;
-                let repaired = self.resolve_local_repo_candidates(repo_id, repo_name)?;
-                self.select_local_repo_name(&repaired).map_err(|_| err)
+        let initial = self.resolve_local_repo_candidates_with_repair(repo_id, repo_name)?;
+        self.select_local_repo_name(&initial)
+    }
+
+    /// Invariants:
+    /// - 执行级本地 repo 解析在已拿到 `RepoUUID` 时必须优先采用 UUID。
+    /// - `repo_name` 仅作为缺失 UUID 时的回退与诊断信息，不得反向覆盖已解析 UUID。
+    pub fn resolve_local_repo_name_for_execution(
+        &self,
+        repo_id: Option<RepoId>,
+        repo_name: Option<&str>,
+    ) -> Result<String> {
+        let candidates = self.resolve_local_repo_candidates_with_repair(repo_id, repo_name)?;
+        if let Some(from_id) = candidates.by_id {
+            if let Some(from_name) = candidates.by_name
+                && from_name != from_id
+            {
+                tracing::warn!(
+                    "UUID-first local repo resolution ignored stale repo_name: repo_id={}, stale_name={}, resolved_name={}",
+                    repo_id.expect("from_id requires repo_id"),
+                    from_name,
+                    from_id
+                );
             }
+            return Ok(from_id);
         }
+        self.select_local_repo_name(&candidates)
     }
 }

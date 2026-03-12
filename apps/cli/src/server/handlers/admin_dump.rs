@@ -14,7 +14,7 @@ pub async fn dump(
 ) -> impl IntoResponse {
     let repo_name = match state
         .repo
-        .resolve_local_repo_name(query.repo.repo_id, query.repo.repo_name.as_deref())
+        .resolve_local_repo_name_for_execution(query.repo.repo_id, query.repo.repo_name.as_deref())
     {
         Ok(name) => name,
         Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),

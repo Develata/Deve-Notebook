@@ -33,7 +33,7 @@ fn collect_reports(
     repair: bool,
 ) -> Result<Vec<NodeCheckResponse>> {
     let repo_names = match target_repo {
-        Some(name) => vec![repo.resolve_local_repo_name(None, Some(name))?],
+        Some(name) => vec![repo.resolve_local_repo_name_for_execution(None, Some(name))?],
         None => repo.list_repos(None)?,
     };
     let mut reports = Vec::with_capacity(repo_names.len());

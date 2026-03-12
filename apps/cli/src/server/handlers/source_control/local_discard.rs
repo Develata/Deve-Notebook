@@ -12,7 +12,7 @@ pub(super) fn discard_via_sync_manager(
     let path = super::service::resolve_path(&pending, target);
     let repo_name = state
         .repo
-        .resolve_local_repo_name(selector.repo_id, selector.repo_name.as_deref())
+        .resolve_local_repo_name_for_execution(selector.repo_id, selector.repo_name.as_deref())
         .map_err(super::errors::map_repo_scope_error)?;
     state
         .sync_manager

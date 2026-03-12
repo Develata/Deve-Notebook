@@ -33,7 +33,7 @@ pub fn run(
     tracing::warn!("======================================================");
 
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    let repo_name = repo.resolve_local_repo_name(None, repo_name.as_deref())?;
+    let repo_name = repo.resolve_local_repo_name_for_execution(None, repo_name.as_deref())?;
     let peer_id = PeerId::new(&target_peer);
 
     let repo_info = repo

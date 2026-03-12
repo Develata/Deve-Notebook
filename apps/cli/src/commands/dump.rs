@@ -28,7 +28,7 @@ pub fn run(
         }
         Err(err) => return Err(err),
     };
-    let repo_name = repo.resolve_local_repo_name(None, repo_name.as_deref())?;
+    let repo_name = repo.resolve_local_repo_name_for_execution(None, repo_name.as_deref())?;
     match dump_support::build_dump(&repo, &repo_name, &path_str)? {
         Some(dump) => print_dump(&dump)?,
         None => println!("Path not found in Ledger."),

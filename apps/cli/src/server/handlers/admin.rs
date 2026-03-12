@@ -37,7 +37,7 @@ pub async fn export(
 ) -> impl IntoResponse {
     let repo_name = match state
         .repo
-        .resolve_local_repo_name(repo.repo_id, repo.repo_name.as_deref())
+        .resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())
     {
         Ok(name) => name,
         Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
@@ -87,7 +87,7 @@ pub async fn node_check(
 
 fn resolve_target_repos(state: &AppState, repo: &RepoSelector) -> anyhow::Result<Vec<String>> {
     if repo.repo_id.is_some() || repo.repo_name.is_some() {
-        return Ok(vec![state.repo.resolve_local_repo_name(
+        return Ok(vec![state.repo.resolve_local_repo_name_for_execution(
             repo.repo_id,
             repo.repo_name.as_deref(),
         )?]);
