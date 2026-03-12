@@ -98,6 +98,7 @@ fn validate_path_kind(path: &str, allow_file_leaf: bool, ch: &DualChannel) -> bo
 pub fn notify_fs_refresh(ch: &DualChannel, repo_id: RepoId, path: &str, change_type: &str) {
     ch.broadcast(ServerMessage::FsChangeDetected {
         repo_id: Some(repo_id),
+        branch: None,
         path: path.to_string(),
         change_type: change_type.to_string(),
         has_conflict: false,

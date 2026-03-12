@@ -85,6 +85,7 @@ pub(super) fn message(
         .unwrap_or(false);
     ServerMessage::FsChangeDetected {
         repo_id: Some(repo_id),
+        branch: None,
         path: path.to_string(),
         change_type: change_type.to_string(),
         has_conflict,

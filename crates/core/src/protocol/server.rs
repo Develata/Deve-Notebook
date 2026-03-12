@@ -9,245 +9,49 @@ use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[rustfmt::skip]
 pub enum ServerMessage {
     Pong,
-    Ack {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        doc_id: DocId,
-        seq: u64,
-        client_op_id: u64,
-    },
-    SyncHello {
-        peer_id: PeerId,
-        repo_id: RepoId,
-        pub_key: Vec<u8>,
-        signature: Vec<u8>,
-        vector: VersionVector,
-    },
-    WriteReady {
-        peer_id: PeerId,
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-    },
-    SyncRequest {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        requests: Vec<(PeerId, (u64, u64))>,
-    },
-    SyncSnapshotRequest {
-        peer_id: PeerId,
-        repo_id: RepoId,
-    },
-    SyncPush {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        ops: Vec<EncryptedOp>,
-    },
-    SyncPushSnapshot {
-        peer_id: PeerId,
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        ops: Vec<EncryptedOp>,
-    },
-    ChatChunk {
-        req_id: String,
-        delta: Option<String>,
-        finish_reason: Option<String>,
-    },
-    NewOp {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        doc_id: DocId,
-        entry: ConfirmedOp,
-    },
-    Snapshot {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        doc_id: DocId,
-        request_id: u64,
-        content: String,
-        base_seq: u64,
-        version: u64,
-        delta_ops: Vec<ConfirmedOp>,
-    },
-    History {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        doc_id: DocId,
-        request_id: u64,
-        ops: Vec<ConfirmedOp>,
-    },
-    DocList {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        docs: Vec<(DocId, String)>,
-    },
-    PluginResponse {
-        req_id: String,
-        result: Option<serde_json::Value>,
-        error: Option<ServerError>,
-    },
-    SearchResults {
-        results: Vec<(String, String, f32)>,
-    },
-    SyncModeStatus {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        mode: String,
-    },
-    PendingOpsInfo {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        count: u32,
-        previews: Vec<(String, String, String)>,
-    },
-    MergeComplete {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        merged_count: u32,
-    },
-    PendingDiscarded {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-    },
-    ShadowList {
-        shadows: Vec<String>,
-    },
-    RepoList {
-        #[serde(default)]
-        branch: Option<String>,
-        repos: Vec<String>,
-    },
-    BranchSwitched {
-        peer_id: Option<String>,
-        success: bool,
-    },
-    RepoSwitched {
-        #[serde(default)]
-        branch: Option<String>,
-        name: String,
-        uuid: String,
-    },
-    PeerDeleted {
-        peer_id: String,
-    },
-    EditRejected {
-        error: ServerError,
-    },
-    ChangesList {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        staged: Vec<ChangeEntry>,
-        unstaged: Vec<ChangeEntry>,
-    },
-    StageAck {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        path: String,
-    },
-    UnstageAck {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        path: String,
-    },
-    CommitAck {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        commit_id: String,
-        timestamp: i64,
-    },
-    CommitHistory {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        commits: Vec<CommitInfo>,
-    },
-    DocDiff {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        path: String,
-        old_content: String,
-        new_content: String,
-    },
-    CommitDiffResult {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        diffs: Vec<CommitFileDiff>,
-    },
-    DocDeleted {
-        doc_id: DocId,
-    },
-    DiscardAck {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        path: String,
-    },
-    TreeUpdate {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        delta: crate::tree::TreeDelta,
-    },
-    ProtocolError {
-        error: ServerError,
-    },
-    BulkStageProgress {
-        op: String,
-        total: u32,
-        done: u32,
-        failed: u32,
-    },
-    BulkStageDone {
-        op: String,
-        total: u32,
-        success: u32,
-        failed_paths: Vec<String>,
-    },
-    FsChangeDetected {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        path: String,
-        change_type: String,
-        #[serde(default)]
-        has_conflict: bool,
-    },
-    ConflictResolved {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        path: String,
-        resolution: String,
-    },
-    KeyProvide {
-        repo_id: RepoId,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        repo_key: Vec<u8>,
-    },
-    KeyDenied {
-        #[serde(default)]
-        repo_id: Option<RepoId>,
-        #[serde(default)]
-        branch: Option<PeerId>,
-        error: ServerError,
-    },
-    SystemMetrics {
-        cpu_usage_percent: f32,
-        memory_used_mb: u64,
-        active_connections: u32,
-        ops_processed: u64,
-        uptime_secs: u64,
-        db_size_bytes: u64,
-        doc_count: u32,
-    },
+    Ack { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, seq: u64, client_op_id: u64 },
+    SyncHello { peer_id: PeerId, repo_id: RepoId, pub_key: Vec<u8>, signature: Vec<u8>, vector: VersionVector },
+    WriteReady { peer_id: PeerId, repo_id: RepoId, #[serde(default)] branch: Option<PeerId> },
+    SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, requests: Vec<(PeerId, (u64, u64))> },
+    SyncSnapshotRequest { peer_id: PeerId, repo_id: RepoId },
+    SyncPush { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
+    SyncPushSnapshot { peer_id: PeerId, repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
+    ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
+    NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, entry: ConfirmedOp },
+    Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },
+    History { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, request_id: u64, ops: Vec<ConfirmedOp> },
+    DocList { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, docs: Vec<(DocId, String)> },
+    PluginResponse { req_id: String, result: Option<serde_json::Value>, error: Option<ServerError> },
+    SearchResults { results: Vec<(String, String, f32)> },
+    SyncModeStatus { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, mode: String },
+    PendingOpsInfo { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, count: u32, previews: Vec<(String, String, String)> },
+    MergeComplete { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, merged_count: u32 },
+    PendingDiscarded { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId> },
+    ShadowList { shadows: Vec<String> },
+    RepoList { #[serde(default)] branch: Option<String>, repos: Vec<String> },
+    BranchSwitched { peer_id: Option<String>, success: bool },
+    RepoSwitched { #[serde(default)] branch: Option<String>, name: String, uuid: String },
+    PeerDeleted { peer_id: String },
+    EditRejected { error: ServerError },
+    ChangesList { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, staged: Vec<ChangeEntry>, unstaged: Vec<ChangeEntry> },
+    StageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String },
+    UnstageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String },
+    CommitAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, commit_id: String, timestamp: i64 },
+    CommitHistory { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, commits: Vec<CommitInfo> },
+    DocDiff { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String, old_content: String, new_content: String },
+    CommitDiffResult { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, diffs: Vec<CommitFileDiff> },
+    DocDeleted { doc_id: DocId },
+    DiscardAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String },
+    TreeUpdate { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, delta: crate::tree::TreeDelta },
+    ProtocolError { error: ServerError },
+    BulkStageProgress { op: String, total: u32, done: u32, failed: u32 },
+    BulkStageDone { op: String, total: u32, success: u32, failed_paths: Vec<String> },
+    FsChangeDetected { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String, change_type: String, #[serde(default)] has_conflict: bool },
+    ConflictResolved { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String, resolution: String },
+    KeyProvide { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, repo_key: Vec<u8> },
+    KeyDenied { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, error: ServerError },
+    SystemMetrics { cpu_usage_percent: f32, memory_used_mb: u64, active_connections: u32, ops_processed: u64, uptime_secs: u64, db_size_bytes: u64, doc_count: u32 },
 }

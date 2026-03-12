@@ -25,6 +25,7 @@ pub async fn handle_discard_file(
             tracing::info!("Discard pending workspace change: {}", path);
             ch.unicast(ServerMessage::DiscardAck {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 path: path.clone(),
             });
             super::changes::handle_get_changes(state, ch, session).await;

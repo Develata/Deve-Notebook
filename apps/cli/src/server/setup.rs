@@ -99,6 +99,7 @@ pub(super) fn spawn_file_watcher(
                     tracing::info!("DirChange detected: repo-scoped refresh ({})", path);
                     let _ = tx.send(ServerMessage::FsChangeDetected {
                         repo_id: Some(repo_id),
+                        branch: None,
                         path,
                         change_type: "dir_changed".to_string(),
                         has_conflict: false,

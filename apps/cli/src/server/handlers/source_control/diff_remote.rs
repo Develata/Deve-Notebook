@@ -48,6 +48,7 @@ pub(super) async fn handle_remote_diff(
 
     ch.unicast(ServerMessage::DocDiff {
         repo_id: Some(scope.repo_id),
+        branch: scope.branch.clone(),
         path,
         old_content,
         new_content,

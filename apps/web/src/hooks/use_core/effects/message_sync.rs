@@ -62,6 +62,8 @@ pub fn handle_sc_or_remaining<F>(
         signals.set_diff_content,
         signals.set_commit_diff_result,
         signals.current_repo_id,
+        signals.active_branch,
+        signals.pending_branch_switch,
         schedule_refresh,
         ws,
     ) {

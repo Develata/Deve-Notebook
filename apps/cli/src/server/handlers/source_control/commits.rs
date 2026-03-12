@@ -21,6 +21,7 @@ pub async fn handle_commit(
             tracing::info!("Created commit: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });
@@ -49,6 +50,7 @@ pub async fn handle_get_commit_history(
             tracing::info!("Returning {} commits", commits.len());
             ch.unicast(ServerMessage::CommitHistory {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 commits,
             });
         }
@@ -82,6 +84,7 @@ pub async fn handle_get_commit_diff(
             tracing::info!("Returning diff with {} file changes", diffs.len());
             ch.unicast(ServerMessage::CommitDiffResult {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 diffs,
             });
         }
@@ -109,6 +112,7 @@ pub async fn handle_commit_and_push(
             tracing::info!("Commit & Push: {} - {}", info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });

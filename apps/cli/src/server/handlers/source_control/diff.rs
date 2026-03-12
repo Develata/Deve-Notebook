@@ -50,6 +50,7 @@ pub async fn handle_get_doc_diff(
 
     ch.unicast(ServerMessage::DocDiff {
         repo_id: Some(scope.repo_id),
+        branch: scope.branch.clone(),
         path: normalized,
         old_content,
         new_content,

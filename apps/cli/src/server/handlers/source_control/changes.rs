@@ -10,6 +10,7 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
     if session.is_readonly() {
         ch.unicast(ServerMessage::ChangesList {
             repo_id: session.active_repo_id,
+            branch: session.active_branch.clone(),
             staged: vec![],
             unstaged: vec![],
         });
@@ -39,6 +40,7 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
     };
     ch.unicast(ServerMessage::ChangesList {
         repo_id: Some(scope.repo_id),
+        branch: scope.branch.clone(),
         staged,
         unstaged,
     });

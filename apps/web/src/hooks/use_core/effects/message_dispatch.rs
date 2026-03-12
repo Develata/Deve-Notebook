@@ -59,18 +59,23 @@ pub fn handle_message<F>(
             signals.set_is_chat_streaming,
         ),
         ServerMessage::SearchResults { results } => signals.set_search_results.set(results),
-        ServerMessage::SyncModeStatus { repo_id, mode } => {
-            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+        ServerMessage::SyncModeStatus {
+            repo_id,
+            branch,
+            mode,
+        } => {
+            if !matches_repo_scope(&repo_id, &branch, signals) {
                 return;
             }
             signals.set_sync_mode.set(mode);
         }
         ServerMessage::PendingOpsInfo {
             repo_id,
+            branch,
             count,
             previews,
         } => {
-            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+            if !matches_repo_scope(&repo_id, &branch, signals) {
                 return;
             }
             signals.set_pending_ops_count.set(count);
@@ -78,17 +83,18 @@ pub fn handle_message<F>(
         }
         ServerMessage::MergeComplete {
             repo_id,
+            branch,
             merged_count,
         } => {
-            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+            if !matches_repo_scope(&repo_id, &branch, signals) {
                 return;
             }
             leptos::logging::log!("已合并 {} 个操作", merged_count);
             signals.set_pending_ops_count.set(0);
             signals.set_pending_ops_previews.set(vec![]);
         }
-        ServerMessage::PendingDiscarded { repo_id } => {
-            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+        ServerMessage::PendingDiscarded { repo_id, branch } => {
+            if !matches_repo_scope(&repo_id, &branch, signals) {
                 return;
             }
             leptos::logging::log!("待处理操作已丢弃");

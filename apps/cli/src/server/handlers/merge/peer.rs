@@ -96,6 +96,7 @@ fn write_merged_content(
     tracing::info!("Merge Success for doc {}", doc_id);
     ch.broadcast(ServerMessage::MergeComplete {
         repo_id: Some(scope.repo_id),
+        branch: scope.branch.clone(),
         merged_count: 1,
     });
 }
@@ -114,6 +115,7 @@ fn send_merge_conflict(
     tracing::warn!("Merge Conflict detected for doc {}", doc_id);
     ch.unicast(ServerMessage::DocDiff {
         repo_id: Some(scope.repo_id),
+        branch: scope.branch.clone(),
         path,
         old_content: local,
         new_content: remote,

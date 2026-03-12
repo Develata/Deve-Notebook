@@ -14,6 +14,7 @@ pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
 pub mod effects_sc;
+mod effects_sc_scope;
 pub mod effects_switch;
 pub mod navigation;
 pub mod pending;

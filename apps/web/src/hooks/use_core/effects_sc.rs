@@ -8,6 +8,9 @@ use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
 use super::diff_session::DiffSessionWire;
+use super::types::PendingBranchTarget;
+
+pub(crate) use super::effects_sc_scope::{matches_current_repo, matches_current_scope};
 
 #[cfg(test)]
 #[path = "effects_sc_test.rs"]
@@ -25,52 +28,110 @@ pub fn handle_sc_message(
     set_diff: WriteSignal<Option<DiffSessionWire>>,
     set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
     current_repo_id: ReadSignal<Option<String>>,
+    active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
+    pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     schedule_refresh: &dyn Fn(),
     ws: &crate::api::WsService,
 ) -> bool {
     match msg {
         ServerMessage::ChangesList {
             repo_id,
+            branch,
             staged,
             unstaged,
         } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             set_staged.set(staged.clone());
             set_unstaged.set(unstaged.clone());
         }
-        ServerMessage::CommitHistory { repo_id, commits } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+        ServerMessage::CommitHistory {
+            repo_id,
+            branch,
+            commits,
+        } => {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             set_history.set(commits.clone());
         }
-        ServerMessage::StageAck { repo_id, path } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+        ServerMessage::StageAck {
+            repo_id,
+            branch,
+            path,
+        } => {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("已暂存: {}", path);
             schedule_refresh();
         }
-        ServerMessage::UnstageAck { repo_id, path } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+        ServerMessage::UnstageAck {
+            repo_id,
+            branch,
+            path,
+        } => {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("已取消暂存: {}", path);
             schedule_refresh();
         }
-        ServerMessage::DiscardAck { repo_id, path } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+        ServerMessage::DiscardAck {
+            repo_id,
+            branch,
+            path,
+        } => {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("已放弃变更: {}", path);
             schedule_refresh();
         }
         ServerMessage::CommitAck {
-            commit_id, repo_id, ..
+            commit_id,
+            repo_id,
+            branch,
+            ..
         } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("已提交: {}", commit_id);
@@ -79,11 +140,18 @@ pub fn handle_sc_message(
         }
         ServerMessage::DocDiff {
             repo_id,
+            branch,
             path,
             old_content,
             new_content,
         } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("收到 Diff: {}", path);
@@ -101,11 +169,18 @@ pub fn handle_sc_message(
         }
         ServerMessage::FsChangeDetected {
             repo_id,
+            branch,
             path,
             change_type,
             has_conflict,
         } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             let conflict_tag = if *has_conflict { " [冲突]" } else { "" };
@@ -113,8 +188,18 @@ pub fn handle_sc_message(
             schedule_refresh();
             ws.send(ClientMessage::ListDocs);
         }
-        ServerMessage::CommitDiffResult { repo_id, diffs } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+        ServerMessage::CommitDiffResult {
+            repo_id,
+            branch,
+            diffs,
+        } => {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
@@ -122,10 +207,17 @@ pub fn handle_sc_message(
         }
         ServerMessage::ConflictResolved {
             repo_id,
+            branch,
             path,
             resolution,
         } => {
-            if !matches_current_repo(repo_id, current_repo_id) {
+            if !matches_current_scope(
+                repo_id,
+                branch,
+                current_repo_id,
+                active_branch,
+                pending_branch_switch,
+            ) {
                 return true;
             }
             leptos::logging::log!("冲突已解决: {} ({})", path, resolution);
@@ -148,26 +240,4 @@ pub fn clear_repo_scoped_state(
     set_history.set(Vec::new());
     set_diff.set(None);
     set_commit_diff.set(Vec::new());
-}
-
-pub(super) fn matches_current_repo(
-    repo_id: &Option<uuid::Uuid>,
-    current_repo_id: ReadSignal<Option<String>>,
-) -> bool {
-    match (repo_id, current_repo_id.get_untracked()) {
-        (Some(repo_id), Some(current_repo_id)) => current_repo_id == repo_id.to_string(),
-        (Some(_), None) => false,
-        (None, None) => true,
-        (None, Some(_)) => false,
-    }
-}
-
-#[cfg(test)]
-pub(super) fn matches_current_scope(
-    repo_id: &Option<uuid::Uuid>,
-    branch: &Option<deve_core::models::PeerId>,
-    current_repo_id: ReadSignal<Option<String>>,
-    active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
-) -> bool {
-    matches_current_repo(repo_id, current_repo_id) && active_branch.get_untracked() == *branch
 }

@@ -59,13 +59,19 @@ impl BroadcastFilter {
         };
 
         match msg {
-            ServerMessage::FsChangeDetected { repo_id, .. }
-            | ServerMessage::CommitAck { repo_id, .. }
-            | ServerMessage::MergeComplete { repo_id, .. } => matches_scope(
+            ServerMessage::FsChangeDetected {
+                repo_id, branch, ..
+            }
+            | ServerMessage::CommitAck {
+                repo_id, branch, ..
+            }
+            | ServerMessage::MergeComplete {
+                repo_id, branch, ..
+            } => matches_scope(
                 scope.active_repo_id,
                 scope.active_branch.as_ref(),
                 repo_id,
-                None,
+                branch.as_ref(),
                 true,
             ),
             ServerMessage::NewOp {

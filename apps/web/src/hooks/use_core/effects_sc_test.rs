@@ -1,5 +1,5 @@
 use super::{clear_repo_scoped_state, matches_current_repo, matches_current_scope};
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::hooks::use_core::{PendingBranchTarget, diff_session::DiffSessionWire};
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
@@ -31,11 +31,13 @@ fn ignores_repo_scoped_messages_from_other_branch() {
     let repo_id = uuid::Uuid::new_v4();
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
     let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
+    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
     assert!(!matches_current_scope(
         &Some(repo_id),
         &Some(PeerId::new("peer-b")),
         current_repo_id,
         active_branch,
+        pending_branch_switch,
     ));
 }
 

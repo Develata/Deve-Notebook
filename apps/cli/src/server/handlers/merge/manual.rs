@@ -19,6 +19,7 @@ pub(super) async fn handle_get_sync_mode(
     };
     ch.unicast(ServerMessage::SyncModeStatus {
         repo_id: Some(repo_id),
+        branch: session.active_branch.clone(),
         mode: sync_mode_label(engine.sync_mode()),
     });
 }
@@ -44,6 +45,7 @@ pub(super) async fn handle_set_sync_mode(
     tracing::info!("SetSyncMode: {:?}", new_mode);
     ch.unicast(ServerMessage::SyncModeStatus {
         repo_id: Some(repo_id),
+        branch: session.active_branch.clone(),
         mode: sync_mode_label(new_mode),
     });
 }
@@ -71,6 +73,7 @@ pub(super) async fn handle_get_pending_ops(
     };
     ch.unicast(ServerMessage::PendingOpsInfo {
         repo_id: Some(repo_id),
+        branch: session.active_branch.clone(),
         count: pending_count as u32,
         previews,
     });
@@ -92,6 +95,7 @@ pub(super) async fn handle_confirm_merge(
             tracing::info!("Merged {} pending operations", count);
             ch.broadcast(ServerMessage::MergeComplete {
                 repo_id: Some(repo_id),
+                branch: session.active_branch.clone(),
                 merged_count: count as u32,
             });
         }
@@ -117,5 +121,6 @@ pub(super) async fn handle_discard_pending(
     tracing::info!("Discarded all pending operations");
     ch.unicast(ServerMessage::PendingDiscarded {
         repo_id: Some(repo_id),
+        branch: session.active_branch.clone(),
     });
 }

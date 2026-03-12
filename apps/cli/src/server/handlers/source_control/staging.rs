@@ -22,6 +22,7 @@ pub async fn handle_stage_file(
             tracing::info!("Staged file: {}", path);
             ch.unicast(ServerMessage::StageAck {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 path,
             });
         }
@@ -49,6 +50,7 @@ pub async fn handle_unstage_file(
             tracing::info!("Unstaged file: {}", path);
             ch.unicast(ServerMessage::UnstageAck {
                 repo_id: Some(scope.repo_id),
+                branch: scope.branch.clone(),
                 path,
             });
         }
