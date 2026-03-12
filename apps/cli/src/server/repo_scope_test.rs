@@ -88,6 +88,21 @@ fn resolve_session_repo_and_sync_updates_session_binding() -> anyhow::Result<()>
 }
 
 #[test]
+fn resolve_session_repo_recovers_local_repo_name_from_uuid() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let mut session = WsSession::new();
+    session.switch_repo("stale-name".into(), Some(test_id));
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.repo_name, "test");
+    assert_eq!(resolved.repo_id, test_id);
+    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(session.active_repo_id, Some(test_id));
+    Ok(())
+}
+
+#[test]
 fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");

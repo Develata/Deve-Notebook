@@ -139,6 +139,35 @@ fn resolve_repo_name_from_session(
     state: &Arc<AppState>,
     session: &WsSession,
 ) -> Result<Option<String>> {
+    if session.active_branch.is_none() {
+        if let Some(repo_name) = session.active_repo.clone() {
+            if state
+                .repo
+                .get_repo_info_for(None, Some(&repo_name))
+                .ok()
+                .flatten()
+                .is_some()
+            {
+                return Ok(Some(repo_name));
+            }
+            if let Some(repo_id) = session.active_repo_id
+                && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?
+            {
+                tracing::warn!(
+                    "Recovering local repo name from UUID: repo_id={}, stale_name={:?}, resolved_name={}",
+                    repo_id,
+                    session.active_repo,
+                    resolved
+                );
+                return Ok(Some(resolved));
+            }
+            return Ok(Some(repo_name));
+        }
+        if let Some(repo_id) = session.active_repo_id {
+            return state.repo.find_local_repo_name_by_id(repo_id);
+        }
+        return Ok(None);
+    }
     if let Some(repo_id) = session.active_repo_id
         && let Some(branch) = session.active_branch.as_ref()
     {
