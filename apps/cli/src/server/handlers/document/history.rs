@@ -1,4 +1,5 @@
 use super::confirmed;
+use super::errors::send_doc_error;
 use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
@@ -25,10 +26,7 @@ pub(super) async fn handle_request_history(
     let ops = match load_doc_history(state, session, &scope.repo_name, doc_id) {
         Ok(ops) => ops,
         Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to load document history: {}", err),
-            ));
+            send_doc_error(ch, "Failed to load document history", err);
             return;
         }
     };

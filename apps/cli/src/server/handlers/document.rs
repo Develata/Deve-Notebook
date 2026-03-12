@@ -2,6 +2,7 @@
 
 mod confirmed;
 mod edit;
+mod errors;
 mod history;
 mod open;
 mod snapshot;

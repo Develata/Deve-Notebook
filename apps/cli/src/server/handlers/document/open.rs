@@ -1,3 +1,4 @@
+use super::errors::{send_doc_error, send_repo_context_invalid};
 use super::snapshot::{SnapshotPayload, build_snapshot_payload};
 use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
@@ -37,10 +38,7 @@ pub(super) async fn handle_open_doc(
             Ok(payload) => payload,
             Err(e) => {
                 tracing::error!("Failed to build snapshot from active_db: {:?}", e);
-                ch.send_protocol_error(ServerError::with_detail(
-                    ServerErrorCode::RequestFailed,
-                    e.to_string(),
-                ));
+                send_doc_error(ch, "Failed to build document snapshot", e);
                 return;
             }
         },
@@ -48,19 +46,13 @@ pub(super) async fn handle_open_doc(
             match load_snapshot_from_local_repo(state, &scope.repo_name, doc_id) {
                 Ok(payload) => payload,
                 Err(e) => {
-                    ch.send_protocol_error(ServerError::with_detail(
-                        ServerErrorCode::RequestFailed,
-                        e.to_string(),
-                    ));
+                    send_doc_error(ch, "Failed to load document snapshot", e);
                     return;
                 }
             }
         }
         None => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                "Remote repository database is not locked",
-            ));
+            send_repo_context_invalid(ch, "Remote repository database is not locked");
             return;
         }
     };
