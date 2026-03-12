@@ -49,3 +49,32 @@ fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
         vec!["main".to_string(), "wiki".to_string()]
     );
 }
+
+#[test]
+fn local_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let main =
+        RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:test:wiki-a")).expect("main");
+    let local_dir = ledger_dir.join("local");
+    let second_path = local_dir.join("wiki-1.redb");
+    let second_db = redb::Database::create(&second_path).expect("create second db");
+    let txn = second_db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.commit().expect("commit metadata table");
+    write_info(
+        &second_db,
+        &RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-b".into()),
+        },
+    );
+    drop(second_db);
+
+    let repos = main.list_repos(None).expect("list repos");
+
+    assert_eq!(repos.len(), 2);
+    assert!(repos.contains(&"wiki".to_string()));
+    assert!(repos.iter().any(|name| name.starts_with("wiki-")));
+}

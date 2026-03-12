@@ -42,26 +42,41 @@ impl RepoListing for RepoManager {
             return Ok(vec![]);
         }
 
-        let mut repos = Vec::new();
+        let mut named = Vec::new();
         for entry in std::fs::read_dir(target_dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                let name = RepoManager::read_repo_info_from_path(&path)?
+                let Some(stem) = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(str::to_string)
+                else {
+                    continue;
+                };
+                let display = RepoManager::read_repo_info_from_path(&path)?
                     .map(|info| info.name)
-                    .or_else(|| {
-                        path.file_stem()
-                            .and_then(|s| s.to_str())
-                            .map(str::to_string)
-                    });
-                if let Some(name) = name {
-                    repos.push(name);
-                }
+                    .unwrap_or_else(|| stem.clone());
+                named.push((stem, display));
             }
         }
 
+        let mut counts = std::collections::HashMap::<String, usize>::new();
+        for (_, display) in &named {
+            *counts.entry(display.clone()).or_default() += 1;
+        }
+        let mut repos = named
+            .into_iter()
+            .map(|(stem, display)| {
+                if counts.get(&display).copied().unwrap_or(0) > 1 {
+                    stem
+                } else {
+                    display
+                }
+            })
+            .collect::<Vec<_>>();
+
         repos.sort();
-        repos.dedup();
         Ok(repos)
     }
 

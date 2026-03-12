@@ -24,6 +24,7 @@ pub fn repo_list_matches_scope(
     pending_repo_switch: Option<String>,
 ) -> bool {
     pending_repo_switch.is_none()
+        && pending_branch_switch.is_none()
         && branch == expected_branch_string(active_branch, pending_branch_switch)
 }
 
@@ -63,15 +64,9 @@ mod tests {
     use deve_core::models::PeerId;
 
     #[test]
-    fn repo_list_uses_pending_branch_scope_during_switch() {
+    fn repo_list_rejects_messages_while_branch_switch_pending() {
         assert!(!repo_list_matches_scope(
             None,
-            None,
-            Some(PendingBranchTarget::Shadow("peer-a".into())),
-            None,
-        ));
-        assert!(repo_list_matches_scope(
-            Some("peer-a".into()),
             None,
             Some(PendingBranchTarget::Shadow("peer-a".into())),
             None,
