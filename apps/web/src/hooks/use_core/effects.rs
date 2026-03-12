@@ -9,34 +9,13 @@ mod message_protocol;
 mod message_sync;
 
 use crate::api::WsService;
-use crate::storage::DegradedSyncMode;
-use crate::storage::identity::StoredPeerIdentity;
-use deve_core::models::{PeerId, VersionVector};
-use leptos::prelude::*;
 
 use super::state::CoreSignals;
+use super::types::HandshakeSignals;
 
 /// 设置握手 Effect。
-pub fn setup_handshake_effect(
-    ws: &WsService,
-    identity: ReadSignal<Option<StoredPeerIdentity>>,
-    repo_vector: ReadSignal<VersionVector>,
-    degraded: ReadSignal<Option<DegradedSyncMode>>,
-    current_repo: ReadSignal<Option<String>>,
-    current_repo_id: ReadSignal<Option<String>>,
-    active_branch: ReadSignal<Option<PeerId>>,
-    set_handshake_ready: WriteSignal<bool>,
-) {
-    handshake::setup(
-        ws,
-        identity,
-        repo_vector,
-        degraded,
-        current_repo,
-        current_repo_id,
-        active_branch,
-        set_handshake_ready,
-    );
+pub fn setup_handshake_effect(ws: &WsService, signals: HandshakeSignals) {
+    handshake::setup(ws, signals);
 }
 
 /// 设置消息处理 Effect。

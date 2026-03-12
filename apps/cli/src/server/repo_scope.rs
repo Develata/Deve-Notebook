@@ -79,6 +79,35 @@ pub fn resolve_session_repo_and_sync(
     Ok(scope)
 }
 
+/// 将当前 resolved scope 收敛到本地可写仓库。
+///
+/// Invariants:
+/// - 已处于本地分支时直接返回当前 scope。
+/// - 远端影子仓库必须优先按 `RepoUUID` 匹配本地仓库。
+/// - 若 UUID 不可用，才允许按共享 URL 回退解析。
+/// - 无可写本地对应仓库时，调用方必须显式处理 `None`。
+pub fn resolve_local_counterpart_repo(
+    state: &Arc<AppState>,
+    scope: &ResolvedRepo,
+) -> Result<Option<ResolvedRepo>> {
+    if scope.branch.is_none() {
+        return Ok(Some(scope.clone()));
+    }
+    if let Some(repo_name) = state.repo.find_local_repo_name_by_id(scope.repo_id)? {
+        return resolve_repo_by_name(state, None, Some(scope.repo_id), repo_name).map(Some);
+    }
+    let Some(url) = state
+        .repo
+        .get_repo_url(scope.branch.as_ref(), &scope.repo_name)?
+    else {
+        return Ok(None);
+    };
+    let Some(repo_name) = state.repo.find_local_repo_name_by_url(&url)? else {
+        return Ok(None);
+    };
+    resolve_repo_by_name(state, None, None, repo_name).map(Some)
+}
+
 pub fn map_repo_scope_error(error: anyhow::Error) -> ServerError {
     let detail = error.to_string();
     let lower = detail.to_ascii_lowercase();
@@ -104,23 +133,23 @@ fn resolve_repo_name_from_session(
     state: &Arc<AppState>,
     session: &WsSession,
 ) -> Result<Option<String>> {
-    if let Some(repo_id) = session.active_repo_id {
-        if let Some(branch) = session.active_branch.as_ref() {
-            let info = state
-                .repo
-                .get_repo_info_for(Some(branch), Some(&repo_id.to_string()))?;
-            if let Some(info) = info {
-                if session.active_repo.as_deref() != Some(info.name.as_str()) {
-                    tracing::warn!(
-                        "Recovering remote repo name from UUID: branch={}, repo_id={}, stale_name={:?}, resolved_name={}",
-                        branch,
-                        repo_id,
-                        session.active_repo,
-                        info.name
-                    );
-                }
-                return Ok(Some(info.name));
+    if let Some(repo_id) = session.active_repo_id
+        && let Some(branch) = session.active_branch.as_ref()
+    {
+        let info = state
+            .repo
+            .get_repo_info_for(Some(branch), Some(&repo_id.to_string()))?;
+        if let Some(info) = info {
+            if session.active_repo.as_deref() != Some(info.name.as_str()) {
+                tracing::warn!(
+                    "Recovering remote repo name from UUID: branch={}, repo_id={}, stale_name={:?}, resolved_name={}",
+                    branch,
+                    repo_id,
+                    session.active_repo,
+                    info.name
+                );
             }
+            return Ok(Some(info.name));
         }
     }
     if let Some(repo_name) = session.active_repo.clone() {

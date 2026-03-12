@@ -1,7 +1,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
-use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
@@ -29,23 +29,11 @@ pub(super) async fn handle_remote_diff(
         }
     };
 
-    let remote_url = state
-        .repo
-        .get_repo_url(session.active_branch.as_ref(), &scope.repo_name)
-        .ok()
-        .flatten();
-    let local_repo_name = session
-        .active_repo_id
-        .and_then(|repo_id| {
-            state
-                .repo
-                .find_local_repo_name_by_id(repo_id)
-                .ok()
-                .flatten()
-        })
-        .or_else(|| {
-            remote_url.and_then(|url| state.repo.find_local_repo_name_by_url(&url).ok().flatten())
-        });
+    let local_repo_name = match resolve_local_counterpart_repo(state, &scope) {
+        Ok(Some(local_scope)) => Some(local_scope.repo_name),
+        Ok(None) => None,
+        Err(err) => return errors::send_ws(ch, errors::map_repo_scope_error(err)),
+    };
     let old_content =
         match local_counterpart_content(state.repo.as_ref(), &target, local_repo_name.as_deref()) {
             Ok(Some(content)) => content,

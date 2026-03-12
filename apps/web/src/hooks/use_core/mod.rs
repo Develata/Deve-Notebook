@@ -56,13 +56,15 @@ pub fn use_core() -> CoreState {
 
     effects::setup_handshake_effect(
         &ws,
-        identity,
-        repo_vector,
-        signals.degraded_sync_mode,
-        signals.current_repo,
-        signals.current_repo_id,
-        signals.active_branch,
-        signals.set_handshake_ready,
+        HandshakeSignals {
+            identity,
+            repo_vector,
+            degraded: signals.degraded_sync_mode,
+            current_repo: signals.current_repo,
+            current_repo_id: signals.current_repo_id,
+            active_branch: signals.active_branch,
+            set_handshake_ready: signals.set_handshake_ready,
+        },
     );
     effects::setup_message_effect(&ws, &signals);
 
@@ -84,13 +86,15 @@ pub fn use_core() -> CoreState {
         callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
     let switch_callbacks = callbacks::create_switch_callbacks(
         &ws,
-        signals.current_doc,
-        signals.pending_local_edits,
-        signals.set_pending_navigation,
-        signals.current_repo,
-        signals.active_branch,
-        signals.set_pending_branch_switch,
-        signals.set_pending_repo_switch,
+        SwitchScopeSignals {
+            current_doc: signals.current_doc,
+            pending_local_edits: signals.pending_local_edits,
+            set_pending_navigation: signals.set_pending_navigation,
+            current_repo: signals.current_repo,
+            active_branch: signals.active_branch,
+            set_pending_branch_switch: signals.set_pending_branch_switch,
+            set_pending_repo_switch: signals.set_pending_repo_switch,
+        },
     );
 
     let state = build_core_state(

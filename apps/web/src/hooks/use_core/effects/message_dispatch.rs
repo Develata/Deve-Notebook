@@ -130,12 +130,14 @@ pub fn handle_message<F>(
             if effects_msg::handle_repo_switched(
                 name,
                 uuid,
-                signals.current_repo_id,
-                signals.pending_repo_switch,
-                signals.set_pending_repo_switch,
-                signals.set_current_repo,
-                signals.set_current_repo_id,
-                signals.set_current_doc,
+                crate::hooks::use_core::RepoSwitchSignals {
+                    current_repo_id: signals.current_repo_id,
+                    pending_repo_switch: signals.pending_repo_switch,
+                    set_pending_repo_switch: signals.set_pending_repo_switch,
+                    set_current_repo: signals.set_current_repo,
+                    set_current_repo_id: signals.set_current_repo_id,
+                    set_current_doc: signals.set_current_doc,
+                },
             ) {
                 signals.set_docs.set(Vec::new());
                 signals.set_tree_nodes.set(Vec::new());
@@ -153,7 +155,9 @@ pub fn handle_message<F>(
         }
         ServerMessage::WriteReady { peer_id, repo_id } => {
             let repo_id = repo_id.to_string();
-            if signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str()) {
+            if signals.active_branch.get_untracked().is_none()
+                && signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str())
+            {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
                 ws.mark_writer_ready(repo_id, peer_id.as_str());
             }

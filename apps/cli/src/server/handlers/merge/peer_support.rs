@@ -1,5 +1,4 @@
-use crate::server::repo_scope::ResolvedRepo;
-use crate::server::session::WsSession;
+use crate::server::repo_scope::{ResolvedRepo, resolve_local_counterpart_repo};
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::models::DocId;
 use std::sync::Arc;
@@ -30,42 +29,23 @@ pub(super) fn resolve_doc_path(
 
 pub(super) fn resolve_local_merge_scope(
     state: &Arc<AppState>,
-    session: &WsSession,
     scope: ResolvedRepo,
     ch: &DualChannel,
 ) -> Option<ResolvedRepo> {
-    if scope.branch.is_none() {
-        return Some(scope);
+    match resolve_local_counterpart_repo(state, &scope) {
+        Ok(Some(local_scope)) => Some(local_scope),
+        Ok(None) => {
+            errors::storage_not_found(
+                ch,
+                "No local repository matched the active remote repository",
+            );
+            None
+        }
+        Err(err) => {
+            errors::request_failed(ch, format!("Failed to resolve local merge scope: {}", err));
+            None
+        }
     }
-    let local_repo_name = session
-        .active_repo_id
-        .and_then(|repo_id| {
-            state
-                .repo
-                .find_local_repo_name_by_id(repo_id)
-                .ok()
-                .flatten()
-        })
-        .or_else(|| {
-            state
-                .repo
-                .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
-                .ok()
-                .flatten()
-                .and_then(|url| state.repo.find_local_repo_name_by_url(&url).ok().flatten())
-        });
-    let Some(repo_name) = local_repo_name else {
-        errors::storage_not_found(
-            ch,
-            "No local repository matched the active remote repository",
-        );
-        return None;
-    };
-    Some(ResolvedRepo {
-        repo_id: scope.repo_id,
-        repo_name,
-        branch: None,
-    })
 }
 
 #[cfg(test)]
@@ -104,8 +84,6 @@ mod tests {
             search_service: None,
             identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
         });
-        let mut session = WsSession::new();
-        session.active_repo_id = Some(info.uuid);
         let ch = crate::server::channel::DualChannel::new(
             broadcast::channel(8).0,
             crate::server::ws::send::new_unicast_channel().0,
@@ -113,7 +91,6 @@ mod tests {
 
         let resolved = resolve_local_merge_scope(
             &state,
-            &session,
             ResolvedRepo {
                 repo_id: info.uuid,
                 repo_name: "shadow-repo".into(),

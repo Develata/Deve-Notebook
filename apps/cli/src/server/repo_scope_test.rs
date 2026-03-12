@@ -1,5 +1,6 @@
 use super::repo_scope::{
-    map_repo_scope_error, resolve_session_repo, resolve_session_repo_and_sync,
+    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo,
+    resolve_session_repo_and_sync,
 };
 use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
 use crate::server::security;
@@ -110,4 +111,26 @@ fn map_repo_scope_error_marks_selector_mismatch_as_context_invalid() {
         "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
     ));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
+fn resolve_local_counterpart_repo_prefers_repo_uuid_for_remote_scope() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, remote_repo_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
+
+    let local = resolve_local_counterpart_repo(
+        &state,
+        &super::repo_scope::ResolvedRepo {
+            repo_id: remote_repo_id,
+            repo_name: "shadow-notes".into(),
+            branch: Some(peer_id),
+        },
+    )?
+    .expect("local counterpart");
+
+    assert!(local.branch.is_none());
+    assert_eq!(local.repo_name, "test");
+    assert_eq!(local.repo_id, remote_repo_id);
+    Ok(())
 }

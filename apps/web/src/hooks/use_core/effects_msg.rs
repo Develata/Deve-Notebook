@@ -8,7 +8,7 @@ use deve_core::protocol::ServerMessage;
 use leptos::prelude::*;
 
 use super::contexts::SystemMetricsData;
-use super::types::{ChatMessage, PeerSession, PendingBranchTarget};
+use super::types::{ChatMessage, PeerSession, PendingBranchTarget, RepoSwitchSignals};
 
 /// 处理 DocList 消息。
 ///
@@ -100,40 +100,63 @@ pub fn handle_branch_switched(
 }
 
 /// 处理仓库切换确认。
-pub fn handle_repo_switched(
-    name: String,
-    uuid: String,
-    current_repo_id: ReadSignal<Option<String>>,
-    pending_repo_switch: ReadSignal<Option<String>>,
-    set_pending_repo_switch: WriteSignal<Option<String>>,
-    set_current_repo: WriteSignal<Option<String>>,
-    set_current_repo_id: WriteSignal<Option<String>>,
-    set_current_doc: WriteSignal<Option<DocId>>,
-) -> bool {
-    if let Some(pending) = pending_repo_switch.get_untracked() {
+pub fn handle_repo_switched(name: String, uuid: String, signals: RepoSwitchSignals) -> bool {
+    if let Some(pending) = signals.pending_repo_switch.get_untracked() {
         if pending != name {
             leptos::logging::warn!("忽略过期 RepoSwitched: {}", name);
             return false;
         }
-        set_pending_repo_switch.set(None);
+        signals.set_pending_repo_switch.set(None);
     }
-    let same_repo =
-        !uuid.is_empty() && current_repo_id.get_untracked().as_deref() == Some(uuid.as_str());
-    set_current_repo.set(Some(name));
-    set_current_repo_id.set((!uuid.is_empty()).then_some(uuid));
+    let same_repo = !uuid.is_empty()
+        && signals.current_repo_id.get_untracked().as_deref() == Some(uuid.as_str());
+    signals.set_current_repo.set(Some(name));
+    signals
+        .set_current_repo_id
+        .set((!uuid.is_empty()).then_some(uuid));
     if !same_repo {
-        set_current_doc.set(None);
+        signals.set_current_doc.set(None);
     }
     !same_repo
+}
+
+/// 处理剩余的通用消息。
+pub fn handle_remaining(
+    msg: ServerMessage,
+    set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
+) {
+    match msg {
+        ServerMessage::SystemMetrics {
+            cpu_usage_percent,
+            memory_used_mb,
+            active_connections,
+            ops_processed,
+            uptime_secs,
+            db_size_bytes,
+            doc_count,
+        } => {
+            set_system_metrics.set(Some(SystemMetricsData {
+                cpu_usage_percent,
+                memory_used_mb,
+                active_connections,
+                ops_processed,
+                uptime_secs,
+                db_size_bytes,
+                doc_count,
+            }));
+        }
+        other => {
+            leptos::logging::log!("未处理的服务端消息: {:?}", other);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::handle_branch_switched;
     use super::handle_repo_switched;
-    use crate::hooks::use_core::PendingBranchTarget;
-    use deve_core::models::DocId;
-    use deve_core::models::PeerId;
+    use crate::hooks::use_core::{PendingBranchTarget, RepoSwitchSignals};
+    use deve_core::models::{DocId, PeerId};
     use leptos::prelude::*;
     use uuid::Uuid;
 
@@ -151,12 +174,14 @@ mod tests {
         let changed = handle_repo_switched(
             "default".to_string(),
             next_repo_id.clone(),
-            current_repo_id,
-            pending_repo_switch,
-            set_pending_repo_switch,
-            set_current_repo,
-            set_current_repo_id,
-            set_current_doc,
+            RepoSwitchSignals {
+                current_repo_id,
+                pending_repo_switch,
+                set_pending_repo_switch,
+                set_current_repo,
+                set_current_repo_id,
+                set_current_doc,
+            },
         );
 
         assert!(changed);
@@ -200,12 +225,14 @@ mod tests {
         let changed = handle_repo_switched(
             "stale".to_string(),
             Uuid::new_v4().to_string(),
-            current_repo_id,
-            pending_repo_switch,
-            set_pending_repo_switch,
-            set_current_repo,
-            set_current_repo_id,
-            set_current_doc,
+            RepoSwitchSignals {
+                current_repo_id,
+                pending_repo_switch,
+                set_pending_repo_switch,
+                set_current_repo,
+                set_current_repo_id,
+                set_current_doc,
+            },
         );
 
         assert!(!changed);
@@ -213,36 +240,5 @@ mod tests {
             pending_repo_switch.get_untracked(),
             Some("default".to_string())
         );
-    }
-}
-
-/// 处理剩余的通用消息。
-pub fn handle_remaining(
-    msg: ServerMessage,
-    set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
-) {
-    match msg {
-        ServerMessage::SystemMetrics {
-            cpu_usage_percent,
-            memory_used_mb,
-            active_connections,
-            ops_processed,
-            uptime_secs,
-            db_size_bytes,
-            doc_count,
-        } => {
-            set_system_metrics.set(Some(SystemMetricsData {
-                cpu_usage_percent,
-                memory_used_mb,
-                active_connections,
-                ops_processed,
-                uptime_secs,
-                db_size_bytes,
-                doc_count,
-            }));
-        }
-        other => {
-            leptos::logging::log!("未处理的服务端消息: {:?}", other);
-        }
     }
 }

@@ -28,7 +28,7 @@ pub(super) async fn handle_merge_peer(
             return;
         }
     };
-    let Some(local_scope) = resolve_local_merge_scope(state, session, scope, ch) else {
+    let Some(local_scope) = resolve_local_merge_scope(state, scope, ch) else {
         return;
     };
     let peer_id = PeerId::new(peer_id);

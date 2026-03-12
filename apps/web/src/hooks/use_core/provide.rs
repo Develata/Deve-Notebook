@@ -25,6 +25,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
         on_search: state.on_search,
     });
     provide_context(EditorContext {
+        current_doc: state.current_doc,
         stats: state.stats,
         on_stats: state.on_stats,
         load_state: state.load_state,
@@ -38,6 +39,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
         playback_version: state.playback_version,
         set_playback_version: state.set_playback_version,
         is_spectator: state.is_spectator,
+        active_branch: state.active_branch,
         current_repo_id: state.current_repo_id,
         handshake_ready: state.handshake_ready,
         pending_local_edits: state.pending_local_edits,

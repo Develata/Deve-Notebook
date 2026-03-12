@@ -63,8 +63,13 @@ pub fn use_editor(
     let ws_clone = ws.clone();
     let set_doc_ver = core.set_doc_version;
     let handshake_ready = core.handshake_ready;
+    let current_doc = core.current_doc;
+    let current_repo_id = core.current_repo_id;
     Effect::new(move |_| {
-        if !handshake_ready.get() {
+        if !handshake_ready.get()
+            || current_doc.get() != Some(doc_id)
+            || current_repo_id.get().is_none()
+        {
             return;
         }
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;

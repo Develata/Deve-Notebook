@@ -1,9 +1,6 @@
 use crate::api::{ConnectionStatus, WsService};
-use crate::storage::DegradedSyncMode;
-use crate::storage::identity::{
-    StoredPeerIdentity, note_handshake, save_repo_vector, sign_sync_hello,
-};
-use deve_core::models::{PeerId, VersionVector};
+use crate::storage::identity::{note_handshake, save_repo_vector, sign_sync_hello};
+use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -11,19 +8,11 @@ use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+use super::super::types::HandshakeSignals;
 use super::handshake_bootstrap::restore_session_scope;
 
 /// 设置握手 Effect。
-pub fn setup(
-    ws: &WsService,
-    identity: ReadSignal<Option<StoredPeerIdentity>>,
-    repo_vector: ReadSignal<VersionVector>,
-    degraded: ReadSignal<Option<DegradedSyncMode>>,
-    current_repo: ReadSignal<Option<String>>,
-    current_repo_id: ReadSignal<Option<String>>,
-    active_branch: ReadSignal<Option<PeerId>>,
-    set_handshake_ready: WriteSignal<bool>,
-) {
+pub fn setup(ws: &WsService, signals: HandshakeSignals) {
     let ws_clone = ws.clone();
     let status_signal = ws.status;
     let endpoint_signal = ws.endpoint;
@@ -36,16 +25,18 @@ pub fn setup(
         if status_signal.get() != ConnectionStatus::Connected {
             *last_mode.borrow_mut() = None;
             ws_clone.clear_writer_ready();
-            set_handshake_ready.set(false);
+            signals.set_handshake_ready.set(false);
             return;
         }
 
-        let Some(mode_key) = degraded
+        let Some(mode_key) = signals
+            .degraded
             .get()
             .as_ref()
             .map(|_| format!("{}::degraded", endpoint_signal.get()))
             .or_else(|| {
-                identity
+                signals
+                    .identity
                     .get()
                     .as_ref()
                     .map(|id| format!("{}::{}", endpoint_signal.get(), id.repo_id))
@@ -59,27 +50,27 @@ pub fn setup(
         }
         *last_mode.borrow_mut() = Some(mode_key);
         ws_clone.clear_writer_ready();
-        set_handshake_ready.set(false);
+        signals.set_handshake_ready.set(false);
 
         let ws = ws_clone.clone();
-        let maybe_mode = degraded.get();
-        let maybe_identity = identity.get();
-        let active_repo_id = current_repo_id.get();
-        let vector = repo_vector.get();
-        let repo_name = current_repo.get();
-        let branch = active_branch.get();
+        let maybe_mode = signals.degraded.get();
+        let maybe_identity = signals.identity.get();
+        let active_repo_id = signals.current_repo_id.get();
+        let vector = signals.repo_vector.get();
+        let repo_name = signals.current_repo.get();
+        let branch = signals.active_branch.get();
         let scope_nonce = scope_nonce.clone();
-        if let Some(identity) = maybe_identity.as_ref() {
-            if maybe_mode.is_none() && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
-            {
-                *last_mode.borrow_mut() = None;
-                if is_reconnect_bootstrap {
-                    restore_session_scope(&ws, repo_name.clone(), branch.clone());
-                }
-                ws.clear_writer_ready();
-                set_handshake_ready.set(false);
-                return;
+        if let Some(identity) = maybe_identity.as_ref()
+            && maybe_mode.is_none()
+            && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
+        {
+            *last_mode.borrow_mut() = None;
+            if is_reconnect_bootstrap {
+                restore_session_scope(&ws, repo_name.clone(), branch.clone());
             }
+            ws.clear_writer_ready();
+            signals.set_handshake_ready.set(false);
+            return;
         }
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
@@ -88,7 +79,7 @@ pub fn setup(
                     restore_session_scope(&ws, repo_name.clone(), branch.clone());
                 }
                 ws.clear_writer_ready();
-                set_handshake_ready.set(true);
+                signals.set_handshake_ready.set(true);
                 return;
             }
             let Some(identity) = maybe_identity else {

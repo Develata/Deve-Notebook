@@ -39,9 +39,7 @@ pub async fn handle_switch_branch(
     } else {
         None
     };
-    let target_branch = final_branch
-        .as_ref()
-        .map(|branch| deve_core::models::PeerId::new(branch));
+    let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
 
     let target_repo = match select_target_repo(

@@ -37,6 +37,7 @@ pub struct DocContext {
 /// 编辑器状态上下文
 #[derive(Clone)]
 pub struct EditorContext {
+    pub current_doc: ReadSignal<Option<DocId>>,
     pub stats: ReadSignal<EditorStats>,
     pub on_stats: Callback<EditorStats>,
     pub load_state: ReadSignal<String>,
@@ -50,6 +51,7 @@ pub struct EditorContext {
     pub playback_version: ReadSignal<u64>,
     pub set_playback_version: WriteSignal<u64>,
     pub is_spectator: Signal<bool>,
+    pub active_branch: ReadSignal<Option<PeerId>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub handshake_ready: ReadSignal<bool>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
