@@ -1,6 +1,8 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{bootstrap_local_repo, resolve_session_repo_and_sync};
+use crate::server::repo_scope::{
+    bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
+};
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_meta;
@@ -24,10 +26,30 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
             return;
         }
         Err(err) => {
-            return ch.send_protocol_error(ServerError::with_detail(
+            return ch.send_protocol_error(map_repo_scope_error(err));
+        }
+    };
+
+    let docs = match load_docs(state, session, &repo_name, repo_id) {
+        Ok(docs) => docs,
+        Err(err) => {
+            tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
+            ch.send_protocol_error(ServerError::with_detail(
                 ServerErrorCode::RequestFailed,
-                err.to_string(),
+                format!("Failed to list docs: {}", err),
             ));
+            return;
+        }
+    };
+    let nodes = match load_nodes(state, session, &repo_name, repo_id) {
+        Ok(nodes) => nodes,
+        Err(err) => {
+            tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                format!("Failed to list nodes: {}", err),
+            ));
+            return;
         }
     };
 
@@ -35,38 +57,15 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
         name: repo_name.clone(),
         uuid: repo_id.to_string(),
     });
-
-    match load_docs(state, session, &repo_name, repo_id) {
-        Ok(docs) => {
-            ch.unicast(ServerMessage::DocList {
-                repo_id: Some(repo_id),
-                docs,
-            });
-            match load_nodes(state, session, &repo_name, repo_id) {
-                Ok(nodes) => {
-                    let delta = state.tree_manager.reset_from_nodes(repo_id, nodes);
-                    ch.unicast(ServerMessage::TreeUpdate {
-                        repo_id: Some(repo_id),
-                        delta,
-                    });
-                }
-                Err(err) => {
-                    tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
-                    ch.send_protocol_error(ServerError::with_detail(
-                        ServerErrorCode::RequestFailed,
-                        format!("Failed to list nodes: {}", err),
-                    ));
-                }
-            }
-        }
-        Err(err) => {
-            tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list docs: {}", err),
-            ));
-        }
-    }
+    ch.unicast(ServerMessage::DocList {
+        repo_id: Some(repo_id),
+        docs,
+    });
+    let delta = state.tree_manager.reset_from_nodes(repo_id, nodes);
+    ch.unicast(ServerMessage::TreeUpdate {
+        repo_id: Some(repo_id),
+        delta,
+    });
 }
 
 fn load_docs(
