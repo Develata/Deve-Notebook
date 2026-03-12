@@ -26,7 +26,7 @@ pub(super) fn sync_modified_pending(
     doc_id: DocId,
 ) -> Result<PendingSyncResult> {
     let file_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-    let disk_content = std::fs::read_to_string(&file_path).unwrap_or_default();
+    let disk_content = std::fs::read_to_string(&file_path)?;
     let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
     let current = repo.run_on_local_repo(repo_name, |db| pending_fs::get(db, repo_path))?;
     if rebuilt.content == disk_content {

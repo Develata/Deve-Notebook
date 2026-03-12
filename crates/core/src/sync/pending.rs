@@ -44,7 +44,7 @@ pub(super) fn upsert(
         String::new()
     } else {
         let file_path = repo.local_repo_workspace_path(repo_name, path)?;
-        let content = std::fs::read_to_string(&file_path).unwrap_or_default();
+        let content = std::fs::read_to_string(&file_path)?;
         pending_fs::content_hash(&content)
     };
     let doc_id = match doc_id_hint {
