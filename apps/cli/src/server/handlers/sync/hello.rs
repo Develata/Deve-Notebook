@@ -1,5 +1,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::handlers::listing;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::ServerMessage;
@@ -91,6 +92,7 @@ pub(super) async fn handle(
     });
 
     if session.is_browser_session() {
+        listing::handle_list_shadows(state, ch, Some(session)).await;
         return;
     }
 

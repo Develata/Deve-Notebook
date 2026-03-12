@@ -167,3 +167,40 @@ async fn browser_sync_hello_skips_sync_payload_messages() -> anyhow::Result<()> 
     }));
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    state
+        .repo
+        .ensure_shadow_repo_binding(&remote.peer_id(), repo_id)?;
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut uni_rx).await?;
+
+    assert!(
+        matches!(messages.first(), Some(ServerMessage::SyncHello { .. })),
+        "unexpected first message: {:?}",
+        messages.first()
+    );
+    let shadow_list = messages
+        .into_iter()
+        .find_map(|msg| match msg {
+            ServerMessage::ShadowList { shadows } => Some(shadows),
+            _ => None,
+        })
+        .expect("browser sync hello should refresh shadow list");
+    assert!(
+        !shadow_list.contains(&remote.peer_id().to_string()),
+        "shadow list should not contain self peer: {:?}",
+        shadow_list
+    );
+    Ok(())
+}
