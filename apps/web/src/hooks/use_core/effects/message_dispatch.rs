@@ -66,8 +66,11 @@ pub fn handle_message<F>(
                 signals.set_is_chat_streaming,
             );
         }
-        ServerMessage::SearchResults { results } => {
-            if !accepts_unscoped_update(signals) {
+        ServerMessage::SearchResults {
+            request_id,
+            results,
+        } => {
+            if !accepts_search_results(&request_id, signals) {
                 return;
             }
             signals.set_search_results.set(results);
@@ -190,9 +193,14 @@ fn accepts_unscoped_update(signals: CoreSignals) -> bool {
         && signals.pending_repo_switch.get_untracked().is_none()
 }
 
+fn accepts_search_results(request_id: &str, signals: CoreSignals) -> bool {
+    accepts_unscoped_update(signals)
+        && signals.search_request_id.get_untracked().as_deref() == Some(request_id)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::accepts_unscoped_update;
+    use super::{accepts_search_results, accepts_unscoped_update};
     use crate::api::ConnectionStatus;
     use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::state::init_signals;
@@ -218,5 +226,16 @@ mod tests {
             .set_pending_branch_switch
             .set(Some(PendingBranchTarget::Local));
         assert!(!accepts_unscoped_update(signals));
+    }
+
+    #[test]
+    fn rejects_search_results_when_request_id_is_stale() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        signals.set_search_request_id.set(Some("fresh".into()));
+        assert!(!accepts_search_results("stale", signals));
+        assert!(accepts_search_results("fresh", signals));
     }
 }

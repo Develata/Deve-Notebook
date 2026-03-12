@@ -25,7 +25,7 @@ pub enum ServerMessage {
     History { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, request_id: u64, ops: Vec<ConfirmedOp> },
     DocList { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, docs: Vec<(DocId, String)> },
     PluginResponse { req_id: String, result: Option<serde_json::Value>, error: Option<ServerError> },
-    SearchResults { results: Vec<(String, String, f32)> },
+    SearchResults { request_id: String, results: Vec<(String, String, f32)> },
     SyncModeStatus { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, mode: String },
     PendingOpsInfo { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, count: u32, previews: Vec<(String, String, String)> },
     MergeComplete { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, merged_count: u32 },

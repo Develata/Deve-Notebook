@@ -34,8 +34,12 @@ pub(super) async fn route_core(
         ClientMessage::ListRepos => {
             listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
         }
-        ClientMessage::Search { query, limit } => {
-            search::handle_search(state, ch, query, limit).await;
+        ClientMessage::Search {
+            request_id,
+            query,
+            limit,
+        } => {
+            search::handle_search(state, ch, request_id, query, limit).await;
         }
         ClientMessage::PluginCall {
             req_id,

@@ -85,8 +85,12 @@ pub fn use_core() -> CoreState {
         signals.staged_changes,
         signals.unstaged_changes,
     );
-    let misc_callbacks =
-        callbacks::create_misc_callbacks(&ws, signals.set_stats, signals.load_state);
+    let misc_callbacks = callbacks::create_misc_callbacks(
+        &ws,
+        signals.set_stats,
+        signals.load_state,
+        signals.set_search_request_id,
+    );
     let switch_callbacks = callbacks::create_switch_callbacks(
         &ws,
         SwitchScopeSignals {

@@ -64,6 +64,8 @@ pub struct CoreSignals {
     pub set_ai_mode: WriteSignal<String>,
 
     // 搜索
+    pub search_request_id: ReadSignal<Option<String>>,
+    pub set_search_request_id: WriteSignal<Option<String>>,
     pub search_results: ReadSignal<Vec<(String, String, f32)>>,
     pub set_search_results: WriteSignal<Vec<(String, String, f32)>>,
 

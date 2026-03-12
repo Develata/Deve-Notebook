@@ -77,6 +77,7 @@ pub enum ClientMessage {
         args: Vec<serde_json::Value>,
     },
     Search {
+        request_id: String,
         query: String,
         limit: u32,
     },

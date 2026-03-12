@@ -177,6 +177,7 @@ pub fn create_misc_callbacks(
     ws: &WsService,
     set_stats: WriteSignal<crate::editor::EditorStats>,
     load_state: ReadSignal<String>,
+    set_search_request_id: WriteSignal<Option<String>>,
 ) -> MiscCallbacks {
     let on_stats = Callback::new(move |s| set_stats.set(s));
 
@@ -203,7 +204,13 @@ pub fn create_misc_callbacks(
             leptos::logging::warn!("Search disabled while loading");
             return;
         }
-        ws_search.send(ClientMessage::Search { query, limit: 50 });
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_search_request_id.set(Some(request_id.clone()));
+        ws_search.send(ClientMessage::Search {
+            request_id,
+            query,
+            limit: 50,
+        });
     });
 
     MiscCallbacks {

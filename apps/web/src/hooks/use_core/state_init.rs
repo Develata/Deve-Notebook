@@ -32,6 +32,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (chat_messages, set_chat_messages) = signal(Vec::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
     let (ai_mode, set_ai_mode) = signal("agent-bridge".to_string());
+    let (search_request_id, set_search_request_id) = signal(None::<String>);
     let (search_results, set_search_results) = signal(Vec::new());
     let (load_state, set_load_state) = signal("ready".to_string());
     let (load_progress, set_load_progress) = signal((0usize, 0usize));
@@ -86,6 +87,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_is_chat_streaming,
         ai_mode,
         set_ai_mode,
+        search_request_id,
+        set_search_request_id,
         search_results,
         set_search_results,
         load_state,

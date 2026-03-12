@@ -11,7 +11,13 @@ use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 #[cfg(feature = "search")]
-pub async fn handle_search(state: &Arc<AppState>, ch: &DualChannel, query: String, limit: u32) {
+pub async fn handle_search(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    request_id: String,
+    query: String,
+    limit: u32,
+) {
     if let Some(ref search_service) = state.search_service {
         match search_service.search(&query, limit as usize) {
             Ok(results) => {
@@ -20,7 +26,10 @@ pub async fn handle_search(state: &Arc<AppState>, ch: &DualChannel, query: Strin
                     .map(|r| (r.doc_id, r.path, r.score))
                     .collect();
                 // 单播搜索结果给请求者
-                ch.unicast(ServerMessage::SearchResults { results });
+                ch.unicast(ServerMessage::SearchResults {
+                    request_id,
+                    results,
+                });
             }
             Err(e) => {
                 ch.send_protocol_error(ServerError::with_detail(
@@ -38,7 +47,13 @@ pub async fn handle_search(state: &Arc<AppState>, ch: &DualChannel, query: Strin
 }
 
 #[cfg(not(feature = "search"))]
-pub async fn handle_search(_state: &Arc<AppState>, ch: &DualChannel, _query: String, _limit: u32) {
+pub async fn handle_search(
+    _state: &Arc<AppState>,
+    ch: &DualChannel,
+    _request_id: String,
+    _query: String,
+    _limit: u32,
+) {
     ch.send_protocol_error(ServerError::with_detail(
         ServerErrorCode::RequestFailed,
         "Search feature not enabled",
