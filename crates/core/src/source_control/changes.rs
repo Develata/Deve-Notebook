@@ -9,7 +9,6 @@
 
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
-use crate::source_control::snapshot_paths::SNAPSHOT_PATHS_TABLE;
 use anyhow::Result;
 use redb::{Database, TableDefinition};
 
@@ -22,7 +21,6 @@ pub fn init_table(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
     {
         let _ = write_txn.open_table(SNAPSHOTS_TABLE)?;
-        let _ = write_txn.open_table(SNAPSHOT_PATHS_TABLE)?;
     }
     write_txn.commit()?;
     Ok(())
@@ -33,14 +31,12 @@ pub fn init_table(db: &Database) -> Result<()> {
 /// **参数**:
 /// - `doc_id`: 文档 ID
 /// - `content`: 文档当前内容
-pub fn save_snapshot(db: &Database, doc_id: DocId, path: &str, content: &str) -> Result<()> {
+pub fn save_snapshot(db: &Database, doc_id: DocId, content: &str) -> Result<()> {
     let doc_id_str = doc_id.to_string();
     let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(SNAPSHOTS_TABLE)?;
         table.insert(doc_id_str.as_str(), content)?;
-        let mut paths_table = write_txn.open_table(SNAPSHOT_PATHS_TABLE)?;
-        paths_table.insert(doc_id_str.as_str(), path)?;
     }
     write_txn.commit()?;
     tracing::debug!("Saved snapshot for doc: {}", doc_id);
@@ -89,8 +85,6 @@ pub fn clear_snapshots(db: &Database) -> Result<()> {
         // Redb supports delete_table
         write_txn.delete_table(SNAPSHOTS_TABLE)?;
         let _ = write_txn.open_table(SNAPSHOTS_TABLE)?;
-        write_txn.delete_table(SNAPSHOT_PATHS_TABLE)?;
-        let _ = write_txn.open_table(SNAPSHOT_PATHS_TABLE)?;
     }
     write_txn.commit()?;
     tracing::info!("Cleared all snapshots");
@@ -104,8 +98,6 @@ pub fn remove_snapshot(db: &Database, doc_id: DocId) -> Result<()> {
     {
         let mut table = write_txn.open_table(SNAPSHOTS_TABLE)?;
         table.remove(doc_id_str.as_str())?;
-        let mut paths_table = write_txn.open_table(SNAPSHOT_PATHS_TABLE)?;
-        paths_table.remove(doc_id_str.as_str())?;
     }
     write_txn.commit()?;
     tracing::debug!("Removed snapshot for doc: {}", doc_id);

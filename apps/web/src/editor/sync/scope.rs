@@ -9,7 +9,7 @@ pub fn matches_scope(
     repo_id: Option<RepoId>,
     branch: Option<PeerId>,
 ) -> bool {
-    if pending_repo_switch.is_some() {
+    if pending_repo_switch.is_some() || pending_branch_switch.is_some() {
         return false;
     }
     let expected_branch = pending_branch_switch
@@ -104,9 +104,22 @@ mod tests {
     }
 
     #[test]
+    fn matches_scope_rejects_messages_while_branch_switch_pending() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(!matches_scope(
+            Some(repo_id.to_string()),
+            None,
+            Some(PeerId::new("peer-a")),
+            Some(PendingBranchTarget::Local),
+            Some(repo_id),
+            None,
+        ));
+    }
+
+    #[test]
     fn matches_scope_prefers_pending_branch_target() {
         let repo_id = uuid::Uuid::new_v4();
-        assert!(matches_scope(
+        assert!(!matches_scope(
             Some(repo_id.to_string()),
             None,
             Some(PeerId::new("peer-a")),

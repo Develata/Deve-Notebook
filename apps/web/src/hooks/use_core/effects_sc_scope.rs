@@ -25,6 +25,9 @@ pub(crate) fn matches_current_scope(
     pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pending_repo_switch: ReadSignal<Option<String>>,
 ) -> bool {
+    if pending_branch_switch.get_untracked().is_some() {
+        return false;
+    }
     matches_current_repo(
         repo_id,
         current_repo_id,
@@ -35,5 +38,53 @@ pub(crate) fn matches_current_scope(
             branch.as_ref().map(|peer| peer.as_str()) == Some(peer_id.as_str())
         }
         None => active_branch.get_untracked() == *branch,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_current_scope;
+    use crate::hooks::use_core::PendingBranchTarget;
+    use deve_core::models::PeerId;
+    use leptos::prelude::*;
+
+    #[test]
+    fn rejects_sc_scope_messages_while_branch_switch_pending() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let repo_id = uuid::Uuid::new_v4();
+        let (current_repo_id, _) = signal(Some(repo_id.to_string()));
+        let (active_branch, _) = signal(None);
+        let (pending_branch_switch, _) = signal(Some(PendingBranchTarget::Local));
+        let (pending_repo_switch, _) = signal(None);
+
+        assert!(!matches_current_scope(
+            &Some(repo_id),
+            &None,
+            current_repo_id,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+        ));
+    }
+
+    #[test]
+    fn accepts_sc_scope_messages_only_after_branch_switch_settles() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let repo_id = uuid::Uuid::new_v4();
+        let (current_repo_id, _) = signal(Some(repo_id.to_string()));
+        let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
+        let (pending_branch_switch, _) = signal(None);
+        let (pending_repo_switch, _) = signal(None);
+
+        assert!(matches_current_scope(
+            &Some(repo_id),
+            &Some(PeerId::new("peer-a")),
+            current_repo_id,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+        ));
     }
 }

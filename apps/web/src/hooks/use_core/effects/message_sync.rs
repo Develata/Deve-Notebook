@@ -49,6 +49,7 @@ fn should_accept_sync_hello(
     repo_id: &str,
 ) -> bool {
     pending_repo_switch.is_none()
+        && pending_branch_switch.is_none()
         && peer_branch_matches_scope(&None, active_branch, pending_branch_switch)
         && current_repo_id.as_deref() == Some(repo_id)
 }
@@ -105,6 +106,18 @@ mod tests {
             Some(crate::hooks::use_core::PendingBranchTarget::Shadow(
                 "peer-a".into(),
             )),
+            None,
+            &repo_id,
+        ));
+    }
+
+    #[test]
+    fn ignores_sync_hello_while_pending_local_switch() {
+        let repo_id = uuid::Uuid::new_v4().to_string();
+        assert!(!should_accept_sync_hello(
+            Some(repo_id.clone()),
+            Some(PeerId::new("peer-a")),
+            Some(crate::hooks::use_core::PendingBranchTarget::Local),
             None,
             &repo_id,
         ));

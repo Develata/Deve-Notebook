@@ -30,8 +30,6 @@ pub mod conflict;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pending_fs;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod snapshot_paths;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod staging;
 
 // 重新导出常用类型

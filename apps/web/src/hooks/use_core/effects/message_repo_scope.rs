@@ -15,6 +15,7 @@ pub fn matches_repo_scope(
     pending_repo_switch: Option<String>,
 ) -> bool {
     pending_repo_switch.is_none()
+        && pending_branch_switch.is_none()
         && matches_current_repo(repo_id, current_repo_id, None)
         && peer_branch_matches_scope(branch, active_branch, pending_branch_switch)
 }
@@ -43,6 +44,7 @@ pub fn accepts_write_ready(
     pending_repo_switch: Option<String>,
 ) -> bool {
     pending_repo_switch.is_none()
+        && pending_branch_switch.is_none()
         && peer_branch_matches_scope(branch, active_branch.clone(), pending_branch_switch)
         && active_branch.is_none()
         && current_repo_id.as_deref() == Some(repo_id)
@@ -87,6 +89,22 @@ mod tests {
     }
 
     #[test]
+    fn rejects_repo_scoped_messages_while_branch_switch_pending() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let repo_id = uuid::Uuid::new_v4();
+        let (current_repo_id, _) = signal(Some(repo_id.to_string()));
+        assert!(!matches_repo_scope(
+            &Some(repo_id),
+            &Some(PeerId::new("peer-a")),
+            current_repo_id,
+            None,
+            Some(PendingBranchTarget::Shadow("peer-a".into())),
+            None,
+        ));
+    }
+
+    #[test]
     fn rejects_write_ready_while_repo_switch_pending() {
         let repo_id = uuid::Uuid::new_v4().to_string();
         assert!(!accepts_write_ready(
@@ -96,6 +114,19 @@ mod tests {
             None,
             Some(PendingBranchTarget::Local),
             Some("default".into()),
+        ));
+    }
+
+    #[test]
+    fn rejects_write_ready_while_branch_switch_pending() {
+        let repo_id = uuid::Uuid::new_v4().to_string();
+        assert!(!accepts_write_ready(
+            &repo_id,
+            &None,
+            Some(repo_id.clone()),
+            None,
+            Some(PendingBranchTarget::Local),
+            None,
         ));
     }
 

@@ -35,7 +35,7 @@ fn seed_doc(repo: &RepoManager, path: &str, committed: &str) -> deve_core::model
     )
     .expect("append committed content");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        changes::save_snapshot(db, doc_id, path, committed)
+        changes::save_snapshot(db, doc_id, committed)
     })
     .expect("save snapshot");
     doc_id

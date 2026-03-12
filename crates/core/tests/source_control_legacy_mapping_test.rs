@@ -87,14 +87,14 @@ fn discard_pending_added_cleans_legacy_mapping() {
 }
 
 #[test]
-fn workdir_diff_does_not_fallback_to_snapshot_paths_for_canonical_identity() {
+fn workdir_diff_does_not_fallback_to_legacy_snapshot_path_index() {
     let (dir, repo) = new_repo();
     let doc_id = seed_file(&repo, "notes/a.md", "hello");
     let file = dir.path().join("vault").join("default").join("notes/a.md");
     std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
     std::fs::write(&file, "workspace hello").expect("write workspace");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        changes::save_snapshot(db, doc_id, "notes/a.md", "hello")?;
+        changes::save_snapshot(db, doc_id, "hello")?;
         let write_txn = db.begin_write()?;
         {
             let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;

@@ -25,7 +25,7 @@ impl RepoManager {
         let patch = reconcile::compute_reconcile_patch(&entries, &disk_content)?;
         reconcile::append_patch_in_local_repo(self, repo_name, doc_id, "local_commit", &patch)?;
         self.run_on_local_repo(repo_name, |db| {
-            changes::save_snapshot(db, doc_id, normalized_path, &disk_content)
+            changes::save_snapshot(db, doc_id, &disk_content)
         })?;
         self.bind_workspace_inode_in_local_repo(repo_name, normalized_path, doc_id)
     }
