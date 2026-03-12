@@ -99,23 +99,31 @@ pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> St
                 })
                 .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
         })
-        .or_else(|| {
-            entries.iter().find(|entry| {
-                normalized(&entry.path) == path && entry.status != ChangeStatus::Deleted
-            })
-        })
-        .or_else(|| {
-            entries.iter().find(|entry| {
-                entry.status != ChangeStatus::Deleted
-                    && entry
-                        .renamed_from
-                        .as_ref()
-                        .is_some_and(|old_path| normalized(old_path) == path)
-            })
-        })
-        .or_else(|| entries.iter().find(|entry| normalized(&entry.path) == path))
+        .or_else(|| resolve_without_doc_id(entries, &path))
         .map(|entry| normalized(&entry.path))
         .unwrap_or(path)
+}
+
+fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {
+    let renamed_successor = entries.iter().find(|entry| {
+        entry.status != ChangeStatus::Deleted
+            && entry
+                .renamed_from
+                .as_ref()
+                .is_some_and(|old_path| normalized(old_path) == path)
+    });
+    let path_reused_after_delete = renamed_successor.is_some()
+        && entries
+            .iter()
+            .any(|entry| normalized(&entry.path) == path && entry.status == ChangeStatus::Deleted);
+    if path_reused_after_delete {
+        return renamed_successor;
+    }
+    entries
+        .iter()
+        .find(|entry| normalized(&entry.path) == path && entry.status != ChangeStatus::Deleted)
+        .or(renamed_successor)
+        .or_else(|| entries.iter().find(|entry| normalized(&entry.path) == path))
 }
 
 fn normalized(path: &str) -> String {
@@ -203,6 +211,40 @@ mod tests {
                     doc_id: Some(doc_id),
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn resolve_target_prefers_rename_successor_over_reused_old_path() {
+        let old_doc = DocId(Uuid::nil());
+        let new_doc = DocId(Uuid::from_u128(1));
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(old_doc),
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(old_doc),
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(new_doc),
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
+
+        assert_eq!(
+            resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
+            "notes/new.md"
         );
     }
 }
