@@ -57,7 +57,7 @@ pub(super) async fn handle_dir_rename(
         {
             tracing::error!("广播父目录失败: {:?}", e);
         }
-        let delta = state.tree_manager.with_tree_mut(scope.repo_id, |tm| {
+        let delta = state.tree_manager.with_tree_mut(scope.repo_id, None, |tm| {
             tm.update_node(
                 node_id,
                 meta.parent_id,
@@ -67,6 +67,7 @@ pub(super) async fn handle_dir_rename(
         });
         ch.unicast(ServerMessage::TreeUpdate {
             repo_id: Some(scope.repo_id),
+            branch: None,
             delta,
         });
     }

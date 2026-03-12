@@ -104,7 +104,7 @@ pub(super) fn broadcast_file_tree_update(
         {
             tracing::error!("广播父目录失败: {:?}", e);
         }
-        let delta = state.tree_manager.with_tree_mut(scope.repo_id, |tm| {
+        let delta = state.tree_manager.with_tree_mut(scope.repo_id, None, |tm| {
             tm.add_file(
                 node_id,
                 meta.path.clone(),
@@ -115,6 +115,7 @@ pub(super) fn broadcast_file_tree_update(
         });
         ch.unicast(ServerMessage::TreeUpdate {
             repo_id: Some(scope.repo_id),
+            branch: None,
             delta,
         });
     }

@@ -20,8 +20,17 @@ pub fn handle_message<F>(
     F: Fn(),
 {
     match msg {
-        ServerMessage::DocList { repo_id, docs } => {
-            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+        ServerMessage::DocList {
+            repo_id,
+            branch,
+            docs,
+        } => {
+            if !effects_sc::matches_current_scope(
+                &repo_id,
+                &branch,
+                signals.current_repo_id,
+                signals.active_branch,
+            ) {
                 return;
             }
             effects_msg::handle_doc_list(docs, signals.set_docs);
@@ -167,8 +176,17 @@ pub fn handle_message<F>(
                 ws.mark_writer_ready(repo_id, peer_id.as_str());
             }
         }
-        ServerMessage::TreeUpdate { repo_id, delta } => {
-            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+        ServerMessage::TreeUpdate {
+            repo_id,
+            branch,
+            delta,
+        } => {
+            if !effects_sc::matches_current_scope(
+                &repo_id,
+                &branch,
+                signals.current_repo_id,
+                signals.active_branch,
+            ) {
                 return;
             }
             signals

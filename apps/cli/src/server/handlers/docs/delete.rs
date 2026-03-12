@@ -98,9 +98,10 @@ pub async fn handle_delete_doc(
     // 4. 更新 TreeManager 并广播 Delta
     let delta = state
         .tree_manager
-        .with_tree_mut(scope.repo_id, |tm| tm.remove(target.node_id));
+        .with_tree_mut(scope.repo_id, None, |tm| tm.remove(target.node_id));
     ch.unicast(ServerMessage::TreeUpdate {
         repo_id: Some(scope.repo_id),
+        branch: None,
         delta,
     });
 

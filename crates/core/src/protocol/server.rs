@@ -77,6 +77,8 @@ pub enum ServerMessage {
     DocList {
         #[serde(default)]
         repo_id: Option<RepoId>,
+        #[serde(default)]
+        branch: Option<PeerId>,
         docs: Vec<(DocId, String)>,
     },
     PluginResponse {
@@ -179,6 +181,8 @@ pub enum ServerMessage {
     TreeUpdate {
         #[serde(default)]
         repo_id: Option<RepoId>,
+        #[serde(default)]
+        branch: Option<PeerId>,
         delta: crate::tree::TreeDelta,
     },
     ProtocolError {

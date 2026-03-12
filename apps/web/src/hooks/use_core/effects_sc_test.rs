@@ -1,0 +1,82 @@
+use super::{clear_repo_scoped_state, matches_current_repo, matches_current_scope};
+use crate::hooks::use_core::diff_session::DiffSessionWire;
+use deve_core::models::PeerId;
+use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use leptos::prelude::*;
+
+#[test]
+fn ignores_repo_scoped_messages_before_repo_scope_is_ready() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (current_repo_id, _) = signal(None::<String>);
+    assert!(!matches_current_repo(
+        &Some(uuid::Uuid::new_v4()),
+        current_repo_id
+    ));
+    assert!(matches_current_repo(&None, current_repo_id));
+}
+
+#[test]
+fn ignores_repo_scoped_messages_from_other_branch() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let repo_id = uuid::Uuid::new_v4();
+    let (current_repo_id, _) = signal(Some(repo_id.to_string()));
+    let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
+    assert!(!matches_current_scope(
+        &Some(repo_id),
+        &Some(PeerId::new("peer-b")),
+        current_repo_id,
+        active_branch,
+    ));
+}
+
+#[test]
+fn clear_repo_scoped_state_resets_source_control_view() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let entry = ChangeEntry {
+        path: "notes/a.md".into(),
+        renamed_from: None,
+        doc_id: None,
+        status: deve_core::source_control::ChangeStatus::Modified,
+        has_conflict: false,
+    };
+    let (staged, set_staged) = signal(vec![entry.clone()]);
+    let (unstaged, set_unstaged) = signal(vec![entry]);
+    let (history, set_history) = signal(vec![CommitInfo {
+        id: "c1".into(),
+        parent_id: None,
+        message: "msg".into(),
+        timestamp: 1,
+        doc_count: 1,
+        ledger_seq: 1,
+    }]);
+    let (diff, set_diff) = signal(Some(DiffSessionWire {
+        path: "a.md".into(),
+        old_content: "old".into(),
+        new_content: "new".into(),
+        opened_at_ms: 1,
+    }));
+    let (commit_diff, set_commit_diff) = signal(vec![CommitFileDiff {
+        path: "notes/a.md".into(),
+        status: deve_core::source_control::ChangeStatus::Modified,
+        previous_path: None,
+        old_content: "old".into(),
+        new_content: "new".into(),
+    }]);
+
+    clear_repo_scoped_state(
+        set_staged,
+        set_unstaged,
+        set_history,
+        set_diff,
+        set_commit_diff,
+    );
+
+    assert!(staged.get_untracked().is_empty());
+    assert!(unstaged.get_untracked().is_empty());
+    assert!(history.get_untracked().is_empty());
+    assert_eq!(diff.get_untracked(), None);
+    assert!(commit_diff.get_untracked().is_empty());
+}

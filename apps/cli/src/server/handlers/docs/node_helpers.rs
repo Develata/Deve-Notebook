@@ -21,13 +21,14 @@ pub fn broadcast_dir_chain(
         .run_on_local_repo(repo_name, |db| collect_dir_chain(db, node_id))?;
 
     for (id, meta) in chain.into_iter().rev() {
-        let delta = state.tree_manager.with_tree_mut(repo_id, |tm| {
+        let delta = state.tree_manager.with_tree_mut(repo_id, None, |tm| {
             (!tm.has_node(id))
                 .then(|| tm.add_folder(id, meta.path.clone(), meta.parent_id, meta.name.clone()))
         });
         if let Some(delta) = delta {
             ch.unicast(ServerMessage::TreeUpdate {
                 repo_id: Some(repo_id),
+                branch: None,
                 delta,
             });
         }

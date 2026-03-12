@@ -59,11 +59,15 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
     });
     ch.unicast(ServerMessage::DocList {
         repo_id: Some(repo_id),
+        branch: session.active_branch.clone(),
         docs,
     });
-    let delta = state.tree_manager.reset_from_nodes(repo_id, nodes);
+    let delta = state
+        .tree_manager
+        .reset_from_nodes(repo_id, session.active_branch.as_ref(), nodes);
     ch.unicast(ServerMessage::TreeUpdate {
         repo_id: Some(repo_id),
+        branch: session.active_branch.clone(),
         delta,
     });
 }

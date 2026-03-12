@@ -181,6 +181,7 @@ impl<'a> FsEventHandler<'a> {
         let docs = self.repo.list_local_docs(Some(self.repo_name))?;
         Ok(vec![ServerMessage::DocList {
             repo_id: Some(self.repo_id),
+            branch: None,
             docs,
         }])
     }
