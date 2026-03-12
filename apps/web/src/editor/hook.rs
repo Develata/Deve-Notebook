@@ -12,7 +12,7 @@
 
 use super::EditorStats;
 use super::delta_input::{DeltaInputCtx, build_on_delta};
-use super::ffi::{applyRemoteContent, destroyEditor, set_read_only, setupCodeMirror};
+use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
@@ -68,9 +68,7 @@ pub fn use_editor(
             return;
         }
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
-        applyRemoteContent("");
         set_read_only(true);
-        set_content.set(String::new());
         set_local_version.set(0);
         set_open_request_id.set(request_id);
         set_history.set(Vec::new());
