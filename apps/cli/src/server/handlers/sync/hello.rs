@@ -67,7 +67,13 @@ pub(super) async fn handle(
     session.bind_repo(repo_id);
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
-    let vec_bytes = serde_json::to_vec(&local_vector).unwrap_or_default();
+    let vec_bytes = match serde_json::to_vec(&local_vector) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            errors::request_failed(ch, format!("Failed to encode local vector: {}", err));
+            return;
+        }
+    };
     let mut msg = Vec::new();
     msg.extend_from_slice(b"deve-handshake");
     msg.extend_from_slice(local_peer_id.as_str().as_bytes());

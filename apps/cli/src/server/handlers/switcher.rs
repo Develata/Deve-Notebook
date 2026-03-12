@@ -75,15 +75,7 @@ pub async fn handle_switch_branch(
 
     session.clear_sync_binding();
     session.switch_branch(final_branch.clone());
-    tracing::info!(
-        "Session ActiveBranch updated to: {:?}",
-        session.active_branch
-    );
-
-    ch.unicast(ServerMessage::BranchSwitched {
-        peer_id: final_branch.clone(),
-        success: true,
-    });
+    tracing::info!("Session ActiveBranch updated to: {:?}", session.active_branch);
 
     let target_repo = if let Some(forced) = force_repo_switch {
         Some(forced)
@@ -144,6 +136,11 @@ pub async fn handle_switch_branch(
                 Err(e) => {
                     tracing::error!("Failed to lock database: {:?}", e);
                     session.clear_active_db();
+                    ch.send_protocol_error(ServerError::with_detail(
+                        ServerErrorCode::StorageDbLocked,
+                        format!("Failed to lock database: {}", e),
+                    ));
+                    return;
                 }
             }
         } else {
@@ -162,6 +159,10 @@ pub async fn handle_switch_branch(
         session.clear_active_repo();
     }
 
+    ch.unicast(ServerMessage::BranchSwitched {
+        peer_id: final_branch.clone(),
+        success: true,
+    });
     listing::handle_list_docs(state, ch, session).await;
     listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
 }
@@ -172,11 +173,7 @@ pub async fn handle_switch_repo(
     session: &mut WsSession,
     name: String,
 ) {
-    tracing::info!(
-        "Handle SwitchRepo request: Name='{}', CurrentBranch={:?}",
-        name,
-        session.active_branch
-    );
+    tracing::info!("Handle SwitchRepo request: Name='{}', CurrentBranch={:?}", name, session.active_branch);
 
     let branch = session.active_branch.clone();
     let repos = match state.repo.list_repos(branch.as_ref()) {
@@ -213,6 +210,11 @@ pub async fn handle_switch_repo(
                 Err(e) => {
                     tracing::error!("Failed to lock database: {:?}", e);
                     session.clear_active_db();
+                    ch.send_protocol_error(ServerError::with_detail(
+                        ServerErrorCode::StorageDbLocked,
+                        format!("Failed to lock database: {}", e),
+                    ));
+                    return;
                 }
             }
         } else {
