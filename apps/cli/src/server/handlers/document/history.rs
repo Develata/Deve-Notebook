@@ -12,20 +12,7 @@ pub(super) async fn handle_request_history(
     doc_id: DocId,
     request_id: u64,
 ) {
-    let scope = match resolve_session_repo(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                err.to_string(),
-            ));
-            return;
-        }
-    };
-    let ops = match state
-        .repo
-        .run_on_local_repo(&scope.repo_name, |db| confirmed::load_doc_ops(db, doc_id))
-    {
+    let ops = match load_doc_history(state, session, doc_id) {
         Ok(ops) => ops,
         Err(err) => {
             ch.send_protocol_error(ServerError::with_detail(
@@ -40,4 +27,18 @@ pub(super) async fn handle_request_history(
         request_id,
         ops,
     });
+}
+
+fn load_doc_history(
+    state: &Arc<AppState>,
+    session: &WsSession,
+    doc_id: DocId,
+) -> anyhow::Result<Vec<deve_core::protocol::ConfirmedOp>> {
+    if let Some(handle) = session.get_active_db() {
+        return confirmed::load_doc_ops(&handle.db, doc_id);
+    }
+    let scope = resolve_session_repo(state, session)?;
+    state.repo.run_on_local_repo(&scope.repo_name, |db| {
+        confirmed::load_doc_ops(db, doc_id)
+    })
 }
