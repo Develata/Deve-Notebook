@@ -78,9 +78,13 @@ pub enum ServerMessage {
         results: Vec<(String, String, f32)>,
     },
     SyncModeStatus {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         mode: String,
     },
     PendingOpsInfo {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         count: u32,
         previews: Vec<(String, String, String)>,
     },
@@ -89,7 +93,10 @@ pub enum ServerMessage {
         repo_id: Option<RepoId>,
         merged_count: u32,
     },
-    PendingDiscarded,
+    PendingDiscarded {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
+    },
     ShadowList {
         shadows: Vec<String>,
     },

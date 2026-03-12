@@ -18,6 +18,7 @@ pub(super) async fn handle_get_sync_mode(
         return;
     };
     ch.unicast(ServerMessage::SyncModeStatus {
+        repo_id: Some(repo_id),
         mode: sync_mode_label(engine.sync_mode()),
     });
 }
@@ -42,6 +43,7 @@ pub(super) async fn handle_set_sync_mode(
     engine.set_sync_mode(new_mode);
     tracing::info!("SetSyncMode: {:?}", new_mode);
     ch.unicast(ServerMessage::SyncModeStatus {
+        repo_id: Some(repo_id),
         mode: sync_mode_label(new_mode),
     });
 }
@@ -68,6 +70,7 @@ pub(super) async fn handle_get_pending_ops(
         Vec::new()
     };
     ch.unicast(ServerMessage::PendingOpsInfo {
+        repo_id: Some(repo_id),
         count: pending_count as u32,
         previews,
     });
@@ -112,5 +115,7 @@ pub(super) async fn handle_discard_pending(
     };
     engine.clear_pending();
     tracing::info!("Discarded all pending operations");
-    ch.unicast(ServerMessage::PendingDiscarded);
+    ch.unicast(ServerMessage::PendingDiscarded {
+        repo_id: Some(repo_id),
+    });
 }

@@ -51,8 +51,20 @@ pub fn handle_message<F>(
             signals.set_is_chat_streaming,
         ),
         ServerMessage::SearchResults { results } => signals.set_search_results.set(results),
-        ServerMessage::SyncModeStatus { mode } => signals.set_sync_mode.set(mode),
-        ServerMessage::PendingOpsInfo { count, previews } => {
+        ServerMessage::SyncModeStatus { repo_id, mode } => {
+            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+                return;
+            }
+            signals.set_sync_mode.set(mode);
+        }
+        ServerMessage::PendingOpsInfo {
+            repo_id,
+            count,
+            previews,
+        } => {
+            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+                return;
+            }
             signals.set_pending_ops_count.set(count);
             signals.set_pending_ops_previews.set(previews);
         }
@@ -67,7 +79,10 @@ pub fn handle_message<F>(
             signals.set_pending_ops_count.set(0);
             signals.set_pending_ops_previews.set(vec![]);
         }
-        ServerMessage::PendingDiscarded => {
+        ServerMessage::PendingDiscarded { repo_id } => {
+            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+                return;
+            }
             leptos::logging::log!("待处理操作已丢弃");
             signals.set_pending_ops_count.set(0);
             signals.set_pending_ops_previews.set(vec![]);
