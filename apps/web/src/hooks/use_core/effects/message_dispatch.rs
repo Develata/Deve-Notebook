@@ -10,7 +10,9 @@ use super::super::pending;
 use super::super::state::CoreSignals;
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
-use super::message_scope::{repo_list_matches_scope, string_branch_matches_scope};
+use super::message_scope::{
+    repo_list_matches_scope, shadow_list_matches_scope, string_branch_matches_scope,
+};
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
 pub fn handle_message<F>(
@@ -100,7 +102,14 @@ pub fn handle_message<F>(
             signals.set_pending_ops_count.set(0);
             signals.set_pending_ops_previews.set(vec![]);
         }
-        ServerMessage::ShadowList { shadows } => signals.set_shadow_repos.set(shadows),
+        ServerMessage::ShadowList { shadows } => {
+            if shadow_list_matches_scope(
+                signals.pending_branch_switch.get_untracked(),
+                signals.pending_repo_switch.get_untracked(),
+            ) {
+                signals.set_shadow_repos.set(shadows);
+            }
+        }
         ServerMessage::RepoList { branch, repos } => {
             if repo_list_matches_scope(
                 branch,
@@ -137,6 +146,7 @@ pub fn handle_message<F>(
                     signals.set_diff_content,
                     signals.set_commit_diff_result,
                 );
+                request_shadow_list(ws);
             }
         }
         ServerMessage::RepoSwitched { branch, name, uuid } => {
@@ -173,6 +183,7 @@ pub fn handle_message<F>(
                     signals.set_commit_diff_result,
                 );
                 request_repo_sync_state(ws);
+                request_shadow_list(ws);
             }
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
@@ -228,4 +239,8 @@ fn clear_merge_state(signals: CoreSignals) {
 fn request_repo_sync_state(ws: &WsService) {
     ws.send(ClientMessage::GetSyncMode);
     ws.send(ClientMessage::GetPendingOps);
+}
+
+fn request_shadow_list(ws: &WsService) {
+    ws.send(ClientMessage::ListShadows);
 }

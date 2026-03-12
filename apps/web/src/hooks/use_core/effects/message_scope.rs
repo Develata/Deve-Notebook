@@ -27,6 +27,13 @@ pub fn repo_list_matches_scope(
         && branch == expected_branch_string(active_branch, pending_branch_switch)
 }
 
+pub fn shadow_list_matches_scope(
+    pending_branch_switch: Option<PendingBranchTarget>,
+    pending_repo_switch: Option<String>,
+) -> bool {
+    pending_branch_switch.is_none() && pending_repo_switch.is_none()
+}
+
 fn expected_branch_string(
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
@@ -48,7 +55,10 @@ fn expected_peer_branch(
 
 #[cfg(test)]
 mod tests {
-    use super::{peer_branch_matches_scope, repo_list_matches_scope, string_branch_matches_scope};
+    use super::{
+        peer_branch_matches_scope, repo_list_matches_scope, shadow_list_matches_scope,
+        string_branch_matches_scope,
+    };
     use crate::hooks::use_core::PendingBranchTarget;
     use deve_core::models::PeerId;
 
@@ -92,6 +102,16 @@ mod tests {
             None,
             Some("default".into()),
         ));
+    }
+
+    #[test]
+    fn shadow_list_rejects_messages_while_switch_pending() {
+        assert!(!shadow_list_matches_scope(
+            Some(PendingBranchTarget::Shadow("peer-a".into())),
+            None,
+        ));
+        assert!(!shadow_list_matches_scope(None, Some("default".into())));
+        assert!(shadow_list_matches_scope(None, None));
     }
 
     #[test]
