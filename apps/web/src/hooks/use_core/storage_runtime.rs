@@ -109,7 +109,13 @@ pub fn init_storage_runtime(
                 }
             };
 
-            let metadata = load_repo_metadata(&repo_id).await.unwrap_or_default();
+            let metadata = match load_repo_metadata(&repo_id).await {
+                Ok(metadata) => metadata,
+                Err(err) => {
+                    leptos::logging::warn!("加载 repo 元数据失败 {}: {}", repo_id, err);
+                    Default::default()
+                }
+            };
 
             // 检查 repo 是否已变更
             if repo_scope(current_repo_id.get_untracked()).as_deref() != Some(repo_id.as_str()) {

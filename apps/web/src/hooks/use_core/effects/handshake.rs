@@ -97,7 +97,13 @@ pub fn setup(
 
             leptos::logging::log!("已连接! 发送 SyncHello...");
             let sorted_map: BTreeMap<_, _> = vector.iter().collect();
-            let vec_bytes = serde_json::to_vec(&sorted_map).unwrap_or_default();
+            let vec_bytes = match serde_json::to_vec(&sorted_map) {
+                Ok(bytes) => bytes,
+                Err(err) => {
+                    leptos::logging::error!("序列化握手向量失败: {}", err);
+                    return;
+                }
+            };
             let mut msg = Vec::new();
             msg.extend_from_slice(b"deve-handshake");
             msg.extend_from_slice(identity.peer_id.as_bytes());
@@ -108,8 +114,14 @@ pub fn setup(
                     let peer_id = PeerId::new(&identity.peer_id);
                     match uuid::Uuid::parse_str(&identity.repo_id) {
                         Ok(repo_id) => {
-                            let vector_json = serde_json::to_string(&vector).unwrap_or_default();
-                            let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
+                            match serde_json::to_string(&vector) {
+                                Ok(vector_json) => {
+                                    let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
+                                }
+                                Err(err) => {
+                                    leptos::logging::warn!("保存握手向量失败: {}", err);
+                                }
+                            }
                             let _ = note_handshake(&identity.repo_id).await;
                             let writer_peer_id = peer_id.clone();
                             ws.send(ClientMessage::SyncHello {

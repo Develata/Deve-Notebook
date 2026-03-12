@@ -22,8 +22,12 @@ pub fn handle_sync_hello(
         signals.set_handshake_ready.set(true);
     }
     spawn_local(async move {
-        let vector_json = serde_json::to_string(&vector).unwrap_or_default();
-        let _ = save_repo_vector(&repo_id, &vector_json).await;
+        match serde_json::to_string(&vector) {
+            Ok(vector_json) => {
+                let _ = save_repo_vector(&repo_id, &vector_json).await;
+            }
+            Err(err) => leptos::logging::warn!("保存 repo 向量失败: {}", err),
+        }
         let _ = note_handshake(&repo_id).await;
     });
 }
