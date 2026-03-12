@@ -23,7 +23,10 @@ pub async fn handle_discard_file(
     match super::local_discard::discard_via_sync_manager(state, &selector, &target) {
         Ok(path) => {
             tracing::info!("Discard pending workspace change: {}", path);
-            ch.unicast(ServerMessage::DiscardAck { path: path.clone() });
+            ch.unicast(ServerMessage::DiscardAck {
+                repo_id: Some(scope.repo_id),
+                path: path.clone(),
+            });
             super::changes::handle_get_changes(state, ch, session).await;
         }
         Err(e) => {

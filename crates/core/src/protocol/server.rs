@@ -117,9 +117,13 @@ pub enum ServerMessage {
         unstaged: Vec<ChangeEntry>,
     },
     StageAck {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         path: String,
     },
     UnstageAck {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         path: String,
     },
     CommitAck {
@@ -149,6 +153,8 @@ pub enum ServerMessage {
         doc_id: DocId,
     },
     DiscardAck {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         path: String,
     },
     TreeUpdate {
@@ -180,6 +186,8 @@ pub enum ServerMessage {
         has_conflict: bool,
     },
     ConflictResolved {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         path: String,
         resolution: String,
     },

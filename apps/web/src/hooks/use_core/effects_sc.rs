@@ -42,15 +42,24 @@ pub fn handle_sc_message(
             }
             set_history.set(commits.clone());
         }
-        ServerMessage::StageAck { path } => {
+        ServerMessage::StageAck { repo_id, path } => {
+            if !matches_current_repo(repo_id, current_repo_id) {
+                return true;
+            }
             leptos::logging::log!("已暂存: {}", path);
             schedule_refresh();
         }
-        ServerMessage::UnstageAck { path } => {
+        ServerMessage::UnstageAck { repo_id, path } => {
+            if !matches_current_repo(repo_id, current_repo_id) {
+                return true;
+            }
             leptos::logging::log!("已取消暂存: {}", path);
             schedule_refresh();
         }
-        ServerMessage::DiscardAck { path } => {
+        ServerMessage::DiscardAck { repo_id, path } => {
+            if !matches_current_repo(repo_id, current_repo_id) {
+                return true;
+            }
             leptos::logging::log!("已放弃变更: {}", path);
             schedule_refresh();
         }
@@ -107,7 +116,14 @@ pub fn handle_sc_message(
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
             set_commit_diff.set(diffs.clone());
         }
-        ServerMessage::ConflictResolved { path, resolution } => {
+        ServerMessage::ConflictResolved {
+            repo_id,
+            path,
+            resolution,
+        } => {
+            if !matches_current_repo(repo_id, current_repo_id) {
+                return true;
+            }
             leptos::logging::log!("冲突已解决: {} ({})", path, resolution);
             schedule_refresh();
         }

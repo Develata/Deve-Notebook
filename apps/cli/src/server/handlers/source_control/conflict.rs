@@ -48,6 +48,7 @@ pub async fn handle_resolve_conflict(
             };
             tracing::info!("Conflict resolved: {} ({})", normalized, label);
             ch.unicast(ServerMessage::ConflictResolved {
+                repo_id: Some(scope.repo_id),
                 path: normalized,
                 resolution: label.to_string(),
             });

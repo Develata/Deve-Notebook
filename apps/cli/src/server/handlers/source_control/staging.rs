@@ -20,7 +20,10 @@ pub async fn handle_stage_file(
     match super::service::stage_pending(state.repo.as_ref(), &selector, &target) {
         Ok(path) => {
             tracing::info!("Staged file: {}", path);
-            ch.unicast(ServerMessage::StageAck { path });
+            ch.unicast(ServerMessage::StageAck {
+                repo_id: Some(scope.repo_id),
+                path,
+            });
         }
         Err(e) => {
             tracing::error!("Failed to stage file: {:?}", e);
@@ -44,7 +47,10 @@ pub async fn handle_unstage_file(
     match super::service::unstage_file(state.repo.as_ref(), &selector, &target) {
         Ok(path) => {
             tracing::info!("Unstaged file: {}", path);
-            ch.unicast(ServerMessage::UnstageAck { path });
+            ch.unicast(ServerMessage::UnstageAck {
+                repo_id: Some(scope.repo_id),
+                path,
+            });
         }
         Err(e) => {
             tracing::error!("Failed to unstage file: {:?}", e);
