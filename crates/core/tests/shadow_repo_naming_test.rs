@@ -122,6 +122,27 @@ fn remote_repo_lookup_prefers_local_metadata_name_for_uuid_legacy_shadow() {
 }
 
 #[test]
+fn remote_repo_lookup_keeps_uuid_name_when_no_metadata_exists() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+
+    repo.ensure_shadow_db(&peer_id, &repo_id)
+        .expect("create legacy uuid shadow");
+
+    assert_eq!(
+        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
+        vec![repo_id.to_string()]
+    );
+    let remote_info = repo
+        .get_repo_info_for(Some(&peer_id), Some(&repo_id.to_string()))
+        .expect("lookup shadow by uuid")
+        .expect("shadow info");
+    assert_eq!(remote_info.uuid, repo_id);
+    assert_eq!(remote_info.name, repo_id.to_string());
+}
+
+#[test]
 fn remote_repo_listing_repairs_legacy_remote_filename() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");

@@ -84,7 +84,17 @@ impl RepoManager {
             {
                 return Ok(Some(local_info));
             }
-            return Self::read_repo_info_from_path(&entry.path);
+            if let Some(info) = Self::read_repo_info_from_path(&entry.path)? {
+                return Ok(Some(info));
+            }
+            if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem) {
+                return Ok(Some(RepoInfo {
+                    uuid: repo_id,
+                    name: entry.stem,
+                    url: None,
+                }));
+            }
+            return Ok(None);
         }
         let db_path = self
             .remotes_dir()
@@ -95,7 +105,11 @@ impl RepoManager {
                 return Ok(Some(info));
             }
             if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
-                return self.get_local_repo_info_by_id(repo_id);
+                return Ok(self.get_local_repo_info_by_id(repo_id)?.or(Some(RepoInfo {
+                    uuid: repo_id,
+                    name: repo_name.to_string(),
+                    url: None,
+                })));
             }
         }
         Ok(None)
