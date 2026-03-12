@@ -58,6 +58,8 @@ mod source_control_commit_diff_test;
 #[cfg(test)]
 mod source_control_http_test;
 pub mod source_control_proxy;
+#[cfg(test)]
+mod source_control_test_support;
 pub mod static_files;
 #[cfg(test)]
 mod switcher_branch_test;

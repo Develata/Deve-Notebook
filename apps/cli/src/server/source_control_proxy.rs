@@ -16,6 +16,7 @@ use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 
+#[derive(Clone)]
 pub struct RemoteSourceControlApi {
     base_url: String,
     client: reqwest::Client,
