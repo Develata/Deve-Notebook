@@ -6,6 +6,7 @@ mod handshake_bootstrap;
 mod message;
 mod message_dispatch;
 mod message_protocol;
+mod message_scope;
 mod message_sync;
 
 use crate::api::WsService;

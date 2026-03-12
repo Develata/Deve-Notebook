@@ -8,6 +8,7 @@ use leptos::task::spawn_local;
 use super::super::effects_msg;
 use super::super::effects_sc;
 use super::super::state::CoreSignals;
+use super::message_scope::peer_branch_matches_scope;
 
 pub fn handle_sync_hello(
     peer_id: PeerId,
@@ -19,6 +20,7 @@ pub fn handle_sync_hello(
     if should_accept_sync_hello(
         signals.current_repo_id.get_untracked(),
         signals.active_branch.get_untracked(),
+        signals.pending_branch_switch.get_untracked(),
         &repo_id,
     ) {
         signals.set_handshake_ready.set(true);
@@ -37,9 +39,11 @@ pub fn handle_sync_hello(
 fn should_accept_sync_hello(
     current_repo_id: Option<String>,
     active_branch: Option<PeerId>,
+    pending_branch_switch: Option<crate::hooks::use_core::PendingBranchTarget>,
     repo_id: &str,
 ) -> bool {
-    active_branch.is_none() && current_repo_id.as_deref() == Some(repo_id)
+    peer_branch_matches_scope(&None, active_branch, pending_branch_switch)
+        && current_repo_id.as_deref() == Some(repo_id)
 }
 
 pub fn handle_sc_or_remaining<F>(
@@ -76,6 +80,20 @@ mod tests {
         assert!(!should_accept_sync_hello(
             Some(repo_id.clone()),
             Some(PeerId::new("peer-a")),
+            None,
+            &repo_id,
+        ));
+    }
+
+    #[test]
+    fn ignores_sync_hello_while_pending_shadow_switch() {
+        let repo_id = uuid::Uuid::new_v4().to_string();
+        assert!(!should_accept_sync_hello(
+            Some(repo_id.clone()),
+            None,
+            Some(crate::hooks::use_core::PendingBranchTarget::Shadow(
+                "peer-a".into(),
+            )),
             &repo_id,
         ));
     }

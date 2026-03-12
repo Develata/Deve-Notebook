@@ -62,6 +62,7 @@ pub struct HandshakeSignals {
 
 #[derive(Clone, Copy)]
 pub struct RepoSwitchSignals {
+    pub current_repo: ReadSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub set_pending_repo_switch: WriteSignal<Option<String>>,

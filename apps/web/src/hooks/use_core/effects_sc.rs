@@ -162,6 +162,7 @@ pub(super) fn matches_current_repo(
     }
 }
 
+#[cfg(test)]
 pub(super) fn matches_current_scope(
     repo_id: &Option<uuid::Uuid>,
     branch: &Option<deve_core::models::PeerId>,

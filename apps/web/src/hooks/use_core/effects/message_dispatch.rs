@@ -1,14 +1,17 @@
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ClientMessage, ServerMessage};
 use leptos::prelude::*;
 
 use super::super::apply::apply_tree_delta;
 use super::super::effects_msg;
 use super::super::effects_sc;
+use super::super::effects_switch;
 use super::super::pending;
 use super::super::state::CoreSignals;
 use super::message_protocol::handle_protocol_error;
+use super::message_scope::{
+    peer_branch_matches_scope, repo_list_matches_scope, string_branch_matches_scope,
+};
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
 pub fn handle_message<F>(
@@ -26,12 +29,7 @@ pub fn handle_message<F>(
             branch,
             docs,
         } => {
-            if !effects_sc::matches_current_scope(
-                &repo_id,
-                &branch,
-                signals.current_repo_id,
-                signals.active_branch,
-            ) {
+            if !matches_repo_scope(&repo_id, &branch, signals) {
                 return;
             }
             effects_msg::handle_doc_list(docs, signals.set_docs);
@@ -108,7 +106,7 @@ pub fn handle_message<F>(
             }
         }
         ServerMessage::BranchSwitched { peer_id, success } => {
-            if effects_msg::handle_branch_switched(
+            if effects_switch::handle_branch_switched(
                 peer_id,
                 success,
                 signals.active_branch,
@@ -125,6 +123,7 @@ pub fn handle_message<F>(
                 signals.set_docs.set(Vec::new());
                 signals.set_tree_nodes.set(Vec::new());
                 signals.set_repo_list.set(Vec::new());
+                clear_merge_state(signals);
                 effects_sc::clear_repo_scoped_state(
                     signals.set_staged_changes,
                     signals.set_unstaged_changes,
@@ -135,19 +134,20 @@ pub fn handle_message<F>(
             }
         }
         ServerMessage::RepoSwitched { branch, name, uuid } => {
-            let current_branch = signals
-                .active_branch
-                .get_untracked()
-                .map(|id| id.to_string());
-            if branch != current_branch {
+            if !string_branch_matches_scope(
+                &branch,
+                signals.active_branch.get_untracked(),
+                signals.pending_branch_switch.get_untracked(),
+            ) {
                 return;
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
-            if effects_msg::handle_repo_switched(
+            if effects_switch::handle_repo_switched(
                 name,
                 uuid,
                 crate::hooks::use_core::RepoSwitchSignals {
+                    current_repo: signals.current_repo,
                     current_repo_id: signals.current_repo_id,
                     pending_repo_switch: signals.pending_repo_switch,
                     set_pending_repo_switch: signals.set_pending_repo_switch,
@@ -158,6 +158,7 @@ pub fn handle_message<F>(
             ) {
                 signals.set_docs.set(Vec::new());
                 signals.set_tree_nodes.set(Vec::new());
+                clear_merge_state(signals);
                 effects_sc::clear_repo_scoped_state(
                     signals.set_staged_changes,
                     signals.set_unstaged_changes,
@@ -165,6 +166,7 @@ pub fn handle_message<F>(
                     signals.set_diff_content,
                     signals.set_commit_diff_result,
                 );
+                request_repo_sync_state(ws);
             }
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
@@ -176,8 +178,11 @@ pub fn handle_message<F>(
             branch,
         } => {
             let repo_id = repo_id.to_string();
-            if signals.active_branch.get_untracked().is_none()
-                && branch == signals.active_branch.get_untracked()
+            if peer_branch_matches_scope(
+                &branch,
+                signals.active_branch.get_untracked(),
+                signals.pending_branch_switch.get_untracked(),
+            ) && signals.active_branch.get_untracked().is_none()
                 && signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str())
             {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
@@ -189,12 +194,7 @@ pub fn handle_message<F>(
             branch,
             delta,
         } => {
-            if !effects_sc::matches_current_scope(
-                &repo_id,
-                &branch,
-                signals.current_repo_id,
-                signals.active_branch,
-            ) {
+            if !matches_repo_scope(&repo_id, &branch, signals) {
                 return;
             }
             signals
@@ -208,12 +208,7 @@ pub fn handle_message<F>(
             client_op_id,
             ..
         } => {
-            if !effects_sc::matches_current_scope(
-                &Some(repo_id),
-                &branch,
-                signals.current_repo_id,
-                signals.active_branch,
-            ) {
+            if !matches_repo_scope(&Some(repo_id), &branch, signals) {
                 return;
             }
             signals.set_pending_local_edits.update(|pending_edits| {
@@ -224,51 +219,26 @@ pub fn handle_message<F>(
     }
 }
 
-fn repo_list_matches_scope(
-    branch: Option<String>,
-    active_branch: Option<deve_core::models::PeerId>,
-    pending_branch_switch: Option<PendingBranchTarget>,
+fn matches_repo_scope(
+    repo_id: &Option<uuid::Uuid>,
+    branch: &Option<deve_core::models::PeerId>,
+    signals: CoreSignals,
 ) -> bool {
-    let expected_branch = pending_branch_switch
-        .map(|pending| match pending {
-            PendingBranchTarget::Local => None,
-            PendingBranchTarget::Shadow(peer_id) => Some(peer_id),
-        })
-        .unwrap_or_else(|| active_branch.map(|peer_id| peer_id.to_string()));
-    branch == expected_branch
+    effects_sc::matches_current_repo(repo_id, signals.current_repo_id)
+        && peer_branch_matches_scope(
+            branch,
+            signals.active_branch.get_untracked(),
+            signals.pending_branch_switch.get_untracked(),
+        )
 }
 
-#[cfg(test)]
-mod tests {
-    use super::repo_list_matches_scope;
-    use crate::hooks::use_core::PendingBranchTarget;
-    use deve_core::models::PeerId;
+fn clear_merge_state(signals: CoreSignals) {
+    signals.set_sync_mode.set("auto".to_string());
+    signals.set_pending_ops_count.set(0);
+    signals.set_pending_ops_previews.set(Vec::new());
+}
 
-    #[test]
-    fn repo_list_uses_pending_branch_scope_during_switch() {
-        assert!(!repo_list_matches_scope(
-            None,
-            None,
-            Some(PendingBranchTarget::Shadow("peer-a".into())),
-        ));
-        assert!(repo_list_matches_scope(
-            Some("peer-a".into()),
-            None,
-            Some(PendingBranchTarget::Shadow("peer-a".into())),
-        ));
-    }
-
-    #[test]
-    fn repo_list_uses_active_branch_without_pending_switch() {
-        assert!(repo_list_matches_scope(
-            Some("peer-a".into()),
-            Some(PeerId::new("peer-a")),
-            None,
-        ));
-        assert!(!repo_list_matches_scope(
-            Some("peer-b".into()),
-            Some(PeerId::new("peer-a")),
-            None,
-        ));
-    }
+fn request_repo_sync_state(ws: &WsService) {
+    ws.send(ClientMessage::GetSyncMode);
+    ws.send(ClientMessage::GetPendingOps);
 }
