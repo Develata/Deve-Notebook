@@ -42,6 +42,21 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, uuid::Uu
     ))
 }
 
+fn seed_remote_shadow(
+    state: &Arc<AppState>,
+    peer_id: &PeerId,
+    repo_id: uuid::Uuid,
+    repo_name: &str,
+) -> anyhow::Result<()> {
+    let info = deve_core::ledger::RepoInfo {
+        uuid: repo_id,
+        name: repo_name.to_string(),
+        url: None,
+    };
+    state.repo.ensure_shadow_repo_info(peer_id, &info)?;
+    Ok(())
+}
+
 #[test]
 fn resolve_session_repo_recovers_from_stale_local_repo_id() -> anyhow::Result<()> {
     let (_dir, state, default_id, test_id) = build_state()?;
@@ -65,5 +80,23 @@ fn resolve_session_repo_and_sync_updates_session_binding() -> anyhow::Result<()>
     assert_eq!(resolved.repo_id, test_id);
     assert_eq!(session.active_repo.as_deref(), Some("test"));
     assert_eq!(session.active_repo_id, Some(test_id));
+    Ok(())
+}
+
+#[test]
+fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, remote_repo_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.active_repo_id = Some(remote_repo_id);
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.branch, Some(peer_id));
+    assert_eq!(resolved.repo_id, remote_repo_id);
+    assert_eq!(resolved.repo_name, "shadow-notes");
+    assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
     Ok(())
 }

@@ -89,6 +89,8 @@ pub fn use_core() -> CoreState {
         signals.set_pending_navigation,
         signals.current_repo,
         signals.active_branch,
+        signals.set_pending_branch_switch,
+        signals.set_pending_repo_switch,
     );
 
     let state = build_core_state(

@@ -7,7 +7,7 @@ use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -28,8 +28,11 @@ pub fn setup(
     let status_signal = ws.status;
     let endpoint_signal = ws.endpoint;
     let last_mode = Rc::new(RefCell::new(None::<String>));
+    let scope_nonce = Rc::new(Cell::new(0u64));
 
     Effect::new(move |_| {
+        let next_nonce = scope_nonce.get().saturating_add(1);
+        scope_nonce.set(next_nonce);
         if status_signal.get() != ConnectionStatus::Connected {
             *last_mode.borrow_mut() = None;
             ws_clone.clear_writer_ready();
@@ -65,6 +68,7 @@ pub fn setup(
         let vector = repo_vector.get();
         let repo_name = current_repo.get();
         let branch = active_branch.get();
+        let scope_nonce = scope_nonce.clone();
         if let Some(identity) = maybe_identity.as_ref() {
             if maybe_mode.is_none() && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
             {
@@ -111,6 +115,10 @@ pub fn setup(
 
             match sign_sync_hello(&identity, &msg).await {
                 Ok(signature) => {
+                    if scope_nonce.get() != next_nonce {
+                        leptos::logging::warn!("忽略过期握手结果: scope 已变更");
+                        return;
+                    }
                     let peer_id = PeerId::new(&identity.peer_id);
                     match uuid::Uuid::parse_str(&identity.repo_id) {
                         Ok(repo_id) => {

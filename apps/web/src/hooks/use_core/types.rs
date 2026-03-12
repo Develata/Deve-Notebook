@@ -15,6 +15,12 @@ use super::navigation::PendingNavigation;
 use super::pending::PendingLocalEdits;
 use super::state::PluginResponse;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PendingBranchTarget {
+    Local,
+    Shadow(String),
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct PeerSession {
     pub id: PeerId,

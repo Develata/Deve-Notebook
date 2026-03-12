@@ -102,10 +102,13 @@ pub fn handle_message<F>(
                 peer_id,
                 success,
                 signals.active_branch,
+                signals.pending_branch_switch,
+                signals.set_pending_branch_switch,
                 signals.set_active_branch,
             ) {
                 ws.clear_writer_ready();
                 signals.set_handshake_ready.set(false);
+                signals.set_pending_repo_switch.set(None);
                 signals.set_current_repo.set(None);
                 signals.set_current_repo_id.set(None);
                 signals.set_current_doc.set(None);
@@ -128,6 +131,8 @@ pub fn handle_message<F>(
                 name,
                 uuid,
                 signals.current_repo_id,
+                signals.pending_repo_switch,
+                signals.set_pending_repo_switch,
                 signals.set_current_repo,
                 signals.set_current_repo_id,
                 signals.set_current_doc,

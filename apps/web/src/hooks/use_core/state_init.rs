@@ -14,7 +14,7 @@ use super::diff_session::DiffSessionWire;
 use super::navigation::PendingNavigation;
 use super::pending::PendingLocalEdits;
 use super::state::{CoreSignals, PluginResponse};
-use super::types::PeerSession;
+use super::types::{PeerSession, PendingBranchTarget};
 
 /// 初始化所有核心信号。
 ///
@@ -40,8 +40,10 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::new());
     let (active_branch, set_active_branch) = signal(None::<PeerId>);
+    let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchTarget>);
     let (current_repo, set_current_repo) = signal(None::<String>);
     let (current_repo_id, set_current_repo_id) = signal(None::<String>);
+    let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (repo_list, set_repo_list) = signal(Vec::new());
     let (doc_version, set_doc_version) = signal(0u64);
@@ -100,10 +102,14 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_pending_ops_previews,
         active_branch,
         set_active_branch,
+        pending_branch_switch,
+        set_pending_branch_switch,
         current_repo,
         set_current_repo,
         current_repo_id,
         set_current_repo_id,
+        pending_repo_switch,
+        set_pending_repo_switch,
         shadow_repos,
         set_shadow_repos,
         repo_list,

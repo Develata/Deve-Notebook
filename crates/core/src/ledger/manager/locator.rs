@@ -103,20 +103,7 @@ impl RepoManager {
             Err(err) => {
                 self.repair_local_repo_catalog()?;
                 let repaired = self.resolve_local_repo_candidates(repo_id, repo_name)?;
-                match self.select_local_repo_name(&repaired) {
-                    Ok(name) => Ok(name),
-                    Err(_) if repaired.by_name.is_some() => {
-                        let healed = repaired.by_name.expect("checked Some");
-                        tracing::warn!(
-                            "Healing stale local repo selector by name: repo_id={:?}, repo_name={:?}, chosen={}",
-                            repo_id,
-                            repo_name,
-                            healed
-                        );
-                        Ok(healed)
-                    }
-                    Err(_) => Err(err),
-                }
+                self.select_local_repo_name(&repaired).map_err(|_| err)
             }
         }
     }

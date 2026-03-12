@@ -82,6 +82,25 @@ fn resolve_repo_name_from_session(
     state: &Arc<AppState>,
     session: &WsSession,
 ) -> Result<Option<String>> {
+    if let Some(repo_id) = session.active_repo_id {
+        if let Some(branch) = session.active_branch.as_ref() {
+            let info = state
+                .repo
+                .get_repo_info_for(Some(branch), Some(&repo_id.to_string()))?;
+            if let Some(info) = info {
+                if session.active_repo.as_deref() != Some(info.name.as_str()) {
+                    tracing::warn!(
+                        "Recovering remote repo name from UUID: branch={}, repo_id={}, stale_name={:?}, resolved_name={}",
+                        branch,
+                        repo_id,
+                        session.active_repo,
+                        info.name
+                    );
+                }
+                return Ok(Some(info.name));
+            }
+        }
+    }
     if let Some(repo_name) = session.active_repo.clone() {
         return Ok(Some(repo_name));
     }

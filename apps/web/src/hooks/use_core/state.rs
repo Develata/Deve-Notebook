@@ -15,7 +15,7 @@ use super::contexts::SystemMetricsData;
 use super::diff_session::DiffSessionWire;
 use super::navigation::PendingNavigation;
 use super::pending::PendingLocalEdits;
-use super::types::{ChatMessage, PeerSession};
+use super::types::{ChatMessage, PeerSession, PendingBranchTarget};
 
 pub use super::state_init::init_signals;
 
@@ -86,10 +86,14 @@ pub struct CoreSignals {
     // 分支/仓库
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub set_active_branch: WriteSignal<Option<PeerId>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub set_pending_repo_switch: WriteSignal<Option<String>>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub set_shadow_repos: WriteSignal<Vec<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
