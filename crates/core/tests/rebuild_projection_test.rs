@@ -1,4 +1,5 @@
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
@@ -36,6 +37,21 @@ fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) {
     .expect("append content");
 }
 
+fn inject_legacy_doc_path(repo: &RepoManager, doc_id: deve_core::models::DocId, path: &str) {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write = db.begin_write()?;
+        {
+            let mut d2p = write.open_table(DOCID_TO_PATH)?;
+            let mut p2d = write.open_table(PATH_TO_DOCID)?;
+            d2p.insert(doc_id.as_u128(), path)?;
+            p2d.insert(path, doc_id.as_u128())?;
+        }
+        write.commit()?;
+        Ok(())
+    })
+    .expect("inject legacy doc path");
+}
+
 #[test]
 fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     let (dir, repo) = new_repo();
@@ -62,4 +78,29 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     assert!(root.join("notes/ghost/keep.bin").exists());
     assert!(root.join(".notegit/state.json").exists());
     assert!(root.join("notes/empty").is_dir());
+}
+
+#[test]
+fn rebuild_projection_prefers_node_path_over_legacy_doc_mapping() {
+    let (dir, repo) = new_repo();
+    seed_file(repo.as_ref(), "notes/a.md", "ledger");
+    let doc_id = repo
+        .get_docid("notes/a.md")
+        .expect("lookup")
+        .expect("doc id");
+    inject_legacy_doc_path(repo.as_ref(), doc_id, "stale/a.md");
+
+    let root = dir.path().join("vault").join("default");
+    std::fs::create_dir_all(root.join("stale")).expect("mkdir stale");
+    std::fs::write(root.join("stale/a.md"), "legacy").expect("write stale");
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    sync.rebuild_projection_local_repo("default")
+        .expect("rebuild");
+
+    assert_eq!(
+        std::fs::read_to_string(root.join("notes/a.md")).expect("read canonical doc"),
+        "ledger"
+    );
+    assert!(!root.join("stale/a.md").exists());
 }

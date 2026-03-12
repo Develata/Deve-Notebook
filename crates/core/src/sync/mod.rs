@@ -22,6 +22,8 @@ mod pending_rename;
 pub(crate) mod persist_guard;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_io;
+#[cfg(not(target_arch = "wasm32"))]
+mod projection_plan;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod rebuild;

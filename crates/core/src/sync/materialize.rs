@@ -1,10 +1,9 @@
 use super::persist_guard::PersistGuard;
+use super::projection_plan;
 use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
-use crate::models::NodeKind;
 use anyhow::Result;
-use std::collections::HashSet;
 use std::path::Path;
 
 /// 启动时确保所有本地 repo 都拥有独立的 `vault/<repo_name>/` 工作区。
@@ -32,22 +31,15 @@ pub(super) fn materialize_local_repo(
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
     std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
-    for dir in expected_dirs(repo, repo_name)? {
+    let plan = projection_plan::build(repo, repo_name)?;
+    for dir in plan.dirs {
         if dir.is_empty() {
             continue;
         }
         std::fs::create_dir_all(repo.local_repo_workspace_path(repo_name, &dir)?)?;
     }
 
-    for (doc_id, repo_path) in repo.list_local_docs(Some(repo_name))? {
-        if crate::utils::notegit::is_internal_repo_path(&repo_path) {
-            tracing::warn!(
-                "Skip materializing internal repo metadata path: {}/{}",
-                repo_name,
-                repo_path
-            );
-            continue;
-        }
+    for (repo_path, doc_id) in plan.docs {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
         if file_path.exists() {
             continue;
@@ -65,26 +57,4 @@ pub(super) fn materialize_local_repo(
     }
 
     Ok(())
-}
-
-fn expected_dirs(repo: &RepoManager, repo_name: &str) -> Result<HashSet<String>> {
-    let mut dirs = HashSet::from([String::new()]);
-    for (_node_id, meta) in repo.list_local_nodes(Some(repo_name))? {
-        let path = meta.path.trim_matches('/').to_string();
-        if crate::utils::notegit::is_internal_repo_path(&path) {
-            continue;
-        }
-        if meta.kind == NodeKind::Dir && !path.is_empty() {
-            dirs.insert(path.clone());
-        }
-        let mut cursor = Path::new(&path).parent();
-        while let Some(parent) = cursor {
-            let value = crate::utils::path::to_forward_slash(&parent.to_string_lossy());
-            if value.is_empty() || !dirs.insert(value.clone()) {
-                break;
-            }
-            cursor = parent.parent();
-        }
-    }
-    Ok(dirs)
 }

@@ -1,7 +1,7 @@
 use super::persist_guard::PersistGuard;
+use super::projection_plan;
 use super::rebuild;
 use crate::ledger::RepoManager;
-use crate::models::NodeKind;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -23,16 +23,15 @@ pub(super) fn rebuild_local_repo(
     let root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&root)?;
     std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
-    let expected_dirs = expected_dirs(repo, repo_name)?;
-    for dir in &expected_dirs {
+    let plan = projection_plan::build(repo, repo_name)?;
+    for dir in &plan.dirs {
         if dir.is_empty() {
             continue;
         }
         std::fs::create_dir_all(repo.local_repo_workspace_path(repo_name, dir)?)?;
     }
 
-    let expected_docs = expected_docs(repo, repo_name)?;
-    for (repo_path, doc_id) in &expected_docs {
+    for (repo_path, doc_id) in &plan.docs {
         let file_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
         let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, *doc_id)?;
         if let Some(parent) = file_path.parent() {
@@ -46,46 +45,8 @@ pub(super) fn rebuild_local_repo(
         repo.bind_workspace_inode_in_local_repo(repo_name, repo_path, *doc_id)?;
     }
 
-    prune_stale_paths(&root, &expected_docs, &expected_dirs, "")?;
+    prune_stale_paths(&root, &plan.docs, &plan.dirs, "")?;
     Ok(())
-}
-
-fn expected_docs(
-    repo: &RepoManager,
-    repo_name: &str,
-) -> Result<HashMap<String, crate::models::DocId>> {
-    Ok(repo
-        .list_local_docs(Some(repo_name))?
-        .into_iter()
-        .filter(|(_, path)| !crate::utils::notegit::is_internal_repo_path(path))
-        .map(|(doc_id, path)| (path, doc_id))
-        .collect())
-}
-
-fn expected_dirs(repo: &RepoManager, repo_name: &str) -> Result<HashSet<String>> {
-    let mut dirs = HashSet::from([String::new()]);
-    for (_node_id, meta) in repo.list_local_nodes(Some(repo_name))? {
-        let path = meta.path.trim_matches('/').to_string();
-        if crate::utils::notegit::is_internal_repo_path(&path) {
-            continue;
-        }
-        if meta.kind == NodeKind::Dir && !path.is_empty() {
-            dirs.insert(path.clone());
-        }
-        insert_parents(&mut dirs, &path);
-    }
-    Ok(dirs)
-}
-
-fn insert_parents(dirs: &mut HashSet<String>, path: &str) {
-    let mut cursor = Path::new(path).parent();
-    while let Some(parent) = cursor {
-        let value = crate::utils::path::to_forward_slash(&parent.to_string_lossy());
-        if value.is_empty() || !dirs.insert(value.clone()) {
-            break;
-        }
-        cursor = parent.parent();
-    }
 }
 
 fn prune_stale_paths(
