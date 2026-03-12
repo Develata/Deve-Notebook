@@ -52,13 +52,6 @@ pub fn handle_chat_chunk(
                 .find(|msg| msg.req_id.as_deref() == Some(req_id.as_str()))
             {
                 existing.content.push_str(&delta);
-            } else {
-                messages.push(ChatMessage {
-                    role: "assistant".to_string(),
-                    content: delta,
-                    req_id: Some(req_id.clone()),
-                    ts_ms: js_sys::Date::now() as u64,
-                });
             }
         });
     }
@@ -96,5 +89,30 @@ pub fn handle_remaining(
         other => {
             leptos::logging::log!("未处理的服务端消息: {:?}", other);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChatMessage;
+    use super::handle_chat_chunk;
+    use leptos::prelude::*;
+
+    #[test]
+    fn chat_chunk_ignores_unknown_req_after_scope_reset() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
+        let (_streaming, set_streaming) = signal(true);
+
+        handle_chat_chunk(
+            "req-1".into(),
+            Some("late".into()),
+            None,
+            set_messages,
+            set_streaming,
+        );
+
+        assert!(messages.get_untracked().is_empty());
     }
 }

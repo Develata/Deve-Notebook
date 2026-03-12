@@ -20,6 +20,7 @@ pub fn make_send_text(
         }
         let req_id = uuid::Uuid::new_v4().to_string();
         core.append_chat_message("user", &msg, None);
+        core.append_chat_message("assistant", "", Some(req_id.clone()));
         if let Some(cb) = on_user_text.as_ref() {
             cb.run(msg.clone());
         }
