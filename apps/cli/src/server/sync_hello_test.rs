@@ -76,3 +76,21 @@ async fn sync_hello_creates_named_shadow_repo() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let _ = uni_rx.recv().await;
+
+    assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    Ok(())
+}

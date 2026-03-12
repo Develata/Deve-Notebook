@@ -45,7 +45,7 @@ pub async fn ws_handler(
     }
 
     let peer_id = uuid::Uuid::new_v4().to_string();
-    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id))
+    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, authed))
         .into_response()
 }
 
@@ -58,9 +58,13 @@ pub async fn handle_socket(
     state: Arc<AppState>,
     socket: axum::extract::ws::WebSocket,
     peer_id: String,
+    browser_session: bool,
 ) {
     let (sender, mut receiver) = socket.split();
     let mut session = WsSession::new();
+    if browser_session {
+        session.mark_browser_session();
+    }
 
     // 为每个连接创建有界单播队列，避免慢客户端导致无界内存增长。
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();

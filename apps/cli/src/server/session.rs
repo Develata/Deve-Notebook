@@ -29,6 +29,13 @@ pub struct WriterIdentity {
 /// 每个 WebSocket 连接维护独立的会话状态实例。
 #[allow(dead_code)] // 为 P2P 握手和分支切换预留的字段
 pub struct WsSession {
+    /// 该连接是否来自已登录浏览器会话。
+    ///
+    /// Invariant:
+    /// - JWT 认证通过的 Web Thin Client 置为 `true`。
+    /// - 浏览器 SyncHello 仅用于 repo-scoped thin-client 协商，不应被当作 shadow branch 物化。
+    pub browser_session: bool,
+
     /// 已认证的对端 Peer ID
     ///
     /// 在 SyncHello 握手成功后设置，用于后续 SyncPush 验证。
@@ -81,6 +88,7 @@ impl Default for WsSession {
             authenticated_peer_id: None,
             bound_repo_id: None,
             writer_identity: None,
+            browser_session: false,
             active_branch: None,
             active_repo: None,
             active_repo_id: None,
@@ -104,6 +112,14 @@ impl WsSession {
             self.writer_identity = None;
         }
         self.authenticated_peer_id = Some(peer_id);
+    }
+
+    pub fn mark_browser_session(&mut self) {
+        self.browser_session = true;
+    }
+
+    pub fn is_browser_session(&self) -> bool {
+        self.browser_session
     }
 
     /// 绑定仓库 ID (在握手成功后调用)
