@@ -83,11 +83,15 @@ pub enum ClientMessage {
         query: String,
         limit: u32,
     },
-    GetSyncMode,
+    GetSyncMode {
+        request_id: String,
+    },
     SetSyncMode {
         mode: String,
     },
-    GetPendingOps,
+    GetPendingOps {
+        request_id: String,
+    },
     ConfirmMerge,
     DiscardPending,
     ListShadows {

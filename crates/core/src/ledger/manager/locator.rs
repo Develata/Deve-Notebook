@@ -136,9 +136,12 @@ impl RepoManager {
             if let Some(from_name) = candidates.by_name
                 && from_name != from_id
             {
+                let repo_id_label = repo_id
+                    .map(|repo_id| repo_id.to_string())
+                    .unwrap_or_else(|| "<missing>".to_string());
                 tracing::warn!(
                     "UUID-first local repo resolution ignored stale repo_name: repo_id={}, stale_name={}, resolved_name={}",
-                    repo_id.expect("from_id requires repo_id"),
+                    repo_id_label,
                     from_name,
                     from_id
                 );

@@ -11,14 +11,14 @@ pub(super) async fn route_merge(
     msg: ClientMessage,
 ) {
     match msg {
-        ClientMessage::GetSyncMode => {
-            merge::handle_get_sync_mode(state, ch, session).await;
+        ClientMessage::GetSyncMode { request_id } => {
+            merge::handle_get_sync_mode(state, ch, session, request_id).await;
         }
         ClientMessage::SetSyncMode { mode } => {
             merge::handle_set_sync_mode(state, ch, session, mode).await;
         }
-        ClientMessage::GetPendingOps => {
-            merge::handle_get_pending_ops(state, ch, session).await;
+        ClientMessage::GetPendingOps { request_id } => {
+            merge::handle_get_pending_ops(state, ch, session, request_id).await;
         }
         ClientMessage::ConfirmMerge => {
             merge::handle_confirm_merge(state, ch, session).await;

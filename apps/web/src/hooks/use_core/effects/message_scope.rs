@@ -46,10 +46,7 @@ pub fn accepts_system_or_matching_request(
     message_id: Option<&str>,
     expected_id: Option<&str>,
 ) -> bool {
-    match message_id {
-        Some(message_id) => expected_id == Some(message_id),
-        None => true,
-    }
+    request_matches(message_id, expected_id)
 }
 
 fn request_matches(message_id: Option<&str>, expected_id: Option<&str>) -> bool {
@@ -166,7 +163,8 @@ mod tests {
 
     #[test]
     fn system_or_matching_request_accepts_none_and_exact_match() {
-        assert!(accepts_system_or_matching_request(None, Some("req-1")));
+        assert!(accepts_system_or_matching_request(None, None));
+        assert!(!accepts_system_or_matching_request(None, Some("req-1")));
         assert!(accepts_system_or_matching_request(
             Some("req-1"),
             Some("req-1"),

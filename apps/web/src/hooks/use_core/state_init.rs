@@ -39,8 +39,10 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (load_progress, set_load_progress) = signal((0usize, 0usize));
     let (load_eta_ms, set_load_eta_ms) = signal(0u64);
     let (sync_mode, set_sync_mode) = signal("auto".to_string());
+    let (sync_mode_request_id, set_sync_mode_request_id) = signal(None::<String>);
     let (pending_ops_count, set_pending_ops_count) = signal(0u32);
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::new());
+    let (pending_ops_request_id, set_pending_ops_request_id) = signal(None::<String>);
     let (active_branch, set_active_branch) = signal(None::<PeerId>);
     let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchTarget>);
     let (current_repo, set_current_repo) = signal(None::<String>);
@@ -110,10 +112,14 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_load_eta_ms,
         sync_mode,
         set_sync_mode,
+        sync_mode_request_id,
+        set_sync_mode_request_id,
         pending_ops_count,
         set_pending_ops_count,
         pending_ops_previews,
         set_pending_ops_previews,
+        pending_ops_request_id,
+        set_pending_ops_request_id,
         active_branch,
         set_active_branch,
         pending_branch_switch,

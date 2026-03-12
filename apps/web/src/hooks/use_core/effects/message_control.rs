@@ -69,7 +69,7 @@ pub fn handle_repo_switched(
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
-        request_repo_sync_state(ws);
+        request_repo_sync_state(ws, signals);
         request_shadow_list(ws, signals);
     }
 }
@@ -105,8 +105,10 @@ pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals
 fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_peers.set(Default::default());
     signals.set_sync_mode.set("auto".to_string());
+    signals.set_sync_mode_request_id.set(None);
     signals.set_pending_ops_count.set(0);
     signals.set_pending_ops_previews.set(Vec::new());
+    signals.set_pending_ops_request_id.set(None);
     signals.set_pending_local_edits.set(Default::default());
     signals.set_plugin_response.set(None);
     signals.set_plugin_request_ids.set(Vec::new());
@@ -135,9 +137,21 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
     });
 }
 
-fn request_repo_sync_state(ws: &WsService) {
-    ws.send(ClientMessage::GetSyncMode);
-    ws.send(ClientMessage::GetPendingOps);
+fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
+    let sync_mode_request_id = uuid::Uuid::new_v4().to_string();
+    let pending_ops_request_id = uuid::Uuid::new_v4().to_string();
+    signals
+        .set_sync_mode_request_id
+        .set(Some(sync_mode_request_id.clone()));
+    signals
+        .set_pending_ops_request_id
+        .set(Some(pending_ops_request_id.clone()));
+    ws.send(ClientMessage::GetSyncMode {
+        request_id: sync_mode_request_id,
+    });
+    ws.send(ClientMessage::GetPendingOps {
+        request_id: pending_ops_request_id,
+    });
 }
 
 fn request_shadow_list(ws: &WsService, signals: CoreSignals) {

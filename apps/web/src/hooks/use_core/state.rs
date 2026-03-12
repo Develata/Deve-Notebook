@@ -82,10 +82,14 @@ pub struct CoreSignals {
     // 手动合并
     pub sync_mode: ReadSignal<String>,
     pub set_sync_mode: WriteSignal<String>,
+    pub sync_mode_request_id: ReadSignal<Option<String>>,
+    pub set_sync_mode_request_id: WriteSignal<Option<String>>,
     pub pending_ops_count: ReadSignal<u32>,
     pub set_pending_ops_count: WriteSignal<u32>,
     pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
     pub set_pending_ops_previews: WriteSignal<Vec<(String, String, String)>>,
+    pub pending_ops_request_id: ReadSignal<Option<String>>,
+    pub set_pending_ops_request_id: WriteSignal<Option<String>>,
 
     // 分支/仓库
     pub active_branch: ReadSignal<Option<PeerId>>,

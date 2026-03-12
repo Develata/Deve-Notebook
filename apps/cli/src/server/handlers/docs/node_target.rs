@@ -27,15 +27,16 @@ pub(super) fn resolve_node_target(
             node_meta::get_node_meta(db, node_id)?.ok_or_else(|| anyhow!("Node meta missing"))?;
         Ok(Some((node_id, meta.kind, meta.doc_id, meta.path)))
     })?;
-    Ok(meta.map(|(node_id, kind, doc_id, repo_path)| {
+    meta.map(|(node_id, kind, doc_id, repo_path)| {
         let abs_path = local_repo_path(state, scope, &repo_path)
-            .expect("canonical node path must resolve inside local repo");
-        NodeTarget {
+            .map_err(|_| anyhow!("Canonical node path escaped local repo: {}", repo_path))?;
+        Ok(NodeTarget {
             node_id,
             kind,
             doc_id,
             repo_path,
             abs_path,
-        }
-    }))
+        })
+    })
+    .transpose()
 }

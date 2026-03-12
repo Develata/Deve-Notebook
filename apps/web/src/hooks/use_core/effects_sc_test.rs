@@ -140,7 +140,8 @@ fn doc_diff_accepts_matching_request_or_system_diff() {
         &Some("stale".into()),
         Some("req-1".into()),
     ));
-    assert!(doc_diff_matches_request(&None, Some("req-1".into())));
+    assert!(doc_diff_matches_request(&None, None));
+    assert!(!doc_diff_matches_request(&None, Some("req-1".into())));
 }
 
 #[test]
@@ -167,7 +168,7 @@ fn changes_and_history_require_matching_request_id() {
         Some("req-1".into()),
     ));
     assert!(changes_list_matches_request(&None, None));
-    assert!(changes_list_matches_request(&None, Some("req-1".into())));
+    assert!(!changes_list_matches_request(&None, Some("req-1".into())));
 
     assert!(commit_history_matches_request(
         &Some("req-1".into()),

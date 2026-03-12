@@ -30,18 +30,19 @@ pub(crate) fn doc_diff_matches_request(
     request_id: &Option<String>,
     expected_request_id: Option<String>,
 ) -> bool {
-    request_id
-        .as_deref()
-        .is_none_or(|request_id| expected_request_id.as_deref() == Some(request_id))
+    match request_id.as_deref() {
+        Some(request_id) => expected_request_id.as_deref() == Some(request_id),
+        None => expected_request_id.is_none(),
+    }
 }
 
 pub(crate) fn changes_list_matches_request(
     request_id: &Option<String>,
     expected_request_id: Option<String>,
 ) -> bool {
-    match request_id {
-        Some(request_id) => expected_request_id.as_deref() == Some(request_id.as_str()),
-        None => true,
+    match request_id.as_deref() {
+        Some(request_id) => expected_request_id.as_deref() == Some(request_id),
+        None => expected_request_id.is_none(),
     }
 }
 

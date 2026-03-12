@@ -87,6 +87,8 @@ pub fn use_core() -> CoreState {
         &ws,
         signals.current_doc,
         signals.set_shadow_list_request_id,
+        signals.set_sync_mode_request_id,
+        signals.set_pending_ops_request_id,
     );
     let sc_callbacks = callbacks::create_source_control_callbacks(
         &ws,

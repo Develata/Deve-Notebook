@@ -117,10 +117,14 @@ pub fn create_sync_callbacks(
     ws: &WsService,
     current_doc: ReadSignal<Option<DocId>>,
     set_shadow_list_request_id: WriteSignal<Option<String>>,
+    set_sync_mode_request_id: WriteSignal<Option<String>>,
+    set_pending_ops_request_id: WriteSignal<Option<String>>,
 ) -> SyncCallbacks {
     let ws1 = ws.clone();
     let on_get_sync_mode = Callback::new(move |_: ()| {
-        ws1.send(ClientMessage::GetSyncMode);
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_sync_mode_request_id.set(Some(request_id.clone()));
+        ws1.send(ClientMessage::GetSyncMode { request_id });
     });
 
     let ws2 = ws.clone();
@@ -130,7 +134,9 @@ pub fn create_sync_callbacks(
 
     let ws3 = ws.clone();
     let on_get_pending_ops = Callback::new(move |_: ()| {
-        ws3.send(ClientMessage::GetPendingOps);
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_pending_ops_request_id.set(Some(request_id.clone()));
+        ws3.send(ClientMessage::GetPendingOps { request_id });
     });
 
     let ws4 = ws.clone();

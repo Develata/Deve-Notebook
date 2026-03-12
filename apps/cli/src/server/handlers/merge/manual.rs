@@ -10,6 +10,7 @@ pub(super) async fn handle_get_sync_mode(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &WsSession,
+    request_id: String,
 ) {
     let Some(repo_id) = require_bound_repo_id(ch, session) else {
         return;
@@ -18,6 +19,7 @@ pub(super) async fn handle_get_sync_mode(
         return;
     };
     ch.unicast(ServerMessage::SyncModeStatus {
+        request_id: Some(request_id),
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
         mode: sync_mode_label(engine.sync_mode()),
@@ -44,6 +46,7 @@ pub(super) async fn handle_set_sync_mode(
     engine.set_sync_mode(new_mode);
     tracing::info!("SetSyncMode: {:?}", new_mode);
     ch.unicast(ServerMessage::SyncModeStatus {
+        request_id: None,
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
         mode: sync_mode_label(new_mode),
@@ -54,6 +57,7 @@ pub(super) async fn handle_get_pending_ops(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &WsSession,
+    request_id: String,
 ) {
     let Some(repo_id) = require_bound_repo_id(ch, session) else {
         return;
@@ -72,6 +76,7 @@ pub(super) async fn handle_get_pending_ops(
         Vec::new()
     };
     ch.unicast(ServerMessage::PendingOpsInfo {
+        request_id: Some(request_id),
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
         count: pending_count as u32,

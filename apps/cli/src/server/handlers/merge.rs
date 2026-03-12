@@ -11,8 +11,13 @@ use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
 use std::sync::Arc;
 
-pub async fn handle_get_sync_mode(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
-    manual::handle_get_sync_mode(state, ch, session).await;
+pub async fn handle_get_sync_mode(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    request_id: String,
+) {
+    manual::handle_get_sync_mode(state, ch, session, request_id).await;
 }
 
 pub async fn handle_set_sync_mode(
@@ -24,8 +29,13 @@ pub async fn handle_set_sync_mode(
     manual::handle_set_sync_mode(state, ch, session, mode).await;
 }
 
-pub async fn handle_get_pending_ops(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
-    manual::handle_get_pending_ops(state, ch, session).await;
+pub async fn handle_get_pending_ops(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    request_id: String,
+) {
+    manual::handle_get_pending_ops(state, ch, session, request_id).await;
 }
 
 pub async fn handle_confirm_merge(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {

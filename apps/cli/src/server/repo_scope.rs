@@ -52,11 +52,9 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
             }
             if session.active_repo.is_some() {
                 tracing::warn!("Recovering from stale local session repo_id: {}", err);
-                let repo_name = session
-                    .active_repo
-                    .clone()
-                    .expect("stale local repo recovery requires active_repo");
-                return resolve_repo_by_name(state, None, None, repo_name);
+                if let Some(repo_name) = session.active_repo.clone() {
+                    return resolve_repo_by_name(state, None, None, repo_name);
+                }
             }
             Err(err)
         }
