@@ -83,6 +83,8 @@ pub fn handle_message<F>(
                 signals.set_current_repo_id,
                 signals.set_current_doc,
             ) {
+                signals.set_docs.set(Vec::new());
+                signals.set_tree_nodes.set(Vec::new());
                 effects_sc::clear_repo_scoped_state(
                     signals.set_staged_changes,
                     signals.set_unstaged_changes,

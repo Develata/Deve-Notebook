@@ -42,8 +42,15 @@ pub(super) async fn handle_request(
             repo_id,
             range,
         };
-        if let Ok(response) = engine.get_ops_for_sync(&sync_req) {
-            ops_to_push.extend(response.ops);
+        match engine.get_ops_for_sync(&sync_req) {
+            Ok(response) => ops_to_push.extend(response.ops),
+            Err(err) => {
+                errors::request_failed(
+                    ch,
+                    format!("Failed to build sync response for repo {}: {}", repo_id, err),
+                );
+                return;
+            }
         }
     }
 

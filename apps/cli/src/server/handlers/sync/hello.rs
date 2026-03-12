@@ -106,8 +106,15 @@ pub(super) async fn handle(
 
     let mut ops_to_push = Vec::new();
     for req in result.to_send {
-        if let Ok(response) = engine.get_ops_for_sync(&req) {
-            ops_to_push.extend(response.ops);
+        match engine.get_ops_for_sync(&req) {
+            Ok(response) => ops_to_push.extend(response.ops),
+            Err(err) => {
+                errors::request_failed(
+                    ch,
+                    format!("Failed to build sync payload for repo {}: {}", repo_id, err),
+                );
+                return;
+            }
         }
     }
 
