@@ -47,7 +47,16 @@ pub(super) async fn handle_remote_diff(
             remote_url.and_then(|url| state.repo.find_local_repo_name_by_url(&url).ok().flatten())
         });
     let old_content =
-        local_counterpart_content(state.repo.as_ref(), &target, local_repo_name.as_deref());
+        match local_counterpart_content(state.repo.as_ref(), &target, local_repo_name.as_deref()) {
+            Ok(Some(content)) => content,
+            Ok(None) => String::new(),
+            Err(err) => {
+                return errors::send_ws(
+                    ch,
+                    errors::map_repo_error(errors::ScOp::DiffDoc(path.clone()), err),
+                );
+            }
+        };
 
     ch.unicast(ServerMessage::DocDiff {
         repo_id: Some(scope.repo_id),
@@ -71,22 +80,18 @@ pub(crate) fn local_counterpart_content(
     repo: &RepoManager,
     target: &ScPathTarget,
     repo_name: Option<&str>,
-) -> String {
-    repo_name
-        .and_then(|name| {
-            repo.run_on_local_repo(name, |db| {
-                let Some(doc_id) = target.doc_id.or_else(|| resolve_doc_id(db, &target.path))
-                else {
-                    return Ok(None);
-                };
-                let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
-                let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-                Ok(Some(deve_core::state::reconstruct_content(&entries)))
-            })
-            .ok()
-            .flatten()
-        })
-        .unwrap_or_default()
+) -> anyhow::Result<Option<String>> {
+    let Some(name) = repo_name else {
+        return Ok(None);
+    };
+    repo.run_on_local_repo(name, |db| {
+        let Some(doc_id) = target.doc_id.or_else(|| resolve_doc_id(db, &target.path)) else {
+            return Ok(None);
+        };
+        let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
+        let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+        Ok(Some(deve_core::state::reconstruct_content(&entries)))
+    })
 }
 
 fn resolve_doc_id(db: &redb::Database, path: &str) -> Option<deve_core::models::DocId> {

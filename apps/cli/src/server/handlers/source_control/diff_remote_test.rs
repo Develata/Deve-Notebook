@@ -83,7 +83,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
             doc_id: Some(doc_id),
         },
         Some(repo.local_repo_name()),
-    );
-    assert_eq!(content, "hello renamed");
+    )?;
+    assert_eq!(content.as_deref(), Some("hello renamed"));
     Ok(())
 }

@@ -25,6 +25,8 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
             "remote session lost repo name",
             "repository uuid not resolved",
             "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
         ],
     ) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
@@ -109,6 +111,14 @@ mod tests {
             "Active repository not selected for current session"
         ));
         assert_eq!(err.code, ServerErrorCode::ScRepoNotSelected);
+    }
+
+    #[test]
+    fn maps_repo_selector_mismatch_to_repo_context_invalid() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
+        ));
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }
 
     #[test]
