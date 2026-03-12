@@ -14,6 +14,8 @@
 mod index;
 #[path = "pending_fs_query.rs"]
 mod query;
+#[path = "pending_fs_target.rs"]
+mod target;
 
 use crate::ledger::schema::PENDING_FS_OPS;
 use crate::models::DocId;
@@ -22,6 +24,7 @@ use anyhow::Result;
 pub use query::{get, list_all, list_for_doc};
 use redb::{Database, ReadableTable};
 use serde::{Deserialize, Serialize};
+pub use target::{get_for_target, take_for_target};
 
 /// 待确认的文件变更条目
 ///

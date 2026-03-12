@@ -10,6 +10,8 @@
 mod index;
 #[path = "staging_query.rs"]
 mod query;
+#[path = "staging_target.rs"]
+mod target;
 
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
@@ -21,6 +23,7 @@ pub use query::{
 };
 use redb::{Database, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
+pub use target::{get_staged_for_target, take_staged_for_target};
 
 /// 暂存区表定义 (path -> JSON bytes)
 pub const STAGED_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("staged_files");

@@ -7,40 +7,20 @@ use anyhow::Result;
 use redb::Database;
 use std::collections::HashSet;
 
-#[derive(Clone, Copy)]
-pub(super) enum ScTargetScope {
-    Pending,
-    Staged,
-    Changes,
-}
-
-pub(super) fn resolve_path(
+pub(super) fn resolve_change_path(
     repo: &RepoManager,
     repo_name: &str,
-    scope: ScTargetScope,
     target: &ScPathTarget,
 ) -> Result<String> {
     let path = to_forward_slash(&target.path);
     if let Some(doc_id) = target.doc_id {
-        let entries = repo.run_on_local_repo(repo_name, |db| entries_for_doc(db, scope, doc_id))?;
+        let entries = repo.run_on_local_repo(repo_name, |db| change_entries(db, doc_id))?;
         if let Some(resolved) = resolve_from_entries(&entries, &path, Some(doc_id)) {
             return Ok(resolved);
         }
     }
-    let entries = match scope {
-        ScTargetScope::Pending => repo.list_pending_fs_in_local_repo(repo_name)?,
-        ScTargetScope::Staged => repo.list_staged_in_local_repo(repo_name)?,
-        ScTargetScope::Changes => repo.list_changes_in_local_repo(repo_name)?,
-    };
+    let entries = repo.list_changes_in_local_repo(repo_name)?;
     Ok(resolve_from_entries(&entries, &path, target.doc_id).unwrap_or(path))
-}
-
-fn entries_for_doc(db: &Database, scope: ScTargetScope, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
-    match scope {
-        ScTargetScope::Pending => pending_entries(db, doc_id),
-        ScTargetScope::Staged => staged_entries(db, doc_id),
-        ScTargetScope::Changes => change_entries(db, doc_id),
-    }
 }
 
 fn pending_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {

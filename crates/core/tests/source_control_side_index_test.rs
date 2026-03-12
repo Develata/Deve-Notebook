@@ -122,3 +122,48 @@ fn target_resolution_keeps_exact_deleted_path() {
     assert_eq!(staged.len(), 1);
     assert_eq!(staged[0].path, "notes/b.md");
 }
+
+#[test]
+fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
+    let (dir, repo) = new_repo();
+    write_workspace_file(&dir, "notes/a.md", "hello");
+    seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added);
+    repo.stage_pending("notes/a.md").expect("stage a");
+    repo.commit_staged("initial").expect("commit a");
+    let doc_id = repo
+        .get_docid("notes/a.md")
+        .expect("lookup")
+        .expect("existing");
+    write_workspace_file(&dir, "notes/b.md", "hello renamed");
+    seed_pending(&repo, "notes/b.md", Some(doc_id), ChangeStatus::Added);
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: Some("notes/a.md".into()),
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("hello renamed"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed successor");
+
+    <RepoManager as Repository>::stage_pending_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget {
+            path: "notes/a.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )
+    .expect("stage via stale path");
+
+    let staged = repo.list_staged().expect("list staged");
+    assert_eq!(staged.len(), 1);
+    assert_eq!(staged[0].path, "notes/b.md");
+    assert_eq!(staged[0].doc_id, Some(doc_id));
+}
