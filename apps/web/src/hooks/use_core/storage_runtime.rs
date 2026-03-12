@@ -122,11 +122,16 @@ pub fn init_storage_runtime(
                 return;
             }
 
-            let vector = metadata
-                .vector_json
-                .as_deref()
-                .and_then(|json| serde_json::from_str(json).ok())
-                .unwrap_or_default();
+            let vector = match metadata.vector_json.as_deref() {
+                Some(json) => match serde_json::from_str(json) {
+                    Ok(vector) => vector,
+                    Err(err) => {
+                        leptos::logging::warn!("解析 repo 向量失败 {}: {}", repo_id, err);
+                        VersionVector::new()
+                    }
+                },
+                None => VersionVector::new(),
+            };
 
             clear_degraded(set_degraded_sync_mode, set_sync_banner);
             set_repo_vector.set(vector);
