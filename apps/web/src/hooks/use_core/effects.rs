@@ -4,6 +4,7 @@
 mod handshake;
 mod handshake_bootstrap;
 mod message;
+mod message_control;
 mod message_dispatch;
 mod message_protocol;
 mod message_repo_scope;

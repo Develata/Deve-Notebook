@@ -1,18 +1,15 @@
 use crate::api::WsService;
-use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::protocol::ServerMessage;
 use leptos::prelude::*;
 
 use super::super::apply::apply_tree_delta;
 use super::super::effects_msg;
-use super::super::effects_sc;
-use super::super::effects_switch;
 use super::super::pending;
 use super::super::state::CoreSignals;
+use super::message_control;
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
-use super::message_scope::{
-    repo_list_matches_scope, shadow_list_matches_scope, string_branch_matches_scope,
-};
+use super::message_scope::{repo_list_matches_scope, shadow_list_matches_scope};
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
 pub fn handle_message<F>(
@@ -121,70 +118,13 @@ pub fn handle_message<F>(
             }
         }
         ServerMessage::BranchSwitched { peer_id, success } => {
-            if effects_switch::handle_branch_switched(
-                peer_id,
-                success,
-                signals.active_branch,
-                signals.pending_branch_switch,
-                signals.set_pending_branch_switch,
-                signals.set_active_branch,
-            ) {
-                ws.clear_writer_ready();
-                signals.set_handshake_ready.set(false);
-                signals.set_pending_repo_switch.set(None);
-                signals.set_current_repo.set(None);
-                signals.set_current_repo_id.set(None);
-                signals.set_current_doc.set(None);
-                signals.set_docs.set(Vec::new());
-                signals.set_tree_nodes.set(Vec::new());
-                signals.set_repo_list.set(Vec::new());
-                clear_merge_state(signals);
-                effects_sc::clear_repo_scoped_state(
-                    signals.set_staged_changes,
-                    signals.set_unstaged_changes,
-                    signals.set_commit_history,
-                    signals.set_diff_content,
-                    signals.set_commit_diff_result,
-                );
-                request_shadow_list(ws);
-            }
+            message_control::handle_branch_switched(peer_id, success, ws, signals);
         }
         ServerMessage::RepoSwitched { branch, name, uuid } => {
-            if !string_branch_matches_scope(
-                &branch,
-                signals.active_branch.get_untracked(),
-                signals.pending_branch_switch.get_untracked(),
-            ) {
-                return;
-            }
-            ws.clear_writer_ready();
-            signals.set_handshake_ready.set(false);
-            if effects_switch::handle_repo_switched(
-                name,
-                uuid,
-                crate::hooks::use_core::RepoSwitchSignals {
-                    current_repo: signals.current_repo,
-                    current_repo_id: signals.current_repo_id,
-                    pending_repo_switch: signals.pending_repo_switch,
-                    set_pending_repo_switch: signals.set_pending_repo_switch,
-                    set_current_repo: signals.set_current_repo,
-                    set_current_repo_id: signals.set_current_repo_id,
-                    set_current_doc: signals.set_current_doc,
-                },
-            ) {
-                signals.set_docs.set(Vec::new());
-                signals.set_tree_nodes.set(Vec::new());
-                clear_merge_state(signals);
-                effects_sc::clear_repo_scoped_state(
-                    signals.set_staged_changes,
-                    signals.set_unstaged_changes,
-                    signals.set_commit_history,
-                    signals.set_diff_content,
-                    signals.set_commit_diff_result,
-                );
-                request_repo_sync_state(ws);
-                request_shadow_list(ws);
-            }
+            message_control::handle_repo_switched(branch, name, uuid, ws, signals);
+        }
+        ServerMessage::PeerDeleted { peer_id } => {
+            message_control::handle_peer_deleted(peer_id, ws, signals);
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
             handle_protocol_error(ws, locale, &error);
@@ -228,19 +168,4 @@ pub fn handle_message<F>(
         }
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
     }
-}
-
-fn clear_merge_state(signals: CoreSignals) {
-    signals.set_sync_mode.set("auto".to_string());
-    signals.set_pending_ops_count.set(0);
-    signals.set_pending_ops_previews.set(Vec::new());
-}
-
-fn request_repo_sync_state(ws: &WsService) {
-    ws.send(ClientMessage::GetSyncMode);
-    ws.send(ClientMessage::GetPendingOps);
-}
-
-fn request_shadow_list(ws: &WsService) {
-    ws.send(ClientMessage::ListShadows);
 }
