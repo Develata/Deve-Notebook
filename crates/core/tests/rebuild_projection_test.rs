@@ -104,3 +104,40 @@ fn rebuild_projection_prefers_node_path_over_legacy_doc_mapping() {
     );
     assert!(!root.join("stale/a.md").exists());
 }
+
+#[test]
+fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
+    let (dir, repo) = new_repo();
+    let doc_id = deve_core::models::DocId::new();
+    repo.append_generated_op_in_local_repo(
+        repo.local_repo_name(),
+        doc_id,
+        PeerId::new("local"),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "legacy".into(),
+                },
+                1,
+                PeerId::new("local"),
+                seq,
+                None,
+                None,
+            )
+        },
+    )
+    .expect("append legacy content");
+    inject_legacy_doc_path(repo.as_ref(), doc_id, "legacy/orphan.md");
+
+    let root = dir.path().join("vault").join("default");
+    std::fs::create_dir_all(root.join("legacy")).expect("mkdir legacy");
+    std::fs::write(root.join("legacy/orphan.md"), "stale").expect("write stale");
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    sync.rebuild_projection_local_repo("default")
+        .expect("rebuild");
+
+    assert!(!root.join("legacy/orphan.md").exists());
+}

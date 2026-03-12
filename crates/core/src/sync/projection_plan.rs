@@ -12,7 +12,6 @@ pub(super) struct ProjectionPlan {
 pub(super) fn build(repo: &RepoManager, repo_name: &str) -> Result<ProjectionPlan> {
     let mut dirs = HashSet::from([String::new()]);
     let mut docs = HashMap::new();
-    let mut anchored_doc_ids = HashSet::new();
 
     for (_node_id, meta) in repo.list_local_nodes(Some(repo_name))? {
         let path = meta.path.trim_matches('/').to_string();
@@ -29,24 +28,6 @@ pub(super) fn build(repo: &RepoManager, repo_name: &str) -> Result<ProjectionPla
         let Some(doc_id) = meta.doc_id else {
             continue;
         };
-        anchored_doc_ids.insert(doc_id);
-        insert_parents(&mut dirs, &path);
-        docs.insert(path, doc_id);
-    }
-
-    for (doc_id, path) in repo.list_local_docs(Some(repo_name))? {
-        if anchored_doc_ids.contains(&doc_id)
-            || docs.contains_key(&path)
-            || crate::utils::notegit::is_internal_repo_path(&path)
-        {
-            continue;
-        }
-        tracing::warn!(
-            "ProjectionPlan: using legacy doc mapping fallback for repo={} doc_id={} path={}",
-            repo_name,
-            doc_id,
-            path
-        );
         insert_parents(&mut dirs, &path);
         docs.insert(path, doc_id);
     }

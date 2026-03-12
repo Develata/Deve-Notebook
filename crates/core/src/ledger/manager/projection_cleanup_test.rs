@@ -59,7 +59,7 @@ fn keeps_empty_file_projection_backed_by_structure_facts() {
 }
 
 #[test]
-fn keeps_legacy_doc_mapping_backed_by_content_facts() {
+fn drops_legacy_doc_mapping_backed_only_by_content_facts() {
     let (_dir, repo) = new_repo();
     let doc_id = DocId::new();
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -98,14 +98,14 @@ fn keeps_legacy_doc_mapping_backed_by_content_facts() {
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         drop_unanchored_projection_path(db, "notes/live.md")
     })
-    .expect("cleanup must preserve live mapping");
+    .expect("cleanup legacy mapping");
 
     let legacy = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
             crate::ledger::metadata::get_docid(db, "notes/live.md")
         })
         .expect("load legacy mapping");
-    assert_eq!(legacy, Some(doc_id));
+    assert!(legacy.is_none());
 }
 
 #[test]
