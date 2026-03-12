@@ -75,7 +75,10 @@ pub async fn handle_switch_branch(
 
     session.clear_sync_binding();
     session.switch_branch(final_branch.clone());
-    tracing::info!("Session ActiveBranch updated to: {:?}", session.active_branch);
+    tracing::info!(
+        "Session ActiveBranch updated to: {:?}",
+        session.active_branch
+    );
 
     let target_repo = if let Some(forced) = force_repo_switch {
         Some(forced)
@@ -173,7 +176,11 @@ pub async fn handle_switch_repo(
     session: &mut WsSession,
     name: String,
 ) {
-    tracing::info!("Handle SwitchRepo request: Name='{}', CurrentBranch={:?}", name, session.active_branch);
+    tracing::info!(
+        "Handle SwitchRepo request: Name='{}', CurrentBranch={:?}",
+        name,
+        session.active_branch
+    );
 
     let branch = session.active_branch.clone();
     let repos = match state.repo.list_repos(branch.as_ref()) {

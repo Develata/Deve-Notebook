@@ -47,7 +47,10 @@ pub(super) async fn handle_request(
             Err(err) => {
                 errors::request_failed(
                     ch,
-                    format!("Failed to build sync response for repo {}: {}", repo_id, err),
+                    format!(
+                        "Failed to build sync response for repo {}: {}",
+                        repo_id, err
+                    ),
                 );
                 return;
             }

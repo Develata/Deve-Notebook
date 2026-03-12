@@ -38,7 +38,7 @@ fn load_doc_history(
         return confirmed::load_doc_ops(&handle.db, doc_id);
     }
     let scope = resolve_session_repo_and_sync(state, session)?;
-    state.repo.run_on_local_repo(&scope.repo_name, |db| {
-        confirmed::load_doc_ops(db, doc_id)
-    })
+    state
+        .repo
+        .run_on_local_repo(&scope.repo_name, |db| confirmed::load_doc_ops(db, doc_id))
 }

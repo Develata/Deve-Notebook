@@ -179,7 +179,10 @@ impl<'a> FsEventHandler<'a> {
 
     fn gen_list(&self) -> Result<Vec<ServerMessage>> {
         let docs = self.repo.list_local_docs(Some(self.repo_name))?;
-        Ok(vec![ServerMessage::DocList { docs }])
+        Ok(vec![ServerMessage::DocList {
+            repo_id: Some(self.repo_id),
+            docs,
+        }])
     }
 
     fn record_external_rename(

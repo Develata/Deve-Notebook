@@ -65,7 +65,10 @@ pub(super) async fn handle_dir_rename(
                 meta.path.clone(),
             )
         });
-        ch.unicast(ServerMessage::TreeUpdate(delta));
+        ch.unicast(ServerMessage::TreeUpdate {
+            repo_id: Some(scope.repo_id),
+            delta,
+        });
     }
     handle_list_docs(state, ch, session).await;
     notify_fs_refresh(ch, scope.repo_id, dst_name, "renamed");

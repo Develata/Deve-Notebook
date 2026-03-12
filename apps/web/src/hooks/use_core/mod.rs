@@ -60,6 +60,7 @@ pub fn use_core() -> CoreState {
         repo_vector,
         signals.degraded_sync_mode,
         signals.current_repo,
+        signals.current_repo_id,
         signals.active_branch,
         signals.set_handshake_ready,
     );

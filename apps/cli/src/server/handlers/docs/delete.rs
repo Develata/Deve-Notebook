@@ -99,7 +99,10 @@ pub async fn handle_delete_doc(
     let delta = state
         .tree_manager
         .with_tree_mut(scope.repo_id, |tm| tm.remove(target.node_id));
-    ch.unicast(ServerMessage::TreeUpdate(delta));
+    ch.unicast(ServerMessage::TreeUpdate {
+        repo_id: Some(scope.repo_id),
+        delta,
+    });
 
     // 5. 刷新文档列表
     handle_list_docs(state, ch, session).await;

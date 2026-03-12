@@ -20,7 +20,12 @@ pub fn handle_message<F>(
     F: Fn(),
 {
     match msg {
-        ServerMessage::DocList { docs } => effects_msg::handle_doc_list(docs, signals.set_docs),
+        ServerMessage::DocList { repo_id, docs } => {
+            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+                return;
+            }
+            effects_msg::handle_doc_list(docs, signals.set_docs);
+        }
         ServerMessage::SyncHello {
             peer_id,
             repo_id,
@@ -70,7 +75,27 @@ pub fn handle_message<F>(
         ServerMessage::ShadowList { shadows } => signals.set_shadow_repos.set(shadows),
         ServerMessage::RepoList { repos } => signals.set_repo_list.set(repos),
         ServerMessage::BranchSwitched { peer_id, success } => {
-            effects_msg::handle_branch_switched(peer_id, success, signals.set_active_branch);
+            if effects_msg::handle_branch_switched(
+                peer_id,
+                success,
+                signals.active_branch,
+                signals.set_active_branch,
+            ) {
+                ws.clear_writer_ready();
+                signals.set_handshake_ready.set(false);
+                signals.set_current_repo.set(None);
+                signals.set_current_repo_id.set(None);
+                signals.set_current_doc.set(None);
+                signals.set_docs.set(Vec::new());
+                signals.set_tree_nodes.set(Vec::new());
+                effects_sc::clear_repo_scoped_state(
+                    signals.set_staged_changes,
+                    signals.set_unstaged_changes,
+                    signals.set_commit_history,
+                    signals.set_diff_content,
+                    signals.set_commit_diff_result,
+                );
+            }
         }
         ServerMessage::RepoSwitched { name, uuid } => {
             ws.clear_writer_ready();
@@ -104,7 +129,10 @@ pub fn handle_message<F>(
                 ws.mark_writer_ready(repo_id, peer_id.as_str());
             }
         }
-        ServerMessage::TreeUpdate(delta) => {
+        ServerMessage::TreeUpdate { repo_id, delta } => {
+            if !effects_sc::matches_current_repo(&repo_id, signals.current_repo_id) {
+                return;
+            }
             signals
                 .set_tree_nodes
                 .update(|nodes| apply_tree_delta(nodes, delta));

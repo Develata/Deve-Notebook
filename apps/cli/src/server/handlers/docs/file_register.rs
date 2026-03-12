@@ -113,6 +113,9 @@ pub(super) fn broadcast_file_tree_update(
                 doc_id,
             )
         });
-        ch.unicast(ServerMessage::TreeUpdate(delta));
+        ch.unicast(ServerMessage::TreeUpdate {
+            repo_id: Some(scope.repo_id),
+            delta,
+        });
     }
 }

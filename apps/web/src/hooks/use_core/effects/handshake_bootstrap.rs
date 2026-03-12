@@ -13,6 +13,8 @@ pub(super) fn restore_session_scope(
         });
         if let Some(repo_name) = current_repo {
             ws.send(ClientMessage::SwitchRepo { name: repo_name });
+        } else {
+            ws.send(ClientMessage::ListRepos);
         }
         return;
     }

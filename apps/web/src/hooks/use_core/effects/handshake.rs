@@ -20,6 +20,7 @@ pub fn setup(
     repo_vector: ReadSignal<VersionVector>,
     degraded: ReadSignal<Option<DegradedSyncMode>>,
     current_repo: ReadSignal<Option<String>>,
+    current_repo_id: ReadSignal<Option<String>>,
     active_branch: ReadSignal<Option<PeerId>>,
     set_handshake_ready: WriteSignal<bool>,
 ) {
@@ -60,9 +61,22 @@ pub fn setup(
         let ws = ws_clone.clone();
         let maybe_mode = degraded.get();
         let maybe_identity = identity.get();
+        let active_repo_id = current_repo_id.get();
         let vector = repo_vector.get();
         let repo_name = current_repo.get();
         let branch = active_branch.get();
+        if let Some(identity) = maybe_identity.as_ref() {
+            if maybe_mode.is_none() && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
+            {
+                *last_mode.borrow_mut() = None;
+                if is_reconnect_bootstrap {
+                    restore_session_scope(&ws, repo_name.clone(), branch.clone());
+                }
+                ws.clear_writer_ready();
+                set_handshake_ready.set(false);
+                return;
+            }
+        }
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());

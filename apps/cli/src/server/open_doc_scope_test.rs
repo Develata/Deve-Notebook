@@ -1,11 +1,12 @@
 use super::handlers::document::handle_open_doc;
+use super::handlers::listing::handle_list_docs;
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -86,5 +87,28 @@ async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert!(uni_rx.try_recv().is_err(), "must not send empty snapshot");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some("missing-shadow".into()));
+
+    handle_list_docs(&state, &ch, &mut session).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+        }
+        other => panic!("expected SyncRepoUnbound error, got {:?}", other),
+    }
+    assert!(
+        uni_rx.try_recv().is_err(),
+        "must not send empty doc/tree payload"
+    );
     Ok(())
 }

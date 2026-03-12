@@ -23,6 +23,7 @@ pub fn setup_handshake_effect(
     repo_vector: ReadSignal<VersionVector>,
     degraded: ReadSignal<Option<DegradedSyncMode>>,
     current_repo: ReadSignal<Option<String>>,
+    current_repo_id: ReadSignal<Option<String>>,
     active_branch: ReadSignal<Option<PeerId>>,
     set_handshake_ready: WriteSignal<bool>,
 ) {
@@ -32,6 +33,7 @@ pub fn setup_handshake_effect(
         repo_vector,
         degraded,
         current_repo,
+        current_repo_id,
         active_branch,
         set_handshake_ready,
     );

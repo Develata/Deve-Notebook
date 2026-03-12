@@ -65,6 +65,8 @@ pub enum ServerMessage {
         ops: Vec<ConfirmedOp>,
     },
     DocList {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         docs: Vec<(DocId, String)>,
     },
     PluginResponse {
@@ -149,7 +151,11 @@ pub enum ServerMessage {
     DiscardAck {
         path: String,
     },
-    TreeUpdate(crate::tree::TreeDelta),
+    TreeUpdate {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
+        delta: crate::tree::TreeDelta,
+    },
     ProtocolError {
         error: ServerError,
     },

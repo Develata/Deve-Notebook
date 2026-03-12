@@ -72,14 +72,18 @@ pub fn handle_chat_chunk(
 pub fn handle_branch_switched(
     peer_id: Option<String>,
     success: bool,
+    active_branch: ReadSignal<Option<PeerId>>,
     set_active_branch: WriteSignal<Option<PeerId>>,
-) {
+) -> bool {
     if !success {
         leptos::logging::warn!("分支切换失败");
-        return;
+        return false;
     }
 
-    set_active_branch.set(peer_id.map(PeerId::new));
+    let next_branch = peer_id.map(PeerId::new);
+    let changed = active_branch.get_untracked() != next_branch;
+    set_active_branch.set(next_branch);
+    changed
 }
 
 /// 处理仓库切换确认。
@@ -103,8 +107,10 @@ pub fn handle_repo_switched(
 
 #[cfg(test)]
 mod tests {
+    use super::handle_branch_switched;
     use super::handle_repo_switched;
     use deve_core::models::DocId;
+    use deve_core::models::PeerId;
     use leptos::prelude::*;
     use uuid::Uuid;
 
@@ -130,6 +136,23 @@ mod tests {
         assert!(changed);
         assert_eq!(current_repo_id.get_untracked(), Some(next_repo_id));
         assert_eq!(current_doc.get_untracked(), None);
+    }
+
+    #[test]
+    fn branch_switch_reports_when_scope_changed() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+
+        let (active_branch, set_active_branch) = signal(Some(PeerId::new("peer-a")));
+        let changed = handle_branch_switched(
+            Some("peer-b".into()),
+            true,
+            active_branch,
+            set_active_branch,
+        );
+
+        assert!(changed);
+        assert_eq!(active_branch.get_untracked(), Some(PeerId::new("peer-b")));
     }
 }
 
