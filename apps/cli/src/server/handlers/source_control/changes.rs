@@ -6,10 +6,10 @@ use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeEntry;
 use std::sync::Arc;
 
-/// 获取变更列表 (暂存区 + 未暂存)
-pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session: &WsSession) {
+pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
     if session.is_readonly() {
         ch.unicast(ServerMessage::ChangesList {
+            repo_id: session.active_repo_id,
             staged: vec![],
             unstaged: vec![],
         });
@@ -40,7 +40,11 @@ pub async fn handle_get_changes(state: &Arc<AppState>, ch: &DualChannel, session
             return super::errors::send_ws(ch, e);
         }
     };
-    ch.unicast(ServerMessage::ChangesList { staged, unstaged });
+    ch.unicast(ServerMessage::ChangesList {
+        repo_id: Some(scope.repo_id),
+        staged,
+        unstaged,
+    });
 }
 
 /// 检测未暂存的变更

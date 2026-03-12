@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub async fn handle_commit(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     message: String,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
@@ -36,7 +36,7 @@ pub async fn handle_commit(
 pub async fn handle_get_commit_history(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     limit: u32,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
@@ -47,7 +47,10 @@ pub async fn handle_get_commit_history(
     match super::service::list_commit_history(state.repo.as_ref(), &selector, limit) {
         Ok(commits) => {
             tracing::info!("Returning {} commits", commits.len());
-            ch.unicast(ServerMessage::CommitHistory { commits });
+            ch.unicast(ServerMessage::CommitHistory {
+                repo_id: Some(scope.repo_id),
+                commits,
+            });
         }
         Err(e) => {
             tracing::error!("Failed to get commit history: {:?}", e);
@@ -60,7 +63,7 @@ pub async fn handle_get_commit_history(
 pub async fn handle_get_commit_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     commit_a: Option<String>,
     commit_b: String,
 ) {
@@ -77,7 +80,10 @@ pub async fn handle_get_commit_diff(
     ) {
         Ok(diffs) => {
             tracing::info!("Returning diff with {} file changes", diffs.len());
-            ch.unicast(ServerMessage::CommitDiffResult { diffs });
+            ch.unicast(ServerMessage::CommitDiffResult {
+                repo_id: Some(scope.repo_id),
+                diffs,
+            });
         }
         Err(e) => {
             tracing::error!("Failed to get commit diff: {:?}", e);
@@ -90,7 +96,7 @@ pub async fn handle_get_commit_diff(
 pub async fn handle_commit_and_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     message: String,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {

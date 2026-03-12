@@ -1,4 +1,4 @@
-use super::repo_scope::resolve_session_repo;
+use super::repo_scope::{resolve_session_repo, resolve_session_repo_and_sync};
 use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
 use crate::server::security;
 use deve_core::config::SyncMode;
@@ -50,5 +50,20 @@ fn resolve_session_repo_recovers_from_stale_local_repo_id() -> anyhow::Result<()
     let resolved = resolve_session_repo(&state, &session)?;
     assert_eq!(resolved.repo_name, "test");
     assert_eq!(resolved.repo_id, test_id);
+    Ok(())
+}
+
+#[test]
+fn resolve_session_repo_and_sync_updates_session_binding() -> anyhow::Result<()> {
+    let (_dir, state, default_id, test_id) = build_state()?;
+    let mut session = WsSession::new();
+    session.switch_repo("test".into(), Some(default_id));
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.repo_name, "test");
+    assert_eq!(resolved.repo_id, test_id);
+    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }

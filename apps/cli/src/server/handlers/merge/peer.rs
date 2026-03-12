@@ -111,6 +111,7 @@ fn send_merge_conflict(
     };
     tracing::warn!("Merge Conflict detected for doc {}", doc_id);
     ch.unicast(ServerMessage::DocDiff {
+        repo_id: None,
         path,
         old_content: local,
         new_content: remote,

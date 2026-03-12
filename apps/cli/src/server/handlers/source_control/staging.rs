@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub async fn handle_stage_file(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     target: ScPathTarget,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
@@ -33,7 +33,7 @@ pub async fn handle_stage_file(
 pub async fn handle_unstage_file(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     target: ScPathTarget,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
@@ -57,7 +57,7 @@ pub async fn handle_unstage_file(
 pub async fn handle_stage_files(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     targets: Vec<ScPathTarget>,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
@@ -78,7 +78,7 @@ pub async fn handle_stage_files(
 pub async fn handle_unstage_files(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     targets: Vec<ScPathTarget>,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {

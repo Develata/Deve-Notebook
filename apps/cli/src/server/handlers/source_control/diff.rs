@@ -18,7 +18,7 @@ use std::sync::Arc;
 pub async fn handle_get_doc_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     target: ScPathTarget,
 ) {
     if session.is_readonly() {
@@ -49,6 +49,7 @@ pub async fn handle_get_doc_diff(
     };
 
     ch.unicast(ServerMessage::DocDiff {
+        repo_id: Some(scope.repo_id),
         path: normalized,
         old_content,
         new_content,

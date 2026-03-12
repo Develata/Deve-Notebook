@@ -109,6 +109,8 @@ pub enum ServerMessage {
         error: ServerError,
     },
     ChangesList {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         staged: Vec<ChangeEntry>,
         unstaged: Vec<ChangeEntry>,
     },
@@ -125,14 +127,20 @@ pub enum ServerMessage {
         timestamp: i64,
     },
     CommitHistory {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         commits: Vec<CommitInfo>,
     },
     DocDiff {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         path: String,
         old_content: String,
         new_content: String,
     },
     CommitDiffResult {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         diffs: Vec<CommitFileDiff>,
     },
     DocDeleted {

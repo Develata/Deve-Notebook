@@ -61,6 +61,24 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
     }
 }
 
+/// 解析并回写会话中的 repo 绑定，收敛 stale `active_repo_id/name`。
+///
+/// Invariants:
+/// - 任何基于会话的 repo-scoped 读写，在落到底层算子前都应尽量先调用本函数。
+/// - 若解析出的 `RepoId/RepoName` 与会话不一致，以解析结果为准回写会话。
+pub fn resolve_session_repo_and_sync(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo> {
+    let scope = resolve_session_repo(state, session)?;
+    if session.active_repo.as_deref() != Some(scope.repo_name.as_str())
+        || session.active_repo_id != Some(scope.repo_id)
+    {
+        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+    }
+    Ok(scope)
+}
+
 fn resolve_repo_name_from_session(
     state: &Arc<AppState>,
     session: &WsSession,

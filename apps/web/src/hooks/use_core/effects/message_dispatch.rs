@@ -75,14 +75,22 @@ pub fn handle_message<F>(
         ServerMessage::RepoSwitched { name, uuid } => {
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
-            effects_msg::handle_repo_switched(
+            if effects_msg::handle_repo_switched(
                 name,
                 uuid,
                 signals.current_repo_id,
                 signals.set_current_repo,
                 signals.set_current_repo_id,
                 signals.set_current_doc,
-            );
+            ) {
+                effects_sc::clear_repo_scoped_state(
+                    signals.set_staged_changes,
+                    signals.set_unstaged_changes,
+                    signals.set_commit_history,
+                    signals.set_diff_content,
+                    signals.set_commit_diff_result,
+                );
+            }
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
             handle_protocol_error(ws, locale, &error);

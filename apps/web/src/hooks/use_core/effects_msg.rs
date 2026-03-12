@@ -90,7 +90,7 @@ pub fn handle_repo_switched(
     set_current_repo: WriteSignal<Option<String>>,
     set_current_repo_id: WriteSignal<Option<String>>,
     set_current_doc: WriteSignal<Option<DocId>>,
-) {
+) -> bool {
     let same_repo =
         !uuid.is_empty() && current_repo_id.get_untracked().as_deref() == Some(uuid.as_str());
     set_current_repo.set(Some(name));
@@ -98,6 +98,7 @@ pub fn handle_repo_switched(
     if !same_repo {
         set_current_doc.set(None);
     }
+    !same_repo
 }
 
 #[cfg(test)]
@@ -117,7 +118,7 @@ mod tests {
         let (current_doc, set_current_doc) = signal(Some(DocId::new()));
         let next_repo_id = Uuid::new_v4().to_string();
 
-        handle_repo_switched(
+        let changed = handle_repo_switched(
             "default".to_string(),
             next_repo_id.clone(),
             current_repo_id,
@@ -126,6 +127,7 @@ mod tests {
             set_current_doc,
         );
 
+        assert!(changed);
         assert_eq!(current_repo_id.get_untracked(), Some(next_repo_id));
         assert_eq!(current_doc.get_untracked(), None);
     }

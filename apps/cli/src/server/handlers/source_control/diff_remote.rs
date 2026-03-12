@@ -50,6 +50,7 @@ pub(super) async fn handle_remote_diff(
         local_counterpart_content(state.repo.as_ref(), &target, local_repo_name.as_deref());
 
     ch.unicast(ServerMessage::DocDiff {
+        repo_id: Some(scope.repo_id),
         path,
         old_content,
         new_content,

@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub async fn handle_discard_file(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     target: ScPathTarget,
 ) {
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {

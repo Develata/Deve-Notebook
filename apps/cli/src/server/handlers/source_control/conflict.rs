@@ -20,7 +20,7 @@ use std::sync::Arc;
 pub async fn handle_resolve_conflict(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     target: ScPathTarget,
     resolution: ConflictResolution,
 ) {
