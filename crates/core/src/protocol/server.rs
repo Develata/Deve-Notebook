@@ -94,6 +94,8 @@ pub enum ServerMessage {
         shadows: Vec<String>,
     },
     RepoList {
+        #[serde(default)]
+        branch: Option<String>,
         repos: Vec<String>,
     },
     BranchSwitched {

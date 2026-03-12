@@ -40,7 +40,10 @@ pub async fn handle_list_repos(
 ) {
     match state.repo.list_repos(active_branch) {
         Ok(repos) => {
-            ch.unicast(ServerMessage::RepoList { repos });
+            ch.unicast(ServerMessage::RepoList {
+                branch: active_branch.map(ToString::to_string),
+                repos,
+            });
         }
         Err(e) => {
             tracing::error!("Failed to list repos: {:?}", e);

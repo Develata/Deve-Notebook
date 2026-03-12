@@ -73,7 +73,15 @@ pub fn handle_message<F>(
             signals.set_pending_ops_previews.set(vec![]);
         }
         ServerMessage::ShadowList { shadows } => signals.set_shadow_repos.set(shadows),
-        ServerMessage::RepoList { repos } => signals.set_repo_list.set(repos),
+        ServerMessage::RepoList { branch, repos } => {
+            let current_branch = signals
+                .active_branch
+                .get_untracked()
+                .map(|id| id.to_string());
+            if branch == current_branch {
+                signals.set_repo_list.set(repos);
+            }
+        }
         ServerMessage::BranchSwitched { peer_id, success } => {
             if effects_msg::handle_branch_switched(
                 peer_id,
@@ -88,6 +96,7 @@ pub fn handle_message<F>(
                 signals.set_current_doc.set(None);
                 signals.set_docs.set(Vec::new());
                 signals.set_tree_nodes.set(Vec::new());
+                signals.set_repo_list.set(Vec::new());
                 effects_sc::clear_repo_scoped_state(
                     signals.set_staged_changes,
                     signals.set_unstaged_changes,
