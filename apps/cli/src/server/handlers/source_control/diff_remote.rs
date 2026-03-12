@@ -18,7 +18,7 @@ pub(super) async fn handle_remote_diff(
         Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
     };
     let path = deve_core::utils::path::to_forward_slash(&target.path);
-    let new_content = match get_remote_doc_content(session, &target) {
+    let new_content = match get_remote_doc_content(session, &scope.repo_name, &target) {
         Some(content) => content,
         None => {
             return errors::send_ws_code(
@@ -54,8 +54,12 @@ pub(super) async fn handle_remote_diff(
     });
 }
 
-fn get_remote_doc_content(session: &WsSession, target: &ScPathTarget) -> Option<String> {
-    let db = session.get_active_db()?;
+fn get_remote_doc_content(
+    session: &WsSession,
+    repo_name: &str,
+    target: &ScPathTarget,
+) -> Option<String> {
+    let db = session.active_db_for(session.active_branch.as_ref(), repo_name)?;
     let doc_id = target
         .doc_id
         .or_else(|| resolve_doc_id(&db.db, &target.path))?;

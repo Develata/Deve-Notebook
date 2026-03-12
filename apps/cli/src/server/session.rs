@@ -53,16 +53,10 @@ pub struct WsSession {
     /// - repo 切换或 peer 变更后必须失效。
     pub writer_identity: Option<WriterIdentity>,
 
-    /// 当前活动分支
-    ///
-    /// - `None`: 本地分支 (Master)
-    /// - `Some(peer_id)`: 远程影子库 (只读模式)
+    /// 当前活动分支。`None` 为本地分支，`Some(peer_id)` 为远程影子库。
     pub active_branch: Option<PeerId>,
 
-    /// 当前活动仓库名称 (repo name)
-    ///
-    /// - `None`: 默认仓库 ("default")
-    /// - `Some(name)`: 指定名称的仓库 (.redb)
+    /// 当前活动仓库名称。`None` 表示默认仓库，`Some(name)` 表示指定 `.redb`。
     pub active_repo: Option<String>,
 
     /// 当前活动仓库 ID（UUID-first）
@@ -189,6 +183,16 @@ impl WsSession {
         self.active_db.as_ref()
     }
 
+    pub fn active_db_for(
+        &self,
+        branch: Option<&PeerId>,
+        repo_name: &str,
+    ) -> Option<&DatabaseHandle> {
+        self.active_db.as_ref().filter(|handle| {
+            handle.branch.as_ref() == branch && handle.repo_name.as_str() == repo_name
+        })
+    }
+
     pub fn record_incoming_message(&mut self, now: Instant) -> bool {
         if now.duration_since(self.message_window_started_at) >= WS_MESSAGE_WINDOW {
             self.message_window_started_at = now;
@@ -201,5 +205,41 @@ impl WsSession {
 
         self.message_count_in_window += 1;
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn active_db_for_rejects_stale_scope() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = Arc::new(redb::Database::create(dir.path().join("repo.redb")).expect("db"));
+        let mut session = WsSession::new();
+        session.set_active_db(DatabaseHandle {
+            db,
+            readonly: true,
+            branch: Some(PeerId::new("peer-a")),
+            repo_name: "notes".into(),
+        });
+
+        assert!(
+            session
+                .active_db_for(Some(&PeerId::new("peer-a")), "notes")
+                .is_some()
+        );
+        assert!(
+            session
+                .active_db_for(Some(&PeerId::new("peer-b")), "notes")
+                .is_none()
+        );
+        assert!(session.active_db_for(None, "notes").is_none());
+        assert!(
+            session
+                .active_db_for(Some(&PeerId::new("peer-a")), "other")
+                .is_none()
+        );
     }
 }

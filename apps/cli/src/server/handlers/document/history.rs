@@ -41,7 +41,7 @@ fn load_doc_history(
     repo_name: &str,
     doc_id: DocId,
 ) -> anyhow::Result<Vec<deve_core::protocol::ConfirmedOp>> {
-    if let Some(handle) = session.get_active_db() {
+    if let Some(handle) = session.active_db_for(session.active_branch.as_ref(), repo_name) {
         return confirmed::load_doc_ops(&handle.db, doc_id);
     }
     state
