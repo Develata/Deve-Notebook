@@ -13,11 +13,11 @@ pub type ScResult<T> = std::result::Result<T, ServerError>;
 
 /// Invariants:
 /// - Source Control 只在本地 branch 上执行。
-/// - 本地工作区与 side table 最终以 repo_name 选中具体仓库文件。
-/// - 上游 `resolve_current_local_repo` 已负责将会话中的漂移 UUID 收敛到正确 repo_name。
+/// - 上游 `resolve_current_local_repo` 已负责将会话中的漂移 UUID 收敛到单一 repo。
+/// - 下游 RepoSelector 必须同时携带 `repo_id + repo_name`，让底层 resolver 做一致性校验。
 pub fn selector_from_scope(scope: &ResolvedRepo) -> RepoSelector {
     RepoSelector {
-        repo_id: None,
+        repo_id: Some(scope.repo_id),
         repo_name: Some(scope.repo_name.clone()),
     }
 }
@@ -32,13 +32,14 @@ mod tests {
     use crate::server::repo_scope::ResolvedRepo;
 
     #[test]
-    fn selector_from_scope_prefers_local_repo_name() {
+    fn selector_from_scope_keeps_uuid_and_name() {
+        let repo_id = uuid::Uuid::new_v4();
         let selector = selector_from_scope(&ResolvedRepo {
-            repo_id: uuid::Uuid::new_v4(),
+            repo_id,
             repo_name: "test".into(),
             branch: None,
         });
-        assert_eq!(selector.repo_id, None);
+        assert_eq!(selector.repo_id, Some(repo_id));
         assert_eq!(selector.repo_name.as_deref(), Some("test"));
     }
 }
