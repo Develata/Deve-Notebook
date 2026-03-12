@@ -21,8 +21,10 @@ pub fn repo_list_matches_scope(
     branch: Option<String>,
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
+    pending_repo_switch: Option<String>,
 ) -> bool {
-    branch == expected_branch_string(active_branch, pending_branch_switch)
+    pending_repo_switch.is_none()
+        && branch == expected_branch_string(active_branch, pending_branch_switch)
 }
 
 fn expected_branch_string(
@@ -56,11 +58,13 @@ mod tests {
             None,
             None,
             Some(PendingBranchTarget::Shadow("peer-a".into())),
+            None,
         ));
         assert!(repo_list_matches_scope(
             Some("peer-a".into()),
             None,
             Some(PendingBranchTarget::Shadow("peer-a".into())),
+            None,
         ));
     }
 
@@ -70,11 +74,23 @@ mod tests {
             Some("peer-a".into()),
             Some(PeerId::new("peer-a")),
             None,
+            None,
         ));
         assert!(!repo_list_matches_scope(
             Some("peer-b".into()),
             Some(PeerId::new("peer-a")),
             None,
+            None,
+        ));
+    }
+
+    #[test]
+    fn repo_list_rejects_messages_while_repo_switch_pending() {
+        assert!(!repo_list_matches_scope(
+            None,
+            None,
+            None,
+            Some("default".into()),
         ));
     }
 

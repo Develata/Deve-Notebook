@@ -17,14 +17,18 @@ pub fn handle_sync_hello(
     signals: CoreSignals,
 ) {
     effects_msg::handle_sync_hello(peer_id, vector.clone(), signals.set_peers);
-    if should_accept_sync_hello(
+    let accepted = should_accept_sync_hello(
         signals.current_repo_id.get_untracked(),
         signals.active_branch.get_untracked(),
         signals.pending_branch_switch.get_untracked(),
         signals.pending_repo_switch.get_untracked(),
         &repo_id,
-    ) {
+    );
+    if accepted {
         signals.set_handshake_ready.set(true);
+    }
+    if !accepted {
+        return;
     }
     spawn_local(async move {
         match serde_json::to_string(&vector) {

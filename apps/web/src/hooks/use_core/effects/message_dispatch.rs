@@ -106,6 +106,7 @@ pub fn handle_message<F>(
                 branch,
                 signals.active_branch.get_untracked(),
                 signals.pending_branch_switch.get_untracked(),
+                signals.pending_repo_switch.get_untracked(),
             ) {
                 signals.set_repo_list.set(repos);
             }
