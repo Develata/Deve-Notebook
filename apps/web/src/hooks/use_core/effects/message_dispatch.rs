@@ -42,21 +42,36 @@ pub fn handle_message<F>(
             req_id,
             result,
             error,
-        } => signals
-            .set_plugin_response
-            .set(Some((req_id, result, error))),
+        } => {
+            if !accepts_unscoped_update(signals) {
+                return;
+            }
+            signals
+                .set_plugin_response
+                .set(Some((req_id, result, error)));
+        }
         ServerMessage::ChatChunk {
             req_id,
             delta,
             finish_reason,
-        } => effects_msg::handle_chat_chunk(
-            req_id,
-            delta,
-            finish_reason,
-            signals.set_chat_messages,
-            signals.set_is_chat_streaming,
-        ),
-        ServerMessage::SearchResults { results } => signals.set_search_results.set(results),
+        } => {
+            if !accepts_unscoped_update(signals) {
+                return;
+            }
+            effects_msg::handle_chat_chunk(
+                req_id,
+                delta,
+                finish_reason,
+                signals.set_chat_messages,
+                signals.set_is_chat_streaming,
+            );
+        }
+        ServerMessage::SearchResults { results } => {
+            if !accepts_unscoped_update(signals) {
+                return;
+            }
+            signals.set_search_results.set(results);
+        }
         ServerMessage::SyncModeStatus {
             repo_id,
             branch,
@@ -167,5 +182,41 @@ pub fn handle_message<F>(
             });
         }
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
+    }
+}
+
+fn accepts_unscoped_update(signals: CoreSignals) -> bool {
+    signals.pending_branch_switch.get_untracked().is_none()
+        && signals.pending_repo_switch.get_untracked().is_none()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::accepts_unscoped_update;
+    use crate::api::ConnectionStatus;
+    use crate::hooks::use_core::PendingBranchTarget;
+    use crate::hooks::use_core::state::init_signals;
+    use leptos::prelude::*;
+
+    #[test]
+    fn rejects_unscoped_updates_while_repo_switch_pending() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        signals.set_pending_repo_switch.set(Some("test".into()));
+        assert!(!accepts_unscoped_update(signals));
+    }
+
+    #[test]
+    fn rejects_unscoped_updates_while_branch_switch_pending() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        signals
+            .set_pending_branch_switch
+            .set(Some(PendingBranchTarget::Local));
+        assert!(!accepts_unscoped_update(signals));
     }
 }

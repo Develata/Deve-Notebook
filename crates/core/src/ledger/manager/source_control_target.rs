@@ -25,7 +25,7 @@ impl RepoManager {
         target: &ScPathTarget,
     ) -> Result<()> {
         let path = self
-            .run_on_local_repo(repo_name, |db| Ok(pending_fs::get_for_target(db, target)?))?
+            .run_on_local_repo(repo_name, |db| pending_fs::get_for_target(db, target))?
             .map(|entry| entry.path)
             .unwrap_or_else(|| target.path.clone());
         self.discard_pending_in_local_repo(repo_name, &path)
