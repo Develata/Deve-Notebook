@@ -6,7 +6,7 @@
 use crate::models::{PeerId, RepoId};
 use crate::sync::engine::SyncEngine;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Repo-Scoped 同步引擎管理器
 ///
@@ -27,6 +27,20 @@ pub struct RepoScopedSyncEngine {
 }
 
 impl RepoScopedSyncEngine {
+    fn read_engines(&self) -> RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>> {
+        self.engines.read().unwrap_or_else(|e| {
+            tracing::warn!("RepoScopedSyncEngine read lock poisoned; recovering");
+            e.into_inner()
+        })
+    }
+
+    fn write_engines(&self) -> RwLockWriteGuard<'_, HashMap<RepoId, SyncEngine>> {
+        self.engines.write().unwrap_or_else(|e| {
+            tracing::warn!("RepoScopedSyncEngine write lock poisoned; recovering");
+            e.into_inner()
+        })
+    }
+
     /// 创建新的 Repo-Scoped 同步引擎管理器
     ///
     /// ## 后置条件 (Post-conditions)
@@ -55,14 +69,14 @@ impl RepoScopedSyncEngine {
     /// - `None` - 如果锁被污染
     pub fn get_or_create(&self, repo_id: RepoId) -> Option<SyncEngine> {
         // 先尝试读取
-        if let Ok(engines) = self.engines.read()
-            && let Some(engine) = engines.get(&repo_id)
-        {
+        let engines = self.read_engines();
+        if let Some(engine) = engines.get(&repo_id) {
             return Some(engine.clone());
         }
+        drop(engines);
 
         // 需要创建新的 engine
-        let mut engines = self.engines.write().ok()?;
+        let mut engines = self.write_engines();
 
         if let Some(engine) = engines.get(&repo_id) {
             return Some(engine.clone());
@@ -79,7 +93,7 @@ impl RepoScopedSyncEngine {
     }
 
     pub fn get(&self, repo_id: RepoId) -> Option<SyncEngine> {
-        let engines = self.engines.read().ok()?;
+        let engines = self.read_engines();
         engines.get(&repo_id).cloned()
     }
 
@@ -88,7 +102,7 @@ impl RepoScopedSyncEngine {
     where
         F: FnOnce(&mut SyncEngine) -> R,
     {
-        let mut engines = self.engines.write().ok()?;
+        let mut engines = self.write_engines();
 
         let engine = engines.entry(repo_id).or_insert_with(|| {
             SyncEngine::new(
@@ -107,7 +121,7 @@ impl RepoScopedSyncEngine {
     where
         F: FnOnce(&SyncEngine) -> R,
     {
-        let engines = self.engines.read().ok()?;
+        let engines = self.read_engines();
         engines.get(&repo_id).map(f)
     }
 
@@ -116,13 +130,13 @@ impl RepoScopedSyncEngine {
     where
         F: FnOnce(&mut SyncEngine) -> R,
     {
-        let mut engines = self.engines.write().ok()?;
+        let mut engines = self.write_engines();
         engines.get_mut(&repo_id).map(f)
     }
 
     /// 移除指定仓库的 SyncEngine
     pub fn remove(&self, repo_id: RepoId) -> Option<SyncEngine> {
-        let mut engines = self.engines.write().ok()?;
+        let mut engines = self.write_engines();
         engines.remove(&repo_id)
     }
 
@@ -137,15 +151,47 @@ impl RepoScopedSyncEngine {
 
     /// 清空所有 SyncEngine
     pub fn clear(&self) {
-        if let Ok(mut engines) = self.engines.write() {
-            engines.clear();
-        }
+        self.write_engines().clear();
     }
 
     fn load_repo_key(&self, repo_id: RepoId) -> Option<crate::security::RepoKey> {
-        let repo_name = self.repo.find_local_repo_name_by_id(repo_id).ok()??;
-        let key_dir = self.repo.local_repo_notegit_keys_root(&repo_name).ok()?;
-        crate::security::load_or_generate_repo_key_at(&key_dir).ok()
+        let repo_name = match self.repo.find_local_repo_name_by_id(repo_id) {
+            Ok(Some(repo_name)) => repo_name,
+            Ok(None) => {
+                tracing::warn!("RepoScopedSyncEngine missing local repo for {}", repo_id);
+                return None;
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "RepoScopedSyncEngine failed to resolve {}: {}",
+                    repo_id,
+                    err
+                );
+                return None;
+            }
+        };
+        let key_dir = match self.repo.local_repo_notegit_keys_root(&repo_name) {
+            Ok(key_dir) => key_dir,
+            Err(err) => {
+                tracing::warn!(
+                    "RepoScopedSyncEngine failed to resolve key dir {}: {}",
+                    repo_name,
+                    err
+                );
+                return None;
+            }
+        };
+        match crate::security::load_or_generate_repo_key_at(&key_dir) {
+            Ok(key) => Some(key),
+            Err(err) => {
+                tracing::warn!(
+                    "RepoScopedSyncEngine failed to load repo key {}: {}",
+                    repo_name,
+                    err
+                );
+                None
+            }
+        }
     }
 }
 

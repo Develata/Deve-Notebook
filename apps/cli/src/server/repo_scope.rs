@@ -50,12 +50,11 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
                 && err.to_string().starts_with("Session repo mismatch:") =>
         {
             tracing::warn!("Recovering from stale local session repo_id: {}", err);
-            resolve_repo_by_name(
-                state,
-                None,
-                None,
-                session.active_repo.clone().unwrap_or_default(),
-            )
+            let repo_name = session
+                .active_repo
+                .clone()
+                .expect("stale local repo recovery requires active_repo");
+            resolve_repo_by_name(state, None, None, repo_name)
         }
         Err(err) => Err(err),
     }
