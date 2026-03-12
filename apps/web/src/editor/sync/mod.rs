@@ -10,6 +10,7 @@ mod snapshot_finish;
 use super::EditorStats;
 use super::ffi::{applyRemoteOp, getEditorContent};
 use context::SyncContext;
+use deve_core::models::RepoId;
 use deve_core::protocol::ServerMessage;
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
@@ -61,12 +62,20 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         ServerMessage::SyncPush { ops } => {
             decrypt::handle_sync_push(ctx, &ops);
         }
-        ServerMessage::KeyProvide { repo_key } => {
-            handle_key_provide(ctx, &repo_key);
+        ServerMessage::KeyProvide { repo_id, repo_key } => {
+            if matches_current_repo(ctx, Some(repo_id)) {
+                handle_key_provide(ctx, &repo_key);
+            }
         }
-        ServerMessage::KeyDenied { error } => {
-            ctx.set_repo_key.set(None);
-            leptos::logging::warn!("KeyDenied: code={:?} detail={:?}", error.code, error.detail);
+        ServerMessage::KeyDenied { repo_id, error } => {
+            if matches_current_repo(ctx, repo_id) {
+                ctx.set_repo_key.set(None);
+                leptos::logging::warn!(
+                    "KeyDenied: code={:?} detail={:?}",
+                    error.code,
+                    error.detail
+                );
+            }
         }
         _ => {}
     }
@@ -86,6 +95,14 @@ fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
         None => {
             leptos::logging::error!("E2EE: Invalid RepoKey length: {}", raw.len());
         }
+    }
+}
+
+fn matches_current_repo(ctx: &SyncContext, repo_id: Option<RepoId>) -> bool {
+    match (repo_id, ctx.current_repo_id.get_untracked()) {
+        (Some(repo_id), Some(current)) => current == repo_id.to_string(),
+        (Some(_), None) => false,
+        (None, _) => true,
     }
 }
 

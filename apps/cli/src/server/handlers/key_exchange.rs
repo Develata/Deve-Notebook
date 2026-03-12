@@ -21,7 +21,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            send_key_denied(ch, ServerErrorCode::SyncRepoUnbound, err.to_string());
+            send_key_denied(ch, None, ServerErrorCode::SyncRepoUnbound, err.to_string());
             return;
         }
     };
@@ -29,7 +29,12 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
     let key_dir = match state.repo.local_repo_notegit_keys_root(&scope.repo_name) {
         Ok(dir) => dir,
         Err(err) => {
-            send_key_denied(ch, ServerErrorCode::StoragePersistFailed, err.to_string());
+            send_key_denied(
+                ch,
+                Some(scope.repo_id),
+                ServerErrorCode::StoragePersistFailed,
+                err.to_string(),
+            );
             return;
         }
     };
@@ -41,18 +46,30 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
                 scope.repo_name
             );
             ch.unicast(ServerMessage::KeyProvide {
+                repo_id: scope.repo_id,
                 repo_key: key.to_bytes().to_vec(),
             });
         }
         Err(err) => {
             tracing::warn!("RepoKey request failed for {}: {:?}", scope.repo_name, err);
-            send_key_denied(ch, ServerErrorCode::StoragePersistFailed, err.to_string());
+            send_key_denied(
+                ch,
+                Some(scope.repo_id),
+                ServerErrorCode::StoragePersistFailed,
+                err.to_string(),
+            );
         }
     }
 }
 
-fn send_key_denied(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
+fn send_key_denied(
+    ch: &DualChannel,
+    repo_id: Option<deve_core::models::RepoId>,
+    code: ServerErrorCode,
+    detail: impl Into<String>,
+) {
     ch.unicast(ServerMessage::KeyDenied {
+        repo_id,
         error: ServerError::with_detail(code, detail),
     });
 }

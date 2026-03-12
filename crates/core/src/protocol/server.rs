@@ -201,9 +201,12 @@ pub enum ServerMessage {
         resolution: String,
     },
     KeyProvide {
+        repo_id: RepoId,
         repo_key: Vec<u8>,
     },
     KeyDenied {
+        #[serde(default)]
+        repo_id: Option<RepoId>,
         error: ServerError,
     },
     SystemMetrics {

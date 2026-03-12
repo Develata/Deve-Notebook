@@ -109,6 +109,7 @@ pub fn use_editor(
                 doc_id,
                 client_id: ws_clone_2
                     .writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
+                current_repo_id: core.current_repo_id,
                 open_request_id,
                 ws: &ws_clone_2,
                 set_content,

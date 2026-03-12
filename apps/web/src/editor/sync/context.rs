@@ -17,6 +17,7 @@ use leptos::prelude::*;
 pub struct SyncContext<'a> {
     pub doc_id: DocId,
     pub client_id: Option<u64>,
+    pub current_repo_id: ReadSignal<Option<String>>,
     pub open_request_id: ReadSignal<u64>,
     pub ws: &'a WsService,
     // 内容信号
