@@ -67,6 +67,7 @@ impl RepoManager {
         if let Some(peer_id) = branch {
             return self.read_remote_repo_info(peer_id, name);
         }
+        self.repair_local_repo_catalog()?;
         if name == self.local_repo_name {
             return Self::read_repo_info_from_db(&self.local_db);
         }
