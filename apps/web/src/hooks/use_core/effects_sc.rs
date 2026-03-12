@@ -10,6 +10,7 @@ use leptos::prelude::*;
 use super::diff_session::DiffSessionWire;
 use super::types::PendingBranchTarget;
 
+#[allow(unused_imports)]
 pub(crate) use super::effects_sc_scope::{matches_current_repo, matches_current_scope};
 
 #[cfg(test)]
@@ -30,9 +31,20 @@ pub fn handle_sc_message(
     current_repo_id: ReadSignal<Option<String>>,
     active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
     pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pending_repo_switch: ReadSignal<Option<String>>,
     schedule_refresh: &dyn Fn(),
     ws: &crate::api::WsService,
 ) -> bool {
+    let in_scope = |repo_id, branch| {
+        matches_scope(
+            repo_id,
+            branch,
+            current_repo_id,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+        )
+    };
     match msg {
         ServerMessage::ChangesList {
             repo_id,
@@ -40,13 +52,7 @@ pub fn handle_sc_message(
             staged,
             unstaged,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             set_staged.set(staged.clone());
@@ -57,13 +63,7 @@ pub fn handle_sc_message(
             branch,
             commits,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             set_history.set(commits.clone());
@@ -73,13 +73,7 @@ pub fn handle_sc_message(
             branch,
             path,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("已暂存: {}", path);
@@ -90,13 +84,7 @@ pub fn handle_sc_message(
             branch,
             path,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("已取消暂存: {}", path);
@@ -107,13 +95,7 @@ pub fn handle_sc_message(
             branch,
             path,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("已放弃变更: {}", path);
@@ -125,13 +107,7 @@ pub fn handle_sc_message(
             branch,
             ..
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("已提交: {}", commit_id);
@@ -145,13 +121,7 @@ pub fn handle_sc_message(
             old_content,
             new_content,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("收到 Diff: {}", path);
@@ -174,13 +144,7 @@ pub fn handle_sc_message(
             change_type,
             has_conflict,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             let conflict_tag = if *has_conflict { " [冲突]" } else { "" };
@@ -193,13 +157,7 @@ pub fn handle_sc_message(
             branch,
             diffs,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
@@ -211,13 +169,7 @@ pub fn handle_sc_message(
             path,
             resolution,
         } => {
-            if !matches_current_scope(
-                repo_id,
-                branch,
-                current_repo_id,
-                active_branch,
-                pending_branch_switch,
-            ) {
+            if !in_scope(repo_id, branch) {
                 return true;
             }
             leptos::logging::log!("冲突已解决: {} ({})", path, resolution);
@@ -226,6 +178,24 @@ pub fn handle_sc_message(
         _ => return false,
     }
     true
+}
+
+fn matches_scope(
+    repo_id: &Option<uuid::Uuid>,
+    branch: &Option<deve_core::models::PeerId>,
+    current_repo_id: ReadSignal<Option<String>>,
+    active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
+    pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pending_repo_switch: ReadSignal<Option<String>>,
+) -> bool {
+    matches_current_scope(
+        repo_id,
+        branch,
+        current_repo_id,
+        active_branch,
+        pending_branch_switch,
+        pending_repo_switch,
+    )
 }
 
 pub fn clear_repo_scoped_state(

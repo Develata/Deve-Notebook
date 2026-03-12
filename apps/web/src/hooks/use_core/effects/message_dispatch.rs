@@ -9,9 +9,8 @@ use super::super::effects_switch;
 use super::super::pending;
 use super::super::state::CoreSignals;
 use super::message_protocol::handle_protocol_error;
-use super::message_scope::{
-    peer_branch_matches_scope, repo_list_matches_scope, string_branch_matches_scope,
-};
+use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
+use super::message_scope::{repo_list_matches_scope, string_branch_matches_scope};
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
 pub fn handle_message<F>(
@@ -29,7 +28,7 @@ pub fn handle_message<F>(
             branch,
             docs,
         } => {
-            if !matches_repo_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals) {
                 return;
             }
             effects_msg::handle_doc_list(docs, signals.set_docs);
@@ -64,7 +63,7 @@ pub fn handle_message<F>(
             branch,
             mode,
         } => {
-            if !matches_repo_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals) {
                 return;
             }
             signals.set_sync_mode.set(mode);
@@ -75,7 +74,7 @@ pub fn handle_message<F>(
             count,
             previews,
         } => {
-            if !matches_repo_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals) {
                 return;
             }
             signals.set_pending_ops_count.set(count);
@@ -86,7 +85,7 @@ pub fn handle_message<F>(
             branch,
             merged_count,
         } => {
-            if !matches_repo_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals) {
                 return;
             }
             leptos::logging::log!("已合并 {} 个操作", merged_count);
@@ -94,7 +93,7 @@ pub fn handle_message<F>(
             signals.set_pending_ops_previews.set(vec![]);
         }
         ServerMessage::PendingDiscarded { repo_id, branch } => {
-            if !matches_repo_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals) {
                 return;
             }
             leptos::logging::log!("待处理操作已丢弃");
@@ -184,13 +183,7 @@ pub fn handle_message<F>(
             branch,
         } => {
             let repo_id = repo_id.to_string();
-            if peer_branch_matches_scope(
-                &branch,
-                signals.active_branch.get_untracked(),
-                signals.pending_branch_switch.get_untracked(),
-            ) && signals.active_branch.get_untracked().is_none()
-                && signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str())
-            {
+            if accepts_write_ready_message(&repo_id, &branch, signals) {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
                 ws.mark_writer_ready(repo_id, peer_id.as_str());
             }
@@ -200,7 +193,7 @@ pub fn handle_message<F>(
             branch,
             delta,
         } => {
-            if !matches_repo_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals) {
                 return;
             }
             signals
@@ -214,7 +207,7 @@ pub fn handle_message<F>(
             client_op_id,
             ..
         } => {
-            if !matches_repo_scope(&Some(repo_id), &branch, signals) {
+            if !matches_current_message_scope(&Some(repo_id), &branch, signals) {
                 return;
             }
             signals.set_pending_local_edits.update(|pending_edits| {
@@ -223,19 +216,6 @@ pub fn handle_message<F>(
         }
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
     }
-}
-
-fn matches_repo_scope(
-    repo_id: &Option<uuid::Uuid>,
-    branch: &Option<deve_core::models::PeerId>,
-    signals: CoreSignals,
-) -> bool {
-    effects_sc::matches_current_repo(repo_id, signals.current_repo_id)
-        && peer_branch_matches_scope(
-            branch,
-            signals.active_branch.get_untracked(),
-            signals.pending_branch_switch.get_untracked(),
-        )
 }
 
 fn clear_merge_state(signals: CoreSignals) {
