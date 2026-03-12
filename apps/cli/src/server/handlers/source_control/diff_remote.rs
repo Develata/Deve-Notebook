@@ -1,7 +1,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
-use crate::server::repo_scope::resolve_session_repo;
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
 use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
@@ -10,10 +10,10 @@ use std::sync::Arc;
 pub(super) async fn handle_remote_diff(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     target: ScPathTarget,
 ) {
-    let scope = match resolve_session_repo(state, session) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
     };

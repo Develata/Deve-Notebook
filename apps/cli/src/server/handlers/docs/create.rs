@@ -7,7 +7,7 @@ use super::errors;
 use super::{validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{local_repo_path, resolve_session_repo};
+use crate::server::repo_scope::{local_repo_path, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
@@ -30,7 +30,7 @@ pub async fn handle_create_doc(
         errors::remote_branch_readonly(ch);
         return;
     }
-    let scope = match resolve_session_repo(state, session) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
             errors::request_failed(ch, err.to_string());
