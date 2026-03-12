@@ -1,4 +1,4 @@
-use super::handlers::docs::{handle_copy_doc, handle_rename_doc};
+use super::handlers::docs::{handle_copy_doc, handle_create_doc, handle_rename_doc};
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
@@ -118,5 +118,19 @@ async fn copy_recovers_from_missing_source_projection() -> anyhow::Result<()> {
         "hello"
     );
     assert!(state.repo.get_docid("notes/b.md")?.is_some());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_rejects_existing_tracked_path_without_projection() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    seed_file(&state, "notes/a.md", "ledger only")?;
+    let (uni_tx, _uni_rx) = mpsc::channel(32);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    activate_local_repo(&mut session, state.repo.as_ref(), repo_id);
+    let original = state.repo.get_docid("notes/a.md")?;
+    handle_create_doc(&state, &ch, &mut session, "notes/a.md".into()).await;
+    assert_eq!(state.repo.get_docid("notes/a.md")?, original);
     Ok(())
 }

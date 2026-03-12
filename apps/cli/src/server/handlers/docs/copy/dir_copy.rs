@@ -16,10 +16,10 @@ pub(super) fn copy_dir(
     src_path: &str,
     dest_path: &str,
 ) -> bool {
-    if !copy_dir_on_disk(ch, src, dst, src_path) {
+    if !register_copied_docs(state, ch, scope, src, src_path, dest_path) {
         return false;
     }
-    if !register_copied_docs(state, ch, scope, src, src_path, dst, dest_path) {
+    if !copy_dir_on_disk(ch, src, dst, src_path) {
         return false;
     }
     if let Ok(report) = run_on_resolved_local_repo(state, scope, |db| {

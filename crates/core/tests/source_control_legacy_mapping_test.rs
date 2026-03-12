@@ -1,7 +1,8 @@
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
-use deve_core::models::DocId;
+use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID, PATH_TO_NODEID};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::changes;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
 
@@ -10,6 +11,33 @@ fn new_repo() -> (TempDir, RepoManager) {
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
     repo.set_vault_root(dir.path().join("vault"));
     (dir, repo)
+}
+
+fn seed_file(repo: &RepoManager, path: &str, content: &str) -> DocId {
+    let doc_id = repo
+        .apply_file_structure_in_local_repo(repo.local_repo_name(), path, None, "test")
+        .expect("create file");
+    repo.append_generated_op_in_local_repo(
+        repo.local_repo_name(),
+        doc_id,
+        PeerId::new("test"),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: content.into(),
+                },
+                1,
+                PeerId::new("test"),
+                seq,
+                None,
+                None,
+            )
+        },
+    )
+    .expect("append content");
+    doc_id
 }
 
 #[test]
@@ -56,4 +84,31 @@ fn discard_pending_added_cleans_legacy_mapping() {
             .expect("lookup docid")
             .is_none()
     );
+}
+
+#[test]
+fn workdir_diff_does_not_fallback_to_snapshot_paths_for_canonical_identity() {
+    let (dir, repo) = new_repo();
+    let doc_id = seed_file(&repo, "notes/a.md", "hello");
+    let file = dir.path().join("vault").join("default").join("notes/a.md");
+    std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&file, "workspace hello").expect("write workspace");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        changes::save_snapshot(db, doc_id, "notes/a.md", "hello")?;
+        let write_txn = db.begin_write()?;
+        {
+            let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;
+            p2n.remove("notes/a.md")?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    })
+    .expect("poison path lookup");
+
+    let (old_content, new_content) = repo
+        .workdir_diff_inputs_in_local_repo(repo.local_repo_name(), "notes/a.md")
+        .expect("workdir diff");
+
+    assert_eq!(old_content, "");
+    assert_eq!(new_content, "workspace hello");
 }

@@ -6,7 +6,7 @@
 
 use crate::ledger::RepoManager;
 use crate::models::DocId;
-use crate::source_control::{ChangeStatus, pending_fs, snapshot_paths, staging};
+use crate::source_control::{ChangeStatus, pending_fs, staging};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
@@ -43,12 +43,7 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
     ) -> Result<Option<DocId>> {
-        if let Some(doc_id) = self.get_tracked_docid_in_local_repo(repo_name, path)? {
-            return Ok(Some(doc_id));
-        }
-        self.run_on_local_repo(repo_name, |db| {
-            snapshot_paths::find_snapshot_doc_id(db, path)
-        })
+        self.get_tracked_docid_in_local_repo(repo_name, path)
     }
 
     pub(crate) fn resolve_workdir_doc_id_in_local_repo(

@@ -1,7 +1,7 @@
-//! 文件创建与已有文件注册逻辑。
+//! 文件创建逻辑。
 
 use super::errors;
-use super::file_register::{broadcast_file_tree_update, register_file_from_disk};
+use super::file_register::{broadcast_file_tree_update, create_file_from_content};
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -18,11 +18,32 @@ pub async fn handle_file_create(
     path: &std::path::Path,
     filename: &str,
 ) {
-    let doc_id = match register_file_from_disk(state, scope, path, filename, "local_create") {
+    if path.exists() {
+        tracing::error!("目标路径已存在，拒绝从磁盘回填创建: {:?}", path);
+        errors::storage_conflict(ch, format!("Target already exists: {}", filename));
+        return;
+    }
+    match state
+        .repo
+        .get_tracked_docid_in_local_repo(&scope.repo_name, filename)
+    {
+        Ok(Some(_)) => {
+            errors::storage_conflict(ch, format!("Target already tracked: {}", filename));
+            return;
+        }
+        Ok(None) => {}
+        Err(e) => {
+            tracing::error!("检查文件跟踪状态失败: {:?}", e);
+            errors::request_failed(ch, format!("Failed to check create target: {}", e));
+            return;
+        }
+    }
+
+    let doc_id = match create_file_from_content(state, scope, filename, "", "local_create") {
         Ok(doc_id) => doc_id,
         Err(e) => {
-            tracing::error!("文件注册失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to register file: {}", e));
+            tracing::error!("文件创建失败: {:?}", e);
+            errors::storage_persist_failed(ch, format!("Failed to create file: {}", e));
             return;
         }
     };

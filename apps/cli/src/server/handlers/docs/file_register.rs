@@ -1,57 +1,14 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
-use crate::server::repo_scope::{ResolvedRepo, run_on_resolved_local_repo};
+use crate::server::repo_scope::{ResolvedRepo, local_repo_path, run_on_resolved_local_repo};
 use anyhow::{Result, anyhow};
 use deve_core::ledger::node_meta;
 use deve_core::models::{DocId, NodeId};
 use deve_core::protocol::ServerMessage;
 use deve_core::state;
 use deve_core::sync::reconcile;
-use std::path::Path;
 use std::sync::Arc;
-
-pub(super) fn register_file_from_disk(
-    state: &Arc<AppState>,
-    scope: &ResolvedRepo,
-    path: &Path,
-    rel_path: &str,
-    peer_label: &str,
-) -> Result<DocId> {
-    if path.exists() && !path.is_file() {
-        anyhow::bail!("Target path is not a file: {}", rel_path);
-    }
-    let existing_doc_id = state
-        .repo
-        .get_tracked_docid_in_local_repo(&scope.repo_name, rel_path)?;
-    let disk_content = if path.exists() {
-        Some(std::fs::read_to_string(path)?)
-    } else {
-        None
-    };
-    let doc_id = state.repo.apply_file_structure_in_local_repo(
-        &scope.repo_name,
-        rel_path,
-        existing_doc_id,
-        peer_label,
-    )?;
-    if let Some(content) = disk_content {
-        if existing_doc_id.is_none() && !content.is_empty() {
-            reconcile::append_patch_in_local_repo(
-                state.repo.as_ref(),
-                &scope.repo_name,
-                doc_id,
-                peer_label,
-                &state::compute_diff("", &content),
-            )?;
-        }
-    } else {
-        state
-            .sync_manager
-            .persist_doc_in_local_repo(&scope.repo_name, doc_id)?;
-    }
-    Ok(doc_id)
-}
 
 pub(super) fn create_file_from_content(
     state: &Arc<AppState>,
@@ -60,6 +17,10 @@ pub(super) fn create_file_from_content(
     content: &str,
     peer_label: &str,
 ) -> Result<DocId> {
+    let path = local_repo_path(state, scope, rel_path)?;
+    if path.exists() {
+        anyhow::bail!("Target file already exists on disk: {}", rel_path);
+    }
     if state
         .repo
         .get_tracked_docid_in_local_repo(&scope.repo_name, rel_path)?

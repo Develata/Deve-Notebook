@@ -17,7 +17,6 @@ pub(super) fn register_copied_docs(
     scope: &ResolvedRepo,
     src: &Path,
     src_path: &str,
-    dst: &Path,
     dest_path: &str,
 ) -> bool {
     let base = match local_repo_root(state, scope) {
@@ -27,7 +26,7 @@ pub(super) fn register_copied_docs(
             return false;
         }
     };
-    register_dirs(state, ch, scope, dst, &base)
+    register_dirs(state, ch, scope, src, &base, src_path, dest_path)
         && register_files(state, ch, scope, src, &base, src_path, dest_path)
 }
 
@@ -35,10 +34,12 @@ fn register_dirs(
     state: &Arc<AppState>,
     ch: &DualChannel,
     scope: &ResolvedRepo,
-    dst: &Path,
+    src: &Path,
     base: &Path,
+    src_path: &str,
+    dest_path: &str,
 ) -> bool {
-    let dirs = match collect_dirs(dst, base) {
+    let mut dirs = match collect_dirs(src, base) {
         Ok(dirs) => dirs,
         Err(err) => {
             tracing::error!("收集目录失败: {:?}", err);
@@ -46,10 +47,15 @@ fn register_dirs(
             return false;
         }
     };
+    dirs.sort_by_key(|path| path.matches('/').count());
     for dir_path in dirs {
+        let Some(dest_rel) = map_dest_rel(&dir_path, src_path, dest_path) else {
+            errors::request_failed(ch, format!("Invalid copied dir path: {}", dir_path));
+            return false;
+        };
         match state.repo.apply_dir_create_structure_in_local_repo(
             &scope.repo_name,
-            &dir_path,
+            &dest_rel,
             "local_copy",
         ) {
             Ok(node_id) => {
