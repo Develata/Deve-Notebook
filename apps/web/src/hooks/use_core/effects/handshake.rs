@@ -59,7 +59,9 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let vector = signals.repo_vector.get();
         let repo_name = signals.current_repo.get();
         let branch = signals.active_branch.get();
-        if branch.is_some() {
+        let pending_repo_switch = signals.pending_repo_switch.get();
+        if should_suspend_handshake(&branch, pending_repo_switch.as_deref()) {
+            *last_mode.borrow_mut() = None;
             if is_reconnect_bootstrap {
                 restore_session_scope(&ws, repo_name.clone(), branch.clone());
             }
@@ -154,4 +156,29 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             }
         });
     });
+}
+
+fn should_suspend_handshake(branch: &Option<PeerId>, pending_repo_switch: Option<&str>) -> bool {
+    branch.is_some() || pending_repo_switch.is_some()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_suspend_handshake;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn suspends_handshake_while_viewing_shadow_branch() {
+        assert!(should_suspend_handshake(&Some(PeerId::new("peer-a")), None));
+    }
+
+    #[test]
+    fn suspends_handshake_while_repo_switch_is_pending() {
+        assert!(should_suspend_handshake(&None, Some("default")));
+    }
+
+    #[test]
+    fn keeps_handshake_enabled_for_local_bound_repo() {
+        assert!(!should_suspend_handshake(&None, None));
+    }
 }

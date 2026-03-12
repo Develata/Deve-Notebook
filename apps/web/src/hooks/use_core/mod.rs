@@ -65,6 +65,7 @@ pub fn use_core() -> CoreState {
             current_repo: signals.current_repo,
             current_repo_id: signals.current_repo_id,
             active_branch: signals.active_branch,
+            pending_repo_switch: signals.pending_repo_switch,
             set_handshake_ready: signals.set_handshake_ready,
         },
     );
