@@ -56,6 +56,25 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
+    let state = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_switch_branch(&state, &ch, &mut session, Some("default".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Result<()> {
     let state = build_state()?;
     let local = state

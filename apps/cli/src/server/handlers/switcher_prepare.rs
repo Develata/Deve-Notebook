@@ -13,15 +13,13 @@ pub(super) struct PreparedRepoSwitch {
     pub db: Option<DatabaseHandle>,
 }
 
-pub(super) fn validate_or_force_local_repo(
+pub(super) fn validate_branch_target(
     state: &Arc<AppState>,
     ch: &DualChannel,
     peer_id: &Option<String>,
-) -> Option<(Option<String>, Option<String>)> {
-    let mut final_branch = peer_id.clone();
-    let mut force_repo_switch = None;
+) -> Option<Option<String>> {
     let Some(pid_str) = peer_id else {
-        return Some((final_branch, force_repo_switch));
+        return Some(None);
     };
     let shadows = match state.repo.list_shadows_on_disk() {
         Ok(shadows) => shadows,
@@ -45,33 +43,31 @@ pub(super) fn validate_or_force_local_repo(
     };
     let is_valid_shadow = shadows.iter().any(|p| p.as_str() == pid_str);
     let is_local_repo = local_repos.contains(pid_str);
-    if !is_valid_shadow && !is_local_repo {
+    if is_local_repo {
+        ch.send_protocol_error(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            format!(
+                "SwitchBranch expects a shadow peer, got local repo selector: {}",
+                pid_str
+            ),
+        ));
+        return None;
+    }
+    if !is_valid_shadow {
         ch.send_protocol_error(ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
             format!("Shadow branch not found: {}", pid_str),
         ));
         return None;
     }
-    if !is_valid_shadow && is_local_repo {
-        tracing::warn!(
-            "Suspicious SwitchBranch: '{}' is a Local Repo but not a Shadow. Correcting to Local Mode.",
-            pid_str
-        );
-        final_branch = None;
-        force_repo_switch = Some(pid_str.clone());
-    }
-    Some((final_branch, force_repo_switch))
+    Some(peer_id.clone())
 }
 
 pub(super) fn select_target_repo(
     state: &Arc<AppState>,
     current_repo_url: Option<String>,
     target_branch: Option<&PeerId>,
-    force_repo_switch: Option<String>,
 ) -> anyhow::Result<Option<String>> {
-    if force_repo_switch.is_some() {
-        return Ok(force_repo_switch);
-    }
     let repos = state.repo.list_repos(target_branch)?;
     if let Some(url) = current_repo_url {
         for repo_name in &repos {

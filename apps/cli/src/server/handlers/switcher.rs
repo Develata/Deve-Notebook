@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use self::switcher_payload::preload_branch_switch;
 use self::switcher_prepare::{
-    commit_session_switch, prepare_repo_switch, select_target_repo, validate_or_force_local_repo,
+    commit_session_switch, prepare_repo_switch, select_target_repo, validate_branch_target,
 };
 
 pub async fn handle_switch_branch(
@@ -24,33 +24,23 @@ pub async fn handle_switch_branch(
 ) {
     tracing::info!("Handle SwitchBranch request: PeerID={:?}", peer_id);
 
-    let Some((final_branch, force_repo_switch)) = validate_or_force_local_repo(state, ch, &peer_id)
-    else {
+    let Some(final_branch) = validate_branch_target(state, ch, &peer_id) else {
         return;
     };
 
-    let current_repo_url = if force_repo_switch.is_none() {
-        if let Some(current_repo) = &session.active_repo {
-            state
-                .repo
-                .get_repo_url(session.active_branch.as_ref(), current_repo)
-                .ok()
-                .flatten()
-        } else {
-            None
-        }
+    let current_repo_url = if let Some(current_repo) = &session.active_repo {
+        state
+            .repo
+            .get_repo_url(session.active_branch.as_ref(), current_repo)
+            .ok()
+            .flatten()
     } else {
         None
     };
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
 
-    let target_repo = match select_target_repo(
-        state,
-        current_repo_url,
-        target_branch_ref,
-        force_repo_switch,
-    ) {
+    let target_repo = match select_target_repo(state, current_repo_url, target_branch_ref) {
         Ok(repo) => repo,
         Err(err) => {
             ch.send_protocol_error(ServerError::with_detail(
