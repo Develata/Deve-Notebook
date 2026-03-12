@@ -15,6 +15,7 @@ pub mod effects;
 pub mod effects_msg;
 pub mod effects_sc;
 mod effects_sc_scope;
+mod effects_sc_state;
 pub mod effects_switch;
 pub mod navigation;
 pub mod pending;
@@ -67,6 +68,8 @@ pub fn use_core() -> CoreState {
             active_branch: signals.active_branch,
             pending_repo_switch: signals.pending_repo_switch,
             set_repo_list_request_id: signals.set_repo_list_request_id,
+            set_doc_list_request_id: signals.set_doc_list_request_id,
+            set_tree_request_id: signals.set_tree_request_id,
             set_handshake_ready: signals.set_handshake_ready,
         },
     );
@@ -89,6 +92,8 @@ pub fn use_core() -> CoreState {
         &ws,
         signals.staged_changes,
         signals.unstaged_changes,
+        signals.set_changes_request_id,
+        signals.set_commit_history_request_id,
         signals.set_doc_diff_request_id,
         signals.set_commit_diff_request_id,
     );

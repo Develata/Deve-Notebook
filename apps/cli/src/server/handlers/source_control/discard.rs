@@ -28,7 +28,7 @@ pub async fn handle_discard_file(
                 branch: scope.branch.clone(),
                 path: path.clone(),
             });
-            super::changes::handle_get_changes(state, ch, session).await;
+            super::changes::handle_get_changes(state, ch, session, None).await;
         }
         Err(e) => {
             tracing::error!("Failed to discard {}: {:?}", target.path, e);

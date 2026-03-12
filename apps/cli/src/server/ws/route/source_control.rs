@@ -11,8 +11,8 @@ pub(super) async fn route_source_control(
     msg: ClientMessage,
 ) {
     match msg {
-        ClientMessage::GetChanges => {
-            source_control::handle_get_changes(state, ch, session).await;
+        ClientMessage::GetChanges { request_id } => {
+            source_control::handle_get_changes(state, ch, session, Some(request_id)).await;
         }
         ClientMessage::StageFile { target } => {
             source_control::handle_stage_file(state, ch, session, target).await;
@@ -32,8 +32,8 @@ pub(super) async fn route_source_control(
         ClientMessage::Commit { message } => {
             source_control::handle_commit(state, ch, session, message).await;
         }
-        ClientMessage::GetCommitHistory { limit } => {
-            source_control::handle_get_commit_history(state, ch, session, limit).await;
+        ClientMessage::GetCommitHistory { request_id, limit } => {
+            source_control::handle_get_commit_history(state, ch, session, request_id, limit).await;
         }
         ClientMessage::GetCommitDiff {
             request_id,

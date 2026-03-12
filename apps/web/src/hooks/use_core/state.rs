@@ -106,6 +106,10 @@ pub struct CoreSignals {
     pub set_repo_list: WriteSignal<Vec<String>>,
     pub repo_list_request_id: ReadSignal<Option<String>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
+    pub doc_list_request_id: ReadSignal<Option<String>>,
+    pub set_doc_list_request_id: WriteSignal<Option<String>>,
+    pub tree_request_id: ReadSignal<Option<String>>,
+    pub set_tree_request_id: WriteSignal<Option<String>>,
 
     // 版本/回放
     pub doc_version: ReadSignal<u64>,
@@ -119,8 +123,12 @@ pub struct CoreSignals {
     pub set_staged_changes: WriteSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
+    pub changes_request_id: ReadSignal<Option<String>>,
+    pub set_changes_request_id: WriteSignal<Option<String>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub set_commit_history: WriteSignal<Vec<CommitInfo>>,
+    pub commit_history_request_id: ReadSignal<Option<String>>,
+    pub set_commit_history_request_id: WriteSignal<Option<String>>,
     pub doc_diff_request_id: ReadSignal<Option<String>>,
     pub set_doc_diff_request_id: WriteSignal<Option<String>>,
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,

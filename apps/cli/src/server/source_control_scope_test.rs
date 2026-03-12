@@ -112,7 +112,7 @@ async fn get_changes_recovers_from_stale_local_selector() -> anyhow::Result<()> 
     let mut session = WsSession::new();
     session.switch_repo("test".into(), Some(default_id));
 
-    handle_get_changes(&state, &ch, &mut session).await;
+    handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
 
     let (repo_id, paths) = recv_changes(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));
@@ -141,7 +141,7 @@ async fn commit_history_recovers_from_stale_local_selector() -> anyhow::Result<(
     let mut session = WsSession::new();
     session.switch_repo("test".into(), Some(default_id));
 
-    handle_get_commit_history(&state, &ch, &mut session, 10).await;
+    handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
 
     let (repo_id, first_message) = recv_history(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));
@@ -169,7 +169,7 @@ async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_id));
 
-    handle_get_commit_history(&state, &ch, &mut session, 10).await;
+    handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
 
     let (repo_id, first_message) = recv_history(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));

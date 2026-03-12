@@ -50,6 +50,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (shadow_list_request_id, set_shadow_list_request_id) = signal(None::<String>);
     let (repo_list, set_repo_list) = signal(Vec::new());
     let (repo_list_request_id, set_repo_list_request_id) = signal(None::<String>);
+    let (doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
+    let (tree_request_id, set_tree_request_id) = signal(None::<String>);
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
     let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
@@ -60,7 +62,9 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     });
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
+    let (changes_request_id, set_changes_request_id) = signal(None::<String>);
     let (commit_history, set_commit_history) = signal(Vec::new());
+    let (commit_history_request_id, set_commit_history_request_id) = signal(None::<String>);
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
@@ -128,6 +132,10 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_repo_list,
         repo_list_request_id,
         set_repo_list_request_id,
+        doc_list_request_id,
+        set_doc_list_request_id,
+        tree_request_id,
+        set_tree_request_id,
         doc_version,
         set_doc_version,
         playback_version,
@@ -137,8 +145,12 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_staged_changes,
         unstaged_changes,
         set_unstaged_changes,
+        changes_request_id,
+        set_changes_request_id,
         commit_history,
         set_commit_history,
+        commit_history_request_id,
+        set_commit_history_request_id,
         doc_diff_request_id,
         set_doc_diff_request_id,
         diff_content,

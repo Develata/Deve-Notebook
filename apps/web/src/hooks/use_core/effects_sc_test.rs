@@ -1,6 +1,7 @@
 use super::{
-    clear_repo_scoped_state, commit_diff_matches_request, doc_diff_matches_request,
-    matches_current_repo, matches_current_scope,
+    changes_list_matches_request, clear_repo_scoped_state, commit_diff_matches_request,
+    commit_history_matches_request, doc_diff_matches_request, matches_current_repo,
+    matches_current_scope,
 };
 use crate::hooks::use_core::{PendingBranchTarget, diff_session::DiffSessionWire};
 use deve_core::models::PeerId;
@@ -79,6 +80,7 @@ fn clear_repo_scoped_state_resets_source_control_view() {
     };
     let (staged, set_staged) = signal(vec![entry.clone()]);
     let (unstaged, set_unstaged) = signal(vec![entry]);
+    let (changes_request_id, set_changes_request_id) = signal(Some("changes-req".to_string()));
     let (history, set_history) = signal(vec![CommitInfo {
         id: "c1".into(),
         parent_id: None,
@@ -87,6 +89,7 @@ fn clear_repo_scoped_state_resets_source_control_view() {
         doc_count: 1,
         ledger_seq: 1,
     }]);
+    let (history_request_id, set_history_request_id) = signal(Some("history-req".to_string()));
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("doc-req".to_string()));
     let (diff, set_diff) = signal(Some(DiffSessionWire {
         path: "a.md".into(),
@@ -104,19 +107,23 @@ fn clear_repo_scoped_state_resets_source_control_view() {
         new_content: "new".into(),
     }]);
 
-    clear_repo_scoped_state(
+    clear_repo_scoped_state(super::super::effects_sc_state::ScStateResetSignals {
         set_staged,
         set_unstaged,
+        set_changes_request_id,
         set_history,
+        set_commit_history_request_id: set_history_request_id,
         set_doc_diff_request_id,
         set_diff,
         set_commit_diff_request_id,
         set_commit_diff,
-    );
+    });
 
     assert!(staged.get_untracked().is_empty());
     assert!(unstaged.get_untracked().is_empty());
+    assert_eq!(changes_request_id.get_untracked(), None);
     assert!(history.get_untracked().is_empty());
+    assert_eq!(history_request_id.get_untracked(), None);
     assert_eq!(doc_diff_request_id.get_untracked(), None);
     assert_eq!(diff.get_untracked(), None);
     assert_eq!(commit_diff_request_id.get_untracked(), None);
@@ -147,4 +154,28 @@ fn commit_diff_requires_matching_request_id() {
         Some("req-1".into()),
     ));
     assert!(!commit_diff_matches_request(&None, Some("req-1".into())));
+}
+
+#[test]
+fn changes_and_history_require_matching_request_id() {
+    assert!(changes_list_matches_request(
+        &Some("req-1".into()),
+        Some("req-1".into()),
+    ));
+    assert!(!changes_list_matches_request(
+        &Some("stale".into()),
+        Some("req-1".into()),
+    ));
+    assert!(changes_list_matches_request(&None, None));
+    assert!(!changes_list_matches_request(&None, Some("req-1".into())));
+
+    assert!(commit_history_matches_request(
+        &Some("req-1".into()),
+        Some("req-1".into()),
+    ));
+    assert!(!commit_history_matches_request(
+        &Some("stale".into()),
+        Some("req-1".into()),
+    ));
+    assert!(!commit_history_matches_request(&None, Some("req-1".into()),));
 }

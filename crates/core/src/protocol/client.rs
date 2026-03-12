@@ -47,7 +47,9 @@ pub enum ClientMessage {
         doc_id: DocId,
         request_id: u64,
     },
-    ListDocs,
+    ListDocs {
+        request_id: String,
+    },
     OpenDoc {
         doc_id: DocId,
         request_id: u64,
@@ -103,7 +105,9 @@ pub enum ClientMessage {
     DeletePeer {
         peer_id: String,
     },
-    GetChanges,
+    GetChanges {
+        request_id: String,
+    },
     StageFile {
         target: ScPathTarget,
     },
@@ -114,6 +118,7 @@ pub enum ClientMessage {
         message: String,
     },
     GetCommitHistory {
+        request_id: String,
         limit: u32,
     },
     MergePeer {

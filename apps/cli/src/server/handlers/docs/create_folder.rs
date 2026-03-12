@@ -50,6 +50,6 @@ pub async fn handle_folder_create(
     if let Err(e) = broadcast_dir_chain(state, ch, scope.repo_id, &scope.repo_name, node_id) {
         tracing::error!("广播目录链失败: {:?}", e);
     }
-    handle_list_docs(state, ch, session).await;
+    handle_list_docs(state, ch, session, None).await;
     notify_fs_refresh(ch, scope.repo_id, folder_path, "dir-added");
 }

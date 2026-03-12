@@ -51,7 +51,7 @@ pub async fn handle_copy_doc(
         return;
     }
 
-    handle_list_docs(state, ch, session).await;
+    handle_list_docs(state, ch, session, None).await;
     notify_fs_refresh(ch, scope.repo_id, &dest_path, "copied");
 }
 

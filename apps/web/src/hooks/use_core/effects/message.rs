@@ -34,8 +34,11 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     t.cancel();
                 }
                 let ws_for_timer = ws.clone();
+                let set_changes_request_id = signals.set_changes_request_id;
                 let timer = Timeout::new(120, move || {
-                    ws_for_timer.send(ClientMessage::GetChanges);
+                    let request_id = uuid::Uuid::new_v4().to_string();
+                    set_changes_request_id.set(Some(request_id.clone()));
+                    ws_for_timer.send(ClientMessage::GetChanges { request_id });
                 });
                 *changes_refresh.borrow_mut() = Some(timer);
             }

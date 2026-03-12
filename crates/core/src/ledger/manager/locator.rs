@@ -86,7 +86,11 @@ impl RepoManager {
                 from_name
             );
         }
-        if let Some(name) = candidates.by_id.clone().or_else(|| candidates.by_name.clone()) {
+        if let Some(name) = candidates
+            .by_id
+            .clone()
+            .or_else(|| candidates.by_name.clone())
+        {
             return Ok(name);
         }
         match self.list_repos(None)?.as_slice() {

@@ -192,7 +192,8 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist() -> anyhow::Result<()> {
+async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist()
+-> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
     RepoManager::init(harness.dir.path(), 10, Some("test"), Some("urn:test"))?;
 

@@ -10,7 +10,12 @@ use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
-pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
+pub async fn handle_list_docs(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    request_id: Option<String>,
+) {
     let resolved = if session.active_branch.is_none() {
         bootstrap_local_repo(state, session).inspect(|scope| {
             session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
@@ -59,6 +64,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
         uuid: repo_id.to_string(),
     });
     ch.unicast(ServerMessage::DocList {
+        request_id: request_id.clone(),
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
         docs,
@@ -67,6 +73,7 @@ pub async fn handle_list_docs(state: &Arc<AppState>, ch: &DualChannel, session: 
         .tree_manager
         .reset_from_nodes(repo_id, session.active_branch.as_ref(), nodes);
     ch.unicast(ServerMessage::TreeUpdate {
+        request_id,
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
         delta,

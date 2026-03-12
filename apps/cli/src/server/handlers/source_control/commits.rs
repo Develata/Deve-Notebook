@@ -40,6 +40,7 @@ pub async fn handle_get_commit_history(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    request_id: String,
     limit: u32,
 ) {
     let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
@@ -50,6 +51,7 @@ pub async fn handle_get_commit_history(
         Ok(commits) => {
             tracing::info!("Returning {} commits", commits.len());
             ch.unicast(ServerMessage::CommitHistory {
+                request_id: Some(request_id),
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
                 commits,

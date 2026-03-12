@@ -12,7 +12,9 @@ use super::message_dispatch_gate::{
 };
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
-use super::message_scope::{repo_list_matches_scope, shadow_list_matches_scope};
+use super::message_scope::{
+    accepts_system_or_matching_request, repo_list_matches_scope, shadow_list_matches_scope,
+};
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
 pub fn handle_message<F>(
@@ -26,12 +28,22 @@ pub fn handle_message<F>(
 {
     match msg {
         ServerMessage::DocList {
+            request_id,
             repo_id,
             branch,
             docs,
         } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals)
+                || !accepts_system_or_matching_request(
+                    request_id.as_deref(),
+                    signals.doc_list_request_id.get_untracked().as_deref(),
+                )
+            {
                 return;
+            }
+            signals.set_doc_list_request_id.set(None);
+            if request_id.is_none() {
+                signals.set_tree_request_id.set(None);
             }
             effects_msg::handle_doc_list(docs, signals.set_docs);
         }
@@ -182,12 +194,22 @@ pub fn handle_message<F>(
             }
         }
         ServerMessage::TreeUpdate {
+            request_id,
             repo_id,
             branch,
             delta,
         } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals) {
+            if !matches_current_message_scope(&repo_id, &branch, signals)
+                || !accepts_system_or_matching_request(
+                    request_id.as_deref(),
+                    signals.tree_request_id.get_untracked().as_deref(),
+                )
+            {
                 return;
+            }
+            signals.set_tree_request_id.set(None);
+            if request_id.is_none() {
+                signals.set_doc_list_request_id.set(None);
             }
             signals
                 .set_tree_nodes

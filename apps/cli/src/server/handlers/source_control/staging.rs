@@ -74,7 +74,7 @@ pub async fn handle_stage_files(
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::stage_pending_many(state.repo.as_ref(), &selector, targets) {
-        Ok(_) => super::changes::handle_get_changes(state, ch, session).await,
+        Ok(_) => super::changes::handle_get_changes(state, ch, session, None).await,
         Err(e) => {
             tracing::error!("Failed to stage files: {:?}", e);
             super::errors::send_ws(ch, e);
@@ -95,7 +95,7 @@ pub async fn handle_unstage_files(
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::unstage_many(state.repo.as_ref(), &selector, targets) {
-        Ok(_) => super::changes::handle_get_changes(state, ch, session).await,
+        Ok(_) => super::changes::handle_get_changes(state, ch, session, None).await,
         Err(e) => {
             tracing::error!("Failed to unstage files: {:?}", e);
             super::errors::send_ws(ch, e);

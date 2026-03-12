@@ -26,12 +26,16 @@ pub fn create_source_control_callbacks(
     ws: &WsService,
     staged_changes: ReadSignal<Vec<ChangeEntry>>,
     unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
+    set_changes_request_id: WriteSignal<Option<String>>,
+    set_commit_history_request_id: WriteSignal<Option<String>>,
     set_doc_diff_request_id: WriteSignal<Option<String>>,
     set_commit_diff_request_id: WriteSignal<Option<String>>,
 ) -> SourceControlCallbacks {
     let ws1 = ws.clone();
     let on_get_changes = Callback::new(move |_: ()| {
-        ws1.send(ClientMessage::GetChanges);
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_changes_request_id.set(Some(request_id.clone()));
+        ws1.send(ClientMessage::GetChanges { request_id });
     });
 
     let ws2 = ws.clone();
@@ -73,7 +77,9 @@ pub fn create_source_control_callbacks(
 
     let ws5 = ws.clone();
     let on_get_history = Callback::new(move |limit: u32| {
-        ws5.send(ClientMessage::GetCommitHistory { limit });
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_commit_history_request_id.set(Some(request_id.clone()));
+        ws5.send(ClientMessage::GetCommitHistory { request_id, limit });
     });
 
     let ws6 = ws.clone();

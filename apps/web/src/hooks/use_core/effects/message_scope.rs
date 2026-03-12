@@ -42,6 +42,16 @@ pub fn shadow_list_matches_scope(
         && pending_repo_switch.is_none()
 }
 
+pub fn accepts_system_or_matching_request(
+    message_id: Option<&str>,
+    expected_id: Option<&str>,
+) -> bool {
+    match message_id {
+        Some(message_id) => expected_id == Some(message_id),
+        None => true,
+    }
+}
+
 fn request_matches(message_id: Option<&str>, expected_id: Option<&str>) -> bool {
     match message_id {
         Some(message_id) => expected_id == Some(message_id),
@@ -71,8 +81,8 @@ fn expected_peer_branch(
 #[cfg(test)]
 mod tests {
     use super::{
-        peer_branch_matches_scope, repo_list_matches_scope, shadow_list_matches_scope,
-        string_branch_matches_scope,
+        accepts_system_or_matching_request, peer_branch_matches_scope, repo_list_matches_scope,
+        shadow_list_matches_scope, string_branch_matches_scope,
     };
     use crate::hooks::use_core::PendingBranchTarget;
     use deve_core::models::PeerId;
@@ -151,6 +161,19 @@ mod tests {
             None,
             None,
             Some("req-1".into()),
+        ));
+    }
+
+    #[test]
+    fn system_or_matching_request_accepts_none_and_exact_match() {
+        assert!(accepts_system_or_matching_request(None, Some("req-1")));
+        assert!(accepts_system_or_matching_request(
+            Some("req-1"),
+            Some("req-1"),
+        ));
+        assert!(!accepts_system_or_matching_request(
+            Some("stale"),
+            Some("req-1"),
         ));
     }
 

@@ -118,6 +118,7 @@ pub async fn handle_switch_branch(
             uuid: repo_view.repo_id.to_string(),
         });
         ch.unicast(ServerMessage::DocList {
+            request_id: None,
             repo_id: Some(repo_view.repo_id),
             branch: tree_branch.clone(),
             docs: repo_view.docs,
@@ -128,6 +129,7 @@ pub async fn handle_switch_branch(
             repo_view.nodes,
         );
         ch.unicast(ServerMessage::TreeUpdate {
+            request_id: None,
             repo_id: Some(repo_view.repo_id),
             branch: tree_branch,
             delta,
@@ -186,7 +188,7 @@ pub async fn handle_switch_repo(
             name,
             session.is_readonly()
         );
-        listing::handle_list_docs(state, ch, session).await;
+        listing::handle_list_docs(state, ch, session, None).await;
     } else {
         tracing::warn!(
             "Repo switch failed: '{}' not found in branch {:?}. Available: {:?}",

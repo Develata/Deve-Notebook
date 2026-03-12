@@ -114,19 +114,25 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_is_chat_streaming.set(false);
     signals.set_shadow_list_request_id.set(None);
     signals.set_repo_list_request_id.set(None);
+    signals.set_doc_list_request_id.set(None);
+    signals.set_tree_request_id.set(None);
     signals.set_search_request_id.set(None);
+    signals.set_changes_request_id.set(None);
+    signals.set_commit_history_request_id.set(None);
     signals.set_doc_diff_request_id.set(None);
     signals.set_commit_diff_request_id.set(None);
     signals.set_search_results.set(Vec::new());
-    effects_sc::clear_repo_scoped_state(
-        signals.set_staged_changes,
-        signals.set_unstaged_changes,
-        signals.set_commit_history,
-        signals.set_doc_diff_request_id,
-        signals.set_diff_content,
-        signals.set_commit_diff_request_id,
-        signals.set_commit_diff_result,
-    );
+    effects_sc::clear_repo_scoped_state(super::super::effects_sc_state::ScStateResetSignals {
+        set_staged: signals.set_staged_changes,
+        set_unstaged: signals.set_unstaged_changes,
+        set_changes_request_id: signals.set_changes_request_id,
+        set_history: signals.set_commit_history,
+        set_commit_history_request_id: signals.set_commit_history_request_id,
+        set_doc_diff_request_id: signals.set_doc_diff_request_id,
+        set_diff: signals.set_diff_content,
+        set_commit_diff_request_id: signals.set_commit_diff_request_id,
+        set_commit_diff: signals.set_commit_diff_result,
+    });
 }
 
 fn request_repo_sync_state(ws: &WsService) {

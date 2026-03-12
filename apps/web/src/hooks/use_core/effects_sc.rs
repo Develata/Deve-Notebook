@@ -12,6 +12,10 @@ use super::types::PendingBranchTarget;
 
 #[allow(unused_imports)]
 pub(crate) use super::effects_sc_scope::{matches_current_repo, matches_current_scope};
+pub(crate) use super::effects_sc_state::{
+    changes_list_matches_request, clear_repo_scoped_state, commit_diff_matches_request,
+    commit_history_matches_request, doc_diff_matches_request,
+};
 
 #[cfg(test)]
 #[path = "effects_sc_test.rs"]
@@ -25,7 +29,13 @@ pub fn handle_sc_message(
     msg: &ServerMessage,
     set_staged: WriteSignal<Vec<ChangeEntry>>,
     set_unstaged: WriteSignal<Vec<ChangeEntry>>,
+    changes_request_id: ReadSignal<Option<String>>,
+    set_changes_request_id: WriteSignal<Option<String>>,
     set_history: WriteSignal<Vec<CommitInfo>>,
+    commit_history_request_id: ReadSignal<Option<String>>,
+    set_commit_history_request_id: WriteSignal<Option<String>>,
+    set_doc_list_request_id: WriteSignal<Option<String>>,
+    set_tree_request_id: WriteSignal<Option<String>>,
     doc_diff_request_id: ReadSignal<Option<String>>,
     set_doc_diff_request_id: WriteSignal<Option<String>>,
     set_diff: WriteSignal<Option<DiffSessionWire>>,
@@ -51,6 +61,7 @@ pub fn handle_sc_message(
     };
     match msg {
         ServerMessage::ChangesList {
+            request_id,
             repo_id,
             branch,
             staged,
@@ -59,10 +70,15 @@ pub fn handle_sc_message(
             if !in_scope(repo_id, branch) {
                 return true;
             }
+            if !changes_list_matches_request(request_id, changes_request_id.get_untracked()) {
+                return true;
+            }
+            set_changes_request_id.set(None);
             set_staged.set(staged.clone());
             set_unstaged.set(unstaged.clone());
         }
         ServerMessage::CommitHistory {
+            request_id,
             repo_id,
             branch,
             commits,
@@ -70,6 +86,13 @@ pub fn handle_sc_message(
             if !in_scope(repo_id, branch) {
                 return true;
             }
+            if !commit_history_matches_request(
+                request_id,
+                commit_history_request_id.get_untracked(),
+            ) {
+                return true;
+            }
+            set_commit_history_request_id.set(None);
             set_history.set(commits.clone());
         }
         ServerMessage::StageAck {
@@ -115,8 +138,17 @@ pub fn handle_sc_message(
                 return true;
             }
             leptos::logging::log!("已提交: {}", commit_id);
-            ws.send(ClientMessage::GetChanges);
-            ws.send(ClientMessage::GetCommitHistory { limit: 50 });
+            let changes_request_id = uuid::Uuid::new_v4().to_string();
+            set_changes_request_id.set(Some(changes_request_id.clone()));
+            ws.send(ClientMessage::GetChanges {
+                request_id: changes_request_id,
+            });
+            let history_request_id = uuid::Uuid::new_v4().to_string();
+            set_commit_history_request_id.set(Some(history_request_id.clone()));
+            ws.send(ClientMessage::GetCommitHistory {
+                request_id: history_request_id,
+                limit: 50,
+            });
         }
         ServerMessage::DocDiff {
             request_id,
@@ -159,7 +191,10 @@ pub fn handle_sc_message(
             let conflict_tag = if *has_conflict { " [冲突]" } else { "" };
             leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
             schedule_refresh();
-            ws.send(ClientMessage::ListDocs);
+            let request_id = uuid::Uuid::new_v4().to_string();
+            set_doc_list_request_id.set(Some(request_id.clone()));
+            set_tree_request_id.set(Some(request_id.clone()));
+            ws.send(ClientMessage::ListDocs { request_id });
         }
         ServerMessage::CommitDiffResult {
             request_id,
@@ -194,25 +229,6 @@ pub fn handle_sc_message(
     true
 }
 
-fn doc_diff_matches_request(
-    request_id: &Option<String>,
-    expected_request_id: Option<String>,
-) -> bool {
-    match request_id {
-        Some(request_id) => expected_request_id.as_deref() == Some(request_id.as_str()),
-        None => true,
-    }
-}
-
-fn commit_diff_matches_request(
-    request_id: &Option<String>,
-    expected_request_id: Option<String>,
-) -> bool {
-    request_id
-        .as_deref()
-        .is_some_and(|request_id| expected_request_id.as_deref() == Some(request_id))
-}
-
 fn matches_scope(
     repo_id: &Option<uuid::Uuid>,
     branch: &Option<deve_core::models::PeerId>,
@@ -229,22 +245,4 @@ fn matches_scope(
         pending_branch_switch,
         pending_repo_switch,
     )
-}
-
-pub fn clear_repo_scoped_state(
-    set_staged: WriteSignal<Vec<ChangeEntry>>,
-    set_unstaged: WriteSignal<Vec<ChangeEntry>>,
-    set_history: WriteSignal<Vec<CommitInfo>>,
-    set_doc_diff_request_id: WriteSignal<Option<String>>,
-    set_diff: WriteSignal<Option<DiffSessionWire>>,
-    set_commit_diff_request_id: WriteSignal<Option<String>>,
-    set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
-) {
-    set_staged.set(Vec::new());
-    set_unstaged.set(Vec::new());
-    set_history.set(Vec::new());
-    set_doc_diff_request_id.set(None);
-    set_diff.set(None);
-    set_commit_diff_request_id.set(None);
-    set_commit_diff.set(Vec::new());
 }

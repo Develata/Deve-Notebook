@@ -54,7 +54,7 @@ pub async fn handle_resolve_conflict(
                 resolution: label.to_string(),
             });
             // 刷新变更列表
-            super::changes::handle_get_changes(state, ch, session).await;
+            super::changes::handle_get_changes(state, ch, session, None).await;
         }
         Err(e) => {
             tracing::error!("Failed to resolve conflict {}: {:?}", normalized, e);

@@ -100,12 +100,13 @@ pub async fn handle_delete_doc(
         .tree_manager
         .with_tree_mut(scope.repo_id, None, |tm| tm.remove(target.node_id));
     ch.unicast(ServerMessage::TreeUpdate {
+        request_id: None,
         repo_id: Some(scope.repo_id),
         branch: None,
         delta,
     });
 
     // 5. 刷新文档列表
-    handle_list_docs(state, ch, session).await;
+    handle_list_docs(state, ch, session, None).await;
     notify_fs_refresh(ch, scope.repo_id, &target.repo_path, "deleted");
 }

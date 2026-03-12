@@ -59,6 +59,8 @@ pub struct HandshakeSignals {
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
+    pub set_doc_list_request_id: WriteSignal<Option<String>>,
+    pub set_tree_request_id: WriteSignal<Option<String>>,
     pub set_handshake_ready: WriteSignal<bool>,
 }
 

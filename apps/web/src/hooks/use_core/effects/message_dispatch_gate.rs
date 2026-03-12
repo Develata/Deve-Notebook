@@ -46,8 +46,8 @@ mod tests {
     };
     use crate::api::ConnectionStatus;
     use crate::hooks::use_core::PendingBranchTarget;
-    use crate::hooks::use_core::types::ChatMessage;
     use crate::hooks::use_core::state::init_signals;
+    use crate::hooks::use_core::types::ChatMessage;
     use leptos::prelude::*;
 
     #[test]

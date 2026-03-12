@@ -27,6 +27,7 @@ pub fn broadcast_dir_chain(
         });
         if let Some(delta) = delta {
             ch.unicast(ServerMessage::TreeUpdate {
+                request_id: None,
                 repo_id: Some(repo_id),
                 branch: None,
                 delta,

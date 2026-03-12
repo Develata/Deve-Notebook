@@ -29,12 +29,23 @@ pub(super) fn restore_session_scope(
         return;
     }
 
-    ws.send(ClientMessage::ListDocs);
+    request_doc_listing(ws, signals);
     request_repo_list(ws, signals);
 }
 
 fn request_repo_list(ws: &WsService, signals: HandshakeSignals) {
     let request_id = uuid::Uuid::new_v4().to_string();
-    signals.set_repo_list_request_id.set(Some(request_id.clone()));
+    signals
+        .set_repo_list_request_id
+        .set(Some(request_id.clone()));
     ws.send(ClientMessage::ListRepos { request_id });
+}
+
+fn request_doc_listing(ws: &WsService, signals: HandshakeSignals) {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    signals
+        .set_doc_list_request_id
+        .set(Some(request_id.clone()));
+    signals.set_tree_request_id.set(Some(request_id.clone()));
+    ws.send(ClientMessage::ListDocs { request_id });
 }

@@ -98,7 +98,7 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
     let mut session = WsSession::new();
     session.switch_branch(Some("missing-shadow".into()));
 
-    handle_list_docs(&state, &ch, &mut session).await;
+    handle_list_docs(&state, &ch, &mut session, None).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error }) => {

@@ -66,11 +66,12 @@ pub(super) async fn handle_dir_rename(
             )
         });
         ch.unicast(ServerMessage::TreeUpdate {
+            request_id: None,
             repo_id: Some(scope.repo_id),
             branch: None,
             delta,
         });
     }
-    handle_list_docs(state, ch, session).await;
+    handle_list_docs(state, ch, session, None).await;
     notify_fs_refresh(ch, scope.repo_id, dst_name, "renamed");
 }

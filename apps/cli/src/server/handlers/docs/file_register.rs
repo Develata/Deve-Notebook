@@ -75,6 +75,7 @@ pub(super) fn broadcast_file_tree_update(
             )
         });
         ch.unicast(ServerMessage::TreeUpdate {
+            request_id: None,
             repo_id: Some(scope.repo_id),
             branch: None,
             delta,
