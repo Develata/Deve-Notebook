@@ -8,7 +8,7 @@ use super::super::pending;
 use super::super::state::CoreSignals;
 use super::message_control;
 use super::message_dispatch_gate::{
-    accepts_plugin_response, accepts_search_results, accepts_unscoped_update,
+    accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
 };
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
@@ -61,7 +61,7 @@ pub fn handle_message<F>(
             delta,
             finish_reason,
         } => {
-            if !accepts_unscoped_update(signals) {
+            if !accepts_chat_chunk(&req_id, signals) {
                 return;
             }
             effects_msg::handle_chat_chunk(

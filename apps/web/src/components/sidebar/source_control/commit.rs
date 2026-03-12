@@ -6,7 +6,7 @@
 //! - Blue "Commit" button with dropdown (Commit & Push 占位)
 
 use crate::components::icons::*;
-use crate::hooks::use_core::{ChatContext, SourceControlContext};
+use crate::hooks::use_core::{ChatContext, ChatMessage, SourceControlContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
@@ -107,6 +107,15 @@ pub fn Commit() -> impl IntoView {
                             active_req_id.set(Some(req_id.clone()));
                             saw_streaming.set(false);
                             set_is_generating.set(true);
+                            chat_ctx.set_messages.update(|messages| {
+                                messages.push(ChatMessage {
+                                    role: "assistant".into(),
+                                    content: String::new(),
+                                    req_id: Some(req_id.clone()),
+                                    ts_ms: js_sys::Date::now() as u64,
+                                });
+                            });
+                            chat_ctx.set_is_streaming.set(true);
                             chat_ctx.on_plugin_call.run((
                                 req_id,
                                 "agent-bridge".to_string(),
