@@ -78,3 +78,17 @@ fn local_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
     assert!(repos.contains(&"wiki".to_string()));
     assert!(repos.iter().any(|name| name.starts_with("wiki-")));
 }
+
+#[test]
+fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+
+    let err = main
+        .resolve_local_repo_name_for_execution(None, None)
+        .expect_err("multiple repos must require explicit selector");
+
+    assert!(err.to_string().contains("multiple local repos exist"));
+}

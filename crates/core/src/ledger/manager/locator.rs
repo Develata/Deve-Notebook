@@ -1,5 +1,6 @@
 use anyhow::Result;
 
+use crate::ledger::listing::RepoListing;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 
@@ -85,11 +86,14 @@ impl RepoManager {
                 from_name
             );
         }
-        Ok(candidates
-            .by_id
-            .clone()
-            .or_else(|| candidates.by_name.clone())
-            .unwrap_or_else(|| self.local_repo_name.clone()))
+        if let Some(name) = candidates.by_id.clone().or_else(|| candidates.by_name.clone()) {
+            return Ok(name);
+        }
+        match self.list_repos(None)?.as_slice() {
+            [repo] => Ok(repo.clone()),
+            [] => anyhow::bail!("No local repositories available"),
+            _ => anyhow::bail!("Active repository not selected: multiple local repos exist"),
+        }
     }
 
     fn resolve_local_repo_candidates_with_repair(

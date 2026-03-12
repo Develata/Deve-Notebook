@@ -41,6 +41,16 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
     }
     if contains_any(
         &detail.to_ascii_lowercase(),
+        &[
+            "active repository not selected",
+            "multiple local repos exist",
+            "no local repositories available",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::ScRepoNotSelected, detail);
+    }
+    if contains_any(
+        &detail.to_ascii_lowercase(),
         &["database is locked", "failed to lock database"],
     ) {
         return ServerError::with_detail(ServerErrorCode::StorageDbLocked, detail);
@@ -128,5 +138,14 @@ mod tests {
             anyhow::anyhow!("{}", r#"{"code":"SC_NOTHING_TO_COMMIT"}"#),
         );
         assert_eq!(err.code, ServerErrorCode::ScNothingToCommit);
+    }
+
+    #[test]
+    fn maps_missing_selector_with_multiple_local_repos() {
+        let err = map_repo_error(
+            ScOp::ListChanges,
+            anyhow::anyhow!("Active repository not selected: multiple local repos exist"),
+        );
+        assert_eq!(err.code, ServerErrorCode::ScRepoNotSelected);
     }
 }
