@@ -193,7 +193,7 @@ async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow:
     let shadow_list = messages
         .into_iter()
         .find_map(|msg| match msg {
-            ServerMessage::ShadowList { shadows } => Some(shadows),
+            ServerMessage::ShadowList { shadows, .. } => Some(shadows),
             _ => None,
         })
         .expect("browser sync hello should refresh shadow list");

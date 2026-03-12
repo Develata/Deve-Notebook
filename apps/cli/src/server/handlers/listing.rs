@@ -21,6 +21,7 @@ pub async fn handle_list_shadows(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: Option<&WsSession>,
+    request_id: Option<String>,
 ) {
     match state.repo.list_shadows_on_disk() {
         Ok(peers) => {
@@ -32,7 +33,10 @@ pub async fn handle_list_shadows(
                 .filter(|peer| Some(peer.clone()) != self_peer)
                 .map(|peer| peer.to_string())
                 .collect();
-            ch.unicast(ServerMessage::ShadowList { shadows });
+            ch.unicast(ServerMessage::ShadowList {
+                request_id,
+                shadows,
+            });
         }
         Err(e) => {
             tracing::error!("Failed to list shadow repos: {:?}", e);
@@ -49,10 +53,12 @@ pub async fn handle_list_repos(
     state: &Arc<AppState>,
     ch: &DualChannel,
     active_branch: Option<&PeerId>,
+    request_id: Option<String>,
 ) {
     match state.repo.list_repos(active_branch) {
         Ok(repos) => {
             ch.unicast(ServerMessage::RepoList {
+                request_id,
                 branch: active_branch.map(ToString::to_string),
                 repos,
             });

@@ -116,6 +116,7 @@ pub struct SyncCallbacks {
 pub fn create_sync_callbacks(
     ws: &WsService,
     current_doc: ReadSignal<Option<DocId>>,
+    set_shadow_list_request_id: WriteSignal<Option<String>>,
 ) -> SyncCallbacks {
     let ws1 = ws.clone();
     let on_get_sync_mode = Callback::new(move |_: ()| {
@@ -144,7 +145,9 @@ pub fn create_sync_callbacks(
 
     let ws6 = ws.clone();
     let on_list_shadows = Callback::new(move |_: ()| {
-        ws6.send(ClientMessage::ListShadows);
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_shadow_list_request_id.set(Some(request_id.clone()));
+        ws6.send(ClientMessage::ListShadows { request_id });
     });
 
     let ws7 = ws.clone();

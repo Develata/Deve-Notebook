@@ -166,6 +166,7 @@ async fn switch_branch_keeps_repo_unbound_when_target_branch_is_ambiguous() -> a
         Some(ServerMessage::RepoList {
             branch: Some(_),
             repos,
+            ..
         }) if repos.len() == 2
     ));
     assert!(

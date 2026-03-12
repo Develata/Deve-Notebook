@@ -88,8 +88,12 @@ pub enum ClientMessage {
     GetPendingOps,
     ConfirmMerge,
     DiscardPending,
-    ListShadows,
-    ListRepos,
+    ListShadows {
+        request_id: String,
+    },
+    ListRepos {
+        request_id: String,
+    },
     SwitchBranch {
         peer_id: Option<String>,
     },

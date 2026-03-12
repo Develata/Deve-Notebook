@@ -47,7 +47,9 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (current_repo_id, set_current_repo_id) = signal(None::<String>);
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
+    let (shadow_list_request_id, set_shadow_list_request_id) = signal(None::<String>);
     let (repo_list, set_repo_list) = signal(Vec::new());
+    let (repo_list_request_id, set_repo_list_request_id) = signal(None::<String>);
     let (doc_version, set_doc_version) = signal(0u64);
     let (playback_version, set_playback_version) = signal(0u64);
     let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
@@ -118,8 +120,12 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_pending_repo_switch,
         shadow_repos,
         set_shadow_repos,
+        shadow_list_request_id,
+        set_shadow_list_request_id,
         repo_list,
         set_repo_list,
+        repo_list_request_id,
+        set_repo_list_request_id,
         doc_version,
         set_doc_version,
         playback_version,

@@ -123,21 +123,38 @@ pub fn handle_message<F>(
             signals.set_pending_ops_count.set(0);
             signals.set_pending_ops_previews.set(vec![]);
         }
-        ServerMessage::ShadowList { shadows } => {
+        ServerMessage::ShadowList {
+            request_id,
+            shadows,
+        } => {
             if shadow_list_matches_scope(
+                request_id.clone(),
                 signals.pending_branch_switch.get_untracked(),
                 signals.pending_repo_switch.get_untracked(),
+                signals.shadow_list_request_id.get_untracked(),
             ) {
+                if request_id.is_some() {
+                    signals.set_shadow_list_request_id.set(None);
+                }
                 signals.set_shadow_repos.set(shadows);
             }
         }
-        ServerMessage::RepoList { branch, repos } => {
+        ServerMessage::RepoList {
+            request_id,
+            branch,
+            repos,
+        } => {
             if repo_list_matches_scope(
+                request_id.clone(),
                 branch,
                 signals.active_branch.get_untracked(),
                 signals.pending_branch_switch.get_untracked(),
                 signals.pending_repo_switch.get_untracked(),
+                signals.repo_list_request_id.get_untracked(),
             ) {
+                if request_id.is_some() {
+                    signals.set_repo_list_request_id.set(None);
+                }
                 signals.set_repo_list.set(repos);
             }
         }

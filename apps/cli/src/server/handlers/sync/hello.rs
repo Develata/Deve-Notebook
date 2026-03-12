@@ -92,7 +92,7 @@ pub(super) async fn handle(
     });
 
     if session.is_browser_session() {
-        listing::handle_list_shadows(state, ch, Some(session)).await;
+        listing::handle_list_shadows(state, ch, Some(session), None).await;
         return;
     }
 

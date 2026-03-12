@@ -28,11 +28,12 @@ pub(super) async fn route_core(
         ClientMessage::ListDocs => {
             listing::handle_list_docs(state, ch, session).await;
         }
-        ClientMessage::ListShadows => {
-            listing::handle_list_shadows(state, ch, Some(session)).await;
+        ClientMessage::ListShadows { request_id } => {
+            listing::handle_list_shadows(state, ch, Some(session), Some(request_id)).await;
         }
-        ClientMessage::ListRepos => {
-            listing::handle_list_repos(state, ch, session.active_branch.as_ref()).await;
+        ClientMessage::ListRepos { request_id } => {
+            listing::handle_list_repos(state, ch, session.active_branch.as_ref(), Some(request_id))
+                .await;
         }
         ClientMessage::Search {
             request_id,

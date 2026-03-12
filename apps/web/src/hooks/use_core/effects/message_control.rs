@@ -33,7 +33,7 @@ pub fn handle_branch_switched(
         signals.set_tree_nodes.set(Vec::new());
         signals.set_repo_list.set(Vec::new());
         clear_repo_scoped_runtime(signals);
-        request_shadow_list(ws);
+        request_shadow_list(ws, signals);
     }
 }
 
@@ -70,7 +70,7 @@ pub fn handle_repo_switched(
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
         request_repo_sync_state(ws);
-        request_shadow_list(ws);
+        request_shadow_list(ws, signals);
     }
 }
 
@@ -112,6 +112,8 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_plugin_request_ids.set(Vec::new());
     signals.set_chat_messages.set(Vec::new());
     signals.set_is_chat_streaming.set(false);
+    signals.set_shadow_list_request_id.set(None);
+    signals.set_repo_list_request_id.set(None);
     signals.set_search_request_id.set(None);
     signals.set_search_results.set(Vec::new());
     effects_sc::clear_repo_scoped_state(
@@ -128,8 +130,10 @@ fn request_repo_sync_state(ws: &WsService) {
     ws.send(ClientMessage::GetPendingOps);
 }
 
-fn request_shadow_list(ws: &WsService) {
-    ws.send(ClientMessage::ListShadows);
+fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    signals.set_shadow_list_request_id.set(Some(request_id.clone()));
+    ws.send(ClientMessage::ListShadows { request_id });
 }
 
 fn should_recover_local_branch(

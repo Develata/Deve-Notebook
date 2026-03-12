@@ -100,8 +100,12 @@ pub struct CoreSignals {
     pub set_pending_repo_switch: WriteSignal<Option<String>>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub set_shadow_repos: WriteSignal<Vec<String>>,
+    pub shadow_list_request_id: ReadSignal<Option<String>>,
+    pub set_shadow_list_request_id: WriteSignal<Option<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
     pub set_repo_list: WriteSignal<Vec<String>>,
+    pub repo_list_request_id: ReadSignal<Option<String>>,
+    pub set_repo_list_request_id: WriteSignal<Option<String>>,
 
     // 版本/回放
     pub doc_version: ReadSignal<u64>,

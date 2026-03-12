@@ -63,7 +63,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         if should_suspend_handshake(&branch, pending_repo_switch.as_deref()) {
             *last_mode.borrow_mut() = None;
             if is_reconnect_bootstrap {
-                restore_session_scope(&ws, repo_name.clone(), branch.clone());
+                restore_session_scope(&ws, signals, repo_name.clone(), branch.clone());
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
@@ -76,7 +76,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         {
             *last_mode.borrow_mut() = None;
             if is_reconnect_bootstrap {
-                restore_session_scope(&ws, repo_name.clone(), branch.clone());
+                restore_session_scope(&ws, signals, repo_name.clone(), branch.clone());
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
@@ -86,7 +86,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());
                 if is_reconnect_bootstrap {
-                    restore_session_scope(&ws, repo_name.clone(), branch.clone());
+                    restore_session_scope(&ws, signals, repo_name.clone(), branch.clone());
                 }
                 ws.clear_writer_ready();
                 signals.set_handshake_ready.set(true);
@@ -97,7 +97,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             };
 
             if is_reconnect_bootstrap {
-                restore_session_scope(&ws, repo_name.clone(), branch.clone());
+                restore_session_scope(&ws, signals, repo_name.clone(), branch.clone());
             }
 
             leptos::logging::log!("已连接! 发送 SyncHello...");

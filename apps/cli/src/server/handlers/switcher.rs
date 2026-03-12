@@ -106,6 +106,7 @@ pub async fn handle_switch_branch(
         success: true,
     });
     ch.unicast(ServerMessage::RepoList {
+        request_id: None,
         branch: final_branch.clone(),
         repos: payload.repo_list,
     });

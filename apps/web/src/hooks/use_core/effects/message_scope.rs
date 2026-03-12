@@ -18,21 +18,35 @@ pub fn string_branch_matches_scope(
 }
 
 pub fn repo_list_matches_scope(
+    request_id: Option<String>,
     branch: Option<String>,
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
     pending_repo_switch: Option<String>,
+    expected_request_id: Option<String>,
 ) -> bool {
-    pending_repo_switch.is_none()
+    request_matches(request_id.as_deref(), expected_request_id.as_deref())
+        && pending_repo_switch.is_none()
         && pending_branch_switch.is_none()
         && branch == expected_branch_string(active_branch, pending_branch_switch)
 }
 
 pub fn shadow_list_matches_scope(
+    request_id: Option<String>,
     pending_branch_switch: Option<PendingBranchTarget>,
     pending_repo_switch: Option<String>,
+    expected_request_id: Option<String>,
 ) -> bool {
-    pending_branch_switch.is_none() && pending_repo_switch.is_none()
+    request_matches(request_id.as_deref(), expected_request_id.as_deref())
+        && pending_branch_switch.is_none()
+        && pending_repo_switch.is_none()
+}
+
+fn request_matches(message_id: Option<&str>, expected_id: Option<&str>) -> bool {
+    match message_id {
+        Some(message_id) => expected_id == Some(message_id),
+        None => expected_id.is_none(),
+    }
 }
 
 fn expected_branch_string(
@@ -68,7 +82,9 @@ mod tests {
         assert!(!repo_list_matches_scope(
             None,
             None,
+            None,
             Some(PendingBranchTarget::Shadow("peer-a".into())),
+            None,
             None,
         ));
     }
@@ -76,14 +92,18 @@ mod tests {
     #[test]
     fn repo_list_uses_active_branch_without_pending_switch() {
         assert!(repo_list_matches_scope(
+            None,
             Some("peer-a".into()),
             Some(PeerId::new("peer-a")),
             None,
             None,
+            None,
         ));
         assert!(!repo_list_matches_scope(
+            None,
             Some("peer-b".into()),
             Some(PeerId::new("peer-a")),
+            None,
             None,
             None,
         ));
@@ -95,18 +115,43 @@ mod tests {
             None,
             None,
             None,
+            None,
             Some("default".into()),
+            None,
         ));
     }
 
     #[test]
     fn shadow_list_rejects_messages_while_switch_pending() {
         assert!(!shadow_list_matches_scope(
+            None,
             Some(PendingBranchTarget::Shadow("peer-a".into())),
             None,
+            None,
         ));
-        assert!(!shadow_list_matches_scope(None, Some("default".into())));
-        assert!(shadow_list_matches_scope(None, None));
+        assert!(!shadow_list_matches_scope(
+            None,
+            None,
+            Some("default".into()),
+            None,
+        ));
+        assert!(shadow_list_matches_scope(None, None, None, None));
+    }
+
+    #[test]
+    fn scoped_list_accepts_matching_request_id_only() {
+        assert!(shadow_list_matches_scope(
+            Some("req-1".into()),
+            None,
+            None,
+            Some("req-1".into()),
+        ));
+        assert!(!shadow_list_matches_scope(
+            Some("stale".into()),
+            None,
+            None,
+            Some("req-1".into()),
+        ));
     }
 
     #[test]

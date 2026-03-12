@@ -66,6 +66,7 @@ pub fn use_core() -> CoreState {
             current_repo_id: signals.current_repo_id,
             active_branch: signals.active_branch,
             pending_repo_switch: signals.pending_repo_switch,
+            set_repo_list_request_id: signals.set_repo_list_request_id,
             set_handshake_ready: signals.set_handshake_ready,
         },
     );
@@ -79,7 +80,11 @@ pub fn use_core() -> CoreState {
         signals.set_current_doc,
         signals.set_explicit_home,
     );
-    let sync_callbacks = callbacks::create_sync_callbacks(&ws, signals.current_doc);
+    let sync_callbacks = callbacks::create_sync_callbacks(
+        &ws,
+        signals.current_doc,
+        signals.set_shadow_list_request_id,
+    );
     let sc_callbacks = callbacks::create_source_control_callbacks(
         &ws,
         signals.staged_changes,
