@@ -2,6 +2,7 @@ use crate::ledger::database::relocate_database_path;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::Result;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Clone)]
@@ -77,37 +78,64 @@ impl RepoManager {
         let selector = selector.trim_end_matches(".redb");
         let target_id = uuid::Uuid::parse_str(selector).ok();
         let mut by_id = None;
-        let mut by_name = None;
         let mut by_stem = None;
+        let mut by_name = Vec::new();
         for entry in self.scan_remote_repo_entries(peer_id)? {
             if entry.stem == selector {
                 by_stem = Some(entry.clone());
             }
             if let Some(info) = &entry.info {
                 if info.name == selector {
-                    by_name = Some(entry.clone());
+                    by_name.push(entry.clone());
                 }
                 if Some(info.uuid) == target_id {
                     by_id = Some(entry);
                 }
             }
         }
-        Ok(by_id.or(by_name).or(by_stem))
+        Ok(by_id.or(by_stem).or_else(|| {
+            if by_name.len() == 1 {
+                by_name.into_iter().next()
+            } else {
+                None
+            }
+        }))
     }
 
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
-        let mut repos = Vec::new();
-        for entry in self.scan_remote_repo_entries(peer_id)? {
-            let fallback = uuid::Uuid::parse_str(&entry.stem)
-                .ok()
-                .and_then(|repo_id| self.get_local_repo_info_by_id(repo_id).ok().flatten())
-                .map(|info| info.name)
-                .unwrap_or(entry.stem);
-            repos.push(entry.info.map(|info| info.name).unwrap_or(fallback));
+        let entries = self.scan_remote_repo_entries(peer_id)?;
+        let mut counts = HashMap::<String, usize>::new();
+        let mut named = Vec::new();
+        for entry in entries {
+            let display = self.remote_repo_display_name(&entry);
+            *counts.entry(display.clone()).or_default() += 1;
+            named.push((entry, display));
         }
+        let mut repos: Vec<_> = named
+            .into_iter()
+            .map(|(entry, display)| {
+                if counts.get(&display).copied().unwrap_or(0) > 1 {
+                    entry.stem
+                } else {
+                    display
+                }
+            })
+            .collect();
         repos.sort();
-        repos.dedup();
         Ok(repos)
+    }
+
+    fn remote_repo_display_name(&self, entry: &RemoteRepoEntry) -> String {
+        let fallback = uuid::Uuid::parse_str(&entry.stem)
+            .ok()
+            .and_then(|repo_id| self.get_local_repo_info_by_id(repo_id).ok().flatten())
+            .map(|info| info.name)
+            .unwrap_or_else(|| entry.stem.clone());
+        entry
+            .info
+            .as_ref()
+            .map(|info| info.name.clone())
+            .unwrap_or(fallback)
     }
 
     fn loaded_remote_repo_info(&self, peer_id: &PeerId) -> Vec<RepoInfo> {

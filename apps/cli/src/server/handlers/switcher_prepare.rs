@@ -72,12 +72,9 @@ pub(super) fn select_target_repo(
 ) -> anyhow::Result<Option<String>> {
     let repos = state.repo.list_repos(target_branch)?;
     if let Some(repo_id) = current_repo_id
-        && let Some(info) = state
-            .repo
-            .get_repo_info_for(target_branch, Some(&repo_id.to_string()))?
-        && repos.contains(&info.name)
+        && let Some(selector) = select_repo_selector_by_id(state, &repos, target_branch, repo_id)?
     {
-        return Ok(Some(info.name));
+        return Ok(Some(selector));
     }
     if let Some(url) = current_repo_url {
         for repo_name in &repos {
@@ -88,12 +85,48 @@ pub(super) fn select_target_repo(
             }
         }
     }
-    if let Some(repo_name) = current_repo_name
-        && repos.iter().any(|candidate| candidate == repo_name)
-    {
-        return Ok(Some(repo_name.to_string()));
+    if let Some(repo_name) = current_repo_name {
+        let matches = select_repo_selectors_by_name(state, &repos, target_branch, repo_name)?;
+        if matches.len() == 1 {
+            return Ok(matches.into_iter().next());
+        }
     }
     Ok((repos.len() == 1).then(|| repos[0].clone()))
+}
+
+fn select_repo_selector_by_id(
+    state: &Arc<AppState>,
+    repos: &[String],
+    branch: Option<&PeerId>,
+    repo_id: RepoId,
+) -> anyhow::Result<Option<String>> {
+    for repo_name in repos {
+        let Some(info) = state.repo.get_repo_info_for(branch, Some(repo_name))? else {
+            continue;
+        };
+        if info.uuid == repo_id {
+            return Ok(Some(repo_name.clone()));
+        }
+    }
+    Ok(None)
+}
+
+fn select_repo_selectors_by_name(
+    state: &Arc<AppState>,
+    repos: &[String],
+    branch: Option<&PeerId>,
+    repo_name: &str,
+) -> anyhow::Result<Vec<String>> {
+    let mut matches = Vec::new();
+    for selector in repos {
+        let Some(info) = state.repo.get_repo_info_for(branch, Some(selector))? else {
+            continue;
+        };
+        if info.name == repo_name || selector == repo_name {
+            matches.push(selector.clone());
+        }
+    }
+    Ok(matches)
 }
 
 pub(super) fn prepare_repo_switch(
@@ -141,5 +174,67 @@ pub(super) fn commit_session_switch(
             session.clear_active_db();
             session.clear_active_repo();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_target_repo;
+    use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+    use deve_core::config::SyncMode;
+    use deve_core::ledger::RepoManager;
+    use deve_core::models::PeerId;
+    use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+    use std::sync::Arc;
+    use tempfile::tempdir;
+    use tokio::sync::broadcast;
+
+    fn build_state() -> anyhow::Result<Arc<AppState>> {
+        let dir = tempdir()?;
+        let vault = dir.path().join("vault");
+        let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+        repo.set_vault_root(&vault);
+        let repo = Arc::new(repo);
+        let (tx, _rx) = broadcast::channel(16);
+        let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+        Ok(Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            tx,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                identity_key.peer_id(),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_service: None,
+            identity_key,
+        }))
+    }
+
+    #[test]
+    fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyhow::Result<()> {
+        let state = build_state()?;
+        let peer_id = PeerId::new("peer-remote");
+        let first = deve_core::ledger::RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-a".into()),
+        };
+        let second = deve_core::ledger::RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-b".into()),
+        };
+        state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
+        state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
+
+        let selected = select_target_repo(&state, Some(second.uuid), None, None, Some(&peer_id))?
+            .expect("selector for second wiki repo");
+        assert_ne!(selected, "wiki");
+        assert!(selected.starts_with("wiki-"));
+        Ok(())
     }
 }

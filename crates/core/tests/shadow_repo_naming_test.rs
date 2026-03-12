@@ -213,3 +213,36 @@ fn ensure_shadow_repo_info_realigns_name_for_same_uuid() {
     assert_eq!(info.name, "wiki");
     assert_eq!(info.uuid, repo_id);
 }
+
+#[test]
+fn remote_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-a".into()),
+        },
+    )
+    .expect("prepare first wiki shadow");
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-b".into()),
+        },
+    )
+    .expect("prepare second wiki shadow");
+
+    let repos = repo.list_repos(Some(&peer_id)).expect("list remote repos");
+    assert_eq!(repos.len(), 2);
+    assert!(repos.iter().any(|name| name == "wiki"));
+    assert!(
+        repos
+            .iter()
+            .any(|name| name != "wiki" && name.starts_with("wiki-"))
+    );
+}
