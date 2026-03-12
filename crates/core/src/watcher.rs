@@ -27,8 +27,6 @@ pub enum FsEventType {
         repo_id: crate::models::RepoId,
         path: String,
     },
-    /// 文件变更已记录到 pending_fs_ops (不自动 ingest)
-    FsPendingChange { path: String, change_type: String },
 }
 
 pub struct Watcher {

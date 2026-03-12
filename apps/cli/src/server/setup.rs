@@ -104,15 +104,6 @@ pub(super) fn spawn_file_watcher(
                         has_conflict: false,
                     });
                 }
-                FsEventType::FsPendingChange { path, change_type } => {
-                    tracing::info!("FsPendingChange: {} ({})", path, change_type);
-                    let _ = tx.send(ServerMessage::FsChangeDetected {
-                        repo_id: None,
-                        path,
-                        change_type,
-                        has_conflict: false,
-                    });
-                }
             },
         );
 

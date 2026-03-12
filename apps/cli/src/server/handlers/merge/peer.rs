@@ -40,7 +40,7 @@ pub(super) async fn handle_merge_peer(
             write_merged_content(state, ch, &local_scope, doc_id, &content);
         }
         Ok(MergeResult::Conflict { local, remote, .. }) => {
-            send_merge_conflict(state, ch, &local_scope.repo_name, doc_id, local, remote);
+            send_merge_conflict(state, ch, &local_scope, doc_id, local, remote);
         }
         Err(e) => errors::request_failed(ch, format!("Merge failed: {}", e)),
     }
@@ -101,17 +101,17 @@ fn write_merged_content(
 fn send_merge_conflict(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    repo_name: &str,
+    scope: &ResolvedRepo,
     doc_id: DocId,
     local: String,
     remote: String,
 ) {
-    let Some(path) = resolve_doc_path(state, ch, repo_name, doc_id) else {
+    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id) else {
         return;
     };
     tracing::warn!("Merge Conflict detected for doc {}", doc_id);
     ch.unicast(ServerMessage::DocDiff {
-        repo_id: None,
+        repo_id: Some(scope.repo_id),
         path,
         old_content: local,
         new_content: remote,
