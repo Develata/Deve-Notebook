@@ -4,7 +4,7 @@ use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::ledger::{RepoManager, node_meta};
-use deve_core::models::RepoId;
+use deve_core::models::{DocId, RepoId};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -20,8 +20,8 @@ pub(super) async fn handle_remote_diff(
         Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
     };
     let path = deve_core::utils::path::to_forward_slash(&target.path);
-    let new_content =
-        match get_remote_doc_content(session, &scope.repo_name, scope.repo_id, &target) {
+    let (doc_id, new_content) =
+        match resolve_remote_content(session, &scope.repo_name, scope.repo_id, &target) {
             Some(content) => content,
             None => {
                 return errors::send_ws_code(
@@ -38,7 +38,7 @@ pub(super) async fn handle_remote_diff(
         Err(err) => return errors::send_ws(ch, errors::map_repo_scope_error(err)),
     };
     let old_content =
-        match local_counterpart_content(state.repo.as_ref(), &target, local_repo_name.as_deref()) {
+        match local_counterpart_content(state.repo.as_ref(), doc_id, local_repo_name.as_deref()) {
             Ok(Some(content)) => content,
             Ok(None) => String::new(),
             Err(err) => {
@@ -59,39 +59,35 @@ pub(super) async fn handle_remote_diff(
     });
 }
 
-fn get_remote_doc_content(
+fn resolve_remote_content(
     session: &WsSession,
     repo_name: &str,
     repo_id: RepoId,
     target: &ScPathTarget,
-) -> Option<String> {
+) -> Option<(DocId, String)> {
     let db = session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))?;
     let doc_id = target.doc_id.or_else(|| resolve_runtime_doc_id(&db.db, &target.path))?;
     let ops = deve_core::ledger::ops::get_ops_from_db(&db.db, doc_id).ok()?;
     let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-    Some(deve_core::state::reconstruct_content(&entries))
+    Some((doc_id, deve_core::state::reconstruct_content(&entries)))
 }
 
 pub(crate) fn local_counterpart_content(
     repo: &RepoManager,
-    target: &ScPathTarget,
+    doc_id: DocId,
     repo_name: Option<&str>,
 ) -> anyhow::Result<Option<String>> {
     let Some(name) = repo_name else {
         return Ok(None);
     };
     repo.run_on_local_repo(name, |db| {
-        let Some(doc_id) = target.doc_id.or_else(|| resolve_runtime_doc_id(db, &target.path))
-        else {
-            return Ok(None);
-        };
         let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
         let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
         Ok(Some(deve_core::state::reconstruct_content(&entries)))
     })
 }
 
-fn resolve_runtime_doc_id(
+pub(super) fn resolve_runtime_doc_id(
     db: &redb::Database,
     path: &str,
 ) -> Option<deve_core::models::DocId> {

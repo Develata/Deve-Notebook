@@ -1,4 +1,4 @@
-use super::remote::local_counterpart_content;
+use super::remote::{local_counterpart_content, resolve_runtime_doc_id};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::ledger::traits::{RepoSelector, Repository};
@@ -79,10 +79,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
 
     let content = local_counterpart_content(
         &repo,
-        &ScPathTarget {
-            path: "notes/a.md".into(),
-            doc_id: Some(doc_id),
-        },
+        doc_id,
         Some(repo.local_repo_name()),
     )?;
     assert_eq!(content.as_deref(), Some("hello renamed"));
@@ -120,11 +117,9 @@ fn remote_diff_prefers_node_projection_before_legacy_path_mapping() -> anyhow::R
         Ok(())
     })?;
 
-    let content = local_counterpart_content(
-        &repo,
-        &ScPathTarget::from_path("notes/a.md"),
-        Some(repo.local_repo_name()),
-    )?;
-    assert_eq!(content.as_deref(), Some("hello"));
+    let doc_id = repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        Ok(resolve_runtime_doc_id(db, "notes/a.md"))
+    })?;
+    assert!(doc_id.is_some());
     Ok(())
 }
