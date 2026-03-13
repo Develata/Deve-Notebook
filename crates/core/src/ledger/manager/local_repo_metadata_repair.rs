@@ -30,6 +30,7 @@ impl RepoManager {
         });
 
         let mut seen = HashMap::new();
+        let mut seen_urls = HashMap::new();
         for path in entries {
             let stem = path
                 .file_stem()
@@ -60,6 +61,18 @@ impl RepoManager {
                 }
             }
             if info.url.is_none() {
+                info.url = Some(format!("urn:uuid:{}", info.uuid));
+            }
+            if let Some(url) = info.url.clone()
+                && let Some(existing_owner) = seen_urls.insert(url.clone(), stem.clone())
+                && existing_owner != stem
+            {
+                tracing::warn!(
+                    "Repairing duplicate local repo URL: {} conflicts with {} on {}",
+                    stem,
+                    existing_owner,
+                    url
+                );
                 info.url = Some(format!("urn:uuid:{}", info.uuid));
             }
             if info != original {

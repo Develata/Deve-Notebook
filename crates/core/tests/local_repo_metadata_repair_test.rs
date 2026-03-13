@@ -92,3 +92,58 @@ fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
 
     assert!(err.to_string().contains("multiple local repos exist"));
 }
+
+#[test]
+fn repair_rewrites_duplicate_local_repo_url_to_repo_urn() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let other_path = ledger_dir.join("local").join("notes.redb");
+    let other_db = redb::Database::create(&other_path).expect("create notes db");
+    let txn = other_db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.commit().expect("commit metadata table");
+    write_info(
+        &other_db,
+        &RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "notes".into(),
+            url: Some("urn:main".into()),
+        },
+    );
+    drop(other_db);
+
+    main.repair_local_repo_catalog().expect("repair catalog");
+
+    let repaired = main
+        .get_repo_info_for(None, Some("notes"))
+        .expect("lookup notes")
+        .expect("notes present");
+    assert_eq!(
+        repaired.url.as_deref(),
+        Some(format!("urn:uuid:{}", repaired.uuid).as_str())
+    );
+}
+
+#[test]
+fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let first = RepoManager::init(
+        &ledger_dir,
+        8,
+        Some("wiki"),
+        Some("https://example.com/wiki.git"),
+    )
+    .expect("init explicit wiki");
+    let second = RepoManager::init(&ledger_dir, 8, Some("wiki"), None).expect("init implicit wiki");
+
+    let first_info = first.get_repo_info().expect("first info").expect("present");
+    let second_info = second
+        .get_repo_info()
+        .expect("second info")
+        .expect("present");
+    assert_eq!(first_info.name, "wiki");
+    assert_eq!(second_info.name, "wiki-1");
+    assert_ne!(first_info.uuid, second_info.uuid);
+}

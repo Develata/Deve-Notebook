@@ -30,6 +30,7 @@ use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
 use super::database::{cached_or_create_database, register_database};
+use super::init_reuse::should_reuse_existing_repo;
 use super::node_check;
 use super::schema::*;
 use super::source_control;
@@ -102,13 +103,7 @@ pub fn init(
                         // 根据需求: "Logical Identity: URL is strictly distinguishing"
                         // 如果输入 URL 为 None, 我们通常是在"打开默认库"，所以匹配。
                         // 如果输入 URL 有值，必须严格匹配。
-                        let match_url = match (repo_url, &info.url) {
-                            (Some(u1), Some(u2)) => u1 == u2,
-                            (None, _) => true, // 没有指定 URL，默认复用同名库
-                            (Some(_), None) => false, // 指定了 URL 但库里没有 (视为不匹配，或是旧库升级?) -> 安全起见视为不匹配
-                        };
-
-                        if match_url {
+                        if should_reuse_existing_repo(repo_url, &info) {
                             local_db = db;
                             break;
                         } else {

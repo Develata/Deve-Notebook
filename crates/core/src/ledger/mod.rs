@@ -31,6 +31,7 @@
 pub mod database;
 pub mod doc_lookup;
 pub mod init;
+mod init_reuse;
 pub mod inode_index;
 pub mod listing;
 mod manager;
