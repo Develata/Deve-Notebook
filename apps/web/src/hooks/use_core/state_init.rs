@@ -51,6 +51,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (current_repo_id, set_current_repo_id) = signal(None::<String>);
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
     let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
+    let (current_scope_nonce, set_current_scope_nonce) = signal(0u64);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (shadow_list_request_id, set_shadow_list_request_id) = signal(None::<String>);
     let (repo_list, set_repo_list) = signal(Vec::new());
@@ -139,6 +140,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_pending_repo_switch,
         pending_repo_switch_nonce,
         set_pending_repo_switch_nonce,
+        current_scope_nonce,
+        set_current_scope_nonce,
         shadow_repos,
         set_shadow_repos,
         shadow_list_request_id,

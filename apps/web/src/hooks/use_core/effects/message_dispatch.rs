@@ -13,7 +13,8 @@ use super::message_dispatch_gate::{
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 use super::message_scope::{
-    accepts_system_or_matching_request, repo_list_matches_scope, shadow_list_matches_scope,
+    RepoListScope, RequestMatch, ShadowListScope, accepts_system_or_matching_request,
+    repo_list_matches_scope, shadow_list_matches_scope,
 };
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
@@ -31,12 +32,15 @@ pub fn handle_message<F>(
             request_id,
             repo_id,
             branch,
+            scope_nonce,
             docs,
         } => {
             if !matches_current_message_scope(&repo_id, &branch, signals)
                 || !accepts_system_or_matching_request(
                     request_id.as_deref(),
                     signals.doc_list_request_id.get_untracked().as_deref(),
+                    scope_nonce,
+                    signals.current_scope_nonce.get_untracked(),
                 )
             {
                 return;
@@ -104,6 +108,8 @@ pub fn handle_message<F>(
                 || !accepts_system_or_matching_request(
                     request_id.as_deref(),
                     signals.sync_mode_request_id.get_untracked().as_deref(),
+                    None,
+                    signals.current_scope_nonce.get_untracked(),
                 )
             {
                 return;
@@ -122,6 +128,8 @@ pub fn handle_message<F>(
                 || !accepts_system_or_matching_request(
                     request_id.as_deref(),
                     signals.pending_ops_request_id.get_untracked().as_deref(),
+                    None,
+                    signals.current_scope_nonce.get_untracked(),
                 )
             {
                 return;
@@ -152,13 +160,20 @@ pub fn handle_message<F>(
         }
         ServerMessage::ShadowList {
             request_id,
+            scope_nonce,
             shadows,
         } => {
             if shadow_list_matches_scope(
-                request_id.clone(),
-                signals.pending_branch_switch.get_untracked(),
-                signals.pending_repo_switch.get_untracked(),
-                signals.shadow_list_request_id.get_untracked(),
+                RequestMatch {
+                    message_id: request_id.as_deref(),
+                    expected_id: signals.shadow_list_request_id.get_untracked().as_deref(),
+                    scope_nonce,
+                    current_scope_nonce: signals.current_scope_nonce.get_untracked(),
+                },
+                &ShadowListScope {
+                    pending_branch_switch: signals.pending_branch_switch.get_untracked(),
+                    pending_repo_switch: signals.pending_repo_switch.get_untracked(),
+                },
             ) {
                 if request_id.is_some() {
                     signals.set_shadow_list_request_id.set(None);
@@ -169,15 +184,22 @@ pub fn handle_message<F>(
         ServerMessage::RepoList {
             request_id,
             branch,
+            scope_nonce,
             repos,
         } => {
             if repo_list_matches_scope(
-                request_id.clone(),
+                RequestMatch {
+                    message_id: request_id.as_deref(),
+                    expected_id: signals.repo_list_request_id.get_untracked().as_deref(),
+                    scope_nonce,
+                    current_scope_nonce: signals.current_scope_nonce.get_untracked(),
+                },
                 branch,
-                signals.active_branch.get_untracked(),
-                signals.pending_branch_switch.get_untracked(),
-                signals.pending_repo_switch.get_untracked(),
-                signals.repo_list_request_id.get_untracked(),
+                &RepoListScope {
+                    active_branch: signals.active_branch.get_untracked(),
+                    pending_branch_switch: signals.pending_branch_switch.get_untracked(),
+                    pending_repo_switch: signals.pending_repo_switch.get_untracked(),
+                },
             ) {
                 if request_id.is_some() {
                     signals.set_repo_list_request_id.set(None);
@@ -222,12 +244,15 @@ pub fn handle_message<F>(
             request_id,
             repo_id,
             branch,
+            scope_nonce,
             delta,
         } => {
             if !matches_current_message_scope(&repo_id, &branch, signals)
                 || !accepts_system_or_matching_request(
                     request_id.as_deref(),
                     signals.tree_request_id.get_untracked().as_deref(),
+                    scope_nonce,
+                    signals.current_scope_nonce.get_untracked(),
                 )
             {
                 return;

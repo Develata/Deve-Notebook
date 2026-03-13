@@ -66,9 +66,14 @@ pub(super) async fn handle_file_rename(
             node_meta::get_node_meta(db, node_id)?.ok_or_else(|| anyhow!("Node meta missing"))?;
         Ok((node_id, meta))
     }) {
-        if let Err(e) =
-            broadcast_parent_dirs(state, ch, scope.repo_id, &scope.repo_name, meta.parent_id)
-        {
+        if let Err(e) = broadcast_parent_dirs(
+            state,
+            ch,
+            scope.repo_id,
+            &scope.repo_name,
+            meta.parent_id,
+            session.scope_nonce(),
+        ) {
             tracing::error!("广播父目录失败: {:?}", e);
         }
         let delta = state.tree_manager.with_tree_mut(scope.repo_id, None, |tm| {
@@ -83,6 +88,7 @@ pub(super) async fn handle_file_rename(
             request_id: None,
             repo_id: Some(scope.repo_id),
             branch: None,
+            scope_nonce: Some(session.scope_nonce()),
             delta,
         });
     }

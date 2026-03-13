@@ -35,6 +35,7 @@ pub async fn handle_list_shadows(
                 .collect();
             ch.unicast(ServerMessage::ShadowList {
                 request_id,
+                scope_nonce: session.map(WsSession::scope_nonce),
                 shadows,
             });
         }
@@ -54,12 +55,14 @@ pub async fn handle_list_repos(
     ch: &DualChannel,
     active_branch: Option<&PeerId>,
     request_id: Option<String>,
+    scope_nonce: Option<u64>,
 ) {
     match state.repo.list_repos(active_branch) {
         Ok(repos) => {
             ch.unicast(ServerMessage::RepoList {
                 request_id,
                 branch: active_branch.map(ToString::to_string),
+                scope_nonce,
                 repos,
             });
         }

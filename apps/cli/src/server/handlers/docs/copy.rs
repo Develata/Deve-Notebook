@@ -14,6 +14,7 @@ use crate::server::handlers::listing::handle_list_docs;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use prepare::prepare_copy_paths;
+use register::CopyRegisterCtx;
 use std::sync::Arc;
 
 pub async fn handle_copy_doc(
@@ -42,10 +43,29 @@ pub async fn handle_copy_doc(
 
     let copied = if paths.kind == deve_core::models::NodeKind::Dir {
         dir_copy::copy_dir(
-            state, ch, &scope, &paths.src, &paths.dst, &src_path, &dest_path,
+            CopyRegisterCtx {
+                state,
+                ch,
+                scope: &scope,
+                scope_nonce: session.scope_nonce(),
+            },
+            &paths.src,
+            &paths.dst,
+            &src_path,
+            &dest_path,
         )
     } else {
-        file_copy::copy_file(state, ch, &scope, &paths, &src_path, &dest_path)
+        file_copy::copy_file(
+            CopyRegisterCtx {
+                state,
+                ch,
+                scope: &scope,
+                scope_nonce: session.scope_nonce(),
+            },
+            &paths,
+            &src_path,
+            &dest_path,
+        )
     };
     if !copied {
         return;

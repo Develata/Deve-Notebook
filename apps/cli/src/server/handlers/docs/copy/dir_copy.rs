@@ -1,28 +1,23 @@
 use super::copy_dir_on_disk;
-use crate::server::AppState;
-use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{ResolvedRepo, run_on_resolved_local_repo};
+use crate::server::repo_scope::run_on_resolved_local_repo;
 use std::path::Path;
-use std::sync::Arc;
 
-use super::register::register_copied_docs;
+use super::register::{CopyRegisterCtx, register_copied_docs};
 
 pub(super) fn copy_dir(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
+    ctx: CopyRegisterCtx<'_>,
     src: &Path,
     dst: &Path,
     src_path: &str,
     dest_path: &str,
 ) -> bool {
-    if !register_copied_docs(state, ch, scope, src, src_path, dest_path) {
+    if !register_copied_docs(ctx, src, src_path, dest_path) {
         return false;
     }
-    if !copy_dir_on_disk(ch, src, dst, src_path) {
+    if !copy_dir_on_disk(ctx.ch, src, dst, src_path) {
         return false;
     }
-    if let Ok(report) = run_on_resolved_local_repo(state, scope, |db| {
+    if let Ok(report) = run_on_resolved_local_repo(ctx.state, ctx.scope, |db| {
         deve_core::ledger::node_check::check_node_consistency(db)
     }) && !report.is_clean()
     {

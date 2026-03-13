@@ -103,6 +103,7 @@ pub async fn handle_delete_doc(
         request_id: None,
         repo_id: Some(scope.repo_id),
         branch: None,
+        scope_nonce: Some(session.scope_nonce()),
         delta,
     });
 

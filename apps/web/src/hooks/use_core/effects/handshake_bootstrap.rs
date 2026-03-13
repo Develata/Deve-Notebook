@@ -4,6 +4,7 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::Set;
 
 use super::super::types::HandshakeSignals;
+use super::super::{PendingBranchTarget, switch_nonce::next_switch_nonce};
 
 pub(super) fn restore_session_scope(
     ws: &WsService,
@@ -12,14 +13,25 @@ pub(super) fn restore_session_scope(
     active_branch: Option<PeerId>,
 ) {
     if let Some(branch) = active_branch {
+        let switch_nonce = next_switch_nonce();
+        signals
+            .set_pending_branch_switch
+            .set(Some(PendingBranchTarget::Shadow(branch.to_string())));
+        signals
+            .set_pending_branch_switch_nonce
+            .set(Some(switch_nonce));
         ws.send(ClientMessage::SwitchBranch {
             peer_id: Some(branch.to_string()),
-            switch_nonce: None,
+            switch_nonce: Some(switch_nonce),
         });
         if let Some(repo_name) = current_repo {
+            signals.set_pending_repo_switch.set(Some(repo_name.clone()));
+            signals
+                .set_pending_repo_switch_nonce
+                .set(Some(switch_nonce));
             ws.send(ClientMessage::SwitchRepo {
                 name: repo_name,
-                switch_nonce: None,
+                switch_nonce: Some(switch_nonce),
             });
         } else {
             request_repo_list(ws, signals);
@@ -28,9 +40,14 @@ pub(super) fn restore_session_scope(
     }
 
     if let Some(repo_name) = current_repo {
+        let switch_nonce = next_switch_nonce();
+        signals.set_pending_repo_switch.set(Some(repo_name.clone()));
+        signals
+            .set_pending_repo_switch_nonce
+            .set(Some(switch_nonce));
         ws.send(ClientMessage::SwitchRepo {
             name: repo_name,
-            switch_nonce: None,
+            switch_nonce: Some(switch_nonce),
         });
         request_repo_list(ws, signals);
         return;

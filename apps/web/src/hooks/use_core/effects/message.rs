@@ -36,6 +36,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     signals.active_branch.get_untracked(),
                     signals.pending_branch_switch.get_untracked(),
                     signals.pending_repo_switch.get_untracked(),
+                    signals.current_scope_nonce.get_untracked(),
                 );
                 let Some(refresh_scope) = refresh_scope else {
                     return;
@@ -57,6 +58,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                         active_branch.get_untracked(),
                         pending_branch_switch.get_untracked(),
                         pending_repo_switch.get_untracked(),
+                        signals.current_scope_nonce.get_untracked(),
                     ) {
                         return;
                     }

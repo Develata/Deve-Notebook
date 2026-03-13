@@ -89,7 +89,7 @@ pub async fn handle_switch_branch(
             return;
         }
     };
-    commit_session_switch(session, final_branch.clone(), prepared);
+    commit_session_switch(session, final_branch.clone(), prepared, switch_nonce);
     tracing::info!(
         "Session ActiveBranch updated to: {:?}",
         session.active_branch
@@ -110,6 +110,7 @@ pub async fn handle_switch_branch(
     ch.unicast(ServerMessage::RepoList {
         request_id: None,
         branch: final_branch.clone(),
+        scope_nonce: Some(session.scope_nonce()),
         repos: payload.repo_list,
     });
     if let Some(repo_view) = payload.repo_view {
@@ -124,6 +125,7 @@ pub async fn handle_switch_branch(
             request_id: None,
             repo_id: Some(repo_view.repo_id),
             branch: tree_branch.clone(),
+            scope_nonce: Some(session.scope_nonce()),
             docs: repo_view.docs,
         });
         let delta = state.tree_manager.reset_from_nodes(
@@ -135,6 +137,7 @@ pub async fn handle_switch_branch(
             request_id: None,
             repo_id: Some(repo_view.repo_id),
             branch: tree_branch,
+            scope_nonce: Some(session.scope_nonce()),
             delta,
         });
     }
@@ -181,7 +184,12 @@ pub async fn handle_switch_repo(
                 return;
             }
         };
-        commit_session_switch(session, branch.map(|peer| peer.to_string()), Some(prepared));
+        commit_session_switch(
+            session,
+            branch.map(|peer| peer.to_string()),
+            Some(prepared),
+            switch_nonce,
+        );
         tracing::info!(
             "Client switched to repo: {} (Branch: {:?})",
             name,

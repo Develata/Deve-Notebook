@@ -7,18 +7,23 @@ use super::types::{PendingBranchTarget, RepoSwitchSignals};
 #[path = "effects_switch_test.rs"]
 mod tests;
 
+#[derive(Clone, Copy)]
+pub struct BranchSwitchSignals {
+    pub active_branch: ReadSignal<Option<PeerId>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
+    pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
+    pub set_active_branch: WriteSignal<Option<PeerId>>,
+}
+
 pub fn handle_branch_switched(
     peer_id: Option<String>,
     success: bool,
     switch_nonce: Option<u64>,
-    active_branch: ReadSignal<Option<PeerId>>,
-    pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pending_branch_switch_nonce: ReadSignal<Option<u64>>,
-    set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
-    set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
-    set_active_branch: WriteSignal<Option<PeerId>>,
+    signals: BranchSwitchSignals,
 ) -> bool {
-    let Some(pending) = pending_branch_switch.get_untracked() else {
+    let Some(pending) = signals.pending_branch_switch.get_untracked() else {
         leptos::logging::warn!("忽略无 pending 的 BranchSwitched: {:?}", peer_id);
         return false;
     };
@@ -26,20 +31,21 @@ pub fn handle_branch_switched(
         .clone()
         .map(PendingBranchTarget::Shadow)
         .unwrap_or(PendingBranchTarget::Local);
-    if pending != next_target || pending_branch_switch_nonce.get_untracked() != switch_nonce {
+    if pending != next_target || signals.pending_branch_switch_nonce.get_untracked() != switch_nonce
+    {
         leptos::logging::warn!("忽略过期 BranchSwitched: {:?}", peer_id);
         return false;
     }
-    set_pending_branch_switch.set(None);
-    set_pending_branch_switch_nonce.set(None);
+    signals.set_pending_branch_switch.set(None);
+    signals.set_pending_branch_switch_nonce.set(None);
     if !success {
         leptos::logging::warn!("分支切换失败");
         return false;
     }
 
     let next_branch = peer_id.map(PeerId::new);
-    let changed = active_branch.get_untracked() != next_branch;
-    set_active_branch.set(next_branch);
+    let changed = signals.active_branch.get_untracked() != next_branch;
+    signals.set_active_branch.set(next_branch);
     changed
 }
 
@@ -60,6 +66,9 @@ pub fn handle_repo_switched(
             }
             signals.set_pending_repo_switch.set(None);
             signals.set_pending_repo_switch_nonce.set(None);
+            if let Some(switch_nonce) = switch_nonce {
+                signals.set_current_scope_nonce.set(switch_nonce);
+            }
         }
         Some(_) => {
             leptos::logging::warn!("忽略过期 RepoSwitched: {}", name);
@@ -74,6 +83,9 @@ pub fn handle_repo_switched(
                 return false;
             }
             signals.set_pending_repo_switch_nonce.set(None);
+            if let Some(switch_nonce) = switch_nonce {
+                signals.set_current_scope_nonce.set(switch_nonce);
+            }
         }
     }
 

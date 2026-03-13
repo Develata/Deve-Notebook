@@ -7,6 +7,7 @@ use leptos::prelude::{GetUntracked, Set, Update};
 use super::super::effects_sc;
 use super::super::effects_switch;
 use super::super::state::CoreSignals;
+use super::super::switch_nonce::next_switch_nonce;
 use super::message_scope::string_branch_matches_scope;
 
 pub fn handle_branch_switched(
@@ -20,13 +21,18 @@ pub fn handle_branch_switched(
         peer_id,
         success,
         switch_nonce,
-        signals.active_branch,
-        signals.pending_branch_switch,
-        signals.pending_branch_switch_nonce,
-        signals.set_pending_branch_switch,
-        signals.set_pending_branch_switch_nonce,
-        signals.set_active_branch,
+        effects_switch::BranchSwitchSignals {
+            active_branch: signals.active_branch,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
+            set_pending_branch_switch: signals.set_pending_branch_switch,
+            set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
+            set_active_branch: signals.set_active_branch,
+        },
     ) {
+        if let Some(switch_nonce) = switch_nonce {
+            signals.set_current_scope_nonce.set(switch_nonce);
+        }
         ws.clear_writer_ready();
         signals.set_handshake_ready.set(false);
         signals.set_pending_repo_switch.set(None);
@@ -69,6 +75,8 @@ pub fn handle_repo_switched(
             set_pending_repo_switch: signals.set_pending_repo_switch,
             pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
             set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
+            current_scope_nonce: signals.current_scope_nonce,
+            set_current_scope_nonce: signals.set_current_scope_nonce,
             set_current_repo: signals.set_current_repo,
             set_current_repo_id: signals.set_current_repo_id,
             set_current_doc: signals.set_current_doc,
@@ -104,15 +112,18 @@ pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals
     ) {
         ws.clear_writer_ready();
         signals.set_handshake_ready.set(false);
+        let switch_nonce = next_switch_nonce();
         signals
             .set_pending_branch_switch
             .set(Some(PendingBranchTarget::Local));
-        signals.set_pending_branch_switch_nonce.set(None);
+        signals
+            .set_pending_branch_switch_nonce
+            .set(Some(switch_nonce));
         signals.set_pending_repo_switch.set(None);
         signals.set_pending_repo_switch_nonce.set(None);
         ws.send(ClientMessage::SwitchBranch {
             peer_id: None,
-            switch_nonce: None,
+            switch_nonce: Some(switch_nonce),
         });
     }
 }

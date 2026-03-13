@@ -32,8 +32,14 @@ pub(super) async fn route_core(
             listing::handle_list_shadows(state, ch, Some(session), Some(request_id)).await;
         }
         ClientMessage::ListRepos { request_id } => {
-            listing::handle_list_repos(state, ch, session.active_branch.as_ref(), Some(request_id))
-                .await;
+            listing::handle_list_repos(
+                state,
+                ch,
+                session.active_branch.as_ref(),
+                Some(request_id),
+                Some(session.scope_nonce()),
+            )
+            .await;
         }
         ClientMessage::Search {
             request_id,

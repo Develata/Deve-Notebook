@@ -29,6 +29,13 @@ pub struct WriterIdentity {
 /// 每个 WebSocket 连接维护独立的会话状态实例。
 #[allow(dead_code)] // 为 P2P 握手和分支切换预留的字段
 pub struct WsSession {
+    /// 当前 UI/控制面 scope 的代际 token。
+    ///
+    /// Invariant:
+    /// - 同一连接每次 branch/repo 切换都必须推进到新的 scope nonce。
+    /// - 所有 repo-scoped 系统消息都必须携带当前 nonce，供前端丢弃跨代迟到消息。
+    pub current_scope_nonce: u64,
+
     /// 该连接是否来自已登录浏览器会话。
     ///
     /// Invariant:
@@ -79,6 +86,7 @@ pub struct WsSession {
 impl Default for WsSession {
     fn default() -> Self {
         Self {
+            current_scope_nonce: 0,
             authenticated_peer_id: None,
             bound_repo_id: None,
             writer_identity: None,
@@ -151,6 +159,16 @@ impl WsSession {
     /// 传入 `None` 切换回本地分支，传入 `Some(id)` 切换到影子库。
     pub fn switch_branch(&mut self, peer_id: Option<String>) {
         self.active_branch = peer_id.map(PeerId::new);
+    }
+
+    pub fn set_scope_nonce(&mut self, scope_nonce: Option<u64>) {
+        if let Some(scope_nonce) = scope_nonce {
+            self.current_scope_nonce = scope_nonce;
+        }
+    }
+
+    pub fn scope_nonce(&self) -> u64 {
+        self.current_scope_nonce
     }
 
     /// 切换活动仓库

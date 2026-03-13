@@ -68,6 +68,7 @@ pub async fn handle_list_docs(
         request_id: request_id.clone(),
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
+        scope_nonce: Some(session.scope_nonce()),
         docs,
     });
     let delta = state
@@ -77,6 +78,7 @@ pub async fn handle_list_docs(
         request_id,
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
+        scope_nonce: Some(session.scope_nonce()),
         delta,
     });
 }

@@ -158,7 +158,9 @@ pub(super) fn commit_session_switch(
     session: &mut WsSession,
     branch: Option<String>,
     prepared: Option<PreparedRepoSwitch>,
+    scope_nonce: Option<u64>,
 ) {
+    session.set_scope_nonce(scope_nonce);
     session.clear_sync_binding();
     session.switch_branch(branch);
     match prepared {

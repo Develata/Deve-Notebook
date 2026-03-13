@@ -11,29 +11,33 @@ use deve_core::state;
 use std::path::Path;
 use std::sync::Arc;
 
+#[derive(Clone, Copy)]
+pub(super) struct CopyRegisterCtx<'a> {
+    pub state: &'a Arc<AppState>,
+    pub ch: &'a DualChannel,
+    pub scope: &'a ResolvedRepo,
+    pub scope_nonce: u64,
+}
+
 pub(super) fn register_copied_docs(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
+    ctx: CopyRegisterCtx<'_>,
     src: &Path,
     src_path: &str,
     dest_path: &str,
 ) -> bool {
-    let base = match local_repo_root(state, scope) {
+    let base = match local_repo_root(ctx.state, ctx.scope) {
         Ok(path) => path,
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::request_failed(ctx.ch, err.to_string());
             return false;
         }
     };
-    register_dirs(state, ch, scope, src, &base, src_path, dest_path)
-        && register_files(state, ch, scope, src, &base, src_path, dest_path)
+    register_dirs(ctx, src, &base, src_path, dest_path)
+        && register_files(ctx, src, &base, src_path, dest_path)
 }
 
 fn register_dirs(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
+    ctx: CopyRegisterCtx<'_>,
     src: &Path,
     base: &Path,
     src_path: &str,
@@ -43,31 +47,39 @@ fn register_dirs(
         Ok(dirs) => dirs,
         Err(err) => {
             tracing::error!("收集目录失败: {:?}", err);
-            errors::storage_persist_failed(ch, format!("Failed to collect copied dirs: {}", err));
+            errors::storage_persist_failed(
+                ctx.ch,
+                format!("Failed to collect copied dirs: {}", err),
+            );
             return false;
         }
     };
     dirs.sort_by_key(|path| path.matches('/').count());
     for dir_path in dirs {
         let Some(dest_rel) = map_dest_rel(&dir_path, src_path, dest_path) else {
-            errors::request_failed(ch, format!("Invalid copied dir path: {}", dir_path));
+            errors::request_failed(ctx.ch, format!("Invalid copied dir path: {}", dir_path));
             return false;
         };
-        match state.repo.apply_dir_create_structure_in_local_repo(
-            &scope.repo_name,
+        match ctx.state.repo.apply_dir_create_structure_in_local_repo(
+            &ctx.scope.repo_name,
             &dest_rel,
             "local_copy",
         ) {
             Ok(node_id) => {
-                if let Err(e) =
-                    broadcast_dir_chain(state, ch, scope.repo_id, &scope.repo_name, node_id)
-                {
+                if let Err(e) = broadcast_dir_chain(
+                    ctx.state,
+                    ctx.ch,
+                    ctx.scope.repo_id,
+                    &ctx.scope.repo_name,
+                    node_id,
+                    ctx.scope_nonce,
+                ) {
                     tracing::error!("广播目录链失败: {:?}", e);
                 }
             }
             Err(e) => {
                 tracing::error!("目录节点创建失败: {:?}", e);
-                errors::storage_persist_failed(ch, format!("Dir node creation failed: {}", e));
+                errors::storage_persist_failed(ctx.ch, format!("Dir node creation failed: {}", e));
                 return false;
             }
         }
@@ -76,9 +88,7 @@ fn register_dirs(
 }
 
 fn register_files(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
+    ctx: CopyRegisterCtx<'_>,
     src: &Path,
     base: &Path,
     src_path: &str,
@@ -89,10 +99,10 @@ fn register_files(
             let count = files.len();
             for rel_path in files {
                 let Some(dest_rel) = map_dest_rel(&rel_path, src_path, dest_path) else {
-                    errors::request_failed(ch, format!("Invalid copied path: {}", rel_path));
+                    errors::request_failed(ctx.ch, format!("Invalid copied path: {}", rel_path));
                     return false;
                 };
-                if !register_file(state, ch, scope, &rel_path, &dest_rel) {
+                if !register_file(ctx, &rel_path, &dest_rel) {
                     return false;
                 }
             }
@@ -101,36 +111,35 @@ fn register_files(
         }
         Err(e) => {
             tracing::error!("收集 .md 文件失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to collect copied files: {}", e));
+            errors::storage_persist_failed(
+                ctx.ch,
+                format!("Failed to collect copied files: {}", e),
+            );
             false
         }
     }
 }
 
-fn register_file(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
-    src_rel: &str,
-    dest_rel: &str,
-) -> bool {
-    let doc_id = match state
+fn register_file(ctx: CopyRegisterCtx<'_>, src_rel: &str, dest_rel: &str) -> bool {
+    let doc_id = match ctx
+        .state
         .repo
-        .get_tracked_docid_in_local_repo(&scope.repo_name, src_rel)
+        .get_tracked_docid_in_local_repo(&ctx.scope.repo_name, src_rel)
     {
         Ok(Some(doc_id)) => doc_id,
         Ok(None) => {
-            errors::storage_not_found(ch, format!("Source doc not tracked: {}", src_rel));
+            errors::storage_not_found(ctx.ch, format!("Source doc not tracked: {}", src_rel));
             return false;
         }
         Err(err) => {
-            errors::request_failed(ch, format!("Failed to resolve copied source: {}", err));
+            errors::request_failed(ctx.ch, format!("Failed to resolve copied source: {}", err));
             return false;
         }
     };
-    let content = match state
+    let content = match ctx
+        .state
         .repo
-        .get_local_ops_in_local_repo(&scope.repo_name, doc_id)
+        .get_local_ops_in_local_repo(&ctx.scope.repo_name, doc_id)
     {
         Ok(ops) => {
             let entries: Vec<_> = ops.into_iter().map(|(_, entry)| entry).collect();
@@ -138,25 +147,29 @@ fn register_file(
         }
         Err(err) => {
             tracing::error!("加载复制源失败 {}: {:?}", src_rel, err);
-            errors::storage_persist_failed(ch, format!("Failed to load copied file: {}", err));
+            errors::storage_persist_failed(ctx.ch, format!("Failed to load copied file: {}", err));
             return false;
         }
     };
-    let doc_id = match create_file_from_content(state, scope, dest_rel, &content, "local_copy") {
-        Ok(doc_id) => doc_id,
-        Err(err) => {
-            tracing::error!("Ledger 注册失败 {}: {:?}", dest_rel, err);
-            errors::storage_persist_failed(ch, format!("Failed to register copied file: {}", err));
-            return false;
-        }
-    };
+    let doc_id =
+        match create_file_from_content(ctx.state, ctx.scope, dest_rel, &content, "local_copy") {
+            Ok(doc_id) => doc_id,
+            Err(err) => {
+                tracing::error!("Ledger 注册失败 {}: {:?}", dest_rel, err);
+                errors::storage_persist_failed(
+                    ctx.ch,
+                    format!("Failed to register copied file: {}", err),
+                );
+                return false;
+            }
+        };
     tracing::debug!(
         "注册复制文档: {} -> {} (DocId: {})",
         src_rel,
         dest_rel,
         doc_id
     );
-    broadcast_file_tree_update(state, ch, scope, doc_id);
+    broadcast_file_tree_update(ctx.state, ctx.ch, ctx.scope, doc_id, ctx.scope_nonce);
     true
 }
 

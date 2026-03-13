@@ -183,6 +183,7 @@ impl<'a> FsEventHandler<'a> {
             request_id: None,
             repo_id: Some(self.repo_id),
             branch: None,
+            scope_nonce: None,
             docs,
         }])
     }

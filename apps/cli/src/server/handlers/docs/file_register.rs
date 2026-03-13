@@ -54,15 +54,21 @@ pub(super) fn broadcast_file_tree_update(
     ch: &DualChannel,
     scope: &ResolvedRepo,
     doc_id: DocId,
+    scope_nonce: u64,
 ) {
     let node_id = NodeId::from_doc_id(doc_id);
     if let Ok(meta) = run_on_resolved_local_repo(state, scope, |db| {
         node_meta::get_node_meta(db, node_id)
             .and_then(|meta| meta.ok_or_else(|| anyhow!("File node meta missing")))
     }) {
-        if let Err(e) =
-            broadcast_parent_dirs(state, ch, scope.repo_id, &scope.repo_name, meta.parent_id)
-        {
+        if let Err(e) = broadcast_parent_dirs(
+            state,
+            ch,
+            scope.repo_id,
+            &scope.repo_name,
+            meta.parent_id,
+            scope_nonce,
+        ) {
             tracing::error!("广播父目录失败: {:?}", e);
         }
         let delta = state.tree_manager.with_tree_mut(scope.repo_id, None, |tm| {
@@ -78,6 +84,7 @@ pub(super) fn broadcast_file_tree_update(
             request_id: None,
             repo_id: Some(scope.repo_id),
             branch: None,
+            scope_nonce: Some(scope_nonce),
             delta,
         });
     }

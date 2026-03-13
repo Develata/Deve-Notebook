@@ -47,7 +47,14 @@ pub async fn handle_folder_create(
         );
         return;
     }
-    if let Err(e) = broadcast_dir_chain(state, ch, scope.repo_id, &scope.repo_name, node_id) {
+    if let Err(e) = broadcast_dir_chain(
+        state,
+        ch,
+        scope.repo_id,
+        &scope.repo_name,
+        node_id,
+        session.scope_nonce(),
+    ) {
         tracing::error!("广播目录链失败: {:?}", e);
     }
     handle_list_docs(state, ch, session, None, None).await;

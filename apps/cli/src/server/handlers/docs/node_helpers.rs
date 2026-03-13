@@ -15,6 +15,7 @@ pub fn broadcast_dir_chain(
     repo_id: RepoId,
     repo_name: &str,
     node_id: NodeId,
+    scope_nonce: u64,
 ) -> Result<()> {
     let chain = state
         .repo
@@ -30,6 +31,7 @@ pub fn broadcast_dir_chain(
                 request_id: None,
                 repo_id: Some(repo_id),
                 branch: None,
+                scope_nonce: Some(scope_nonce),
                 delta,
             });
         }
@@ -43,9 +45,10 @@ pub fn broadcast_parent_dirs(
     repo_id: RepoId,
     repo_name: &str,
     parent_id: Option<NodeId>,
+    scope_nonce: u64,
 ) -> Result<()> {
     if let Some(parent_id) = parent_id {
-        broadcast_dir_chain(state, ch, repo_id, repo_name, parent_id)?;
+        broadcast_dir_chain(state, ch, repo_id, repo_name, parent_id, scope_nonce)?;
     }
     Ok(())
 }

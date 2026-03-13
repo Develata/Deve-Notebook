@@ -5,6 +5,7 @@ use deve_core::models::PeerId;
 pub struct RefreshScope {
     repo_id: Option<String>,
     branch: Option<PeerId>,
+    scope_nonce: u64,
 }
 
 pub fn capture_refresh_scope(
@@ -12,11 +13,16 @@ pub fn capture_refresh_scope(
     branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
     pending_repo_switch: Option<String>,
+    scope_nonce: u64,
 ) -> Option<RefreshScope> {
     if pending_branch_switch.is_some() || pending_repo_switch.is_some() {
         return None;
     }
-    Some(RefreshScope { repo_id, branch })
+    Some(RefreshScope {
+        repo_id,
+        branch,
+        scope_nonce,
+    })
 }
 
 pub fn should_send_refresh(
@@ -25,11 +31,13 @@ pub fn should_send_refresh(
     branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
     pending_repo_switch: Option<String>,
+    scope_nonce: u64,
 ) -> bool {
     pending_branch_switch.is_none()
         && pending_repo_switch.is_none()
         && scope.repo_id == repo_id
         && scope.branch == branch
+        && scope.scope_nonce == scope_nonce
 }
 
 pub fn can_issue_sc_refresh(pending_changes_request_id: Option<String>) -> bool {
@@ -50,6 +58,7 @@ mod tests {
                 None,
                 Some(PendingBranchTarget::Local),
                 None,
+                3,
             ),
             None,
         );
@@ -60,6 +69,7 @@ mod tests {
         let scope = RefreshScope {
             repo_id: Some("repo-a".into()),
             branch: Some(PeerId::new("peer-a")),
+            scope_nonce: 3,
         };
         assert!(!should_send_refresh(
             &scope,
@@ -67,6 +77,7 @@ mod tests {
             Some(PeerId::new("peer-a")),
             None,
             None,
+            3,
         ));
         assert!(!should_send_refresh(
             &scope,
@@ -74,6 +85,15 @@ mod tests {
             Some(PeerId::new("peer-b")),
             None,
             None,
+            3,
+        ));
+        assert!(!should_send_refresh(
+            &scope,
+            Some("repo-a".into()),
+            Some(PeerId::new("peer-a")),
+            None,
+            None,
+            4,
         ));
     }
 
@@ -82,6 +102,7 @@ mod tests {
         let scope = RefreshScope {
             repo_id: Some("repo-a".into()),
             branch: None,
+            scope_nonce: 5,
         };
         assert!(should_send_refresh(
             &scope,
@@ -89,6 +110,7 @@ mod tests {
             None,
             None,
             None,
+            5,
         ));
     }
 

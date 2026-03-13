@@ -108,6 +108,8 @@ pub struct CoreSignals {
     pub set_pending_repo_switch: WriteSignal<Option<String>>,
     pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
     pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub current_scope_nonce: ReadSignal<u64>,
+    pub set_current_scope_nonce: WriteSignal<u64>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub set_shadow_repos: WriteSignal<Vec<String>>,
     pub shadow_list_request_id: ReadSignal<Option<String>>,
