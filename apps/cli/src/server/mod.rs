@@ -65,6 +65,8 @@ pub mod source_control_proxy;
 #[cfg(test)]
 mod source_control_remote_scope_test;
 #[cfg(test)]
+mod source_control_remote_selector_test;
+#[cfg(test)]
 mod source_control_scope_test;
 #[cfg(test)]
 mod source_control_test_support;
