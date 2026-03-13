@@ -1,5 +1,6 @@
 use super::remote::local_counterpart_content;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeStatus;
@@ -85,5 +86,45 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
         Some(repo.local_repo_name()),
     )?;
     assert_eq!(content.as_deref(), Some("hello renamed"));
+    Ok(())
+}
+
+#[test]
+fn remote_diff_prefers_node_projection_before_legacy_path_mapping() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo()?;
+    let selector = RepoSelector::default();
+    write_workspace_file(&dir, "notes/a.md", "hello");
+    seed_pending_entry(
+        &repo,
+        PendingFsEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            change_type: ChangeStatus::Added,
+            content_hash: pending_fs::content_hash("hello"),
+            detected_at: 1,
+            has_conflict: false,
+        },
+    );
+    repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
+    repo.commit_staged_in_repo(&selector, "initial")?;
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write = db.begin_write()?;
+        {
+            let mut d2p = write.open_table(DOCID_TO_PATH)?;
+            let mut p2d = write.open_table(PATH_TO_DOCID)?;
+            d2p.retain(|_, _| false)?;
+            p2d.retain(|_, _| false)?;
+        }
+        write.commit()?;
+        Ok(())
+    })?;
+
+    let content = local_counterpart_content(
+        &repo,
+        &ScPathTarget::from_path("notes/a.md"),
+        Some(repo.local_repo_name()),
+    )?;
+    assert_eq!(content.as_deref(), Some("hello"));
     Ok(())
 }

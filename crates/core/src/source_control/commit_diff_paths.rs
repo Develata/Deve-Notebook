@@ -102,16 +102,16 @@ fn path_for(
     let Some(state) = nodes.get(&node_id) else {
         return String::new();
     };
-    let path = match state.parent_id.and_then(|parent| nodes.get(&parent)) {
-        Some(_) => {
-            let parent_path = path_for(state.parent_id.expect("checked"), nodes, cache);
+    let path = match state.parent_id {
+        Some(parent_id) if nodes.contains_key(&parent_id) => {
+            let parent_path = path_for(parent_id, nodes, cache);
             if parent_path.is_empty() {
                 state.name.clone()
             } else {
                 format!("{}/{}", parent_path, state.name)
             }
         }
-        None => state.name.clone(),
+        _ => state.name.clone(),
     };
     cache.insert(node_id, path.clone());
     path
