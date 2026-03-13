@@ -6,16 +6,23 @@
 
 #[path = "repo_scope_lookup.rs"]
 mod lookup;
+#[path = "repo_scope_error.rs"]
+mod repo_scope_error;
+#[path = "repo_scope_workspace.rs"]
+mod repo_scope_workspace;
 
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
-use deve_core::protocol::{ServerError, ServerErrorCode};
-use redb::Database;
 use std::sync::Arc;
 
 use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
+pub use self::repo_scope_error::map_repo_scope_error;
+pub use self::repo_scope_workspace::{
+    local_repo_path, local_repo_root, run_on_resolved_local_repo,
+};
+use deve_core::ledger::listing::RepoListing;
 
 #[derive(Clone, Debug)]
 pub struct ResolvedRepo {
@@ -104,27 +111,6 @@ pub fn resolve_local_counterpart_repo(
     resolve_repo_by_name(state, None, None, repo_name).map(Some)
 }
 
-pub fn map_repo_scope_error(error: anyhow::Error) -> ServerError {
-    let detail = error.to_string();
-    let lower = detail.to_ascii_lowercase();
-    if lower.contains("active repository not selected") {
-        return ServerError::with_detail(ServerErrorCode::SyncRepoUnbound, detail);
-    }
-    if contains_any(
-        &lower,
-        &[
-            "remote session lost repo name",
-            "repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "local repo not found for uuid",
-        ],
-    ) {
-        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
-    }
-    ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
-}
-
 fn resolve_repo_name_from_session(
     state: &Arc<AppState>,
     session: &WsSession,
@@ -181,7 +167,26 @@ fn resolve_repo_name_from_session(
         return Ok(Some(selector));
     }
     if let Some(repo_name) = session.active_repo.clone() {
-        return Ok(Some(repo_name));
+        let Some(branch) = session.active_branch.as_ref() else {
+            return Ok(Some(repo_name));
+        };
+        if let Some(selector) = recover_remote_repo_name_from_selector(state, branch, &repo_name)? {
+            if selector != repo_name {
+                tracing::warn!(
+                    "Recovering remote repo selector from stale name: branch={}, stale_name={}, resolved_selector={}",
+                    branch,
+                    repo_name,
+                    selector
+                );
+            }
+            return Ok(Some(selector));
+        }
+        tracing::warn!(
+            "Dropping stale remote session repo_name without recoverable selector: branch={}, stale_name={}",
+            branch,
+            repo_name
+        );
+        return Ok(None);
     }
     let Some(repo_id) = session.active_repo_id else {
         return Ok(None);
@@ -195,49 +200,31 @@ fn resolve_repo_name_from_session(
     state.repo.find_local_repo_name_by_id(repo_id)
 }
 
-pub fn run_on_resolved_local_repo<F, R>(
+fn recover_remote_repo_name_from_selector(
     state: &Arc<AppState>,
-    repo: &ResolvedRepo,
-    f: F,
-) -> Result<R>
-where
-    F: FnOnce(&Database) -> Result<R>,
-{
-    if repo.branch.is_some() {
-        return Err(anyhow!(
-            "Local repo operation requested on remote branch: {}",
-            repo.repo_name
-        ));
+    branch: &PeerId,
+    repo_name: &str,
+) -> Result<Option<String>> {
+    let normalized = repo_name.trim_end_matches(".redb");
+    let selectors = state.repo.list_repos(Some(branch))?;
+    if selectors.iter().any(|selector| selector == normalized) {
+        return Ok(Some(normalized.to_string()));
     }
-    state.repo.run_on_local_repo(&repo.repo_name, f)
-}
-
-pub fn local_repo_path(
-    state: &Arc<AppState>,
-    repo: &ResolvedRepo,
-    rel_path: &str,
-) -> Result<std::path::PathBuf> {
-    if repo.branch.is_some() {
-        return Err(anyhow!(
-            "Local workspace path requested on remote branch: {}",
-            repo.repo_name
-        ));
+    let mut matches = selectors
+        .iter()
+        .filter_map(|selector| {
+            state
+                .repo
+                .get_repo_info_for(Some(branch), Some(selector))
+                .ok()
+                .flatten()
+                .filter(|info| info.name == normalized)
+                .map(|_| selector.clone())
+        })
+        .collect::<Vec<_>>();
+    matches.dedup();
+    if matches.len() == 1 {
+        return Ok(matches.pop());
     }
-    state
-        .repo
-        .local_repo_workspace_path(&repo.repo_name, rel_path)
-}
-
-pub fn local_repo_root(state: &Arc<AppState>, repo: &ResolvedRepo) -> Result<std::path::PathBuf> {
-    if repo.branch.is_some() {
-        return Err(anyhow!(
-            "Local workspace root requested on remote branch: {}",
-            repo.repo_name
-        ));
-    }
-    state.repo.local_repo_workspace_root(&repo.repo_name)
-}
-
-fn contains_any(input: &str, patterns: &[&str]) -> bool {
-    patterns.iter().any(|pattern| input.contains(pattern))
+    Ok((selectors.len() == 1).then(|| selectors[0].clone()))
 }
