@@ -19,6 +19,12 @@ impl Repository for RepoManager {
     fn get_doc_content_in_repo(&self, repo: &RepoSelector, doc_id: DocId) -> Result<String> {
         let repo_name =
             self.resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())?;
+        if self
+            .get_file_meta_for_doc_in_local_repo(&repo_name, doc_id)?
+            .is_none()
+        {
+            anyhow::bail!("Document not found: {}", doc_id);
+        }
         let ops = self.get_local_ops_in_local_repo(&repo_name, doc_id)?;
         let entries: Vec<_> = ops.into_iter().map(|(_, e)| e).collect();
         Ok(reconstruct_content(&entries))
