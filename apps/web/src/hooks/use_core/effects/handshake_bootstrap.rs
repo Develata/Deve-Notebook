@@ -14,9 +14,13 @@ pub(super) fn restore_session_scope(
     if let Some(branch) = active_branch {
         ws.send(ClientMessage::SwitchBranch {
             peer_id: Some(branch.to_string()),
+            switch_nonce: None,
         });
         if let Some(repo_name) = current_repo {
-            ws.send(ClientMessage::SwitchRepo { name: repo_name });
+            ws.send(ClientMessage::SwitchRepo {
+                name: repo_name,
+                switch_nonce: None,
+            });
         } else {
             request_repo_list(ws, signals);
         }
@@ -24,7 +28,10 @@ pub(super) fn restore_session_scope(
     }
 
     if let Some(repo_name) = current_repo {
-        ws.send(ClientMessage::SwitchRepo { name: repo_name });
+        ws.send(ClientMessage::SwitchRepo {
+            name: repo_name,
+            switch_nonce: None,
+        });
         request_repo_list(ws, signals);
         return;
     }

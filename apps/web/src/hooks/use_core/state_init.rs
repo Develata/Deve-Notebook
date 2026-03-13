@@ -46,9 +46,11 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (pending_ops_request_id, set_pending_ops_request_id) = signal(None::<String>);
     let (active_branch, set_active_branch) = signal(None::<PeerId>);
     let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchTarget>);
+    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(None::<u64>);
     let (current_repo, set_current_repo) = signal(None::<String>);
     let (current_repo_id, set_current_repo_id) = signal(None::<String>);
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
+    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (shadow_list_request_id, set_shadow_list_request_id) = signal(None::<String>);
     let (repo_list, set_repo_list) = signal(Vec::new());
@@ -127,12 +129,16 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_active_branch,
         pending_branch_switch,
         set_pending_branch_switch,
+        pending_branch_switch_nonce,
+        set_pending_branch_switch_nonce,
         current_repo,
         set_current_repo,
         current_repo_id,
         set_current_repo_id,
         pending_repo_switch,
         set_pending_repo_switch,
+        pending_repo_switch_nonce,
+        set_pending_repo_switch_nonce,
         shadow_repos,
         set_shadow_repos,
         shadow_list_request_id,

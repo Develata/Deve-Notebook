@@ -24,6 +24,7 @@ pub mod state;
 mod state_build;
 mod state_init;
 mod storage_runtime;
+mod switch_nonce;
 pub mod types;
 
 pub use contexts::*;
@@ -124,7 +125,9 @@ pub fn use_core() -> CoreState {
             current_repo: signals.current_repo,
             active_branch: signals.active_branch,
             set_pending_branch_switch: signals.set_pending_branch_switch,
+            set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
             set_pending_repo_switch: signals.set_pending_repo_switch,
+            set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
         },
     );
 

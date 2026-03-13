@@ -86,6 +86,6 @@ pub(super) async fn handle_file_rename(
             delta,
         });
     }
-    handle_list_docs(state, ch, session, None).await;
+    handle_list_docs(state, ch, session, None, None).await;
     notify_fs_refresh(ch, scope.repo_id, dst_path, "renamed");
 }

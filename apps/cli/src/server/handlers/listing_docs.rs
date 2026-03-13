@@ -14,6 +14,7 @@ pub async fn handle_list_docs(
     ch: &DualChannel,
     session: &mut WsSession,
     request_id: Option<String>,
+    switch_nonce: Option<u64>,
 ) {
     let resolved = if session.active_branch.is_none() {
         bootstrap_local_repo(state, session).inspect(|scope| {
@@ -61,6 +62,7 @@ pub async fn handle_list_docs(
         branch: session.active_branch.as_ref().map(ToString::to_string),
         name: repo_name.clone(),
         uuid: repo_id.to_string(),
+        switch_nonce,
     });
     ch.unicast(ServerMessage::DocList {
         request_id: request_id.clone(),

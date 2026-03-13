@@ -110,7 +110,7 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
     let mut session = WsSession::new();
     session.switch_branch(Some("missing-shadow".into()));
 
-    handle_list_docs(&state, &ch, &mut session, None).await;
+    handle_list_docs(&state, &ch, &mut session, None, None).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error }) => {
@@ -135,7 +135,7 @@ async fn list_docs_recovers_from_stale_local_selector() -> anyhow::Result<()> {
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     session.switch_repo("test".into(), Some(default_id));
 
-    handle_list_docs(&state, &ch, &mut session, Some("req-1".into())).await;
+    handle_list_docs(&state, &ch, &mut session, Some("req-1".into()), None).await;
 
     loop {
         match uni_rx.recv().await {

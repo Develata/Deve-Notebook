@@ -43,7 +43,7 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
 
-    handle_switch_branch(&state, &ch, &mut session, Some("missing-peer".into())).await;
+    handle_switch_branch(&state, &ch, &mut session, Some("missing-peer".into()), None).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error }) => {
@@ -62,7 +62,7 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
 
-    handle_switch_branch(&state, &ch, &mut session, Some("default".into())).await;
+    handle_switch_branch(&state, &ch, &mut session, Some("default".into()), None).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error }) => {
@@ -89,11 +89,22 @@ async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Resul
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string())).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(17),
+    )
+    .await;
 
     assert!(matches!(
         uni_rx.recv().await,
-        Some(ServerMessage::BranchSwitched { success: true, .. })
+        Some(ServerMessage::BranchSwitched {
+            success: true,
+            switch_nonce: Some(17),
+            ..
+        })
     ));
     assert!(matches!(
         uni_rx.recv().await,
@@ -106,6 +117,7 @@ async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Resul
         uni_rx.recv().await,
         Some(ServerMessage::RepoSwitched {
             branch: Some(_),
+            switch_nonce: Some(17),
             ..
         })
     ));
@@ -155,7 +167,7 @@ async fn switch_branch_keeps_repo_unbound_when_target_branch_is_ambiguous() -> a
     let mut session = WsSession::new();
     session.switch_repo("ghost".into(), None);
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string())).await;
+    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
 
     assert!(matches!(
         uni_rx.recv().await,

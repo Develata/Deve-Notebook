@@ -185,11 +185,20 @@ pub fn handle_message<F>(
                 signals.set_repo_list.set(repos);
             }
         }
-        ServerMessage::BranchSwitched { peer_id, success } => {
-            message_control::handle_branch_switched(peer_id, success, ws, signals);
+        ServerMessage::BranchSwitched {
+            peer_id,
+            success,
+            switch_nonce,
+        } => {
+            message_control::handle_branch_switched(peer_id, success, switch_nonce, ws, signals);
         }
-        ServerMessage::RepoSwitched { branch, name, uuid } => {
-            message_control::handle_repo_switched(branch, name, uuid, ws, signals);
+        ServerMessage::RepoSwitched {
+            branch,
+            name,
+            uuid,
+            switch_nonce,
+        } => {
+            message_control::handle_repo_switched(branch, name, uuid, switch_nonce, ws, signals);
         }
         ServerMessage::PeerDeleted { peer_id } => {
             message_control::handle_peer_deleted(peer_id, ws, signals);

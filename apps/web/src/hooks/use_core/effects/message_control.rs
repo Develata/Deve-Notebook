@@ -12,15 +12,19 @@ use super::message_scope::string_branch_matches_scope;
 pub fn handle_branch_switched(
     peer_id: Option<String>,
     success: bool,
+    switch_nonce: Option<u64>,
     ws: &WsService,
     signals: CoreSignals,
 ) {
     if effects_switch::handle_branch_switched(
         peer_id,
         success,
+        switch_nonce,
         signals.active_branch,
         signals.pending_branch_switch,
+        signals.pending_branch_switch_nonce,
         signals.set_pending_branch_switch,
+        signals.set_pending_branch_switch_nonce,
         signals.set_active_branch,
     ) {
         ws.clear_writer_ready();
@@ -33,6 +37,7 @@ pub fn handle_branch_switched(
         signals.set_tree_nodes.set(Vec::new());
         signals.set_repo_list.set(Vec::new());
         clear_repo_scoped_runtime(signals);
+        signals.set_pending_repo_switch_nonce.set(switch_nonce);
         request_repo_list(ws, signals);
         request_shadow_list(ws, signals);
     }
@@ -42,6 +47,7 @@ pub fn handle_repo_switched(
     branch: Option<String>,
     name: String,
     uuid: String,
+    switch_nonce: Option<u64>,
     ws: &WsService,
     signals: CoreSignals,
 ) {
@@ -55,11 +61,14 @@ pub fn handle_repo_switched(
     if effects_switch::handle_repo_switched(
         name,
         uuid,
+        switch_nonce,
         crate::hooks::use_core::RepoSwitchSignals {
             current_repo: signals.current_repo,
             current_repo_id: signals.current_repo_id,
             pending_repo_switch: signals.pending_repo_switch,
             set_pending_repo_switch: signals.set_pending_repo_switch,
+            pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
+            set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
             set_current_repo: signals.set_current_repo,
             set_current_repo_id: signals.set_current_repo_id,
             set_current_doc: signals.set_current_doc,
@@ -70,7 +79,6 @@ pub fn handle_repo_switched(
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
-        request_repo_listing(ws, signals);
         request_repo_sync_state(ws, signals);
         request_shadow_list(ws, signals);
     }
@@ -99,8 +107,13 @@ pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals
         signals
             .set_pending_branch_switch
             .set(Some(PendingBranchTarget::Local));
+        signals.set_pending_branch_switch_nonce.set(None);
         signals.set_pending_repo_switch.set(None);
-        ws.send(ClientMessage::SwitchBranch { peer_id: None });
+        signals.set_pending_repo_switch_nonce.set(None);
+        ws.send(ClientMessage::SwitchBranch {
+            peer_id: None,
+            switch_nonce: None,
+        });
     }
 }
 
@@ -115,6 +128,8 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_pending_ops_previews.set(Vec::new());
     signals.set_pending_ops_request_id.set(None);
     signals.set_handshake_scope_nonce.set(None);
+    signals.set_pending_branch_switch_nonce.set(None);
+    signals.set_pending_repo_switch_nonce.set(None);
     signals.set_pending_local_edits.set(Default::default());
     signals.set_plugin_response.set(None);
     signals.set_plugin_request_ids.set(Vec::new());
@@ -169,15 +184,6 @@ fn request_repo_list(ws: &WsService, signals: CoreSignals) {
         .set_repo_list_request_id
         .set(Some(request_id.clone()));
     ws.send(ClientMessage::ListRepos { request_id });
-}
-
-fn request_repo_listing(ws: &WsService, signals: CoreSignals) {
-    let request_id = uuid::Uuid::new_v4().to_string();
-    signals
-        .set_doc_list_request_id
-        .set(Some(request_id.clone()));
-    signals.set_tree_request_id.set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListDocs { request_id });
 }
 
 fn should_request_repo_sync_state(active_branch: Option<PeerId>) -> bool {

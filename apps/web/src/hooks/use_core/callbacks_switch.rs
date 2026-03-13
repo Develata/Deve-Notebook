@@ -4,6 +4,7 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 use super::navigation::{NavigationTarget, guard_navigation};
+use super::switch_nonce::next_switch_nonce;
 use super::types::{PendingBranchTarget, SwitchScopeSignals};
 
 pub struct SwitchCallbacks {
@@ -26,14 +27,20 @@ pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> S
         let target_peer = peer_id.clone();
         let ws_branch_action = ws_branch.clone();
         let action = Callback::new(move |_: ()| {
+            let switch_nonce = next_switch_nonce();
             let pending = target_peer
                 .clone()
                 .map(PendingBranchTarget::Shadow)
                 .unwrap_or(PendingBranchTarget::Local);
             signals.set_pending_branch_switch.set(Some(pending));
+            signals
+                .set_pending_branch_switch_nonce
+                .set(Some(switch_nonce));
             signals.set_pending_repo_switch.set(None);
+            signals.set_pending_repo_switch_nonce.set(None);
             ws_branch_action.send(ClientMessage::SwitchBranch {
                 peer_id: target_peer.clone(),
+                switch_nonce: Some(switch_nonce),
             });
         });
         let _ = guard_navigation(
@@ -53,11 +60,16 @@ pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> S
         let target_repo = name.clone();
         let ws_repo_action = ws_repo.clone();
         let action = Callback::new(move |_: ()| {
+            let switch_nonce = next_switch_nonce();
             signals
                 .set_pending_repo_switch
                 .set(Some(target_repo.clone()));
+            signals
+                .set_pending_repo_switch_nonce
+                .set(Some(switch_nonce));
             ws_repo_action.send(ClientMessage::SwitchRepo {
                 name: target_repo.clone(),
+                switch_nonce: Some(switch_nonce),
             });
         });
         let _ = guard_navigation(

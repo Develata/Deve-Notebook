@@ -154,7 +154,7 @@ async fn list_docs_on_remote_branch_uses_shadow_repo_without_locked_db() -> anyh
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_repo_id));
 
-    handle_list_docs(&state, &ch, &mut session, None).await;
+    handle_list_docs(&state, &ch, &mut session, None, None).await;
 
     loop {
         match uni_rx.recv().await {

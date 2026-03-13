@@ -104,9 +104,13 @@ pub enum ClientMessage {
     },
     SwitchBranch {
         peer_id: Option<String>,
+        #[serde(default)]
+        switch_nonce: Option<u64>,
     },
     SwitchRepo {
         name: String,
+        #[serde(default)]
+        switch_nonce: Option<u64>,
     },
     DeletePeer {
         peer_id: String,

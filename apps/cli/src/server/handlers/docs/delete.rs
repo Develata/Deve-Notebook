@@ -107,6 +107,6 @@ pub async fn handle_delete_doc(
     });
 
     // 5. 刷新文档列表
-    handle_list_docs(state, ch, session, None).await;
+    handle_list_docs(state, ch, session, None, None).await;
     notify_fs_refresh(ch, scope.repo_id, &target.repo_path, "deleted");
 }

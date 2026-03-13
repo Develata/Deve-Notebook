@@ -49,6 +49,6 @@ pub async fn handle_file_create(
     };
 
     broadcast_file_tree_update(state, ch, scope, doc_id);
-    handle_list_docs(state, ch, session, None).await;
+    handle_list_docs(state, ch, session, None, None).await;
     notify_fs_refresh(ch, scope.repo_id, filename, "added");
 }

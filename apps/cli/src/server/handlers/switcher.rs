@@ -22,6 +22,7 @@ pub async fn handle_switch_branch(
     ch: &DualChannel,
     session: &mut WsSession,
     peer_id: Option<String>,
+    switch_nonce: Option<u64>,
 ) {
     tracing::info!("Handle SwitchBranch request: PeerID={:?}", peer_id);
 
@@ -104,6 +105,7 @@ pub async fn handle_switch_branch(
     ch.unicast(ServerMessage::BranchSwitched {
         peer_id: final_branch.clone(),
         success: true,
+        switch_nonce,
     });
     ch.unicast(ServerMessage::RepoList {
         request_id: None,
@@ -116,6 +118,7 @@ pub async fn handle_switch_branch(
             branch: final_branch.clone(),
             name: repo_view.repo_name,
             uuid: repo_view.repo_id.to_string(),
+            switch_nonce,
         });
         ch.unicast(ServerMessage::DocList {
             request_id: None,
@@ -142,6 +145,7 @@ pub async fn handle_switch_repo(
     ch: &DualChannel,
     session: &mut WsSession,
     name: String,
+    switch_nonce: Option<u64>,
 ) {
     tracing::info!(
         "Handle SwitchRepo request: Name='{}', CurrentBranch={:?}",
@@ -188,7 +192,7 @@ pub async fn handle_switch_repo(
             name,
             session.is_readonly()
         );
-        listing::handle_list_docs(state, ch, session, None).await;
+        listing::handle_list_docs(state, ch, session, None, switch_nonce).await;
     } else {
         tracing::warn!(
             "Repo switch failed: '{}' not found in branch {:?}. Available: {:?}",

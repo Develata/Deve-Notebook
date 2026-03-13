@@ -26,7 +26,7 @@ pub(super) async fn route_core(
             document::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
         }
         ClientMessage::ListDocs { request_id } => {
-            listing::handle_list_docs(state, ch, session, Some(request_id)).await;
+            listing::handle_list_docs(state, ch, session, Some(request_id), None).await;
         }
         ClientMessage::ListShadows { request_id } => {
             listing::handle_list_shadows(state, ch, Some(session), Some(request_id)).await;
@@ -50,11 +50,14 @@ pub(super) async fn route_core(
         } => {
             plugin::handle_plugin_call(state, ch, req_id, plugin_id, fn_name, args).await;
         }
-        ClientMessage::SwitchBranch { peer_id } => {
-            switcher::handle_switch_branch(state, ch, session, peer_id).await;
+        ClientMessage::SwitchBranch {
+            peer_id,
+            switch_nonce,
+        } => {
+            switcher::handle_switch_branch(state, ch, session, peer_id, switch_nonce).await;
         }
-        ClientMessage::SwitchRepo { name } => {
-            switcher::handle_switch_repo(state, ch, session, name).await;
+        ClientMessage::SwitchRepo { name, switch_nonce } => {
+            switcher::handle_switch_repo(state, ch, session, name, switch_nonce).await;
         }
         ClientMessage::DeletePeer { peer_id } => {
             sync::handle_delete_peer(state, ch, peer_id).await;
