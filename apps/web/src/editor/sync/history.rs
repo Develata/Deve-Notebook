@@ -1,3 +1,4 @@
+use super::apply_live_op;
 use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOpsBatch, getEditorContent};
@@ -6,7 +7,10 @@ use deve_core::protocol::ClientMessage;
 use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 
-pub(super) fn handle_history(ctx: &SyncContext, ops: Vec<ConfirmedOp>) {
+pub(super) fn handle_history(ctx: &SyncContext, expected_generation: u64, ops: Vec<ConfirmedOp>) {
+    if !ctx.is_generation_current(expected_generation) {
+        return;
+    }
     ctx.set_pending_local_edits.update(|pending_edits| {
         let _ = pending::reconcile_with_history(pending_edits, ctx.doc_id, &ops);
     });
@@ -19,6 +23,8 @@ pub(super) fn handle_history(ctx: &SyncContext, ops: Vec<ConfirmedOp>) {
     ctx.set_content.set(txt);
     ctx.set_playback_version
         .set(ctx.local_version.get_untracked());
+    ctx.mark_live_ready(expected_generation);
+    replay_buffered_live_ops(ctx, expected_generation);
     ctx.set_load_state.set("ready".to_string());
     ctx.set_load_progress.set((0, 0));
     ctx.set_load_eta_ms.set(0);
@@ -46,6 +52,20 @@ fn replay_pending_overlay(ctx: &SyncContext) {
     }
     if let Ok(json) = serde_json::to_string(&ops) {
         applyRemoteOpsBatch(&json);
+    }
+}
+
+fn replay_buffered_live_ops(ctx: &SyncContext, expected_generation: u64) {
+    if !ctx.is_generation_current(expected_generation) {
+        return;
+    }
+    let mut buffered = ctx.drain_buffered_live_ops();
+    buffered.sort_by_key(|entry| entry.seq);
+    for entry in buffered {
+        if !ctx.is_generation_current(expected_generation) {
+            return;
+        }
+        apply_live_op(ctx, entry);
     }
 }
 

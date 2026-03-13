@@ -13,7 +13,7 @@
 use super::EditorStats;
 use super::delta_input::{DeltaInputCtx, build_on_delta};
 use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
-use super::open_scope::can_open_doc;
+use super::open_scope::{OpenDocScope, can_open_doc};
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
@@ -23,6 +23,8 @@ use deve_core::protocol::ClientMessage;
 use deve_core::security::RepoKey;
 use leptos::html::Div;
 use leptos::prelude::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 #[allow(dead_code)] // 为回放功能预留的字段
 pub struct EditorState {
@@ -45,6 +47,9 @@ pub fn use_editor(
     let (content, set_content) = signal("".to_string());
     let (local_version, set_local_version) = signal(0u64);
     let (open_request_id, set_open_request_id) = signal(0u64);
+    let session_generation = Arc::new(AtomicU64::new(0));
+    let ready_generation = Arc::new(AtomicU64::new(0));
+    let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
     let set_load_state = core.set_load_state;
     let set_load_progress = core.set_load_progress;
     let set_load_eta_ms = core.set_load_eta_ms;
@@ -70,20 +75,29 @@ pub fn use_editor(
     let active_branch = core.active_branch;
     let pending_branch_switch = core.pending_branch_switch;
     let pending_repo_switch = core.pending_repo_switch;
+    let open_session_generation = session_generation.clone();
+    let open_ready_generation = ready_generation.clone();
+    let open_buffered_live_ops = buffered_live_ops.clone();
     Effect::new(move |_| {
-        if !can_open_doc(
+        if !can_open_doc(OpenDocScope {
             doc_id,
-            &docs.get(),
-            handshake_ready.get(),
-            active_branch.get(),
-            current_doc.get() == Some(doc_id),
-            current_repo_id.get().is_some(),
-            pending_branch_switch.get().is_none(),
-            pending_repo_switch.get().is_none(),
-        ) {
+            docs: &docs.get(),
+            handshake_ready: handshake_ready.get(),
+            active_branch: active_branch.get(),
+            doc_selected: current_doc.get() == Some(doc_id),
+            has_repo_scope: current_repo_id.get().is_some(),
+            branch_switch_idle: pending_branch_switch.get().is_none(),
+            repo_switch_idle: pending_repo_switch.get().is_none(),
+        }) {
             return;
         }
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
+        let _ = open_session_generation.fetch_add(1, Ordering::Relaxed);
+        open_ready_generation.store(0, Ordering::Relaxed);
+        open_buffered_live_ops
+            .lock()
+            .expect("buffered live ops mutex")
+            .clear();
         set_read_only(true);
         set_local_version.set(0);
         set_open_request_id.set(request_id);
@@ -118,12 +132,18 @@ pub fn use_editor(
 
     // 处理传入消息
     let ws_clone_2 = ws.clone();
+    let sync_session_generation = session_generation.clone();
+    let sync_ready_generation = ready_generation.clone();
+    let sync_buffered_live_ops = buffered_live_ops.clone();
     Effect::new(move |_| {
         if let Some(msg) = ws_clone_2.msg.get() {
             let ctx = sync::context::SyncContext {
                 doc_id,
                 client_id: ws_clone_2
                     .writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
+                session_generation: sync_session_generation.clone(),
+                ready_generation: sync_ready_generation.clone(),
+                buffered_live_ops: sync_buffered_live_ops.clone(),
                 active_branch: core.active_branch,
                 pending_branch_switch: core.pending_branch_switch,
                 current_repo_id: core.current_repo_id,
@@ -179,7 +199,16 @@ pub fn use_editor(
     });
 
     // 清理: 组件卸载时销毁编辑器
+    let cleanup_session_generation = session_generation.clone();
+    let cleanup_ready_generation = ready_generation.clone();
+    let cleanup_buffered_live_ops = buffered_live_ops.clone();
     on_cleanup(move || {
+        let _ = cleanup_session_generation.fetch_add(1, Ordering::Relaxed);
+        cleanup_ready_generation.store(0, Ordering::Relaxed);
+        cleanup_buffered_live_ops
+            .lock()
+            .expect("buffered live ops mutex")
+            .clear();
         destroyEditor();
         leptos::logging::log!("编辑器已清理");
     });

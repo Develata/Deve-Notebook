@@ -6,8 +6,11 @@ use crate::editor::EditorStats;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op, PeerId};
+use deve_core::protocol::ConfirmedOp;
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 /// 同步消息处理所需的全部上下文
 ///
@@ -18,6 +21,9 @@ use leptos::prelude::*;
 pub struct SyncContext<'a> {
     pub doc_id: DocId,
     pub client_id: Option<u64>,
+    pub session_generation: Arc<AtomicU64>,
+    pub ready_generation: Arc<AtomicU64>,
+    pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub current_repo_id: ReadSignal<Option<String>>,
@@ -46,4 +52,43 @@ pub struct SyncContext<'a> {
     // E2EE: 仓库密钥 (RAM-only)
     pub repo_key: ReadSignal<Option<RepoKey>>,
     pub set_repo_key: WriteSignal<Option<RepoKey>>,
+}
+
+impl SyncContext<'_> {
+    pub fn current_generation(&self) -> u64 {
+        self.session_generation.load(Ordering::Relaxed)
+    }
+
+    pub fn is_generation_current(&self, expected_generation: u64) -> bool {
+        self.current_generation() == expected_generation
+    }
+
+    pub fn mark_live_ready(&self, expected_generation: u64) {
+        if self.is_generation_current(expected_generation) {
+            self.ready_generation
+                .store(expected_generation, Ordering::Relaxed);
+        }
+    }
+
+    pub fn is_live_ready(&self) -> bool {
+        let current_generation = self.current_generation();
+        current_generation != 0
+            && self.ready_generation.load(Ordering::Relaxed) == current_generation
+    }
+
+    pub fn buffer_live_op(&self, entry: ConfirmedOp) {
+        self.buffered_live_ops
+            .lock()
+            .expect("buffered live ops mutex")
+            .push(entry);
+    }
+
+    pub fn drain_buffered_live_ops(&self) -> Vec<ConfirmedOp> {
+        std::mem::take(
+            &mut *self
+                .buffered_live_ops
+                .lock()
+                .expect("buffered live ops mutex"),
+        )
+    }
 }

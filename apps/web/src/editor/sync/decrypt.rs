@@ -7,11 +7,11 @@
 //! - 若无 RepoKey，加密操作将被跳过并记录警告
 //! - 解密后的内容事件与 `NewOp` 走相同的应用路径
 
+use super::apply_live_op;
 use super::context::SyncContext;
-use crate::editor::EditorStats;
-use crate::editor::ffi::{applyRemoteOp, getEditorContent};
+use deve_core::protocol::{ClientOrigin, ConfirmedOp};
 use deve_core::security::EncryptedOp;
-use leptos::prelude::*;
+use leptos::prelude::GetUntracked;
 
 /// 解密并应用 P2P 同步推送的加密操作
 ///
@@ -45,36 +45,23 @@ pub fn handle_sync_push(ctx: &SyncContext, ops: &[EncryptedOp]) {
 ///
 /// 逻辑与 handle_new_op 对齐：过滤回显、更新版本、推进回放。
 fn apply_decrypted_entry(ctx: &SyncContext, entry: deve_core::models::LedgerEntry, seq: u64) {
-    let current_ver = ctx.local_version.get_untracked();
-    if seq <= current_ver {
-        return;
-    }
-
     if entry.doc_id != Some(ctx.doc_id) {
         return;
     }
     let Some(op) = entry.cloned_content_op() else {
         return;
     };
-
-    // 应用远程操作到编辑器
-    if let Ok(json) = serde_json::to_string(&op) {
-        applyRemoteOp(&json);
-    }
-
-    let txt = getEditorContent();
-    if let Some(cb) = ctx.on_stats {
-        cb.run(EditorStats {
-            chars: txt.len(),
-            words: txt.split_whitespace().count(),
-            lines: txt.lines().count(),
-        });
-    }
-    ctx.set_content.set(txt);
-    ctx.set_local_version.set(seq);
-    ctx.set_history.update(|h| h.push((seq, op)));
-
-    if !ctx.is_playback.get_untracked() {
-        ctx.set_playback_version.set(seq);
+    let origin = match (entry.client_id, entry.client_op_id) {
+        (Some(client_id), Some(client_op_id)) => Some(ClientOrigin {
+            client_id,
+            client_op_id,
+        }),
+        _ => None,
+    };
+    let confirmed = ConfirmedOp::new(seq, op, origin);
+    if ctx.is_live_ready() {
+        apply_live_op(ctx, confirmed);
+    } else {
+        ctx.buffer_live_op(confirmed);
     }
 }

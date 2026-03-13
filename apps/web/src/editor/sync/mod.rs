@@ -38,8 +38,19 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             if request_id != ctx.open_request_id.get_untracked() {
                 return;
             }
+            let expected_generation = ctx.current_generation();
             snapshot::handle_snapshot(
-                ctx, repo_id, branch, request_id, content, base_seq, version, delta_ops,
+                ctx,
+                snapshot::SnapshotMessage {
+                    expected_generation,
+                    repo_id,
+                    branch,
+                    request_id,
+                    new_content: content,
+                    base_seq,
+                    version,
+                    delta_ops,
+                },
             );
         }
         ServerMessage::History {
@@ -55,8 +66,9 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             if msg_doc_id != ctx.doc_id || request_id != ctx.open_request_id.get_untracked() {
                 return;
             }
+            let expected_generation = ctx.current_generation();
             leptos::logging::log!("Received History: {} ops", ops.len());
-            history::handle_history(ctx, ops);
+            history::handle_history(ctx, expected_generation, ops);
         }
         ServerMessage::NewOp {
             repo_id,
@@ -157,6 +169,14 @@ fn matches_current_scope(
 }
 
 fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
+    if !ctx.is_live_ready() {
+        ctx.buffer_live_op(entry);
+        return;
+    }
+    apply_live_op(ctx, entry);
+}
+
+pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
     if entry.seq <= ctx.local_version.get_untracked() {
         return;
     }
