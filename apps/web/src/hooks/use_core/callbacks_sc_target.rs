@@ -36,28 +36,31 @@ pub(super) fn resolve_targets(
 }
 
 fn resolve_entry(entries: ReadSignal<Vec<ChangeEntry>>, path: &str) -> Option<ChangeEntry> {
+    let entries = entries.get_untracked();
+    let renamed_successor = entries.iter().find(|entry| {
+        entry.status != deve_core::source_control::ChangeStatus::Deleted
+            && entry
+                .renamed_from
+                .as_ref()
+                .is_some_and(|old_path| normalized(old_path) == path)
+    });
+    let path_reused_after_delete = renamed_successor.is_some()
+        && entries.iter().any(|entry| {
+            normalized(&entry.path) == path
+                && entry.status == deve_core::source_control::ChangeStatus::Deleted
+        });
+    if path_reused_after_delete {
+        return renamed_successor.cloned();
+    }
     entries
-        .get_untracked()
-        .into_iter()
+        .iter()
         .find(|entry| {
             normalized(&entry.path) == path
                 && entry.status != deve_core::source_control::ChangeStatus::Deleted
         })
-        .or_else(|| {
-            entries.get_untracked().into_iter().find(|entry| {
-                entry.status != deve_core::source_control::ChangeStatus::Deleted
-                    && entry
-                        .renamed_from
-                        .as_ref()
-                        .is_some_and(|old_path| normalized(old_path) == path)
-            })
-        })
-        .or_else(|| {
-            entries
-                .get_untracked()
-                .into_iter()
-                .find(|entry| normalized(&entry.path) == path)
-        })
+        .or(renamed_successor)
+        .or_else(|| entries.iter().find(|entry| normalized(&entry.path) == path))
+        .cloned()
 }
 
 fn to_target(entry: ChangeEntry) -> ScPathTarget {
@@ -90,6 +93,34 @@ mod tests {
             ChangeEntry {
                 path: "notes/new.md".into(),
                 renamed_from: Some("notes/old.md".into()),
+                doc_id: None,
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ]);
+        assert_eq!(resolve_target(read, "notes/old.md").path, "notes/new.md");
+    }
+
+    #[test]
+    fn resolve_target_prefers_rename_successor_over_reused_old_path() {
+        let (read, _write) = signal(vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: None,
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
                 doc_id: None,
                 status: ChangeStatus::Added,
                 has_conflict: false,
