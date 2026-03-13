@@ -103,6 +103,34 @@ async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let doc_id = seed_default_doc(&state)?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    state.repo.apply_file_delete_structure_in_local_repo(
+        state.repo.local_repo_name(),
+        "notes/a.md",
+        Some(doc_id),
+        "test",
+    )?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo("default".into(), Some(default_id));
+
+    handle_open_doc(&state, &ch, &mut session, doc_id, 8).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error }) => {
+            assert_eq!(error.code, ServerErrorCode::StorageNotFound);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(uni_rx.try_recv().is_err(), "must not send deleted snapshot");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);

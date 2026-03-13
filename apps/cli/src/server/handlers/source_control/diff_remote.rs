@@ -3,7 +3,7 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
-use deve_core::ledger::{RepoManager, node_meta};
+use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -69,9 +69,7 @@ fn resolve_remote_content(
     state
         .repo
         .run_on_shadow_repo_by_id(peer_id, &repo_id, |db| {
-            let doc_id = target
-                .doc_id
-                .or_else(|| resolve_runtime_doc_id(db, &target.path));
+            let doc_id = resolve_tracked_doc_id(db, target);
             let Some(doc_id) = doc_id else {
                 return Ok(None);
             };
@@ -95,25 +93,26 @@ pub(crate) fn local_counterpart_content(
         return Ok(None);
     };
     repo.run_on_local_repo(name, |db| {
+        if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
+            return Ok(None);
+        }
         let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
         let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
         Ok(Some(deve_core::state::reconstruct_content(&entries)))
     })
 }
 
-pub(super) fn resolve_runtime_doc_id(
+pub(super) fn resolve_tracked_doc_id(
     db: &redb::Database,
-    path: &str,
+    target: &ScPathTarget,
 ) -> Option<deve_core::models::DocId> {
-    let normalized = deve_core::utils::path::to_forward_slash(path);
-    node_meta::get_node_id(db, &normalized)
+    if let Some(doc_id) = target.doc_id {
+        return deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)
+            .ok()
+            .flatten()
+            .map(|_| doc_id);
+    }
+    deve_core::ledger::doc_lookup::resolve_doc_id(db, &target.path)
         .ok()
         .flatten()
-        .and_then(|node_id| node_meta::get_node_meta(db, node_id).ok().flatten())
-        .and_then(|meta| meta.doc_id)
-        .or_else(|| {
-            deve_core::ledger::doc_lookup::resolve_doc_id(db, &normalized)
-                .ok()
-                .flatten()
-        })
 }

@@ -28,11 +28,12 @@ fn rebuild_full_snapshot(
     doc_id: DocId,
     snapshot_depth: usize,
 ) -> anyhow::Result<SnapshotPayload> {
+    if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
+        anyhow::bail!("Document not found: {}", doc_id);
+    }
+
     let full_entries = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
     if full_entries.is_empty() {
-        if deve_core::ledger::node_meta::path_for_doc(db, doc_id)?.is_none() {
-            anyhow::bail!("Document not found: {}", doc_id);
-        }
         return Ok((String::new(), 0, Vec::new(), 0));
     }
 

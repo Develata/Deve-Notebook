@@ -1,4 +1,4 @@
-use super::remote::{local_counterpart_content, resolve_runtime_doc_id};
+use super::remote::{local_counterpart_content, resolve_tracked_doc_id};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::ledger::traits::{RepoSelector, Repository};
@@ -114,8 +114,52 @@ fn remote_diff_prefers_node_projection_before_legacy_path_mapping() -> anyhow::R
     })?;
 
     let doc_id = repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        Ok(resolve_runtime_doc_id(db, "notes/a.md"))
+        Ok(resolve_tracked_doc_id(
+            db,
+            &ScPathTarget::from_path("notes/a.md"),
+        ))
     })?;
     assert!(doc_id.is_some());
+    Ok(())
+}
+
+#[test]
+fn remote_diff_rejects_deleted_doc_even_with_doc_id_hint() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo()?;
+    let selector = RepoSelector::default();
+    write_workspace_file(&dir, "notes/a.md", "hello");
+    seed_pending_entry(
+        &repo,
+        PendingFsEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            change_type: ChangeStatus::Added,
+            content_hash: pending_fs::content_hash("hello"),
+            detected_at: 1,
+            has_conflict: false,
+        },
+    );
+    repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
+    repo.commit_staged_in_repo(&selector, "initial")?;
+    let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
+    repo.apply_file_delete_structure_in_local_repo(
+        repo.local_repo_name(),
+        "notes/a.md",
+        Some(doc_id),
+        "test",
+    )?;
+
+    let resolved = repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        Ok(resolve_tracked_doc_id(
+            db,
+            &ScPathTarget {
+                path: "notes/a.md".into(),
+                doc_id: Some(doc_id),
+            },
+        ))
+    })?;
+    assert!(resolved.is_none());
+    assert!(local_counterpart_content(&repo, doc_id, Some(repo.local_repo_name()))?.is_none());
     Ok(())
 }
