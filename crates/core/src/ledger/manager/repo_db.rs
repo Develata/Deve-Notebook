@@ -46,4 +46,19 @@ impl RepoManager {
             .ok_or_else(|| anyhow!("未找到指定 Repo 的影子库: {}/{}", peer_id, repo_id))?;
         f(db.as_ref())
     }
+
+    /// Invariants:
+    /// - 远端只读路径必须先按 `PeerId + RepoId` 锁定 shadow DB。
+    /// - 调用方不得绕过 `RepoId` 再回退到名称匹配。
+    pub fn run_on_shadow_repo_by_id<F, R>(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        f: F,
+    ) -> Result<R>
+    where
+        F: FnOnce(&Database) -> Result<R>,
+    {
+        self.run_on_shadow_repo(peer_id, repo_id, f)
+    }
 }

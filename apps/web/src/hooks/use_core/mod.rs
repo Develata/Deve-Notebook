@@ -96,10 +96,17 @@ pub fn use_core() -> CoreState {
         &ws,
         signals.staged_changes,
         signals.unstaged_changes,
-        signals.set_changes_request_id,
-        signals.set_commit_history_request_id,
-        signals.set_doc_diff_request_id,
-        signals.set_commit_diff_request_id,
+        callbacks_sc::SourceControlScopeSignals {
+            current_repo_id: signals.current_repo_id,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_repo_switch: signals.pending_repo_switch,
+        },
+        callbacks_sc::SourceControlRequestSignals {
+            set_changes_request_id: signals.set_changes_request_id,
+            set_commit_history_request_id: signals.set_commit_history_request_id,
+            set_doc_diff_request_id: signals.set_doc_diff_request_id,
+            set_commit_diff_request_id: signals.set_commit_diff_request_id,
+        },
     );
     let misc_callbacks = callbacks::create_misc_callbacks(
         &ws,

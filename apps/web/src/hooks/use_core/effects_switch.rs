@@ -47,9 +47,10 @@ pub fn handle_repo_switched(name: String, uuid: String, signals: RepoSwitchSigna
             return false;
         }
         None => {
+            let rebinding_after_branch_switch = current_repo.is_none() && current_repo_id.is_none();
             let same_repo = current_repo.as_deref() == Some(name.as_str())
                 && current_repo_id.as_deref() == Some(uuid.as_str());
-            if !same_repo {
+            if !same_repo && !rebinding_after_branch_switch {
                 leptos::logging::warn!("忽略无 pending 的 RepoSwitched: {}", name);
                 return false;
             }
@@ -203,5 +204,36 @@ mod tests {
             },
         ));
         assert_eq!(current_doc.get_untracked(), Some(doc_id));
+    }
+
+    #[test]
+    fn accepts_repo_switched_after_branch_switch_clears_repo_scope() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+
+        let (current_repo, set_current_repo) = signal(None::<String>);
+        let (current_repo_id, set_current_repo_id) = signal(None::<String>);
+        let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
+        let (current_doc, set_current_doc) = signal(Some(DocId::new()));
+        let repo_id = Uuid::new_v4().to_string();
+
+        let changed = handle_repo_switched(
+            "default".to_string(),
+            repo_id.clone(),
+            RepoSwitchSignals {
+                current_repo,
+                current_repo_id,
+                pending_repo_switch,
+                set_pending_repo_switch,
+                set_current_repo,
+                set_current_repo_id,
+                set_current_doc,
+            },
+        );
+
+        assert!(changed);
+        assert_eq!(current_repo.get_untracked().as_deref(), Some("default"));
+        assert_eq!(current_repo_id.get_untracked(), Some(repo_id));
+        assert_eq!(current_doc.get_untracked(), None);
     }
 }

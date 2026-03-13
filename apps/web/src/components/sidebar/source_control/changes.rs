@@ -19,8 +19,14 @@ use super::unstaged_section::UnstagedSection;
 pub fn Changes() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
 
-    // 初次加载时获取变更数据
     Effect::new(move |_| {
+        if core.current_repo_id.get().is_none()
+            || core.pending_branch_switch.get().is_some()
+            || core.pending_repo_switch.get().is_some()
+        {
+            return;
+        }
+        let _ = core.active_branch.get();
         core.on_get_changes.run(());
     });
 

@@ -102,8 +102,9 @@ fn list_commit_history(
     if let Some(peer_id) = &scope.branch {
         return state
             .repo
-            .open_database(Some(peer_id), &scope.repo_name)
-            .and_then(|handle| ledger_source_control::list_commits(&handle.db, limit))
+            .run_on_shadow_repo_by_id(peer_id, &scope.repo_id, |db| {
+                ledger_source_control::list_commits(db, limit)
+            })
             .map_err(|e| super::errors::map_repo_error(super::errors::ScOp::CommitHistory, e));
     }
     let selector = super::service::selector_from_scope(scope);
@@ -119,9 +120,8 @@ fn diff_commits(
     if let Some(peer_id) = &scope.branch {
         return state
             .repo
-            .open_database(Some(peer_id), &scope.repo_name)
-            .and_then(|handle| {
-                source_control::commit_diff::compare_commits(&handle.db, commit_a, commit_b)
+            .run_on_shadow_repo_by_id(peer_id, &scope.repo_id, |db| {
+                source_control::commit_diff::compare_commits(db, commit_a, commit_b)
             })
             .map_err(|e| {
                 super::errors::map_repo_error(

@@ -17,6 +17,11 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (bulk_busy, set_bulk_busy) = signal(false);
+    let scope_switching = move || {
+        core.current_repo_id.get().is_none()
+            || core.pending_branch_switch.get().is_some()
+            || core.pending_repo_switch.get().is_some()
+    };
 
     // 折叠状态
     let expanded = RwSignal::new(true);
@@ -60,7 +65,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         <button
                             class="p-0.5 hover:bg-active rounded"
                             title=move || t::source_control::discard_all_changes(locale.get())
-                            disabled=move || bulk_busy.get()
+                            disabled=move || bulk_busy.get() || scope_switching()
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
                                 for entry in unstaged_list_for_discard.get_value() {
@@ -74,7 +79,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         <button
                             class="p-0.5 hover:bg-active rounded"
                             title=move || t::source_control::stage_all_changes(locale.get())
-                            disabled=move || bulk_busy.get()
+                            disabled=move || bulk_busy.get() || scope_switching()
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
                                 let paths = unstaged_list_for_stage

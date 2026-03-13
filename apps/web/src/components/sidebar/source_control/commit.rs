@@ -16,6 +16,9 @@ pub fn Commit() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let chat_ctx = expect_context::<ChatContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
+    let current_repo_id = core.current_repo_id;
+    let pending_branch_switch = core.pending_branch_switch;
+    let pending_repo_switch = core.pending_repo_switch;
 
     let (msg, set_msg) = signal(String::new());
     let (is_generating, set_is_generating) = signal(false);
@@ -27,7 +30,12 @@ pub fn Commit() -> impl IntoView {
     let has_staged = move || !core.staged_changes.get().is_empty();
 
     let do_commit = move || {
-        if !has_staged() || msg.get().trim().is_empty() {
+        if current_repo_id.get().is_none()
+            || pending_branch_switch.get().is_some()
+            || pending_repo_switch.get().is_some()
+            || !has_staged()
+            || msg.get().trim().is_empty()
+        {
             return;
         }
         core.on_commit.run(msg.get());
@@ -76,14 +84,29 @@ pub fn Commit() -> impl IntoView {
                         prop:value=msg
                         on:input=move |ev| set_msg.set(event_target_value(&ev))
                         on:keydown=on_keydown
-                        disabled=move || !has_staged()
+                        disabled=move || {
+                            current_repo_id.get().is_none()
+                                || pending_branch_switch.get().is_some()
+                                || pending_repo_switch.get().is_some()
+                                || !has_staged()
+                        }
                     />
                     <button
                         class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
                         title=move || t::source_control::generate_commit_message(locale.get())
-                        disabled=move || !has_staged() || is_generating.get()
+                        disabled=move || {
+                            current_repo_id.get().is_none()
+                                || pending_branch_switch.get().is_some()
+                                || pending_repo_switch.get().is_some()
+                                || !has_staged()
+                                || is_generating.get()
+                        }
                         on:click=move |_| {
-                            if !has_staged() {
+                            if current_repo_id.get().is_none()
+                                || pending_branch_switch.get().is_some()
+                                || pending_repo_switch.get().is_some()
+                                || !has_staged()
+                            {
                                 return;
                             }
                             let req_id = uuid::Uuid::new_v4().to_string();
@@ -138,7 +161,13 @@ pub fn Commit() -> impl IntoView {
                 <div class="flex relative">
                     <button
                         class="flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 rounded-l-[2px] flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm"
-                        disabled=move || !has_staged() || msg.get().trim().is_empty()
+                        disabled=move || {
+                            current_repo_id.get().is_none()
+                                || pending_branch_switch.get().is_some()
+                                || pending_repo_switch.get().is_some()
+                                || !has_staged()
+                                || msg.get().trim().is_empty()
+                        }
                         on:click=move |_| { dropdown_open.set(false); do_commit(); }
                     >
                         <span class="codicon codicon-check"></span>
@@ -164,7 +193,13 @@ pub fn Commit() -> impl IntoView {
                                 </button>
                                 <button
                                     class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled=move || !has_staged() || msg.get().trim().is_empty()
+                                    disabled=move || {
+                                        current_repo_id.get().is_none()
+                                            || pending_branch_switch.get().is_some()
+                                            || pending_repo_switch.get().is_some()
+                                            || !has_staged()
+                                            || msg.get().trim().is_empty()
+                                    }
                                     on:click=move |_| {
                                         dropdown_open.set(false);
                                         core.on_commit_and_push.run(msg.get());
