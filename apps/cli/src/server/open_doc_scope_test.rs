@@ -45,12 +45,24 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
 }
 
 fn seed_default_doc(state: &Arc<AppState>) -> anyhow::Result<DocId> {
-    let doc_id =
-        state
-            .repo
-            .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
+    seed_doc(state, "default", "notes/a.md", "hello")
+}
+
+fn seed_test_doc(state: &Arc<AppState>) -> anyhow::Result<DocId> {
+    seed_doc(state, "test", "notes/b.md", "from test")
+}
+
+fn seed_doc(
+    state: &Arc<AppState>,
+    repo_name: &str,
+    path: &str,
+    content: &str,
+) -> anyhow::Result<DocId> {
+    let doc_id = state
+        .repo
+        .apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
     state.repo.append_generated_op_in_local_repo(
-        "default",
+        repo_name,
         doc_id,
         PeerId::new("test-peer"),
         |seq| {
@@ -58,7 +70,7 @@ fn seed_default_doc(state: &Arc<AppState>) -> anyhow::Result<DocId> {
                 doc_id,
                 Op::Insert {
                     pos: 0,
-                    content: "hello".into(),
+                    content: content.into(),
                 },
                 1,
                 PeerId::new("test-peer"),
@@ -110,5 +122,34 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
         uni_rx.try_recv().is_err(),
         "must not send empty doc/tree payload"
     );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_recovers_from_stale_local_selector() -> anyhow::Result<()> {
+    let (_dir, state, test_repo_id) = build_state()?;
+    let _ = seed_test_doc(&state)?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    session.switch_repo("test".into(), Some(default_id));
+
+    handle_list_docs(&state, &ch, &mut session, Some("req-1".into())).await;
+
+    loop {
+        match uni_rx.recv().await {
+            Some(ServerMessage::DocList { repo_id, docs, .. }) => {
+                assert_eq!(repo_id, Some(test_repo_id));
+                assert_eq!(docs.len(), 1);
+                assert_eq!(docs[0].1, "notes/b.md");
+                break;
+            }
+            Some(_) => continue,
+            None => panic!("expected DocList"),
+        }
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(session.active_repo_id, Some(test_repo_id));
     Ok(())
 }
