@@ -128,9 +128,8 @@ fn resolve_repo_name_from_session(
 ) -> Result<Option<String>> {
     if session.active_branch.is_none() {
         if let Some(repo_name) = session.active_repo.clone() {
-            match state.repo.get_repo_info_for(None, Some(&repo_name)) {
-                Ok(Some(_)) => return Ok(Some(repo_name)),
-                Ok(None) | Err(_) => {}
+            if let Ok(Some(_)) = state.repo.get_repo_info_for(None, Some(&repo_name)) {
+                return Ok(Some(repo_name));
             }
             if let Some(repo_id) = session.active_repo_id
                 && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?

@@ -35,6 +35,7 @@ pub fn matches_current_message_scope(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn accepts_write_ready(
     repo_id: &str,
     branch: &Option<PeerId>,

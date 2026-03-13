@@ -3,7 +3,7 @@ use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::Result;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub(crate) struct RemoteRepoEntry {
@@ -75,7 +75,7 @@ impl RepoManager {
         Ok(repos)
     }
 
-    fn repaired_remote_repo_info(&self, path: &PathBuf, stem: &str) -> Result<Option<RepoInfo>> {
+    fn repaired_remote_repo_info(&self, path: &Path, stem: &str) -> Result<Option<RepoInfo>> {
         let original = Self::read_repo_info_from_path(path)?;
         let Some(mut info) = original.clone().or_else(|| {
             uuid::Uuid::parse_str(stem).ok().map(|repo_id| {
