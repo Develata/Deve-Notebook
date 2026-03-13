@@ -67,6 +67,8 @@ pub fn use_core() -> CoreState {
             current_repo_id: signals.current_repo_id,
             active_branch: signals.active_branch,
             pending_repo_switch: signals.pending_repo_switch,
+            handshake_scope_nonce: signals.handshake_scope_nonce,
+            set_handshake_scope_nonce: signals.set_handshake_scope_nonce,
             set_repo_list_request_id: signals.set_repo_list_request_id,
             set_doc_list_request_id: signals.set_doc_list_request_id,
             set_tree_request_id: signals.set_tree_request_id,

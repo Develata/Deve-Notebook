@@ -27,6 +27,7 @@ pub(crate) async fn route_message(
             signature,
             vector,
             repo_id,
+            scope_nonce,
         } => {
             sync::handle_sync_hello(
                 state,
@@ -38,6 +39,7 @@ pub(crate) async fn route_message(
                     signature,
                     remote_vector: vector,
                     repo_id,
+                    scope_nonce,
                 },
             )
             .await;

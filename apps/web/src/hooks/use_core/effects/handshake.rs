@@ -26,6 +26,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             *last_mode.borrow_mut() = None;
             ws_clone.clear_writer_ready();
             signals.set_handshake_ready.set(false);
+            signals.set_handshake_scope_nonce.set(None);
             return;
         }
 
@@ -51,6 +52,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         *last_mode.borrow_mut() = Some(mode_key);
         ws_clone.clear_writer_ready();
         signals.set_handshake_ready.set(false);
+        signals.set_handshake_scope_nonce.set(None);
 
         let ws = ws_clone.clone();
         let maybe_mode = signals.degraded.get();
@@ -67,6 +69,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
+            signals.set_handshake_scope_nonce.set(None);
             return;
         }
         let scope_nonce = scope_nonce.clone();
@@ -80,8 +83,10 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
+            signals.set_handshake_scope_nonce.set(None);
             return;
         }
+        signals.set_handshake_scope_nonce.set(Some(next_nonce));
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());
@@ -90,6 +95,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                 }
                 ws.clear_writer_ready();
                 signals.set_handshake_ready.set(true);
+                signals.set_handshake_scope_nonce.set(None);
                 return;
             }
             let Some(identity) = maybe_identity else {
@@ -139,10 +145,12 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                                 signature,
                                 vector,
                                 repo_id,
+                                scope_nonce: next_nonce,
                             });
                             ws.send(ClientMessage::RegisterWriter {
                                 peer_id: writer_peer_id,
                                 repo_id,
+                                scope_nonce: next_nonce,
                             });
                         }
                         Err(err) => leptos::logging::error!(

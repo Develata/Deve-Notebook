@@ -26,6 +26,7 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let (stats, set_stats) = signal(EditorStats::default());
     let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
     let (handshake_ready, set_handshake_ready) = signal(false);
+    let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(None::<u64>);
     let (pending_local_edits, set_pending_local_edits) = signal(PendingLocalEdits::new());
     let (pending_navigation, set_pending_navigation) = signal(None::<PendingNavigation>);
     let (plugin_response, set_plugin_response) = signal(PluginResponse::default());
@@ -86,6 +87,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_peers,
         handshake_ready,
         set_handshake_ready,
+        handshake_scope_nonce,
+        set_handshake_scope_nonce,
         pending_local_edits,
         set_pending_local_edits,
         pending_navigation,

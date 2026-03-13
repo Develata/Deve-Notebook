@@ -3,13 +3,20 @@ use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 
-pub(super) fn handle(ch: &DualChannel, session: &mut WsSession, repo_id: RepoId, peer_id: PeerId) {
+pub(super) fn handle(
+    ch: &DualChannel,
+    session: &mut WsSession,
+    repo_id: RepoId,
+    peer_id: PeerId,
+    scope_nonce: u64,
+) {
     match validate(session, repo_id, &peer_id) {
         Ok(()) => {
             session.set_writer_identity(repo_id, peer_id.clone());
             ch.unicast(ServerMessage::WriteReady {
                 peer_id,
                 repo_id,
+                scope_nonce,
                 branch: session.active_branch.clone(),
             });
         }

@@ -32,8 +32,9 @@ pub fn handle_register_writer(
     session: &mut WsSession,
     repo_id: RepoId,
     peer_id: PeerId,
+    scope_nonce: u64,
 ) {
-    writer::handle(ch, session, repo_id, peer_id);
+    writer::handle(ch, session, repo_id, peer_id, scope_nonce);
 }
 
 pub async fn handle_sync_request(

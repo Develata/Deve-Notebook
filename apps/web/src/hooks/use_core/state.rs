@@ -46,6 +46,8 @@ pub struct CoreSignals {
     pub set_peers: WriteSignal<HashMap<PeerId, PeerSession>>,
     pub handshake_ready: ReadSignal<bool>,
     pub set_handshake_ready: WriteSignal<bool>,
+    pub handshake_scope_nonce: ReadSignal<Option<u64>>,
+    pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
     pub pending_navigation: ReadSignal<Option<PendingNavigation>>,

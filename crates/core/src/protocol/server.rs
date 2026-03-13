@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 pub enum ServerMessage {
     Pong,
     Ack { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, seq: u64, client_op_id: u64 },
-    SyncHello { peer_id: PeerId, repo_id: RepoId, pub_key: Vec<u8>, signature: Vec<u8>, vector: VersionVector },
-    WriteReady { peer_id: PeerId, repo_id: RepoId, #[serde(default)] branch: Option<PeerId> },
+    SyncHello { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, pub_key: Vec<u8>, signature: Vec<u8>, vector: VersionVector },
+    WriteReady { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId> },
     SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, requests: Vec<(PeerId, (u64, u64))> },
     SyncSnapshotRequest { peer_id: PeerId, repo_id: RepoId },
     SyncPush { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },

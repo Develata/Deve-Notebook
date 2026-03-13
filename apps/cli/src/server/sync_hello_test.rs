@@ -56,6 +56,7 @@ fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> SyncHelloIn
         signature: remote.sign(&msg),
         remote_vector: vector.clone(),
         repo_id: uuid::Uuid::nil(),
+        scope_nonce: 1,
     }
 }
 

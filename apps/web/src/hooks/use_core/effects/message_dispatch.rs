@@ -50,9 +50,10 @@ pub fn handle_message<F>(
         ServerMessage::SyncHello {
             peer_id,
             repo_id,
+            scope_nonce,
             vector,
             ..
-        } => handle_sync_hello(peer_id, repo_id.to_string(), vector, signals),
+        } => handle_sync_hello(peer_id, repo_id.to_string(), scope_nonce, vector, signals),
         ServerMessage::PluginResponse {
             req_id,
             result,
@@ -199,10 +200,11 @@ pub fn handle_message<F>(
         ServerMessage::WriteReady {
             peer_id,
             repo_id,
+            scope_nonce,
             branch,
         } => {
             let repo_id = repo_id.to_string();
-            if accepts_write_ready_message(&repo_id, &branch, signals) {
+            if accepts_write_ready_message(&repo_id, &branch, scope_nonce, signals) {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
                 ws.mark_writer_ready(repo_id, peer_id.as_str());
             }

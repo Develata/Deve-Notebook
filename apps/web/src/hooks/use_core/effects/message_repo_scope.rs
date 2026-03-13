@@ -38,13 +38,16 @@ pub fn matches_current_message_scope(
 pub fn accepts_write_ready(
     repo_id: &str,
     branch: &Option<PeerId>,
+    scope_nonce: u64,
     current_repo_id: Option<String>,
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
     pending_repo_switch: Option<String>,
+    handshake_scope_nonce: Option<u64>,
 ) -> bool {
     pending_repo_switch.is_none()
         && pending_branch_switch.is_none()
+        && handshake_scope_nonce == Some(scope_nonce)
         && peer_branch_matches_scope(branch, active_branch.clone(), pending_branch_switch)
         && active_branch.is_none()
         && current_repo_id.as_deref() == Some(repo_id)
@@ -53,15 +56,18 @@ pub fn accepts_write_ready(
 pub fn accepts_write_ready_message(
     repo_id: &str,
     branch: &Option<PeerId>,
+    scope_nonce: u64,
     signals: CoreSignals,
 ) -> bool {
     accepts_write_ready(
         repo_id,
         branch,
+        scope_nonce,
         signals.current_repo_id.get_untracked(),
         signals.active_branch.get_untracked(),
         signals.pending_branch_switch.get_untracked(),
         signals.pending_repo_switch.get_untracked(),
+        signals.handshake_scope_nonce.get_untracked(),
     )
 }
 
@@ -110,10 +116,12 @@ mod tests {
         assert!(!accepts_write_ready(
             &repo_id,
             &None,
+            3,
             Some(repo_id.clone()),
             None,
             Some(PendingBranchTarget::Local),
             Some("default".into()),
+            Some(3),
         ));
     }
 
@@ -123,10 +131,12 @@ mod tests {
         assert!(!accepts_write_ready(
             &repo_id,
             &None,
+            3,
             Some(repo_id.clone()),
             None,
             Some(PendingBranchTarget::Local),
             None,
+            Some(3),
         ));
     }
 
@@ -136,18 +146,32 @@ mod tests {
         assert!(accepts_write_ready(
             &repo_id,
             &None,
+            3,
             Some(repo_id.clone()),
             None,
             None,
             None,
+            Some(3),
         ));
         assert!(!accepts_write_ready(
             &repo_id,
             &Some(PeerId::new("peer-a")),
+            3,
             Some(repo_id.clone()),
             Some(PeerId::new("peer-a")),
             None,
             None,
+            Some(3),
+        ));
+        assert!(!accepts_write_ready(
+            &repo_id,
+            &None,
+            2,
+            Some(repo_id.clone()),
+            None,
+            None,
+            None,
+            Some(3),
         ));
     }
 }

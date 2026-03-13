@@ -14,6 +14,7 @@ pub struct SyncHelloInput {
     pub signature: Vec<u8>,
     pub remote_vector: VersionVector,
     pub repo_id: RepoId,
+    pub scope_nonce: u64,
 }
 
 pub(super) async fn handle(
@@ -28,6 +29,7 @@ pub(super) async fn handle(
         signature,
         remote_vector,
         repo_id,
+        scope_nonce,
     } = hello;
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
 
@@ -86,6 +88,7 @@ pub(super) async fn handle(
     ch.unicast(ServerMessage::SyncHello {
         peer_id: local_peer_id,
         repo_id,
+        scope_nonce,
         pub_key: state.identity_key.public_key_bytes().to_vec(),
         signature: my_sig,
         vector: local_vector,

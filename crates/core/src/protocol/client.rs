@@ -15,10 +15,12 @@ pub enum ClientMessage {
         signature: Vec<u8>,
         vector: VersionVector,
         repo_id: crate::models::RepoId,
+        scope_nonce: u64,
     },
     RegisterWriter {
         peer_id: PeerId,
         repo_id: crate::models::RepoId,
+        scope_nonce: u64,
     },
     SyncRequest {
         repo_id: crate::models::RepoId,

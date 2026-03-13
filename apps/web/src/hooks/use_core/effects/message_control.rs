@@ -109,6 +109,7 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_pending_ops_count.set(0);
     signals.set_pending_ops_previews.set(Vec::new());
     signals.set_pending_ops_request_id.set(None);
+    signals.set_handshake_scope_nonce.set(None);
     signals.set_pending_local_edits.set(Default::default());
     signals.set_plugin_response.set(None);
     signals.set_plugin_request_ids.set(Vec::new());

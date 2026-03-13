@@ -58,6 +58,8 @@ pub struct HandshakeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub handshake_scope_nonce: ReadSignal<Option<u64>>,
+    pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
     pub set_tree_request_id: WriteSignal<Option<String>>,
