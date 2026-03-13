@@ -5,10 +5,6 @@ fn send(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
     ch.send_protocol_error(ServerError::with_detail(code, detail));
 }
 
-pub(super) fn repo_unbound(ch: &DualChannel) {
-    ch.send_sync_repo_unbound();
-}
-
 pub(super) fn request_failed(ch: &DualChannel, detail: impl Into<String>) {
     send(ch, ServerErrorCode::RequestFailed, detail);
 }

@@ -1,6 +1,6 @@
 use super::errors;
 use super::manual_support::{load_engine, sync_mode_label};
-use super::scope::require_bound_repo_id;
+use super::scope::{resolve_read_repo_id, resolve_write_repo_id};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::config::SyncMode;
 use deve_core::protocol::ServerMessage;
@@ -12,7 +12,7 @@ pub(super) async fn handle_get_sync_mode(
     session: &WsSession,
     request_id: String,
 ) {
-    let Some(repo_id) = require_bound_repo_id(ch, session) else {
+    let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
         return;
     };
     let Some(engine) = load_engine(state, ch, repo_id) else {
@@ -32,7 +32,7 @@ pub(super) async fn handle_set_sync_mode(
     session: &WsSession,
     mode: String,
 ) {
-    let Some(repo_id) = require_bound_repo_id(ch, session) else {
+    let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
     };
     let new_mode = match mode.to_lowercase().as_str() {
@@ -59,7 +59,7 @@ pub(super) async fn handle_get_pending_ops(
     session: &WsSession,
     request_id: String,
 ) {
-    let Some(repo_id) = require_bound_repo_id(ch, session) else {
+    let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
         return;
     };
     let Some(engine) = load_engine(state, ch, repo_id) else {
@@ -89,7 +89,7 @@ pub(super) async fn handle_confirm_merge(
     ch: &DualChannel,
     session: &WsSession,
 ) {
-    let Some(repo_id) = require_bound_repo_id(ch, session) else {
+    let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
     };
     let Some(mut engine) = load_engine(state, ch, repo_id) else {
@@ -116,7 +116,7 @@ pub(super) async fn handle_discard_pending(
     ch: &DualChannel,
     session: &WsSession,
 ) {
-    let Some(repo_id) = require_bound_repo_id(ch, session) else {
+    let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
     };
     let Some(mut engine) = load_engine(state, ch, repo_id) else {

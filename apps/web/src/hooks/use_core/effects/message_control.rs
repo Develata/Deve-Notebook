@@ -138,6 +138,9 @@ fn clear_repo_scoped_runtime(signals: CoreSignals) {
 }
 
 fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
+    if !should_request_repo_sync_state(signals.active_branch.get_untracked()) {
+        return;
+    }
     let sync_mode_request_id = uuid::Uuid::new_v4().to_string();
     let pending_ops_request_id = uuid::Uuid::new_v4().to_string();
     signals
@@ -152,6 +155,10 @@ fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
     ws.send(ClientMessage::GetPendingOps {
         request_id: pending_ops_request_id,
     });
+}
+
+fn should_request_repo_sync_state(active_branch: Option<PeerId>) -> bool {
+    active_branch.is_none()
 }
 
 fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
@@ -173,7 +180,7 @@ fn should_recover_local_branch(
 
 #[cfg(test)]
 mod tests {
-    use super::should_recover_local_branch;
+    use super::{should_recover_local_branch, should_request_repo_sync_state};
     use crate::hooks::use_core::PendingBranchTarget;
     use deve_core::models::PeerId;
 
@@ -194,5 +201,11 @@ mod tests {
             Some(PeerId::new("peer-a")),
             Some(PendingBranchTarget::Local),
         ));
+    }
+
+    #[test]
+    fn repo_sync_state_requests_only_run_on_local_branch() {
+        assert!(should_request_repo_sync_state(None));
+        assert!(!should_request_repo_sync_state(Some(PeerId::new("peer-a"))));
     }
 }
