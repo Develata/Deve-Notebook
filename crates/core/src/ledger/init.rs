@@ -97,27 +97,28 @@ pub fn init(
                     if let Some(guard) = table.get(&0)? {
                         let val = guard.value();
                         let info: super::RepoInfo = bincode::deserialize(val)?;
-
-                        // 如果 URL 匹配 (或都为 None)，则确认为同一仓库
-                        // 注意:这里简化处理，如果输入的 URL 为 None，我们假设匹配任何（或者生成新的？）
-                        // 根据需求: "Logical Identity: URL is strictly distinguishing"
-                        // 如果输入 URL 为 None, 我们通常是在"打开默认库"，所以匹配。
-                        // 如果输入 URL 有值，必须严格匹配。
                         if should_reuse_existing_repo(repo_url, &info) {
                             local_db = db;
                             break;
                         } else {
-                            // URL 不匹配，这是另一个同名仓库 -> 继续循环尝试下一个名字
                             counter += 1;
                             continue;
                         }
                     }
-                }
-                Err(_) => {
-                    anyhow::bail!(
-                        "Repo metadata is missing in {:?}; unsupported ledger layout",
+                    tracing::warn!(
+                        "Repo metadata value missing in {:?}; reusing legacy local repo and repairing metadata",
                         db_path
                     );
+                    local_db = db;
+                    break;
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        "Repo metadata table missing in {:?}; reusing legacy local repo and repairing metadata",
+                        db_path
+                    );
+                    local_db = db;
+                    break;
                 }
             }
         } else {
@@ -150,9 +151,7 @@ pub fn init(
     }
 
     // 7. 写入 Metadata (如果是新库，或者旧库缺失)
-    // 即使是旧库，如果缺失也可以补全? 还是保持原样?
-    // 这里我们只在 is_new_repo 时写入，或者做一下检查
-    if is_new_repo {
+    if is_new_repo || super::RepoManager::read_repo_info_from_db(local_db.as_ref())?.is_none() {
         let repo_uuid = uuid::Uuid::new_v4();
         let info = super::RepoInfo {
             uuid: repo_uuid,

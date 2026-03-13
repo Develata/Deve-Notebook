@@ -177,3 +177,29 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
     assert!(vault_dir.join("main/note.md").exists());
     assert!(!vault_dir.join("legacy").exists());
 }
+
+#[test]
+fn init_repairs_existing_local_repo_without_metadata() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let local_dir = ledger_dir.join("local");
+    std::fs::create_dir_all(&local_dir).expect("create local dir");
+    let db_path = local_dir.join("legacy.redb");
+    let db = redb::Database::create(&db_path).expect("create legacy db");
+    let txn = db.begin_write().expect("write txn");
+    txn.commit().expect("commit empty db");
+    drop(db);
+
+    let repo = RepoManager::init(&ledger_dir, 8, Some("legacy"), None).expect("init legacy repo");
+    let info = repo.get_repo_info().expect("repo info").expect("present");
+
+    assert_eq!(info.name, "legacy");
+    assert_eq!(
+        info.url.as_deref(),
+        Some(format!("urn:uuid:{}", info.uuid).as_str())
+    );
+    assert_eq!(
+        repo.list_repos(None).expect("list repos"),
+        vec!["legacy".to_string()]
+    );
+}

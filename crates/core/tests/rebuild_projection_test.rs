@@ -1,7 +1,8 @@
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
+use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::sync::SyncManager;
+use redb::ReadableTable;
 use tempfile::TempDir;
 
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
@@ -50,6 +51,46 @@ fn inject_legacy_doc_path(repo: &RepoManager, doc_id: deve_core::models::DocId, 
         Ok(())
     })
     .expect("inject legacy doc path");
+}
+
+fn wipe_node_projection(repo: &RepoManager) {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let read = db.begin_read()?;
+        let node_paths = {
+            let table = read.open_table(PATH_TO_NODEID)?;
+            let mut keys = Vec::new();
+            for item in table.iter()? {
+                let (path, _) = item?;
+                keys.push(path.value().to_string());
+            }
+            keys
+        };
+        let node_ids = {
+            let table = read.open_table(NODEID_TO_META)?;
+            let mut keys = Vec::new();
+            for item in table.iter()? {
+                let (node_id, _) = item?;
+                keys.push(node_id.value());
+            }
+            keys
+        };
+        drop(read);
+
+        let write = db.begin_write()?;
+        {
+            let mut n2m = write.open_table(NODEID_TO_META)?;
+            let mut p2n = write.open_table(PATH_TO_NODEID)?;
+            for path in node_paths {
+                p2n.remove(path.as_str())?;
+            }
+            for node_id in node_ids {
+                n2m.remove(node_id)?;
+            }
+        }
+        write.commit()?;
+        Ok(())
+    })
+    .expect("wipe node projection");
 }
 
 #[test]
@@ -140,4 +181,24 @@ fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
         .expect("rebuild");
 
     assert!(!root.join("legacy/orphan.md").exists());
+}
+
+#[test]
+fn rebuild_projection_recovers_when_node_projection_is_missing() {
+    let (dir, repo) = new_repo();
+    repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
+        .expect("create dir");
+    seed_file(repo.as_ref(), "notes/sub/a.md", "ledger");
+    wipe_node_projection(repo.as_ref());
+
+    let root = dir.path().join("vault").join("default");
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    sync.rebuild_projection_local_repo("default")
+        .expect("rebuild from ledger facts");
+
+    assert!(root.join("notes/sub").is_dir());
+    assert_eq!(
+        std::fs::read_to_string(root.join("notes/sub/a.md")).expect("read canonical doc"),
+        "ledger"
+    );
 }
