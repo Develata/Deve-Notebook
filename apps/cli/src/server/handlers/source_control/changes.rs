@@ -12,6 +12,7 @@ pub async fn handle_get_changes(
     session: &mut WsSession,
     request_id: Option<String>,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     if session.active_branch.is_some() {
         let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
             Ok(scope) => scope,
@@ -21,6 +22,7 @@ pub async fn handle_get_changes(
             request_id,
             repo_id: Some(scope.repo_id),
             branch: scope.branch,
+            scope_nonce,
             staged: vec![],
             unstaged: vec![],
         });
@@ -52,6 +54,7 @@ pub async fn handle_get_changes(
         request_id,
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
+        scope_nonce,
         staged,
         unstaged,
     });

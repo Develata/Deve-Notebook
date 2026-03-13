@@ -43,6 +43,7 @@ pub async fn handle_get_commit_history(
     request_id: String,
     limit: u32,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -54,6 +55,7 @@ pub async fn handle_get_commit_history(
                 request_id: Some(request_id),
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce,
                 commits,
             });
         }
@@ -73,6 +75,7 @@ pub async fn handle_get_commit_diff(
     commit_a: Option<String>,
     commit_b: String,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -84,6 +87,7 @@ pub async fn handle_get_commit_diff(
                 request_id: Some(request_id),
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce,
                 diffs,
             });
         }

@@ -89,6 +89,7 @@ pub fn handle_sc_or_remaining<F>(
         signals.active_branch,
         signals.pending_branch_switch,
         signals.pending_repo_switch,
+        signals.current_scope_nonce,
         schedule_refresh,
         ws,
     ) {

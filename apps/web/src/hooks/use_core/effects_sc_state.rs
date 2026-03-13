@@ -26,40 +26,75 @@ pub(crate) fn clear_repo_scoped_state(signals: ScStateResetSignals) {
     signals.set_commit_diff.set(Vec::new());
 }
 
+pub(crate) fn scoped_ack_matches(scope_nonce: Option<u64>, current_scope_nonce: u64) -> bool {
+    scope_nonce == Some(current_scope_nonce)
+}
+
 pub(crate) fn doc_diff_matches_request(
     request_id: &Option<String>,
     expected_request_id: Option<String>,
+    scope_nonce: Option<u64>,
+    current_scope_nonce: u64,
 ) -> bool {
-    match request_id.as_deref() {
-        Some(request_id) => expected_request_id.as_deref() == Some(request_id),
-        None => expected_request_id.is_none(),
-    }
+    scoped_request_matches(
+        request_id,
+        expected_request_id,
+        scope_nonce,
+        current_scope_nonce,
+    )
 }
 
 pub(crate) fn changes_list_matches_request(
     request_id: &Option<String>,
     expected_request_id: Option<String>,
+    scope_nonce: Option<u64>,
+    current_scope_nonce: u64,
 ) -> bool {
-    match request_id.as_deref() {
-        Some(request_id) => expected_request_id.as_deref() == Some(request_id),
-        None => expected_request_id.is_none(),
-    }
+    scoped_request_matches(
+        request_id,
+        expected_request_id,
+        scope_nonce,
+        current_scope_nonce,
+    )
 }
 
 pub(crate) fn commit_history_matches_request(
     request_id: &Option<String>,
     expected_request_id: Option<String>,
+    scope_nonce: Option<u64>,
+    current_scope_nonce: u64,
 ) -> bool {
-    request_id
-        .as_deref()
-        .is_some_and(|request_id| expected_request_id.as_deref() == Some(request_id))
+    scoped_request_matches(
+        request_id,
+        expected_request_id,
+        scope_nonce,
+        current_scope_nonce,
+    )
 }
 
 pub(crate) fn commit_diff_matches_request(
     request_id: &Option<String>,
     expected_request_id: Option<String>,
+    scope_nonce: Option<u64>,
+    current_scope_nonce: u64,
 ) -> bool {
-    request_id
-        .as_deref()
-        .is_some_and(|request_id| expected_request_id.as_deref() == Some(request_id))
+    scoped_request_matches(
+        request_id,
+        expected_request_id,
+        scope_nonce,
+        current_scope_nonce,
+    )
+}
+
+fn scoped_request_matches(
+    request_id: &Option<String>,
+    expected_request_id: Option<String>,
+    scope_nonce: Option<u64>,
+    current_scope_nonce: u64,
+) -> bool {
+    scope_nonce == Some(current_scope_nonce)
+        && match request_id.as_deref() {
+            Some(request_id) => expected_request_id.as_deref() == Some(request_id),
+            None => expected_request_id.is_none(),
+        }
 }

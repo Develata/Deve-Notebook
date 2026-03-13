@@ -14,6 +14,7 @@ pub mod diff_session;
 pub mod effects;
 pub mod effects_msg;
 pub mod effects_sc;
+mod effects_sc_apply;
 mod effects_sc_scope;
 mod effects_sc_state;
 pub mod effects_switch;

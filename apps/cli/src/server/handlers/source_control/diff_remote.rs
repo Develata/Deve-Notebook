@@ -15,6 +15,7 @@ pub(super) async fn handle_remote_diff(
     request_id: String,
     target: ScPathTarget,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
@@ -59,6 +60,7 @@ pub(super) async fn handle_remote_diff(
         request_id: Some(request_id),
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
+        scope_nonce,
         path,
         old_content,
         new_content,

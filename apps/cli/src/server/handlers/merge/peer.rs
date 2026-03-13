@@ -42,7 +42,15 @@ pub(super) async fn handle_merge_peer(
             write_merged_content(state, ch, &local_scope, doc_id, &content);
         }
         Ok(MergeResult::Conflict { local, remote, .. }) => {
-            send_merge_conflict(state, ch, &local_scope, doc_id, local, remote);
+            send_merge_conflict(
+                state,
+                ch,
+                &local_scope,
+                doc_id,
+                local,
+                remote,
+                Some(session.scope_nonce()),
+            );
         }
         Err(e) => errors::request_failed(ch, format!("Merge failed: {}", e)),
     }
@@ -108,6 +116,7 @@ fn send_merge_conflict(
     doc_id: DocId,
     local: String,
     remote: String,
+    scope_nonce: Option<u64>,
 ) {
     let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id) else {
         return;
@@ -117,6 +126,7 @@ fn send_merge_conflict(
         request_id: None,
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
+        scope_nonce,
         path,
         old_content: local,
         new_content: remote,

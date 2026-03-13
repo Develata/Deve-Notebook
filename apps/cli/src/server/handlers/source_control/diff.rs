@@ -22,6 +22,7 @@ pub async fn handle_get_doc_diff(
     request_id: String,
     target: ScPathTarget,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     if session.active_branch.is_some() {
         remote::handle_remote_diff(state, ch, session, request_id, target).await;
         return;
@@ -53,6 +54,7 @@ pub async fn handle_get_doc_diff(
         request_id: Some(request_id),
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
+        scope_nonce,
         path: normalized,
         old_content,
         new_content,

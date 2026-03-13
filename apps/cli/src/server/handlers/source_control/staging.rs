@@ -12,6 +12,7 @@ pub async fn handle_stage_file(
     session: &mut WsSession,
     target: ScPathTarget,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -23,6 +24,7 @@ pub async fn handle_stage_file(
             ch.unicast(ServerMessage::StageAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce,
                 path,
             });
         }
@@ -40,6 +42,7 @@ pub async fn handle_unstage_file(
     session: &mut WsSession,
     target: ScPathTarget,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -51,6 +54,7 @@ pub async fn handle_unstage_file(
             ch.unicast(ServerMessage::UnstageAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce,
                 path,
             });
         }

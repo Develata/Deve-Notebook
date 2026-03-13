@@ -15,6 +15,7 @@ pub async fn handle_discard_file(
     session: &mut WsSession,
     target: ScPathTarget,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -26,6 +27,7 @@ pub async fn handle_discard_file(
             ch.unicast(ServerMessage::DiscardAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce,
                 path: path.clone(),
             });
             super::changes::handle_get_changes(state, ch, session, None).await;
