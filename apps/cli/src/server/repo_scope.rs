@@ -128,14 +128,21 @@ fn resolve_repo_name_from_session(
 ) -> Result<Option<String>> {
     if session.active_branch.is_none() {
         if let Some(repo_name) = session.active_repo.clone() {
-            if state
-                .repo
-                .get_repo_info_for(None, Some(&repo_name))
-                .ok()
-                .flatten()
-                .is_some()
-            {
-                return Ok(Some(repo_name));
+            if let Some(info) = state.repo.get_repo_info_for(None, Some(&repo_name))? {
+                if session.active_repo_id.is_none() || session.active_repo_id == Some(info.uuid) {
+                    return Ok(Some(repo_name));
+                }
+                if let Some(repo_id) = session.active_repo_id
+                    && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?
+                {
+                    tracing::warn!(
+                        "Recovering local repo name from mismatched UUID: repo_id={}, stale_name={:?}, resolved_name={}",
+                        repo_id,
+                        session.active_repo,
+                        resolved
+                    );
+                    return Ok(Some(resolved));
+                }
             }
             if let Some(repo_id) = session.active_repo_id
                 && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?
