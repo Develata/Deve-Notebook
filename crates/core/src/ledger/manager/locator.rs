@@ -76,7 +76,10 @@ impl RepoManager {
                     .ok_or_else(|| {
                         anyhow::anyhow!("Local repo not found for name {}", normalized)
                     })?;
-                Some(normalized.to_string())
+                Some(
+                    self.resolve_local_repo_stem(normalized)?
+                        .unwrap_or_else(|| normalized.to_string()),
+                )
             }
             None => None,
         };

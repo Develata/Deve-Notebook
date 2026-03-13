@@ -131,8 +131,15 @@ fn resolve_repo_name_from_session(
 ) -> Result<Option<String>> {
     if session.active_branch.is_none() {
         if let Some(repo_name) = session.active_repo.clone() {
-            if let Ok(Some(_)) = state.repo.get_repo_info_for(None, Some(&repo_name)) {
-                return Ok(Some(repo_name));
+            if let Ok(canonical) = state.repo.resolve_local_repo_name(None, Some(&repo_name)) {
+                if repo_name != canonical {
+                    tracing::warn!(
+                        "Recovering local repo selector from alias: stale_name={}, resolved_name={}",
+                        repo_name,
+                        canonical
+                    );
+                }
+                return Ok(Some(canonical));
             }
             if let Some(repo_id) = session.active_repo_id
                 && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?

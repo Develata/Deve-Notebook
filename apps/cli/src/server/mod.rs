@@ -53,6 +53,8 @@ mod rate_limit;
 mod repo_scope;
 #[cfg(test)]
 mod repo_scope_test;
+#[cfg(test)]
+mod repo_scope_local_alias_test;
 mod router;
 pub mod security;
 pub mod session;
