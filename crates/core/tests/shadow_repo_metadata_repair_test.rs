@@ -103,7 +103,7 @@ fn init_repairs_uuid_shadow_path_and_metadata() {
 }
 
 #[test]
-fn local_catalog_repair_cascades_to_legacy_uuid_shadow_catalog() {
+fn local_catalog_repair_leaves_irrecoverable_legacy_uuid_shadow_as_uuid_selector() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
@@ -140,12 +140,12 @@ fn local_catalog_repair_cascades_to_legacy_uuid_shadow_catalog() {
     assert_eq!(
         main.list_repos(Some(&peer_id))
             .expect("list repaired shadows"),
-        vec!["wiki".to_string()]
+        vec![wiki_info.uuid.to_string()]
     );
     assert!(
         main.remotes_dir()
             .join(peer_id.to_filename())
-            .join("wiki.redb")
+            .join(format!("{}.redb", wiki_info.uuid))
             .exists()
     );
 }
