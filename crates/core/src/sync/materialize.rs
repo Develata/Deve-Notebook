@@ -2,7 +2,6 @@ use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;
 use crate::ledger::RepoManager;
-use crate::ledger::listing::RepoListing;
 use anyhow::Result;
 use std::path::Path;
 
@@ -12,7 +11,7 @@ pub(super) fn prepare_local_workspaces(
     _vault_root: &Path,
     guard: &PersistGuard,
 ) -> Result<()> {
-    for repo_name in repo.list_repos(None)? {
+    for repo_name in repo.list_local_repo_names_for_execution()? {
         materialize_local_repo(repo, guard, &repo_name)?;
     }
     Ok(())

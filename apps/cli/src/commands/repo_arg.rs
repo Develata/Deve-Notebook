@@ -1,6 +1,5 @@
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
 
 pub(crate) fn resolve_local_repo_arg(repo: &RepoManager, selector: Option<&str>) -> Result<String> {
     let repo_id = selector.and_then(|value| uuid::Uuid::parse_str(value).ok());
@@ -14,7 +13,7 @@ pub(crate) fn resolve_local_repo_args(
 ) -> Result<Vec<String>> {
     match selector {
         Some(selector) => Ok(vec![resolve_local_repo_arg(repo, Some(selector))?]),
-        None => repo.list_repos(None),
+        None => repo.list_local_repo_names_for_execution(),
     }
 }
 

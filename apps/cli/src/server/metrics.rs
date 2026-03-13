@@ -11,7 +11,6 @@
 //! - 其他平台: 安全降级 (CPU=0, 内存=0)
 
 use crate::server::AppState;
-use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -79,7 +78,7 @@ fn storage_metrics(state: &AppState) -> (u64, u32) {
 fn local_doc_count(state: &AppState) -> anyhow::Result<u32> {
     // Invariant: doc_count 统计所有本地 repo 的文档总数，而不是默认主库的投影。
     let mut total = 0u32;
-    for repo_name in state.repo.list_repos(None)? {
+    for repo_name in state.repo.list_local_repo_names_for_execution()? {
         let count = state.repo.list_local_docs(Some(&repo_name))?.len();
         total = total.saturating_add(count as u32);
     }

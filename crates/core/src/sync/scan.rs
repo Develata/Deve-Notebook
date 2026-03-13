@@ -1,5 +1,4 @@
 use crate::ledger::RepoManager;
-use crate::ledger::listing::RepoListing;
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::path_to_forward_slash;
@@ -14,7 +13,7 @@ use walkdir::WalkDir;
 /// 全量扫描所有本地 repo 工作区：`vault/<repo_name>/...`
 pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Result<()> {
     info!("SyncScan: Starting full scan of {:?}", vault_root);
-    for repo_name in repo.list_repos(None)? {
+    for repo_name in repo.list_local_repo_names_for_execution()? {
         scan_local_repo(repo, vfs, &repo_name)?;
     }
     info!("SyncScan: Scan complete.");
