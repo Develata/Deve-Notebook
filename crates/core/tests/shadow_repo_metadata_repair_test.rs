@@ -50,3 +50,41 @@ fn remote_catalog_repairs_legacy_uuid_shadow_metadata() {
             .exists()
     );
 }
+
+#[test]
+fn init_repairs_remote_shadow_catalog_before_first_listing() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let local = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:test:wiki"))
+        .expect("init local companion");
+    let info = local
+        .get_repo_info()
+        .expect("local repo info")
+        .expect("local repo exists");
+    let peer_id = PeerId::new("peer-remote");
+
+    repo.ensure_shadow_db(&peer_id, &info.uuid)
+        .expect("create legacy uuid shadow");
+    assert!(
+        repo.remotes_dir()
+            .join(peer_id.to_filename())
+            .join(format!("{}.redb", info.uuid))
+            .exists()
+    );
+
+    let repaired = RepoManager::init(&ledger_dir, 10, None, None).expect("re-init repo");
+    assert_eq!(
+        repaired
+            .list_repos(Some(&peer_id))
+            .expect("list repaired shadows"),
+        vec!["wiki".to_string()]
+    );
+    assert!(
+        repaired
+            .remotes_dir()
+            .join(peer_id.to_filename())
+            .join("wiki.redb")
+            .exists()
+    );
+}

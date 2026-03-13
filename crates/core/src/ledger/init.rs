@@ -29,7 +29,7 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
-use super::database::register_database;
+use super::database::{cached_or_create_database, register_database};
 use super::node_check;
 use super::schema::*;
 use super::source_control;
@@ -86,7 +86,7 @@ pub fn init(
 
         if db_path.exists() {
             // 尝试打开现有库检查 Metadata
-            let db = Database::create(&db_path)
+            let db = cached_or_create_database(&db_path)
                 .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", db_path))?;
 
             // 检查 URL
@@ -109,7 +109,7 @@ pub fn init(
                         };
 
                         if match_url {
-                            local_db = Arc::new(db);
+                            local_db = db;
                             break;
                         } else {
                             // URL 不匹配，这是另一个同名仓库 -> 继续循环尝试下一个名字
@@ -127,10 +127,8 @@ pub fn init(
             }
         } else {
             // 文件不存在，创建新库
-            local_db = Arc::new(
-                Database::create(&db_path)
-                    .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?,
-            );
+            local_db = cached_or_create_database(&db_path)
+                .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?;
             is_new_repo = true;
             break;
         }
@@ -179,7 +177,7 @@ pub fn init(
 
     super::RepoManager::repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref())?;
 
-    Ok(RepoManager {
+    let repo = RepoManager {
         ledger_dir,
         local_db,
         local_repo_name: final_name,
@@ -188,7 +186,9 @@ pub fn init(
         snapshot_depth,
         vault_root: None,
         persist_guard: Arc::new(crate::sync::persist_guard::PersistGuard::new()),
-    })
+    };
+    repo.repair_remote_repo_catalogs()?;
+    Ok(repo)
 }
 
 /// 初始化本地数据库的核心表

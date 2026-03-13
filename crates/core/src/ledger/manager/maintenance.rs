@@ -12,6 +12,27 @@ impl RepoManager {
         )
     }
 
+    pub fn repair_remote_repo_catalogs(&self) -> Result<()> {
+        let remotes_dir = self.remotes_dir();
+        if !remotes_dir.exists() {
+            return Ok(());
+        }
+        for entry in std::fs::read_dir(remotes_dir)? {
+            let path = entry?.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            if name.starts_with('.') || name.is_empty() {
+                continue;
+            }
+            self.scan_remote_repo_entries(&PeerId::new(name))?;
+        }
+        Ok(())
+    }
+
     /// 重置指定 Shadow 文档的所有历史操作 (物理清空)
     ///
     /// **用途**: 当接收到 P2P Snapshot 时，旧的增量日志失效，需清空并重写。
