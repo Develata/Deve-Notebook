@@ -4,15 +4,15 @@ use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
 use tempfile::TempDir;
 
-fn read_repo_info(db: &redb::Database) -> deve_core::ledger::RepoInfo {
+fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
     let read = db.begin_read().expect("read txn");
     let table = read.open_table(REPO_METADATA).expect("repo metadata");
-    let raw = table.get(&0).expect("read metadata").expect("metadata row");
-    bincode::deserialize(raw.value()).expect("deserialize repo info")
+    let raw = table.get(&0).expect("read metadata")?;
+    Some(bincode::deserialize(raw.value()).expect("deserialize repo info"))
 }
 
 #[test]
-fn remote_catalog_repairs_legacy_uuid_shadow_metadata() {
+fn remote_catalog_displays_legacy_uuid_shadow_without_writing_local_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let local = RepoManager::init(
@@ -39,20 +39,17 @@ fn remote_catalog_repairs_legacy_uuid_shadow_metadata() {
     let handle = repo
         .open_database(Some(&peer_id), "wiki")
         .expect("open repaired shadow");
-    let repaired = read_repo_info(&handle.db);
-    assert_eq!(repaired.uuid, info.uuid);
-    assert_eq!(repaired.name, "wiki");
-    assert_eq!(repaired.url.as_deref(), Some("urn:test:wiki"));
+    assert_eq!(read_repo_info(&handle.db), None);
     assert!(
         repo.remotes_dir()
             .join(peer_id.to_filename())
-            .join("wiki.redb")
+            .join(format!("{}.redb", info.uuid))
             .exists()
     );
 }
 
 #[test]
-fn init_repairs_remote_shadow_catalog_before_first_listing() {
+fn init_keeps_uuid_shadow_path_while_restoring_display_name() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
@@ -84,7 +81,7 @@ fn init_repairs_remote_shadow_catalog_before_first_listing() {
         repaired
             .remotes_dir()
             .join(peer_id.to_filename())
-            .join("wiki.redb")
+            .join(format!("{}.redb", info.uuid))
             .exists()
     );
 }

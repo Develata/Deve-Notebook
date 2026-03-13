@@ -12,6 +12,11 @@ pub(crate) struct RemoteRepoEntry {
     pub info: Option<RepoInfo>,
 }
 
+struct RemoteRepoCatalogInfo {
+    info: RepoInfo,
+    stable_catalog: bool,
+}
+
 impl RepoManager {
     fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
@@ -29,10 +34,13 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let Some(info) = self.repaired_remote_repo_info(&path, &stem)? else {
+            let Some(repair) = self.repaired_remote_repo_info(&path, &stem)? else {
                 continue;
             };
-            let desired = self.allocate_remote_repo_path(peer_id, &info)?;
+            if !repair.stable_catalog {
+                continue;
+            }
+            let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
             if desired != path {
                 relocate_database_path(&path, &desired);
                 std::fs::rename(&path, &desired)?;
@@ -68,17 +76,25 @@ impl RepoManager {
                 .cloned()
             {
                 Some(info) => Some(info),
-                None => self.repaired_remote_repo_info(&path, &stem)?,
+                None => self
+                    .repaired_remote_repo_info(&path, &stem)?
+                    .map(|repair| repair.info),
             };
             repos.push(RemoteRepoEntry { path, stem, info });
         }
         Ok(repos)
     }
 
-    fn repaired_remote_repo_info(&self, path: &Path, stem: &str) -> Result<Option<RepoInfo>> {
+    fn repaired_remote_repo_info(
+        &self,
+        path: &Path,
+        stem: &str,
+    ) -> Result<Option<RemoteRepoCatalogInfo>> {
         let original = Self::read_repo_info_from_path(path)?;
+        let mut stable_catalog = original.is_some();
         let Some(mut info) = original.clone().or_else(|| {
             uuid::Uuid::parse_str(stem).ok().map(|repo_id| {
+                stable_catalog = false;
                 self.get_local_repo_info_by_id(repo_id)
                     .ok()
                     .flatten()
@@ -101,11 +117,14 @@ impl RepoManager {
                 .and_then(|local| local.url)
                 .or_else(|| Some(format!("urn:uuid:{}", info.uuid)));
         }
-        if should_write_missing_metadata || original.as_ref() != Some(&info) {
+        if stable_catalog && (should_write_missing_metadata || original.as_ref() != Some(&info)) {
             let db = cached_database(path)?;
             Self::write_repo_info_to_db(db.as_ref(), &info)?;
         }
-        Ok(Some(info))
+        Ok(Some(RemoteRepoCatalogInfo {
+            info,
+            stable_catalog,
+        }))
     }
 
     pub(crate) fn resolve_remote_repo_entry(
