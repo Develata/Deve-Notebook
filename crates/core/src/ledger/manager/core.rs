@@ -36,45 +36,15 @@ impl RepoManager {
     where
         F: FnOnce(&redb::Database) -> Result<R>,
     {
-        // 1. Check Main Repo, strip extension if present
-        let name = repo_name.trim_end_matches(".redb");
-
-        if name == self.local_repo_name {
-            return f(self.local_db.as_ref());
+        let selector = repo_name.trim_end_matches(".redb");
+        if let Some(stem) = self.resolve_local_repo_stem(selector)? {
+            return self.run_on_local_repo_stem(&stem, f);
         }
-
-        // 2. Check Cache
-        {
-            let guard = self.extra_local_dbs.read().unwrap();
-            if let Some(db) = guard.get(name) {
-                return f(db);
-            }
+        self.repair_local_repo_catalog()?;
+        if let Some(stem) = self.resolve_local_repo_stem(selector)? {
+            return self.run_on_local_repo_stem(&stem, f);
         }
-
-        // 3. Open if not cached
-        let db_path = self.ledger_dir.join("local").join(format!("{}.redb", name));
-        if !db_path.exists() {
-            return Err(anyhow!("Repository not found: {}", name));
-        }
-
-        let db = cached_database(&db_path)?;
-        source_control::init_tables(db.as_ref())?;
-
-        // Cache it
-        {
-            let mut guard = self.extra_local_dbs.write().unwrap();
-            if let std::collections::hash_map::Entry::Vacant(e) = guard.entry(name.to_string()) {
-                e.insert(db);
-            }
-        }
-
-        // 4. Run closure
-        let guard = self.extra_local_dbs.read().unwrap();
-        if let Some(db) = guard.get(name) {
-            f(db.as_ref())
-        } else {
-            Err(anyhow!("Failed into cache repo"))
-        }
+        Err(anyhow!("Repository not found: {}", selector))
     }
 
     /// 获取主仓库名称
@@ -122,5 +92,71 @@ impl RepoManager {
         self.run_on_local_repo_id(repo_id, |db| {
             range::get_ops_in_range(db, start_seq, end_seq)
         })
+    }
+
+    pub(crate) fn run_on_local_repo_stem<F, R>(&self, stem: &str, f: F) -> Result<R>
+    where
+        F: FnOnce(&redb::Database) -> Result<R>,
+    {
+        if stem == self.local_repo_name {
+            return f(self.local_db.as_ref());
+        }
+        {
+            let guard = self.extra_local_dbs.read().unwrap();
+            if let Some(db) = guard.get(stem) {
+                return f(db);
+            }
+        }
+        let db_path = self.ledger_dir.join("local").join(format!("{}.redb", stem));
+        let db = cached_database(&db_path)?;
+        source_control::init_tables(db.as_ref())?;
+        {
+            let mut guard = self.extra_local_dbs.write().unwrap();
+            if let std::collections::hash_map::Entry::Vacant(e) = guard.entry(stem.to_string()) {
+                e.insert(db);
+            }
+        }
+        let guard = self.extra_local_dbs.read().unwrap();
+        guard
+            .get(stem)
+            .map(|db| f(db.as_ref()))
+            .transpose()?
+            .ok_or_else(|| anyhow!("Failed into cache repo"))
+    }
+
+    pub(crate) fn resolve_local_repo_stem(&self, selector: &str) -> Result<Option<String>> {
+        if selector == self.local_repo_name {
+            return Ok(Some(self.local_repo_name.clone()));
+        }
+        let local_dir = self.ledger_dir.join("local");
+        if !local_dir.exists() {
+            return Ok(None);
+        }
+        let mut by_alias = None::<String>;
+        for entry in std::fs::read_dir(local_dir)? {
+            let path = entry?.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
+                continue;
+            }
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .to_string();
+            if stem == selector {
+                return Ok(Some(stem));
+            }
+            if Self::read_repo_info_from_path(&path)?
+                .as_ref()
+                .map(|info| info.name.as_str())
+                == Some(selector)
+            {
+                if by_alias.as_ref().is_some_and(|current| current != &stem) {
+                    return Err(anyhow!("Ambiguous local repository selector: {}", selector));
+                }
+                by_alias = Some(stem);
+            }
+        }
+        Ok(by_alias)
     }
 }

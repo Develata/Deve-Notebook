@@ -1,6 +1,6 @@
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use deve_core::models::{LedgerEntry, NodeId, Op, PeerId, RepoId, RepoType};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
@@ -20,6 +20,15 @@ fn new_local_repos() -> (TempDir, RepoManager, RepoId, String) {
         .expect("read extra repo info")
         .expect("extra repo info present");
     (dir, main, extra_info.uuid, extra_info.name)
+}
+
+fn write_repo_info(db: &redb::Database, info: &RepoInfo) {
+    let txn = db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
+        .expect("write metadata");
+    txn.commit().expect("commit");
 }
 
 fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::DocId {
@@ -98,4 +107,40 @@ fn sync_snapshot_uses_requested_local_repo_id() {
         .decrypt(&response.ops[0])
         .expect("decrypt snapshot entry");
     assert_eq!(entry.doc_id, Some(doc_id));
+}
+
+#[test]
+fn local_repo_reads_recover_from_stale_metadata_name_selector() {
+    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    write_repo_info(
+        extra_db.db.as_ref(),
+        &RepoInfo {
+            uuid: extra_id,
+            name: "legacy-wiki".into(),
+            url: Some("urn:wiki".into()),
+        },
+    );
+
+    let info = repo
+        .get_repo_info_for(None, Some("legacy-wiki"))
+        .expect("lookup repo info")
+        .expect("repo info");
+    assert_eq!(info.uuid, extra_id);
+
+    let uuid = repo
+        .run_on_local_repo("legacy-wiki", |db| {
+            let txn = db.begin_read()?;
+            let table = txn.open_table(REPO_METADATA)?;
+            let info = table
+                .get(&0)?
+                .map(|bytes| {
+                    bincode::deserialize::<RepoInfo>(bytes.value()).expect("deserialize repo info")
+                })
+                .map(|info| info.uuid);
+            Ok(info)
+        })
+        .expect("run on stale alias")
+        .expect("uuid");
+    assert_eq!(uuid, extra_id);
 }

@@ -79,11 +79,22 @@ impl RepoManager {
         if let Some(peer_id) = branch {
             return self.read_remote_repo_info(peer_id, name);
         }
-        self.repair_local_repo_catalog()?;
-        if name == self.local_repo_name {
-            return Self::read_repo_info_from_db(&self.local_db);
+        if let Some(stem) = self.resolve_local_repo_stem(name)? {
+            return if stem == self.local_repo_name {
+                Self::read_repo_info_from_db(&self.local_db)
+            } else {
+                self.run_on_local_repo_stem(&stem, Self::read_repo_info_from_db)
+            };
         }
-        self.run_on_local_repo(name, Self::read_repo_info_from_db)
+        self.repair_local_repo_catalog()?;
+        if let Some(stem) = self.resolve_local_repo_stem(name)? {
+            return if stem == self.local_repo_name {
+                Self::read_repo_info_from_db(&self.local_db)
+            } else {
+                self.run_on_local_repo_stem(&stem, Self::read_repo_info_from_db)
+            };
+        }
+        Ok(None)
     }
 
     fn read_remote_repo_info(&self, peer_id: &PeerId, repo_name: &str) -> Result<Option<RepoInfo>> {
