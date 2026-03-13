@@ -39,6 +39,16 @@ fn clear_degraded(
     set_banner.set(None);
 }
 
+fn reset_repo_runtime(
+    last_repo: &Rc<RefCell<Option<String>>>,
+    set_identity: WriteSignal<Option<StoredPeerIdentity>>,
+    set_repo_vector: WriteSignal<VersionVector>,
+) {
+    last_repo.borrow_mut().take();
+    set_identity.set(None);
+    set_repo_vector.set(VersionVector::new());
+}
+
 /// 初始化浏览器身份与 repo 级向量缓存。
 /// 仅当 repo_id 是有效 UUID 时才执行，避免使用 "default" 等字符串。
 pub fn init_storage_runtime(
@@ -55,11 +65,13 @@ pub fn init_storage_runtime(
     let set_sync_banner = signals.set_sync_banner;
 
     Effect::new(move |_| {
+        let current_scope = current_repo_id.get();
         // 必须等到有有效的 UUID 格式的 repo_id
-        let Some(repo_id) = repo_scope(current_repo_id.get()) else {
+        let Some(repo_id) = repo_scope(current_scope.clone()) else {
+            reset_repo_runtime(&last_repo, set_identity, set_repo_vector);
             leptos::logging::log!(
                 "Storage: waiting for valid repo UUID, current: {:?}",
-                current_repo_id.get()
+                current_scope
             );
             return;
         };
@@ -146,4 +158,21 @@ pub fn init_storage_runtime(
     });
 
     (identity, repo_vector)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::repo_scope;
+
+    #[test]
+    fn repo_scope_rejects_non_uuid_strings() {
+        assert_eq!(repo_scope(Some("default".into())), None);
+        assert_eq!(repo_scope(Some(String::new())), None);
+    }
+
+    #[test]
+    fn repo_scope_accepts_uuid_strings() {
+        let repo_id = uuid::Uuid::new_v4().to_string();
+        assert_eq!(repo_scope(Some(repo_id.clone())), Some(repo_id));
+    }
 }
