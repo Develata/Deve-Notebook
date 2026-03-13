@@ -8,6 +8,7 @@ mod message_control;
 mod message_dispatch;
 mod message_dispatch_gate;
 mod message_protocol;
+mod message_refresh;
 mod message_repo_scope;
 mod message_scope;
 mod message_sync;

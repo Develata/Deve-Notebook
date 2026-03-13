@@ -66,7 +66,9 @@ fn resolve_remote_content(
     target: &ScPathTarget,
 ) -> Option<(DocId, String)> {
     let db = session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))?;
-    let doc_id = target.doc_id.or_else(|| resolve_runtime_doc_id(&db.db, &target.path))?;
+    let doc_id = target
+        .doc_id
+        .or_else(|| resolve_runtime_doc_id(&db.db, &target.path))?;
     let ops = deve_core::ledger::ops::get_ops_from_db(&db.db, doc_id).ok()?;
     let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
     Some((doc_id, deve_core::state::reconstruct_content(&entries)))

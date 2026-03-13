@@ -31,7 +31,8 @@ fn remote_catalog_repairs_legacy_uuid_shadow_metadata() {
     repo.ensure_shadow_db(&peer_id, &info.uuid)
         .expect("create legacy uuid shadow");
     assert_eq!(
-        repo.list_repos(Some(&peer_id)).expect("list repaired shadows"),
+        repo.list_repos(Some(&peer_id))
+            .expect("list repaired shadows"),
         vec!["wiki".to_string()]
     );
 

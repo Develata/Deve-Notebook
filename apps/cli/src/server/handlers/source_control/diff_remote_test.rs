@@ -77,11 +77,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
     repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/b.md"))?;
     repo.commit_staged_in_repo(&selector, "rename")?;
 
-    let content = local_counterpart_content(
-        &repo,
-        doc_id,
-        Some(repo.local_repo_name()),
-    )?;
+    let content = local_counterpart_content(&repo, doc_id, Some(repo.local_repo_name()))?;
     assert_eq!(content.as_deref(), Some("hello renamed"));
     Ok(())
 }
