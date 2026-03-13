@@ -29,7 +29,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             version,
             delta_ops,
         } => {
-            if !matches_current_scope(ctx, Some(repo_id), branch) {
+            if !matches_current_scope(ctx, Some(repo_id), branch.clone()) {
                 return;
             }
             if msg_doc_id != ctx.doc_id {
@@ -38,7 +38,9 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             if request_id != ctx.open_request_id.get_untracked() {
                 return;
             }
-            snapshot::handle_snapshot(ctx, request_id, content, base_seq, version, delta_ops);
+            snapshot::handle_snapshot(
+                ctx, repo_id, branch, request_id, content, base_seq, version, delta_ops,
+            );
         }
         ServerMessage::History {
             repo_id,

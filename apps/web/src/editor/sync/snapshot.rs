@@ -2,9 +2,12 @@
 //! Snapshot 消息处理: 接收文档快照并渐进式应用 delta ops
 
 use super::context::SyncContext;
+use super::scope::matches_scope;
 use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use crate::editor::ffi::{applyRemoteContent, applyRemoteOpsBatch};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
+use crate::hooks::use_core::PendingBranchTarget;
+use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 
@@ -21,6 +24,8 @@ type ProgressHandler = std::rc::Rc<dyn Fn(usize, usize, f64)>;
 /// - local_version 推进到最新 seq
 pub(super) fn handle_snapshot(
     ctx: &SyncContext,
+    repo_id: RepoId,
+    branch: Option<PeerId>,
     request_id: u64,
     new_content: String,
     base_seq: u64,
@@ -28,6 +33,11 @@ pub(super) fn handle_snapshot(
     delta_ops: Vec<ConfirmedOp>,
 ) {
     let load_start = now_ms();
+    let open_request_id = ctx.open_request_id;
+    let current_repo_id = ctx.current_repo_id;
+    let pending_repo_switch = ctx.pending_repo_switch;
+    let active_branch = ctx.active_branch;
+    let pending_branch_switch = ctx.pending_branch_switch;
 
     leptos::logging::log!(
         "Received Snapshot: {} chars, Base: {}, Ver: {}, Pending: {}",
@@ -51,12 +61,31 @@ pub(super) fn handle_snapshot(
         return;
     }
 
-    let apply_batch = build_apply_batch(ctx, request_id);
+    let apply_batch = build_apply_batch(
+        ctx.set_local_version,
+        ctx.set_history,
+        open_request_id,
+        current_repo_id,
+        pending_repo_switch,
+        active_branch,
+        pending_branch_switch,
+        repo_id,
+        branch.clone(),
+        request_id,
+    );
     let on_progress = build_progress_handler(ctx.set_load_progress, ctx.set_load_eta_ms);
     let finish = LoadFinish::from_ctx(ctx, version, load_start, request_id);
-    let open_request_id = ctx.open_request_id;
     let on_done = std::rc::Rc::new(move || {
-        if open_request_id.get_untracked() == request_id {
+        if snapshot_request_matches(
+            open_request_id.get_untracked(),
+            request_id,
+            current_repo_id.get_untracked(),
+            pending_repo_switch.get_untracked(),
+            active_branch.get_untracked(),
+            pending_branch_switch.get_untracked(),
+            repo_id,
+            branch.clone(),
+        ) {
             finish.clone().complete();
         }
     });
@@ -74,12 +103,29 @@ pub(super) fn handle_snapshot(
     );
 }
 
-fn build_apply_batch(ctx: &SyncContext, request_id: u64) -> BatchHandler {
-    let open_request_id = ctx.open_request_id;
-    let set_local_version = ctx.set_local_version;
-    let set_history = ctx.set_history;
+fn build_apply_batch(
+    set_local_version: WriteSignal<u64>,
+    set_history: WriteSignal<Vec<(u64, deve_core::models::Op)>>,
+    open_request_id: ReadSignal<u64>,
+    current_repo_id: ReadSignal<Option<String>>,
+    pending_repo_switch: ReadSignal<Option<String>>,
+    active_branch: ReadSignal<Option<PeerId>>,
+    pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    repo_id: RepoId,
+    branch: Option<PeerId>,
+    request_id: u64,
+) -> BatchHandler {
     std::rc::Rc::new(move |batch: &[ConfirmedOp]| {
-        if open_request_id.get_untracked() != request_id {
+        if !snapshot_request_matches(
+            open_request_id.get_untracked(),
+            request_id,
+            current_repo_id.get_untracked(),
+            pending_repo_switch.get_untracked(),
+            active_branch.get_untracked(),
+            pending_branch_switch.get_untracked(),
+            repo_id,
+            branch.clone(),
+        ) {
             return;
         }
         let ops_only: Vec<_> = batch.iter().map(|entry| entry.op.clone()).collect();
@@ -111,4 +157,82 @@ fn build_progress_handler(
             set_load_eta_ms.set(remaining as u64);
         }
     })
+}
+
+fn snapshot_request_matches(
+    open_request_id: u64,
+    request_id: u64,
+    current_repo_id: Option<String>,
+    pending_repo_switch: Option<String>,
+    active_branch: Option<PeerId>,
+    pending_branch_switch: Option<PendingBranchTarget>,
+    repo_id: RepoId,
+    branch: Option<PeerId>,
+) -> bool {
+    open_request_id == request_id
+        && matches_scope(
+            current_repo_id,
+            pending_repo_switch,
+            active_branch,
+            pending_branch_switch,
+            Some(repo_id),
+            branch,
+        )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::snapshot_request_matches;
+    use crate::hooks::use_core::PendingBranchTarget;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn snapshot_request_rejects_pending_repo_switch() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(!snapshot_request_matches(
+            7,
+            7,
+            Some(repo_id.to_string()),
+            Some("test".into()),
+            None,
+            None,
+            repo_id,
+            None,
+        ));
+    }
+
+    #[test]
+    fn snapshot_request_rejects_branch_mismatch_even_with_same_request_id() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(!snapshot_request_matches(
+            7,
+            7,
+            Some(repo_id.to_string()),
+            None,
+            Some(PeerId::new("peer-a")),
+            None,
+            repo_id,
+            Some(PeerId::new("peer-b")),
+        ));
+        assert!(!snapshot_request_matches(
+            7,
+            7,
+            Some(repo_id.to_string()),
+            None,
+            Some(PeerId::new("peer-a")),
+            Some(PendingBranchTarget::Local),
+            repo_id,
+            None,
+        ));
+        assert!(snapshot_request_matches(
+            7,
+            7,
+            Some(repo_id.to_string()),
+            None,
+            None,
+            None,
+            repo_id,
+            None,
+        ));
+    }
 }
