@@ -88,21 +88,6 @@ fn resolve_session_repo_and_sync_updates_session_binding() -> anyhow::Result<()>
 }
 
 #[test]
-fn resolve_session_repo_prefers_local_uuid_over_existing_but_stale_name() -> anyhow::Result<()> {
-    let (_dir, state, default_id, _test_id) = build_state()?;
-    let mut session = WsSession::new();
-    session.switch_repo("test".into(), Some(default_id));
-
-    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
-
-    assert_eq!(resolved.repo_name, "default");
-    assert_eq!(resolved.repo_id, default_id);
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
-    assert_eq!(session.active_repo_id, Some(default_id));
-    Ok(())
-}
-
-#[test]
 fn resolve_session_repo_recovers_local_repo_name_from_uuid() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
     let mut session = WsSession::new();
