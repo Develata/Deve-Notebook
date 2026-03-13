@@ -33,6 +33,7 @@ pub fn handle_branch_switched(
         signals.set_tree_nodes.set(Vec::new());
         signals.set_repo_list.set(Vec::new());
         clear_repo_scoped_runtime(signals);
+        request_repo_list(ws, signals);
         request_shadow_list(ws, signals);
     }
 }
@@ -69,6 +70,7 @@ pub fn handle_repo_switched(
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
+        request_repo_listing(ws, signals);
         request_repo_sync_state(ws, signals);
         request_shadow_list(ws, signals);
     }
@@ -156,6 +158,23 @@ fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
     ws.send(ClientMessage::GetPendingOps {
         request_id: pending_ops_request_id,
     });
+}
+
+fn request_repo_list(ws: &WsService, signals: CoreSignals) {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    signals
+        .set_repo_list_request_id
+        .set(Some(request_id.clone()));
+    ws.send(ClientMessage::ListRepos { request_id });
+}
+
+fn request_repo_listing(ws: &WsService, signals: CoreSignals) {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    signals
+        .set_doc_list_request_id
+        .set(Some(request_id.clone()));
+    signals.set_tree_request_id.set(Some(request_id.clone()));
+    ws.send(ClientMessage::ListDocs { request_id });
 }
 
 fn should_request_repo_sync_state(active_branch: Option<PeerId>) -> bool {
