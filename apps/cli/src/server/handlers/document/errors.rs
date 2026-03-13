@@ -14,10 +14,3 @@ pub(super) fn send_doc_error(ch: &DualChannel, context: &str, err: anyhow::Error
         format!("{}: {}", context, err),
     ));
 }
-
-pub(super) fn send_repo_context_invalid(ch: &DualChannel, detail: &str) {
-    ch.send_protocol_error(ServerError::with_detail(
-        ServerErrorCode::ScRepoContextInvalid,
-        detail,
-    ));
-}

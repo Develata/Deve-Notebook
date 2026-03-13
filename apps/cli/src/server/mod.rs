@@ -36,6 +36,8 @@ mod docs_create_test;
 mod docs_dir_copy_test;
 #[cfg(test)]
 mod docs_projection_repair_test;
+#[cfg(test)]
+mod document_remote_scope_test;
 pub mod handlers;
 pub mod mcp;
 pub mod metrics;
@@ -60,6 +62,8 @@ mod source_control_commit_diff_test;
 #[cfg(test)]
 mod source_control_http_test;
 pub mod source_control_proxy;
+#[cfg(test)]
+mod source_control_remote_scope_test;
 #[cfg(test)]
 mod source_control_scope_test;
 #[cfg(test)]

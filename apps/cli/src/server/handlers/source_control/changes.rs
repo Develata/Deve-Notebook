@@ -12,7 +12,7 @@ pub async fn handle_get_changes(
     session: &mut WsSession,
     request_id: Option<String>,
 ) {
-    if session.is_readonly() {
+    if session.active_branch.is_some() {
         let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws(ch, e),

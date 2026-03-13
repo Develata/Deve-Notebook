@@ -86,15 +86,13 @@ fn load_docs(
     repo_name: &str,
     repo_id: RepoId,
 ) -> anyhow::Result<Vec<(deve_core::models::DocId, String)>> {
-    if let Some(handle) =
-        session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))
-    {
-        return deve_core::ledger::node_meta::list_file_docs(&handle.db);
-    }
     if let Some(peer_id) = &session.active_branch {
         return state
             .repo
             .list_docs(&RepoType::Remote(peer_id.clone(), repo_id));
+    }
+    if let Some(handle) = session.active_db_for(None, repo_name, Some(repo_id)) {
+        return deve_core::ledger::node_meta::list_file_docs(&handle.db);
     }
     state.repo.list_local_docs(Some(repo_name))
 }
@@ -105,15 +103,13 @@ fn load_nodes(
     repo_name: &str,
     repo_id: RepoId,
 ) -> anyhow::Result<Vec<(NodeId, NodeMeta)>> {
-    if let Some(handle) =
-        session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))
-    {
-        return node_meta::list_nodes(&handle.db);
-    }
     if let Some(peer_id) = &session.active_branch {
         return state
             .repo
             .list_nodes(&RepoType::Remote(peer_id.clone(), repo_id));
+    }
+    if let Some(handle) = session.active_db_for(None, repo_name, Some(repo_id)) {
+        return node_meta::list_nodes(&handle.db);
     }
     state.repo.list_local_nodes(Some(repo_name))
 }

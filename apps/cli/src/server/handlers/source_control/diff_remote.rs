@@ -4,7 +4,7 @@ use crate::server::handlers::source_control::errors;
 use crate::server::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::ledger::{RepoManager, node_meta};
-use deve_core::models::{DocId, RepoId};
+use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -21,7 +21,7 @@ pub(super) async fn handle_remote_diff(
     };
     let path = deve_core::utils::path::to_forward_slash(&target.path);
     let (doc_id, new_content) =
-        match resolve_remote_content(session, &scope.repo_name, scope.repo_id, &target) {
+        match resolve_remote_content(state, scope.branch.as_ref(), scope.repo_id, &target) {
             Some(content) => content,
             None => {
                 return errors::send_ws_code(
@@ -60,18 +60,30 @@ pub(super) async fn handle_remote_diff(
 }
 
 fn resolve_remote_content(
-    session: &WsSession,
-    repo_name: &str,
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
     repo_id: RepoId,
     target: &ScPathTarget,
 ) -> Option<(DocId, String)> {
-    let db = session.active_db_for(session.active_branch.as_ref(), repo_name, Some(repo_id))?;
-    let doc_id = target
-        .doc_id
-        .or_else(|| resolve_runtime_doc_id(&db.db, &target.path))?;
-    let ops = deve_core::ledger::ops::get_ops_from_db(&db.db, doc_id).ok()?;
-    let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
-    Some((doc_id, deve_core::state::reconstruct_content(&entries)))
+    let peer_id = branch?;
+    state
+        .repo
+        .run_on_shadow_repo_by_id(peer_id, &repo_id, |db| {
+            let doc_id = target
+                .doc_id
+                .or_else(|| resolve_runtime_doc_id(db, &target.path));
+            let Some(doc_id) = doc_id else {
+                return Ok(None);
+            };
+            let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
+            let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
+            Ok(Some((
+                doc_id,
+                deve_core::state::reconstruct_content(&entries),
+            )))
+        })
+        .ok()
+        .flatten()
 }
 
 pub(crate) fn local_counterpart_content(

@@ -22,7 +22,7 @@ pub async fn handle_get_doc_diff(
     request_id: String,
     target: ScPathTarget,
 ) {
-    if session.is_readonly() {
+    if session.active_branch.is_some() {
         remote::handle_remote_diff(state, ch, session, request_id, target).await;
         return;
     }
