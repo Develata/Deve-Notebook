@@ -63,7 +63,13 @@ pub async fn doc_content(
 ) -> impl IntoResponse {
     let doc_id = match parse_doc_id(&q.doc_id) {
         Ok(doc_id) => doc_id,
-        Err(response) => return response,
+        Err(detail) => {
+            return http_error(
+                StatusCode::BAD_REQUEST,
+                ServerErrorCode::RequestFailed,
+                detail,
+            );
+        }
     };
     match Repository::get_doc_content_in_repo(state.repo.as_ref(), &q.repo, doc_id) {
         Ok(content) => content.into_response(),
@@ -81,7 +87,13 @@ pub async fn doc_content_plugin_host(
 ) -> impl IntoResponse {
     let doc_id = match parse_doc_id(&q.doc_id) {
         Ok(doc_id) => doc_id,
-        Err(response) => return response,
+        Err(detail) => {
+            return http_error(
+                StatusCode::BAD_REQUEST,
+                ServerErrorCode::RequestFailed,
+                detail,
+            );
+        }
     };
     match host::repository() {
         Ok(repo) => match repo.get_doc_content_in_repo(&q.repo, doc_id) {
@@ -100,14 +112,10 @@ pub async fn doc_content_plugin_host(
     }
 }
 
-fn parse_doc_id(raw: &str) -> Result<DocId, axum::response::Response> {
-    uuid::Uuid::parse_str(raw).map(DocId).map_err(|_| {
-        http_error(
-            StatusCode::BAD_REQUEST,
-            ServerErrorCode::RequestFailed,
-            "invalid doc_id",
-        )
-    })
+fn parse_doc_id(raw: &str) -> Result<DocId, &'static str> {
+    uuid::Uuid::parse_str(raw)
+        .map(DocId)
+        .map_err(|_| "invalid doc_id")
 }
 
 fn http_error(
@@ -121,22 +129,12 @@ fn http_error(
 #[cfg(test)]
 mod tests {
     use super::parse_doc_id;
-    use axum::body::to_bytes;
-    use axum::http::StatusCode;
 
-    #[tokio::test]
-    async fn invalid_doc_id_returns_structured_bad_request() {
-        let response = parse_doc_id("not-a-uuid").expect_err("must reject");
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        let body = to_bytes(response.into_body(), usize::MAX)
-            .await
-            .expect("read body");
-        let error: deve_core::protocol::ServerError =
-            serde_json::from_slice(&body).expect("decode error");
+    #[test]
+    fn invalid_doc_id_returns_small_error_detail() {
         assert_eq!(
-            error.code,
-            deve_core::protocol::ServerErrorCode::RequestFailed
+            parse_doc_id("not-a-uuid").expect_err("must reject"),
+            "invalid doc_id"
         );
-        assert_eq!(error.detail.as_deref(), Some("invalid doc_id"));
     }
 }
