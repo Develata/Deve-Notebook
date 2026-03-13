@@ -4,8 +4,9 @@ mod restore;
 mod shadow;
 mod weird_paths;
 
+use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
-use deve_core::ledger::{RepoManager, listing::RepoListing};
+use deve_core::ledger::RepoManager;
 use deve_core::sync::SyncManager;
 use std::path::Path;
 use std::sync::Arc;
@@ -25,10 +26,7 @@ pub fn run(
     let repo = Arc::new(repo);
     let sync_manager = SyncManager::new(repo.clone(), vault_path.to_path_buf());
 
-    let repo_names = match target_repo {
-        Some(repo_name) => vec![repo_name.to_string()],
-        None => repo.list_repos(None)?,
-    };
+    let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     let fixed_paths = path_fix::repair_repo_prefixed_paths(&repo, &repo_names)?;
     let quarantined_md_dirs = weird_paths::quarantine_md_dirs(&repo, &repo_names)?;
     let restored =

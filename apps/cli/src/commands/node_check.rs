@@ -3,9 +3,9 @@
 
 use crate::admin_api::NodeCheckResponse;
 use crate::commands::live_proxy;
+use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_check::{check_node_consistency, repair_missing_nodes};
 use std::path::PathBuf;
 
@@ -32,10 +32,7 @@ fn collect_reports(
     target_repo: Option<&str>,
     repair: bool,
 ) -> Result<Vec<NodeCheckResponse>> {
-    let repo_names = match target_repo {
-        Some(name) => vec![repo.resolve_local_repo_name_for_execution(None, Some(name))?],
-        None => repo.list_repos(None)?,
-    };
+    let repo_names = resolve_local_repo_args(repo, target_repo)?;
     let mut reports = Vec::with_capacity(repo_names.len());
     for repo_name in repo_names {
         let report = repo.run_on_local_repo(&repo_name, |db| {

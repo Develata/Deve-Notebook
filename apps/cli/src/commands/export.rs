@@ -1,6 +1,7 @@
 // apps\cli\src\commands
 use crate::admin_api::ExportEntry;
 use crate::commands::live_proxy;
+use crate::commands::repo_arg::resolve_local_repo_arg;
 use crate::export_entries;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
@@ -30,7 +31,7 @@ pub fn run(
         }
         Err(err) => return Err(err),
     };
-    let repo_name = repo.resolve_local_repo_name_for_execution(None, repo_name.as_deref())?;
+    let repo_name = resolve_local_repo_arg(&repo, repo_name.as_deref())?;
     write_entries(output, &export_entries::build(&repo, &repo_name)?)
 }
 

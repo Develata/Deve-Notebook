@@ -8,6 +8,7 @@ pub mod init;
 pub mod live_proxy;
 pub mod node_check;
 pub mod repair;
+mod repo_arg;
 pub mod scan;
 pub mod seed;
 pub mod serve;

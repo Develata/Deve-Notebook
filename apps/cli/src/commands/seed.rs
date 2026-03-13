@@ -8,6 +8,7 @@
 //! 它会将本地数据"伪装"成来自 `target_peer` 的数据写入 Shadow 库。
 //! **生产环境误用可能导致数据混淆！**
 
+use crate::commands::repo_arg::resolve_local_repo_arg;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
@@ -33,7 +34,7 @@ pub fn run(
     tracing::warn!("======================================================");
 
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    let repo_name = repo.resolve_local_repo_name_for_execution(None, repo_name.as_deref())?;
+    let repo_name = resolve_local_repo_arg(&repo, repo_name.as_deref())?;
     let peer_id = PeerId::new(&target_peer);
 
     let repo_info = repo

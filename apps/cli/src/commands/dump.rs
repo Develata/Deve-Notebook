@@ -5,6 +5,7 @@
 
 use crate::admin_api::DumpResponse;
 use crate::commands::live_proxy;
+use crate::commands::repo_arg::resolve_local_repo_arg;
 use crate::dump_support;
 use deve_core::ledger::RepoManager;
 use std::path::PathBuf;
@@ -28,7 +29,7 @@ pub fn run(
         }
         Err(err) => return Err(err),
     };
-    let repo_name = repo.resolve_local_repo_name_for_execution(None, repo_name.as_deref())?;
+    let repo_name = resolve_local_repo_arg(&repo, repo_name.as_deref())?;
     match dump_support::build_dump(&repo, &repo_name, &path_str)? {
         Some(dump) => print_dump(&dump)?,
         None => println!("Path not found in Ledger."),
