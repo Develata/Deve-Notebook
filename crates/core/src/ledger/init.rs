@@ -170,7 +170,12 @@ pub fn init(
         write_txn.commit()?;
     }
 
-    super::RepoManager::repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref())?;
+    super::RepoManager::repair_local_repo_metadata(
+        &ledger_dir,
+        &final_name,
+        local_db.as_ref(),
+        None,
+    )?;
 
     let repo = RepoManager {
         ledger_dir,

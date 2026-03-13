@@ -9,6 +9,7 @@ impl RepoManager {
             &self.ledger_dir,
             &self.local_repo_name,
             self.local_db.as_ref(),
+            self.vault_root.as_deref(),
         )
     }
 

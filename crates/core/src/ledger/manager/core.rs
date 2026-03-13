@@ -23,6 +23,9 @@ impl RepoManager {
     /// 设置 Vault 根目录 (用于 commit 时读取磁盘文件)
     pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
         self.vault_root = Some(root.as_ref().to_path_buf());
+        if let Err(error) = self.repair_local_repo_catalog() {
+            tracing::warn!("Failed to repair local repo catalog after mounting vault: {error}");
+        }
     }
 
     /// 执行闭包于指定的本地仓库 (按名称)
