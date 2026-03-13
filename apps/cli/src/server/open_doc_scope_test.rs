@@ -1,4 +1,4 @@
-use super::handlers::document::handle_open_doc;
+use super::handlers::document::{handle_open_doc, handle_request_history};
 use super::handlers::listing::handle_list_docs;
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
@@ -127,6 +127,53 @@ async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()>
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert!(uni_rx.try_recv().is_err(), "must not send deleted snapshot");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow::Result<()> {
+    let (_dir, state, test_repo_id) = build_state()?;
+    let doc_id = seed_default_doc(&state)?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo("test".into(), Some(test_repo_id));
+
+    handle_request_history(&state, &ch, &mut session, doc_id, 9).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { .. }) => {}
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(uni_rx.try_recv().is_err(), "must not send empty history");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn request_history_on_deleted_doc_returns_error_without_history() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let doc_id = seed_default_doc(&state)?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    state.repo.apply_file_delete_structure_in_local_repo(
+        state.repo.local_repo_name(),
+        "notes/a.md",
+        Some(doc_id),
+        "test",
+    )?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo("default".into(), Some(default_id));
+
+    handle_request_history(&state, &ch, &mut session, doc_id, 10).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error }) => {
+            assert_eq!(error.code, ServerErrorCode::StorageNotFound);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(uni_rx.try_recv().is_err(), "must not send deleted history");
     Ok(())
 }
 

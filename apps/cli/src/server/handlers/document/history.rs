@@ -44,7 +44,12 @@ fn load_doc_history(
 ) -> anyhow::Result<Vec<deve_core::protocol::ConfirmedOp>> {
     state.repo.run_on_repo_db(
         &resolved_repo_type(session.active_branch.as_ref(), repo_id),
-        |db| confirmed::load_doc_ops(db, doc_id),
+        |db| {
+            if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
+                anyhow::bail!("Document not found: {}", doc_id);
+            }
+            confirmed::load_doc_ops(db, doc_id)
+        },
     )
 }
 

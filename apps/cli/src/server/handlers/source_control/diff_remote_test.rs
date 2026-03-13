@@ -1,17 +1,44 @@
-use super::remote::{local_counterpart_content, resolve_tracked_doc_id};
+use super::remote::{local_counterpart_content, resolve_remote_content, resolve_tracked_doc_id};
+use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::models::PeerId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+use deve_core::{config::SyncMode, protocol::ServerMessage};
+use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
+use tokio::sync::broadcast;
 
 fn new_repo() -> anyhow::Result<(TempDir, RepoManager)> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
     repo.set_vault_root(dir.path().join("vault"));
     Ok((dir, repo))
+}
+
+fn build_state(dir: &TempDir, repo: RepoManager) -> anyhow::Result<Arc<AppState>> {
+    let vault = dir.path().join("vault");
+    let repo = Arc::new(repo);
+    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    Ok(Arc::new(AppState {
+        repo: repo.clone(),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        tx: broadcast::channel::<ServerMessage>(16).0,
+        plugins: vec![],
+        sync_engine: Arc::new(RepoScopedSyncEngine::new(
+            PeerId::new("test-peer"),
+            repo,
+            SyncMode::Auto,
+        )),
+        tree_manager: Arc::new(RepoTreeRegistry::new()),
+        #[cfg(feature = "search")]
+        search_service: None,
+        identity_key,
+    }))
 }
 
 fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
@@ -114,10 +141,7 @@ fn remote_diff_prefers_node_projection_before_legacy_path_mapping() -> anyhow::R
     })?;
 
     let doc_id = repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        Ok(resolve_tracked_doc_id(
-            db,
-            &ScPathTarget::from_path("notes/a.md"),
-        ))
+        resolve_tracked_doc_id(db, &ScPathTarget::from_path("notes/a.md"))
     })?;
     assert!(doc_id.is_some());
     Ok(())
@@ -151,15 +175,45 @@ fn remote_diff_rejects_deleted_doc_even_with_doc_id_hint() -> anyhow::Result<()>
     )?;
 
     let resolved = repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        Ok(resolve_tracked_doc_id(
+        resolve_tracked_doc_id(
             db,
             &ScPathTarget {
                 path: "notes/a.md".into(),
                 doc_id: Some(doc_id),
             },
-        ))
+        )
     })?;
     assert!(resolved.is_none());
     assert!(local_counterpart_content(&repo, doc_id, Some(repo.local_repo_name()))?.is_none());
+    Ok(())
+}
+
+#[test]
+fn remote_diff_surfaces_shadow_lookup_errors_instead_of_not_found() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo()?;
+    let peer = PeerId::new("peer-missing");
+    let repo_id = uuid::Uuid::new_v4();
+    std::fs::create_dir_all(
+        dir.path()
+            .join("remotes")
+            .join(peer.to_filename())
+            .join(format!("{}.redb", repo_id)),
+    )?;
+    let state = build_state(&dir, repo)?;
+    let err = resolve_remote_content(
+        &state,
+        Some(&peer),
+        repo_id,
+        &ScPathTarget::from_path("notes/a.md"),
+    )
+    .expect_err("missing shadow repo should stay an error");
+    let detail = err.to_string();
+    assert!(
+        detail.contains("shadow")
+            || detail.contains("redb")
+            || detail.contains("directory")
+            || detail.contains("Is a directory"),
+        "unexpected error detail: {detail}"
+    );
     Ok(())
 }

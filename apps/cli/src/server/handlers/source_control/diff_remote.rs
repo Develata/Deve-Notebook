@@ -22,12 +22,18 @@ pub(super) async fn handle_remote_diff(
     let path = deve_core::utils::path::to_forward_slash(&target.path);
     let (doc_id, new_content) =
         match resolve_remote_content(state, scope.branch.as_ref(), scope.repo_id, &target) {
-            Some(content) => content,
-            None => {
+            Ok(Some(content)) => content,
+            Ok(None) => {
                 return errors::send_ws_code(
                     ch,
                     ServerErrorCode::ScDocNotFound,
                     format!("Remote document not found: {}", path),
+                );
+            }
+            Err(err) => {
+                return errors::send_ws(
+                    ch,
+                    errors::map_repo_error(errors::ScOp::DiffDoc(path.clone()), err),
                 );
             }
         };
@@ -59,17 +65,19 @@ pub(super) async fn handle_remote_diff(
     });
 }
 
-fn resolve_remote_content(
+pub(super) fn resolve_remote_content(
     state: &Arc<AppState>,
     branch: Option<&PeerId>,
     repo_id: RepoId,
     target: &ScPathTarget,
-) -> Option<(DocId, String)> {
-    let peer_id = branch?;
+) -> anyhow::Result<Option<(DocId, String)>> {
+    let Some(peer_id) = branch else {
+        return Ok(None);
+    };
     state
         .repo
         .run_on_shadow_repo_by_id(peer_id, &repo_id, |db| {
-            let doc_id = resolve_tracked_doc_id(db, target);
+            let doc_id = resolve_tracked_doc_id(db, target)?;
             let Some(doc_id) = doc_id else {
                 return Ok(None);
             };
@@ -80,8 +88,6 @@ fn resolve_remote_content(
                 deve_core::state::reconstruct_content(&entries),
             )))
         })
-        .ok()
-        .flatten()
 }
 
 pub(crate) fn local_counterpart_content(
@@ -105,14 +111,9 @@ pub(crate) fn local_counterpart_content(
 pub(super) fn resolve_tracked_doc_id(
     db: &redb::Database,
     target: &ScPathTarget,
-) -> Option<deve_core::models::DocId> {
+) -> anyhow::Result<Option<deve_core::models::DocId>> {
     if let Some(doc_id) = target.doc_id {
-        return deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)
-            .ok()
-            .flatten()
-            .map(|_| doc_id);
+        return Ok(deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.map(|_| doc_id));
     }
     deve_core::ledger::doc_lookup::resolve_doc_id(db, &target.path)
-        .ok()
-        .flatten()
 }

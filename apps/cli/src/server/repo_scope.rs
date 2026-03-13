@@ -165,7 +165,9 @@ fn resolve_repo_name_from_session(
     }
     if let Some(repo_id) = session.active_repo_id
         && let Some(branch) = session.active_branch.as_ref()
-        && let Some(selector) = state.repo.find_remote_repo_selector_by_id(branch, repo_id)?
+        && let Some(selector) = state
+            .repo
+            .find_remote_repo_selector_by_id(branch, repo_id)?
     {
         if session.active_repo.as_deref() != Some(selector.as_str()) {
             tracing::warn!(

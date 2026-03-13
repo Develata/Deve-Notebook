@@ -76,7 +76,8 @@ async fn readonly_remote_changes_recover_collision_safe_selector_from_uuid() -> 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn readonly_remote_history_recovers_collision_safe_selector_from_uuid() -> anyhow::Result<()> {
+async fn readonly_remote_history_recovers_collision_safe_selector_from_uuid() -> anyhow::Result<()>
+{
     let (_dir, state, peer_id, repo_id, selector) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
