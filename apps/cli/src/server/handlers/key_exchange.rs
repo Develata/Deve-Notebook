@@ -22,7 +22,8 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         Ok(scope) => scope,
         Err(err) => {
             ch.unicast(ServerMessage::KeyDenied {
-                repo_id: None,
+                repo_id: session.active_repo_id.or(session.bound_repo_id),
+                scope_nonce: message_scope_nonce(session),
                 branch: session.active_branch.clone(),
                 error: map_repo_scope_error(err),
             });
@@ -35,6 +36,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         Err(err) => {
             send_key_denied(
                 ch,
+                message_scope_nonce(session),
                 Some(scope.repo_id),
                 session.active_branch.clone(),
                 ServerErrorCode::StoragePersistFailed,
@@ -52,6 +54,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             );
             ch.unicast(ServerMessage::KeyProvide {
                 repo_id: scope.repo_id,
+                scope_nonce: message_scope_nonce(session),
                 branch: session.active_branch.clone(),
                 repo_key: key.to_bytes().to_vec(),
             });
@@ -60,6 +63,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             tracing::warn!("RepoKey request failed for {}: {:?}", scope.repo_name, err);
             send_key_denied(
                 ch,
+                message_scope_nonce(session),
                 Some(scope.repo_id),
                 session.active_branch.clone(),
                 ServerErrorCode::StoragePersistFailed,
@@ -71,6 +75,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
 
 fn send_key_denied(
     ch: &DualChannel,
+    scope_nonce: u64,
     repo_id: Option<deve_core::models::RepoId>,
     branch: Option<deve_core::models::PeerId>,
     code: ServerErrorCode,
@@ -78,7 +83,14 @@ fn send_key_denied(
 ) {
     ch.unicast(ServerMessage::KeyDenied {
         repo_id,
+        scope_nonce,
         branch,
         error: ServerError::with_detail(code, detail),
     });
+}
+
+fn message_scope_nonce(session: &WsSession) -> u64 {
+    session
+        .sync_scope_nonce()
+        .unwrap_or_else(|| session.scope_nonce())
 }

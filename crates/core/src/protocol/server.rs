@@ -51,7 +51,7 @@ pub enum ServerMessage {
     BulkStageDone { op: String, total: u32, success: u32, failed_paths: Vec<String> },
     FsChangeDetected { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String, change_type: String, #[serde(default)] has_conflict: bool },
     ConflictResolved { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, path: String, resolution: String },
-    KeyProvide { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, repo_key: Vec<u8> },
-    KeyDenied { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, error: ServerError },
+    KeyProvide { repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, repo_key: Vec<u8> },
+    KeyDenied { #[serde(default)] repo_id: Option<RepoId>, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, error: ServerError },
     SystemMetrics { cpu_usage_percent: f32, memory_used_mb: u64, active_connections: u32, ops_processed: u64, uptime_secs: u64, db_size_bytes: u64, doc_count: u32 },
 }
