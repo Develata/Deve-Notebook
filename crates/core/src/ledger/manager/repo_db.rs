@@ -7,7 +7,7 @@ impl RepoManager {
     /// Invariants:
     /// - `RepoType::Local(repo_id)` 必须先解析到真实 local repo instance。
     /// - 后续读路径不得在忽略 `repo_id` 的前提下回退到 `local_db`。
-    pub(crate) fn run_on_repo_db<F, R>(&self, repo_type: &RepoType, f: F) -> Result<R>
+    pub fn run_on_repo_db<F, R>(&self, repo_type: &RepoType, f: F) -> Result<R>
     where
         F: FnOnce(&Database) -> Result<R>,
     {

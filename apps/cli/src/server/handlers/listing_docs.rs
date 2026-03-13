@@ -5,7 +5,6 @@ use crate::server::repo_scope::{
 };
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::node_meta;
 use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -35,7 +34,7 @@ pub async fn handle_list_docs(
         }
     };
 
-    let docs = match load_docs(state, session, &repo_name, repo_id) {
+    let docs = match load_docs(state, session, repo_id) {
         Ok(docs) => docs,
         Err(err) => {
             tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
@@ -46,7 +45,7 @@ pub async fn handle_list_docs(
             return;
         }
     };
-    let nodes = match load_nodes(state, session, &repo_name, repo_id) {
+    let nodes = match load_nodes(state, session, repo_id) {
         Ok(nodes) => nodes,
         Err(err) => {
             tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
@@ -83,33 +82,22 @@ pub async fn handle_list_docs(
 fn load_docs(
     state: &Arc<AppState>,
     session: &WsSession,
-    repo_name: &str,
     repo_id: RepoId,
 ) -> anyhow::Result<Vec<(deve_core::models::DocId, String)>> {
-    if let Some(peer_id) = &session.active_branch {
-        return state
-            .repo
-            .list_docs(&RepoType::Remote(peer_id.clone(), repo_id));
-    }
-    if let Some(handle) = session.active_db_for(None, repo_name, Some(repo_id)) {
-        return deve_core::ledger::node_meta::list_file_docs(&handle.db);
-    }
-    state.repo.list_local_docs(Some(repo_name))
+    state.repo.list_docs(&resolved_repo_type(session, repo_id))
 }
 
 fn load_nodes(
     state: &Arc<AppState>,
     session: &WsSession,
-    repo_name: &str,
     repo_id: RepoId,
 ) -> anyhow::Result<Vec<(NodeId, NodeMeta)>> {
-    if let Some(peer_id) = &session.active_branch {
-        return state
-            .repo
-            .list_nodes(&RepoType::Remote(peer_id.clone(), repo_id));
+    state.repo.list_nodes(&resolved_repo_type(session, repo_id))
+}
+
+fn resolved_repo_type(session: &WsSession, repo_id: RepoId) -> RepoType {
+    match session.active_branch.clone() {
+        Some(peer_id) => RepoType::Remote(peer_id, repo_id),
+        None => RepoType::Local(repo_id),
     }
-    if let Some(handle) = session.active_db_for(None, repo_name, Some(repo_id)) {
-        return node_meta::list_nodes(&handle.db);
-    }
-    state.repo.list_local_nodes(Some(repo_name))
 }
