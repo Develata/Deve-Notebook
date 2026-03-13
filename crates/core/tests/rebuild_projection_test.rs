@@ -181,6 +181,7 @@ fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
         .expect("rebuild");
 
     assert!(!root.join("legacy/orphan.md").exists());
+    assert!(sync.should_ignore_fs_event("default/legacy/orphan.md"));
 }
 
 #[test]

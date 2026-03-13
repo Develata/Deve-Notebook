@@ -45,11 +45,13 @@ pub(super) fn rebuild_local_repo(
         repo.bind_workspace_inode_in_local_repo(repo_name, repo_path, *doc_id)?;
     }
 
-    prune_stale_paths(&root, &plan.docs, &plan.dirs, "")?;
+    prune_stale_paths(repo_name, guard, &root, &plan.docs, &plan.dirs, "")?;
     Ok(())
 }
 
 fn prune_stale_paths(
+    repo_name: &str,
+    guard: &PersistGuard,
     root: &Path,
     expected_docs: &HashMap<String, crate::models::DocId>,
     expected_dirs: &HashSet<String>,
@@ -73,7 +75,14 @@ fn prune_stale_paths(
         };
         let path = entry.path();
         if path.is_dir() {
-            let empty = prune_stale_paths(root, expected_docs, expected_dirs, &child_rel)?;
+            let empty = prune_stale_paths(
+                repo_name,
+                guard,
+                root,
+                expected_docs,
+                expected_dirs,
+                &child_rel,
+            )?;
             if empty && !expected_dirs.contains(&child_rel) {
                 std::fs::remove_dir(&path)?;
             }
@@ -81,6 +90,7 @@ fn prune_stale_paths(
         }
         let is_md = path.extension().and_then(|ext| ext.to_str()) == Some("md");
         if is_md && !expected_docs.contains_key(&child_rel) {
+            guard.record_delete(&format!("{repo_name}/{child_rel}"));
             std::fs::remove_file(path)?;
         }
     }
