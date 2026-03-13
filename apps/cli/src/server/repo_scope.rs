@@ -17,7 +17,9 @@ use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
-use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
+use self::lookup::{
+    find_unique_local_repo_name_by_display, resolve_repo_by_name, resolve_repo_by_repo_id,
+};
 pub use self::repo_scope_error::map_repo_scope_error;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,
@@ -106,6 +108,9 @@ pub fn resolve_local_counterpart_repo(
         return Ok(None);
     };
     let Some(repo_name) = state.repo.find_local_repo_name_by_url(&url)? else {
+        if let Some(repo_name) = find_unique_local_repo_name_by_display(state, &scope.repo_name)? {
+            return resolve_repo_by_name(state, None, None, repo_name).map(Some);
+        }
         return Ok(None);
     };
     resolve_repo_by_name(state, None, None, repo_name).map(Some)
