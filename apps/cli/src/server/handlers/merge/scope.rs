@@ -1,6 +1,6 @@
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo,
+    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo_and_sync,
 };
 use crate::server::{AppState, session::WsSession};
 use deve_core::models::RepoId;
@@ -12,9 +12,9 @@ use super::errors;
 pub(super) fn resolve_read_repo_id(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
 ) -> Option<RepoId> {
-    let scope = match resolve_session_repo(state, session) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
             ch.send_protocol_error(map_repo_scope_error(err));
@@ -40,9 +40,9 @@ pub(super) fn resolve_read_repo_id(
 pub(super) fn resolve_write_repo_id(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
 ) -> Option<RepoId> {
-    let scope = match resolve_session_repo(state, session) {
+    let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
             ch.send_protocol_error(map_repo_scope_error(err));
@@ -106,8 +106,11 @@ mod tests {
         let mut session = crate::server::session::WsSession::new();
         session.switch_repo("test".into(), Some(test_id));
 
-        assert_eq!(resolve_read_repo_id(&state, &ch, &session), Some(test_id));
-        assert_eq!(session.bound_repo_id, None);
+        assert_eq!(
+            resolve_read_repo_id(&state, &ch, &mut session),
+            Some(test_id)
+        );
+        assert_eq!(session.active_repo_id, Some(test_id));
         Ok(())
     }
 }

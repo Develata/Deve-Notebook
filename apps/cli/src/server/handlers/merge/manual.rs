@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub(super) async fn handle_get_sync_mode(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     request_id: String,
 ) {
     let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
@@ -29,7 +29,7 @@ pub(super) async fn handle_get_sync_mode(
 pub(super) async fn handle_set_sync_mode(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     mode: String,
 ) {
     let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
@@ -56,7 +56,7 @@ pub(super) async fn handle_set_sync_mode(
 pub(super) async fn handle_get_pending_ops(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     request_id: String,
 ) {
     let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
@@ -87,7 +87,7 @@ pub(super) async fn handle_get_pending_ops(
 pub(super) async fn handle_confirm_merge(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
 ) {
     let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
@@ -114,7 +114,7 @@ pub(super) async fn handle_confirm_merge(
 pub(super) async fn handle_discard_pending(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
 ) {
     let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
