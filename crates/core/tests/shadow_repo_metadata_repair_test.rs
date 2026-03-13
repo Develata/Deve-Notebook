@@ -87,13 +87,65 @@ fn init_repairs_uuid_shadow_path_and_metadata() {
         vec!["wiki".to_string()]
     );
     assert!(
-        repaired.remotes_dir().join(peer_id.to_filename()).join("wiki.redb").exists()
+        repaired
+            .remotes_dir()
+            .join(peer_id.to_filename())
+            .join("wiki.redb")
+            .exists()
     );
     assert!(
         !repaired
             .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", info.uuid))
+            .exists()
+    );
+}
+
+#[test]
+fn local_catalog_repair_cascades_to_legacy_uuid_shadow_catalog() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
+    let wiki = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let peer_id = PeerId::new("peer-remote");
+    let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
+
+    main.ensure_shadow_db(&peer_id, &wiki_info.uuid)
+        .expect("create legacy uuid shadow");
+
+    let main_info = main.get_repo_info().expect("main info").expect("present");
+    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
+    let bad = deve_core::ledger::RepoInfo {
+        uuid: main_info.uuid,
+        name: "main".into(),
+        url: Some(format!("urn:uuid:{}", main_info.uuid)),
+    };
+    let write = wiki_db.begin_write().expect("write txn");
+    write
+        .open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(
+            &0,
+            bincode::serialize(&bad)
+                .expect("serialize repaired metadata")
+                .as_slice(),
+        )
+        .expect("write bad metadata");
+    write.commit().expect("commit metadata");
+
+    main.repair_local_repo_catalog()
+        .expect("repair local catalog");
+
+    assert_eq!(
+        main.list_repos(Some(&peer_id))
+            .expect("list repaired shadows"),
+        vec!["wiki".to_string()]
+    );
+    assert!(
+        main.remotes_dir()
+            .join(peer_id.to_filename())
+            .join("wiki.redb")
             .exists()
     );
 }

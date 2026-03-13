@@ -5,10 +5,21 @@ use crate::models::PeerId;
 
 impl RepoManager {
     pub fn get_local_repo_info_by_id(&self, repo_id: uuid::Uuid) -> Result<Option<RepoInfo>> {
-        let Some(repo_name) = self.find_local_repo_name_by_id(repo_id)? else {
+        self.repair_local_repo_catalog()?;
+        self.get_local_repo_info_by_id_without_repair(repo_id)
+    }
+
+    pub(crate) fn get_local_repo_info_by_id_without_repair(
+        &self,
+        repo_id: uuid::Uuid,
+    ) -> Result<Option<RepoInfo>> {
+        let Some(repo_name) = self.find_local_repo_name_by_id_without_repair(repo_id)? else {
             return Ok(None);
         };
-        self.get_repo_info_for(None, Some(&repo_name))
+        if repo_name == self.local_repo_name {
+            return Self::read_repo_info_from_db(&self.local_db);
+        }
+        self.run_on_local_repo(&repo_name, Self::read_repo_info_from_db)
     }
 
     pub fn get_repo_url(&self, branch: Option<&PeerId>, repo_name: &str) -> Result<Option<String>> {
@@ -81,7 +92,7 @@ impl RepoManager {
                 return Ok(Some(info));
             }
             if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem)
-                && let Some(local_info) = self.get_local_repo_info_by_id(repo_id)?
+                && let Some(local_info) = self.get_local_repo_info_by_id_without_repair(repo_id)?
             {
                 return Ok(Some(local_info));
             }
@@ -106,11 +117,13 @@ impl RepoManager {
                 return Ok(Some(info));
             }
             if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
-                return Ok(self.get_local_repo_info_by_id(repo_id)?.or(Some(RepoInfo {
-                    uuid: repo_id,
-                    name: repo_name.to_string(),
-                    url: None,
-                })));
+                return Ok(self
+                    .get_local_repo_info_by_id_without_repair(repo_id)?
+                    .or(Some(RepoInfo {
+                        uuid: repo_id,
+                        name: repo_name.to_string(),
+                        url: None,
+                    })));
             }
         }
         Ok(None)

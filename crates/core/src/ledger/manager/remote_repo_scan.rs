@@ -97,7 +97,7 @@ impl RepoManager {
         let original = Self::read_repo_info_from_path(path)?;
         let Some(mut info) = original.clone().or_else(|| {
             uuid::Uuid::parse_str(stem).ok().map(|repo_id| {
-                self.get_local_repo_info_by_id(repo_id)
+                self.get_local_repo_info_by_id_without_repair(repo_id)
                     .ok()
                     .flatten()
                     .unwrap_or(RepoInfo {
@@ -116,7 +116,7 @@ impl RepoManager {
         }
         if info.url.is_none() {
             info.url = self
-                .get_local_repo_info_by_id(info.uuid)?
+                .get_local_repo_info_by_id_without_repair(info.uuid)?
                 .and_then(|local| local.url)
                 .or_else(|| Some(format!("urn:uuid:{}", info.uuid)));
             write_back = true;
@@ -124,10 +124,7 @@ impl RepoManager {
         if original.as_ref() != Some(&info) {
             write_back = true;
         }
-        Ok(Some(RemoteRepoCatalogInfo {
-            info,
-            write_back,
-        }))
+        Ok(Some(RemoteRepoCatalogInfo { info, write_back }))
     }
 
     pub(crate) fn resolve_remote_repo_entry(
@@ -198,7 +195,11 @@ impl RepoManager {
     fn remote_repo_display_name(&self, entry: &RemoteRepoEntry) -> String {
         let fallback = uuid::Uuid::parse_str(&entry.stem)
             .ok()
-            .and_then(|repo_id| self.get_local_repo_info_by_id(repo_id).ok().flatten())
+            .and_then(|repo_id| {
+                self.get_local_repo_info_by_id_without_repair(repo_id)
+                    .ok()
+                    .flatten()
+            })
             .map(|info| info.name)
             .unwrap_or_else(|| entry.stem.clone());
         entry
@@ -219,7 +220,11 @@ impl RepoManager {
                 Self::read_repo_info_from_db(db)
                     .ok()
                     .flatten()
-                    .or_else(|| self.get_local_repo_info_by_id(*repo_id).ok().flatten())
+                    .or_else(|| {
+                        self.get_local_repo_info_by_id_without_repair(*repo_id)
+                            .ok()
+                            .flatten()
+                    })
                     .unwrap_or(RepoInfo {
                         uuid: *repo_id,
                         name: repo_id.to_string(),

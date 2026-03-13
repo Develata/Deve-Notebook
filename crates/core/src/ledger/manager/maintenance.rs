@@ -10,7 +10,8 @@ impl RepoManager {
             &self.local_repo_name,
             self.local_db.as_ref(),
             self.vault_root.as_deref(),
-        )
+        )?;
+        self.repair_remote_repo_catalogs()
     }
 
     pub fn repair_remote_repo_catalogs(&self) -> Result<()> {
