@@ -36,6 +36,13 @@ pub struct WsSession {
     /// - 所有 repo-scoped 系统消息都必须携带当前 nonce，供前端丢弃跨代迟到消息。
     pub current_scope_nonce: u64,
 
+    /// 当前同步握手代际 token。
+    ///
+    /// Invariant:
+    /// - 每次 `SyncHello` 成功后都必须更新为客户端声明的 `scope_nonce`。
+    /// - `SyncPush/SyncPushSnapshot` 必须沿用该 nonce，避免同 repo 重连时迟到增量串入新握手代。
+    pub current_sync_scope_nonce: Option<u64>,
+
     /// 该连接是否来自已登录浏览器会话。
     ///
     /// Invariant:
@@ -87,6 +94,7 @@ impl Default for WsSession {
     fn default() -> Self {
         Self {
             current_scope_nonce: 0,
+            current_sync_scope_nonce: None,
             authenticated_peer_id: None,
             bound_repo_id: None,
             writer_identity: None,
@@ -147,6 +155,7 @@ impl WsSession {
         self.authenticated_peer_id = None;
         self.bound_repo_id = None;
         self.writer_identity = None;
+        self.current_sync_scope_nonce = None;
     }
 
     /// 检查给定 repo_id 是否与会话绑定一致
@@ -169,6 +178,14 @@ impl WsSession {
 
     pub fn scope_nonce(&self) -> u64 {
         self.current_scope_nonce
+    }
+
+    pub fn set_sync_scope_nonce(&mut self, scope_nonce: u64) {
+        self.current_sync_scope_nonce = Some(scope_nonce);
+    }
+
+    pub fn sync_scope_nonce(&self) -> Option<u64> {
+        self.current_sync_scope_nonce
     }
 
     /// 切换活动仓库

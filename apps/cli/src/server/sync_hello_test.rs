@@ -170,6 +170,24 @@ async fn browser_sync_hello_skips_sync_payload_messages() -> anyhow::Result<()> 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_binds_session_sync_scope_nonce() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    hello.scope_nonce = 9;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let _ = collect_unicast_messages(&mut uni_rx).await?;
+
+    assert_eq!(session.sync_scope_nonce(), Some(9));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();

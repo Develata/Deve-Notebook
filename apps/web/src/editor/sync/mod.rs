@@ -15,7 +15,7 @@ use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use deve_core::security::RepoKey;
 use leptos::prelude::*;
-use scope::matches_scope;
+use scope::{SyncPayloadScope, accepts_sync_payload, matches_scope};
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {
@@ -92,20 +92,22 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         ServerMessage::Pong => {}
         ServerMessage::SyncPush {
             repo_id,
+            scope_nonce,
             branch,
             ops,
         } => {
-            if matches_current_scope(ctx, Some(repo_id), branch) {
+            if accepts_current_sync_payload(ctx, repo_id, branch, scope_nonce) {
                 decrypt::handle_sync_push(ctx, &ops);
             }
         }
         ServerMessage::SyncPushSnapshot {
             repo_id,
+            scope_nonce,
             branch,
             ops,
             ..
         } => {
-            if matches_current_scope(ctx, Some(repo_id), branch) {
+            if accepts_current_sync_payload(ctx, repo_id, branch, scope_nonce) {
                 decrypt::handle_sync_push(ctx, &ops);
             }
         }
@@ -165,6 +167,26 @@ fn matches_current_scope(
         ctx.pending_branch_switch.get_untracked(),
         repo_id,
         branch,
+    )
+}
+
+fn accepts_current_sync_payload(
+    ctx: &SyncContext,
+    repo_id: RepoId,
+    branch: Option<PeerId>,
+    scope_nonce: u64,
+) -> bool {
+    accepts_sync_payload(
+        SyncPayloadScope {
+            current_repo_id: ctx.current_repo_id.get_untracked(),
+            pending_repo_switch: ctx.pending_repo_switch.get_untracked(),
+            current_branch: ctx.active_branch.get_untracked(),
+            pending_branch_switch: ctx.pending_branch_switch.get_untracked(),
+            handshake_scope_nonce: ctx.handshake_scope_nonce.get_untracked(),
+        },
+        repo_id,
+        branch,
+        scope_nonce,
     )
 }
 

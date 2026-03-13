@@ -70,6 +70,7 @@ pub(super) async fn handle(
 
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(scope_nonce);
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
     let vec_bytes = match serde_json::to_vec(&local_vector) {
@@ -136,6 +137,7 @@ pub(super) async fn handle(
     if !ops_to_push.is_empty() {
         ch.unicast(ServerMessage::SyncPush {
             repo_id,
+            scope_nonce,
             branch: session.active_branch.clone(),
             ops: ops_to_push,
         });

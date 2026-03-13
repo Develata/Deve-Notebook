@@ -28,6 +28,7 @@ pub struct SyncContext<'a> {
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub open_request_id: ReadSignal<u64>,
     pub ws: &'a WsService,
     // 内容信号

@@ -60,6 +60,9 @@ pub(super) async fn handle_request(
     if !ops_to_push.is_empty() {
         ch.unicast(ServerMessage::SyncPush {
             repo_id,
+            scope_nonce: session
+                .sync_scope_nonce()
+                .unwrap_or_else(|| session.scope_nonce()),
             branch: session.active_branch.clone(),
             ops: ops_to_push,
         });

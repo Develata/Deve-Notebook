@@ -100,6 +100,7 @@ pub struct CoreState {
     // P2P 状态
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     pub handshake_ready: ReadSignal<bool>,
+    pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
     pub pending_navigation: ReadSignal<Option<PendingNavigation>>,

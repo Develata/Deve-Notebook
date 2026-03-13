@@ -57,6 +57,7 @@ pub(super) fn build_core_state(
         stats: signals.stats,
         peers: signals.peers,
         handshake_ready: signals.handshake_ready,
+        handshake_scope_nonce: signals.handshake_scope_nonce,
         pending_local_edits: signals.pending_local_edits,
         set_pending_local_edits: signals.set_pending_local_edits,
         pending_navigation: signals.pending_navigation,

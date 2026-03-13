@@ -1,6 +1,15 @@
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::{PeerId, RepoId};
 
+#[derive(Clone)]
+pub struct SyncPayloadScope {
+    pub current_repo_id: Option<String>,
+    pub pending_repo_switch: Option<String>,
+    pub current_branch: Option<PeerId>,
+    pub pending_branch_switch: Option<PendingBranchTarget>,
+    pub handshake_scope_nonce: Option<u64>,
+}
+
 pub fn matches_scope(
     current_repo_id: Option<String>,
     pending_repo_switch: Option<String>,
@@ -28,9 +37,26 @@ pub fn matches_scope(
     }
 }
 
+pub fn accepts_sync_payload(
+    scope: SyncPayloadScope,
+    repo_id: RepoId,
+    branch: Option<PeerId>,
+    scope_nonce: u64,
+) -> bool {
+    scope.handshake_scope_nonce == Some(scope_nonce)
+        && matches_scope(
+            scope.current_repo_id,
+            scope.pending_repo_switch,
+            scope.current_branch,
+            scope.pending_branch_switch,
+            Some(repo_id),
+            branch,
+        )
+}
+
 #[cfg(test)]
 mod tests {
-    use super::matches_scope;
+    use super::{SyncPayloadScope, accepts_sync_payload, matches_scope};
     use crate::hooks::use_core::PendingBranchTarget;
     use deve_core::models::PeerId;
 
@@ -126,6 +152,52 @@ mod tests {
             Some(PendingBranchTarget::Shadow("peer-b".into())),
             Some(repo_id),
             Some(PeerId::new("peer-b")),
+        ));
+    }
+
+    #[test]
+    fn accepts_sync_payload_only_for_current_handshake_scope() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(accepts_sync_payload(
+            SyncPayloadScope {
+                current_repo_id: Some(repo_id.to_string()),
+                pending_repo_switch: None,
+                current_branch: None,
+                pending_branch_switch: None,
+                handshake_scope_nonce: Some(5),
+            },
+            repo_id,
+            None,
+            5,
+        ));
+        assert!(!accepts_sync_payload(
+            SyncPayloadScope {
+                current_repo_id: Some(repo_id.to_string()),
+                pending_repo_switch: None,
+                current_branch: None,
+                pending_branch_switch: None,
+                handshake_scope_nonce: Some(6),
+            },
+            repo_id,
+            None,
+            5,
+        ));
+    }
+
+    #[test]
+    fn rejects_sync_payload_while_scope_switch_is_pending() {
+        let repo_id = uuid::Uuid::new_v4();
+        assert!(!accepts_sync_payload(
+            SyncPayloadScope {
+                current_repo_id: Some(repo_id.to_string()),
+                pending_repo_switch: Some("test".into()),
+                current_branch: None,
+                pending_branch_switch: None,
+                handshake_scope_nonce: Some(5),
+            },
+            repo_id,
+            None,
+            5,
         ));
     }
 }

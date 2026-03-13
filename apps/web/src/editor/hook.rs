@@ -148,6 +148,7 @@ pub fn use_editor(
                 pending_branch_switch: core.pending_branch_switch,
                 current_repo_id: core.current_repo_id,
                 pending_repo_switch: core.pending_repo_switch,
+                handshake_scope_nonce: core.handshake_scope_nonce,
                 open_request_id,
                 ws: &ws_clone_2,
                 set_content,
