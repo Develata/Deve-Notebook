@@ -13,6 +13,7 @@ mod delta_input;
 pub mod ffi;
 pub mod hook;
 pub mod op_id;
+mod open_scope;
 pub mod playback;
 pub mod prefetch;
 pub mod sync;

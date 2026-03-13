@@ -25,6 +25,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
         on_search: state.on_search,
     });
     provide_context(EditorContext {
+        docs: state.docs,
         current_doc: state.current_doc,
         stats: state.stats,
         on_stats: state.on_stats,

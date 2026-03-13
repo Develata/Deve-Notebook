@@ -13,6 +13,7 @@
 use super::EditorStats;
 use super::delta_input::{DeltaInputCtx, build_on_delta};
 use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
+use super::open_scope::can_open_doc;
 use super::playback;
 use super::sync;
 use crate::api::{ConnectionStatus, WsService};
@@ -64,12 +65,15 @@ pub fn use_editor(
     let set_doc_ver = core.set_doc_version;
     let handshake_ready = core.handshake_ready;
     let current_doc = core.current_doc;
+    let docs = core.docs;
     let current_repo_id = core.current_repo_id;
     let active_branch = core.active_branch;
     let pending_branch_switch = core.pending_branch_switch;
     let pending_repo_switch = core.pending_repo_switch;
     Effect::new(move |_| {
         if !can_open_doc(
+            doc_id,
+            &docs.get(),
             handshake_ready.get(),
             active_branch.get(),
             current_doc.get() == Some(doc_id),
@@ -211,56 +215,5 @@ pub fn use_editor(
         playback_version,
         local_version,
         on_playback_change,
-    }
-}
-
-fn can_open_doc(
-    handshake_ready: bool,
-    active_branch: Option<deve_core::models::PeerId>,
-    doc_selected: bool,
-    has_repo_scope: bool,
-    branch_switch_idle: bool,
-    repo_switch_idle: bool,
-) -> bool {
-    branch_switch_idle
-        && repo_switch_idle
-        && has_repo_scope
-        && doc_selected
-        && (handshake_ready || active_branch.is_some())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::can_open_doc;
-    use deve_core::models::PeerId;
-
-    #[test]
-    fn remote_branch_can_open_without_handshake() {
-        assert!(can_open_doc(
-            false,
-            Some(PeerId::new("peer-a")),
-            true,
-            true,
-            true,
-            true,
-        ));
-    }
-
-    #[test]
-    fn local_branch_still_requires_handshake() {
-        assert!(!can_open_doc(false, None, true, true, true, true));
-    }
-
-    #[test]
-    fn pending_scope_switch_blocks_open_doc() {
-        assert!(!can_open_doc(true, None, true, true, false, true,));
-        assert!(!can_open_doc(
-            true,
-            Some(PeerId::new("peer-a")),
-            true,
-            true,
-            true,
-            false,
-        ));
     }
 }

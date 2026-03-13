@@ -37,6 +37,7 @@ pub struct DocContext {
 /// 编辑器状态上下文
 #[derive(Clone)]
 pub struct EditorContext {
+    pub docs: ReadSignal<Vec<(DocId, String)>>,
     pub current_doc: ReadSignal<Option<DocId>>,
     pub stats: ReadSignal<EditorStats>,
     pub on_stats: Callback<EditorStats>,
