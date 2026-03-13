@@ -2,10 +2,7 @@ use super::super::errors;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::docs::copy_utils::{collect_dirs, collect_md_files};
-use crate::server::handlers::docs::file_register::{
-    broadcast_file_tree_update, create_file_from_content,
-};
-use crate::server::handlers::docs::node_helpers::broadcast_dir_chain;
+use crate::server::handlers::docs::file_register::create_file_from_content;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_root};
 use deve_core::state;
 use std::path::Path;
@@ -16,7 +13,6 @@ pub(super) struct CopyRegisterCtx<'a> {
     pub state: &'a Arc<AppState>,
     pub ch: &'a DualChannel,
     pub scope: &'a ResolvedRepo,
-    pub scope_nonce: u64,
 }
 
 pub(super) fn register_copied_docs(
@@ -65,18 +61,7 @@ fn register_dirs(
             &dest_rel,
             "local_copy",
         ) {
-            Ok(node_id) => {
-                if let Err(e) = broadcast_dir_chain(
-                    ctx.state,
-                    ctx.ch,
-                    ctx.scope.repo_id,
-                    &ctx.scope.repo_name,
-                    node_id,
-                    ctx.scope_nonce,
-                ) {
-                    tracing::error!("广播目录链失败: {:?}", e);
-                }
-            }
+            Ok(_) => {}
             Err(e) => {
                 tracing::error!("目录节点创建失败: {:?}", e);
                 errors::storage_persist_failed(ctx.ch, format!("Dir node creation failed: {}", e));
@@ -169,7 +154,6 @@ fn register_file(ctx: CopyRegisterCtx<'_>, src_rel: &str, dest_rel: &str) -> boo
         dest_rel,
         doc_id
     );
-    broadcast_file_tree_update(ctx.state, ctx.ch, ctx.scope, doc_id, ctx.scope_nonce);
     true
 }
 

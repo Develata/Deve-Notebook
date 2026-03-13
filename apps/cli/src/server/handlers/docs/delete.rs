@@ -2,15 +2,14 @@
 //! # 删除文档处理器
 
 use super::errors;
+use super::node_helpers::broadcast_local_projection_refresh;
 use super::node_target::resolve_node_target;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::listing::handle_list_docs;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 /// 处理删除文档请求
@@ -95,19 +94,10 @@ pub async fn handle_delete_doc(
         }
     }
 
-    // 4. 更新 TreeManager 并广播 Delta
-    let delta = state
-        .tree_manager
-        .with_tree_mut(scope.repo_id, None, |tm| tm.remove(target.node_id));
-    ch.unicast(ServerMessage::TreeUpdate {
-        request_id: None,
-        repo_id: Some(scope.repo_id),
-        branch: None,
-        scope_nonce: Some(session.scope_nonce()),
-        delta,
-    });
-
-    // 5. 刷新文档列表
-    handle_list_docs(state, ch, session, None, None).await;
+    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
+        tracing::error!("删除后刷新视图失败: {:?}", e);
+        errors::request_failed(ch, format!("Failed to refresh deleted node view: {}", e));
+        return;
+    }
     notify_fs_refresh(ch, scope.repo_id, &target.repo_path, "deleted");
 }

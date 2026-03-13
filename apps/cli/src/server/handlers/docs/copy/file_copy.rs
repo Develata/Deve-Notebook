@@ -1,8 +1,6 @@
 use super::super::errors;
 use super::prepare::CopyPaths;
-use crate::server::handlers::docs::file_register::{
-    broadcast_file_tree_update, create_file_from_content,
-};
+use crate::server::handlers::docs::file_register::create_file_from_content;
 use deve_core::state;
 
 use super::register::CopyRegisterCtx;
@@ -45,6 +43,5 @@ pub(super) fn copy_file(
             }
         };
     tracing::info!("已复制 {} -> {} (DocId: {})", src_path, dest_path, doc_id);
-    broadcast_file_tree_update(ctx.state, ctx.ch, ctx.scope, doc_id, ctx.scope_nonce);
     true
 }

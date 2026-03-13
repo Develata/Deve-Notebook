@@ -1,11 +1,11 @@
 //! 文件创建逻辑。
 
 use super::errors;
-use super::file_register::{broadcast_file_tree_update, create_file_from_content};
+use super::file_register::create_file_from_content;
+use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::listing::handle_list_docs;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::session::WsSession;
 use std::sync::Arc;
@@ -39,16 +39,17 @@ pub async fn handle_file_create(
         }
     }
 
-    let doc_id = match create_file_from_content(state, scope, filename, "", "local_create") {
-        Ok(doc_id) => doc_id,
-        Err(e) => {
-            tracing::error!("文件创建失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to create file: {}", e));
-            return;
-        }
-    };
+    if let Err(e) = create_file_from_content(state, scope, filename, "", "local_create") {
+        tracing::error!("文件创建失败: {:?}", e);
+        errors::storage_persist_failed(ch, format!("Failed to create file: {}", e));
+        return;
+    }
 
-    broadcast_file_tree_update(state, ch, scope, doc_id, session.scope_nonce());
-    handle_list_docs(state, ch, session, None, None).await;
+    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
+        tracing::error!("文件创建后刷新视图失败: {:?}", e);
+        errors::request_failed(ch, format!("Failed to refresh created file view: {}", e));
+        return;
+    }
+
     notify_fs_refresh(ch, scope.repo_id, filename, "added");
 }

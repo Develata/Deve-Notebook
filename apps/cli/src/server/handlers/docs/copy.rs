@@ -7,10 +7,10 @@ mod register;
 
 use super::copy_utils::copy_dir_assets_only;
 use super::errors;
+use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::listing::handle_list_docs;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use prepare::prepare_copy_paths;
@@ -47,7 +47,6 @@ pub async fn handle_copy_doc(
                 state,
                 ch,
                 scope: &scope,
-                scope_nonce: session.scope_nonce(),
             },
             &paths.src,
             &paths.dst,
@@ -60,7 +59,6 @@ pub async fn handle_copy_doc(
                 state,
                 ch,
                 scope: &scope,
-                scope_nonce: session.scope_nonce(),
             },
             &paths,
             &src_path,
@@ -71,7 +69,11 @@ pub async fn handle_copy_doc(
         return;
     }
 
-    handle_list_docs(state, ch, session, None, None).await;
+    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
+        tracing::error!("复制后刷新视图失败: {:?}", e);
+        errors::request_failed(ch, format!("Failed to refresh copied docs view: {}", e));
+        return;
+    }
     notify_fs_refresh(ch, scope.repo_id, &dest_path, "copied");
 }
 

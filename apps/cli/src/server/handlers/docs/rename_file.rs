@@ -1,14 +1,10 @@
 use super::errors;
+use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::docs::node_helpers::broadcast_parent_dirs;
-use crate::server::handlers::listing::handle_list_docs;
-use crate::server::repo_scope::{ResolvedRepo, run_on_resolved_local_repo};
+use crate::server::repo_scope::ResolvedRepo;
 use crate::server::session::WsSession;
-use anyhow::anyhow;
-use deve_core::ledger::node_meta;
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 pub(super) async fn handle_file_rename(
@@ -59,39 +55,10 @@ pub(super) async fn handle_file_rename(
         errors::storage_persist_failed(ch, format!("Failed to remove old file: {}", e));
         return;
     }
-    if let Ok((node_id, meta)) = run_on_resolved_local_repo(state, scope, |db| {
-        let node_id = node_meta::get_node_id(db, dst_path)?
-            .ok_or_else(|| anyhow!("Node not found: {}", dst_path))?;
-        let meta =
-            node_meta::get_node_meta(db, node_id)?.ok_or_else(|| anyhow!("Node meta missing"))?;
-        Ok((node_id, meta))
-    }) {
-        if let Err(e) = broadcast_parent_dirs(
-            state,
-            ch,
-            scope.repo_id,
-            &scope.repo_name,
-            meta.parent_id,
-            session.scope_nonce(),
-        ) {
-            tracing::error!("广播父目录失败: {:?}", e);
-        }
-        let delta = state.tree_manager.with_tree_mut(scope.repo_id, None, |tm| {
-            tm.update_node(
-                node_id,
-                meta.parent_id,
-                meta.name.clone(),
-                meta.path.clone(),
-            )
-        });
-        ch.unicast(ServerMessage::TreeUpdate {
-            request_id: None,
-            repo_id: Some(scope.repo_id),
-            branch: None,
-            scope_nonce: Some(session.scope_nonce()),
-            delta,
-        });
+    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
+        tracing::error!("文件重命名后刷新视图失败: {:?}", e);
+        errors::request_failed(ch, format!("Failed to refresh renamed file view: {}", e));
+        return;
     }
-    handle_list_docs(state, ch, session, None, None).await;
     notify_fs_refresh(ch, scope.repo_id, dst_path, "renamed");
 }
