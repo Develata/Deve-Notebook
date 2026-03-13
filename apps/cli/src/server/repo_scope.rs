@@ -158,22 +158,18 @@ fn resolve_repo_name_from_session(
     }
     if let Some(repo_id) = session.active_repo_id
         && let Some(branch) = session.active_branch.as_ref()
+        && let Some(selector) = state.repo.find_remote_repo_selector_by_id(branch, repo_id)?
     {
-        let info = state
-            .repo
-            .get_repo_info_for(Some(branch), Some(&repo_id.to_string()))?;
-        if let Some(info) = info {
-            if session.active_repo.as_deref() != Some(info.name.as_str()) {
-                tracing::warn!(
-                    "Recovering remote repo name from UUID: branch={}, repo_id={}, stale_name={:?}, resolved_name={}",
-                    branch,
-                    repo_id,
-                    session.active_repo,
-                    info.name
-                );
-            }
-            return Ok(Some(info.name));
+        if session.active_repo.as_deref() != Some(selector.as_str()) {
+            tracing::warn!(
+                "Recovering remote repo selector from UUID: branch={}, repo_id={}, stale_name={:?}, resolved_selector={}",
+                branch,
+                repo_id,
+                session.active_repo,
+                selector
+            );
         }
+        return Ok(Some(selector));
     }
     if let Some(repo_name) = session.active_repo.clone() {
         return Ok(Some(repo_name));
