@@ -1,4 +1,4 @@
-use crate::ledger::database::relocate_database_path;
+use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::Result;
@@ -24,7 +24,12 @@ impl RepoManager {
             .collect::<Vec<_>>();
         paths.sort();
         for path in paths {
-            let Some(info) = Self::read_repo_info_from_path(&path)? else {
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .to_string();
+            let Some(info) = self.repaired_remote_repo_info(&path, &stem)? else {
                 continue;
             };
             let desired = self.allocate_remote_repo_path(peer_id, &info)?;
@@ -63,11 +68,44 @@ impl RepoManager {
                 .cloned()
             {
                 Some(info) => Some(info),
-                None => Self::read_repo_info_from_path(&path)?,
+                None => self.repaired_remote_repo_info(&path, &stem)?,
             };
             repos.push(RemoteRepoEntry { path, stem, info });
         }
         Ok(repos)
+    }
+
+    fn repaired_remote_repo_info(&self, path: &PathBuf, stem: &str) -> Result<Option<RepoInfo>> {
+        let original = Self::read_repo_info_from_path(path)?;
+        let Some(mut info) = original.clone().or_else(|| {
+            uuid::Uuid::parse_str(stem).ok().map(|repo_id| {
+                self.get_local_repo_info_by_id(repo_id)
+                    .ok()
+                    .flatten()
+                    .unwrap_or(RepoInfo {
+                        uuid: repo_id,
+                        name: stem.to_string(),
+                        url: Some(format!("urn:uuid:{}", repo_id)),
+                    })
+            })
+        }) else {
+            return Ok(None);
+        };
+        let should_write_missing_metadata = original.is_none();
+        if info.name.trim().is_empty() {
+            info.name = stem.to_string();
+        }
+        if info.url.is_none() {
+            info.url = self
+                .get_local_repo_info_by_id(info.uuid)?
+                .and_then(|local| local.url)
+                .or_else(|| Some(format!("urn:uuid:{}", info.uuid)));
+        }
+        if should_write_missing_metadata || original.as_ref() != Some(&info) {
+            let db = cached_database(path)?;
+            Self::write_repo_info_to_db(db.as_ref(), &info)?;
+        }
+        Ok(Some(info))
     }
 
     pub(crate) fn resolve_remote_repo_entry(
