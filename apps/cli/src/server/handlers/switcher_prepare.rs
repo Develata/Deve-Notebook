@@ -31,7 +31,7 @@ pub(super) fn validate_branch_target(
             return None;
         }
     };
-    let local_repos = match state.repo.list_repos(None) {
+    let local_repos = match state.repo.list_local_repo_names_for_execution() {
         Ok(repos) => repos,
         Err(err) => {
             ch.send_protocol_error(ServerError::with_detail(

@@ -94,6 +94,9 @@ impl RepoListing for RepoManager {
                 && let Some(name) = path.file_name().and_then(|s| s.to_str())
                 && !name.starts_with('.')
                 && !name.is_empty()
+                && !self
+                    .scan_remote_repo_entries(&PeerId::new(name))?
+                    .is_empty()
             {
                 peers.push(PeerId::new(name));
             }
