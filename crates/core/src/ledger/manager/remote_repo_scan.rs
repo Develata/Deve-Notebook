@@ -14,7 +14,7 @@ pub(crate) struct RemoteRepoEntry {
 
 struct RemoteRepoCatalogInfo {
     info: RepoInfo,
-    stable_catalog: bool,
+    write_back: bool,
 }
 
 impl RepoManager {
@@ -37,13 +37,17 @@ impl RepoManager {
             let Some(repair) = self.repaired_remote_repo_info(&path, &stem)? else {
                 continue;
             };
-            if !repair.stable_catalog {
-                continue;
-            }
             let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
-            if desired != path {
+            let target = if desired != path {
                 relocate_database_path(&path, &desired);
                 std::fs::rename(&path, &desired)?;
+                desired
+            } else {
+                path
+            };
+            if repair.write_back {
+                let db = cached_database(&target)?;
+                Self::write_repo_info_to_db(db.as_ref(), &repair.info)?;
             }
         }
         Ok(())
@@ -91,10 +95,8 @@ impl RepoManager {
         stem: &str,
     ) -> Result<Option<RemoteRepoCatalogInfo>> {
         let original = Self::read_repo_info_from_path(path)?;
-        let mut stable_catalog = original.is_some();
         let Some(mut info) = original.clone().or_else(|| {
             uuid::Uuid::parse_str(stem).ok().map(|repo_id| {
-                stable_catalog = false;
                 self.get_local_repo_info_by_id(repo_id)
                     .ok()
                     .flatten()
@@ -107,23 +109,24 @@ impl RepoManager {
         }) else {
             return Ok(None);
         };
-        let should_write_missing_metadata = original.is_none();
+        let mut write_back = original.is_none();
         if info.name.trim().is_empty() {
             info.name = stem.to_string();
+            write_back = true;
         }
         if info.url.is_none() {
             info.url = self
                 .get_local_repo_info_by_id(info.uuid)?
                 .and_then(|local| local.url)
                 .or_else(|| Some(format!("urn:uuid:{}", info.uuid)));
+            write_back = true;
         }
-        if stable_catalog && (should_write_missing_metadata || original.as_ref() != Some(&info)) {
-            let db = cached_database(path)?;
-            Self::write_repo_info_to_db(db.as_ref(), &info)?;
+        if original.as_ref() != Some(&info) {
+            write_back = true;
         }
         Ok(Some(RemoteRepoCatalogInfo {
             info,
-            stable_catalog,
+            write_back,
         }))
     }
 

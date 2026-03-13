@@ -12,7 +12,7 @@ fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
 }
 
 #[test]
-fn remote_catalog_displays_legacy_uuid_shadow_without_writing_local_metadata() {
+fn remote_catalog_repairs_legacy_uuid_shadow_to_named_catalog() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let local = RepoManager::init(
@@ -39,9 +39,18 @@ fn remote_catalog_displays_legacy_uuid_shadow_without_writing_local_metadata() {
     let handle = repo
         .open_database(Some(&peer_id), "wiki")
         .expect("open repaired shadow");
-    assert_eq!(read_repo_info(&handle.db), None);
+    let repaired = read_repo_info(&handle.db).expect("repo info written back");
+    assert_eq!(repaired.name, "wiki");
+    assert_eq!(repaired.uuid, info.uuid);
     assert!(
         repo.remotes_dir()
+            .join(peer_id.to_filename())
+            .join("wiki.redb")
+            .exists()
+    );
+    assert!(
+        !repo
+            .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", info.uuid))
             .exists()
@@ -49,7 +58,7 @@ fn remote_catalog_displays_legacy_uuid_shadow_without_writing_local_metadata() {
 }
 
 #[test]
-fn init_keeps_uuid_shadow_path_while_restoring_display_name() {
+fn init_repairs_uuid_shadow_path_and_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
@@ -78,7 +87,10 @@ fn init_keeps_uuid_shadow_path_while_restoring_display_name() {
         vec!["wiki".to_string()]
     );
     assert!(
-        repaired
+        repaired.remotes_dir().join(peer_id.to_filename()).join("wiki.redb").exists()
+    );
+    assert!(
+        !repaired
             .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", info.uuid))
