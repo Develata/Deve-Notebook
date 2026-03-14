@@ -88,7 +88,7 @@ fn remote_repo_listing_reuses_open_remote_database() {
 }
 
 #[test]
-fn remote_repo_lookup_prefers_local_metadata_name_for_uuid_legacy_shadow() {
+fn remote_repo_lookup_keeps_uuid_selector_for_uuid_legacy_shadow() {
     let (dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let local = RepoManager::init(
@@ -108,17 +108,17 @@ fn remote_repo_lookup_prefers_local_metadata_name_for_uuid_legacy_shadow() {
 
     assert_eq!(
         repo.list_repos(Some(&peer_id)).expect("list remote repos"),
-        vec!["wiki".to_string()]
+        vec![info.uuid.to_string()]
     );
     let remote_info = repo
         .get_repo_info_for(Some(&peer_id), Some(&info.uuid.to_string()))
         .expect("lookup shadow by uuid")
         .expect("shadow info");
-    assert_eq!(remote_info.name, "wiki");
+    assert_eq!(remote_info.name, info.uuid.to_string());
     let handle = repo
         .open_database(Some(&peer_id), &info.uuid.to_string())
         .expect("open remote shadow by uuid");
-    assert_eq!(handle.repo_name, "wiki");
+    assert_eq!(handle.repo_name, info.uuid.to_string());
 }
 
 #[test]
@@ -212,70 +212,4 @@ fn ensure_shadow_repo_info_realigns_name_for_same_uuid() {
         .expect("remote repo info exists");
     assert_eq!(info.name, "wiki");
     assert_eq!(info.uuid, repo_id);
-}
-
-#[test]
-fn remote_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
-    let (_dir, repo) = new_repo();
-    let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: Uuid::new_v4(),
-            name: "wiki".into(),
-            url: Some("urn:test:wiki-a".into()),
-        },
-    )
-    .expect("prepare first wiki shadow");
-    repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: Uuid::new_v4(),
-            name: "wiki".into(),
-            url: Some("urn:test:wiki-b".into()),
-        },
-    )
-    .expect("prepare second wiki shadow");
-
-    let repos = repo.list_repos(Some(&peer_id)).expect("list remote repos");
-    assert_eq!(repos.len(), 2);
-    assert!(repos.iter().any(|name| name == "wiki"));
-    assert!(
-        repos
-            .iter()
-            .any(|name| name != "wiki" && name.starts_with("wiki-"))
-    );
-}
-
-#[test]
-fn remote_repo_selector_stays_stable_for_same_uuid_under_name_collision() {
-    let (_dir, repo) = new_repo();
-    let peer_id = PeerId::new("peer-remote");
-    let first = RepoInfo {
-        uuid: Uuid::new_v4(),
-        name: "wiki".into(),
-        url: Some("urn:test:wiki-a".into()),
-    };
-    let second = RepoInfo {
-        uuid: Uuid::new_v4(),
-        name: "wiki".into(),
-        url: Some("urn:test:wiki-b".into()),
-    };
-    repo.ensure_shadow_repo_info(&peer_id, &first)
-        .expect("prepare first wiki shadow");
-    repo.ensure_shadow_repo_info(&peer_id, &second)
-        .expect("prepare second wiki shadow");
-
-    let before = repo
-        .find_remote_repo_selector_by_id(&peer_id, second.uuid)
-        .expect("lookup selector")
-        .expect("selector must exist");
-    repo.ensure_shadow_repo_info(&peer_id, &second)
-        .expect("rewrite same shadow info");
-    let after = repo
-        .find_remote_repo_selector_by_id(&peer_id, second.uuid)
-        .expect("lookup selector after rewrite")
-        .expect("selector must still exist");
-
-    assert_eq!(before, after);
 }

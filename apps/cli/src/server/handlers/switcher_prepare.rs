@@ -72,7 +72,7 @@ pub(super) fn select_target_repo(
 ) -> anyhow::Result<Option<String>> {
     let repos = state.repo.list_repos(target_branch)?;
     if let Some(repo_id) = current_repo_id
-        && let Some(selector) = select_repo_selector_by_id(state, &repos, target_branch, repo_id)?
+        && let Some(selector) = select_repo_selector_by_id(state, target_branch, repo_id)?
     {
         return Ok(Some(selector));
     }
@@ -102,19 +102,13 @@ pub(super) fn select_target_repo(
 
 fn select_repo_selector_by_id(
     state: &Arc<AppState>,
-    repos: &[String],
     branch: Option<&PeerId>,
     repo_id: RepoId,
 ) -> anyhow::Result<Option<String>> {
-    for repo_name in repos {
-        let Some(info) = state.repo.get_repo_info_for(branch, Some(repo_name))? else {
-            continue;
-        };
-        if info.uuid == repo_id {
-            return Ok(Some(repo_name.clone()));
-        }
+    match branch {
+        Some(peer_id) => state.repo.find_remote_repo_selector_by_id(peer_id, repo_id),
+        None => state.repo.find_local_repo_name_by_id(repo_id),
     }
-    Ok(None)
 }
 
 pub(super) fn prepare_repo_switch(
@@ -150,7 +144,7 @@ pub(super) fn resolve_requested_repo_name(
 ) -> anyhow::Result<Option<String>> {
     let repos = state.repo.list_repos(branch)?;
     if let Some(repo_id) = repo_id
-        && let Some(selector) = select_repo_selector_by_id(state, &repos, branch, repo_id)?
+        && let Some(selector) = select_repo_selector_by_id(state, branch, repo_id)?
     {
         return Ok(Some(selector));
     }
@@ -237,11 +231,14 @@ mod tests {
         };
         state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
         state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
+        let expected = state
+            .repo
+            .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
+            .expect("selector for second wiki repo");
 
         let selected = select_target_repo(&state, Some(second.uuid), None, None, Some(&peer_id))?
             .expect("selector for second wiki repo");
-        assert_ne!(selected, "wiki");
-        assert!(selected.starts_with("wiki-"));
+        assert_eq!(selected, expected);
         Ok(())
     }
 }

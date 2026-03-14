@@ -90,22 +90,6 @@ impl RepoManager {
             }
             return Ok(None);
         }
-        let db_path = self
-            .remotes_dir()
-            .join(peer_id.to_filename())
-            .join(format!("{}.redb", repo_name));
-        if db_path.exists() {
-            if let Some(info) = Self::read_repo_info_from_path(&db_path)? {
-                return Ok(Some(info));
-            }
-            if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
-                return Ok(Some(RepoInfo {
-                    uuid: repo_id,
-                    name: repo_name.to_string(),
-                    url: None,
-                }));
-            }
-        }
         Ok(None)
     }
 }

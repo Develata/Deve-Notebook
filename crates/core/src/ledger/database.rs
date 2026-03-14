@@ -116,18 +116,14 @@ impl RepoManager {
             }
             // 远端影子库 (只读)
             Some(peer_id) => {
-                let resolved = self.resolve_remote_repo_entry(peer_id, name)?;
-                let repo_name = resolved
-                    .as_ref()
-                    .and_then(|entry| entry.info.as_ref().map(|info| info.name.clone()))
-                    .unwrap_or_else(|| name.to_string());
-                let repo_id = resolved.as_ref().and_then(|entry| {
-                    entry
-                        .info
-                        .as_ref()
-                        .map(|info| info.uuid)
-                        .or_else(|| uuid::Uuid::parse_str(&entry.stem).ok())
-                });
+                let resolved = self
+                    .resolve_remote_repo_entry(peer_id, name)?
+                    .ok_or_else(|| anyhow::anyhow!("Repository not found: {}", name))?;
+                let repo_name = resolved.stem.clone();
+                let repo_id = match &resolved.info {
+                    Some(info) => Some(info.uuid),
+                    None => uuid::Uuid::parse_str(&resolved.stem).ok(),
+                };
                 let loaded = repo_id.and_then(|repo_id| {
                     self.shadow_dbs
                         .read()
@@ -145,12 +141,7 @@ impl RepoManager {
                         repo_name,
                     });
                 }
-                let db_path = resolved.map(|entry| entry.path).unwrap_or_else(|| {
-                    self.remotes_dir()
-                        .join(peer_id.to_filename())
-                        .join(format!("{}.redb", name))
-                });
-                let db = self.get_or_open_db_at(&db_path)?;
+                let db = self.get_or_open_db_at(&resolved.path)?;
                 Ok(DatabaseHandle {
                     db,
                     readonly: true, // 远端分支始终只读
