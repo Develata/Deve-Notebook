@@ -58,6 +58,7 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
         &lower,
         &[
             "remote session lost repo name",
+            "cannot bootstrap local repo while on remote branch",
             "repository uuid not resolved",
             "remote repository selector not resolved",
             "local repository uuid not resolved",
@@ -194,6 +195,15 @@ mod tests {
         let err = decode_error(
             StatusCode::CONFLICT,
             b"Repo selector mismatch: repo_id resolved to default, repo_name resolved to test",
+        );
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_plain_text_remote_bootstrap_drift() {
+        let err = decode_error(
+            StatusCode::CONFLICT,
+            b"Cannot bootstrap local repo while on remote branch",
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }

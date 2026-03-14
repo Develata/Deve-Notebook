@@ -50,6 +50,7 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
         &lower,
         &[
             "local repo operation requested on remote branch",
+            "cannot bootstrap local repo while on remote branch",
             "repo selector mismatch",
             "session repo mismatch",
             "remote session lost repo name",
@@ -102,6 +103,14 @@ mod tests {
     fn classifies_repo_scope_drift_as_repo_context_invalid() {
         assert_eq!(
             classify_failure_code("Repository UUID not resolved for selector wiki"),
+            ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_remote_bootstrap_drift_as_repo_context_invalid() {
+        assert_eq!(
+            classify_failure_code("Cannot bootstrap local repo while on remote branch"),
             ServerErrorCode::ScRepoContextInvalid
         );
     }
