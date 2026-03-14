@@ -73,11 +73,14 @@ impl RepoManager {
             return Ok(None);
         }
 
-        let Some(info) = self.get_repo_info_for(None, Some(repo_name))? else {
+        let Some(repo_stem) = self.resolve_local_repo_stem(repo_name)? else {
+            return Ok(None);
+        };
+        let Some(info) = self.get_repo_info_for(None, Some(&repo_stem))? else {
             return Ok(None);
         };
 
-        Ok(Some((info.name, info.uuid, repo_path.to_string())))
+        Ok(Some((repo_stem, info.uuid, repo_path.to_string())))
     }
 
     pub(crate) fn record_projection_write(&self, repo_name: &str, repo_path: &str, content: &str) {

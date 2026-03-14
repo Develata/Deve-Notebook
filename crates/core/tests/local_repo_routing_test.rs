@@ -155,3 +155,25 @@ fn local_repo_reads_recover_from_stale_metadata_name_selector() {
         .expect("uuid");
     assert_eq!(uuid, extra_id);
 }
+
+#[test]
+fn workspace_resolution_keeps_execution_repo_stem_after_metadata_drift() {
+    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    write_repo_info(
+        extra_db.db.as_ref(),
+        &RepoInfo {
+            uuid: extra_id,
+            name: "legacy-wiki".into(),
+            url: Some("urn:wiki".into()),
+        },
+    );
+
+    let (repo_name, repo_id, repo_path) = repo
+        .resolve_local_workspace_path("wiki/notes/extra.md")
+        .expect("resolve workspace path")
+        .expect("resolved repo scope");
+    assert_eq!(repo_name, "wiki");
+    assert_eq!(repo_id, extra_id);
+    assert_eq!(repo_path, "notes/extra.md");
+}
