@@ -127,3 +127,11 @@ fn map_repo_scope_error_marks_locked_db_as_storage_db_locked() {
     ));
     assert_eq!(err.code, ServerErrorCode::StorageDbLocked);
 }
+
+#[test]
+fn map_repo_scope_error_marks_stale_nonce_as_context_invalid() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
+    ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}

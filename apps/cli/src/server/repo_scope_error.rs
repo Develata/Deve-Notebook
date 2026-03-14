@@ -36,6 +36,8 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
             "session repo mismatch",
             "repo selector mismatch",
             "local repo not found for uuid",
+            "scope mismatch",
+            "stale scope nonce",
         ],
     ) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);

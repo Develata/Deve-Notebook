@@ -137,6 +137,16 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
     if contains_any(
         &lower,
         &[
+            "active repository not selected",
+            "multiple local repos exist",
+            "no local repositories available",
+        ],
+    ) {
+        return (StatusCode::CONFLICT, ServerErrorCode::SyncRepoUnbound);
+    }
+    if contains_any(
+        &lower,
+        &[
             "remote session lost repo name",
             "repository uuid not resolved",
             "session repo mismatch",
@@ -145,6 +155,8 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",
             "local workspace root requested on remote branch",
+            "scope mismatch",
+            "stale scope nonce",
         ],
     ) {
         return (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid);
@@ -191,6 +203,24 @@ mod tests {
                 StatusCode::SERVICE_UNAVAILABLE,
                 ServerErrorCode::StorageDbLocked
             )
+        );
+    }
+
+    #[test]
+    fn classifies_missing_repo_selection_as_sync_repo_unbound() {
+        assert_eq!(
+            classify_repo_error("Active repository not selected: multiple local repos exist"),
+            (StatusCode::CONFLICT, ServerErrorCode::SyncRepoUnbound)
+        );
+    }
+
+    #[test]
+    fn classifies_stale_scope_nonce_as_repo_context_invalid() {
+        assert_eq!(
+            classify_repo_error(
+                "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
+            ),
+            (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid)
         );
     }
 }
