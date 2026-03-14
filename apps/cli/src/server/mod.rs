@@ -78,9 +78,13 @@ mod source_control_scope_test;
 mod source_control_test_support;
 pub mod static_files;
 #[cfg(test)]
+mod switcher_branch_scope_test;
+#[cfg(test)]
 mod switcher_branch_test;
 #[cfg(test)]
 mod switcher_exact_selector_test;
+#[cfg(test)]
+mod sync_hello_browser_test;
 #[cfg(test)]
 mod sync_hello_test;
 mod tree_state;

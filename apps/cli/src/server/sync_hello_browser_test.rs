@@ -71,8 +71,7 @@ async fn collect_unicast_messages(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata()
--> anyhow::Result<()> {
+async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
     let mut hello = signed_hello(&remote, &VersionVector::new());
@@ -80,31 +79,114 @@ async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata(
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(1));
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
     let _ = uni_rx.recv().await;
 
-    assert_eq!(
-        state.repo.list_repos(Some(&remote.peer_id()))?,
-        vec![repo_id.to_string()]
+    assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_hello_skips_sync_payload_messages() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(1));
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut uni_rx).await?;
+
+    assert!(
+        matches!(messages.first(), Some(ServerMessage::SyncHello { .. })),
+        "unexpected first message: {:?}",
+        messages.first()
+    );
+    assert!(!messages.iter().any(|msg| {
+        matches!(
+            msg,
+            ServerMessage::SyncRequest { .. }
+                | ServerMessage::SyncSnapshotRequest { .. }
+                | ServerMessage::SyncPush { .. }
+                | ServerMessage::SyncPushSnapshot { .. }
+        )
+    }));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    state
+        .repo
+        .ensure_shadow_repo_binding(&remote.peer_id(), repo_id)?;
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(1));
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut uni_rx).await?;
+
+    assert!(
+        matches!(messages.first(), Some(ServerMessage::SyncHello { .. })),
+        "unexpected first message: {:?}",
+        messages.first()
+    );
+    let shadow_list = messages
+        .into_iter()
+        .find_map(|msg| match msg {
+            ServerMessage::ShadowList { shadows, .. } => Some(shadows),
+            _ => None,
+        })
+        .expect("browser sync hello should refresh shadow list");
+    assert!(
+        !shadow_list.contains(&remote.peer_id().to_string()),
+        "shadow list should not contain self peer: {:?}",
+        shadow_list
     );
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn sync_hello_binds_session_sync_scope_nonce() -> anyhow::Result<()> {
+async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
     let mut hello = signed_hello(&remote, &VersionVector::new());
     hello.repo_id = repo_id;
-    hello.scope_nonce = 9;
+    hello.scope_nonce = 7;
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = super::session::WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(9));
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
-    let _ = collect_unicast_messages(&mut uni_rx).await?;
 
-    assert_eq!(session.sync_scope_nonce(), Some(9));
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
 }

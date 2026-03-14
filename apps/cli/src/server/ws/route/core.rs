@@ -63,7 +63,15 @@ pub(super) async fn route_core(
             switcher::handle_switch_branch(state, ch, session, peer_id, switch_nonce).await;
         }
         ClientMessage::SwitchRepo { name, switch_nonce } => {
-            switcher::handle_switch_repo(state, ch, session, name, switch_nonce).await;
+            switcher::handle_switch_repo(state, ch, session, name, None, switch_nonce).await;
+        }
+        ClientMessage::SwitchRepoExact {
+            name,
+            repo_id,
+            switch_nonce,
+        } => {
+            switcher::handle_switch_repo(state, ch, session, name, Some(repo_id), switch_nonce)
+                .await;
         }
         ClientMessage::DeletePeer { peer_id } => {
             sync::handle_delete_peer(state, ch, peer_id).await;

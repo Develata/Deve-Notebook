@@ -7,7 +7,7 @@ mod switcher_payload;
 #[path = "switcher_prepare.rs"]
 mod switcher_prepare;
 
-use deve_core::ledger::listing::RepoListing;
+use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -148,6 +148,7 @@ pub async fn handle_switch_repo(
     ch: &DualChannel,
     session: &mut WsSession,
     name: String,
+    repo_id: Option<RepoId>,
     switch_nonce: Option<u64>,
 ) {
     tracing::info!(
@@ -157,60 +158,62 @@ pub async fn handle_switch_repo(
     );
 
     let branch = session.active_branch.clone();
-    let repos = match state.repo.list_repos(branch.as_ref()) {
-        Ok(repos) => repos,
-        Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list repos: {}", err),
-            ));
-            return;
-        }
-    };
-
-    if repos.contains(&name) {
-        let prepared = match prepare_repo_switch(state, branch.as_ref(), name.clone()) {
-            Ok(prepared) => prepared,
-            Err(err) => {
-                let code = if branch.is_some() {
-                    ServerErrorCode::StorageDbLocked
-                } else {
-                    ServerErrorCode::StoragePersistFailed
-                };
+    let repo_name =
+        match switcher_prepare::resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id)
+        {
+            Ok(Some(repo_name)) => repo_name,
+            Ok(None) => {
+                tracing::warn!(
+                    "Repo switch failed: '{}' (repo_id={:?}) not found in branch {:?}",
+                    name,
+                    repo_id,
+                    branch
+                );
                 ch.send_protocol_error(ServerError::with_detail(
-                    code,
-                    format!("Failed to switch repo: {}", err),
+                    ServerErrorCode::ScRepoContextInvalid,
+                    format!("Repository not found: {}", name),
+                ));
+                return;
+            }
+            Err(err) => {
+                ch.send_protocol_error(ServerError::with_detail(
+                    ServerErrorCode::RequestFailed,
+                    format!("Failed to list repos: {}", err),
                 ));
                 return;
             }
         };
-        commit_session_switch(
-            session,
-            branch.map(|peer| peer.to_string()),
-            Some(prepared),
-            switch_nonce,
-        );
-        tracing::info!(
-            "Client switched to repo: {} (Branch: {:?})",
-            name,
-            session.active_branch
-        );
-        tracing::info!(
-            "Database locked: {} (readonly: {})",
-            name,
-            session.is_readonly()
-        );
-        listing::handle_list_docs(state, ch, session, None, switch_nonce).await;
-    } else {
-        tracing::warn!(
-            "Repo switch failed: '{}' not found in branch {:?}. Available: {:?}",
-            name,
-            branch,
-            repos
-        );
-        ch.send_protocol_error(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            format!("Repository not found: {}", name),
-        ));
-    }
+
+    let prepared = match prepare_repo_switch(state, branch.as_ref(), repo_name.clone()) {
+        Ok(prepared) => prepared,
+        Err(err) => {
+            let code = if branch.is_some() {
+                ServerErrorCode::StorageDbLocked
+            } else {
+                ServerErrorCode::StoragePersistFailed
+            };
+            ch.send_protocol_error(ServerError::with_detail(
+                code,
+                format!("Failed to switch repo: {}", err),
+            ));
+            return;
+        }
+    };
+    commit_session_switch(
+        session,
+        branch.map(|peer| peer.to_string()),
+        Some(prepared),
+        switch_nonce,
+    );
+    tracing::info!(
+        "Client switched to repo: {} (Branch: {:?})",
+        repo_name,
+        session.active_branch
+    );
+    tracing::info!(
+        "Database locked: {} (readonly: {})",
+        repo_name,
+        session.is_readonly()
+    );
+    listing::handle_list_docs(state, ch, session, None, switch_nonce).await;
 }

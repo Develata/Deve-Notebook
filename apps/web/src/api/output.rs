@@ -199,6 +199,7 @@ fn is_write_message(msg: &ClientMessage) -> bool {
         ClientMessage::DeletePeer { .. } => true,
         ClientMessage::SwitchBranch { .. } => true,
         ClientMessage::SwitchRepo { .. } => true,
+        ClientMessage::SwitchRepoExact { .. } => true,
         // 合并操作
         ClientMessage::ConfirmMerge => true,
         ClientMessage::DiscardPending => true,

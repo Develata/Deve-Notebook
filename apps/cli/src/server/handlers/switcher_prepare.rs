@@ -142,6 +142,23 @@ pub(super) fn prepare_repo_switch(
     })
 }
 
+pub(super) fn resolve_requested_repo_name(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    repo_name: &str,
+    repo_id: Option<RepoId>,
+) -> anyhow::Result<Option<String>> {
+    let repos = state.repo.list_repos(branch)?;
+    if let Some(repo_id) = repo_id
+        && let Some(selector) = select_repo_selector_by_id(state, &repos, branch, repo_id)?
+    {
+        return Ok(Some(selector));
+    }
+    Ok(repos
+        .contains(&repo_name.to_string())
+        .then(|| repo_name.to_string()))
+}
+
 pub(super) fn commit_session_switch(
     session: &mut WsSession,
     branch: Option<String>,
