@@ -16,11 +16,11 @@ use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
     handle_sync_mode_status,
 };
-use super::message_shadow;
 use super::message_scope::{
     RepoListScope, RequestMatch, ShadowListScope, repo_list_matches_scope,
     shadow_list_matches_scope,
 };
+use super::message_shadow;
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
 pub fn handle_message<F>(

@@ -45,7 +45,8 @@ impl RepoManager {
         target: &ScPathTarget,
     ) -> Result<(String, String, String)> {
         let path = source_control_target_lookup::resolve_change_path(self, repo_name, target)?;
-        let (old_content, new_content) = self.workdir_diff_inputs_in_local_repo(repo_name, &path)?;
+        let (old_content, new_content) =
+            self.workdir_diff_inputs_in_local_repo(repo_name, &path)?;
         Ok((path, old_content, new_content))
     }
 

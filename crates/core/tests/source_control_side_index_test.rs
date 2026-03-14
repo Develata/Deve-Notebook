@@ -167,3 +167,40 @@ fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
     assert_eq!(staged[0].path, "notes/b.md");
     assert_eq!(staged[0].doc_id, Some(doc_id));
 }
+
+#[test]
+fn stage_target_keeps_exact_deleted_half_of_rename_pair() {
+    let (dir, repo) = new_repo();
+    let doc_id = seed_rename_pair(&dir, &repo);
+
+    <RepoManager as Repository>::stage_pending_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget {
+            path: "notes/b.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )
+    .expect("stage successor");
+    <RepoManager as Repository>::stage_pending_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget {
+            path: "notes/a.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )
+    .expect("stage deleted half");
+
+    let mut pending = repo.list_pending_fs().expect("pending after rename stage");
+    pending.sort_by(|left, right| left.path.cmp(&right.path));
+    assert!(pending.is_empty());
+
+    let mut staged = repo.list_staged().expect("staged rename pair");
+    staged.sort_by(|left, right| left.path.cmp(&right.path));
+    assert_eq!(staged.len(), 2);
+    assert_eq!(staged[0].path, "notes/a.md");
+    assert_eq!(staged[0].status, ChangeStatus::Deleted);
+    assert_eq!(staged[1].path, "notes/b.md");
+    assert_eq!(staged[1].status, ChangeStatus::Added);
+}

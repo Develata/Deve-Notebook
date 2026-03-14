@@ -10,7 +10,11 @@ fn peer_deleted_only_refreshes_shadows_when_scope_is_stable() {
         None,
         false,
     ));
-    assert!(!should_refresh_shadow_list(None, Some("default".into()), false));
+    assert!(!should_refresh_shadow_list(
+        None,
+        Some("default".into()),
+        false
+    ));
     assert!(!should_refresh_shadow_list(None, None, true));
 }
 

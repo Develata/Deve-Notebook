@@ -80,12 +80,7 @@ impl RepoManager {
         Ok(Some((info.name, info.uuid, repo_path.to_string())))
     }
 
-    pub(crate) fn record_projection_write(
-        &self,
-        repo_name: &str,
-        repo_path: &str,
-        content: &str,
-    ) {
+    pub(crate) fn record_projection_write(&self, repo_name: &str, repo_path: &str, content: &str) {
         let relative = self.local_repo_workspace_relative(repo_name, repo_path);
         self.persist_guard.record(&relative, content);
     }

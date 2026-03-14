@@ -6,8 +6,8 @@ use leptos::prelude::{GetUntracked, Set};
 use super::super::effects_sc;
 use super::super::effects_switch;
 use super::super::state::CoreSignals;
-use super::message_shadow;
 use super::message_scope::string_branch_matches_scope;
+use super::message_shadow;
 
 pub fn handle_branch_switched(
     peer_id: Option<String>,

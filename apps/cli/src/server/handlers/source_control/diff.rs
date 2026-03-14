@@ -39,10 +39,7 @@ pub async fn handle_get_doc_diff(
         Err(e) => {
             return super::errors::send_ws(
                 ch,
-                super::errors::map_repo_error(
-                    super::errors::ScOp::DiffDoc(target.path.clone()),
-                    e,
-                ),
+                super::errors::map_repo_error(super::errors::ScOp::DiffDoc(target.path.clone()), e),
             );
         }
     };

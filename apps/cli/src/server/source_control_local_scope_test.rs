@@ -1,5 +1,7 @@
 use super::handlers::source_control::handle_get_doc_diff;
-use super::{AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry};
+use super::{
+    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
@@ -18,17 +20,24 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     repo.set_vault_root(&vault);
     let repo = Arc::new(repo);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    Ok((dir, Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx: broadcast::channel(16).0,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(PeerId::new("test-peer"), repo, SyncMode::Auto)),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key,
-    })))
+    Ok((
+        dir,
+        Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            tx: broadcast::channel(16).0,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                PeerId::new("test-peer"),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_service: None,
+            identity_key,
+        }),
+    ))
 }
 
 fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
@@ -43,56 +52,84 @@ fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
 async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     write_workspace_file(&dir, "notes/a.md", "hello");
-    state.repo.run_on_local_repo(state.repo.local_repo_name(), |db| {
-        pending_fs::upsert(db, &PendingFsEntry {
-            path: "notes/a.md".into(),
-            renamed_from: None,
-            doc_id: None,
-            change_type: ChangeStatus::Added,
-            content_hash: pending_fs::content_hash("hello"),
-            detected_at: 1,
-            has_conflict: false,
-        })
-    })?;
+    state
+        .repo
+        .run_on_local_repo(state.repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "notes/a.md".into(),
+                    renamed_from: None,
+                    doc_id: None,
+                    change_type: ChangeStatus::Added,
+                    content_hash: pending_fs::content_hash("hello"),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })?;
     state.repo.stage_pending("notes/a.md")?;
     state.repo.commit_staged("initial")?;
-    let doc_id = state.repo.get_docid("notes/a.md")?.expect("existing doc id");
+    let doc_id = state
+        .repo
+        .get_docid("notes/a.md")?
+        .expect("existing doc id");
 
     std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))?;
     write_workspace_file(&dir, "notes/b.md", "hello renamed");
-    state.repo.run_on_local_repo(state.repo.local_repo_name(), |db| {
-        pending_fs::upsert(db, &PendingFsEntry {
-            path: "notes/a.md".into(),
-            renamed_from: None,
-            doc_id: Some(doc_id),
-            change_type: ChangeStatus::Deleted,
-            content_hash: String::new(),
-            detected_at: 2,
-            has_conflict: false,
+    state
+        .repo
+        .run_on_local_repo(state.repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "notes/a.md".into(),
+                    renamed_from: None,
+                    doc_id: Some(doc_id),
+                    change_type: ChangeStatus::Deleted,
+                    content_hash: String::new(),
+                    detected_at: 2,
+                    has_conflict: false,
+                },
+            )?;
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "notes/b.md".into(),
+                    renamed_from: Some("notes/a.md".into()),
+                    doc_id: Some(doc_id),
+                    change_type: ChangeStatus::Added,
+                    content_hash: pending_fs::content_hash("hello renamed"),
+                    detected_at: 2,
+                    has_conflict: false,
+                },
+            )
         })?;
-        pending_fs::upsert(db, &PendingFsEntry {
-            path: "notes/b.md".into(),
-            renamed_from: Some("notes/a.md".into()),
-            doc_id: Some(doc_id),
-            change_type: ChangeStatus::Added,
-            content_hash: pending_fs::content_hash("hello renamed"),
-            detected_at: 2,
-            has_conflict: false,
-        })
-    })?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.switch_repo("default".into(), None);
 
-    handle_get_doc_diff(&state, &ch, &mut session, "req-1".into(), ScPathTarget {
-        path: "notes/a.md".into(),
-        doc_id: Some(doc_id),
-    }).await;
+    handle_get_doc_diff(
+        &state,
+        &ch,
+        &mut session,
+        "req-1".into(),
+        ScPathTarget {
+            path: "notes/a.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )
+    .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::DocDiff { path, old_content, new_content, .. }) => {
+        Some(ServerMessage::DocDiff {
+            path,
+            old_content,
+            new_content,
+            ..
+        }) => {
             assert_eq!(path, "notes/b.md");
             assert_eq!(old_content, "hello");
             assert_eq!(new_content, "hello renamed");

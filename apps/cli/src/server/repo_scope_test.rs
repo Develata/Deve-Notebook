@@ -149,8 +149,8 @@ fn resolve_session_repo_recovers_remote_scope_from_uuid_when_name_is_stale() -> 
 }
 
 #[test]
-fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unrecoverable(
-) -> anyhow::Result<()> {
+fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unrecoverable()
+-> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;

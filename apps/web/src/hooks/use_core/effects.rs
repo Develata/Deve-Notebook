@@ -12,8 +12,8 @@ mod message_protocol;
 mod message_refresh;
 mod message_repo_scope;
 mod message_runtime;
-mod message_shadow;
 mod message_scope;
+mod message_shadow;
 mod message_sync;
 
 use crate::api::WsService;

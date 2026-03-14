@@ -46,7 +46,10 @@ fn select_entry(
             entry.path == path && doc_id.map(|id| entry.doc_id == Some(id)).unwrap_or(true)
         })
         .cloned();
-    if exact.as_ref().is_some_and(PendingEntryStatus::status_is_live) {
+    if exact
+        .as_ref()
+        .is_some_and(PendingEntryStatus::status_is_live)
+    {
         return exact;
     }
     entries
