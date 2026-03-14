@@ -35,7 +35,7 @@ fn restore_repo(
     };
     let mut restored = 0usize;
     for repo_path in targets {
-        let Some(doc_id) = repo.get_docid_in_local_repo(repo_name, &repo_path)? else {
+        let Some(doc_id) = resolve_repair_docid(repo, repo_name, &repo_path)? else {
             println!("repair: skip {}:{}, doc not found", repo_name, repo_path);
             continue;
         };
@@ -96,14 +96,28 @@ fn walk_repo(
         }
         let current = std::fs::read_to_string(&path).unwrap_or_default();
         if current.starts_with("# Loading...")
-            && repo
-                .get_docid_in_local_repo(repo_name, &repo_path)?
-                .is_some()
+            && resolve_repair_docid(repo, repo_name, &repo_path)?.is_some()
         {
             targets.push(repo_path);
         }
     }
     Ok(())
+}
+
+fn resolve_repair_docid(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    repo_path: &str,
+) -> Result<Option<deve_core::models::DocId>> {
+    repo.get_tracked_docid_in_local_repo(repo_name, repo_path)
+        .or_else(|_| repo.get_docid_in_local_repo(repo_name, repo_path))
+        .and_then(|doc_id| {
+            if doc_id.is_some() {
+                Ok(doc_id)
+            } else {
+                repo.get_docid_in_local_repo(repo_name, repo_path)
+            }
+        })
 }
 
 fn resolve_backup_path(

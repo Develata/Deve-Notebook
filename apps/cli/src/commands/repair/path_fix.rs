@@ -22,7 +22,12 @@ pub(super) fn repair_repo_prefixed_paths(
             else {
                 continue;
             };
-            if stripped.is_empty() || repo.get_docid_in_local_repo(repo_name, stripped)?.is_some() {
+            if stripped.is_empty()
+                || repo
+                    .get_tracked_docid_in_local_repo(repo_name, stripped)?
+                    .or(repo.get_docid_in_local_repo(repo_name, stripped)?)
+                    .is_some()
+            {
                 continue;
             }
             repo.repair_rename_doc_mapping_in_local_repo(repo_name, &old_path, stripped)?;
