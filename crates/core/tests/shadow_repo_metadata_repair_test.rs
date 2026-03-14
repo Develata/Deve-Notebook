@@ -149,3 +149,47 @@ fn local_catalog_repair_leaves_irrecoverable_legacy_uuid_shadow_as_uuid_selector
             .exists()
     );
 }
+
+#[test]
+fn remote_catalog_repair_uses_repaired_local_metadata_before_naming_shadow() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
+    let wiki = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let peer_id = PeerId::new("peer-remote");
+    let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
+
+    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
+    let poisoned = deve_core::ledger::RepoInfo {
+        uuid: wiki_info.uuid,
+        name: String::new(),
+        url: wiki_info.url.clone(),
+    };
+    let write = wiki_db.begin_write().expect("write txn");
+    write
+        .open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(
+            &0,
+            bincode::serialize(&poisoned)
+                .expect("serialize poisoned metadata")
+                .as_slice(),
+        )
+        .expect("write poisoned metadata");
+    write.commit().expect("commit metadata");
+
+    main.ensure_shadow_db(&peer_id, &wiki_info.uuid)
+        .expect("create legacy uuid shadow");
+
+    assert_eq!(
+        main.list_repos(Some(&peer_id))
+            .expect("list repaired shadows"),
+        vec!["wiki".to_string()]
+    );
+    assert!(
+        main.remotes_dir()
+            .join(peer_id.to_filename())
+            .join("wiki.redb")
+            .exists()
+    );
+}
