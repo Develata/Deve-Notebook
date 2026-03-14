@@ -1,6 +1,5 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::listing;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo};
 use crate::server::session::WsSession;
 #[path = "switcher_payload.rs"]
@@ -15,7 +14,7 @@ use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
-use self::switcher_payload::preload_branch_switch;
+use self::switcher_payload::{RepoViewPayload, preload_branch_switch, preload_repo_view};
 use self::switcher_prepare::{
     commit_session_switch, prepare_repo_switch, select_target_repo, validate_branch_target,
 };
@@ -115,34 +114,14 @@ pub async fn handle_switch_branch(
         scope_nonce: Some(session.scope_nonce()),
         repos: payload.repo_list,
     });
-    if let Some(repo_view) = payload.repo_view {
-        let tree_branch = final_branch.clone().map(PeerId::new);
-        ch.unicast(ServerMessage::RepoSwitched {
-            branch: final_branch.clone(),
-            name: repo_view.repo_name,
-            uuid: repo_view.repo_id.to_string(),
-            switch_nonce,
-        });
-        ch.unicast(ServerMessage::DocList {
-            request_id: None,
-            repo_id: Some(repo_view.repo_id),
-            branch: tree_branch.clone(),
-            scope_nonce: Some(session.scope_nonce()),
-            docs: repo_view.docs,
-        });
-        let delta = state.tree_manager.reset_from_nodes(
-            repo_view.repo_id,
-            tree_branch.as_ref(),
-            repo_view.nodes,
-        );
-        ch.unicast(ServerMessage::TreeUpdate {
-            request_id: None,
-            repo_id: Some(repo_view.repo_id),
-            branch: tree_branch,
-            scope_nonce: Some(session.scope_nonce()),
-            delta,
-        });
-    }
+    emit_repo_view(
+        state,
+        ch,
+        session,
+        final_branch,
+        switch_nonce,
+        payload.repo_view,
+    );
 }
 
 pub async fn handle_switch_repo(
@@ -201,6 +180,16 @@ pub async fn handle_switch_repo(
             return;
         }
     };
+    let repo_view = match preload_repo_view(state, branch.as_ref(), &prepared) {
+        Ok(repo_view) => repo_view,
+        Err(err) => {
+            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
+                "Failed to preload repo switch view: {}",
+                err
+            )));
+            return;
+        }
+    };
     commit_session_switch(
         session,
         branch.map(|peer| peer.to_string()),
@@ -217,5 +206,51 @@ pub async fn handle_switch_repo(
         repo_name,
         session.is_readonly()
     );
-    listing::handle_list_docs(state, ch, session, None, switch_nonce).await;
+    emit_repo_view(
+        state,
+        ch,
+        session,
+        session.active_branch.as_ref().map(ToString::to_string),
+        switch_nonce,
+        Some(repo_view),
+    );
+}
+
+fn emit_repo_view(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    branch: Option<String>,
+    switch_nonce: Option<u64>,
+    repo_view: Option<RepoViewPayload>,
+) {
+    let Some(repo_view) = repo_view else {
+        return;
+    };
+    let tree_branch = branch.clone().map(PeerId::new);
+    ch.unicast(ServerMessage::RepoSwitched {
+        branch: branch.clone(),
+        name: repo_view.repo_name,
+        uuid: repo_view.repo_id.to_string(),
+        switch_nonce,
+    });
+    ch.unicast(ServerMessage::DocList {
+        request_id: None,
+        repo_id: Some(repo_view.repo_id),
+        branch: tree_branch.clone(),
+        scope_nonce: Some(session.scope_nonce()),
+        docs: repo_view.docs,
+    });
+    let delta = state.tree_manager.reset_from_nodes(
+        repo_view.repo_id,
+        tree_branch.as_ref(),
+        repo_view.nodes,
+    );
+    ch.unicast(ServerMessage::TreeUpdate {
+        request_id: None,
+        repo_id: Some(repo_view.repo_id),
+        branch: tree_branch,
+        scope_nonce: Some(session.scope_nonce()),
+        delta,
+    });
 }

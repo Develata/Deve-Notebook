@@ -18,9 +18,7 @@ pub async fn handle_list_docs(
     switch_nonce: Option<u64>,
 ) {
     let resolved = if session.active_branch.is_none() {
-        bootstrap_local_repo(state, session).inspect(|scope| {
-            session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
-        })
+        bootstrap_local_repo(state, session)
     } else {
         resolve_session_repo_and_sync(state, session)
     };
@@ -52,6 +50,12 @@ pub async fn handle_list_docs(
             return;
         }
     };
+    if session.active_branch.is_none()
+        && (session.active_repo.as_deref() != Some(repo_name.as_str())
+            || session.active_repo_id != Some(repo_id))
+    {
+        session.switch_repo(repo_name.clone(), Some(repo_id));
+    }
 
     ch.unicast(ServerMessage::RepoSwitched {
         branch: session.active_branch.as_ref().map(ToString::to_string),

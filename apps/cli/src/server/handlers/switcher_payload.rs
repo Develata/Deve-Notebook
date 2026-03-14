@@ -32,6 +32,14 @@ pub(super) fn preload_branch_switch(
     })
 }
 
+pub(super) fn preload_repo_view(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    prepared: &PreparedRepoSwitch,
+) -> anyhow::Result<RepoViewPayload> {
+    load_repo_view(state, branch, prepared)
+}
+
 fn load_repo_view(
     state: &Arc<AppState>,
     branch: Option<&PeerId>,

@@ -131,5 +131,21 @@ async fn switch_repo_prefers_exact_remote_selector_from_repo_id() -> anyhow::Res
             ..
         }) if name == selector && uuid == second.uuid.to_string()
     ));
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::DocList {
+            repo_id: Some(repo_id),
+            branch: Some(_),
+            ..
+        }) if repo_id == second.uuid
+    ));
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::TreeUpdate {
+            repo_id: Some(repo_id),
+            branch: Some(_),
+            ..
+        }) if repo_id == second.uuid
+    ));
     Ok(())
 }
