@@ -113,12 +113,12 @@ impl RepoListing for RepoManager {
                 continue;
             }
             let peer_id = PeerId::new(name);
-            match self.scan_remote_repo_entries(&peer_id) {
+            match self.scan_remote_repo_entries_without_repair(&peer_id) {
                 Ok(entries) if !entries.is_empty() => peers.push(peer_id),
                 Ok(_) => {}
                 Err(err) => {
                     tracing::warn!(
-                        "Skipping broken shadow peer {} while listing shadows: {:?}",
+                        "Skipping unreadable shadow peer directory {} while listing shadows: {:?}",
                         peer_id,
                         err
                     );

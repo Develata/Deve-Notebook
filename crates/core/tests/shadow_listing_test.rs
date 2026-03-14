@@ -18,7 +18,7 @@ fn list_shadows_ignores_empty_peer_dirs() {
 }
 
 #[test]
-fn list_shadows_skips_broken_peer_catalogs() {
+fn list_shadows_keeps_broken_peer_dirs_visible() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let good_peer = PeerId::new("peer-good");
@@ -36,5 +36,5 @@ fn list_shadows_skips_broken_peer_catalogs() {
     std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
 
     let shadows = repo.list_shadows_on_disk().expect("list shadows");
-    assert_eq!(shadows, vec![good_peer]);
+    assert_eq!(shadows, vec![bad_peer, good_peer]);
 }

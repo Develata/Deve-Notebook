@@ -58,6 +58,13 @@ impl RepoManager {
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
         self.repair_remote_repo_catalog(peer_id)?;
+        self.scan_remote_repo_entries_without_repair(peer_id)
+    }
+
+    pub(crate) fn scan_remote_repo_entries_without_repair(
+        &self,
+        peer_id: &PeerId,
+    ) -> Result<Vec<RemoteRepoEntry>> {
         let loaded = self.loaded_remote_repo_info(peer_id);
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
         if !peer_dir.exists() {
@@ -80,9 +87,17 @@ impl RepoManager {
                 .cloned()
             {
                 Some(info) => Some(info),
-                None => self
-                    .repaired_remote_repo_info(&path, &stem)?
-                    .map(|repair| repair.info),
+                None => match Self::read_remote_repo_info_without_repair(&path, &stem) {
+                    Ok(info) => info,
+                    Err(err) => {
+                        tracing::warn!(
+                            "Keeping shadow repo entry {} without metadata during pure scan: {:?}",
+                            stem,
+                            err
+                        );
+                        None
+                    }
+                },
             };
             repos.push(RemoteRepoEntry { path, stem, info });
         }
@@ -196,6 +211,17 @@ impl RepoManager {
             .as_ref()
             .map(|info| info.name.clone())
             .unwrap_or_else(|| entry.stem.clone())
+    }
+
+    fn read_remote_repo_info_without_repair(path: &Path, stem: &str) -> Result<Option<RepoInfo>> {
+        if let Some(info) = Self::read_repo_info_from_path(path)? {
+            return Ok(Some(info));
+        }
+        Ok(uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
+            uuid: repo_id,
+            name: stem.to_string(),
+            url: None,
+        }))
     }
 
     fn loaded_remote_repo_info(&self, peer_id: &PeerId) -> Vec<RepoInfo> {
