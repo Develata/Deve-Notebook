@@ -6,6 +6,7 @@
 use crate::ledger::RepoManager;
 use crate::ledger::source_control;
 use crate::models::DocId;
+use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, pending_fs};
 use anyhow::Result;
 
@@ -16,25 +17,7 @@ impl RepoManager {
     }
 
     pub fn unstage_file_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        let path = crate::utils::path::to_forward_slash(path);
-        self.run_on_local_repo(repo_name, |db| {
-            let Some(staged) = source_control::take_staged_entry(db, &path)? else {
-                anyhow::bail!("Path is not staged: {}", path);
-            };
-            pending_fs::upsert(
-                db,
-                &pending_fs::PendingFsEntry {
-                    path: path.clone(),
-                    renamed_from: staged.renamed_from,
-                    doc_id: staged.doc_id,
-                    change_type: staged.status,
-                    content_hash: staged.content_hash,
-                    detected_at: chrono::Utc::now().timestamp_millis(),
-                    has_conflict: staged.has_conflict,
-                },
-            )?;
-            Ok(())
-        })
+        self.unstage_file_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
     }
 
     /// 获取已暂存文件列表
@@ -126,15 +109,7 @@ impl RepoManager {
     }
 
     pub fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        let path = crate::utils::path::to_forward_slash(path);
-        self.run_on_local_repo(repo_name, |db| {
-            let Some(entry) = pending_fs::get(db, &path)? else {
-                anyhow::bail!("Path is not in pending_fs_ops: {}", path);
-            };
-            pending_fs::remove(db, &path)?;
-            source_control::stage_pending_entry(db, &entry)?;
-            Ok(())
-        })
+        self.stage_pending_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
     }
 
     /// 丢弃待确认变更
@@ -143,6 +118,7 @@ impl RepoManager {
     }
 
     pub fn discard_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.discard_pending_workdir_in_local_repo(repo_name, path)
+        self.discard_pending_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
+            .map(|_| ())
     }
 }

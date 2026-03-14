@@ -7,15 +7,12 @@
 use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeStatus, pending_fs, staging};
+use crate::source_control::{pending_fs, staging};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
 use super::source_control_target_lookup;
-use super::source_control_workdir_helpers::{
-    clear_pending_for_doc, discard_added, discard_tracked_add, rebuild_doc_projection,
-    restore_doc_projection_at_path,
-};
+use super::source_control_workdir_helpers::rebuild_doc_projection;
 
 impl RepoManager {
     pub fn workdir_diff_inputs_in_local_repo(
@@ -79,44 +76,5 @@ impl RepoManager {
             }
             Ok(None)
         })
-    }
-
-    pub(crate) fn discard_pending_workdir_in_local_repo(
-        &self,
-        repo_name: &str,
-        path: &str,
-    ) -> Result<()> {
-        let normalized = to_forward_slash(path);
-        let entry = self
-            .run_on_local_repo(repo_name, |db| pending_fs::get(db, &normalized))?
-            .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", normalized))?;
-
-        match entry.change_type {
-            ChangeStatus::Added => match entry.doc_id {
-                Some(doc_id) => discard_tracked_add(self, repo_name, &normalized, doc_id)?,
-                None => discard_added(self, repo_name, &normalized)?,
-            },
-            ChangeStatus::Modified | ChangeStatus::Deleted | ChangeStatus::Renamed => {
-                let doc_id = match entry.doc_id {
-                    Some(doc_id) => doc_id,
-                    None => self
-                        .resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)?
-                        .ok_or_else(|| anyhow::anyhow!("Document not found: {}", normalized))?,
-                };
-                let canonical_path = self
-                    .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
-                    .map(|meta| meta.path)
-                    .ok_or_else(|| anyhow::anyhow!("Document not found: {}", doc_id))?;
-                if canonical_path != normalized {
-                    discard_added(self, repo_name, &normalized)?;
-                }
-                restore_doc_projection_at_path(self, repo_name, doc_id, &canonical_path)?;
-                self.run_on_local_repo(repo_name, |db| {
-                    clear_pending_for_doc(db, doc_id, &normalized)
-                })?;
-            }
-        }
-
-        Ok(())
     }
 }

@@ -4,7 +4,6 @@ use crate::source_control::pending_fs;
 use anyhow::Result;
 
 use super::projection_cleanup::drop_unanchored_projection_path;
-use super::source_control_workdir_helpers::clear_pending_for_doc;
 
 impl RepoManager {
     pub(crate) fn discard_untracked_pending_add_in_local_repo(
@@ -27,4 +26,17 @@ impl RepoManager {
     ) -> Result<()> {
         self.run_on_local_repo(repo_name, |db| clear_pending_for_doc(db, doc_id, path))
     }
+}
+
+fn clear_pending_for_doc(db: &redb::Database, doc_id: DocId, path: &str) -> Result<()> {
+    let mut paths = vec![path.to_string()];
+    for entry in pending_fs::list_for_doc(db, doc_id)? {
+        if entry.doc_id == Some(doc_id) && !paths.iter().any(|item| item == &entry.path) {
+            paths.push(entry.path);
+        }
+    }
+    for path in paths {
+        pending_fs::remove(db, &path)?;
+    }
+    Ok(())
 }
