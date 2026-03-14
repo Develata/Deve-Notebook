@@ -193,20 +193,11 @@ impl RepoManager {
     }
 
     fn remote_repo_display_name(&self, entry: &RemoteRepoEntry) -> String {
-        let fallback = uuid::Uuid::parse_str(&entry.stem)
-            .ok()
-            .and_then(|repo_id| {
-                self.get_local_repo_info_by_id_without_repair(repo_id)
-                    .ok()
-                    .flatten()
-            })
-            .map(|info| info.name)
-            .unwrap_or_else(|| entry.stem.clone());
         entry
             .info
             .as_ref()
             .map(|info| info.name.clone())
-            .unwrap_or(fallback)
+            .unwrap_or_else(|| entry.stem.clone())
     }
 
     fn loaded_remote_repo_info(&self, peer_id: &PeerId) -> Vec<RepoInfo> {
@@ -220,11 +211,6 @@ impl RepoManager {
                 Self::read_repo_info_from_db(db)
                     .ok()
                     .flatten()
-                    .or_else(|| {
-                        self.get_local_repo_info_by_id_without_repair(*repo_id)
-                            .ok()
-                            .flatten()
-                    })
                     .unwrap_or(RepoInfo {
                         uuid: *repo_id,
                         name: repo_id.to_string(),

@@ -124,16 +124,6 @@ impl RepoManager {
                 let repo_name = resolved
                     .as_ref()
                     .and_then(|entry| entry.info.as_ref().map(|info| info.name.clone()))
-                    .or_else(|| {
-                        resolved.as_ref().and_then(|entry| {
-                            uuid::Uuid::parse_str(&entry.stem)
-                                .ok()
-                                .and_then(|repo_id| {
-                                    self.get_local_repo_info_by_id(repo_id).ok().flatten()
-                                })
-                                .map(|info| info.name)
-                        })
-                    })
                     .unwrap_or_else(|| name.to_string());
                 let repo_id = resolved.as_ref().and_then(|entry| {
                     entry
