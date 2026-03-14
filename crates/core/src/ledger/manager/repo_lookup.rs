@@ -102,11 +102,6 @@ impl RepoManager {
             if let Some(info) = entry.info {
                 return Ok(Some(info));
             }
-            if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem)
-                && let Some(local_info) = self.get_local_repo_info_by_id_without_repair(repo_id)?
-            {
-                return Ok(Some(local_info));
-            }
             if let Some(info) = Self::read_repo_info_from_path(&entry.path)? {
                 return Ok(Some(info));
             }
@@ -128,13 +123,11 @@ impl RepoManager {
                 return Ok(Some(info));
             }
             if let Ok(repo_id) = uuid::Uuid::parse_str(repo_name) {
-                return Ok(self
-                    .get_local_repo_info_by_id_without_repair(repo_id)?
-                    .or(Some(RepoInfo {
-                        uuid: repo_id,
-                        name: repo_name.to_string(),
-                        url: None,
-                    })));
+                return Ok(Some(RepoInfo {
+                    uuid: repo_id,
+                    name: repo_name.to_string(),
+                    url: None,
+                }));
             }
         }
         Ok(None)
