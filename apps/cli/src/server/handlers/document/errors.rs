@@ -1,24 +1,13 @@
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::map_repo_scope_error;
+use anyhow::anyhow;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 fn error_code(err: &anyhow::Error) -> ServerErrorCode {
     let detail = err.to_string();
-    let lower = detail.to_ascii_lowercase();
-    if detail.starts_with("Document not found:") || detail.starts_with("Repository not found:") {
-        return ServerErrorCode::StorageNotFound;
-    }
-    if lower.contains("database already open")
-        || lower.contains("cannot acquire lock")
-        || lower.contains("db locked")
-        || lower.contains("database is locked")
-    {
-        return ServerErrorCode::StorageDbLocked;
-    }
-    if lower.contains("local repo operation requested on remote branch")
-        || lower.contains("repo selector mismatch")
-        || lower.contains("remote session lost repo name")
-    {
-        return ServerErrorCode::ScRepoContextInvalid;
+    let mapped = map_repo_scope_error(anyhow!(detail.clone())).code;
+    if mapped != ServerErrorCode::RequestFailed {
+        return mapped;
     }
     ServerErrorCode::RequestFailed
 }
@@ -50,7 +39,9 @@ mod tests {
     #[test]
     fn classifies_locked_databases_as_storage_db_locked() {
         assert_eq!(
-            error_code(&anyhow::anyhow!("Database already open. Cannot acquire lock.")),
+            error_code(&anyhow::anyhow!(
+                "Database already open. Cannot acquire lock."
+            )),
             ServerErrorCode::StorageDbLocked
         );
     }
@@ -62,6 +53,16 @@ mod tests {
                 "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
             )),
             ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_missing_repo_selection_as_sync_repo_unbound() {
+        assert_eq!(
+            error_code(&anyhow::anyhow!(
+                "Active repository not selected: multiple local repos exist"
+            )),
+            ServerErrorCode::SyncRepoUnbound
         );
     }
 }

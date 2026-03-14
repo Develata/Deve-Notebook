@@ -1,4 +1,6 @@
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::map_repo_scope_error;
+use anyhow::anyhow;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 fn send(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
@@ -35,27 +37,15 @@ pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
 }
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {
+    let repo_scope_code = map_repo_scope_error(anyhow!(detail.to_string())).code;
+    if repo_scope_code != ServerErrorCode::RequestFailed {
+        return repo_scope_code;
+    }
     let lower = detail.to_ascii_lowercase();
     if lower.contains("node meta missing")
         || lower.contains("canonical node path resolution failed")
     {
         return ServerErrorCode::StoragePersistFailed;
-    }
-    if lower.contains("local workspace path requested on remote branch")
-        || lower.contains("local workspace root requested on remote branch")
-        || lower.contains("local repo operation requested on remote branch")
-    {
-        return ServerErrorCode::ScRepoContextInvalid;
-    }
-    if lower.contains("repository not found:") {
-        return ServerErrorCode::StorageNotFound;
-    }
-    if lower.contains("database already open")
-        || lower.contains("cannot acquire lock")
-        || lower.contains("db locked")
-        || lower.contains("database is locked")
-    {
-        return ServerErrorCode::StorageDbLocked;
     }
     ServerErrorCode::RequestFailed
 }
@@ -78,6 +68,22 @@ mod tests {
         assert_eq!(
             classify_failure_code("Local workspace path requested on remote branch: wiki"),
             ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_missing_repo_selection_as_sync_repo_unbound() {
+        assert_eq!(
+            classify_failure_code("Active repository not selected: multiple local repos exist"),
+            ServerErrorCode::SyncRepoUnbound
+        );
+    }
+
+    #[test]
+    fn classifies_missing_docs_as_storage_not_found() {
+        assert_eq!(
+            classify_failure_code("Document not found: abc"),
+            ServerErrorCode::StorageNotFound
         );
     }
 }

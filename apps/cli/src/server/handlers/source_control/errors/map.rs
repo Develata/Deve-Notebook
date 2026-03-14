@@ -15,21 +15,8 @@ pub enum ScOp {
 
 pub fn map_repo_scope_error(error: Error) -> ServerError {
     let detail = error.to_string();
-    let lower = detail.to_ascii_lowercase();
-    if lower.contains("active repository not selected") {
-        return ServerError::with_detail(ServerErrorCode::ScRepoNotSelected, detail);
-    }
-    if contains_any(
-        &lower,
-        &[
-            "remote session lost repo name",
-            "repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "local repo not found for uuid",
-        ],
-    ) {
-        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
+    if let Some(code) = classify_common_scope_code(&detail) {
+        return ServerError::with_detail(code, detail);
     }
     ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
 }
@@ -39,36 +26,8 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
     if let Ok(error) = serde_json::from_str::<ServerError>(&detail) {
         return error;
     }
-    if contains_any(
-        &detail.to_ascii_lowercase(),
-        &[
-            "active repository not selected",
-            "multiple local repos exist",
-            "no local repositories available",
-        ],
-    ) {
-        return ServerError::with_detail(ServerErrorCode::ScRepoNotSelected, detail);
-    }
-    if contains_any(
-        &detail.to_ascii_lowercase(),
-        &[
-            "remote session lost repo name",
-            "repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "local repo not found for uuid",
-            "local repo operation requested on remote branch",
-            "local workspace path requested on remote branch",
-            "local workspace root requested on remote branch",
-        ],
-    ) {
-        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
-    }
-    if contains_any(
-        &detail.to_ascii_lowercase(),
-        &["database is locked", "failed to lock database"],
-    ) {
-        return ServerError::with_detail(ServerErrorCode::StorageDbLocked, detail);
+    if let Some(code) = classify_common_scope_code(&detail) {
+        return ServerError::with_detail(code, detail);
     }
     if detail.to_ascii_lowercase().contains("conflict") {
         return ServerError::with_detail(ServerErrorCode::StorageConflict, detail);
@@ -113,6 +72,58 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
     }
 }
 
+fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
+    let lower = detail.to_ascii_lowercase();
+    if contains_any(
+        &lower,
+        &[
+            "active repository not selected",
+            "multiple local repos exist",
+            "no local repositories available",
+        ],
+    ) {
+        return Some(ServerErrorCode::ScRepoNotSelected);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "repository not found:",
+            "document not found",
+            "doc not found",
+        ],
+    ) {
+        return Some(ServerErrorCode::StorageNotFound);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "database already open",
+            "cannot acquire lock",
+            "db locked",
+            "database is locked",
+            "failed to lock database",
+        ],
+    ) {
+        return Some(ServerErrorCode::StorageDbLocked);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+            "local repo operation requested on remote branch",
+            "local workspace path requested on remote branch",
+            "local workspace root requested on remote branch",
+        ],
+    ) {
+        return Some(ServerErrorCode::ScRepoContextInvalid);
+    }
+    None
+}
+
 fn contains_any(input: &str, patterns: &[&str]) -> bool {
     patterns.iter().any(|pattern| input.contains(pattern))
 }
@@ -147,6 +158,20 @@ mod tests {
     }
 
     #[test]
+    fn maps_scope_missing_repo_to_storage_not_found() {
+        let err = map_repo_scope_error(anyhow::anyhow!("Repository not found: default"));
+        assert_eq!(err.code, ServerErrorCode::StorageNotFound);
+    }
+
+    #[test]
+    fn maps_scope_locked_db_to_storage_db_locked() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Database already open. Cannot acquire lock."
+        ));
+        assert_eq!(err.code, ServerErrorCode::StorageDbLocked);
+    }
+
+    #[test]
     fn preserves_remote_structured_errors() {
         let err = map_repo_error(
             ScOp::Commit,
@@ -173,5 +198,14 @@ mod tests {
             ),
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_repo_error_missing_repo_to_storage_not_found() {
+        let err = map_repo_error(
+            ScOp::ListChanges,
+            anyhow::anyhow!("Repository not found: default"),
+        );
+        assert_eq!(err.code, ServerErrorCode::StorageNotFound);
     }
 }
