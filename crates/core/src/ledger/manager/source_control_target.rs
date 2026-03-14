@@ -1,9 +1,8 @@
 use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{pending_fs, staging};
+use crate::source_control::diff;
 use anyhow::Result;
-
-use super::source_control_target_lookup;
 
 impl RepoManager {
     pub fn stage_pending_target_in_local_repo(
@@ -60,7 +59,8 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<String> {
-        let path = source_control_target_lookup::resolve_change_path(self, repo_name, target)?;
-        self.diff_doc_path_in_local_repo(repo_name, &path)
+        let (path, old_content, new_content) =
+            self.workdir_diff_inputs_for_target_in_local_repo(repo_name, target)?;
+        Ok(diff::unified_diff(&old_content, &new_content, &path))
     }
 }

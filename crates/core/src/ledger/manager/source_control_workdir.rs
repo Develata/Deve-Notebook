@@ -6,10 +6,12 @@
 
 use crate::ledger::RepoManager;
 use crate::models::DocId;
+use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeStatus, pending_fs, staging};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
+use super::source_control_target_lookup;
 use super::source_control_workdir_helpers::{
     clear_pending_for_doc, discard_added, discard_tracked_add, rebuild_doc_projection,
     restore_doc_projection_at_path,
@@ -36,6 +38,16 @@ impl RepoManager {
             anyhow::bail!("Doc not found: {}", normalized);
         }
         Ok((old_content, new_content))
+    }
+
+    pub fn workdir_diff_inputs_for_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &ScPathTarget,
+    ) -> Result<(String, String, String)> {
+        let path = source_control_target_lookup::resolve_change_path(self, repo_name, target)?;
+        let (old_content, new_content) = self.workdir_diff_inputs_in_local_repo(repo_name, &path)?;
+        Ok((path, old_content, new_content))
     }
 
     pub(crate) fn resolve_canonical_doc_id_in_local_repo(

@@ -11,10 +11,6 @@ pub fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathT
     present::resolve_target(entries, target)
 }
 
-pub fn resolve_path(entries: &[ChangeEntry], target: &ScPathTarget) -> String {
-    resolve_target(entries, target).path
-}
-
 pub fn resolve_targets(entries: &[ChangeEntry], targets: Vec<ScPathTarget>) -> Vec<ScPathTarget> {
     let mut seen = HashSet::new();
     targets

@@ -63,6 +63,8 @@ mod setup;
 mod source_control_commit_diff_test;
 #[cfg(test)]
 mod source_control_http_test;
+#[cfg(test)]
+mod source_control_local_scope_test;
 pub mod source_control_proxy;
 #[cfg(test)]
 mod source_control_remote_scope_test;

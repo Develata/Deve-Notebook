@@ -31,21 +31,18 @@ pub async fn handle_get_doc_diff(
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let selector = super::service::selector_from_scope(&scope);
-    let entries = match super::service::list_changes(state.repo.as_ref(), &selector) {
-        Ok(entries) => entries,
-        Err(e) => return super::errors::send_ws(ch, e),
-    };
-    let normalized = super::service::resolve_path(&entries, &target);
-    let (old_content, new_content) = match state
+    let (normalized, old_content, new_content) = match state
         .repo
-        .workdir_diff_inputs_in_local_repo(&scope.repo_name, &normalized)
+        .workdir_diff_inputs_for_target_in_local_repo(&scope.repo_name, &target)
     {
         Ok(payload) => payload,
         Err(e) => {
             return super::errors::send_ws(
                 ch,
-                super::errors::map_repo_error(super::errors::ScOp::DiffDoc(normalized.clone()), e),
+                super::errors::map_repo_error(
+                    super::errors::ScOp::DiffDoc(target.path.clone()),
+                    e,
+                ),
             );
         }
     };

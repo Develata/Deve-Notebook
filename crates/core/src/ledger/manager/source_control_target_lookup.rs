@@ -69,20 +69,40 @@ fn resolve_from_entries(
     path: &str,
     doc_id: Option<DocId>,
 ) -> Option<String> {
-    let by_doc = doc_id.and_then(|doc_id| {
-        entries
-            .iter()
-            .find(|entry| entry.doc_id == Some(doc_id) && to_forward_slash(&entry.path) == path)
-            .or_else(|| {
-                entries.iter().find(|entry| {
-                    entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted
-                })
-            })
-            .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
-    });
+    let by_doc = doc_id.and_then(|doc_id| resolve_for_doc(entries, path, doc_id));
     by_doc
         .or_else(|| resolve_without_doc_id(entries, path))
         .map(|entry| to_forward_slash(&entry.path))
+}
+
+fn resolve_for_doc<'a>(
+    entries: &'a [ChangeEntry],
+    path: &str,
+    doc_id: DocId,
+) -> Option<&'a ChangeEntry> {
+    let exact = entries
+        .iter()
+        .find(|entry| entry.doc_id == Some(doc_id) && to_forward_slash(&entry.path) == path);
+    if exact.is_some_and(|entry| entry.status != ChangeStatus::Deleted) {
+        return exact;
+    }
+    entries
+        .iter()
+        .find(|entry| {
+            entry.doc_id == Some(doc_id)
+                && entry.status != ChangeStatus::Deleted
+                && entry
+                    .renamed_from
+                    .as_ref()
+                    .is_some_and(|old_path| to_forward_slash(old_path) == path)
+        })
+        .or_else(|| {
+            entries
+                .iter()
+                .find(|entry| entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted)
+        })
+        .or(exact)
+        .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
 }
 
 fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {
@@ -154,6 +174,32 @@ mod tests {
             status: ChangeStatus::Added,
             has_conflict: false,
         }];
+
+        assert_eq!(
+            resolve_from_entries(&entries, "notes/old.md", Some(doc_id)),
+            Some("notes/new.md".into())
+        );
+    }
+
+    #[test]
+    fn resolve_from_entries_prefers_live_successor_over_exact_deleted_doc_path() {
+        let doc_id = DocId(uuid::Uuid::nil());
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
 
         assert_eq!(
             resolve_from_entries(&entries, "notes/old.md", Some(doc_id)),
