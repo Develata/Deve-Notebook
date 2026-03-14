@@ -16,3 +16,25 @@ fn list_shadows_ignores_empty_peer_dirs() {
             .is_empty()
     );
 }
+
+#[test]
+fn list_shadows_skips_broken_peer_catalogs() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let good_peer = PeerId::new("peer-good");
+    let bad_peer = PeerId::new("peer-bad");
+    let info = deve_core::ledger::RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:notes".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&good_peer, &info)
+        .expect("seed good shadow");
+    let bad_dir = repo.remotes_dir().join(bad_peer.to_filename());
+    std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
+    std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
+
+    let shadows = repo.list_shadows_on_disk().expect("list shadows");
+    assert_eq!(shadows, vec![good_peer]);
+}

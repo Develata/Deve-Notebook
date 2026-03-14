@@ -90,15 +90,26 @@ impl RepoListing for RepoManager {
         for entry in std::fs::read_dir(remotes_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_dir()
-                && let Some(name) = path.file_name().and_then(|s| s.to_str())
-                && !name.starts_with('.')
-                && !name.is_empty()
-                && !self
-                    .scan_remote_repo_entries(&PeerId::new(name))?
-                    .is_empty()
-            {
-                peers.push(PeerId::new(name));
+            if !path.is_dir() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            if name.starts_with('.') || name.is_empty() {
+                continue;
+            }
+            let peer_id = PeerId::new(name);
+            match self.scan_remote_repo_entries(&peer_id) {
+                Ok(entries) if !entries.is_empty() => peers.push(peer_id),
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::warn!(
+                        "Skipping broken shadow peer {} while listing shadows: {:?}",
+                        peer_id,
+                        err
+                    );
+                }
             }
         }
         peers.sort();
