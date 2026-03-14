@@ -47,7 +47,10 @@ pub async fn handle_file_create(
 
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
         tracing::error!("文件创建后刷新视图失败: {:?}", e);
-        errors::request_failed(ch, format!("Failed to refresh created file view: {}", e));
+        errors::projection_refresh_failed(
+            ch,
+            format!("Failed to refresh created file view: {}", e),
+        );
         return;
     }
 

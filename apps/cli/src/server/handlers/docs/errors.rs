@@ -25,6 +25,10 @@ pub(super) fn storage_persist_failed(ch: &DualChannel, detail: impl Into<String>
     send(ch, ServerErrorCode::StoragePersistFailed, detail);
 }
 
+pub(super) fn projection_refresh_failed(ch: &DualChannel, detail: impl Into<String>) {
+    send(ch, ServerErrorCode::StoragePersistFailed, detail);
+}
+
 pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
     let detail = detail.into();
     send(ch, classify_failure_code(&detail), detail);

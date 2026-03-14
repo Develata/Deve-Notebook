@@ -96,7 +96,10 @@ pub async fn handle_delete_doc(
 
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
         tracing::error!("删除后刷新视图失败: {:?}", e);
-        errors::request_failed(ch, format!("Failed to refresh deleted node view: {}", e));
+        errors::projection_refresh_failed(
+            ch,
+            format!("Failed to refresh deleted node view: {}", e),
+        );
         return;
     }
     notify_fs_refresh(ch, scope.repo_id, &target.repo_path, "deleted");

@@ -71,7 +71,10 @@ pub async fn handle_copy_doc(
 
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
         tracing::error!("复制后刷新视图失败: {:?}", e);
-        errors::request_failed(ch, format!("Failed to refresh copied docs view: {}", e));
+        errors::projection_refresh_failed(
+            ch,
+            format!("Failed to refresh copied docs view: {}", e),
+        );
         return;
     }
     notify_fs_refresh(ch, scope.repo_id, &dest_path, "copied");

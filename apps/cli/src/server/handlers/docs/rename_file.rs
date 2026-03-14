@@ -57,7 +57,10 @@ pub(super) async fn handle_file_rename(
     }
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
         tracing::error!("文件重命名后刷新视图失败: {:?}", e);
-        errors::request_failed(ch, format!("Failed to refresh renamed file view: {}", e));
+        errors::projection_refresh_failed(
+            ch,
+            format!("Failed to refresh renamed file view: {}", e),
+        );
         return;
     }
     notify_fs_refresh(ch, scope.repo_id, dst_path, "renamed");
