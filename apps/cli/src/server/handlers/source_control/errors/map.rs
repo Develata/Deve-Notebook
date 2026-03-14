@@ -51,7 +51,7 @@ fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<ServerError> {
         ),
         ScOp::DiffDoc(path)
             if contains_any(
-                &detail,
+                detail,
                 &[
                     "Doc not found",
                     "Document not found",

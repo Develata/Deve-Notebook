@@ -130,14 +130,14 @@ pub fn use_editor(
         set_doc_ver.set(ver);
     });
 
-    message_effect::setup_server_message_effect(
-        ws.clone(),
-        core.clone(),
+    message_effect::setup_server_message_effect(message_effect::ServerMessageEffectCtx {
+        ws: ws.clone(),
+        core: core.clone(),
         doc_id,
         open_request_id,
-        session_generation.clone(),
-        ready_generation.clone(),
-        buffered_live_ops.clone(),
+        session_generation: session_generation.clone(),
+        ready_generation: ready_generation.clone(),
+        buffered_live_ops: buffered_live_ops.clone(),
         set_content,
         local_version,
         set_local_version,
@@ -145,10 +145,10 @@ pub fn use_editor(
         set_history,
         is_playback,
         set_playback_version,
-        on_stats.clone(),
+        on_stats: on_stats.clone(),
         repo_key,
         set_repo_key,
-    );
+    });
 
     // 编辑器初始化 (Delta 模式)
     let ws_editor = ws.clone();

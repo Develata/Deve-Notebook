@@ -9,25 +9,47 @@ use leptos::prelude::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
 
-pub fn setup_server_message_effect(
-    ws: WsService,
-    core: EditorContext,
-    doc_id: DocId,
-    open_request_id: ReadSignal<u64>,
-    session_generation: Arc<AtomicU64>,
-    ready_generation: Arc<AtomicU64>,
-    buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
-    set_content: WriteSignal<String>,
-    local_version: ReadSignal<u64>,
-    set_local_version: WriteSignal<u64>,
-    history: ReadSignal<Vec<(u64, Op)>>,
-    set_history: WriteSignal<Vec<(u64, Op)>>,
-    is_playback: ReadSignal<bool>,
-    set_playback_version: WriteSignal<u64>,
-    on_stats: Option<Callback<EditorStats>>,
-    repo_key: ReadSignal<Option<RepoKey>>,
-    set_repo_key: WriteSignal<Option<RepoKey>>,
-) {
+#[derive(Clone)]
+pub struct ServerMessageEffectCtx {
+    pub ws: WsService,
+    pub core: EditorContext,
+    pub doc_id: DocId,
+    pub open_request_id: ReadSignal<u64>,
+    pub session_generation: Arc<AtomicU64>,
+    pub ready_generation: Arc<AtomicU64>,
+    pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
+    pub set_content: WriteSignal<String>,
+    pub local_version: ReadSignal<u64>,
+    pub set_local_version: WriteSignal<u64>,
+    pub history: ReadSignal<Vec<(u64, Op)>>,
+    pub set_history: WriteSignal<Vec<(u64, Op)>>,
+    pub is_playback: ReadSignal<bool>,
+    pub set_playback_version: WriteSignal<u64>,
+    pub on_stats: Option<Callback<EditorStats>>,
+    pub repo_key: ReadSignal<Option<RepoKey>>,
+    pub set_repo_key: WriteSignal<Option<RepoKey>>,
+}
+
+pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
+    let ServerMessageEffectCtx {
+        ws,
+        core,
+        doc_id,
+        open_request_id,
+        session_generation,
+        ready_generation,
+        buffered_live_ops,
+        set_content,
+        local_version,
+        set_local_version,
+        history,
+        set_history,
+        is_playback,
+        set_playback_version,
+        on_stats,
+        repo_key,
+        set_repo_key,
+    } = ctx;
     let (last_msg_seq, set_last_msg_seq) = signal(0u64);
 
     Effect::new(move |_| {
