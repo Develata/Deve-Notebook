@@ -22,13 +22,14 @@ pub(super) fn resolve_node_target(
         let Some(node_id) = node_meta::get_node_id(db, path)? else {
             return Ok(None);
         };
-        let meta =
-            node_meta::get_node_meta(db, node_id)?.ok_or_else(|| anyhow!("Node meta missing"))?;
+        let meta = node_meta::get_node_meta(db, node_id)?
+            .ok_or_else(|| anyhow!("Node meta missing for node {}", node_id))?;
         Ok(Some((node_id, meta.kind, meta.doc_id, meta.path)))
     })?;
     meta.map(|(_, kind, doc_id, repo_path)| {
-        let abs_path = local_repo_path(state, scope, &repo_path)
-            .map_err(|_| anyhow!("Canonical node path escaped local repo: {}", repo_path))?;
+        let abs_path = local_repo_path(state, scope, &repo_path).map_err(|err| {
+            anyhow!("Canonical node path resolution failed for {}: {}", repo_path, err)
+        })?;
         Ok(NodeTarget {
             kind,
             doc_id,

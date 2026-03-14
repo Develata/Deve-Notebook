@@ -54,7 +54,7 @@ pub async fn handle_create_doc(
     let path = match local_repo_path(state, &scope, &filename) {
         Ok(path) => path,
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::classified_failure(ch, err.to_string());
             return;
         }
     };

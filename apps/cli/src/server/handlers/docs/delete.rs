@@ -46,7 +46,7 @@ pub async fn handle_delete_doc(
             return;
         }
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::classified_failure(ch, err.to_string());
             return;
         }
     };

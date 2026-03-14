@@ -49,7 +49,7 @@ pub async fn handle_rename_doc(
             return;
         }
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::classified_failure(ch, err.to_string());
             return;
         }
     };
@@ -78,7 +78,7 @@ pub async fn handle_rename_doc(
     let dst = match local_repo_path(state, &scope, &dst_name) {
         Ok(path) => path,
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::classified_failure(ch, err.to_string());
             return;
         }
     };

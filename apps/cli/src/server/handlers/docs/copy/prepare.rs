@@ -28,14 +28,14 @@ pub(super) fn prepare_copy_paths(
             return None;
         }
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::classified_failure(ch, err.to_string());
             return None;
         }
     };
     let dst = match local_repo_path(state, scope, dest_path) {
         Ok(path) => path,
         Err(err) => {
-            errors::request_failed(ch, err.to_string());
+            errors::classified_failure(ch, err.to_string());
             return None;
         }
     };

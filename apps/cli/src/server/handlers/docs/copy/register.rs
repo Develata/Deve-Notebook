@@ -24,7 +24,7 @@ pub(super) fn register_copied_docs(
     let base = match local_repo_root(ctx.state, ctx.scope) {
         Ok(path) => path,
         Err(err) => {
-            errors::request_failed(ctx.ch, err.to_string());
+            errors::classified_failure(ctx.ch, err.to_string());
             return false;
         }
     };
@@ -117,7 +117,10 @@ fn register_file(ctx: CopyRegisterCtx<'_>, src_rel: &str, dest_rel: &str) -> boo
             return false;
         }
         Err(err) => {
-            errors::request_failed(ctx.ch, format!("Failed to resolve copied source: {}", err));
+            errors::classified_failure(
+                ctx.ch,
+                format!("Failed to resolve copied source: {}", err),
+            );
             return false;
         }
     };

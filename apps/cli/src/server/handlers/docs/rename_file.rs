@@ -25,7 +25,7 @@ pub(super) async fn handle_file_rename(
             return;
         }
         Err(e) => {
-            errors::request_failed(ch, format!("Failed to resolve document: {}", e));
+            errors::classified_failure(ch, format!("Failed to resolve document: {}", e));
             return;
         }
     };

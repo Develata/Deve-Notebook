@@ -34,7 +34,7 @@ pub async fn handle_file_create(
         Ok(None) => {}
         Err(e) => {
             tracing::error!("检查文件跟踪状态失败: {:?}", e);
-            errors::request_failed(ch, format!("Failed to check create target: {}", e));
+            errors::classified_failure(ch, format!("Failed to check create target: {}", e));
             return;
         }
     }
