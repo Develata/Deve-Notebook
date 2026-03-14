@@ -200,6 +200,10 @@ pub fn handle_message<F>(
                     pending_repo_switch: signals.pending_repo_switch,
                     set_pending_repo_switch: signals.set_pending_repo_switch,
                     set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
+                    set_shadow_list_request_id: signals.set_shadow_list_request_id,
+                    set_repo_list_request_id: signals.set_repo_list_request_id,
+                    set_doc_list_request_id: signals.set_doc_list_request_id,
+                    set_tree_request_id: signals.set_tree_request_id,
                 },
             );
         }

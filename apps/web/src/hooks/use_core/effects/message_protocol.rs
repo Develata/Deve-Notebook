@@ -12,6 +12,10 @@ pub struct ProtocolControlSignals {
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub set_pending_repo_switch: WriteSignal<Option<String>>,
     pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub set_shadow_list_request_id: WriteSignal<Option<String>>,
+    pub set_repo_list_request_id: WriteSignal<Option<String>>,
+    pub set_doc_list_request_id: WriteSignal<Option<String>>,
+    pub set_tree_request_id: WriteSignal<Option<String>>,
 }
 
 pub fn handle_protocol_error(
@@ -38,6 +42,10 @@ fn clear_failed_scope_switch(code: ServerErrorCode, signals: ProtocolControlSign
     if !is_scope_switch_error(code) {
         return;
     }
+    signals.set_shadow_list_request_id.set(None);
+    signals.set_repo_list_request_id.set(None);
+    signals.set_doc_list_request_id.set(None);
+    signals.set_tree_request_id.set(None);
     if signals.pending_branch_switch.get_untracked().is_some() {
         signals.set_pending_branch_switch.set(None);
         signals.set_pending_branch_switch_nonce.set(None);
@@ -85,6 +93,12 @@ mod tests {
             let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
             let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
             let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
+            let (shadow_list_request_id, set_shadow_list_request_id) =
+                signal(Some("shadow-1".to_string()));
+            let (repo_list_request_id, set_repo_list_request_id) =
+                signal(Some("repo-1".to_string()));
+            let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
+            let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
 
             clear_failed_scope_switch(
                 code,
@@ -95,11 +109,19 @@ mod tests {
                     pending_repo_switch,
                     set_pending_repo_switch,
                     set_pending_repo_switch_nonce,
+                    set_shadow_list_request_id,
+                    set_repo_list_request_id,
+                    set_doc_list_request_id,
+                    set_tree_request_id,
                 },
             );
 
             assert_eq!(pending_branch_switch.get_untracked(), None);
             assert_eq!(pending_repo_switch.get_untracked(), None);
+            assert_eq!(shadow_list_request_id.get_untracked(), None);
+            assert_eq!(repo_list_request_id.get_untracked(), None);
+            assert_eq!(doc_list_request_id.get_untracked(), None);
+            assert_eq!(tree_request_id.get_untracked(), None);
         }
     }
 
@@ -118,6 +140,12 @@ mod tests {
             let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
             let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
             let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
+            let (shadow_list_request_id, set_shadow_list_request_id) =
+                signal(Some("shadow-1".to_string()));
+            let (repo_list_request_id, set_repo_list_request_id) =
+                signal(Some("repo-1".to_string()));
+            let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
+            let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
 
             clear_failed_scope_switch(
                 code,
@@ -128,6 +156,10 @@ mod tests {
                     pending_repo_switch,
                     set_pending_repo_switch,
                     set_pending_repo_switch_nonce,
+                    set_shadow_list_request_id,
+                    set_repo_list_request_id,
+                    set_doc_list_request_id,
+                    set_tree_request_id,
                 },
             );
 
@@ -139,6 +171,19 @@ mod tests {
                 pending_repo_switch.get_untracked(),
                 Some("wiki".to_string())
             );
+            assert_eq!(
+                shadow_list_request_id.get_untracked(),
+                Some("shadow-1".to_string())
+            );
+            assert_eq!(
+                repo_list_request_id.get_untracked(),
+                Some("repo-1".to_string())
+            );
+            assert_eq!(
+                doc_list_request_id.get_untracked(),
+                Some("doc-1".to_string())
+            );
+            assert_eq!(tree_request_id.get_untracked(), Some("tree-1".to_string()));
         }
     }
 }
