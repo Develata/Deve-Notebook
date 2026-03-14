@@ -103,7 +103,14 @@ impl RepoManager {
                         .resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)?
                         .ok_or_else(|| anyhow::anyhow!("Document not found: {}", normalized))?,
                 };
-                restore_doc_projection_at_path(self, repo_name, doc_id, &normalized)?;
+                let canonical_path = self
+                    .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+                    .map(|meta| meta.path)
+                    .ok_or_else(|| anyhow::anyhow!("Document not found: {}", doc_id))?;
+                if canonical_path != normalized {
+                    discard_added(self, repo_name, &normalized)?;
+                }
+                restore_doc_projection_at_path(self, repo_name, doc_id, &canonical_path)?;
                 self.run_on_local_repo(repo_name, |db| {
                     clear_pending_for_doc(db, doc_id, &normalized)
                 })?;
