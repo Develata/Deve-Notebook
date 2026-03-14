@@ -174,6 +174,7 @@ pub fn init(
         &final_name,
         local_db.as_ref(),
         None,
+        false,
     )?;
 
     let repo = RepoManager {

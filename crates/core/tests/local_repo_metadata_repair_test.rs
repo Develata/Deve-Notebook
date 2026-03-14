@@ -149,36 +149,6 @@ fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
 }
 
 #[test]
-fn repair_realigns_workspace_root_to_repaired_repo_name() {
-    let dir = TempDir::new().expect("tempdir");
-    let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
-    let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let main_db = repo.open_database(None, "main").expect("main db").db;
-
-    std::fs::create_dir_all(vault_dir.join("legacy/.notegit")).expect("legacy workspace");
-    std::fs::write(vault_dir.join("legacy/note.md"), "hello").expect("write note");
-    write_info(
-        main_db.as_ref(),
-        &RepoInfo {
-            uuid: repo
-                .get_repo_info()
-                .expect("main info")
-                .expect("present")
-                .uuid,
-            name: "legacy".into(),
-            url: Some("urn:main".into()),
-        },
-    );
-
-    repo.set_vault_root(&vault_dir);
-
-    assert!(vault_dir.join("main/.notegit").exists());
-    assert!(vault_dir.join("main/note.md").exists());
-    assert!(!vault_dir.join("legacy").exists());
-}
-
-#[test]
 fn init_repairs_existing_local_repo_without_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");

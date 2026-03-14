@@ -35,7 +35,7 @@ impl RepoListing for RepoManager {
         if let Some(peer_id) = peer_id {
             return self.list_remote_repo_names(peer_id);
         }
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         let target_dir = self.ledger_dir.join("local");
 
         if !target_dir.exists() {

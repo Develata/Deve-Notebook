@@ -12,7 +12,7 @@ struct LocalRepoCandidates {
 
 impl RepoManager {
     pub fn find_local_repo_name_by_id(&self, target_id: RepoId) -> Result<Option<String>> {
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         self.find_local_repo_name_by_id_without_repair(target_id)
     }
 
@@ -146,7 +146,7 @@ impl RepoManager {
         if self.select_local_repo_name(&initial).is_ok() {
             return Ok(initial);
         }
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         self.resolve_local_repo_candidates(repo_id, repo_name)
     }
 

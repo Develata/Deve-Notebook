@@ -6,7 +6,7 @@ impl RepoManager {
     /// - 返回值始终是可执行的本地 repo 文件 stem，而不是显示别名。
     /// - 返回前必须先修复本地 repo catalog，避免 name drift 污染执行路径。
     pub fn list_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         let local_dir = self.ledger_dir.join("local");
         if !local_dir.exists() {
             return Ok(vec![]);

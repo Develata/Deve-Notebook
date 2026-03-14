@@ -40,7 +40,7 @@ impl RepoManager {
         if let Some(stem) = self.resolve_local_repo_stem(selector)? {
             return self.run_on_local_repo_stem(&stem, f);
         }
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         if let Some(stem) = self.resolve_local_repo_stem(selector)? {
             return self.run_on_local_repo_stem(&stem, f);
         }

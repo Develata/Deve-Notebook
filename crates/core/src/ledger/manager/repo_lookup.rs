@@ -5,7 +5,7 @@ use crate::models::PeerId;
 
 impl RepoManager {
     pub fn get_local_repo_info_by_id(&self, repo_id: uuid::Uuid) -> Result<Option<RepoInfo>> {
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         self.get_local_repo_info_by_id_without_repair(repo_id)
     }
 
@@ -29,7 +29,7 @@ impl RepoManager {
     }
 
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         let matches = self
             .list_local_repo_names_for_execution()?
             .into_iter()
@@ -62,7 +62,7 @@ impl RepoManager {
                 self.run_on_local_repo_stem(&stem, Self::read_repo_info_from_db)
             };
         }
-        self.repair_local_repo_catalog()?;
+        self.refresh_local_repo_catalog()?;
         if let Some(stem) = self.resolve_local_repo_stem(name)? {
             return if stem == self.local_repo_name {
                 Self::read_repo_info_from_db(&self.local_db)

@@ -11,6 +11,7 @@ impl RepoManager {
         main_repo_name: &str,
         main_db: &Database,
         vault_root: Option<&Path>,
+        allow_workspace_root_rewrite: bool,
     ) -> Result<()> {
         let local_dir = ledger_dir.join("local");
         if !local_dir.exists() {
@@ -102,7 +103,9 @@ impl RepoManager {
             }
             if info != original {
                 Self::write_repo_info_to_db(db, &info)?;
-                repair_workspace_root(vault_root, &previous_name, &stem)?;
+                if allow_workspace_root_rewrite {
+                    repair_workspace_root(vault_root, &previous_name, &stem)?;
+                }
                 tracing::warn!("Repaired local repo metadata: {} -> {}", stem, info.uuid);
             }
         }
