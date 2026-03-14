@@ -1,5 +1,5 @@
 use super::repo_scope::{
-    map_repo_scope_error, resolve_session_repo, resolve_session_repo_and_sync,
+    bootstrap_local_repo, map_repo_scope_error, resolve_session_repo, resolve_session_repo_and_sync,
 };
 use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
 use crate::server::security;
@@ -92,6 +92,16 @@ fn resolve_session_repo_rejects_unrecoverable_stale_local_repo_name() -> anyhow:
     let mut session = WsSession::new();
     session.switch_repo("stale-name".into(), None);
     let err = resolve_session_repo(&state, &session).expect_err("stale local repo must fail");
+    assert!(err.to_string().contains("Active repository not selected"));
+    Ok(())
+}
+
+#[test]
+fn bootstrap_local_repo_requires_explicit_selection_when_multiple_local_repos_exist()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let session = WsSession::new();
+    let err = bootstrap_local_repo(&state, &session).expect_err("multi repo bootstrap must fail");
     assert!(err.to_string().contains("Active repository not selected"));
     Ok(())
 }

@@ -203,3 +203,24 @@ fn init_repairs_existing_local_repo_without_metadata() {
         vec!["legacy".to_string()]
     );
 }
+
+#[test]
+fn local_execution_resolution_ignores_broken_remote_catalogs() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let remote_dir = ledger_dir.join("remotes").join("peer-a");
+    std::fs::create_dir_all(&remote_dir).expect("remote dir");
+    std::fs::write(remote_dir.join("broken.redb"), b"not-a-redb").expect("broken shadow file");
+
+    assert_eq!(
+        repo.resolve_local_repo_name_for_execution(None, Some("main"))
+            .expect("local execution selector"),
+        "main"
+    );
+    assert_eq!(
+        repo.list_local_repo_names_for_execution()
+            .expect("local repo names"),
+        vec!["main".to_string()]
+    );
+}

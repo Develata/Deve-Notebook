@@ -110,6 +110,33 @@ impl RepoManager {
         }
     }
 
+    fn select_local_repo_name_for_execution(
+        &self,
+        candidates: &LocalRepoCandidates,
+    ) -> Result<String> {
+        if let (Some(from_id), Some(from_name)) = (&candidates.by_id, &candidates.by_name)
+            && from_id != from_name
+        {
+            anyhow::bail!(
+                "Repo selector mismatch: repo_id resolved to {}, repo_name resolved to {}",
+                from_id,
+                from_name
+            );
+        }
+        if let Some(name) = candidates
+            .by_id
+            .clone()
+            .or_else(|| candidates.by_name.clone())
+        {
+            return Ok(name);
+        }
+        match self.list_local_repo_names_for_execution()?.as_slice() {
+            [repo] => Ok(repo.clone()),
+            [] => anyhow::bail!("No local repositories available"),
+            _ => anyhow::bail!("Active repository not selected: multiple local repos exist"),
+        }
+    }
+
     fn resolve_local_repo_candidates_with_repair(
         &self,
         repo_id: Option<RepoId>,
@@ -158,6 +185,6 @@ impl RepoManager {
             }
             return Ok(from_id);
         }
-        self.select_local_repo_name(&candidates)
+        self.select_local_repo_name_for_execution(&candidates)
     }
 }
