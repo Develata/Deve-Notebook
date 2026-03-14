@@ -61,9 +61,6 @@ fn is_scope_switch_error(code: ServerErrorCode) -> bool {
         ServerErrorCode::ScRepoNotSelected
             | ServerErrorCode::ScRepoContextInvalid
             | ServerErrorCode::SyncRepoUnbound
-            | ServerErrorCode::RequestFailed
-            | ServerErrorCode::StoragePersistFailed
-            | ServerErrorCode::StorageDbLocked
     )
 }
 
@@ -79,6 +76,7 @@ mod tests {
         for code in [
             ServerErrorCode::ScRepoContextInvalid,
             ServerErrorCode::ScRepoNotSelected,
+            ServerErrorCode::SyncRepoUnbound,
         ] {
             let runtime = leptos::reactive::owner::Owner::new();
             runtime.set();
@@ -107,33 +105,40 @@ mod tests {
 
     #[test]
     fn non_switch_errors_keep_pending_scope_switches() {
-        let runtime = leptos::reactive::owner::Owner::new();
-        runtime.set();
-        let (pending_branch_switch, set_pending_branch_switch) =
-            signal(Some(PendingBranchTarget::Local));
-        let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
-        let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
-        let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
-
-        clear_failed_scope_switch(
+        for code in [
             ServerErrorCode::AuthTokenExpired,
-            ProtocolControlSignals {
-                pending_branch_switch,
-                set_pending_branch_switch,
-                set_pending_branch_switch_nonce,
-                pending_repo_switch,
-                set_pending_repo_switch,
-                set_pending_repo_switch_nonce,
-            },
-        );
+            ServerErrorCode::RequestFailed,
+            ServerErrorCode::StoragePersistFailed,
+            ServerErrorCode::StorageDbLocked,
+        ] {
+            let runtime = leptos::reactive::owner::Owner::new();
+            runtime.set();
+            let (pending_branch_switch, set_pending_branch_switch) =
+                signal(Some(PendingBranchTarget::Local));
+            let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
+            let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
+            let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
 
-        assert_eq!(
-            pending_branch_switch.get_untracked(),
-            Some(PendingBranchTarget::Local)
-        );
-        assert_eq!(
-            pending_repo_switch.get_untracked(),
-            Some("wiki".to_string())
-        );
+            clear_failed_scope_switch(
+                code,
+                ProtocolControlSignals {
+                    pending_branch_switch,
+                    set_pending_branch_switch,
+                    set_pending_branch_switch_nonce,
+                    pending_repo_switch,
+                    set_pending_repo_switch,
+                    set_pending_repo_switch_nonce,
+                },
+            );
+
+            assert_eq!(
+                pending_branch_switch.get_untracked(),
+                Some(PendingBranchTarget::Local)
+            );
+            assert_eq!(
+                pending_repo_switch.get_untracked(),
+                Some("wiki".to_string())
+            );
+        }
     }
 }

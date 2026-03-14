@@ -35,7 +35,7 @@ pub(super) fn restore_session_scope(
                 current_repo_id.clone(),
                 switch_nonce,
             ));
-        } else {
+        } else if should_request_repo_list_after_restore(false) {
             request_repo_list(ws, signals);
         }
         return;
@@ -48,12 +48,13 @@ pub(super) fn restore_session_scope(
             .set_pending_repo_switch_nonce
             .set(Some(switch_nonce));
         ws.send(build_switch_repo(repo_name, current_repo_id, switch_nonce));
-        request_repo_list(ws, signals);
         return;
     }
 
     request_doc_listing(ws, signals);
-    request_repo_list(ws, signals);
+    if should_request_repo_list_after_restore(true) {
+        request_repo_list(ws, signals);
+    }
 }
 
 fn request_repo_list(ws: &WsService, signals: HandshakeSignals) {
@@ -90,9 +91,13 @@ fn build_switch_repo(name: String, repo_id: Option<String>, switch_nonce: u64) -
     }
 }
 
+fn should_request_repo_list_after_restore(scope_unbound: bool) -> bool {
+    scope_unbound
+}
+
 #[cfg(test)]
 mod tests {
-    use super::build_switch_repo;
+    use super::{build_switch_repo, should_request_repo_list_after_restore};
     use deve_core::protocol::ClientMessage;
 
     #[test]
@@ -119,5 +124,11 @@ mod tests {
                 switch_nonce: Some(7),
             } if name == "default"
         ));
+    }
+
+    #[test]
+    fn request_repo_list_only_when_scope_is_unbound() {
+        assert!(should_request_repo_list_after_restore(true));
+        assert!(!should_request_repo_list_after_restore(false));
     }
 }

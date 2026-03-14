@@ -10,7 +10,9 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
+use super::callbacks_scope::{LocalScopeSignals, run_if_stable_local_scope};
 pub use super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
+pub use super::callbacks_sync::{SyncCallbacks, create_sync_callbacks};
 use super::navigation::{NavigationTarget, PendingNavigation, guard_navigation};
 use super::pending::PendingLocalEdits;
 
@@ -32,6 +34,7 @@ pub struct DocCallbacks {
 pub fn create_doc_callbacks(
     ws: &WsService,
     current_doc: ReadSignal<Option<DocId>>,
+    local_scope: LocalScopeSignals,
     pending_local_edits: ReadSignal<PendingLocalEdits>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     set_current_doc: WriteSignal<Option<DocId>>,
@@ -58,36 +61,51 @@ pub fn create_doc_callbacks(
 
     let ws_for_create = ws.clone();
     let on_doc_create = Callback::new(move |name: String| {
-        ws_for_create.send(ClientMessage::CreateDoc { name });
+        let ws = ws_for_create.clone();
+        run_if_stable_local_scope(local_scope, "CreateDoc", move || {
+            ws.send(ClientMessage::CreateDoc { name });
+        });
     });
 
     let ws_for_rename = ws.clone();
     let on_doc_rename = Callback::new(move |(old_path, new_path): (String, String)| {
-        leptos::logging::log!("重命名: {} -> {}", old_path, new_path);
-        ws_for_rename.send(ClientMessage::RenameDoc { old_path, new_path });
+        let ws = ws_for_rename.clone();
+        run_if_stable_local_scope(local_scope, "RenameDoc", move || {
+            leptos::logging::log!("重命名: {} -> {}", old_path, new_path);
+            ws.send(ClientMessage::RenameDoc { old_path, new_path });
+        });
     });
 
     let ws_for_delete = ws.clone();
     let on_doc_delete = Callback::new(move |path: String| {
-        leptos::logging::log!("删除: {}", path);
-        ws_for_delete.send(ClientMessage::DeleteDoc { path });
+        let ws = ws_for_delete.clone();
+        run_if_stable_local_scope(local_scope, "DeleteDoc", move || {
+            leptos::logging::log!("删除: {}", path);
+            ws.send(ClientMessage::DeleteDoc { path });
+        });
     });
 
     let ws_for_copy = ws.clone();
     let on_doc_copy = Callback::new(move |(src_path, dest_path): (String, String)| {
-        leptos::logging::log!("复制: {} -> {}", src_path, dest_path);
-        ws_for_copy.send(ClientMessage::CopyDoc {
-            src_path,
-            dest_path,
+        let ws = ws_for_copy.clone();
+        run_if_stable_local_scope(local_scope, "CopyDoc", move || {
+            leptos::logging::log!("复制: {} -> {}", src_path, dest_path);
+            ws.send(ClientMessage::CopyDoc {
+                src_path,
+                dest_path,
+            });
         });
     });
 
     let ws_for_move = ws.clone();
     let on_doc_move = Callback::new(move |(src_path, dest_path): (String, String)| {
-        leptos::logging::log!("移动: {} -> {}", src_path, dest_path);
-        ws_for_move.send(ClientMessage::MoveDoc {
-            src_path,
-            dest_path,
+        let ws = ws_for_move.clone();
+        run_if_stable_local_scope(local_scope, "MoveDoc", move || {
+            leptos::logging::log!("移动: {} -> {}", src_path, dest_path);
+            ws.send(ClientMessage::MoveDoc {
+                src_path,
+                dest_path,
+            });
         });
     });
 
@@ -98,79 +116,6 @@ pub fn create_doc_callbacks(
         on_doc_delete,
         on_doc_copy,
         on_doc_move,
-    }
-}
-
-/// 同步/合并操作回调
-pub struct SyncCallbacks {
-    pub on_get_sync_mode: Callback<()>,
-    pub on_set_sync_mode: Callback<String>,
-    pub on_get_pending_ops: Callback<()>,
-    pub on_confirm_merge: Callback<()>,
-    pub on_discard_pending: Callback<()>,
-    pub on_list_shadows: Callback<()>,
-    pub on_merge_peer: Callback<String>,
-}
-
-/// 创建同步回调
-pub fn create_sync_callbacks(
-    ws: &WsService,
-    current_doc: ReadSignal<Option<DocId>>,
-    set_shadow_list_request_id: WriteSignal<Option<String>>,
-    set_sync_mode_request_id: WriteSignal<Option<String>>,
-    set_pending_ops_request_id: WriteSignal<Option<String>>,
-) -> SyncCallbacks {
-    let ws1 = ws.clone();
-    let on_get_sync_mode = Callback::new(move |_: ()| {
-        let request_id = uuid::Uuid::new_v4().to_string();
-        set_sync_mode_request_id.set(Some(request_id.clone()));
-        ws1.send(ClientMessage::GetSyncMode { request_id });
-    });
-
-    let ws2 = ws.clone();
-    let on_set_sync_mode = Callback::new(move |mode: String| {
-        ws2.send(ClientMessage::SetSyncMode { mode });
-    });
-
-    let ws3 = ws.clone();
-    let on_get_pending_ops = Callback::new(move |_: ()| {
-        let request_id = uuid::Uuid::new_v4().to_string();
-        set_pending_ops_request_id.set(Some(request_id.clone()));
-        ws3.send(ClientMessage::GetPendingOps { request_id });
-    });
-
-    let ws4 = ws.clone();
-    let on_confirm_merge = Callback::new(move |_: ()| {
-        ws4.send(ClientMessage::ConfirmMerge);
-    });
-
-    let ws5 = ws.clone();
-    let on_discard_pending = Callback::new(move |_: ()| {
-        ws5.send(ClientMessage::DiscardPending);
-    });
-
-    let ws6 = ws.clone();
-    let on_list_shadows = Callback::new(move |_: ()| {
-        let request_id = uuid::Uuid::new_v4().to_string();
-        set_shadow_list_request_id.set(Some(request_id.clone()));
-        ws6.send(ClientMessage::ListShadows { request_id });
-    });
-
-    let ws7 = ws.clone();
-    let on_merge_peer = Callback::new(move |peer_id: String| {
-        if let Some(doc_id) = current_doc.get_untracked() {
-            ws7.send(ClientMessage::MergePeer { peer_id, doc_id });
-        }
-    });
-
-    SyncCallbacks {
-        on_get_sync_mode,
-        on_set_sync_mode,
-        on_get_pending_ops,
-        on_confirm_merge,
-        on_discard_pending,
-        on_list_shadows,
-        on_merge_peer,
     }
 }
 

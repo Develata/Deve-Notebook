@@ -7,7 +7,9 @@ pub mod apply;
 pub mod callbacks;
 pub mod callbacks_sc;
 mod callbacks_sc_target;
+mod callbacks_scope;
 mod callbacks_switch;
+mod callbacks_sync;
 pub mod contexts;
 mod dashboard_context;
 pub mod diff_session;
@@ -87,6 +89,12 @@ pub fn use_core() -> CoreState {
     let doc_callbacks = callbacks::create_doc_callbacks(
         &ws,
         signals.current_doc,
+        callbacks_scope::LocalScopeSignals {
+            current_repo_id: signals.current_repo_id,
+            active_branch: signals.active_branch,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_repo_switch: signals.pending_repo_switch,
+        },
         signals.pending_local_edits,
         signals.set_pending_navigation,
         signals.set_current_doc,
@@ -95,6 +103,12 @@ pub fn use_core() -> CoreState {
     let sync_callbacks = callbacks::create_sync_callbacks(
         &ws,
         signals.current_doc,
+        callbacks_scope::LocalScopeSignals {
+            current_repo_id: signals.current_repo_id,
+            active_branch: signals.active_branch,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_repo_switch: signals.pending_repo_switch,
+        },
         signals.set_shadow_list_request_id,
         signals.set_sync_mode_request_id,
         signals.set_pending_ops_request_id,
@@ -130,6 +144,8 @@ pub fn use_core() -> CoreState {
             set_pending_navigation: signals.set_pending_navigation,
             current_repo: signals.current_repo,
             active_branch: signals.active_branch,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_repo_switch: signals.pending_repo_switch,
             set_handshake_ready: signals.set_handshake_ready,
             set_handshake_scope_nonce: signals.set_handshake_scope_nonce,
             set_pending_branch_switch: signals.set_pending_branch_switch,

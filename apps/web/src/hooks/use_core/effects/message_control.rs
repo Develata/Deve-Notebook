@@ -86,6 +86,7 @@ pub fn handle_repo_switched(
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
+        request_repo_list(ws, signals);
         request_repo_sync_state(ws, signals);
         message_shadow::request_shadow_list(ws, signals);
     }

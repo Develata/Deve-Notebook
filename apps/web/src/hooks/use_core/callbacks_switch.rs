@@ -15,6 +15,10 @@ pub struct SwitchCallbacks {
 pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> SwitchCallbacks {
     let ws_branch = ws.clone();
     let on_switch_branch = Callback::new(move |peer_id: Option<String>| {
+        if !can_start_scope_switch(signals) {
+            leptos::logging::warn!("忽略分支切换: 仍有 scope switch 挂起");
+            return;
+        }
         let same_branch = signals
             .active_branch
             .get_untracked()
@@ -55,6 +59,10 @@ pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> S
 
     let ws_repo = ws.clone();
     let on_switch_repo = Callback::new(move |name: String| {
+        if !can_start_scope_switch(signals) {
+            leptos::logging::warn!("忽略仓库切换: 仍有 scope switch 挂起");
+            return;
+        }
         if signals.current_repo.get_untracked().as_deref() == Some(name.as_str()) {
             return;
         }
@@ -93,4 +101,69 @@ fn prepare_scope_switch(ws: &WsService, signals: SwitchScopeSignals) {
     ws.clear_writer_ready();
     signals.set_handshake_ready.set(false);
     signals.set_handshake_scope_nonce.set(None);
+}
+
+fn can_start_scope_switch(signals: SwitchScopeSignals) -> bool {
+    signals.pending_branch_switch.get_untracked().is_none()
+        && signals.pending_repo_switch.get_untracked().is_none()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_start_scope_switch;
+    use crate::hooks::use_core::{PendingBranchTarget, SwitchScopeSignals};
+    use leptos::prelude::*;
+
+    #[test]
+    fn blocks_reentrant_scope_switches() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (current_doc, _) = signal(None);
+        let (pending_local_edits, _) = signal(Default::default());
+        let (_, set_pending_navigation) = signal(None);
+        let (current_repo, _) = signal(Some("default".to_string()));
+        let (active_branch, _) = signal(None::<deve_core::models::PeerId>);
+        let (_, set_handshake_ready) = signal(false);
+        let (_, set_handshake_scope_nonce) = signal(None::<u64>);
+        let (pending_branch_switch, set_pending_branch_switch) =
+            signal(Some(PendingBranchTarget::Local));
+        let (_, set_pending_branch_switch_nonce) = signal(Some(1u64));
+        let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
+        let (_, set_pending_repo_switch_nonce) = signal(None::<u64>);
+
+        assert!(!can_start_scope_switch(SwitchScopeSignals {
+            current_doc,
+            pending_local_edits,
+            set_pending_navigation,
+            current_repo,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+            set_handshake_ready,
+            set_handshake_scope_nonce,
+            set_pending_branch_switch,
+            set_pending_branch_switch_nonce,
+            set_pending_repo_switch,
+            set_pending_repo_switch_nonce,
+        }));
+
+        set_pending_branch_switch.set(None);
+        set_pending_repo_switch.set(Some("repo-2".to_string()));
+
+        assert!(!can_start_scope_switch(SwitchScopeSignals {
+            current_doc,
+            pending_local_edits,
+            set_pending_navigation,
+            current_repo,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+            set_handshake_ready,
+            set_handshake_scope_nonce,
+            set_pending_branch_switch,
+            set_pending_branch_switch_nonce,
+            set_pending_repo_switch,
+            set_pending_repo_switch_nonce,
+        }));
+    }
 }
