@@ -113,6 +113,25 @@ fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unreco
 }
 
 #[test]
+fn resolve_session_repo_recovers_remote_selector_from_uuid_string_without_bound_id()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, remote_repo_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo(remote_repo_id.to_string(), None);
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.branch, Some(peer_id));
+    assert_eq!(resolved.repo_id, remote_repo_id);
+    assert_eq!(resolved.repo_name, "shadow-notes");
+    assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
+    Ok(())
+}
+
+#[test]
 fn resolve_session_repo_recovers_collision_safe_remote_selector_from_uuid() -> anyhow::Result<()> {
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");

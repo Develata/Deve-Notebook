@@ -25,7 +25,6 @@ pub use self::repo_scope_error::map_repo_scope_error;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,
 };
-use deve_core::ledger::listing::RepoListing;
 
 #[derive(Clone, Debug)]
 pub struct ResolvedRepo {
@@ -210,9 +209,5 @@ fn recover_remote_repo_name_from_selector(
     branch: &PeerId,
     repo_name: &str,
 ) -> Result<Option<String>> {
-    let normalized = repo_name.trim_end_matches(".redb");
-    let selectors = state.repo.list_repos(Some(branch))?;
-    Ok(selectors
-        .into_iter()
-        .find(|selector| selector.trim_end_matches(".redb") == normalized))
+    state.repo.find_remote_repo_selector(branch, repo_name)
 }

@@ -157,6 +157,16 @@ impl RepoManager {
             .map(|entry| entry.stem))
     }
 
+    pub fn find_remote_repo_selector(
+        &self,
+        peer_id: &PeerId,
+        selector: &str,
+    ) -> Result<Option<String>> {
+        Ok(self
+            .resolve_remote_repo_entry(peer_id, selector)?
+            .map(|entry| entry.stem))
+    }
+
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
         let entries = self.scan_remote_repo_entries(peer_id)?;
         let mut counts = HashMap::<String, usize>::new();

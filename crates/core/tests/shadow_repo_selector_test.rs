@@ -107,3 +107,28 @@ fn open_remote_database_preserves_collision_safe_selector() {
     assert_eq!(handle.repo_name, selector);
     assert_eq!(handle.repo_id, Some(second.uuid));
 }
+
+#[test]
+fn remote_repo_selector_can_recover_from_uuid_string() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let info = RepoInfo {
+        uuid: Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-a".into()),
+    };
+    repo.ensure_shadow_repo_info(&peer_id, &info)
+        .expect("prepare shadow repo");
+
+    let selector = repo
+        .find_remote_repo_selector(&peer_id, &info.uuid.to_string())
+        .expect("resolve selector")
+        .expect("selector exists");
+
+    assert_eq!(
+        selector,
+        repo.find_remote_repo_selector_by_id(&peer_id, info.uuid)
+            .expect("selector by id")
+            .expect("selector exists")
+    );
+}
