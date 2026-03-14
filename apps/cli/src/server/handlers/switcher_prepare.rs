@@ -172,14 +172,22 @@ pub(super) fn resolve_requested_repo_name(
         .then(|| repo_name.to_string()))
 }
 
-fn recover_canonical_selector(
+pub(super) fn recover_canonical_selector(
     state: &Arc<AppState>,
     branch: Option<&PeerId>,
     raw_repo_name: &str,
     repo_id: RepoId,
 ) -> anyhow::Result<Option<String>> {
-    Ok(select_repo_selector_by_id(state, branch, repo_id)?
-        .or_else(|| Some(raw_repo_name.to_string())))
+    let resolved = select_repo_selector_by_id(state, branch, repo_id)?;
+    if resolved.is_none() {
+        tracing::warn!(
+            "Refusing to recover execution selector from raw repo name without UUID mapping: branch={:?}, raw_name={}, repo_id={}",
+            branch,
+            raw_repo_name,
+            repo_id
+        );
+    }
+    Ok(resolved)
 }
 
 fn recover_selector_from_raw_name(
