@@ -10,6 +10,27 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
     if contains_any(
         &lower,
         &[
+            "repository not found:",
+            "document not found",
+            "doc not found",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::StorageNotFound, detail);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "database already open",
+            "cannot acquire lock",
+            "db locked",
+            "database is locked",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::StorageDbLocked, detail);
+    }
+    if contains_any(
+        &lower,
+        &[
             "remote session lost repo name",
             "repository uuid not resolved",
             "session repo mismatch",

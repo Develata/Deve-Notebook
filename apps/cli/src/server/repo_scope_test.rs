@@ -113,3 +113,17 @@ fn map_repo_scope_error_marks_selector_mismatch_as_context_invalid() {
     ));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }
+
+#[test]
+fn map_repo_scope_error_marks_missing_repo_as_not_found() {
+    let err = map_repo_scope_error(anyhow::anyhow!("Repository not found: default"));
+    assert_eq!(err.code, ServerErrorCode::StorageNotFound);
+}
+
+#[test]
+fn map_repo_scope_error_marks_locked_db_as_storage_db_locked() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Database already open. Cannot acquire lock."
+    ));
+    assert_eq!(err.code, ServerErrorCode::StorageDbLocked);
+}
