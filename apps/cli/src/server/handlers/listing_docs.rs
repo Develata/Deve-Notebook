@@ -1,12 +1,13 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::handlers::document::errors::send_doc_error;
 use crate::server::repo_scope::{
     bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 pub async fn handle_list_docs(
@@ -39,10 +40,7 @@ pub async fn handle_list_docs(
         Ok(docs) => docs,
         Err(err) => {
             tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list docs: {}", err),
-            ));
+            send_doc_error(ch, "Failed to list docs", err);
             return;
         }
     };
@@ -50,10 +48,7 @@ pub async fn handle_list_docs(
         Ok(nodes) => nodes,
         Err(err) => {
             tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list nodes: {}", err),
-            ));
+            send_doc_error(ch, "Failed to list nodes", err);
             return;
         }
     };

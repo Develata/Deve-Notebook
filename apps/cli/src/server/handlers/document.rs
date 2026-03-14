@@ -2,7 +2,7 @@
 
 mod confirmed;
 mod edit;
-mod errors;
+pub(crate) mod errors;
 mod history;
 mod open;
 mod snapshot;
