@@ -38,15 +38,100 @@ async fn read_error(response: Response) -> anyhow::Error {
 }
 
 fn decode_error(status: StatusCode, body: &[u8]) -> ServerError {
-    serde_json::from_slice::<ServerError>(body).unwrap_or_else(|_| {
-        let detail = String::from_utf8_lossy(body).trim().to_string();
-        let detail = if detail.is_empty() {
-            format!("remote source control request failed with HTTP {status}")
-        } else {
-            format!("remote source control request failed with HTTP {status}: {detail}")
-        };
-        ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
-    })
+    serde_json::from_slice::<ServerError>(body)
+        .unwrap_or_else(|_| decode_plain_text_error(status, String::from_utf8_lossy(body).trim()))
+}
+
+fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError {
+    let lower = raw_detail.to_ascii_lowercase();
+    if contains_any(
+        &lower,
+        &[
+            "active repository not selected",
+            "multiple local repos exist",
+            "no local repositories available",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::ScRepoNotSelected, raw_detail);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+            "local repo operation requested on remote branch",
+            "local workspace path requested on remote branch",
+            "local workspace root requested on remote branch",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "database already open",
+            "cannot acquire lock",
+            "db locked",
+            "database is locked",
+            "failed to lock database",
+        ],
+    ) || status == StatusCode::SERVICE_UNAVAILABLE
+    {
+        return ServerError::with_detail(
+            ServerErrorCode::StorageDbLocked,
+            format_remote_detail(status, raw_detail),
+        );
+    }
+    if lower.contains("path is not in pending_fs_ops") {
+        return ServerError::with_detail(ServerErrorCode::ScPendingNotFound, raw_detail);
+    }
+    if lower.contains("path is not staged") {
+        return ServerError::with_detail(ServerErrorCode::ScStagedNotFound, raw_detail);
+    }
+    if lower.contains("commit not found") {
+        return ServerError::with_detail(ServerErrorCode::ScCommitNotFound, raw_detail);
+    }
+    if lower.contains("nothing to commit") {
+        return ServerError::new(ServerErrorCode::ScNothingToCommit);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "doc not found",
+            "document not found",
+            "remote document not found",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::ScDocNotFound, raw_detail);
+    }
+    if lower.contains("conflict") {
+        return ServerError::with_detail(ServerErrorCode::StorageConflict, raw_detail);
+    }
+    if status == StatusCode::NOT_FOUND {
+        return ServerError::with_detail(
+            ServerErrorCode::StorageNotFound,
+            format_remote_detail(status, raw_detail),
+        );
+    }
+    ServerError::with_detail(
+        ServerErrorCode::RequestFailed,
+        format_remote_detail(status, raw_detail),
+    )
+}
+
+fn format_remote_detail(status: StatusCode, raw_detail: &str) -> String {
+    if raw_detail.is_empty() {
+        format!("remote source control request failed with HTTP {status}")
+    } else {
+        format!("remote source control request failed with HTTP {status}: {raw_detail}")
+    }
+}
+
+fn contains_any(input: &str, patterns: &[&str]) -> bool {
+    patterns.iter().any(|pattern| input.contains(pattern))
 }
 
 #[derive(Debug)]
@@ -80,11 +165,33 @@ mod tests {
     #[test]
     fn wraps_plain_text_errors() {
         let err = decode_error(StatusCode::NOT_FOUND, b"notes/a.md");
-        assert_eq!(err.code, ServerErrorCode::RequestFailed);
+        assert_eq!(err.code, ServerErrorCode::StorageNotFound);
         assert!(
             err.detail
                 .as_deref()
                 .is_some_and(|detail| detail.contains("404 Not Found"))
         );
+    }
+
+    #[test]
+    fn maps_plain_text_pending_miss() {
+        let err = decode_error(
+            StatusCode::CONFLICT,
+            b"Path is not in pending_fs_ops: notes/a.md",
+        );
+        assert_eq!(err.code, ServerErrorCode::ScPendingNotFound);
+        assert_eq!(
+            err.detail.as_deref(),
+            Some("Path is not in pending_fs_ops: notes/a.md")
+        );
+    }
+
+    #[test]
+    fn maps_plain_text_repo_scope_drift() {
+        let err = decode_error(
+            StatusCode::CONFLICT,
+            b"Repo selector mismatch: repo_id resolved to default, repo_name resolved to test",
+        );
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }
 }
