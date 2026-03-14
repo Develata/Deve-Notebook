@@ -1,6 +1,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
+use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
 #[path = "switcher_payload.rs"]
 mod switcher_payload;
@@ -51,10 +52,10 @@ pub async fn handle_switch_branch(
     ) {
         Ok(repo) => repo,
         Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list repos for branch switch: {}", err),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
+                "Failed to list repos for branch switch: {}",
+                err
+            )));
             return;
         }
     };
@@ -82,10 +83,10 @@ pub async fn handle_switch_branch(
     let payload = match preload_branch_switch(state, target_branch_ref, prepared.as_ref()) {
         Ok(payload) => payload,
         Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to preload branch switch view: {}", err),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
+                "Failed to preload branch switch view: {}",
+                err
+            )));
             return;
         }
     };
@@ -176,10 +177,10 @@ pub async fn handle_switch_repo(
                 return;
             }
             Err(err) => {
-                ch.send_protocol_error(ServerError::with_detail(
-                    ServerErrorCode::RequestFailed,
-                    format!("Failed to list repos: {}", err),
-                ));
+                ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
+                    "Failed to list repos: {}",
+                    err
+                )));
                 return;
             }
         };

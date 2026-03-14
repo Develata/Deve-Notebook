@@ -1,5 +1,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::ledger::listing::RepoListing;
@@ -24,20 +25,20 @@ pub(super) fn validate_branch_target(
     let shadows = match state.repo.list_shadows_on_disk() {
         Ok(shadows) => shadows,
         Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list shadows: {}", err),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
+                "Failed to list shadows: {}",
+                err
+            )));
             return None;
         }
     };
     let local_repos = match state.repo.list_local_repo_names_for_execution() {
         Ok(repos) => repos,
         Err(err) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list local repos: {}", err),
-            ));
+            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
+                "Failed to list local repos: {}",
+                err
+            )));
             return None;
         }
     };
