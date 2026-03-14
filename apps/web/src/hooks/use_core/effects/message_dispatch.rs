@@ -10,7 +10,7 @@ use super::message_dispatch_gate::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
 };
 use super::message_projection::{handle_doc_list, handle_tree_update};
-use super::message_protocol::handle_protocol_error;
+use super::message_protocol::{ProtocolControlSignals, handle_protocol_error};
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
@@ -189,7 +189,19 @@ pub fn handle_message<F>(
             message_shadow::handle_peer_deleted(peer_id, ws, signals);
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
-            handle_protocol_error(ws, locale, &error);
+            handle_protocol_error(
+                ws,
+                locale,
+                &error,
+                ProtocolControlSignals {
+                    pending_branch_switch: signals.pending_branch_switch,
+                    set_pending_branch_switch: signals.set_pending_branch_switch,
+                    set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
+                    pending_repo_switch: signals.pending_repo_switch,
+                    set_pending_repo_switch: signals.set_pending_repo_switch,
+                    set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
+                },
+            );
         }
         ServerMessage::WriteReady {
             peer_id,
