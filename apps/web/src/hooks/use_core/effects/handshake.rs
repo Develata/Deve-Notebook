@@ -30,30 +30,6 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             return;
         }
 
-        let Some(mode_key) = signals
-            .degraded
-            .get()
-            .as_ref()
-            .map(|_| format!("{}::degraded", endpoint_signal.get()))
-            .or_else(|| {
-                signals
-                    .identity
-                    .get()
-                    .as_ref()
-                    .map(|id| format!("{}::{}", endpoint_signal.get(), id.repo_id))
-            })
-        else {
-            return;
-        };
-        let is_reconnect_bootstrap = last_mode.borrow().is_none();
-        if last_mode.borrow().as_deref() == Some(mode_key.as_str()) {
-            return;
-        }
-        *last_mode.borrow_mut() = Some(mode_key);
-        ws_clone.clear_writer_ready();
-        signals.set_handshake_ready.set(false);
-        signals.set_handshake_scope_nonce.set(None);
-
         let ws = ws_clone.clone();
         let maybe_mode = signals.degraded.get();
         let maybe_identity = signals.identity.get();
@@ -62,6 +38,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let repo_name = signals.current_repo.get();
         let branch = signals.active_branch.get();
         let pending_repo_switch = signals.pending_repo_switch.get();
+        let is_reconnect_bootstrap = last_mode.borrow().is_none();
         if should_suspend_handshake(&branch, pending_repo_switch.as_deref()) {
             *last_mode.borrow_mut() = None;
             if is_reconnect_bootstrap {
@@ -72,6 +49,21 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             signals.set_handshake_scope_nonce.set(None);
             return;
         }
+        let Some(mode_key) = handshake_mode_key(
+            &endpoint_signal.get(),
+            maybe_mode.as_ref().map(|_| ()),
+            maybe_identity.as_ref().map(|id| id.repo_id.as_str()),
+            branch.as_ref(),
+        ) else {
+            return;
+        };
+        if last_mode.borrow().as_deref() == Some(mode_key.as_str()) {
+            return;
+        }
+        *last_mode.borrow_mut() = Some(mode_key);
+        ws_clone.clear_writer_ready();
+        signals.set_handshake_ready.set(false);
+        signals.set_handshake_scope_nonce.set(None);
         let scope_nonce = scope_nonce.clone();
         if let Some(identity) = maybe_identity.as_ref()
             && maybe_mode.is_none()
@@ -166,13 +158,31 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
     });
 }
 
+fn handshake_mode_key(
+    endpoint: &str,
+    degraded: Option<()>,
+    repo_id: Option<&str>,
+    branch: Option<&PeerId>,
+) -> Option<String> {
+    degraded
+        .map(|_| format!("{endpoint}::degraded"))
+        .or_else(|| {
+            repo_id.map(|repo_id| {
+                let branch_key = branch
+                    .map(PeerId::to_string)
+                    .unwrap_or_else(|| "local".to_string());
+                format!("{endpoint}::{repo_id}::{branch_key}")
+            })
+        })
+}
+
 fn should_suspend_handshake(branch: &Option<PeerId>, pending_repo_switch: Option<&str>) -> bool {
     branch.is_some() || pending_repo_switch.is_some()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::should_suspend_handshake;
+    use super::{handshake_mode_key, should_suspend_handshake};
     use deve_core::models::PeerId;
 
     #[test]
@@ -188,5 +198,13 @@ mod tests {
     #[test]
     fn keeps_handshake_enabled_for_local_bound_repo() {
         assert!(!should_suspend_handshake(&None, None));
+    }
+
+    #[test]
+    fn handshake_mode_key_distinguishes_local_and_shadow_scope() {
+        let local = handshake_mode_key("ws://a", None, Some("repo-1"), None);
+        let shadow =
+            handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")));
+        assert_ne!(local, shadow);
     }
 }

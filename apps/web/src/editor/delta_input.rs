@@ -2,6 +2,7 @@ use super::EditorStats;
 use super::ffi::{Delta, getEditorContent};
 use super::op_id::next_client_op_id;
 use crate::api::WsService;
+use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::pending::{self, PendingLocalEdits};
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
@@ -12,6 +13,9 @@ pub struct DeltaInputCtx {
     pub doc_id: DocId,
     pub ws: WsService,
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub handshake_ready: ReadSignal<bool>,
     pub is_playback: ReadSignal<bool>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
     pub local_version: ReadSignal<u64>,
@@ -21,7 +25,12 @@ pub struct DeltaInputCtx {
 
 pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
     Closure::wrap(Box::new(move |delta_json: String| {
-        if ctx.is_playback.get_untracked() {
+        if !can_send_delta(
+            ctx.is_playback.get_untracked(),
+            ctx.pending_branch_switch.get_untracked().is_some(),
+            ctx.pending_repo_switch.get_untracked().is_some(),
+            ctx.handshake_ready.get_untracked(),
+        ) {
             return;
         }
         let Some(client_id) = ctx
@@ -72,5 +81,35 @@ fn emit_stats(on_stats: Option<Callback<EditorStats>>, text: &str) {
             words: text.split_whitespace().count(),
             lines: text.lines().count(),
         });
+    }
+}
+
+fn can_send_delta(
+    is_playback: bool,
+    branch_switch_pending: bool,
+    repo_switch_pending: bool,
+    handshake_ready: bool,
+) -> bool {
+    !is_playback && !branch_switch_pending && !repo_switch_pending && handshake_ready
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_send_delta;
+
+    #[test]
+    fn blocks_delta_while_scope_switch_is_pending() {
+        assert!(!can_send_delta(false, true, false, true));
+        assert!(!can_send_delta(false, false, true, true));
+    }
+
+    #[test]
+    fn blocks_delta_before_handshake_is_ready() {
+        assert!(!can_send_delta(false, false, false, false));
+    }
+
+    #[test]
+    fn allows_delta_only_in_stable_writable_scope() {
+        assert!(can_send_delta(false, false, false, true));
     }
 }

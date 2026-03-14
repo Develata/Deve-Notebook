@@ -43,9 +43,12 @@ pub fn Editor(
         let spectator = core.is_spectator.get();
         let is_pb = playback_version.get() < local_version.get_untracked();
         let loading = core.load_state.get() != "ready";
+        let switching =
+            core.pending_branch_switch.get().is_some() || core.pending_repo_switch.get().is_some();
         let handshake_ready = core.handshake_ready.get();
         let writer_ready = ws.writer_ready_repo_id.get() == core.current_repo_id.get();
-        let should_readonly = spectator || is_pb || loading || !handshake_ready || !writer_ready;
+        let should_readonly =
+            spectator || is_pb || loading || switching || !handshake_ready || !writer_ready;
         ffi::set_read_only(should_readonly);
     });
     let (outline_pref, set_outline_pref) = use_outline();

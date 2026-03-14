@@ -45,6 +45,8 @@ pub struct SwitchScopeSignals {
     pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     pub current_repo: ReadSignal<Option<String>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
+    pub set_handshake_ready: WriteSignal<bool>,
+    pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
     pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
     pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
     pub set_pending_repo_switch: WriteSignal<Option<String>>,

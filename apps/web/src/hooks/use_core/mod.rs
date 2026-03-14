@@ -129,6 +129,8 @@ pub fn use_core() -> CoreState {
             set_pending_navigation: signals.set_pending_navigation,
             current_repo: signals.current_repo,
             active_branch: signals.active_branch,
+            set_handshake_ready: signals.set_handshake_ready,
+            set_handshake_scope_nonce: signals.set_handshake_scope_nonce,
             set_pending_branch_switch: signals.set_pending_branch_switch,
             set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
             set_pending_repo_switch: signals.set_pending_repo_switch,

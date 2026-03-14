@@ -32,6 +32,7 @@ pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> S
                 .clone()
                 .map(PendingBranchTarget::Shadow)
                 .unwrap_or(PendingBranchTarget::Local);
+            prepare_scope_switch(&ws_branch_action, signals);
             signals.set_pending_branch_switch.set(Some(pending));
             signals
                 .set_pending_branch_switch_nonce
@@ -61,6 +62,7 @@ pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> S
         let ws_repo_action = ws_repo.clone();
         let action = Callback::new(move |_: ()| {
             let switch_nonce = next_switch_nonce();
+            prepare_scope_switch(&ws_repo_action, signals);
             signals
                 .set_pending_repo_switch
                 .set(Some(target_repo.clone()));
@@ -85,4 +87,10 @@ pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> S
         on_switch_branch,
         on_switch_repo,
     }
+}
+
+fn prepare_scope_switch(ws: &WsService, signals: SwitchScopeSignals) {
+    ws.clear_writer_ready();
+    signals.set_handshake_ready.set(false);
+    signals.set_handshake_scope_nonce.set(None);
 }
