@@ -57,7 +57,7 @@ pub(super) async fn handle_merge_peer(
                 Some(session.scope_nonce()),
             );
         }
-        Err(e) => errors::request_failed(ch, format!("Merge failed: {}", e)),
+        Err(e) => errors::classified_failure(ch, format!("Merge failed: {}", e)),
     }
 }
 
@@ -78,7 +78,7 @@ fn write_merged_content(
             .map(|(_, entry)| entry)
             .collect::<Vec<_>>(),
         Err(err) => {
-            return errors::request_failed(
+            return errors::classified_failure(
                 ch,
                 format!("Failed to load local merge state: {}", err),
             );

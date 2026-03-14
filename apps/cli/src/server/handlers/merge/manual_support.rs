@@ -21,7 +21,7 @@ pub(super) fn load_engine(
     repo_id: RepoId,
 ) -> Option<SyncEngine> {
     state.sync_engine.get_or_create(repo_id).or_else(|| {
-        errors::request_failed(ch, "Failed to get or create sync engine");
+        errors::storage_persist_failed(ch, "Failed to get or create sync engine");
         None
     })
 }

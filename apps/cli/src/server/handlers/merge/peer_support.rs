@@ -21,7 +21,7 @@ pub(super) fn resolve_doc_path(
             None
         }
         Err(e) => {
-            errors::request_failed(ch, format!("Failed to resolve merged doc path: {}", e));
+            errors::classified_failure(ch, format!("Failed to resolve merged doc path: {}", e));
             None
         }
     }
@@ -42,7 +42,10 @@ pub(super) fn resolve_local_merge_scope(
             None
         }
         Err(err) => {
-            errors::request_failed(ch, format!("Failed to resolve local merge scope: {}", err));
+            errors::classified_failure(
+                ch,
+                format!("Failed to resolve local merge scope: {}", err),
+            );
             None
         }
     }
