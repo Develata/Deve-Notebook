@@ -32,6 +32,7 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
         &lower,
         &[
             "remote session lost repo name",
+            "cannot bootstrap local repo while on remote branch",
             "repository uuid not resolved",
             "remote repository selector not resolved",
             "local repository uuid not resolved",

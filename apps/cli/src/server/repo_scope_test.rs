@@ -135,3 +135,11 @@ fn map_repo_scope_error_marks_stale_nonce_as_context_invalid() {
     ));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }
+
+#[test]
+fn map_repo_scope_error_marks_remote_bootstrap_as_context_invalid() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Cannot bootstrap local repo while on remote branch"
+    ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
