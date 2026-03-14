@@ -16,7 +16,10 @@ impl RepoManager {
             .filter_map(|entry| entry.ok().map(|e| e.path()))
             .filter(|path| path.extension().and_then(|s| s.to_str()) == Some("redb"))
             .filter_map(|path| {
-                let stem = path.file_stem().and_then(|s| s.to_str()).map(str::to_string)?;
+                let stem = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(str::to_string)?;
                 if stem == self.local_repo_name {
                     return Some(stem);
                 }

@@ -28,7 +28,11 @@ pub(super) fn resolve_node_target(
     })?;
     meta.map(|(_, kind, doc_id, repo_path)| {
         let abs_path = local_repo_path(state, scope, &repo_path).map_err(|err| {
-            anyhow!("Canonical node path resolution failed for {}: {}", repo_path, err)
+            anyhow!(
+                "Canonical node path resolution failed for {}: {}",
+                repo_path,
+                err
+            )
         })?;
         Ok(NodeTarget {
             kind,

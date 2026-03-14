@@ -157,7 +157,9 @@ pub fn create_source_control_callbacks(
             return;
         }
         let request_id = uuid::Uuid::new_v4().to_string();
-        request.set_doc_diff_request_id.set(Some(request_id.clone()));
+        request
+            .set_doc_diff_request_id
+            .set(Some(request_id.clone()));
         ws6.send(ClientMessage::GetDocDiff {
             request_id,
             target: resolve_target_any(staged_changes, unstaged_changes, &path),

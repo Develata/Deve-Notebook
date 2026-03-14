@@ -98,7 +98,10 @@ pub(super) async fn handle_push(
         Ok(count) => tracing::info!("Applied {} ops for repo {}", count, repo_id),
         Err(e) => {
             tracing::error!("Failed to apply ops for repo {}: {:?}", repo_id, e);
-            errors::sync_apply_failed(ch, format!("Failed to apply sync ops for repo {}: {}", repo_id, e));
+            errors::sync_apply_failed(
+                ch,
+                format!("Failed to apply sync ops for repo {}: {}", repo_id, e),
+            );
         }
     }
 }

@@ -117,10 +117,7 @@ fn register_file(ctx: CopyRegisterCtx<'_>, src_rel: &str, dest_rel: &str) -> boo
             return false;
         }
         Err(err) => {
-            errors::classified_failure(
-                ctx.ch,
-                format!("Failed to resolve copied source: {}", err),
-            );
+            errors::classified_failure(ctx.ch, format!("Failed to resolve copied source: {}", err));
             return false;
         }
     };

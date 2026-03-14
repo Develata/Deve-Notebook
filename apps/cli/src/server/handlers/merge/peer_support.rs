@@ -42,10 +42,7 @@ pub(super) fn resolve_local_merge_scope(
             None
         }
         Err(err) => {
-            errors::classified_failure(
-                ch,
-                format!("Failed to resolve local merge scope: {}", err),
-            );
+            errors::classified_failure(ch, format!("Failed to resolve local merge scope: {}", err));
             None
         }
     }
