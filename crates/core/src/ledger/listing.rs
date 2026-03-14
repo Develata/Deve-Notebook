@@ -54,9 +54,22 @@ impl RepoListing for RepoManager {
                 else {
                     continue;
                 };
-                let display = RepoManager::read_repo_info_from_path(&path)?
-                    .map(|info| info.name)
-                    .unwrap_or_else(|| stem.clone());
+                let display = if stem == self.local_repo_name {
+                    self.get_repo_info()?.map(|info| info.name)
+                } else {
+                    match RepoManager::read_repo_info_from_path(&path) {
+                        Ok(info) => info.map(|info| info.name),
+                        Err(err) => {
+                            tracing::warn!(
+                                "Skipping broken local repo {} while listing repos: {:?}",
+                                stem,
+                                err
+                            );
+                            continue;
+                        }
+                    }
+                }
+                .unwrap_or_else(|| stem.clone());
                 named.push((stem, display));
             }
         }

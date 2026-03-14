@@ -41,10 +41,33 @@ impl RepoManager {
             let db = if stem == main_repo_name {
                 None
             } else {
-                Some(cached_or_create_database(&path)?)
+                match cached_or_create_database(&path) {
+                    Ok(db) => Some(db),
+                    Err(err) => {
+                        tracing::warn!(
+                            "Skipping broken local repo catalog {} during repair: {:?}",
+                            stem,
+                            err
+                        );
+                        continue;
+                    }
+                }
             };
             let db = db.as_deref().unwrap_or(main_db);
-            let mut info = Self::read_repo_info_from_db(db)?.unwrap_or_else(|| RepoInfo {
+            let read_info = Self::read_repo_info_from_db(db);
+            let mut info = match read_info {
+                Ok(info) => info,
+                Err(err) if stem != main_repo_name => {
+                    tracing::warn!(
+                        "Skipping unreadable local repo metadata {} during repair: {:?}",
+                        stem,
+                        err
+                    );
+                    continue;
+                }
+                Err(err) => return Err(err),
+            }
+            .unwrap_or_else(|| RepoInfo {
                 uuid: uuid::Uuid::new_v4(),
                 name: stem.clone(),
                 url: None,

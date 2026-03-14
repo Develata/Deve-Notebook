@@ -146,11 +146,23 @@ impl RepoManager {
             if stem == selector {
                 return Ok(Some(stem));
             }
-            if Self::read_repo_info_from_path(&path)?
-                .as_ref()
-                .map(|info| info.name.as_str())
-                == Some(selector)
-            {
+            let info = if stem == self.local_repo_name {
+                self.get_repo_info()?
+            } else {
+                match Self::read_repo_info_from_path(&path) {
+                    Ok(info) => info,
+                    Err(err) => {
+                        tracing::warn!(
+                            "Skipping broken local repo {} while resolving selector {}: {:?}",
+                            stem,
+                            selector,
+                            err
+                        );
+                        continue;
+                    }
+                }
+            };
+            if info.as_ref().map(|info| info.name.as_str()) == Some(selector) {
                 if by_alias.as_ref().is_some_and(|current| current != &stem) {
                     return Err(anyhow!("Ambiguous local repository selector: {}", selector));
                 }
