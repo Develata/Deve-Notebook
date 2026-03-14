@@ -72,6 +72,8 @@ strip = true              # 移除所有符号和调试信息
 
 [profile.dev]
 debug = 1              # 行号信息 (默认值 2 会导致 LNK1102 OOM)
+incremental = false    # WSL/DrvFS 下增量产物易损坏，优先稳定性
 
 [profile.test]
 debug = 1              # 同上，确保测试也不会 OOM
+incremental = false    # 避免 test binary/dep-graph 在 WSL 下损坏
