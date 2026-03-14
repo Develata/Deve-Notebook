@@ -1,7 +1,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
-use crate::server::repo_scope::map_repo_scope_error;
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo};
 use crate::server::session::WsSession;
 #[path = "switcher_payload.rs"]
 mod switcher_payload;
@@ -34,15 +34,24 @@ pub async fn handle_switch_branch(
         return;
     };
 
-    let current_repo_url = if let Some(current_repo) = &session.active_repo {
-        state
-            .repo
-            .get_repo_url(session.active_branch.as_ref(), current_repo)
-            .ok()
-            .flatten()
-    } else {
-        None
-    };
+    let current_repo_url = resolve_session_repo(state, session)
+        .ok()
+        .and_then(|scope| {
+            state
+                .repo
+                .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
+                .ok()
+                .flatten()
+        })
+        .or_else(|| {
+            session.active_repo.as_ref().and_then(|current_repo| {
+                state
+                    .repo
+                    .get_repo_url(session.active_branch.as_ref(), current_repo)
+                    .ok()
+                    .flatten()
+            })
+        });
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
 
