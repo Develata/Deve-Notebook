@@ -60,7 +60,10 @@ async fn handle_binary(
             route::route_message(state, ch, session, client_msg).await;
             broadcast_filter.sync_from_session(session);
         }
-        Err(e) => tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len()),
+        Err(e) => {
+            tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len());
+            ch.send_protocol_error(invalid_client_message("Invalid bincode client message"));
+        }
     }
     SocketFlow::Continue
 }
@@ -81,7 +84,10 @@ async fn handle_text(
             route::route_message(state, ch, session, client_msg).await;
             broadcast_filter.sync_from_session(session);
         }
-        Err(_) => tracing::warn!("Failed to parse client message: {}", text),
+        Err(_) => {
+            tracing::warn!("Failed to parse client message: {}", text);
+            ch.send_protocol_error(invalid_client_message("Invalid JSON client message"));
+        }
     }
     SocketFlow::Continue
 }
@@ -96,4 +102,21 @@ fn record_message(session: &mut WsSession, ch: &DualChannel, peer_id: &str) -> b
     ));
     tracing::warn!("WS message rate limit exceeded: {}", peer_id);
     false
+}
+
+fn invalid_client_message(detail: &'static str) -> ServerError {
+    ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::invalid_client_message;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn invalid_client_messages_use_structured_request_failed() {
+        let error = invalid_client_message("Invalid JSON client message");
+        assert_eq!(error.code, ServerErrorCode::RequestFailed);
+        assert_eq!(error.detail.as_deref(), Some("Invalid JSON client message"));
+    }
 }
