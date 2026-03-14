@@ -67,6 +67,9 @@ fn resolve_session_repo_keeps_exact_remote_selector_without_uuid() -> anyhow::Re
     assert_eq!(resolved.branch, Some(peer_id));
     assert_eq!(resolved.repo_id, repo_id);
     assert_eq!(resolved.repo_name, exact_selector);
-    assert_eq!(session.active_repo.as_deref(), Some(resolved.repo_name.as_str()));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(resolved.repo_name.as_str())
+    );
     Ok(())
 }

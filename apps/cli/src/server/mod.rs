@@ -54,6 +54,8 @@ mod repo_scope;
 #[cfg(test)]
 mod repo_scope_local_alias_test;
 #[cfg(test)]
+mod repo_scope_recovery_test;
+#[cfg(test)]
 mod repo_scope_remote_selector_test;
 #[cfg(test)]
 mod repo_scope_test;

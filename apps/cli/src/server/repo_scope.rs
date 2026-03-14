@@ -212,32 +212,7 @@ fn recover_remote_repo_name_from_selector(
 ) -> Result<Option<String>> {
     let normalized = repo_name.trim_end_matches(".redb");
     let selectors = state.repo.list_repos(Some(branch))?;
-    let mut matches = selectors
-        .iter()
-        .filter_map(|selector| {
-            state
-                .repo
-                .get_repo_info_for(Some(branch), Some(selector))
-                .ok()
-                .flatten()
-                .filter(|info| info.name == normalized)
-                .map(|_| selector.clone())
-        })
-        .collect::<Vec<_>>();
-    matches.dedup();
-    if state
-        .repo
-        .get_repo_info_for(Some(branch), Some(normalized))?
-        .is_some()
-    {
-        return if matches.len() > 1 {
-            Ok(None)
-        } else {
-            Ok(Some(normalized.to_string()))
-        };
-    }
-    if matches.len() == 1 {
-        return Ok(matches.pop());
-    }
-    Ok(None)
+    Ok(selectors
+        .into_iter()
+        .find(|selector| selector.trim_end_matches(".redb") == normalized))
 }

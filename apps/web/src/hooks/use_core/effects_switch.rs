@@ -4,8 +4,11 @@ use leptos::prelude::*;
 use super::types::{PendingBranchTarget, RepoSwitchSignals};
 
 #[cfg(test)]
-#[path = "effects_switch_test.rs"]
-mod tests;
+#[path = "effects_switch_branch_test.rs"]
+mod branch_tests;
+#[cfg(test)]
+#[path = "effects_switch_repo_test.rs"]
+mod repo_tests;
 
 #[derive(Clone, Copy)]
 pub struct BranchSwitchSignals {

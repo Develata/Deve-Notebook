@@ -30,42 +30,18 @@ impl RepoManager {
 
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
         self.repair_local_repo_catalog()?;
-        if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
-            && info.url.as_deref() == Some(target_url)
-        {
-            return Ok(Some(self.local_repo_name.clone()));
-        }
-
-        let local_dir = self.ledger_dir.join("local");
-        if !local_dir.exists() {
-            return Ok(None);
-        }
-
-        for entry in std::fs::read_dir(local_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
-                continue;
-            }
-            let file_stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or_default();
-            if file_stem == self.local_repo_name {
-                continue;
-            }
-            let is_match = self
-                .run_on_local_repo(file_stem, |db| {
-                    let info = Self::read_repo_info_from_db(db)?;
-                    Ok(info.and_then(|i| i.url).as_deref() == Some(target_url))
-                })
-                .unwrap_or(false);
-            if is_match {
-                return Ok(Some(file_stem.to_string()));
-            }
-        }
-
-        Ok(None)
+        let matches = self
+            .list_local_repo_names_for_execution()?
+            .into_iter()
+            .filter_map(|repo_name| {
+                self.get_repo_info_for(None, Some(&repo_name))
+                    .ok()
+                    .flatten()
+                    .filter(|info| info.url.as_deref() == Some(target_url))
+                    .map(|_| repo_name)
+            })
+            .collect::<Vec<_>>();
+        Ok((matches.len() == 1).then(|| matches[0].clone()))
     }
 
     pub fn get_repo_info_for(
