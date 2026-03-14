@@ -114,3 +114,31 @@ fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> 
     assert_eq!(selected, "test");
     Ok(())
 }
+
+#[test]
+fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let peer_id = PeerId::new("peer-remote");
+    let first = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:shared".into()),
+    };
+    let second = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:shared".into()),
+    };
+    state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
+    state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
+
+    let selected = select_target_repo(
+        &state,
+        None,
+        None,
+        Some("urn:test:shared".into()),
+        Some(&peer_id),
+    )?;
+    assert_eq!(selected, None);
+    Ok(())
+}

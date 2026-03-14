@@ -141,7 +141,7 @@ pub fn handle_message<F>(
                 if request_id.is_some() {
                     signals.set_shadow_list_request_id.set(None);
                 }
-                message_shadow::handle_shadow_list(shadows, ws, signals);
+                message_shadow::handle_shadow_list(shadows, request_id.is_some(), ws, signals);
             }
         }
         ServerMessage::RepoList {

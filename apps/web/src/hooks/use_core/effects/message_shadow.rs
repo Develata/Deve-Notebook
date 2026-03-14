@@ -19,11 +19,17 @@ pub fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
     ws.send(ClientMessage::ListShadows { request_id });
 }
 
-pub fn handle_shadow_list(shadows: Vec<String>, ws: &WsService, signals: CoreSignals) {
+pub fn handle_shadow_list(
+    shadows: Vec<String>,
+    authoritative_refresh: bool,
+    ws: &WsService,
+    signals: CoreSignals,
+) {
     let should_recover = should_recover_local_branch_from_shadow_list(
         &shadows,
         signals.active_branch.get_untracked(),
         signals.pending_branch_switch.get_untracked(),
+        authoritative_refresh,
     );
     signals.set_shadow_repos.set(shadows);
     if should_recover {
@@ -96,8 +102,10 @@ fn should_recover_local_branch_from_shadow_list(
     shadows: &[String],
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
+    authoritative_refresh: bool,
 ) -> bool {
-    pending_branch_switch.is_none()
+    authoritative_refresh
+        && pending_branch_switch.is_none()
         && active_branch
             .as_ref()
             .map(|peer| !shadows.iter().any(|entry| entry == peer.as_str()))

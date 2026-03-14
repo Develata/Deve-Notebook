@@ -34,24 +34,13 @@ pub async fn handle_switch_branch(
         return;
     };
 
-    let current_repo_url = resolve_session_repo(state, session)
-        .ok()
-        .and_then(|scope| {
-            state
-                .repo
-                .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
-                .ok()
-                .flatten()
-        })
-        .or_else(|| {
-            session.active_repo.as_ref().and_then(|current_repo| {
-                state
-                    .repo
-                    .get_repo_url(session.active_branch.as_ref(), current_repo)
-                    .ok()
-                    .flatten()
-            })
-        });
+    let current_repo_url = resolve_session_repo(state, session).ok().and_then(|scope| {
+        state
+            .repo
+            .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
+            .ok()
+            .flatten()
+    });
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
 

@@ -91,14 +91,19 @@ pub(super) fn select_target_repo(
         return recover_canonical_selector(state, target_branch, repo_name, info.uuid);
     }
     if let Some(url) = current_repo_url {
-        for repo_name in &repos {
-            if let Ok(Some(repo_url)) = state.repo.get_repo_url(target_branch, repo_name)
-                && repo_url == url
-            {
-                return Ok(Some(repo_name.clone()));
-            }
-        }
-        return Ok(None);
+        let matches = repos
+            .iter()
+            .filter_map(|repo_name| {
+                state
+                    .repo
+                    .get_repo_url(target_branch, repo_name)
+                    .ok()
+                    .flatten()
+                    .filter(|repo_url| repo_url == &url)
+                    .map(|_| repo_name.clone())
+            })
+            .collect::<Vec<_>>();
+        return Ok((matches.len() == 1).then(|| matches[0].clone()));
     }
     if current_repo_name.is_some() || current_repo_id.is_some() {
         return Ok(None);
