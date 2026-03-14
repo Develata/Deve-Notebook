@@ -76,6 +76,12 @@ pub(super) fn select_target_repo(
     {
         return Ok(Some(selector));
     }
+    if let Some(repo_name) = current_repo_name
+        && let Some(info) = state.repo.get_repo_info_for(target_branch, Some(repo_name))?
+        && info.name != repo_name
+    {
+        return Ok(Some(repo_name.to_string()));
+    }
     if let Some(url) = current_repo_url {
         for repo_name in &repos {
             if let Ok(Some(repo_url)) = state.repo.get_repo_url(target_branch, repo_name)

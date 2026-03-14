@@ -54,6 +54,8 @@ mod repo_scope;
 #[cfg(test)]
 mod repo_scope_local_alias_test;
 #[cfg(test)]
+mod repo_scope_remote_selector_test;
+#[cfg(test)]
 mod repo_scope_test;
 mod router;
 pub mod security;
@@ -77,6 +79,8 @@ mod source_control_test_support;
 pub mod static_files;
 #[cfg(test)]
 mod switcher_branch_test;
+#[cfg(test)]
+mod switcher_exact_selector_test;
 #[cfg(test)]
 mod sync_hello_test;
 mod tree_state;
