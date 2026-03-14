@@ -44,7 +44,7 @@ pub(super) fn validate_branch_target(
     };
     let is_valid_shadow = shadows.iter().any(|p| p.as_str() == pid_str);
     let is_local_repo = local_repos.contains(pid_str);
-    if is_local_repo {
+    if !is_valid_shadow && is_local_repo {
         ch.send_protocol_error(ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
             format!(

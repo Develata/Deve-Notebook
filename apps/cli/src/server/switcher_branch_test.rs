@@ -75,6 +75,48 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_accepts_shadow_peer_even_if_local_repo_stem_matches() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    repo.set_vault_root(&vault);
+    let local = RepoManager::init(dir.path(), 10, Some("peer-remote"), Some("urn:local:peer"))?;
+    let local_info = local.get_repo_info()?.expect("local peer repo info");
+    let peer_id = PeerId::new("peer-remote");
+    repo.ensure_shadow_repo_binding(&peer_id, local_info.uuid)?;
+    let repo = Arc::new(repo);
+    let (tx, _rx) = broadcast::channel(16);
+    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let state = Arc::new(AppState {
+        repo: repo.clone(),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        tx,
+        plugins: vec![],
+        sync_engine: Arc::new(RepoScopedSyncEngine::new(
+            identity_key.peer_id(),
+            repo,
+            SyncMode::Auto,
+        )),
+        tree_manager: Arc::new(RepoTreeRegistry::new()),
+        #[cfg(feature = "search")]
+        search_service: None,
+        identity_key,
+    });
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
+
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::BranchSwitched { success: true, .. })
+    ));
+    assert_eq!(session.active_branch, Some(peer_id));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Result<()> {
     let state = build_state()?;
     let local = state
