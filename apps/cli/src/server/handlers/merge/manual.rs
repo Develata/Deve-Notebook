@@ -12,6 +12,7 @@ pub(super) async fn handle_get_sync_mode(
     session: &mut WsSession,
     request_id: String,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
         return;
     };
@@ -22,6 +23,7 @@ pub(super) async fn handle_get_sync_mode(
         request_id: Some(request_id),
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
+        scope_nonce,
         mode: sync_mode_label(engine.sync_mode()),
     });
 }
@@ -32,6 +34,7 @@ pub(super) async fn handle_set_sync_mode(
     session: &mut WsSession,
     mode: String,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
     };
@@ -49,6 +52,7 @@ pub(super) async fn handle_set_sync_mode(
         request_id: None,
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
+        scope_nonce,
         mode: sync_mode_label(new_mode),
     });
 }
@@ -59,6 +63,7 @@ pub(super) async fn handle_get_pending_ops(
     session: &mut WsSession,
     request_id: String,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
         return;
     };
@@ -79,6 +84,7 @@ pub(super) async fn handle_get_pending_ops(
         request_id: Some(request_id),
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
+        scope_nonce,
         count: pending_count as u32,
         previews,
     });

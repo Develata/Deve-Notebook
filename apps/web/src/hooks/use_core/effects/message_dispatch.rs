@@ -102,13 +102,14 @@ pub fn handle_message<F>(
             request_id,
             repo_id,
             branch,
+            scope_nonce,
             mode,
         } => {
             if !matches_current_message_scope(&repo_id, &branch, signals)
                 || !accepts_system_or_matching_request(
                     request_id.as_deref(),
                     signals.sync_mode_request_id.get_untracked().as_deref(),
-                    None,
+                    scope_nonce,
                     signals.current_scope_nonce.get_untracked(),
                 )
             {
@@ -121,6 +122,7 @@ pub fn handle_message<F>(
             request_id,
             repo_id,
             branch,
+            scope_nonce,
             count,
             previews,
         } => {
@@ -128,7 +130,7 @@ pub fn handle_message<F>(
                 || !accepts_system_or_matching_request(
                     request_id.as_deref(),
                     signals.pending_ops_request_id.get_untracked().as_deref(),
-                    None,
+                    scope_nonce,
                     signals.current_scope_nonce.get_untracked(),
                 )
             {
