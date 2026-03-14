@@ -228,3 +228,22 @@ async fn list_docs_recovers_from_stale_local_selector() -> anyhow::Result<()> {
     assert_eq!(session.active_repo_id, Some(test_repo_id));
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_on_scoped_local_unbound_state_returns_repo_unbound() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.set_scope_nonce(Some(9));
+
+    handle_list_docs(&state, &ch, &mut session, None, None).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+        }
+        other => panic!("expected SyncRepoUnbound error, got {:?}", other),
+    }
+    Ok(())
+}

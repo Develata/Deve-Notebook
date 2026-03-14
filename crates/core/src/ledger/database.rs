@@ -9,18 +9,13 @@
 //! 主库 (`local_db`) 已经被 RepoManager 持有，我们通过路径匹配来避免重复打开。
 
 use super::RepoManager;
+use super::database_cache::OPENED_DBS;
 use crate::models::PeerId;
 use crate::models::RepoId;
 use anyhow::Result;
 use redb::Database;
-use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
-
-/// 全局缓存：已打开的数据库 (path -> Arc<Database>)
-/// 这确保同一个数据库文件在整个进程中只被打开一次
-static OPENED_DBS: std::sync::LazyLock<RwLock<HashMap<std::path::PathBuf, Arc<Database>>>> =
-    std::sync::LazyLock::new(|| RwLock::new(HashMap::new()));
+use std::sync::Arc;
 
 pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) {
     OPENED_DBS

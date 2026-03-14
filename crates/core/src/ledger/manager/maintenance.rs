@@ -1,3 +1,4 @@
+use crate::ledger::database_cache::evict_database_paths_under;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::schema::{
     CLIENT_OP_INDEX, DOC_OPS, DOCID_TO_PATH, INODE_TO_DOCID, INODE_TO_NODEID, LEDGER_OPS, NODE_OPS,
@@ -160,12 +161,58 @@ impl RepoManager {
             let mut guard = self.shadow_dbs.write().unwrap();
             guard.remove(peer_id);
         }
+        evict_database_paths_under(&peer_dir);
 
         // 3. Physical delete
         std::fs::remove_dir_all(&peer_dir)
             .with_context(|| format!("无法删除 Peer 目录: {:?}", peer_dir))?;
 
         tracing::info!("Deleted peer branch: {}", peer_id);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RepoManager;
+    use crate::ledger::RepoInfo;
+    use crate::models::PeerId;
+    use tempfile::tempdir;
+
+    #[test]
+    fn delete_peer_branch_evicts_shadow_db_cache() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = RepoManager::init(dir.path(), 8, Some("default"), Some("urn:default"))?;
+        let peer_id = PeerId::new("peer-a");
+        let first = RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:first".into()),
+        };
+        let second = RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "wiki".into(),
+            url: Some("urn:test:second".into()),
+        };
+        let path = repo
+            .remotes_dir()
+            .join(peer_id.to_filename())
+            .join("wiki.redb");
+
+        repo.ensure_shadow_repo_info(&peer_id, &first)?;
+        assert!(path.exists());
+
+        repo.delete_peer_branch(&peer_id)?;
+        assert!(!path.exists());
+
+        repo.ensure_shadow_repo_info(&peer_id, &second)?;
+        assert!(path.exists());
+        assert_eq!(
+            repo.get_repo_info_for(Some(&peer_id), Some("wiki"))?
+                .expect("recreated shadow repo")
+                .uuid,
+            second.uuid
+        );
         Ok(())
     }
 }

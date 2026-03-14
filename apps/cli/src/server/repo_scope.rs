@@ -6,6 +6,8 @@
 
 #[path = "repo_scope_lookup.rs"]
 mod lookup;
+#[path = "repo_scope_bootstrap.rs"]
+mod repo_scope_bootstrap;
 #[path = "repo_scope_error.rs"]
 mod repo_scope_error;
 #[path = "repo_scope_workspace.rs"]
@@ -18,6 +20,7 @@ use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
 use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
+use self::repo_scope_bootstrap::fallback_local_repo_name;
 pub use self::repo_scope_error::map_repo_scope_error;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,
@@ -42,8 +45,10 @@ pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
     if session.active_repo.is_some() || session.active_repo_id.is_some() {
         return resolve_session_repo(state, session);
     }
-    let repo_name = resolve_repo_name_from_session(state, session)?
-        .unwrap_or_else(|| state.repo.local_repo_name().to_string());
+    let repo_name = match resolve_repo_name_from_session(state, session)? {
+        Some(repo_name) => repo_name,
+        None => fallback_local_repo_name(state, session)?,
+    };
     resolve_repo_by_name(state, None, session.active_repo_id, repo_name)
 }
 

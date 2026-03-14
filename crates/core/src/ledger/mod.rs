@@ -29,6 +29,7 @@
 // ========== 子模块声明 ==========
 
 pub mod database;
+mod database_cache;
 pub mod doc_lookup;
 pub mod init;
 mod init_reuse;
