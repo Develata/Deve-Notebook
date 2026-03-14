@@ -1,4 +1,5 @@
 use super::{SyncManager, projection_io};
+use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeStatus, pending_fs};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
@@ -13,6 +14,29 @@ pub(super) fn discard_pending_workdir(
         .repo
         .run_on_local_repo(repo_name, |db| pending_fs::get(db, &normalized))?
         .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", normalized))?;
+    discard_entry(sync, repo_name, normalized, entry)
+}
+
+pub(super) fn discard_pending_target_workdir(
+    sync: &SyncManager,
+    repo_name: &str,
+    target: &ScPathTarget,
+) -> Result<String> {
+    let entry = sync
+        .repo
+        .run_on_local_repo(repo_name, |db| pending_fs::get_for_target(db, target))?
+        .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path))?;
+    let normalized = to_forward_slash(&entry.path);
+    discard_entry(sync, repo_name, normalized.clone(), entry)?;
+    Ok(normalized)
+}
+
+fn discard_entry(
+    sync: &SyncManager,
+    repo_name: &str,
+    normalized: String,
+    entry: pending_fs::PendingFsEntry,
+) -> Result<()> {
     match entry.change_type {
         ChangeStatus::Added => match entry.doc_id {
             Some(doc_id) => discard_tracked_add(sync, repo_name, &normalized, doc_id),

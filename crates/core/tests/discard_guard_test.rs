@@ -1,5 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::sync::SyncManager;
@@ -180,6 +181,49 @@ fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
     sync.discard_pending_in_local_repo("default", "notes/b.md")?;
 
     assert_eq!(std::fs::read_to_string(old_path)?, "ledger");
+    assert!(!new_path.exists());
+    Ok(())
+}
+
+#[test]
+fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo();
+    let doc_id = repo.apply_file_structure_in_local_repo(
+        repo.local_repo_name(),
+        "notes/a.md",
+        None,
+        "test",
+    )?;
+    let old_path = dir.path().join("vault/default/notes/a.md");
+    let new_path = dir.path().join("vault/default/notes/b.md");
+    std::fs::create_dir_all(old_path.parent().expect("parent"))?;
+    std::fs::write(&new_path, "dirty")?;
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: Some("notes/a.md".into()),
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Renamed,
+                content_hash: pending_fs::content_hash("dirty"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })?;
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let resolved = sync.discard_pending_target_in_local_repo(
+        "default",
+        &ScPathTarget {
+            path: "notes/a.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )?;
+
+    assert_eq!(resolved, "notes/b.md");
+    assert_eq!(std::fs::read_to_string(old_path)?, "");
     assert!(!new_path.exists());
     Ok(())
 }

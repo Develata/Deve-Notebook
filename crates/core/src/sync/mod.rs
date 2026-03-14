@@ -96,6 +96,14 @@ impl SyncManager {
         discard_pending::discard_pending_workdir(self, repo_name, path)
     }
 
+    pub fn discard_pending_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &crate::protocol::ScPathTarget,
+    ) -> Result<String> {
+        discard_pending::discard_pending_target_workdir(self, repo_name, target)
+    }
+
     pub fn reconcile_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<bool> {
         if let Some(path_str) = self
             .repo

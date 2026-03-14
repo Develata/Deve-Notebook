@@ -8,17 +8,18 @@ pub(super) fn discard_via_sync_manager(
     selector: &RepoSelector,
     target: &ScPathTarget,
 ) -> Result<String, ServerError> {
-    let pending = super::service::list_pending(state.repo.as_ref(), selector)?;
-    let path = super::service::resolve_path(&pending, target);
     let repo_name = state
         .repo
         .resolve_local_repo_name_for_execution(selector.repo_id, selector.repo_name.as_deref())
         .map_err(super::errors::map_repo_scope_error)?;
-    state
+    let path = state
         .sync_manager
-        .discard_pending_in_local_repo(&repo_name, &path)
+        .discard_pending_target_in_local_repo(&repo_name, target)
         .map_err(|e| {
-            super::errors::map_repo_error(super::errors::ScOp::DiscardPending(path.clone()), e)
+            super::errors::map_repo_error(
+                super::errors::ScOp::DiscardPending(target.path.clone()),
+                e,
+            )
         })?;
     Ok(path)
 }
