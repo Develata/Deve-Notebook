@@ -152,9 +152,12 @@ pub fn handle_sc_message(
             commit_id,
             repo_id,
             branch,
+            scope_nonce,
             ..
         } => {
-            if !in_scope(repo_id, branch) {
+            if !in_scope(repo_id, branch)
+                || !scoped_ack_matches(*scope_nonce, current_scope_nonce.get_untracked())
+            {
                 return true;
             }
             refresh_after_commit(
@@ -190,11 +193,14 @@ pub fn handle_sc_message(
         ServerMessage::FsChangeDetected {
             repo_id,
             branch,
+            scope_nonce,
             path,
             change_type,
             has_conflict,
         } => {
-            if !in_scope(repo_id, branch) {
+            if !in_scope(repo_id, branch)
+                || !scoped_ack_matches(*scope_nonce, current_scope_nonce.get_untracked())
+            {
                 return true;
             }
             refresh_after_fs_change(

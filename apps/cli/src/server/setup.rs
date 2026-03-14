@@ -100,6 +100,7 @@ pub(super) fn spawn_file_watcher(
                     let _ = tx.send(ServerMessage::FsChangeDetected {
                         repo_id: Some(repo_id),
                         branch: None,
+                        scope_nonce: None,
                         path,
                         change_type: "dir_changed".to_string(),
                         has_conflict: false,

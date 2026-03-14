@@ -1,13 +1,12 @@
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
-use leptos::prelude::{GetUntracked, Set, Update};
+use leptos::prelude::{GetUntracked, Set};
 
 use super::super::effects_sc;
 use super::super::effects_switch;
 use super::super::state::CoreSignals;
-use super::super::switch_nonce::next_switch_nonce;
+use super::message_shadow;
 use super::message_scope::string_branch_matches_scope;
 
 pub fn handle_branch_switched(
@@ -45,7 +44,7 @@ pub fn handle_branch_switched(
         clear_repo_scoped_runtime(signals);
         signals.set_pending_repo_switch_nonce.set(switch_nonce);
         request_repo_list(ws, signals);
-        request_shadow_list(ws, signals);
+        message_shadow::request_shadow_list(ws, signals);
     }
 }
 
@@ -88,43 +87,7 @@ pub fn handle_repo_switched(
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
         request_repo_sync_state(ws, signals);
-        request_shadow_list(ws, signals);
-    }
-}
-
-pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals) {
-    if signals.pending_branch_switch.get_untracked().is_some()
-        || signals.pending_repo_switch.get_untracked().is_some()
-    {
-        leptos::logging::warn!("忽略切换窗口内的 PeerDeleted: {}", peer_id);
-        return;
-    }
-    signals
-        .set_shadow_repos
-        .update(|peers| peers.retain(|entry| entry != &peer_id));
-    signals.set_peers.update(|peers| {
-        peers.remove(&PeerId::new(&peer_id));
-    });
-    if should_recover_local_branch(
-        &peer_id,
-        signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-    ) {
-        ws.clear_writer_ready();
-        signals.set_handshake_ready.set(false);
-        let switch_nonce = next_switch_nonce();
-        signals
-            .set_pending_branch_switch
-            .set(Some(PendingBranchTarget::Local));
-        signals
-            .set_pending_branch_switch_nonce
-            .set(Some(switch_nonce));
-        signals.set_pending_repo_switch.set(None);
-        signals.set_pending_repo_switch_nonce.set(None);
-        ws.send(ClientMessage::SwitchBranch {
-            peer_id: None,
-            switch_nonce: Some(switch_nonce),
-        });
+        message_shadow::request_shadow_list(ws, signals);
     }
 }
 
@@ -201,51 +164,15 @@ fn should_request_repo_sync_state(active_branch: Option<PeerId>) -> bool {
     active_branch.is_none()
 }
 
-fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
-    let request_id = uuid::Uuid::new_v4().to_string();
-    signals
-        .set_shadow_list_request_id
-        .set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListShadows { request_id });
-}
-
-fn should_recover_local_branch(
-    deleted_peer: &str,
-    active_branch: Option<PeerId>,
-    pending_branch_switch: Option<PendingBranchTarget>,
-) -> bool {
-    pending_branch_switch.is_none()
-        && active_branch.as_ref().map(PeerId::as_str) == Some(deleted_peer)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{should_recover_local_branch, should_request_repo_sync_state};
-    use crate::hooks::use_core::PendingBranchTarget;
-    use deve_core::models::PeerId;
-
-    #[test]
-    fn peer_deleted_only_recovers_current_shadow_branch() {
-        assert!(should_recover_local_branch(
-            "peer-a",
-            Some(PeerId::new("peer-a")),
-            None,
-        ));
-        assert!(!should_recover_local_branch(
-            "peer-a",
-            Some(PeerId::new("peer-b")),
-            None,
-        ));
-        assert!(!should_recover_local_branch(
-            "peer-a",
-            Some(PeerId::new("peer-a")),
-            Some(PendingBranchTarget::Local),
-        ));
-    }
+    use super::should_request_repo_sync_state;
 
     #[test]
     fn repo_sync_state_requests_only_run_on_local_branch() {
         assert!(should_request_repo_sync_state(None));
-        assert!(!should_request_repo_sync_state(Some(PeerId::new("peer-a"))));
+        assert!(!should_request_repo_sync_state(Some(
+            deve_core::models::PeerId::new("peer-a")
+        )));
     }
 }

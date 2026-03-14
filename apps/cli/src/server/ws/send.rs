@@ -56,6 +56,7 @@ pub(crate) fn spawn_broadcast_forwarder(
                     if !filter.should_forward(&msg) {
                         continue;
                     }
+                    let msg = filter.stamp_scope_nonce(msg);
                     if let Err(e) = unicast_tx.try_send(msg) {
                         match e {
                             TrySendError::Full(_) => {

@@ -24,6 +24,7 @@ pub async fn handle_commit(
             ch.broadcast(ServerMessage::CommitAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce: None,
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });
@@ -156,6 +157,7 @@ pub async fn handle_commit_and_push(
             ch.broadcast(ServerMessage::CommitAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
+                scope_nonce: None,
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });

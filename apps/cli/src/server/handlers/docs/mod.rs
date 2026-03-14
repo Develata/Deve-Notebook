@@ -99,6 +99,7 @@ pub fn notify_fs_refresh(ch: &DualChannel, repo_id: RepoId, path: &str, change_t
     ch.broadcast(ServerMessage::FsChangeDetected {
         repo_id: Some(repo_id),
         branch: None,
+        scope_nonce: None,
         path: path.to_string(),
         change_type: change_type.to_string(),
         has_conflict: false,

@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 struct SessionBroadcastScope {
     active_repo_id: Option<RepoId>,
     active_branch: Option<PeerId>,
+    scope_nonce: u64,
 }
 
 impl SessionBroadcastScope {
@@ -14,6 +15,7 @@ impl SessionBroadcastScope {
         Self {
             active_repo_id: session.active_repo_id,
             active_branch: session.active_branch.clone(),
+            scope_nonce: session.scope_nonce(),
         }
     }
 }
@@ -86,6 +88,47 @@ impl BroadcastFilter {
             _ => true,
         }
     }
+
+    pub(crate) fn stamp_scope_nonce(&self, msg: ServerMessage) -> ServerMessage {
+        let Some(scope) = &self.scope else {
+            return msg;
+        };
+        let Ok(scope) = scope.read() else {
+            return msg;
+        };
+
+        match msg {
+            ServerMessage::FsChangeDetected {
+                repo_id,
+                branch,
+                path,
+                change_type,
+                has_conflict,
+                ..
+            } => ServerMessage::FsChangeDetected {
+                repo_id,
+                branch,
+                scope_nonce: Some(scope.scope_nonce),
+                path,
+                change_type,
+                has_conflict,
+            },
+            ServerMessage::CommitAck {
+                repo_id,
+                branch,
+                commit_id,
+                timestamp,
+                ..
+            } => ServerMessage::CommitAck {
+                repo_id,
+                branch,
+                scope_nonce: Some(scope.scope_nonce),
+                commit_id,
+                timestamp,
+            },
+            other => other,
+        }
+    }
 }
 
 fn matches_scope(
@@ -136,5 +179,39 @@ mod tests {
                 None
             ),
         }));
+    }
+
+    #[test]
+    fn stamps_commit_and_fs_messages_with_session_scope_nonce() {
+        let mut session = WsSession::new();
+        session.set_scope_nonce(Some(9));
+        let filter = BroadcastFilter::for_session(&session);
+
+        let commit = filter.stamp_scope_nonce(ServerMessage::CommitAck {
+            repo_id: None,
+            branch: None,
+            scope_nonce: None,
+            commit_id: "c1".into(),
+            timestamp: 1,
+        });
+        let fs = filter.stamp_scope_nonce(ServerMessage::FsChangeDetected {
+            repo_id: None,
+            branch: None,
+            scope_nonce: None,
+            path: "notes/a.md".into(),
+            change_type: "modified".into(),
+            has_conflict: false,
+        });
+
+        match commit {
+            ServerMessage::CommitAck { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+            other => panic!("unexpected commit message: {:?}", other),
+        }
+        match fs {
+            ServerMessage::FsChangeDetected { scope_nonce, .. } => {
+                assert_eq!(scope_nonce, Some(9))
+            }
+            other => panic!("unexpected fs message: {:?}", other),
+        }
     }
 }

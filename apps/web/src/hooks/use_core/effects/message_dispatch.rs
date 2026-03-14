@@ -16,6 +16,7 @@ use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
     handle_sync_mode_status,
 };
+use super::message_shadow;
 use super::message_scope::{
     RepoListScope, RequestMatch, ShadowListScope, repo_list_matches_scope,
     shadow_list_matches_scope,
@@ -140,7 +141,7 @@ pub fn handle_message<F>(
                 if request_id.is_some() {
                     signals.set_shadow_list_request_id.set(None);
                 }
-                signals.set_shadow_repos.set(shadows);
+                message_shadow::handle_shadow_list(shadows, ws, signals);
             }
         }
         ServerMessage::RepoList {
@@ -185,7 +186,7 @@ pub fn handle_message<F>(
             message_control::handle_repo_switched(branch, name, uuid, switch_nonce, ws, signals);
         }
         ServerMessage::PeerDeleted { peer_id } => {
-            message_control::handle_peer_deleted(peer_id, ws, signals);
+            message_shadow::handle_peer_deleted(peer_id, ws, signals);
         }
         ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
             handle_protocol_error(ws, locale, &error);
