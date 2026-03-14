@@ -113,25 +113,3 @@ fn recover_repo_selector(
     }
     state.repo.find_local_repo_name_by_id(repo_id)
 }
-
-pub(super) fn find_unique_local_repo_name_by_display(
-    state: &Arc<AppState>,
-    repo_name: &str,
-) -> Result<Option<String>> {
-    let mut matches = state
-        .repo
-        .list_local_repo_names_for_execution()?
-        .into_iter()
-        .filter_map(|selector| {
-            state
-                .repo
-                .get_repo_info_for(None, Some(&selector))
-                .ok()
-                .flatten()
-                .filter(|info| info.name == repo_name || selector == repo_name)
-                .map(|_| selector)
-        })
-        .collect::<Vec<_>>();
-    matches.dedup();
-    Ok((matches.len() == 1).then(|| matches.remove(0)))
-}

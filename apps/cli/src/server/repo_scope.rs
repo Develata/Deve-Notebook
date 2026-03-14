@@ -17,9 +17,7 @@ use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
-use self::lookup::{
-    find_unique_local_repo_name_by_display, resolve_repo_by_name, resolve_repo_by_repo_id,
-};
+use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
 pub use self::repo_scope_error::map_repo_scope_error;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,
@@ -90,7 +88,7 @@ pub fn resolve_session_repo_and_sync(
 }
 
 /// 将当前 resolved scope 收敛到本地可写仓库。
-/// Invariants: 已处于本地分支时直接返回当前 scope；远端影子仓库优先按 `RepoUUID` 匹配本地仓库，仅在 UUID 不可用时按 URL 回退；无可写本地对应仓库时显式返回 `None`。
+/// Invariants: 已处于本地分支时直接返回当前 scope；远端影子仓库只允许按 `RepoUUID -> URL` 收敛到本地仓库；无可写本地对应仓库时显式返回 `None`。
 pub fn resolve_local_counterpart_repo(
     state: &Arc<AppState>,
     scope: &ResolvedRepo,
@@ -108,9 +106,6 @@ pub fn resolve_local_counterpart_repo(
         return Ok(None);
     };
     let Some(repo_name) = state.repo.find_local_repo_name_by_url(&url)? else {
-        if let Some(repo_name) = find_unique_local_repo_name_by_display(state, &scope.repo_name)? {
-            return resolve_repo_by_name(state, None, None, repo_name).map(Some);
-        }
         return Ok(None);
     };
     resolve_repo_by_name(state, None, None, repo_name).map(Some)

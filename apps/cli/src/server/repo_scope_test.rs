@@ -234,7 +234,7 @@ fn resolve_local_counterpart_repo_prefers_repo_uuid_for_remote_scope() -> anyhow
 }
 
 #[test]
-fn resolve_local_counterpart_repo_recovers_unique_local_name_without_url() -> anyhow::Result<()> {
+fn resolve_local_counterpart_repo_requires_uuid_or_url_match() -> anyhow::Result<()> {
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let remote_repo_id = uuid::Uuid::new_v4();
@@ -247,10 +247,8 @@ fn resolve_local_counterpart_repo_recovers_unique_local_name_without_url() -> an
             repo_name: "test".into(),
             branch: Some(peer_id),
         },
-    )?
-    .expect("local counterpart by unique name");
+    )?;
 
-    assert!(local.branch.is_none());
-    assert_eq!(local.repo_name, "test");
+    assert!(local.is_none());
     Ok(())
 }
