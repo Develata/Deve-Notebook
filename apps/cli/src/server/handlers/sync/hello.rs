@@ -52,7 +52,7 @@ pub(super) async fn handle(
         Ok(res) => res,
         Err(e) => {
             tracing::error!("Handshake failed with {}: {}", peer_id, e);
-            errors::request_failed(ch, format!("Handshake failed: {}", e));
+            errors::classified_failure(ch, format!("Handshake failed: {}", e));
             return;
         }
     };
@@ -125,7 +125,7 @@ pub(super) async fn handle(
         match engine.get_ops_for_sync(&req) {
             Ok(response) => ops_to_push.extend(response.ops),
             Err(err) => {
-                errors::request_failed(
+                errors::classified_failure(
                     ch,
                     format!("Failed to build sync payload for repo {}: {}", repo_id, err),
                 );

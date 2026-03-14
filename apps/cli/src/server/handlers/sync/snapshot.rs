@@ -53,7 +53,7 @@ pub(super) async fn handle_request(
         }
         Err(e) => {
             tracing::error!("Failed to generate snapshot for {}: {:?}", source_peer, e);
-            errors::request_failed(ch, format!("Failed to generate snapshot: {}", e));
+            errors::classified_failure(ch, format!("Failed to generate snapshot: {}", e));
         }
     }
 }

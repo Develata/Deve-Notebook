@@ -45,7 +45,7 @@ pub(super) async fn handle_request(
         match engine.get_ops_for_sync(&sync_req) {
             Ok(response) => ops_to_push.extend(response.ops),
             Err(err) => {
-                errors::request_failed(
+                errors::classified_failure(
                     ch,
                     format!(
                         "Failed to build sync response for repo {}: {}",
@@ -98,10 +98,7 @@ pub(super) async fn handle_push(
         Ok(count) => tracing::info!("Applied {} ops for repo {}", count, repo_id),
         Err(e) => {
             tracing::error!("Failed to apply ops for repo {}: {:?}", repo_id, e);
-            errors::sync_apply_failed(
-                ch,
-                format!("Failed to apply sync ops for repo {}: {}", repo_id, e),
-            );
+            errors::sync_apply_failed(ch, format!("Failed to apply sync ops for repo {}: {}", repo_id, e));
         }
     }
 }
