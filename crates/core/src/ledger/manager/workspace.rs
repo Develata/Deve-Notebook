@@ -80,6 +80,26 @@ impl RepoManager {
         Ok(Some((info.name, info.uuid, repo_path.to_string())))
     }
 
+    pub(crate) fn record_projection_write(
+        &self,
+        repo_name: &str,
+        repo_path: &str,
+        content: &str,
+    ) {
+        let relative = self.local_repo_workspace_relative(repo_name, repo_path);
+        self.persist_guard.record(&relative, content);
+    }
+
+    pub(crate) fn record_projection_delete(&self, repo_name: &str, repo_path: &str) {
+        let relative = self.local_repo_workspace_relative(repo_name, repo_path);
+        self.persist_guard.record_delete(&relative);
+    }
+
+    pub(crate) fn clear_projection_guard(&self, repo_name: &str, repo_path: &str) {
+        let relative = self.local_repo_workspace_relative(repo_name, repo_path);
+        self.persist_guard.clear(&relative);
+    }
+
     pub(crate) fn should_ignore_workspace_event(&self, root_relative: &str) -> bool {
         self.vault_root
             .as_ref()

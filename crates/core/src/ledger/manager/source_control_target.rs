@@ -27,7 +27,7 @@ impl RepoManager {
             .run_on_local_repo(repo_name, |db| pending_fs::get_for_target(db, target))?
             .map(|entry| entry.path)
             .unwrap_or_else(|| target.path.clone());
-        self.discard_pending_in_local_repo(repo_name, &path)
+        self.discard_pending_workdir_in_local_repo(repo_name, &path)
     }
 
     pub fn unstage_file_target_in_local_repo(
