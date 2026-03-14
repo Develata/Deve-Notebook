@@ -7,7 +7,6 @@
 //! 3. 读取服务器消息并更新信号
 //! 4. 通过 link_tx 将写入端传递给输出管理器
 
-use deve_core::protocol::ServerMessage;
 use futures::StreamExt;
 use futures::channel::mpsc::UnboundedSender;
 use futures::stream::SplitSink;
@@ -15,10 +14,12 @@ use gloo_net::http::Request;
 use gloo_net::websocket::{Message, futures::WebSocket};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use std::collections::VecDeque;
 
 use super::ConnectionStatus;
 use super::auth_probe::{AuthProbe, probe_auth_status};
 use super::backoff::BackoffStrategy;
+use super::incoming::process_incoming_messages;
 
 /// 本地开发后端默认端口；仅在 debug 构建中作为兜底候选。
 const DEV_WS_PORT: u16 = 3001;
@@ -26,7 +27,8 @@ const DEV_WS_PORT: u16 = 3001;
 /// 启动连接管理器任务
 pub fn spawn_connection_manager(
     set_status: WriteSignal<ConnectionStatus>,
-    set_msg: WriteSignal<Option<ServerMessage>>,
+    set_msg_seq: WriteSignal<u64>,
+    set_msg_queue: WriteSignal<VecDeque<(u64, deve_core::protocol::ServerMessage)>>,
     set_endpoint: WriteSignal<String>,
     set_node_role: WriteSignal<String>,
     link_tx: UnboundedSender<SplitSink<WebSocket, Message>>,
@@ -60,7 +62,7 @@ pub fn spawn_connection_manager(
 
                     // Block on reading until disconnect
                     // Pass set_status to confirm connection after first successful message
-                    process_incoming_messages(read, set_msg, set_status).await;
+                    process_incoming_messages(read, set_msg_seq, set_msg_queue, set_status).await;
 
                     leptos::logging::log!("WS: Connection Lost (Reader ended)");
                 }
@@ -112,57 +114,6 @@ async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
             role.to_string()
         };
         set_node_role.set(text);
-    }
-}
-
-/// 从 WebSocket 读取消息直到连接关闭。
-/// 在收到第一条成功消息后将状态设置为 Connected。
-///
-/// ## 协议策略
-/// - **优先二进制 (Bincode)**: 体积更小，解析更快，零字符串分配。
-/// - **降级 JSON**: 向后兼容旧版服务端或调试场景。
-async fn process_incoming_messages(
-    mut read: futures::stream::SplitStream<WebSocket>,
-    set_msg: WriteSignal<Option<ServerMessage>>,
-    set_status: WriteSignal<ConnectionStatus>,
-) {
-    let mut confirmed_connected = false;
-
-    while let Some(result) = read.next().await {
-        match result {
-            // 优先处理二进制消息 (Bincode)
-            Ok(Message::Bytes(bytes)) => {
-                if !confirmed_connected {
-                    leptos::logging::log!(
-                        "WS: First binary message received, connection confirmed!"
-                    );
-                    set_status.set(ConnectionStatus::Connected);
-                    confirmed_connected = true;
-                }
-
-                match bincode::deserialize::<ServerMessage>(&bytes) {
-                    Ok(server_msg) => set_msg.set(Some(server_msg)),
-                    Err(e) => leptos::logging::error!("Bincode Parse Error: {:?}", e),
-                }
-            }
-            // 向后兼容: JSON 文本消息
-            Ok(Message::Text(txt)) => {
-                if !confirmed_connected {
-                    leptos::logging::log!("WS: First text message received, connection confirmed!");
-                    set_status.set(ConnectionStatus::Connected);
-                    confirmed_connected = true;
-                }
-
-                match serde_json::from_str::<ServerMessage>(&txt) {
-                    Ok(server_msg) => set_msg.set(Some(server_msg)),
-                    Err(e) => leptos::logging::error!("JSON Parse Error: {:?}", e),
-                }
-            }
-            Err(e) => {
-                leptos::logging::error!("WS Read Error: {:?}", e);
-                break;
-            }
-        }
     }
 }
 

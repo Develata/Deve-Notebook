@@ -13,9 +13,9 @@
 use super::EditorStats;
 use super::delta_input::{DeltaInputCtx, build_on_delta};
 use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
+use super::message_effect;
 use super::open_scope::{OpenDocScope, can_open_doc};
 use super::playback;
-use super::sync;
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
@@ -130,46 +130,25 @@ pub fn use_editor(
         set_doc_ver.set(ver);
     });
 
-    // 处理传入消息
-    let ws_clone_2 = ws.clone();
-    let sync_session_generation = session_generation.clone();
-    let sync_ready_generation = ready_generation.clone();
-    let sync_buffered_live_ops = buffered_live_ops.clone();
-    Effect::new(move |_| {
-        if let Some(msg) = ws_clone_2.msg.get() {
-            let ctx = sync::context::SyncContext {
-                doc_id,
-                client_id: ws_clone_2
-                    .writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
-                session_generation: sync_session_generation.clone(),
-                ready_generation: sync_ready_generation.clone(),
-                buffered_live_ops: sync_buffered_live_ops.clone(),
-                active_branch: core.active_branch,
-                pending_branch_switch: core.pending_branch_switch,
-                current_repo_id: core.current_repo_id,
-                pending_repo_switch: core.pending_repo_switch,
-                handshake_scope_nonce: core.handshake_scope_nonce,
-                open_request_id,
-                ws: &ws_clone_2,
-                set_content,
-                pending_local_edits: core.pending_local_edits,
-                set_pending_local_edits,
-                local_version,
-                set_local_version,
-                history,
-                set_history,
-                is_playback,
-                set_playback_version,
-                set_load_state,
-                set_load_progress,
-                set_load_eta_ms,
-                on_stats,
-                repo_key,
-                set_repo_key,
-            };
-            sync::handle_server_message(msg, &ctx);
-        }
-    });
+    message_effect::setup_server_message_effect(
+        ws.clone(),
+        core.clone(),
+        doc_id,
+        open_request_id,
+        session_generation.clone(),
+        ready_generation.clone(),
+        buffered_live_ops.clone(),
+        set_content,
+        local_version,
+        set_local_version,
+        history,
+        set_history,
+        is_playback,
+        set_playback_version,
+        on_stats.clone(),
+        repo_key,
+        set_repo_key,
+    );
 
     // 编辑器初始化 (Delta 模式)
     let ws_editor = ws.clone();

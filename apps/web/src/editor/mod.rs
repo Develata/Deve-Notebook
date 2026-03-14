@@ -12,6 +12,7 @@ use leptos::prelude::*;
 mod delta_input;
 pub mod ffi;
 pub mod hook;
+mod message_effect;
 pub mod op_id;
 mod open_scope;
 pub mod playback;

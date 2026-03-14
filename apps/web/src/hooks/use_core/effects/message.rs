@@ -17,6 +17,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
     let degraded_sync_mode = signals.degraded_sync_mode;
     let set_sync_banner = signals.set_sync_banner;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
+    let (last_msg_seq, set_last_msg_seq) = signal(0u64);
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     Effect::new(move |_| {
@@ -73,7 +74,8 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
             }
         };
 
-        if let Some(msg) = ws_rx.msg.get() {
+        let _ = ws_rx.msg_seq.get();
+        for (seq, msg) in ws_rx.messages_since(last_msg_seq.get_untracked()) {
             message_dispatch::handle_message(
                 msg,
                 &ws_rx,
@@ -81,6 +83,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                 locale.get_untracked(),
                 &schedule_refresh,
             );
+            set_last_msg_seq.set(seq);
         }
     });
 }

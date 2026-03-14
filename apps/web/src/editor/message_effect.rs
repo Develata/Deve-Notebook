@@ -1,0 +1,69 @@
+use super::EditorStats;
+use super::sync;
+use crate::api::WsService;
+use crate::hooks::use_core::EditorContext;
+use deve_core::models::{DocId, Op};
+use deve_core::protocol::ConfirmedOp;
+use deve_core::security::RepoKey;
+use leptos::prelude::*;
+use std::sync::atomic::AtomicU64;
+use std::sync::{Arc, Mutex};
+
+pub fn setup_server_message_effect(
+    ws: WsService,
+    core: EditorContext,
+    doc_id: DocId,
+    open_request_id: ReadSignal<u64>,
+    session_generation: Arc<AtomicU64>,
+    ready_generation: Arc<AtomicU64>,
+    buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
+    set_content: WriteSignal<String>,
+    local_version: ReadSignal<u64>,
+    set_local_version: WriteSignal<u64>,
+    history: ReadSignal<Vec<(u64, Op)>>,
+    set_history: WriteSignal<Vec<(u64, Op)>>,
+    is_playback: ReadSignal<bool>,
+    set_playback_version: WriteSignal<u64>,
+    on_stats: Option<Callback<EditorStats>>,
+    repo_key: ReadSignal<Option<RepoKey>>,
+    set_repo_key: WriteSignal<Option<RepoKey>>,
+) {
+    let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+
+    Effect::new(move |_| {
+        let _ = ws.msg_seq.get();
+        for (seq, msg) in ws.messages_since(last_msg_seq.get_untracked()) {
+            let ctx = sync::context::SyncContext {
+                doc_id,
+                client_id: ws.writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
+                session_generation: session_generation.clone(),
+                ready_generation: ready_generation.clone(),
+                buffered_live_ops: buffered_live_ops.clone(),
+                active_branch: core.active_branch,
+                pending_branch_switch: core.pending_branch_switch,
+                current_repo_id: core.current_repo_id,
+                pending_repo_switch: core.pending_repo_switch,
+                handshake_scope_nonce: core.handshake_scope_nonce,
+                open_request_id,
+                ws: &ws,
+                set_content,
+                pending_local_edits: core.pending_local_edits,
+                set_pending_local_edits: core.set_pending_local_edits,
+                local_version,
+                set_local_version,
+                history,
+                set_history,
+                is_playback,
+                set_playback_version,
+                set_load_state: core.set_load_state,
+                set_load_progress: core.set_load_progress,
+                set_load_eta_ms: core.set_load_eta_ms,
+                on_stats,
+                repo_key,
+                set_repo_key,
+            };
+            sync::handle_server_message(msg, &ctx);
+            set_last_msg_seq.set(seq);
+        }
+    });
+}

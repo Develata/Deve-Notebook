@@ -18,12 +18,12 @@
 //! - 避免了 `Arc<Mutex<Option<Sink>>>` 带来的锁竞争和死锁风险
 //!
 //! ### 性能提示
-//! `msg` 信号在每次收到 WebSocket 消息时更新。如果后端短时间内推送大量操作，
-//! 可能导致前端组件频繁重绘。若发现 UI 卡顿，建议在消费端 Effect 中加入防抖/节流。
+//! 入站消息会进入一个有序小队列。消费端必须按顺序 drain，不能依赖“最新值槽位”。
 
 mod auth_probe;
 mod backoff;
 mod connection;
+mod incoming;
 mod output;
 mod writer_id;
 
@@ -33,6 +33,7 @@ use futures::stream::SplitSink;
 use gloo_net::websocket::{Message, futures::WebSocket};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use std::collections::VecDeque;
 
 use self::connection::spawn_connection_manager;
 use self::output::spawn_output_manager;
@@ -80,9 +81,12 @@ impl std::fmt::Display for ConnectionStatus {
 ///
 /// ## 响应式消费
 /// ```ignore
+/// let (last_seq, set_last_seq) = signal(0u64);
 /// Effect::new(move |_| {
-///     if let Some(msg) = ws.msg.get() {
+///     let _ = ws.msg_seq.get();
+///     for (seq, msg) in ws.messages_since(last_seq.get_untracked()) {
 ///         // 处理消息...
+///         set_last_seq.set(seq);
 ///     }
 /// });
 /// ```
@@ -103,11 +107,9 @@ pub struct WsService {
     /// 当前节点角色 (main/proxy)
     pub node_role: ReadSignal<String>,
 
-    /// 来自服务器的最新消息 (响应式信号)
-    ///
-    /// **性能注意**: 此信号在每收到一条消息时更新。
-    /// 如果后端高频推送，建议消费端使用防抖/节流。
-    pub msg: ReadSignal<Option<ServerMessage>>,
+    /// 入站消息序号（每收到一条消息严格递增）
+    pub msg_seq: ReadSignal<u64>,
+    msg_queue: ReadSignal<VecDeque<(u64, ServerMessage)>>,
 
     /// 发送消息的通道 (内部使用)
     tx: UnboundedSender<ClientMessage>,
@@ -124,7 +126,8 @@ impl WsService {
         let (status, set_status) = signal(ConnectionStatus::Disconnected);
         let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(None::<String>);
         let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
-        let (msg, set_msg) = signal(None);
+        let (msg_seq, set_msg_seq) = signal(0u64);
+        let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, ServerMessage)>::new());
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
@@ -134,7 +137,14 @@ impl WsService {
         let (link_tx, link_rx) = unbounded::<SplitSink<WebSocket, Message>>();
 
         // 启动两个异步任务
-        spawn_connection_manager(set_status, set_msg, set_endpoint, set_node_role, link_tx);
+        spawn_connection_manager(
+            set_status,
+            set_msg_seq,
+            set_msg_queue,
+            set_endpoint,
+            set_node_role,
+            link_tx,
+        );
         spawn_output_manager(rx, link_rx, status);
 
         // 启动心跳任务 (30秒间隔)
@@ -158,7 +168,8 @@ impl WsService {
             set_writer_client_id,
             endpoint,
             node_role,
-            msg,
+            msg_seq,
+            msg_queue,
             tx,
         }
     }
@@ -206,5 +217,13 @@ impl WsService {
             }
             _ => None,
         }
+    }
+
+    pub fn messages_since(&self, after_seq: u64) -> Vec<(u64, ServerMessage)> {
+        self.msg_queue
+            .get_untracked()
+            .into_iter()
+            .filter(|(seq, _)| *seq > after_seq)
+            .collect()
     }
 }
