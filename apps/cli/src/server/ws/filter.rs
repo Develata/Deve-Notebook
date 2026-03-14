@@ -126,6 +126,17 @@ impl BroadcastFilter {
                 commit_id,
                 timestamp,
             },
+            ServerMessage::MergeComplete {
+                repo_id,
+                branch,
+                merged_count,
+                ..
+            } => ServerMessage::MergeComplete {
+                repo_id,
+                branch,
+                scope_nonce: Some(scope.scope_nonce),
+                merged_count,
+            },
             other => other,
         }
     }
@@ -182,7 +193,7 @@ mod tests {
     }
 
     #[test]
-    fn stamps_commit_and_fs_messages_with_session_scope_nonce() {
+    fn stamps_runtime_broadcasts_with_session_scope_nonce() {
         let mut session = WsSession::new();
         session.set_scope_nonce(Some(9));
         let filter = BroadcastFilter::for_session(&session);
@@ -202,6 +213,12 @@ mod tests {
             change_type: "modified".into(),
             has_conflict: false,
         });
+        let merge = filter.stamp_scope_nonce(ServerMessage::MergeComplete {
+            repo_id: None,
+            branch: None,
+            scope_nonce: None,
+            merged_count: 2,
+        });
 
         match commit {
             ServerMessage::CommitAck { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
@@ -212,6 +229,12 @@ mod tests {
                 assert_eq!(scope_nonce, Some(9))
             }
             other => panic!("unexpected fs message: {:?}", other),
+        }
+        match merge {
+            ServerMessage::MergeComplete { scope_nonce, .. } => {
+                assert_eq!(scope_nonce, Some(9))
+            }
+            other => panic!("unexpected merge message: {:?}", other),
         }
     }
 }
