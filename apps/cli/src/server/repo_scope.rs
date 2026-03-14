@@ -219,5 +219,15 @@ fn recover_remote_repo_name_from_selector(
     branch: &PeerId,
     repo_name: &str,
 ) -> Result<Option<String>> {
-    state.repo.find_remote_repo_selector(branch, repo_name)
+    let resolved = state.repo.find_remote_repo_selector(branch, repo_name)?;
+    if uuid::Uuid::parse_str(repo_name).is_ok() || resolved.as_deref() == Some(repo_name) {
+        return Ok(resolved);
+    }
+    tracing::warn!(
+        "Refusing to recover remote repo selector from display-only name without UUID: branch={}, raw_name={}, resolved_selector={:?}",
+        branch,
+        repo_name,
+        resolved
+    );
+    Ok(None)
 }
