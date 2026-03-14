@@ -1,0 +1,116 @@
+use super::switcher_prepare::{resolve_requested_repo_name, select_target_repo};
+use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+use deve_core::config::SyncMode;
+use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::models::PeerId;
+use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+use std::sync::Arc;
+use tempfile::{TempDir, tempdir};
+use tokio::sync::broadcast;
+
+fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
+    let dir = tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    repo.set_vault_root(&vault);
+    let repo = Arc::new(repo);
+    let (tx, _rx) = broadcast::channel(16);
+    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let state = Arc::new(AppState {
+        repo: repo.clone(),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        tx,
+        plugins: vec![],
+        sync_engine: Arc::new(RepoScopedSyncEngine::new(
+            identity_key.peer_id(),
+            repo,
+            SyncMode::Auto,
+        )),
+        tree_manager: Arc::new(RepoTreeRegistry::new()),
+        #[cfg(feature = "search")]
+        search_service: None,
+        identity_key,
+    });
+    Ok((dir, state))
+}
+
+fn seed_duplicate_remote(
+    state: &Arc<AppState>,
+) -> anyhow::Result<(PeerId, uuid::Uuid, uuid::Uuid, String)> {
+    let peer_id = PeerId::new("peer-remote");
+    let first = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-a".into()),
+    };
+    let second = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-b".into()),
+    };
+    state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
+    state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
+    let second_selector = state
+        .repo
+        .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
+        .expect("selector for second repo");
+    Ok((peer_id, first.uuid, second.uuid, second_selector))
+}
+
+#[test]
+fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let selected = select_target_repo(&state, Some(second_id), None, None, Some(&peer_id))?
+        .expect("selector for second wiki repo");
+    assert_eq!(selected, second_selector);
+    Ok(())
+}
+
+#[test]
+fn select_target_repo_recovers_remote_selector_from_uuid_string_without_repo_id()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let selected = select_target_repo(
+        &state,
+        None,
+        Some(&second_id.to_string()),
+        None,
+        Some(&peer_id),
+    )?
+    .expect("selector for second wiki repo");
+    assert_eq!(selected, second_selector);
+    Ok(())
+}
+
+#[test]
+fn resolve_requested_repo_name_recovers_remote_selector_from_uuid_string_without_repo_id()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let selected =
+        resolve_requested_repo_name(&state, Some(&peer_id), &second_id.to_string(), None)?
+            .expect("selector for second wiki repo");
+    assert_eq!(selected, second_selector);
+    Ok(())
+}
+
+#[test]
+fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let test_id = state
+        .repo
+        .get_repo_info_for(None, Some("test"))?
+        .expect("test repo info")
+        .uuid;
+
+    let selected = select_target_repo(&state, None, Some(&test_id.to_string()), None, None)?
+        .expect("canonical local repo stem");
+    assert_eq!(selected, "test");
+    Ok(())
+}

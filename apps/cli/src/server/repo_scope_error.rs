@@ -33,8 +33,11 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
         &[
             "remote session lost repo name",
             "repository uuid not resolved",
+            "remote repository selector not resolved",
+            "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
+            "ambiguous local repository selector",
             "local repo not found for uuid",
             "scope mismatch",
             "stale scope nonce",

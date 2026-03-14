@@ -149,8 +149,11 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
         &[
             "remote session lost repo name",
             "repository uuid not resolved",
+            "remote repository selector not resolved",
+            "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
+            "ambiguous local repository selector",
             "local repo not found for uuid",
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",
@@ -220,6 +223,14 @@ mod tests {
             classify_repo_error(
                 "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
             ),
+            (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid)
+        );
+    }
+
+    #[test]
+    fn classifies_ambiguous_local_selector_as_repo_context_invalid() {
+        assert_eq!(
+            classify_repo_error("Ambiguous local repository selector: wiki"),
             (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid)
         );
     }

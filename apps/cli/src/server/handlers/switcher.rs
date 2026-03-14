@@ -7,6 +7,9 @@ use crate::server::session::WsSession;
 mod switcher_payload;
 #[path = "switcher_prepare.rs"]
 mod switcher_prepare;
+#[cfg(test)]
+#[path = "switcher_prepare_test.rs"]
+mod switcher_prepare_test;
 
 use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};

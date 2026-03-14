@@ -68,8 +68,11 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
         &[
             "remote session lost repo name",
             "repository uuid not resolved",
+            "remote repository selector not resolved",
+            "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
+            "ambiguous local repository selector",
             "local repo not found for uuid",
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",
@@ -145,6 +148,14 @@ mod tests {
         assert_eq!(
             classify_failure_code("Repository not found: default"),
             ServerErrorCode::StorageNotFound
+        );
+    }
+
+    #[test]
+    fn classifies_ambiguous_local_selector_as_repo_context_invalid() {
+        assert_eq!(
+            classify_failure_code("Ambiguous local repository selector: wiki"),
+            ServerErrorCode::ScRepoContextInvalid
         );
     }
 }

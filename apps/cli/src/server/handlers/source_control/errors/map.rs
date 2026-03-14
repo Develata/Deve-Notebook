@@ -111,8 +111,11 @@ fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
         &[
             "remote session lost repo name",
             "repository uuid not resolved",
+            "remote repository selector not resolved",
+            "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
+            "ambiguous local repository selector",
             "local repo not found for uuid",
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",
@@ -169,6 +172,13 @@ mod tests {
             "Database already open. Cannot acquire lock."
         ));
         assert_eq!(err.code, ServerErrorCode::StorageDbLocked);
+    }
+
+    #[test]
+    fn maps_scope_ambiguous_local_selector_to_repo_context_invalid() {
+        let err =
+            map_repo_scope_error(anyhow::anyhow!("Ambiguous local repository selector: wiki"));
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }
 
     #[test]

@@ -96,8 +96,11 @@ fn classify_listing_error(detail: &str) -> ServerErrorCode {
         &[
             "remote session lost repo name",
             "repository uuid not resolved",
+            "remote repository selector not resolved",
+            "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
+            "ambiguous local repository selector",
             "local repo not found for uuid",
         ],
     ) {

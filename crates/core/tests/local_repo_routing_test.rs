@@ -177,3 +177,21 @@ fn workspace_resolution_keeps_execution_repo_stem_after_metadata_drift() {
     assert_eq!(repo_id, extra_id);
     assert_eq!(repo_path, "notes/extra.md");
 }
+
+#[test]
+fn execution_resolution_accepts_uuid_string_selector() {
+    let (_dir, repo, extra_id, _extra_name) = new_local_repos();
+
+    assert_eq!(
+        repo.resolve_local_repo_name_for_execution(None, Some(&extra_id.to_string()))
+            .expect("resolve execution selector"),
+        "wiki"
+    );
+    assert_eq!(
+        repo.get_repo_info_for(None, Some(&extra_id.to_string()))
+            .expect("lookup repo info")
+            .expect("repo info")
+            .uuid,
+        extra_id
+    );
+}

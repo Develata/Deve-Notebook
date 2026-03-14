@@ -78,12 +78,17 @@ pub(super) fn select_target_repo(
         return Ok(Some(selector));
     }
     if let Some(repo_name) = current_repo_name
+        && let Some(selector) = recover_selector_from_raw_name(state, target_branch, repo_name)?
+    {
+        return Ok(Some(selector));
+    }
+    if let Some(repo_name) = current_repo_name
         && let Some(info) = state
             .repo
             .get_repo_info_for(target_branch, Some(repo_name))?
         && (info.name != repo_name || uuid::Uuid::parse_str(repo_name).is_ok())
     {
-        return Ok(Some(repo_name.to_string()));
+        return recover_canonical_selector(state, target_branch, repo_name, info.uuid);
     }
     if let Some(url) = current_repo_url {
         for repo_name in &repos {
@@ -149,9 +154,38 @@ pub(super) fn resolve_requested_repo_name(
     {
         return Ok(Some(selector));
     }
+    if let Some(selector) = recover_selector_from_raw_name(state, branch, repo_name)? {
+        return Ok(Some(selector));
+    }
+    if let Some(info) = state.repo.get_repo_info_for(branch, Some(repo_name))?
+        && (info.name != repo_name || uuid::Uuid::parse_str(repo_name).is_ok())
+    {
+        return recover_canonical_selector(state, branch, repo_name, info.uuid);
+    }
     Ok(repos
         .contains(&repo_name.to_string())
         .then(|| repo_name.to_string()))
+}
+
+fn recover_canonical_selector(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    raw_repo_name: &str,
+    repo_id: RepoId,
+) -> anyhow::Result<Option<String>> {
+    Ok(select_repo_selector_by_id(state, branch, repo_id)?
+        .or_else(|| Some(raw_repo_name.to_string())))
+}
+
+fn recover_selector_from_raw_name(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    raw_repo_name: &str,
+) -> anyhow::Result<Option<String>> {
+    let Ok(repo_id) = uuid::Uuid::parse_str(raw_repo_name) else {
+        return Ok(None);
+    };
+    select_repo_selector_by_id(state, branch, repo_id)
 }
 
 pub(super) fn commit_session_switch(
@@ -176,70 +210,5 @@ pub(super) fn commit_session_switch(
             session.clear_active_db();
             session.clear_active_repo();
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::select_target_repo;
-    use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
-    use deve_core::config::SyncMode;
-    use deve_core::ledger::RepoManager;
-    use deve_core::models::PeerId;
-    use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-    use std::sync::Arc;
-    use tempfile::tempdir;
-    use tokio::sync::broadcast;
-
-    fn build_state() -> anyhow::Result<Arc<AppState>> {
-        let dir = tempdir()?;
-        let vault = dir.path().join("vault");
-        let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-        repo.set_vault_root(&vault);
-        let repo = Arc::new(repo);
-        let (tx, _rx) = broadcast::channel(16);
-        let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-        Ok(Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                identity_key.peer_id(),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key,
-        }))
-    }
-
-    #[test]
-    fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyhow::Result<()> {
-        let state = build_state()?;
-        let peer_id = PeerId::new("peer-remote");
-        let first = deve_core::ledger::RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
-            name: "wiki".into(),
-            url: Some("urn:test:wiki-a".into()),
-        };
-        let second = deve_core::ledger::RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
-            name: "wiki".into(),
-            url: Some("urn:test:wiki-b".into()),
-        };
-        state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
-        state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
-        let expected = state
-            .repo
-            .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
-            .expect("selector for second wiki repo");
-
-        let selected = select_target_repo(&state, Some(second.uuid), None, None, Some(&peer_id))?
-            .expect("selector for second wiki repo");
-        assert_eq!(selected, expected);
-        Ok(())
     }
 }

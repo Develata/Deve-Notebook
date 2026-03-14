@@ -132,6 +132,7 @@ impl RepoManager {
         if !local_dir.exists() {
             return Ok(None);
         }
+        let target_id = uuid::Uuid::parse_str(selector).ok();
         let mut by_alias = None::<String>;
         for entry in std::fs::read_dir(local_dir)? {
             let path = entry?.path();
@@ -162,6 +163,9 @@ impl RepoManager {
                     }
                 }
             };
+            if info.as_ref().map(|info| info.uuid) == target_id {
+                return Ok(Some(stem));
+            }
             if info.as_ref().map(|info| info.name.as_str()) == Some(selector) {
                 if by_alias.as_ref().is_some_and(|current| current != &stem) {
                     return Err(anyhow!("Ambiguous local repository selector: {}", selector));
