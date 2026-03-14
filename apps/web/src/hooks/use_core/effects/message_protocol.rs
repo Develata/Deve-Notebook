@@ -58,7 +58,8 @@ fn is_auth_error(code: ServerErrorCode) -> bool {
 fn is_scope_switch_error(code: ServerErrorCode) -> bool {
     matches!(
         code,
-        ServerErrorCode::ScRepoContextInvalid
+        ServerErrorCode::ScRepoNotSelected
+            | ServerErrorCode::ScRepoContextInvalid
             | ServerErrorCode::SyncRepoUnbound
             | ServerErrorCode::RequestFailed
             | ServerErrorCode::StoragePersistFailed
@@ -75,28 +76,33 @@ mod tests {
 
     #[test]
     fn switch_errors_clear_pending_scope_switches() {
-        let runtime = leptos::reactive::owner::Owner::new();
-        runtime.set();
-        let (pending_branch_switch, set_pending_branch_switch) =
-            signal(Some(PendingBranchTarget::Local));
-        let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
-        let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
-        let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
-
-        clear_failed_scope_switch(
+        for code in [
             ServerErrorCode::ScRepoContextInvalid,
-            ProtocolControlSignals {
-                pending_branch_switch,
-                set_pending_branch_switch,
-                set_pending_branch_switch_nonce,
-                pending_repo_switch,
-                set_pending_repo_switch,
-                set_pending_repo_switch_nonce,
-            },
-        );
+            ServerErrorCode::ScRepoNotSelected,
+        ] {
+            let runtime = leptos::reactive::owner::Owner::new();
+            runtime.set();
+            let (pending_branch_switch, set_pending_branch_switch) =
+                signal(Some(PendingBranchTarget::Local));
+            let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
+            let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
+            let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
 
-        assert_eq!(pending_branch_switch.get_untracked(), None);
-        assert_eq!(pending_repo_switch.get_untracked(), None);
+            clear_failed_scope_switch(
+                code,
+                ProtocolControlSignals {
+                    pending_branch_switch,
+                    set_pending_branch_switch,
+                    set_pending_branch_switch_nonce,
+                    pending_repo_switch,
+                    set_pending_repo_switch,
+                    set_pending_repo_switch_nonce,
+                },
+            );
+
+            assert_eq!(pending_branch_switch.get_untracked(), None);
+            assert_eq!(pending_repo_switch.get_untracked(), None);
+        }
     }
 
     #[test]
