@@ -25,6 +25,14 @@ pub fn send_plugin_invalid_message(ch: &DualChannel, req_id: &str, detail: impl 
     );
 }
 
+pub fn send_plugin_unsupported_message(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
+    send_plugin_error(
+        ch,
+        req_id,
+        ServerError::with_detail(ServerErrorCode::PluginUnsupportedMessage, detail),
+    );
+}
+
 pub fn send_plugin_request_failed(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
     send_plugin_error(
         ch,

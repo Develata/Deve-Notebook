@@ -5,7 +5,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::plugin_response::{send_plugin_request_failed, send_plugin_result};
+use crate::server::plugin_response::{
+    send_plugin_request_failed, send_plugin_result, send_plugin_unsupported_message,
+};
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
 use std::sync::Arc;
 use tokio::task::block_in_place;
@@ -62,6 +64,6 @@ pub async fn handle_plugin_call_with_plugins(
             }
         }
     } else {
-        send_plugin_request_failed(ch, &req_id, format!("Plugin not found: {}", plugin_id));
+        send_plugin_unsupported_message(ch, &req_id, format!("Plugin not found: {}", plugin_id));
     }
 }
