@@ -56,3 +56,29 @@ fn resolve_session_repo_syncs_stale_local_alias_back_to_canonical_stem() -> anyh
     assert_eq!(session.active_repo_id, Some(wiki_info.uuid));
     Ok(())
 }
+
+#[test]
+fn open_database_accepts_stale_local_alias_after_metadata_drift() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
+    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
+    let wiki_db = repo.open_database(None, "wiki")?.db;
+    let txn = wiki_db.begin_write()?;
+    txn.open_table(REPO_METADATA)?.insert(
+        &0,
+        bincode::serialize(&RepoInfo {
+            uuid: wiki_info.uuid,
+            name: "legacy-wiki".into(),
+            url: wiki_info.url.clone(),
+        })?
+        .as_slice(),
+    )?;
+    txn.commit()?;
+
+    let handle = repo.open_database(None, "legacy-wiki")?;
+
+    assert_eq!(handle.repo_name, "wiki");
+    assert_eq!(handle.repo_id, Some(wiki_info.uuid));
+    Ok(())
+}

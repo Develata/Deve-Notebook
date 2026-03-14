@@ -101,16 +101,17 @@ impl RepoManager {
         match branch {
             // 本地分支 (可读写)
             None => {
-                let db = self.get_or_open_local_db(name)?;
+                let stem = self.resolve_local_repo_name_for_execution(None, Some(name))?;
+                let db = self.get_or_open_local_db(&stem)?;
                 let repo_id = self
-                    .get_repo_info_for(None, Some(name))?
+                    .get_repo_info_for(None, Some(&stem))?
                     .map(|info| info.uuid);
                 Ok(DatabaseHandle {
                     db,
                     readonly: false,
                     branch: None,
                     repo_id,
-                    repo_name: name.to_string(),
+                    repo_name: stem,
                 })
             }
             // 远端影子库 (只读)
