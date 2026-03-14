@@ -61,6 +61,7 @@ pub struct HandshakeSignals {
     pub current_repo: ReadSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
     pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,

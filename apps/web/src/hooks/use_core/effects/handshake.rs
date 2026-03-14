@@ -37,9 +37,14 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let vector = signals.repo_vector.get();
         let repo_name = signals.current_repo.get();
         let branch = signals.active_branch.get();
+        let pending_branch_switch = signals.pending_branch_switch.get();
         let pending_repo_switch = signals.pending_repo_switch.get();
         let is_reconnect_bootstrap = last_mode.borrow().is_none();
-        if should_suspend_handshake(&branch, pending_repo_switch.as_deref()) {
+        if should_suspend_handshake(
+            &branch,
+            pending_branch_switch.as_ref(),
+            pending_repo_switch.as_deref(),
+        ) {
             *last_mode.borrow_mut() = None;
             if is_reconnect_bootstrap {
                 restore_session_scope(&ws, signals, repo_name.clone(), branch.clone());
@@ -176,28 +181,46 @@ fn handshake_mode_key(
         })
 }
 
-fn should_suspend_handshake(branch: &Option<PeerId>, pending_repo_switch: Option<&str>) -> bool {
-    branch.is_some() || pending_repo_switch.is_some()
+fn should_suspend_handshake(
+    branch: &Option<PeerId>,
+    pending_branch_switch: Option<&super::super::PendingBranchTarget>,
+    pending_repo_switch: Option<&str>,
+) -> bool {
+    branch.is_some() || pending_branch_switch.is_some() || pending_repo_switch.is_some()
 }
 
 #[cfg(test)]
 mod tests {
     use super::{handshake_mode_key, should_suspend_handshake};
+    use crate::hooks::use_core::PendingBranchTarget;
     use deve_core::models::PeerId;
 
     #[test]
     fn suspends_handshake_while_viewing_shadow_branch() {
-        assert!(should_suspend_handshake(&Some(PeerId::new("peer-a")), None));
+        assert!(should_suspend_handshake(
+            &Some(PeerId::new("peer-a")),
+            None,
+            None,
+        ));
+    }
+
+    #[test]
+    fn suspends_handshake_while_branch_switch_is_pending() {
+        assert!(should_suspend_handshake(
+            &None,
+            Some(&PendingBranchTarget::Shadow("peer-a".into())),
+            None,
+        ));
     }
 
     #[test]
     fn suspends_handshake_while_repo_switch_is_pending() {
-        assert!(should_suspend_handshake(&None, Some("default")));
+        assert!(should_suspend_handshake(&None, None, Some("default")));
     }
 
     #[test]
     fn keeps_handshake_enabled_for_local_bound_repo() {
-        assert!(!should_suspend_handshake(&None, None));
+        assert!(!should_suspend_handshake(&None, None, None));
     }
 
     #[test]
