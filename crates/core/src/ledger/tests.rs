@@ -116,11 +116,14 @@ fn test_local_and_shadow_isolation() -> Result<()> {
     let remote_ops = repo.get_ops(&RepoType::Remote(peer_id.clone(), repo_id), doc_id)?;
     assert_eq!(remote_ops.len(), 1);
 
-    // 验证影子库文件存在
-    let shadow_path = ledger_dir
-        .join("remotes")
-        .join(peer_id.to_filename())
-        .join(format!("{}.redb", repo_id));
+    // 验证影子库文件存在：运行时必须先经 UUID 恢复 execution-safe selector。
+    let shadow_selector = repo
+        .find_remote_repo_selector_by_id(&peer_id, repo_id)?
+        .expect("shadow selector");
+    let shadow_path = repo
+        .resolve_remote_repo_entry(&peer_id, &shadow_selector)?
+        .expect("shadow entry")
+        .path;
     assert!(shadow_path.exists());
 
     Ok(())
