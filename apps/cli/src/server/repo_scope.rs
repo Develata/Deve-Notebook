@@ -207,9 +207,10 @@ fn recover_remote_repo_name_from_selector(
 ) -> Result<Option<String>> {
     let normalized = repo_name.trim_end_matches(".redb");
     let selectors = state.repo.list_repos(Some(branch))?;
-    if selectors.iter().any(|selector| selector == normalized) {
-        return Ok(Some(normalized.to_string()));
-    }
+    let exact_selector = selectors
+        .iter()
+        .find(|selector| selector.as_str() == normalized)
+        .cloned();
     let mut matches = selectors
         .iter()
         .filter_map(|selector| {
@@ -223,6 +224,12 @@ fn recover_remote_repo_name_from_selector(
         })
         .collect::<Vec<_>>();
     matches.dedup();
+    if exact_selector.is_some() && matches.len() > 1 {
+        return Ok(None);
+    }
+    if let Some(selector) = exact_selector {
+        return Ok(Some(selector));
+    }
     if matches.len() == 1 {
         return Ok(matches.pop());
     }
