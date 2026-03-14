@@ -114,7 +114,7 @@ pub(super) async fn handle_confirm_merge(
         }
         Err(e) => {
             tracing::error!("Merge failed: {:?}", e);
-            errors::request_failed(ch, format!("Merge failed: {}", e));
+            errors::classified_failure(ch, format!("Merge failed: {}", e));
         }
     }
 }

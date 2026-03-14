@@ -28,9 +28,15 @@ pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {
     let lower = detail.to_ascii_lowercase();
-    if lower.contains("repository not found:")
-        || lower.contains("no local repository matched the active remote repository")
-    {
+    if contains_any(
+        &lower,
+        &[
+            "repository not found:",
+            "document not found",
+            "doc not found",
+            "no local repository matched the active remote repository",
+        ],
+    ) {
         return ServerErrorCode::StorageNotFound;
     }
     if lower.contains("database already open")
@@ -40,13 +46,24 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     {
         return ServerErrorCode::StorageDbLocked;
     }
-    if lower.contains("local repo operation requested on remote branch")
-        || lower.contains("repo selector mismatch")
-        || lower.contains("remote session lost repo name")
-    {
+    if contains_any(
+        &lower,
+        &[
+            "local repo operation requested on remote branch",
+            "repo selector mismatch",
+            "session repo mismatch",
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "local repo not found for uuid",
+        ],
+    ) {
         return ServerErrorCode::ScRepoContextInvalid;
     }
     ServerErrorCode::RequestFailed
+}
+
+fn contains_any(input: &str, patterns: &[&str]) -> bool {
+    patterns.iter().any(|pattern| input.contains(pattern))
 }
 
 #[cfg(test)]
@@ -67,6 +84,22 @@ mod tests {
         assert_eq!(
             classify_failure_code("Database already open. Cannot acquire lock."),
             ServerErrorCode::StorageDbLocked
+        );
+    }
+
+    #[test]
+    fn classifies_missing_merged_doc_as_storage_not_found() {
+        assert_eq!(
+            classify_failure_code("Document not found while merging"),
+            ServerErrorCode::StorageNotFound
+        );
+    }
+
+    #[test]
+    fn classifies_repo_scope_drift_as_repo_context_invalid() {
+        assert_eq!(
+            classify_failure_code("Repository UUID not resolved for selector wiki"),
+            ServerErrorCode::ScRepoContextInvalid
         );
     }
 }

@@ -33,8 +33,28 @@ pub(super) fn sync_apply_failed(ch: &DualChannel, detail: impl Into<String>) {
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {
     let lower = detail.to_ascii_lowercase();
+    if contains_any(
+        &lower,
+        &[
+            "active repository not selected",
+            "multiple local repos exist",
+            "no local repositories available",
+        ],
+    ) {
+        return ServerErrorCode::SyncRepoUnbound;
+    }
     if lower.contains("decrypt") || lower.contains("aead") {
         return ServerErrorCode::SyncDecryptFailed;
+    }
+    if contains_any(
+        &lower,
+        &[
+            "repository not found:",
+            "document not found",
+            "doc not found",
+        ],
+    ) {
+        return ServerErrorCode::StorageNotFound;
     }
     if lower.contains("database already open")
         || lower.contains("cannot acquire lock")
@@ -42,6 +62,23 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
         || lower.contains("database is locked")
     {
         return ServerErrorCode::StorageDbLocked;
+    }
+    if contains_any(
+        &lower,
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+            "local repo operation requested on remote branch",
+            "local workspace path requested on remote branch",
+            "local workspace root requested on remote branch",
+            "scope mismatch",
+            "stale scope nonce",
+        ],
+    ) {
+        return ServerErrorCode::ScRepoContextInvalid;
     }
     if lower.contains("signature")
         || lower.contains("verify")
@@ -58,6 +95,10 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
         return ServerErrorCode::StoragePersistFailed;
     }
     ServerErrorCode::RequestFailed
+}
+
+fn contains_any(input: &str, patterns: &[&str]) -> bool {
+    patterns.iter().any(|pattern| input.contains(pattern))
 }
 
 #[cfg(test)]
@@ -78,6 +119,32 @@ mod tests {
         assert_eq!(
             classify_failure_code("Failed to generate snapshot for repo x"),
             ServerErrorCode::StoragePersistFailed
+        );
+    }
+
+    #[test]
+    fn classifies_missing_sync_scope_as_repo_unbound() {
+        assert_eq!(
+            classify_failure_code("Active repository not selected: multiple local repos exist"),
+            ServerErrorCode::SyncRepoUnbound
+        );
+    }
+
+    #[test]
+    fn classifies_sync_repo_scope_drift_as_repo_context_invalid() {
+        assert_eq!(
+            classify_failure_code(
+                "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
+            ),
+            ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_missing_sync_repo_as_storage_not_found() {
+        assert_eq!(
+            classify_failure_code("Repository not found: default"),
+            ServerErrorCode::StorageNotFound
         );
     }
 }
