@@ -149,7 +149,8 @@ fn resolve_session_repo_recovers_remote_scope_from_uuid_when_name_is_stale() -> 
 }
 
 #[test]
-fn resolve_session_repo_recovers_remote_selector_without_uuid_when_unique() -> anyhow::Result<()> {
+fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unrecoverable(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
@@ -157,13 +158,12 @@ fn resolve_session_repo_recovers_remote_selector_without_uuid_when_unique() -> a
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("stale-name".into(), None);
 
-    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
-
-    assert_eq!(resolved.branch, Some(peer_id));
-    assert_eq!(resolved.repo_id, remote_repo_id);
-    assert_eq!(resolved.repo_name, "shadow-notes");
-    assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
-    assert_eq!(session.active_repo_id, Some(remote_repo_id));
+    let err = resolve_session_repo_and_sync(&state, &mut session)
+        .expect_err("remote stale selector without uuid must fail");
+    assert!(
+        err.to_string().contains("Active repository not selected")
+            || err.to_string().contains("Remote session lost repo name")
+    );
     Ok(())
 }
 

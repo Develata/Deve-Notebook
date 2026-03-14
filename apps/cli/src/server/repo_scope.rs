@@ -226,5 +226,5 @@ fn recover_remote_repo_name_from_selector(
     if matches.len() == 1 {
         return Ok(matches.pop());
     }
-    Ok((selectors.len() == 1).then(|| selectors[0].clone()))
+    Ok(None)
 }
