@@ -28,11 +28,7 @@ pub async fn list_docs(
 ) -> impl IntoResponse {
     match Repository::list_docs_in_repo(state.repo.as_ref(), &repo) {
         Ok(list) => Json(list).into_response(),
-        Err(e) => http_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ServerErrorCode::RequestFailed,
-            e.to_string(),
-        ),
+        Err(e) => repo_error_response(e),
     }
 }
 
@@ -43,17 +39,9 @@ pub async fn list_docs_plugin_host(
     match host::repository() {
         Ok(repository) => match repository.list_docs_in_repo(&repo) {
             Ok(list) => Json(list).into_response(),
-            Err(e) => http_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ServerErrorCode::RequestFailed,
-                e.to_string(),
-            ),
+            Err(e) => repo_error_response(e),
         },
-        Err(e) => http_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ServerErrorCode::RequestFailed,
-            e.to_string(),
-        ),
+        Err(e) => repo_error_response(e),
     }
 }
 
@@ -73,11 +61,7 @@ pub async fn doc_content(
     };
     match Repository::get_doc_content_in_repo(state.repo.as_ref(), &q.repo, doc_id) {
         Ok(content) => content.into_response(),
-        Err(e) => http_error(
-            StatusCode::NOT_FOUND,
-            ServerErrorCode::StorageNotFound,
-            e.to_string(),
-        ),
+        Err(e) => repo_error_response(e),
     }
 }
 
@@ -98,17 +82,9 @@ pub async fn doc_content_plugin_host(
     match host::repository() {
         Ok(repo) => match repo.get_doc_content_in_repo(&q.repo, doc_id) {
             Ok(content) => content.into_response(),
-            Err(e) => http_error(
-                StatusCode::NOT_FOUND,
-                ServerErrorCode::StorageNotFound,
-                e.to_string(),
-            ),
+            Err(e) => repo_error_response(e),
         },
-        Err(e) => http_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ServerErrorCode::RequestFailed,
-            e.to_string(),
-        ),
+        Err(e) => repo_error_response(e),
     }
 }
 
@@ -126,15 +102,95 @@ fn http_error(
     (status, Json(ServerError::with_detail(code, detail))).into_response()
 }
 
+fn repo_error_response(error: impl ToString) -> axum::response::Response {
+    let detail = error.to_string();
+    let (status, code) = classify_repo_error(&detail);
+    http_error(status, code, detail)
+}
+
+fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
+    let lower = detail.to_ascii_lowercase();
+    if contains_any(
+        &lower,
+        &[
+            "repository not found:",
+            "document not found",
+            "doc not found",
+        ],
+    ) {
+        return (StatusCode::NOT_FOUND, ServerErrorCode::StorageNotFound);
+    }
+    if contains_any(
+        &lower,
+        &[
+            "database already open",
+            "cannot acquire lock",
+            "db locked",
+            "database is locked",
+        ],
+    ) {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            ServerErrorCode::StorageDbLocked,
+        );
+    }
+    if contains_any(
+        &lower,
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+            "local repo operation requested on remote branch",
+            "local workspace path requested on remote branch",
+            "local workspace root requested on remote branch",
+        ],
+    ) {
+        return (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid);
+    }
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        ServerErrorCode::RequestFailed,
+    )
+}
+
+fn contains_any(input: &str, patterns: &[&str]) -> bool {
+    patterns.iter().any(|pattern| input.contains(pattern))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::parse_doc_id;
+    use super::{classify_repo_error, parse_doc_id};
+    use axum::http::StatusCode;
+    use deve_core::protocol::ServerErrorCode;
 
     #[test]
     fn invalid_doc_id_returns_small_error_detail() {
         assert_eq!(
             parse_doc_id("not-a-uuid").expect_err("must reject"),
             "invalid doc_id"
+        );
+    }
+
+    #[test]
+    fn classifies_repo_scope_drift_as_conflict() {
+        assert_eq!(
+            classify_repo_error(
+                "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
+            ),
+            (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid)
+        );
+    }
+
+    #[test]
+    fn classifies_locked_repo_db_as_service_unavailable() {
+        assert_eq!(
+            classify_repo_error("Database already open. Cannot acquire lock."),
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                ServerErrorCode::StorageDbLocked
+            )
         );
     }
 }

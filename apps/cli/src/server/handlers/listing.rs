@@ -41,10 +41,7 @@ pub async fn handle_list_shadows(
         }
         Err(e) => {
             tracing::error!("Failed to list shadow repos: {:?}", e);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list shadow repos: {}", e),
-            ));
+            send_listing_error(ch, format!("Failed to list shadow repos: {}", e));
         }
     }
 }
@@ -68,10 +65,69 @@ pub async fn handle_list_repos(
         }
         Err(e) => {
             tracing::error!("Failed to list repos: {:?}", e);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::RequestFailed,
-                format!("Failed to list repos: {}", e),
-            ));
+            send_listing_error(ch, format!("Failed to list repos: {}", e));
         }
+    }
+}
+
+fn send_listing_error(ch: &DualChannel, detail: impl Into<String>) {
+    let detail = detail.into();
+    ch.send_protocol_error(ServerError::with_detail(
+        classify_listing_error(&detail),
+        detail,
+    ));
+}
+
+fn classify_listing_error(detail: &str) -> ServerErrorCode {
+    let lower = detail.to_ascii_lowercase();
+    if contains_any(
+        &lower,
+        &[
+            "database already open",
+            "cannot acquire lock",
+            "db locked",
+            "database is locked",
+        ],
+    ) {
+        return ServerErrorCode::StorageDbLocked;
+    }
+    if contains_any(
+        &lower,
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+        ],
+    ) {
+        return ServerErrorCode::ScRepoContextInvalid;
+    }
+    ServerErrorCode::RequestFailed
+}
+
+fn contains_any(input: &str, patterns: &[&str]) -> bool {
+    patterns.iter().any(|pattern| input.contains(pattern))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::classify_listing_error;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn classifies_locked_listing_db_as_storage_db_locked() {
+        assert_eq!(
+            classify_listing_error("Database already open. Cannot acquire lock."),
+            ServerErrorCode::StorageDbLocked
+        );
+    }
+
+    #[test]
+    fn classifies_listing_scope_drift_as_repo_context_invalid() {
+        assert_eq!(
+            classify_listing_error("Remote session lost repo name for current branch"),
+            ServerErrorCode::ScRepoContextInvalid
+        );
     }
 }
