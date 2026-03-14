@@ -51,6 +51,21 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
     }
     if contains_any(
         &detail.to_ascii_lowercase(),
+        &[
+            "remote session lost repo name",
+            "repository uuid not resolved",
+            "session repo mismatch",
+            "repo selector mismatch",
+            "local repo not found for uuid",
+            "local repo operation requested on remote branch",
+            "local workspace path requested on remote branch",
+            "local workspace root requested on remote branch",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
+    }
+    if contains_any(
+        &detail.to_ascii_lowercase(),
         &["database is locked", "failed to lock database"],
     ) {
         return ServerError::with_detail(ServerErrorCode::StorageDbLocked, detail);
@@ -147,5 +162,16 @@ mod tests {
             anyhow::anyhow!("Active repository not selected: multiple local repos exist"),
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoNotSelected);
+    }
+
+    #[test]
+    fn maps_repo_error_selector_mismatch_to_repo_context_invalid() {
+        let err = map_repo_error(
+            ScOp::ListChanges,
+            anyhow::anyhow!(
+                "Repo selector mismatch: repo_id resolved to default, repo_name resolved to test"
+            ),
+        );
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }
 }
