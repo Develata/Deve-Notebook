@@ -76,6 +76,22 @@ fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<
 }
 
 #[test]
+fn resolve_session_repo_recovers_local_repo_name_from_uuid_string_without_bound_id()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let mut session = WsSession::new();
+    session.switch_repo(test_id.to_string(), None);
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert!(resolved.branch.is_none());
+    assert_eq!(resolved.repo_id, test_id);
+    assert_eq!(resolved.repo_name, "test");
+    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    Ok(())
+}
+
+#[test]
 fn resolve_session_repo_recovers_remote_scope_from_uuid_when_name_is_stale() -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");

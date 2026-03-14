@@ -131,6 +131,16 @@ fn resolve_repo_name_from_session(
                 }
                 return Ok(Some(canonical));
             }
+            if let Ok(repo_id) = uuid::Uuid::parse_str(&repo_name)
+                && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?
+            {
+                tracing::warn!(
+                    "Recovering local repo name from UUID string selector: stale_name={}, resolved_name={}",
+                    repo_name,
+                    resolved
+                );
+                return Ok(Some(resolved));
+            }
             if let Some(repo_id) = session.active_repo_id
                 && let Some(resolved) = state.repo.find_local_repo_name_by_id(repo_id)?
             {
