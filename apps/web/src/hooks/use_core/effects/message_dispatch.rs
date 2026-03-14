@@ -2,7 +2,6 @@ use crate::api::WsService;
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::*;
 
-use super::super::apply::apply_tree_delta;
 use super::super::effects_msg;
 use super::super::pending;
 use super::super::state::CoreSignals;
@@ -10,11 +9,16 @@ use super::message_control;
 use super::message_dispatch_gate::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
 };
+use super::message_projection::{handle_doc_list, handle_tree_update};
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
+use super::message_runtime::{
+    handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
+    handle_sync_mode_status,
+};
 use super::message_scope::{
-    RepoListScope, RequestMatch, ShadowListScope, accepts_system_or_matching_request,
-    repo_list_matches_scope, shadow_list_matches_scope,
+    RepoListScope, RequestMatch, ShadowListScope, repo_list_matches_scope,
+    shadow_list_matches_scope,
 };
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
@@ -34,23 +38,7 @@ pub fn handle_message<F>(
             branch,
             scope_nonce,
             docs,
-        } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals)
-                || !accepts_system_or_matching_request(
-                    request_id.as_deref(),
-                    signals.doc_list_request_id.get_untracked().as_deref(),
-                    scope_nonce,
-                    signals.current_scope_nonce.get_untracked(),
-                )
-            {
-                return;
-            }
-            signals.set_doc_list_request_id.set(None);
-            if request_id.is_none() {
-                signals.set_tree_request_id.set(None);
-            }
-            effects_msg::handle_doc_list(docs, signals.set_docs);
-        }
+        } => handle_doc_list(request_id, repo_id, branch, scope_nonce, docs, signals),
         ServerMessage::SyncHello {
             peer_id,
             repo_id,
@@ -104,20 +92,7 @@ pub fn handle_message<F>(
             branch,
             scope_nonce,
             mode,
-        } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals)
-                || !accepts_system_or_matching_request(
-                    request_id.as_deref(),
-                    signals.sync_mode_request_id.get_untracked().as_deref(),
-                    scope_nonce,
-                    signals.current_scope_nonce.get_untracked(),
-                )
-            {
-                return;
-            }
-            signals.set_sync_mode_request_id.set(None);
-            signals.set_sync_mode.set(mode);
-        }
+        } => handle_sync_mode_status(request_id, repo_id, branch, scope_nonce, mode, signals),
         ServerMessage::PendingOpsInfo {
             request_id,
             repo_id,
@@ -125,41 +100,26 @@ pub fn handle_message<F>(
             scope_nonce,
             count,
             previews,
-        } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals)
-                || !accepts_system_or_matching_request(
-                    request_id.as_deref(),
-                    signals.pending_ops_request_id.get_untracked().as_deref(),
-                    scope_nonce,
-                    signals.current_scope_nonce.get_untracked(),
-                )
-            {
-                return;
-            }
-            signals.set_pending_ops_request_id.set(None);
-            signals.set_pending_ops_count.set(count);
-            signals.set_pending_ops_previews.set(previews);
-        }
+        } => handle_pending_ops_info(
+            request_id,
+            repo_id,
+            branch,
+            scope_nonce,
+            count,
+            previews,
+            signals,
+        ),
         ServerMessage::MergeComplete {
             repo_id,
             branch,
+            scope_nonce,
             merged_count,
-        } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals) {
-                return;
-            }
-            leptos::logging::log!("已合并 {} 个操作", merged_count);
-            signals.set_pending_ops_count.set(0);
-            signals.set_pending_ops_previews.set(vec![]);
-        }
-        ServerMessage::PendingDiscarded { repo_id, branch } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals) {
-                return;
-            }
-            leptos::logging::log!("待处理操作已丢弃");
-            signals.set_pending_ops_count.set(0);
-            signals.set_pending_ops_previews.set(vec![]);
-        }
+        } => handle_merge_complete(repo_id, branch, scope_nonce, merged_count, signals),
+        ServerMessage::PendingDiscarded {
+            repo_id,
+            branch,
+            scope_nonce,
+        } => handle_pending_discarded(repo_id, branch, scope_nonce, signals),
         ServerMessage::ShadowList {
             request_id,
             scope_nonce,
@@ -248,25 +208,7 @@ pub fn handle_message<F>(
             branch,
             scope_nonce,
             delta,
-        } => {
-            if !matches_current_message_scope(&repo_id, &branch, signals)
-                || !accepts_system_or_matching_request(
-                    request_id.as_deref(),
-                    signals.tree_request_id.get_untracked().as_deref(),
-                    scope_nonce,
-                    signals.current_scope_nonce.get_untracked(),
-                )
-            {
-                return;
-            }
-            signals.set_tree_request_id.set(None);
-            if request_id.is_none() {
-                signals.set_doc_list_request_id.set(None);
-            }
-            signals
-                .set_tree_nodes
-                .update(|nodes| apply_tree_delta(nodes, delta));
-        }
+        } => handle_tree_update(request_id, repo_id, branch, scope_nonce, delta, signals),
         ServerMessage::Ack {
             repo_id,
             branch,

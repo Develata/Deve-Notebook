@@ -95,6 +95,7 @@ pub(super) async fn handle_confirm_merge(
     ch: &DualChannel,
     session: &mut WsSession,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
     };
@@ -107,6 +108,7 @@ pub(super) async fn handle_confirm_merge(
             ch.broadcast(ServerMessage::MergeComplete {
                 repo_id: Some(repo_id),
                 branch: session.active_branch.clone(),
+                scope_nonce,
                 merged_count: count as u32,
             });
         }
@@ -122,6 +124,7 @@ pub(super) async fn handle_discard_pending(
     ch: &DualChannel,
     session: &mut WsSession,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
         return;
     };
@@ -133,5 +136,6 @@ pub(super) async fn handle_discard_pending(
     ch.unicast(ServerMessage::PendingDiscarded {
         repo_id: Some(repo_id),
         branch: session.active_branch.clone(),
+        scope_nonce,
     });
 }

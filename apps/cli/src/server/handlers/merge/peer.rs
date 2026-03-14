@@ -38,9 +38,14 @@ pub(super) async fn handle_merge_peer(
         &local_scope.repo_id,
         doc_id,
     ) {
-        Ok(MergeResult::Success(content)) => {
-            write_merged_content(state, ch, &local_scope, doc_id, &content);
-        }
+        Ok(MergeResult::Success(content)) => write_merged_content(
+            state,
+            ch,
+            &local_scope,
+            doc_id,
+            &content,
+            Some(session.scope_nonce()),
+        ),
         Ok(MergeResult::Conflict { local, remote, .. }) => {
             send_merge_conflict(
                 state,
@@ -62,6 +67,7 @@ fn write_merged_content(
     scope: &ResolvedRepo,
     doc_id: DocId,
     content: &str,
+    scope_nonce: Option<u64>,
 ) {
     let entries = match state
         .repo
@@ -105,6 +111,7 @@ fn write_merged_content(
     ch.broadcast(ServerMessage::MergeComplete {
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
+        scope_nonce,
         merged_count: 1,
     });
 }
