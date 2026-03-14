@@ -22,12 +22,7 @@ pub(super) fn repair_repo_prefixed_paths(
             else {
                 continue;
             };
-            if stripped.is_empty()
-                || repo
-                    .get_tracked_docid_in_local_repo(repo_name, stripped)?
-                    .or(repo.get_docid_in_local_repo(repo_name, stripped)?)
-                    .is_some()
-            {
+            if stripped.is_empty() || path_exists_for_repair(repo, repo_name, stripped)? {
                 continue;
             }
             repo.repair_rename_doc_mapping_in_local_repo(repo_name, &old_path, stripped)?;
@@ -41,6 +36,13 @@ pub(super) fn repair_repo_prefixed_paths(
         }
     }
     Ok(fixed)
+}
+
+fn path_exists_for_repair(repo: &Arc<RepoManager>, repo_name: &str, path: &str) -> Result<bool> {
+    match repo.get_tracked_docid_in_local_repo(repo_name, path)? {
+        Some(_) => Ok(true),
+        None => Ok(repo.get_docid_in_local_repo(repo_name, path)?.is_some()),
+    }
 }
 
 fn rename_workspace_file(
@@ -95,5 +97,26 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
         let parent = path.parent().map(|p| p.to_path_buf());
         let _ = std::fs::remove_dir(&path);
         cursor = parent;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::path_exists_for_repair;
+    use deve_core::ledger::RepoManager;
+    use std::sync::Arc;
+    use tempfile::tempdir;
+
+    #[test]
+    fn path_exists_for_repair_prefers_tracked_lookup() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path(),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        assert!(!path_exists_for_repair(&repo, "default", "notes/a.md")?);
+        Ok(())
     }
 }

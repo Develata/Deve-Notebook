@@ -109,15 +109,23 @@ fn resolve_repair_docid(
     repo_name: &str,
     repo_path: &str,
 ) -> Result<Option<deve_core::models::DocId>> {
-    repo.get_tracked_docid_in_local_repo(repo_name, repo_path)
-        .or_else(|_| repo.get_docid_in_local_repo(repo_name, repo_path))
-        .and_then(|doc_id| {
-            if doc_id.is_some() {
-                Ok(doc_id)
-            } else {
-                repo.get_docid_in_local_repo(repo_name, repo_path)
-            }
-        })
+    resolve_repair_docid_lookup(
+        repo.get_tracked_docid_in_local_repo(repo_name, repo_path),
+        || repo.get_docid_in_local_repo(repo_name, repo_path),
+    )
+}
+
+fn resolve_repair_docid_lookup<F>(
+    tracked: Result<Option<deve_core::models::DocId>>,
+    legacy: F,
+) -> Result<Option<deve_core::models::DocId>>
+where
+    F: FnOnce() -> Result<Option<deve_core::models::DocId>>,
+{
+    match tracked? {
+        Some(doc_id) => Ok(Some(doc_id)),
+        None => legacy(),
+    }
 }
 
 fn resolve_backup_path(
@@ -152,4 +160,34 @@ fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
         });
     }
     ops
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_repair_docid_lookup;
+    use deve_core::models::DocId;
+
+    #[test]
+    fn resolve_repair_docid_lookup_falls_back_only_after_tracked_none() -> anyhow::Result<()> {
+        let doc_id = DocId::new();
+        assert_eq!(
+            resolve_repair_docid_lookup(Ok(Some(doc_id)), || Ok(None))?,
+            Some(doc_id)
+        );
+        assert_eq!(
+            resolve_repair_docid_lookup(Ok(None), || Ok(Some(doc_id)))?,
+            Some(doc_id)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_repair_docid_lookup_does_not_swallow_tracked_errors() {
+        let err =
+            resolve_repair_docid_lookup(Err(anyhow::anyhow!("tracked lookup failed")), || {
+                Ok(Some(DocId::new()))
+            })
+            .expect_err("tracked lookup errors must stop repair lookup");
+        assert!(err.to_string().contains("tracked lookup failed"));
+    }
 }
