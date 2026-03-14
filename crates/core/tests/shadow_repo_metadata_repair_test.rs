@@ -89,6 +89,30 @@ fn init_keeps_uuid_shadow_path_without_remote_metadata() {
 }
 
 #[test]
+fn init_survives_broken_shadow_catalogs() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let peer_id = PeerId::new("peer-bad");
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("create peer dir");
+    std::fs::write(peer_dir.join("broken.redb"), b"not-a-redb").expect("write broken shadow");
+
+    let repaired = RepoManager::init(&ledger_dir, 10, None, None).expect("re-init repo");
+
+    assert_eq!(
+        repaired.get_repo_info().expect("local info").expect("present").name,
+        "default"
+    );
+    assert!(
+        repaired
+            .list_shadows_on_disk()
+            .expect("list shadows after init")
+            .contains(&peer_id)
+    );
+}
+
+#[test]
 fn local_catalog_repair_leaves_irrecoverable_legacy_uuid_shadow_as_uuid_selector() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
