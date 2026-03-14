@@ -16,7 +16,7 @@ fn new_repo() -> (TempDir, RepoManager) {
 }
 
 #[test]
-fn ensure_shadow_repo_binding_copies_local_repo_metadata() {
+fn ensure_shadow_repo_binding_keeps_shadow_repo_uuid_scoped_without_local_metadata_guess() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let info = repo
@@ -30,11 +30,16 @@ fn ensure_shadow_repo_binding_copies_local_repo_metadata() {
     let listed = repo
         .list_repos(Some(&peer_id))
         .expect("list named remote repos");
-    assert_eq!(listed, vec!["notes".to_string()]);
+    assert_eq!(listed, vec![info.uuid.to_string()]);
+    let selector = repo
+        .find_remote_repo_selector_by_id(&peer_id, info.uuid)
+        .expect("resolve shadow selector")
+        .expect("shadow selector");
+    assert_eq!(selector, info.uuid.to_string());
     assert!(
         repo.remotes_dir()
             .join(peer_id.to_filename())
-            .join("notes.redb")
+            .join(format!("{}.redb", selector))
             .exists()
     );
 }
@@ -43,10 +48,12 @@ fn ensure_shadow_repo_binding_copies_local_repo_metadata() {
 fn list_shadows_on_disk_ignores_hidden_dirs() {
     let (_dir, repo) = new_repo();
     std::fs::create_dir_all(repo.remotes_dir().join(".invalid")).expect("hidden dir");
-    std::fs::create_dir_all(repo.remotes_dir().join("peer-visible")).expect("peer dir");
+    let peer = PeerId::new("peer-visible");
+    repo.ensure_shadow_db(&peer, &uuid::Uuid::new_v4())
+        .expect("seed visible shadow");
 
     assert_eq!(
         repo.list_shadows_on_disk().expect("list shadows"),
-        vec![PeerId::new("peer-visible")]
+        vec![peer]
     );
 }

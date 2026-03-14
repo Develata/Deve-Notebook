@@ -5,12 +5,9 @@ use crate::models::{PeerId, RepoId};
 
 impl RepoManager {
     /// Invariants:
-    /// - 远端影子库元数据优先对齐同 `repo_id` 的本地 `RepoInfo`。
-    /// - 若本地没有该 repo 的元数据，仍必须至少建立 repo-scoped 影子库。
+    /// - `ensure_shadow_repo_binding` 只负责建立 repo-scoped shadow 实例，不得猜测远端 metadata。
+    /// - 远端 `RepoInfo` 只能来自 shadow 自身显式元数据或后续受控 repair，不得借本地同 UUID 仓库推断。
     pub fn ensure_shadow_repo_binding(&self, peer_id: &PeerId, repo_id: RepoId) -> Result<()> {
-        if let Some(info) = self.get_local_repo_info_by_id(repo_id)? {
-            return self.ensure_shadow_repo_info(peer_id, &info);
-        }
         self.ensure_shadow_db(peer_id, &repo_id)
     }
 }

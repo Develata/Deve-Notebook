@@ -12,7 +12,7 @@ fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
 }
 
 #[test]
-fn remote_catalog_repairs_legacy_uuid_shadow_to_named_catalog() {
+fn remote_catalog_keeps_legacy_uuid_shadow_as_uuid_selector_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let local = RepoManager::init(
@@ -33,24 +33,17 @@ fn remote_catalog_repairs_legacy_uuid_shadow_to_named_catalog() {
     assert_eq!(
         repo.list_repos(Some(&peer_id))
             .expect("list repaired shadows"),
-        vec!["wiki".to_string()]
+        vec![info.uuid.to_string()]
     );
 
     let handle = repo
-        .open_database(Some(&peer_id), "wiki")
+        .open_database(Some(&peer_id), &info.uuid.to_string())
         .expect("open repaired shadow");
     let repaired = read_repo_info(&handle.db).expect("repo info written back");
-    assert_eq!(repaired.name, "wiki");
+    assert_eq!(repaired.name, info.uuid.to_string());
     assert_eq!(repaired.uuid, info.uuid);
     assert!(
         repo.remotes_dir()
-            .join(peer_id.to_filename())
-            .join("wiki.redb")
-            .exists()
-    );
-    assert!(
-        !repo
-            .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", info.uuid))
             .exists()
@@ -58,7 +51,7 @@ fn remote_catalog_repairs_legacy_uuid_shadow_to_named_catalog() {
 }
 
 #[test]
-fn init_repairs_uuid_shadow_path_and_metadata() {
+fn init_keeps_uuid_shadow_path_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
@@ -84,17 +77,10 @@ fn init_repairs_uuid_shadow_path_and_metadata() {
         repaired
             .list_repos(Some(&peer_id))
             .expect("list repaired shadows"),
-        vec!["wiki".to_string()]
+        vec![info.uuid.to_string()]
     );
     assert!(
         repaired
-            .remotes_dir()
-            .join(peer_id.to_filename())
-            .join("wiki.redb")
-            .exists()
-    );
-    assert!(
-        !repaired
             .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", info.uuid))
@@ -142,16 +128,20 @@ fn local_catalog_repair_leaves_irrecoverable_legacy_uuid_shadow_as_uuid_selector
             .expect("list repaired shadows"),
         vec![wiki_info.uuid.to_string()]
     );
+    let selector = main
+        .find_remote_repo_selector_by_id(&peer_id, wiki_info.uuid)
+        .expect("resolve repaired shadow selector")
+        .expect("shadow selector");
     assert!(
         main.remotes_dir()
             .join(peer_id.to_filename())
-            .join(format!("{}.redb", wiki_info.uuid))
+            .join(format!("{}.redb", selector))
             .exists()
     );
 }
 
 #[test]
-fn remote_catalog_repair_uses_repaired_local_metadata_before_naming_shadow() {
+fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
@@ -181,15 +171,15 @@ fn remote_catalog_repair_uses_repaired_local_metadata_before_naming_shadow() {
     main.ensure_shadow_db(&peer_id, &wiki_info.uuid)
         .expect("create legacy uuid shadow");
 
-    assert_eq!(
-        main.list_repos(Some(&peer_id))
-            .expect("list repaired shadows"),
-        vec!["wiki".to_string()]
-    );
+    let selectors = main
+        .list_repos(Some(&peer_id))
+        .expect("list repaired shadows");
+    assert_eq!(selectors, vec![wiki_info.uuid.to_string()]);
+    let selector = selectors[0].clone();
     assert!(
         main.remotes_dir()
             .join(peer_id.to_filename())
-            .join("wiki.redb")
+            .join(format!("{}.redb", selector))
             .exists()
     );
 }

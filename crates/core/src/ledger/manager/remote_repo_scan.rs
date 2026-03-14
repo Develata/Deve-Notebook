@@ -18,16 +18,6 @@ struct RemoteRepoCatalogInfo {
 }
 
 impl RepoManager {
-    fn repaired_local_repo_info_for_shadow(&self, repo_id: uuid::Uuid) -> Result<Option<RepoInfo>> {
-        Self::repair_local_repo_metadata(
-            &self.ledger_dir,
-            &self.local_repo_name,
-            self.local_db.as_ref(),
-            self.vault_root.as_deref(),
-        )?;
-        self.get_local_repo_info_by_id_without_repair(repo_id)
-    }
-
     fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
         if !peer_dir.exists() {
@@ -106,15 +96,10 @@ impl RepoManager {
     ) -> Result<Option<RemoteRepoCatalogInfo>> {
         let original = Self::read_repo_info_from_path(path)?;
         let Some(mut info) = original.clone().or_else(|| {
-            uuid::Uuid::parse_str(stem).ok().map(|repo_id| {
-                self.repaired_local_repo_info_for_shadow(repo_id)
-                    .ok()
-                    .flatten()
-                    .unwrap_or(RepoInfo {
-                        uuid: repo_id,
-                        name: stem.to_string(),
-                        url: Some(format!("urn:uuid:{}", repo_id)),
-                    })
+            uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
+                uuid: repo_id,
+                name: stem.to_string(),
+                url: None,
             })
         }) else {
             return Ok(None);
@@ -122,13 +107,6 @@ impl RepoManager {
         let mut write_back = original.is_none();
         if info.name.trim().is_empty() {
             info.name = stem.to_string();
-            write_back = true;
-        }
-        if info.url.is_none() {
-            info.url = self
-                .repaired_local_repo_info_for_shadow(info.uuid)?
-                .and_then(|local| local.url)
-                .or_else(|| Some(format!("urn:uuid:{}", info.uuid)));
             write_back = true;
         }
         if original.as_ref() != Some(&info) {

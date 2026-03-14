@@ -77,8 +77,10 @@ pub(super) fn select_target_repo(
         return Ok(Some(selector));
     }
     if let Some(repo_name) = current_repo_name
-        && let Some(info) = state.repo.get_repo_info_for(target_branch, Some(repo_name))?
-        && info.name != repo_name
+        && let Some(info) = state
+            .repo
+            .get_repo_info_for(target_branch, Some(repo_name))?
+        && (info.name != repo_name || uuid::Uuid::parse_str(repo_name).is_ok())
     {
         return Ok(Some(repo_name.to_string()));
     }
@@ -90,12 +92,10 @@ pub(super) fn select_target_repo(
                 return Ok(Some(repo_name.clone()));
             }
         }
+        return Ok(None);
     }
-    if let Some(repo_name) = current_repo_name {
-        let matches = select_repo_selectors_by_name(state, &repos, target_branch, repo_name)?;
-        if matches.len() == 1 {
-            return Ok(matches.into_iter().next());
-        }
+    if current_repo_name.is_some() || current_repo_id.is_some() {
+        return Ok(None);
     }
     Ok((repos.len() == 1).then(|| repos[0].clone()))
 }
@@ -115,24 +115,6 @@ fn select_repo_selector_by_id(
         }
     }
     Ok(None)
-}
-
-fn select_repo_selectors_by_name(
-    state: &Arc<AppState>,
-    repos: &[String],
-    branch: Option<&PeerId>,
-    repo_name: &str,
-) -> anyhow::Result<Vec<String>> {
-    let mut matches = Vec::new();
-    for selector in repos {
-        let Some(info) = state.repo.get_repo_info_for(branch, Some(selector))? else {
-            continue;
-        };
-        if info.name == repo_name || selector == repo_name {
-            matches.push(selector.clone());
-        }
-    }
-    Ok(matches)
 }
 
 pub(super) fn prepare_repo_switch(

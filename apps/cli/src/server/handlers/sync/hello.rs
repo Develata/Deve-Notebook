@@ -3,7 +3,7 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 use super::errors;
@@ -32,6 +32,11 @@ pub(super) async fn handle(
         scope_nonce,
     } = hello;
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
+
+    if let Err(error) = validate_scope(session, repo_id, scope_nonce) {
+        ch.send_protocol_error(error);
+        return;
+    }
 
     let mut engine = match state.sync_engine.get_or_create(repo_id) {
         Some(e) => e,
@@ -142,4 +147,34 @@ pub(super) async fn handle(
             ops: ops_to_push,
         });
     }
+}
+
+fn validate_scope(
+    session: &WsSession,
+    repo_id: RepoId,
+    scope_nonce: u64,
+) -> Result<(), ServerError> {
+    if !session.is_browser_session() {
+        return Ok(());
+    }
+    if session.active_branch.is_some() || session.active_repo_id != Some(repo_id) {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            format!(
+                "Browser SyncHello scope mismatch: active_branch={:?}, active_repo_id={:?}, requested_repo_id={}",
+                session.active_branch, session.active_repo_id, repo_id
+            ),
+        ));
+    }
+    if session.scope_nonce() != scope_nonce {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            format!(
+                "Browser SyncHello stale scope nonce: current_scope_nonce={}, requested_scope_nonce={}",
+                session.scope_nonce(),
+                scope_nonce
+            ),
+        ));
+    }
+    Ok(())
 }

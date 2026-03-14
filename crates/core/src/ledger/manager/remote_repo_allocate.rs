@@ -30,6 +30,9 @@ impl RepoManager {
                 }
                 continue;
             }
+            if stem == info.uuid.to_string() {
+                return Ok(path);
+            }
         }
         unreachable!("remote repo path allocator must terminate")
     }
