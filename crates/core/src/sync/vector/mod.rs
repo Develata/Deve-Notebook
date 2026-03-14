@@ -131,6 +131,26 @@ impl VersionVector {
         }
     }
 
+    /// 精确设置指定节点的版本号。
+    ///
+    /// 用于 Snapshot 覆盖场景：收到全量状态后，版本向量必须与远端 head 精确一致。
+    pub fn set_exact(&mut self, peer: PeerId, seq: u64) {
+        match self.clock.binary_search_by(|(p, _)| p.cmp(&peer)) {
+            Ok(idx) => {
+                if seq == 0 {
+                    self.clock.remove(idx);
+                } else {
+                    self.clock[idx].1 = seq;
+                }
+            }
+            Err(idx) => {
+                if seq > 0 {
+                    self.clock.insert(idx, (peer, seq));
+                }
+            }
+        }
+    }
+
     /// 对内部数组进行排序与去重 (保持最大 seq)
     ///
     /// **注意**: `dedup_by(|a, b|)` 中 `a` 是待移除元素，`b` 是保留元素。

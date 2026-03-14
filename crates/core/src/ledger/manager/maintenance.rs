@@ -1,5 +1,9 @@
 use crate::ledger::manager::types::RepoManager;
-use crate::ledger::schema::{DOC_OPS, NODE_OPS};
+use crate::ledger::schema::{
+    CLIENT_OP_INDEX, DOC_OPS, DOCID_TO_PATH, INODE_TO_DOCID, INODE_TO_NODEID, LEDGER_OPS, NODE_OPS,
+    NODE_PEER_SEQ, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID, PEER_DOC_SEQ, SNAPSHOT_DATA,
+    SNAPSHOT_INDEX,
+};
 use crate::models::{DocId, NodeId, PeerId, RepoId};
 use anyhow::{Context, Result};
 
@@ -88,6 +92,56 @@ impl RepoManager {
         write_txn
             .open_multimap_table(NODE_OPS)?
             .remove_all(&node_id.as_u128())?;
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// 整库重置指定 Shadow Repo 的 ledger/projection 内容，但保留 RepoMetadata。
+    ///
+    /// Invariants:
+    /// - Snapshot 覆盖必须先物理清空旧 shadow 内容，再按原始 Ledger Facts 重放。
+    /// - 只保留 `REPO_METADATA`，其余运行时表一律重建。
+    pub fn reset_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
+        self.ensure_shadow_db(peer_id, repo_id)?;
+
+        let guard = self.shadow_dbs.read().unwrap();
+        let peer_map = guard
+            .get(peer_id)
+            .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
+        let db = peer_map
+            .get(repo_id)
+            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
+
+        let write_txn = db.begin_write()?;
+        let _ = write_txn.delete_table(LEDGER_OPS)?;
+        let _ = write_txn.delete_multimap_table(DOC_OPS)?;
+        let _ = write_txn.delete_multimap_table(NODE_OPS)?;
+        let _ = write_txn.delete_table(CLIENT_OP_INDEX)?;
+        let _ = write_txn.delete_table(PEER_DOC_SEQ)?;
+        let _ = write_txn.delete_table(NODE_PEER_SEQ)?;
+        let _ = write_txn.delete_multimap_table(SNAPSHOT_INDEX)?;
+        let _ = write_txn.delete_table(SNAPSHOT_DATA)?;
+        let _ = write_txn.delete_table(PATH_TO_DOCID)?;
+        let _ = write_txn.delete_table(DOCID_TO_PATH)?;
+        let _ = write_txn.delete_table(INODE_TO_DOCID)?;
+        let _ = write_txn.delete_table(NODEID_TO_META)?;
+        let _ = write_txn.delete_table(PATH_TO_NODEID)?;
+        let _ = write_txn.delete_table(INODE_TO_NODEID)?;
+
+        let _ = write_txn.open_table(LEDGER_OPS)?;
+        let _ = write_txn.open_multimap_table(DOC_OPS)?;
+        let _ = write_txn.open_multimap_table(NODE_OPS)?;
+        let _ = write_txn.open_table(CLIENT_OP_INDEX)?;
+        let _ = write_txn.open_table(PEER_DOC_SEQ)?;
+        let _ = write_txn.open_table(NODE_PEER_SEQ)?;
+        let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+        let _ = write_txn.open_table(SNAPSHOT_DATA)?;
+        let _ = write_txn.open_table(PATH_TO_DOCID)?;
+        let _ = write_txn.open_table(DOCID_TO_PATH)?;
+        let _ = write_txn.open_table(INODE_TO_DOCID)?;
+        let _ = write_txn.open_table(NODEID_TO_META)?;
+        let _ = write_txn.open_table(PATH_TO_NODEID)?;
+        let _ = write_txn.open_table(INODE_TO_NODEID)?;
         write_txn.commit()?;
         Ok(())
     }

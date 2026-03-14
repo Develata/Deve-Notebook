@@ -1,6 +1,11 @@
+use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::models::Op;
 use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, RepoType, StructureOp};
+use deve_core::security::RepoKey;
+use deve_core::sync::engine::SyncEngine;
+use deve_core::sync::protocol::SyncSnapshotRequest;
 use tempfile::TempDir;
 use uuid::Uuid;
 
@@ -114,4 +119,80 @@ fn remote_repo_info_falls_back_to_repo_id_when_metadata_missing() {
     assert_eq!(info.uuid, repo_id);
     assert_eq!(info.name, repo_id.to_string());
     assert_eq!(info.url, None);
+}
+
+#[test]
+fn apply_remote_snapshot_replaces_stale_shadow_repo_contents() {
+    let (_dir, repo) = new_repo();
+    let repo_key = RepoKey::generate();
+    let mut engine = SyncEngine::new(
+        PeerId::new("local"),
+        std::sync::Arc::new(repo),
+        SyncMode::Auto,
+        Some(repo_key.clone()),
+    );
+    let repo_id = engine
+        .repo
+        .get_repo_info()
+        .expect("repo info")
+        .expect("present")
+        .uuid;
+    let local_name = engine.repo.local_repo_name().to_string();
+    let live_doc = engine
+        .repo
+        .apply_file_structure_in_local_repo(&local_name, "notes/live.md", None, "test")
+        .expect("create local file");
+    engine
+        .repo
+        .append_generated_op_in_local_repo(&local_name, live_doc, PeerId::new("local"), |seq| {
+            LedgerEntry::new_content(
+                live_doc,
+                Op::Insert {
+                    pos: 0,
+                    content: "fresh".into(),
+                },
+                1,
+                PeerId::new("local"),
+                seq,
+                None,
+                None,
+            )
+        })
+        .expect("append local content");
+
+    let stale_doc = DocId::new();
+    engine
+        .repo
+        .append_remote_op(
+            &PeerId::new("local"),
+            &repo_id,
+            &LedgerEntry::new_structure(
+                StructureOp::CreateFile {
+                    node_id: NodeId::from_doc_id(stale_doc),
+                    doc_id: stale_doc,
+                    parent_id: None,
+                    name: "stale.md".into(),
+                },
+                1,
+                PeerId::new("local"),
+                1,
+            ),
+        )
+        .expect("append stale shadow file");
+
+    let response = engine
+        .get_snapshot_for_sync(&SyncSnapshotRequest {
+            peer_id: PeerId::new("local"),
+            repo_id,
+        })
+        .expect("build snapshot");
+    engine
+        .apply_remote_snapshot(response)
+        .expect("apply snapshot");
+
+    let shadow = RepoType::Remote(PeerId::new("local"), repo_id);
+    assert_eq!(
+        engine.repo.list_docs(&shadow).expect("list shadow docs"),
+        vec![(live_doc, "notes/live.md".into())]
+    );
 }

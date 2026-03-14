@@ -126,3 +126,14 @@ fn test_intersection() {
     assert_eq!(lca.get(&p("B")), 5); // min(5, 8)
     assert_eq!(lca.get(&p("C")), 0); // min(0, 3) = 0, not stored
 }
+
+#[test]
+fn test_set_exact_allows_snapshot_replace_and_clear() {
+    let mut vv = VersionVector::new();
+    vv.update(p("A"), 10);
+    vv.set_exact(p("A"), 4);
+    assert_eq!(vv.get(&p("A")), 4);
+
+    vv.set_exact(p("A"), 0);
+    assert_eq!(vv.get(&p("A")), 0);
+}

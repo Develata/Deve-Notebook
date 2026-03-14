@@ -1,7 +1,7 @@
 use deve_core::config::SyncMode;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
-use deve_core::models::{LedgerEntry, NodeId, Op, PeerId, RepoId, RepoType};
+use deve_core::models::{LedgerEntry, LedgerEvent, NodeId, Op, PeerId, RepoId, RepoType};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::protocol::SyncSnapshotRequest;
@@ -102,11 +102,22 @@ fn sync_snapshot_uses_requested_local_repo_id() {
         })
         .expect("build sync snapshot");
 
-    assert_eq!(response.ops.len(), 1);
-    let entry = repo_key
-        .decrypt(&response.ops[0])
-        .expect("decrypt snapshot entry");
-    assert_eq!(entry.doc_id, Some(doc_id));
+    assert!(response.ops.len() >= 2);
+    let entries = response
+        .ops
+        .iter()
+        .map(|enc| repo_key.decrypt(enc).expect("decrypt snapshot entry"))
+        .collect::<Vec<_>>();
+    assert!(entries.iter().any(|entry| entry.doc_id == Some(doc_id)));
+    assert!(entries.iter().any(|entry| {
+        matches!(
+            entry.event,
+            LedgerEvent::Structure(deve_core::models::StructureOp::CreateFile {
+                doc_id: file_doc_id,
+                ..
+            }) if file_doc_id == doc_id
+        )
+    }));
 }
 
 #[test]
