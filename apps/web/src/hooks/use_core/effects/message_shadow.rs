@@ -32,9 +32,19 @@ pub fn handle_shadow_list(shadows: Vec<String>, ws: &WsService, signals: CoreSig
 }
 
 pub fn handle_peer_deleted(peer_id: String, ws: &WsService, signals: CoreSignals) {
+    let deleted_peer = PeerId::new(&peer_id);
     signals.set_peers.update(|peers| {
-        peers.remove(&PeerId::new(&peer_id));
+        peers.remove(&deleted_peer);
     });
+    if should_recover_local_branch_from_deleted_peer(
+        &deleted_peer,
+        signals.active_branch.get_untracked(),
+        signals.pending_branch_switch.get_untracked(),
+        signals.pending_repo_switch.get_untracked(),
+    ) {
+        recover_local_branch(ws, signals);
+        return;
+    }
     if should_refresh_shadow_list(
         signals.pending_branch_switch.get_untracked(),
         signals.pending_repo_switch.get_untracked(),
@@ -68,6 +78,17 @@ fn should_refresh_shadow_list(
     has_inflight_shadow_list: bool,
 ) -> bool {
     pending_branch_switch.is_none() && pending_repo_switch.is_none() && !has_inflight_shadow_list
+}
+
+fn should_recover_local_branch_from_deleted_peer(
+    peer_id: &PeerId,
+    active_branch: Option<PeerId>,
+    pending_branch_switch: Option<PendingBranchTarget>,
+    pending_repo_switch: Option<String>,
+) -> bool {
+    pending_branch_switch.is_none()
+        && pending_repo_switch.is_none()
+        && active_branch.as_ref() == Some(peer_id)
 }
 
 // Invariant: 只有 authoritative ShadowList 缺失当前 shadow 分支时，前端才允许恢复本地分支。

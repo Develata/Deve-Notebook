@@ -1,4 +1,7 @@
-use super::{should_recover_local_branch_from_shadow_list, should_refresh_shadow_list};
+use super::{
+    should_recover_local_branch_from_deleted_peer, should_recover_local_branch_from_shadow_list,
+    should_refresh_shadow_list,
+};
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 
@@ -39,5 +42,33 @@ fn shadow_list_recovers_local_only_when_current_peer_disappears() {
         &["peer-b".into()],
         Some(PeerId::new("peer-a")),
         Some(PendingBranchTarget::Local),
+    ));
+}
+
+#[test]
+fn peer_deleted_recovers_local_only_for_active_shadow_branch() {
+    assert!(should_recover_local_branch_from_deleted_peer(
+        &PeerId::new("peer-a"),
+        Some(PeerId::new("peer-a")),
+        None,
+        None,
+    ));
+    assert!(!should_recover_local_branch_from_deleted_peer(
+        &PeerId::new("peer-b"),
+        Some(PeerId::new("peer-a")),
+        None,
+        None,
+    ));
+    assert!(!should_recover_local_branch_from_deleted_peer(
+        &PeerId::new("peer-a"),
+        Some(PeerId::new("peer-a")),
+        Some(PendingBranchTarget::Local),
+        None,
+    ));
+    assert!(!should_recover_local_branch_from_deleted_peer(
+        &PeerId::new("peer-a"),
+        Some(PeerId::new("peer-a")),
+        None,
+        Some("default".into()),
     ));
 }
