@@ -47,6 +47,12 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     {
         return ServerErrorCode::StoragePersistFailed;
     }
+    if lower.contains("already exists")
+        || lower.contains("destination exists")
+        || lower.contains("target file already exists on disk")
+    {
+        return ServerErrorCode::StorageConflict;
+    }
     ServerErrorCode::RequestFailed
 }
 
@@ -84,6 +90,14 @@ mod tests {
         assert_eq!(
             classify_failure_code("Document not found: abc"),
             ServerErrorCode::StorageNotFound
+        );
+    }
+
+    #[test]
+    fn classifies_existing_targets_as_storage_conflict() {
+        assert_eq!(
+            classify_failure_code("Target file already exists on disk: notes/a.md"),
+            ServerErrorCode::StorageConflict
         );
     }
 }
