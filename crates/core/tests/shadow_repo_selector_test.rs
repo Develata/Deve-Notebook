@@ -201,3 +201,33 @@ fn remote_repo_selector_by_id_does_not_match_uuid_shaped_display_name() {
         None,
     );
 }
+
+#[test]
+fn broken_shadow_file_is_hidden_even_if_metadata_was_previously_loaded() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let info = RepoInfo {
+        uuid: Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-a".into()),
+    };
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    let path = peer_dir.join("wiki.redb");
+    let backup = peer_dir.join("wiki.bak");
+
+    repo.ensure_shadow_repo_info(&peer_id, &info)
+        .expect("prepare shadow repo");
+    std::fs::rename(&path, &backup).expect("move live shadow db aside");
+    std::fs::write(&path, b"not-a-redb").expect("replace shadow db with broken bytes");
+
+    assert_eq!(
+        repo.list_repos(Some(&peer_id))
+            .expect("broken shadow must not stay switchable"),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        repo.find_remote_repo_selector_by_id(&peer_id, info.uuid)
+            .expect("broken shadow must not recover selector"),
+        None
+    );
+}

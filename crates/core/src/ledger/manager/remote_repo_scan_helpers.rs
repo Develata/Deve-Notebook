@@ -3,7 +3,10 @@ use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::{Result, anyhow};
 use std::collections::{HashMap, HashSet};
+use std::io::Read;
 use std::path::Path;
+
+const REDB_MAGIC: [u8; 9] = [b'r', b'e', b'd', b'b', 0x1A, 0x0A, 0xA9, 0x0D, 0x0A];
 
 pub(super) fn read_remote_repo_info_without_repair(
     _repo: &RepoManager,
@@ -20,24 +23,38 @@ pub(super) fn read_remote_repo_info_without_repair(
     }))
 }
 
-pub(super) fn loaded_remote_repo_info(repo: &RepoManager, peer_id: &PeerId) -> Vec<RepoInfo> {
-    repo.shadow_dbs
-        .read()
-        .unwrap()
-        .get(peer_id)
-        .into_iter()
-        .flat_map(|repos| repos.iter())
-        .map(|(repo_id, db)| {
-            RepoManager::read_repo_info_from_db(db)
-                .ok()
-                .flatten()
-                .unwrap_or(RepoInfo {
-                    uuid: *repo_id,
-                    name: repo_id.to_string(),
-                    url: None,
-                })
-        })
-        .collect()
+pub(super) fn scanned_remote_repo_info(
+    repo: &RepoManager,
+    path: &Path,
+    stem: &str,
+) -> Option<RepoInfo> {
+    if !path_looks_like_redb(path) {
+        tracing::warn!(
+            "Keeping shadow repo entry {} unreadable during pure scan: invalid redb header",
+            stem
+        );
+        return None;
+    }
+    match read_remote_repo_info_without_repair(repo, path, stem) {
+        Ok(Some(info)) => Some(info),
+        Ok(None) => None,
+        Err(err) => {
+            tracing::warn!(
+                "Keeping shadow repo entry {} unreadable during pure scan: {:?}",
+                stem,
+                err
+            );
+            None
+        }
+    }
+}
+
+fn path_looks_like_redb(path: &Path) -> bool {
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return false;
+    };
+    let mut header = [0u8; REDB_MAGIC.len()];
+    file.read_exact(&mut header).is_ok() && header == REDB_MAGIC
 }
 
 pub(super) fn repaired_remote_repo_info(

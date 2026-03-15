@@ -137,3 +137,38 @@ fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows
         "duplicate uuid shadow peer must not be switchable"
     );
 }
+
+#[test]
+fn pure_shadow_scan_does_not_resurrect_loaded_but_corrupted_shadow_files() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let peer_id = PeerId::new("peer-corrupt");
+    let info = deve_core::ledger::RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:notes".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&peer_id, &info)
+        .expect("seed shadow");
+    std::fs::write(
+        repo.remotes_dir()
+            .join(peer_id.to_filename())
+            .join("notes.redb"),
+        b"not-a-redb",
+    )
+    .expect("poison on-disk shadow");
+
+    assert!(
+        repo.list_repos(Some(&peer_id))
+            .expect("list shadow repos after corruption")
+            .is_empty(),
+        "loaded in-memory metadata must not resurrect an unreadable shadow file",
+    );
+    assert!(
+        repo.find_remote_repo_selector(&peer_id, "notes")
+            .expect("resolve shadow selector after corruption")
+            .is_none(),
+        "corrupted shadow path must not stay selectable through loaded metadata",
+    );
+}

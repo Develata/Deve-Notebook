@@ -2,9 +2,9 @@
 mod helpers;
 
 use self::helpers::{
-    duplicate_catalog_ids, duplicate_entry_ids, loaded_remote_repo_info,
-    read_remote_repo_info_without_repair, reject_duplicate_remote_matches,
-    repaired_remote_repo_info, resolve_remote_repo_entry_by_id, single_remote_entry,
+    duplicate_catalog_ids, duplicate_entry_ids, reject_duplicate_remote_matches,
+    repaired_remote_repo_info, resolve_remote_repo_entry_by_id, scanned_remote_repo_info,
+    single_remote_entry,
 };
 use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
@@ -89,13 +89,6 @@ impl RepoManager {
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
-        let loaded = loaded_remote_repo_info(self, peer_id);
-        let mut loaded_by_id = HashMap::new();
-        let mut loaded_name_counts = HashMap::<String, usize>::new();
-        for info in &loaded {
-            loaded_by_id.insert(info.uuid, info.clone());
-            *loaded_name_counts.entry(info.name.clone()).or_default() += 1;
-        }
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
         if !peer_dir.exists() {
             return Ok(vec![]);
@@ -111,27 +104,7 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let info = match uuid::Uuid::parse_str(&stem)
-                .ok()
-                .and_then(|repo_id| loaded_by_id.get(&repo_id).cloned())
-                .or_else(|| {
-                    (loaded_name_counts.get(&stem).copied() == Some(1))
-                        .then(|| loaded.iter().find(|info| info.name == stem).cloned())
-                        .flatten()
-                }) {
-                Some(info) => Some(info),
-                None => match read_remote_repo_info_without_repair(self, &path, &stem) {
-                    Ok(info) => info,
-                    Err(err) => {
-                        tracing::warn!(
-                            "Keeping shadow repo entry {} without metadata during pure scan: {:?}",
-                            stem,
-                            err
-                        );
-                        None
-                    }
-                },
-            };
+            let info = scanned_remote_repo_info(self, &path, &stem);
             repos.push(RemoteRepoEntry { path, stem, info });
         }
         Ok(repos)
