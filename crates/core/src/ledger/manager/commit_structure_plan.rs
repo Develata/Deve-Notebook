@@ -50,7 +50,21 @@ pub(super) fn plan_delete(
 ) -> Result<Option<StructuredCommitTarget>> {
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => repo.resolve_canonical_doc_id_in_local_repo(repo_name, path)?,
+        None => {
+            if let Some(doc_id) = repo.resolve_canonical_doc_id_in_local_repo(repo_name, path)? {
+                Some(doc_id)
+            } else if repo
+                .run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))?
+                .is_some()
+            {
+                return Err(anyhow!(
+                    "Tracked document projection missing for legacy-mapped path: {}",
+                    path
+                ));
+            } else {
+                None
+            }
+        }
     };
     Ok(doc_id.map(|doc_id| StructuredCommitTarget {
         doc_id,
