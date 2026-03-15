@@ -73,3 +73,26 @@ async fn list_docs_on_unbound_shadow_branch_clears_stale_db_and_sync_binding() -
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_on_unbound_shadow_branch_preserves_switch_nonce() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some("missing-shadow".into()));
+
+    handle_list_docs(&state, &ch, &mut session, Some("req-1".into()), Some(17)).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+            assert_eq!(switch_nonce, Some(17));
+        }
+        other => panic!("expected ProtocolError with switch nonce, got {:?}", other),
+    }
+    Ok(())
+}

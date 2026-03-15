@@ -1,6 +1,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::handlers::document::errors::send_doc_error;
+use crate::server::handlers::document::errors::send_doc_error_with_switch_nonce;
 use crate::server::repo_scope::{
     bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
@@ -25,7 +25,8 @@ pub async fn handle_list_docs(
     let (repo_name, repo_id) = match resolved {
         Ok(scope) => (scope.repo_name, scope.repo_id),
         Err(err) => {
-            return ch.send_protocol_error(map_repo_scope_error(err));
+            return ch
+                .send_protocol_error_with_switch_nonce(map_repo_scope_error(err), switch_nonce);
         }
     };
 
@@ -33,7 +34,7 @@ pub async fn handle_list_docs(
         Ok(docs) => docs,
         Err(err) => {
             tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
-            send_doc_error(ch, "Failed to list docs", err);
+            send_doc_error_with_switch_nonce(ch, "Failed to list docs", err, switch_nonce);
             return;
         }
     };
@@ -41,7 +42,7 @@ pub async fn handle_list_docs(
         Ok(nodes) => nodes,
         Err(err) => {
             tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
-            send_doc_error(ch, "Failed to list nodes", err);
+            send_doc_error_with_switch_nonce(ch, "Failed to list nodes", err, switch_nonce);
             return;
         }
     };

@@ -19,10 +19,19 @@ fn error_code(err: &anyhow::Error) -> ServerErrorCode {
 }
 
 pub(crate) fn send_doc_error(ch: &DualChannel, context: &str, err: anyhow::Error) {
-    ch.send_protocol_error(ServerError::with_detail(
-        error_code(&err),
-        format!("{}: {}", context, err),
-    ));
+    send_doc_error_with_switch_nonce(ch, context, err, None);
+}
+
+pub(crate) fn send_doc_error_with_switch_nonce(
+    ch: &DualChannel,
+    context: &str,
+    err: anyhow::Error,
+    switch_nonce: Option<u64>,
+) {
+    ch.send_protocol_error_with_switch_nonce(
+        ServerError::with_detail(error_code(&err), format!("{}: {}", context, err)),
+        switch_nonce,
+    );
 }
 
 #[cfg(test)]
