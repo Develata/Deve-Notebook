@@ -43,6 +43,7 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     }
     let lower = detail.to_ascii_lowercase();
     if lower.contains("node meta missing")
+        || lower.contains("tracked document projection missing")
         || lower.contains("canonical node path resolution failed")
     {
         return ServerErrorCode::StoragePersistFailed;
@@ -98,6 +99,16 @@ mod tests {
         assert_eq!(
             classify_failure_code("Target file already exists on disk: notes/a.md"),
             ServerErrorCode::StorageConflict
+        );
+    }
+
+    #[test]
+    fn classifies_legacy_projection_breakage_as_storage_persist_failed() {
+        assert_eq!(
+            classify_failure_code(
+                "Tracked document projection missing for legacy-mapped path: notes/legacy.md"
+            ),
+            ServerErrorCode::StoragePersistFailed
         );
     }
 }

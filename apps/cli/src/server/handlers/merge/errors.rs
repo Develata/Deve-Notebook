@@ -46,6 +46,9 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     {
         return ServerErrorCode::StorageDbLocked;
     }
+    if lower.contains("tracked document projection missing") {
+        return ServerErrorCode::StoragePersistFailed;
+    }
     if contains_any(
         &lower,
         &[

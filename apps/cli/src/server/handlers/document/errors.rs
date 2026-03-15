@@ -9,6 +9,12 @@ fn error_code(err: &anyhow::Error) -> ServerErrorCode {
     if mapped != ServerErrorCode::RequestFailed {
         return mapped;
     }
+    if detail
+        .to_ascii_lowercase()
+        .contains("tracked document projection missing")
+    {
+        return ServerErrorCode::StoragePersistFailed;
+    }
     ServerErrorCode::RequestFailed
 }
 
@@ -63,6 +69,16 @@ mod tests {
                 "Active repository not selected: multiple local repos exist"
             )),
             ServerErrorCode::SyncRepoUnbound
+        );
+    }
+
+    #[test]
+    fn classifies_legacy_projection_breakage_as_storage_persist_failed() {
+        assert_eq!(
+            error_code(&anyhow::anyhow!(
+                "Tracked document projection missing for legacy-mapped path: notes/legacy.md"
+            )),
+            ServerErrorCode::StoragePersistFailed
         );
     }
 }

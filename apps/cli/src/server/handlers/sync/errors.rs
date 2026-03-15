@@ -63,6 +63,9 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     {
         return ServerErrorCode::StorageDbLocked;
     }
+    if lower.contains("tracked document projection missing") {
+        return ServerErrorCode::StoragePersistFailed;
+    }
     if contains_any(
         &lower,
         &[
@@ -166,6 +169,16 @@ mod tests {
         assert_eq!(
             classify_failure_code("Cannot bootstrap local repo while on remote branch"),
             ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_legacy_projection_breakage_as_storage_persist_failed() {
+        assert_eq!(
+            classify_failure_code(
+                "Tracked document projection missing for legacy-mapped path: notes/legacy.md"
+            ),
+            ServerErrorCode::StoragePersistFailed
         );
     }
 }

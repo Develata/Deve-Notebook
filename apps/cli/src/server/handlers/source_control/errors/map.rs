@@ -108,6 +108,9 @@ fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
     ) {
         return Some(ServerErrorCode::StorageDbLocked);
     }
+    if lower.contains("tracked document projection missing") {
+        return Some(ServerErrorCode::StoragePersistFailed);
+    }
     if contains_any(
         &lower,
         &[
