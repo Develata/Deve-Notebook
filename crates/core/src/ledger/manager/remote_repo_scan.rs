@@ -2,8 +2,8 @@ use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::{RemoteRepoCatalogInfo, RemoteRepoEntry};
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
-use anyhow::Result;
-use std::collections::HashMap;
+use anyhow::{Result, anyhow};
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 impl RepoManager {
@@ -17,6 +17,7 @@ impl RepoManager {
             .filter(|path| path.extension().and_then(|s| s.to_str()) == Some("redb"))
             .collect::<Vec<_>>();
         paths.sort();
+        let mut repairs = Vec::new();
         for path in paths {
             let stem = path
                 .file_stem()
@@ -35,6 +36,24 @@ impl RepoManager {
                     continue;
                 }
             };
+            repairs.push((path, repair));
+        }
+        let duplicate_ids = duplicate_catalog_ids(
+            repairs
+                .iter()
+                .map(|(_, repair)| repair.info.uuid)
+                .collect::<Vec<_>>(),
+        );
+        for (path, repair) in repairs {
+            if duplicate_ids.contains(&repair.info.uuid) {
+                tracing::warn!(
+                    "Skipping duplicate shadow UUID during repair: peer={}, uuid={}, path={:?}",
+                    peer_id,
+                    repair.info.uuid,
+                    path
+                );
+                continue;
+            }
             let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
             let target = if desired != path {
                 relocate_database_path(&path, &desired);
@@ -64,6 +83,12 @@ impl RepoManager {
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
         let loaded = self.loaded_remote_repo_info(peer_id);
+        let mut loaded_by_id = HashMap::new();
+        let mut loaded_name_counts = HashMap::<String, usize>::new();
+        for info in &loaded {
+            loaded_by_id.insert(info.uuid, info.clone());
+            *loaded_name_counts.entry(info.name.clone()).or_default() += 1;
+        }
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
         if !peer_dir.exists() {
             return Ok(vec![]);
@@ -79,11 +104,14 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let info = match loaded
-                .iter()
-                .find(|info| info.name == stem || info.uuid.to_string() == stem)
-                .cloned()
-            {
+            let info = match uuid::Uuid::parse_str(&stem)
+                .ok()
+                .and_then(|repo_id| loaded_by_id.get(&repo_id).cloned())
+                .or_else(|| {
+                    (loaded_name_counts.get(&stem).copied() == Some(1))
+                        .then(|| loaded.iter().find(|info| info.name == stem).cloned())
+                        .flatten()
+                }) {
                 Some(info) => Some(info),
                 None => match Self::read_remote_repo_info_without_repair(&path, &stem) {
                     Ok(info) => info,
@@ -135,30 +163,35 @@ impl RepoManager {
     ) -> Result<Option<RemoteRepoEntry>> {
         let selector = selector.trim_end_matches(".redb");
         let target_id = uuid::Uuid::parse_str(selector).ok();
-        let mut by_id = None;
-        let mut by_stem = None;
+        let entries = self.scan_remote_repo_entries(peer_id)?;
+        let duplicate_ids = duplicate_entry_ids(&entries);
+        let mut by_id = Vec::new();
+        let mut by_stem = Vec::new();
         let mut by_name = Vec::new();
-        for entry in self.scan_remote_repo_entries(peer_id)? {
+        for entry in entries {
             let Some(info) = &entry.info else {
                 continue;
             };
             if entry.stem == selector {
-                by_stem = Some(entry.clone());
+                by_stem.push(entry.clone());
             }
             if info.name == selector {
                 by_name.push(entry.clone());
             }
             if Some(info.uuid) == target_id {
-                by_id = Some(entry);
+                by_id.push(entry);
             }
         }
-        Ok(by_id.or(by_stem).or_else(|| {
-            if by_name.len() == 1 {
-                by_name.into_iter().next()
-            } else {
-                None
-            }
-        }))
+        reject_duplicate_remote_matches(selector, &by_id, &duplicate_ids)?;
+        if let Some(entry) = single_remote_entry(by_id) {
+            return Ok(Some(entry));
+        }
+        reject_duplicate_remote_matches(selector, &by_stem, &duplicate_ids)?;
+        if let Some(entry) = single_remote_entry(by_stem) {
+            return Ok(Some(entry));
+        }
+        reject_duplicate_remote_matches(selector, &by_name, &duplicate_ids)?;
+        Ok(single_remote_entry(by_name))
     }
 
     pub fn find_remote_repo_selector_by_id(
@@ -185,7 +218,17 @@ impl RepoManager {
         let entries = self
             .scan_remote_repo_entries(peer_id)?
             .into_iter()
-            .filter(RemoteRepoEntry::is_readable)
+            .collect::<Vec<_>>();
+        let duplicate_ids = duplicate_entry_ids(&entries);
+        let entries = entries
+            .into_iter()
+            .filter(|entry| {
+                entry.is_readable()
+                    && entry
+                        .info
+                        .as_ref()
+                        .is_some_and(|info| !duplicate_ids.contains(&info.uuid))
+            })
             .collect::<Vec<_>>();
         let mut counts = HashMap::<String, usize>::new();
         let mut named = Vec::new();
@@ -238,4 +281,44 @@ impl RepoManager {
             })
             .collect()
     }
+}
+
+fn duplicate_catalog_ids(ids: Vec<uuid::Uuid>) -> HashSet<uuid::Uuid> {
+    let mut counts = HashMap::<uuid::Uuid, usize>::new();
+    for id in ids {
+        *counts.entry(id).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .filter_map(|(id, count)| (count > 1).then_some(id))
+        .collect()
+}
+
+fn duplicate_entry_ids(entries: &[RemoteRepoEntry]) -> HashSet<uuid::Uuid> {
+    duplicate_catalog_ids(
+        entries
+            .iter()
+            .filter_map(|entry| entry.info.as_ref().map(|info| info.uuid))
+            .collect(),
+    )
+}
+
+fn reject_duplicate_remote_matches(
+    selector: &str,
+    matches: &[RemoteRepoEntry],
+    duplicate_ids: &HashSet<uuid::Uuid>,
+) -> Result<()> {
+    if matches.iter().any(|entry| {
+        entry
+            .info
+            .as_ref()
+            .is_some_and(|info| duplicate_ids.contains(&info.uuid))
+    }) {
+        return Err(anyhow!("ambiguous remote repository selector: {}", selector));
+    }
+    Ok(())
+}
+
+fn single_remote_entry(entries: Vec<RemoteRepoEntry>) -> Option<RemoteRepoEntry> {
+    (entries.len() == 1).then(|| entries.into_iter().next()).flatten()
 }

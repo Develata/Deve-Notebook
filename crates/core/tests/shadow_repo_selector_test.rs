@@ -1,7 +1,9 @@
 use deve_core::ledger::RepoInfo;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
+use redb::Database;
 use tempfile::TempDir;
 use uuid::Uuid;
 
@@ -9,6 +11,23 @@ fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     (dir, repo)
+}
+
+fn seed_shadow_file(repo: &RepoManager, peer_id: &PeerId, stem: &str, info: &RepoInfo) {
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    let path = peer_dir.join(format!("{}.redb", stem));
+    let db = Database::create(&path).expect("shadow db");
+    let write = db.begin_write().expect("write txn");
+    write
+        .open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(
+            &0,
+            bincode::serialize(info).expect("serialize repo info").as_slice(),
+        )
+        .expect("write repo info");
+    write.commit().expect("commit repo info");
 }
 
 #[test]
@@ -131,4 +150,29 @@ fn remote_repo_selector_can_recover_from_uuid_string() {
             .expect("selector by id")
             .expect("selector exists")
     );
+}
+
+#[test]
+fn duplicate_shadow_uuid_is_hidden_and_fails_selector_recovery() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+    let info = RepoInfo {
+        uuid: repo_id,
+        name: "wiki".into(),
+        url: Some("urn:test:wiki".into()),
+    };
+    seed_shadow_file(&repo, &peer_id, "wiki", &info);
+    seed_shadow_file(&repo, &peer_id, "wiki-1", &info);
+
+    assert_eq!(
+        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
+        Vec::<String>::new()
+    );
+    let err = repo
+        .find_remote_repo_selector_by_id(&peer_id, repo_id)
+        .expect_err("duplicate uuid must fail closed");
+    assert!(err
+        .to_string()
+        .contains("ambiguous remote repository selector"));
 }
