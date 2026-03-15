@@ -188,6 +188,40 @@ fn resolve_requested_repo_name_prefers_canonical_local_stem_after_metadata_drift
 }
 
 #[test]
+fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    RepoManager::init(dir.path(), 10, Some("notes-a"), Some("urn:notes-a"))?;
+    RepoManager::init(dir.path(), 10, Some("notes-b"), Some("urn:notes-b"))?;
+    for repo_name in ["notes-a", "notes-b"] {
+        let repo_uuid = state
+            .repo
+            .get_repo_info_for(None, Some(repo_name))?
+            .expect("repo info")
+            .uuid;
+        let db = state.repo.open_database(None, repo_name)?.db;
+        let txn = db.begin_write()?;
+        txn.open_table(REPO_METADATA)?.insert(
+            &0,
+            bincode::serialize(&RepoInfo {
+                uuid: repo_uuid,
+                name: "wiki".into(),
+                url: Some(format!("urn:{repo_name}")),
+            })?
+            .as_slice(),
+        )?;
+        txn.commit()?;
+    }
+
+    let err = select_target_repo(&state, false, None, Some("wiki"), None, None)
+        .expect_err("ambiguous local alias must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Ambiguous local repository selector: wiki")
+    );
+    Ok(())
+}
+
+#[test]
 fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;

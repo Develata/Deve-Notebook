@@ -188,10 +188,14 @@ fn recover_selector_from_raw_name(
     raw_repo_name: &str,
 ) -> anyhow::Result<Option<String>> {
     let Some(branch) = branch else {
-        return Ok(state
+        return match state
             .repo
             .resolve_local_repo_name_for_execution(None, Some(raw_repo_name))
-            .ok());
+        {
+            Ok(selector) => Ok(Some(selector)),
+            Err(err) if local_selector_miss(&err) => Ok(None),
+            Err(err) => Err(err),
+        };
     };
     if let Ok(repo_id) = uuid::Uuid::parse_str(raw_repo_name) {
         return select_repo_selector_by_id(state, Some(branch), repo_id);
@@ -200,6 +204,14 @@ fn recover_selector_from_raw_name(
         .repo
         .find_remote_repo_selector(branch, raw_repo_name)?
         .filter(|selector| selector == raw_repo_name))
+}
+
+fn local_selector_miss(err: &anyhow::Error) -> bool {
+    matches!(
+        err.to_string().as_str(),
+        detail if detail.contains("Local repo not found for name")
+            || detail.contains("No local repositories available")
+    )
 }
 
 pub(super) fn commit_session_switch(
