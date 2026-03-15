@@ -103,3 +103,25 @@ fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
         Some("notes/new.md".into())
     );
 }
+
+#[test]
+fn resolve_from_entries_fails_closed_when_path_only_target_is_ambiguous() {
+    let entries = vec![
+        ChangeEntry {
+            path: "notes/old.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            status: ChangeStatus::Added,
+            has_conflict: false,
+        },
+        ChangeEntry {
+            path: "notes/new.md".into(),
+            renamed_from: Some("notes/old.md".into()),
+            doc_id: None,
+            status: ChangeStatus::Added,
+            has_conflict: false,
+        },
+    ];
+
+    assert_eq!(resolve_from_entries(&entries, "notes/old.md", None), None);
+}

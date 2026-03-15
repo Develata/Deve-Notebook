@@ -145,3 +145,28 @@ fn resolve_target_keeps_requested_path_when_doc_id_does_not_match_reused_path() 
         "notes/reused.md"
     );
 }
+
+#[test]
+fn resolve_target_keeps_requested_path_when_path_only_resolution_is_ambiguous() {
+    let entries = vec![
+        ChangeEntry {
+            path: "notes/old.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            status: ChangeStatus::Added,
+            has_conflict: false,
+        },
+        ChangeEntry {
+            path: "notes/new.md".into(),
+            renamed_from: Some("notes/old.md".into()),
+            doc_id: None,
+            status: ChangeStatus::Added,
+            has_conflict: false,
+        },
+    ];
+
+    assert_eq!(
+        resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
+        "notes/old.md"
+    );
+}

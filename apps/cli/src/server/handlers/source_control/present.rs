@@ -105,25 +105,44 @@ pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> St
 }
 
 fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {
-    let renamed_successor = entries.iter().find(|entry| {
-        entry.status != ChangeStatus::Deleted
-            && entry
-                .renamed_from
-                .as_ref()
-                .is_some_and(|old_path| normalized(old_path) == path)
-    });
-    let path_reused_after_delete = renamed_successor.is_some()
-        && entries
-            .iter()
-            .any(|entry| normalized(&entry.path) == path && entry.status == ChangeStatus::Deleted);
-    if path_reused_after_delete {
-        return renamed_successor;
-    }
-    entries
+    let exact = entries
         .iter()
-        .find(|entry| normalized(&entry.path) == path && entry.status != ChangeStatus::Deleted)
-        .or(renamed_successor)
-        .or_else(|| entries.iter().find(|entry| normalized(&entry.path) == path))
+        .filter(|entry| normalized(&entry.path) == path)
+        .collect::<Vec<_>>();
+    let live_exact = exact
+        .iter()
+        .copied()
+        .filter(|entry| entry.status != ChangeStatus::Deleted)
+        .collect::<Vec<_>>();
+    let renamed = entries
+        .iter()
+        .filter(|entry| {
+            entry.status != ChangeStatus::Deleted
+                && entry
+                    .renamed_from
+                    .as_ref()
+                    .is_some_and(|old_path| normalized(old_path) == path)
+        })
+        .collect::<Vec<_>>();
+    let deleted_exact = exact
+        .iter()
+        .any(|entry| entry.status == ChangeStatus::Deleted);
+    if live_exact.len() > 1 || renamed.len() > 1 {
+        return None;
+    }
+    if deleted_exact && renamed.len() == 1 {
+        return renamed.into_iter().next();
+    }
+    if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
+        return None;
+    }
+    if let Some(entry) = live_exact.into_iter().next() {
+        return Some(entry);
+    }
+    if let Some(entry) = renamed.into_iter().next() {
+        return Some(entry);
+    }
+    (exact.len() == 1).then_some(exact[0])
 }
 
 fn normalized(path: &str) -> String {
