@@ -74,6 +74,9 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
     ) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);
     }
+    if lower.contains("tracked document projection missing") {
+        return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, raw_detail);
+    }
     if contains_any(
         &lower,
         &[
@@ -207,5 +210,18 @@ mod tests {
             b"Cannot bootstrap local repo while on remote branch",
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_plain_text_legacy_projection_breakage() {
+        let err = decode_error(
+            StatusCode::CONFLICT,
+            b"Tracked document projection missing for legacy-mapped path: notes/legacy.md",
+        );
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+        assert_eq!(
+            err.detail.as_deref(),
+            Some("Tracked document projection missing for legacy-mapped path: notes/legacy.md")
+        );
     }
 }
