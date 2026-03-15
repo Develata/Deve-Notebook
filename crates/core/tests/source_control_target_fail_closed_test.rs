@@ -40,3 +40,20 @@ fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Resu
     assert!(err.to_string().contains("Path is not in pending_fs_ops"));
     Ok(())
 }
+
+#[test]
+fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+    repo.set_vault_root(dir.path().join("vault"));
+
+    let err = repo
+        .diff_doc_target_in_local_repo("default", &ScPathTarget::from_path("notes/missing.md"))
+        .expect_err("untracked path-only diff target must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("Source control target not resolved for path notes/missing.md")
+    );
+    Ok(())
+}

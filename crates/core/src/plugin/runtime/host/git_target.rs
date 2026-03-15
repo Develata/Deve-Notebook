@@ -48,7 +48,11 @@ fn resolve_entry<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a Chang
             to_forward_slash(&entry.path) == path && entry.status != ChangeStatus::Deleted
         })
         .or(renamed_successor)
-        .or_else(|| entries.iter().find(|entry| to_forward_slash(&entry.path) == path))
+        .or_else(|| {
+            entries
+                .iter()
+                .find(|entry| to_forward_slash(&entry.path) == path)
+        })
 }
 
 #[cfg(test)]

@@ -28,7 +28,18 @@ pub(super) fn resolve_change_path(
         ));
     }
     let entries = repo.list_changes_in_local_repo(repo_name)?;
-    Ok(resolve_from_entries(&entries, &path, None).unwrap_or(path))
+    if let Some(resolved) = resolve_from_entries(&entries, &path, None) {
+        return Ok(resolved);
+    }
+    if let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, &path)?
+        && let Some(canonical) = resolve_canonical_path(repo, repo_name, doc_id)?
+    {
+        return Ok(canonical);
+    }
+    Err(anyhow!(
+        "Source control target not resolved for path {}",
+        path
+    ))
 }
 
 fn resolve_canonical_path(
