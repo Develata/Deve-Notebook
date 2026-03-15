@@ -11,14 +11,6 @@ pub struct LocalScopeSignals {
     pub pending_repo_switch: ReadSignal<Option<String>>,
 }
 
-pub fn run_if_stable_local_scope(signals: LocalScopeSignals, op_name: &str, action: impl FnOnce()) {
-    if !stable_local_scope_ready(signals) {
-        leptos::logging::warn!("忽略 {}: local repo scope 尚未稳定", op_name);
-        return;
-    }
-    action();
-}
-
 pub fn stable_local_scope_nonce(signals: LocalScopeSignals) -> Option<u64> {
     stable_local_scope_ready(signals).then(|| signals.current_scope_nonce.get_untracked())
 }
@@ -32,13 +24,13 @@ fn stable_local_scope_ready(signals: LocalScopeSignals) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{LocalScopeSignals, run_if_stable_local_scope, stable_local_scope_nonce};
+    use super::{LocalScopeSignals, stable_local_scope_nonce};
     use crate::hooks::use_core::PendingBranchTarget;
     use deve_core::models::PeerId;
     use leptos::prelude::*;
 
     #[test]
-    fn runs_only_in_stable_local_scope() {
+    fn returns_scope_nonce_for_stable_local_scope() {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let (current_repo_id, _) = signal(Some("repo-1".to_string()));
@@ -46,31 +38,26 @@ mod tests {
         let (active_branch, _) = signal(None);
         let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
         let (pending_repo_switch, _) = signal(None::<String>);
-        let (ran, set_ran) = signal(false);
 
-        run_if_stable_local_scope(
-            LocalScopeSignals {
+        assert_eq!(
+            stable_local_scope_nonce(LocalScopeSignals {
                 current_repo_id,
                 current_scope_nonce,
                 active_branch,
                 pending_branch_switch,
                 pending_repo_switch,
-            },
-            "test-op",
-            move || set_ran.set(true),
+            }),
+            Some(7)
         );
-
-        assert!(ran.get_untracked());
     }
 
     #[test]
-    fn blocks_when_branch_or_repo_switch_is_pending() {
+    fn returns_none_when_branch_or_repo_switch_is_pending() {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let (current_repo_id, _) = signal(Some("repo-1".to_string()));
         let (current_scope_nonce, _) = signal(7u64);
         let (active_branch, _) = signal(None);
-        let (ran, set_ran) = signal(false);
 
         for (pending_branch_switch, pending_repo_switch) in [
             (Some(PendingBranchTarget::Local), None),
@@ -79,20 +66,17 @@ mod tests {
             let (pending_branch_switch, _) = signal(pending_branch_switch.clone());
             let (pending_repo_switch, _) = signal(pending_repo_switch.clone());
 
-            run_if_stable_local_scope(
-                LocalScopeSignals {
+            assert_eq!(
+                stable_local_scope_nonce(LocalScopeSignals {
                     current_repo_id,
                     current_scope_nonce,
                     active_branch,
                     pending_branch_switch,
                     pending_repo_switch,
-                },
-                "test-op",
-                move || set_ran.set(true),
+                }),
+                None
             );
         }
-
-        assert!(!ran.get_untracked());
     }
 
     #[test]

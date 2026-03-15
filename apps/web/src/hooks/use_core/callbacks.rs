@@ -10,7 +10,7 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-use super::callbacks_scope::{LocalScopeSignals, run_if_stable_local_scope};
+use super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 pub use super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
 pub use super::callbacks_sync::{SyncCallbacks, create_sync_callbacks};
 use super::navigation::{NavigationTarget, PendingNavigation, guard_navigation};
@@ -61,51 +61,68 @@ pub fn create_doc_callbacks(
 
     let ws_for_create = ws.clone();
     let on_doc_create = Callback::new(move |name: String| {
-        let ws = ws_for_create.clone();
-        run_if_stable_local_scope(local_scope, "CreateDoc", move || {
-            ws.send(ClientMessage::CreateDoc { name });
+        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+            leptos::logging::warn!("忽略 CreateDoc: local repo scope 尚未稳定");
+            return;
+        };
+        ws_for_create.send(ClientMessage::CreateDoc {
+            name,
+            scope_nonce: Some(scope_nonce),
         });
     });
 
     let ws_for_rename = ws.clone();
     let on_doc_rename = Callback::new(move |(old_path, new_path): (String, String)| {
-        let ws = ws_for_rename.clone();
-        run_if_stable_local_scope(local_scope, "RenameDoc", move || {
-            leptos::logging::log!("重命名: {} -> {}", old_path, new_path);
-            ws.send(ClientMessage::RenameDoc { old_path, new_path });
+        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+            leptos::logging::warn!("忽略 RenameDoc: local repo scope 尚未稳定");
+            return;
+        };
+        leptos::logging::log!("重命名: {} -> {}", old_path, new_path);
+        ws_for_rename.send(ClientMessage::RenameDoc {
+            old_path,
+            new_path,
+            scope_nonce: Some(scope_nonce),
         });
     });
 
     let ws_for_delete = ws.clone();
     let on_doc_delete = Callback::new(move |path: String| {
-        let ws = ws_for_delete.clone();
-        run_if_stable_local_scope(local_scope, "DeleteDoc", move || {
-            leptos::logging::log!("删除: {}", path);
-            ws.send(ClientMessage::DeleteDoc { path });
+        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+            leptos::logging::warn!("忽略 DeleteDoc: local repo scope 尚未稳定");
+            return;
+        };
+        leptos::logging::log!("删除: {}", path);
+        ws_for_delete.send(ClientMessage::DeleteDoc {
+            path,
+            scope_nonce: Some(scope_nonce),
         });
     });
 
     let ws_for_copy = ws.clone();
     let on_doc_copy = Callback::new(move |(src_path, dest_path): (String, String)| {
-        let ws = ws_for_copy.clone();
-        run_if_stable_local_scope(local_scope, "CopyDoc", move || {
-            leptos::logging::log!("复制: {} -> {}", src_path, dest_path);
-            ws.send(ClientMessage::CopyDoc {
-                src_path,
-                dest_path,
-            });
+        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+            leptos::logging::warn!("忽略 CopyDoc: local repo scope 尚未稳定");
+            return;
+        };
+        leptos::logging::log!("复制: {} -> {}", src_path, dest_path);
+        ws_for_copy.send(ClientMessage::CopyDoc {
+            src_path,
+            dest_path,
+            scope_nonce: Some(scope_nonce),
         });
     });
 
     let ws_for_move = ws.clone();
     let on_doc_move = Callback::new(move |(src_path, dest_path): (String, String)| {
-        let ws = ws_for_move.clone();
-        run_if_stable_local_scope(local_scope, "MoveDoc", move || {
-            leptos::logging::log!("移动: {} -> {}", src_path, dest_path);
-            ws.send(ClientMessage::MoveDoc {
-                src_path,
-                dest_path,
-            });
+        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+            leptos::logging::warn!("忽略 MoveDoc: local repo scope 尚未稳定");
+            return;
+        };
+        leptos::logging::log!("移动: {} -> {}", src_path, dest_path);
+        ws_for_move.send(ClientMessage::MoveDoc {
+            src_path,
+            dest_path,
+            scope_nonce: Some(scope_nonce),
         });
     });
 

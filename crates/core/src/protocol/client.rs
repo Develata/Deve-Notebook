@@ -58,21 +58,31 @@ pub enum ClientMessage {
     },
     CreateDoc {
         name: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     RenameDoc {
         old_path: String,
         new_path: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     DeleteDoc {
         path: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     CopyDoc {
         src_path: String,
         dest_path: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     MoveDoc {
         src_path: String,
         dest_path: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     PluginCall {
         req_id: String,
