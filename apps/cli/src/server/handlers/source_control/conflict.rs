@@ -34,7 +34,10 @@ pub async fn handle_resolve_conflict(
         Ok(entries) => entries,
         Err(e) => return super::errors::send_ws(ch, e),
     };
-    let resolved = super::service::resolve_target(&pending, &target);
+    let resolved = match super::service::resolve_target(&pending, &target) {
+        Ok(resolved) => resolved,
+        Err(e) => return super::errors::send_ws(ch, e),
+    };
     let normalized = resolved.path.clone();
     let result = match resolution {
         ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &resolved),

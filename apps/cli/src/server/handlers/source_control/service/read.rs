@@ -27,7 +27,7 @@ pub fn diff_doc_target(
     target: &ScPathTarget,
 ) -> super::ScResult<String> {
     let entries = list_changes(repo, selector)?;
-    let resolved = super::resolve_target(&entries, target);
+    let resolved = super::resolve_target(&entries, target)?;
     let path = resolved.path.clone();
     repo.diff_doc_path_in_repo(selector, &resolved)
         .map_err(|e| errors::map_repo_error(ScOp::DiffDoc(path), e))

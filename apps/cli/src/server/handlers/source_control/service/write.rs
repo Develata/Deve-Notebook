@@ -11,7 +11,7 @@ pub fn stage_pending(
     let entries = repo
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::StagePending(target.path.clone()), e))?;
-    let resolved = super::resolve_target(&entries, target);
+    let resolved = super::resolve_target(&entries, target)?;
     let path = resolved.path.clone();
     for related_target in super::related_targets(&entries, &resolved) {
         repo.stage_pending_in_repo(selector, &related_target)
@@ -28,7 +28,7 @@ pub fn stage_pending_many(
     let entries = repo
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::ListPending, e))?;
-    let resolved_targets = super::resolve_targets(&entries, targets);
+    let resolved_targets = super::resolve_targets(&entries, targets)?;
     let visible_paths: Vec<_> = resolved_targets
         .iter()
         .map(|target| target.path.clone())
@@ -51,7 +51,7 @@ pub fn discard_pending(
     let entries = repo
         .list_pending_fs_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::DiscardPending(target.path.clone()), e))?;
-    let resolved = super::resolve_target(&entries, target);
+    let resolved = super::resolve_target(&entries, target)?;
     let path = resolved.path.clone();
     repo.discard_pending_in_repo(selector, &resolved)
         .map_err(|e| errors::map_repo_error(ScOp::DiscardPending(path.clone()), e))?;
@@ -66,7 +66,7 @@ pub fn unstage_file(
     let entries = repo
         .list_changes_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::Unstage(target.path.clone()), e))?;
-    let resolved = super::resolve_target(&entries, target);
+    let resolved = super::resolve_target(&entries, target)?;
     let path = resolved.path.clone();
     for related_target in super::related_targets(&entries, &resolved) {
         repo.unstage_file_in_repo(selector, &related_target)
@@ -83,7 +83,7 @@ pub fn unstage_many(
     let entries = repo
         .list_changes_in_repo(selector)
         .map_err(|e| errors::map_repo_error(ScOp::ListChanges, e))?;
-    let resolved_targets = super::resolve_targets(&entries, targets);
+    let resolved_targets = super::resolve_targets(&entries, targets)?;
     let visible_paths: Vec<_> = resolved_targets
         .iter()
         .map(|target| target.path.clone())
