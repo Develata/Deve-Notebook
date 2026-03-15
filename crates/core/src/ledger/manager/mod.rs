@@ -25,6 +25,7 @@ mod ops_structure;
 mod projection_cleanup;
 mod remote_repo_allocate;
 mod remote_repo_scan;
+mod remote_repo_scan_entry;
 mod repo_db;
 mod repo_info;
 mod repo_lookup;

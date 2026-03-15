@@ -38,3 +38,35 @@ fn list_shadows_keeps_broken_peer_dirs_visible() {
     let shadows = repo.list_shadows_on_disk().expect("list shadows");
     assert_eq!(shadows, vec![bad_peer, good_peer]);
 }
+
+#[test]
+fn broken_shadow_repos_stay_hidden_from_repo_listing_and_selector_recovery() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let peer_id = PeerId::new("peer-mixed");
+    let info = deve_core::ledger::RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:notes".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&peer_id, &info)
+        .expect("seed good shadow");
+    std::fs::write(
+        repo.remotes_dir()
+            .join(peer_id.to_filename())
+            .join("broken.redb"),
+        b"not-a-redb",
+    )
+    .expect("seed broken shadow");
+
+    assert_eq!(
+        repo.list_repos(Some(&peer_id)).expect("list repos"),
+        vec!["notes"]
+    );
+    assert_eq!(
+        repo.find_remote_repo_selector(&peer_id, "broken")
+            .expect("resolve selector"),
+        None
+    );
+}

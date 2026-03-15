@@ -1,21 +1,10 @@
 use crate::ledger::database::{cached_database, relocate_database_path};
+use crate::ledger::manager::remote_repo_scan_entry::{RemoteRepoCatalogInfo, RemoteRepoEntry};
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::Result;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-
-#[derive(Clone)]
-pub(crate) struct RemoteRepoEntry {
-    pub path: PathBuf,
-    pub stem: String,
-    pub info: Option<RepoInfo>,
-}
-
-struct RemoteRepoCatalogInfo {
-    info: RepoInfo,
-    write_back: bool,
-}
+use std::path::Path;
 
 impl RepoManager {
     fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
@@ -34,8 +23,17 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let Some(repair) = self.repaired_remote_repo_info(&path, &stem)? else {
-                continue;
+            let repair = match self.repaired_remote_repo_info(&path, &stem) {
+                Ok(Some(repair)) => repair,
+                Ok(None) => continue,
+                Err(err) => {
+                    tracing::warn!(
+                        "Skipping unreadable shadow repo {} during repair: {:?}",
+                        stem,
+                        err
+                    );
+                    continue;
+                }
             };
             let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
             let target = if desired != path {
@@ -141,16 +139,17 @@ impl RepoManager {
         let mut by_stem = None;
         let mut by_name = Vec::new();
         for entry in self.scan_remote_repo_entries(peer_id)? {
+            let Some(info) = &entry.info else {
+                continue;
+            };
             if entry.stem == selector {
                 by_stem = Some(entry.clone());
             }
-            if let Some(info) = &entry.info {
-                if info.name == selector {
-                    by_name.push(entry.clone());
-                }
-                if Some(info.uuid) == target_id {
-                    by_id = Some(entry);
-                }
+            if info.name == selector {
+                by_name.push(entry.clone());
+            }
+            if Some(info.uuid) == target_id {
+                by_id = Some(entry);
             }
         }
         Ok(by_id.or(by_stem).or_else(|| {
@@ -183,11 +182,15 @@ impl RepoManager {
     }
 
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
-        let entries = self.scan_remote_repo_entries(peer_id)?;
+        let entries = self
+            .scan_remote_repo_entries(peer_id)?
+            .into_iter()
+            .filter(RemoteRepoEntry::is_readable)
+            .collect::<Vec<_>>();
         let mut counts = HashMap::<String, usize>::new();
         let mut named = Vec::new();
         for entry in entries {
-            let display = self.remote_repo_display_name(&entry);
+            let display = entry.display_name();
             *counts.entry(display.clone()).or_default() += 1;
             named.push((entry, display));
         }
@@ -203,14 +206,6 @@ impl RepoManager {
             .collect();
         repos.sort();
         Ok(repos)
-    }
-
-    fn remote_repo_display_name(&self, entry: &RemoteRepoEntry) -> String {
-        entry
-            .info
-            .as_ref()
-            .map(|info| info.name.clone())
-            .unwrap_or_else(|| entry.stem.clone())
     }
 
     fn read_remote_repo_info_without_repair(path: &Path, stem: &str) -> Result<Option<RepoInfo>> {
