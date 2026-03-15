@@ -93,18 +93,15 @@ pub(super) fn select_target_repo(
     }
     let repos = state.repo.list_repos(target_branch)?;
     if let Some(url) = current_repo_url {
-        let matches = repos
-            .iter()
-            .filter_map(|repo_name| {
-                state
-                    .repo
-                    .get_repo_url(target_branch, repo_name)
-                    .ok()
-                    .flatten()
-                    .filter(|repo_url| repo_url == &url)
-                    .map(|_| repo_name.clone())
-            })
-            .collect::<Vec<_>>();
+        let mut matches = Vec::new();
+        for repo_name in &repos {
+            let Some(repo_url) = state.repo.get_repo_url(target_branch, repo_name)? else {
+                continue;
+            };
+            if repo_url == url {
+                matches.push(repo_name.clone());
+            }
+        }
         if target_branch.is_some() && matches.len() > 1 {
             return Err(anyhow!(
                 "Ambiguous remote repository selector for URL: {}",

@@ -2,7 +2,7 @@ use super::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and
 use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
 use crate::server::security;
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
+use deve_core::ledger::{REPO_METADATA, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -367,5 +367,26 @@ fn resolve_local_counterpart_repo_uses_unique_local_url_after_catalog_repair() -
     assert!(local.branch.is_none());
     assert_eq!(local.repo_name, expected_local);
     assert_eq!(local.repo_id, expected_info.uuid);
+    Ok(())
+}
+
+#[test]
+fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadable()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let db = state.repo.open_database(None, "default")?.db;
+    let txn = db.begin_write()?;
+    txn.open_table(REPO_METADATA)?.insert(&0, [0_u8, 1, 2, 3].as_slice())?;
+    txn.commit()?;
+
+    let err = state
+        .repo
+        .find_local_repo_name_by_url("urn:default")
+        .expect_err("broken local repo metadata must fail closed");
+    assert!(
+        err.to_string().contains("decode")
+            || err.to_string().contains("deserialize")
+            || err.to_string().contains("unexpected end")
+    );
     Ok(())
 }

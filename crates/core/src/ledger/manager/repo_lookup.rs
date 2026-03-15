@@ -30,17 +30,15 @@ impl RepoManager {
 
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
         self.refresh_local_repo_catalog()?;
-        let matches = self
-            .list_local_repo_names_for_execution()?
-            .into_iter()
-            .filter_map(|repo_name| {
-                self.get_repo_info_for(None, Some(&repo_name))
-                    .ok()
-                    .flatten()
-                    .filter(|info| info.url.as_deref() == Some(target_url))
-                    .map(|_| repo_name)
-            })
-            .collect::<Vec<_>>();
+        let mut matches = Vec::new();
+        for repo_name in self.list_local_repo_names_for_execution()? {
+            let Some(info) = self.get_repo_info_for(None, Some(&repo_name))? else {
+                continue;
+            };
+            if info.url.as_deref() == Some(target_url) {
+                matches.push(repo_name);
+            }
+        }
         Ok((matches.len() == 1).then(|| matches[0].clone()))
     }
 

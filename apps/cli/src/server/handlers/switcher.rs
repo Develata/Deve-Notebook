@@ -37,13 +37,22 @@ pub async fn handle_switch_branch(
 
     let had_current_repo_hint = session.active_repo.is_some() || session.active_repo_id.is_some();
     let current_scope = resolve_session_repo(state, session).ok();
-    let current_repo_url = current_scope.as_ref().and_then(|scope| {
-        state
-            .repo
-            .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
-            .ok()
-            .flatten()
-    });
+    let current_repo_url = match current_scope.as_ref() {
+        Some(scope) => match state.repo.get_repo_url(scope.branch.as_ref(), &scope.repo_name) {
+            Ok(url) => url,
+            Err(err) => {
+                ch.send_protocol_error_with_switch_nonce(
+                    map_repo_scope_error(anyhow::anyhow!(
+                        "Failed to resolve current repo URL before branch switch: {}",
+                        err
+                    )),
+                    switch_nonce,
+                );
+                return;
+            }
+        },
+        None => None,
+    };
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
 
