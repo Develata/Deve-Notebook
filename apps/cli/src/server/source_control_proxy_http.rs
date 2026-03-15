@@ -115,6 +115,9 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
     ) {
         return ServerError::with_detail(ServerErrorCode::ScDocNotFound, raw_detail);
     }
+    if lower.contains("local repo not found for name") {
+        return ServerError::with_detail(ServerErrorCode::StorageNotFound, raw_detail);
+    }
     if lower.contains("conflict") {
         return ServerError::with_detail(ServerErrorCode::StorageConflict, raw_detail);
     }
@@ -223,5 +226,12 @@ mod tests {
             err.detail.as_deref(),
             Some("Tracked document projection missing for legacy-mapped path: notes/legacy.md")
         );
+    }
+
+    #[test]
+    fn maps_plain_text_missing_local_repo_name() {
+        let err = decode_error(StatusCode::NOT_FOUND, b"Local repo not found for name wiki");
+        assert_eq!(err.code, ServerErrorCode::StorageNotFound);
+        assert_eq!(err.detail.as_deref(), Some("Local repo not found for name wiki"));
     }
 }
