@@ -93,6 +93,12 @@ pub(super) fn reject_duplicate_remote_matches(
     matches: &[RemoteRepoEntry],
     duplicate_ids: &HashSet<uuid::Uuid>,
 ) -> Result<()> {
+    if matches.len() > 1 {
+        return Err(anyhow!(
+            "ambiguous remote repository selector: {}",
+            selector
+        ));
+    }
     if matches.iter().any(|entry| {
         entry
             .info
