@@ -1,10 +1,17 @@
+#[path = "remote_repo_scan_helpers.rs"]
+mod helpers;
+
+use self::helpers::{
+    duplicate_catalog_ids, duplicate_entry_ids, loaded_remote_repo_info,
+    read_remote_repo_info_without_repair, reject_duplicate_remote_matches,
+    repaired_remote_repo_info, resolve_remote_repo_entry_by_id, single_remote_entry,
+};
 use crate::ledger::database::{cached_database, relocate_database_path};
-use crate::ledger::manager::remote_repo_scan_entry::{RemoteRepoCatalogInfo, RemoteRepoEntry};
-use crate::ledger::manager::types::{RepoInfo, RepoManager};
+use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
+use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
-use anyhow::{Result, anyhow};
-use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use anyhow::Result;
+use std::collections::HashMap;
 
 impl RepoManager {
     fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
@@ -24,7 +31,7 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let repair = match self.repaired_remote_repo_info(&path, &stem) {
+            let repair = match repaired_remote_repo_info(&path, &stem) {
                 Ok(Some(repair)) => repair,
                 Ok(None) => continue,
                 Err(err) => {
@@ -82,7 +89,7 @@ impl RepoManager {
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
-        let loaded = self.loaded_remote_repo_info(peer_id);
+        let loaded = loaded_remote_repo_info(self, peer_id);
         let mut loaded_by_id = HashMap::new();
         let mut loaded_name_counts = HashMap::<String, usize>::new();
         for info in &loaded {
@@ -113,7 +120,7 @@ impl RepoManager {
                         .flatten()
                 }) {
                 Some(info) => Some(info),
-                None => match Self::read_remote_repo_info_without_repair(&path, &stem) {
+                None => match read_remote_repo_info_without_repair(self, &path, &stem) {
                     Ok(info) => info,
                     Err(err) => {
                         tracing::warn!(
@@ -128,32 +135,6 @@ impl RepoManager {
             repos.push(RemoteRepoEntry { path, stem, info });
         }
         Ok(repos)
-    }
-
-    fn repaired_remote_repo_info(
-        &self,
-        path: &Path,
-        stem: &str,
-    ) -> Result<Option<RemoteRepoCatalogInfo>> {
-        let original = Self::read_repo_info_from_path(path)?;
-        let Some(mut info) = original.clone().or_else(|| {
-            uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
-                uuid: repo_id,
-                name: stem.to_string(),
-                url: None,
-            })
-        }) else {
-            return Ok(None);
-        };
-        let mut write_back = original.is_none();
-        if info.name.trim().is_empty() {
-            info.name = stem.to_string();
-            write_back = true;
-        }
-        if original.as_ref() != Some(&info) {
-            write_back = true;
-        }
-        Ok(Some(RemoteRepoCatalogInfo { info, write_back }))
     }
 
     pub(crate) fn resolve_remote_repo_entry(
@@ -200,7 +181,7 @@ impl RepoManager {
         repo_id: uuid::Uuid,
     ) -> Result<Option<String>> {
         Ok(self
-            .resolve_remote_repo_entry(peer_id, &repo_id.to_string())?
+            .resolve_remote_repo_entry_by_id(peer_id, repo_id)?
             .map(|entry| entry.stem))
     }
 
@@ -250,80 +231,14 @@ impl RepoManager {
         repos.sort();
         Ok(repos)
     }
-
-    fn read_remote_repo_info_without_repair(path: &Path, stem: &str) -> Result<Option<RepoInfo>> {
-        if let Some(info) = Self::read_repo_info_from_path(path)? {
-            return Ok(Some(info));
-        }
-        Ok(uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
-            uuid: repo_id,
-            name: stem.to_string(),
-            url: None,
-        }))
-    }
-
-    fn loaded_remote_repo_info(&self, peer_id: &PeerId) -> Vec<RepoInfo> {
-        self.shadow_dbs
-            .read()
-            .unwrap()
-            .get(peer_id)
-            .into_iter()
-            .flat_map(|repos| repos.iter())
-            .map(|(repo_id, db)| {
-                Self::read_repo_info_from_db(db)
-                    .ok()
-                    .flatten()
-                    .unwrap_or(RepoInfo {
-                        uuid: *repo_id,
-                        name: repo_id.to_string(),
-                        url: None,
-                    })
-            })
-            .collect()
-    }
 }
 
-fn duplicate_catalog_ids(ids: Vec<uuid::Uuid>) -> HashSet<uuid::Uuid> {
-    let mut counts = HashMap::<uuid::Uuid, usize>::new();
-    for id in ids {
-        *counts.entry(id).or_default() += 1;
+impl RepoManager {
+    pub(crate) fn resolve_remote_repo_entry_by_id(
+        &self,
+        peer_id: &PeerId,
+        repo_id: uuid::Uuid,
+    ) -> Result<Option<RemoteRepoEntry>> {
+        resolve_remote_repo_entry_by_id(self, peer_id, repo_id)
     }
-    counts
-        .into_iter()
-        .filter_map(|(id, count)| (count > 1).then_some(id))
-        .collect()
-}
-
-fn duplicate_entry_ids(entries: &[RemoteRepoEntry]) -> HashSet<uuid::Uuid> {
-    duplicate_catalog_ids(
-        entries
-            .iter()
-            .filter_map(|entry| entry.info.as_ref().map(|info| info.uuid))
-            .collect(),
-    )
-}
-
-fn reject_duplicate_remote_matches(
-    selector: &str,
-    matches: &[RemoteRepoEntry],
-    duplicate_ids: &HashSet<uuid::Uuid>,
-) -> Result<()> {
-    if matches.iter().any(|entry| {
-        entry
-            .info
-            .as_ref()
-            .is_some_and(|info| duplicate_ids.contains(&info.uuid))
-    }) {
-        return Err(anyhow!(
-            "ambiguous remote repository selector: {}",
-            selector
-        ));
-    }
-    Ok(())
-}
-
-fn single_remote_entry(entries: Vec<RemoteRepoEntry>) -> Option<RemoteRepoEntry> {
-    (entries.len() == 1)
-        .then(|| entries.into_iter().next())
-        .flatten()
 }

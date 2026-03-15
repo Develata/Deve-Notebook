@@ -179,3 +179,25 @@ fn duplicate_shadow_uuid_is_hidden_and_fails_selector_recovery() {
             .contains("ambiguous remote repository selector")
     );
 }
+
+#[test]
+fn remote_repo_selector_by_id_does_not_match_uuid_shaped_display_name() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let target_uuid = Uuid::new_v4();
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: Uuid::new_v4(),
+            name: target_uuid.to_string(),
+            url: Some("urn:test:uuid-shaped-name".into()),
+        },
+    )
+    .expect("prepare uuid-shaped display-name shadow");
+
+    assert_eq!(
+        repo.find_remote_repo_selector_by_id(&peer_id, target_uuid)
+            .expect("lookup by id must not guess from display name"),
+        None,
+    );
+}

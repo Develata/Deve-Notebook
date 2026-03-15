@@ -27,7 +27,7 @@ impl RepoManager {
     /// * `peer_id` - 远端 Peer 的唯一标识
     pub fn ensure_shadow_db(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
         let db_path = self
-            .resolve_remote_repo_entry(peer_id, &repo_id.to_string())?
+            .resolve_remote_repo_entry_by_id(peer_id, *repo_id)?
             .map(|entry| entry.path)
             .unwrap_or_else(|| {
                 self.remotes_dir()
@@ -45,7 +45,7 @@ impl RepoManager {
 
     pub fn ensure_shadow_repo_info(&self, peer_id: &PeerId, info: &RepoInfo) -> Result<()> {
         let desired = self.allocate_remote_repo_path(peer_id, info)?;
-        let db_path = match self.resolve_remote_repo_entry(peer_id, &info.uuid.to_string())? {
+        let db_path = match self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)? {
             Some(entry) if entry.path == desired => entry.path,
             Some(entry) => {
                 relocate_database_path(&entry.path, &desired);
