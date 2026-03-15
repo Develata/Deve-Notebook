@@ -77,29 +77,29 @@ pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) ->
 
 pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> String {
     let path = normalized(&target.path);
-    target
-        .doc_id
-        .and_then(|doc_id| {
-            entries
-                .iter()
-                .find(|entry| {
-                    entry.doc_id == Some(doc_id)
-                        && normalized(&entry.path) == path
-                        && entry.status != ChangeStatus::Deleted
+    if let Some(doc_id) = target.doc_id {
+        return entries
+            .iter()
+            .find(|entry| {
+                entry.doc_id == Some(doc_id)
+                    && normalized(&entry.path) == path
+                    && entry.status != ChangeStatus::Deleted
+            })
+            .or_else(|| {
+                entries.iter().find(|entry| {
+                    entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted
                 })
-                .or_else(|| {
-                    entries.iter().find(|entry| {
-                        entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted
-                    })
-                })
-                .or_else(|| {
-                    entries.iter().find(|entry| {
-                        entry.doc_id == Some(doc_id) && normalized(&entry.path) == path
-                    })
-                })
-                .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
-        })
-        .or_else(|| resolve_without_doc_id(entries, &path))
+            })
+            .or_else(|| {
+                entries
+                    .iter()
+                    .find(|entry| entry.doc_id == Some(doc_id) && normalized(&entry.path) == path)
+            })
+            .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
+            .map(|entry| normalized(&entry.path))
+            .unwrap_or(path);
+    }
+    resolve_without_doc_id(entries, &path)
         .map(|entry| normalized(&entry.path))
         .unwrap_or(path)
 }
@@ -131,120 +131,5 @@ fn normalized(path: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use deve_core::models::DocId;
-    use uuid::Uuid;
-
-    #[test]
-    fn resolve_target_prefers_doc_id_over_stale_path() {
-        let doc_id = DocId(Uuid::nil());
-        let entries = vec![ChangeEntry {
-            path: "notes/new.md".into(),
-            renamed_from: Some("notes/old.md".into()),
-            doc_id: Some(doc_id),
-            status: ChangeStatus::Added,
-            has_conflict: false,
-        }];
-        let target = ScPathTarget {
-            path: "notes/old.md".into(),
-            doc_id: Some(doc_id),
-        };
-
-        assert_eq!(resolve_target_path(&entries, &target), "notes/new.md");
-    }
-
-    #[test]
-    fn resolve_target_matches_renamed_from_without_doc_id() {
-        let entries = vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: None,
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: None,
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ];
-
-        assert_eq!(
-            resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
-            "notes/new.md"
-        );
-    }
-
-    #[test]
-    fn expand_related_targets_preserves_doc_id_for_rename_pair() {
-        let doc_id = DocId(Uuid::nil());
-        let entries = vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: Some(doc_id),
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: Some(doc_id),
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ];
-
-        assert_eq!(
-            expand_related_targets(&entries, &ScPathTarget::from_path("notes/new.md")),
-            vec![
-                ScPathTarget {
-                    path: "notes/new.md".into(),
-                    doc_id: Some(doc_id),
-                },
-                ScPathTarget {
-                    path: "notes/old.md".into(),
-                    doc_id: Some(doc_id),
-                },
-            ]
-        );
-    }
-
-    #[test]
-    fn resolve_target_prefers_rename_successor_over_reused_old_path() {
-        let old_doc = DocId(Uuid::nil());
-        let new_doc = DocId(Uuid::from_u128(1));
-        let entries = vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: Some(old_doc),
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: Some(old_doc),
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: Some(new_doc),
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ];
-
-        assert_eq!(
-            resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
-            "notes/new.md"
-        );
-    }
-}
+#[path = "present_test.rs"]
+mod tests;
