@@ -13,11 +13,12 @@ use super::guard::require_bound_peer;
 pub(super) async fn handle_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     repo_id: RepoId,
     requests: Vec<(PeerId, (u64, u64))>,
 ) {
     if !session.is_repo_bound(&repo_id) {
+        super::cleanup::clear_remote_unbound_state(session);
         tracing::warn!(
             "SyncRequest repo mismatch: session bound to {:?}, got {}",
             session.bound_repo_id,
@@ -72,7 +73,7 @@ pub(super) async fn handle_request(
 pub(super) async fn handle_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
 ) {

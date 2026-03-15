@@ -3,6 +3,8 @@ use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 
+use super::cleanup::clear_remote_unbound_state;
+
 pub(super) fn handle(
     ch: &DualChannel,
     session: &mut WsSession,
@@ -25,7 +27,7 @@ pub(super) fn handle(
 }
 
 fn validate(
-    session: &WsSession,
+    session: &mut WsSession,
     repo_id: RepoId,
     peer_id: &PeerId,
     scope_nonce: u64,
@@ -48,9 +50,11 @@ fn validate(
         }
     }
     if !session.is_repo_bound(&repo_id) {
+        clear_remote_unbound_state(session);
         return Err(ServerError::new(ServerErrorCode::SyncRepoUnbound));
     }
     let Some(auth_peer_id) = session.authenticated_peer_id.as_ref() else {
+        clear_remote_unbound_state(session);
         return Err(ServerError::new(ServerErrorCode::SyncPeerUnauthenticated));
     };
     if auth_peer_id != peer_id {
@@ -70,8 +74,9 @@ mod tests {
 
     #[test]
     fn rejects_unbound_repo() {
-        let session = WsSession::new();
-        let error = validate(&session, uuid::Uuid::nil(), &PeerId::new("browser"), 1).unwrap_err();
+        let mut session = WsSession::new();
+        let error =
+            validate(&mut session, uuid::Uuid::nil(), &PeerId::new("browser"), 1).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
     }
 
@@ -90,7 +95,7 @@ mod tests {
             repo_name: "repo".into(),
         });
         session.set_authenticated(peer_id.clone());
-        let error = validate(&session, repo_id, &peer_id, 1).unwrap_err();
+        let error = validate(&mut session, repo_id, &peer_id, 1).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
     }
 
@@ -100,7 +105,7 @@ mod tests {
         let repo_id = uuid::Uuid::new_v4();
         session.set_authenticated(PeerId::new("browser-a"));
         session.bind_repo(repo_id);
-        let error = validate(&session, repo_id, &PeerId::new("browser-b"), 1).unwrap_err();
+        let error = validate(&mut session, repo_id, &PeerId::new("browser-b"), 1).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
     }
 
@@ -111,7 +116,7 @@ mod tests {
         let peer_id = PeerId::new("browser-a");
         session.set_authenticated(peer_id.clone());
         session.bind_repo(repo_id);
-        assert!(validate(&session, repo_id, &peer_id, 1).is_ok());
+        assert!(validate(&mut session, repo_id, &peer_id, 1).is_ok());
     }
 
     #[test]
@@ -125,7 +130,7 @@ mod tests {
         session.set_sync_scope_nonce(9);
         session.set_authenticated(peer_id.clone());
         session.bind_repo(repo_id);
-        let error = validate(&session, repo_id, &peer_id, 8).unwrap_err();
+        let error = validate(&mut session, repo_id, &peer_id, 8).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
     }
 
@@ -140,7 +145,7 @@ mod tests {
         session.set_sync_scope_nonce(9);
         session.set_authenticated(peer_id.clone());
         session.bind_repo(repo_id);
-        let error = validate(&session, repo_id, &peer_id, 9).unwrap_err();
+        let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
     }
 }

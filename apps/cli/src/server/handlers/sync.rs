@@ -2,6 +2,7 @@
 
 #![allow(dead_code)]
 
+mod cleanup;
 mod errors;
 mod guard;
 mod hello;
@@ -40,7 +41,7 @@ pub fn handle_register_writer(
 pub async fn handle_sync_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     repo_id: RepoId,
     requests: Vec<(PeerId, (u64, u64))>,
 ) {
@@ -50,7 +51,7 @@ pub async fn handle_sync_request(
 pub async fn handle_sync_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
 ) {
@@ -60,7 +61,7 @@ pub async fn handle_sync_push(
 pub async fn handle_sync_snapshot_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
 ) {
@@ -70,7 +71,7 @@ pub async fn handle_sync_snapshot_request(
 pub async fn handle_sync_push_snapshot(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,

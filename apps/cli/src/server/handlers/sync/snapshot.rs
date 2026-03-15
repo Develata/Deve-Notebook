@@ -12,7 +12,7 @@ use super::guard::require_bound_peer;
 pub(super) async fn handle_request(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     _peer_id: PeerId,
     repo_id: RepoId,
 ) {
@@ -61,7 +61,7 @@ pub(super) async fn handle_request(
 pub(super) async fn handle_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: &WsSession,
+    session: &mut WsSession,
     _peer_id: PeerId,
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
