@@ -55,7 +55,7 @@ async fn create_doc_rejects_existing_workspace_file_without_backfill() -> anyhow
     handle_create_doc(&state, &ch, &mut session, "external.md".into()).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::StorageConflict);
         }
         other => panic!("expected ProtocolError, got {:?}", other),

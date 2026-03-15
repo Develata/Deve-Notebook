@@ -179,7 +179,7 @@ async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(
                 error.code,
                 deve_core::protocol::ServerErrorCode::ScRepoContextInvalid

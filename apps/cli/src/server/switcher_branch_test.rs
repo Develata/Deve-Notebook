@@ -46,7 +46,7 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
     handle_switch_branch(&state, &ch, &mut session, Some("missing-peer".into()), None).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
         }
         other => panic!("expected ProtocolError, got {:?}", other),
@@ -65,7 +65,7 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
     handle_switch_branch(&state, &ch, &mut session, Some("default".into()), None).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
         }
         other => panic!("expected ProtocolError, got {:?}", other),

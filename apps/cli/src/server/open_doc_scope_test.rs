@@ -121,7 +121,7 @@ async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()>
     handle_open_doc(&state, &ch, &mut session, doc_id, 8).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::StorageNotFound);
         }
         other => panic!("expected ProtocolError, got {:?}", other),
@@ -168,7 +168,7 @@ async fn request_history_on_deleted_doc_returns_error_without_history() -> anyho
     handle_request_history(&state, &ch, &mut session, doc_id, 10).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::StorageNotFound);
         }
         other => panic!("expected ProtocolError, got {:?}", other),
@@ -188,7 +188,7 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
     handle_list_docs(&state, &ch, &mut session, None, None).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
         }
         other => panic!("expected SyncRepoUnbound error, got {:?}", other),
@@ -240,7 +240,7 @@ async fn list_docs_on_scoped_local_unbound_state_returns_repo_unbound() -> anyho
     handle_list_docs(&state, &ch, &mut session, None, None).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error }) => {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
         }
         other => panic!("expected SyncRepoUnbound error, got {:?}", other),

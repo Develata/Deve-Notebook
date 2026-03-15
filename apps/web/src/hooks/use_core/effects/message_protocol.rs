@@ -7,9 +7,11 @@ use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal};
 #[derive(Clone, Copy)]
 pub struct ProtocolControlSignals {
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
     pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
     pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
     pub set_pending_repo_switch: WriteSignal<Option<String>>,
     pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
     pub set_shadow_list_request_id: WriteSignal<Option<String>>,
@@ -22,9 +24,10 @@ pub fn handle_protocol_error(
     ws: &WsService,
     locale: Locale,
     error: &ServerError,
+    switch_nonce: Option<u64>,
     signals: ProtocolControlSignals,
 ) {
-    clear_failed_scope_switch(error.code, signals);
+    clear_failed_scope_switch(error.code, switch_nonce, signals);
     if is_auth_error(error.code) {
         ws.mark_unauthorized();
     }
@@ -38,19 +41,31 @@ pub fn handle_protocol_error(
     }
 }
 
-fn clear_failed_scope_switch(code: ServerErrorCode, signals: ProtocolControlSignals) {
-    if !is_scope_switch_error(code) {
+fn clear_failed_scope_switch(
+    code: ServerErrorCode,
+    switch_nonce: Option<u64>,
+    signals: ProtocolControlSignals,
+) {
+    if !is_scope_switch_error(code) || switch_nonce.is_none() {
+        return;
+    }
+    let switch_nonce = switch_nonce.expect("checked above");
+    let clear_branch = signals.pending_branch_switch.get_untracked().is_some()
+        && signals.pending_branch_switch_nonce.get_untracked() == Some(switch_nonce);
+    let clear_repo = signals.pending_repo_switch.get_untracked().is_some()
+        && signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);
+    if !clear_branch && !clear_repo {
         return;
     }
     signals.set_shadow_list_request_id.set(None);
     signals.set_repo_list_request_id.set(None);
     signals.set_doc_list_request_id.set(None);
     signals.set_tree_request_id.set(None);
-    if signals.pending_branch_switch.get_untracked().is_some() {
+    if clear_branch {
         signals.set_pending_branch_switch.set(None);
         signals.set_pending_branch_switch_nonce.set(None);
     }
-    if signals.pending_repo_switch.get_untracked().is_some() {
+    if clear_repo {
         signals.set_pending_repo_switch.set(None);
         signals.set_pending_repo_switch_nonce.set(None);
     }
@@ -73,117 +88,5 @@ fn is_scope_switch_error(code: ServerErrorCode) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{ProtocolControlSignals, clear_failed_scope_switch};
-    use crate::hooks::use_core::PendingBranchTarget;
-    use deve_core::protocol::ServerErrorCode;
-    use leptos::prelude::*;
-
-    #[test]
-    fn switch_errors_clear_pending_scope_switches() {
-        for code in [
-            ServerErrorCode::ScRepoContextInvalid,
-            ServerErrorCode::ScRepoNotSelected,
-            ServerErrorCode::SyncRepoUnbound,
-        ] {
-            let runtime = leptos::reactive::owner::Owner::new();
-            runtime.set();
-            let (pending_branch_switch, set_pending_branch_switch) =
-                signal(Some(PendingBranchTarget::Local));
-            let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
-            let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
-            let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
-            let (shadow_list_request_id, set_shadow_list_request_id) =
-                signal(Some("shadow-1".to_string()));
-            let (repo_list_request_id, set_repo_list_request_id) =
-                signal(Some("repo-1".to_string()));
-            let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
-            let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
-
-            clear_failed_scope_switch(
-                code,
-                ProtocolControlSignals {
-                    pending_branch_switch,
-                    set_pending_branch_switch,
-                    set_pending_branch_switch_nonce,
-                    pending_repo_switch,
-                    set_pending_repo_switch,
-                    set_pending_repo_switch_nonce,
-                    set_shadow_list_request_id,
-                    set_repo_list_request_id,
-                    set_doc_list_request_id,
-                    set_tree_request_id,
-                },
-            );
-
-            assert_eq!(pending_branch_switch.get_untracked(), None);
-            assert_eq!(pending_repo_switch.get_untracked(), None);
-            assert_eq!(shadow_list_request_id.get_untracked(), None);
-            assert_eq!(repo_list_request_id.get_untracked(), None);
-            assert_eq!(doc_list_request_id.get_untracked(), None);
-            assert_eq!(tree_request_id.get_untracked(), None);
-        }
-    }
-
-    #[test]
-    fn non_switch_errors_keep_pending_scope_switches() {
-        for code in [
-            ServerErrorCode::AuthTokenExpired,
-            ServerErrorCode::RequestFailed,
-            ServerErrorCode::StoragePersistFailed,
-            ServerErrorCode::StorageDbLocked,
-        ] {
-            let runtime = leptos::reactive::owner::Owner::new();
-            runtime.set();
-            let (pending_branch_switch, set_pending_branch_switch) =
-                signal(Some(PendingBranchTarget::Local));
-            let (_, set_pending_branch_switch_nonce) = signal(Some(7u64));
-            let (pending_repo_switch, set_pending_repo_switch) = signal(Some("wiki".to_string()));
-            let (_, set_pending_repo_switch_nonce) = signal(Some(7u64));
-            let (shadow_list_request_id, set_shadow_list_request_id) =
-                signal(Some("shadow-1".to_string()));
-            let (repo_list_request_id, set_repo_list_request_id) =
-                signal(Some("repo-1".to_string()));
-            let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
-            let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
-
-            clear_failed_scope_switch(
-                code,
-                ProtocolControlSignals {
-                    pending_branch_switch,
-                    set_pending_branch_switch,
-                    set_pending_branch_switch_nonce,
-                    pending_repo_switch,
-                    set_pending_repo_switch,
-                    set_pending_repo_switch_nonce,
-                    set_shadow_list_request_id,
-                    set_repo_list_request_id,
-                    set_doc_list_request_id,
-                    set_tree_request_id,
-                },
-            );
-
-            assert_eq!(
-                pending_branch_switch.get_untracked(),
-                Some(PendingBranchTarget::Local)
-            );
-            assert_eq!(
-                pending_repo_switch.get_untracked(),
-                Some("wiki".to_string())
-            );
-            assert_eq!(
-                shadow_list_request_id.get_untracked(),
-                Some("shadow-1".to_string())
-            );
-            assert_eq!(
-                repo_list_request_id.get_untracked(),
-                Some("repo-1".to_string())
-            );
-            assert_eq!(
-                doc_list_request_id.get_untracked(),
-                Some("doc-1".to_string())
-            );
-            assert_eq!(tree_request_id.get_untracked(), Some("tree-1".to_string()));
-        }
-    }
-}
+#[path = "message_protocol_test.rs"]
+mod tests;

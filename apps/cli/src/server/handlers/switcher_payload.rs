@@ -1,8 +1,9 @@
 use super::switcher_prepare::PreparedRepoSwitch;
-use crate::server::AppState;
+use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_meta;
 use deve_core::models::{DocId, NodeId, NodeMeta, PeerId, RepoId, RepoType};
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 pub(super) struct RepoViewPayload {
@@ -38,6 +39,45 @@ pub(super) fn preload_repo_view(
     prepared: &PreparedRepoSwitch,
 ) -> anyhow::Result<RepoViewPayload> {
     load_repo_view(state, branch, prepared)
+}
+
+pub(super) fn emit_repo_view(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &WsSession,
+    branch: Option<String>,
+    switch_nonce: Option<u64>,
+    repo_view: Option<RepoViewPayload>,
+) {
+    let Some(repo_view) = repo_view else {
+        return;
+    };
+    let tree_branch = branch.clone().map(PeerId::new);
+    ch.unicast(ServerMessage::RepoSwitched {
+        branch: branch.clone(),
+        name: repo_view.repo_name,
+        uuid: repo_view.repo_id.to_string(),
+        switch_nonce,
+    });
+    ch.unicast(ServerMessage::DocList {
+        request_id: None,
+        repo_id: Some(repo_view.repo_id),
+        branch: tree_branch.clone(),
+        scope_nonce: Some(session.scope_nonce()),
+        docs: repo_view.docs,
+    });
+    let delta = state.tree_manager.reset_from_nodes(
+        repo_view.repo_id,
+        tree_branch.as_ref(),
+        repo_view.nodes,
+    );
+    ch.unicast(ServerMessage::TreeUpdate {
+        request_id: None,
+        repo_id: Some(repo_view.repo_id),
+        branch: tree_branch,
+        scope_nonce: Some(session.scope_nonce()),
+        delta,
+    });
 }
 
 fn load_repo_view(

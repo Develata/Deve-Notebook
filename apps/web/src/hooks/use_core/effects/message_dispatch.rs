@@ -188,16 +188,44 @@ pub fn handle_message<F>(
         ServerMessage::PeerDeleted { peer_id } => {
             message_shadow::handle_peer_deleted(peer_id, ws, signals);
         }
-        ServerMessage::EditRejected { error } | ServerMessage::ProtocolError { error } => {
+        ServerMessage::EditRejected { error } => {
             handle_protocol_error(
                 ws,
                 locale,
                 &error,
+                None,
                 ProtocolControlSignals {
                     pending_branch_switch: signals.pending_branch_switch,
+                    pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
                     set_pending_branch_switch: signals.set_pending_branch_switch,
                     set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
                     pending_repo_switch: signals.pending_repo_switch,
+                    pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
+                    set_pending_repo_switch: signals.set_pending_repo_switch,
+                    set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
+                    set_shadow_list_request_id: signals.set_shadow_list_request_id,
+                    set_repo_list_request_id: signals.set_repo_list_request_id,
+                    set_doc_list_request_id: signals.set_doc_list_request_id,
+                    set_tree_request_id: signals.set_tree_request_id,
+                },
+            );
+        }
+        ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+        } => {
+            handle_protocol_error(
+                ws,
+                locale,
+                &error,
+                switch_nonce,
+                ProtocolControlSignals {
+                    pending_branch_switch: signals.pending_branch_switch,
+                    pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
+                    set_pending_branch_switch: signals.set_pending_branch_switch,
+                    set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
+                    pending_repo_switch: signals.pending_repo_switch,
+                    pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
                     set_pending_repo_switch: signals.set_pending_repo_switch,
                     set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
                     set_shadow_list_request_id: signals.set_shadow_list_request_id,

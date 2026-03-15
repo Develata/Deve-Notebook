@@ -14,11 +14,10 @@ use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
-use self::switcher_payload::{RepoViewPayload, preload_branch_switch, preload_repo_view};
+use self::switcher_payload::{emit_repo_view, preload_branch_switch, preload_repo_view};
 use self::switcher_prepare::{
     commit_session_switch, prepare_repo_switch, select_target_repo, validate_branch_target,
 };
-use deve_core::models::PeerId;
 
 pub async fn handle_switch_branch(
     state: &Arc<AppState>,
@@ -29,7 +28,7 @@ pub async fn handle_switch_branch(
 ) {
     tracing::info!("Handle SwitchBranch request: PeerID={:?}", peer_id);
 
-    let Some(final_branch) = validate_branch_target(state, ch, &peer_id) else {
+    let Some(final_branch) = validate_branch_target(state, ch, &peer_id, switch_nonce) else {
         return;
     };
 
@@ -52,10 +51,13 @@ pub async fn handle_switch_branch(
     ) {
         Ok(repo) => repo,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
-                "Failed to list repos for branch switch: {}",
-                err
-            )));
+            ch.send_protocol_error_with_switch_nonce(
+                map_repo_scope_error(anyhow::anyhow!(
+                    "Failed to list repos for branch switch: {}",
+                    err
+                )),
+                switch_nonce,
+            );
             return;
         }
     };
@@ -70,10 +72,10 @@ pub async fn handle_switch_branch(
                     } else {
                         ServerErrorCode::StoragePersistFailed
                     };
-                    ch.send_protocol_error(ServerError::with_detail(
-                        code,
-                        format!("Failed to switch repo: {}", err),
-                    ));
+                    ch.send_protocol_error_with_switch_nonce(
+                        ServerError::with_detail(code, format!("Failed to switch repo: {}", err)),
+                        switch_nonce,
+                    );
                     return;
                 }
             }
@@ -83,10 +85,13 @@ pub async fn handle_switch_branch(
     let payload = match preload_branch_switch(state, target_branch_ref, prepared.as_ref()) {
         Ok(payload) => payload,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
-                "Failed to preload branch switch view: {}",
-                err
-            )));
+            ch.send_protocol_error_with_switch_nonce(
+                map_repo_scope_error(anyhow::anyhow!(
+                    "Failed to preload branch switch view: {}",
+                    err
+                )),
+                switch_nonce,
+            );
             return;
         }
     };
@@ -150,17 +155,20 @@ pub async fn handle_switch_repo(
                     repo_id,
                     branch
                 );
-                ch.send_protocol_error(ServerError::with_detail(
-                    ServerErrorCode::ScRepoContextInvalid,
-                    format!("Repository not found: {}", name),
-                ));
+                ch.send_protocol_error_with_switch_nonce(
+                    ServerError::with_detail(
+                        ServerErrorCode::ScRepoContextInvalid,
+                        format!("Repository not found: {}", name),
+                    ),
+                    switch_nonce,
+                );
                 return;
             }
             Err(err) => {
-                ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
-                    "Failed to list repos: {}",
-                    err
-                )));
+                ch.send_protocol_error_with_switch_nonce(
+                    map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err)),
+                    switch_nonce,
+                );
                 return;
             }
         };
@@ -173,20 +181,23 @@ pub async fn handle_switch_repo(
             } else {
                 ServerErrorCode::StoragePersistFailed
             };
-            ch.send_protocol_error(ServerError::with_detail(
-                code,
-                format!("Failed to switch repo: {}", err),
-            ));
+            ch.send_protocol_error_with_switch_nonce(
+                ServerError::with_detail(code, format!("Failed to switch repo: {}", err)),
+                switch_nonce,
+            );
             return;
         }
     };
     let repo_view = match preload_repo_view(state, branch.as_ref(), &prepared) {
         Ok(repo_view) => repo_view,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(anyhow::anyhow!(
-                "Failed to preload repo switch view: {}",
-                err
-            )));
+            ch.send_protocol_error_with_switch_nonce(
+                map_repo_scope_error(anyhow::anyhow!(
+                    "Failed to preload repo switch view: {}",
+                    err
+                )),
+                switch_nonce,
+            );
             return;
         }
     };
@@ -214,43 +225,4 @@ pub async fn handle_switch_repo(
         switch_nonce,
         Some(repo_view),
     );
-}
-
-fn emit_repo_view(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &WsSession,
-    branch: Option<String>,
-    switch_nonce: Option<u64>,
-    repo_view: Option<RepoViewPayload>,
-) {
-    let Some(repo_view) = repo_view else {
-        return;
-    };
-    let tree_branch = branch.clone().map(PeerId::new);
-    ch.unicast(ServerMessage::RepoSwitched {
-        branch: branch.clone(),
-        name: repo_view.repo_name,
-        uuid: repo_view.repo_id.to_string(),
-        switch_nonce,
-    });
-    ch.unicast(ServerMessage::DocList {
-        request_id: None,
-        repo_id: Some(repo_view.repo_id),
-        branch: tree_branch.clone(),
-        scope_nonce: Some(session.scope_nonce()),
-        docs: repo_view.docs,
-    });
-    let delta = state.tree_manager.reset_from_nodes(
-        repo_view.repo_id,
-        tree_branch.as_ref(),
-        repo_view.nodes,
-    );
-    ch.unicast(ServerMessage::TreeUpdate {
-        request_id: None,
-        repo_id: Some(repo_view.repo_id),
-        branch: tree_branch,
-        scope_nonce: Some(session.scope_nonce()),
-        delta,
-    });
 }

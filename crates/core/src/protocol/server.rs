@@ -46,7 +46,7 @@ pub enum ServerMessage {
     DocDeleted { doc_id: DocId },
     DiscardAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     TreeUpdate { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, delta: crate::tree::TreeDelta },
-    ProtocolError { error: ServerError },
+    ProtocolError { error: ServerError, #[serde(default)] switch_nonce: Option<u64> },
     BulkStageProgress { op: String, total: u32, done: u32, failed: u32 },
     BulkStageDone { op: String, total: u32, success: u32, failed_paths: Vec<String> },
     FsChangeDetected { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String, change_type: String, #[serde(default)] has_conflict: bool },

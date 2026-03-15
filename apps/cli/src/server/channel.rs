@@ -93,7 +93,18 @@ impl DualChannel {
     }
 
     pub fn send_protocol_error(&self, error: ServerError) {
-        self.unicast(ServerMessage::ProtocolError { error });
+        self.send_protocol_error_with_switch_nonce(error, None);
+    }
+
+    pub fn send_protocol_error_with_switch_nonce(
+        &self,
+        error: ServerError,
+        switch_nonce: Option<u64>,
+    ) {
+        self.unicast(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+        });
     }
 
     pub fn send_sync_repo_unbound(&self) {
