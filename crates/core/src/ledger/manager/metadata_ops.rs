@@ -62,7 +62,7 @@ impl RepoManager {
 
     /// 运行时主链的 tracked doc 查询 + fail-closed 兼容护栏：
     /// 若当前 path 只剩 legacy path mapping，而 node projection 已缺失，则必须显式报错。
-    pub(crate) fn tracked_docid_or_legacy_error_in_local_repo(
+    pub fn tracked_docid_or_legacy_error_in_local_repo(
         &self,
         repo_name: &str,
         path: &str,

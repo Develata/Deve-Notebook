@@ -25,7 +25,7 @@ pub async fn handle_file_create(
     }
     match state
         .repo
-        .get_tracked_docid_in_local_repo(&scope.repo_name, filename)
+        .tracked_docid_or_legacy_error_in_local_repo(&scope.repo_name, filename)
     {
         Ok(Some(_)) => {
             errors::storage_conflict(ch, format!("Target already tracked: {}", filename));

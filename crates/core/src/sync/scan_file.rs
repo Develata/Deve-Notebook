@@ -37,7 +37,8 @@ pub(super) fn scan_disk_file(
         return Ok(Some(doc_id));
     }
 
-    let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, repo_path)? else {
+    let Some(doc_id) = repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, repo_path)?
+    else {
         pending::upsert(repo, repo_name, repo_path, ChangeStatus::Added, None, None)?;
         return Ok(None);
     };
