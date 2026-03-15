@@ -184,6 +184,43 @@ fn resolve_session_repo_recovers_collision_safe_remote_selector_from_uuid() -> a
 }
 
 #[test]
+fn resolve_session_repo_prefers_uuid_scoped_remote_selector_over_display_name_collision()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    let first = uuid::Uuid::new_v4();
+    let second = uuid::Uuid::new_v4();
+    seed_remote_shadow(&state, &peer_id, first, "wiki")?;
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &deve_core::ledger::RepoInfo {
+            uuid: second,
+            name: "wiki".into(),
+            url: Some("urn:test:wiki-b".into()),
+        },
+    )?;
+    let expected_selector = state
+        .repo
+        .find_remote_repo_selector_by_id(&peer_id, second)?
+        .expect("selector for duplicate remote repo");
+
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("wiki".into(), Some(second));
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.branch, Some(peer_id));
+    assert_eq!(resolved.repo_id, second);
+    assert_eq!(resolved.repo_name, expected_selector);
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(resolved.repo_name.as_str())
+    );
+    Ok(())
+}
+
+#[test]
 fn resolve_session_repo_accepts_exact_collision_safe_remote_selector_without_uuid()
 -> anyhow::Result<()> {
     let (_dir, state, _default_id, _test_id) = build_state()?;

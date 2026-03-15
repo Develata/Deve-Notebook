@@ -11,6 +11,20 @@ pub(super) fn recover_remote_repo_name_from_selector(
 ) -> Result<Option<String>> {
     let resolved = state.repo.find_remote_repo_selector(branch, repo_name)?;
     if resolved.as_deref() == Some(repo_name) {
+        if let Some(expected_repo_id) = expected_repo_id
+            && has_remote_display_name(state, branch, repo_name)?
+            && let Some(selector) =
+                state.repo.find_remote_repo_selector_by_id(branch, expected_repo_id)?
+            && selector != repo_name
+        {
+            tracing::warn!(
+                "Recovering collision-safe remote selector from UUID after ambiguous display-name hit: branch={}, raw_name={}, resolved_selector={}",
+                branch,
+                repo_name,
+                selector
+            );
+            return Ok(Some(selector));
+        }
         return Ok(resolved);
     }
     if let Ok(raw_uuid) = uuid::Uuid::parse_str(repo_name) {
