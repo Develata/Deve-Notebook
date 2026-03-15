@@ -84,6 +84,7 @@ pub fn handle_repo_switched(
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
+        request_repo_projection(ws, signals);
         request_repo_list(ws, signals);
         request_repo_sync_state(ws, signals);
         message_shadow::request_shadow_list(ws, signals);
@@ -155,7 +156,7 @@ fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
 }
 
 fn request_repo_list(ws: &WsService, signals: CoreSignals) {
-    let request_id = uuid::Uuid::new_v4().to_string();
+    let request_id = next_request_id();
     signals
         .set_repo_list_request_id
         .set(Some(request_id.clone()));
@@ -165,13 +166,30 @@ fn request_repo_list(ws: &WsService, signals: CoreSignals) {
     });
 }
 
+fn request_repo_projection(ws: &WsService, signals: CoreSignals) {
+    let request_id = next_request_id();
+    signals
+        .set_doc_list_request_id
+        .set(Some(request_id.clone()));
+    signals.set_tree_request_id.set(Some(request_id.clone()));
+    ws.send(ClientMessage::ListDocs {
+        request_id,
+        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+    });
+}
+
+fn next_request_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
 fn should_request_repo_sync_state(active_branch: Option<PeerId>) -> bool {
     active_branch.is_none()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::should_request_repo_sync_state;
+    use super::{next_request_id, should_request_repo_sync_state};
+    use deve_core::protocol::ClientMessage;
 
     #[test]
     fn repo_sync_state_requests_only_run_on_local_branch() {
@@ -179,5 +197,28 @@ mod tests {
         assert!(!should_request_repo_sync_state(Some(
             deve_core::models::PeerId::new("peer-a")
         )));
+    }
+
+    #[test]
+    fn request_ids_are_non_empty() {
+        let request_id = next_request_id();
+        assert!(!request_id.is_empty());
+        assert!(uuid::Uuid::parse_str(&request_id).is_ok());
+    }
+
+    #[test]
+    fn list_docs_request_keeps_shared_request_id_shape() {
+        let request_id = next_request_id();
+        let msg = ClientMessage::ListDocs {
+            request_id: request_id.clone(),
+            scope_nonce: Some(7),
+        };
+        assert!(matches!(
+            msg,
+            ClientMessage::ListDocs {
+                request_id: actual,
+                scope_nonce: Some(7),
+            } if actual == request_id
+        ));
     }
 }
