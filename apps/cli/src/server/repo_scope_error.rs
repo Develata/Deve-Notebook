@@ -34,6 +34,9 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
         &[
             "remote session lost repo name",
             "cannot bootstrap local repo while on remote branch",
+            "local repo operation requested on remote branch",
+            "local workspace path requested on remote branch",
+            "local workspace root requested on remote branch",
             "repository uuid not resolved",
             "remote repository selector not resolved",
             "local repository uuid not resolved",
@@ -64,6 +67,14 @@ mod tests {
     fn classifies_ambiguous_remote_selector_as_repo_context_invalid() {
         let err = map_repo_scope_error(anyhow::anyhow!(
             "Ambiguous remote repository selector: shadow-wiki"
+        ));
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn classifies_remote_workspace_access_as_repo_context_invalid() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Local workspace path requested on remote branch: wiki"
         ));
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }
