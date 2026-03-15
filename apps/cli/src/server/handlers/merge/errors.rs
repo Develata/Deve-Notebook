@@ -58,6 +58,7 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
             "remote repository selector not resolved",
             "local repository uuid not resolved",
             "ambiguous local repository selector",
+            "ambiguous remote repository selector",
             "local repo not found for uuid",
         ],
     ) {

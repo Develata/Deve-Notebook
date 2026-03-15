@@ -101,6 +101,7 @@ fn classify_listing_error(detail: &str) -> ServerErrorCode {
             "session repo mismatch",
             "repo selector mismatch",
             "ambiguous local repository selector",
+            "ambiguous remote repository selector",
             "local repo not found for uuid",
         ],
     ) {
@@ -130,6 +131,14 @@ mod tests {
     fn classifies_listing_scope_drift_as_repo_context_invalid() {
         assert_eq!(
             classify_listing_error("Remote session lost repo name for current branch"),
+            ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_ambiguous_remote_selector_as_repo_context_invalid() {
+        assert_eq!(
+            classify_listing_error("Ambiguous remote repository selector: shadow-wiki"),
             ServerErrorCode::ScRepoContextInvalid
         );
     }

@@ -65,6 +65,7 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
             "session repo mismatch",
             "repo selector mismatch",
             "ambiguous local repository selector",
+            "ambiguous remote repository selector",
             "local repo not found for uuid",
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",

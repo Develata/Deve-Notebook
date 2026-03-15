@@ -39,6 +39,7 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
             "session repo mismatch",
             "repo selector mismatch",
             "ambiguous local repository selector",
+            "ambiguous remote repository selector",
             "local repo not found for uuid",
             "scope mismatch",
             "stale scope nonce",
@@ -51,4 +52,18 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
 
 fn contains_any(input: &str, patterns: &[&str]) -> bool {
     patterns.iter().any(|pattern| input.contains(pattern))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::map_repo_scope_error;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn classifies_ambiguous_remote_selector_as_repo_context_invalid() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Ambiguous remote repository selector: shadow-wiki"
+        ));
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
 }
