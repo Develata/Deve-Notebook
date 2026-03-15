@@ -95,7 +95,7 @@ fn resolve_repair_docid(
     repo_name: &str,
     repo_path: &str,
 ) -> Result<Option<deve_core::models::DocId>> {
-    repo.get_tracked_docid_in_local_repo(repo_name, repo_path)
+    repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, repo_path)
 }
 
 fn normalize_restore_path(repo_name: &str, path: &str) -> String {

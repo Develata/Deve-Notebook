@@ -27,7 +27,7 @@ fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
 }
 
 #[test]
-fn resolve_repair_docid_ignores_legacy_only_path_mapping() -> anyhow::Result<()> {
+fn resolve_repair_docid_fails_closed_for_legacy_only_path_mapping() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = Arc::new(RepoManager::init(
         dir.path(),
@@ -48,9 +48,11 @@ fn resolve_repair_docid_ignores_legacy_only_path_mapping() -> anyhow::Result<()>
         Ok(())
     })?;
 
-    assert_eq!(
-        resolve_repair_docid(&repo, "default", "notes/legacy.md")?,
-        None
+    let err = resolve_repair_docid(&repo, "default", "notes/legacy.md")
+        .expect_err("legacy-only repair target must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Tracked document projection missing for legacy-mapped path")
     );
     Ok(())
 }
