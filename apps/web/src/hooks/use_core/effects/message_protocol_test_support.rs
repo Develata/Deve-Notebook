@@ -1,0 +1,147 @@
+use super::super::ProtocolControlSignals;
+use crate::hooks::use_core::PendingBranchTarget;
+use leptos::prelude::{GetUntracked, ReadSignal, signal};
+
+pub struct ProtocolSignalHarness {
+    _runtime: leptos::reactive::owner::Owner,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
+    shadow_list_request_id: ReadSignal<Option<String>>,
+    repo_list_request_id: ReadSignal<Option<String>>,
+    doc_list_request_id: ReadSignal<Option<String>>,
+    tree_request_id: ReadSignal<Option<String>>,
+    sync_mode_request_id: ReadSignal<Option<String>>,
+    pending_ops_request_id: ReadSignal<Option<String>>,
+    changes_request_id: ReadSignal<Option<String>>,
+    commit_history_request_id: ReadSignal<Option<String>>,
+    doc_diff_request_id: ReadSignal<Option<String>>,
+    commit_diff_request_id: ReadSignal<Option<String>>,
+    control: ProtocolControlSignals,
+}
+
+pub fn protocol_signal_harness(
+    pending_branch: Option<PendingBranchTarget>,
+    pending_branch_nonce: Option<u64>,
+    pending_repo: Option<&str>,
+    pending_repo_nonce: Option<u64>,
+) -> ProtocolSignalHarness {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (pending_branch_switch, set_pending_branch_switch) = signal(pending_branch);
+    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) =
+        signal(pending_branch_nonce);
+    let (pending_repo_switch, set_pending_repo_switch) = signal(pending_repo.map(str::to_string));
+    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(pending_repo_nonce);
+    let (shadow_list_request_id, set_shadow_list_request_id) = signal(Some("shadow-1".to_string()));
+    let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));
+    let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
+    let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
+    let (sync_mode_request_id, set_sync_mode_request_id) = signal(Some("sync-1".to_string()));
+    let (pending_ops_request_id, set_pending_ops_request_id) =
+        signal(Some("pending-1".to_string()));
+    let (changes_request_id, set_changes_request_id) = signal(Some("changes-1".to_string()));
+    let (commit_history_request_id, set_commit_history_request_id) =
+        signal(Some("history-1".to_string()));
+    let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("diff-1".to_string()));
+    let (commit_diff_request_id, set_commit_diff_request_id) =
+        signal(Some("commit-diff-1".to_string()));
+
+    ProtocolSignalHarness {
+        _runtime: runtime,
+        pending_branch_switch,
+        pending_repo_switch,
+        pending_repo_switch_nonce,
+        shadow_list_request_id,
+        repo_list_request_id,
+        doc_list_request_id,
+        tree_request_id,
+        sync_mode_request_id,
+        pending_ops_request_id,
+        changes_request_id,
+        commit_history_request_id,
+        doc_diff_request_id,
+        commit_diff_request_id,
+        control: ProtocolControlSignals {
+            pending_branch_switch,
+            pending_branch_switch_nonce,
+            set_pending_branch_switch,
+            set_pending_branch_switch_nonce,
+            pending_repo_switch_nonce,
+            set_pending_repo_switch,
+            set_pending_repo_switch_nonce,
+            set_shadow_list_request_id,
+            set_repo_list_request_id,
+            set_doc_list_request_id,
+            set_tree_request_id,
+            set_sync_mode_request_id,
+            set_pending_ops_request_id,
+            set_changes_request_id,
+            set_commit_history_request_id,
+            set_doc_diff_request_id,
+            set_commit_diff_request_id,
+        },
+    }
+}
+
+impl ProtocolSignalHarness {
+    pub fn control(&self) -> ProtocolControlSignals {
+        self.control
+    }
+
+    pub fn assert_all_requests_cleared(&self) {
+        assert_eq!(self.shadow_list_request_id.get_untracked(), None);
+        assert_eq!(self.repo_list_request_id.get_untracked(), None);
+        assert_eq!(self.doc_list_request_id.get_untracked(), None);
+        assert_eq!(self.tree_request_id.get_untracked(), None);
+        assert_eq!(self.sync_mode_request_id.get_untracked(), None);
+        assert_eq!(self.pending_ops_request_id.get_untracked(), None);
+        assert_eq!(self.changes_request_id.get_untracked(), None);
+        assert_eq!(self.commit_history_request_id.get_untracked(), None);
+        assert_eq!(self.doc_diff_request_id.get_untracked(), None);
+        assert_eq!(self.commit_diff_request_id.get_untracked(), None);
+    }
+
+    pub fn assert_all_requests_pending(&self) {
+        assert_eq!(
+            self.shadow_list_request_id.get_untracked().as_deref(),
+            Some("shadow-1")
+        );
+        assert_eq!(
+            self.repo_list_request_id.get_untracked().as_deref(),
+            Some("repo-1")
+        );
+        assert_eq!(
+            self.doc_list_request_id.get_untracked().as_deref(),
+            Some("doc-1")
+        );
+        assert_eq!(
+            self.tree_request_id.get_untracked().as_deref(),
+            Some("tree-1")
+        );
+        assert_eq!(
+            self.sync_mode_request_id.get_untracked().as_deref(),
+            Some("sync-1")
+        );
+        assert_eq!(
+            self.pending_ops_request_id.get_untracked().as_deref(),
+            Some("pending-1")
+        );
+        assert_eq!(
+            self.changes_request_id.get_untracked().as_deref(),
+            Some("changes-1")
+        );
+        assert_eq!(
+            self.commit_history_request_id.get_untracked().as_deref(),
+            Some("history-1")
+        );
+        assert_eq!(
+            self.doc_diff_request_id.get_untracked().as_deref(),
+            Some("diff-1")
+        );
+        assert_eq!(
+            self.commit_diff_request_id.get_untracked().as_deref(),
+            Some("commit-diff-1")
+        );
+    }
+}

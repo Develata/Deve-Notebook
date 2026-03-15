@@ -7,6 +7,7 @@ mod message;
 mod message_control;
 mod message_dispatch;
 mod message_dispatch_gate;
+mod message_dispatch_protocol;
 mod message_projection;
 mod message_protocol;
 mod message_refresh;

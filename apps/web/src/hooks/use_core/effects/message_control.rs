@@ -61,7 +61,7 @@ pub fn handle_repo_switched(
     ) {
         return;
     }
-    if effects_switch::handle_repo_switched(
+    let outcome = effects_switch::handle_repo_switched(
         name,
         uuid,
         switch_nonce,
@@ -78,7 +78,8 @@ pub fn handle_repo_switched(
             set_current_repo_id: signals.set_current_repo_id,
             set_current_doc: signals.set_current_doc,
         },
-    ) {
+    );
+    if outcome.should_refresh {
         ws.clear_writer_ready();
         signals.set_handshake_ready.set(false);
         signals.set_docs.set(Vec::new());

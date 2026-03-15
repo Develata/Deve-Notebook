@@ -9,17 +9,15 @@ use super::message_control;
 use super::message_dispatch_gate::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
 };
+use super::message_dispatch_protocol::{handle_shadow_list_message, protocol_control_signals};
 use super::message_projection::{handle_doc_list, handle_tree_update};
-use super::message_protocol::{ProtocolControlSignals, handle_protocol_error};
+use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
     handle_sync_mode_status,
 };
-use super::message_scope::{
-    RepoListScope, RequestMatch, ShadowListScope, repo_list_matches_scope,
-    shadow_list_matches_scope,
-};
+use super::message_scope::{RepoListScope, RequestMatch, repo_list_matches_scope};
 use super::message_shadow;
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
@@ -125,25 +123,7 @@ pub fn handle_message<F>(
             request_id,
             scope_nonce,
             shadows,
-        } => {
-            if shadow_list_matches_scope(
-                RequestMatch {
-                    message_id: request_id.as_deref(),
-                    expected_id: signals.shadow_list_request_id.get_untracked().as_deref(),
-                    scope_nonce,
-                    current_scope_nonce: signals.current_scope_nonce.get_untracked(),
-                },
-                &ShadowListScope {
-                    pending_branch_switch: signals.pending_branch_switch.get_untracked(),
-                    pending_repo_switch: signals.pending_repo_switch.get_untracked(),
-                },
-            ) {
-                if request_id.is_some() {
-                    signals.set_shadow_list_request_id.set(None);
-                }
-                message_shadow::handle_shadow_list(shadows, request_id.is_some(), ws, signals);
-            }
-        }
+        } => handle_shadow_list_message(request_id, scope_nonce, shadows, ws, signals),
         ServerMessage::RepoList {
             request_id,
             branch,
@@ -189,25 +169,7 @@ pub fn handle_message<F>(
             message_shadow::handle_peer_deleted(peer_id, ws, signals);
         }
         ServerMessage::EditRejected { error } => {
-            handle_protocol_error(
-                ws,
-                locale,
-                &error,
-                None,
-                ProtocolControlSignals {
-                    pending_branch_switch: signals.pending_branch_switch,
-                    pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
-                    set_pending_branch_switch: signals.set_pending_branch_switch,
-                    set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
-                    pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
-                    set_pending_repo_switch: signals.set_pending_repo_switch,
-                    set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
-                    set_shadow_list_request_id: signals.set_shadow_list_request_id,
-                    set_repo_list_request_id: signals.set_repo_list_request_id,
-                    set_doc_list_request_id: signals.set_doc_list_request_id,
-                    set_tree_request_id: signals.set_tree_request_id,
-                },
-            );
+            handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
         }
         ServerMessage::ProtocolError {
             error,
@@ -218,19 +180,7 @@ pub fn handle_message<F>(
                 locale,
                 &error,
                 switch_nonce,
-                ProtocolControlSignals {
-                    pending_branch_switch: signals.pending_branch_switch,
-                    pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
-                    set_pending_branch_switch: signals.set_pending_branch_switch,
-                    set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
-                    pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
-                    set_pending_repo_switch: signals.set_pending_repo_switch,
-                    set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
-                    set_shadow_list_request_id: signals.set_shadow_list_request_id,
-                    set_repo_list_request_id: signals.set_repo_list_request_id,
-                    set_doc_list_request_id: signals.set_doc_list_request_id,
-                    set_tree_request_id: signals.set_tree_request_id,
-                },
+                protocol_control_signals(signals),
             );
         }
         ServerMessage::WriteReady {

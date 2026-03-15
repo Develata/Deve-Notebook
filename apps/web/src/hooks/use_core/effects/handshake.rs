@@ -40,13 +40,18 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let pending_branch_switch = signals.pending_branch_switch.get();
         let pending_repo_switch = signals.pending_repo_switch.get();
         let is_reconnect_bootstrap = last_mode.borrow().is_none();
+        let should_restore = should_restore_session_scope(
+            is_reconnect_bootstrap,
+            pending_branch_switch.as_ref(),
+            pending_repo_switch.as_deref(),
+        );
         if should_suspend_handshake(
             &branch,
             pending_branch_switch.as_ref(),
             pending_repo_switch.as_deref(),
         ) {
             *last_mode.borrow_mut() = None;
-            if is_reconnect_bootstrap {
+            if should_restore {
                 restore_session_scope(
                     &ws,
                     signals,
@@ -81,7 +86,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
         {
             *last_mode.borrow_mut() = None;
-            if is_reconnect_bootstrap {
+            if should_restore {
                 restore_session_scope(
                     &ws,
                     signals,
@@ -99,7 +104,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());
-                if is_reconnect_bootstrap {
+                if should_restore {
                     restore_session_scope(
                         &ws,
                         signals,
@@ -117,7 +122,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                 return;
             };
 
-            if is_reconnect_bootstrap {
+            if should_restore {
                 restore_session_scope(
                     &ws,
                     signals,
@@ -213,45 +218,14 @@ fn should_suspend_handshake(
     branch.is_some() || pending_branch_switch.is_some() || pending_repo_switch.is_some()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{handshake_mode_key, should_suspend_handshake};
-    use crate::hooks::use_core::PendingBranchTarget;
-    use deve_core::models::PeerId;
-
-    #[test]
-    fn suspends_handshake_while_viewing_shadow_branch() {
-        assert!(should_suspend_handshake(
-            &Some(PeerId::new("peer-a")),
-            None,
-            None,
-        ));
-    }
-
-    #[test]
-    fn suspends_handshake_while_branch_switch_is_pending() {
-        assert!(should_suspend_handshake(
-            &None,
-            Some(&PendingBranchTarget::Shadow("peer-a".into())),
-            None,
-        ));
-    }
-
-    #[test]
-    fn suspends_handshake_while_repo_switch_is_pending() {
-        assert!(should_suspend_handshake(&None, None, Some("default")));
-    }
-
-    #[test]
-    fn keeps_handshake_enabled_for_local_bound_repo() {
-        assert!(!should_suspend_handshake(&None, None, None));
-    }
-
-    #[test]
-    fn handshake_mode_key_distinguishes_local_and_shadow_scope() {
-        let local = handshake_mode_key("ws://a", None, Some("repo-1"), None);
-        let shadow =
-            handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")));
-        assert_ne!(local, shadow);
-    }
+fn should_restore_session_scope(
+    is_reconnect_bootstrap: bool,
+    pending_branch_switch: Option<&super::super::PendingBranchTarget>,
+    pending_repo_switch: Option<&str>,
+) -> bool {
+    is_reconnect_bootstrap && pending_branch_switch.is_none() && pending_repo_switch.is_none()
 }
+
+#[cfg(test)]
+#[path = "handshake_test.rs"]
+mod tests;

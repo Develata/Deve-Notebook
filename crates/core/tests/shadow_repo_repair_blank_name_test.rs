@@ -42,7 +42,8 @@ fn remote_catalog_repair_uses_uuid_selector_for_blank_non_uuid_shadow_name() {
         .expect("repair remote catalogs");
 
     assert_eq!(
-        repo.list_repos(Some(&peer_id)).expect("list repaired shadows"),
+        repo.list_repos(Some(&peer_id))
+            .expect("list repaired shadows"),
         vec![info.uuid.to_string()]
     );
     assert!(

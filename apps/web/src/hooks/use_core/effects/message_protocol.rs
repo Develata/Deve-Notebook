@@ -17,6 +17,12 @@ pub struct ProtocolControlSignals {
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
     pub set_tree_request_id: WriteSignal<Option<String>>,
+    pub set_sync_mode_request_id: WriteSignal<Option<String>>,
+    pub set_pending_ops_request_id: WriteSignal<Option<String>>,
+    pub set_changes_request_id: WriteSignal<Option<String>>,
+    pub set_commit_history_request_id: WriteSignal<Option<String>>,
+    pub set_doc_diff_request_id: WriteSignal<Option<String>>,
+    pub set_commit_diff_request_id: WriteSignal<Option<String>>,
 }
 
 pub fn handle_protocol_error(
@@ -59,6 +65,12 @@ fn clear_failed_scope_switch(
     signals.set_repo_list_request_id.set(None);
     signals.set_doc_list_request_id.set(None);
     signals.set_tree_request_id.set(None);
+    signals.set_sync_mode_request_id.set(None);
+    signals.set_pending_ops_request_id.set(None);
+    signals.set_changes_request_id.set(None);
+    signals.set_commit_history_request_id.set(None);
+    signals.set_doc_diff_request_id.set(None);
+    signals.set_commit_diff_request_id.set(None);
     if clear_branch {
         signals.set_pending_branch_switch.set(None);
         signals.set_pending_branch_switch_nonce.set(None);
