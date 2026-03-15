@@ -3,7 +3,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::models::Op;
 use deve_core::sync::{SyncManager, reconcile};
 use deve_core::utils::path::to_forward_slash;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub(super) fn restore_docs_from_backup(
@@ -70,17 +70,24 @@ fn restore_repo(
 fn find_loading_corruption(repo: &Arc<RepoManager>, repo_name: &str) -> Result<Vec<String>> {
     let mut targets = Vec::new();
     for (_, repo_path) in repo.list_local_docs(Some(repo_name))? {
-        let path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
-        let Ok(current) = std::fs::read_to_string(&path) else {
-            continue;
-        };
-        if current.starts_with("# Loading...")
+        if workspace_starts_with_loading(repo, repo_name, &repo_path)?
             && resolve_repair_docid(repo, repo_name, &repo_path)?.is_some()
         {
             targets.push(repo_path);
         }
     }
     Ok(targets)
+}
+
+fn workspace_starts_with_loading(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    repo_path: &str,
+) -> Result<bool> {
+    let path = repo.local_repo_workspace_path(repo_name, repo_path)?;
+    Ok(std::fs::read_to_string(path)
+        .map(|current| current.starts_with("# Loading..."))
+        .unwrap_or(false))
 }
 
 fn resolve_repair_docid(
@@ -100,11 +107,7 @@ fn normalize_restore_path(repo_name: &str, path: &str) -> String {
         .unwrap_or(path)
 }
 
-fn resolve_backup_path(
-    backup_root: &Path,
-    repo_name: &str,
-    repo_path: &str,
-) -> Option<std::path::PathBuf> {
+fn resolve_backup_path(backup_root: &Path, repo_name: &str, repo_path: &str) -> Option<PathBuf> {
     let prefixed = backup_root.join(repo_name).join(repo_path);
     prefixed.exists().then_some(prefixed)
 }
@@ -131,84 +134,5 @@ fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{normalize_restore_path, resolve_backup_path, resolve_repair_docid};
-    use deve_core::ledger::RepoManager;
-    use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
-    use deve_core::models::DocId;
-    use std::sync::Arc;
-    use tempfile::tempdir;
-
-    #[test]
-    fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
-        let dir = tempdir()?;
-        let repo = Arc::new(RepoManager::init(
-            dir.path(),
-            10,
-            Some("default"),
-            Some("urn:default"),
-        )?);
-        let doc_id = DocId::new();
-        repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
-        assert_eq!(
-            resolve_repair_docid(&repo, "default", "notes/live.md")?,
-            Some(doc_id)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_repair_docid_ignores_legacy_only_path_mapping() -> anyhow::Result<()> {
-        let dir = tempdir()?;
-        let repo = Arc::new(RepoManager::init(
-            dir.path(),
-            10,
-            Some("default"),
-            Some("urn:default"),
-        )?);
-        let doc_id = DocId::new();
-        repo.run_on_local_repo("default", |db| {
-            let write = db.begin_write()?;
-            {
-                let mut p2d = write.open_table(PATH_TO_DOCID)?;
-                let mut d2p = write.open_table(DOCID_TO_PATH)?;
-                p2d.insert("notes/legacy.md", doc_id.as_u128())?;
-                d2p.insert(doc_id.as_u128(), "notes/legacy.md")?;
-            }
-            write.commit()?;
-            Ok(())
-        })?;
-
-        assert_eq!(
-            resolve_repair_docid(&repo, "default", "notes/legacy.md")?,
-            None
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_backup_path_requires_repo_scoped_backup_layout() -> anyhow::Result<()> {
-        let dir = tempdir()?;
-        let direct = dir.path().join("notes/live.md");
-        std::fs::create_dir_all(direct.parent().expect("parent"))?;
-        std::fs::write(&direct, "backup")?;
-
-        assert_eq!(
-            resolve_backup_path(dir.path(), "default", "notes/live.md"),
-            None
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn normalize_restore_path_strips_repo_prefix() {
-        assert_eq!(
-            normalize_restore_path("default", "default/notes/live.md"),
-            "notes/live.md"
-        );
-        assert_eq!(
-            normalize_restore_path("default", "notes/live.md"),
-            "notes/live.md"
-        );
-    }
-}
+#[path = "restore_test.rs"]
+mod tests;

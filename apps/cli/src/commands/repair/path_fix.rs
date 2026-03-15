@@ -27,7 +27,7 @@ pub(super) fn repair_repo_prefixed_paths(
             }
             repo.repair_rename_doc_mapping_in_local_repo(repo_name, &old_path, stripped)?;
             rename_workspace_file(repo, repo_name, &old_path, stripped)?;
-            move_pending(repo, repo_name, &old_path, stripped)?;
+            move_pending(repo, repo_name, doc_id, &old_path, stripped)?;
             println!(
                 "repair: normalized repo path {}:{} -> {}",
                 repo_name, old_path, stripped
@@ -71,9 +71,18 @@ fn rename_workspace_file(
     Ok(())
 }
 
-fn move_pending(repo: &RepoManager, repo_name: &str, old_path: &str, new_path: &str) -> Result<()> {
+fn move_pending(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: deve_core::models::DocId,
+    old_path: &str,
+    new_path: &str,
+) -> Result<()> {
     repo.run_on_local_repo(repo_name, |db| {
-        let Some(entry) = pending_fs::get(db, old_path)? else {
+        let Some(entry) = pending_fs::list_for_doc(db, doc_id)?
+            .into_iter()
+            .find(|entry| entry.path == old_path)
+        else {
             return Ok(());
         };
         pending_fs::remove(db, old_path)?;
@@ -106,10 +115,12 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
 
 #[cfg(test)]
 mod tests {
-    use super::path_exists_for_repair;
+    use super::{move_pending, path_exists_for_repair};
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use deve_core::models::DocId;
+    use deve_core::source_control::ChangeStatus;
+    use deve_core::source_control::pending_fs::{self, PendingFsEntry};
     use std::sync::Arc;
     use tempfile::tempdir;
 
@@ -181,6 +192,44 @@ mod tests {
             "notes/live.md",
             DocId::new()
         )?);
+        Ok(())
+    }
+
+    #[test]
+    fn move_pending_ignores_entries_without_matching_doc_id() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path(),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        repo.run_on_local_repo("default", |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "default/notes/live.md".into(),
+                    renamed_from: None,
+                    doc_id: None,
+                    change_type: ChangeStatus::Modified,
+                    content_hash: String::new(),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })?;
+
+        move_pending(
+            &repo,
+            "default",
+            DocId::new(),
+            "default/notes/live.md",
+            "notes/live.md",
+        )?;
+        let old_exists = repo.run_on_local_repo("default", |db| {
+            Ok(pending_fs::get(db, "default/notes/live.md")?.is_some())
+        })?;
+        assert!(old_exists);
         Ok(())
     }
 }
