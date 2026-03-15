@@ -35,7 +35,7 @@ pub mod init;
 mod init_reuse;
 pub mod inode_index;
 pub mod listing;
-mod manager;
+pub(crate) mod manager;
 pub mod merge;
 pub mod metadata;
 pub mod node_check;

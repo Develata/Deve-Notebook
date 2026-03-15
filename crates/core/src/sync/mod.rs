@@ -30,6 +30,8 @@ pub(crate) mod rebuild;
 #[cfg(not(target_arch = "wasm32"))]
 mod rebuild_projection;
 #[cfg(not(target_arch = "wasm32"))]
+mod rebuild_projection_state;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod reconcile;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod repo_scoped;

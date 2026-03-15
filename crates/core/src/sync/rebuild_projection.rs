@@ -1,6 +1,7 @@
 use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;
+use super::rebuild_projection_state;
 use crate::ledger::RepoManager;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
@@ -24,6 +25,7 @@ pub(super) fn rebuild_local_repo(
     std::fs::create_dir_all(&root)?;
     std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
     let plan = projection_plan::build(repo, repo_name)?;
+    rebuild_projection_state::rebuild_local_projection_state(repo, repo_name)?;
     for dir in &plan.dirs {
         if dir.is_empty() {
             continue;
