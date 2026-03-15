@@ -73,6 +73,7 @@ pub(super) fn validate_branch_target(
 
 pub(super) fn select_target_repo(
     state: &Arc<AppState>,
+    had_current_repo_hint: bool,
     current_repo_id: Option<RepoId>,
     current_repo_name: Option<&str>,
     current_repo_url: Option<String>,
@@ -84,14 +85,8 @@ pub(super) fn select_target_repo(
         return Ok(Some(selector));
     }
     if let Some(repo_name) = current_repo_name
+        && (target_branch.is_none() || uuid::Uuid::parse_str(repo_name).is_ok())
         && let Some(selector) = recover_selector_from_raw_name(state, target_branch, repo_name)?
-    {
-        return Ok(Some(selector));
-    }
-    if let Some(repo_name) = current_repo_name
-        && let Some(info) = state.repo.get_repo_info_for(target_branch, Some(repo_name))?
-        && let Some(selector) =
-            recover_canonical_selector(state, target_branch, repo_name, info.uuid)?
     {
         return Ok(Some(selector));
     }
@@ -111,7 +106,7 @@ pub(super) fn select_target_repo(
             .collect::<Vec<_>>();
         return Ok((matches.len() == 1).then(|| matches[0].clone()));
     }
-    if current_repo_name.is_some() || current_repo_id.is_some() {
+    if had_current_repo_hint || current_repo_name.is_some() || current_repo_id.is_some() {
         return Ok(None);
     }
     Ok((repos.len() == 1).then(|| repos[0].clone()))
@@ -167,33 +162,10 @@ pub(super) fn resolve_requested_repo_name(
     if let Some(selector) = recover_selector_from_raw_name(state, branch, repo_name)? {
         return Ok(Some(selector));
     }
-    if let Some(info) = state.repo.get_repo_info_for(branch, Some(repo_name))?
-        && let Some(selector) = recover_canonical_selector(state, branch, repo_name, info.uuid)?
-    {
-        return Ok(Some(selector));
-    }
     let repos = state.repo.list_repos(branch)?;
     Ok(repos
         .contains(&repo_name.to_string())
         .then(|| repo_name.to_string()))
-}
-
-pub(super) fn recover_canonical_selector(
-    state: &Arc<AppState>,
-    branch: Option<&PeerId>,
-    raw_repo_name: &str,
-    repo_id: RepoId,
-) -> anyhow::Result<Option<String>> {
-    let resolved = select_repo_selector_by_id(state, branch, repo_id)?;
-    if resolved.is_none() {
-        tracing::warn!(
-            "Refusing to recover execution selector from raw repo name without UUID mapping: branch={:?}, raw_name={}, repo_id={}",
-            branch,
-            raw_repo_name,
-            repo_id
-        );
-    }
-    Ok(resolved)
 }
 
 fn recover_selector_from_raw_name(
@@ -201,16 +173,19 @@ fn recover_selector_from_raw_name(
     branch: Option<&PeerId>,
     raw_repo_name: &str,
 ) -> anyhow::Result<Option<String>> {
-    if branch.is_none() {
+    let Some(branch) = branch else {
         return Ok(state
             .repo
             .resolve_local_repo_name_for_execution(None, Some(raw_repo_name))
             .ok());
-    }
-    let Ok(repo_id) = uuid::Uuid::parse_str(raw_repo_name) else {
-        return Ok(None);
     };
-    select_repo_selector_by_id(state, branch, repo_id)
+    if let Ok(repo_id) = uuid::Uuid::parse_str(raw_repo_name) {
+        return select_repo_selector_by_id(state, Some(branch), repo_id);
+    }
+    Ok(state
+        .repo
+        .find_remote_repo_selector(branch, raw_repo_name)?
+        .filter(|selector| selector == raw_repo_name))
 }
 
 pub(super) fn commit_session_switch(

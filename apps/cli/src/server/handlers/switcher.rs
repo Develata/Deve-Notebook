@@ -32,7 +32,9 @@ pub async fn handle_switch_branch(
         return;
     };
 
-    let current_repo_url = resolve_session_repo(state, session).ok().and_then(|scope| {
+    let had_current_repo_hint = session.active_repo.is_some() || session.active_repo_id.is_some();
+    let current_scope = resolve_session_repo(state, session).ok();
+    let current_repo_url = current_scope.as_ref().and_then(|scope| {
         state
             .repo
             .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
@@ -44,8 +46,9 @@ pub async fn handle_switch_branch(
 
     let target_repo = match select_target_repo(
         state,
-        session.active_repo_id,
-        session.active_repo.as_deref(),
+        had_current_repo_hint,
+        current_scope.as_ref().map(|scope| scope.repo_id),
+        current_scope.as_ref().map(|scope| scope.repo_name.as_str()),
         current_repo_url,
         target_branch_ref,
     ) {

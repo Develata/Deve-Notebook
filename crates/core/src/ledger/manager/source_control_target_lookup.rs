@@ -3,7 +3,7 @@ use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, ChangeStatus, pending_fs, staging};
 use crate::utils::path::to_forward_slash;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 use std::collections::HashSet;
 
@@ -18,15 +18,17 @@ pub(super) fn resolve_change_path(
         if let Some(resolved) = resolve_from_entries(&entries, &path, Some(doc_id)) {
             return Ok(resolved);
         }
+        if let Some(canonical) = resolve_canonical_path(repo, repo_name, doc_id)? {
+            return Ok(canonical);
+        }
+        return Err(anyhow!(
+            "Source control target not resolved for doc {} at {}",
+            doc_id,
+            path
+        ));
     }
     let entries = repo.list_changes_in_local_repo(repo_name)?;
-    let canonical = target
-        .doc_id
-        .and_then(|doc_id| resolve_canonical_path(repo, repo_name, doc_id).transpose())
-        .transpose()?;
-    Ok(resolve_from_entries(&entries, &path, target.doc_id)
-        .or(canonical)
-        .unwrap_or(path))
+    Ok(resolve_from_entries(&entries, &path, None).unwrap_or(path))
 }
 
 fn resolve_canonical_path(

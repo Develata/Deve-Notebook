@@ -118,11 +118,7 @@ fn resolve_backup_path(
     repo_path: &str,
 ) -> Option<std::path::PathBuf> {
     let prefixed = backup_root.join(repo_name).join(repo_path);
-    if prefixed.exists() {
-        return Some(prefixed);
-    }
-    let direct = backup_root.join(repo_path);
-    direct.exists().then_some(direct)
+    prefixed.exists().then_some(prefixed)
 }
 
 fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
@@ -148,7 +144,7 @@ fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_repair_docid;
+    use super::{resolve_backup_path, resolve_repair_docid};
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use deve_core::models::DocId;
@@ -199,6 +195,17 @@ mod tests {
             resolve_repair_docid(&repo, "default", "notes/legacy.md")?,
             None
         );
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_backup_path_requires_repo_scoped_backup_layout() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let direct = dir.path().join("notes/live.md");
+        std::fs::create_dir_all(direct.parent().expect("parent"))?;
+        std::fs::write(&direct, "backup")?;
+
+        assert_eq!(resolve_backup_path(dir.path(), "default", "notes/live.md"), None);
         Ok(())
     }
 }

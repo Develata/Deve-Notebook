@@ -1,6 +1,4 @@
-use super::switcher_prepare::{
-    recover_canonical_selector, resolve_requested_repo_name, select_target_repo,
-};
+use super::switcher_prepare::{resolve_requested_repo_name, select_target_repo};
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
@@ -64,7 +62,7 @@ fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyho
     let (_dir, state) = build_state()?;
     let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let selected = select_target_repo(&state, Some(second_id), None, None, Some(&peer_id))?
+    let selected = select_target_repo(&state, false, Some(second_id), None, None, Some(&peer_id))?
         .expect("selector for second wiki repo");
     assert_eq!(selected, second_selector);
     Ok(())
@@ -78,6 +76,7 @@ fn select_target_repo_recovers_remote_selector_from_uuid_string_without_repo_id(
 
     let selected = select_target_repo(
         &state,
+        false,
         None,
         Some(&second_id.to_string()),
         None,
@@ -102,6 +101,18 @@ fn resolve_requested_repo_name_recovers_remote_selector_from_uuid_string_without
 }
 
 #[test]
+fn resolve_requested_repo_name_accepts_exact_remote_selector_without_uuid() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, _first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let selected =
+        resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, None)?
+            .expect("exact remote selector");
+    assert_eq!(selected, second_selector);
+    Ok(())
+}
+
+#[test]
 fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
@@ -111,7 +122,7 @@ fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> 
         .expect("test repo info")
         .uuid;
 
-    let selected = select_target_repo(&state, None, Some(&test_id.to_string()), None, None)?
+    let selected = select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)?
         .expect("canonical local repo stem");
     assert_eq!(selected, "test");
     Ok(())
@@ -136,41 +147,12 @@ fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyho
 
     let selected = select_target_repo(
         &state,
+        false,
         None,
         None,
         Some("urn:test:shared".into()),
         Some(&peer_id),
     )?;
-    assert_eq!(selected, None);
-    Ok(())
-}
-
-#[test]
-fn recover_canonical_selector_rejects_local_raw_name_without_uuid_mapping() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-
-    let selected = recover_canonical_selector(&state, None, "wiki", uuid::Uuid::new_v4())?;
-
-    assert_eq!(selected, None);
-    Ok(())
-}
-
-#[test]
-fn recover_canonical_selector_rejects_remote_raw_name_without_uuid_mapping() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let peer_id = PeerId::new("peer-remote");
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
-            name: "wiki".into(),
-            url: Some("urn:test:wiki".into()),
-        },
-    )?;
-
-    let selected =
-        recover_canonical_selector(&state, Some(&peer_id), "wiki", uuid::Uuid::new_v4())?;
-
     assert_eq!(selected, None);
     Ok(())
 }
