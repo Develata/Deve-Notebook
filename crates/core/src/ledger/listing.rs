@@ -135,8 +135,7 @@ impl RepoListing for RepoManager {
     fn list_switchable_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
         for peer_id in self.list_shadows_on_disk()? {
-            let entries = self.scan_remote_repo_entries_without_repair(&peer_id)?;
-            if entries.iter().any(|entry| entry.is_readable()) {
+            if !self.list_repos(Some(&peer_id))?.is_empty() {
                 peers.push(peer_id);
             }
         }

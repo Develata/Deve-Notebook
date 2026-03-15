@@ -95,3 +95,41 @@ fn switchable_shadow_list_hides_peers_with_only_broken_repos() {
         vec![good_peer]
     );
 }
+
+#[test]
+fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let peer_id = PeerId::new("peer-dup");
+    let info = deve_core::ledger::RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:notes".into()),
+    };
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    for stem in ["notes", "notes-1"] {
+        let db = redb::Database::create(peer_dir.join(format!("{stem}.redb"))).expect("shadow db");
+        let write = db.begin_write().expect("write txn");
+        write
+            .open_table(deve_core::ledger::schema::REPO_METADATA)
+            .expect("repo metadata")
+            .insert(
+                &0,
+                bincode::serialize(&info).expect("serialize info").as_slice(),
+            )
+            .expect("write info");
+        write.commit().expect("commit");
+    }
+
+    assert!(
+        repo.list_repos(Some(&peer_id)).expect("list dup repos").is_empty(),
+        "duplicate uuid shadows must be hidden from repo listing"
+    );
+    assert!(
+        repo.list_switchable_shadows_on_disk()
+            .expect("list switchable shadows")
+            .is_empty(),
+        "duplicate uuid shadow peer must not be switchable"
+    );
+}
