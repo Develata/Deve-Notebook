@@ -2,8 +2,7 @@ use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::models::Op;
 use deve_core::sync::{SyncManager, reconcile};
-use deve_core::utils::notegit::is_internal_repo_path;
-use deve_core::utils::path::{path_to_forward_slash, to_forward_slash};
+use deve_core::utils::path::to_forward_slash;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -31,7 +30,10 @@ fn restore_repo(
     let targets = if paths.is_empty() {
         find_loading_corruption(repo, repo_name)?
     } else {
-        paths.iter().map(|path| to_forward_slash(path)).collect()
+        paths
+            .iter()
+            .map(|path| normalize_restore_path(repo_name, path))
+            .collect()
     };
     let mut restored = 0usize;
     for repo_path in targets {
@@ -66,42 +68,19 @@ fn restore_repo(
 }
 
 fn find_loading_corruption(repo: &Arc<RepoManager>, repo_name: &str) -> Result<Vec<String>> {
-    let root = repo.local_repo_workspace_root(repo_name)?;
     let mut targets = Vec::new();
-    walk_repo(repo, repo_name, &root, &root, &mut targets)?;
-    Ok(targets)
-}
-
-fn walk_repo(
-    repo: &Arc<RepoManager>,
-    repo_name: &str,
-    root: &Path,
-    dir: &Path,
-    targets: &mut Vec<String>,
-) -> Result<()> {
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            walk_repo(repo, repo_name, root, &path, targets)?;
+    for (_, repo_path) in repo.list_local_docs(Some(repo_name))? {
+        let path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
+        let Ok(current) = std::fs::read_to_string(&path) else {
             continue;
-        }
-        if path.extension().and_then(|ext| ext.to_str()) != Some("md") {
-            continue;
-        }
-        let rel = path.strip_prefix(root)?;
-        let repo_path = path_to_forward_slash(rel);
-        if is_internal_repo_path(&repo_path) {
-            continue;
-        }
-        let current = std::fs::read_to_string(&path).unwrap_or_default();
+        };
         if current.starts_with("# Loading...")
             && resolve_repair_docid(repo, repo_name, &repo_path)?.is_some()
         {
             targets.push(repo_path);
         }
     }
-    Ok(())
+    Ok(targets)
 }
 
 fn resolve_repair_docid(
@@ -110,6 +89,15 @@ fn resolve_repair_docid(
     repo_path: &str,
 ) -> Result<Option<deve_core::models::DocId>> {
     repo.get_tracked_docid_in_local_repo(repo_name, repo_path)
+}
+
+fn normalize_restore_path(repo_name: &str, path: &str) -> String {
+    let path = to_forward_slash(path);
+    path.strip_prefix(repo_name)
+        .and_then(|rest| rest.strip_prefix('/'))
+        .filter(|rest| !rest.is_empty())
+        .map(str::to_string)
+        .unwrap_or(path)
 }
 
 fn resolve_backup_path(
@@ -144,7 +132,7 @@ fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_backup_path, resolve_repair_docid};
+    use super::{normalize_restore_path, resolve_backup_path, resolve_repair_docid};
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use deve_core::models::DocId;
@@ -210,5 +198,17 @@ mod tests {
             None
         );
         Ok(())
+    }
+
+    #[test]
+    fn normalize_restore_path_strips_repo_prefix() {
+        assert_eq!(
+            normalize_restore_path("default", "default/notes/live.md"),
+            "notes/live.md"
+        );
+        assert_eq!(
+            normalize_restore_path("default", "notes/live.md"),
+            "notes/live.md"
+        );
     }
 }

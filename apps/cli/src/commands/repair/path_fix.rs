@@ -15,14 +15,14 @@ pub(super) fn repair_repo_prefixed_paths(
             continue;
         }
         let docs = repo.list_local_docs(Some(repo_name))?;
-        for (_doc_id, old_path) in docs {
+        for (doc_id, old_path) in docs {
             let Some(stripped) = old_path
                 .strip_prefix(repo_name.as_str())
                 .and_then(|rest| rest.strip_prefix('/'))
             else {
                 continue;
             };
-            if stripped.is_empty() || path_exists_for_repair(repo, repo_name, stripped)? {
+            if stripped.is_empty() || path_exists_for_repair(repo, repo_name, stripped, doc_id)? {
                 continue;
             }
             repo.repair_rename_doc_mapping_in_local_repo(repo_name, &old_path, stripped)?;
@@ -38,10 +38,15 @@ pub(super) fn repair_repo_prefixed_paths(
     Ok(fixed)
 }
 
-fn path_exists_for_repair(repo: &Arc<RepoManager>, repo_name: &str, path: &str) -> Result<bool> {
+fn path_exists_for_repair(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    path: &str,
+    doc_id: deve_core::models::DocId,
+) -> Result<bool> {
     Ok(repo
         .get_tracked_docid_in_local_repo(repo_name, path)?
-        .is_some())
+        .is_some_and(|existing| existing != doc_id))
 }
 
 fn rename_workspace_file(
@@ -117,7 +122,13 @@ mod tests {
             Some("default"),
             Some("urn:default"),
         )?);
-        assert!(!path_exists_for_repair(&repo, "default", "notes/a.md")?);
+        let doc_id = DocId::new();
+        assert!(!path_exists_for_repair(
+            &repo,
+            "default",
+            "notes/a.md",
+            doc_id
+        )?);
         Ok(())
     }
 
@@ -146,7 +157,29 @@ mod tests {
         assert!(!path_exists_for_repair(
             &repo,
             "default",
-            "notes/legacy.md"
+            "notes/legacy.md",
+            DocId::new()
+        )?);
+        Ok(())
+    }
+
+    #[test]
+    fn path_exists_for_repair_rejects_other_tracked_doc() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path(),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        let live = DocId::new();
+        repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(live), "test")?;
+
+        assert!(path_exists_for_repair(
+            &repo,
+            "default",
+            "notes/live.md",
+            DocId::new()
         )?);
         Ok(())
     }
