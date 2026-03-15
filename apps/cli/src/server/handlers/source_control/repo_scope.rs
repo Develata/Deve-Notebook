@@ -8,6 +8,10 @@ pub fn resolve_current_repo_scope(
     session: &mut WsSession,
 ) -> Result<ResolvedRepo, ServerError> {
     if session.active_repo.is_none() && session.active_repo_id.is_none() {
+        if session.active_branch.is_some() {
+            session.clear_active_db();
+            session.clear_sync_binding();
+        }
         return Err(ServerError::new(ServerErrorCode::ScRepoNotSelected));
     }
     resolve_session_repo_and_sync(state, session).map_err(super::errors::map_repo_scope_error)

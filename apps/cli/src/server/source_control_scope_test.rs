@@ -202,3 +202,37 @@ async fn readonly_remote_changes_are_allowed_without_locked_db() -> anyhow::Resu
     assert!(paths.is_empty());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remote_changes_without_repo_selection_clear_stale_db_and_sync_binding()
+-> anyhow::Result<()> {
+    let (_dir, state, default_id, _test_id) = build_state()?;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some("peer-a".into()));
+    session.set_active_db(local_handle);
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(default_id);
+    session.set_sync_scope_nonce(13);
+
+    handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoNotSelected
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
