@@ -168,6 +168,13 @@ impl RepoManager {
             .map(|entry| entry.stem))
     }
 
+    pub fn has_remote_display_name(&self, peer_id: &PeerId, raw_name: &str) -> Result<bool> {
+        Ok(self
+            .scan_remote_repo_entries(peer_id)?
+            .into_iter()
+            .any(|entry| entry.info.as_ref().is_some_and(|info| info.name == raw_name)))
+    }
+
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
         let entries = self
             .scan_remote_repo_entries(peer_id)?

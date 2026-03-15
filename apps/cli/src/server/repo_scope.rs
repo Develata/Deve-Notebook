@@ -6,6 +6,8 @@
 
 #[path = "repo_scope_lookup.rs"]
 mod lookup;
+#[path = "repo_scope_remote.rs"]
+mod repo_scope_remote;
 #[path = "repo_scope_bootstrap.rs"]
 mod repo_scope_bootstrap;
 #[path = "repo_scope_error.rs"]
@@ -22,6 +24,7 @@ use std::sync::Arc;
 use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
 use self::repo_scope_bootstrap::fallback_local_repo_name;
 pub use self::repo_scope_error::map_repo_scope_error;
+use self::repo_scope_remote::recover_remote_repo_name_from_selector;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,
 };
@@ -167,7 +170,7 @@ fn resolve_repo_name_from_session(
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));
         };
-        if let Some(selector) = recover_remote_repo_name_from_selector(state, branch, &repo_name)? {
+        if let Some(selector) = recover_remote_repo_name_from_selector(state, branch, &repo_name, session.active_repo_id)? {
             if selector != repo_name {
                 tracing::warn!(
                     "Recovering remote repo selector from stale name: branch={}, stale_name={}, resolved_selector={}",
@@ -216,22 +219,4 @@ fn resolve_repo_name_from_session(
         ));
     }
     state.repo.find_local_repo_name_by_id(repo_id)
-}
-
-fn recover_remote_repo_name_from_selector(
-    state: &Arc<AppState>,
-    branch: &PeerId,
-    repo_name: &str,
-) -> Result<Option<String>> {
-    let resolved = state.repo.find_remote_repo_selector(branch, repo_name)?;
-    if uuid::Uuid::parse_str(repo_name).is_ok() || resolved.as_deref() == Some(repo_name) {
-        return Ok(resolved);
-    }
-    tracing::warn!(
-        "Refusing to recover remote repo selector from display-only name without UUID: branch={}, raw_name={}, resolved_selector={:?}",
-        branch,
-        repo_name,
-        resolved
-    );
-    Ok(None)
 }

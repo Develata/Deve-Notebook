@@ -149,3 +149,34 @@ fn commit_diff_reports_rename_from_structure_facts() {
     assert_eq!(diffs[0].old_content, "v1");
     assert_eq!(diffs[0].new_content, "v1");
 }
+
+#[test]
+fn commit_diff_skips_content_only_docs_without_structure_projection() {
+    let (_dir, repo) = new_repo();
+    let doc_id = deve_core::models::DocId::new();
+    repo.append_local_op(&deve_core::models::LedgerEntry::new_content(
+        doc_id,
+        deve_core::models::Op::Insert {
+            pos: 0,
+            content: "orphan".into(),
+        },
+        0,
+        deve_core::models::PeerId::new("test"),
+        1,
+        None,
+        None,
+    ))
+    .expect("append orphan content op");
+    let commit = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            let ledger_seq = deve_core::ledger::range::get_max_seq(db)?;
+            deve_core::source_control::commits::create(db, "orphan-content", 1, ledger_seq)
+        })
+        .expect("create orphan commit");
+
+    let diffs = repo
+        .diff_commits(None, &commit.id)
+        .expect("diff commits with orphan content");
+
+    assert!(diffs.is_empty());
+}

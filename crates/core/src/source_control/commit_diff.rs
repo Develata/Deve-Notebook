@@ -57,6 +57,15 @@ pub fn compare_commits(
         if old_content == new_content && old_path == new_path {
             continue;
         }
+        let Some(path) = new_path.clone().or(old_path.clone()) else {
+            tracing::warn!(
+                "Skipping commit diff for unprojected document: doc_id={}, seq_a={}, seq_b={}",
+                doc_id,
+                seq_a,
+                seq_b
+            );
+            continue;
+        };
         let status = detect_status(
             old_path.as_deref(),
             new_path.as_deref(),
@@ -64,7 +73,7 @@ pub fn compare_commits(
             &new_content,
         );
         diffs.push(CommitFileDiff {
-            path: new_path.clone().or(old_path.clone()).unwrap_or_default(),
+            path,
             status,
             previous_path: (old_path != new_path).then_some(old_path).flatten(),
             old_content,
