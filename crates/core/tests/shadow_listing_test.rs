@@ -116,14 +116,18 @@ fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows
             .expect("repo metadata")
             .insert(
                 &0,
-                bincode::serialize(&info).expect("serialize info").as_slice(),
+                bincode::serialize(&info)
+                    .expect("serialize info")
+                    .as_slice(),
             )
             .expect("write info");
         write.commit().expect("commit");
     }
 
     assert!(
-        repo.list_repos(Some(&peer_id)).expect("list dup repos").is_empty(),
+        repo.list_repos(Some(&peer_id))
+            .expect("list dup repos")
+            .is_empty(),
         "duplicate uuid shadows must be hidden from repo listing"
     );
     assert!(

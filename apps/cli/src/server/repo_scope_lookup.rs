@@ -60,8 +60,7 @@ pub(super) fn resolve_repo_by_name(
             repo_name
         ));
     }
-    let repo_name = recover_repo_selector(state, branch.as_ref(), info.uuid)?
-        .unwrap_or(repo_name);
+    let repo_name = recover_repo_selector(state, branch.as_ref(), info.uuid)?.unwrap_or(repo_name);
     Ok(ResolvedRepo {
         repo_id: info.uuid,
         repo_name,

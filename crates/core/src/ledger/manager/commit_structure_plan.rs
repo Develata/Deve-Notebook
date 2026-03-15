@@ -73,7 +73,10 @@ fn resolve_doc_id(
     if let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, path)? {
         return Ok(doc_id);
     }
-    if repo.run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))?.is_some() {
+    if repo
+        .run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))?
+        .is_some()
+    {
         return Err(anyhow!(
             "Tracked document projection missing for legacy-mapped path: {}",
             path

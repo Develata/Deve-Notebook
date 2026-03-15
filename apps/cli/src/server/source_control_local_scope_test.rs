@@ -143,12 +143,9 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
 async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     write_workspace_file(&dir, "notes/a.md", "hello");
-    state.repo.apply_file_structure_in_local_repo(
-        "default",
-        "notes/a.md",
-        None,
-        "test",
-    )?;
+    state
+        .repo
+        .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
     let tracked_doc_id = state.repo.get_docid("notes/a.md")?.expect("tracked doc id");
     state.repo.append_generated_op_in_local_repo(
         "default",
@@ -221,11 +218,13 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert!(error
-                .detail
-                .as_deref()
-                .unwrap_or_default()
-                .contains("Source control target not resolved"));
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .unwrap_or_default()
+                    .contains("Source control target not resolved")
+            );
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

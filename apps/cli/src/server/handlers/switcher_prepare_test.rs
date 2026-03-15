@@ -105,9 +105,8 @@ fn resolve_requested_repo_name_accepts_exact_remote_selector_without_uuid() -> a
     let (_dir, state) = build_state()?;
     let (peer_id, _first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let selected =
-        resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, None)?
-            .expect("exact remote selector");
+    let selected = resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, None)?
+        .expect("exact remote selector");
     assert_eq!(selected, second_selector);
     Ok(())
 }

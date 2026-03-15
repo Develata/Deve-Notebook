@@ -24,7 +24,9 @@ fn seed_shadow_file(repo: &RepoManager, peer_id: &PeerId, stem: &str, info: &Rep
         .expect("repo metadata")
         .insert(
             &0,
-            bincode::serialize(info).expect("serialize repo info").as_slice(),
+            bincode::serialize(info)
+                .expect("serialize repo info")
+                .as_slice(),
         )
         .expect("write repo info");
     write.commit().expect("commit repo info");
@@ -172,7 +174,8 @@ fn duplicate_shadow_uuid_is_hidden_and_fails_selector_recovery() {
     let err = repo
         .find_remote_repo_selector_by_id(&peer_id, repo_id)
         .expect_err("duplicate uuid must fail closed");
-    assert!(err
-        .to_string()
-        .contains("ambiguous remote repository selector"));
+    assert!(
+        err.to_string()
+            .contains("ambiguous remote repository selector")
+    );
 }

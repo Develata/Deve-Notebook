@@ -57,7 +57,8 @@ fn apply_file_structure_fails_closed_when_only_legacy_path_mapping_exists() {
     let err = repo
         .apply_file_structure_in_local_repo("default", "notes/legacy.md", None, "test")
         .expect_err("legacy-only path must fail closed");
-    assert!(err
-        .to_string()
-        .contains("Tracked document projection missing for legacy-mapped path"));
+    assert!(
+        err.to_string()
+            .contains("Tracked document projection missing for legacy-mapped path")
+    );
 }

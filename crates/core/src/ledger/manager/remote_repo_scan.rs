@@ -314,11 +314,16 @@ fn reject_duplicate_remote_matches(
             .as_ref()
             .is_some_and(|info| duplicate_ids.contains(&info.uuid))
     }) {
-        return Err(anyhow!("ambiguous remote repository selector: {}", selector));
+        return Err(anyhow!(
+            "ambiguous remote repository selector: {}",
+            selector
+        ));
     }
     Ok(())
 }
 
 fn single_remote_entry(entries: Vec<RemoteRepoEntry>) -> Option<RemoteRepoEntry> {
-    (entries.len() == 1).then(|| entries.into_iter().next()).flatten()
+    (entries.len() == 1)
+        .then(|| entries.into_iter().next())
+        .flatten()
 }

@@ -205,7 +205,10 @@ mod tests {
         std::fs::create_dir_all(direct.parent().expect("parent"))?;
         std::fs::write(&direct, "backup")?;
 
-        assert_eq!(resolve_backup_path(dir.path(), "default", "notes/live.md"), None);
+        assert_eq!(
+            resolve_backup_path(dir.path(), "default", "notes/live.md"),
+            None
+        );
         Ok(())
     }
 }
