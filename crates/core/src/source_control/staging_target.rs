@@ -97,31 +97,41 @@ fn select_entry_without_doc(
     let exact = entries
         .iter()
         .find(|(entry_path, _)| entry_path == path)
-        .cloned();
-    let renamed_successor = entries.iter().find(|(_, entry)| {
-        entry.status != ChangeStatus::Deleted
-            && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
-    });
-    let path_reused_after_delete = renamed_successor.is_some()
-        && entries
-            .iter()
-            .any(|(entry_path, entry)| entry_path == path && entry.status == ChangeStatus::Deleted);
-    if path_reused_after_delete {
-        return renamed_successor.cloned();
-    }
-    if exact.is_some() {
-        return exact;
-    }
-    entries
-        .iter()
-        .find(|(entry_path, entry)| entry_path == path && entry.status != ChangeStatus::Deleted)
         .cloned()
-        .or_else(|| renamed_successor.cloned())
-        .or_else(|| {
-            entries
-                .into_iter()
-                .find(|(entry_path, _)| entry_path == path)
+        .into_iter()
+        .collect::<Vec<_>>();
+    let live_exact = exact
+        .iter()
+        .filter(|(_, entry)| entry.status != ChangeStatus::Deleted)
+        .cloned()
+        .collect::<Vec<_>>();
+    let renamed = entries
+        .iter()
+        .filter(|(_, entry)| {
+            entry.status != ChangeStatus::Deleted
+                && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
         })
+        .cloned()
+        .collect::<Vec<_>>();
+    let deleted_exact = entries
+        .iter()
+        .any(|(entry_path, entry)| entry_path == path && entry.status == ChangeStatus::Deleted);
+    if live_exact.len() > 1 || renamed.len() > 1 {
+        return None;
+    }
+    if deleted_exact && renamed.len() == 1 {
+        return renamed.into_iter().next();
+    }
+    if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
+        return None;
+    }
+    if let Some(entry) = live_exact.into_iter().next() {
+        return Some(entry);
+    }
+    if let Some(entry) = renamed.into_iter().next() {
+        return Some(entry);
+    }
+    (exact.len() == 1).then(|| exact[0].clone())
 }
 
 #[cfg(test)]
@@ -173,5 +183,35 @@ mod tests {
                 .0,
             "notes/new.md"
         );
+    }
+
+    #[test]
+    fn fails_closed_when_path_only_target_is_ambiguous() {
+        let entries = vec![
+            (
+                "notes/old.md".into(),
+                StagedEntry {
+                    timestamp: 1,
+                    doc_id: None,
+                    status: ChangeStatus::Added,
+                    content_hash: String::new(),
+                    has_conflict: false,
+                    renamed_from: None,
+                },
+            ),
+            (
+                "notes/new.md".into(),
+                StagedEntry {
+                    timestamp: 2,
+                    doc_id: None,
+                    status: ChangeStatus::Added,
+                    content_hash: String::new(),
+                    has_conflict: false,
+                    renamed_from: Some("notes/old.md".into()),
+                },
+            ),
+        ];
+
+        assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
     }
 }

@@ -77,30 +77,43 @@ fn select_entry_for_doc(
 }
 
 fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<PendingFsEntry> {
-    let exact = entries.iter().find(|entry| entry.path == path).cloned();
-    let renamed_successor = entries.iter().find(|entry| {
-        entry.status_is_live()
-            && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
-    });
-    let path_reused_after_delete = renamed_successor.is_some()
-        && entries
-            .iter()
-            .any(|entry| entry.path == path && entry.change_type == ChangeStatus::Deleted);
-    if path_reused_after_delete {
-        return renamed_successor.cloned();
-    }
-    if exact
-        .as_ref()
-        .is_some_and(PendingEntryStatus::status_is_live)
-    {
-        return exact;
-    }
-    entries
+    let exact = entries
         .iter()
-        .find(|entry| entry.path == path && entry.status_is_live())
+        .filter(|entry| entry.path == path)
         .cloned()
-        .or_else(|| renamed_successor.cloned())
-        .or(exact)
+        .collect::<Vec<_>>();
+    let live_exact = exact
+        .iter()
+        .filter(|entry| entry.status_is_live())
+        .cloned()
+        .collect::<Vec<_>>();
+    let renamed = entries
+        .iter()
+        .filter(|entry| {
+            entry.status_is_live()
+                && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    let deleted_exact = exact
+        .iter()
+        .any(|entry| entry.change_type == ChangeStatus::Deleted);
+    if live_exact.len() > 1 || renamed.len() > 1 {
+        return None;
+    }
+    if deleted_exact && renamed.len() == 1 {
+        return renamed.into_iter().next();
+    }
+    if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
+        return None;
+    }
+    if let Some(entry) = live_exact.into_iter().next() {
+        return Some(entry);
+    }
+    if let Some(entry) = renamed.into_iter().next() {
+        return Some(entry);
+    }
+    (exact.len() == 1).then(|| exact[0].clone())
 }
 
 trait PendingEntryStatus {
@@ -157,5 +170,31 @@ mod tests {
                 .path,
             "notes/new.md"
         );
+    }
+
+    #[test]
+    fn fails_closed_when_path_only_target_is_ambiguous() {
+        let entries = vec![
+            PendingFsEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: String::new(),
+                detected_at: 1,
+                has_conflict: false,
+            },
+            PendingFsEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: String::new(),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        ];
+
+        assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
     }
 }
