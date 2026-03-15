@@ -9,7 +9,7 @@
 //! 主库 (`local_db`) 已经被 RepoManager 持有，我们通过路径匹配来避免重复打开。
 
 use super::RepoManager;
-use super::database_cache::OPENED_DBS;
+use super::database_cache::{CachedDatabaseEntry, OPENED_DBS, current_file_stamp};
 use crate::models::PeerId;
 use crate::models::RepoId;
 use anyhow::Result;
@@ -18,16 +18,20 @@ use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) {
-    OPENED_DBS
-        .write()
-        .unwrap()
-        .insert(db_path.to_path_buf(), db);
+    OPENED_DBS.write().unwrap().insert(
+        db_path.to_path_buf(),
+        CachedDatabaseEntry {
+            db,
+            stamp: current_file_stamp(db_path),
+        },
+    );
 }
 
 pub(crate) fn relocate_database_path(old_path: &Path, new_path: &Path) {
     let mut cache = OPENED_DBS.write().unwrap();
-    if let Some(db) = cache.remove(old_path) {
-        cache.insert(new_path.to_path_buf(), db);
+    if let Some(mut entry) = cache.remove(old_path) {
+        entry.stamp = current_file_stamp(new_path);
+        cache.insert(new_path.to_path_buf(), entry);
     }
 }
 
@@ -39,13 +43,17 @@ pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
 }
 
 pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>> {
+    let current_stamp = current_file_stamp(db_path);
     {
         let cache = OPENED_DBS.read().unwrap();
-        if let Some(arc_db) = cache.get(db_path) {
+        if let Some(entry) = cache.get(db_path)
+            && entry.stamp == current_stamp
+        {
             tracing::debug!("Database cache hit: {:?}", db_path);
-            return Ok(arc_db.clone());
+            return Ok(entry.db.clone());
         }
     }
+    OPENED_DBS.write().unwrap().remove(db_path);
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -55,7 +63,13 @@ pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>>
 
     {
         let mut cache = OPENED_DBS.write().unwrap();
-        cache.insert(db_path.to_path_buf(), arc_db.clone());
+        cache.insert(
+            db_path.to_path_buf(),
+            CachedDatabaseEntry {
+                db: arc_db.clone(),
+                stamp: current_file_stamp(db_path),
+            },
+        );
     }
 
     tracing::info!("Opened and cached database: {:?}", db_path);
@@ -160,11 +174,14 @@ impl RepoManager {
         // 1. 检查全局缓存
         {
             let cache = OPENED_DBS.read().unwrap();
-            if let Some(arc_db) = cache.get(cache_key.as_path()) {
+            if let Some(entry) = cache.get(cache_key.as_path())
+                && entry.stamp == current_file_stamp(cache_key.as_path())
+            {
                 tracing::debug!("Database cache hit: {:?}", cache_key);
-                return Ok(arc_db.clone());
+                return Ok(entry.db.clone());
             }
         }
+        OPENED_DBS.write().unwrap().remove(cache_key.as_path());
 
         // 2. 检查是否是主库 (已经被 RepoManager 持有)
         // 主库的路径检查
@@ -188,7 +205,13 @@ impl RepoManager {
 
         {
             let mut cache = OPENED_DBS.write().unwrap();
-            cache.insert(cache_key.clone(), arc_db.clone());
+            cache.insert(
+                cache_key.clone(),
+                CachedDatabaseEntry {
+                    db: arc_db.clone(),
+                    stamp: current_file_stamp(&cache_key),
+                },
+            );
         }
 
         tracing::info!("Opened and cached database: {:?}", cache_key);
