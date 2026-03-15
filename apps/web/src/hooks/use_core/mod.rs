@@ -6,6 +6,7 @@
 pub mod apply;
 pub mod callbacks;
 pub mod callbacks_sc;
+mod callbacks_sc_scope;
 mod callbacks_sc_target;
 mod callbacks_scope;
 mod callbacks_switch;
@@ -119,6 +120,7 @@ pub fn use_core() -> CoreState {
         signals.unstaged_changes,
         callbacks_sc::SourceControlScopeSignals {
             current_repo_id: signals.current_repo_id,
+            current_scope_nonce: signals.current_scope_nonce,
             pending_branch_switch: signals.pending_branch_switch,
             pending_repo_switch: signals.pending_repo_switch,
         },

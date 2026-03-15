@@ -149,12 +149,7 @@ fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyho
 fn recover_canonical_selector_rejects_local_raw_name_without_uuid_mapping() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
 
-    let selected = recover_canonical_selector(
-        &state,
-        None,
-        "wiki",
-        uuid::Uuid::new_v4(),
-    )?;
+    let selected = recover_canonical_selector(&state, None, "wiki", uuid::Uuid::new_v4())?;
 
     assert_eq!(selected, None);
     Ok(())
@@ -173,12 +168,8 @@ fn recover_canonical_selector_rejects_remote_raw_name_without_uuid_mapping() -> 
         },
     )?;
 
-    let selected = recover_canonical_selector(
-        &state,
-        Some(&peer_id),
-        "wiki",
-        uuid::Uuid::new_v4(),
-    )?;
+    let selected =
+        recover_canonical_selector(&state, Some(&peer_id), "wiki", uuid::Uuid::new_v4())?;
 
     assert_eq!(selected, None);
     Ok(())

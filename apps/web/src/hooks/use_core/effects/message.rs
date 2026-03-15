@@ -68,7 +68,10 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     }
                     let request_id = uuid::Uuid::new_v4().to_string();
                     set_changes_request_id.set(Some(request_id.clone()));
-                    ws_for_timer.send(ClientMessage::GetChanges { request_id });
+                    ws_for_timer.send(ClientMessage::GetChanges {
+                        request_id,
+                        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+                    });
                 });
                 *changes_refresh.borrow_mut() = Some(timer);
             }

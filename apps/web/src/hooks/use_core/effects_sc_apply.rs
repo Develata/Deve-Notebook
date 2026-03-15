@@ -41,6 +41,7 @@ pub(super) fn refresh_after_fs_change(
 
 pub(super) fn refresh_after_commit(
     commit_id: &str,
+    current_scope_nonce: u64,
     set_changes_request_id: WriteSignal<Option<String>>,
     set_commit_history_request_id: WriteSignal<Option<String>>,
     ws: &WsService,
@@ -50,11 +51,13 @@ pub(super) fn refresh_after_commit(
     set_changes_request_id.set(Some(changes_request_id.clone()));
     ws.send(deve_core::protocol::ClientMessage::GetChanges {
         request_id: changes_request_id,
+        scope_nonce: Some(current_scope_nonce),
     });
     let history_request_id = uuid::Uuid::new_v4().to_string();
     set_commit_history_request_id.set(Some(history_request_id.clone()));
     ws.send(deve_core::protocol::ClientMessage::GetCommitHistory {
         request_id: history_request_id,
         limit: 50,
+        scope_nonce: Some(current_scope_nonce),
     });
 }

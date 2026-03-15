@@ -101,7 +101,11 @@ fn init_survives_broken_shadow_catalogs() {
     let repaired = RepoManager::init(&ledger_dir, 10, None, None).expect("re-init repo");
 
     assert_eq!(
-        repaired.get_repo_info().expect("local info").expect("present").name,
+        repaired
+            .get_repo_info()
+            .expect("local info")
+            .expect("present")
+            .name,
         "default"
     );
     assert!(

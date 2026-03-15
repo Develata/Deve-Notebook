@@ -162,6 +162,7 @@ pub fn handle_sc_message(
             }
             refresh_after_commit(
                 commit_id,
+                current_scope_nonce.get_untracked(),
                 set_changes_request_id,
                 set_commit_history_request_id,
                 ws,

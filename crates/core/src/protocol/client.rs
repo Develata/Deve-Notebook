@@ -123,19 +123,29 @@ pub enum ClientMessage {
     },
     GetChanges {
         request_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     StageFile {
         target: ScPathTarget,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     UnstageFile {
         target: ScPathTarget,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     Commit {
         message: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     GetCommitHistory {
         request_id: String,
         limit: u32,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     MergePeer {
         peer_id: String,
@@ -144,27 +154,41 @@ pub enum ClientMessage {
     GetDocDiff {
         request_id: String,
         target: ScPathTarget,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     DiscardFile {
         target: ScPathTarget,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     StageFiles {
         targets: Vec<ScPathTarget>,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     UnstageFiles {
         targets: Vec<ScPathTarget>,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     GetCommitDiff {
         request_id: String,
         commit_a: Option<String>,
         commit_b: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     RequestKey,
     ResolveConflict {
         target: ScPathTarget,
         resolution: crate::source_control::ConflictResolution,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     CommitAndPush {
         message: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
 }
