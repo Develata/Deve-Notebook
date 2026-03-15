@@ -25,11 +25,15 @@ pub struct DeltaInputCtx {
 
 pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
     Closure::wrap(Box::new(move |delta_json: String| {
+        let writer_ready = ctx
+            .ws
+            .writer_ready_for(ctx.current_repo_id.get_untracked().as_deref());
         if !can_send_delta(
             ctx.is_playback.get_untracked(),
             ctx.pending_branch_switch.get_untracked().is_some(),
             ctx.pending_repo_switch.get_untracked().is_some(),
             ctx.handshake_ready.get_untracked(),
+            writer_ready,
         ) {
             return;
         }
@@ -89,8 +93,13 @@ fn can_send_delta(
     branch_switch_pending: bool,
     repo_switch_pending: bool,
     handshake_ready: bool,
+    writer_ready: bool,
 ) -> bool {
-    !is_playback && !branch_switch_pending && !repo_switch_pending && handshake_ready
+    !is_playback
+        && !branch_switch_pending
+        && !repo_switch_pending
+        && handshake_ready
+        && writer_ready
 }
 
 #[cfg(test)]
@@ -99,17 +108,18 @@ mod tests {
 
     #[test]
     fn blocks_delta_while_scope_switch_is_pending() {
-        assert!(!can_send_delta(false, true, false, true));
-        assert!(!can_send_delta(false, false, true, true));
+        assert!(!can_send_delta(false, true, false, true, true));
+        assert!(!can_send_delta(false, false, true, true, true));
     }
 
     #[test]
     fn blocks_delta_before_handshake_is_ready() {
-        assert!(!can_send_delta(false, false, false, false));
+        assert!(!can_send_delta(false, false, false, false, true));
     }
 
     #[test]
     fn allows_delta_only_in_stable_writable_scope() {
-        assert!(can_send_delta(false, false, false, true));
+        assert!(can_send_delta(false, false, false, true, true));
+        assert!(!can_send_delta(false, false, false, true, false));
     }
 }

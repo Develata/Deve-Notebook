@@ -3,7 +3,7 @@ use super::switcher_prepare::{
 };
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -172,5 +172,30 @@ fn recover_canonical_selector_rejects_remote_raw_name_without_uuid_mapping() -> 
         recover_canonical_selector(&state, Some(&peer_id), "wiki", uuid::Uuid::new_v4())?;
 
     assert_eq!(selected, None);
+    Ok(())
+}
+
+#[test]
+fn resolve_requested_repo_name_prefers_canonical_local_stem_after_metadata_drift()
+-> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
+    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
+    let wiki_db = state.repo.open_database(None, "wiki")?.db;
+    let txn = wiki_db.begin_write()?;
+    txn.open_table(REPO_METADATA)?.insert(
+        &0,
+        bincode::serialize(&RepoInfo {
+            uuid: wiki_info.uuid,
+            name: "legacy-wiki".into(),
+            url: wiki_info.url.clone(),
+        })?
+        .as_slice(),
+    )?;
+    txn.commit()?;
+
+    let selected = resolve_requested_repo_name(&state, None, "legacy-wiki", None)?
+        .expect("canonical local selector");
+    assert_eq!(selected, "wiki");
     Ok(())
 }

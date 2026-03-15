@@ -89,6 +89,16 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         } => {
             leptos::logging::log!("P2P Handshake from Peer: {}", peer_id);
         }
+        ServerMessage::WriteReady {
+            repo_id,
+            scope_nonce,
+            branch,
+            ..
+        } => {
+            if accepts_current_sync_payload(ctx, repo_id, branch, scope_nonce) {
+                history::resend_pending_edits(ctx);
+            }
+        }
         ServerMessage::Pong => {}
         ServerMessage::SyncPush {
             repo_id,

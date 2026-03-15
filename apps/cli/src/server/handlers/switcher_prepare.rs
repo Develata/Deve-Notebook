@@ -78,7 +78,6 @@ pub(super) fn select_target_repo(
     current_repo_url: Option<String>,
     target_branch: Option<&PeerId>,
 ) -> anyhow::Result<Option<String>> {
-    let repos = state.repo.list_repos(target_branch)?;
     if let Some(repo_id) = current_repo_id
         && let Some(selector) = select_repo_selector_by_id(state, target_branch, repo_id)?
     {
@@ -90,13 +89,13 @@ pub(super) fn select_target_repo(
         return Ok(Some(selector));
     }
     if let Some(repo_name) = current_repo_name
-        && let Some(info) = state
-            .repo
-            .get_repo_info_for(target_branch, Some(repo_name))?
-        && (info.name != repo_name || uuid::Uuid::parse_str(repo_name).is_ok())
+        && let Some(info) = state.repo.get_repo_info_for(target_branch, Some(repo_name))?
+        && let Some(selector) =
+            recover_canonical_selector(state, target_branch, repo_name, info.uuid)?
     {
-        return recover_canonical_selector(state, target_branch, repo_name, info.uuid);
+        return Ok(Some(selector));
     }
+    let repos = state.repo.list_repos(target_branch)?;
     if let Some(url) = current_repo_url {
         let matches = repos
             .iter()
@@ -160,7 +159,6 @@ pub(super) fn resolve_requested_repo_name(
     repo_name: &str,
     repo_id: Option<RepoId>,
 ) -> anyhow::Result<Option<String>> {
-    let repos = state.repo.list_repos(branch)?;
     if let Some(repo_id) = repo_id
         && let Some(selector) = select_repo_selector_by_id(state, branch, repo_id)?
     {
@@ -170,10 +168,11 @@ pub(super) fn resolve_requested_repo_name(
         return Ok(Some(selector));
     }
     if let Some(info) = state.repo.get_repo_info_for(branch, Some(repo_name))?
-        && (info.name != repo_name || uuid::Uuid::parse_str(repo_name).is_ok())
+        && let Some(selector) = recover_canonical_selector(state, branch, repo_name, info.uuid)?
     {
-        return recover_canonical_selector(state, branch, repo_name, info.uuid);
+        return Ok(Some(selector));
     }
+    let repos = state.repo.list_repos(branch)?;
     Ok(repos
         .contains(&repo_name.to_string())
         .then(|| repo_name.to_string()))
@@ -202,6 +201,12 @@ fn recover_selector_from_raw_name(
     branch: Option<&PeerId>,
     raw_repo_name: &str,
 ) -> anyhow::Result<Option<String>> {
+    if branch.is_none() {
+        return Ok(state
+            .repo
+            .resolve_local_repo_name_for_execution(None, Some(raw_repo_name))
+            .ok());
+    }
     let Ok(repo_id) = uuid::Uuid::parse_str(raw_repo_name) else {
         return Ok(None);
     };

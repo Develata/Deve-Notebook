@@ -43,6 +43,7 @@ pub fn spawn_output_manager(
     rx: UnboundedReceiver<ClientMessage>,
     link_rx: UnboundedReceiver<SplitSink<WebSocket, Message>>,
     connection_status: ReadSignal<ConnectionStatus>,
+    set_status: WriteSignal<ConnectionStatus>,
 ) {
     spawn_local(async move {
         let mut current_sink: Option<SplitSink<WebSocket, Message>> = None;
@@ -67,7 +68,7 @@ pub fn spawn_output_manager(
                         leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
                         continue;
                     }
-                    handle_client_message(*msg, &mut current_sink, &mut queue).await;
+                    handle_client_message(*msg, &mut current_sink, &mut queue, set_status).await;
                 }
             }
         }
@@ -80,6 +81,7 @@ async fn handle_new_link(
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,
 ) {
+    drop_queued_writes(queue);
     leptos::logging::log!("OutputLoop: 收到新连接。刷新 {} 条消息。", queue.len() + 1);
     *current_sink = Some(sink);
 
@@ -98,6 +100,7 @@ async fn handle_client_message(
     msg: ClientMessage,
     current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,
+    set_status: WriteSignal<ConnectionStatus>,
 ) {
     if let Some(writer) = current_sink.as_mut() {
         let text = match serde_json::to_string(&msg) {
@@ -112,6 +115,7 @@ async fn handle_client_message(
             leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
             enqueue_with_limit(queue, msg);
             *current_sink = None; // 标记连接已死
+            set_status.set(ConnectionStatus::Disconnected);
         }
     } else {
         // 离线状态，入队等待
@@ -132,6 +136,10 @@ fn enqueue_with_limit(queue: &mut VecDeque<ClientMessage>, msg: ClientMessage) {
         );
     }
     queue.push_back(msg);
+}
+
+fn drop_queued_writes(queue: &mut VecDeque<ClientMessage>) {
+    queue.retain(|msg| !is_write_message(msg));
 }
 
 /// 将队列中的所有消息刷新到当前连接

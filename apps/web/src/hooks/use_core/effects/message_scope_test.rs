@@ -116,11 +116,23 @@ fn shadow_list_rejects_messages_while_switch_pending() {
 
 #[test]
 fn scoped_list_accepts_matching_request_id_only() {
-    assert!(shadow_list_matches_scope(
+    assert!(!shadow_list_matches_scope(
         RequestMatch {
             message_id: Some("req-1"),
             expected_id: Some("req-1"),
             scope_nonce: Some(7),
+            current_scope_nonce: 3,
+        },
+        &ShadowListScope {
+            pending_branch_switch: None,
+            pending_repo_switch: None,
+        },
+    ));
+    assert!(shadow_list_matches_scope(
+        RequestMatch {
+            message_id: Some("req-1"),
+            expected_id: Some("req-1"),
+            scope_nonce: Some(3),
             current_scope_nonce: 3,
         },
         &ShadowListScope {
@@ -154,7 +166,7 @@ fn system_or_matching_request_accepts_none_and_exact_match() {
     assert!(accepts_system_or_matching_request(
         Some("req-1"),
         Some("req-1"),
-        Some(7),
+        Some(3),
         3,
     ));
     assert!(!accepts_system_or_matching_request(
@@ -165,6 +177,16 @@ fn system_or_matching_request_accepts_none_and_exact_match() {
     ));
     assert!(!accepts_system_or_matching_request(None, None, Some(2), 3));
     assert!(!accepts_system_or_matching_request(None, None, None, 3));
+}
+
+#[test]
+fn requested_message_without_scope_nonce_still_accepts_exact_request_id() {
+    assert!(accepts_system_or_matching_request(
+        Some("req-1"),
+        Some("req-1"),
+        None,
+        3,
+    ));
 }
 
 #[test]

@@ -28,7 +28,7 @@ pub(super) fn handle_history(ctx: &SyncContext, expected_generation: u64, ops: V
     ctx.set_load_state.set("ready".to_string());
     ctx.set_load_progress.set((0, 0));
     ctx.set_load_eta_ms.set(0);
-    resend_pending_edits(ctx);
+    resend_pending_edits_if_ready(ctx);
 }
 
 fn merge_history_tail(
@@ -69,7 +69,17 @@ fn replay_buffered_live_ops(ctx: &SyncContext, expected_generation: u64) {
     }
 }
 
-fn resend_pending_edits(ctx: &SyncContext) {
+pub(super) fn resend_pending_edits_if_ready(ctx: &SyncContext) {
+    if !ctx
+        .ws
+        .writer_ready_for(ctx.current_repo_id.get_untracked().as_deref())
+    {
+        return;
+    }
+    resend_pending_edits(ctx);
+}
+
+pub(super) fn resend_pending_edits(ctx: &SyncContext) {
     let edits =
         pending::cloned_pending_edits_for_doc(&ctx.pending_local_edits.get_untracked(), ctx.doc_id);
     for edit in edits {

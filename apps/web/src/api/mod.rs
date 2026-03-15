@@ -145,7 +145,7 @@ impl WsService {
             set_node_role,
             link_tx,
         );
-        spawn_output_manager(rx, link_rx, status);
+        spawn_output_manager(rx, link_rx, status, set_status);
 
         // 启动心跳任务 (30秒间隔)
         let tx_clone = tx.clone();
