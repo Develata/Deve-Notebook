@@ -56,7 +56,11 @@ pub(super) fn repaired_remote_repo_info(
     };
     let mut write_back = original.is_none();
     if info.name.trim().is_empty() {
-        info.name = stem.to_string();
+        info.name = if uuid::Uuid::parse_str(stem).ok() == Some(info.uuid) {
+            stem.to_string()
+        } else {
+            info.uuid.to_string()
+        };
         write_back = true;
     }
     if original.as_ref() != Some(&info) {
