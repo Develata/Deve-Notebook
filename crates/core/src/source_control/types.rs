@@ -27,7 +27,7 @@ pub struct CommitInfo {
 }
 
 /// 文件变更状态
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChangeStatus {
     /// 已修改
     Modified,

@@ -5,7 +5,7 @@
 //! - Diff 左侧来自当前 Ledger 投影，右侧来自工作区文件。
 
 use crate::ledger::RepoManager;
-use crate::source_control::{ChangeEntry, CommitFileDiff};
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitFileDiff};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 use std::collections::HashSet;
@@ -17,15 +17,12 @@ impl RepoManager {
 
     pub fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
         let staged = self.list_staged_in_local_repo(repo_name)?;
-        let staged_paths: HashSet<String> = staged
-            .iter()
-            .map(|entry| to_forward_slash(&entry.path))
-            .collect();
+        let staged_keys: HashSet<_> = staged.iter().map(change_identity_key).collect();
         let mut changes = staged;
         changes.extend(
             self.list_pending_fs_in_local_repo(repo_name)?
                 .into_iter()
-                .filter(|entry| !staged_paths.contains(&to_forward_slash(&entry.path))),
+                .filter(|entry| !staged_keys.contains(&change_identity_key(entry))),
         );
         Ok(changes)
     }
@@ -59,4 +56,20 @@ impl RepoManager {
             crate::source_control::commit_diff::compare_commits(db, commit_a.as_deref(), &commit_b)
         })
     }
+}
+
+fn change_identity_key(
+    entry: &ChangeEntry,
+) -> (
+    Option<crate::models::DocId>,
+    String,
+    Option<String>,
+    ChangeStatus,
+) {
+    (
+        entry.doc_id,
+        to_forward_slash(&entry.path),
+        entry.renamed_from.as_deref().map(to_forward_slash),
+        entry.status,
+    )
 }
