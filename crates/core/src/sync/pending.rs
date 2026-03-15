@@ -9,7 +9,7 @@ use crate::models::DocId;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use std::sync::Arc;
 
 pub(super) fn clear(repo: &Arc<RepoManager>, repo_name: &str, path: &str) -> Result<()> {
@@ -49,7 +49,21 @@ pub(super) fn upsert(
     };
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => repo.resolve_canonical_doc_id_in_local_repo(repo_name, path)?,
+        None => {
+            if let Some(doc_id) = repo.resolve_canonical_doc_id_in_local_repo(repo_name, path)? {
+                Some(doc_id)
+            } else if repo
+                .run_on_local_repo(repo_name, |db| crate::ledger::metadata::get_docid(db, path))?
+                .is_some()
+            {
+                return Err(anyhow!(
+                    "Tracked document projection missing for legacy-mapped path: {}",
+                    path
+                ));
+            } else {
+                None
+            }
+        }
     };
     let has_conflict = match doc_id {
         Some(doc_id) => repo.run_on_local_repo(repo_name, |db| {
