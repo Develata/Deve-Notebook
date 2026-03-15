@@ -1,0 +1,125 @@
+use deve_core::ledger::RepoManager;
+use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::models::DocId;
+use deve_core::protocol::ScPathTarget;
+use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::{ChangeStatus, staging};
+use tempfile::{TempDir, tempdir};
+
+fn new_repo() -> (TempDir, RepoManager) {
+    let dir = tempdir().expect("create tempdir");
+    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
+    repo.set_vault_root(dir.path().join("vault"));
+    (dir, repo)
+}
+
+fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
+    let abs = dir.path().join("vault").join("default").join(path);
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent).expect("create parent");
+    }
+    std::fs::write(abs, content).expect("write workspace");
+}
+
+fn commit_doc(dir: &TempDir, repo: &RepoManager, path: &str, content: &str) -> DocId {
+    write_workspace_file(dir, path, content);
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: path.into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash(content),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed pending");
+    repo.stage_pending(path).expect("stage doc");
+    repo.commit_staged("commit doc").expect("commit doc");
+    repo.get_docid(path).expect("lookup").expect("existing")
+}
+
+#[test]
+fn stage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
+    let (dir, repo) = new_repo();
+    let doc_a = commit_doc(&dir, &repo, "notes/a.md", "alpha");
+    let doc_b = commit_doc(&dir, &repo, "notes/b.md", "beta");
+    assert_ne!(doc_a, doc_b);
+
+    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_b),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("beta changed"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed pending b");
+
+    let err = <RepoManager as Repository>::stage_pending_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget {
+            path: "notes/b.md".into(),
+            doc_id: Some(doc_a),
+        },
+    )
+    .expect_err("mismatched doc target must fail");
+    assert!(err.to_string().contains("Path is not in pending_fs_ops"));
+}
+
+#[test]
+fn unstage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
+    let (dir, repo) = new_repo();
+    let doc_a = commit_doc(&dir, &repo, "notes/a.md", "alpha");
+    let doc_b = commit_doc(&dir, &repo, "notes/b.md", "beta");
+    assert_ne!(doc_a, doc_b);
+
+    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_b),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("beta changed"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )?;
+        let entry = pending_fs::take_for_target(
+            db,
+            &ScPathTarget {
+                path: "notes/b.md".into(),
+                doc_id: Some(doc_b),
+            },
+        )?
+        .expect("pending b");
+        staging::stage_pending_entry(db, &entry)
+    })
+    .expect("seed staged b");
+
+    let err = <RepoManager as Repository>::unstage_file_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget {
+            path: "notes/b.md".into(),
+            doc_id: Some(doc_a),
+        },
+    )
+    .expect_err("mismatched staged doc target must fail");
+    assert!(err.to_string().contains("Path is not staged"));
+}
