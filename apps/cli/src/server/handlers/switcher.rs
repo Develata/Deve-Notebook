@@ -2,6 +2,8 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo};
 use crate::server::session::WsSession;
+#[path = "switcher_error.rs"]
+mod switcher_error;
 #[path = "switcher_payload.rs"]
 mod switcher_payload;
 #[path = "switcher_prepare.rs"]
@@ -14,6 +16,7 @@ use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
+use self::switcher_error::prepare_switch_error;
 use self::switcher_payload::{emit_repo_view, preload_branch_switch, preload_repo_view};
 use self::switcher_prepare::{
     commit_session_switch, prepare_repo_switch, select_target_repo, validate_branch_target,
@@ -70,13 +73,8 @@ pub async fn handle_switch_branch(
             match prepare_repo_switch(state, target_branch_ref, repo_name.clone()) {
                 Ok(prepared) => Some(prepared),
                 Err(err) => {
-                    let code = if target_branch_ref.is_some() {
-                        ServerErrorCode::StorageDbLocked
-                    } else {
-                        ServerErrorCode::StoragePersistFailed
-                    };
                     ch.send_protocol_error_with_switch_nonce(
-                        ServerError::with_detail(code, format!("Failed to switch repo: {}", err)),
+                        prepare_switch_error(target_branch_ref, err),
                         switch_nonce,
                     );
                     return;
@@ -179,13 +177,8 @@ pub async fn handle_switch_repo(
     let prepared = match prepare_repo_switch(state, branch.as_ref(), repo_name.clone()) {
         Ok(prepared) => prepared,
         Err(err) => {
-            let code = if branch.is_some() {
-                ServerErrorCode::StorageDbLocked
-            } else {
-                ServerErrorCode::StoragePersistFailed
-            };
             ch.send_protocol_error_with_switch_nonce(
-                ServerError::with_detail(code, format!("Failed to switch repo: {}", err)),
+                prepare_switch_error(branch.as_ref(), err),
                 switch_nonce,
             );
             return;
