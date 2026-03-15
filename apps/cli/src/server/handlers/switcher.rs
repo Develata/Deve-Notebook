@@ -36,7 +36,23 @@ pub async fn handle_switch_branch(
     };
 
     let had_current_repo_hint = session.active_repo.is_some() || session.active_repo_id.is_some();
-    let current_scope = resolve_session_repo(state, session).ok();
+    let current_scope = match resolve_session_repo(state, session) {
+        Ok(scope) => Some(scope),
+        Err(err) => {
+            let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
+            if matches!(
+                mapped.code,
+                ServerErrorCode::StorageNotFound
+                    | ServerErrorCode::SyncRepoUnbound
+                    | ServerErrorCode::ScRepoContextInvalid
+            ) {
+                None
+            } else {
+                ch.send_protocol_error_with_switch_nonce(mapped, switch_nonce);
+                return;
+            }
+        }
+    };
     let current_repo_url = match current_scope.as_ref() {
         Some(scope) => match state.repo.get_repo_url(scope.branch.as_ref(), &scope.repo_name) {
             Ok(url) => url,
