@@ -1,7 +1,7 @@
 use crate::api::WsService;
 use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
-use leptos::prelude::Set;
+use leptos::prelude::{GetUntracked, Set};
 
 use super::super::types::HandshakeSignals;
 use super::super::{PendingBranchTarget, switch_nonce::next_switch_nonce};
@@ -62,7 +62,10 @@ fn request_repo_list(ws: &WsService, signals: HandshakeSignals) {
     signals
         .set_repo_list_request_id
         .set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListRepos { request_id });
+    ws.send(ClientMessage::ListRepos {
+        request_id,
+        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+    });
 }
 
 fn request_doc_listing(ws: &WsService, signals: HandshakeSignals) {

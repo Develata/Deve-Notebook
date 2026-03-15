@@ -161,7 +161,10 @@ fn request_repo_list(ws: &WsService, signals: CoreSignals) {
     signals
         .set_repo_list_request_id
         .set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListRepos { request_id });
+    ws.send(ClientMessage::ListRepos {
+        request_id,
+        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+    });
 }
 
 fn should_request_repo_sync_state(active_branch: Option<PeerId>) -> bool {

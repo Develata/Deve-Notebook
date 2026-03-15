@@ -32,15 +32,26 @@ pub(super) async fn route_core(
             request_id,
             scope_nonce,
         } => {
-            if let Err(error) =
-                super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "shadow list")
-            {
+            if let Err(error) = super::scope_guard::validate_browser_scope_nonce(
+                session,
+                scope_nonce,
+                "shadow list",
+            ) {
                 ch.send_protocol_error(error);
                 return;
             }
             listing::handle_list_shadows(state, ch, Some(session), Some(request_id)).await;
         }
-        ClientMessage::ListRepos { request_id } => {
+        ClientMessage::ListRepos {
+            request_id,
+            scope_nonce,
+        } => {
+            if let Err(error) =
+                super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "repo list")
+            {
+                ch.send_protocol_error(error);
+                return;
+            }
             listing::handle_list_repos(
                 state,
                 ch,

@@ -70,6 +70,7 @@ pub fn use_core() -> CoreState {
             degraded: signals.degraded_sync_mode,
             current_repo: signals.current_repo,
             current_repo_id: signals.current_repo_id,
+            current_scope_nonce: signals.current_scope_nonce,
             active_branch: signals.active_branch,
             pending_branch_switch: signals.pending_branch_switch,
             set_pending_branch_switch: signals.set_pending_branch_switch,

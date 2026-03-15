@@ -125,6 +125,8 @@ pub enum ClientMessage {
     },
     ListRepos {
         request_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     SwitchBranch {
         peer_id: Option<String>,
