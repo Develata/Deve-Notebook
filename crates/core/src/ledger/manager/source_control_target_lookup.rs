@@ -31,7 +31,7 @@ pub(super) fn resolve_change_path(
     if let Some(resolved) = resolve_from_entries(&entries, &path, None) {
         return Ok(resolved);
     }
-    if let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, &path)?
+    if let Some(doc_id) = repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, &path)?
         && let Some(canonical) = resolve_canonical_path(repo, repo_name, doc_id)?
     {
         return Ok(canonical);

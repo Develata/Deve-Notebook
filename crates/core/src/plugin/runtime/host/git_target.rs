@@ -22,7 +22,7 @@ pub(super) fn resolve_local_sc_target(
         });
     }
     let doc_id = repo_manager
-        .get_tracked_docid_in_local_repo(repo_manager.local_repo_name(), &path)
+        .tracked_docid_or_legacy_error_in_local_repo(repo_manager.local_repo_name(), &path)
         .map_err(|e| e.to_string())?;
     Ok(ScPathTarget { path, doc_id })
 }
@@ -57,9 +57,13 @@ fn resolve_entry<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a Chang
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_entry;
+    use super::{resolve_entry, resolve_local_sc_target};
+    use crate::ledger::RepoManager;
+    use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use crate::models::DocId;
+    use crate::protocol::ScPathTarget;
     use crate::source_control::{ChangeEntry, ChangeStatus};
+    use tempfile::tempdir;
 
     #[test]
     fn resolve_entry_prefers_rename_successor_over_reused_old_path() {
@@ -91,5 +95,37 @@ mod tests {
         let resolved = resolve_entry(&entries, "notes/old.md").expect("resolved target");
         assert_eq!(resolved.path, "notes/new.md");
         assert_eq!(resolved.doc_id, Some(doc_id));
+    }
+
+    #[test]
+    fn resolve_local_sc_target_fails_closed_for_legacy_only_path_mapping() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+        repo.set_vault_root(dir.path().join("vault"));
+        let doc_id = DocId::new();
+        repo.run_on_local_repo("default", |db| {
+            let write = db.begin_write()?;
+            {
+                let mut p2d = write.open_table(PATH_TO_DOCID)?;
+                let mut d2p = write.open_table(DOCID_TO_PATH)?;
+                p2d.insert("notes/legacy.md", doc_id.as_u128())?;
+                d2p.insert(doc_id.as_u128(), "notes/legacy.md")?;
+            }
+            write.commit()?;
+            Ok::<_, anyhow::Error>(())
+        })?;
+
+        let err = resolve_local_sc_target(&repo, &repo, "notes/legacy.md")
+            .expect_err("legacy-only plugin target must fail closed");
+
+        assert!(
+            err.to_string()
+                .contains("Tracked document projection missing")
+        );
+        assert_ne!(
+            ScPathTarget::from_path("notes/legacy.md").doc_id,
+            Some(doc_id)
+        );
+        Ok(())
     }
 }
