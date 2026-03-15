@@ -211,3 +211,38 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
             .exists()
     );
 }
+
+#[test]
+fn remote_catalog_repair_skips_broken_peer_and_repairs_healthy_one() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let local = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:test:wiki"))
+        .expect("init local companion");
+    let info = local
+        .get_repo_info()
+        .expect("local repo info")
+        .expect("local repo exists");
+    let good_peer = PeerId::new("peer-good");
+    let bad_peer = PeerId::new("peer-bad");
+
+    repo.ensure_shadow_db(&good_peer, &info.uuid)
+        .expect("create healthy legacy uuid shadow");
+    let bad_dir = repo.remotes_dir().join(bad_peer.to_filename());
+    std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
+    std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("write broken shadow");
+
+    repo.repair_remote_repo_catalogs()
+        .expect("repair remote catalogs");
+
+    assert_eq!(
+        repo.list_repos(Some(&good_peer))
+            .expect("list healthy peer"),
+        vec![info.uuid.to_string()]
+    );
+    assert!(
+        repo.list_shadows_on_disk()
+            .expect("list peers")
+            .contains(&bad_peer)
+    );
+}

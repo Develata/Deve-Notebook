@@ -45,7 +45,14 @@ impl RepoManager {
             if name.starts_with('.') || name.is_empty() {
                 continue;
             }
-            self.scan_remote_repo_entries(&PeerId::new(name))?;
+            let peer_id = PeerId::new(name);
+            if let Err(err) = self.scan_remote_repo_entries(&peer_id) {
+                tracing::warn!(
+                    "Skipping broken shadow peer during remote catalog repair: peer={}, err={:?}",
+                    peer_id,
+                    err
+                );
+            }
         }
         Ok(())
     }

@@ -20,7 +20,23 @@ pub(super) fn resolve_change_path(
         }
     }
     let entries = repo.list_changes_in_local_repo(repo_name)?;
-    Ok(resolve_from_entries(&entries, &path, target.doc_id).unwrap_or(path))
+    let canonical = target
+        .doc_id
+        .and_then(|doc_id| resolve_canonical_path(repo, repo_name, doc_id).transpose())
+        .transpose()?;
+    Ok(resolve_from_entries(&entries, &path, target.doc_id)
+        .or(canonical)
+        .unwrap_or(path))
+}
+
+fn resolve_canonical_path(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: DocId,
+) -> Result<Option<String>> {
+    Ok(repo
+        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+        .map(|meta| to_forward_slash(&meta.path)))
 }
 
 fn pending_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
@@ -134,110 +150,5 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
 }
 
 #[cfg(test)]
-mod tests {
-    use super::resolve_from_entries;
-    use crate::models::DocId;
-    use crate::source_control::{ChangeEntry, ChangeStatus};
-
-    #[test]
-    fn resolve_from_entries_matches_renamed_from_without_doc_id() {
-        let entries = vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: None,
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: None,
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ];
-
-        assert_eq!(
-            resolve_from_entries(&entries, "notes/old.md", None),
-            Some("notes/new.md".into())
-        );
-    }
-
-    #[test]
-    fn resolve_from_entries_prefers_doc_id_when_available() {
-        let doc_id = DocId(uuid::Uuid::nil());
-        let entries = vec![ChangeEntry {
-            path: "notes/new.md".into(),
-            renamed_from: Some("notes/old.md".into()),
-            doc_id: Some(doc_id),
-            status: ChangeStatus::Added,
-            has_conflict: false,
-        }];
-
-        assert_eq!(
-            resolve_from_entries(&entries, "notes/old.md", Some(doc_id)),
-            Some("notes/new.md".into())
-        );
-    }
-
-    #[test]
-    fn resolve_from_entries_prefers_live_successor_over_exact_deleted_doc_path() {
-        let doc_id = DocId(uuid::Uuid::nil());
-        let entries = vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: Some(doc_id),
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: Some(doc_id),
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ];
-
-        assert_eq!(
-            resolve_from_entries(&entries, "notes/old.md", Some(doc_id)),
-            Some("notes/new.md".into())
-        );
-    }
-
-    #[test]
-    fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
-        let old_doc = DocId(uuid::Uuid::nil());
-        let new_doc = DocId(uuid::Uuid::from_u128(1));
-        let entries = vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: Some(old_doc),
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: Some(old_doc),
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: Some(new_doc),
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ];
-
-        assert_eq!(
-            resolve_from_entries(&entries, "notes/old.md", None),
-            Some("notes/new.md".into())
-        );
-    }
-}
+#[path = "source_control_target_lookup_test.rs"]
+mod tests;
