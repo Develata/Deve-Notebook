@@ -64,3 +64,11 @@ fn classifies_remote_bootstrap_drift_as_repo_context_invalid() {
         (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid)
     );
 }
+
+#[test]
+fn classifies_missing_local_repo_name_as_not_found() {
+    assert_eq!(
+        classify_repo_error("Local repo not found for name wiki"),
+        (StatusCode::NOT_FOUND, ServerErrorCode::StorageNotFound)
+    );
+}

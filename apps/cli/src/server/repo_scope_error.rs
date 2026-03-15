@@ -13,6 +13,7 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
             "repository not found:",
             "document not found",
             "doc not found",
+            "local repo not found for name",
         ],
     ) {
         return ServerError::with_detail(ServerErrorCode::StorageNotFound, detail);
@@ -65,5 +66,11 @@ mod tests {
             "Ambiguous remote repository selector: shadow-wiki"
         ));
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn classifies_missing_local_repo_name_as_storage_not_found() {
+        let err = map_repo_scope_error(anyhow::anyhow!("Local repo not found for name wiki"));
+        assert_eq!(err.code, ServerErrorCode::StorageNotFound);
     }
 }

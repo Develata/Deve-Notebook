@@ -116,6 +116,7 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
             "repository not found:",
             "document not found",
             "doc not found",
+            "local repo not found for name",
         ],
     ) {
         return (StatusCode::NOT_FOUND, ServerErrorCode::StorageNotFound);
