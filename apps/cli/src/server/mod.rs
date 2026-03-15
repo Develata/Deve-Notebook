@@ -39,6 +39,8 @@ mod docs_projection_repair_test;
 #[cfg(test)]
 mod document_remote_scope_test;
 pub mod handlers;
+#[cfg(test)]
+mod listing_scope_cleanup_test;
 pub mod mcp;
 pub mod metrics;
 pub mod node_role;

@@ -24,11 +24,6 @@ pub async fn handle_list_docs(
     };
     let (repo_name, repo_id) = match resolved {
         Ok(scope) => (scope.repo_name, scope.repo_id),
-        Err(_err) if session.active_branch.is_some() && session.active_repo.is_none() => {
-            session.clear_active_repo();
-            ch.send_sync_repo_unbound();
-            return;
-        }
         Err(err) => {
             return ch.send_protocol_error(map_repo_scope_error(err));
         }

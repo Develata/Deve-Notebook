@@ -6,12 +6,14 @@
 
 #[path = "repo_scope_lookup.rs"]
 mod lookup;
-#[path = "repo_scope_remote.rs"]
-mod repo_scope_remote;
 #[path = "repo_scope_bootstrap.rs"]
 mod repo_scope_bootstrap;
+#[path = "repo_scope_cleanup.rs"]
+mod repo_scope_cleanup;
 #[path = "repo_scope_error.rs"]
 mod repo_scope_error;
+#[path = "repo_scope_remote.rs"]
+mod repo_scope_remote;
 #[path = "repo_scope_workspace.rs"]
 mod repo_scope_workspace;
 
@@ -23,6 +25,7 @@ use std::sync::Arc;
 
 use self::lookup::{resolve_repo_by_name, resolve_repo_by_repo_id};
 use self::repo_scope_bootstrap::fallback_local_repo_name;
+use self::repo_scope_cleanup::should_clear_stale_remote_scope;
 pub use self::repo_scope_error::map_repo_scope_error;
 use self::repo_scope_remote::recover_remote_repo_name_from_selector;
 pub use self::repo_scope_workspace::{
@@ -85,7 +88,19 @@ pub fn resolve_session_repo_and_sync(
     state: &Arc<AppState>,
     session: &mut WsSession,
 ) -> Result<ResolvedRepo> {
-    let scope = resolve_session_repo(state, session)?;
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            if session.active_branch.is_some()
+                && should_clear_stale_remote_scope(err.to_string().as_str())
+            {
+                session.clear_active_repo();
+                session.clear_active_db();
+                session.clear_sync_binding();
+            }
+            return Err(err);
+        }
+    };
     if session.active_repo.as_deref() != Some(scope.repo_name.as_str())
         || session.active_repo_id != Some(scope.repo_id)
     {
@@ -170,7 +185,12 @@ fn resolve_repo_name_from_session(
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));
         };
-        if let Some(selector) = recover_remote_repo_name_from_selector(state, branch, &repo_name, session.active_repo_id)? {
+        if let Some(selector) = recover_remote_repo_name_from_selector(
+            state,
+            branch,
+            &repo_name,
+            session.active_repo_id,
+        )? {
             if selector != repo_name {
                 tracing::warn!(
                     "Recovering remote repo selector from stale name: branch={}, stale_name={}, resolved_selector={}",
