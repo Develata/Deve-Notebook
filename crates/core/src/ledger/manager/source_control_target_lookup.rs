@@ -172,7 +172,9 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
     if let Some(entry) = renamed.into_iter().next() {
         return Some(entry);
     }
-    (exact.len() == 1).then_some(exact[0])
+    (exact.len() == 1)
+        .then(|| exact.into_iter().next())
+        .flatten()
 }
 
 #[cfg(test)]

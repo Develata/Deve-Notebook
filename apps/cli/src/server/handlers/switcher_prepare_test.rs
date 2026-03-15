@@ -144,15 +144,19 @@ fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyho
     state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
     state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
 
-    let selected = select_target_repo(
+    let err = select_target_repo(
         &state,
         false,
         None,
         None,
         Some("urn:test:shared".into()),
         Some(&peer_id),
-    )?;
-    assert_eq!(selected, None);
+    )
+    .expect_err("ambiguous remote URL must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Ambiguous remote repository selector for URL")
+    );
     Ok(())
 }
 

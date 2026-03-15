@@ -1,5 +1,5 @@
 use crate::ledger::RepoManager;
-use crate::ledger::{metadata, node_meta};
+use crate::ledger::node_meta;
 use crate::models::{DocId, NodeId, NodeKind, StructureOp};
 use anyhow::{Result, anyhow};
 
@@ -50,21 +50,7 @@ pub(super) fn plan_delete(
 ) -> Result<Option<StructuredCommitTarget>> {
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => {
-            if let Some(doc_id) = repo.resolve_canonical_doc_id_in_local_repo(repo_name, path)? {
-                Some(doc_id)
-            } else if repo
-                .run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))?
-                .is_some()
-            {
-                return Err(anyhow!(
-                    "Tracked document projection missing for legacy-mapped path: {}",
-                    path
-                ));
-            } else {
-                None
-            }
-        }
+        None => repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?,
     };
     Ok(doc_id.map(|doc_id| StructuredCommitTarget {
         doc_id,
@@ -84,17 +70,8 @@ fn resolve_doc_id(
     if let Some(doc_id) = doc_id_hint {
         return Ok(doc_id);
     }
-    if let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, path)? {
+    if let Some(doc_id) = repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)? {
         return Ok(doc_id);
-    }
-    if repo
-        .run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))?
-        .is_some()
-    {
-        return Err(anyhow!(
-            "Tracked document projection missing for legacy-mapped path: {}",
-            path
-        ));
     }
     Ok(DocId::new())
 }

@@ -2,6 +2,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
+use anyhow::anyhow;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{PeerId, RepoId};
@@ -104,6 +105,12 @@ pub(super) fn select_target_repo(
                     .map(|_| repo_name.clone())
             })
             .collect::<Vec<_>>();
+        if target_branch.is_some() && matches.len() > 1 {
+            return Err(anyhow!(
+                "Ambiguous remote repository selector for URL: {}",
+                url
+            ));
+        }
         return Ok((matches.len() == 1).then(|| matches[0].clone()));
     }
     if had_current_repo_hint || current_repo_name.is_some() || current_repo_id.is_some() {
@@ -133,6 +140,12 @@ pub(super) fn prepare_repo_switch(
         .get_repo_info_for(branch, Some(&repo_name))?
         .map(|info| info.uuid);
     if branch.is_some() {
+        if repo_info.is_none() {
+            return Err(anyhow!(
+                "Remote repository UUID not resolved for selector: {}",
+                repo_name
+            ));
+        }
         let handle = state.repo.open_database(branch, &repo_name)?;
         return Ok(PreparedRepoSwitch {
             repo_name,

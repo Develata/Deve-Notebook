@@ -155,6 +155,37 @@ fn remote_repo_selector_can_recover_from_uuid_string() {
 }
 
 #[test]
+fn remote_repo_selector_prefers_exact_uuid_shaped_stem_over_foreign_uuid_match() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let exact_selector = Uuid::new_v4();
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: Uuid::new_v4(),
+            name: exact_selector.to_string(),
+            url: Some("urn:test:uuid-shaped-selector".into()),
+        },
+    )
+    .expect("prepare exact uuid-shaped selector");
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: exact_selector,
+            name: "notes-b".into(),
+            url: Some("urn:test:notes-b".into()),
+        },
+    )
+    .expect("prepare foreign uuid match");
+
+    assert_eq!(
+        repo.find_remote_repo_selector(&peer_id, &exact_selector.to_string())
+            .expect("resolve selector"),
+        Some(exact_selector.to_string())
+    );
+}
+
+#[test]
 fn duplicate_shadow_uuid_is_hidden_and_fails_selector_recovery() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");

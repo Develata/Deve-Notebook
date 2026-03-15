@@ -5,9 +5,9 @@
 //! repair/rebuild 使用的映射直写接口已拆到 `metadata_repair_ops`。
 
 use crate::ledger::RepoManager;
-use crate::ledger::{doc_lookup, inode_index, node_meta};
+use crate::ledger::{doc_lookup, inode_index, metadata, node_meta};
 use crate::models::{DocId, NodeMeta};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 impl RepoManager {
     /// 根据路径获取 DocId
@@ -58,6 +58,28 @@ impl RepoManager {
             };
             Ok(node_meta::get_node_meta(db, node_id)?.and_then(|meta| meta.doc_id))
         })
+    }
+
+    /// 运行时主链的 tracked doc 查询 + fail-closed 兼容护栏：
+    /// 若当前 path 只剩 legacy path mapping，而 node projection 已缺失，则必须显式报错。
+    pub(crate) fn tracked_docid_or_legacy_error_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+    ) -> Result<Option<DocId>> {
+        if let Some(doc_id) = self.get_tracked_docid_in_local_repo(repo_name, path)? {
+            return Ok(Some(doc_id));
+        }
+        if self
+            .run_on_local_repo(repo_name, |db| metadata::get_docid(db, path))?
+            .is_some()
+        {
+            return Err(anyhow!(
+                "Tracked document projection missing for legacy-mapped path: {}",
+                path
+            ));
+        }
+        Ok(None)
     }
 
     /// 绑定 Inode 到 DocId

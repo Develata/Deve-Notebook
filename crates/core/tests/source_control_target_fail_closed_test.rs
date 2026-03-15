@@ -1,4 +1,5 @@
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeStatus;
@@ -54,6 +55,35 @@ fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow
     assert!(
         err.to_string()
             .contains("Source control target not resolved for path notes/missing.md")
+    );
+    Ok(())
+}
+
+#[test]
+fn repo_diff_path_fails_closed_when_only_legacy_path_mapping_exists() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+    repo.set_vault_root(dir.path().join("vault"));
+    let doc_id = DocId::new();
+    repo.run_on_local_repo("default", |db| {
+        let write = db.begin_write()?;
+        {
+            let mut p2d = write.open_table(PATH_TO_DOCID)?;
+            let mut d2p = write.open_table(DOCID_TO_PATH)?;
+            p2d.insert("notes/legacy.md", doc_id.as_u128())?;
+            d2p.insert(doc_id.as_u128(), "notes/legacy.md")?;
+        }
+        write.commit()?;
+        Ok::<_, anyhow::Error>(())
+    })?;
+
+    let err = repo
+        .diff_doc_path("notes/legacy.md")
+        .expect_err("legacy-only path wrapper must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("Tracked document projection missing for legacy-mapped path")
     );
     Ok(())
 }

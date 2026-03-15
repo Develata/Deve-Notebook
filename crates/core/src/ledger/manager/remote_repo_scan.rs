@@ -136,12 +136,12 @@ impl RepoManager {
                 by_id.push(entry);
             }
         }
-        reject_duplicate_remote_matches(selector, &by_id, &duplicate_ids)?;
-        if let Some(entry) = single_remote_entry(by_id) {
-            return Ok(Some(entry));
-        }
         reject_duplicate_remote_matches(selector, &by_stem, &duplicate_ids)?;
         if let Some(entry) = single_remote_entry(by_stem) {
+            return Ok(Some(entry));
+        }
+        reject_duplicate_remote_matches(selector, &by_id, &duplicate_ids)?;
+        if let Some(entry) = single_remote_entry(by_id) {
             return Ok(Some(entry));
         }
         reject_duplicate_remote_matches(selector, &by_name, &duplicate_ids)?;

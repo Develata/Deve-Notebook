@@ -163,23 +163,6 @@ fn resolve_repo_name_from_session(
         }
         return Ok(None);
     }
-    if let Some(repo_id) = session.active_repo_id
-        && let Some(branch) = session.active_branch.as_ref()
-        && let Some(selector) = state
-            .repo
-            .find_remote_repo_selector_by_id(branch, repo_id)?
-    {
-        if session.active_repo.as_deref() != Some(selector.as_str()) {
-            tracing::warn!(
-                "Recovering remote repo selector from UUID: branch={}, repo_id={}, stale_name={:?}, resolved_selector={}",
-                branch,
-                repo_id,
-                session.active_repo,
-                selector
-            );
-        }
-        return Ok(Some(selector));
-    }
     if let Some(repo_name) = session.active_repo.clone() {
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));
@@ -195,6 +178,20 @@ fn resolve_repo_name_from_session(
             }
             return Ok(Some(selector));
         }
+        if let Some(repo_id) = session.active_repo_id
+            && let Some(selector) = state
+                .repo
+                .find_remote_repo_selector_by_id(branch, repo_id)?
+        {
+            tracing::warn!(
+                "Recovering remote repo selector from UUID after stale name miss: branch={}, repo_id={}, stale_name={}, resolved_selector={}",
+                branch,
+                repo_id,
+                repo_name,
+                selector
+            );
+            return Ok(Some(selector));
+        }
         tracing::warn!(
             "Dropping stale remote session repo_name without recoverable selector: branch={}, stale_name={}",
             branch,
@@ -205,6 +202,13 @@ fn resolve_repo_name_from_session(
     let Some(repo_id) = session.active_repo_id else {
         return Ok(None);
     };
+    if let Some(branch) = session.active_branch.as_ref()
+        && let Some(selector) = state
+            .repo
+            .find_remote_repo_selector_by_id(branch, repo_id)?
+    {
+        return Ok(Some(selector));
+    }
     if session.active_branch.is_some() {
         return Err(anyhow!(
             "Remote session lost repo name for bound repo {}",

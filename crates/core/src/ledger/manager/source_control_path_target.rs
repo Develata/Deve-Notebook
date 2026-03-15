@@ -16,7 +16,7 @@ impl RepoManager {
     ) -> Result<ScPathTarget> {
         let path = to_forward_slash(path);
         Ok(ScPathTarget {
-            doc_id: self.get_tracked_docid_in_local_repo(repo_name, &path)?,
+            doc_id: self.tracked_docid_or_legacy_error_in_local_repo(repo_name, &path)?,
             path,
         })
     }

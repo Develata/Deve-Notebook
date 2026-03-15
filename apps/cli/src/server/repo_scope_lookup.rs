@@ -38,6 +38,26 @@ pub(super) fn resolve_repo_by_name(
     if let Some(expected_repo_id) = expected_repo_id
         && expected_repo_id != info.uuid
     {
+        if let Some(peer_id) = branch.as_ref()
+            && state
+                .repo
+                .find_remote_repo_selector(peer_id, &repo_name)?
+                .as_deref()
+                == Some(repo_name.as_str())
+        {
+            tracing::warn!(
+                "Ignoring stale remote repo UUID in favor of exact selector: branch={:?}, repo_name={}, stale_repo_id={}, resolved_repo_id={}",
+                branch,
+                repo_name,
+                expected_repo_id,
+                info.uuid
+            );
+            return Ok(ResolvedRepo {
+                repo_id: info.uuid,
+                repo_name,
+                branch,
+            });
+        }
         if branch.is_some()
             && let Some(selector) = recover_repo_selector(state, branch.as_ref(), expected_repo_id)?
         {
