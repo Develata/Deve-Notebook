@@ -5,7 +5,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
+use anyhow::anyhow;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -79,39 +81,7 @@ fn send_listing_error(ch: &DualChannel, detail: impl Into<String>) {
 }
 
 fn classify_listing_error(detail: &str) -> ServerErrorCode {
-    let lower = detail.to_ascii_lowercase();
-    if contains_any(
-        &lower,
-        &[
-            "database already open",
-            "cannot acquire lock",
-            "db locked",
-            "database is locked",
-        ],
-    ) {
-        return ServerErrorCode::StorageDbLocked;
-    }
-    if contains_any(
-        &lower,
-        &[
-            "remote session lost repo name",
-            "repository uuid not resolved",
-            "remote repository selector not resolved",
-            "local repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "ambiguous local repository selector",
-            "ambiguous remote repository selector",
-            "local repo not found for uuid",
-        ],
-    ) {
-        return ServerErrorCode::ScRepoContextInvalid;
-    }
-    ServerErrorCode::RequestFailed
-}
-
-fn contains_any(input: &str, patterns: &[&str]) -> bool {
-    patterns.iter().any(|pattern| input.contains(pattern))
+    map_repo_scope_error(anyhow!(detail.to_string())).code
 }
 
 #[cfg(test)]
@@ -139,6 +109,22 @@ mod tests {
     fn classifies_ambiguous_remote_selector_as_repo_context_invalid() {
         assert_eq!(
             classify_listing_error("Ambiguous remote repository selector: shadow-wiki"),
+            ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_missing_repo_selection_as_sync_repo_unbound() {
+        assert_eq!(
+            classify_listing_error("Active repository not selected: multiple local repos exist"),
+            ServerErrorCode::SyncRepoUnbound
+        );
+    }
+
+    #[test]
+    fn classifies_remote_workspace_access_as_repo_context_invalid() {
+        assert_eq!(
+            classify_listing_error("Local workspace root requested on remote branch: wiki"),
             ServerErrorCode::ScRepoContextInvalid
         );
     }
