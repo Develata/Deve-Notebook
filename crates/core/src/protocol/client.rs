@@ -120,6 +120,8 @@ pub enum ClientMessage {
     },
     ListShadows {
         request_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     ListRepos {
         request_id: String,

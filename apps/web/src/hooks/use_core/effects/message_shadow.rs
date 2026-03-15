@@ -16,7 +16,10 @@ pub fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
     signals
         .set_shadow_list_request_id
         .set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListShadows { request_id });
+    ws.send(ClientMessage::ListShadows {
+        request_id,
+        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+    });
 }
 
 pub fn handle_shadow_list(

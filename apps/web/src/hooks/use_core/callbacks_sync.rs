@@ -87,9 +87,16 @@ pub fn create_sync_callbacks(
 
     let ws6 = ws.clone();
     let on_list_shadows = Callback::new(move |_: ()| {
+        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+            leptos::logging::warn!("忽略 ListShadows: local repo scope 尚未稳定");
+            return;
+        };
         let request_id = uuid::Uuid::new_v4().to_string();
         set_shadow_list_request_id.set(Some(request_id.clone()));
-        ws6.send(ClientMessage::ListShadows { request_id });
+        ws6.send(ClientMessage::ListShadows {
+            request_id,
+            scope_nonce: Some(scope_nonce),
+        });
     });
 
     let ws7 = ws.clone();

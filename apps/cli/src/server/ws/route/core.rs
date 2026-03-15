@@ -28,7 +28,16 @@ pub(super) async fn route_core(
         ClientMessage::ListDocs { request_id } => {
             listing::handle_list_docs(state, ch, session, Some(request_id), None).await;
         }
-        ClientMessage::ListShadows { request_id } => {
+        ClientMessage::ListShadows {
+            request_id,
+            scope_nonce,
+        } => {
+            if let Err(error) =
+                super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "shadow list")
+            {
+                ch.send_protocol_error(error);
+                return;
+            }
             listing::handle_list_shadows(state, ch, Some(session), Some(request_id)).await;
         }
         ClientMessage::ListRepos { request_id } => {

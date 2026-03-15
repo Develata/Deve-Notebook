@@ -43,11 +43,22 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
 
-    handle_switch_branch(&state, &ch, &mut session, Some("missing-peer".into()), None).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some("missing-peer".into()),
+        Some(11),
+    )
+    .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+        }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(switch_nonce, Some(11));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -62,11 +73,15 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
 
-    handle_switch_branch(&state, &ch, &mut session, Some("default".into()), None).await;
+    handle_switch_branch(&state, &ch, &mut session, Some("default".into()), Some(13)).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+        }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(switch_nonce, Some(13));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
