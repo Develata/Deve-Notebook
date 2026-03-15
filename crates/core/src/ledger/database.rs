@@ -9,7 +9,9 @@
 //! 主库 (`local_db`) 已经被 RepoManager 持有，我们通过路径匹配来避免重复打开。
 
 use super::RepoManager;
-use super::database_cache::{CachedDatabaseEntry, OPENED_DBS, current_file_stamp};
+use super::database_cache::{
+    CachedDatabaseEntry, OPENED_DBS, current_file_stamp, reusable_cached_database,
+};
 use crate::models::PeerId;
 use crate::models::RepoId;
 use anyhow::Result;
@@ -43,15 +45,8 @@ pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
 }
 
 pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>> {
-    let current_stamp = current_file_stamp(db_path);
-    {
-        let cache = OPENED_DBS.read().unwrap();
-        if let Some(entry) = cache.get(db_path)
-            && entry.stamp == current_stamp
-        {
-            tracing::debug!("Database cache hit: {:?}", db_path);
-            return Ok(entry.db.clone());
-        }
+    if let Some(db) = reusable_cached_database(db_path) {
+        return Ok(db);
     }
     OPENED_DBS.write().unwrap().remove(db_path);
     if let Some(parent) = db_path.parent() {
@@ -172,14 +167,8 @@ impl RepoManager {
         let cache_key = self.ledger_dir.join("local").join(format!("{}.redb", name));
 
         // 1. 检查全局缓存
-        {
-            let cache = OPENED_DBS.read().unwrap();
-            if let Some(entry) = cache.get(cache_key.as_path())
-                && entry.stamp == current_file_stamp(cache_key.as_path())
-            {
-                tracing::debug!("Database cache hit: {:?}", cache_key);
-                return Ok(entry.db.clone());
-            }
+        if let Some(db) = reusable_cached_database(cache_key.as_path()) {
+            return Ok(db);
         }
         OPENED_DBS.write().unwrap().remove(cache_key.as_path());
 
