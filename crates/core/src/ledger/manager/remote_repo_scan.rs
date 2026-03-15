@@ -172,7 +172,12 @@ impl RepoManager {
         Ok(self
             .scan_remote_repo_entries(peer_id)?
             .into_iter()
-            .any(|entry| entry.info.as_ref().is_some_and(|info| info.name == raw_name)))
+            .any(|entry| {
+                entry
+                    .info
+                    .as_ref()
+                    .is_some_and(|info| info.name == raw_name)
+            }))
     }
 
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {

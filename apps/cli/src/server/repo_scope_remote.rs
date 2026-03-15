@@ -37,10 +37,6 @@ pub(super) fn recover_remote_repo_name_from_selector(
     Ok(None)
 }
 
-fn has_remote_display_name(
-    state: &Arc<AppState>,
-    branch: &PeerId,
-    raw_name: &str,
-) -> Result<bool> {
+fn has_remote_display_name(state: &Arc<AppState>, branch: &PeerId, raw_name: &str) -> Result<bool> {
     state.repo.has_remote_display_name(branch, raw_name)
 }
