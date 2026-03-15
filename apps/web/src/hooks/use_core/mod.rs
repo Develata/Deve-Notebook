@@ -92,6 +92,7 @@ pub fn use_core() -> CoreState {
         signals.current_doc,
         callbacks_scope::LocalScopeSignals {
             current_repo_id: signals.current_repo_id,
+            current_scope_nonce: signals.current_scope_nonce,
             active_branch: signals.active_branch,
             pending_branch_switch: signals.pending_branch_switch,
             pending_repo_switch: signals.pending_repo_switch,
@@ -106,6 +107,7 @@ pub fn use_core() -> CoreState {
         signals.current_doc,
         callbacks_scope::LocalScopeSignals {
             current_repo_id: signals.current_repo_id,
+            current_scope_nonce: signals.current_scope_nonce,
             active_branch: signals.active_branch,
             pending_branch_switch: signals.pending_branch_switch,
             pending_repo_switch: signals.pending_repo_switch,

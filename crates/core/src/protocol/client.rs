@@ -87,15 +87,27 @@ pub enum ClientMessage {
     },
     GetSyncMode {
         request_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     SetSyncMode {
         mode: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     GetPendingOps {
         request_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
-    ConfirmMerge,
-    DiscardPending,
+    ConfirmMerge {
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
+    DiscardPending {
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
     ListShadows {
         request_id: String,
     },
@@ -150,6 +162,8 @@ pub enum ClientMessage {
     MergePeer {
         peer_id: String,
         doc_id: DocId,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     GetDocDiff {
         request_id: String,

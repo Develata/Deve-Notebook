@@ -137,6 +137,7 @@ fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
     if !should_request_repo_sync_state(signals.active_branch.get_untracked()) {
         return;
     }
+    let scope_nonce = signals.current_scope_nonce.get_untracked();
     let sync_mode_request_id = uuid::Uuid::new_v4().to_string();
     let pending_ops_request_id = uuid::Uuid::new_v4().to_string();
     signals
@@ -147,9 +148,11 @@ fn request_repo_sync_state(ws: &WsService, signals: CoreSignals) {
         .set(Some(pending_ops_request_id.clone()));
     ws.send(ClientMessage::GetSyncMode {
         request_id: sync_mode_request_id,
+        scope_nonce: Some(scope_nonce),
     });
     ws.send(ClientMessage::GetPendingOps {
         request_id: pending_ops_request_id,
+        scope_nonce: Some(scope_nonce),
     });
 }
 

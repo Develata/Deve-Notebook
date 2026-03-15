@@ -201,8 +201,8 @@ fn is_write_message(msg: &ClientMessage) -> bool {
         ClientMessage::SwitchRepo { .. } => true,
         ClientMessage::SwitchRepoExact { .. } => true,
         // 合并操作
-        ClientMessage::ConfirmMerge => true,
-        ClientMessage::DiscardPending => true,
+        ClientMessage::ConfirmMerge { .. } => true,
+        ClientMessage::DiscardPending { .. } => true,
         ClientMessage::SetSyncMode { .. } => true,
         // 插件调用视为写入（可能有副作用）
         ClientMessage::PluginCall { .. } => true,

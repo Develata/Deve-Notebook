@@ -1,6 +1,6 @@
 use crate::server::handlers::source_control;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
-use deve_core::protocol::{ClientMessage, ServerError, ServerErrorCode};
+use deve_core::protocol::ClientMessage;
 use std::sync::Arc;
 
 /// 路由版本控制相关消息。
@@ -11,7 +11,8 @@ pub(super) async fn route_source_control(
     msg: ClientMessage,
 ) {
     if let Some(scope_nonce) = requested_scope_nonce(&msg)
-        && let Err(error) = validate_scope_nonce(session, scope_nonce)
+        && let Err(error) =
+            super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "source control")
     {
         ch.send_protocol_error(error);
         return;
@@ -71,32 +72,6 @@ pub(super) async fn route_source_control(
     }
 }
 
-fn validate_scope_nonce(
-    session: &WsSession,
-    requested_scope_nonce: Option<u64>,
-) -> Result<(), ServerError> {
-    if !session.is_browser_session() {
-        return Ok(());
-    }
-    let Some(requested_scope_nonce) = requested_scope_nonce else {
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            "source control scope nonce missing",
-        ));
-    };
-    if session.scope_nonce() != requested_scope_nonce {
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            format!(
-                "source control scope nonce is stale: current_scope_nonce={}, requested_scope_nonce={}",
-                session.scope_nonce(),
-                requested_scope_nonce
-            ),
-        ));
-    }
-    Ok(())
-}
-
 fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
     match msg {
         ClientMessage::GetChanges { scope_nonce, .. }
@@ -117,9 +92,8 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{requested_scope_nonce, validate_scope_nonce};
-    use crate::server::session::WsSession;
-    use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode};
+    use super::requested_scope_nonce;
+    use deve_core::protocol::{ClientMessage, ScPathTarget};
 
     #[test]
     fn extracts_scope_nonce_from_source_control_messages() {
@@ -138,24 +112,5 @@ mod tests {
             Some(Some(9))
         );
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
-    }
-
-    #[test]
-    fn browser_source_control_requests_require_current_scope_nonce() {
-        let mut session = WsSession::new();
-        session.mark_browser_session();
-        session.set_scope_nonce(Some(11));
-        let missing = validate_scope_nonce(&session, None).unwrap_err();
-        assert_eq!(missing.code, ServerErrorCode::ScRepoContextInvalid);
-        let stale = validate_scope_nonce(&session, Some(10)).unwrap_err();
-        assert_eq!(stale.code, ServerErrorCode::ScRepoContextInvalid);
-        assert!(stale.detail.as_deref().expect("detail").contains("stale"));
-        assert!(validate_scope_nonce(&session, Some(11)).is_ok());
-    }
-
-    #[test]
-    fn non_browser_source_control_requests_do_not_require_scope_nonce() {
-        let session = WsSession::new();
-        assert!(validate_scope_nonce(&session, None).is_ok());
     }
 }

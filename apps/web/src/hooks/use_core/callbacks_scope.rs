@@ -5,6 +5,7 @@ use leptos::prelude::{GetUntracked, ReadSignal};
 #[derive(Clone, Copy)]
 pub struct LocalScopeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
@@ -18,6 +19,10 @@ pub fn run_if_stable_local_scope(signals: LocalScopeSignals, op_name: &str, acti
     action();
 }
 
+pub fn stable_local_scope_nonce(signals: LocalScopeSignals) -> Option<u64> {
+    stable_local_scope_ready(signals).then(|| signals.current_scope_nonce.get_untracked())
+}
+
 fn stable_local_scope_ready(signals: LocalScopeSignals) -> bool {
     signals.current_repo_id.get_untracked().is_some()
         && signals.active_branch.get_untracked().is_none()
@@ -27,8 +32,9 @@ fn stable_local_scope_ready(signals: LocalScopeSignals) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{LocalScopeSignals, run_if_stable_local_scope};
+    use super::{LocalScopeSignals, run_if_stable_local_scope, stable_local_scope_nonce};
     use crate::hooks::use_core::PendingBranchTarget;
+    use deve_core::models::PeerId;
     use leptos::prelude::*;
 
     #[test]
@@ -36,6 +42,7 @@ mod tests {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+        let (current_scope_nonce, _) = signal(7u64);
         let (active_branch, _) = signal(None);
         let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
         let (pending_repo_switch, _) = signal(None::<String>);
@@ -44,6 +51,7 @@ mod tests {
         run_if_stable_local_scope(
             LocalScopeSignals {
                 current_repo_id,
+                current_scope_nonce,
                 active_branch,
                 pending_branch_switch,
                 pending_repo_switch,
@@ -60,6 +68,7 @@ mod tests {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+        let (current_scope_nonce, _) = signal(7u64);
         let (active_branch, _) = signal(None);
         let (ran, set_ran) = signal(false);
 
@@ -73,6 +82,7 @@ mod tests {
             run_if_stable_local_scope(
                 LocalScopeSignals {
                     current_repo_id,
+                    current_scope_nonce,
                     active_branch,
                     pending_branch_switch,
                     pending_repo_switch,
@@ -83,5 +93,39 @@ mod tests {
         }
 
         assert!(!ran.get_untracked());
+    }
+
+    #[test]
+    fn returns_scope_nonce_only_for_stable_local_scope() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+        let (current_scope_nonce, _) = signal(9u64);
+        let (active_branch, _) = signal(None::<PeerId>);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_repo_switch, _) = signal(None::<String>);
+
+        assert_eq!(
+            stable_local_scope_nonce(LocalScopeSignals {
+                current_repo_id,
+                current_scope_nonce,
+                active_branch,
+                pending_branch_switch,
+                pending_repo_switch,
+            }),
+            Some(9)
+        );
+
+        let (pending_repo_switch, _) = signal(Some("repo-2".to_string()));
+        assert_eq!(
+            stable_local_scope_nonce(LocalScopeSignals {
+                current_repo_id,
+                current_scope_nonce,
+                active_branch,
+                pending_branch_switch,
+                pending_repo_switch,
+            }),
+            None
+        );
     }
 }

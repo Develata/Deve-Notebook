@@ -7,6 +7,7 @@ use std::sync::Arc;
 mod core;
 mod docs;
 mod merge;
+mod scope_guard;
 mod source_control;
 
 /// WebSocket 消息路由入口。
