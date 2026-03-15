@@ -78,6 +78,17 @@ fn select_entry_for_doc(
 
 fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<PendingFsEntry> {
     let exact = entries.iter().find(|entry| entry.path == path).cloned();
+    let renamed_successor = entries.iter().find(|entry| {
+        entry.status_is_live()
+            && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
+    });
+    let path_reused_after_delete = renamed_successor.is_some()
+        && entries
+            .iter()
+            .any(|entry| entry.path == path && entry.change_type == ChangeStatus::Deleted);
+    if path_reused_after_delete {
+        return renamed_successor.cloned();
+    }
     if exact
         .as_ref()
         .is_some_and(PendingEntryStatus::status_is_live)
@@ -88,6 +99,7 @@ fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<
         .iter()
         .find(|entry| entry.path == path && entry.status_is_live())
         .cloned()
+        .or_else(|| renamed_successor.cloned())
         .or(exact)
 }
 
@@ -98,5 +110,52 @@ trait PendingEntryStatus {
 impl PendingEntryStatus for PendingFsEntry {
     fn status_is_live(&self) -> bool {
         self.change_type != ChangeStatus::Deleted
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_entry_without_doc;
+    use crate::source_control::ChangeStatus;
+    use crate::source_control::pending_fs::PendingFsEntry;
+
+    #[test]
+    fn prefers_rename_successor_when_old_path_is_reused() {
+        let entries = vec![
+            PendingFsEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Deleted,
+                content_hash: String::new(),
+                detected_at: 1,
+                has_conflict: false,
+            },
+            PendingFsEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: String::new(),
+                detected_at: 2,
+                has_conflict: false,
+            },
+            PendingFsEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: String::new(),
+                detected_at: 3,
+                has_conflict: false,
+            },
+        ];
+
+        assert_eq!(
+            select_entry_without_doc(entries, "notes/old.md")
+                .expect("rename successor should win")
+                .path,
+            "notes/new.md"
+        );
     }
 }

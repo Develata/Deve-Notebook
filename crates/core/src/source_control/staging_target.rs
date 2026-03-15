@@ -98,6 +98,17 @@ fn select_entry_without_doc(
         .iter()
         .find(|(entry_path, _)| entry_path == path)
         .cloned();
+    let renamed_successor = entries.iter().find(|(_, entry)| {
+        entry.status != ChangeStatus::Deleted
+            && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
+    });
+    let path_reused_after_delete = renamed_successor.is_some()
+        && entries
+            .iter()
+            .any(|(entry_path, entry)| entry_path == path && entry.status == ChangeStatus::Deleted);
+    if path_reused_after_delete {
+        return renamed_successor.cloned();
+    }
     if exact.is_some() {
         return exact;
     }
@@ -105,9 +116,62 @@ fn select_entry_without_doc(
         .iter()
         .find(|(entry_path, entry)| entry_path == path && entry.status != ChangeStatus::Deleted)
         .cloned()
+        .or_else(|| renamed_successor.cloned())
         .or_else(|| {
             entries
                 .into_iter()
                 .find(|(entry_path, _)| entry_path == path)
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_entry_without_doc;
+    use crate::source_control::{ChangeStatus, staging::StagedEntry};
+
+    #[test]
+    fn prefers_rename_successor_when_old_path_is_reused() {
+        let entries = vec![
+            (
+                "notes/old.md".into(),
+                StagedEntry {
+                    timestamp: 1,
+                    doc_id: None,
+                    status: ChangeStatus::Deleted,
+                    content_hash: String::new(),
+                    has_conflict: false,
+                    renamed_from: None,
+                },
+            ),
+            (
+                "notes/new.md".into(),
+                StagedEntry {
+                    timestamp: 2,
+                    doc_id: None,
+                    status: ChangeStatus::Added,
+                    content_hash: String::new(),
+                    has_conflict: false,
+                    renamed_from: Some("notes/old.md".into()),
+                },
+            ),
+            (
+                "notes/old.md".into(),
+                StagedEntry {
+                    timestamp: 3,
+                    doc_id: None,
+                    status: ChangeStatus::Added,
+                    content_hash: String::new(),
+                    has_conflict: false,
+                    renamed_from: None,
+                },
+            ),
+        ];
+
+        assert_eq!(
+            select_entry_without_doc(entries, "notes/old.md")
+                .expect("rename successor should win")
+                .0,
+            "notes/new.md"
+        );
+    }
 }
