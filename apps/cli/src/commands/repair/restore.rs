@@ -109,23 +109,7 @@ fn resolve_repair_docid(
     repo_name: &str,
     repo_path: &str,
 ) -> Result<Option<deve_core::models::DocId>> {
-    resolve_repair_docid_lookup(
-        repo.get_tracked_docid_in_local_repo(repo_name, repo_path),
-        || repo.get_docid_in_local_repo(repo_name, repo_path),
-    )
-}
-
-fn resolve_repair_docid_lookup<F>(
-    tracked: Result<Option<deve_core::models::DocId>>,
-    legacy: F,
-) -> Result<Option<deve_core::models::DocId>>
-where
-    F: FnOnce() -> Result<Option<deve_core::models::DocId>>,
-{
-    match tracked? {
-        Some(doc_id) => Ok(Some(doc_id)),
-        None => legacy(),
-    }
+    repo.get_tracked_docid_in_local_repo(repo_name, repo_path)
 }
 
 fn resolve_backup_path(
@@ -164,30 +148,57 @@ fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_repair_docid_lookup;
+    use super::resolve_repair_docid;
+    use deve_core::ledger::RepoManager;
+    use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use deve_core::models::DocId;
+    use std::sync::Arc;
+    use tempfile::tempdir;
 
     #[test]
-    fn resolve_repair_docid_lookup_falls_back_only_after_tracked_none() -> anyhow::Result<()> {
+    fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path(),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?);
         let doc_id = DocId::new();
+        repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
         assert_eq!(
-            resolve_repair_docid_lookup(Ok(Some(doc_id)), || Ok(None))?,
-            Some(doc_id)
-        );
-        assert_eq!(
-            resolve_repair_docid_lookup(Ok(None), || Ok(Some(doc_id)))?,
+            resolve_repair_docid(&repo, "default", "notes/live.md")?,
             Some(doc_id)
         );
         Ok(())
     }
 
     #[test]
-    fn resolve_repair_docid_lookup_does_not_swallow_tracked_errors() {
-        let err =
-            resolve_repair_docid_lookup(Err(anyhow::anyhow!("tracked lookup failed")), || {
-                Ok(Some(DocId::new()))
-            })
-            .expect_err("tracked lookup errors must stop repair lookup");
-        assert!(err.to_string().contains("tracked lookup failed"));
+    fn resolve_repair_docid_ignores_legacy_only_path_mapping() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path(),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        let doc_id = DocId::new();
+        repo.run_on_local_repo("default", |db| {
+            let write = db.begin_write()?;
+            {
+                let mut p2d = write.open_table(PATH_TO_DOCID)?;
+                let mut d2p = write.open_table(DOCID_TO_PATH)?;
+                p2d.insert("notes/legacy.md", doc_id.as_u128())?;
+                d2p.insert(doc_id.as_u128(), "notes/legacy.md")?;
+            }
+            write.commit()?;
+            Ok(())
+        })?;
+
+        assert_eq!(
+            resolve_repair_docid(&repo, "default", "notes/legacy.md")?,
+            None
+        );
+        Ok(())
     }
 }

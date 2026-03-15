@@ -39,10 +39,9 @@ pub(super) fn repair_repo_prefixed_paths(
 }
 
 fn path_exists_for_repair(repo: &Arc<RepoManager>, repo_name: &str, path: &str) -> Result<bool> {
-    match repo.get_tracked_docid_in_local_repo(repo_name, path)? {
-        Some(_) => Ok(true),
-        None => Ok(repo.get_docid_in_local_repo(repo_name, path)?.is_some()),
-    }
+    Ok(repo
+        .get_tracked_docid_in_local_repo(repo_name, path)?
+        .is_some())
 }
 
 fn rename_workspace_file(
@@ -104,6 +103,8 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
 mod tests {
     use super::path_exists_for_repair;
     use deve_core::ledger::RepoManager;
+    use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
+    use deve_core::models::DocId;
     use std::sync::Arc;
     use tempfile::tempdir;
 
@@ -117,6 +118,36 @@ mod tests {
             Some("urn:default"),
         )?);
         assert!(!path_exists_for_repair(&repo, "default", "notes/a.md")?);
+        Ok(())
+    }
+
+    #[test]
+    fn path_exists_for_repair_ignores_legacy_only_path_mapping() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path(),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        let doc_id = DocId::new();
+        repo.run_on_local_repo("default", |db| {
+            let write = db.begin_write()?;
+            {
+                let mut p2d = write.open_table(PATH_TO_DOCID)?;
+                let mut d2p = write.open_table(DOCID_TO_PATH)?;
+                p2d.insert("notes/legacy.md", doc_id.as_u128())?;
+                d2p.insert(doc_id.as_u128(), "notes/legacy.md")?;
+            }
+            write.commit()?;
+            Ok(())
+        })?;
+
+        assert!(!path_exists_for_repair(
+            &repo,
+            "default",
+            "notes/legacy.md"
+        )?);
         Ok(())
     }
 }
