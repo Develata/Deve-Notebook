@@ -32,6 +32,7 @@ pub fn handle_shadow_list(
         &shadows,
         signals.active_branch.get_untracked(),
         signals.pending_branch_switch.get_untracked(),
+        signals.pending_repo_switch.get_untracked(),
         authoritative_refresh,
     );
     signals.set_shadow_repos.set(shadows);
@@ -105,10 +106,12 @@ fn should_recover_local_branch_from_shadow_list(
     shadows: &[String],
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
+    pending_repo_switch: Option<String>,
     authoritative_refresh: bool,
 ) -> bool {
     authoritative_refresh
         && pending_branch_switch.is_none()
+        && pending_repo_switch.is_none()
         && active_branch
             .as_ref()
             .map(|peer| !shadows.iter().any(|entry| entry == peer.as_str()))

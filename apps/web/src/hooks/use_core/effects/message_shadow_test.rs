@@ -27,16 +27,19 @@ fn shadow_list_recovers_local_only_when_current_peer_disappears() {
         &["peer-b".into()],
         Some(PeerId::new("peer-a")),
         None,
+        None,
         true,
     ));
     assert!(!should_recover_local_branch_from_shadow_list(
         &["peer-a".into(), "peer-b".into()],
         Some(PeerId::new("peer-a")),
         None,
+        None,
         true,
     ));
     assert!(!should_recover_local_branch_from_shadow_list(
         &[],
+        None,
         None,
         None,
         true,
@@ -45,11 +48,20 @@ fn shadow_list_recovers_local_only_when_current_peer_disappears() {
         &["peer-b".into()],
         Some(PeerId::new("peer-a")),
         Some(PendingBranchTarget::Local),
+        None,
         true,
     ));
     assert!(!should_recover_local_branch_from_shadow_list(
         &["peer-b".into()],
         Some(PeerId::new("peer-a")),
+        None,
+        Some("default".into()),
+        true,
+    ));
+    assert!(!should_recover_local_branch_from_shadow_list(
+        &["peer-b".into()],
+        Some(PeerId::new("peer-a")),
+        None,
         None,
         false,
     ));
