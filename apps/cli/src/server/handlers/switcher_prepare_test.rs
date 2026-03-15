@@ -1,4 +1,6 @@
-use super::switcher_prepare::{resolve_requested_repo_name, select_target_repo};
+use super::switcher_prepare::{
+    prepare_repo_switch, resolve_requested_repo_name, select_target_repo,
+};
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
@@ -182,5 +184,25 @@ fn resolve_requested_repo_name_prefers_canonical_local_stem_after_metadata_drift
     let selected = resolve_requested_repo_name(&state, None, "legacy-wiki", None)?
         .expect("canonical local selector");
     assert_eq!(selected, "wiki");
+    Ok(())
+}
+
+#[test]
+fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let db = state.repo.open_database(None, "test")?.db;
+    let txn = db.begin_write()?;
+    txn.open_table(REPO_METADATA)?.remove(&0)?;
+    txn.commit()?;
+
+    let err = match prepare_repo_switch(&state, None, "test".into()) {
+        Ok(_) => anyhow::bail!("local switch must fail without repo uuid metadata"),
+        Err(err) => err,
+    };
+    assert!(
+        err.to_string()
+            .contains("Local repository UUID not resolved for selector: test")
+    );
     Ok(())
 }

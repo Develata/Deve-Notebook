@@ -139,13 +139,14 @@ pub(super) fn prepare_repo_switch(
         .repo
         .get_repo_info_for(branch, Some(&repo_name))?
         .map(|info| info.uuid);
+    if repo_info.is_none() {
+        let scope = if branch.is_some() { "Remote" } else { "Local" };
+        return Err(anyhow!(
+            "{scope} repository UUID not resolved for selector: {}",
+            repo_name
+        ));
+    }
     if branch.is_some() {
-        if repo_info.is_none() {
-            return Err(anyhow!(
-                "Remote repository UUID not resolved for selector: {}",
-                repo_name
-            ));
-        }
         let handle = state.repo.open_database(branch, &repo_name)?;
         return Ok(PreparedRepoSwitch {
             repo_name,
