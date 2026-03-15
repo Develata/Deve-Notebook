@@ -8,10 +8,8 @@ use redb::Database;
 
 pub fn get_for_target(db: &Database, target: &ScPathTarget) -> Result<Option<PendingFsEntry>> {
     let path = to_forward_slash(&target.path);
-    if let Some(doc_id) = target.doc_id
-        && let Some(entry) = resolve_for_doc(db, &path, doc_id)?
-    {
-        return Ok(Some(entry));
+    if let Some(doc_id) = target.doc_id {
+        return resolve_for_doc(db, &path, doc_id);
     }
     if let Some(entry) = get(db, &path)? {
         return Ok(Some(entry));
@@ -40,11 +38,20 @@ fn select_entry(
     path: &str,
     doc_id: Option<DocId>,
 ) -> Option<PendingFsEntry> {
+    if let Some(doc_id) = doc_id {
+        return select_entry_for_doc(entries, path, doc_id);
+    }
+    select_entry_without_doc(entries, path)
+}
+
+fn select_entry_for_doc(
+    entries: Vec<PendingFsEntry>,
+    path: &str,
+    doc_id: DocId,
+) -> Option<PendingFsEntry> {
     let exact = entries
         .iter()
-        .find(|entry| {
-            entry.path == path && doc_id.map(|id| entry.doc_id == Some(id)).unwrap_or(true)
-        })
+        .find(|entry| entry.path == path && entry.doc_id == Some(doc_id))
         .cloned();
     if exact
         .as_ref()
@@ -55,7 +62,7 @@ fn select_entry(
     entries
         .iter()
         .find(|entry| {
-            entry.doc_id == doc_id
+            entry.doc_id == Some(doc_id)
                 && entry.status_is_live()
                 && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
         })
@@ -64,16 +71,24 @@ fn select_entry(
         .or_else(|| {
             entries
                 .iter()
-                .find(|entry| entry.doc_id == doc_id && entry.status_is_live())
+                .find(|entry| entry.doc_id == Some(doc_id) && entry.status_is_live())
                 .cloned()
         })
-        .or_else(|| {
-            entries
-                .iter()
-                .find(|entry| entry.path == path && entry.status_is_live())
-                .cloned()
-        })
-        .or_else(|| entries.into_iter().find(|entry| entry.path == path))
+}
+
+fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<PendingFsEntry> {
+    let exact = entries.iter().find(|entry| entry.path == path).cloned();
+    if exact
+        .as_ref()
+        .is_some_and(PendingEntryStatus::status_is_live)
+    {
+        return exact;
+    }
+    entries
+        .iter()
+        .find(|entry| entry.path == path && entry.status_is_live())
+        .cloned()
+        .or(exact)
 }
 
 trait PendingEntryStatus {
