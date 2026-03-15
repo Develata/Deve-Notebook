@@ -119,8 +119,6 @@ pub fn use_core() -> CoreState {
     );
     let sc_callbacks = callbacks::create_source_control_callbacks(
         &ws,
-        signals.staged_changes,
-        signals.unstaged_changes,
         callbacks_sc::SourceControlScopeSignals {
             current_repo_id: signals.current_repo_id,
             current_scope_nonce: signals.current_scope_nonce,

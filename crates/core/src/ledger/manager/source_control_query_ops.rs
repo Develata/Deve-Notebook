@@ -5,7 +5,6 @@
 //! - Diff 左侧来自当前 Ledger 投影，右侧来自工作区文件。
 
 use crate::ledger::RepoManager;
-use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, CommitFileDiff};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
@@ -36,7 +35,8 @@ impl RepoManager {
     }
 
     pub fn diff_doc_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<String> {
-        self.diff_doc_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
+        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
+        self.diff_doc_target_in_local_repo(repo_name, &target)
     }
 
     pub fn diff_commits(

@@ -41,12 +41,13 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         String::new()
     };
 
-    let path_for_stage = full_path.clone();
-    let path_for_unstage = full_path.clone();
-    let path_for_open = full_path.clone();
-    let path_for_discard = full_path.clone();
-    let path_keep_fs = full_path.clone();
-    let path_keep_ledger = full_path.clone();
+    let entry_for_click = entry.clone();
+    let entry_for_unstage = entry.clone();
+    let entry_for_keep_fs = entry.clone();
+    let entry_for_keep_ledger = entry.clone();
+    let entry_for_open = entry.clone();
+    let entry_for_discard = entry.clone();
+    let entry_for_stage = entry.clone();
 
     // 状态图标和颜色
     let (icon_char, color_cls) = match entry.status {
@@ -68,7 +69,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     return;
                 }
                 // 点击任何条目都打开 diff 视图 (与 VS Code 行为一致)
-                core.on_get_doc_diff.run(full_path.clone());
+                core.on_get_doc_diff.run(entry_for_click.clone());
             }
         >
             <div class="flex items-center gap-1.5 flex-1 overflow-hidden">
@@ -95,7 +96,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                             || pending_repo_switch.get().is_some()
                                     }
                                     title=move || t::source_control::unstage_changes(locale.get())
-                                    on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(path_for_unstage.clone()); }
+                                    on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(entry_for_unstage.clone()); }
                                 >
                                 <Minus class="w-3.5 h-3.5" />
                             </button>
@@ -111,7 +112,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                         || pending_repo_switch.get().is_some()
                                 }
                                 title=move || t::source_control::keep_file_system(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((path_keep_fs.clone(), ConflictResolution::KeepFs)); }
+                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((entry_for_keep_fs.clone(), ConflictResolution::KeepFs)); }
                             >
                                 <Upload class="w-3.5 h-3.5" />
                             </button>
@@ -123,7 +124,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                         || pending_repo_switch.get().is_some()
                                 }
                                 title=move || t::source_control::keep_ledger(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((path_keep_ledger.clone(), ConflictResolution::KeepLedger)); }
+                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((entry_for_keep_ledger.clone(), ConflictResolution::KeepLedger)); }
                             >
                                 <Download class="w-3.5 h-3.5" />
                             </button>
@@ -139,7 +140,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                         || pending_repo_switch.get().is_some()
                                 }
                                 title=move || t::source_control::open_file(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(path_for_open.clone()); }
+                                on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(entry_for_open.clone()); }
                             >
                                 <ExternalLink class="w-3.5 h-3.5" />
                             </button>
@@ -151,7 +152,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                         || pending_repo_switch.get().is_some()
                                 }
                                 title=move || t::source_control::discard_changes(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_discard_file.run(path_for_discard.clone()); }
+                                on:click=move |ev| { ev.stop_propagation(); core.on_discard_file.run(entry_for_discard.clone()); }
                             >
                                 <RotateCcw class="w-3.5 h-3.5" />
                             </button>
@@ -163,7 +164,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                         || pending_repo_switch.get().is_some()
                                 }
                                 title=move || t::source_control::stage_changes(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_stage_file.run(path_for_stage.clone()); }
+                                on:click=move |ev| { ev.stop_propagation(); core.on_stage_file.run(entry_for_stage.clone()); }
                             >
                                 <Plus class="w-3.5 h-3.5" />
                             </button>

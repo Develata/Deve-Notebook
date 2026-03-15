@@ -69,7 +69,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
                                 for entry in unstaged_list_for_discard.get_value() {
-                                    core.on_discard_file.run(entry.path);
+                                    core.on_discard_file.run(entry);
                                 }
                             }
                         >
@@ -82,12 +82,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                             disabled=move || bulk_busy.get() || scope_switching()
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
-                                let paths = unstaged_list_for_stage
-                                    .get_value()
-                                    .into_iter()
-                                    .map(|entry| entry.path)
-                                    .collect::<Vec<_>>();
-                                core.on_stage_files.run(paths);
+                                core.on_stage_files.run(unstaged_list_for_stage.get_value());
                             }
                         >
                         <Plus class="w-3.5 h-3.5" />
@@ -102,7 +97,17 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                 view! {
                     <For
                         each=move || unstaged_list.get_value()
-                        key=|e| e.path.clone()
+                        key=|e| {
+                            format!(
+                                "{}:{}:{:?}:{}",
+                                e.doc_id
+                                    .map(|doc_id| doc_id.to_string())
+                                    .unwrap_or_default(),
+                                e.path,
+                                e.status,
+                                e.renamed_from.clone().unwrap_or_default()
+                            )
+                        }
                         children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
                     />
                 }.into_any()

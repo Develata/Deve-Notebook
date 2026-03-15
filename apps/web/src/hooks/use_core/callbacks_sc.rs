@@ -1,24 +1,22 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
-use crate::hooks::use_core::callbacks_sc_target::{
-    resolve_target, resolve_target_any, resolve_targets,
-};
+use crate::hooks::use_core::callbacks_sc_target::{to_target, to_targets};
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
 
 pub struct SourceControlCallbacks {
     pub on_get_changes: Callback<()>,
-    pub on_stage_file: Callback<String>,
-    pub on_stage_files: Callback<Vec<String>>,
-    pub on_unstage_file: Callback<String>,
-    pub on_unstage_files: Callback<Vec<String>>,
-    pub on_discard_file: Callback<String>,
+    pub on_stage_file: Callback<ChangeEntry>,
+    pub on_stage_files: Callback<Vec<ChangeEntry>>,
+    pub on_unstage_file: Callback<ChangeEntry>,
+    pub on_unstage_files: Callback<Vec<ChangeEntry>>,
+    pub on_discard_file: Callback<ChangeEntry>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
-    pub on_get_doc_diff: Callback<String>,
-    pub on_resolve_conflict: Callback<(String, ConflictResolution)>,
+    pub on_get_doc_diff: Callback<ChangeEntry>,
+    pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
     pub on_commit_and_push: Callback<String>,
 }
@@ -41,8 +39,6 @@ pub struct SourceControlRequestSignals {
 
 pub fn create_source_control_callbacks(
     ws: &WsService,
-    staged_changes: ReadSignal<Vec<ChangeEntry>>,
-    unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
     scope: SourceControlScopeSignals,
     request: SourceControlRequestSignals,
 ) -> SourceControlCallbacks {
@@ -60,21 +56,21 @@ pub fn create_source_control_callbacks(
     });
 
     let ws_stage = ws.clone();
-    let on_stage_file = Callback::new(move |path: String| {
+    let on_stage_file = Callback::new(move |entry: ChangeEntry| {
         send_targeted(scope, &ws_stage, move |scope_nonce| {
             ClientMessage::StageFile {
-                target: resolve_target(unstaged_changes, &path),
+                target: to_target(&entry),
                 scope_nonce: Some(scope_nonce),
             }
         });
     });
 
     let ws_stage_many = ws.clone();
-    let on_stage_files = Callback::new(move |paths: Vec<String>| {
+    let on_stage_files = Callback::new(move |entries: Vec<ChangeEntry>| {
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
-        let targets = resolve_targets(unstaged_changes, paths);
+        let targets = to_targets(entries);
         if targets.is_empty() {
             return;
         }
@@ -85,21 +81,21 @@ pub fn create_source_control_callbacks(
     });
 
     let ws_unstage = ws.clone();
-    let on_unstage_file = Callback::new(move |path: String| {
+    let on_unstage_file = Callback::new(move |entry: ChangeEntry| {
         send_targeted(scope, &ws_unstage, move |scope_nonce| {
             ClientMessage::UnstageFile {
-                target: resolve_target(staged_changes, &path),
+                target: to_target(&entry),
                 scope_nonce: Some(scope_nonce),
             }
         });
     });
 
     let ws_unstage_many = ws.clone();
-    let on_unstage_files = Callback::new(move |paths: Vec<String>| {
+    let on_unstage_files = Callback::new(move |entries: Vec<ChangeEntry>| {
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
-        let targets = resolve_targets(staged_changes, paths);
+        let targets = to_targets(entries);
         if targets.is_empty() {
             return;
         }
@@ -110,10 +106,10 @@ pub fn create_source_control_callbacks(
     });
 
     let ws_discard = ws.clone();
-    let on_discard_file = Callback::new(move |path: String| {
+    let on_discard_file = Callback::new(move |entry: ChangeEntry| {
         send_targeted(scope, &ws_discard, move |scope_nonce| {
             ClientMessage::DiscardFile {
-                target: resolve_target(unstaged_changes, &path),
+                target: to_target(&entry),
                 scope_nonce: Some(scope_nonce),
             }
         });
@@ -146,7 +142,7 @@ pub fn create_source_control_callbacks(
     });
 
     let ws_doc_diff = ws.clone();
-    let on_get_doc_diff = Callback::new(move |path: String| {
+    let on_get_doc_diff = Callback::new(move |entry: ChangeEntry| {
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
@@ -156,22 +152,23 @@ pub fn create_source_control_callbacks(
             .set(Some(request_id.clone()));
         ws_doc_diff.send(ClientMessage::GetDocDiff {
             request_id,
-            target: resolve_target_any(staged_changes, unstaged_changes, &path),
+            target: to_target(&entry),
             scope_nonce: Some(scope_nonce),
         });
     });
 
     let ws_conflict = ws.clone();
-    let on_resolve_conflict =
-        Callback::new(move |(path, resolution): (String, ConflictResolution)| {
+    let on_resolve_conflict = Callback::new(
+        move |(entry, resolution): (ChangeEntry, ConflictResolution)| {
             send_simple(scope, &ws_conflict, move |scope_nonce| {
                 ClientMessage::ResolveConflict {
-                    target: resolve_target(unstaged_changes, &path),
+                    target: to_target(&entry),
                     resolution,
                     scope_nonce: Some(scope_nonce),
                 }
             });
-        });
+        },
+    );
 
     let ws_commit_diff = ws.clone();
     let on_get_commit_diff = Callback::new(move |(commit_a, commit_b)| {

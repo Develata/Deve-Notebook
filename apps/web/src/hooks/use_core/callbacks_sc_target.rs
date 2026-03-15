@@ -1,73 +1,22 @@
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeEntry;
-use leptos::prelude::*;
 use std::collections::HashSet;
 
-pub(super) fn resolve_target(entries: ReadSignal<Vec<ChangeEntry>>, path: &str) -> ScPathTarget {
-    let path = deve_core::utils::path::to_forward_slash(path);
-    resolve_entry(entries, &path)
-        .map(to_target)
-        .unwrap_or_else(|| ScPathTarget::from_path(path))
-}
-
-pub(super) fn resolve_target_any(
-    primary: ReadSignal<Vec<ChangeEntry>>,
-    secondary: ReadSignal<Vec<ChangeEntry>>,
-    path: &str,
-) -> ScPathTarget {
-    let path = deve_core::utils::path::to_forward_slash(path);
-    resolve_entry(primary, &path)
-        .or_else(|| resolve_entry(secondary, &path))
-        .map(to_target)
-        .unwrap_or_else(|| ScPathTarget::from_path(path))
-}
-
-pub(super) fn resolve_targets(
-    entries: ReadSignal<Vec<ChangeEntry>>,
-    paths: Vec<String>,
-) -> Vec<ScPathTarget> {
-    let mut seen = HashSet::new();
-    paths
-        .into_iter()
-        .map(|path| resolve_target(entries, &path))
-        .filter(|target| !target.path.is_empty())
-        .filter(|target| seen.insert(target.path.clone()))
-        .collect()
-}
-
-fn resolve_entry(entries: ReadSignal<Vec<ChangeEntry>>, path: &str) -> Option<ChangeEntry> {
-    let entries = entries.get_untracked();
-    let renamed_successor = entries.iter().find(|entry| {
-        entry.status != deve_core::source_control::ChangeStatus::Deleted
-            && entry
-                .renamed_from
-                .as_ref()
-                .is_some_and(|old_path| normalized(old_path) == path)
-    });
-    let path_reused_after_delete = renamed_successor.is_some()
-        && entries.iter().any(|entry| {
-            normalized(&entry.path) == path
-                && entry.status == deve_core::source_control::ChangeStatus::Deleted
-        });
-    if path_reused_after_delete {
-        return renamed_successor.cloned();
-    }
-    entries
-        .iter()
-        .find(|entry| {
-            normalized(&entry.path) == path
-                && entry.status != deve_core::source_control::ChangeStatus::Deleted
-        })
-        .or(renamed_successor)
-        .or_else(|| entries.iter().find(|entry| normalized(&entry.path) == path))
-        .cloned()
-}
-
-fn to_target(entry: ChangeEntry) -> ScPathTarget {
+pub(super) fn to_target(entry: &ChangeEntry) -> ScPathTarget {
     ScPathTarget {
-        path: entry.path,
+        path: normalized(&entry.path),
         doc_id: entry.doc_id,
     }
+}
+
+pub(super) fn to_targets(entries: Vec<ChangeEntry>) -> Vec<ScPathTarget> {
+    let mut seen = HashSet::new();
+    entries
+        .into_iter()
+        .map(|entry| to_target(&entry))
+        .filter(|target| !target.path.is_empty())
+        .filter(|target| seen.insert((target.doc_id, target.path.clone())))
+        .collect()
 }
 
 fn normalized(path: &str) -> String {
@@ -76,56 +25,55 @@ fn normalized(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_target;
+    use super::{to_target, to_targets};
+    use deve_core::models::DocId;
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
-    use leptos::prelude::signal;
 
     #[test]
-    fn resolve_target_maps_old_rename_path_to_current_entry() {
-        let (read, _write) = signal(vec![
-            ChangeEntry {
-                path: "notes/old.md".into(),
-                renamed_from: None,
-                doc_id: None,
-                status: ChangeStatus::Deleted,
-                has_conflict: false,
-            },
-            ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: None,
-                status: ChangeStatus::Added,
-                has_conflict: false,
-            },
-        ]);
-        assert_eq!(resolve_target(read, "notes/old.md").path, "notes/new.md");
+    fn to_target_preserves_doc_id_and_normalizes_path() {
+        let doc_id = DocId::new();
+        let target = to_target(&ChangeEntry {
+            path: "notes\\a.md".into(),
+            renamed_from: None,
+            doc_id: Some(doc_id),
+            status: ChangeStatus::Modified,
+            has_conflict: false,
+        });
+
+        assert_eq!(target.path, "notes/a.md");
+        assert_eq!(target.doc_id, Some(doc_id));
     }
 
     #[test]
-    fn resolve_target_prefers_rename_successor_over_reused_old_path() {
-        let (read, _write) = signal(vec![
+    fn to_targets_keeps_distinct_doc_ids_for_same_path() {
+        let first = DocId::new();
+        let second = DocId::new();
+        let targets = to_targets(vec![
             ChangeEntry {
-                path: "notes/old.md".into(),
+                path: "notes/a.md".into(),
                 renamed_from: None,
-                doc_id: None,
-                status: ChangeStatus::Deleted,
+                doc_id: Some(first),
+                status: ChangeStatus::Modified,
                 has_conflict: false,
             },
             ChangeEntry {
-                path: "notes/new.md".into(),
-                renamed_from: Some("notes/old.md".into()),
-                doc_id: None,
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: Some(second),
                 status: ChangeStatus::Added,
                 has_conflict: false,
             },
             ChangeEntry {
-                path: "notes/old.md".into(),
+                path: "notes/a.md".into(),
                 renamed_from: None,
-                doc_id: None,
+                doc_id: Some(second),
                 status: ChangeStatus::Added,
                 has_conflict: false,
             },
         ]);
-        assert_eq!(resolve_target(read, "notes/old.md").path, "notes/new.md");
+
+        assert_eq!(targets.len(), 2);
+        assert!(targets.iter().any(|target| target.doc_id == Some(first)));
+        assert!(targets.iter().any(|target| target.doc_id == Some(second)));
     }
 }

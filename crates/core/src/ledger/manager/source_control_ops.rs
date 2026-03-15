@@ -6,7 +6,6 @@
 use crate::ledger::RepoManager;
 use crate::ledger::source_control;
 use crate::models::DocId;
-use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, ChangeStatus, CommitInfo, pending_fs};
 use anyhow::Result;
 
@@ -17,7 +16,8 @@ impl RepoManager {
     }
 
     pub fn unstage_file_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.unstage_file_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
+        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
+        self.unstage_file_target_in_local_repo(repo_name, &target)
     }
 
     /// 获取已暂存文件列表
@@ -109,7 +109,8 @@ impl RepoManager {
     }
 
     pub fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.stage_pending_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
+        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
+        self.stage_pending_target_in_local_repo(repo_name, &target)
     }
 
     /// 丢弃待确认变更
@@ -118,7 +119,8 @@ impl RepoManager {
     }
 
     pub fn discard_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        self.discard_pending_target_in_local_repo(repo_name, &ScPathTarget::from_path(path))
+        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
+        self.discard_pending_target_in_local_repo(repo_name, &target)
             .map(|_| ())
     }
 }
