@@ -8,7 +8,9 @@ use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
 use super::diff_session::DiffSessionWire;
-use super::effects_sc_apply::{apply_doc_diff, refresh_after_commit, refresh_after_fs_change};
+use super::effects_sc_apply::{
+    FsRefreshSignals, apply_doc_diff, refresh_after_commit, refresh_after_fs_change,
+};
 use super::types::PendingBranchTarget;
 
 #[allow(unused_imports)]
@@ -208,8 +210,11 @@ pub fn handle_sc_message(
                 path,
                 change_type,
                 *has_conflict,
-                set_doc_list_request_id,
-                set_tree_request_id,
+                FsRefreshSignals {
+                    current_scope_nonce: current_scope_nonce.get_untracked(),
+                    set_doc_list_request_id,
+                    set_tree_request_id,
+                },
                 schedule_refresh,
                 ws,
             );

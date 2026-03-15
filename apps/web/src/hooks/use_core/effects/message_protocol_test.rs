@@ -31,7 +31,6 @@ fn switch_errors_clear_pending_scope_switches_only_for_matching_nonce() {
                 pending_branch_switch_nonce,
                 set_pending_branch_switch,
                 set_pending_branch_switch_nonce,
-                pending_repo_switch,
                 pending_repo_switch_nonce,
                 set_pending_repo_switch,
                 set_pending_repo_switch_nonce,
@@ -49,6 +48,45 @@ fn switch_errors_clear_pending_scope_switches_only_for_matching_nonce() {
         assert_eq!(doc_list_request_id.get_untracked(), None);
         assert_eq!(tree_request_id.get_untracked(), None);
     }
+}
+
+#[test]
+fn switch_errors_clear_orphan_repo_switch_nonce_without_pending_name() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (pending_branch_switch, set_pending_branch_switch) = signal(None);
+    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(None::<u64>);
+    let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
+    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(Some(7u64));
+    let (shadow_list_request_id, set_shadow_list_request_id) = signal(Some("shadow-1".to_string()));
+    let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));
+    let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
+    let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
+
+    clear_failed_scope_switch(
+        ServerErrorCode::ScRepoContextInvalid,
+        Some(7),
+        ProtocolControlSignals {
+            pending_branch_switch,
+            pending_branch_switch_nonce,
+            set_pending_branch_switch,
+            set_pending_branch_switch_nonce,
+            pending_repo_switch_nonce,
+            set_pending_repo_switch,
+            set_pending_repo_switch_nonce,
+            set_shadow_list_request_id,
+            set_repo_list_request_id,
+            set_doc_list_request_id,
+            set_tree_request_id,
+        },
+    );
+
+    assert_eq!(pending_repo_switch.get_untracked(), None);
+    assert_eq!(pending_repo_switch_nonce.get_untracked(), None);
+    assert_eq!(shadow_list_request_id.get_untracked(), None);
+    assert_eq!(repo_list_request_id.get_untracked(), None);
+    assert_eq!(doc_list_request_id.get_untracked(), None);
+    assert_eq!(tree_request_id.get_untracked(), None);
 }
 
 #[test]
@@ -74,7 +112,6 @@ fn stale_or_missing_nonce_keeps_pending_scope_switches() {
                 pending_branch_switch_nonce,
                 set_pending_branch_switch,
                 set_pending_branch_switch_nonce,
-                pending_repo_switch,
                 pending_repo_switch_nonce,
                 set_pending_repo_switch,
                 set_pending_repo_switch_nonce,
@@ -125,7 +162,6 @@ fn non_switch_errors_keep_pending_scope_switches() {
                 pending_branch_switch_nonce,
                 set_pending_branch_switch,
                 set_pending_branch_switch_nonce,
-                pending_repo_switch,
                 pending_repo_switch_nonce,
                 set_pending_repo_switch,
                 set_pending_repo_switch_nonce,

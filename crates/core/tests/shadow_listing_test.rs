@@ -70,3 +70,28 @@ fn broken_shadow_repos_stay_hidden_from_repo_listing_and_selector_recovery() {
         None
     );
 }
+
+#[test]
+fn switchable_shadow_list_hides_peers_with_only_broken_repos() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let good_peer = PeerId::new("peer-good");
+    let bad_peer = PeerId::new("peer-bad");
+    let info = deve_core::ledger::RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:notes".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&good_peer, &info)
+        .expect("seed good shadow");
+    let bad_dir = repo.remotes_dir().join(bad_peer.to_filename());
+    std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
+    std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
+
+    assert_eq!(
+        repo.list_switchable_shadows_on_disk()
+            .expect("list switchable shadows"),
+        vec![good_peer]
+    );
+}

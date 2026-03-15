@@ -2,6 +2,12 @@ use crate::api::WsService;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use leptos::prelude::*;
 
+pub(super) struct FsRefreshSignals {
+    pub current_scope_nonce: u64,
+    pub set_doc_list_request_id: WriteSignal<Option<String>>,
+    pub set_tree_request_id: WriteSignal<Option<String>>,
+}
+
 pub(super) fn apply_doc_diff(
     path: &str,
     old_content: &str,
@@ -25,8 +31,7 @@ pub(super) fn refresh_after_fs_change(
     path: &str,
     change_type: &str,
     has_conflict: bool,
-    set_doc_list_request_id: WriteSignal<Option<String>>,
-    set_tree_request_id: WriteSignal<Option<String>>,
+    signals: FsRefreshSignals,
     schedule_refresh: &dyn Fn(),
     ws: &WsService,
 ) {
@@ -34,9 +39,14 @@ pub(super) fn refresh_after_fs_change(
     leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
     schedule_refresh();
     let request_id = uuid::Uuid::new_v4().to_string();
-    set_doc_list_request_id.set(Some(request_id.clone()));
-    set_tree_request_id.set(Some(request_id.clone()));
-    ws.send(deve_core::protocol::ClientMessage::ListDocs { request_id });
+    signals
+        .set_doc_list_request_id
+        .set(Some(request_id.clone()));
+    signals.set_tree_request_id.set(Some(request_id.clone()));
+    ws.send(deve_core::protocol::ClientMessage::ListDocs {
+        request_id,
+        scope_nonce: Some(signals.current_scope_nonce),
+    });
 }
 
 pub(super) fn refresh_after_commit(

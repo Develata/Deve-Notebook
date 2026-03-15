@@ -23,7 +23,7 @@ pub async fn handle_list_shadows(
     session: Option<&WsSession>,
     request_id: Option<String>,
 ) {
-    match state.repo.list_shadows_on_disk() {
+    match state.repo.list_switchable_shadows_on_disk() {
         Ok(peers) => {
             let self_peer = session
                 .filter(|session| session.is_browser_session())

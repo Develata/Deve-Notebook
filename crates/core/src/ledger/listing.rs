@@ -20,6 +20,9 @@ pub trait RepoListing {
 
     /// 列出当前磁盘上的所有影子库 Peer ID
     fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>>;
+
+    /// 列出至少包含一个可读 shadow repo 的 Peer ID
+    fn list_switchable_shadows_on_disk(&self) -> Result<Vec<PeerId>>;
 }
 
 impl RepoListing for RepoManager {
@@ -126,6 +129,17 @@ impl RepoListing for RepoManager {
             }
         }
         peers.sort();
+        Ok(peers)
+    }
+
+    fn list_switchable_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
+        let mut peers = Vec::new();
+        for peer_id in self.list_shadows_on_disk()? {
+            let entries = self.scan_remote_repo_entries_without_repair(&peer_id)?;
+            if entries.iter().any(|entry| entry.is_readable()) {
+                peers.push(peer_id);
+            }
+        }
         Ok(peers)
     }
 }

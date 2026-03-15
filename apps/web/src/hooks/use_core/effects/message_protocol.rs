@@ -10,7 +10,6 @@ pub struct ProtocolControlSignals {
     pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
     pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
     pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
     pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
     pub set_pending_repo_switch: WriteSignal<Option<String>>,
     pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
@@ -52,8 +51,7 @@ fn clear_failed_scope_switch(
     let switch_nonce = switch_nonce.expect("checked above");
     let clear_branch = signals.pending_branch_switch.get_untracked().is_some()
         && signals.pending_branch_switch_nonce.get_untracked() == Some(switch_nonce);
-    let clear_repo = signals.pending_repo_switch.get_untracked().is_some()
-        && signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);
+    let clear_repo = signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);
     if !clear_branch && !clear_repo {
         return;
     }

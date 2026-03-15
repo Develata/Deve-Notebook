@@ -51,6 +51,8 @@ pub enum ClientMessage {
     },
     ListDocs {
         request_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     OpenDoc {
         doc_id: DocId,

@@ -23,7 +23,7 @@ pub(super) fn validate_branch_target(
     let Some(pid_str) = peer_id else {
         return Some(None);
     };
-    let shadows = match state.repo.list_shadows_on_disk() {
+    let shadows = match state.repo.list_switchable_shadows_on_disk() {
         Ok(shadows) => shadows,
         Err(err) => {
             ch.send_protocol_error_with_switch_nonce(

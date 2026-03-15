@@ -163,8 +163,8 @@ fn accepts_repo_switched_after_branch_switch_clears_repo_scope() {
     let (current_repo, set_current_repo) = signal(None::<String>);
     let (current_repo_id, set_current_repo_id) = signal(None::<String>);
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
-    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(Some(21));
-    let (current_scope_nonce, set_current_scope_nonce) = signal(8u64);
+    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
+    let (current_scope_nonce, set_current_scope_nonce) = signal(21u64);
     let (current_doc, set_current_doc) = signal(Some(DocId::new()));
     let repo_id = Uuid::new_v4().to_string();
 

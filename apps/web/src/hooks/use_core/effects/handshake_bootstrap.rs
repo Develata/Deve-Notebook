@@ -74,7 +74,10 @@ fn request_doc_listing(ws: &WsService, signals: HandshakeSignals) {
         .set_doc_list_request_id
         .set(Some(request_id.clone()));
     signals.set_tree_request_id.set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListDocs { request_id });
+    ws.send(ClientMessage::ListDocs {
+        request_id,
+        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+    });
 }
 
 fn build_switch_repo(name: String, repo_id: Option<String>, switch_nonce: u64) -> ClientMessage {

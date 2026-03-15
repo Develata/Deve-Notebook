@@ -61,6 +61,7 @@ pub fn handle_repo_switched(
     let current_repo = signals.current_repo.get_untracked();
     let current_repo_id = signals.current_repo_id.get_untracked();
     let pending_nonce = signals.pending_repo_switch_nonce.get_untracked();
+    let current_scope_nonce = signals.current_scope_nonce.get_untracked();
     match signals.pending_repo_switch.get_untracked() {
         Some(pending) if pending == name => {
             if pending_nonce != switch_nonce {
@@ -78,10 +79,12 @@ pub fn handle_repo_switched(
             return false;
         }
         None => {
-            let rebinding_after_branch_switch = current_repo.is_none() && current_repo_id.is_none();
+            let rebinding_after_branch_switch = current_repo.is_none()
+                && current_repo_id.is_none()
+                && switch_nonce == Some(current_scope_nonce);
             let same_repo = current_repo.as_deref() == Some(name.as_str())
                 && current_repo_id.as_deref() == Some(uuid.as_str());
-            if (!same_repo && !rebinding_after_branch_switch) || pending_nonce != switch_nonce {
+            if !rebinding_after_branch_switch && (pending_nonce != switch_nonce || !same_repo) {
                 leptos::logging::warn!("忽略无 pending 的 RepoSwitched: {}", name);
                 return false;
             }

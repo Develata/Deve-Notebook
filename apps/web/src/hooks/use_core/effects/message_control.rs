@@ -42,9 +42,7 @@ pub fn handle_branch_switched(
         signals.set_tree_nodes.set(Vec::new());
         signals.set_repo_list.set(Vec::new());
         clear_repo_scoped_runtime(signals);
-        signals.set_pending_repo_switch_nonce.set(switch_nonce);
         request_repo_list(ws, signals);
-        message_shadow::request_shadow_list(ws, signals);
     }
 }
 

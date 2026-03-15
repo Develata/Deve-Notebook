@@ -90,6 +90,40 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_rejects_peer_with_only_broken_shadow_repos() -> anyhow::Result<()> {
+    let state = build_state()?;
+    let bad_peer = PeerId::new("peer-bad");
+    let bad_dir = state.repo.remotes_dir().join(bad_peer.to_filename());
+    std::fs::create_dir_all(&bad_dir)?;
+    std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb")?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(bad_peer.to_string()),
+        Some(23),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(switch_nonce, Some(23));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_accepts_shadow_peer_even_if_local_repo_stem_matches() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");

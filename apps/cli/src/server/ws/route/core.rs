@@ -25,7 +25,18 @@ pub(super) async fn route_core(
         } => {
             document::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
         }
-        ClientMessage::ListDocs { request_id } => {
+        ClientMessage::ListDocs {
+            request_id,
+            scope_nonce,
+        } => {
+            if let Err(error) = super::scope_guard::validate_browser_scope_nonce(
+                session,
+                scope_nonce,
+                "document list",
+            ) {
+                ch.send_protocol_error(error);
+                return;
+            }
             listing::handle_list_docs(state, ch, session, Some(request_id), None).await;
         }
         ClientMessage::ListShadows {
