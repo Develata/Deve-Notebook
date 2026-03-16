@@ -201,8 +201,8 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn list_docs_recovers_from_stale_local_selector() -> anyhow::Result<()> {
-    let (_dir, state, test_repo_id) = build_state()?;
+async fn list_docs_rejects_stale_local_selector() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
     let _ = seed_test_doc(&state)?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -212,20 +212,14 @@ async fn list_docs_recovers_from_stale_local_selector() -> anyhow::Result<()> {
 
     handle_list_docs(&state, &ch, &mut session, Some("req-1".into()), None).await;
 
-    loop {
-        match uni_rx.recv().await {
-            Some(ServerMessage::DocList { repo_id, docs, .. }) => {
-                assert_eq!(repo_id, Some(test_repo_id));
-                assert_eq!(docs.len(), 1);
-                assert_eq!(docs[0].1, "notes/b.md");
-                break;
-            }
-            Some(_) => continue,
-            None => panic!("expected DocList"),
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
         }
+        other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(test_repo_id));
+    assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }
 

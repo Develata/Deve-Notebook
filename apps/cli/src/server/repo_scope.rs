@@ -80,12 +80,6 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
                 tracing::warn!("Recovering remote session repo scope from UUID: {}", err);
                 return resolve_repo_by_repo_id(state, branch, repo_id);
             }
-            if session.active_repo.is_some() {
-                tracing::warn!("Recovering from stale local session repo_id: {}", err);
-                if let Some(repo_name) = session.active_repo.clone() {
-                    return resolve_repo_by_name(state, None, None, repo_name);
-                }
-            }
             Err(err)
         }
         Err(err) => Err(err),

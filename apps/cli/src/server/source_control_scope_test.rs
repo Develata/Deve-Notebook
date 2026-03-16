@@ -104,8 +104,8 @@ async fn recv_history(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn get_changes_recovers_from_stale_local_selector() -> anyhow::Result<()> {
-    let (_dir, state, default_id, test_id) = build_state()?;
+async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {
+    let (_dir, state, default_id, _test_id) = build_state()?;
     seed_pending(state.repo.as_ref(), "test", "notes/a.md", "hello");
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -114,16 +114,19 @@ async fn get_changes_recovers_from_stale_local_selector() -> anyhow::Result<()> 
 
     handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
 
-    let (repo_id, paths) = recv_changes(&mut uni_rx).await;
-    assert_eq!(repo_id, Some(test_id));
-    assert_eq!(paths, vec!["notes/a.md".to_string()]);
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, deve_core::protocol::ServerErrorCode::ScRepoContextInvalid);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
     assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(test_id));
+    assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn commit_history_recovers_from_stale_local_selector() -> anyhow::Result<()> {
+async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
     let (dir, state, default_id, test_id) = build_state()?;
     write_workspace_file(&dir, "test", "notes/a.md", "hello");
     seed_pending(state.repo.as_ref(), "test", "notes/a.md", "hello");
@@ -143,10 +146,13 @@ async fn commit_history_recovers_from_stale_local_selector() -> anyhow::Result<(
 
     handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
 
-    let (repo_id, first_message) = recv_history(&mut uni_rx).await;
-    assert_eq!(repo_id, Some(test_id));
-    assert_eq!(first_message.as_deref(), Some("initial"));
-    assert_eq!(session.active_repo_id, Some(test_id));
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, deve_core::protocol::ServerErrorCode::ScRepoContextInvalid);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }
 
