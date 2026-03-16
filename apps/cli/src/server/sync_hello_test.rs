@@ -193,7 +193,10 @@ async fn sync_hello_rejects_non_browser_repo_rebinding() -> anyhow::Result<()> {
                 deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
             );
             assert!(
-                error.detail.as_deref().is_some_and(|detail| detail.contains("requested_repo_id")),
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("requested_repo_id")),
                 "unexpected detail: {:?}",
                 error.detail
             );

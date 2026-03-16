@@ -37,9 +37,9 @@ mod docs_dir_copy_test;
 #[cfg(test)]
 mod docs_projection_repair_test;
 #[cfg(test)]
-mod edit_scope_test;
-#[cfg(test)]
 mod document_remote_scope_test;
+#[cfg(test)]
+mod edit_scope_test;
 pub mod handlers;
 #[cfg(test)]
 mod listing_scope_cleanup_test;
@@ -88,9 +88,9 @@ pub mod static_files;
 #[cfg(test)]
 mod switcher_branch_scope_test;
 #[cfg(test)]
-mod switcher_current_scope_test;
-#[cfg(test)]
 mod switcher_branch_test;
+#[cfg(test)]
+mod switcher_current_scope_test;
 #[cfg(test)]
 mod switcher_exact_selector_test;
 #[cfg(test)]

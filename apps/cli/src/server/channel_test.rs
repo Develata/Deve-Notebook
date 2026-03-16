@@ -31,5 +31,8 @@ async fn non_critical_unicast_messages_still_drop_when_queue_is_full() {
     ch.unicast(ServerMessage::Pong);
 
     assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
-    assert!(unicast_rx.try_recv().is_err(), "second pong should be dropped");
+    assert!(
+        unicast_rx.try_recv().is_err(),
+        "second pong should be dropped"
+    );
 }

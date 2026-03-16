@@ -125,8 +125,8 @@ async fn readonly_remote_diff_is_allowed_without_locked_db() -> anyhow::Result<(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn remote_diff_without_repo_selection_clears_stale_db_and_sync_binding()
--> anyhow::Result<()> {
+async fn remote_diff_without_repo_selection_clears_stale_db_and_sync_binding() -> anyhow::Result<()>
+{
     let (_dir, state, test_id) = build_state()?;
     let local_handle = state
         .repo
@@ -151,7 +151,10 @@ async fn remote_diff_without_repo_selection_clears_stale_db_and_sync_binding()
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, deve_core::protocol::ServerErrorCode::ScRepoNotSelected);
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoNotSelected
+            );
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

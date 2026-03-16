@@ -149,10 +149,17 @@ fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow:
     std::fs::write(&old_abs, "old")?;
     std::fs::write(&new_abs, "new")?;
 
-    let err =
-        validate_workspace_rename_target(&repo, "default", "default/notes/live.md", "notes/live.md")
-            .expect_err("conflicting workspace target must fail closed");
-    assert!(err.to_string().contains("Repair target path already exists"));
+    let err = validate_workspace_rename_target(
+        &repo,
+        "default",
+        "default/notes/live.md",
+        "notes/live.md",
+    )
+    .expect_err("conflicting workspace target must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Repair target path already exists")
+    );
     Ok(())
 }
 
@@ -171,6 +178,9 @@ fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()>
 
     let err = rename_workspace_file(&repo, "default", "default/notes/live.md", "notes/live.md")
         .expect_err("conflicting workspace target must fail closed");
-    assert!(err.to_string().contains("Repair target path already exists"));
+    assert!(
+        err.to_string()
+            .contains("Repair target path already exists")
+    );
     Ok(())
 }

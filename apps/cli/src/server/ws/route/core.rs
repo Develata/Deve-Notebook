@@ -70,13 +70,7 @@ pub(super) async fn route_core(
                 ch.send_protocol_error(error);
                 return;
             }
-            listing::handle_list_repos(
-                state,
-                ch,
-                session,
-                Some(request_id),
-            )
-            .await;
+            listing::handle_list_repos(state, ch, session, Some(request_id)).await;
         }
         ClientMessage::Search {
             request_id,

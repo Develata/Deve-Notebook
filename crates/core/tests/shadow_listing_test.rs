@@ -230,7 +230,11 @@ fn shadow_listing_fails_closed_on_invalid_repo_stem() {
     std::fs::create_dir_all(&peer_dir).expect("peer dir");
     let invalid_path = peer_dir.join(OsString::from_vec(vec![0xff, b'.', b'r', b'e', b'd', b'b']));
     let invalid = redb::Database::create(&invalid_path).expect("invalid shadow db");
-    invalid.begin_write().expect("write txn").commit().expect("commit");
+    invalid
+        .begin_write()
+        .expect("write txn")
+        .commit()
+        .expect("commit");
     drop(invalid);
 
     let err = repo

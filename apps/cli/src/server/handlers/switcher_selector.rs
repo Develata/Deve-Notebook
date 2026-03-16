@@ -88,7 +88,9 @@ pub(super) fn resolve_requested_repo_name(
         return Ok(Some(selector));
     }
     let repos = state.repo.list_repos(branch)?;
-    Ok(repos.contains(&repo_name.to_string()).then(|| repo_name.to_string()))
+    Ok(repos
+        .contains(&repo_name.to_string())
+        .then(|| repo_name.to_string()))
 }
 
 fn select_target_repo_by_url(
@@ -108,7 +110,10 @@ fn select_target_repo_by_url(
         }
     }
     if target_branch.is_some() && matches.len() > 1 {
-        return Err(anyhow!("Ambiguous remote repository selector for URL: {}", url));
+        return Err(anyhow!(
+            "Ambiguous remote repository selector for URL: {}",
+            url
+        ));
     }
     if matches.len() == 1 {
         return Ok(Some(matches.remove(0)));

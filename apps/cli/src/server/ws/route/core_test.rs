@@ -1,5 +1,7 @@
 use super::route_core;
-use crate::server::{AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry};
+use crate::server::{
+    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, PeerId};
@@ -66,6 +68,9 @@ async fn browser_edit_requires_current_scope_nonce() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
-    assert!(uni_rx.try_recv().is_err(), "must not continue edit handling");
+    assert!(
+        uni_rx.try_recv().is_err(),
+        "must not continue edit handling"
+    );
     Ok(())
 }

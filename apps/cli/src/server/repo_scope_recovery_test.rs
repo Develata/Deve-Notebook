@@ -76,7 +76,8 @@ fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<
 }
 
 #[test]
-fn resolve_session_repo_rejects_local_uuid_string_selector_without_bound_id() -> anyhow::Result<()> {
+fn resolve_session_repo_rejects_local_uuid_string_selector_without_bound_id() -> anyhow::Result<()>
+{
     let (_dir, state, _default_id, test_id) = build_state()?;
     let mut session = WsSession::new();
     session.switch_repo(test_id.to_string(), None);

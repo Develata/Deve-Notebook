@@ -35,7 +35,13 @@ impl RepoManager {
             .and_then(|s| s.to_str())
             .filter(|stem| !stem.is_empty())
             .map(str::to_string)
-            .ok_or_else(|| anyhow!("Broken repo entry {:?} while {}: invalid file stem", path, context))
+            .ok_or_else(|| {
+                anyhow!(
+                    "Broken repo entry {:?} while {}: invalid file stem",
+                    path,
+                    context
+                )
+            })
     }
 
     pub(crate) fn write_repo_info_to_db(db: &Database, info: &RepoInfo) -> Result<()> {

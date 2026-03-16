@@ -1,5 +1,7 @@
 use super::handlers::document::handle_edit;
-use super::{AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry};
+use super::{
+    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
@@ -41,7 +43,12 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     ))
 }
 
-fn seed_doc(state: &Arc<AppState>, repo_name: &str, path: &str, content: &str) -> anyhow::Result<DocId> {
+fn seed_doc(
+    state: &Arc<AppState>,
+    repo_name: &str,
+    path: &str,
+    content: &str,
+) -> anyhow::Result<DocId> {
     let doc_id = state
         .repo
         .apply_file_structure_in_local_repo(repo_name, path, None, "test")?;

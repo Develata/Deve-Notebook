@@ -17,7 +17,10 @@ fn resolve_target_prefers_doc_id_over_stale_path() {
         doc_id: Some(doc_id),
     };
 
-    assert_eq!(resolve_target_path(&entries, &target), Some("notes/new.md".into()));
+    assert_eq!(
+        resolve_target_path(&entries, &target),
+        Some("notes/new.md".into())
+    );
 }
 
 #[test]

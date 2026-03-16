@@ -103,8 +103,7 @@ pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> Op
             .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
             .map(|entry| normalized(&entry.path));
     }
-    resolve_without_doc_id(entries, &path)
-        .map(|entry| normalized(&entry.path))
+    resolve_without_doc_id(entries, &path).map(|entry| normalized(&entry.path))
 }
 
 fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {

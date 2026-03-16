@@ -8,13 +8,13 @@ mod switcher_error;
 mod switcher_payload;
 #[path = "switcher_prepare.rs"]
 mod switcher_prepare;
-#[path = "switcher_selector.rs"]
-mod switcher_selector;
 #[cfg(test)]
 #[path = "switcher_prepare_test.rs"]
 mod switcher_prepare_test;
 #[path = "switcher_scope.rs"]
 mod switcher_scope;
+#[path = "switcher_selector.rs"]
+mod switcher_selector;
 
 use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -48,8 +48,8 @@ pub async fn handle_switch_branch(
     };
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
-    let had_current_repo_hint = current.scope.is_some()
-        || (raw_current_repo_hint && target_branch_ref.is_some());
+    let had_current_repo_hint =
+        current.scope.is_some() || (raw_current_repo_hint && target_branch_ref.is_some());
     let current_scope = current.scope;
     let current_repo_url = current.repo_url;
 
@@ -151,33 +151,32 @@ pub async fn handle_switch_repo(
     );
 
     let branch = session.active_branch.clone();
-    let repo_name =
-        match resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id) {
-            Ok(Some(repo_name)) => repo_name,
-            Ok(None) => {
-                tracing::warn!(
-                    "Repo switch failed: '{}' (repo_id={:?}) not found in branch {:?}",
-                    name,
-                    repo_id,
-                    branch
-                );
-                ch.send_protocol_error_with_switch_nonce(
-                    ServerError::with_detail(
-                        ServerErrorCode::ScRepoContextInvalid,
-                        format!("Repository not found: {}", name),
-                    ),
-                    switch_nonce,
-                );
-                return;
-            }
-            Err(err) => {
-                ch.send_protocol_error_with_switch_nonce(
-                    map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err)),
-                    switch_nonce,
-                );
-                return;
-            }
-        };
+    let repo_name = match resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id) {
+        Ok(Some(repo_name)) => repo_name,
+        Ok(None) => {
+            tracing::warn!(
+                "Repo switch failed: '{}' (repo_id={:?}) not found in branch {:?}",
+                name,
+                repo_id,
+                branch
+            );
+            ch.send_protocol_error_with_switch_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::ScRepoContextInvalid,
+                    format!("Repository not found: {}", name),
+                ),
+                switch_nonce,
+            );
+            return;
+        }
+        Err(err) => {
+            ch.send_protocol_error_with_switch_nonce(
+                map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err)),
+                switch_nonce,
+            );
+            return;
+        }
+    };
 
     let prepared = match prepare_repo_switch(state, branch.as_ref(), repo_name.clone()) {
         Ok(prepared) => prepared,

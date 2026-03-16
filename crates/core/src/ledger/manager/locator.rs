@@ -37,7 +37,8 @@ impl RepoManager {
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {
                 continue;
             }
-            let file_stem = Self::repo_stem_from_path(&path, "resolving local repo UUID without repair")?;
+            let file_stem =
+                Self::repo_stem_from_path(&path, "resolving local repo UUID without repair")?;
             if file_stem == self.local_repo_name {
                 continue;
             }

@@ -388,8 +388,8 @@ async fn switch_branch_does_not_guess_repo_from_stale_session_name() -> anyhow::
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair()
--> anyhow::Result<()> {
+async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -> anyhow::Result<()>
+{
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -434,7 +434,14 @@ async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair()
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo(selector, Some(first.uuid));
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), Some(17)).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(17),
+    )
+    .await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError {

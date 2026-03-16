@@ -73,7 +73,9 @@ fn resolve_remote_repo_name_from_session(
             return Ok(Some(selector));
         }
         if let Some(repo_id) = session.active_repo_id
-            && let Some(selector) = state.repo.find_remote_repo_selector_by_id(branch, repo_id)?
+            && let Some(selector) = state
+                .repo
+                .find_remote_repo_selector_by_id(branch, repo_id)?
         {
             tracing::warn!(
                 "Recovering remote repo selector from UUID after stale name miss: branch={}, repo_id={}, stale_name={}, resolved_selector={}",
@@ -98,7 +100,10 @@ fn resolve_remote_repo_name_from_session(
             repo_id
         ));
     };
-    if let Some(selector) = state.repo.find_remote_repo_selector_by_id(branch, repo_id)? {
+    if let Some(selector) = state
+        .repo
+        .find_remote_repo_selector_by_id(branch, repo_id)?
+    {
         return Ok(Some(selector));
     }
     Err(anyhow!(

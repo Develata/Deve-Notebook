@@ -74,9 +74,15 @@ fn select_target_repo_prefers_exact_remote_selector_over_stale_uuid() -> anyhow:
     let (_dir, state) = build_state()?;
     let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let err =
-        select_target_repo(&state, false, Some(first_id), Some(&second_selector), None, Some(&peer_id))
-            .expect_err("stale uuid must not override exact selector");
+    let err = select_target_repo(
+        &state,
+        false,
+        Some(first_id),
+        Some(&second_selector),
+        None,
+        Some(&peer_id),
+    )
+    .expect_err("stale uuid must not override exact selector");
     assert!(err.to_string().contains("Session repo mismatch:"));
     Ok(())
 }
@@ -125,8 +131,8 @@ fn resolve_requested_repo_name_accepts_exact_remote_selector_without_uuid() -> a
 }
 
 #[test]
-fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid()
--> anyhow::Result<()> {
+fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid() -> anyhow::Result<()>
+{
     let (_dir, state) = build_state()?;
     let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
 
@@ -137,8 +143,8 @@ fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid()
 }
 
 #[test]
-fn resolve_requested_repo_name_prefers_repo_id_when_display_name_is_ambiguous()
--> anyhow::Result<()> {
+fn resolve_requested_repo_name_prefers_repo_id_when_display_name_is_ambiguous() -> anyhow::Result<()>
+{
     let (_dir, state) = build_state()?;
     let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
 

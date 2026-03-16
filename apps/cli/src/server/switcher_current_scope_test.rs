@@ -12,8 +12,8 @@ use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale() -> anyhow::Result<()>
-{
+async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
+-> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -73,8 +73,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale()
--> anyhow::Result<()>
-{
+-> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;

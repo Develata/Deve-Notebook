@@ -14,8 +14,8 @@ use super::ffi::{applyRemoteOp, getEditorContent};
 use context::SyncContext;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
-use leptos::prelude::*;
 use key::handle_key_provide;
+use leptos::prelude::*;
 use scope::{ScopedMessageScope, SyncPayloadScope, accepts_sync_payload, matches_scoped_message};
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {

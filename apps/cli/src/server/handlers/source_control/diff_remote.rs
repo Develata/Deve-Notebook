@@ -120,7 +120,7 @@ pub(super) fn resolve_tracked_doc_id(
     }
     if let Some(node_id) = deve_core::ledger::node_meta::get_node_id(db, &target.path)? {
         return Ok(
-            deve_core::ledger::node_meta::get_node_meta(db, node_id)?.and_then(|meta| meta.doc_id),
+            deve_core::ledger::node_meta::get_node_meta(db, node_id)?.and_then(|meta| meta.doc_id)
         );
     }
     if deve_core::ledger::metadata::get_docid(db, &target.path)?.is_some() {
