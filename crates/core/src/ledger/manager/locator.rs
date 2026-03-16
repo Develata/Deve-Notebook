@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 use crate::ledger::listing::RepoListing;
 use crate::ledger::manager::types::RepoManager;
@@ -44,9 +44,16 @@ impl RepoManager {
             if file_stem == self.local_repo_name {
                 continue;
             }
-            let repo_uuid = self.run_on_local_repo(file_stem, |db| {
-                Ok(Self::read_repo_info_from_db(db)?.map(|info| info.uuid))
-            })?;
+            let repo_uuid = Self::read_repo_info_from_path(&path)
+                .map_err(|err| {
+                    anyhow!(
+                        "Broken local repo {} while resolving UUID {} without repair: {}",
+                        file_stem,
+                        target_id,
+                        err
+                    )
+                })?
+                .map(|info| info.uuid);
             if repo_uuid == Some(target_id) {
                 return Ok(Some(file_stem.to_string()));
             }
@@ -184,5 +191,45 @@ impl RepoManager {
             return Ok(from_id);
         }
         self.select_local_repo_name_for_execution(&candidates)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RepoManager;
+    use crate::ledger::{REPO_METADATA, RepoInfo};
+    use tempfile::TempDir;
+
+    fn write_info(db: &redb::Database, info: &RepoInfo) {
+        let txn = db.begin_write().expect("write txn");
+        txn.open_table(REPO_METADATA)
+            .expect("repo metadata")
+            .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
+            .expect("write metadata");
+        txn.commit().expect("commit");
+    }
+
+    #[test]
+    fn local_repo_id_lookup_without_repair_uses_current_on_disk_metadata() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+        let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
+        let wiki_db = main.open_database(None, "wiki").expect("wiki db");
+        write_info(
+            wiki_db.db.as_ref(),
+            &RepoInfo {
+                uuid: uuid::Uuid::new_v4(),
+                name: "wiki".into(),
+                url: Some("urn:wiki".into()),
+            },
+        );
+
+        assert_eq!(
+            main.find_local_repo_name_by_id_without_repair(wiki_info.uuid)
+                .expect("lookup without repair"),
+            None
+        );
     }
 }
