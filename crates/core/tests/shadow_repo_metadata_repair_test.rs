@@ -89,7 +89,7 @@ fn init_keeps_uuid_shadow_path_without_remote_metadata() {
 }
 
 #[test]
-fn init_survives_broken_shadow_catalogs() {
+fn init_fails_closed_on_broken_shadow_catalogs() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
@@ -98,20 +98,12 @@ fn init_survives_broken_shadow_catalogs() {
     std::fs::create_dir_all(&peer_dir).expect("create peer dir");
     std::fs::write(peer_dir.join("broken.redb"), b"not-a-redb").expect("write broken shadow");
 
-    let repaired = RepoManager::init(&ledger_dir, 10, None, None).expect("re-init repo");
-
-    assert_eq!(
-        repaired
-            .get_repo_info()
-            .expect("local info")
-            .expect("present")
-            .name,
-        "default"
-    );
-    let err = repaired
-        .list_shadows_on_disk()
-        .expect_err("broken shadow peer must fail listing after init");
-    assert!(err.to_string().contains("Broken shadow peer peer-bad"));
+    let err = RepoManager::init(&ledger_dir, 10, None, None)
+        .err()
+        .expect("broken shadow peer must fail init");
+    let detail = format!("{err:#}");
+    assert!(detail.contains("Failed to repair remote repo catalogs during init"));
+    assert!(detail.contains("Broken shadow peer peer-bad"));
 }
 
 #[test]
@@ -211,7 +203,7 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
 }
 
 #[test]
-fn remote_catalog_repair_skips_broken_peer_and_repairs_healthy_one() {
+fn remote_catalog_repair_fails_closed_on_broken_peer() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
@@ -230,8 +222,10 @@ fn remote_catalog_repair_skips_broken_peer_and_repairs_healthy_one() {
     std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
     std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("write broken shadow");
 
-    repo.repair_remote_repo_catalogs()
-        .expect("repair remote catalogs");
+    let err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("broken peer must fail remote catalog repair");
+    assert!(err.to_string().contains("Broken shadow peer peer-bad"));
 
     assert_eq!(
         repo.list_repos(Some(&good_peer))

@@ -34,6 +34,7 @@ impl RepoManager {
         if !remotes_dir.exists() {
             return Ok(());
         }
+        let mut peers = Vec::new();
         for entry in std::fs::read_dir(remotes_dir)? {
             let path = entry?.path();
             if !path.is_dir() {
@@ -45,14 +46,13 @@ impl RepoManager {
             if name.starts_with('.') || name.is_empty() {
                 continue;
             }
-            let peer_id = PeerId::new(name);
-            if let Err(err) = self.scan_remote_repo_entries(&peer_id) {
-                tracing::warn!(
-                    "Skipping broken shadow peer during remote catalog repair: peer={}, err={:?}",
-                    peer_id,
-                    err
-                );
-            }
+            peers.push(PeerId::new(name));
+        }
+        peers.sort_by_key(|peer_id| peer_id.to_string());
+        for peer_id in peers {
+            self.scan_remote_repo_entries(&peer_id).with_context(|| {
+                format!("Broken shadow peer {} while repairing catalogs", peer_id)
+            })?;
         }
         Ok(())
     }

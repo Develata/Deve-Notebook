@@ -187,9 +187,8 @@ pub fn init(
         vault_root: None,
         persist_guard: Arc::new(crate::sync::persist_guard::PersistGuard::new()),
     };
-    if let Err(err) = repo.repair_remote_repo_catalogs() {
-        tracing::warn!("Failed to repair remote repo catalogs during init: {err}");
-    }
+    repo.repair_remote_repo_catalogs()
+        .context("Failed to repair remote repo catalogs during init")?;
     Ok(repo)
 }
 

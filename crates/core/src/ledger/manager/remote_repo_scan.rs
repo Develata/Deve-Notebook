@@ -38,12 +38,12 @@ impl RepoManager {
                 Ok(Some(repair)) => repair,
                 Ok(None) => continue,
                 Err(err) => {
-                    tracing::warn!(
-                        "Skipping unreadable shadow repo {} during repair: {:?}",
+                    return Err(anyhow!(
+                        "Broken shadow repo {} for peer {} while repairing catalog: {}",
                         stem,
+                        peer_id,
                         err
-                    );
-                    continue;
+                    ));
                 }
             };
             repairs.push((path, repair));
@@ -56,12 +56,6 @@ impl RepoManager {
         );
         for (path, repair) in repairs {
             if duplicate_ids.contains(&repair.info.uuid) {
-                tracing::warn!(
-                    "Skipping duplicate shadow UUID during repair: peer={}, uuid={}, path={:?}",
-                    peer_id,
-                    repair.info.uuid,
-                    path
-                );
                 continue;
             }
             let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
