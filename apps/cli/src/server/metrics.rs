@@ -70,8 +70,14 @@ pub fn spawn_broadcaster(state: Arc<AppState>) {
 
 /// 存储指标: DB 文件大小 + 文档数
 fn storage_metrics(state: &AppState) -> (u64, u32) {
-    let db_size = db_file_size(state.repo.ledger_dir());
-    let doc_count = local_doc_count(state).unwrap_or(0);
+    let db_size = db_file_size(state.repo.ledger_dir()).unwrap_or_else(|err| {
+        tracing::warn!("Failed to collect DB size metrics: {err}");
+        0
+    });
+    let doc_count = local_doc_count(state).unwrap_or_else(|err| {
+        tracing::warn!("Failed to collect doc count metrics: {err}");
+        0
+    });
     (db_size, doc_count)
 }
 
@@ -86,16 +92,20 @@ fn local_doc_count(state: &AppState) -> anyhow::Result<u32> {
 }
 
 /// 计算 ledger 目录下所有 .redb 文件总大小
-fn db_file_size(ledger_dir: &std::path::Path) -> u64 {
+fn db_file_size(ledger_dir: &std::path::Path) -> anyhow::Result<u64> {
     let local_dir = ledger_dir.join("local");
-    std::fs::read_dir(local_dir)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().is_some_and(|ext| ext == "redb"))
-        .filter_map(|e| e.metadata().ok())
-        .map(|m| m.len())
-        .sum()
+    if !local_dir.exists() {
+        return Ok(0);
+    }
+
+    let mut total = 0u64;
+    for entry in std::fs::read_dir(local_dir)? {
+        let entry = entry?;
+        if entry.path().extension().is_some_and(|ext| ext == "redb") {
+            total = total.saturating_add(entry.metadata()?.len());
+        }
+    }
+    Ok(total)
 }
 
 /// 平台相关的 CPU / 内存指标
@@ -171,5 +181,25 @@ mod linux {
         let idle = vals[3];
         let total: u64 = vals.iter().sum();
         Some(CpuStat { total, idle })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::db_file_size;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn db_file_size_counts_only_redb_files() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let local = dir.path().join("local");
+        fs::create_dir_all(&local)?;
+        fs::write(local.join("a.redb"), vec![0u8; 3])?;
+        fs::write(local.join("b.redb"), vec![0u8; 5])?;
+        fs::write(local.join("note.txt"), vec![0u8; 99])?;
+
+        assert_eq!(db_file_size(dir.path())?, 8);
+        Ok(())
     }
 }
