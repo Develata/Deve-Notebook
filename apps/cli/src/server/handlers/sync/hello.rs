@@ -35,6 +35,7 @@ pub(super) async fn handle(
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
 
     if let Err(error) = validate_scope(session, repo_id, scope_nonce) {
+        clear_stale_browser_sync_scope(session);
         ch.send_protocol_error(error);
         return;
     }
@@ -182,4 +183,12 @@ fn validate_scope(
         ));
     }
     Ok(())
+}
+
+fn clear_stale_browser_sync_scope(session: &mut WsSession) {
+    if !session.is_browser_session() {
+        return;
+    }
+    session.clear_active_db();
+    session.clear_sync_binding();
 }

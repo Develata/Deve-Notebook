@@ -1,6 +1,5 @@
-use super::switcher_prepare::{
-    prepare_repo_switch, resolve_requested_repo_name, select_target_repo,
-};
+use super::switcher_prepare::prepare_repo_switch;
+use super::switcher_selector::{resolve_requested_repo_name, select_target_repo};
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
@@ -199,6 +198,36 @@ fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyho
         err.to_string()
             .contains("Ambiguous remote repository selector for URL")
     );
+    Ok(())
+}
+
+#[test]
+fn select_target_repo_prefers_current_repo_url_over_stale_uuid() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let peer_id = PeerId::new("peer-remote");
+    let first = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki-a".into()),
+    };
+    let second = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:wiki-b".into()),
+    };
+    state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
+    state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
+
+    let selected = select_target_repo(
+        &state,
+        true,
+        Some(second.uuid),
+        Some("stale-notes"),
+        first.url.clone(),
+        Some(&peer_id),
+    )?
+    .expect("canonical URL match");
+    assert_eq!(selected, "wiki");
     Ok(())
 }
 

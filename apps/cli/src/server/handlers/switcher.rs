@@ -8,6 +8,8 @@ mod switcher_error;
 mod switcher_payload;
 #[path = "switcher_prepare.rs"]
 mod switcher_prepare;
+#[path = "switcher_selector.rs"]
+mod switcher_selector;
 #[cfg(test)]
 #[path = "switcher_prepare_test.rs"]
 mod switcher_prepare_test;
@@ -20,9 +22,8 @@ use std::sync::Arc;
 
 use self::switcher_error::prepare_switch_error;
 use self::switcher_payload::{emit_repo_view, preload_branch_switch, preload_repo_view};
-use self::switcher_prepare::{
-    commit_session_switch, prepare_repo_switch, select_target_repo, validate_branch_target,
-};
+use self::switcher_prepare::{commit_session_switch, prepare_repo_switch, validate_branch_target};
+use self::switcher_selector::{resolve_requested_repo_name, select_target_repo};
 
 pub async fn handle_switch_branch(
     state: &Arc<AppState>,
@@ -151,8 +152,7 @@ pub async fn handle_switch_repo(
 
     let branch = session.active_branch.clone();
     let repo_name =
-        match switcher_prepare::resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id)
-        {
+        match resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id) {
             Ok(Some(repo_name)) => repo_name,
             Ok(None) => {
                 tracing::warn!(

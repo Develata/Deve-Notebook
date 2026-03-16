@@ -82,33 +82,6 @@ pub(super) fn resolve_repo_by_name(
     })
 }
 
-pub(super) fn resolve_repo_by_repo_id(
-    state: &Arc<AppState>,
-    branch: Option<PeerId>,
-    repo_id: RepoId,
-) -> Result<ResolvedRepo> {
-    if let Some(peer_id) = branch.as_ref() {
-        let selector = state
-            .repo
-            .find_remote_repo_selector_by_id(peer_id, repo_id)?
-            .ok_or_else(|| anyhow!("Remote repository selector not resolved for {}", repo_id))?;
-        return Ok(ResolvedRepo {
-            repo_id,
-            repo_name: selector,
-            branch,
-        });
-    }
-    let info = state
-        .repo
-        .find_local_repo_name_by_id(repo_id)?
-        .ok_or_else(|| anyhow!("Local repository UUID not resolved for {}", repo_id))?;
-    Ok(ResolvedRepo {
-        repo_id,
-        repo_name: info,
-        branch,
-    })
-}
-
 fn recover_repo_selector(
     state: &Arc<AppState>,
     branch: Option<&PeerId>,

@@ -175,6 +175,11 @@ async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
     session.mark_browser_session();
     session.switch_repo("notes".into(), Some(repo_id));
     session.set_scope_nonce(Some(9));
+    let local_handle = state.repo.open_database(None, "notes")?;
+    session.set_active_db(local_handle);
+    session.set_authenticated(remote.peer_id());
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(5);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
@@ -187,6 +192,9 @@ async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
 }

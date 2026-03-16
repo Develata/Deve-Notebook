@@ -51,7 +51,10 @@ fn resolve_session_repo_rejects_stale_local_repo_id_mismatch() -> anyhow::Result
     let mut session = WsSession::new();
     session.switch_repo("test".into(), Some(default_id));
     let err = resolve_session_repo(&state, &session).expect_err("stale local repo must fail");
-    assert!(err.to_string().contains("Session repo mismatch:"));
+    assert!(
+        err.to_string()
+            .contains("Local repository selector not resolved")
+    );
     assert_eq!(session.active_repo.as_deref(), Some("test"));
     assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
@@ -65,24 +68,26 @@ fn resolve_session_repo_and_sync_rejects_stale_local_repo_id_mismatch() -> anyho
 
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("stale local repo must fail before syncing session");
-    assert!(err.to_string().contains("Session repo mismatch:"));
+    assert!(
+        err.to_string()
+            .contains("Local repository selector not resolved")
+    );
     assert_eq!(session.active_repo.as_deref(), Some("test"));
     assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }
 
 #[test]
-fn resolve_session_repo_recovers_local_repo_name_from_uuid() -> anyhow::Result<()> {
+fn resolve_session_repo_rejects_local_name_recovery_from_stale_uuid() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
     let mut session = WsSession::new();
     session.switch_repo("stale-name".into(), Some(test_id));
-
-    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
-
-    assert_eq!(resolved.repo_name, "test");
-    assert_eq!(resolved.repo_id, test_id);
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(test_id));
+    let err = resolve_session_repo_and_sync(&state, &mut session)
+        .expect_err("local stale selector must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Local repository selector not resolved")
+    );
     Ok(())
 }
 

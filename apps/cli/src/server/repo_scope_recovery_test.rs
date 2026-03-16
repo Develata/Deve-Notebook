@@ -76,18 +76,17 @@ fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<
 }
 
 #[test]
-fn resolve_session_repo_recovers_local_repo_name_from_uuid_string_without_bound_id()
--> anyhow::Result<()> {
+fn resolve_session_repo_rejects_local_uuid_string_selector_without_bound_id() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
     let mut session = WsSession::new();
     session.switch_repo(test_id.to_string(), None);
 
-    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
-
-    assert!(resolved.branch.is_none());
-    assert_eq!(resolved.repo_id, test_id);
-    assert_eq!(resolved.repo_name, "test");
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    let err = resolve_session_repo_and_sync(&state, &mut session)
+        .expect_err("local uuid-string selector must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Local repository selector not resolved")
+    );
     Ok(())
 }
 
