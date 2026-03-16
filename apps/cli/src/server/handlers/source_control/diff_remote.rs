@@ -1,7 +1,8 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::source_control::errors;
-use crate::server::repo_scope::{resolve_local_counterpart_repo, resolve_session_repo_and_sync};
+use crate::server::handlers::source_control::repo_scope;
+use crate::server::repo_scope::resolve_local_counterpart_repo;
 use crate::server::session::WsSession;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, PeerId, RepoId};
@@ -16,9 +17,9 @@ pub(super) async fn handle_remote_diff(
     target: ScPathTarget,
 ) {
     let scope_nonce = Some(session.scope_nonce());
-    let scope = match resolve_session_repo_and_sync(state, session) {
+    let scope = match repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
-        Err(e) => return errors::send_ws(ch, errors::map_repo_scope_error(e)),
+        Err(e) => return errors::send_ws(ch, e),
     };
     let path = deve_core::utils::path::to_forward_slash(&target.path);
     let (doc_id, new_content) =
