@@ -19,10 +19,13 @@ impl RepoManager {
         if !peer_dir.exists() {
             return Ok(());
         }
-        let mut paths = std::fs::read_dir(&peer_dir)?
-            .filter_map(|entry| entry.ok().map(|e| e.path()))
-            .filter(|path| path.extension().and_then(|s| s.to_str()) == Some("redb"))
-            .collect::<Vec<_>>();
+        let mut paths = Vec::new();
+        for entry in std::fs::read_dir(&peer_dir)? {
+            let path = entry?.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
+                paths.push(path);
+            }
+        }
         paths.sort();
         let mut repairs = Vec::new();
         for path in paths {

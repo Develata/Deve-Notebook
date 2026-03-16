@@ -18,10 +18,13 @@ impl RepoManager {
             return Ok(());
         }
 
-        let mut entries = std::fs::read_dir(&local_dir)?
-            .filter_map(|entry| entry.ok().map(|e| e.path()))
-            .filter(|path| path.extension().and_then(|s| s.to_str()) == Some("redb"))
-            .collect::<Vec<_>>();
+        let mut entries = Vec::new();
+        for entry in std::fs::read_dir(&local_dir)? {
+            let path = entry?.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
+                entries.push(path);
+            }
+        }
         entries.sort();
         entries.sort_by_key(|path| {
             let stem = path

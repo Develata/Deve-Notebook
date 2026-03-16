@@ -12,30 +12,34 @@ impl RepoManager {
             return Ok(vec![]);
         }
 
-        let mut repos = std::fs::read_dir(local_dir)?
-            .filter_map(|entry| entry.ok().map(|e| e.path()))
-            .filter(|path| path.extension().and_then(|s| s.to_str()) == Some("redb"))
-            .filter_map(|path| {
-                let stem = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(str::to_string)?;
-                if stem == self.local_repo_name {
-                    return Some(stem);
+        let mut repos = Vec::new();
+        for entry in std::fs::read_dir(local_dir)? {
+            let path = entry?.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
+                continue;
+            }
+            let Some(stem) = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(str::to_string)
+            else {
+                continue;
+            };
+            if stem == self.local_repo_name {
+                repos.push(stem);
+                continue;
+            }
+            match RepoManager::read_repo_info_from_path(&path) {
+                Ok(_) => repos.push(stem),
+                Err(err) => {
+                    tracing::warn!(
+                        "Skipping broken local repo {} while listing execution names: {:?}",
+                        stem,
+                        err
+                    );
                 }
-                match RepoManager::read_repo_info_from_path(&path) {
-                    Ok(_) => Some(stem),
-                    Err(err) => {
-                        tracing::warn!(
-                            "Skipping broken local repo {} while listing execution names: {:?}",
-                            stem,
-                            err
-                        );
-                        None
-                    }
-                }
-            })
-            .collect::<Vec<_>>();
+            }
+        }
         repos.sort();
         Ok(repos)
     }
