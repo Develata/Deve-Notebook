@@ -1,4 +1,4 @@
-use super::handlers::listing::handle_list_docs;
+use super::handlers::listing::{handle_list_docs, handle_list_repos};
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
@@ -61,7 +61,7 @@ async fn list_docs_on_unbound_shadow_branch_clears_stale_db_and_sync_binding() -
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
         }
         other => panic!("expected SyncRepoUnbound error, got {:?}", other),
     }
@@ -94,5 +94,40 @@ async fn list_docs_on_unbound_shadow_branch_preserves_switch_nonce() -> anyhow::
         }
         other => panic!("expected ProtocolError with switch nonce, got {:?}", other),
     }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_repos_on_unbound_shadow_branch_clears_stale_db_and_sync_binding() -> anyhow::Result<()>
+{
+    let (_dir, state) = build_state()?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some("missing-shadow".into()));
+    session.switch_repo("ghost".into(), Some(default_id));
+    session.set_active_db(local_handle);
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(default_id);
+    session.set_sync_scope_nonce(11);
+
+    handle_list_repos(&state, &ch, &mut session, Some("req-2".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::RepoList { branch, .. }) => {
+            assert_eq!(branch, Some("missing-shadow".into()));
+        }
+        other => panic!("expected RepoList after cleanup, got {:?}", other),
+    }
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }

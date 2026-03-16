@@ -66,9 +66,8 @@ pub(super) async fn route_core(
             listing::handle_list_repos(
                 state,
                 ch,
-                session.active_branch.as_ref(),
+                session,
                 Some(request_id),
-                Some(session.scope_nonce()),
             )
             .await;
         }

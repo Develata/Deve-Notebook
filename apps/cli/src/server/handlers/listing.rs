@@ -6,10 +6,10 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
 use anyhow::anyhow;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
@@ -52,16 +52,19 @@ pub async fn handle_list_shadows(
 pub async fn handle_list_repos(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    active_branch: Option<&PeerId>,
+    session: &mut WsSession,
     request_id: Option<String>,
-    scope_nonce: Option<u64>,
 ) {
+    if session.active_branch.is_some() {
+        let _ = resolve_session_repo_and_sync(state, session);
+    }
+    let active_branch = session.active_branch.as_ref();
     match state.repo.list_repos(active_branch) {
         Ok(repos) => {
             ch.unicast(ServerMessage::RepoList {
                 request_id,
                 branch: active_branch.map(ToString::to_string),
-                scope_nonce,
+                scope_nonce: Some(session.scope_nonce()),
                 repos,
             });
         }
