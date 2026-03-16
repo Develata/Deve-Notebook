@@ -17,6 +17,7 @@ pub(super) fn rebuild_doc_projection(
 }
 
 pub(super) fn discard_added(repo: &RepoManager, repo_name: &str, path: &str) -> Result<()> {
+    repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?;
     let file_path = repo.local_repo_workspace_path(repo_name, path)?;
     if file_path.exists() {
         repo.record_projection_delete(repo_name, path);

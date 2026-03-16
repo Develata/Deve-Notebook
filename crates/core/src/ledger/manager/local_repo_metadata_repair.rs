@@ -27,9 +27,7 @@ impl RepoManager {
         }
         entries.sort();
         entries.sort_by_key(|path| {
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
+            let stem = RepoManager::repo_stem_from_path(path, "repairing local catalog")
                 .unwrap_or_default();
             usize::from(stem != main_repo_name)
         });
@@ -37,11 +35,7 @@ impl RepoManager {
         let mut seen = HashMap::new();
         let mut seen_urls = HashMap::new();
         for path in entries {
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or_default()
-                .to_string();
+            let stem = RepoManager::repo_stem_from_path(&path, "repairing local catalog")?;
             let db = if stem == main_repo_name {
                 None
             } else {

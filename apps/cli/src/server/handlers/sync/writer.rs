@@ -3,7 +3,7 @@ use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 
-use super::cleanup::clear_remote_unbound_state;
+use super::cleanup::{clear_remote_unbound_state, clear_stale_browser_sync_scope};
 
 pub(super) fn handle(
     ch: &DualChannel,
@@ -37,12 +37,14 @@ fn validate(
     }
     if session.is_browser_session() {
         if session.active_branch.is_some() || session.active_repo_id != Some(repo_id) {
+            clear_stale_browser_sync_scope(session);
             return Err(ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
                 "writer scope does not match active repo",
             ));
         }
         if session.scope_nonce() != scope_nonce || session.sync_scope_nonce() != Some(scope_nonce) {
+            clear_stale_browser_sync_scope(session);
             return Err(ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
                 "writer scope nonce is stale",
@@ -132,6 +134,10 @@ mod tests {
         session.bind_repo(repo_id);
         let error = validate(&mut session, repo_id, &peer_id, 8).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+        assert!(session.get_active_db().is_none());
+        assert!(session.bound_repo_id.is_none());
+        assert!(session.authenticated_peer_id.is_none());
+        assert_eq!(session.sync_scope_nonce(), None);
     }
 
     #[test]
@@ -143,9 +149,22 @@ mod tests {
         session.switch_repo("notes".into(), Some(uuid::Uuid::new_v4()));
         session.set_scope_nonce(Some(9));
         session.set_sync_scope_nonce(9);
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
+        session.set_active_db(DatabaseHandle {
+            db,
+            readonly: false,
+            branch: None,
+            repo_id: Some(repo_id),
+            repo_name: "notes".into(),
+        });
         session.set_authenticated(peer_id.clone());
         session.bind_repo(repo_id);
         let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+        assert!(session.get_active_db().is_none());
+        assert!(session.bound_repo_id.is_none());
+        assert!(session.authenticated_peer_id.is_none());
+        assert_eq!(session.sync_scope_nonce(), None);
     }
 }

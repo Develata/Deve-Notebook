@@ -41,7 +41,7 @@ fn seed_file(repo: &RepoManager, path: &str, content: &str) -> DocId {
 }
 
 #[test]
-fn discard_pending_added_cleans_legacy_mapping() {
+fn discard_pending_added_fails_closed_on_legacy_only_projection() {
     let (dir, repo) = new_repo();
     let file = dir
         .path()
@@ -76,14 +76,21 @@ fn discard_pending_added_cleans_legacy_mapping() {
     })
     .expect("seed legacy mapping");
 
-    repo.discard_pending("notes/new.md").expect("discard added");
-
-    assert!(!file.exists());
+    let err = repo
+        .discard_pending("notes/new.md")
+        .expect_err("legacy-only discard must fail closed");
     assert!(
-        repo.get_docid("notes/new.md")
-            .expect("lookup docid")
-            .is_none()
+        err.to_string()
+            .contains("Tracked document projection missing for legacy-mapped path")
     );
+
+    assert!(file.exists());
+    let legacy = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            deve_core::ledger::metadata::get_docid(db, "notes/new.md")
+        })
+        .expect("legacy lookup");
+    assert!(legacy.is_some());
 }
 
 #[test]
@@ -105,10 +112,11 @@ fn workdir_diff_does_not_fallback_to_legacy_snapshot_path_index() {
     })
     .expect("poison path lookup");
 
-    let (old_content, new_content) = repo
+    let err = repo
         .workdir_diff_inputs_in_local_repo(repo.local_repo_name(), "notes/a.md")
-        .expect("workdir diff");
-
-    assert_eq!(old_content, "");
-    assert_eq!(new_content, "workspace hello");
+        .expect_err("legacy-only workdir diff must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Tracked document projection missing for legacy-mapped path")
+    );
 }

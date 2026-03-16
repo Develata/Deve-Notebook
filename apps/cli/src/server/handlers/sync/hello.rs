@@ -6,6 +6,7 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
+use super::cleanup::clear_stale_browser_sync_scope;
 use super::engine;
 use super::errors;
 
@@ -183,12 +184,4 @@ fn validate_scope(
         ));
     }
     Ok(())
-}
-
-fn clear_stale_browser_sync_scope(session: &mut WsSession) {
-    if !session.is_browser_session() {
-        return;
-    }
-    session.clear_active_db();
-    session.clear_sync_binding();
 }

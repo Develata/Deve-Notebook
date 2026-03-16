@@ -16,7 +16,7 @@ use crate::source_control::commit_diff_paths;
 use crate::source_control::commits::COMMITS_TABLE;
 use crate::source_control::types::{ChangeStatus, CommitFileDiff};
 use crate::state::reconstruct_content;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 use std::collections::{HashMap, HashSet};
 
@@ -58,13 +58,12 @@ pub fn compare_commits(
             continue;
         }
         let Some(path) = new_path.clone().or(old_path.clone()) else {
-            tracing::warn!(
-                "Skipping commit diff for unprojected document: doc_id={}, seq_a={}, seq_b={}",
+            return Err(anyhow!(
+                "Commit diff lost projected path for doc {} between seq {} and {}",
                 doc_id,
                 seq_a,
                 seq_b
-            );
-            continue;
+            ));
         };
         let status = detect_status(
             old_path.as_deref(),

@@ -2,7 +2,7 @@ use crate::ledger::RepoManager;
 use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::REPO_METADATA;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 use std::path::Path;
 
@@ -28,6 +28,14 @@ impl RepoManager {
     pub(crate) fn read_repo_info_from_path(path: &Path) -> Result<Option<RepoInfo>> {
         let db = cached_database(path)?;
         Self::read_repo_info_from_db(db.as_ref())
+    }
+
+    pub(crate) fn repo_stem_from_path(path: &Path, context: &str) -> Result<String> {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .filter(|stem| !stem.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| anyhow!("Broken repo entry {:?} while {}: invalid file stem", path, context))
     }
 
     pub(crate) fn write_repo_info_to_db(db: &Database, info: &RepoInfo) -> Result<()> {

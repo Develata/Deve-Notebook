@@ -151,7 +151,7 @@ fn commit_diff_reports_rename_from_structure_facts() {
 }
 
 #[test]
-fn commit_diff_skips_content_only_docs_without_structure_projection() {
+fn commit_diff_fails_closed_for_content_only_docs_without_structure_projection() {
     let (_dir, repo) = new_repo();
     let doc_id = deve_core::models::DocId::new();
     repo.append_local_op(&deve_core::models::LedgerEntry::new_content(
@@ -174,9 +174,12 @@ fn commit_diff_skips_content_only_docs_without_structure_projection() {
         })
         .expect("create orphan commit");
 
-    let diffs = repo
+    let err = repo
         .diff_commits(None, &commit.id)
-        .expect("diff commits with orphan content");
+        .expect_err("orphan content diff must fail closed");
 
-    assert!(diffs.is_empty());
+    assert!(
+        err.to_string()
+            .contains("Commit diff lost projected path for doc")
+    );
 }

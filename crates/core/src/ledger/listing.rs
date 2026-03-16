@@ -50,13 +50,7 @@ impl RepoListing for RepoManager {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                let Some(stem) = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(str::to_string)
-                else {
-                    continue;
-                };
+                let stem = RepoManager::repo_stem_from_path(&path, "listing repos")?;
                 let display = if stem == self.local_repo_name {
                     self.get_repo_info()?.map(|info| info.name)
                 } else {

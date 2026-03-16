@@ -252,3 +252,40 @@ fn set_vault_root_checked_fails_closed_on_broken_secondary_repo() {
         .expect_err("broken local repo must fail checked vault mount");
     assert!(err.to_string().contains("Broken local repo broken"));
 }
+
+#[cfg(unix)]
+#[test]
+fn local_repo_listing_fails_closed_on_invalid_repo_stem() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let local_dir = ledger_dir.join("local");
+    let invalid_path = {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        local_dir.join(OsString::from_vec(vec![0xff, b'.', b'r', b'e', b'd', b'b']))
+    };
+    let invalid = redb::Database::create(&invalid_path).expect("invalid stem db");
+    invalid
+        .begin_write()
+        .expect("write txn")
+        .commit()
+        .expect("commit");
+    drop(invalid);
+
+    let list_err = repo
+        .list_repos(None)
+        .expect_err("invalid repo stem must fail local listing");
+    assert!(list_err.to_string().contains("invalid file stem"));
+
+    let exec_err = repo
+        .list_local_repo_names_for_execution()
+        .expect_err("invalid repo stem must fail execution listing");
+    assert!(exec_err.to_string().contains("invalid file stem"));
+
+    let lookup_err = repo
+        .find_local_repo_name_by_id(uuid::Uuid::new_v4())
+        .expect_err("invalid repo stem must fail UUID lookup");
+    assert!(lookup_err.to_string().contains("invalid file stem"));
+}

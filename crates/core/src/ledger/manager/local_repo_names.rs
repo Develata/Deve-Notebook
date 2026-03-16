@@ -18,13 +18,7 @@ impl RepoManager {
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {
                 continue;
             }
-            let Some(stem) = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .map(str::to_string)
-            else {
-                continue;
-            };
+            let stem = RepoManager::repo_stem_from_path(&path, "listing execution names")?;
             if stem == self.local_repo_name {
                 repos.push(stem);
                 continue;
