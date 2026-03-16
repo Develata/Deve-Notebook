@@ -23,7 +23,7 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Result<()> {
     // 1. 初始化 RepoManager
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_path);
+    repo.set_vault_root_checked(vault_path)?;
     let repo = Arc::new(repo);
 
     // 2. 初始化 SyncManager

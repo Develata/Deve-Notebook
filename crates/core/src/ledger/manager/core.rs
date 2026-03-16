@@ -20,10 +20,19 @@ impl RepoManager {
         init::init(ledger_dir, snapshot_depth, repo_name, repo_url)
     }
 
+    /// 设置 Vault 根目录并强制校验本地 catalog。
+    ///
+    /// Invariants:
+    /// - 生产态在挂载 Vault 后，必须立即暴露本地 repo catalog 损坏。
+    /// - 测试辅助可继续使用 `set_vault_root` 的宽松包装。
+    pub fn set_vault_root_checked(&mut self, root: impl AsRef<Path>) -> Result<()> {
+        self.vault_root = Some(root.as_ref().to_path_buf());
+        self.repair_local_repo_catalog()
+    }
+
     /// 设置 Vault 根目录 (用于 commit 时读取磁盘文件)
     pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
-        self.vault_root = Some(root.as_ref().to_path_buf());
-        if let Err(error) = self.repair_local_repo_catalog() {
+        if let Err(error) = self.set_vault_root_checked(root) {
             tracing::warn!("Failed to repair local repo catalog after mounting vault: {error}");
         }
     }

@@ -22,7 +22,7 @@ pub fn run(
 ) -> Result<()> {
     let quarantined = shadow::quarantine_nil_shadow_repos(&ledger_dir.join("remotes"))?;
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_path);
+    repo.set_vault_root_checked(vault_path)?;
     let repo = Arc::new(repo);
     let sync_manager = SyncManager::new(repo.clone(), vault_path.to_path_buf());
 

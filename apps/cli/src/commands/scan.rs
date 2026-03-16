@@ -11,7 +11,7 @@ use std::sync::Arc;
 pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> anyhow::Result<()> {
     // 初始化 RepoManager
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_path);
+    repo.set_vault_root_checked(vault_path)?;
     let repo = Arc::new(repo);
     let sync_manager = deve_core::sync::SyncManager::new(repo, vault_path.to_path_buf());
     println!("Scanning vault at {:?}...", vault_path);

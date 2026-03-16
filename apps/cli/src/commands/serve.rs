@@ -49,7 +49,7 @@ pub async fn run(
             return Err(e);
         }
     };
-    repo.set_vault_root(&vault_path);
+    repo.set_vault_root_checked(&vault_path)?;
     let repo_arc = Arc::new(repo);
 
     // 启动时通过 SyncManager 自动扫描
