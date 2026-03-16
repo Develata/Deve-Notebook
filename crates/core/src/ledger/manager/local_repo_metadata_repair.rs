@@ -22,20 +22,19 @@ impl RepoManager {
         for entry in std::fs::read_dir(&local_dir)? {
             let path = entry?.path();
             if path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                entries.push(path);
+                let stem = RepoManager::repo_stem_from_path(&path, "repairing local catalog")?;
+                entries.push((path, stem));
             }
         }
-        entries.sort();
-        entries.sort_by_key(|path| {
-            let stem = RepoManager::repo_stem_from_path(path, "repairing local catalog")
-                .unwrap_or_default();
-            usize::from(stem != main_repo_name)
+        entries.sort_by(|(left_path, left_stem), (right_path, right_stem)| {
+            usize::from(left_stem != main_repo_name)
+                .cmp(&usize::from(right_stem != main_repo_name))
+                .then_with(|| left_path.cmp(right_path))
         });
 
         let mut seen = HashMap::new();
         let mut seen_urls = HashMap::new();
-        for path in entries {
-            let stem = RepoManager::repo_stem_from_path(&path, "repairing local catalog")?;
+        for (path, stem) in entries {
             let db = if stem == main_repo_name {
                 None
             } else {

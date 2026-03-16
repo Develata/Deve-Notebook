@@ -118,5 +118,16 @@ pub(super) fn resolve_tracked_doc_id(
     if let Some(doc_id) = target.doc_id {
         return Ok(deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.map(|_| doc_id));
     }
-    deve_core::ledger::doc_lookup::resolve_doc_id(db, &target.path)
+    if let Some(node_id) = deve_core::ledger::node_meta::get_node_id(db, &target.path)? {
+        return Ok(
+            deve_core::ledger::node_meta::get_node_meta(db, node_id)?.and_then(|meta| meta.doc_id),
+        );
+    }
+    if deve_core::ledger::metadata::get_docid(db, &target.path)?.is_some() {
+        anyhow::bail!(
+            "Tracked document projection missing for legacy-mapped path: {}",
+            target.path
+        );
+    }
+    Ok(None)
 }
