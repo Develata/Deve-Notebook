@@ -54,7 +54,7 @@ pub async fn commit_history_plugin_host(
             Ok(commits) => Json::<Vec<CommitInfo>>(commits).into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }
 
@@ -85,6 +85,6 @@ pub async fn commit_diff_plugin_host(
                 Err(e) => super::errors::http(e),
             }
         }
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }

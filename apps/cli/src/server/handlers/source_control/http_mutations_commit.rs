@@ -31,6 +31,6 @@ pub async fn commit_plugin_host(
             Ok(info) => Json::<CommitInfo>(info).into_response(),
             Err(e) => errors::http(e),
         },
-        Err(e) => errors::http(errors::request_failed(e.to_string())),
+        Err(e) => errors::http(errors::unsupported(e.to_string())),
     }
 }

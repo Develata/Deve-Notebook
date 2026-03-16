@@ -65,7 +65,7 @@ pub async fn stage_plugin_host(
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }
 
@@ -90,7 +90,7 @@ pub async fn discard_pending_plugin_host(
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }
 
@@ -115,6 +115,6 @@ pub async fn unstage_plugin_host(
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }

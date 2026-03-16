@@ -58,7 +58,7 @@ pub async fn pending_plugin_host(
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }
 
@@ -81,7 +81,7 @@ pub async fn status_plugin_host(
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }
 
@@ -104,6 +104,6 @@ pub async fn diff_plugin_host(
             Ok(diff) => diff.into_response(),
             Err(e) => super::errors::http(e),
         },
-        Err(e) => super::errors::http(super::errors::request_failed(e.to_string())),
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
 }

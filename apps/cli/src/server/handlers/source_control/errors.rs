@@ -20,8 +20,8 @@ pub fn http(error: ServerError) -> Response {
     (status(error.code), Json(error)).into_response()
 }
 
-pub fn request_failed(detail: impl Into<String>) -> ServerError {
-    ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
+pub fn unsupported(detail: impl Into<String>) -> ServerError {
+    ServerError::with_detail(ServerErrorCode::PluginUnsupportedMessage, detail)
 }
 
 fn status(code: ServerErrorCode) -> StatusCode {
@@ -31,6 +31,7 @@ fn status(code: ServerErrorCode) -> StatusCode {
         ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing => {
             StatusCode::UNAUTHORIZED
         }
+        ServerErrorCode::PluginUnsupportedMessage => StatusCode::NOT_IMPLEMENTED,
         ServerErrorCode::ScRepoNotSelected
         | ServerErrorCode::ScRemoteBranchReadonly
         | ServerErrorCode::ScRepoContextInvalid
@@ -43,5 +44,19 @@ fn status(code: ServerErrorCode) -> StatusCode {
         | ServerErrorCode::SyncEditRejected => StatusCode::CONFLICT,
         ServerErrorCode::SyncPeerUnauthenticated => StatusCode::FORBIDDEN,
         _ => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{status, unsupported};
+    use axum::http::StatusCode;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn plugin_unsupported_errors_map_to_not_implemented() {
+        let err = unsupported("Repository not configured");
+        assert_eq!(err.code, ServerErrorCode::PluginUnsupportedMessage);
+        assert_eq!(status(err.code), StatusCode::NOT_IMPLEMENTED);
     }
 }
