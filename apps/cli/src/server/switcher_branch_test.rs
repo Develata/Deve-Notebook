@@ -114,7 +114,7 @@ async fn switch_branch_rejects_peer_with_only_broken_shadow_repos() -> anyhow::R
             error,
             switch_nonce,
         }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert_eq!(switch_nonce, Some(23));
         }
         other => panic!("expected ProtocolError, got {:?}", other),

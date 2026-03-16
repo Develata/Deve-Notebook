@@ -90,6 +90,8 @@ mod switcher_branch_test;
 #[cfg(test)]
 mod switcher_exact_selector_test;
 #[cfg(test)]
+mod switcher_scope_rebind_test;
+#[cfg(test)]
 mod sync_hello_browser_test;
 #[cfg(test)]
 mod sync_hello_test;

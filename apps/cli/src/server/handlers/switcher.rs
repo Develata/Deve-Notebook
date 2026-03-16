@@ -1,6 +1,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo};
+use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
 #[path = "switcher_error.rs"]
 mod switcher_error;
@@ -11,6 +11,8 @@ mod switcher_prepare;
 #[cfg(test)]
 #[path = "switcher_prepare_test.rs"]
 mod switcher_prepare_test;
+#[path = "switcher_scope.rs"]
+mod switcher_scope;
 
 use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -34,46 +36,21 @@ pub async fn handle_switch_branch(
     let Some(final_branch) = validate_branch_target(state, ch, &peer_id, switch_nonce) else {
         return;
     };
+    let raw_current_repo_hint = session.active_repo.is_some() || session.active_repo_id.is_some();
 
-    let had_current_repo_hint = session.active_repo.is_some() || session.active_repo_id.is_some();
-    let current_scope = match resolve_session_repo(state, session) {
-        Ok(scope) => Some(scope),
+    let current = match switcher_scope::resolve_current_branch_switch_context(state, session) {
+        Ok(current) => current,
         Err(err) => {
-            let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
-            if matches!(
-                mapped.code,
-                ServerErrorCode::StorageNotFound
-                    | ServerErrorCode::SyncRepoUnbound
-                    | ServerErrorCode::ScRepoContextInvalid
-            ) {
-                None
-            } else {
-                ch.send_protocol_error_with_switch_nonce(mapped, switch_nonce);
-                return;
-            }
+            ch.send_protocol_error_with_switch_nonce(err, switch_nonce);
+            return;
         }
-    };
-    let current_repo_url = match current_scope.as_ref() {
-        Some(scope) => match state
-            .repo
-            .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
-        {
-            Ok(url) => url,
-            Err(err) => {
-                ch.send_protocol_error_with_switch_nonce(
-                    map_repo_scope_error(anyhow::anyhow!(
-                        "Failed to resolve current repo URL before branch switch: {}",
-                        err
-                    )),
-                    switch_nonce,
-                );
-                return;
-            }
-        },
-        None => None,
     };
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
+    let had_current_repo_hint = current.scope.is_some()
+        || (raw_current_repo_hint && target_branch_ref.is_some());
+    let current_scope = current.scope;
+    let current_repo_url = current.repo_url;
 
     let target_repo = match select_target_repo(
         state,
