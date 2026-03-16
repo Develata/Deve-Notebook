@@ -144,25 +144,24 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            if stem == selector {
-                return Ok(Some(stem));
-            }
             let info = if stem == self.local_repo_name {
                 self.get_repo_info()?
             } else {
                 match Self::read_repo_info_from_path(&path) {
                     Ok(info) => info,
                     Err(err) => {
-                        tracing::warn!(
-                            "Skipping broken local repo {} while resolving selector {}: {:?}",
+                        return Err(anyhow!(
+                            "Broken local repo {} while resolving selector {}: {}",
                             stem,
                             selector,
                             err
-                        );
-                        continue;
+                        ));
                     }
                 }
             };
+            if stem == selector {
+                return Ok(Some(stem));
+            }
             if info.as_ref().map(|info| info.uuid) == target_id {
                 return Ok(Some(stem));
             }

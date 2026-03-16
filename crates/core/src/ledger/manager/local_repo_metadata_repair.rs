@@ -1,6 +1,6 @@
 use crate::ledger::database::cached_or_create_database;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -48,12 +48,11 @@ impl RepoManager {
                 match cached_or_create_database(&path) {
                     Ok(db) => Some(db),
                     Err(err) => {
-                        tracing::warn!(
-                            "Skipping broken local repo catalog {} during repair: {:?}",
+                        return Err(anyhow!(
+                            "Broken local repo {} while repairing catalog: {}",
                             stem,
                             err
-                        );
-                        continue;
+                        ));
                     }
                 }
             };
@@ -62,12 +61,11 @@ impl RepoManager {
             let mut info = match read_info {
                 Ok(info) => info,
                 Err(err) if stem != main_repo_name => {
-                    tracing::warn!(
-                        "Skipping unreadable local repo metadata {} during repair: {:?}",
+                    return Err(anyhow!(
+                        "Broken local repo {} while reading metadata during repair: {}",
                         stem,
                         err
-                    );
-                    continue;
+                    ));
                 }
                 Err(err) => return Err(err),
             }

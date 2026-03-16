@@ -213,7 +213,26 @@ fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
     assert!(exec_err.to_string().contains("Broken local repo broken"));
     assert_eq!(
         repo.resolve_local_repo_name(None, Some("main"))
-            .expect("resolve main selector"),
+            .expect("exact main selector remains valid"),
         "main"
     );
+    let resolve_err = repo
+        .resolve_local_repo_name(None, Some("broken"))
+        .expect_err("broken selector must fail resolution");
+    assert!(resolve_err.to_string().contains("Broken local repo broken"));
+}
+
+#[test]
+fn init_fails_closed_on_broken_secondary_repo() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let _repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let local_dir = ledger_dir.join("local");
+    std::fs::write(local_dir.join("broken.redb"), b"not-a-redb").expect("broken local repo");
+
+    let err = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))
+        .err()
+        .expect("broken local repo must fail init");
+    let detail = format!("{err:#}");
+    assert!(detail.contains("Broken local repo broken"));
 }
