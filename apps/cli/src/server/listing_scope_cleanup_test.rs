@@ -118,10 +118,10 @@ async fn list_repos_on_unbound_shadow_branch_clears_stale_db_and_sync_binding() 
     handle_list_repos(&state, &ch, &mut session, Some("req-2".into())).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::RepoList { branch, .. }) => {
-            assert_eq!(branch, Some("missing-shadow".into()));
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
         }
-        other => panic!("expected RepoList after cleanup, got {:?}", other),
+        other => panic!("expected ProtocolError after cleanup, got {:?}", other),
     }
     assert!(session.active_repo.is_none());
     assert!(session.active_repo_id.is_none());

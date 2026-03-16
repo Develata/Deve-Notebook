@@ -55,8 +55,11 @@ pub async fn handle_list_repos(
     session: &mut WsSession,
     request_id: Option<String>,
 ) {
-    if session.active_branch.is_some() {
-        let _ = resolve_session_repo_and_sync(state, session);
+    if session.active_branch.is_some()
+        && let Err(error) = resolve_session_repo_and_sync(state, session)
+    {
+        ch.send_protocol_error(map_repo_scope_error(error));
+        return;
     }
     let active_branch = session.active_branch.as_ref();
     match state.repo.list_repos(active_branch) {
