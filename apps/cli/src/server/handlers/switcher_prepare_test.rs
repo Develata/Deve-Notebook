@@ -137,6 +137,18 @@ fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid()
 }
 
 #[test]
+fn resolve_requested_repo_name_prefers_repo_id_when_display_name_is_ambiguous()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let selected = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second_id))?
+        .expect("repo id should recover collision-safe selector");
+    assert_eq!(selected, second_selector);
+    Ok(())
+}
+
+#[test]
 fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;

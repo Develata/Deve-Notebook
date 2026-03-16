@@ -16,12 +16,20 @@ pub(super) fn select_target_repo(
         return select_target_repo_by_url(state, had_current_repo_hint, target_branch, &url);
     }
     if let Some(repo_name) = current_repo_name
-        && let Some(exact_selector) = recover_selector_from_raw_name(state, target_branch, repo_name)?
+        && let Some(exact_selector) = recover_selector_from_raw_name_for_switch(
+            state,
+            target_branch,
+            repo_name,
+            current_repo_id,
+        )?
     {
         if let Some(repo_id) = current_repo_id
             && let Some(selector_by_id) = select_repo_selector_by_id(state, target_branch, repo_id)?
             && selector_by_id != exact_selector
         {
+            if can_defer_to_repo_id_for_display_collision(state, target_branch, repo_name)? {
+                return Ok(Some(selector_by_id));
+            }
             return Err(anyhow!(
                 "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
                 repo_id,
@@ -55,11 +63,16 @@ pub(super) fn resolve_requested_repo_name(
     repo_name: &str,
     repo_id: Option<RepoId>,
 ) -> Result<Option<String>> {
-    if let Some(exact_selector) = recover_selector_from_raw_name(state, branch, repo_name)? {
+    if let Some(exact_selector) =
+        recover_selector_from_raw_name_for_switch(state, branch, repo_name, repo_id)?
+    {
         if let Some(repo_id) = repo_id
             && let Some(selector_by_id) = select_repo_selector_by_id(state, branch, repo_id)?
             && selector_by_id != exact_selector
         {
+            if can_defer_to_repo_id_for_display_collision(state, branch, repo_name)? {
+                return Ok(Some(selector_by_id));
+            }
             return Err(anyhow!(
                 "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
                 repo_id,
@@ -139,6 +152,39 @@ fn recover_selector_from_raw_name(
         .repo
         .find_remote_repo_selector(branch, raw_repo_name)?
         .filter(|selector| selector == raw_repo_name))
+}
+
+fn recover_selector_from_raw_name_for_switch(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    raw_repo_name: &str,
+    repo_id: Option<RepoId>,
+) -> Result<Option<String>> {
+    match recover_selector_from_raw_name(state, branch, raw_repo_name) {
+        Ok(selector) => Ok(selector),
+        Err(err)
+            if branch.is_some()
+                && repo_id.is_some()
+                && err
+                    .to_string()
+                    .to_ascii_lowercase()
+                    .contains("ambiguous remote repository selector") =>
+        {
+            Ok(None)
+        }
+        Err(err) => Err(err),
+    }
+}
+
+fn can_defer_to_repo_id_for_display_collision(
+    state: &Arc<AppState>,
+    branch: Option<&PeerId>,
+    raw_repo_name: &str,
+) -> Result<bool> {
+    let Some(peer_id) = branch else {
+        return Ok(false);
+    };
+    state.repo.has_remote_display_name(peer_id, raw_repo_name)
 }
 
 fn local_selector_miss(err: &anyhow::Error) -> bool {
