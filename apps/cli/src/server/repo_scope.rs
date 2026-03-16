@@ -67,6 +67,16 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
             if branch.is_some()
                 && let Some(repo_id) = session.active_repo_id
             {
+                if let (Some(branch), Some(repo_name)) =
+                    (branch.as_ref(), session.active_repo.as_deref())
+                    && state
+                        .repo
+                        .find_remote_repo_selector(branch, repo_name)?
+                        .as_deref()
+                        == Some(repo_name)
+                {
+                    return Err(err);
+                }
                 tracing::warn!("Recovering remote session repo scope from UUID: {}", err);
                 return resolve_repo_by_repo_id(state, branch, repo_id);
             }

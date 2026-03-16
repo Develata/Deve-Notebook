@@ -1,5 +1,5 @@
 use crate::server::AppState;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
@@ -18,13 +18,12 @@ pub(super) fn recover_remote_repo_name_from_selector(
                 .find_remote_repo_selector_by_id(branch, expected_repo_id)?
             && selector != repo_name
         {
-            tracing::warn!(
-                "Recovering collision-safe remote selector from UUID after ambiguous display-name hit: branch={}, raw_name={}, resolved_selector={}",
-                branch,
-                repo_name,
-                selector
-            );
-            return Ok(Some(selector));
+            return Err(anyhow!(
+                "Session repo mismatch: expected {}, resolved selector {} for exact remote selector {}",
+                expected_repo_id,
+                selector,
+                repo_name
+            ));
         }
         return Ok(resolved);
     }

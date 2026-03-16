@@ -45,18 +45,12 @@ pub(super) fn resolve_repo_by_name(
                 .as_deref()
                 == Some(repo_name.as_str())
         {
-            tracing::warn!(
-                "Ignoring stale remote repo UUID in favor of exact selector: branch={:?}, repo_name={}, stale_repo_id={}, resolved_repo_id={}",
-                branch,
-                repo_name,
+            return Err(anyhow!(
+                "Session repo mismatch: expected {}, resolved {} for exact remote selector {}",
                 expected_repo_id,
-                info.uuid
-            );
-            return Ok(ResolvedRepo {
-                repo_id: info.uuid,
-                repo_name,
-                branch,
-            });
+                info.uuid,
+                repo_name
+            ));
         }
         if branch.is_some()
             && let Some(selector) = recover_repo_selector(state, branch.as_ref(), expected_repo_id)?

@@ -60,6 +60,8 @@ mod repo_scope_recovery_test;
 #[cfg(test)]
 mod repo_scope_remote_selector_test;
 #[cfg(test)]
+mod repo_scope_runtime_selector_test;
+#[cfg(test)]
 mod repo_scope_test;
 mod router;
 pub mod security;
