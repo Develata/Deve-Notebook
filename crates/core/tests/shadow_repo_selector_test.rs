@@ -234,7 +234,7 @@ fn remote_repo_selector_by_id_does_not_match_uuid_shaped_display_name() {
 }
 
 #[test]
-fn broken_shadow_file_is_hidden_even_if_metadata_was_previously_loaded() {
+fn broken_shadow_file_fails_closed_even_if_metadata_was_previously_loaded() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let info = RepoInfo {
@@ -251,14 +251,20 @@ fn broken_shadow_file_is_hidden_even_if_metadata_was_previously_loaded() {
     std::fs::rename(&path, &backup).expect("move live shadow db aside");
     std::fs::write(&path, b"not-a-redb").expect("replace shadow db with broken bytes");
 
-    assert_eq!(
-        repo.list_repos(Some(&peer_id))
-            .expect("broken shadow must not stay switchable"),
-        Vec::<String>::new()
+    let list_err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("broken shadow listing must fail closed");
+    assert!(
+        list_err
+            .to_string()
+            .contains("Broken shadow repo wiki for peer peer-remote")
     );
-    assert_eq!(
-        repo.find_remote_repo_selector_by_id(&peer_id, info.uuid)
-            .expect("broken shadow must not recover selector"),
-        None
+    let selector_err = repo
+        .find_remote_repo_selector_by_id(&peer_id, info.uuid)
+        .expect_err("broken shadow selector must fail closed");
+    assert!(
+        selector_err
+            .to_string()
+            .contains("Broken shadow repo wiki for peer peer-remote")
     );
 }

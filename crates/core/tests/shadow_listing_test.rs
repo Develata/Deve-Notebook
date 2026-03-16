@@ -69,10 +69,13 @@ fn broken_shadow_repos_fail_closed_in_repo_listing_and_stay_hidden_from_selector
         err.to_string()
             .contains("Broken shadow repo broken for peer peer-mixed")
     );
-    assert_eq!(
-        repo.find_remote_repo_selector(&peer_id, "broken")
-            .expect("resolve selector"),
-        None
+    let selector_err = repo
+        .find_remote_repo_selector(&peer_id, "broken")
+        .expect_err("broken selector resolution must fail closed");
+    assert!(
+        selector_err
+            .to_string()
+            .contains("Broken shadow repo broken for peer peer-mixed")
     );
 }
 
@@ -204,10 +207,12 @@ fn pure_shadow_scan_fails_closed_and_does_not_resurrect_loaded_corrupted_shadow_
         err.to_string()
             .contains("Broken shadow repo notes for peer peer-corrupt")
     );
+    let selector_err = repo
+        .find_remote_repo_selector(&peer_id, "notes")
+        .expect_err("corrupted shadow selector must fail closed");
     assert!(
-        repo.find_remote_repo_selector(&peer_id, "notes")
-            .expect("resolve shadow selector after corruption")
-            .is_none(),
-        "corrupted shadow path must not stay selectable through loaded metadata",
+        selector_err
+            .to_string()
+            .contains("Broken shadow repo notes for peer peer-corrupt")
     );
 }

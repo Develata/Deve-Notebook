@@ -121,6 +121,13 @@ impl RepoManager {
         let selector = selector.trim_end_matches(".redb");
         let target_id = uuid::Uuid::parse_str(selector).ok();
         let entries = self.scan_remote_repo_entries(peer_id)?;
+        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+            return Err(anyhow!(
+                "Broken shadow repo {} for peer {} while resolving selector",
+                entry.stem,
+                peer_id
+            ));
+        }
         let duplicate_ids = duplicate_entry_ids(&entries);
         let mut by_id = Vec::new();
         let mut by_stem = Vec::new();

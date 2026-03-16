@@ -125,6 +125,13 @@ pub(super) fn resolve_remote_repo_entry_by_id(
     repo_id: uuid::Uuid,
 ) -> Result<Option<RemoteRepoEntry>> {
     let entries = repo.scan_remote_repo_entries(peer_id)?;
+    if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+        return Err(anyhow!(
+            "Broken shadow repo {} for peer {} while resolving selector",
+            entry.stem,
+            peer_id
+        ));
+    }
     let duplicate_ids = duplicate_entry_ids(&entries);
     let matches = entries
         .into_iter()
