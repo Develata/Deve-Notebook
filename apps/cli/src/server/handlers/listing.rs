@@ -128,4 +128,12 @@ mod tests {
             ServerErrorCode::ScRepoContextInvalid
         );
     }
+
+    #[test]
+    fn classifies_broken_shadow_listing_as_storage_persist_failed() {
+        assert_eq!(
+            classify_listing_error("Broken shadow repo notes for peer peer-a while listing repos"),
+            ServerErrorCode::StoragePersistFailed
+        );
+    }
 }

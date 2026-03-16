@@ -108,6 +108,20 @@ fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
     ) {
         return Some(ServerErrorCode::StorageDbLocked);
     }
+    if contains_any(
+        &lower,
+        &[
+            "broken local repo",
+            "broken shadow repo",
+            "broken shadow peer",
+            "failed to walk local repo",
+            "deserialize",
+            "decode",
+            "unexpected end",
+        ],
+    ) {
+        return Some(ServerErrorCode::StoragePersistFailed);
+    }
     if lower.contains("tracked document projection missing") {
         return Some(ServerErrorCode::StoragePersistFailed);
     }
@@ -194,6 +208,20 @@ mod tests {
             "Cannot bootstrap local repo while on remote branch"
         ));
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_broken_shadow_listing_to_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Broken shadow repo notes for peer peer-a while listing repos"
+        ));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
+
+    #[test]
+    fn maps_repo_decode_failures_to_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!("failed to deserialize repo metadata"));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
 
     #[test]

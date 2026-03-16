@@ -32,6 +32,20 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
     if contains_any(
         &lower,
         &[
+            "broken local repo",
+            "broken shadow repo",
+            "broken shadow peer",
+            "failed to walk local repo",
+            "deserialize",
+            "decode",
+            "unexpected end",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, detail);
+    }
+    if contains_any(
+        &lower,
+        &[
             "remote session lost repo name",
             "cannot bootstrap local repo while on remote branch",
             "local repo operation requested on remote branch",
@@ -83,5 +97,19 @@ mod tests {
     fn classifies_missing_local_repo_name_as_storage_not_found() {
         let err = map_repo_scope_error(anyhow::anyhow!("Local repo not found for name wiki"));
         assert_eq!(err.code, ServerErrorCode::StorageNotFound);
+    }
+
+    #[test]
+    fn classifies_broken_shadow_listing_as_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Broken shadow repo notes for peer peer-a while listing repos"
+        ));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
+
+    #[test]
+    fn classifies_repo_metadata_decode_failure_as_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!("failed to deserialize repo metadata"));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
 }

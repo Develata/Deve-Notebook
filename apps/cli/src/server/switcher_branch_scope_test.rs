@@ -318,7 +318,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
             error,
             switch_nonce,
         }) => {
-            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert_eq!(switch_nonce, Some(41));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
