@@ -86,6 +86,8 @@ pub mod static_files;
 #[cfg(test)]
 mod switcher_branch_scope_test;
 #[cfg(test)]
+mod switcher_current_scope_test;
+#[cfg(test)]
 mod switcher_branch_test;
 #[cfg(test)]
 mod switcher_exact_selector_test;
