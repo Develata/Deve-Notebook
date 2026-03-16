@@ -80,7 +80,8 @@ pub(super) fn select_target_repo(
     current_repo_url: Option<String>,
     target_branch: Option<&PeerId>,
 ) -> anyhow::Result<Option<String>> {
-    if let Some(repo_name) = current_repo_name
+    if current_repo_url.is_none()
+        && let Some(repo_name) = current_repo_name
         && let Some(exact_selector) = recover_selector_from_raw_name(state, target_branch, repo_name)?
     {
         if let Some(repo_id) = current_repo_id

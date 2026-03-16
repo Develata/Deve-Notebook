@@ -17,12 +17,7 @@ pub(super) fn resolve_current_branch_switch_context(
         Ok(scope) => Some(scope),
         Err(err) => {
             let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
-            if matches!(
-                mapped.code,
-                ServerErrorCode::StorageNotFound
-                    | ServerErrorCode::SyncRepoUnbound
-                    | ServerErrorCode::ScRepoContextInvalid
-            ) {
+            if can_ignore_current_scope_error(&err.to_string(), mapped.code) {
                 None
             } else {
                 return Err(mapped);
@@ -42,4 +37,12 @@ pub(super) fn resolve_current_branch_switch_context(
         None => None,
     };
     Ok(CurrentBranchSwitchContext { scope, repo_url })
+}
+
+fn can_ignore_current_scope_error(detail: &str, code: ServerErrorCode) -> bool {
+    match code {
+        ServerErrorCode::StorageNotFound | ServerErrorCode::SyncRepoUnbound => true,
+        ServerErrorCode::ScRepoContextInvalid => !detail.starts_with("Session repo mismatch:"),
+        _ => false,
+    }
 }
