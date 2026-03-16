@@ -38,16 +38,7 @@ impl ResponseChannel {
                 let _ = tx.send(msg);
             }
             ResponseChannel::Unicast(tx) => {
-                if let Err(e) = tx.try_send(msg) {
-                    match e {
-                        TrySendError::Full(_) => {
-                            tracing::warn!("Unicast channel full; dropping message");
-                        }
-                        TrySendError::Closed(_) => {
-                            tracing::debug!("Unicast channel closed; dropping message");
-                        }
-                    }
-                }
+                send_unicast(tx, msg);
             }
         }
     }
@@ -80,16 +71,7 @@ impl DualChannel {
 
     /// 单播消息 (单客户端响应)
     pub fn unicast(&self, msg: ServerMessage) {
-        if let Err(e) = self.unicast.try_send(msg) {
-            match e {
-                TrySendError::Full(_) => {
-                    tracing::warn!("Unicast channel full; dropping message");
-                }
-                TrySendError::Closed(_) => {
-                    tracing::debug!("Unicast channel closed; dropping message");
-                }
-            }
-        }
+        send_unicast(&self.unicast, msg);
     }
 
     pub fn send_protocol_error(&self, error: ServerError) {
@@ -115,3 +97,39 @@ impl DualChannel {
         self.send_protocol_error(ServerError::new(ServerErrorCode::SyncPeerUnauthenticated));
     }
 }
+
+fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
+    let must_deliver = must_deliver_unicast(&msg);
+    if let Err(error) = tx.try_send(msg) {
+        match error {
+            TrySendError::Full(msg) if must_deliver => schedule_must_deliver(tx.clone(), msg),
+            TrySendError::Full(_) => {
+                tracing::warn!("Unicast channel full; dropping message");
+            }
+            TrySendError::Closed(_) => {
+                tracing::debug!("Unicast channel closed; dropping message");
+            }
+        }
+    }
+}
+
+fn must_deliver_unicast(msg: &ServerMessage) -> bool {
+    matches!(
+        msg,
+        ServerMessage::ProtocolError { .. } | ServerMessage::EditRejected { .. }
+    )
+}
+
+fn schedule_must_deliver(tx: mpsc::Sender<ServerMessage>, msg: ServerMessage) {
+    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        handle.spawn(async move {
+            let _ = tx.send(msg).await;
+        });
+    } else {
+        tracing::warn!("Unicast channel full outside runtime; dropping critical message");
+    }
+}
+
+#[cfg(test)]
+#[path = "channel_test.rs"]
+mod tests;
