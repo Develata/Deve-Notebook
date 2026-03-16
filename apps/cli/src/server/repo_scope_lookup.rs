@@ -16,7 +16,8 @@ pub(super) fn resolve_repo_by_name(
     {
         Some(info) => info,
         None => {
-            if let Some(expected_repo_id) = expected_repo_id
+            if branch.is_some()
+                && let Some(expected_repo_id) = expected_repo_id
                 && let Some(selector) =
                     recover_repo_selector(state, branch.as_ref(), expected_repo_id)?
             {
