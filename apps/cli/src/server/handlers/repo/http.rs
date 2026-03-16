@@ -158,6 +158,7 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
             "cannot bootstrap local repo while on remote branch",
             "repository uuid not resolved",
             "remote repository selector not resolved",
+            "local repository selector not resolved",
             "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",

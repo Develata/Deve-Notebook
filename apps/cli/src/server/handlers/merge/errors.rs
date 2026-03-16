@@ -59,6 +59,7 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
             "remote session lost repo name",
             "repository uuid not resolved",
             "remote repository selector not resolved",
+            "local repository selector not resolved",
             "local repository uuid not resolved",
             "ambiguous local repository selector",
             "ambiguous remote repository selector",

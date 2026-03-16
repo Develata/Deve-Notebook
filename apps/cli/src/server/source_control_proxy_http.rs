@@ -61,6 +61,7 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
             "cannot bootstrap local repo while on remote branch",
             "repository uuid not resolved",
             "remote repository selector not resolved",
+            "local repository selector not resolved",
             "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
