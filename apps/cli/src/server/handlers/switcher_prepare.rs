@@ -165,6 +165,22 @@ pub(super) fn resolve_requested_repo_name(
     repo_name: &str,
     repo_id: Option<RepoId>,
 ) -> anyhow::Result<Option<String>> {
+    if let Some(branch) = branch
+        && let Some(exact_selector) = recover_selector_from_raw_name(state, Some(branch), repo_name)?
+    {
+        if let Some(repo_id) = repo_id
+            && let Some(selector_by_id) = select_repo_selector_by_id(state, Some(branch), repo_id)?
+            && selector_by_id != exact_selector
+        {
+            return Err(anyhow!(
+                "Session repo mismatch: expected {}, resolved selector {} for exact remote selector {}",
+                repo_id,
+                selector_by_id,
+                repo_name
+            ));
+        }
+        return Ok(Some(exact_selector));
+    }
     if let Some(repo_id) = repo_id
         && let Some(selector) = select_repo_selector_by_id(state, branch, repo_id)?
     {

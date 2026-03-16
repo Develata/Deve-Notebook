@@ -114,6 +114,18 @@ fn resolve_requested_repo_name_accepts_exact_remote_selector_without_uuid() -> a
 }
 
 #[test]
+fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let err = resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, Some(first_id))
+        .expect_err("stale uuid must not override exact selector");
+    assert!(err.to_string().contains("Session repo mismatch:"));
+    Ok(())
+}
+
+#[test]
 fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
