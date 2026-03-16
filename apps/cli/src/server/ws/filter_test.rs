@@ -55,6 +55,34 @@ fn rejects_unscoped_runtime_broadcasts_for_bound_repo_sessions() {
 }
 
 #[test]
+fn rejects_repo_scoped_runtime_broadcasts_for_unbound_sessions() {
+    let session = WsSession::new();
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(!filter.should_forward(&ServerMessage::CommitAck {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: Some(7),
+        commit_id: "c1".into(),
+        timestamp: 1,
+    }));
+    assert!(!filter.should_forward(&ServerMessage::FsChangeDetected {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: Some(7),
+        path: "notes/a.md".into(),
+        change_type: "modified".into(),
+        has_conflict: false,
+    }));
+    assert!(!filter.should_forward(&ServerMessage::MergeComplete {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: Some(7),
+        merged_count: 2,
+    }));
+}
+
+#[test]
 fn stamps_runtime_broadcasts_with_session_scope_nonce() {
     let mut session = WsSession::new();
     session.set_scope_nonce(Some(9));

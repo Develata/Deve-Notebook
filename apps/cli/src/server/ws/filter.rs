@@ -157,6 +157,7 @@ fn matches_scope(
         return false;
     }
     match (active_repo_id, message_repo_id, message_branch) {
+        (None, Some(_), _) => false,
         (Some(_), None, _) => false,
         (Some(active_repo_id), Some(message_repo_id), Some(branch)) => {
             active_repo_id == *message_repo_id && active_branch == Some(branch)
