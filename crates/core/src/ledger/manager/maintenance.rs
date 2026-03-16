@@ -41,7 +41,10 @@ impl RepoManager {
                 continue;
             }
             let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
-                continue;
+                return Err(anyhow::anyhow!(
+                    "Broken shadow peer entry {:?} while repairing catalogs: invalid directory name",
+                    path
+                ));
             };
             if name.starts_with('.') || name.is_empty() {
                 continue;

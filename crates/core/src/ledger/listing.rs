@@ -135,7 +135,10 @@ fn shadow_peer_dirs(remotes_dir: &std::path::Path) -> Result<Vec<PeerId>> {
             continue;
         }
         let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
-            continue;
+            return Err(anyhow!(
+                "Broken shadow peer entry {:?} while listing shadows: invalid directory name",
+                path
+            ));
         };
         if name.starts_with('.') || name.is_empty() {
             continue;

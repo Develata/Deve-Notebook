@@ -112,12 +112,16 @@ pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
             if !path.is_dir() {
                 continue;
             }
-            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                if name.starts_with('.') || name.is_empty() {
-                    continue;
-                }
-                peers.push(PeerId::new(name));
+            let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+                return Err(anyhow::anyhow!(
+                    "Broken shadow peer entry {:?} while listing shadows on disk: invalid directory name",
+                    path
+                ));
+            };
+            if name.starts_with('.') || name.is_empty() {
+                continue;
             }
+            peers.push(PeerId::new(name));
         }
     }
 
