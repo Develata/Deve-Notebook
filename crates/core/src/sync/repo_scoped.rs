@@ -100,7 +100,10 @@ impl RepoScopedSyncEngine {
     /// - repo-scoped sync engine 进入传输链前必须已加载有效 `RepoKey`。
     /// - 严格路径不得缓存 `repo_key = None` 的 engine。
     pub fn get_or_create_strict(&self, repo_id: RepoId) -> Result<SyncEngine> {
-        let engines = self.read_engines();
+        let engines = self
+            .engines
+            .read()
+            .map_err(|_| anyhow!("RepoScopedSyncEngine read lock poisoned"))?;
         if let Some(engine) = engines.get(&repo_id)
             && engine.repo_key.is_some()
         {
@@ -109,7 +112,10 @@ impl RepoScopedSyncEngine {
         drop(engines);
 
         let repo_key = self.load_repo_key_strict(repo_id)?;
-        let mut engines = self.write_engines();
+        let mut engines = self
+            .engines
+            .write()
+            .map_err(|_| anyhow!("RepoScopedSyncEngine write lock poisoned"))?;
 
         if let Some(engine) = engines.get_mut(&repo_id) {
             if engine.repo_key.is_none() {
@@ -131,25 +137,6 @@ impl RepoScopedSyncEngine {
     pub fn get(&self, repo_id: RepoId) -> Option<SyncEngine> {
         let engines = self.read_engines();
         engines.get(&repo_id).cloned()
-    }
-
-    /// 获取或创建指定仓库的 SyncEngine（可变引用）
-    pub fn get_or_create_mut<F, R>(&self, repo_id: RepoId, f: F) -> Option<R>
-    where
-        F: FnOnce(&mut SyncEngine) -> R,
-    {
-        let mut engines = self.write_engines();
-
-        let engine = engines.entry(repo_id).or_insert_with(|| {
-            SyncEngine::new(
-                self.local_peer_id.clone(),
-                self.repo.clone(),
-                self.sync_mode,
-                self.load_repo_key(repo_id),
-            )
-        });
-
-        Some(f(engine))
     }
 
     /// 对指定仓库的 SyncEngine 执行操作
@@ -243,3 +230,7 @@ impl Clone for RepoScopedSyncEngine {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "repo_scoped_test.rs"]
+mod tests;
