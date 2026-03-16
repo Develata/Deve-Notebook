@@ -8,6 +8,7 @@ use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
 
 use super::errors;
+use super::engine;
 use super::guard::require_bound_peer;
 
 pub(super) async fn handle_request(
@@ -28,12 +29,8 @@ pub(super) async fn handle_request(
         return;
     }
 
-    let engine = match state.sync_engine.get_or_create(repo_id) {
-        Some(e) => e,
-        None => {
-            errors::engine_unavailable(ch);
-            return;
-        }
+    let Some(engine) = engine::load_strict(state, ch, repo_id) else {
+        return;
     };
     let mut ops_to_push = Vec::new();
 
@@ -81,12 +78,8 @@ pub(super) async fn handle_push(
         return;
     };
 
-    let mut engine = match state.sync_engine.get_or_create(repo_id) {
-        Some(e) => e,
-        None => {
-            errors::engine_unavailable(ch);
-            return;
-        }
+    let Some(mut engine) = engine::load_strict(state, ch, repo_id) else {
+        return;
     };
 
     let response = sync_proto::SyncResponse {

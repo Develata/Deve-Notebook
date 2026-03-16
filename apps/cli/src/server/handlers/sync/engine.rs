@@ -1,21 +1,10 @@
 use crate::server::{AppState, channel::DualChannel};
-use deve_core::config::SyncMode;
-use deve_core::models::RepoId;
-use deve_core::sync::engine::SyncEngine;
+use deve_core::{models::RepoId, sync::engine::SyncEngine};
 use std::sync::Arc;
 
 use super::errors;
 
-pub(super) fn sync_mode_label(mode: SyncMode) -> String {
-    if matches!(mode, SyncMode::Auto) {
-        "auto"
-    } else {
-        "manual"
-    }
-    .to_string()
-}
-
-pub(super) fn load_engine(
+pub(super) fn load_strict(
     state: &Arc<AppState>,
     ch: &DualChannel,
     repo_id: RepoId,

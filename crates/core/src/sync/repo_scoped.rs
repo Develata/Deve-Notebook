@@ -4,7 +4,9 @@
 //! 管理多个仓库的 SyncEngine 实例，每个仓库拥有独立的同步状态。
 
 use crate::models::{PeerId, RepoId};
+use crate::security::RepoKey;
 use crate::sync::engine::SyncEngine;
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -92,6 +94,40 @@ impl RepoScopedSyncEngine {
         Some(engine)
     }
 
+    /// 严格获取指定仓库的 SyncEngine。
+    ///
+    /// Invariants:
+    /// - repo-scoped sync engine 进入传输链前必须已加载有效 `RepoKey`。
+    /// - 严格路径不得缓存 `repo_key = None` 的 engine。
+    pub fn get_or_create_strict(&self, repo_id: RepoId) -> Result<SyncEngine> {
+        let engines = self.read_engines();
+        if let Some(engine) = engines.get(&repo_id)
+            && engine.repo_key.is_some()
+        {
+            return Ok(engine.clone());
+        }
+        drop(engines);
+
+        let repo_key = self.load_repo_key_strict(repo_id)?;
+        let mut engines = self.write_engines();
+
+        if let Some(engine) = engines.get_mut(&repo_id) {
+            if engine.repo_key.is_none() {
+                engine.repo_key = Some(repo_key.clone());
+            }
+            return Ok(engine.clone());
+        }
+
+        let engine = SyncEngine::new(
+            self.local_peer_id.clone(),
+            self.repo.clone(),
+            self.sync_mode,
+            Some(repo_key),
+        );
+        engines.insert(repo_id, engine.clone());
+        Ok(engine)
+    }
+
     pub fn get(&self, repo_id: RepoId) -> Option<SyncEngine> {
         let engines = self.read_engines();
         engines.get(&repo_id).cloned()
@@ -154,43 +190,40 @@ impl RepoScopedSyncEngine {
         self.write_engines().clear();
     }
 
-    fn load_repo_key(&self, repo_id: RepoId) -> Option<crate::security::RepoKey> {
+    fn load_repo_key(&self, repo_id: RepoId) -> Option<RepoKey> {
+        self.load_repo_key_strict(repo_id).map_err(|err| {
+            tracing::warn!("RepoScopedSyncEngine failed to load repo key {repo_id}: {err}");
+        }).ok()
+    }
+
+    fn load_repo_key_strict(&self, repo_id: RepoId) -> Result<RepoKey> {
         let repo_name = match self.repo.find_local_repo_name_by_id(repo_id) {
             Ok(Some(repo_name)) => repo_name,
             Ok(None) => {
-                tracing::warn!("RepoScopedSyncEngine missing local repo for {}", repo_id);
-                return None;
+                return Err(anyhow!("Local repo not found for UUID {}", repo_id));
             }
             Err(err) => {
-                tracing::warn!(
-                    "RepoScopedSyncEngine failed to resolve {}: {}",
-                    repo_id,
-                    err
-                );
-                return None;
+                return Err(err.context(format!(
+                    "Failed to resolve local repo for UUID {}",
+                    repo_id
+                )));
             }
         };
         let key_dir = match self.repo.local_repo_notegit_keys_root(&repo_name) {
             Ok(key_dir) => key_dir,
             Err(err) => {
-                tracing::warn!(
-                    "RepoScopedSyncEngine failed to resolve key dir {}: {}",
-                    repo_name,
-                    err
-                );
-                return None;
+                return Err(err.context(format!(
+                    "Failed to resolve key dir for local repo {}",
+                    repo_name
+                )));
             }
         };
         match crate::security::load_or_generate_repo_key_at(&key_dir) {
-            Ok(key) => Some(key),
-            Err(err) => {
-                tracing::warn!(
-                    "RepoScopedSyncEngine failed to load repo key {}: {}",
-                    repo_name,
-                    err
-                );
-                None
-            }
+            Ok(key) => Ok(key),
+            Err(err) => Err(err.context(format!(
+                "Failed to load repo key for local repo {}",
+                repo_name
+            ))),
         }
     }
 }

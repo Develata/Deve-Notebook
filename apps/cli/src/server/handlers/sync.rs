@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 
 mod cleanup;
+mod engine;
 mod errors;
 mod guard;
 mod hello;

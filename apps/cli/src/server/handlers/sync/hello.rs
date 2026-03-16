@@ -7,6 +7,7 @@ use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 use super::errors;
+use super::engine;
 
 pub struct SyncHelloInput {
     pub peer_id: PeerId,
@@ -38,12 +39,8 @@ pub(super) async fn handle(
         return;
     }
 
-    let mut engine = match state.sync_engine.get_or_create(repo_id) {
-        Some(e) => e,
-        None => {
-            errors::engine_unavailable(ch);
-            return;
-        }
+    let Some(mut engine) = engine::load_strict(state, ch, repo_id) else {
+        return;
     };
     let local_peer_id = engine.local_peer_id.clone();
     let local_vector = engine.version_vector().clone();
@@ -65,12 +62,20 @@ pub(super) async fn handle(
     if !session.is_browser_session()
         && let Err(err) = state.repo.ensure_shadow_repo_binding(&peer_id, repo_id)
     {
-        tracing::warn!(
+        tracing::error!(
             "Failed to align shadow repo metadata for peer {} repo {}: {:?}",
             peer_id,
             repo_id,
             err
         );
+        errors::storage_persist_failed(
+            ch,
+            format!(
+                "Failed to bind shadow repo {} for peer {}: {}",
+                repo_id, peer_id, err
+            ),
+        );
+        return;
     }
 
     session.set_authenticated(peer_id.clone());

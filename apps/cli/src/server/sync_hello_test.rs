@@ -108,3 +108,60 @@ async fn sync_hello_binds_session_sync_scope_nonce() -> anyhow::Result<()> {
     assert_eq!(session.sync_scope_nonce(), Some(9));
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Result<()> {
+    let (_dir, state, _repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = uuid::Uuid::new_v4();
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_fails_closed_when_shadow_binding_fails() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    std::fs::create_dir_all(state.repo.remotes_dir())?;
+    std::fs::write(state.repo.remotes_dir().join(remote.peer_id().to_filename()), b"blocked")?;
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::StoragePersistFailed
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    Ok(())
+}
