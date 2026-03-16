@@ -52,6 +52,21 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     if contains_any(
         &lower,
         &[
+            "broken repo entry",
+            "broken local repo",
+            "broken shadow repo",
+            "broken shadow peer",
+            "failed to walk local repo",
+            "deserialize",
+            "decode",
+            "unexpected end",
+        ],
+    ) {
+        return ServerErrorCode::StoragePersistFailed;
+    }
+    if contains_any(
+        &lower,
+        &[
             "local repo operation requested on remote branch",
             "cannot bootstrap local repo while on remote branch",
             "repo selector mismatch",
@@ -64,6 +79,8 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
             "ambiguous local repository selector",
             "ambiguous remote repository selector",
             "local repo not found for uuid",
+            "scope mismatch",
+            "stale scope nonce",
         ],
     ) {
         return ServerErrorCode::ScRepoContextInvalid;
@@ -117,6 +134,26 @@ mod tests {
         assert_eq!(
             classify_failure_code("Cannot bootstrap local repo while on remote branch"),
             ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_stale_scope_nonce_as_repo_context_invalid() {
+        assert_eq!(
+            classify_failure_code(
+                "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
+            ),
+            ServerErrorCode::ScRepoContextInvalid
+        );
+    }
+
+    #[test]
+    fn classifies_broken_repo_entry_as_storage_persist_failed() {
+        assert_eq!(
+            classify_failure_code(
+                "Broken repo entry \"/tmp/local/.redb\" while listing repos: invalid file stem"
+            ),
+            ServerErrorCode::StoragePersistFailed
         );
     }
 }

@@ -32,6 +32,7 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
     if contains_any(
         &lower,
         &[
+            "broken repo entry",
             "broken local repo",
             "broken shadow repo",
             "broken shadow peer",
@@ -104,6 +105,14 @@ mod tests {
     fn classifies_broken_shadow_listing_as_storage_persist_failed() {
         let err = map_repo_scope_error(anyhow::anyhow!(
             "Broken shadow repo notes for peer peer-a while listing repos"
+        ));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
+
+    #[test]
+    fn classifies_broken_repo_entry_as_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Broken repo entry \"/tmp/local/.redb\" while listing repos: invalid file stem"
         ));
         assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }

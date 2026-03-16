@@ -144,6 +144,24 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
     if contains_any(
         &lower,
         &[
+            "broken repo entry",
+            "broken local repo",
+            "broken shadow repo",
+            "broken shadow peer",
+            "failed to walk local repo",
+            "deserialize",
+            "decode",
+            "unexpected end",
+        ],
+    ) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ServerErrorCode::StoragePersistFailed,
+        );
+    }
+    if contains_any(
+        &lower,
+        &[
             "active repository not selected",
             "multiple local repos exist",
             "no local repositories available",

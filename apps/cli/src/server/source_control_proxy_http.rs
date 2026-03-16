@@ -83,6 +83,21 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
     if contains_any(
         &lower,
         &[
+            "broken repo entry",
+            "broken local repo",
+            "broken shadow repo",
+            "broken shadow peer",
+            "failed to walk local repo",
+            "deserialize",
+            "decode",
+            "unexpected end",
+        ],
+    ) {
+        return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, raw_detail);
+    }
+    if contains_any(
+        &lower,
+        &[
             "database already open",
             "cannot acquire lock",
             "db locked",
@@ -216,6 +231,15 @@ mod tests {
             b"Cannot bootstrap local repo while on remote branch",
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_plain_text_broken_repo_entry_to_storage_persist_failed() {
+        let err = decode_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            br#"Broken repo entry "/tmp/local/.redb" while listing repos: invalid file stem"#,
+        );
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
 
     #[test]

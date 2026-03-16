@@ -85,6 +85,14 @@ fn maps_repo_decode_failures_to_storage_persist_failed() {
 }
 
 #[test]
+fn maps_broken_repo_entry_to_storage_persist_failed() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Broken repo entry \"/tmp/local/.redb\" while listing repos: invalid file stem"
+    ));
+    assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+}
+
+#[test]
 fn preserves_remote_structured_errors() {
     let err = map_repo_error(
         ScOp::Commit,

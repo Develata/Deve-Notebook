@@ -69,6 +69,21 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     if contains_any(
         &lower,
         &[
+            "broken repo entry",
+            "broken local repo",
+            "broken shadow repo",
+            "broken shadow peer",
+            "failed to walk local repo",
+            "deserialize",
+            "decode",
+            "unexpected end",
+        ],
+    ) {
+        return ServerErrorCode::StoragePersistFailed;
+    }
+    if contains_any(
+        &lower,
+        &[
             "remote session lost repo name",
             "cannot bootstrap local repo while on remote branch",
             "repository uuid not resolved",
@@ -178,6 +193,16 @@ mod tests {
         assert_eq!(
             classify_failure_code(
                 "Tracked document projection missing for legacy-mapped path: notes/legacy.md"
+            ),
+            ServerErrorCode::StoragePersistFailed
+        );
+    }
+
+    #[test]
+    fn classifies_broken_repo_entry_as_storage_persist_failed() {
+        assert_eq!(
+            classify_failure_code(
+                "Broken repo entry \"/tmp/local/.redb\" while listing repos: invalid file stem"
             ),
             ServerErrorCode::StoragePersistFailed
         );

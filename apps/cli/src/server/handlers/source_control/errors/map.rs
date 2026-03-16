@@ -111,6 +111,7 @@ fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
     if contains_any(
         &lower,
         &[
+            "broken repo entry",
             "broken local repo",
             "broken shadow repo",
             "broken shadow peer",

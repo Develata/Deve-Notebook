@@ -72,3 +72,16 @@ fn classifies_missing_local_repo_name_as_not_found() {
         (StatusCode::NOT_FOUND, ServerErrorCode::StorageNotFound)
     );
 }
+
+#[test]
+fn classifies_broken_repo_entry_as_storage_persist_failed() {
+    assert_eq!(
+        classify_repo_error(
+            "Broken repo entry \"/tmp/local/.redb\" while listing repos: invalid file stem"
+        ),
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ServerErrorCode::StoragePersistFailed
+        )
+    );
+}
