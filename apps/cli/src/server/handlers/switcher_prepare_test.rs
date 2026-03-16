@@ -71,6 +71,18 @@ fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyho
 }
 
 #[test]
+fn select_target_repo_prefers_exact_remote_selector_over_stale_uuid() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
+
+    let err =
+        select_target_repo(&state, false, Some(first_id), Some(&second_selector), None, Some(&peer_id))
+            .expect_err("stale uuid must not override exact selector");
+    assert!(err.to_string().contains("Session repo mismatch:"));
+    Ok(())
+}
+
+#[test]
 fn select_target_repo_recovers_remote_selector_from_uuid_string_without_repo_id()
 -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;

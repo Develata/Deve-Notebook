@@ -80,6 +80,22 @@ pub(super) fn select_target_repo(
     current_repo_url: Option<String>,
     target_branch: Option<&PeerId>,
 ) -> anyhow::Result<Option<String>> {
+    if let (Some(branch), Some(repo_name)) = (target_branch, current_repo_name)
+        && let Some(exact_selector) = recover_selector_from_raw_name(state, Some(branch), repo_name)?
+    {
+        if let Some(repo_id) = current_repo_id
+            && let Some(selector_by_id) = select_repo_selector_by_id(state, Some(branch), repo_id)?
+            && selector_by_id != exact_selector
+        {
+            return Err(anyhow!(
+                "Session repo mismatch: expected {}, resolved selector {} for exact remote selector {}",
+                repo_id,
+                selector_by_id,
+                repo_name
+            ));
+        }
+        return Ok(Some(exact_selector));
+    }
     if let Some(repo_id) = current_repo_id
         && let Some(selector) = select_repo_selector_by_id(state, target_branch, repo_id)?
     {
