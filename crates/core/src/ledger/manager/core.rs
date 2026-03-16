@@ -148,11 +148,7 @@ impl RepoManager {
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {
                 continue;
             }
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or_default()
-                .to_string();
+            let stem = Self::repo_stem_from_path(&path, "resolving local selector")?;
             let info = if stem == self.local_repo_name {
                 self.get_repo_info()?
             } else {

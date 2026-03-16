@@ -29,11 +29,7 @@ impl RepoManager {
         paths.sort();
         let mut repairs = Vec::new();
         for path in paths {
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or_default()
-                .to_string();
+            let stem = Self::repo_stem_from_path(&path, "repairing remote catalog")?;
             let repair = match repaired_remote_repo_info(&path, &stem) {
                 Ok(Some(repair)) => repair,
                 Ok(None) => continue,
@@ -96,11 +92,7 @@ impl RepoManager {
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {
                 continue;
             }
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or_default()
-                .to_string();
+            let stem = Self::repo_stem_from_path(&path, "pure scanning remote catalog")?;
             let info = scanned_remote_repo_info(self, &path, &stem).map_err(|err| {
                 anyhow!(
                     "Broken shadow repo {} for peer {} while pure scanning catalog: {}",

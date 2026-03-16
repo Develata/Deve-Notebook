@@ -216,3 +216,25 @@ fn pure_shadow_scan_fails_closed_and_does_not_resurrect_loaded_corrupted_shadow_
             .contains("Broken shadow repo notes for peer peer-corrupt")
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn shadow_listing_fails_closed_on_invalid_repo_stem() {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let peer_id = PeerId::new("peer-invalid");
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    let invalid_path = peer_dir.join(OsString::from_vec(vec![0xff, b'.', b'r', b'e', b'd', b'b']));
+    let invalid = redb::Database::create(&invalid_path).expect("invalid shadow db");
+    invalid.begin_write().expect("write txn").commit().expect("commit");
+    drop(invalid);
+
+    let err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("invalid shadow stem must fail closed");
+    assert!(err.to_string().contains("invalid file stem"));
+}
