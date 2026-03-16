@@ -54,10 +54,7 @@ pub async fn run(
 
     // 启动时通过 SyncManager 自动扫描
     let sync_manager = deve_core::sync::SyncManager::new(repo_arc.clone(), vault_path.clone());
-    match sync_manager.scan() {
-        Ok(_) => {} // Silent success
-        Err(e) => tracing::warn!("启动扫描警告: {:?}", e),
-    }
+    sync_manager.scan()?;
 
     // 2. 加载插件 (Plugins)
     let plugins = load_plugins();
