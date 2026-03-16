@@ -5,7 +5,7 @@
 
 use crate::ledger::{RepoManager, node_meta};
 use crate::models::{DocId, NodeId, NodeMeta, PeerId, RepoType};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 /// 仓库列表查询扩展Trait
 pub trait RepoListing {
@@ -60,17 +60,11 @@ impl RepoListing for RepoManager {
                 let display = if stem == self.local_repo_name {
                     self.get_repo_info()?.map(|info| info.name)
                 } else {
-                    match RepoManager::read_repo_info_from_path(&path) {
-                        Ok(info) => info.map(|info| info.name),
-                        Err(err) => {
-                            tracing::warn!(
-                                "Skipping broken local repo {} while listing repos: {:?}",
-                                stem,
-                                err
-                            );
-                            continue;
-                        }
-                    }
+                    RepoManager::read_repo_info_from_path(&path)
+                        .map_err(|err| {
+                            anyhow!("Broken local repo {} while listing repos: {}", stem, err)
+                        })?
+                        .map(|info| info.name)
                 }
                 .unwrap_or_else(|| stem.clone());
                 named.push((stem, display));

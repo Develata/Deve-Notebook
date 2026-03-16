@@ -1,5 +1,5 @@
 use crate::ledger::manager::types::RepoManager;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 impl RepoManager {
     /// Invariants:
@@ -29,16 +29,14 @@ impl RepoManager {
                 repos.push(stem);
                 continue;
             }
-            match RepoManager::read_repo_info_from_path(&path) {
-                Ok(_) => repos.push(stem),
-                Err(err) => {
-                    tracing::warn!(
-                        "Skipping broken local repo {} while listing execution names: {:?}",
-                        stem,
-                        err
-                    );
-                }
-            }
+            RepoManager::read_repo_info_from_path(&path).map_err(|err| {
+                anyhow!(
+                    "Broken local repo {} while listing execution names: {}",
+                    stem,
+                    err
+                )
+            })?;
+            repos.push(stem);
         }
         repos.sort();
         Ok(repos)
