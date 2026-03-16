@@ -13,13 +13,13 @@ impl RepoManager {
         &self,
         repo_id: uuid::Uuid,
     ) -> Result<Option<RepoInfo>> {
-        let Some(repo_name) = self.find_local_repo_name_by_id_without_repair(repo_id)? else {
+        let Some(repo_stem) = self.find_local_repo_name_by_id_without_repair(repo_id)? else {
             return Ok(None);
         };
-        if repo_name == self.local_repo_name {
+        if repo_stem == self.local_repo_name {
             return Self::read_repo_info_from_db(&self.local_db);
         }
-        self.run_on_local_repo(&repo_name, Self::read_repo_info_from_db)
+        self.run_on_local_repo_stem(&repo_stem, Self::read_repo_info_from_db)
     }
 
     pub fn get_repo_url(&self, branch: Option<&PeerId>, repo_name: &str) -> Result<Option<String>> {
@@ -89,5 +89,45 @@ impl RepoManager {
             return Ok(None);
         }
         Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+    use tempfile::TempDir;
+
+    fn write_info(db: &redb::Database, info: &RepoInfo) {
+        let txn = db.begin_write().expect("write txn");
+        txn.open_table(REPO_METADATA)
+            .expect("repo metadata")
+            .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
+            .expect("write metadata");
+        txn.commit().expect("commit");
+    }
+
+    #[test]
+    fn local_repo_info_lookup_without_repair_preserves_unrepaired_metadata() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+        let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
+        let wiki_db = main.open_database(None, "wiki").expect("wiki db");
+        write_info(
+            wiki_db.db.as_ref(),
+            &RepoInfo {
+                uuid: wiki_info.uuid,
+                name: "alias".into(),
+                url: Some("urn:alias".into()),
+            },
+        );
+
+        let looked_up = main
+            .get_local_repo_info_by_id_without_repair(wiki_info.uuid)
+            .expect("lookup")
+            .expect("present");
+        assert_eq!(looked_up.name, "alias");
+        assert_eq!(looked_up.url.as_deref(), Some("urn:alias"));
     }
 }
