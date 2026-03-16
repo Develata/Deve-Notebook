@@ -6,8 +6,8 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
-use super::errors;
 use super::engine;
+use super::errors;
 
 pub struct SyncHelloInput {
     pub peer_id: PeerId,

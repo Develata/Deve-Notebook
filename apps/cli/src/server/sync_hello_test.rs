@@ -142,7 +142,13 @@ async fn sync_hello_fails_closed_when_shadow_binding_fails() -> anyhow::Result<(
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
     std::fs::create_dir_all(state.repo.remotes_dir())?;
-    std::fs::write(state.repo.remotes_dir().join(remote.peer_id().to_filename()), b"blocked")?;
+    std::fs::write(
+        state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename()),
+        b"blocked",
+    )?;
     let mut hello = signed_hello(&remote, &VersionVector::new());
     hello.repo_id = repo_id;
     let (uni_tx, mut uni_rx) = mpsc::channel(16);

@@ -116,7 +116,10 @@ async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, deve_core::protocol::ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -148,7 +151,10 @@ async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, deve_core::protocol::ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

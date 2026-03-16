@@ -244,7 +244,6 @@ fn resolve_session_repo_accepts_exact_collision_safe_remote_selector_without_uui
     Ok(())
 }
 
-
 #[test]
 fn resolve_local_counterpart_repo_prefers_repo_uuid_for_remote_scope() -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;

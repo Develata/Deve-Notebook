@@ -1,0 +1,40 @@
+use deve_core::ledger::RepoManager;
+use deve_core::sync::SyncManager;
+use std::sync::Arc;
+use tempfile::TempDir;
+
+#[cfg(unix)]
+#[test]
+fn scan_fails_closed_on_unreadable_repo_dir() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let vault_dir = dir.path().join("vault");
+    let mut repo =
+        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
+    repo.set_vault_root(&vault_dir);
+    let repo = Arc::new(repo);
+    let sync = SyncManager::new(repo, vault_dir.clone());
+
+    let unreadable = vault_dir.join("default").join("private");
+    std::fs::create_dir_all(&unreadable).expect("create unreadable dir");
+    std::fs::write(unreadable.join("hidden.md"), "# hidden").expect("write hidden doc");
+    let mut perms = std::fs::metadata(&unreadable)
+        .expect("metadata")
+        .permissions();
+    perms.set_mode(0o000);
+    std::fs::set_permissions(&unreadable, perms).expect("chmod 000");
+
+    let err = sync.scan().expect_err("scan must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Failed to walk local repo default")
+    );
+
+    let mut restore = std::fs::metadata(&unreadable)
+        .expect("metadata")
+        .permissions();
+    restore.set_mode(0o755);
+    std::fs::set_permissions(&unreadable, restore).expect("restore perms");
+}

@@ -178,9 +178,11 @@ impl RepoScopedSyncEngine {
     }
 
     fn load_repo_key(&self, repo_id: RepoId) -> Option<RepoKey> {
-        self.load_repo_key_strict(repo_id).map_err(|err| {
-            tracing::warn!("RepoScopedSyncEngine failed to load repo key {repo_id}: {err}");
-        }).ok()
+        self.load_repo_key_strict(repo_id)
+            .map_err(|err| {
+                tracing::warn!("RepoScopedSyncEngine failed to load repo key {repo_id}: {err}");
+            })
+            .ok()
     }
 
     fn load_repo_key_strict(&self, repo_id: RepoId) -> Result<RepoKey> {
@@ -190,10 +192,9 @@ impl RepoScopedSyncEngine {
                 return Err(anyhow!("Local repo not found for UUID {}", repo_id));
             }
             Err(err) => {
-                return Err(err.context(format!(
-                    "Failed to resolve local repo for UUID {}",
-                    repo_id
-                )));
+                return Err(
+                    err.context(format!("Failed to resolve local repo for UUID {}", repo_id))
+                );
             }
         };
         let key_dir = match self.repo.local_repo_notegit_keys_root(&repo_name) {

@@ -3,7 +3,7 @@ use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::path_to_forward_slash;
 use crate::vfs::Vfs;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
@@ -26,7 +26,9 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
     let mut on_disk = HashSet::new();
     let mut seen_docs = HashSet::<DocId>::new();
 
-    for entry in WalkDir::new(&repo_root).into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(&repo_root) {
+        let entry =
+            entry.map_err(|err| anyhow!("Failed to walk local repo {}: {}", repo_name, err))?;
         let path = entry.path();
         if !path.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("md") {
             continue;

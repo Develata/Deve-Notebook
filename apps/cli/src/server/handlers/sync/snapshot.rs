@@ -6,8 +6,8 @@ use deve_core::protocol::ServerMessage;
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
-use super::errors;
 use super::engine;
+use super::errors;
 use super::guard::require_bound_peer;
 
 pub(super) async fn handle_request(
