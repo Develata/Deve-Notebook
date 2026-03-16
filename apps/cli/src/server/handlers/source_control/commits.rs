@@ -13,6 +13,7 @@ pub async fn handle_commit(
     session: &mut WsSession,
     message: String,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -24,7 +25,7 @@ pub async fn handle_commit(
             ch.broadcast(ServerMessage::CommitAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
-                scope_nonce: None,
+                scope_nonce,
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });
@@ -146,6 +147,7 @@ pub async fn handle_commit_and_push(
     session: &mut WsSession,
     message: String,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws(ch, e),
@@ -157,7 +159,7 @@ pub async fn handle_commit_and_push(
             ch.broadcast(ServerMessage::CommitAck {
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
-                scope_nonce: None,
+                scope_nonce,
                 commit_id: info.id,
                 timestamp: info.timestamp,
             });
