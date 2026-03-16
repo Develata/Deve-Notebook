@@ -71,6 +71,8 @@ fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError 
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",
             "local workspace root requested on remote branch",
+            "scope mismatch",
+            "stale scope nonce",
         ],
     ) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);
@@ -212,6 +214,15 @@ mod tests {
         let err = decode_error(
             StatusCode::CONFLICT,
             b"Cannot bootstrap local repo while on remote branch",
+        );
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_plain_text_stale_scope_nonce() {
+        let err = decode_error(
+            StatusCode::CONFLICT,
+            b"Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7",
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }

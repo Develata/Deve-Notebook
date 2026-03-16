@@ -142,6 +142,8 @@ fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
             "local repo operation requested on remote branch",
             "local workspace path requested on remote branch",
             "local workspace root requested on remote branch",
+            "scope mismatch",
+            "stale scope nonce",
         ],
     ) {
         return Some(ServerErrorCode::ScRepoContextInvalid);

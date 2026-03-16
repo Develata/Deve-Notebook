@@ -50,9 +50,7 @@ fn maps_scope_locked_db_to_storage_db_locked() {
 
 #[test]
 fn maps_scope_ambiguous_local_selector_to_repo_context_invalid() {
-    let err = map_repo_scope_error(anyhow::anyhow!(
-        "Ambiguous local repository selector: wiki"
-    ));
+    let err = map_repo_scope_error(anyhow::anyhow!("Ambiguous local repository selector: wiki"));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }
 
@@ -60,6 +58,14 @@ fn maps_scope_ambiguous_local_selector_to_repo_context_invalid() {
 fn maps_scope_remote_bootstrap_drift_to_repo_context_invalid() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "Cannot bootstrap local repo while on remote branch"
+    ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
+fn maps_scope_stale_nonce_to_repo_context_invalid() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
     ));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }
