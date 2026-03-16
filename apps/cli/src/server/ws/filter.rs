@@ -47,8 +47,11 @@ impl BroadcastFilter {
         let Some(scope) = &self.scope else {
             return;
         };
-        if let Ok(mut slot) = scope.write() {
-            *slot = SessionBroadcastScope::from_session(session);
+        match scope.write() {
+            Ok(mut slot) => *slot = SessionBroadcastScope::from_session(session),
+            Err(_) => {
+                tracing::error!("WS broadcast filter write lock poisoned; keeping filter closed");
+            }
         }
     }
 
@@ -57,7 +60,8 @@ impl BroadcastFilter {
             return true;
         };
         let Ok(scope) = scope.read() else {
-            return true;
+            tracing::error!("WS broadcast filter read lock poisoned; dropping broadcast");
+            return false;
         };
 
         match msg {

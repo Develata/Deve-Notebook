@@ -95,3 +95,23 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
         other => panic!("unexpected merge message: {:?}", other),
     }
 }
+
+#[test]
+fn drops_broadcasts_when_filter_lock_is_poisoned() {
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    let filter = BroadcastFilter::for_session(&session);
+    let scope = filter.scope.as_ref().expect("scoped filter").clone();
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = scope.write().expect("write lock");
+        panic!("poison broadcast filter");
+    });
+
+    assert!(!filter.should_forward(&ServerMessage::CommitAck {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: None,
+        commit_id: "c1".into(),
+        timestamp: 1,
+    }));
+}
