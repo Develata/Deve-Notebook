@@ -54,7 +54,10 @@ pub async fn handle_switch_branch(
         }
     };
     let current_repo_url = match current_scope.as_ref() {
-        Some(scope) => match state.repo.get_repo_url(scope.branch.as_ref(), &scope.repo_name) {
+        Some(scope) => match state
+            .repo
+            .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
+        {
             Ok(url) => url,
             Err(err) => {
                 ch.send_protocol_error_with_switch_nonce(

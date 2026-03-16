@@ -376,7 +376,8 @@ fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadabl
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let db = state.repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(&0, [0_u8, 1, 2, 3].as_slice())?;
+    txn.open_table(REPO_METADATA)?
+        .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
     txn.commit()?;
 
     let err = state

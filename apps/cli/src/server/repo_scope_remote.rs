@@ -13,8 +13,9 @@ pub(super) fn recover_remote_repo_name_from_selector(
     if resolved.as_deref() == Some(repo_name) {
         if let Some(expected_repo_id) = expected_repo_id
             && has_remote_display_name(state, branch, repo_name)?
-            && let Some(selector) =
-                state.repo.find_remote_repo_selector_by_id(branch, expected_repo_id)?
+            && let Some(selector) = state
+                .repo
+                .find_remote_repo_selector_by_id(branch, expected_repo_id)?
             && selector != repo_name
         {
             tracing::warn!(

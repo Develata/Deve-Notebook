@@ -226,18 +226,12 @@ fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> a
     let (_dir, state) = build_state()?;
     let db = state.repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(&0, [0_u8, 1, 2, 3].as_slice())?;
+    txn.open_table(REPO_METADATA)?
+        .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
     txn.commit()?;
 
-    let err = select_target_repo(
-        &state,
-        false,
-        None,
-        None,
-        Some("urn:default".into()),
-        None,
-    )
-    .expect_err("broken local repo metadata must fail closed during URL recovery");
+    let err = select_target_repo(&state, false, None, None, Some("urn:default".into()), None)
+        .expect_err("broken local repo metadata must fail closed during URL recovery");
     assert!(
         err.to_string().contains("decode")
             || err.to_string().contains("deserialize")

@@ -232,6 +232,9 @@ mod tests {
     fn maps_plain_text_missing_local_repo_name() {
         let err = decode_error(StatusCode::NOT_FOUND, b"Local repo not found for name wiki");
         assert_eq!(err.code, ServerErrorCode::StorageNotFound);
-        assert_eq!(err.detail.as_deref(), Some("Local repo not found for name wiki"));
+        assert_eq!(
+            err.detail.as_deref(),
+            Some("Local repo not found for name wiki")
+        );
     }
 }

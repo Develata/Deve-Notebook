@@ -79,7 +79,11 @@ fn request_doc_listing(ws: &WsService, signals: HandshakeSignals) {
     });
 }
 
-fn build_switch_repo(name: String, repo_id: Option<String>, switch_nonce: u64) -> Option<ClientMessage> {
+fn build_switch_repo(
+    name: String,
+    repo_id: Option<String>,
+    switch_nonce: u64,
+) -> Option<ClientMessage> {
     match repo_id {
         Some(repo_id) => match uuid::Uuid::parse_str(&repo_id) {
             Ok(repo_id) => Some(ClientMessage::SwitchRepoExact {

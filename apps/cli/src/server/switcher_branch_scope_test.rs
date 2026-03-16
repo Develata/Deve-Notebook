@@ -277,7 +277,8 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     repo.ensure_shadow_repo_binding(&peer_id, local_info.uuid)?;
     let db = repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(&0, [0_u8, 1, 2, 3].as_slice())?;
+    txn.open_table(REPO_METADATA)?
+        .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
     txn.commit()?;
 
     let repo = Arc::new(repo);
@@ -303,7 +304,14 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     let mut session = WsSession::new();
     session.switch_repo("default".into(), Some(local_info.uuid));
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), Some(41)).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(41),
+    )
+    .await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError {

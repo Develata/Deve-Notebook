@@ -118,7 +118,8 @@ fn map_repo_scope_error_marks_selector_mismatch_as_context_invalid() {
 fn map_repo_scope_error_marks_missing_repo_as_not_found() {
     let err = map_repo_scope_error(anyhow::anyhow!("Repository not found: default"));
     assert_eq!(err.code, ServerErrorCode::StorageNotFound);
-    let local_name_err = map_repo_scope_error(anyhow::anyhow!("Local repo not found for name test"));
+    let local_name_err =
+        map_repo_scope_error(anyhow::anyhow!("Local repo not found for name test"));
     assert_eq!(local_name_err.code, ServerErrorCode::StorageNotFound);
 }
 
