@@ -41,7 +41,7 @@ pub async fn list_docs_plugin_host(
             Ok(list) => Json(list).into_response(),
             Err(e) => repo_error_response(e),
         },
-        Err(e) => repo_error_response(e),
+        Err(e) => plugin_host_error_response(e),
     }
 }
 
@@ -84,7 +84,7 @@ pub async fn doc_content_plugin_host(
             Ok(content) => content.into_response(),
             Err(e) => repo_error_response(e),
         },
-        Err(e) => repo_error_response(e),
+        Err(e) => plugin_host_error_response(e),
     }
 }
 
@@ -106,6 +106,14 @@ fn repo_error_response(error: impl ToString) -> axum::response::Response {
     let detail = error.to_string();
     let (status, code) = classify_repo_error(&detail);
     http_error(status, code, detail)
+}
+
+fn plugin_host_error_response(error: impl ToString) -> axum::response::Response {
+    http_error(
+        StatusCode::NOT_IMPLEMENTED,
+        ServerErrorCode::PluginUnsupportedMessage,
+        error.to_string(),
+    )
 }
 
 fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {

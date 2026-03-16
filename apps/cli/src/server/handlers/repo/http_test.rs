@@ -1,4 +1,4 @@
-use super::{classify_repo_error, parse_doc_id};
+use super::{classify_repo_error, parse_doc_id, plugin_host_error_response};
 use axum::http::StatusCode;
 use deve_core::protocol::ServerErrorCode;
 
@@ -84,4 +84,10 @@ fn classifies_broken_repo_entry_as_storage_persist_failed() {
             ServerErrorCode::StoragePersistFailed
         )
     );
+}
+
+#[test]
+fn plugin_host_repository_unavailable_maps_to_not_implemented() {
+    let response = plugin_host_error_response("Repository not configured");
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
 }
