@@ -101,7 +101,14 @@ impl RepoManager {
                 .and_then(|s| s.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let info = scanned_remote_repo_info(self, &path, &stem);
+            let info = scanned_remote_repo_info(self, &path, &stem).map_err(|err| {
+                anyhow!(
+                    "Broken shadow repo {} for peer {} while pure scanning catalog: {}",
+                    stem,
+                    peer_id,
+                    err
+                )
+            })?;
             repos.push(RemoteRepoEntry { path, stem, info });
         }
         Ok(repos)

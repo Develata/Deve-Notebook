@@ -24,19 +24,8 @@ pub(super) fn scanned_remote_repo_info(
     repo: &RepoManager,
     path: &Path,
     stem: &str,
-) -> Option<RepoInfo> {
-    match read_remote_repo_info_without_repair(repo, path, stem) {
-        Ok(Some(info)) => Some(info),
-        Ok(None) => None,
-        Err(err) => {
-            tracing::warn!(
-                "Keeping shadow repo entry {} unreadable during pure scan: {:?}",
-                stem,
-                err
-            );
-            None
-        }
-    }
+) -> Result<Option<RepoInfo>> {
+    read_remote_repo_info_without_repair(repo, path, stem)
 }
 
 pub(super) fn repaired_remote_repo_info(
