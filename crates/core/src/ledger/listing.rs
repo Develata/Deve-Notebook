@@ -122,6 +122,7 @@ impl RepoListing for RepoManager {
                 peers.push(peer_id);
             }
         }
+        peers.sort();
         Ok(peers)
     }
 }

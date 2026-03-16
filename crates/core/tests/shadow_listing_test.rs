@@ -97,6 +97,37 @@ fn switchable_shadow_list_hides_peers_with_only_broken_repos() {
 }
 
 #[test]
+fn switchable_shadow_list_is_sorted_stably() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let later_peer = PeerId::new("peer-z");
+    let earlier_peer = PeerId::new("peer-a");
+    let info = deve_core::ledger::RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "notes".into(),
+        url: Some("urn:test:notes".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&later_peer, &info)
+        .expect("seed later peer");
+    repo.ensure_shadow_repo_info(
+        &earlier_peer,
+        &deve_core::ledger::RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "notes".into(),
+            url: Some("urn:test:notes-2".into()),
+        },
+    )
+    .expect("seed earlier peer");
+
+    assert_eq!(
+        repo.list_switchable_shadows_on_disk()
+            .expect("list switchable shadows"),
+        vec![earlier_peer, later_peer]
+    );
+}
+
+#[test]
 fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
