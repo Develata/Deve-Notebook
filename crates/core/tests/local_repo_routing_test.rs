@@ -195,3 +195,24 @@ fn execution_resolution_accepts_uuid_string_selector() {
         extra_id
     );
 }
+
+#[test]
+fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
+    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    let txn = extra_db.db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(&0, [0_u8, 1, 2, 3].as_slice())
+        .expect("write broken metadata");
+    txn.commit().expect("commit broken metadata");
+
+    let err = repo
+        .find_local_repo_name_by_id(extra_id)
+        .expect_err("broken secondary repo metadata must fail closed");
+    assert!(
+        err.to_string().contains("decode")
+            || err.to_string().contains("deserialize")
+            || err.to_string().contains("unexpected end")
+    );
+}

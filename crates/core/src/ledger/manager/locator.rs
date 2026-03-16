@@ -44,12 +44,10 @@ impl RepoManager {
             if file_stem == self.local_repo_name {
                 continue;
             }
-            let is_match = self
-                .run_on_local_repo(file_stem, |db| {
-                    Ok(Self::read_repo_info_from_db(db)?.map(|info| info.uuid) == Some(target_id))
-                })
-                .unwrap_or(false);
-            if is_match {
+            let repo_uuid = self.run_on_local_repo(file_stem, |db| {
+                Ok(Self::read_repo_info_from_db(db)?.map(|info| info.uuid))
+            })?;
+            if repo_uuid == Some(target_id) {
                 return Ok(Some(file_stem.to_string()));
             }
         }
