@@ -55,6 +55,7 @@ pub struct EditorContext {
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub current_scope_nonce: ReadSignal<u64>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub handshake_ready: ReadSignal<bool>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,

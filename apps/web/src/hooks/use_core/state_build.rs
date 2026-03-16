@@ -96,6 +96,7 @@ pub(super) fn build_core_state(
         set_current_repo: signals.set_current_repo,
         current_repo_id: signals.current_repo_id,
         set_current_repo_id: signals.set_current_repo_id,
+        current_scope_nonce: signals.current_scope_nonce,
         pending_repo_switch: signals.pending_repo_switch,
         on_switch_repo: switch.on_switch_repo,
         shadow_repos: signals.shadow_repos,

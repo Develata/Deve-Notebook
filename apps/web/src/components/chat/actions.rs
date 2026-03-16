@@ -1,6 +1,7 @@
 use crate::editor::ffi::get_editor_selection;
 use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
+use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::{CoreState, pending};
 use crate::i18n::{Locale, t};
 use deve_core::models::Op;
@@ -115,6 +116,16 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             leptos::logging::warn!("Apply code aborted: writer client id unavailable.");
             return;
         };
+        let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
+            current_repo_id: core.current_repo_id,
+            current_scope_nonce: core.current_scope_nonce,
+            active_branch: core.active_branch,
+            pending_branch_switch: core.pending_branch_switch,
+            pending_repo_switch: core.pending_repo_switch,
+        }) else {
+            leptos::logging::warn!("Apply code aborted: local scope nonce unavailable.");
+            return;
+        };
         let client_op_id = next_client_op_id();
         core.set_pending_local_edits.update(|pending_edits| {
             pending::push_pending_edit(
@@ -131,6 +142,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             op,
             client_id,
             client_op_id,
+            scope_nonce: Some(scope_nonce),
         });
     })
 }

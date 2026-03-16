@@ -27,6 +27,28 @@ pub(super) async fn handle_edit(
             return;
         }
     };
+    match state
+        .repo
+        .get_file_meta_for_doc_in_local_repo(&scope.repo_name, doc_id)
+    {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            ch.unicast(ServerMessage::EditRejected {
+                error: ServerError::with_detail(
+                    ServerErrorCode::StorageNotFound,
+                    format!("Document not found in active repository: {doc_id}"),
+                ),
+            });
+            return;
+        }
+        Err(e) => {
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::StoragePersistFailed,
+                e.to_string(),
+            ));
+            return;
+        }
+    }
     let local_peer_id = match session.writer_peer_id_for(&scope.repo_id) {
         Some(peer_id) => peer_id,
         None => {

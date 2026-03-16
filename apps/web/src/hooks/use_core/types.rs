@@ -168,6 +168,7 @@ pub struct CoreState {
     pub set_current_repo: WriteSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
+    pub current_scope_nonce: ReadSignal<u64>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
 

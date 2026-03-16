@@ -44,6 +44,8 @@ pub enum ClientMessage {
         op: Op,
         client_id: u64,
         client_op_id: u64,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     RequestHistory {
         doc_id: DocId,

@@ -37,6 +37,8 @@ mod docs_dir_copy_test;
 #[cfg(test)]
 mod docs_projection_repair_test;
 #[cfg(test)]
+mod edit_scope_test;
+#[cfg(test)]
 mod document_remote_scope_test;
 pub mod handlers;
 #[cfg(test)]

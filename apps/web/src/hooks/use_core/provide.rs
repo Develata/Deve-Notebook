@@ -43,6 +43,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
         active_branch: state.active_branch,
         pending_branch_switch: state.pending_branch_switch,
         current_repo_id: state.current_repo_id,
+        current_scope_nonce: state.current_scope_nonce,
         pending_repo_switch: state.pending_repo_switch,
         handshake_ready: state.handshake_ready,
         handshake_scope_nonce: state.handshake_scope_nonce,

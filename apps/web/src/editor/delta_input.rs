@@ -2,9 +2,10 @@ use super::EditorStats;
 use super::ffi::{Delta, getEditorContent};
 use super::op_id::next_client_op_id;
 use crate::api::WsService;
+use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::pending::{self, PendingLocalEdits};
-use deve_core::models::DocId;
+use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 use wasm_bindgen::prelude::Closure;
@@ -13,6 +14,8 @@ pub struct DeltaInputCtx {
     pub doc_id: DocId,
     pub ws: WsService,
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub current_scope_nonce: ReadSignal<u64>,
+    pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub handshake_ready: ReadSignal<bool>,
@@ -44,6 +47,16 @@ pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
             leptos::logging::warn!("Delta ignored: writer client id unavailable.");
             return;
         };
+        let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
+            current_repo_id: ctx.current_repo_id,
+            current_scope_nonce: ctx.current_scope_nonce,
+            active_branch: ctx.active_branch,
+            pending_branch_switch: ctx.pending_branch_switch,
+            pending_repo_switch: ctx.pending_repo_switch,
+        }) else {
+            leptos::logging::warn!("Delta ignored: local scope nonce unavailable.");
+            return;
+        };
         let deltas: Vec<Delta> = match serde_json::from_str(&delta_json) {
             Ok(deltas) => deltas,
             Err(err) => {
@@ -69,6 +82,7 @@ pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
                     op: op.clone(),
                     client_id,
                     client_op_id,
+                    scope_nonce: Some(scope_nonce),
                 });
             }
         }

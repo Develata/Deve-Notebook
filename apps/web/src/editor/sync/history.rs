@@ -2,6 +2,7 @@ use super::apply_live_op;
 use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOpsBatch, getEditorContent};
+use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::pending;
 use deve_core::protocol::ClientMessage;
 use deve_core::protocol::ConfirmedOp;
@@ -80,6 +81,15 @@ pub(super) fn resend_pending_edits_if_ready(ctx: &SyncContext) {
 }
 
 pub(super) fn resend_pending_edits(ctx: &SyncContext) {
+    let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
+        current_repo_id: ctx.current_repo_id,
+        current_scope_nonce: ctx.current_scope_nonce,
+        active_branch: ctx.active_branch,
+        pending_branch_switch: ctx.pending_branch_switch,
+        pending_repo_switch: ctx.pending_repo_switch,
+    }) else {
+        return;
+    };
     let edits =
         pending::cloned_pending_edits_for_doc(&ctx.pending_local_edits.get_untracked(), ctx.doc_id);
     for edit in edits {
@@ -88,6 +98,7 @@ pub(super) fn resend_pending_edits(ctx: &SyncContext) {
             op: edit.op,
             client_id: edit.client_id,
             client_op_id: edit.client_op_id,
+            scope_nonce: Some(scope_nonce),
         });
     }
 }

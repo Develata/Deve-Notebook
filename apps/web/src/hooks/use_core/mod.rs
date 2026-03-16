@@ -8,7 +8,7 @@ pub mod callbacks;
 pub mod callbacks_sc;
 mod callbacks_sc_scope;
 mod callbacks_sc_target;
-mod callbacks_scope;
+pub(crate) mod callbacks_scope;
 mod callbacks_switch;
 mod callbacks_sync;
 pub mod contexts;

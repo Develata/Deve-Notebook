@@ -64,6 +64,7 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
                 active_branch: core.active_branch,
                 pending_branch_switch: core.pending_branch_switch,
                 current_repo_id: core.current_repo_id,
+                current_scope_nonce: core.current_scope_nonce,
                 pending_repo_switch: core.pending_repo_switch,
                 handshake_scope_nonce: core.handshake_scope_nonce,
                 open_request_id,

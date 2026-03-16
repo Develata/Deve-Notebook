@@ -22,7 +22,14 @@ pub(super) async fn route_core(
             op,
             client_id,
             client_op_id,
+            scope_nonce,
         } => {
+            if let Err(error) =
+                super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "edit")
+            {
+                ch.send_protocol_error(error);
+                return;
+            }
             document::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
         }
         ClientMessage::ListDocs {
@@ -140,3 +147,7 @@ pub(super) async fn route_core(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "core_test.rs"]
+mod tests;
