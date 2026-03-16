@@ -154,6 +154,22 @@ fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> 
 }
 
 #[test]
+fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let default_id = state
+        .repo
+        .get_repo_info_for(None, Some("default"))?
+        .expect("default repo info")
+        .uuid;
+
+    let err = select_target_repo(&state, false, Some(default_id), Some("test"), None, None)
+        .expect_err("stale uuid must not override exact local stem");
+    assert!(err.to_string().contains("Session repo mismatch:"));
+    Ok(())
+}
+
+#[test]
 fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let peer_id = PeerId::new("peer-remote");
@@ -208,6 +224,22 @@ fn resolve_requested_repo_name_prefers_canonical_local_stem_after_metadata_drift
     let selected = resolve_requested_repo_name(&state, None, "legacy-wiki", None)?
         .expect("canonical local selector");
     assert_eq!(selected, "wiki");
+    Ok(())
+}
+
+#[test]
+fn resolve_requested_repo_name_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let default_id = state
+        .repo
+        .get_repo_info_for(None, Some("default"))?
+        .expect("default repo info")
+        .uuid;
+
+    let err = resolve_requested_repo_name(&state, None, "test", Some(default_id))
+        .expect_err("stale uuid must not override exact local stem");
+    assert!(err.to_string().contains("Session repo mismatch:"));
     Ok(())
 }
 
