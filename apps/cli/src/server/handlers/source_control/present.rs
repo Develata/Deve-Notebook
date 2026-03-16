@@ -48,7 +48,9 @@ pub fn expand_related_paths(entries: &[ChangeEntry], path: &str) -> Vec<String> 
 }
 
 pub fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathTarget {
-    let path = resolve_target_path(entries, target);
+    let Some(path) = resolve_target_path(entries, target) else {
+        return target.clone();
+    };
     let doc_id = target.doc_id.or_else(|| {
         entries
             .iter()
@@ -60,6 +62,9 @@ pub fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathT
 
 pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) -> Vec<ScPathTarget> {
     let resolved = resolve_target(entries, target);
+    if resolve_target_path(entries, &resolved).is_none() {
+        return vec![];
+    }
     let mut targets = vec![];
     for path in expand_related_paths(entries, &resolved.path) {
         let doc_id = entries
@@ -75,7 +80,7 @@ pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) ->
     targets
 }
 
-pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> String {
+pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> Option<String> {
     let path = normalized(&target.path);
     if let Some(doc_id) = target.doc_id {
         return entries
@@ -96,12 +101,10 @@ pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> St
                     .find(|entry| entry.doc_id == Some(doc_id) && normalized(&entry.path) == path)
             })
             .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
-            .map(|entry| normalized(&entry.path))
-            .unwrap_or(path);
+            .map(|entry| normalized(&entry.path));
     }
     resolve_without_doc_id(entries, &path)
         .map(|entry| normalized(&entry.path))
-        .unwrap_or(path)
 }
 
 fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {

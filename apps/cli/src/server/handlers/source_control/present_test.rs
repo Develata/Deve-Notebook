@@ -17,7 +17,7 @@ fn resolve_target_prefers_doc_id_over_stale_path() {
         doc_id: Some(doc_id),
     };
 
-    assert_eq!(resolve_target_path(&entries, &target), "notes/new.md");
+    assert_eq!(resolve_target_path(&entries, &target), Some("notes/new.md".into()));
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn resolve_target_matches_renamed_from_without_doc_id() {
 
     assert_eq!(
         resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
-        "notes/new.md"
+        Some("notes/new.md".into())
     );
 }
 
@@ -110,7 +110,7 @@ fn resolve_target_prefers_rename_successor_over_reused_old_path() {
 
     assert_eq!(
         resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
-        "notes/new.md"
+        Some("notes/new.md".into())
     );
 }
 
@@ -142,12 +142,12 @@ fn resolve_target_keeps_requested_path_when_doc_id_does_not_match_reused_path() 
                 doc_id: Some(DocId(Uuid::nil())),
             },
         ),
-        "notes/reused.md"
+        None
     );
 }
 
 #[test]
-fn resolve_target_keeps_requested_path_when_path_only_resolution_is_ambiguous() {
+fn resolve_target_fails_closed_when_path_only_resolution_is_ambiguous() {
     let entries = vec![
         ChangeEntry {
             path: "notes/old.md".into(),
@@ -167,6 +167,6 @@ fn resolve_target_keeps_requested_path_when_path_only_resolution_is_ambiguous() 
 
     assert_eq!(
         resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
-        "notes/old.md"
+        None
     );
 }
