@@ -34,8 +34,11 @@ pub async fn run(
     }
 
     let bind_addr = format!("0.0.0.0:{}", port);
-    if TcpListener::bind(&bind_addr).is_err() {
-        return start_proxy_mode(port).await;
+    if let Err(err) = TcpListener::bind(&bind_addr) {
+        if err.kind() == std::io::ErrorKind::AddrInUse {
+            return start_proxy_mode(port).await;
+        }
+        return Err(err.into());
     }
 
     // 1. 初始化 RepoManager
