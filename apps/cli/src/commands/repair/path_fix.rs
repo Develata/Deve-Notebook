@@ -100,10 +100,10 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
         if path == root || !path.starts_with(&root) {
             break;
         }
-        let is_empty = std::fs::read_dir(&path)
-            .ok()
-            .and_then(|mut iter| iter.next())
-            .is_none();
+        let is_empty = match std::fs::read_dir(&path) {
+            Ok(mut iter) => iter.next().is_none(),
+            Err(_) => break,
+        };
         if !is_empty {
             break;
         }
@@ -115,7 +115,7 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{move_pending, path_exists_for_repair};
+    use super::{move_pending, path_exists_for_repair, prune_empty_parents};
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use deve_core::models::DocId;
@@ -230,6 +230,23 @@ mod tests {
             Ok(pending_fs::get(db, "default/notes/live.md")?.is_some())
         })?;
         assert!(old_exists);
+        Ok(())
+    }
+
+    #[test]
+    fn prune_empty_parents_stops_when_start_dir_is_missing() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let root = dir.path().join("vault");
+        let parent = root.join("notes");
+        std::fs::create_dir_all(&parent)?;
+        let missing = parent.join("missing");
+
+        prune_empty_parents(root.clone(), Some(&missing));
+
+        assert!(
+            parent.exists(),
+            "missing start dir must not cause parent pruning"
+        );
         Ok(())
     }
 }
