@@ -16,15 +16,9 @@ pub(super) fn resolve_local_sc_target(
         .list_changes_in_repo(&selector)
         .map_err(|e| e.to_string())?;
     if let Some(entry) = resolve_entry(&changes, &path) {
-        return Ok(ScPathTarget {
-            path: to_forward_slash(&entry.path),
-            doc_id: entry.doc_id,
-        });
+        return target_for_resolved_path(repo_manager, &entry.path, entry.doc_id);
     }
-    let doc_id = repo_manager
-        .tracked_docid_or_legacy_error_in_local_repo(repo_manager.local_repo_name(), &path)
-        .map_err(|e| e.to_string())?;
-    Ok(ScPathTarget { path, doc_id })
+    target_for_resolved_path(repo_manager, &path, None)
 }
 
 fn resolve_entry<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {
@@ -55,14 +49,29 @@ fn resolve_entry<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a Chang
         })
 }
 
+fn target_for_resolved_path(
+    repo_manager: &RepoManager,
+    path: &str,
+    fallback_doc_id: Option<crate::models::DocId>,
+) -> Result<ScPathTarget, Box<EvalAltResult>> {
+    let path = to_forward_slash(path);
+    let doc_id = match fallback_doc_id {
+        Some(doc_id) => Some(doc_id),
+        None => repo_manager
+            .tracked_docid_or_legacy_error_in_local_repo(repo_manager.local_repo_name(), &path)
+            .map_err(|e| e.to_string())?,
+    };
+    Ok(ScPathTarget { path, doc_id })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{resolve_entry, resolve_local_sc_target};
-    use crate::ledger::RepoManager;
     use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
+    use crate::ledger::{RepoManager, node_meta};
     use crate::models::DocId;
     use crate::protocol::ScPathTarget;
-    use crate::source_control::{ChangeEntry, ChangeStatus};
+    use crate::source_control::{ChangeEntry, ChangeStatus, pending_fs};
     use tempfile::tempdir;
 
     #[test]
@@ -126,6 +135,35 @@ mod tests {
             ScPathTarget::from_path("notes/legacy.md").doc_id,
             Some(doc_id)
         );
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_local_sc_target_fills_doc_id_from_tracked_projection() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+        repo.set_vault_root(dir.path().join("vault"));
+        let doc_id = DocId::new();
+        repo.run_on_local_repo("default", |db| {
+            node_meta::ensure_file_node(db, "notes/a.md", doc_id)?;
+            pending_fs::upsert(
+                db,
+                &pending_fs::PendingFsEntry {
+                    path: "notes/a.md".into(),
+                    renamed_from: None,
+                    doc_id: None,
+                    change_type: ChangeStatus::Modified,
+                    content_hash: "hash".into(),
+                    detected_at: 0,
+                    has_conflict: false,
+                },
+            )?;
+            Ok::<_, anyhow::Error>(())
+        })?;
+
+        let target = resolve_local_sc_target(&repo, &repo, "notes/a.md").expect("resolved");
+        assert_eq!(target.path, "notes/a.md");
+        assert_eq!(target.doc_id, Some(doc_id));
         Ok(())
     }
 }
