@@ -92,7 +92,10 @@ fn resolve_session_repo_rejects_unrecoverable_stale_local_repo_name() -> anyhow:
     let mut session = WsSession::new();
     session.switch_repo("stale-name".into(), None);
     let err = resolve_session_repo(&state, &session).expect_err("stale local repo must fail");
-    assert!(err.to_string().contains("Active repository not selected"));
+    assert!(
+        err.to_string()
+            .contains("Local repository selector not resolved")
+    );
     Ok(())
 }
 

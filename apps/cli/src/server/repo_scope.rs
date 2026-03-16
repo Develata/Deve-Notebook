@@ -178,7 +178,10 @@ fn resolve_repo_name_from_session(
                 "Dropping stale local session repo_name without recoverable UUID: {:?}",
                 session.active_repo
             );
-            return Ok(None);
+            return Err(anyhow!(
+                "Local repository selector not resolved for {}",
+                repo_name
+            ));
         }
         if let Some(repo_id) = session.active_repo_id {
             return state.repo.find_local_repo_name_by_id(repo_id);
@@ -224,7 +227,10 @@ fn resolve_repo_name_from_session(
             branch,
             repo_name
         );
-        return Ok(None);
+        return Err(anyhow!(
+            "Remote repository selector not resolved for {}",
+            repo_name
+        ));
     }
     let Some(repo_id) = session.active_repo_id else {
         return Ok(None);

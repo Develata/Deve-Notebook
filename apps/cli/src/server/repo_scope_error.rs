@@ -53,6 +53,7 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
             "local workspace root requested on remote branch",
             "repository uuid not resolved",
             "remote repository selector not resolved",
+            "local repository selector not resolved",
             "local repository uuid not resolved",
             "session repo mismatch",
             "repo selector mismatch",
@@ -105,6 +106,14 @@ mod tests {
             "Broken shadow repo notes for peer peer-a while listing repos"
         ));
         assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
+
+    #[test]
+    fn classifies_missing_local_selector_as_repo_context_invalid() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Local repository selector not resolved for stale-name"
+        ));
+        assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
     }
 
     #[test]

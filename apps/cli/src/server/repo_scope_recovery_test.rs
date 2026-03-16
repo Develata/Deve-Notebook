@@ -122,8 +122,8 @@ fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unreco
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("remote stale selector without uuid must fail");
     assert!(
-        err.to_string().contains("Active repository not selected")
-            || err.to_string().contains("Remote session lost repo name")
+        err.to_string()
+            .contains("Remote repository selector not resolved")
     );
     Ok(())
 }
