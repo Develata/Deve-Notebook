@@ -88,7 +88,7 @@ pub(super) fn select_target_repo(
             && selector_by_id != exact_selector
         {
             return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved selector {} for exact remote selector {}",
+                "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
                 repo_id,
                 selector_by_id,
                 repo_name
@@ -188,7 +188,7 @@ pub(super) fn resolve_requested_repo_name(
             && selector_by_id != exact_selector
         {
             return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved selector {} for exact remote selector {}",
+                "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
                 repo_id,
                 selector_by_id,
                 repo_name
