@@ -11,13 +11,12 @@ use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_to_local_rebinds_single_repo_after_stale_remote_scope() -> anyhow::Result<()>
-{
+async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale()
+-> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     repo.set_vault_root(&vault);
-    let default_id = repo.get_repo_info()?.expect("default info").uuid;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -46,28 +45,20 @@ async fn switch_branch_to_local_rebinds_single_repo_after_stale_remote_scope() -
 
     assert!(matches!(
         uni_rx.recv().await,
-        Some(ServerMessage::BranchSwitched {
-            peer_id: None,
-            success: true,
+        Some(ServerMessage::ProtocolError {
+            error,
             switch_nonce: Some(17),
-        })
+        }) if error.code == deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
     ));
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::RepoList { branch: None, repos, .. })
-            if repos == vec!["default".to_string()]
-    ));
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::RepoSwitched {
-            branch: None,
-            name,
-            uuid,
-            switch_nonce: Some(17),
-        }) if name == "default" && uuid == default_id.to_string()
-    ));
-    assert_eq!(session.active_branch, None);
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
-    assert_eq!(session.active_repo_id, Some(default_id));
+    assert_eq!(
+        session
+            .active_branch
+            .as_ref()
+            .map(ToString::to_string)
+            .as_deref(),
+        Some("missing-shadow")
+    );
+    assert_eq!(session.active_repo.as_deref(), Some("ghost"));
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
