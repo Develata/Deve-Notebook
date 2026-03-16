@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[rustfmt::skip]
 pub enum ServerMessage {
     Pong,
-    Ack { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, seq: u64, client_op_id: u64 },
+    Ack { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, seq: u64, client_op_id: u64 },
     SyncHello { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, pub_key: Vec<u8>, signature: Vec<u8>, vector: VersionVector },
     WriteReady { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId> },
     SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, requests: Vec<(PeerId, (u64, u64))> },
@@ -20,9 +20,9 @@ pub enum ServerMessage {
     SyncPush { repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
     SyncPushSnapshot { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
-    NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, entry: ConfirmedOp },
-    Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },
-    History { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, doc_id: DocId, request_id: u64, ops: Vec<ConfirmedOp> },
+    NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },
+    Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },
+    History { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, ops: Vec<ConfirmedOp> },
     DocList { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, docs: Vec<(DocId, String)> },
     PluginResponse { req_id: String, result: Option<serde_json::Value>, error: Option<ServerError> },
     SearchResults { request_id: String, results: Vec<(String, String, f32)> },

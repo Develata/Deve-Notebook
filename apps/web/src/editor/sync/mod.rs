@@ -4,6 +4,7 @@
 pub mod context;
 mod decrypt;
 mod history;
+mod key;
 mod scope;
 mod snapshot;
 mod snapshot_finish;
@@ -13,15 +14,16 @@ use super::ffi::{applyRemoteOp, getEditorContent};
 use context::SyncContext;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
-use deve_core::security::RepoKey;
 use leptos::prelude::*;
-use scope::{SyncPayloadScope, accepts_sync_payload, matches_scope};
+use key::handle_key_provide;
+use scope::{ScopedMessageScope, SyncPayloadScope, accepts_sync_payload, matches_scoped_message};
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     match msg {
         ServerMessage::Snapshot {
             repo_id,
             branch,
+            scope_nonce,
             doc_id: msg_doc_id,
             request_id,
             content,
@@ -29,7 +31,12 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             version,
             delta_ops,
         } => {
-            if !matches_current_scope(ctx, Some(repo_id), branch.clone()) {
+            if !matches_scoped_message(
+                current_scoped_message_scope(ctx),
+                Some(repo_id),
+                branch.clone(),
+                scope_nonce,
+            ) {
                 return;
             }
             if msg_doc_id != ctx.doc_id {
@@ -56,11 +63,17 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         ServerMessage::History {
             repo_id,
             branch,
+            scope_nonce,
             doc_id: msg_doc_id,
             request_id,
             ops,
         } => {
-            if !matches_current_scope(ctx, Some(repo_id), branch) {
+            if !matches_scoped_message(
+                current_scoped_message_scope(ctx),
+                Some(repo_id),
+                branch,
+                scope_nonce,
+            ) {
                 return;
             }
             if msg_doc_id != ctx.doc_id || request_id != ctx.open_request_id.get_untracked() {
@@ -73,10 +86,16 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         ServerMessage::NewOp {
             repo_id,
             branch,
+            scope_nonce,
             doc_id: msg_doc_id,
             entry,
         } => {
-            if !matches_current_scope(ctx, Some(repo_id), branch) {
+            if !matches_scoped_message(
+                current_scoped_message_scope(ctx),
+                Some(repo_id),
+                branch,
+                scope_nonce,
+            ) {
                 return;
             }
             if msg_doc_id != ctx.doc_id {
@@ -153,36 +172,14 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     }
 }
 
-/// E2EE: 收到服务端提供的 RepoKey，存入内存信号
-///
-/// # Invariants
-/// - `repo_key` 必须恰好 32 bytes (AES-256)
-/// - 仅存于 RAM 信号中，页面卸载时自动清除
-fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
-    match RepoKey::from_bytes(raw) {
-        Some(key) => {
-            leptos::logging::log!("E2EE: RepoKey received ({} bytes)", raw.len());
-            ctx.set_repo_key.set(Some(key));
-        }
-        None => {
-            leptos::logging::error!("E2EE: Invalid RepoKey length: {}", raw.len());
-        }
+fn current_scoped_message_scope(ctx: &SyncContext) -> ScopedMessageScope {
+    ScopedMessageScope {
+        current_repo_id: ctx.current_repo_id.get_untracked(),
+        pending_repo_switch: ctx.pending_repo_switch.get_untracked(),
+        current_branch: ctx.active_branch.get_untracked(),
+        pending_branch_switch: ctx.pending_branch_switch.get_untracked(),
+        current_scope_nonce: ctx.current_scope_nonce.get_untracked(),
     }
-}
-
-fn matches_current_scope(
-    ctx: &SyncContext,
-    repo_id: Option<RepoId>,
-    branch: Option<PeerId>,
-) -> bool {
-    matches_scope(
-        ctx.current_repo_id.get_untracked(),
-        ctx.pending_repo_switch.get_untracked(),
-        ctx.active_branch.get_untracked(),
-        ctx.pending_branch_switch.get_untracked(),
-        repo_id,
-        branch,
-    )
 }
 
 fn accepts_current_sync_payload(

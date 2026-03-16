@@ -205,11 +205,14 @@ pub fn handle_message<F>(
         ServerMessage::Ack {
             repo_id,
             branch,
+            scope_nonce,
             doc_id,
             client_op_id,
             ..
         } => {
-            if !matches_current_message_scope(&Some(repo_id), &branch, signals) {
+            if !matches_current_message_scope(&Some(repo_id), &branch, signals)
+                || scope_nonce != Some(signals.current_scope_nonce.get_untracked())
+            {
                 return;
             }
             signals.set_pending_local_edits.update(|pending_edits| {

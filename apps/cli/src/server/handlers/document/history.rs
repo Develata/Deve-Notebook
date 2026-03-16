@@ -30,6 +30,7 @@ pub(super) async fn handle_request_history(
     ch.unicast(ServerMessage::History {
         repo_id: scope.repo_id,
         branch: session.active_branch.clone(),
+        scope_nonce: Some(session.scope_nonce()),
         doc_id,
         request_id,
         ops,

@@ -130,6 +130,19 @@ impl BroadcastFilter {
                 commit_id,
                 timestamp,
             },
+            ServerMessage::NewOp {
+                repo_id,
+                branch,
+                doc_id,
+                entry,
+                ..
+            } => ServerMessage::NewOp {
+                repo_id,
+                branch,
+                scope_nonce: Some(scope.scope_nonce),
+                doc_id,
+                entry,
+            },
             ServerMessage::MergeComplete {
                 repo_id,
                 branch,

@@ -98,6 +98,7 @@ async fn open_doc_on_remote_branch_uses_shadow_repo_without_locked_db() -> anyho
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.set_scope_nonce(Some(13));
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_repo_id));
 
@@ -106,11 +107,13 @@ async fn open_doc_on_remote_branch_uses_shadow_repo_without_locked_db() -> anyho
     match uni_rx.recv().await {
         Some(ServerMessage::Snapshot {
             repo_id,
+            scope_nonce,
             doc_id: seen_doc,
             content,
             ..
         }) => {
             assert_eq!(repo_id, test_repo_id);
+            assert_eq!(scope_nonce, Some(13));
             assert_eq!(seen_doc, doc_id);
             assert_eq!(content, "hello remote");
         }
@@ -128,14 +131,21 @@ async fn request_history_on_remote_branch_uses_shadow_repo_without_locked_db() -
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.set_scope_nonce(Some(17));
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_repo_id));
 
     handle_request_history(&state, &ch, &mut session, doc_id, 11).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::History { repo_id, ops, .. }) => {
+        Some(ServerMessage::History {
+            repo_id,
+            scope_nonce,
+            ops,
+            ..
+        }) => {
             assert_eq!(repo_id, test_repo_id);
+            assert_eq!(scope_nonce, Some(17));
             assert_eq!(ops.len(), 1);
         }
         other => panic!("expected History, got {:?}", other),

@@ -71,6 +71,7 @@ pub(super) async fn handle_edit(
         ch.unicast(ServerMessage::Ack {
             repo_id: scope.repo_id,
             branch: session.active_branch.clone(),
+            scope_nonce: Some(session.scope_nonce()),
             doc_id,
             seq: entry.seq,
             client_op_id,
@@ -112,6 +113,7 @@ pub(super) async fn handle_edit(
             ch.broadcast(ServerMessage::NewOp {
                 repo_id: scope.repo_id,
                 branch: session.active_branch.clone(),
+                scope_nonce: None,
                 doc_id,
                 entry: ConfirmedOp::new(
                     local_seq,
@@ -125,6 +127,7 @@ pub(super) async fn handle_edit(
             ch.unicast(ServerMessage::Ack {
                 repo_id: scope.repo_id,
                 branch: session.active_branch.clone(),
+                scope_nonce: Some(session.scope_nonce()),
                 doc_id,
                 seq: local_seq,
                 client_op_id,

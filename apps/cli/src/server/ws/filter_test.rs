@@ -13,6 +13,7 @@ fn rejects_new_op_from_other_branch() {
     assert!(!filter.should_forward(&ServerMessage::NewOp {
         repo_id: uuid::Uuid::nil(),
         branch: Some(PeerId::new("peer-b")),
+        scope_nonce: None,
         doc_id: DocId::new(),
         entry: ConfirmedOp::new(
             1,
@@ -109,6 +110,20 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
         scope_nonce: None,
         merged_count: 2,
     });
+    let new_op = filter.stamp_scope_nonce(ServerMessage::NewOp {
+        repo_id: uuid::Uuid::nil(),
+        branch: None,
+        scope_nonce: None,
+        doc_id: DocId::new(),
+        entry: ConfirmedOp::new(
+            1,
+            Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            None,
+        ),
+    });
 
     match commit {
         ServerMessage::CommitAck { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
@@ -121,6 +136,10 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
     match merge {
         ServerMessage::MergeComplete { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected merge message: {:?}", other),
+    }
+    match new_op {
+        ServerMessage::NewOp { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        other => panic!("unexpected new-op message: {:?}", other),
     }
 }
 
