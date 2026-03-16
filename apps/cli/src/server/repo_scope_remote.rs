@@ -19,7 +19,7 @@ pub(super) fn recover_remote_repo_name_from_selector(
             && selector != repo_name
         {
             return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved selector {} for exact remote selector {}",
+                "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
                 expected_repo_id,
                 selector,
                 repo_name

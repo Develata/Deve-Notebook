@@ -46,7 +46,7 @@ pub(super) fn resolve_repo_by_name(
                 == Some(repo_name.as_str())
         {
             return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved {} for exact remote selector {}",
+                "Session repo mismatch: expected {}, resolved {} for exact repository selector {}",
                 expected_repo_id,
                 info.uuid,
                 repo_name
