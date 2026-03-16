@@ -75,20 +75,18 @@ pub(super) fn message(
     repo_id: crate::models::RepoId,
     path: &str,
     change_type: &str,
-) -> ServerMessage {
-    let has_conflict = repo
-        .run_on_local_repo(repo_name, |db| {
-            Ok(pending_fs::get(db, path)?
-                .map(|entry| entry.has_conflict)
-                .unwrap_or(false))
-        })
-        .unwrap_or(false);
-    ServerMessage::FsChangeDetected {
+) -> Result<ServerMessage> {
+    let has_conflict = repo.run_on_local_repo(repo_name, |db| {
+        Ok(pending_fs::get(db, path)?
+            .map(|entry| entry.has_conflict)
+            .unwrap_or(false))
+    })?;
+    Ok(ServerMessage::FsChangeDetected {
         repo_id: Some(repo_id),
         branch: None,
         scope_nonce: None,
         path: path.to_string(),
         change_type: change_type.to_string(),
         has_conflict,
-    }
+    })
 }

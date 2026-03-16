@@ -18,12 +18,4 @@ impl SyncManager {
         super::scan::scan_local_repo(&self.repo, &self.vfs, &repo_name)?;
         Ok(Some((repo_id, repo_path)))
     }
-
-    pub fn local_repo_id(&self) -> Option<RepoId> {
-        self.repo
-            .get_repo_info()
-            .ok()
-            .flatten()
-            .map(|info| info.uuid)
-    }
 }

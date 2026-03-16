@@ -94,7 +94,7 @@ impl<'a> FsEventHandler<'a> {
             self.repo_id,
             repo_path,
             "added",
-        ));
+        )?);
         Ok(msgs)
     }
 
@@ -133,7 +133,7 @@ impl<'a> FsEventHandler<'a> {
             self.repo_id,
             repo_path,
             "deleted",
-        ));
+        )?);
         Ok(msgs)
     }
 
@@ -173,7 +173,7 @@ impl<'a> FsEventHandler<'a> {
             self.repo_id,
             repo_path,
             "modified",
-        ));
+        )?);
         Ok(msgs)
     }
 
@@ -202,8 +202,8 @@ impl<'a> FsEventHandler<'a> {
             doc_id,
         )?;
         Ok(vec![
-            super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted"),
-            super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added"),
+            super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted")?,
+            super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added")?,
         ])
     }
 }
