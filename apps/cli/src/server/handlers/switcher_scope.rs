@@ -43,11 +43,12 @@ fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) 
     if session.active_repo_id.is_some() {
         return false;
     }
+    if code == ServerErrorCode::ScRepoContextInvalid {
+        return session.active_branch.is_none();
+    }
     matches!(
         code,
-        ServerErrorCode::StorageNotFound
-            | ServerErrorCode::SyncRepoUnbound
-            | ServerErrorCode::ScRepoContextInvalid
+        ServerErrorCode::StorageNotFound | ServerErrorCode::SyncRepoUnbound
     )
 }
 

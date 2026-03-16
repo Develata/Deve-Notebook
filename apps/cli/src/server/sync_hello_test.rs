@@ -171,3 +171,37 @@ async fn sync_hello_fails_closed_when_shadow_binding_fails() -> anyhow::Result<(
     assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_non_browser_repo_rebinding() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = uuid::Uuid::new_v4();
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.bind_repo(repo_id);
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
+            assert!(
+                error.detail.as_deref().is_some_and(|detail| detail.contains("requested_repo_id")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.bound_repo_id, Some(repo_id));
+    assert_eq!(session.active_repo_id, Some(repo_id));
+    assert_eq!(session.sync_scope_nonce(), None);
+    Ok(())
+}

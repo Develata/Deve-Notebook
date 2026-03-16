@@ -162,6 +162,28 @@ fn validate_scope(
     scope_nonce: u64,
 ) -> Result<(), ServerError> {
     if !session.is_browser_session() {
+        if let Some(bound_repo_id) = session.bound_repo_id
+            && bound_repo_id != repo_id
+        {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                format!(
+                    "SyncHello repo mismatch: bound_repo_id={}, requested_repo_id={}",
+                    bound_repo_id, repo_id
+                ),
+            ));
+        }
+        if let Some(active_repo_id) = session.active_repo_id
+            && active_repo_id != repo_id
+        {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                format!(
+                    "SyncHello repo mismatch: active_repo_id={}, requested_repo_id={}",
+                    active_repo_id, repo_id
+                ),
+            ));
+        }
         return Ok(());
     }
     if session.active_branch.is_some() || session.active_repo_id != Some(repo_id) {
