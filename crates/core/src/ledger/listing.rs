@@ -93,16 +93,16 @@ impl RepoListing for RepoManager {
     fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
         for peer_id in shadow_peer_dirs(&self.remotes_dir())? {
-            match self.scan_remote_repo_entries_without_repair(&peer_id) {
-                Ok(entries) if !entries.is_empty() => peers.push(peer_id),
-                Ok(_) => {}
-                Err(err) => {
-                    tracing::warn!(
-                        "Skipping unreadable shadow peer directory {} while listing shadows: {:?}",
-                        peer_id,
-                        err
-                    );
-                }
+            let entries = self.scan_remote_repo_entries_without_repair(&peer_id)?;
+            if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+                return Err(anyhow!(
+                    "Broken shadow peer {} while listing shadows: unreadable repo {}",
+                    peer_id,
+                    entry.stem
+                ));
+            }
+            if !entries.is_empty() {
+                peers.push(peer_id);
             }
         }
         peers.sort();

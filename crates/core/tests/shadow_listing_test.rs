@@ -18,7 +18,7 @@ fn list_shadows_ignores_empty_peer_dirs() {
 }
 
 #[test]
-fn list_shadows_keeps_broken_peer_dirs_visible() {
+fn list_shadows_fail_closed_on_broken_peer_dirs() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let good_peer = PeerId::new("peer-good");
@@ -35,12 +35,14 @@ fn list_shadows_keeps_broken_peer_dirs_visible() {
     std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
     std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
 
-    let shadows = repo.list_shadows_on_disk().expect("list shadows");
-    assert_eq!(shadows, vec![bad_peer, good_peer]);
+    let err = repo
+        .list_shadows_on_disk()
+        .expect_err("broken shadow peer must fail closed");
+    assert!(err.to_string().contains("Broken shadow peer peer-bad"));
 }
 
 #[test]
-fn broken_shadow_repos_stay_hidden_from_repo_listing_and_selector_recovery() {
+fn broken_shadow_repos_fail_closed_in_repo_listing_and_stay_hidden_from_selector_recovery() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let peer_id = PeerId::new("peer-mixed");
@@ -60,9 +62,12 @@ fn broken_shadow_repos_stay_hidden_from_repo_listing_and_selector_recovery() {
     )
     .expect("seed broken shadow");
 
-    assert_eq!(
-        repo.list_repos(Some(&peer_id)).expect("list repos"),
-        vec!["notes"]
+    let err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("broken shadow repo listing must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Broken shadow repo broken for peer peer-mixed")
     );
     assert_eq!(
         repo.find_remote_repo_selector(&peer_id, "broken")
@@ -72,7 +77,7 @@ fn broken_shadow_repos_stay_hidden_from_repo_listing_and_selector_recovery() {
 }
 
 #[test]
-fn switchable_shadow_list_hides_peers_with_only_broken_repos() {
+fn switchable_shadow_list_fails_closed_on_broken_repos() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let good_peer = PeerId::new("peer-good");
@@ -89,10 +94,12 @@ fn switchable_shadow_list_hides_peers_with_only_broken_repos() {
     std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
     std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
 
-    assert_eq!(
-        repo.list_switchable_shadows_on_disk()
-            .expect("list switchable shadows"),
-        vec![good_peer]
+    let err = repo
+        .list_switchable_shadows_on_disk()
+        .expect_err("broken shadow peer must fail switchable listing");
+    assert!(
+        err.to_string()
+            .contains("Broken shadow repo broken for peer peer-bad")
     );
 }
 
@@ -170,7 +177,7 @@ fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows
 }
 
 #[test]
-fn pure_shadow_scan_does_not_resurrect_loaded_but_corrupted_shadow_files() {
+fn pure_shadow_scan_fails_closed_and_does_not_resurrect_loaded_corrupted_shadow_files() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let peer_id = PeerId::new("peer-corrupt");
@@ -190,11 +197,12 @@ fn pure_shadow_scan_does_not_resurrect_loaded_but_corrupted_shadow_files() {
     )
     .expect("poison on-disk shadow");
 
+    let err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("corrupted shadow list must fail closed");
     assert!(
-        repo.list_repos(Some(&peer_id))
-            .expect("list shadow repos after corruption")
-            .is_empty(),
-        "loaded in-memory metadata must not resurrect an unreadable shadow file",
+        err.to_string()
+            .contains("Broken shadow repo notes for peer peer-corrupt")
     );
     assert!(
         repo.find_remote_repo_selector(&peer_id, "notes")

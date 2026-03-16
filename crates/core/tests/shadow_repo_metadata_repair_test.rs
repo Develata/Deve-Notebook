@@ -108,12 +108,10 @@ fn init_survives_broken_shadow_catalogs() {
             .name,
         "default"
     );
-    assert!(
-        repaired
-            .list_shadows_on_disk()
-            .expect("list shadows after init")
-            .contains(&peer_id)
-    );
+    let err = repaired
+        .list_shadows_on_disk()
+        .expect_err("broken shadow peer must fail listing after init");
+    assert!(err.to_string().contains("Broken shadow peer peer-bad"));
 }
 
 #[test]
@@ -240,9 +238,8 @@ fn remote_catalog_repair_skips_broken_peer_and_repairs_healthy_one() {
             .expect("list healthy peer"),
         vec![info.uuid.to_string()]
     );
-    assert!(
-        repo.list_shadows_on_disk()
-            .expect("list peers")
-            .contains(&bad_peer)
-    );
+    let err = repo
+        .list_shadows_on_disk()
+        .expect_err("broken peer must fail shadow listing");
+    assert!(err.to_string().contains("Broken shadow peer peer-bad"));
 }

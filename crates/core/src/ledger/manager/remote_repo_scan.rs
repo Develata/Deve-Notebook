@@ -10,7 +10,7 @@ use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 
 impl RepoManager {
@@ -188,15 +188,21 @@ impl RepoManager {
             .scan_remote_repo_entries(peer_id)?
             .into_iter()
             .collect::<Vec<_>>();
+        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+            return Err(anyhow!(
+                "Broken shadow repo {} for peer {} while listing repos",
+                entry.stem,
+                peer_id
+            ));
+        }
         let duplicate_ids = duplicate_entry_ids(&entries);
         let entries = entries
             .into_iter()
             .filter(|entry| {
-                entry.is_readable()
-                    && entry
-                        .info
-                        .as_ref()
-                        .is_some_and(|info| !duplicate_ids.contains(&info.uuid))
+                entry
+                    .info
+                    .as_ref()
+                    .is_some_and(|info| !duplicate_ids.contains(&info.uuid))
             })
             .collect::<Vec<_>>();
         let mut counts = HashMap::<String, usize>::new();
