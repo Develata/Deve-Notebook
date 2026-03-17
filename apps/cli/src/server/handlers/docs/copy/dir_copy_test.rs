@@ -17,6 +17,7 @@ async fn rejects_dirty_node_consistency_report() {
             missing_nodes: vec![(DocId::new(), "notes/missing.md".into())],
             orphan_nodes: vec![(NodeId::new(), "notes/orphan.md".into())],
         },
+        None,
     ));
 
     match uni_rx.recv().await {

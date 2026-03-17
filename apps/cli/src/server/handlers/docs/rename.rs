@@ -46,11 +46,15 @@ pub async fn handle_rename_doc(
     let src = match resolve_node_target(state, &scope, &old_path) {
         Ok(Some(target)) => target,
         Ok(None) => {
-            errors::storage_not_found(ch, format!("Source not found: {}", old_path));
+            errors::storage_not_found_scoped(
+                ch,
+                format!("Source not found: {}", old_path),
+                scope_nonce,
+            );
             return;
         }
         Err(err) => {
-            errors::classified_failure(ch, err.to_string());
+            errors::classified_failure_scoped(ch, err.to_string(), scope_nonce);
             return;
         }
     };
@@ -63,9 +67,9 @@ pub async fn handle_rename_doc(
 
     // 2. 路径校验
     let valid = if src.kind == NodeKind::Dir {
-        validate_folder_path(&dst_name, ch)
+        validate_folder_path(&dst_name, ch, scope_nonce)
     } else {
-        validate_file_path(&dst_name, ch)
+        validate_file_path(&dst_name, ch, scope_nonce)
     };
     if !valid {
         return;
@@ -86,7 +90,11 @@ pub async fn handle_rename_doc(
 
     if dst.exists() {
         tracing::error!("重命名失败: 目标已存在: {:?}", dst);
-        errors::storage_conflict(ch, format!("Destination exists: {}", dst_name));
+        errors::storage_conflict_scoped(
+            ch,
+            format!("Destination exists: {}", dst_name),
+            scope_nonce,
+        );
         return;
     }
 

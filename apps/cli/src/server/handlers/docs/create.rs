@@ -44,9 +44,9 @@ pub async fn handle_create_doc(
     let filename = normalize_name(name);
 
     let valid = if filename.ends_with('/') {
-        validate_folder_path(&filename, ch)
+        validate_folder_path(&filename, ch, scope_nonce)
     } else {
-        validate_file_path(&filename, ch)
+        validate_file_path(&filename, ch, scope_nonce)
     };
     if !valid {
         return;

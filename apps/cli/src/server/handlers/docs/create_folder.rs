@@ -17,10 +17,11 @@ pub async fn handle_folder_create(
     path: &std::path::Path,
     filename: &str,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let folder_path = filename.trim_end_matches('/');
     if path.exists() && !path.is_dir() {
         tracing::error!("目标路径不是目录: {:?}", path);
-        errors::storage_conflict(ch, "Target path is not a directory");
+        errors::storage_conflict_scoped(ch, "Target path is not a directory", scope_nonce);
         return;
     }
     if let Err(e) = state.repo.apply_dir_create_structure_in_local_repo(
@@ -29,7 +30,11 @@ pub async fn handle_folder_create(
         "local_create",
     ) {
         tracing::error!("目录结构事实追加失败: {:?}", e);
-        errors::storage_persist_failed(ch, format!("Failed to create folder: {}", e));
+        errors::storage_persist_failed_scoped(
+            ch,
+            format!("Failed to create folder: {}", e),
+            scope_nonce,
+        );
         return;
     }
     if let Err(e) = state
@@ -37,17 +42,19 @@ pub async fn handle_folder_create(
         .rebuild_projection_local_repo(&scope.repo_name)
     {
         tracing::error!("目录创建后重建投影失败: {:?}", e);
-        errors::storage_persist_failed(
+        errors::storage_persist_failed_scoped(
             ch,
             format!("Failed to rebuild created folder projection: {}", e),
+            scope_nonce,
         );
         return;
     }
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
         tracing::error!("目录创建后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed(
+        errors::projection_refresh_failed_scoped(
             ch,
             format!("Failed to refresh created folder view: {}", e),
+            scope_nonce,
         );
         return;
     }

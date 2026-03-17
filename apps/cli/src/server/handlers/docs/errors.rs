@@ -12,8 +12,12 @@ fn send(
     ch.send_protocol_error_with_scope_nonce(ServerError::with_detail(code, detail), scope_nonce);
 }
 
-pub(super) fn request_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::RequestFailed, detail, None);
+pub(super) fn request_failed_scoped(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(ch, ServerErrorCode::RequestFailed, detail, scope_nonce);
 }
 
 pub(super) fn remote_branch_readonly_scoped(ch: &DualChannel, scope_nonce: Option<u64>) {
@@ -23,20 +27,46 @@ pub(super) fn remote_branch_readonly_scoped(ch: &DualChannel, scope_nonce: Optio
     );
 }
 
-pub(super) fn storage_not_found(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StorageNotFound, detail, None);
+pub(super) fn storage_not_found_scoped(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(ch, ServerErrorCode::StorageNotFound, detail, scope_nonce);
 }
 
-pub(super) fn storage_conflict(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StorageConflict, detail, None);
+pub(super) fn storage_conflict_scoped(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(ch, ServerErrorCode::StorageConflict, detail, scope_nonce);
 }
 
-pub(super) fn storage_persist_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StoragePersistFailed, detail, None);
+pub(super) fn storage_persist_failed_scoped(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(
+        ch,
+        ServerErrorCode::StoragePersistFailed,
+        detail,
+        scope_nonce,
+    );
 }
 
-pub(super) fn projection_refresh_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StoragePersistFailed, detail, None);
+pub(super) fn projection_refresh_failed_scoped(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(
+        ch,
+        ServerErrorCode::StoragePersistFailed,
+        detail,
+        scope_nonce,
+    );
 }
 
 pub(super) fn classified_failure_scoped(
@@ -46,10 +76,6 @@ pub(super) fn classified_failure_scoped(
 ) {
     let detail = detail.into();
     send(ch, classify_failure_code(&detail), detail, scope_nonce);
-}
-
-pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
-    classified_failure_scoped(ch, detail, None);
 }
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {

@@ -37,7 +37,7 @@ pub async fn handle_copy_doc(
             return;
         }
     };
-    let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path) {
+    let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path, scope_nonce) {
         Some(paths) => paths,
         None => return,
     };
@@ -48,6 +48,7 @@ pub async fn handle_copy_doc(
                 state,
                 ch,
                 scope: &scope,
+                scope_nonce,
             },
             &paths.src,
             &paths.dst,
@@ -60,6 +61,7 @@ pub async fn handle_copy_doc(
                 state,
                 ch,
                 scope: &scope,
+                scope_nonce,
             },
             &paths,
             &src_path,
@@ -72,7 +74,11 @@ pub async fn handle_copy_doc(
 
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
         tracing::error!("复制后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed(ch, format!("Failed to refresh copied docs view: {}", e));
+        errors::projection_refresh_failed_scoped(
+            ch,
+            format!("Failed to refresh copied docs view: {}", e),
+            scope_nonce,
+        );
         return;
     }
     notify_fs_refresh(ch, scope.repo_id, &dest_path, "copied");
@@ -83,10 +89,15 @@ fn copy_dir_on_disk(
     src: &std::path::Path,
     dst: &std::path::Path,
     src_path: &str,
+    scope_nonce: Option<u64>,
 ) -> bool {
     if let Err(e) = copy_dir_assets_only(src, dst) {
         tracing::error!("目录复制失败 {} -> {:?}: {:?}", src_path, dst, e);
-        errors::storage_persist_failed(ch, format!("Directory copy failed: {}", e));
+        errors::storage_persist_failed_scoped(
+            ch,
+            format!("Directory copy failed: {}", e),
+            scope_nonce,
+        );
         return false;
     }
     true

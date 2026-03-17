@@ -15,6 +15,7 @@ pub(super) async fn handle_dir_rename(
     old_path: &str,
     dst_name: &str,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     match state.repo.apply_dir_rename_structure_in_local_repo(
         &scope.repo_name,
         old_path,
@@ -23,12 +24,20 @@ pub(super) async fn handle_dir_rename(
     ) {
         Ok(Some(_)) => {}
         Ok(None) => {
-            errors::storage_not_found(ch, format!("Source not tracked: {}", old_path));
+            errors::storage_not_found_scoped(
+                ch,
+                format!("Source not tracked: {}", old_path),
+                scope_nonce,
+            );
             return;
         }
         Err(e) => {
             tracing::error!("目录重命名结构事实失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to rename folder: {}", e));
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to rename folder: {}", e),
+                scope_nonce,
+            );
             return;
         }
     };
@@ -37,17 +46,19 @@ pub(super) async fn handle_dir_rename(
         .rebuild_projection_local_repo(&scope.repo_name)
     {
         tracing::error!("目录重命名后重建投影失败: {:?}", e);
-        errors::storage_persist_failed(
+        errors::storage_persist_failed_scoped(
             ch,
             format!("Failed to rebuild renamed directory projection: {}", e),
+            scope_nonce,
         );
         return;
     }
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
         tracing::error!("目录重命名后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed(
+        errors::projection_refresh_failed_scoped(
             ch,
             format!("Failed to refresh renamed folder view: {}", e),
+            scope_nonce,
         );
         return;
     }

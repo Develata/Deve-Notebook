@@ -20,33 +20,42 @@ pub(super) fn prepare_copy_paths(
     scope: &ResolvedRepo,
     src_path: &str,
     dest_path: &str,
+    scope_nonce: Option<u64>,
 ) -> Option<CopyPaths> {
     let src = match resolve_node_target(state, scope, src_path) {
         Ok(Some(src)) => src,
         Ok(None) => {
-            errors::storage_not_found(ch, format!("Source not found: {}", src_path));
+            errors::storage_not_found_scoped(
+                ch,
+                format!("Source not found: {}", src_path),
+                scope_nonce,
+            );
             return None;
         }
         Err(err) => {
-            errors::classified_failure(ch, err.to_string());
+            errors::classified_failure_scoped(ch, err.to_string(), scope_nonce);
             return None;
         }
     };
     let dst = match local_repo_path(state, scope, dest_path) {
         Ok(path) => path,
         Err(err) => {
-            errors::classified_failure(ch, err.to_string());
+            errors::classified_failure_scoped(ch, err.to_string(), scope_nonce);
             return None;
         }
     };
     if dst.exists() {
-        errors::storage_conflict(ch, format!("Destination exists: {}", dest_path));
+        errors::storage_conflict_scoped(
+            ch,
+            format!("Destination exists: {}", dest_path),
+            scope_nonce,
+        );
         return None;
     }
     let valid = if src.kind == NodeKind::Dir {
-        validate_folder_path(dest_path, ch)
+        validate_folder_path(dest_path, ch, scope_nonce)
     } else {
-        validate_file_path(dest_path, ch)
+        validate_file_path(dest_path, ch, scope_nonce)
     };
     if !valid {
         return None;
@@ -57,11 +66,19 @@ pub(super) fn prepare_copy_paths(
             .sync_manager
             .rebuild_projection_local_repo(&scope.repo_name)
     {
-        errors::storage_persist_failed(ch, format!("Failed to rebuild source projection: {}", err));
+        errors::storage_persist_failed_scoped(
+            ch,
+            format!("Failed to rebuild source projection: {}", err),
+            scope_nonce,
+        );
         return None;
     }
     if src.kind == NodeKind::Dir && !src.abs_path.exists() {
-        errors::storage_not_found(ch, format!("Source projection missing: {}", src_path));
+        errors::storage_not_found_scoped(
+            ch,
+            format!("Source projection missing: {}", src_path),
+            scope_nonce,
+        );
         return None;
     }
     Some(CopyPaths {

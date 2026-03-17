@@ -18,9 +18,14 @@ pub async fn handle_file_create(
     path: &std::path::Path,
     filename: &str,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     if path.exists() {
         tracing::error!("目标路径已存在，拒绝从磁盘回填创建: {:?}", path);
-        errors::storage_conflict(ch, format!("Target already exists: {}", filename));
+        errors::storage_conflict_scoped(
+            ch,
+            format!("Target already exists: {}", filename),
+            scope_nonce,
+        );
         return;
     }
     match state
@@ -28,28 +33,41 @@ pub async fn handle_file_create(
         .tracked_docid_or_legacy_error_in_local_repo(&scope.repo_name, filename)
     {
         Ok(Some(_)) => {
-            errors::storage_conflict(ch, format!("Target already tracked: {}", filename));
+            errors::storage_conflict_scoped(
+                ch,
+                format!("Target already tracked: {}", filename),
+                scope_nonce,
+            );
             return;
         }
         Ok(None) => {}
         Err(e) => {
             tracing::error!("检查文件跟踪状态失败: {:?}", e);
-            errors::classified_failure(ch, format!("Failed to check create target: {}", e));
+            errors::classified_failure_scoped(
+                ch,
+                format!("Failed to check create target: {}", e),
+                scope_nonce,
+            );
             return;
         }
     }
 
     if let Err(e) = create_file_from_content(state, scope, filename, "", "local_create") {
         tracing::error!("文件创建失败: {:?}", e);
-        errors::storage_persist_failed(ch, format!("Failed to create file: {}", e));
+        errors::storage_persist_failed_scoped(
+            ch,
+            format!("Failed to create file: {}", e),
+            scope_nonce,
+        );
         return;
     }
 
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
         tracing::error!("文件创建后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed(
+        errors::projection_refresh_failed_scoped(
             ch,
             format!("Failed to refresh created file view: {}", e),
+            scope_nonce,
         );
         return;
     }

@@ -12,7 +12,11 @@ pub(super) fn copy_file(
     dest_path: &str,
 ) -> bool {
     let Some(doc_id) = paths.src_doc_id else {
-        errors::storage_not_found(ctx.ch, format!("Source doc missing: {}", src_path));
+        errors::storage_not_found_scoped(
+            ctx.ch,
+            format!("Source doc missing: {}", src_path),
+            ctx.scope_nonce,
+        );
         return false;
     };
     let content = match ctx
@@ -26,7 +30,11 @@ pub(super) fn copy_file(
         }
         Err(err) => {
             tracing::error!("读取复制源失败 {}: {:?}", src_path, err);
-            errors::storage_persist_failed(ctx.ch, format!("Failed to load copy source: {}", err));
+            errors::storage_persist_failed_scoped(
+                ctx.ch,
+                format!("Failed to load copy source: {}", err),
+                ctx.scope_nonce,
+            );
             return false;
         }
     };
@@ -35,9 +43,10 @@ pub(super) fn copy_file(
             Ok(doc_id) => doc_id,
             Err(err) => {
                 tracing::error!("复制文档注册失败 {}: {:?}", dest_path, err);
-                errors::storage_persist_failed(
+                errors::storage_persist_failed_scoped(
                     ctx.ch,
                     format!("Failed to register copied file: {}", err),
+                    ctx.scope_nonce,
                 );
                 return false;
             }

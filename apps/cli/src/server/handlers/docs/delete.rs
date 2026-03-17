@@ -43,11 +43,15 @@ pub async fn handle_delete_doc(
     let target = match resolve_node_target(state, &scope, &path) {
         Ok(Some(target)) => target,
         Ok(None) => {
-            errors::storage_not_found(ch, format!("Source not found: {}", path));
+            errors::storage_not_found_scoped(
+                ch,
+                format!("Source not found: {}", path),
+                scope_nonce,
+            );
             return;
         }
         Err(err) => {
-            errors::classified_failure(ch, err.to_string());
+            errors::classified_failure_scoped(ch, err.to_string(), scope_nonce);
             return;
         }
     };
@@ -60,7 +64,11 @@ pub async fn handle_delete_doc(
             "local_delete",
         ) {
             tracing::error!("目录删除结构事实失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to delete directory: {}", e));
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to delete directory: {}", e),
+                scope_nonce,
+            );
             return;
         }
         if let Err(e) = state
@@ -68,9 +76,10 @@ pub async fn handle_delete_doc(
             .rebuild_projection_local_repo(&scope.repo_name)
         {
             tracing::error!("目录删除后重建投影失败: {:?}", e);
-            errors::storage_persist_failed(
+            errors::storage_persist_failed_scoped(
                 ch,
                 format!("Failed to rebuild deleted directory projection: {}", e),
+                scope_nonce,
             );
             return;
         }
@@ -82,7 +91,11 @@ pub async fn handle_delete_doc(
             "local_delete",
         ) {
             tracing::error!("文件删除结构事实失败: {:?}", e);
-            errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to delete file: {}", e),
+                scope_nonce,
+            );
             return;
         }
         if let Err(e) = state
@@ -90,16 +103,21 @@ pub async fn handle_delete_doc(
             .remove_projection_path_in_local_repo(&scope.repo_name, &target.repo_path)
         {
             tracing::error!("删除文件投影失败 {}: {:?}", target.repo_path, e);
-            errors::storage_persist_failed(ch, format!("Failed to delete file: {}", e));
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to delete file: {}", e),
+                scope_nonce,
+            );
             return;
         }
     }
 
     if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
         tracing::error!("删除后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed(
+        errors::projection_refresh_failed_scoped(
             ch,
             format!("Failed to refresh deleted node view: {}", e),
+            scope_nonce,
         );
         return;
     }

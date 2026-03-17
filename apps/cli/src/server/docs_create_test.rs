@@ -92,3 +92,27 @@ async fn create_doc_rejects_stale_browser_scope_with_scoped_error() -> anyhow::R
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_rejects_invalid_browser_path_with_scoped_error() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+    session.set_scope_nonce(Some(23));
+
+    handle_create_doc(&state, &ch, &mut session, "../escape.md".into()).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(scope_nonce, Some(23));
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}
