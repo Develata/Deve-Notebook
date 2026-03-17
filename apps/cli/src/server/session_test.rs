@@ -1,4 +1,5 @@
-use super::{WsSession, active_db_matches_scope};
+use super::WsSession;
+use super::session_scope::active_db_matches_scope;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use std::sync::Arc;

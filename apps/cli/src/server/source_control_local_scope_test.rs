@@ -1,4 +1,4 @@
-use super::handlers::source_control::{handle_commit, handle_get_doc_diff};
+use super::handlers::source_control::handle_get_doc_diff;
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
@@ -234,52 +234,6 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
             assert_eq!(scope_nonce, Some(19));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    Ok(())
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
-    let (dir, state) = build_state()?;
-    write_workspace_file(&dir, "notes/a.md", "hello");
-    state
-        .repo
-        .run_on_local_repo(state.repo.local_repo_name(), |db| {
-            pending_fs::upsert(
-                db,
-                &PendingFsEntry {
-                    path: "notes/a.md".into(),
-                    renamed_from: None,
-                    doc_id: None,
-                    change_type: ChangeStatus::Added,
-                    content_hash: pending_fs::content_hash("hello"),
-                    detected_at: 1,
-                    has_conflict: false,
-                },
-            )
-        })?;
-    state.repo.stage_pending("notes/a.md")?;
-
-    let (uni_tx, _uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut rx = state.tx.subscribe();
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.switch_repo("default".into(), None);
-    session.set_scope_nonce(Some(23));
-
-    handle_commit(&state, &ch, &mut session, "initial".into()).await;
-
-    match rx.recv().await.expect("broadcast ack") {
-        ServerMessage::CommitAck {
-            repo_id,
-            scope_nonce,
-            ..
-        } => {
-            assert_eq!(repo_id, state.repo.get_repo_info()?.map(|info| info.uuid));
-            assert_eq!(scope_nonce, Some(23));
-        }
-        other => panic!("expected CommitAck, got {:?}", other),
     }
     Ok(())
 }

@@ -75,6 +75,8 @@ mod source_control_commit_diff_test;
 #[cfg(test)]
 mod source_control_http_test;
 #[cfg(test)]
+mod source_control_local_commit_scope_test;
+#[cfg(test)]
 mod source_control_local_scope_test;
 pub mod source_control_proxy;
 #[cfg(test)]
@@ -94,6 +96,8 @@ mod switcher_branch_scope_test_extra;
 mod switcher_branch_scope_test_fail_closed;
 #[cfg(test)]
 mod switcher_branch_test;
+#[cfg(test)]
+mod switcher_current_scope_remote_test;
 #[cfg(test)]
 mod switcher_current_scope_test;
 #[cfg(test)]
