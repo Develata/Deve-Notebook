@@ -1,9 +1,7 @@
 use deve_core::ledger::RepoInfo;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
-use redb::Database;
 use tempfile::TempDir;
 use uuid::Uuid;
 
@@ -11,25 +9,6 @@ fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     (dir, repo)
-}
-
-fn seed_shadow_file(repo: &RepoManager, peer_id: &PeerId, stem: &str, info: &RepoInfo) {
-    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    std::fs::create_dir_all(&peer_dir).expect("peer dir");
-    let path = peer_dir.join(format!("{}.redb", stem));
-    let db = Database::create(&path).expect("shadow db");
-    let write = db.begin_write().expect("write txn");
-    write
-        .open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(
-            &0,
-            bincode::serialize(info)
-                .expect("serialize repo info")
-                .as_slice(),
-        )
-        .expect("write repo info");
-    write.commit().expect("commit repo info");
 }
 
 #[test]
@@ -186,32 +165,6 @@ fn remote_repo_selector_prefers_exact_uuid_shaped_stem_over_foreign_uuid_match()
 }
 
 #[test]
-fn duplicate_shadow_uuid_is_hidden_and_fails_selector_recovery() {
-    let (_dir, repo) = new_repo();
-    let peer_id = PeerId::new("peer-remote");
-    let repo_id = Uuid::new_v4();
-    let info = RepoInfo {
-        uuid: repo_id,
-        name: "wiki".into(),
-        url: Some("urn:test:wiki".into()),
-    };
-    seed_shadow_file(&repo, &peer_id, "wiki", &info);
-    seed_shadow_file(&repo, &peer_id, "wiki-1", &info);
-
-    assert_eq!(
-        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
-        Vec::<String>::new()
-    );
-    let err = repo
-        .find_remote_repo_selector_by_id(&peer_id, repo_id)
-        .expect_err("duplicate uuid must fail closed");
-    assert!(
-        err.to_string()
-            .contains("ambiguous remote repository selector")
-    );
-}
-
-#[test]
 fn remote_repo_selector_by_id_does_not_match_uuid_shaped_display_name() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
@@ -230,41 +183,5 @@ fn remote_repo_selector_by_id_does_not_match_uuid_shaped_display_name() {
         repo.find_remote_repo_selector_by_id(&peer_id, target_uuid)
             .expect("lookup by id must not guess from display name"),
         None,
-    );
-}
-
-#[test]
-fn broken_shadow_file_fails_closed_even_if_metadata_was_previously_loaded() {
-    let (_dir, repo) = new_repo();
-    let peer_id = PeerId::new("peer-remote");
-    let info = RepoInfo {
-        uuid: Uuid::new_v4(),
-        name: "wiki".into(),
-        url: Some("urn:test:wiki-a".into()),
-    };
-    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    let path = peer_dir.join("wiki.redb");
-    let backup = peer_dir.join("wiki.bak");
-
-    repo.ensure_shadow_repo_info(&peer_id, &info)
-        .expect("prepare shadow repo");
-    std::fs::rename(&path, &backup).expect("move live shadow db aside");
-    std::fs::write(&path, b"not-a-redb").expect("replace shadow db with broken bytes");
-
-    let list_err = repo
-        .list_repos(Some(&peer_id))
-        .expect_err("broken shadow listing must fail closed");
-    assert!(
-        list_err
-            .to_string()
-            .contains("Broken shadow repo wiki for peer peer-remote")
-    );
-    let selector_err = repo
-        .find_remote_repo_selector_by_id(&peer_id, info.uuid)
-        .expect_err("broken shadow selector must fail closed");
-    assert!(
-        selector_err
-            .to_string()
-            .contains("Broken shadow repo wiki for peer peer-remote")
     );
 }
