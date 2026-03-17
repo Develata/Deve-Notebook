@@ -53,7 +53,7 @@ fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) 
 }
 
 fn recover_local_repo_url_from_hint(
-    state: &Arc<AppState>,
+    _state: &Arc<AppState>,
     session: &WsSession,
 ) -> Result<Option<String>, ServerError> {
     if session.active_branch.is_some() {
@@ -62,18 +62,11 @@ fn recover_local_repo_url_from_hint(
     let Some(raw_name) = session.active_repo.as_deref() else {
         return Ok(None);
     };
-    let Ok(repo_id) = uuid::Uuid::parse_str(raw_name) else {
-        return Ok(None);
-    };
-    let Some(repo_name) = state
-        .repo
-        .find_local_repo_name_by_id(repo_id)
-        .map_err(|err| map_repo_scope_error(anyhow::anyhow!(err.to_string())))?
-    else {
-        return Ok(None);
-    };
-    state
-        .repo
-        .get_repo_url(None, &repo_name)
-        .map_err(|err| map_repo_scope_error(anyhow::anyhow!(err.to_string())))
+    if uuid::Uuid::parse_str(raw_name).is_ok() {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            format!("Local repository selector not resolved for {}", raw_name),
+        ));
+    }
+    Ok(None)
 }
