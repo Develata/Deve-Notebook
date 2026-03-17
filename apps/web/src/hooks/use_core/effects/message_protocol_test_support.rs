@@ -101,47 +101,4 @@ impl ProtocolSignalHarness {
         assert_eq!(self.doc_diff_request_id.get_untracked(), None);
         assert_eq!(self.commit_diff_request_id.get_untracked(), None);
     }
-
-    pub fn assert_all_requests_pending(&self) {
-        assert_eq!(
-            self.shadow_list_request_id.get_untracked().as_deref(),
-            Some("shadow-1")
-        );
-        assert_eq!(
-            self.repo_list_request_id.get_untracked().as_deref(),
-            Some("repo-1")
-        );
-        assert_eq!(
-            self.doc_list_request_id.get_untracked().as_deref(),
-            Some("doc-1")
-        );
-        assert_eq!(
-            self.tree_request_id.get_untracked().as_deref(),
-            Some("tree-1")
-        );
-        assert_eq!(
-            self.sync_mode_request_id.get_untracked().as_deref(),
-            Some("sync-1")
-        );
-        assert_eq!(
-            self.pending_ops_request_id.get_untracked().as_deref(),
-            Some("pending-1")
-        );
-        assert_eq!(
-            self.changes_request_id.get_untracked().as_deref(),
-            Some("changes-1")
-        );
-        assert_eq!(
-            self.commit_history_request_id.get_untracked().as_deref(),
-            Some("history-1")
-        );
-        assert_eq!(
-            self.doc_diff_request_id.get_untracked().as_deref(),
-            Some("diff-1")
-        );
-        assert_eq!(
-            self.commit_diff_request_id.get_untracked().as_deref(),
-            Some("commit-diff-1")
-        );
-    }
 }

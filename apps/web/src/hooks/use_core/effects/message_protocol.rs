@@ -47,11 +47,11 @@ pub fn handle_protocol_error(
 }
 
 fn clear_failed_scope_switch(
-    code: ServerErrorCode,
+    _code: ServerErrorCode,
     switch_nonce: Option<u64>,
     signals: ProtocolControlSignals,
 ) {
-    if !is_scope_switch_error(code) || switch_nonce.is_none() {
+    if switch_nonce.is_none() {
         return;
     }
     let switch_nonce = switch_nonce.expect("checked above");
@@ -85,15 +85,6 @@ fn is_auth_error(code: ServerErrorCode) -> bool {
     matches!(
         code,
         ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing
-    )
-}
-
-fn is_scope_switch_error(code: ServerErrorCode) -> bool {
-    matches!(
-        code,
-        ServerErrorCode::ScRepoNotSelected
-            | ServerErrorCode::ScRepoContextInvalid
-            | ServerErrorCode::SyncRepoUnbound
     )
 }
 

@@ -13,6 +13,8 @@ fn switch_errors_clear_pending_scope_switches_only_for_matching_nonce() {
         ServerErrorCode::ScRepoContextInvalid,
         ServerErrorCode::ScRepoNotSelected,
         ServerErrorCode::SyncRepoUnbound,
+        ServerErrorCode::StoragePersistFailed,
+        ServerErrorCode::StorageDbLocked,
     ] {
         let harness = protocol_signal_harness(
             Some(PendingBranchTarget::Local),
@@ -66,12 +68,10 @@ fn stale_or_missing_nonce_keeps_pending_scope_switches() {
 }
 
 #[test]
-fn non_switch_errors_keep_pending_scope_switches() {
+fn matching_switch_nonce_always_clears_pending_scope_switches() {
     for code in [
         ServerErrorCode::AuthTokenExpired,
         ServerErrorCode::RequestFailed,
-        ServerErrorCode::StoragePersistFailed,
-        ServerErrorCode::StorageDbLocked,
     ] {
         let harness = protocol_signal_harness(
             Some(PendingBranchTarget::Local),
@@ -80,14 +80,8 @@ fn non_switch_errors_keep_pending_scope_switches() {
             Some(7),
         );
         clear_failed_scope_switch(code, Some(7), harness.control());
-        assert_eq!(
-            harness.pending_branch_switch.get_untracked(),
-            Some(PendingBranchTarget::Local)
-        );
-        assert_eq!(
-            harness.pending_repo_switch.get_untracked().as_deref(),
-            Some("wiki")
-        );
-        harness.assert_all_requests_pending();
+        harness.assert_all_requests_cleared();
+        assert_eq!(harness.pending_branch_switch.get_untracked(), None);
+        assert_eq!(harness.pending_repo_switch.get_untracked(), None);
     }
 }
