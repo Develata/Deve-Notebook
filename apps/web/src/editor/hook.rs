@@ -124,7 +124,9 @@ pub fn use_editor(
             return;
         }
         if ws_key.status.get() == ConnectionStatus::Connected {
-            ws_key.send(ClientMessage::RequestKey);
+            ws_key.send(ClientMessage::RequestKey {
+                scope_nonce: Some(core.current_scope_nonce.get()),
+            });
         }
     });
 

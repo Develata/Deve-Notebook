@@ -215,7 +215,10 @@ pub enum ClientMessage {
         #[serde(default)]
         scope_nonce: Option<u64>,
     },
-    RequestKey,
+    RequestKey {
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
     ResolveConflict {
         target: ScPathTarget,
         resolution: crate::source_control::ConflictResolution,

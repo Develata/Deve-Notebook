@@ -155,7 +155,15 @@ pub(super) async fn route_core(
         ClientMessage::Ping => {
             ch.unicast(deve_core::protocol::ServerMessage::Pong);
         }
-        ClientMessage::RequestKey => {
+        ClientMessage::RequestKey { scope_nonce } => {
+            if let Err(error) = super::scope_guard::validate_browser_scope_nonce(
+                session,
+                scope_nonce,
+                "request key",
+            ) {
+                ch.send_protocol_error(error);
+                return;
+            }
             key_exchange::handle_request_key(state, ch, session).await;
         }
         other => {
