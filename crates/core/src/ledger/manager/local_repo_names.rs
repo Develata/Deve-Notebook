@@ -9,7 +9,10 @@ impl RepoManager {
         self.refresh_local_repo_catalog()?;
         let local_dir = self.ledger_dir.join("local");
         if !local_dir.exists() {
-            return Ok(vec![]);
+            anyhow::bail!(
+                "Broken local repo catalog: local repo directory missing at {:?}",
+                local_dir
+            );
         }
 
         let mut repos = Vec::new();

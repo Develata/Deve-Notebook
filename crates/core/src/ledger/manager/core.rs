@@ -139,7 +139,10 @@ impl RepoManager {
         }
         let local_dir = self.ledger_dir.join("local");
         if !local_dir.exists() {
-            return Ok(None);
+            anyhow::bail!(
+                "Broken local repo catalog: local repo directory missing at {:?}",
+                local_dir
+            );
         }
         let target_id = uuid::Uuid::parse_str(selector).ok();
         let mut by_alias = None::<String>;

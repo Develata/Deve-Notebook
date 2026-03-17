@@ -28,7 +28,10 @@ impl RepoManager {
 
         let local_dir = self.ledger_dir.join("local");
         if !local_dir.exists() {
-            return Ok(None);
+            anyhow::bail!(
+                "Broken local repo catalog: local repo directory missing at {:?}",
+                local_dir
+            );
         }
 
         for entry in std::fs::read_dir(local_dir)? {

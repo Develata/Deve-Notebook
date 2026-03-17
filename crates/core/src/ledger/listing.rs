@@ -42,7 +42,10 @@ impl RepoListing for RepoManager {
         let target_dir = self.ledger_dir.join("local");
 
         if !target_dir.exists() {
-            return Ok(vec![]);
+            anyhow::bail!(
+                "Broken local repo catalog: local repo directory missing at {:?}",
+                target_dir
+            );
         }
 
         let mut named = Vec::new();
