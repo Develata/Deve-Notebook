@@ -50,6 +50,8 @@ pub enum ClientMessage {
     RequestHistory {
         doc_id: DocId,
         request_id: u64,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     ListDocs {
         request_id: String,
@@ -59,6 +61,8 @@ pub enum ClientMessage {
     OpenDoc {
         doc_id: DocId,
         request_id: u64,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     CreateDoc {
         name: String,

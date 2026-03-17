@@ -11,10 +11,32 @@ pub(super) async fn route_core(
     msg: ClientMessage,
 ) {
     match msg {
-        ClientMessage::OpenDoc { doc_id, request_id } => {
+        ClientMessage::OpenDoc {
+            doc_id,
+            request_id,
+            scope_nonce,
+        } => {
+            if let Err(error) =
+                super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "open doc")
+            {
+                ch.send_protocol_error(error);
+                return;
+            }
             document::handle_open_doc(state, ch, session, doc_id, request_id).await;
         }
-        ClientMessage::RequestHistory { doc_id, request_id } => {
+        ClientMessage::RequestHistory {
+            doc_id,
+            request_id,
+            scope_nonce,
+        } => {
+            if let Err(error) = super::scope_guard::validate_browser_scope_nonce(
+                session,
+                scope_nonce,
+                "document history",
+            ) {
+                ch.send_protocol_error(error);
+                return;
+            }
             document::handle_request_history(state, ch, session, doc_id, request_id).await;
         }
         ClientMessage::Edit {

@@ -107,7 +107,11 @@ pub fn use_editor(
         set_load_state.set("loading".to_string());
         set_load_progress.set((0, 0));
         set_load_eta_ms.set(0);
-        ws_clone.send(ClientMessage::OpenDoc { doc_id, request_id });
+        ws_clone.send(ClientMessage::OpenDoc {
+            doc_id,
+            request_id,
+            scope_nonce: Some(core.current_scope_nonce.get()),
+        });
     });
 
     // E2EE: 仅在当前 repo 握手完成后请求 RepoKey

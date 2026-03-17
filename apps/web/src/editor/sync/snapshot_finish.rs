@@ -12,6 +12,7 @@ pub(super) struct LoadFinish {
     version: u64,
     load_start: f64,
     request_id: u64,
+    scope_nonce: u64,
     ws: WsService,
     set_content: WriteSignal<String>,
     set_playback_version: WriteSignal<u64>,
@@ -32,6 +33,7 @@ impl LoadFinish {
             version,
             load_start,
             request_id,
+            scope_nonce: ctx.current_scope_nonce.get_untracked(),
             ws: ctx.ws.clone(),
             set_content: ctx.set_content,
             set_playback_version: ctx.set_playback_version,
@@ -56,6 +58,7 @@ impl LoadFinish {
         self.ws.send(ClientMessage::RequestHistory {
             doc_id: self.doc_id,
             request_id: self.request_id,
+            scope_nonce: Some(self.scope_nonce),
         });
     }
 }
