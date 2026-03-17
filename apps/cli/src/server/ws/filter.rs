@@ -83,7 +83,7 @@ impl BroadcastFilter {
             ServerMessage::NewOp {
                 repo_id, branch, ..
             } => matches_scope(
-                Some(*repo_id),
+                scope.active_repo_id,
                 scope.active_branch.as_ref(),
                 &Some(*repo_id),
                 branch.as_ref(),

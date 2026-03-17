@@ -56,6 +56,49 @@ fn rejects_unscoped_runtime_broadcasts_for_bound_repo_sessions() {
 }
 
 #[test]
+fn rejects_new_op_for_wrong_local_repo() {
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::new_v4()));
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(!filter.should_forward(&ServerMessage::NewOp {
+        repo_id: uuid::Uuid::new_v4(),
+        branch: None,
+        scope_nonce: None,
+        doc_id: DocId::new(),
+        entry: ConfirmedOp::new(
+            1,
+            Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            None,
+        ),
+    }));
+}
+
+#[test]
+fn rejects_new_op_for_unbound_session() {
+    let session = WsSession::new();
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(!filter.should_forward(&ServerMessage::NewOp {
+        repo_id: uuid::Uuid::new_v4(),
+        branch: None,
+        scope_nonce: None,
+        doc_id: DocId::new(),
+        entry: ConfirmedOp::new(
+            1,
+            Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            None,
+        ),
+    }));
+}
+
+#[test]
 fn rejects_repo_scoped_runtime_broadcasts_for_unbound_sessions() {
     let session = WsSession::new();
     let filter = BroadcastFilter::for_session(&session);

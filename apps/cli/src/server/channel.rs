@@ -98,8 +98,11 @@ impl DualChannel {
     }
 }
 
-fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
-    let must_deliver = must_deliver_unicast(&msg);
+pub(crate) fn try_send_with_delivery_class(
+    tx: &mpsc::Sender<ServerMessage>,
+    msg: ServerMessage,
+    must_deliver: bool,
+) {
     if let Err(error) = tx.try_send(msg) {
         match error {
             TrySendError::Full(msg) if must_deliver => schedule_must_deliver(tx.clone(), msg),
@@ -111,6 +114,11 @@ fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
             }
         }
     }
+}
+
+fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
+    let must_deliver = must_deliver_unicast(&msg);
+    try_send_with_delivery_class(tx, msg, must_deliver);
 }
 
 fn must_deliver_unicast(msg: &ServerMessage) -> bool {

@@ -1,9 +1,9 @@
 pub(crate) use super::filter::BroadcastFilter;
+use crate::server::channel::try_send_with_delivery_class;
 use axum::extract::ws::{Message, WebSocket};
 use deve_core::protocol::ServerMessage;
 use futures::SinkExt;
 use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::{broadcast, mpsc};
 
 /// 单播队列容量（每个连接）。
@@ -57,14 +57,8 @@ pub(crate) fn spawn_broadcast_forwarder(
                         continue;
                     }
                     let msg = filter.stamp_scope_nonce(msg);
-                    if let Err(e) = unicast_tx.try_send(msg) {
-                        match e {
-                            TrySendError::Full(_) => {
-                                tracing::warn!("WS unicast queue full; dropping broadcast");
-                            }
-                            TrySendError::Closed(_) => break,
-                        }
-                    }
+                    let must_deliver = must_deliver_broadcast(&msg);
+                    try_send_with_delivery_class(&unicast_tx, msg, must_deliver);
                 }
                 Err(RecvError::Lagged(skipped)) => {
                     tracing::warn!("WS broadcast lagged; skipped {} messages", skipped);
@@ -74,3 +68,17 @@ pub(crate) fn spawn_broadcast_forwarder(
         }
     });
 }
+
+fn must_deliver_broadcast(msg: &ServerMessage) -> bool {
+    matches!(
+        msg,
+        ServerMessage::FsChangeDetected { .. }
+            | ServerMessage::CommitAck { .. }
+            | ServerMessage::MergeComplete { .. }
+            | ServerMessage::NewOp { .. }
+    )
+}
+
+#[cfg(test)]
+#[path = "send_test.rs"]
+mod tests;
