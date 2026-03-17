@@ -1,5 +1,5 @@
 use super::confirmed;
-use super::errors::send_doc_error;
+use super::errors::send_doc_error_with_scope_nonce;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, PeerId, RepoId, RepoType};
@@ -13,17 +13,23 @@ pub(super) async fn handle_request_history(
     doc_id: DocId,
     request_id: u64,
 ) {
+    let scope_nonce = browser_scope_nonce(session);
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(err));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
             return;
         }
     };
     let ops = match load_doc_history(state, session, scope.repo_id, doc_id) {
         Ok(ops) => ops,
         Err(err) => {
-            send_doc_error(ch, "Failed to load document history", err);
+            send_doc_error_with_scope_nonce(
+                ch,
+                "Failed to load document history",
+                err,
+                scope_nonce,
+            );
             return;
         }
     };
@@ -35,6 +41,10 @@ pub(super) async fn handle_request_history(
         request_id,
         ops,
     });
+}
+
+fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
+    session.is_browser_session().then(|| session.scope_nonce())
 }
 
 fn load_doc_history(

@@ -18,18 +18,25 @@ fn error_code(err: &anyhow::Error) -> ServerErrorCode {
     ServerErrorCode::RequestFailed
 }
 
-pub(crate) fn send_doc_error(ch: &DualChannel, context: &str, err: anyhow::Error) {
-    send_doc_error_with_switch_nonce(ch, context, err, None);
-}
-
-pub(crate) fn send_doc_error_with_switch_nonce(
+pub(crate) fn send_doc_error_with_scope_nonce(
     ch: &DualChannel,
     context: &str,
     err: anyhow::Error,
+    scope_nonce: Option<u64>,
+) {
+    send_doc_error_with_scope_and_switch_nonce(ch, context, err, scope_nonce, None);
+}
+
+pub(crate) fn send_doc_error_with_scope_and_switch_nonce(
+    ch: &DualChannel,
+    context: &str,
+    err: anyhow::Error,
+    scope_nonce: Option<u64>,
     switch_nonce: Option<u64>,
 ) {
-    ch.send_protocol_error_with_switch_nonce(
+    ch.send_protocol_error_with_scope_and_switch_nonce(
         ServerError::with_detail(error_code(&err), format!("{}: {}", context, err)),
+        scope_nonce,
         switch_nonce,
     );
 }

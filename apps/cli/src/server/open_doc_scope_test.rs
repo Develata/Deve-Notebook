@@ -90,12 +90,16 @@ async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(7));
     session.switch_repo("test".into(), Some(test_repo_id));
 
     handle_open_doc(&state, &ch, &mut session, doc_id, 7).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { .. }) => {}
+        Some(ServerMessage::ProtocolError { scope_nonce, .. }) => {
+            assert_eq!(scope_nonce, Some(7));
+        }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert!(uni_rx.try_recv().is_err(), "must not send empty snapshot");
@@ -137,12 +141,16 @@ async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(9));
     session.switch_repo("test".into(), Some(test_repo_id));
 
     handle_request_history(&state, &ch, &mut session, doc_id, 9).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { .. }) => {}
+        Some(ServerMessage::ProtocolError { scope_nonce, .. }) => {
+            assert_eq!(scope_nonce, Some(9));
+        }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert!(uni_rx.try_recv().is_err(), "must not send empty history");
@@ -207,14 +215,19 @@ async fn list_docs_rejects_stale_local_selector() -> anyhow::Result<()> {
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(13));
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     session.switch_repo("test".into(), Some(default_id));
 
     handle_list_docs(&state, &ch, &mut session, Some("req-1".into()), None).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(13));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

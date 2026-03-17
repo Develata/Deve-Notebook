@@ -25,6 +25,7 @@ pub async fn handle_list_shadows(
     session: Option<&WsSession>,
     request_id: Option<String>,
 ) {
+    let scope_nonce = browser_scope_nonce(session);
     match state.repo.list_switchable_shadows_on_disk() {
         Ok(peers) => {
             let self_peer = session
@@ -37,13 +38,17 @@ pub async fn handle_list_shadows(
                 .collect();
             ch.unicast(ServerMessage::ShadowList {
                 request_id,
-                scope_nonce: session.map(WsSession::scope_nonce),
+                scope_nonce,
                 shadows,
             });
         }
         Err(e) => {
             tracing::error!("Failed to list shadow repos: {:?}", e);
-            send_listing_error(ch, format!("Failed to list shadow repos: {}", e));
+            send_listing_error(
+                ch,
+                format!("Failed to list shadow repos: {}", e),
+                scope_nonce,
+            );
         }
     }
 }
@@ -55,10 +60,11 @@ pub async fn handle_list_repos(
     session: &mut WsSession,
     request_id: Option<String>,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     if session.active_branch.is_some()
         && let Err(error) = resolve_session_repo_and_sync(state, session)
     {
-        ch.send_protocol_error(map_repo_scope_error(error));
+        ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(error), scope_nonce);
         return;
     }
     let active_branch = session.active_branch.as_ref();
@@ -67,23 +73,29 @@ pub async fn handle_list_repos(
             ch.unicast(ServerMessage::RepoList {
                 request_id,
                 branch: active_branch.map(ToString::to_string),
-                scope_nonce: Some(session.scope_nonce()),
+                scope_nonce,
                 repos,
             });
         }
         Err(e) => {
             tracing::error!("Failed to list repos: {:?}", e);
-            send_listing_error(ch, format!("Failed to list repos: {}", e));
+            send_listing_error(ch, format!("Failed to list repos: {}", e), scope_nonce);
         }
     }
 }
 
-fn send_listing_error(ch: &DualChannel, detail: impl Into<String>) {
+fn send_listing_error(ch: &DualChannel, detail: impl Into<String>, scope_nonce: Option<u64>) {
     let detail = detail.into();
-    ch.send_protocol_error(ServerError::with_detail(
-        classify_listing_error(&detail),
-        detail,
-    ));
+    ch.send_protocol_error_with_scope_nonce(
+        ServerError::with_detail(classify_listing_error(&detail), detail),
+        scope_nonce,
+    );
+}
+
+fn browser_scope_nonce(session: Option<&WsSession>) -> Option<u64> {
+    session
+        .filter(|session| session.is_browser_session())
+        .map(WsSession::scope_nonce)
 }
 
 fn classify_listing_error(detail: &str) -> ServerErrorCode {

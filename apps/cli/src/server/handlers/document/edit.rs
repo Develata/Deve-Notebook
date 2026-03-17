@@ -13,6 +13,7 @@ pub(super) async fn handle_edit(
     client_id: u64,
     client_op_id: u64,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     if session.is_readonly() {
         tracing::debug!("Edit rejected: session is readonly (remote branch)");
         ch.unicast(ServerMessage::EditRejected {
@@ -24,7 +25,7 @@ pub(super) async fn handle_edit(
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
-            ch.send_protocol_error(map_repo_scope_error(e));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(e), scope_nonce);
             return;
         }
     };
@@ -44,17 +45,20 @@ pub(super) async fn handle_edit(
             return;
         }
         Err(e) => {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::StoragePersistFailed,
-                e.to_string(),
-            ));
+            ch.send_protocol_error_with_scope_nonce(
+                ServerError::with_detail(ServerErrorCode::StoragePersistFailed, e.to_string()),
+                scope_nonce,
+            );
             return;
         }
     }
     let local_peer_id = match session.writer_peer_id_for(&scope.repo_id) {
         Some(peer_id) => peer_id,
         None => {
-            ch.send_protocol_error(ServerError::new(ServerErrorCode::SyncPeerUnauthenticated));
+            ch.send_protocol_error_with_scope_nonce(
+                ServerError::new(ServerErrorCode::SyncPeerUnauthenticated),
+                scope_nonce,
+            );
             return;
         }
     };
@@ -64,10 +68,13 @@ pub(super) async fn handle_edit(
             .find_client_op_in_local_repo(&scope.repo_name, doc_id, client_id, client_op_id)
     {
         if entry.content_op() != Some(&op) {
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::SyncEditRejected,
-                "client_op_id conflicts with a different op",
-            ));
+            ch.send_protocol_error_with_scope_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::SyncEditRejected,
+                    "client_op_id conflicts with a different op",
+                ),
+                scope_nonce,
+            );
             return;
         }
         ch.unicast(ServerMessage::Ack {
@@ -106,10 +113,10 @@ pub(super) async fn handle_edit(
                 .persist_doc_in_local_repo(&scope.repo_name, doc_id)
             {
                 tracing::error!("Failed to persist op: {:?}", e);
-                ch.send_protocol_error(ServerError::with_detail(
-                    ServerErrorCode::StoragePersistFailed,
-                    e.to_string(),
-                ));
+                ch.send_protocol_error_with_scope_nonce(
+                    ServerError::with_detail(ServerErrorCode::StoragePersistFailed, e.to_string()),
+                    scope_nonce,
+                );
                 return;
             }
             ch.broadcast(ServerMessage::NewOp {
@@ -137,10 +144,10 @@ pub(super) async fn handle_edit(
         }
         Err(e) => {
             tracing::error!("Failed to persist op: {:?}", e);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::StoragePersistFailed,
-                e.to_string(),
-            ));
+            ch.send_protocol_error_with_scope_nonce(
+                ServerError::with_detail(ServerErrorCode::StoragePersistFailed, e.to_string()),
+                scope_nonce,
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::errors::send_doc_error;
+use super::errors::send_doc_error_with_scope_nonce;
 use super::snapshot::{SnapshotPayload, build_snapshot_payload};
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
@@ -22,10 +22,11 @@ pub(super) async fn handle_open_doc(
     );
 
     let start = Instant::now();
+    let scope_nonce = browser_scope_nonce(session);
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
-            ch.send_protocol_error(map_repo_scope_error(e));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(e), scope_nonce);
             return;
         }
     };
@@ -33,7 +34,12 @@ pub(super) async fn handle_open_doc(
         match load_snapshot(state, session, scope.repo_id, doc_id) {
             Ok(payload) => payload,
             Err(e) => {
-                send_doc_error(ch, "Failed to load document snapshot", e);
+                send_doc_error_with_scope_nonce(
+                    ch,
+                    "Failed to load document snapshot",
+                    e,
+                    scope_nonce,
+                );
                 return;
             }
         };
@@ -58,6 +64,10 @@ pub(super) async fn handle_open_doc(
         version,
         delta_ops,
     });
+}
+
+fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
+    session.is_browser_session().then(|| session.scope_nonce())
 }
 
 fn load_snapshot(
