@@ -4,6 +4,7 @@ use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use tokio::sync::{broadcast, mpsc};
 
 mod request_response;
+mod sync_control;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn protocol_errors_are_not_dropped_when_unicast_queue_is_full() {

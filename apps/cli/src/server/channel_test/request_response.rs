@@ -89,3 +89,67 @@ async fn snapshot_is_not_dropped_when_unicast_queue_is_full() {
         other => panic!("expected queued Snapshot, got {:?}", other),
     }
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pending_discarded_is_not_dropped_when_unicast_queue_is_full() {
+    let (broadcast_tx, _) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = mpsc::channel(1);
+    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+
+    ch.unicast(ServerMessage::Pong);
+    ch.unicast(ServerMessage::PendingDiscarded {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: Some(PeerId::new("peer-a")),
+        scope_nonce: Some(5),
+    });
+
+    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    tokio::task::yield_now().await;
+    match unicast_rx.recv().await {
+        Some(ServerMessage::PendingDiscarded {
+            repo_id,
+            branch,
+            scope_nonce,
+        }) => {
+            assert_eq!(repo_id, Some(uuid::Uuid::nil()));
+            assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
+            assert_eq!(scope_nonce, Some(5));
+        }
+        other => panic!("expected queued PendingDiscarded, got {:?}", other),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn conflict_resolved_is_not_dropped_when_unicast_queue_is_full() {
+    let (broadcast_tx, _) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = mpsc::channel(1);
+    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+
+    ch.unicast(ServerMessage::Pong);
+    ch.unicast(ServerMessage::ConflictResolved {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: Some(PeerId::new("peer-a")),
+        scope_nonce: Some(5),
+        path: "notes/a.md".into(),
+        resolution: "KeepLedger".into(),
+    });
+
+    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    tokio::task::yield_now().await;
+    match unicast_rx.recv().await {
+        Some(ServerMessage::ConflictResolved {
+            repo_id,
+            branch,
+            scope_nonce,
+            path,
+            resolution,
+        }) => {
+            assert_eq!(repo_id, Some(uuid::Uuid::nil()));
+            assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
+            assert_eq!(scope_nonce, Some(5));
+            assert_eq!(path, "notes/a.md");
+            assert_eq!(resolution, "KeepLedger");
+        }
+        other => panic!("expected queued ConflictResolved, got {:?}", other),
+    }
+}

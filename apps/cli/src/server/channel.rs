@@ -118,6 +118,11 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
         msg,
         ServerMessage::ProtocolError { .. }
             | ServerMessage::EditRejected { .. }
+            | ServerMessage::SyncHello { .. }
+            | ServerMessage::SyncRequest { .. }
+            | ServerMessage::SyncSnapshotRequest { .. }
+            | ServerMessage::SyncPush { .. }
+            | ServerMessage::SyncPushSnapshot { .. }
             | ServerMessage::BranchSwitched { .. }
             | ServerMessage::RepoSwitched { .. }
             | ServerMessage::WriteReady { .. }
@@ -134,6 +139,7 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::SearchResults { .. }
             | ServerMessage::SyncModeStatus { .. }
             | ServerMessage::PendingOpsInfo { .. }
+            | ServerMessage::PendingDiscarded { .. }
             | ServerMessage::ChangesList { .. }
             | ServerMessage::StageAck { .. }
             | ServerMessage::UnstageAck { .. }
@@ -141,6 +147,7 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::CommitHistory { .. }
             | ServerMessage::DocDiff { .. }
             | ServerMessage::CommitDiffResult { .. }
+            | ServerMessage::ConflictResolved { .. }
     )
 }
 
