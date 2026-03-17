@@ -88,6 +88,7 @@ async fn list_docs_on_unbound_shadow_branch_preserves_switch_nonce() -> anyhow::
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
             assert_eq!(switch_nonce, Some(17));

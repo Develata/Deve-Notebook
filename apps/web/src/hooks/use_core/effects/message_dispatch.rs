@@ -13,7 +13,8 @@ use super::message_dispatch_protocol::{handle_shadow_list_message, protocol_cont
 use super::message_projection::{handle_doc_list, handle_tree_update};
 use super::message_protocol::handle_protocol_error;
 use super::message_repo_scope::{
-    accepts_edit_rejected_message, accepts_write_ready_message, matches_current_message_scope,
+    accepts_edit_rejected_message, accepts_protocol_error_message, accepts_write_ready_message,
+    matches_current_message_scope,
 };
 use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
@@ -179,7 +180,11 @@ pub fn handle_message<F>(
         ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            scope_nonce,
         } => {
+            if !accepts_protocol_error_message(scope_nonce, signals) {
+                return;
+            }
             handle_protocol_error(
                 ws,
                 locale,

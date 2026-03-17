@@ -56,6 +56,7 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(11));
@@ -79,6 +80,7 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(13));
@@ -113,6 +115,7 @@ async fn switch_branch_rejects_peer_with_only_broken_shadow_repos() -> anyhow::R
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert_eq!(switch_nonce, Some(23));

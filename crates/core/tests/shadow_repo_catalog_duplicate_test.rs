@@ -42,9 +42,7 @@ fn remote_catalog_repair_fails_closed_on_duplicate_shadow_uuid() {
         .expect_err("duplicate shadow uuid must fail repair");
     let detail = format!("{err:#}");
     assert!(detail.contains("Broken shadow peer peer-dup"));
-    assert!(
-        detail.contains("duplicate remote repository UUIDs")
-    );
+    assert!(detail.contains("duplicate remote repository UUIDs"));
 }
 
 #[test]

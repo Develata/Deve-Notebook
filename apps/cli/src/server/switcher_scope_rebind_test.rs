@@ -48,6 +48,7 @@ async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce: Some(17),
+            ..
         }) if error.code == deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
     ));
     assert_eq!(

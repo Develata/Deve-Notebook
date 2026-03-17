@@ -14,7 +14,7 @@ pub(super) async fn route_merge(
         && let Err(error) =
             super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "merge control")
     {
-        ch.send_protocol_error(error);
+        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return;
     }
     match msg {

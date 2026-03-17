@@ -317,6 +317,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert_eq!(switch_nonce, Some(41));
@@ -447,6 +448,7 @@ async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(17));

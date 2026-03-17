@@ -78,9 +78,19 @@ pub fn accepts_edit_rejected_message(scope_nonce: Option<u64>, signals: CoreSign
         && scope_nonce == Some(signals.current_scope_nonce.get_untracked())
 }
 
+pub fn accepts_protocol_error_message(scope_nonce: Option<u64>, signals: CoreSignals) -> bool {
+    scope_nonce.is_none()
+        || (signals.pending_repo_switch.get_untracked().is_none()
+            && signals.pending_branch_switch.get_untracked().is_none()
+            && scope_nonce == Some(signals.current_scope_nonce.get_untracked()))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{accepts_edit_rejected_message, accepts_write_ready, matches_repo_scope};
+    use super::{
+        accepts_edit_rejected_message, accepts_protocol_error_message, accepts_write_ready,
+        matches_repo_scope,
+    };
     use crate::api::ConnectionStatus;
     use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::state::init_signals;
@@ -202,5 +212,25 @@ mod tests {
         assert!(!accepts_edit_rejected_message(Some(9), signals));
         assert!(!accepts_edit_rejected_message(None, signals));
         assert!(accepts_edit_rejected_message(Some(7), signals));
+    }
+
+    #[test]
+    fn rejects_scoped_protocol_errors_while_scope_switch_pending_or_nonce_is_stale() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(status);
+        signals.set_current_scope_nonce.set(7);
+        signals
+            .set_pending_branch_switch
+            .set(Some(PendingBranchTarget::Local));
+        assert!(!accepts_protocol_error_message(Some(7), signals));
+        signals.set_pending_branch_switch.set(None);
+        signals.set_pending_repo_switch.set(Some("wiki".into()));
+        assert!(!accepts_protocol_error_message(Some(7), signals));
+        signals.set_pending_repo_switch.set(None);
+        assert!(!accepts_protocol_error_message(Some(9), signals));
+        assert!(accepts_protocol_error_message(None, signals));
+        assert!(accepts_protocol_error_message(Some(7), signals));
     }
 }

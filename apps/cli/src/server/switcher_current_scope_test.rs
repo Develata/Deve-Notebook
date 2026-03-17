@@ -59,6 +59,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(55));
@@ -119,6 +120,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid() 
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(57));
@@ -178,6 +180,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_stale_name(
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(58));
@@ -237,6 +240,7 @@ async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
         Some(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(73));

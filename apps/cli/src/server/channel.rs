@@ -75,7 +75,15 @@ impl DualChannel {
     }
 
     pub fn send_protocol_error(&self, error: ServerError) {
-        self.send_protocol_error_with_switch_nonce(error, None);
+        self.send_protocol_error_with_scope_and_switch_nonce(error, None, None);
+    }
+
+    pub fn send_protocol_error_with_scope_nonce(
+        &self,
+        error: ServerError,
+        scope_nonce: Option<u64>,
+    ) {
+        self.send_protocol_error_with_scope_and_switch_nonce(error, scope_nonce, None);
     }
 
     pub fn send_protocol_error_with_switch_nonce(
@@ -83,9 +91,19 @@ impl DualChannel {
         error: ServerError,
         switch_nonce: Option<u64>,
     ) {
+        self.send_protocol_error_with_scope_and_switch_nonce(error, None, switch_nonce);
+    }
+
+    pub fn send_protocol_error_with_scope_and_switch_nonce(
+        &self,
+        error: ServerError,
+        scope_nonce: Option<u64>,
+        switch_nonce: Option<u64>,
+    ) {
         self.unicast(ServerMessage::ProtocolError {
             error,
             switch_nonce,
+            scope_nonce,
         });
     }
 

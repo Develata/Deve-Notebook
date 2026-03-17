@@ -168,15 +168,19 @@ fn duplicate_shadow_uuid_peers_fail_closed_in_listing_and_switchable_views() {
     let repos_err = repo
         .list_repos(Some(&peer_id))
         .expect_err("duplicate uuid shadows must fail repo listing");
-    assert!(repos_err
-        .to_string()
-        .contains("duplicate remote repository UUIDs"));
+    assert!(
+        repos_err
+            .to_string()
+            .contains("duplicate remote repository UUIDs")
+    );
     let switchable_err = repo
         .list_switchable_shadows_on_disk()
         .expect_err("duplicate uuid shadow peer must fail switchable listing");
-    assert!(switchable_err
-        .to_string()
-        .contains("duplicate remote repository UUIDs"));
+    assert!(
+        switchable_err
+            .to_string()
+            .contains("duplicate remote repository UUIDs")
+    );
 }
 
 #[test]
