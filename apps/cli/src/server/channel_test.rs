@@ -1,4 +1,5 @@
 use super::DualChannel;
+use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use tokio::sync::{broadcast, mpsc};
 
@@ -93,4 +94,36 @@ async fn scope_switch_messages_are_not_dropped_when_unicast_queue_is_full() {
     }
     assert!(saw_branch, "BranchSwitched must not be dropped");
     assert!(saw_repo, "RepoSwitched must not be dropped");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn write_ready_is_not_dropped_when_unicast_queue_is_full() {
+    let (broadcast_tx, _) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = mpsc::channel(1);
+    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+
+    ch.unicast(ServerMessage::Pong);
+    ch.unicast(ServerMessage::WriteReady {
+        peer_id: PeerId::new("peer-a"),
+        repo_id: uuid::Uuid::nil(),
+        scope_nonce: 9,
+        branch: Some(PeerId::new("peer-a")),
+    });
+
+    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    tokio::task::yield_now().await;
+    match unicast_rx.recv().await {
+        Some(ServerMessage::WriteReady {
+            peer_id,
+            repo_id,
+            scope_nonce,
+            branch,
+        }) => {
+            assert_eq!(peer_id.as_str(), "peer-a");
+            assert_eq!(repo_id, uuid::Uuid::nil());
+            assert_eq!(scope_nonce, 9);
+            assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
+        }
+        other => panic!("expected queued WriteReady, got {:?}", other),
+    }
 }

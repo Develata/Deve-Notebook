@@ -120,6 +120,7 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::EditRejected { .. }
             | ServerMessage::BranchSwitched { .. }
             | ServerMessage::RepoSwitched { .. }
+            | ServerMessage::WriteReady { .. }
     )
 }
 
