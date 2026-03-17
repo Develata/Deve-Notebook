@@ -44,14 +44,6 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     ))
 }
 
-fn seed_default_doc(state: &Arc<AppState>) -> anyhow::Result<DocId> {
-    seed_doc(state, "default", "notes/a.md", "hello")
-}
-
-fn seed_test_doc(state: &Arc<AppState>) -> anyhow::Result<DocId> {
-    seed_doc(state, "test", "notes/b.md", "from test")
-}
-
 fn seed_doc(
     state: &Arc<AppState>,
     repo_name: &str,
@@ -86,7 +78,7 @@ fn seed_doc(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow::Result<()> {
     let (_dir, state, test_repo_id) = build_state()?;
-    let doc_id = seed_default_doc(&state)?;
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -109,7 +101,7 @@ async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
-    let doc_id = seed_default_doc(&state)?;
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     state.repo.apply_file_delete_structure_in_local_repo(
         state.repo.local_repo_name(),
@@ -137,7 +129,7 @@ async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()>
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow::Result<()> {
     let (_dir, state, test_repo_id) = build_state()?;
-    let doc_id = seed_default_doc(&state)?;
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -160,7 +152,7 @@ async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_history_on_deleted_doc_returns_error_without_history() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
-    let doc_id = seed_default_doc(&state)?;
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     state.repo.apply_file_delete_structure_in_local_repo(
         state.repo.local_repo_name(),
@@ -211,7 +203,7 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn list_docs_rejects_stale_local_selector() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
-    let _ = seed_test_doc(&state)?;
+    let _ = seed_doc(&state, "test", "notes/b.md", "from test")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
