@@ -40,7 +40,7 @@ pub(super) fn resolve_current_branch_switch_context(
 }
 
 fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) -> bool {
-    if session.active_repo_id.is_some() {
+    if session.active_repo.is_some() || session.active_repo_id.is_some() {
         return false;
     }
     if code == ServerErrorCode::ScRepoContextInvalid {
