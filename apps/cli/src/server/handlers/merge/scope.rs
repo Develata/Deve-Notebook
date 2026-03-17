@@ -13,11 +13,12 @@ pub(super) fn resolve_read_repo_id(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    scope_nonce: Option<u64>,
 ) -> Option<RepoId> {
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(err));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
             return None;
         }
     };
@@ -27,11 +28,15 @@ pub(super) fn resolve_read_repo_id(
     match resolve_local_counterpart_repo(state, &scope) {
         Ok(Some(local_scope)) => Some(local_scope.repo_id),
         Ok(None) => {
-            errors::storage_not_found(ch, "No local repository matched the active remote branch");
+            errors::storage_not_found(
+                ch,
+                "No local repository matched the active remote branch",
+                scope_nonce,
+            );
             None
         }
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(err));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
             None
         }
     }
@@ -41,16 +46,20 @@ pub(super) fn resolve_write_repo_id(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    scope_nonce: Option<u64>,
 ) -> Option<RepoId> {
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(err));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
             return None;
         }
     };
     if scope.branch.is_some() {
-        ch.send_protocol_error(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
+        ch.send_protocol_error_with_scope_nonce(
+            ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
+            scope_nonce,
+        );
         return None;
     }
     Some(scope.repo_id)
@@ -107,7 +116,7 @@ mod tests {
         session.switch_repo("test".into(), Some(test_id));
 
         assert_eq!(
-            resolve_read_repo_id(&state, &ch, &mut session),
+            resolve_read_repo_id(&state, &ch, &mut session, None),
             Some(test_id)
         );
         assert_eq!(session.active_repo_id, Some(test_id));

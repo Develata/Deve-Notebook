@@ -13,10 +13,10 @@ pub(super) async fn handle_get_sync_mode(
     request_id: String,
 ) {
     let scope_nonce = Some(session.scope_nonce());
-    let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
+    let Some(repo_id) = resolve_read_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(engine) = load_engine(state, ch, repo_id) else {
+    let Some(engine) = load_engine(state, ch, repo_id, scope_nonce) else {
         return;
     };
     ch.unicast(ServerMessage::SyncModeStatus {
@@ -35,15 +35,17 @@ pub(super) async fn handle_set_sync_mode(
     mode: String,
 ) {
     let scope_nonce = Some(session.scope_nonce());
-    let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
+    let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
     let new_mode = match mode.to_lowercase().as_str() {
         "auto" => SyncMode::Auto,
         "manual" => SyncMode::Manual,
-        _ => return errors::request_failed(ch, format!("Invalid sync mode: {}", mode)),
+        _ => {
+            return errors::request_failed(ch, format!("Invalid sync mode: {}", mode), scope_nonce);
+        }
     };
-    let Some(mut engine) = load_engine(state, ch, repo_id) else {
+    let Some(mut engine) = load_engine(state, ch, repo_id, scope_nonce) else {
         return;
     };
     engine.set_sync_mode(new_mode);
@@ -64,10 +66,10 @@ pub(super) async fn handle_get_pending_ops(
     request_id: String,
 ) {
     let scope_nonce = Some(session.scope_nonce());
-    let Some(repo_id) = resolve_read_repo_id(state, ch, session) else {
+    let Some(repo_id) = resolve_read_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(engine) = load_engine(state, ch, repo_id) else {
+    let Some(engine) = load_engine(state, ch, repo_id, scope_nonce) else {
         return;
     };
     let pending_count = engine.pending_ops_count();
@@ -96,10 +98,10 @@ pub(super) async fn handle_confirm_merge(
     session: &mut WsSession,
 ) {
     let scope_nonce = Some(session.scope_nonce());
-    let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
+    let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(mut engine) = load_engine(state, ch, repo_id) else {
+    let Some(mut engine) = load_engine(state, ch, repo_id, scope_nonce) else {
         return;
     };
     match engine.merge_pending() {
@@ -114,7 +116,7 @@ pub(super) async fn handle_confirm_merge(
         }
         Err(e) => {
             tracing::error!("Merge failed: {:?}", e);
-            errors::classified_failure(ch, format!("Merge failed: {}", e));
+            errors::classified_failure(ch, format!("Merge failed: {}", e), scope_nonce);
         }
     }
 }
@@ -125,10 +127,10 @@ pub(super) async fn handle_discard_pending(
     session: &mut WsSession,
 ) {
     let scope_nonce = Some(session.scope_nonce());
-    let Some(repo_id) = resolve_write_repo_id(state, ch, session) else {
+    let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(mut engine) = load_engine(state, ch, repo_id) else {
+    let Some(mut engine) = load_engine(state, ch, repo_id, scope_nonce) else {
         return;
     };
     engine.clear_pending();

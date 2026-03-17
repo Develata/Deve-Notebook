@@ -21,14 +21,15 @@ pub(super) async fn handle_merge_peer(
     peer_id: String,
     doc_id: DocId,
 ) {
+    let scope_nonce = Some(session.scope_nonce());
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
-            ch.send_protocol_error(map_repo_scope_error(e));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(e), scope_nonce);
             return;
         }
     };
-    let Some(local_scope) = resolve_local_merge_scope(state, scope, ch) else {
+    let Some(local_scope) = resolve_local_merge_scope(state, scope, ch, scope_nonce) else {
         return;
     };
     let peer_id = PeerId::new(peer_id);
@@ -38,26 +39,13 @@ pub(super) async fn handle_merge_peer(
         &local_scope.repo_id,
         doc_id,
     ) {
-        Ok(MergeResult::Success(content)) => write_merged_content(
-            state,
-            ch,
-            &local_scope,
-            doc_id,
-            &content,
-            Some(session.scope_nonce()),
-        ),
-        Ok(MergeResult::Conflict { local, remote, .. }) => {
-            send_merge_conflict(
-                state,
-                ch,
-                &local_scope,
-                doc_id,
-                local,
-                remote,
-                Some(session.scope_nonce()),
-            );
+        Ok(MergeResult::Success(content)) => {
+            write_merged_content(state, ch, &local_scope, doc_id, &content, scope_nonce)
         }
-        Err(e) => errors::classified_failure(ch, format!("Merge failed: {}", e)),
+        Ok(MergeResult::Conflict { local, remote, .. }) => {
+            send_merge_conflict(state, ch, &local_scope, doc_id, local, remote, scope_nonce);
+        }
+        Err(e) => errors::classified_failure(ch, format!("Merge failed: {}", e), scope_nonce),
     }
 }
 
@@ -81,13 +69,18 @@ fn write_merged_content(
             return errors::classified_failure(
                 ch,
                 format!("Failed to load local merge state: {}", err),
+                scope_nonce,
             );
         }
     };
     let patch = match reconcile::compute_reconcile_patch(&entries, content) {
         Ok(patch) => patch,
         Err(err) => {
-            return errors::request_failed(ch, format!("Failed to diff merged content: {}", err));
+            return errors::request_failed(
+                ch,
+                format!("Failed to diff merged content: {}", err),
+                scope_nonce,
+            );
         }
     };
     if let Err(err) = reconcile::append_patch_in_local_repo(
@@ -97,14 +90,22 @@ fn write_merged_content(
         "merge",
         &patch,
     ) {
-        errors::storage_persist_failed(ch, format!("Failed to append merged content: {}", err));
+        errors::storage_persist_failed(
+            ch,
+            format!("Failed to append merged content: {}", err),
+            scope_nonce,
+        );
         return;
     }
     if let Err(err) = state
         .sync_manager
         .persist_doc_in_local_repo(&scope.repo_name, doc_id)
     {
-        errors::storage_persist_failed(ch, format!("Failed to persist merged content: {}", err));
+        errors::storage_persist_failed(
+            ch,
+            format!("Failed to persist merged content: {}", err),
+            scope_nonce,
+        );
         return;
     }
     tracing::info!("Merge Success for doc {}", doc_id);
@@ -125,7 +126,7 @@ fn send_merge_conflict(
     remote: String,
     scope_nonce: Option<u64>,
 ) {
-    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id) else {
+    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id, scope_nonce) else {
         return;
     };
     tracing::warn!("Merge Conflict detected for doc {}", doc_id);
@@ -138,5 +139,9 @@ fn send_merge_conflict(
         old_content: local,
         new_content: remote,
     });
-    errors::storage_conflict(ch, "Merge Conflict detected. Showing Diff View.");
+    errors::storage_conflict(
+        ch,
+        "Merge Conflict detected. Showing Diff View.",
+        scope_nonce,
+    );
 }

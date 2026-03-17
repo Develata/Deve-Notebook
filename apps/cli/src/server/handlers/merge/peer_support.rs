@@ -10,6 +10,7 @@ pub(super) fn resolve_doc_path(
     ch: &DualChannel,
     repo_name: &str,
     doc_id: DocId,
+    scope_nonce: Option<u64>,
 ) -> Option<String> {
     match state
         .repo
@@ -17,11 +18,15 @@ pub(super) fn resolve_doc_path(
     {
         Ok(Some(meta)) => Some(meta.path),
         Ok(None) => {
-            errors::storage_not_found(ch, "Doc path not found for merged document");
+            errors::storage_not_found(ch, "Doc path not found for merged document", scope_nonce);
             None
         }
         Err(e) => {
-            errors::classified_failure(ch, format!("Failed to resolve merged doc path: {}", e));
+            errors::classified_failure(
+                ch,
+                format!("Failed to resolve merged doc path: {}", e),
+                scope_nonce,
+            );
             None
         }
     }
@@ -31,6 +36,7 @@ pub(super) fn resolve_local_merge_scope(
     state: &Arc<AppState>,
     scope: ResolvedRepo,
     ch: &DualChannel,
+    scope_nonce: Option<u64>,
 ) -> Option<ResolvedRepo> {
     match resolve_local_counterpart_repo(state, &scope) {
         Ok(Some(local_scope)) => Some(local_scope),
@@ -38,11 +44,16 @@ pub(super) fn resolve_local_merge_scope(
             errors::storage_not_found(
                 ch,
                 "No local repository matched the active remote repository",
+                scope_nonce,
             );
             None
         }
         Err(err) => {
-            errors::classified_failure(ch, format!("Failed to resolve local merge scope: {}", err));
+            errors::classified_failure(
+                ch,
+                format!("Failed to resolve local merge scope: {}", err),
+                scope_nonce,
+            );
             None
         }
     }
@@ -97,6 +108,7 @@ mod tests {
                 branch: Some(PeerId::new("remote-peer")),
             },
             &ch,
+            None,
         )
         .expect("resolved scope");
 
