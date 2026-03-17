@@ -121,6 +121,8 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::BranchSwitched { .. }
             | ServerMessage::RepoSwitched { .. }
             | ServerMessage::WriteReady { .. }
+            | ServerMessage::KeyProvide { .. }
+            | ServerMessage::KeyDenied { .. }
     )
 }
 
