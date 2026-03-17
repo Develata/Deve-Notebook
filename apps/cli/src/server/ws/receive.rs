@@ -62,7 +62,10 @@ async fn handle_binary(
         }
         Err(e) => {
             tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len());
-            ch.send_protocol_error(invalid_client_message("Invalid bincode client message"));
+            ch.send_protocol_error_with_scope_nonce(
+                invalid_client_message("Invalid bincode client message"),
+                browser_scope_nonce(session),
+            );
         }
     }
     SocketFlow::Continue
@@ -86,7 +89,10 @@ async fn handle_text(
         }
         Err(_) => {
             tracing::warn!("Failed to parse client message: {}", text);
-            ch.send_protocol_error(invalid_client_message("Invalid JSON client message"));
+            ch.send_protocol_error_with_scope_nonce(
+                invalid_client_message("Invalid JSON client message"),
+                browser_scope_nonce(session),
+            );
         }
     }
     SocketFlow::Continue
@@ -96,12 +102,23 @@ fn record_message(session: &mut WsSession, ch: &DualChannel, peer_id: &str) -> b
     if session.record_incoming_message(Instant::now()) {
         return true;
     }
-    ch.send_protocol_error(ServerError::with_detail(
-        ServerErrorCode::RequestFailed,
-        "WebSocket rate limit exceeded",
-    ));
+    ch.send_protocol_error_with_scope_nonce(
+        ServerError::with_detail(
+            ServerErrorCode::RequestFailed,
+            "WebSocket rate limit exceeded",
+        ),
+        browser_scope_nonce(session),
+    );
     tracing::warn!("WS message rate limit exceeded: {}", peer_id);
     false
+}
+
+fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
+    session.is_browser_session().then(|| {
+        session
+            .sync_scope_nonce()
+            .unwrap_or_else(|| session.scope_nonce())
+    })
 }
 
 fn invalid_client_message(detail: &'static str) -> ServerError {
@@ -110,7 +127,8 @@ fn invalid_client_message(detail: &'static str) -> ServerError {
 
 #[cfg(test)]
 mod tests {
-    use super::invalid_client_message;
+    use super::{browser_scope_nonce, invalid_client_message};
+    use crate::server::session::WsSession;
     use deve_core::protocol::ServerErrorCode;
 
     #[test]
@@ -118,5 +136,22 @@ mod tests {
         let error = invalid_client_message("Invalid JSON client message");
         assert_eq!(error.code, ServerErrorCode::RequestFailed);
         assert_eq!(error.detail.as_deref(), Some("Invalid JSON client message"));
+    }
+
+    #[test]
+    fn browser_scope_nonce_prefers_sync_scope() {
+        let mut session = WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(7));
+        session.set_sync_scope_nonce(11);
+        assert_eq!(browser_scope_nonce(&session), Some(11));
+    }
+
+    #[test]
+    fn browser_scope_nonce_falls_back_to_current_scope() {
+        let mut session = WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(7));
+        assert_eq!(browser_scope_nonce(&session), Some(7));
     }
 }

@@ -11,7 +11,7 @@
 //! **使用场景**:
 //! Handler 函数接收 `ResponseChannel` 参数，根据消息类型选择合适的通道发送。
 
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ServerError, ServerMessage};
 use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::{broadcast, mpsc};
 
@@ -105,14 +105,6 @@ impl DualChannel {
             switch_nonce,
             scope_nonce,
         });
-    }
-
-    pub fn send_sync_repo_unbound(&self) {
-        self.send_protocol_error(ServerError::new(ServerErrorCode::SyncRepoUnbound));
-    }
-
-    pub fn send_sync_peer_unauthenticated(&self) {
-        self.send_protocol_error(ServerError::new(ServerErrorCode::SyncPeerUnauthenticated));
     }
 }
 
