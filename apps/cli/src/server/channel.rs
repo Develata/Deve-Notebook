@@ -116,7 +116,10 @@ fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
 fn must_deliver_unicast(msg: &ServerMessage) -> bool {
     matches!(
         msg,
-        ServerMessage::ProtocolError { .. } | ServerMessage::EditRejected { .. }
+        ServerMessage::ProtocolError { .. }
+            | ServerMessage::EditRejected { .. }
+            | ServerMessage::BranchSwitched { .. }
+            | ServerMessage::RepoSwitched { .. }
     )
 }
 
