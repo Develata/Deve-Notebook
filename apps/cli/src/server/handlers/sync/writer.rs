@@ -22,7 +22,10 @@ pub(super) fn handle(
                 branch: session.active_branch.clone(),
             });
         }
-        Err(error) => ch.send_protocol_error(error),
+        Err(error) => ch.send_protocol_error_with_scope_nonce(
+            error,
+            session.is_browser_session().then_some(scope_nonce),
+        ),
     }
 }
 

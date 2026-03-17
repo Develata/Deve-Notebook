@@ -64,3 +64,31 @@ async fn create_doc_rejects_existing_workspace_file_without_backfill() -> anyhow
     assert_eq!(std::fs::read_to_string(path)?, "external only");
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_rejects_stale_browser_scope_with_scoped_error() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo(
+        state.repo.local_repo_name().to_string(),
+        Some(uuid::Uuid::new_v4()),
+    );
+    session.set_scope_nonce(Some(17));
+    session.bind_repo(repo_id);
+
+    handle_create_doc(&state, &ch, &mut session, "scoped.md".into()).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(17));
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}

@@ -5,34 +5,61 @@ use crate::server::error_classify::{
 };
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
-fn send(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
-    ch.send_protocol_error(ServerError::with_detail(code, detail));
+fn send(
+    ch: &DualChannel,
+    code: ServerErrorCode,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    ch.send_protocol_error_with_scope_nonce(ServerError::with_detail(code, detail), scope_nonce);
 }
 
-pub(super) fn engine_unavailable(ch: &DualChannel) {
+pub(super) fn engine_unavailable(ch: &DualChannel, scope_nonce: Option<u64>) {
     send(
         ch,
         ServerErrorCode::StoragePersistFailed,
         "Failed to get or create sync engine",
+        scope_nonce,
     );
 }
 
-pub(super) fn request_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::RequestFailed, detail);
+pub(super) fn request_failed(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(ch, ServerErrorCode::RequestFailed, detail, scope_nonce);
 }
 
-pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
+pub(super) fn classified_failure(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
     let detail = detail.into();
-    send(ch, classify_failure_code(&detail), detail);
+    send(ch, classify_failure_code(&detail), detail, scope_nonce);
 }
 
-pub(super) fn storage_persist_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StoragePersistFailed, detail);
+pub(super) fn storage_persist_failed(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(
+        ch,
+        ServerErrorCode::StoragePersistFailed,
+        detail,
+        scope_nonce,
+    );
 }
 
-pub(super) fn sync_apply_failed(ch: &DualChannel, detail: impl Into<String>) {
+pub(super) fn sync_apply_failed(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
     let detail = detail.into();
-    send(ch, classify_failure_code(&detail), detail);
+    send(ch, classify_failure_code(&detail), detail, scope_nonce);
 }
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {

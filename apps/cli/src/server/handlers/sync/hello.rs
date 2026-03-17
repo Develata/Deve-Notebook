@@ -34,14 +34,15 @@ pub(super) async fn handle(
         scope_nonce,
     } = hello;
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
+    let scope = session.is_browser_session().then_some(scope_nonce);
 
     if let Err(error) = validate_scope(session, repo_id, scope_nonce) {
         clear_stale_browser_sync_scope(session);
-        ch.send_protocol_error(error);
+        ch.send_protocol_error_with_scope_nonce(error, scope);
         return;
     }
 
-    let Some(mut engine) = engine::load_strict(state, ch, repo_id) else {
+    let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
         return;
     };
     let local_peer_id = engine.local_peer_id.clone();
@@ -56,7 +57,7 @@ pub(super) async fn handle(
         Ok(res) => res,
         Err(e) => {
             tracing::error!("Handshake failed with {}: {}", peer_id, e);
-            errors::classified_failure(ch, format!("Handshake failed: {}", e));
+            errors::classified_failure(ch, format!("Handshake failed: {}", e), scope);
             return;
         }
     };
@@ -76,6 +77,7 @@ pub(super) async fn handle(
                 "Failed to bind shadow repo {} for peer {}: {}",
                 repo_id, peer_id, err
             ),
+            scope,
         );
         return;
     }
@@ -88,7 +90,7 @@ pub(super) async fn handle(
     let vec_bytes = match serde_json::to_vec(&local_vector) {
         Ok(bytes) => bytes,
         Err(err) => {
-            errors::request_failed(ch, format!("Failed to encode local vector: {}", err));
+            errors::request_failed(ch, format!("Failed to encode local vector: {}", err), scope);
             return;
         }
     };
@@ -140,6 +142,7 @@ pub(super) async fn handle(
                 errors::classified_failure(
                     ch,
                     format!("Failed to build sync payload for repo {}: {}", repo_id, err),
+                    scope,
                 );
                 return;
             }

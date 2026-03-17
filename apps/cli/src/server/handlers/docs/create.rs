@@ -27,15 +27,16 @@ pub async fn handle_create_doc(
     session: &mut WsSession,
     name: String,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     if session.is_readonly() {
         tracing::debug!("Create rejected: session is readonly (remote branch)");
-        errors::remote_branch_readonly(ch);
+        errors::remote_branch_readonly_scoped(ch, scope_nonce);
         return;
     }
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.send_protocol_error(map_repo_scope_error(err));
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
             return;
         }
     };
@@ -54,7 +55,7 @@ pub async fn handle_create_doc(
     let path = match local_repo_path(state, &scope, &filename) {
         Ok(path) => path,
         Err(err) => {
-            errors::classified_failure(ch, err.to_string());
+            errors::classified_failure_scoped(ch, err.to_string(), scope_nonce);
             return;
         }
     };

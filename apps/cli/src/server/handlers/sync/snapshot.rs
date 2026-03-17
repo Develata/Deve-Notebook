@@ -17,11 +17,16 @@ pub(super) async fn handle_request(
     _peer_id: PeerId,
     repo_id: RepoId,
 ) {
+    let scope = session.is_browser_session().then(|| {
+        session
+            .sync_scope_nonce()
+            .unwrap_or_else(|| session.scope_nonce())
+    });
     let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
         return;
     };
 
-    let Some(engine) = engine::load_strict(state, ch, repo_id) else {
+    let Some(engine) = engine::load_strict(state, ch, repo_id, scope) else {
         return;
     };
     tracing::info!("Handling SnapshotRequest from {}", source_peer);
@@ -50,7 +55,7 @@ pub(super) async fn handle_request(
         }
         Err(e) => {
             tracing::error!("Failed to generate snapshot for {}: {:?}", source_peer, e);
-            errors::classified_failure(ch, format!("Failed to generate snapshot: {}", e));
+            errors::classified_failure(ch, format!("Failed to generate snapshot: {}", e), scope);
         }
     }
 }
@@ -63,11 +68,16 @@ pub(super) async fn handle_push(
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
 ) {
+    let scope = session.is_browser_session().then(|| {
+        session
+            .sync_scope_nonce()
+            .unwrap_or_else(|| session.scope_nonce())
+    });
     let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
         return;
     };
 
-    let Some(mut engine) = engine::load_strict(state, ch, repo_id) else {
+    let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
         return;
     };
     tracing::info!(
@@ -90,7 +100,7 @@ pub(super) async fn handle_push(
         ),
         Err(e) => {
             tracing::error!("Failed to apply snapshot from {}: {:?}", source_peer, e);
-            errors::sync_apply_failed(ch, format!("Failed to apply snapshot: {}", e));
+            errors::sync_apply_failed(ch, format!("Failed to apply snapshot: {}", e), scope);
         }
     }
 }

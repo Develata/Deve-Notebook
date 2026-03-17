@@ -93,3 +93,34 @@ fn writer_registration_on_unbound_remote_clears_stale_db_and_sync_binding() -> a
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[test]
+fn browser_writer_registration_rejects_stale_scope_nonce_with_scoped_error() -> anyhow::Result<()> {
+    let (state, repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("default".into(), Some(repo_id));
+    session.set_scope_nonce(Some(13));
+    session.set_sync_scope_nonce(13);
+    session.set_authenticated(PeerId::new("browser"));
+    session.bind_repo(repo_id);
+
+    handle_register_writer(&ch, &mut session, repo_id, PeerId::new("browser"), 11);
+
+    match uni_rx.try_recv() {
+        Ok(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(11));
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}

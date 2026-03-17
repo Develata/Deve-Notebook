@@ -3,37 +3,53 @@ use crate::server::repo_scope::map_repo_scope_error;
 use anyhow::anyhow;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
-fn send(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
-    ch.send_protocol_error(ServerError::with_detail(code, detail));
+fn send(
+    ch: &DualChannel,
+    code: ServerErrorCode,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    ch.send_protocol_error_with_scope_nonce(ServerError::with_detail(code, detail), scope_nonce);
 }
 
 pub(super) fn request_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::RequestFailed, detail);
+    send(ch, ServerErrorCode::RequestFailed, detail, None);
 }
 
-pub(super) fn remote_branch_readonly(ch: &DualChannel) {
-    ch.send_protocol_error(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
+pub(super) fn remote_branch_readonly_scoped(ch: &DualChannel, scope_nonce: Option<u64>) {
+    ch.send_protocol_error_with_scope_nonce(
+        ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
+        scope_nonce,
+    );
 }
 
 pub(super) fn storage_not_found(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StorageNotFound, detail);
+    send(ch, ServerErrorCode::StorageNotFound, detail, None);
 }
 
 pub(super) fn storage_conflict(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StorageConflict, detail);
+    send(ch, ServerErrorCode::StorageConflict, detail, None);
 }
 
 pub(super) fn storage_persist_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StoragePersistFailed, detail);
+    send(ch, ServerErrorCode::StoragePersistFailed, detail, None);
 }
 
 pub(super) fn projection_refresh_failed(ch: &DualChannel, detail: impl Into<String>) {
-    send(ch, ServerErrorCode::StoragePersistFailed, detail);
+    send(ch, ServerErrorCode::StoragePersistFailed, detail, None);
+}
+
+pub(super) fn classified_failure_scoped(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    let detail = detail.into();
+    send(ch, classify_failure_code(&detail), detail, scope_nonce);
 }
 
 pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
-    let detail = detail.into();
-    send(ch, classify_failure_code(&detail), detail);
+    classified_failure_scoped(ch, detail, None);
 }
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {

@@ -18,6 +18,11 @@ pub(super) async fn handle_request(
     repo_id: RepoId,
     requests: Vec<(PeerId, (u64, u64))>,
 ) {
+    let scope = session.is_browser_session().then(|| {
+        session
+            .sync_scope_nonce()
+            .unwrap_or_else(|| session.scope_nonce())
+    });
     if !session.is_repo_bound(&repo_id) {
         super::cleanup::clear_remote_unbound_state(session);
         tracing::warn!(
@@ -25,11 +30,16 @@ pub(super) async fn handle_request(
             session.bound_repo_id,
             repo_id
         );
-        ch.send_sync_repo_unbound();
+        ch.send_protocol_error_with_scope_nonce(
+            deve_core::protocol::ServerError::new(
+                deve_core::protocol::ServerErrorCode::SyncRepoUnbound,
+            ),
+            scope,
+        );
         return;
     }
 
-    let Some(engine) = engine::load_strict(state, ch, repo_id) else {
+    let Some(engine) = engine::load_strict(state, ch, repo_id, scope) else {
         return;
     };
     let mut ops_to_push = Vec::new();
@@ -49,6 +59,7 @@ pub(super) async fn handle_request(
                         "Failed to build sync response for repo {}: {}",
                         repo_id, err
                     ),
+                    scope,
                 );
                 return;
             }
@@ -74,11 +85,16 @@ pub(super) async fn handle_push(
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
 ) {
+    let scope = session.is_browser_session().then(|| {
+        session
+            .sync_scope_nonce()
+            .unwrap_or_else(|| session.scope_nonce())
+    });
     let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
         return;
     };
 
-    let Some(mut engine) = engine::load_strict(state, ch, repo_id) else {
+    let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
         return;
     };
 
@@ -95,6 +111,7 @@ pub(super) async fn handle_push(
             errors::sync_apply_failed(
                 ch,
                 format!("Failed to apply sync ops for repo {}: {}", repo_id, e),
+                scope,
             );
         }
     }
