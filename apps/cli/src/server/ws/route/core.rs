@@ -98,8 +98,15 @@ pub(super) async fn route_core(
             request_id,
             query,
             limit,
+            scope_nonce,
         } => {
-            search::handle_search(state, ch, request_id, query, limit).await;
+            if let Err(error) =
+                super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "search")
+            {
+                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                return;
+            }
+            search::handle_search(state, ch, request_id, query, limit, scope_nonce).await;
         }
         ClientMessage::PluginCall {
             req_id,

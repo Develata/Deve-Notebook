@@ -81,9 +81,10 @@ pub fn handle_message<F>(
         }
         ServerMessage::SearchResults {
             request_id,
+            scope_nonce,
             results,
         } => {
-            if !accepts_search_results(&request_id, signals) {
+            if !accepts_search_results(&request_id, scope_nonce, signals) {
                 return;
             }
             signals.set_search_results.set(results);

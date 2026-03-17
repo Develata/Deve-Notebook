@@ -1,4 +1,4 @@
-﻿// apps/cli/src/server/handlers/search.rs
+// apps/cli/src/server/handlers/search.rs
 //! # 搜索处理器 (Search Handler)
 //!
 //! 处理来自客户端的搜索请求
@@ -17,6 +17,7 @@ pub async fn handle_search(
     request_id: String,
     query: String,
     limit: u32,
+    scope_nonce: Option<u64>,
 ) {
     if let Some(ref search_service) = state.search_service {
         match search_service.search(&query, limit as usize) {
@@ -28,21 +29,25 @@ pub async fn handle_search(
                 // 单播搜索结果给请求者
                 ch.unicast(ServerMessage::SearchResults {
                     request_id,
+                    scope_nonce,
                     results,
                 });
             }
             Err(e) => {
-                ch.send_protocol_error(ServerError::with_detail(
-                    ServerErrorCode::RequestFailed,
-                    format!("Search failed: {}", e),
-                ));
+                ch.send_protocol_error_with_scope_nonce(
+                    ServerError::with_detail(
+                        ServerErrorCode::RequestFailed,
+                        format!("Search failed: {}", e),
+                    ),
+                    scope_nonce,
+                );
             }
         }
     } else {
-        ch.send_protocol_error(ServerError::with_detail(
-            ServerErrorCode::RequestFailed,
-            "Search feature not enabled",
-        ));
+        ch.send_protocol_error_with_scope_nonce(
+            ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature not enabled"),
+            scope_nonce,
+        );
     }
 }
 
@@ -53,9 +58,10 @@ pub async fn handle_search(
     _request_id: String,
     _query: String,
     _limit: u32,
+    scope_nonce: Option<u64>,
 ) {
-    ch.send_protocol_error(ServerError::with_detail(
-        ServerErrorCode::RequestFailed,
-        "Search feature not enabled",
-    ));
+    ch.send_protocol_error_with_scope_nonce(
+        ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature not enabled"),
+        scope_nonce,
+    );
 }

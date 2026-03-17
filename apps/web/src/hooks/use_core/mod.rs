@@ -136,8 +136,15 @@ pub fn use_core() -> CoreState {
         &ws,
         signals.set_stats,
         signals.load_state,
-        signals.set_plugin_request_ids,
-        signals.set_search_request_id,
+        callbacks::SearchScopeSignals {
+            current_scope_nonce: signals.current_scope_nonce,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_repo_switch: signals.pending_repo_switch,
+        },
+        callbacks::MiscRequestSignals {
+            set_plugin_request_ids: signals.set_plugin_request_ids,
+            set_search_request_id: signals.set_search_request_id,
+        },
     );
     let switch_callbacks = callbacks::create_switch_callbacks(
         &ws,

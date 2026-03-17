@@ -102,6 +102,8 @@ pub enum ClientMessage {
         request_id: String,
         query: String,
         limit: u32,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     GetSyncMode {
         request_id: String,

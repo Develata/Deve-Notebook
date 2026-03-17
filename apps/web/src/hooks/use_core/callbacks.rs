@@ -10,6 +10,7 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
+use super::PendingBranchTarget;
 use super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 pub use super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
 pub use super::callbacks_sync::{SyncCallbacks, create_sync_callbacks};
@@ -143,13 +144,24 @@ pub struct MiscCallbacks {
     pub on_search: Callback<String>,
 }
 
+pub struct SearchScopeSignals {
+    pub current_scope_nonce: ReadSignal<u64>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
+}
+
+pub struct MiscRequestSignals {
+    pub set_plugin_request_ids: WriteSignal<Vec<String>>,
+    pub set_search_request_id: WriteSignal<Option<String>>,
+}
+
 /// 创建其他回调
 pub fn create_misc_callbacks(
     ws: &WsService,
     set_stats: WriteSignal<crate::editor::EditorStats>,
     load_state: ReadSignal<String>,
-    set_plugin_request_ids: WriteSignal<Vec<String>>,
-    set_search_request_id: WriteSignal<Option<String>>,
+    search_scope: SearchScopeSignals,
+    request_signals: MiscRequestSignals,
 ) -> MiscCallbacks {
     let on_stats = Callback::new(move |s| set_stats.set(s));
 
@@ -161,7 +173,7 @@ pub fn create_misc_callbacks(
             String,
             Vec<serde_json::Value>,
         )| {
-            set_plugin_request_ids.update(|ids| {
+            request_signals.set_plugin_request_ids.update(|ids| {
                 if !ids.iter().any(|id| id == &req_id) {
                     ids.push(req_id.clone());
                 }
@@ -181,12 +193,21 @@ pub fn create_misc_callbacks(
             leptos::logging::warn!("Search disabled while loading");
             return;
         }
+        if search_scope.pending_branch_switch.get_untracked().is_some()
+            || search_scope.pending_repo_switch.get_untracked().is_some()
+        {
+            leptos::logging::warn!("Search disabled while scope switch is pending");
+            return;
+        }
         let request_id = uuid::Uuid::new_v4().to_string();
-        set_search_request_id.set(Some(request_id.clone()));
+        request_signals
+            .set_search_request_id
+            .set(Some(request_id.clone()));
         ws_search.send(ClientMessage::Search {
             request_id,
             query,
             limit: 50,
+            scope_nonce: Some(search_scope.current_scope_nonce.get_untracked()),
         });
     });
 

@@ -172,3 +172,37 @@ async fn browser_request_key_requires_current_scope_nonce() -> anyhow::Result<()
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_search_requires_current_scope_nonce() -> anyhow::Result<()> {
+    let state = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(7));
+
+    route_core(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::Search {
+            request_id: "search-1".into(),
+            query: "abc".into(),
+            limit: 10,
+            scope_nonce: None,
+        },
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, None);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}

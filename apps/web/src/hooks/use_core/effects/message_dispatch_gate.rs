@@ -27,8 +27,14 @@ pub fn accepts_chat_chunk(req_id: &str, signals: CoreSignals) -> bool {
             || contains_chat_message(req_id, signals.chat_messages.get_untracked()))
 }
 
-pub fn accepts_search_results(request_id: &str, signals: CoreSignals) -> bool {
+pub fn accepts_search_results(
+    request_id: &str,
+    scope_nonce: Option<u64>,
+    signals: CoreSignals,
+) -> bool {
     accepts_unscoped_update(signals)
+        && (scope_nonce.is_none()
+            || scope_nonce == Some(signals.current_scope_nonce.get_untracked()))
         && signals.search_request_id.get_untracked().as_deref() == Some(request_id)
 }
 
@@ -79,8 +85,10 @@ mod tests {
         let (connection_status, _) = signal(ConnectionStatus::Connected);
         let signals = init_signals(connection_status);
         signals.set_search_request_id.set(Some("fresh".into()));
-        assert!(!accepts_search_results("stale", signals));
-        assert!(accepts_search_results("fresh", signals));
+        signals.set_current_scope_nonce.set(11);
+        assert!(!accepts_search_results("stale", Some(11), signals));
+        assert!(!accepts_search_results("fresh", Some(7), signals));
+        assert!(accepts_search_results("fresh", Some(11), signals));
     }
 
     #[test]
