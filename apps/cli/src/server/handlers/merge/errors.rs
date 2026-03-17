@@ -1,4 +1,7 @@
 use crate::server::channel::DualChannel;
+use crate::server::error_classify::{
+    is_db_locked, is_repo_context_invalid, is_storage_corruption, is_storage_not_found,
+};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 fn send(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
@@ -28,68 +31,21 @@ pub(super) fn classified_failure(ch: &DualChannel, detail: impl Into<String>) {
 
 fn classify_failure_code(detail: &str) -> ServerErrorCode {
     let lower = detail.to_ascii_lowercase();
-    if contains_any(
-        &lower,
-        &[
-            "repository not found:",
-            "document not found",
-            "doc not found",
-            "no local repository matched the active remote repository",
-        ],
-    ) {
+    if is_storage_not_found(&lower)
+        || lower.contains("no local repository matched the active remote repository")
+    {
         return ServerErrorCode::StorageNotFound;
     }
-    if lower.contains("database already open")
-        || lower.contains("cannot acquire lock")
-        || lower.contains("db locked")
-        || lower.contains("database is locked")
-    {
+    if is_db_locked(&lower) {
         return ServerErrorCode::StorageDbLocked;
     }
-    if lower.contains("tracked document projection missing") {
+    if is_storage_corruption(&lower) {
         return ServerErrorCode::StoragePersistFailed;
     }
-    if contains_any(
-        &lower,
-        &[
-            "broken repo entry",
-            "broken local repo",
-            "broken shadow repo",
-            "broken shadow peer",
-            "failed to walk local repo",
-            "deserialize",
-            "decode",
-            "unexpected end",
-        ],
-    ) {
-        return ServerErrorCode::StoragePersistFailed;
-    }
-    if contains_any(
-        &lower,
-        &[
-            "local repo operation requested on remote branch",
-            "cannot bootstrap local repo while on remote branch",
-            "repo selector mismatch",
-            "session repo mismatch",
-            "remote session lost repo name",
-            "repository uuid not resolved",
-            "remote repository selector not resolved",
-            "local repository selector not resolved",
-            "local repository uuid not resolved",
-            "ambiguous local repository selector",
-            "ambiguous remote repository selector",
-            "local repo not found for uuid",
-            "scope mismatch",
-            "stale scope nonce",
-        ],
-    ) {
+    if is_repo_context_invalid(&lower) {
         return ServerErrorCode::ScRepoContextInvalid;
     }
     ServerErrorCode::RequestFailed
-}
-
-fn contains_any(input: &str, patterns: &[&str]) -> bool {
-    patterns.iter().any(|pattern| input.contains(pattern))
 }
 
 #[cfg(test)]
@@ -152,6 +108,16 @@ mod tests {
         assert_eq!(
             classify_failure_code(
                 "Broken repo entry \"/tmp/local/.redb\" while listing repos: invalid file stem"
+            ),
+            ServerErrorCode::StoragePersistFailed
+        );
+    }
+
+    #[test]
+    fn classifies_missing_remote_catalog_as_storage_persist_failed() {
+        assert_eq!(
+            classify_failure_code(
+                "Broken remote repo catalog: remote repo directory missing at /tmp/ledger/remotes"
             ),
             ServerErrorCode::StoragePersistFailed
         );

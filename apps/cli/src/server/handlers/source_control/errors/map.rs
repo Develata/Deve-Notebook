@@ -1,3 +1,7 @@
+use crate::server::error_classify::{
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
+    is_storage_not_found,
+};
 use anyhow::Error;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -76,77 +80,19 @@ fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<ServerError> {
 
 fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode> {
     let lower = detail.to_ascii_lowercase();
-    if contains_any(
-        &lower,
-        &[
-            "active repository not selected",
-            "multiple local repos exist",
-            "no local repositories available",
-        ],
-    ) {
+    if is_repo_not_selected(&lower) {
         return Some(ServerErrorCode::ScRepoNotSelected);
     }
-    if contains_any(
-        &lower,
-        &[
-            "repository not found:",
-            "document not found",
-            "doc not found",
-        ],
-    ) {
+    if is_storage_not_found(&lower) {
         return Some(ServerErrorCode::StorageNotFound);
     }
-    if contains_any(
-        &lower,
-        &[
-            "database already open",
-            "cannot acquire lock",
-            "db locked",
-            "database is locked",
-            "failed to lock database",
-        ],
-    ) {
+    if is_db_locked(&lower) {
         return Some(ServerErrorCode::StorageDbLocked);
     }
-    if contains_any(
-        &lower,
-        &[
-            "broken repo entry",
-            "broken local repo",
-            "broken shadow repo",
-            "broken shadow peer",
-            "failed to walk local repo",
-            "deserialize",
-            "decode",
-            "unexpected end",
-        ],
-    ) {
+    if is_storage_corruption(&lower) {
         return Some(ServerErrorCode::StoragePersistFailed);
     }
-    if lower.contains("tracked document projection missing") {
-        return Some(ServerErrorCode::StoragePersistFailed);
-    }
-    if contains_any(
-        &lower,
-        &[
-            "remote session lost repo name",
-            "cannot bootstrap local repo while on remote branch",
-            "repository uuid not resolved",
-            "remote repository selector not resolved",
-            "local repository selector not resolved",
-            "local repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "ambiguous local repository selector",
-            "ambiguous remote repository selector",
-            "local repo not found for uuid",
-            "local repo operation requested on remote branch",
-            "local workspace path requested on remote branch",
-            "local workspace root requested on remote branch",
-            "scope mismatch",
-            "stale scope nonce",
-        ],
-    ) {
+    if is_repo_context_invalid(&lower) {
         return Some(ServerErrorCode::ScRepoContextInvalid);
     }
     None

@@ -87,6 +87,19 @@ fn classifies_broken_repo_entry_as_storage_persist_failed() {
 }
 
 #[test]
+fn classifies_missing_remote_catalog_as_storage_persist_failed() {
+    assert_eq!(
+        classify_repo_error(
+            "Broken remote repo catalog: remote repo directory missing at /tmp/ledger/remotes"
+        ),
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ServerErrorCode::StoragePersistFailed
+        )
+    );
+}
+
+#[test]
 fn plugin_host_repository_unavailable_maps_to_not_implemented() {
     let response = plugin_host_error_response("Repository not configured");
     assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);

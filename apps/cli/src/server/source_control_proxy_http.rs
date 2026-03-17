@@ -1,3 +1,6 @@
+use crate::server::error_classify::{
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
+};
 use anyhow::Result;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use reqwest::{RequestBuilder, Response, StatusCode};
@@ -44,68 +47,16 @@ fn decode_error(status: StatusCode, body: &[u8]) -> ServerError {
 
 fn decode_plain_text_error(status: StatusCode, raw_detail: &str) -> ServerError {
     let lower = raw_detail.to_ascii_lowercase();
-    if contains_any(
-        &lower,
-        &[
-            "active repository not selected",
-            "multiple local repos exist",
-            "no local repositories available",
-        ],
-    ) {
+    if is_repo_not_selected(&lower) {
         return ServerError::with_detail(ServerErrorCode::ScRepoNotSelected, raw_detail);
     }
-    if contains_any(
-        &lower,
-        &[
-            "remote session lost repo name",
-            "cannot bootstrap local repo while on remote branch",
-            "repository uuid not resolved",
-            "remote repository selector not resolved",
-            "local repository selector not resolved",
-            "local repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "ambiguous local repository selector",
-            "ambiguous remote repository selector",
-            "local repo not found for uuid",
-            "local repo operation requested on remote branch",
-            "local workspace path requested on remote branch",
-            "local workspace root requested on remote branch",
-            "scope mismatch",
-            "stale scope nonce",
-        ],
-    ) {
+    if is_repo_context_invalid(&lower) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);
     }
-    if lower.contains("tracked document projection missing") {
+    if is_storage_corruption(&lower) {
         return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, raw_detail);
     }
-    if contains_any(
-        &lower,
-        &[
-            "broken repo entry",
-            "broken local repo",
-            "broken shadow repo",
-            "broken shadow peer",
-            "failed to walk local repo",
-            "deserialize",
-            "decode",
-            "unexpected end",
-        ],
-    ) {
-        return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, raw_detail);
-    }
-    if contains_any(
-        &lower,
-        &[
-            "database already open",
-            "cannot acquire lock",
-            "db locked",
-            "database is locked",
-            "failed to lock database",
-        ],
-    ) || status == StatusCode::SERVICE_UNAVAILABLE
-    {
+    if is_db_locked(&lower) || status == StatusCode::SERVICE_UNAVAILABLE {
         return ServerError::with_detail(
             ServerErrorCode::StorageDbLocked,
             format_remote_detail(status, raw_detail),
@@ -222,6 +173,15 @@ mod tests {
             b"Repo selector mismatch: repo_id resolved to default, repo_name resolved to test",
         );
         assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    }
+
+    #[test]
+    fn maps_missing_remote_catalog_as_storage_persist_failed() {
+        let err = decode_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            b"Broken remote repo catalog: remote repo directory missing at /tmp/ledger/remotes",
+        );
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
 
     #[test]

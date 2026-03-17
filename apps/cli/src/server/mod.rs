@@ -40,6 +40,7 @@ mod docs_projection_repair_test;
 mod document_remote_scope_test;
 #[cfg(test)]
 mod edit_scope_test;
+mod error_classify;
 pub mod handlers;
 #[cfg(test)]
 mod listing_scope_cleanup_test;

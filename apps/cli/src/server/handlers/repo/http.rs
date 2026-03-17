@@ -1,6 +1,10 @@
 // apps/cli/src/server/handlers/repo/http.rs
 //! # Repo HTTP API
 
+use crate::server::error_classify::{
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
+    is_storage_not_found,
+};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -118,96 +122,31 @@ fn plugin_host_error_response(error: impl ToString) -> axum::response::Response 
 
 fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
     let lower = detail.to_ascii_lowercase();
-    if contains_any(
-        &lower,
-        &[
-            "repository not found:",
-            "document not found",
-            "doc not found",
-            "local repo not found for name",
-        ],
-    ) {
+    if is_storage_not_found(&lower) {
         return (StatusCode::NOT_FOUND, ServerErrorCode::StorageNotFound);
     }
-    if contains_any(
-        &lower,
-        &[
-            "database already open",
-            "cannot acquire lock",
-            "db locked",
-            "database is locked",
-        ],
-    ) {
+    if is_db_locked(&lower) {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
             ServerErrorCode::StorageDbLocked,
         );
     }
-    if lower.contains("tracked document projection missing") {
+    if is_storage_corruption(&lower) {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             ServerErrorCode::StoragePersistFailed,
         );
     }
-    if contains_any(
-        &lower,
-        &[
-            "broken repo entry",
-            "broken local repo",
-            "broken shadow repo",
-            "broken shadow peer",
-            "failed to walk local repo",
-            "deserialize",
-            "decode",
-            "unexpected end",
-        ],
-    ) {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ServerErrorCode::StoragePersistFailed,
-        );
-    }
-    if contains_any(
-        &lower,
-        &[
-            "active repository not selected",
-            "multiple local repos exist",
-            "no local repositories available",
-        ],
-    ) {
+    if is_repo_not_selected(&lower) {
         return (StatusCode::CONFLICT, ServerErrorCode::SyncRepoUnbound);
     }
-    if contains_any(
-        &lower,
-        &[
-            "remote session lost repo name",
-            "cannot bootstrap local repo while on remote branch",
-            "repository uuid not resolved",
-            "remote repository selector not resolved",
-            "local repository selector not resolved",
-            "local repository uuid not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "ambiguous local repository selector",
-            "ambiguous remote repository selector",
-            "local repo not found for uuid",
-            "local repo operation requested on remote branch",
-            "local workspace path requested on remote branch",
-            "local workspace root requested on remote branch",
-            "scope mismatch",
-            "stale scope nonce",
-        ],
-    ) {
+    if is_repo_context_invalid(&lower) {
         return (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid);
     }
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         ServerErrorCode::RequestFailed,
     )
-}
-
-fn contains_any(input: &str, patterns: &[&str]) -> bool {
-    patterns.iter().any(|pattern| input.contains(pattern))
 }
 
 #[cfg(test)]

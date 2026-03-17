@@ -93,6 +93,14 @@ fn maps_broken_repo_entry_to_storage_persist_failed() {
 }
 
 #[test]
+fn maps_missing_remote_catalog_to_storage_persist_failed() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "Broken remote repo catalog: remote repo directory missing at /tmp/ledger/remotes"
+    ));
+    assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+}
+
+#[test]
 fn preserves_remote_structured_errors() {
     let err = map_repo_error(
         ScOp::Commit,
