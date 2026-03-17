@@ -13,10 +13,10 @@ pub async fn handle_commit(
     session: &mut WsSession,
     message: String,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::commit_staged(state.repo.as_ref(), &selector, &message) {
@@ -32,7 +32,7 @@ pub async fn handle_commit(
         }
         Err(e) => {
             tracing::error!("Failed to create commit: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
@@ -45,10 +45,10 @@ pub async fn handle_get_commit_history(
     request_id: String,
     limit: u32,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     match list_commit_history(state, &scope, limit) {
         Ok(commits) => {
@@ -63,7 +63,7 @@ pub async fn handle_get_commit_history(
         }
         Err(e) => {
             tracing::error!("Failed to get commit history: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
@@ -77,10 +77,10 @@ pub async fn handle_get_commit_diff(
     commit_a: Option<String>,
     commit_b: String,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     match diff_commits(state, &scope, commit_a.as_deref(), &commit_b) {
         Ok(diffs) => {
@@ -95,7 +95,7 @@ pub async fn handle_get_commit_diff(
         }
         Err(e) => {
             tracing::error!("Failed to get commit diff: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
@@ -147,10 +147,10 @@ pub async fn handle_commit_and_push(
     session: &mut WsSession,
     message: String,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::commit_staged(state.repo.as_ref(), &selector, &message) {
@@ -166,7 +166,7 @@ pub async fn handle_commit_and_push(
         }
         Err(e) => {
             tracing::error!("Commit & Push failed: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }

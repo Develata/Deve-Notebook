@@ -109,6 +109,8 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(19));
     session.switch_repo("default".into(), None);
 
     handle_get_doc_diff(
@@ -202,6 +204,8 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(19));
     session.switch_repo("default".into(), None);
 
     handle_get_doc_diff(
@@ -217,7 +221,9 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
             assert!(
                 error
                     .detail
@@ -225,6 +231,7 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
                     .unwrap_or_default()
                     .contains("Source control target not resolved")
             );
+            assert_eq!(scope_nonce, Some(19));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -257,6 +264,7 @@ async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut rx = state.tx.subscribe();
     let mut session = WsSession::new();
+    session.mark_browser_session();
     session.switch_repo("default".into(), None);
     session.set_scope_nonce(Some(23));
 

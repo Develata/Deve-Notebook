@@ -8,12 +8,17 @@ use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub use map::{ScOp, map_repo_error, map_repo_scope_error};
 
-pub fn send_ws(ch: &DualChannel, error: ServerError) {
-    ch.send_protocol_error(error);
+pub fn send_ws_scoped(ch: &DualChannel, error: ServerError, scope_nonce: Option<u64>) {
+    ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
 }
 
-pub fn send_ws_code(ch: &DualChannel, code: ServerErrorCode, detail: impl Into<String>) {
-    send_ws(ch, ServerError::with_detail(code, detail));
+pub fn send_ws_code_scoped(
+    ch: &DualChannel,
+    code: ServerErrorCode,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send_ws_scoped(ch, ServerError::with_detail(code, detail), scope_nonce);
 }
 
 pub fn http(error: ServerError) -> Response {

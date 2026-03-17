@@ -12,11 +12,11 @@ pub async fn handle_get_changes(
     session: &mut WsSession,
     request_id: Option<String>,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     if session.active_branch.is_some() {
         let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
             Ok(scope) => scope,
-            Err(e) => return super::errors::send_ws(ch, e),
+            Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
         ch.unicast(ServerMessage::ChangesList {
             request_id,
@@ -30,16 +30,17 @@ pub async fn handle_get_changes(
     }
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     let staged = match state.repo.list_staged_in_repo(&selector) {
         Ok(list) => super::present::collapse_rename_candidates(list),
         Err(e) => {
             tracing::error!("Failed to list staged files: {:?}", e);
-            return super::errors::send_ws(
+            return super::errors::send_ws_scoped(
                 ch,
                 super::errors::map_repo_error(super::errors::ScOp::ListChanges, e),
+                scope_nonce,
             );
         }
     };
@@ -47,7 +48,7 @@ pub async fn handle_get_changes(
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to list unstaged files: {:?}", e);
-            return super::errors::send_ws(ch, e);
+            return super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     };
     ch.unicast(ServerMessage::ChangesList {

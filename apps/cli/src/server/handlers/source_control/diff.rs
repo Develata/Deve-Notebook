@@ -22,14 +22,14 @@ pub async fn handle_get_doc_diff(
     request_id: String,
     target: ScPathTarget,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     if session.active_branch.is_some() {
         remote::handle_remote_diff(state, ch, session, request_id, target).await;
         return;
     }
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let (normalized, old_content, new_content) = match state
         .repo
@@ -37,9 +37,10 @@ pub async fn handle_get_doc_diff(
     {
         Ok(payload) => payload,
         Err(e) => {
-            return super::errors::send_ws(
+            return super::errors::send_ws_scoped(
                 ch,
                 super::errors::map_repo_error(super::errors::ScOp::DiffDoc(target.path.clone()), e),
+                scope_nonce,
             );
         }
     };

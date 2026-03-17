@@ -12,10 +12,10 @@ pub async fn handle_stage_file(
     session: &mut WsSession,
     target: ScPathTarget,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::stage_pending(state.repo.as_ref(), &selector, &target) {
@@ -30,7 +30,7 @@ pub async fn handle_stage_file(
         }
         Err(e) => {
             tracing::error!("Failed to stage file: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
@@ -42,10 +42,10 @@ pub async fn handle_unstage_file(
     session: &mut WsSession,
     target: ScPathTarget,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::unstage_file(state.repo.as_ref(), &selector, &target) {
@@ -60,7 +60,7 @@ pub async fn handle_unstage_file(
         }
         Err(e) => {
             tracing::error!("Failed to unstage file: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
@@ -72,16 +72,17 @@ pub async fn handle_stage_files(
     session: &mut WsSession,
     targets: Vec<ScPathTarget>,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::stage_pending_many(state.repo.as_ref(), &selector, targets) {
         Ok(_) => super::changes::handle_get_changes(state, ch, session, None).await,
         Err(e) => {
             tracing::error!("Failed to stage files: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
@@ -93,16 +94,17 @@ pub async fn handle_unstage_files(
     session: &mut WsSession,
     targets: Vec<ScPathTarget>,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::unstage_many(state.repo.as_ref(), &selector, targets) {
         Ok(_) => super::changes::handle_get_changes(state, ch, session, None).await,
         Err(e) => {
             tracing::error!("Failed to unstage files: {:?}", e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }

@@ -24,19 +24,19 @@ pub async fn handle_resolve_conflict(
     target: ScPathTarget,
     resolution: ConflictResolution,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     let pending = match super::service::list_pending(state.repo.as_ref(), &selector) {
         Ok(entries) => entries,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let resolved = match super::service::resolve_target(&pending, &target) {
         Ok(resolved) => resolved,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let normalized = resolved.path.clone();
     let result = match resolution {
@@ -63,7 +63,7 @@ pub async fn handle_resolve_conflict(
         }
         Err(e) => {
             tracing::error!("Failed to resolve conflict {}: {:?}", normalized, e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }

@@ -16,26 +16,28 @@ pub(super) async fn handle_remote_diff(
     request_id: String,
     target: ScPathTarget,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match repo_scope::resolve_current_repo_scope(state, session) {
         Ok(scope) => scope,
-        Err(e) => return errors::send_ws(ch, e),
+        Err(e) => return errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let path = deve_core::utils::path::to_forward_slash(&target.path);
     let (doc_id, new_content) =
         match resolve_remote_content(state, scope.branch.as_ref(), scope.repo_id, &target) {
             Ok(Some(content)) => content,
             Ok(None) => {
-                return errors::send_ws_code(
+                return errors::send_ws_code_scoped(
                     ch,
                     ServerErrorCode::ScDocNotFound,
                     format!("Remote document not found: {}", path),
+                    scope_nonce,
                 );
             }
             Err(err) => {
-                return errors::send_ws(
+                return errors::send_ws_scoped(
                     ch,
                     errors::map_repo_error(errors::ScOp::DiffDoc(path.clone()), err),
+                    scope_nonce,
                 );
             }
         };
@@ -43,16 +45,19 @@ pub(super) async fn handle_remote_diff(
     let local_repo_name = match resolve_local_counterpart_repo(state, &scope) {
         Ok(Some(local_scope)) => Some(local_scope.repo_name),
         Ok(None) => None,
-        Err(err) => return errors::send_ws(ch, errors::map_repo_scope_error(err)),
+        Err(err) => {
+            return errors::send_ws_scoped(ch, errors::map_repo_scope_error(err), scope_nonce);
+        }
     };
     let old_content =
         match local_counterpart_content(state.repo.as_ref(), doc_id, local_repo_name.as_deref()) {
             Ok(Some(content)) => content,
             Ok(None) => String::new(),
             Err(err) => {
-                return errors::send_ws(
+                return errors::send_ws_scoped(
                     ch,
                     errors::map_repo_error(errors::ScOp::DiffDoc(path.clone()), err),
+                    scope_nonce,
                 );
             }
         };

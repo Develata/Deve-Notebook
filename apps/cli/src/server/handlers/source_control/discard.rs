@@ -15,10 +15,10 @@ pub async fn handle_discard_file(
     session: &mut WsSession,
     target: ScPathTarget,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
         Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws(ch, e),
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
     let selector = super::service::selector_from_scope(&scope);
     match super::local_discard::discard_via_sync_manager(state, &selector, &target) {
@@ -34,7 +34,7 @@ pub async fn handle_discard_file(
         }
         Err(e) => {
             tracing::error!("Failed to discard {}: {:?}", target.path, e);
-            super::errors::send_ws(ch, e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
 }
