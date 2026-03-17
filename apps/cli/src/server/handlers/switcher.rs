@@ -123,7 +123,7 @@ pub async fn handle_switch_branch(
     ch.unicast(ServerMessage::RepoList {
         request_id: None,
         branch: final_branch.clone(),
-        scope_nonce: Some(session.scope_nonce()),
+        scope_nonce: session.is_browser_session().then(|| session.scope_nonce()),
         repos: payload.repo_list,
     });
     emit_repo_view(

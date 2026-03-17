@@ -21,7 +21,7 @@ pub(super) async fn handle_merge_peer(
     peer_id: String,
     doc_id: DocId,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {

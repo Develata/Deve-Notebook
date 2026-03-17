@@ -12,7 +12,7 @@ pub(super) async fn handle_get_sync_mode(
     session: &mut WsSession,
     request_id: String,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(repo_id) = resolve_read_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
@@ -34,7 +34,7 @@ pub(super) async fn handle_set_sync_mode(
     session: &mut WsSession,
     mode: String,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
@@ -65,7 +65,7 @@ pub(super) async fn handle_get_pending_ops(
     session: &mut WsSession,
     request_id: String,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(repo_id) = resolve_read_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
@@ -97,7 +97,7 @@ pub(super) async fn handle_confirm_merge(
     ch: &DualChannel,
     session: &mut WsSession,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
@@ -126,7 +126,7 @@ pub(super) async fn handle_discard_pending(
     ch: &DualChannel,
     session: &mut WsSession,
 ) {
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };

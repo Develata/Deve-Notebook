@@ -8,10 +8,10 @@ use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::tempdir;
+use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
-fn build_state() -> anyhow::Result<(Arc<AppState>, uuid::Uuid)> {
+fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -21,6 +21,7 @@ fn build_state() -> anyhow::Result<(Arc<AppState>, uuid::Uuid)> {
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     Ok((
+        dir,
         Arc::new(AppState {
             repo: repo.clone(),
             sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
@@ -42,7 +43,7 @@ fn build_state() -> anyhow::Result<(Arc<AppState>, uuid::Uuid)> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_request_on_unbound_remote_clears_stale_db_and_sync_binding() -> anyhow::Result<()> {
-    let (state, repo_id) = build_state()?;
+    let (_dir, state, repo_id) = build_state()?;
     let local_handle = state
         .repo
         .open_database(None, state.repo.local_repo_name())?;
@@ -72,7 +73,7 @@ async fn sync_request_on_unbound_remote_clears_stale_db_and_sync_binding() -> an
 
 #[test]
 fn writer_registration_on_unbound_remote_clears_stale_db_and_sync_binding() -> anyhow::Result<()> {
-    let (state, repo_id) = build_state()?;
+    let (_dir, state, repo_id) = build_state()?;
     let local_handle = state
         .repo
         .open_database(None, state.repo.local_repo_name())?;
@@ -96,7 +97,7 @@ fn writer_registration_on_unbound_remote_clears_stale_db_and_sync_binding() -> a
 
 #[test]
 fn browser_writer_registration_rejects_stale_scope_nonce_with_scoped_error() -> anyhow::Result<()> {
-    let (state, repo_id) = build_state()?;
+    let (_dir, state, repo_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();

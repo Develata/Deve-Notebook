@@ -8,10 +8,10 @@ use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::tempdir;
+use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
-fn build_state() -> anyhow::Result<Arc<AppState>> {
+fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -19,26 +19,29 @@ fn build_state() -> anyhow::Result<Arc<AppState>> {
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(8);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    Ok(Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            PeerId::new("test-peer"),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key,
-    }))
+    Ok((
+        dir,
+        Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            tx,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                PeerId::new("test-peer"),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_service: None,
+            identity_key,
+        }),
+    ))
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_edit_requires_current_scope_nonce() -> anyhow::Result<()> {
-    let state = build_state()?;
+    let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -80,7 +83,7 @@ async fn browser_edit_requires_current_scope_nonce() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_open_doc_requires_current_scope_nonce() -> anyhow::Result<()> {
-    let state = build_state()?;
+    let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -113,7 +116,7 @@ async fn browser_open_doc_requires_current_scope_nonce() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_request_history_requires_current_scope_nonce() -> anyhow::Result<()> {
-    let state = build_state()?;
+    let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -146,7 +149,7 @@ async fn browser_request_history_requires_current_scope_nonce() -> anyhow::Resul
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_request_key_requires_current_scope_nonce() -> anyhow::Result<()> {
-    let state = build_state()?;
+    let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -175,7 +178,7 @@ async fn browser_request_key_requires_current_scope_nonce() -> anyhow::Result<()
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_search_requires_current_scope_nonce() -> anyhow::Result<()> {
-    let state = build_state()?;
+    let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();

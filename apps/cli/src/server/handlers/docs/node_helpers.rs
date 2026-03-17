@@ -26,7 +26,7 @@ pub fn broadcast_local_projection_refresh(
     let delta = state
         .tree_manager
         .reset_from_nodes(scope.repo_id, None, nodes);
-    let scope_nonce = Some(session.scope_nonce());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
 
     ch.unicast(ServerMessage::DocList {
         request_id: None,
