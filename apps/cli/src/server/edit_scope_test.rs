@@ -99,7 +99,8 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::EditRejected { error }) => {
+        Some(ServerMessage::EditRejected { scope_nonce, error }) => {
+            assert_eq!(scope_nonce, Some(session.scope_nonce()));
             assert_eq!(error.code, ServerErrorCode::StorageNotFound);
         }
         other => panic!("expected EditRejected(StorageNotFound), got {:?}", other),

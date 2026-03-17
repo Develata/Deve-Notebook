@@ -12,7 +12,9 @@ use super::message_dispatch_gate::{
 use super::message_dispatch_protocol::{handle_shadow_list_message, protocol_control_signals};
 use super::message_projection::{handle_doc_list, handle_tree_update};
 use super::message_protocol::handle_protocol_error;
-use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
+use super::message_repo_scope::{
+    accepts_edit_rejected_message, accepts_write_ready_message, matches_current_message_scope,
+};
 use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
     handle_sync_mode_status,
@@ -168,7 +170,10 @@ pub fn handle_message<F>(
         ServerMessage::PeerDeleted { peer_id } => {
             message_shadow::handle_peer_deleted(peer_id, ws, signals);
         }
-        ServerMessage::EditRejected { error } => {
+        ServerMessage::EditRejected { scope_nonce, error } => {
+            if !accepts_edit_rejected_message(scope_nonce, signals) {
+                return;
+            }
             handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
         }
         ServerMessage::ProtocolError {

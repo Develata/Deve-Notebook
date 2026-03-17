@@ -16,6 +16,7 @@ pub(super) async fn handle_edit(
     if session.is_readonly() {
         tracing::debug!("Edit rejected: session is readonly (remote branch)");
         ch.unicast(ServerMessage::EditRejected {
+            scope_nonce: Some(session.scope_nonce()),
             error: ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
         });
         return;
@@ -34,6 +35,7 @@ pub(super) async fn handle_edit(
         Ok(Some(_)) => {}
         Ok(None) => {
             ch.unicast(ServerMessage::EditRejected {
+                scope_nonce: Some(session.scope_nonce()),
                 error: ServerError::with_detail(
                     ServerErrorCode::StorageNotFound,
                     format!("Document not found in active repository: {doc_id}"),
