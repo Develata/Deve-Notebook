@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 impl RepoManager {
     fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
-        let peer_dir = self.remotes_dir().join(peer_id.to_filename());
+        let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
         if !peer_dir.exists() {
             return Ok(());
         }
@@ -82,7 +82,7 @@ impl RepoManager {
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
-        let peer_dir = self.remotes_dir().join(peer_id.to_filename());
+        let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
         if !peer_dir.exists() {
             return Ok(vec![]);
         }

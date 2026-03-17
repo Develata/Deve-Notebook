@@ -86,6 +86,17 @@ impl RepoManager {
         self.ledger_dir.join("remotes")
     }
 
+    pub(crate) fn checked_remotes_dir(&self) -> Result<PathBuf> {
+        let remotes_dir = self.remotes_dir();
+        if !remotes_dir.exists() {
+            anyhow::bail!(
+                "Broken remote repo catalog: remote repo directory missing at {:?}",
+                remotes_dir
+            );
+        }
+        Ok(remotes_dir)
+    }
+
     /// 获取本地数据库的只读事务 (用于高级查询)
     pub fn local_db_read_txn(&self) -> Result<redb::ReadTransaction> {
         Ok(self.local_db.begin_read()?)

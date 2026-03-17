@@ -30,10 +30,7 @@ impl RepoManager {
     }
 
     pub fn repair_remote_repo_catalogs(&self) -> Result<()> {
-        let remotes_dir = self.remotes_dir();
-        if !remotes_dir.exists() {
-            return Ok(());
-        }
+        let remotes_dir = self.checked_remotes_dir()?;
         let mut peers = Vec::new();
         for entry in std::fs::read_dir(remotes_dir)? {
             let path = entry?.path();

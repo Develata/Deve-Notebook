@@ -89,7 +89,7 @@ impl RepoListing for RepoManager {
 
     fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
-        for peer_id in shadow_peer_dirs(&self.remotes_dir())? {
+        for peer_id in shadow_peer_dirs(self)? {
             let entries = self
                 .scan_remote_repo_entries_without_repair(&peer_id)
                 .map_err(|err| {
@@ -116,7 +116,7 @@ impl RepoListing for RepoManager {
 
     fn list_switchable_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
-        for peer_id in shadow_peer_dirs(&self.remotes_dir())? {
+        for peer_id in shadow_peer_dirs(self)? {
             if !self.list_remote_repo_names(&peer_id)?.is_empty() {
                 peers.push(peer_id);
             }
@@ -126,12 +126,10 @@ impl RepoListing for RepoManager {
     }
 }
 
-fn shadow_peer_dirs(remotes_dir: &std::path::Path) -> Result<Vec<PeerId>> {
-    if !remotes_dir.exists() {
-        return Ok(vec![]);
-    }
+fn shadow_peer_dirs(repo: &RepoManager) -> Result<Vec<PeerId>> {
+    let remotes_dir = repo.checked_remotes_dir()?;
     let mut peers = Vec::new();
-    for entry in std::fs::read_dir(remotes_dir)? {
+    for entry in std::fs::read_dir(&remotes_dir)? {
         let entry = entry?;
         let path = entry.path();
         if !path.is_dir() {
