@@ -123,6 +123,24 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::WriteReady { .. }
             | ServerMessage::KeyProvide { .. }
             | ServerMessage::KeyDenied { .. }
+            | ServerMessage::Ack { .. }
+            | ServerMessage::Snapshot { .. }
+            | ServerMessage::History { .. }
+            | ServerMessage::RepoList { .. }
+            | ServerMessage::DocList { .. }
+            | ServerMessage::TreeUpdate { .. }
+            | ServerMessage::ShadowList { .. }
+            | ServerMessage::PluginResponse { .. }
+            | ServerMessage::SearchResults { .. }
+            | ServerMessage::SyncModeStatus { .. }
+            | ServerMessage::PendingOpsInfo { .. }
+            | ServerMessage::ChangesList { .. }
+            | ServerMessage::StageAck { .. }
+            | ServerMessage::UnstageAck { .. }
+            | ServerMessage::DiscardAck { .. }
+            | ServerMessage::CommitHistory { .. }
+            | ServerMessage::DocDiff { .. }
+            | ServerMessage::CommitDiffResult { .. }
     )
 }
 
@@ -137,5 +155,5 @@ fn schedule_must_deliver(tx: mpsc::Sender<ServerMessage>, msg: ServerMessage) {
 }
 
 #[cfg(test)]
-#[path = "channel_test.rs"]
+#[path = "channel_test/mod.rs"]
 mod tests;
