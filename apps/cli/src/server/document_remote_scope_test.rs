@@ -98,6 +98,7 @@ async fn open_doc_on_remote_branch_uses_shadow_repo_without_locked_db() -> anyho
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
     session.set_scope_nonce(Some(13));
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_repo_id));
@@ -131,6 +132,7 @@ async fn request_history_on_remote_branch_uses_shadow_repo_without_locked_db() -
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
     session.set_scope_nonce(Some(17));
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_repo_id));
@@ -161,6 +163,8 @@ async fn list_docs_on_remote_branch_uses_shadow_repo_without_locked_db() -> anyh
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(19));
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_repo_id));
 

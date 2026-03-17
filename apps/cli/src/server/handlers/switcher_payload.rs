@@ -52,6 +52,7 @@ pub(super) fn emit_repo_view(
     let Some(repo_view) = repo_view else {
         return;
     };
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let tree_branch = branch.clone().map(PeerId::new);
     ch.unicast(ServerMessage::RepoSwitched {
         branch: branch.clone(),
@@ -63,7 +64,7 @@ pub(super) fn emit_repo_view(
         request_id: None,
         repo_id: Some(repo_view.repo_id),
         branch: tree_branch.clone(),
-        scope_nonce: Some(session.scope_nonce()),
+        scope_nonce,
         docs: repo_view.docs,
     });
     let delta = state.tree_manager.reset_from_nodes(
@@ -75,7 +76,7 @@ pub(super) fn emit_repo_view(
         request_id: None,
         repo_id: Some(repo_view.repo_id),
         branch: tree_branch,
-        scope_nonce: Some(session.scope_nonce()),
+        scope_nonce,
         delta,
     });
 }

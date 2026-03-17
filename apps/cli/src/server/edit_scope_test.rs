@@ -81,6 +81,8 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(19));
     session.switch_repo("test".into(), Some(test_repo_id));
     session.set_writer_identity(test_repo_id, PeerId::new("writer"));
 
@@ -100,7 +102,7 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
 
     match uni_rx.recv().await {
         Some(ServerMessage::EditRejected { scope_nonce, error }) => {
-            assert_eq!(scope_nonce, Some(session.scope_nonce()));
+            assert_eq!(scope_nonce, Some(19));
             assert_eq!(error.code, ServerErrorCode::StorageNotFound);
         }
         other => panic!("expected EditRejected(StorageNotFound), got {:?}", other),

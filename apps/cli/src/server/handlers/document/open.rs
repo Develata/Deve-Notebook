@@ -56,7 +56,7 @@ pub(super) async fn handle_open_doc(
     ch.unicast(ServerMessage::Snapshot {
         repo_id: scope.repo_id,
         branch: session.active_branch.clone(),
-        scope_nonce: Some(session.scope_nonce()),
+        scope_nonce,
         doc_id,
         request_id,
         content,
