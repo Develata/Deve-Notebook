@@ -245,6 +245,47 @@ fn resolve_session_repo_accepts_exact_collision_safe_remote_selector_without_uui
 }
 
 #[test]
+fn resolve_session_repo_rejects_uuid_shaped_remote_display_name_with_stale_uuid()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    let display_uuid = uuid::Uuid::new_v4();
+    let stale_uuid = uuid::Uuid::new_v4();
+    let peer_dir = state.repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir)?;
+    for (stem, uuid, name) in [
+        ("shadow-display", display_uuid, display_uuid.to_string()),
+        ("shadow-notes", stale_uuid, "shadow-notes".into()),
+    ] {
+        let db = redb::Database::create(peer_dir.join(format!("{stem}.redb")))?;
+        let write = db.begin_write()?;
+        write.open_table(REPO_METADATA)?.insert(
+            &0,
+            bincode::serialize(&deve_core::ledger::RepoInfo {
+                uuid,
+                name,
+                url: None,
+            })?
+            .as_slice(),
+        )?;
+        write.commit()?;
+    }
+
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo(display_uuid.to_string(), Some(stale_uuid));
+
+    let err = resolve_session_repo_and_sync(&state, &mut session)
+        .expect_err("uuid-shaped display name must not be overridden by stale uuid");
+    assert!(
+        err.to_string()
+            .contains("Remote repository selector not resolved")
+            || err.to_string().contains("Session repo mismatch")
+    );
+    Ok(())
+}
+
+#[test]
 fn resolve_local_counterpart_repo_prefers_repo_uuid_for_remote_scope() -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
