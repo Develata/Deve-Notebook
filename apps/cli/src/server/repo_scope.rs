@@ -75,9 +75,8 @@ pub fn resolve_session_repo_and_sync(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            if session.active_branch.is_some()
-                && should_clear_stale_remote_scope(err.to_string().as_str())
-            {
+            let mapped = map_repo_scope_error(anyhow!(err.to_string()));
+            if session.active_branch.is_some() && should_clear_stale_remote_scope(&mapped) {
                 session.clear_active_repo();
                 session.clear_active_db();
                 session.clear_sync_binding();
