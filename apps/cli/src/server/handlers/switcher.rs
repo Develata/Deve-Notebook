@@ -9,7 +9,7 @@ mod switcher_payload;
 #[path = "switcher_prepare.rs"]
 mod switcher_prepare;
 #[cfg(test)]
-#[path = "switcher_prepare_test.rs"]
+#[path = "switcher_prepare_test/mod.rs"]
 mod switcher_prepare_test;
 #[path = "switcher_scope.rs"]
 mod switcher_scope;

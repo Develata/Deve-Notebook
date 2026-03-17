@@ -9,7 +9,9 @@ use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::broadcast;
 
-fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
+mod remote;
+
+pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -35,7 +37,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     Ok((dir, state))
 }
 
-fn seed_duplicate_remote(
+pub(super) fn seed_duplicate_remote(
     state: &Arc<AppState>,
 ) -> anyhow::Result<(PeerId, uuid::Uuid, uuid::Uuid, String)> {
     let peer_id = PeerId::new("peer-remote");
@@ -56,102 +58,6 @@ fn seed_duplicate_remote(
         .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
         .expect("selector for second repo");
     Ok((peer_id, first.uuid, second.uuid, second_selector))
-}
-
-#[test]
-fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let selected = select_target_repo(&state, false, Some(second_id), None, None, Some(&peer_id))?
-        .expect("selector for second wiki repo");
-    assert_eq!(selected, second_selector);
-    Ok(())
-}
-
-#[test]
-fn select_target_repo_prefers_exact_remote_selector_over_stale_uuid() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let err = select_target_repo(
-        &state,
-        false,
-        Some(first_id),
-        Some(&second_selector),
-        None,
-        Some(&peer_id),
-    )
-    .expect_err("stale uuid must not override exact selector");
-    assert!(err.to_string().contains("Session repo mismatch:"));
-    Ok(())
-}
-
-#[test]
-fn select_target_repo_recovers_remote_selector_from_uuid_string_without_repo_id()
--> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let selected = select_target_repo(
-        &state,
-        false,
-        None,
-        Some(&second_id.to_string()),
-        None,
-        Some(&peer_id),
-    )?
-    .expect("selector for second wiki repo");
-    assert_eq!(selected, second_selector);
-    Ok(())
-}
-
-#[test]
-fn resolve_requested_repo_name_recovers_remote_selector_from_uuid_string_without_repo_id()
--> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let selected =
-        resolve_requested_repo_name(&state, Some(&peer_id), &second_id.to_string(), None)?
-            .expect("selector for second wiki repo");
-    assert_eq!(selected, second_selector);
-    Ok(())
-}
-
-#[test]
-fn resolve_requested_repo_name_accepts_exact_remote_selector_without_uuid() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let selected = resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, None)?
-        .expect("exact remote selector");
-    assert_eq!(selected, second_selector);
-    Ok(())
-}
-
-#[test]
-fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid() -> anyhow::Result<()>
-{
-    let (_dir, state) = build_state()?;
-    let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let err = resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, Some(first_id))
-        .expect_err("stale uuid must not override exact selector");
-    assert!(err.to_string().contains("Session repo mismatch:"));
-    Ok(())
-}
-
-#[test]
-fn resolve_requested_repo_name_prefers_repo_id_when_display_name_is_ambiguous() -> anyhow::Result<()>
-{
-    let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
-
-    let selected = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second_id))?
-        .expect("repo id should recover collision-safe selector");
-    assert_eq!(selected, second_selector);
-    Ok(())
 }
 
 #[test]
@@ -183,69 +89,6 @@ fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Resu
     let err = select_target_repo(&state, false, Some(default_id), Some("test"), None, None)
         .expect_err("stale uuid must not override exact local stem");
     assert!(err.to_string().contains("Session repo mismatch:"));
-    Ok(())
-}
-
-#[test]
-fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let peer_id = PeerId::new("peer-remote");
-    let first = RepoInfo {
-        uuid: uuid::Uuid::new_v4(),
-        name: "wiki".into(),
-        url: Some("urn:test:shared".into()),
-    };
-    let second = RepoInfo {
-        uuid: uuid::Uuid::new_v4(),
-        name: "notes".into(),
-        url: Some("urn:test:shared".into()),
-    };
-    state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
-    state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
-
-    let err = select_target_repo(
-        &state,
-        false,
-        None,
-        None,
-        Some("urn:test:shared".into()),
-        Some(&peer_id),
-    )
-    .expect_err("ambiguous remote URL must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Ambiguous remote repository selector for URL")
-    );
-    Ok(())
-}
-
-#[test]
-fn select_target_repo_prefers_current_repo_url_over_stale_uuid() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let peer_id = PeerId::new("peer-remote");
-    let first = RepoInfo {
-        uuid: uuid::Uuid::new_v4(),
-        name: "wiki".into(),
-        url: Some("urn:test:wiki-a".into()),
-    };
-    let second = RepoInfo {
-        uuid: uuid::Uuid::new_v4(),
-        name: "notes".into(),
-        url: Some("urn:test:wiki-b".into()),
-    };
-    state.repo.ensure_shadow_repo_info(&peer_id, &first)?;
-    state.repo.ensure_shadow_repo_info(&peer_id, &second)?;
-
-    let selected = select_target_repo(
-        &state,
-        true,
-        Some(second.uuid),
-        Some("stale-notes"),
-        first.url.clone(),
-        Some(&peer_id),
-    )?
-    .expect("canonical URL match");
-    assert_eq!(selected, "wiki");
     Ok(())
 }
 

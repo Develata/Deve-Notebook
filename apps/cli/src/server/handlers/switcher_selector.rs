@@ -186,6 +186,9 @@ fn can_defer_to_repo_id_for_display_collision(
     branch: Option<&PeerId>,
     raw_repo_name: &str,
 ) -> Result<bool> {
+    if uuid::Uuid::parse_str(raw_repo_name).is_ok() {
+        return Ok(false);
+    }
     let Some(peer_id) = branch else {
         return Ok(false);
     };
