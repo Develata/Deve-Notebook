@@ -81,9 +81,9 @@ pub fn accepts_edit_rejected_message(scope_nonce: Option<u64>, signals: CoreSign
 #[cfg(test)]
 mod tests {
     use super::{accepts_edit_rejected_message, accepts_write_ready, matches_repo_scope};
+    use crate::api::ConnectionStatus;
     use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::state::init_signals;
-    use crate::api::ConnectionStatus;
     use deve_core::models::PeerId;
     use leptos::prelude::*;
 

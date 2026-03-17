@@ -138,7 +138,7 @@ fn switchable_shadow_list_is_sorted_stably() {
 }
 
 #[test]
-fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows() {
+fn duplicate_shadow_uuid_peers_fail_closed_in_listing_and_switchable_views() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let peer_id = PeerId::new("peer-dup");
@@ -165,18 +165,18 @@ fn switchable_shadow_list_hides_peers_with_only_ambiguous_duplicate_uuid_shadows
         write.commit().expect("commit");
     }
 
-    assert!(
-        repo.list_repos(Some(&peer_id))
-            .expect("list dup repos")
-            .is_empty(),
-        "duplicate uuid shadows must be hidden from repo listing"
-    );
-    assert!(
-        repo.list_switchable_shadows_on_disk()
-            .expect("list switchable shadows")
-            .is_empty(),
-        "duplicate uuid shadow peer must not be switchable"
-    );
+    let repos_err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("duplicate uuid shadows must fail repo listing");
+    assert!(repos_err
+        .to_string()
+        .contains("duplicate remote repository UUIDs"));
+    let switchable_err = repo
+        .list_switchable_shadows_on_disk()
+        .expect_err("duplicate uuid shadow peer must fail switchable listing");
+    assert!(switchable_err
+        .to_string()
+        .contains("duplicate remote repository UUIDs"));
 }
 
 #[test]

@@ -50,10 +50,19 @@ impl RepoManager {
                 .map(|(_, repair)| repair.info.uuid)
                 .collect::<Vec<_>>(),
         );
+        if !duplicate_ids.is_empty() {
+            let mut duplicate_ids = duplicate_ids
+                .into_iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<_>>();
+            duplicate_ids.sort();
+            return Err(anyhow!(
+                "Broken shadow peer {} while repairing catalog: duplicate remote repository UUIDs: {}",
+                peer_id,
+                duplicate_ids.join(", ")
+            ));
+        }
         for (path, repair) in repairs {
-            if duplicate_ids.contains(&repair.info.uuid) {
-                continue;
-            }
             let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
             let target = if desired != path {
                 relocate_database_path(&path, &desired);
