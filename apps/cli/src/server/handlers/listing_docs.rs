@@ -68,9 +68,26 @@ pub async fn handle_list_docs(
     {
         session.switch_repo(repo_name.clone(), Some(repo_id));
     }
+    let branch = session.active_branch.clone();
+    let delta = match state
+        .tree_manager
+        .reset_from_nodes(repo_id, branch.as_ref(), nodes)
+    {
+        Ok(delta) => delta,
+        Err(err) => {
+            send_doc_error_with_scope_and_switch_nonce(
+                ch,
+                "Failed to rebuild tree projection",
+                err,
+                scope_nonce,
+                switch_nonce,
+            );
+            return;
+        }
+    };
 
     ch.unicast(ServerMessage::RepoSwitched {
-        branch: session.active_branch.as_ref().map(ToString::to_string),
+        branch: branch.as_ref().map(ToString::to_string),
         name: repo_name.clone(),
         uuid: repo_id.to_string(),
         switch_nonce,
@@ -78,31 +95,14 @@ pub async fn handle_list_docs(
     ch.unicast(ServerMessage::DocList {
         request_id: request_id.clone(),
         repo_id: Some(repo_id),
-        branch: session.active_branch.clone(),
+        branch: branch.clone(),
         scope_nonce,
         docs,
     });
-    let delta =
-        match state
-            .tree_manager
-            .reset_from_nodes(repo_id, session.active_branch.as_ref(), nodes)
-        {
-            Ok(delta) => delta,
-            Err(err) => {
-                send_doc_error_with_scope_and_switch_nonce(
-                    ch,
-                    "Failed to rebuild tree projection",
-                    err,
-                    scope_nonce,
-                    switch_nonce,
-                );
-                return;
-            }
-        };
     ch.unicast(ServerMessage::TreeUpdate {
         request_id,
         repo_id: Some(repo_id),
-        branch: session.active_branch.clone(),
+        branch,
         scope_nonce,
         delta,
     });

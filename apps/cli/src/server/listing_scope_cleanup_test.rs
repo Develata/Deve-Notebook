@@ -132,3 +132,37 @@ async fn list_repos_on_unbound_shadow_branch_clears_stale_db_and_sync_binding() 
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_does_not_emit_partial_repo_view_when_tree_reset_fails() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = state
+            .tree_manager
+            .with_tree_mut(uuid::Uuid::new_v4(), None, |_| {
+                panic!("poison tree registry")
+            });
+    }));
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_list_docs(&state, &ch, &mut session, Some("req-tree".into()), Some(41)).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+            ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(switch_nonce, Some(41));
+        }
+        other => panic!("expected tree rebuild ProtocolError, got {:?}", other),
+    }
+    assert!(
+        uni_rx.try_recv().is_err(),
+        "must not emit partial repo view"
+    );
+    Ok(())
+}
