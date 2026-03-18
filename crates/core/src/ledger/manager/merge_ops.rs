@@ -39,19 +39,7 @@ impl RepoManager {
         doc_id: DocId,
     ) -> Result<MergeResult> {
         let local_ops = self.get_local_ops_in_local_repo(repo_name, doc_id)?;
-        let remote_ops = match self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id) {
-            Ok(ops) => ops,
-            Err(e) => {
-                tracing::warn!(
-                    "merge_peer: 无法读取远端 ops (peer={}, repo={}): {:?}",
-                    peer_id,
-                    repo_id,
-                    e
-                );
-                // 远端无数据时视为空集 — 合并结果等于本地内容
-                Vec::new()
-            }
-        };
+        let remote_ops = self.get_ops(&RepoType::Remote(peer_id.clone(), *repo_id), doc_id)?;
         Ok(merge_ops(doc_id, local_ops, remote_ops))
     }
 }
