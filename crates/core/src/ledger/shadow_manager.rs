@@ -48,7 +48,7 @@ impl RepoManager {
         let db_path = match self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)? {
             Some(entry) if entry.path == desired => entry.path,
             Some(entry) => {
-                relocate_database_path(&entry.path, &desired);
+                relocate_database_path(&entry.path, &desired)?;
                 std::fs::rename(&entry.path, &desired)?;
                 self.detach_shadow_repo(peer_id, &info.uuid);
                 desired

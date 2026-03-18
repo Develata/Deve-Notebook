@@ -178,7 +178,7 @@ impl RepoManager {
             let mut guard = self.shadow_dbs.write().unwrap();
             guard.remove(peer_id);
         }
-        evict_database_paths_under(&peer_dir);
+        evict_database_paths_under(&peer_dir)?;
 
         // 3. Physical delete
         std::fs::remove_dir_all(&peer_dir)

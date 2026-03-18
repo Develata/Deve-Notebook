@@ -9,6 +9,7 @@
 //! 主库 (`local_db`) 已经被 RepoManager 持有，我们通过路径匹配来避免重复打开。
 
 use super::RepoManager;
+pub(crate) use super::database_cache::{register_database, relocate_database_path};
 use super::database_cache::{
     CachedDatabaseEntry, OPENED_DBS, current_file_stamp, reusable_cached_database,
 };
@@ -19,24 +20,6 @@ use redb::Database;
 use std::path::Path;
 use std::sync::Arc;
 
-pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) {
-    OPENED_DBS.write().unwrap().insert(
-        db_path.to_path_buf(),
-        CachedDatabaseEntry {
-            db,
-            stamp: current_file_stamp(db_path),
-        },
-    );
-}
-
-pub(crate) fn relocate_database_path(old_path: &Path, new_path: &Path) {
-    let mut cache = OPENED_DBS.write().unwrap();
-    if let Some(mut entry) = cache.remove(old_path) {
-        entry.stamp = current_file_stamp(new_path);
-        cache.insert(new_path.to_path_buf(), entry);
-    }
-}
-
 pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
     if !db_path.exists() {
         return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
@@ -45,10 +28,13 @@ pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
 }
 
 pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>> {
-    if let Some(db) = reusable_cached_database(db_path) {
+    if let Some(db) = reusable_cached_database(db_path)? {
         return Ok(db);
     }
-    OPENED_DBS.write().unwrap().remove(db_path);
+    OPENED_DBS
+        .write()
+        .map_err(|_| anyhow::anyhow!("Database cache lock poisoned while removing {:?}", db_path))?
+        .remove(db_path);
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -57,7 +43,9 @@ pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>>
     let arc_db = Arc::new(db);
 
     {
-        let mut cache = OPENED_DBS.write().unwrap();
+        let mut cache = OPENED_DBS.write().map_err(|_| {
+            anyhow::anyhow!("Database cache lock poisoned while storing {:?}", db_path)
+        })?;
         cache.insert(
             db_path.to_path_buf(),
             CachedDatabaseEntry {
@@ -133,10 +121,10 @@ impl RepoManager {
                     Some(info) => Some(info.uuid),
                     None => uuid::Uuid::parse_str(&resolved.stem).ok(),
                 };
-                let loaded = repo_id.and_then(|repo_id| {
+                let loaded = repo_id.and_then(|repo_id| -> Option<Arc<Database>> {
                     self.shadow_dbs
                         .read()
-                        .unwrap()
+                        .ok()?
                         .get(peer_id)
                         .and_then(|repos| repos.get(&repo_id))
                         .cloned()
@@ -167,10 +155,18 @@ impl RepoManager {
         let cache_key = self.ledger_dir.join("local").join(format!("{}.redb", name));
 
         // 1. 检查全局缓存
-        if let Some(db) = reusable_cached_database(cache_key.as_path()) {
+        if let Some(db) = reusable_cached_database(cache_key.as_path())? {
             return Ok(db);
         }
-        OPENED_DBS.write().unwrap().remove(cache_key.as_path());
+        OPENED_DBS
+            .write()
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "Database cache lock poisoned while removing {:?}",
+                    cache_key
+                )
+            })?
+            .remove(cache_key.as_path());
 
         // 2. 检查是否是主库 (已经被 RepoManager 持有)
         // 主库的路径检查
@@ -193,7 +189,12 @@ impl RepoManager {
         let arc_db = Arc::new(db);
 
         {
-            let mut cache = OPENED_DBS.write().unwrap();
+            let mut cache = OPENED_DBS.write().map_err(|_| {
+                anyhow::anyhow!(
+                    "Database cache lock poisoned while storing {:?}",
+                    cache_key
+                )
+            })?;
             cache.insert(
                 cache_key.clone(),
                 CachedDatabaseEntry {

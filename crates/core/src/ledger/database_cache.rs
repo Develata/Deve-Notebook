@@ -1,3 +1,4 @@
+use anyhow::{Result, anyhow};
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -9,6 +10,7 @@ use std::os::unix::fs::MetadataExt;
 #[cfg(windows)]
 use std::os::windows::fs::MetadataExt;
 use std::sync::{Arc, RwLock};
+use tracing::warn;
 
 #[derive(Clone)]
 pub(crate) struct CachedDatabaseEntry {
@@ -52,26 +54,40 @@ pub(crate) static OPENED_DBS: std::sync::LazyLock<
     RwLock<HashMap<std::path::PathBuf, CachedDatabaseEntry>>,
 > = std::sync::LazyLock::new(|| RwLock::new(HashMap::new()));
 
-pub(crate) fn reusable_cached_database(path: &Path) -> Option<Arc<Database>> {
+pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Database>>> {
     let current_stamp = current_file_stamp(path);
-    let cache = OPENED_DBS.read().unwrap();
-    let entry = cache.get(path)?;
+    let cache = OPENED_DBS.read().map_err(|_| {
+        anyhow!(
+            "Database cache lock poisoned while reading cached entry for {:?}",
+            path
+        )
+    })?;
+    let Some(entry) = cache.get(path) else {
+        return Ok(None);
+    };
     if entry.stamp == current_stamp {
         tracing::debug!("Database cache hit: {:?}", path);
-        return Some(entry.db.clone());
+        return Ok(Some(entry.db.clone()));
     }
     if let (Some(previous), Some(current)) = (entry.stamp, current_stamp)
         && previous.same_file_identity(current)
         && path_looks_like_redb(path)
     {
         drop(cache);
-        let mut cache = OPENED_DBS.write().unwrap();
-        let entry = cache.get_mut(path)?;
+        let mut cache = OPENED_DBS.write().map_err(|_| {
+            anyhow!(
+                "Database cache lock poisoned while refreshing cached stamp for {:?}",
+                path
+            )
+        })?;
+        let Some(entry) = cache.get_mut(path) else {
+            return Ok(None);
+        };
         entry.stamp = Some(current);
         tracing::debug!("Database cache stamp refreshed: {:?}", path);
-        return Some(entry.db.clone());
+        return Ok(Some(entry.db.clone()));
     }
-    None
+    Ok(None)
 }
 
 pub(crate) fn current_file_stamp(path: &Path) -> Option<FileStamp> {
@@ -120,9 +136,44 @@ fn file_stamp(metadata: &Metadata) -> FileStamp {
     }
 }
 
-pub(crate) fn evict_database_paths_under(root: &Path) {
+pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) -> Result<()> {
     OPENED_DBS
         .write()
-        .unwrap()
+        .map_err(|_| anyhow!("Database cache lock poisoned while registering {:?}", db_path))?
+        .insert(
+            db_path.to_path_buf(),
+            CachedDatabaseEntry {
+                db,
+                stamp: current_file_stamp(db_path),
+            },
+        );
+    Ok(())
+}
+
+pub(crate) fn relocate_database_path(old_path: &Path, new_path: &Path) -> Result<()> {
+    let mut cache = OPENED_DBS.write().map_err(|_| {
+        anyhow!(
+            "Database cache lock poisoned while relocating {:?} -> {:?}",
+            old_path,
+            new_path
+        )
+    })?;
+    if let Some(mut entry) = cache.remove(old_path) {
+        entry.stamp = current_file_stamp(new_path);
+        cache.insert(new_path.to_path_buf(), entry);
+    } else {
+        warn!(
+            "Database cache relocate skipped: {:?} not present while moving to {:?}",
+            old_path, new_path
+        );
+    }
+    Ok(())
+}
+
+pub(crate) fn evict_database_paths_under(root: &Path) -> Result<()> {
+    OPENED_DBS
+        .write()
+        .map_err(|_| anyhow!("Database cache lock poisoned while evicting under {:?}", root))?
         .retain(|path, _| !path.starts_with(root));
+    Ok(())
 }

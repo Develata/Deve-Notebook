@@ -65,7 +65,7 @@ impl RepoManager {
         for (path, repair) in repairs {
             let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
             let target = if desired != path {
-                relocate_database_path(&path, &desired);
+                relocate_database_path(&path, &desired)?;
                 std::fs::rename(&path, &desired)?;
                 desired
             } else {

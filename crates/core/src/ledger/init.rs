@@ -132,7 +132,7 @@ pub fn init(
     register_database(
         &local_dir.join(format!("{}.redb", final_name)),
         local_db.clone(),
-    );
+    )?;
 
     // 4. 初始化核心表
     init_core_tables(local_db.as_ref())?;
