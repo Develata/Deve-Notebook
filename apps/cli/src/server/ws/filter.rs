@@ -1,6 +1,6 @@
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerMessage};
 use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Default)]
@@ -164,18 +164,28 @@ impl BroadcastFilter {
         })
     }
 
-    pub(crate) fn current_scope_nonce(&self) -> Option<u64> {
-        let scope = self.scope.as_ref()?;
-        let scope = match scope.read() {
-            Ok(scope) => scope,
-            Err(_) => {
-                tracing::error!(
-                    "WS broadcast filter read lock poisoned while reading current scope nonce"
-                );
-                return None;
-            }
+    pub(crate) fn scoped_protocol_error(
+        &self,
+        error: ServerError,
+        switch_nonce: Option<u64>,
+    ) -> Option<ServerMessage> {
+        let scope_nonce = match &self.scope {
+            None => None,
+            Some(scope) => match scope.read() {
+                Ok(scope) => Some(scope.scope_nonce),
+                Err(_) => {
+                    tracing::error!(
+                        "WS broadcast filter read lock poisoned while building scoped protocol error"
+                    );
+                    return None;
+                }
+            },
         };
-        Some(scope.scope_nonce)
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+            scope_nonce,
+        })
     }
 }
 

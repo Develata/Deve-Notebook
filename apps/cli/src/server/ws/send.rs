@@ -64,29 +64,21 @@ pub(crate) fn spawn_broadcast_forwarder(
                 }
                 Err(RecvError::Lagged(skipped)) => {
                     tracing::warn!("WS broadcast lagged; skipped {} messages", skipped);
-                    try_send_with_delivery_class(
-                        &unicast_tx,
-                        lagged_broadcast_error(filter.current_scope_nonce(), skipped),
-                        true,
+                    let error = ServerError::with_detail(
+                        ServerErrorCode::RequestFailed,
+                        format!(
+                            "WS broadcast lagged; skipped {skipped} messages; reconnect or reopen to resync"
+                        ),
                     );
+                    let Some(msg) = filter.scoped_protocol_error(error, None) else {
+                        continue;
+                    };
+                    try_send_with_delivery_class(&unicast_tx, msg, true);
                 }
                 Err(RecvError::Closed) => break,
             }
         }
     });
-}
-
-fn lagged_broadcast_error(scope_nonce: Option<u64>, skipped: u64) -> ServerMessage {
-    ServerMessage::ProtocolError {
-        error: ServerError::with_detail(
-            ServerErrorCode::RequestFailed,
-            format!(
-                "WS broadcast lagged; skipped {skipped} messages; reconnect or reopen to resync"
-            ),
-        ),
-        switch_nonce: None,
-        scope_nonce,
-    }
 }
 
 fn must_deliver_broadcast(msg: &ServerMessage) -> bool {

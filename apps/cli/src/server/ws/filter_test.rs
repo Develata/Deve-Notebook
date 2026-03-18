@@ -1,7 +1,7 @@
 use super::BroadcastFilter;
 use crate::server::session::WsSession;
 use deve_core::models::{DocId, Op, PeerId};
-use deve_core::protocol::{ConfirmedOp, ServerMessage};
+use deve_core::protocol::{ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
 
 #[test]
 fn rejects_new_op_from_other_branch() {
@@ -220,6 +220,24 @@ fn drops_stamped_broadcasts_when_filter_lock_is_poisoned() {
             timestamp: 1,
         })
         .is_none());
+}
+
+#[test]
+fn drops_scoped_protocol_errors_when_filter_lock_is_poisoned() {
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    let filter = BroadcastFilter::for_session(&session);
+    let scope = filter.scope.as_ref().expect("scoped filter").clone();
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = scope.write().expect("write lock");
+        panic!("poison broadcast filter");
+    });
+
+    assert!(
+        filter
+            .scoped_protocol_error(ServerError::new(ServerErrorCode::RequestFailed), None)
+            .is_none()
+    );
 }
 
 #[test]
