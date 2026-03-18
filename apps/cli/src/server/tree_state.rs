@@ -6,8 +6,9 @@
 
 use deve_core::models::{NodeId, NodeMeta, PeerId, RepoId};
 use deve_core::tree::{TreeDelta, TreeManager};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockWriteGuard};
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 struct TreeScope {
@@ -20,6 +21,12 @@ pub struct RepoTreeRegistry {
 }
 
 impl RepoTreeRegistry {
+    fn write_trees(&self) -> Result<RwLockWriteGuard<'_, HashMap<TreeScope, TreeManager>>> {
+        self.trees
+            .write()
+            .map_err(|_| anyhow!("RepoTreeRegistry write lock poisoned"))
+    }
+
     pub fn new() -> Self {
         Self {
             trees: RwLock::new(HashMap::new()),
@@ -31,25 +38,25 @@ impl RepoTreeRegistry {
         repo_id: RepoId,
         branch: Option<&PeerId>,
         nodes: Vec<(NodeId, NodeMeta)>,
-    ) -> TreeDelta {
+    ) -> Result<TreeDelta> {
         self.with_tree_mut(repo_id, branch, |tree| {
             tree.init_from_nodes(nodes);
             tree.build_init_delta()
         })
     }
 
-    pub fn with_tree_mut<F, R>(&self, repo_id: RepoId, branch: Option<&PeerId>, f: F) -> R
+    pub fn with_tree_mut<F, R>(&self, repo_id: RepoId, branch: Option<&PeerId>, f: F) -> Result<R>
     where
         F: FnOnce(&mut TreeManager) -> R,
     {
-        let mut trees = self.trees.write().unwrap_or_else(|e| e.into_inner());
+        let mut trees = self.write_trees()?;
         let tree = trees
             .entry(TreeScope {
                 branch: branch.cloned(),
                 repo_id,
             })
             .or_default();
-        f(tree)
+        Ok(f(tree))
     }
 }
 
@@ -72,13 +79,29 @@ mod tests {
         let node_id = NodeId::new();
         registry.with_tree_mut(repo_id, None, |tree: &mut TreeManager| {
             tree.add_folder(node_id, "notes".into(), None, "notes".into())
-        });
-        let local_present = registry.with_tree_mut(repo_id, None, |tree| tree.has_node(node_id));
+        }).expect("local tree update");
+        let local_present = registry
+            .with_tree_mut(repo_id, None, |tree| tree.has_node(node_id))
+            .expect("local tree read");
         let remote_present =
             registry.with_tree_mut(repo_id, Some(&PeerId::new("peer-a")), |tree| {
                 tree.has_node(node_id)
-            });
+            }).expect("remote tree read");
         assert!(local_present);
         assert!(!remote_present);
+    }
+
+    #[test]
+    fn fails_closed_when_tree_registry_lock_is_poisoned() {
+        let registry = RepoTreeRegistry::new();
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = registry.trees.write().expect("write lock");
+            panic!("poison tree registry");
+        }));
+
+        let err = registry
+            .reset_from_nodes(RepoId::new_v4(), None, vec![])
+            .expect_err("poisoned registry must fail closed");
+        assert!(err.to_string().contains("lock poisoned"));
     }
 }

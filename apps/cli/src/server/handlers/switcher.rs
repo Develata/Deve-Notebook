@@ -126,14 +126,16 @@ pub async fn handle_switch_branch(
         scope_nonce: session.is_browser_session().then(|| session.scope_nonce()),
         repos: payload.repo_list,
     });
-    emit_repo_view(
+    if let Err(error) = emit_repo_view(
         state,
         ch,
         session,
         final_branch,
         switch_nonce,
         payload.repo_view,
-    );
+    ) {
+        ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
+    }
 }
 
 pub async fn handle_switch_repo(
@@ -217,12 +219,14 @@ pub async fn handle_switch_repo(
         repo_name,
         session.is_readonly()
     );
-    emit_repo_view(
+    if let Err(error) = emit_repo_view(
         state,
         ch,
         session,
         session.active_branch.as_ref().map(ToString::to_string),
         switch_nonce,
         Some(repo_view),
-    );
+    ) {
+        ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
+    }
 }

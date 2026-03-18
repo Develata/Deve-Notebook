@@ -48,9 +48,9 @@ pub(super) fn emit_repo_view(
     branch: Option<String>,
     switch_nonce: Option<u64>,
     repo_view: Option<RepoViewPayload>,
-) {
+) -> anyhow::Result<()> {
     let Some(repo_view) = repo_view else {
-        return;
+        return Ok(());
     };
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let tree_branch = branch.clone().map(PeerId::new);
@@ -71,7 +71,7 @@ pub(super) fn emit_repo_view(
         repo_view.repo_id,
         tree_branch.as_ref(),
         repo_view.nodes,
-    );
+    )?;
     ch.unicast(ServerMessage::TreeUpdate {
         request_id: None,
         repo_id: Some(repo_view.repo_id),
@@ -79,6 +79,7 @@ pub(super) fn emit_repo_view(
         scope_nonce,
         delta,
     });
+    Ok(())
 }
 
 fn load_repo_view(
