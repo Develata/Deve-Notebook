@@ -183,7 +183,7 @@ pub fn handle_message<F>(
             switch_nonce,
             scope_nonce,
         } => {
-            if !accepts_protocol_error_message(scope_nonce, signals) {
+            if !accepts_protocol_error_message(scope_nonce, switch_nonce, signals) {
                 return;
             }
             handle_protocol_error(

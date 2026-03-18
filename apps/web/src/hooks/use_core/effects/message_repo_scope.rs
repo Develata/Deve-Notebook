@@ -78,11 +78,17 @@ pub fn accepts_edit_rejected_message(scope_nonce: Option<u64>, signals: CoreSign
         && scope_nonce == Some(signals.current_scope_nonce.get_untracked())
 }
 
-pub fn accepts_protocol_error_message(scope_nonce: Option<u64>, signals: CoreSignals) -> bool {
-    scope_nonce.is_none()
-        || (signals.pending_repo_switch.get_untracked().is_none()
-            && signals.pending_branch_switch.get_untracked().is_none()
-            && scope_nonce == Some(signals.current_scope_nonce.get_untracked()))
+pub fn accepts_protocol_error_message(
+    scope_nonce: Option<u64>,
+    switch_nonce: Option<u64>,
+    signals: CoreSignals,
+) -> bool {
+    if scope_nonce.is_none() {
+        return switch_nonce.is_some();
+    }
+    signals.pending_repo_switch.get_untracked().is_none()
+        && signals.pending_branch_switch.get_untracked().is_none()
+        && scope_nonce == Some(signals.current_scope_nonce.get_untracked())
 }
 
 #[cfg(test)]
@@ -224,13 +230,14 @@ mod tests {
         signals
             .set_pending_branch_switch
             .set(Some(PendingBranchTarget::Local));
-        assert!(!accepts_protocol_error_message(Some(7), signals));
+        assert!(!accepts_protocol_error_message(Some(7), None, signals));
         signals.set_pending_branch_switch.set(None);
         signals.set_pending_repo_switch.set(Some("wiki".into()));
-        assert!(!accepts_protocol_error_message(Some(7), signals));
+        assert!(!accepts_protocol_error_message(Some(7), None, signals));
         signals.set_pending_repo_switch.set(None);
-        assert!(!accepts_protocol_error_message(Some(9), signals));
-        assert!(accepts_protocol_error_message(None, signals));
-        assert!(accepts_protocol_error_message(Some(7), signals));
+        assert!(!accepts_protocol_error_message(Some(9), None, signals));
+        assert!(!accepts_protocol_error_message(None, None, signals));
+        assert!(accepts_protocol_error_message(None, Some(3), signals));
+        assert!(accepts_protocol_error_message(Some(7), None, signals));
     }
 }
