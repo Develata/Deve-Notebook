@@ -68,7 +68,7 @@ impl RepoManager {
     ) -> Result<()> {
         self.ensure_shadow_db(peer_id, repo_id)?;
 
-        let guard = self.shadow_dbs.read().unwrap();
+        let guard = self.read_shadow_dbs()?;
         let peer_map = guard
             .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
@@ -98,7 +98,7 @@ impl RepoManager {
     ) -> Result<()> {
         self.ensure_shadow_db(peer_id, repo_id)?;
 
-        let guard = self.shadow_dbs.read().unwrap();
+        let guard = self.read_shadow_dbs()?;
         let peer_map = guard
             .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
@@ -122,7 +122,7 @@ impl RepoManager {
     pub fn reset_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
         self.ensure_shadow_db(peer_id, repo_id)?;
 
-        let guard = self.shadow_dbs.read().unwrap();
+        let guard = self.read_shadow_dbs()?;
         let peer_map = guard
             .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
@@ -175,7 +175,7 @@ impl RepoManager {
 
         // 2. Remove from cache (shadow_dbs)
         {
-            let mut guard = self.shadow_dbs.write().unwrap();
+            let mut guard = self.write_shadow_dbs()?;
             guard.remove(peer_id);
         }
         evict_database_paths_under(&peer_dir)?;

@@ -18,7 +18,9 @@ use anyhow::{Context, Result};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+type ShadowRepoMap = HashMap<PeerId, HashMap<RepoId, Arc<Database>>>;
 
 /// 确保指定 Peer 的特定影子库已加载。
 pub fn ensure_shadow_db(
@@ -42,7 +44,7 @@ pub fn load_shadow_db(
 ) -> Result<()> {
     // Check if already loaded (Read Lock)
     {
-        let dbs = shadow_dbs.read().unwrap();
+        let dbs = read_shadow_dbs(shadow_dbs)?;
         if let Some(repos) = dbs.get(peer_id)
             && repos.contains_key(repo_id)
         {
@@ -51,7 +53,7 @@ pub fn load_shadow_db(
     }
 
     // Acquire Write Lock
-    let mut dbs = shadow_dbs.write().unwrap();
+    let mut dbs = write_shadow_dbs(shadow_dbs)?;
 
     // Double-Check: Check again under Write Lock
     // Another thread might have created it while we waited for the lock
@@ -99,6 +101,22 @@ pub fn load_shadow_db(
     dbs.entry(peer_id.clone()).or_default().insert(*repo_id, db);
 
     Ok(())
+}
+
+fn read_shadow_dbs<'a>(
+    shadow_dbs: &'a RwLock<ShadowRepoMap>,
+) -> Result<RwLockReadGuard<'a, ShadowRepoMap>> {
+    shadow_dbs
+        .read()
+        .map_err(|_| anyhow::anyhow!("Shadow DB registry lock poisoned"))
+}
+
+fn write_shadow_dbs<'a>(
+    shadow_dbs: &'a RwLock<ShadowRepoMap>,
+) -> Result<RwLockWriteGuard<'a, ShadowRepoMap>> {
+    shadow_dbs
+        .write()
+        .map_err(|_| anyhow::anyhow!("Shadow DB registry lock poisoned"))
 }
 
 /// 扫描磁盘上所有影子库文件夹并返回 PeerId 列表。

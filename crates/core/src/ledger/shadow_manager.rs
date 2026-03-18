@@ -9,6 +9,8 @@
 //! "Receive Only" 隔离策略。每个 Peer 拥有独立的 `.redb` 文件。
 
 use anyhow::{Result, anyhow};
+use std::collections::HashMap;
+use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 use super::RepoInfo;
 use super::RepoManager;
@@ -16,6 +18,9 @@ use super::database::relocate_database_path;
 use super::ops;
 use super::shadow;
 use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId, RepoType};
+use redb::Database;
+
+type ShadowRepoMap = HashMap<PeerId, HashMap<RepoId, Arc<Database>>>;
 
 impl RepoManager {
     /// 确保指定 Peer 的影子库已加载到内存
@@ -62,7 +67,7 @@ impl RepoManager {
             &info.uuid,
             &db_path,
         )?;
-        let dbs = self.shadow_dbs.read().unwrap();
+        let dbs = self.read_shadow_dbs()?;
         let db = dbs
             .get(peer_id)
             .and_then(|repos| repos.get(&info.uuid))
@@ -76,12 +81,15 @@ impl RepoManager {
     ///
     /// 当前已加载的所有 PeerId 列表
     pub fn list_loaded_shadows(&self) -> Vec<PeerId> {
-        let dbs = self.shadow_dbs.read().unwrap();
-        dbs.keys().cloned().collect()
+        self.read_shadow_dbs()
+            .map(|dbs| dbs.keys().cloned().collect())
+            .unwrap_or_default()
     }
 
     fn detach_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) {
-        let mut dbs = self.shadow_dbs.write().unwrap();
+        let Ok(mut dbs) = self.write_shadow_dbs() else {
+            return;
+        };
         if let Some(repos) = dbs.get_mut(peer_id) {
             repos.remove(repo_id);
             if repos.is_empty() {
@@ -121,5 +129,21 @@ impl RepoManager {
         self.run_on_shadow_repo(peer_id, repo_id, |db| {
             ops::get_structure_ops_for_node_from_db(db, node_id)
         })
+    }
+
+    pub(crate) fn read_shadow_dbs(
+        &self,
+    ) -> Result<RwLockReadGuard<'_, ShadowRepoMap>> {
+        self.shadow_dbs
+            .read()
+            .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))
+    }
+
+    pub(crate) fn write_shadow_dbs(
+        &self,
+    ) -> Result<RwLockWriteGuard<'_, ShadowRepoMap>> {
+        self.shadow_dbs
+            .write()
+            .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))
     }
 }

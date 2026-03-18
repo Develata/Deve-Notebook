@@ -37,7 +37,7 @@ impl RepoManager {
         F: FnOnce(&Database) -> Result<R>,
     {
         self.ensure_shadow_db(peer_id, repo_id)?;
-        let dbs = self.shadow_dbs.read().unwrap();
+        let dbs = self.read_shadow_dbs()?;
         let peer_repos = dbs
             .get(peer_id)
             .ok_or_else(|| anyhow!("未找到 Peer 的影子库集合: {}", peer_id))?;
