@@ -124,6 +124,26 @@ fn rejects_repo_scoped_runtime_broadcasts_for_unbound_sessions() {
         scope_nonce: Some(7),
         merged_count: 2,
     }));
+}
+
+#[test]
+fn forwards_peer_deleted_to_unbound_browser_sessions() {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(7));
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(filter.should_forward(&ServerMessage::PeerDeleted {
+        peer_id: "peer-a".into(),
+        scope_nonce: Some(7),
+    }));
+}
+
+#[test]
+fn rejects_peer_deleted_for_non_browser_unbound_sessions() {
+    let session = WsSession::new();
+    let filter = BroadcastFilter::for_session(&session);
+
     assert!(!filter.should_forward(&ServerMessage::PeerDeleted {
         peer_id: "peer-a".into(),
         scope_nonce: Some(7),

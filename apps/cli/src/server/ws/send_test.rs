@@ -98,6 +98,7 @@ async fn peer_deleted_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
     let (broadcast_tx, broadcast_rx) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = new_unicast_channel();
     let mut session = WsSession::new();
+    session.mark_browser_session();
     session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
     session.set_scope_nonce(Some(13));
     let filter = BroadcastFilter::for_session(&session);

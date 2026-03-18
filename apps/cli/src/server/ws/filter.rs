@@ -5,6 +5,7 @@ use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Default)]
 struct SessionBroadcastScope {
+    browser_session: bool,
     active_repo_id: Option<RepoId>,
     active_branch: Option<PeerId>,
     scope_nonce: u64,
@@ -13,6 +14,7 @@ struct SessionBroadcastScope {
 impl SessionBroadcastScope {
     fn from_session(session: &WsSession) -> Self {
         Self {
+            browser_session: session.is_browser_session(),
             active_repo_id: session.active_repo_id,
             active_branch: session.active_branch.clone(),
             scope_nonce: session.scope_nonce(),
@@ -25,6 +27,7 @@ impl SessionBroadcastScope {
 /// Invariants:
 /// - `FsChangeDetected` 只应投递到本地分支会话。
 /// - 若会话已锁定 `active_repo_id`，则只接收同仓库事件。
+/// - `PeerDeleted` 属于浏览器控制面事件，只投递给 browser session。
 #[derive(Clone, Default)]
 pub(crate) struct BroadcastFilter {
     scope: Option<Arc<RwLock<SessionBroadcastScope>>>,
@@ -89,7 +92,7 @@ impl BroadcastFilter {
                 branch.as_ref(),
                 false,
             ),
-            ServerMessage::PeerDeleted { .. } => scope.active_repo_id.is_some(),
+            ServerMessage::PeerDeleted { .. } => scope.browser_session,
             _ => true,
         }
     }
