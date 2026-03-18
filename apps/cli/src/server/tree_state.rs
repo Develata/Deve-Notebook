@@ -4,9 +4,9 @@
 //! - 每个 `(branch, RepoId)` scope 拥有独立的 `TreeManager`。
 //! - 任一会话只能读写其当前 repo 对应的树状态。
 
+use anyhow::{Result, anyhow};
 use deve_core::models::{NodeId, NodeMeta, PeerId, RepoId};
 use deve_core::tree::{TreeDelta, TreeManager};
-use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::sync::{RwLock, RwLockWriteGuard};
 
@@ -77,16 +77,19 @@ mod tests {
         let registry = RepoTreeRegistry::new();
         let repo_id = RepoId::new_v4();
         let node_id = NodeId::new();
-        registry.with_tree_mut(repo_id, None, |tree: &mut TreeManager| {
-            tree.add_folder(node_id, "notes".into(), None, "notes".into())
-        }).expect("local tree update");
+        registry
+            .with_tree_mut(repo_id, None, |tree: &mut TreeManager| {
+                tree.add_folder(node_id, "notes".into(), None, "notes".into())
+            })
+            .expect("local tree update");
         let local_present = registry
             .with_tree_mut(repo_id, None, |tree| tree.has_node(node_id))
             .expect("local tree read");
-        let remote_present =
-            registry.with_tree_mut(repo_id, Some(&PeerId::new("peer-a")), |tree| {
+        let remote_present = registry
+            .with_tree_mut(repo_id, Some(&PeerId::new("peer-a")), |tree| {
                 tree.has_node(node_id)
-            }).expect("remote tree read");
+            })
+            .expect("remote tree read");
         assert!(local_present);
         assert!(!remote_present);
     }

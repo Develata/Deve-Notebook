@@ -21,7 +21,13 @@ impl RepoManager {
 
         let mut seen = HashMap::new();
         let mut seen_urls = HashMap::new();
-        validate_local_repo_info(main_repo_name, main_repo_name, Self::read_repo_info_from_db(main_db)?, &mut seen, &mut seen_urls)?;
+        validate_local_repo_info(
+            main_repo_name,
+            main_repo_name,
+            Self::read_repo_info_from_db(main_db)?,
+            &mut seen,
+            &mut seen_urls,
+        )?;
 
         let mut entries = Vec::new();
         for entry in std::fs::read_dir(&local_dir)? {
@@ -35,7 +41,11 @@ impl RepoManager {
 
         for (path, stem) in entries {
             let db = cached_or_create_database(&path).map_err(|err| {
-                anyhow!("Broken local repo {} while validating catalog: {}", stem, err)
+                anyhow!(
+                    "Broken local repo {} while validating catalog: {}",
+                    stem,
+                    err
+                )
             })?;
             let info = Self::read_repo_info_from_db(db.as_ref()).map_err(|err| {
                 anyhow!(

@@ -197,9 +197,7 @@ impl RepoManager {
         Ok(by_alias)
     }
 
-    fn read_extra_local_dbs(
-        &self,
-    ) -> Result<RwLockReadGuard<'_, HashMap<String, Arc<Database>>>> {
+    fn read_extra_local_dbs(&self) -> Result<RwLockReadGuard<'_, HashMap<String, Arc<Database>>>> {
         self.extra_local_dbs
             .read()
             .map_err(|_| anyhow!("Local repo registry lock poisoned"))

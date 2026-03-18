@@ -139,7 +139,12 @@ fn file_stamp(metadata: &Metadata) -> FileStamp {
 pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) -> Result<()> {
     OPENED_DBS
         .write()
-        .map_err(|_| anyhow!("Database cache lock poisoned while registering {:?}", db_path))?
+        .map_err(|_| {
+            anyhow!(
+                "Database cache lock poisoned while registering {:?}",
+                db_path
+            )
+        })?
         .insert(
             db_path.to_path_buf(),
             CachedDatabaseEntry {
@@ -173,7 +178,12 @@ pub(crate) fn relocate_database_path(old_path: &Path, new_path: &Path) -> Result
 pub(crate) fn evict_database_paths_under(root: &Path) -> Result<()> {
     OPENED_DBS
         .write()
-        .map_err(|_| anyhow!("Database cache lock poisoned while evicting under {:?}", root))?
+        .map_err(|_| {
+            anyhow!(
+                "Database cache lock poisoned while evicting under {:?}",
+                root
+            )
+        })?
         .retain(|path, _| !path.starts_with(root));
     Ok(())
 }

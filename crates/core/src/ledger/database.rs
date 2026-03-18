@@ -9,10 +9,10 @@
 //! 主库 (`local_db`) 已经被 RepoManager 持有，我们通过路径匹配来避免重复打开。
 
 use super::RepoManager;
-pub(crate) use super::database_cache::{register_database, relocate_database_path};
 use super::database_cache::{
     CachedDatabaseEntry, OPENED_DBS, current_file_stamp, reusable_cached_database,
 };
+pub(crate) use super::database_cache::{register_database, relocate_database_path};
 use crate::models::PeerId;
 use crate::models::RepoId;
 use anyhow::Result;
@@ -190,10 +190,7 @@ impl RepoManager {
 
         {
             let mut cache = OPENED_DBS.write().map_err(|_| {
-                anyhow::anyhow!(
-                    "Database cache lock poisoned while storing {:?}",
-                    cache_key
-                )
+                anyhow::anyhow!("Database cache lock poisoned while storing {:?}", cache_key)
             })?;
             cache.insert(
                 cache_key.clone(),

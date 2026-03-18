@@ -171,7 +171,10 @@ pub fn handle_message<F>(
         } => {
             message_control::handle_repo_switched(branch, name, uuid, switch_nonce, ws, signals);
         }
-        ServerMessage::PeerDeleted { peer_id, scope_nonce } => {
+        ServerMessage::PeerDeleted {
+            peer_id,
+            scope_nonce,
+        } => {
             if !accepts_system_or_matching_request(
                 None,
                 None,

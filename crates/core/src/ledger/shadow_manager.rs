@@ -139,17 +139,13 @@ impl RepoManager {
         })
     }
 
-    pub(crate) fn read_shadow_dbs(
-        &self,
-    ) -> Result<RwLockReadGuard<'_, ShadowRepoMap>> {
+    pub(crate) fn read_shadow_dbs(&self) -> Result<RwLockReadGuard<'_, ShadowRepoMap>> {
         self.shadow_dbs
             .read()
             .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))
     }
 
-    pub(crate) fn write_shadow_dbs(
-        &self,
-    ) -> Result<RwLockWriteGuard<'_, ShadowRepoMap>> {
+    pub(crate) fn write_shadow_dbs(&self) -> Result<RwLockWriteGuard<'_, ShadowRepoMap>> {
         self.shadow_dbs
             .write()
             .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))

@@ -31,9 +31,7 @@ pub struct BruteForceGuard {
 }
 
 impl BruteForceGuard {
-    fn lock_records(
-        &self,
-    ) -> Result<std::sync::MutexGuard<'_, HashMap<IpAddr, IpRecord>>, ()> {
+    fn lock_records(&self) -> Result<std::sync::MutexGuard<'_, HashMap<IpAddr, IpRecord>>, ()> {
         self.records.lock().map_err(|_| {
             tracing::error!("BruteForceGuard lock poisoned; failing closed");
         })

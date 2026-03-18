@@ -1,5 +1,5 @@
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use tempfile::TempDir;
 
 fn write_info(db: &redb::Database, info: &RepoInfo) {
@@ -143,7 +143,10 @@ fn runtime_listing_fails_closed_on_missing_secondary_metadata_until_explicit_rep
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let local_dir = ledger_dir.join("local");
     let db = redb::Database::create(local_dir.join("legacy.redb")).expect("create legacy db");
-    db.begin_write().expect("write txn").commit().expect("commit");
+    db.begin_write()
+        .expect("write txn")
+        .commit()
+        .expect("commit");
     drop(db);
 
     let err = repo

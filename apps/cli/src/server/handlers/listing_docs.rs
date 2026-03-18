@@ -82,22 +82,23 @@ pub async fn handle_list_docs(
         scope_nonce,
         docs,
     });
-    let delta = match state
-        .tree_manager
-        .reset_from_nodes(repo_id, session.active_branch.as_ref(), nodes)
-    {
-        Ok(delta) => delta,
-        Err(err) => {
-            send_doc_error_with_scope_and_switch_nonce(
-                ch,
-                "Failed to rebuild tree projection",
-                err,
-                scope_nonce,
-                switch_nonce,
-            );
-            return;
-        }
-    };
+    let delta =
+        match state
+            .tree_manager
+            .reset_from_nodes(repo_id, session.active_branch.as_ref(), nodes)
+        {
+            Ok(delta) => delta,
+            Err(err) => {
+                send_doc_error_with_scope_and_switch_nonce(
+                    ch,
+                    "Failed to rebuild tree projection",
+                    err,
+                    scope_nonce,
+                    switch_nonce,
+                );
+                return;
+            }
+        };
     ch.unicast(ServerMessage::TreeUpdate {
         request_id,
         repo_id: Some(repo_id),

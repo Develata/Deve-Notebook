@@ -99,7 +99,9 @@ impl BroadcastFilter {
             return Some(msg);
         };
         let Ok(scope) = scope.read() else {
-            tracing::error!("WS broadcast filter read lock poisoned during nonce stamp; dropping broadcast");
+            tracing::error!(
+                "WS broadcast filter read lock poisoned during nonce stamp; dropping broadcast"
+            );
             return None;
         };
 

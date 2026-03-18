@@ -209,9 +209,11 @@ mod tests {
             panic!("poison writer");
         }));
 
-        assert!(service
-            .index_document(DocId::new(), "docs/poison.md", "content")
-            .is_err());
+        assert!(
+            service
+                .index_document(DocId::new(), "docs/poison.md", "content")
+                .is_err()
+        );
         assert!(service.delete_document(DocId::new()).is_err());
         Ok(())
     }

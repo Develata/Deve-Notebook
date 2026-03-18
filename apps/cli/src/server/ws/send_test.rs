@@ -177,16 +177,16 @@ async fn lagged_broadcasts_surface_protocol_error() {
 
     match unicast_rx.recv().await {
         Some(ServerMessage::ProtocolError {
-            error,
-            scope_nonce,
-            ..
+            error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
             assert_eq!(scope_nonce, Some(17));
-            assert!(error
-                .detail
-                .as_deref()
-                .is_some_and(|detail| detail.contains("WS broadcast lagged")));
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("WS broadcast lagged"))
+            );
         }
         other => panic!("expected lagged ProtocolError, got {:?}", other),
     }

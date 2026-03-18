@@ -211,15 +211,17 @@ fn drops_stamped_broadcasts_when_filter_lock_is_poisoned() {
         panic!("poison broadcast filter");
     });
 
-    assert!(filter
-        .stamp_scope_nonce(ServerMessage::CommitAck {
-            repo_id: Some(uuid::Uuid::nil()),
-            branch: None,
-            scope_nonce: None,
-            commit_id: "c1".into(),
-            timestamp: 1,
-        })
-        .is_none());
+    assert!(
+        filter
+            .stamp_scope_nonce(ServerMessage::CommitAck {
+                repo_id: Some(uuid::Uuid::nil()),
+                branch: None,
+                scope_nonce: None,
+                commit_id: "c1".into(),
+                timestamp: 1,
+            })
+            .is_none()
+    );
 }
 
 #[test]
