@@ -80,8 +80,14 @@ pub async fn handle_sync_push_snapshot(
     snapshot::handle_push(state, ch, session, peer_id, repo_id, ops).await;
 }
 
-pub async fn handle_delete_peer(state: &Arc<AppState>, ch: &DualChannel, peer_id_str: String) {
+pub async fn handle_delete_peer(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    peer_id_str: String,
+) {
     let peer_id = PeerId::new(peer_id_str.clone());
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     tracing::info!("Handling DeletePeer request for: {}", peer_id);
 
     match state.repo.delete_peer_branch(&peer_id) {
@@ -90,11 +96,20 @@ pub async fn handle_delete_peer(state: &Arc<AppState>, ch: &DualChannel, peer_id
             ch.broadcast(deve_core::protocol::ServerMessage::PeerDeleted {
                 peer_id: peer_id_str,
             });
-            crate::server::handlers::listing::handle_list_shadows(state, ch, None, None).await;
+            crate::server::handlers::listing::handle_list_shadows(state, ch, Some(session), None)
+                .await;
         }
         Err(e) => {
             tracing::error!("Failed to delete peer branch {}: {:?}", peer_id, e);
-            errors::storage_persist_failed(ch, format!("Failed to delete peer: {}", e), None);
+            errors::storage_persist_failed(
+                ch,
+                format!("Failed to delete peer: {}", e),
+                scope_nonce,
+            );
         }
     }
 }
+
+#[cfg(test)]
+#[path = "../sync_delete_peer_test.rs"]
+mod sync_delete_peer_test;

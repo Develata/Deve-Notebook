@@ -156,6 +156,8 @@ pub enum ClientMessage {
     },
     DeletePeer {
         peer_id: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
     },
     GetChanges {
         request_id: String,

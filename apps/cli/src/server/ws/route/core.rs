@@ -133,8 +133,19 @@ pub(super) async fn route_core(
             switcher::handle_switch_repo(state, ch, session, name, Some(repo_id), switch_nonce)
                 .await;
         }
-        ClientMessage::DeletePeer { peer_id } => {
-            sync::handle_delete_peer(state, ch, peer_id).await;
+        ClientMessage::DeletePeer {
+            peer_id,
+            scope_nonce,
+        } => {
+            if let Err(error) = super::scope_guard::validate_browser_scope_nonce(
+                session,
+                scope_nonce,
+                "delete peer",
+            ) {
+                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                return;
+            }
+            sync::handle_delete_peer(state, ch, session, peer_id).await;
         }
         ClientMessage::SyncSnapshotRequest { peer_id, repo_id } => {
             sync::handle_sync_snapshot_request(state, ch, session, peer_id, repo_id).await;
