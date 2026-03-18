@@ -100,7 +100,8 @@ fn local_repo_paths(ledger_dir: &Path, action: &str) -> Result<Vec<(PathBuf, Str
 #[cfg(test)]
 mod tests {
     use super::RepoManager;
-    use crate::source_control::{self, staging};
+    use crate::ledger::source_control;
+    use crate::source_control::staging;
     use tempfile::tempdir;
 
     #[test]
