@@ -90,22 +90,13 @@ impl RepoListing for RepoManager {
     fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
         for peer_id in shadow_peer_dirs(self)? {
-            let entries = self
-                .scan_remote_repo_entries_without_repair(&peer_id)
-                .map_err(|err| {
-                    anyhow!(
-                        "Broken shadow peer {} while listing shadows: {}",
-                        peer_id,
-                        err
-                    )
-                })?;
-            if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
-                return Err(anyhow!(
-                    "Broken shadow peer {} while listing shadows: unreadable repo {}",
+            let entries = self.scan_remote_repo_entries(&peer_id).map_err(|err| {
+                anyhow!(
+                    "Broken shadow peer {} while listing shadows: {}",
                     peer_id,
-                    entry.stem
-                ));
-            }
+                    err
+                )
+            })?;
             if !entries.is_empty() {
                 peers.push(peer_id);
             }

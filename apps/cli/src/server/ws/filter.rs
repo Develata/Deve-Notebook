@@ -215,5 +215,8 @@ fn matches_scope(
 }
 
 #[cfg(test)]
+#[path = "filter_poison_test.rs"]
+mod poison_tests;
+#[cfg(test)]
 #[path = "filter_test.rs"]
 mod tests;
