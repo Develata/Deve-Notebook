@@ -226,10 +226,15 @@ impl RepoScopedSyncEngine {
 
 impl Clone for RepoScopedSyncEngine {
     fn clone(&self) -> Self {
-        let engines = self
-            .read_engines()
-            .map(|engines| engines.clone())
-            .unwrap_or_default();
+        let engines = match self.read_engines() {
+            Some(engines) => engines.clone(),
+            None => {
+                tracing::error!(
+                    "RepoScopedSyncEngine clone observed poisoned engine registry; cloning closed"
+                );
+                HashMap::new()
+            }
+        };
 
         Self {
             local_peer_id: self.local_peer_id.clone(),

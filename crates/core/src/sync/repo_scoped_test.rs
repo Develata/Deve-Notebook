@@ -43,3 +43,20 @@ fn get_or_create_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
     assert!(engine.loaded_repos().is_empty());
     Ok(())
 }
+
+#[test]
+fn clone_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_vault_root(&vault);
+    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _guard = engine.engines.write().expect("write lock");
+        panic!("poison repo scoped sync engine");
+    }));
+
+    let cloned = engine.clone();
+    assert!(cloned.loaded_repos().is_empty());
+    Ok(())
+}
