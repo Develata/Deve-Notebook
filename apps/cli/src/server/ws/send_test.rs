@@ -158,6 +158,9 @@ async fn non_critical_broadcasts_still_drop_when_unicast_queue_is_full() {
 async fn lagged_broadcasts_surface_protocol_error() {
     let (broadcast_tx, broadcast_rx) = broadcast::channel(1);
     let (unicast_tx, mut unicast_rx) = new_unicast_channel();
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    session.set_scope_nonce(Some(17));
 
     broadcast_tx
         .send(ServerMessage::Pong)
@@ -169,12 +172,17 @@ async fn lagged_broadcasts_surface_protocol_error() {
     spawn_broadcast_forwarder(
         broadcast_rx,
         unicast_tx,
-        BroadcastFilter::allow_all(),
+        BroadcastFilter::for_session(&session),
     );
 
     match unicast_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
+        Some(ServerMessage::ProtocolError {
+            error,
+            scope_nonce,
+            ..
+        }) => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(scope_nonce, Some(17));
             assert!(error
                 .detail
                 .as_deref()

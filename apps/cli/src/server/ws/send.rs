@@ -64,7 +64,7 @@ pub(crate) fn spawn_broadcast_forwarder(
                     tracing::warn!("WS broadcast lagged; skipped {} messages", skipped);
                     try_send_with_delivery_class(
                         &unicast_tx,
-                        lagged_broadcast_error(skipped),
+                        lagged_broadcast_error(filter.current_scope_nonce(), skipped),
                         true,
                     );
                 }
@@ -74,7 +74,7 @@ pub(crate) fn spawn_broadcast_forwarder(
     });
 }
 
-fn lagged_broadcast_error(skipped: u64) -> ServerMessage {
+fn lagged_broadcast_error(scope_nonce: Option<u64>, skipped: u64) -> ServerMessage {
     ServerMessage::ProtocolError {
         error: ServerError::with_detail(
             ServerErrorCode::RequestFailed,
@@ -83,7 +83,7 @@ fn lagged_broadcast_error(skipped: u64) -> ServerMessage {
             ),
         ),
         switch_nonce: None,
-        scope_nonce: None,
+        scope_nonce,
     }
 }
 

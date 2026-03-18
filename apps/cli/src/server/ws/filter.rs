@@ -162,6 +162,12 @@ impl BroadcastFilter {
             other => other,
         }
     }
+
+    pub(crate) fn current_scope_nonce(&self) -> Option<u64> {
+        let scope = self.scope.as_ref()?;
+        let scope = scope.read().ok()?;
+        Some(scope.scope_nonce)
+    }
 }
 
 fn matches_scope(
