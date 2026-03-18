@@ -56,7 +56,9 @@ pub(crate) fn spawn_broadcast_forwarder(
                     if !filter.should_forward(&msg) {
                         continue;
                     }
-                    let msg = filter.stamp_scope_nonce(msg);
+                    let Some(msg) = filter.stamp_scope_nonce(msg) else {
+                        continue;
+                    };
                     let must_deliver = must_deliver_broadcast(&msg);
                     try_send_with_delivery_class(&unicast_tx, msg, must_deliver);
                 }

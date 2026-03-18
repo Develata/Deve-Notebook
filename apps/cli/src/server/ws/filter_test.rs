@@ -177,25 +177,49 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
     });
 
     match commit {
-        ServerMessage::CommitAck { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        Some(ServerMessage::CommitAck { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected commit message: {:?}", other),
     }
     match fs {
-        ServerMessage::FsChangeDetected { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        Some(ServerMessage::FsChangeDetected { scope_nonce, .. }) => {
+            assert_eq!(scope_nonce, Some(9))
+        }
         other => panic!("unexpected fs message: {:?}", other),
     }
     match merge {
-        ServerMessage::MergeComplete { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        Some(ServerMessage::MergeComplete { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected merge message: {:?}", other),
     }
     match new_op {
-        ServerMessage::NewOp { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        Some(ServerMessage::NewOp { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected new-op message: {:?}", other),
     }
     match peer_deleted {
-        ServerMessage::PeerDeleted { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        Some(ServerMessage::PeerDeleted { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected peer-deleted message: {:?}", other),
     }
+}
+
+#[test]
+fn drops_stamped_broadcasts_when_filter_lock_is_poisoned() {
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    let filter = BroadcastFilter::for_session(&session);
+    let scope = filter.scope.as_ref().expect("scoped filter").clone();
+    let _ = std::panic::catch_unwind(move || {
+        let _guard = scope.write().expect("write lock");
+        panic!("poison broadcast filter");
+    });
+
+    assert!(filter
+        .stamp_scope_nonce(ServerMessage::CommitAck {
+            repo_id: Some(uuid::Uuid::nil()),
+            branch: None,
+            scope_nonce: None,
+            commit_id: "c1".into(),
+            timestamp: 1,
+        })
+        .is_none());
 }
 
 #[test]

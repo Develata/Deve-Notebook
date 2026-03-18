@@ -94,15 +94,16 @@ impl BroadcastFilter {
         }
     }
 
-    pub(crate) fn stamp_scope_nonce(&self, msg: ServerMessage) -> ServerMessage {
+    pub(crate) fn stamp_scope_nonce(&self, msg: ServerMessage) -> Option<ServerMessage> {
         let Some(scope) = &self.scope else {
-            return msg;
+            return Some(msg);
         };
         let Ok(scope) = scope.read() else {
-            return msg;
+            tracing::error!("WS broadcast filter read lock poisoned during nonce stamp; dropping broadcast");
+            return None;
         };
 
-        match msg {
+        Some(match msg {
             ServerMessage::FsChangeDetected {
                 repo_id,
                 branch,
@@ -160,12 +161,20 @@ impl BroadcastFilter {
                 scope_nonce: Some(scope.scope_nonce),
             },
             other => other,
-        }
+        })
     }
 
     pub(crate) fn current_scope_nonce(&self) -> Option<u64> {
         let scope = self.scope.as_ref()?;
-        let scope = scope.read().ok()?;
+        let scope = match scope.read() {
+            Ok(scope) => scope,
+            Err(_) => {
+                tracing::error!(
+                    "WS broadcast filter read lock poisoned while reading current scope nonce"
+                );
+                return None;
+            }
+        };
         Some(scope.scope_nonce)
     }
 }
