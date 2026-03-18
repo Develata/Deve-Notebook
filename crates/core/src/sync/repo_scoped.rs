@@ -29,18 +29,24 @@ pub struct RepoScopedSyncEngine {
 }
 
 impl RepoScopedSyncEngine {
-    fn read_engines(&self) -> RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>> {
-        self.engines.read().unwrap_or_else(|e| {
-            tracing::warn!("RepoScopedSyncEngine read lock poisoned; recovering");
-            e.into_inner()
-        })
+    fn read_engines(&self) -> Option<RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>>> {
+        match self.engines.read() {
+            Ok(guard) => Some(guard),
+            Err(_) => {
+                tracing::error!("RepoScopedSyncEngine read lock poisoned; failing closed");
+                None
+            }
+        }
     }
 
-    fn write_engines(&self) -> RwLockWriteGuard<'_, HashMap<RepoId, SyncEngine>> {
-        self.engines.write().unwrap_or_else(|e| {
-            tracing::warn!("RepoScopedSyncEngine write lock poisoned; recovering");
-            e.into_inner()
-        })
+    fn write_engines(&self) -> Option<RwLockWriteGuard<'_, HashMap<RepoId, SyncEngine>>> {
+        match self.engines.write() {
+            Ok(guard) => Some(guard),
+            Err(_) => {
+                tracing::error!("RepoScopedSyncEngine write lock poisoned; failing closed");
+                None
+            }
+        }
     }
 
     /// 创建新的 Repo-Scoped 同步引擎管理器
@@ -71,14 +77,14 @@ impl RepoScopedSyncEngine {
     /// - `None` - 如果锁被污染
     pub fn get_or_create(&self, repo_id: RepoId) -> Option<SyncEngine> {
         // 先尝试读取
-        let engines = self.read_engines();
+        let engines = self.read_engines()?;
         if let Some(engine) = engines.get(&repo_id) {
             return Some(engine.clone());
         }
         drop(engines);
 
         // 需要创建新的 engine
-        let mut engines = self.write_engines();
+        let mut engines = self.write_engines()?;
 
         if let Some(engine) = engines.get(&repo_id) {
             return Some(engine.clone());
@@ -135,7 +141,7 @@ impl RepoScopedSyncEngine {
     }
 
     pub fn get(&self, repo_id: RepoId) -> Option<SyncEngine> {
-        let engines = self.read_engines();
+        let engines = self.read_engines()?;
         engines.get(&repo_id).cloned()
     }
 
@@ -144,7 +150,7 @@ impl RepoScopedSyncEngine {
     where
         F: FnOnce(&SyncEngine) -> R,
     {
-        let engines = self.read_engines();
+        let engines = self.read_engines()?;
         engines.get(&repo_id).map(f)
     }
 
@@ -153,28 +159,30 @@ impl RepoScopedSyncEngine {
     where
         F: FnOnce(&mut SyncEngine) -> R,
     {
-        let mut engines = self.write_engines();
+        let mut engines = self.write_engines()?;
         engines.get_mut(&repo_id).map(f)
     }
 
     /// 移除指定仓库的 SyncEngine
     pub fn remove(&self, repo_id: RepoId) -> Option<SyncEngine> {
-        let mut engines = self.write_engines();
+        let mut engines = self.write_engines()?;
         engines.remove(&repo_id)
     }
 
     /// 获取所有已加载的仓库 ID
     pub fn loaded_repos(&self) -> Vec<RepoId> {
-        let engines = match self.engines.read() {
-            Ok(e) => e,
-            Err(e) => e.into_inner(),
+        let Some(engines) = self.read_engines() else {
+            return Vec::new();
         };
         engines.keys().cloned().collect()
     }
 
     /// 清空所有 SyncEngine
     pub fn clear(&self) {
-        self.write_engines().clear();
+        let Some(mut engines) = self.write_engines() else {
+            return;
+        };
+        engines.clear();
     }
 
     fn load_repo_key(&self, repo_id: RepoId) -> Option<RepoKey> {
@@ -218,10 +226,10 @@ impl RepoScopedSyncEngine {
 
 impl Clone for RepoScopedSyncEngine {
     fn clone(&self) -> Self {
-        let engines = match self.engines.read() {
-            Ok(e) => e.clone(),
-            Err(e) => e.into_inner().clone(),
-        };
+        let engines = self
+            .read_engines()
+            .map(|engines| engines.clone())
+            .unwrap_or_default();
 
         Self {
             local_peer_id: self.local_peer_id.clone(),
