@@ -13,8 +13,9 @@
 //! **类型**: Plugin MAY (插件可选) - 仅 Standard Profile 启用
 
 use crate::models::DocId;
+use anyhow::anyhow;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
 use tantivy::schema::{Field, STORED, STRING, Schema, TEXT, Value};
@@ -87,7 +88,7 @@ impl SearchService {
 
     /// Index a document
     pub fn index_document(&self, doc_id: DocId, path: &str, content: &str) -> anyhow::Result<()> {
-        let mut writer = self.writer.lock().unwrap();
+        let mut writer = self.lock_writer()?;
         let doc_id_str = doc_id.to_string();
 
         // Delete existing document first (upsert)
@@ -108,7 +109,7 @@ impl SearchService {
 
     /// Delete a document from the index
     pub fn delete_document(&self, doc_id: DocId) -> anyhow::Result<()> {
-        let mut writer = self.writer.lock().unwrap();
+        let mut writer = self.lock_writer()?;
         let doc_id_str = doc_id.to_string();
         writer.delete_term(tantivy::Term::from_field_text(
             self.field_doc_id,
@@ -158,11 +159,18 @@ impl SearchService {
 
         Ok(results)
     }
+
+    fn lock_writer(&self) -> anyhow::Result<MutexGuard<'_, IndexWriter>> {
+        self.writer
+            .lock()
+            .map_err(|_| anyhow!("SearchService writer lock poisoned"))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
 
     #[test]
     fn test_search_service() -> anyhow::Result<()> {
@@ -190,6 +198,21 @@ mod tests {
         let results = service.search("docs", 10)?;
         assert_eq!(results.len(), 2);
 
+        Ok(())
+    }
+
+    #[test]
+    fn poisoned_writer_fails_closed() -> anyhow::Result<()> {
+        let service = SearchService::new_in_memory()?;
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            let _held = service.writer.lock().expect("lock writer");
+            panic!("poison writer");
+        }));
+
+        assert!(service
+            .index_document(DocId::new(), "docs/poison.md", "content")
+            .is_err());
+        assert!(service.delete_document(DocId::new()).is_err());
         Ok(())
     }
 }

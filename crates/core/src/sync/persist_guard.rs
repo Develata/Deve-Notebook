@@ -1,9 +1,9 @@
 use crate::source_control::pending_fs;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
-use tracing::debug;
+use tracing::{debug, warn};
 
 const PERSISTED_WRITE_TTL: Duration = Duration::from_secs(2);
 const PERSISTED_WRITE_MATCH_BUDGET: u8 = 4;
@@ -44,12 +44,16 @@ impl PersistGuard {
     }
 
     pub(crate) fn clear(&self, path: &str) {
-        let mut guard = self.recent_writes.lock().unwrap();
+        let Some(mut guard) = self.lock_recent_writes() else {
+            return;
+        };
         guard.remove(path);
     }
 
     pub(crate) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
-        let mut guard = self.recent_writes.lock().unwrap();
+        let Some(mut guard) = self.lock_recent_writes() else {
+            return false;
+        };
         let Some(entry) = guard.get_mut(path) else {
             return false;
         };
@@ -94,7 +98,9 @@ impl PersistGuard {
     }
 
     fn insert(&self, path: &str, action: PersistedAction) {
-        let mut guard = self.recent_writes.lock().unwrap();
+        let Some(mut guard) = self.lock_recent_writes() else {
+            return;
+        };
         guard.retain(|_, entry| entry.recorded_at.elapsed() <= PERSISTED_WRITE_TTL);
         guard.insert(
             path.to_string(),
@@ -104,5 +110,37 @@ impl PersistGuard {
                 remaining_hits: PERSISTED_WRITE_MATCH_BUDGET,
             },
         );
+    }
+
+    fn lock_recent_writes(&self) -> Option<MutexGuard<'_, HashMap<String, PersistedWrite>>> {
+        match self.recent_writes.lock() {
+            Ok(guard) => Some(guard),
+            Err(_) => {
+                warn!("PersistGuard: recent_writes 锁已损坏，按 fail-closed 处理");
+                None
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PersistGuard;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+    use tempfile::tempdir;
+
+    #[test]
+    fn poisoned_lock_stops_ignoring_without_panicking() {
+        let guard = PersistGuard::new();
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            let _held = guard.recent_writes.lock().expect("lock persist guard");
+            panic!("poison persist guard");
+        }));
+
+        let dir = tempdir().expect("tempdir");
+        assert!(!guard.should_ignore(dir.path(), "notes/a.md"));
+        guard.record("notes/a.md", "content");
+        guard.record_delete("notes/a.md");
+        guard.clear("notes/a.md");
     }
 }
