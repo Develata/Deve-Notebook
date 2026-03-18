@@ -31,6 +31,14 @@ pub struct BruteForceGuard {
 }
 
 impl BruteForceGuard {
+    fn lock_records(
+        &self,
+    ) -> Result<std::sync::MutexGuard<'_, HashMap<IpAddr, IpRecord>>, ()> {
+        self.records.lock().map_err(|_| {
+            tracing::error!("BruteForceGuard lock poisoned; failing closed");
+        })
+    }
+
     pub fn new() -> Self {
         Self {
             records: Mutex::new(HashMap::new()),
@@ -39,7 +47,9 @@ impl BruteForceGuard {
 
     /// 检查 IP 是否被封禁
     pub fn is_blocked(&self, ip: &IpAddr) -> bool {
-        let records = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let Ok(records) = self.lock_records() else {
+            return true;
+        };
         match records.get(ip) {
             Some(r) if r.failures >= MAX_FAILURES => r.last_failure.elapsed() < BAN_DURATION,
             _ => false,
@@ -48,7 +58,9 @@ impl BruteForceGuard {
 
     /// 记录一次登录失败
     pub fn record_failure(&self, ip: &IpAddr) {
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let Ok(mut records) = self.lock_records() else {
+            return;
+        };
         let entry = records.entry(*ip).or_insert(IpRecord {
             failures: 0,
             last_failure: Instant::now(),
@@ -64,7 +76,9 @@ impl BruteForceGuard {
 
     /// 登录成功后清除记录
     pub fn record_success(&self, ip: &IpAddr) {
-        let mut records = self.records.lock().unwrap_or_else(|e| e.into_inner());
+        let Ok(mut records) = self.lock_records() else {
+            return;
+        };
         records.remove(ip);
     }
 }
@@ -110,5 +124,16 @@ mod tests {
             guard.record_failure(&ip);
         }
         assert!(!guard.is_blocked(&ip));
+    }
+
+    #[test]
+    fn poisoned_lock_blocks_ip_fail_closed() {
+        let guard = BruteForceGuard::new();
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = guard.records.lock().expect("lock");
+            panic!("poison brute force guard");
+        }));
+        let ip: IpAddr = "10.0.0.5".parse().unwrap();
+        assert!(guard.is_blocked(&ip));
     }
 }
