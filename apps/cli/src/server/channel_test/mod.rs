@@ -197,3 +197,28 @@ async fn key_messages_are_not_dropped_when_unicast_queue_is_full() {
     assert!(saw_provide, "KeyProvide must not be dropped");
     assert!(saw_denied, "KeyDenied must not be dropped");
 }
+
+#[test]
+fn protocol_errors_are_blocking_delivered_outside_runtime() {
+    let (broadcast_tx, _) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = mpsc::channel(1);
+    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+
+    ch.unicast(ServerMessage::Pong);
+    let sender = std::thread::spawn({
+        let ch = ch.clone();
+        move || ch.send_protocol_error(ServerError::new(ServerErrorCode::RequestFailed))
+    });
+
+    assert!(matches!(
+        unicast_rx.blocking_recv(),
+        Some(ServerMessage::Pong)
+    ));
+    sender.join().expect("sender thread");
+    match unicast_rx.blocking_recv() {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+        }
+        other => panic!("expected blocking-delivered ProtocolError, got {:?}", other),
+    }
+}

@@ -174,8 +174,8 @@ fn schedule_must_deliver(tx: mpsc::Sender<ServerMessage>, msg: ServerMessage) {
         handle.spawn(async move {
             let _ = tx.send(msg).await;
         });
-    } else {
-        tracing::warn!("Unicast channel full outside runtime; dropping critical message");
+    } else if tx.blocking_send(msg).is_err() {
+        tracing::debug!("Unicast channel closed outside runtime; dropping critical message");
     }
 }
 
