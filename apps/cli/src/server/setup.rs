@@ -90,8 +90,16 @@ pub(super) fn spawn_file_watcher(
             move |event| match event {
                 FsEventType::DocChange(msgs) => {
                     for msg in msgs {
-                        if matches!(msg, ServerMessage::FsChangeDetected { .. }) {
-                            let _ = tx.send(msg);
+                        match msg {
+                            ServerMessage::FsChangeDetected { .. } => {
+                                let _ = tx.send(msg);
+                            }
+                            other => {
+                                tracing::error!(
+                                    "Watcher emitted unexpected doc-change message: {:?}",
+                                    other
+                                );
+                            }
                         }
                     }
                 }
