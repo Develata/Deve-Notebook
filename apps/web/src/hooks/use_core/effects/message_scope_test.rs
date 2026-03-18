@@ -180,8 +180,8 @@ fn system_or_matching_request_accepts_none_and_exact_match() {
 }
 
 #[test]
-fn requested_message_without_scope_nonce_still_accepts_exact_request_id() {
-    assert!(accepts_system_or_matching_request(
+fn requested_message_without_scope_nonce_is_rejected() {
+    assert!(!accepts_system_or_matching_request(
         Some("req-1"),
         Some("req-1"),
         None,

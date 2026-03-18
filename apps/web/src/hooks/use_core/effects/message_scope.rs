@@ -74,9 +74,7 @@ pub fn accepts_system_or_matching_request(
 }
 
 fn request_matches(request: RequestMatch<'_>) -> bool {
-    let scoped_match = request
-        .scope_nonce
-        .is_none_or(|scope_nonce| scope_nonce == request.current_scope_nonce);
+    let scoped_match = request.scope_nonce == Some(request.current_scope_nonce);
     match request.message_id {
         Some(message_id) => request.expected_id == Some(message_id) && scoped_match,
         None => {
