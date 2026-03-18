@@ -77,6 +77,36 @@ pub(super) fn duplicate_entry_ids(entries: &[RemoteRepoEntry]) -> HashSet<uuid::
     )
 }
 
+pub(super) fn validate_scanned_remote_entries(
+    peer_id: &PeerId,
+    entries: &[RemoteRepoEntry],
+    action: &str,
+) -> Result<()> {
+    if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+        return Err(anyhow!(
+            "Broken shadow repo {} for peer {} while {}",
+            entry.stem,
+            peer_id,
+            action
+        ));
+    }
+    let duplicate_ids = duplicate_entry_ids(entries);
+    if duplicate_ids.is_empty() {
+        return Ok(());
+    }
+    let mut duplicate_ids = duplicate_ids
+        .into_iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>();
+    duplicate_ids.sort();
+    Err(anyhow!(
+        "Broken shadow peer {} while {}: duplicate remote repository UUIDs: {}",
+        peer_id,
+        action,
+        duplicate_ids.join(", ")
+    ))
+}
+
 pub(super) fn reject_duplicate_remote_matches(
     selector: &str,
     matches: &[RemoteRepoEntry],

@@ -48,6 +48,9 @@ impl RepoManager {
         }
         peers.sort_by_key(|peer_id| peer_id.to_string());
         for peer_id in peers {
+            self.repair_remote_repo_catalog(&peer_id).with_context(|| {
+                format!("Broken shadow peer {} while repairing catalogs", peer_id)
+            })?;
             self.scan_remote_repo_entries(&peer_id).with_context(|| {
                 format!("Broken shadow peer {} while repairing catalogs", peer_id)
             })?;

@@ -4,7 +4,7 @@ mod helpers;
 use self::helpers::{
     duplicate_catalog_ids, duplicate_entry_ids, reject_duplicate_remote_matches,
     repaired_remote_repo_info, resolve_remote_repo_entry_by_id, scanned_remote_repo_info,
-    single_remote_entry,
+    single_remote_entry, validate_scanned_remote_entries,
 };
 use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
@@ -14,7 +14,7 @@ use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 
 impl RepoManager {
-    fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
+    pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
         let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
         if !peer_dir.exists() {
             return Ok(());
@@ -83,8 +83,9 @@ impl RepoManager {
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
-        self.repair_remote_repo_catalog(peer_id)?;
-        self.scan_remote_repo_entries_without_repair(peer_id)
+        let entries = self.scan_remote_repo_entries_without_repair(peer_id)?;
+        validate_scanned_remote_entries(peer_id, &entries, "scanning catalog")?;
+        Ok(entries)
     }
 
     pub(crate) fn scan_remote_repo_entries_without_repair(
@@ -123,13 +124,6 @@ impl RepoManager {
         let selector = selector.trim_end_matches(".redb");
         let target_id = uuid::Uuid::parse_str(selector).ok();
         let entries = self.scan_remote_repo_entries(peer_id)?;
-        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
-            return Err(anyhow!(
-                "Broken shadow repo {} for peer {} while resolving selector",
-                entry.stem,
-                peer_id
-            ));
-        }
         let duplicate_ids = duplicate_entry_ids(&entries);
         let mut by_id = Vec::new();
         let mut by_stem = Vec::new();
@@ -197,13 +191,6 @@ impl RepoManager {
             .scan_remote_repo_entries(peer_id)?
             .into_iter()
             .collect::<Vec<_>>();
-        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
-            return Err(anyhow!(
-                "Broken shadow repo {} for peer {} while listing repos",
-                entry.stem,
-                peer_id
-            ));
-        }
         let duplicate_ids = duplicate_entry_ids(&entries);
         let entries = entries
             .into_iter()

@@ -30,6 +30,8 @@ fn remote_catalog_keeps_legacy_uuid_shadow_as_uuid_selector_without_remote_metad
 
     repo.ensure_shadow_db(&peer_id, &info.uuid)
         .expect("create legacy uuid shadow");
+    repo.repair_remote_repo_catalogs()
+        .expect("repair remote catalogs explicitly");
     assert_eq!(
         repo.list_repos(Some(&peer_id))
             .expect("list repaired shadows"),
