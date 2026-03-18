@@ -70,7 +70,10 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         }
     };
 
-    let key_dir = match state.repo.local_repo_notegit_keys_root(&key_scope.repo_name) {
+    let key_dir = match state
+        .repo
+        .local_repo_notegit_keys_root(&key_scope.repo_name)
+    {
         Ok(dir) => dir,
         Err(err) => {
             send_key_denied_error(
@@ -98,7 +101,11 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             });
         }
         Err(err) => {
-            tracing::warn!("RepoKey request failed for {}: {:?}", key_scope.repo_name, err);
+            tracing::warn!(
+                "RepoKey request failed for {}: {:?}",
+                key_scope.repo_name,
+                err
+            );
             send_key_denied_error(
                 ch,
                 scope_nonce,

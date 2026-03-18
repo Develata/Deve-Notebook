@@ -1,5 +1,7 @@
 use super::handlers::key_exchange::handle_request_key;
-use super::{AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry};
+use super::{
+    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+};
 use deve_core::config::SyncMode;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
@@ -51,7 +53,9 @@ async fn request_key_rejects_non_browser_sessions() -> anyhow::Result<()> {
     handle_request_key(&state, &ch, &mut session).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, scope_nonce, .. }) => {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(scope_nonce, None);
         }
@@ -75,7 +79,12 @@ async fn request_key_uses_current_browser_scope_when_sync_scope_is_stale() -> an
     handle_request_key(&state, &ch, &mut session).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::KeyProvide { repo_id: seen, scope_nonce, branch, .. }) => {
+        Some(ServerMessage::KeyProvide {
+            repo_id: seen,
+            scope_nonce,
+            branch,
+            ..
+        }) => {
             assert_eq!(seen, repo_id);
             assert_eq!(scope_nonce, 17);
             assert_eq!(branch, None);
@@ -110,7 +119,12 @@ async fn request_key_on_remote_branch_uses_local_counterpart_keys_root() -> anyh
     handle_request_key(&state, &ch, &mut session).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::KeyProvide { repo_id: seen, scope_nonce, branch, .. }) => {
+        Some(ServerMessage::KeyProvide {
+            repo_id: seen,
+            scope_nonce,
+            branch,
+            ..
+        }) => {
             assert_eq!(seen, repo_id);
             assert_eq!(scope_nonce, 21);
             assert_eq!(branch, Some(peer_id.clone()));
@@ -118,6 +132,11 @@ async fn request_key_on_remote_branch_uses_local_counterpart_keys_root() -> anyh
         other => panic!("expected KeyProvide, got {:?}", other),
     }
     assert!(state.repo.local_repo_notegit_keys_root("notes")?.exists());
-    assert!(!state.repo.local_repo_notegit_keys_root("shadow-notes")?.exists());
+    assert!(
+        !state
+            .repo
+            .local_repo_notegit_keys_root("shadow-notes")?
+            .exists()
+    );
     Ok(())
 }

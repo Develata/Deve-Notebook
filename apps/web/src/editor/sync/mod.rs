@@ -161,7 +161,12 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             branch,
             error,
         } => {
-            if matches_scoped_message(current_scoped_message_scope(ctx), repo_id, branch, Some(scope_nonce)) {
+            if matches_scoped_message(
+                current_scoped_message_scope(ctx),
+                repo_id,
+                branch,
+                Some(scope_nonce),
+            ) {
                 ctx.set_repo_key.set(None);
                 leptos::logging::warn!(
                     "KeyDenied: code={:?} detail={:?}",

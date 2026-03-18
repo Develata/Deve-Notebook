@@ -147,5 +147,8 @@ fn resolve_from_entries_fails_closed_when_same_path_maps_to_distinct_docs() {
         },
     ];
 
-    assert_eq!(resolve_from_entries(&entries, "notes/reused.md", None), None);
+    assert_eq!(
+        resolve_from_entries(&entries, "notes/reused.md", None),
+        None
+    );
 }

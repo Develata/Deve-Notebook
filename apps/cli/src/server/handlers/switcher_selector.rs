@@ -110,9 +110,14 @@ fn select_target_repo_by_url(
             matches.push(repo_name.clone());
         }
     }
-    if target_branch.is_some() && matches.len() > 1 {
+    if matches.len() > 1 {
+        let scope = if target_branch.is_some() {
+            "remote"
+        } else {
+            "local"
+        };
         return Err(anyhow!(
-            "Ambiguous remote repository selector for URL: {}",
+            "Ambiguous {scope} repository selector for URL: {}",
             url
         ));
     }

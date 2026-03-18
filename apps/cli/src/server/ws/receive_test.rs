@@ -176,7 +176,10 @@ async fn browser_rate_limit_error_uses_current_control_scope_when_sync_scope_is_
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
-            assert_eq!(error.detail.as_deref(), Some("WebSocket rate limit exceeded"));
+            assert_eq!(
+                error.detail.as_deref(),
+                Some("WebSocket rate limit exceeded")
+            );
             assert_eq!(scope_nonce, Some(19));
         }
         other => panic!("expected scoped ProtocolError, got {:?}", other),
