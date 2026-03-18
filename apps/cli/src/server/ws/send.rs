@@ -1,7 +1,7 @@
 pub(crate) use super::filter::BroadcastFilter;
 use crate::server::channel::try_send_with_delivery_class;
 use axum::extract::ws::{Message, WebSocket};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use futures::SinkExt;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{broadcast, mpsc};
@@ -62,11 +62,29 @@ pub(crate) fn spawn_broadcast_forwarder(
                 }
                 Err(RecvError::Lagged(skipped)) => {
                     tracing::warn!("WS broadcast lagged; skipped {} messages", skipped);
+                    try_send_with_delivery_class(
+                        &unicast_tx,
+                        lagged_broadcast_error(skipped),
+                        true,
+                    );
                 }
                 Err(RecvError::Closed) => break,
             }
         }
     });
+}
+
+fn lagged_broadcast_error(skipped: u64) -> ServerMessage {
+    ServerMessage::ProtocolError {
+        error: ServerError::with_detail(
+            ServerErrorCode::RequestFailed,
+            format!(
+                "WS broadcast lagged; skipped {skipped} messages; reconnect or reopen to resync"
+            ),
+        ),
+        switch_nonce: None,
+        scope_nonce: None,
+    }
 }
 
 fn must_deliver_broadcast(msg: &ServerMessage) -> bool {

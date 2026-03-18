@@ -1,7 +1,7 @@
 use super::{BroadcastFilter, new_unicast_channel, spawn_broadcast_forwarder};
 use crate::server::session::WsSession;
 use deve_core::models::{DocId, Op};
-use deve_core::protocol::{ConfirmedOp, ServerMessage};
+use deve_core::protocol::{ConfirmedOp, ServerErrorCode, ServerMessage};
 use tokio::sync::broadcast;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -152,4 +152,34 @@ async fn non_critical_broadcasts_still_drop_when_unicast_queue_is_full() {
         unicast_rx.try_recv().is_err(),
         "non-critical broadcast must still be droppable"
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn lagged_broadcasts_surface_protocol_error() {
+    let (broadcast_tx, broadcast_rx) = broadcast::channel(1);
+    let (unicast_tx, mut unicast_rx) = new_unicast_channel();
+
+    broadcast_tx
+        .send(ServerMessage::Pong)
+        .expect("seed first broadcast");
+    broadcast_tx
+        .send(ServerMessage::Pong)
+        .expect("seed second broadcast");
+
+    spawn_broadcast_forwarder(
+        broadcast_rx,
+        unicast_tx,
+        BroadcastFilter::allow_all(),
+    );
+
+    match unicast_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("WS broadcast lagged")));
+        }
+        other => panic!("expected lagged ProtocolError, got {:?}", other),
+    }
 }
