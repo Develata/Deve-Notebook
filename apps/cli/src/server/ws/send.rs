@@ -76,6 +76,7 @@ fn must_deliver_broadcast(msg: &ServerMessage) -> bool {
             | ServerMessage::CommitAck { .. }
             | ServerMessage::MergeComplete { .. }
             | ServerMessage::NewOp { .. }
+            | ServerMessage::PeerDeleted { .. }
     )
 }
 

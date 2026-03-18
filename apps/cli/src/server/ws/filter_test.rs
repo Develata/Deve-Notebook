@@ -124,6 +124,10 @@ fn rejects_repo_scoped_runtime_broadcasts_for_unbound_sessions() {
         scope_nonce: Some(7),
         merged_count: 2,
     }));
+    assert!(!filter.should_forward(&ServerMessage::PeerDeleted {
+        peer_id: "peer-a".into(),
+        scope_nonce: Some(7),
+    }));
 }
 
 #[test]
@@ -167,6 +171,10 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
             None,
         ),
     });
+    let peer_deleted = filter.stamp_scope_nonce(ServerMessage::PeerDeleted {
+        peer_id: "peer-a".into(),
+        scope_nonce: None,
+    });
 
     match commit {
         ServerMessage::CommitAck { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
@@ -183,6 +191,10 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
     match new_op {
         ServerMessage::NewOp { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected new-op message: {:?}", other),
+    }
+    match peer_deleted {
+        ServerMessage::PeerDeleted { scope_nonce, .. } => assert_eq!(scope_nonce, Some(9)),
+        other => panic!("unexpected peer-deleted message: {:?}", other),
     }
 }
 

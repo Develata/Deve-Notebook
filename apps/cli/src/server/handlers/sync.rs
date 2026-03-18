@@ -95,6 +95,7 @@ pub async fn handle_delete_peer(
             tracing::info!("Successfully deleted peer branch: {}", peer_id);
             ch.broadcast(deve_core::protocol::ServerMessage::PeerDeleted {
                 peer_id: peer_id_str,
+                scope_nonce: None,
             });
             crate::server::handlers::listing::handle_list_shadows(state, ch, Some(session), None)
                 .await;

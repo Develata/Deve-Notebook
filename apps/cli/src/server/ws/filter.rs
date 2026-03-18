@@ -89,6 +89,7 @@ impl BroadcastFilter {
                 branch.as_ref(),
                 false,
             ),
+            ServerMessage::PeerDeleted { .. } => scope.active_repo_id.is_some(),
             _ => true,
         }
     }
@@ -153,6 +154,10 @@ impl BroadcastFilter {
                 branch,
                 scope_nonce: Some(scope.scope_nonce),
                 merged_count,
+            },
+            ServerMessage::PeerDeleted { peer_id, .. } => ServerMessage::PeerDeleted {
+                peer_id,
+                scope_nonce: Some(scope.scope_nonce),
             },
             other => other,
         }

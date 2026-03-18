@@ -94,6 +94,41 @@ async fn new_op_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn peer_deleted_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
+    let (broadcast_tx, broadcast_rx) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = new_unicast_channel();
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    session.set_scope_nonce(Some(13));
+    let filter = BroadcastFilter::for_session(&session);
+
+    spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), filter);
+
+    unicast_tx
+        .try_send(ServerMessage::Pong)
+        .expect("fill unicast queue");
+    broadcast_tx
+        .send(ServerMessage::PeerDeleted {
+            peer_id: "peer-a".into(),
+            scope_nonce: None,
+        })
+        .expect("broadcast peer deleted");
+
+    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    tokio::task::yield_now().await;
+    match unicast_rx.recv().await {
+        Some(ServerMessage::PeerDeleted {
+            peer_id,
+            scope_nonce,
+        }) => {
+            assert_eq!(peer_id, "peer-a");
+            assert_eq!(scope_nonce, Some(13));
+        }
+        other => panic!("expected queued PeerDeleted, got {:?}", other),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn non_critical_broadcasts_still_drop_when_unicast_queue_is_full() {
     let (broadcast_tx, broadcast_rx) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = new_unicast_channel();

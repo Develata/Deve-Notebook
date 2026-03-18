@@ -20,7 +20,9 @@ use super::message_runtime::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
     handle_sync_mode_status,
 };
-use super::message_scope::{RepoListScope, RequestMatch, repo_list_matches_scope};
+use super::message_scope::{
+    RepoListScope, RequestMatch, accepts_system_or_matching_request, repo_list_matches_scope,
+};
 use super::message_shadow;
 use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
 
@@ -169,7 +171,15 @@ pub fn handle_message<F>(
         } => {
             message_control::handle_repo_switched(branch, name, uuid, switch_nonce, ws, signals);
         }
-        ServerMessage::PeerDeleted { peer_id } => {
+        ServerMessage::PeerDeleted { peer_id, scope_nonce } => {
+            if !accepts_system_or_matching_request(
+                None,
+                None,
+                scope_nonce,
+                signals.current_scope_nonce.get_untracked(),
+            ) {
+                return;
+            }
             message_shadow::handle_peer_deleted(peer_id, ws, signals);
         }
         ServerMessage::EditRejected { scope_nonce, error } => {
