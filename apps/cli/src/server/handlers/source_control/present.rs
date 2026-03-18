@@ -129,7 +129,14 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
     let deleted_exact = exact
         .iter()
         .any(|entry| entry.status == ChangeStatus::Deleted);
+    let exact_doc_ids = exact
+        .iter()
+        .filter_map(|entry| entry.doc_id)
+        .collect::<HashSet<_>>();
     if live_exact.len() > 1 || renamed.len() > 1 {
+        return None;
+    }
+    if renamed.is_empty() && exact_doc_ids.len() > 1 {
         return None;
     }
     if deleted_exact && renamed.len() == 1 {
