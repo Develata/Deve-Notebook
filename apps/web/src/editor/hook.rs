@@ -94,10 +94,10 @@ pub fn use_editor(
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
         let _ = open_session_generation.fetch_add(1, Ordering::Relaxed);
         open_ready_generation.store(0, Ordering::Relaxed);
-        open_buffered_live_ops
-            .lock()
-            .expect("buffered live ops mutex")
-            .clear();
+        match open_buffered_live_ops.lock() {
+            Ok(mut buffered) => buffered.clear(),
+            Err(_) => leptos::logging::warn!("清空 buffered live ops 失败: 锁已损坏"),
+        }
         set_read_only(true);
         set_local_version.set(0);
         set_open_request_id.set(request_id);
@@ -196,10 +196,10 @@ pub fn use_editor(
     on_cleanup(move || {
         let _ = cleanup_session_generation.fetch_add(1, Ordering::Relaxed);
         cleanup_ready_generation.store(0, Ordering::Relaxed);
-        cleanup_buffered_live_ops
-            .lock()
-            .expect("buffered live ops mutex")
-            .clear();
+        match cleanup_buffered_live_ops.lock() {
+            Ok(mut buffered) => buffered.clear(),
+            Err(_) => leptos::logging::warn!("编辑器清理时忽略 buffered live ops: 锁已损坏"),
+        }
         destroyEditor();
         leptos::logging::log!("编辑器已清理");
     });

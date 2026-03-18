@@ -79,18 +79,19 @@ impl SyncContext<'_> {
     }
 
     pub fn buffer_live_op(&self, entry: ConfirmedOp) {
-        self.buffered_live_ops
-            .lock()
-            .expect("buffered live ops mutex")
-            .push(entry);
+        match self.buffered_live_ops.lock() {
+            Ok(mut buffered) => buffered.push(entry),
+            Err(_) => leptos::logging::warn!("忽略 live op: buffered_live_ops 锁已损坏"),
+        }
     }
 
     pub fn drain_buffered_live_ops(&self) -> Vec<ConfirmedOp> {
-        std::mem::take(
-            &mut *self
-                .buffered_live_ops
-                .lock()
-                .expect("buffered live ops mutex"),
-        )
+        match self.buffered_live_ops.lock() {
+            Ok(mut buffered) => std::mem::take(&mut *buffered),
+            Err(_) => {
+                leptos::logging::warn!("忽略 buffered live ops: 锁已损坏");
+                Vec::new()
+            }
+        }
     }
 }
