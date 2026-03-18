@@ -83,11 +83,19 @@ impl RepoManager {
     pub fn list_loaded_shadows(&self) -> Vec<PeerId> {
         self.read_shadow_dbs()
             .map(|dbs| dbs.keys().cloned().collect())
-            .unwrap_or_default()
+            .unwrap_or_else(|err| {
+                tracing::warn!("Failed to list loaded shadows: {err}");
+                Vec::new()
+            })
     }
 
     fn detach_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) {
         let Ok(mut dbs) = self.write_shadow_dbs() else {
+            tracing::warn!(
+                "Failed to detach shadow repo {}/{}: shadow registry lock poisoned",
+                peer_id,
+                repo_id
+            );
             return;
         };
         if let Some(repos) = dbs.get_mut(peer_id) {

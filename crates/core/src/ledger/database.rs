@@ -121,14 +121,14 @@ impl RepoManager {
                     Some(info) => Some(info.uuid),
                     None => uuid::Uuid::parse_str(&resolved.stem).ok(),
                 };
-                let loaded = repo_id.and_then(|repo_id| -> Option<Arc<Database>> {
-                    self.shadow_dbs
-                        .read()
-                        .ok()?
+                let loaded = if let Some(repo_id) = repo_id {
+                    self.read_shadow_dbs()?
                         .get(peer_id)
                         .and_then(|repos| repos.get(&repo_id))
                         .cloned()
-                });
+                } else {
+                    None
+                };
                 if let Some(db) = loaded {
                     return Ok(DatabaseHandle {
                         db,
