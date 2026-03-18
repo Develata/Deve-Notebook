@@ -1,3 +1,10 @@
+//! 会话级 repo selector 解析。
+//!
+//! Invariants:
+//! - 本地分支不得接受 UUID 形态的 `active_repo` 作为可执行 selector。
+//! - 远端分支只有在 selector 可由当前 branch 唯一恢复时才允许继续执行。
+//! - 本模块只负责把 session hint 收敛成可执行 selector；不负责最终 `RepoUUID` 解析。
+
 use super::repo_scope_remote::recover_remote_repo_name_from_selector;
 use crate::server::AppState;
 use crate::server::session::WsSession;

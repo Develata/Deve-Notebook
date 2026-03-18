@@ -1,3 +1,10 @@
+//! 远端分支 selector 恢复辅助。
+//!
+//! Invariants:
+//! - display-only 名称在无绑定 UUID 时不得升格为可执行 selector。
+//! - UUID 形态输入若与真实 display name 冲突，必须 fail-closed。
+//! - 返回 `Ok(Some(selector))` 时，结果必须可直接用于 remote repo 执行路径。
+
 use crate::server::AppState;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};

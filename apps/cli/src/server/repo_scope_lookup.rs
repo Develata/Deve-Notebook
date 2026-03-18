@@ -1,3 +1,10 @@
+//! `repo_name` / `repo_id` 收敛到单一 `ResolvedRepo`。
+//!
+//! Invariants:
+//! - 执行前必须把本地/远端输入收敛到唯一 `RepoUUID`。
+//! - 对远端分支，exact selector 优先于 stale UUID；冲突时必须 fail-closed。
+//! - 对本地分支，不允许借 stale `repo_id` 反向覆盖当前 selector。
+
 use super::ResolvedRepo;
 use crate::server::AppState;
 use anyhow::{Result, anyhow};

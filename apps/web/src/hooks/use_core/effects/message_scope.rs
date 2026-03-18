@@ -1,3 +1,10 @@
+//! 前端 repo-scoped 请求/响应门禁。
+//!
+//! Invariants:
+//! - repo-scoped request/response 必须匹配当前 `scope_nonce`。
+//! - branch/repo 切换挂起期间，不得接受任何 repo-scoped 列表刷新。
+//! - system push 与 request-response 都必须落在当前 scope 代际内。
+
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 
