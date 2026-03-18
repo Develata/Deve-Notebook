@@ -51,7 +51,7 @@ fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
 }
 
 #[test]
-fn local_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
+fn local_repo_listing_fails_closed_on_duplicate_name_drift_until_repair() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main =
@@ -72,11 +72,17 @@ fn local_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
     );
     drop(second_db);
 
-    let repos = main.list_repos(None).expect("list repos");
+    let err = main
+        .list_repos(None)
+        .expect_err("duplicate local name drift must fail closed");
+    assert!(err.to_string().contains("metadata name drifted to wiki"));
 
+    main.repair_local_repo_catalog().expect("repair local catalog");
+
+    let repos = main.list_repos(None).expect("list repos after repair");
     assert_eq!(repos.len(), 2);
     assert!(repos.contains(&"wiki".to_string()));
-    assert!(repos.iter().any(|name| name.starts_with("wiki-")));
+    assert!(repos.contains(&"wiki-1".to_string()));
 }
 
 #[test]

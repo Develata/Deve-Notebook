@@ -6,15 +6,15 @@ use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_accepts_shadow_peer_even_if_local_display_name_matches() -> anyhow::Result<()>
-{
+async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow_peer()
+-> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -65,10 +65,13 @@ async fn switch_branch_accepts_shadow_peer_even_if_local_display_name_matches() 
 
     handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
 
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::BranchSwitched { success: true, .. })
-    ));
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
     Ok(())
 }
 

@@ -132,7 +132,13 @@ impl RepoManager {
         }
         let db_path = self.ledger_dir.join("local").join(format!("{}.redb", stem));
         let db = cached_database(&db_path)?;
-        source_control::init_tables(db.as_ref())?;
+        source_control::validate_tables(db.as_ref()).map_err(|err| {
+            anyhow!(
+                "Broken local repo {} while validating source control tables: {}",
+                stem,
+                err
+            )
+        })?;
         {
             let mut guard = self.write_extra_local_dbs()?;
             if let std::collections::hash_map::Entry::Vacant(e) = guard.entry(stem.to_string()) {

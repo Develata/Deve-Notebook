@@ -8,6 +8,7 @@
 //! - 提交管理 (create/list commits)
 //! - 变更检测 (获取未提交的文件)
 
+use crate::ledger::schema::{PENDING_FS_DOC_INDEX, PENDING_FS_OPS, STAGED_DOC_INDEX};
 use crate::models::DocId;
 use crate::source_control::{
     ChangeEntry, ChangeStatus, CommitInfo, changes, commits, pending_fs, staging,
@@ -21,6 +22,21 @@ pub fn init_tables(db: &Database) -> Result<()> {
     commits::init_table(db)?;
     changes::init_table(db)?;
     pending_fs::init_table(db)?;
+    Ok(())
+}
+
+/// Invariants:
+/// - runtime local-repo access must not create missing source-control tables
+/// - missing source-control tables are treated as catalog corruption until explicit repair
+pub fn validate_tables(db: &Database) -> Result<()> {
+    let read_txn = db.begin_read()?;
+    let _ = read_txn.open_table(staging::STAGED_TABLE)?;
+    let _ = read_txn.open_multimap_table(STAGED_DOC_INDEX)?;
+    let _ = read_txn.open_table(commits::COMMITS_TABLE)?;
+    let _ = read_txn.open_table(commits::COMMITS_ORDER_TABLE)?;
+    let _ = read_txn.open_table(changes::SNAPSHOTS_TABLE)?;
+    let _ = read_txn.open_table(PENDING_FS_OPS)?;
+    let _ = read_txn.open_multimap_table(PENDING_FS_DOC_INDEX)?;
     Ok(())
 }
 

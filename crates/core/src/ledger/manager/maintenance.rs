@@ -16,11 +16,21 @@ impl RepoManager {
             self.local_db.as_ref(),
             self.vault_root.as_deref(),
             true,
+        )?;
+        Self::repair_local_repo_source_control_tables(
+            &self.ledger_dir,
+            &self.local_repo_name,
+            self.local_db.as_ref(),
         )
     }
 
     pub(crate) fn refresh_local_repo_catalog(&self) -> Result<()> {
         Self::validate_local_repo_metadata(
+            &self.ledger_dir,
+            &self.local_repo_name,
+            self.local_db.as_ref(),
+        )?;
+        Self::validate_local_repo_source_control_tables(
             &self.ledger_dir,
             &self.local_repo_name,
             self.local_db.as_ref(),

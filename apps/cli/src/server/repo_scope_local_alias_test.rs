@@ -1,4 +1,4 @@
-use super::repo_scope::resolve_session_repo_and_sync;
+use super::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
 use crate::server::security;
 use deve_core::config::SyncMode;
@@ -10,7 +10,7 @@ use tempfile::tempdir;
 use tokio::sync::broadcast;
 
 #[test]
-fn resolve_session_repo_syncs_stale_local_alias_back_to_canonical_stem() -> anyhow::Result<()> {
+fn resolve_session_repo_fails_closed_on_stale_local_alias_drift() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -49,10 +49,13 @@ fn resolve_session_repo_syncs_stale_local_alias_back_to_canonical_stem() -> anyh
 
     let mut session = WsSession::new();
     session.switch_repo("legacy-wiki".into(), Some(wiki_info.uuid));
-    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
-
-    assert_eq!(resolved.repo_name, "wiki");
-    assert_eq!(session.active_repo.as_deref(), Some("wiki"));
+    let err = resolve_session_repo_and_sync(&state, &mut session).expect_err("must fail closed");
+    let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
+    assert_eq!(
+        mapped.code,
+        deve_core::protocol::ServerErrorCode::StoragePersistFailed
+    );
+    assert_eq!(session.active_repo.as_deref(), Some("legacy-wiki"));
     assert_eq!(session.active_repo_id, Some(wiki_info.uuid));
     Ok(())
 }
