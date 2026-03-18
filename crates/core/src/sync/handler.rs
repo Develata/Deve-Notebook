@@ -87,15 +87,13 @@ impl<'a> FsEventHandler<'a> {
             None,
             None,
         )?;
-        let mut msgs = self.gen_list()?;
-        msgs.push(super::pending::message(
+        Ok(vec![super::pending::message(
             self.repo,
             self.repo_name,
             self.repo_id,
             repo_path,
             "added",
-        )?);
-        Ok(msgs)
+        )?])
     }
 
     fn handle_delete(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
@@ -126,15 +124,13 @@ impl<'a> FsEventHandler<'a> {
             tracked_doc_id,
             None,
         )?;
-        let mut msgs = self.gen_list()?;
-        msgs.push(super::pending::message(
+        Ok(vec![super::pending::message(
             self.repo,
             self.repo_name,
             self.repo_id,
             repo_path,
             "deleted",
-        )?);
-        Ok(msgs)
+        )?])
     }
 
     fn handle_known_inode(
@@ -166,26 +162,13 @@ impl<'a> FsEventHandler<'a> {
     }
 
     fn modified_refresh(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
-        let mut msgs = self.gen_list()?;
-        msgs.push(super::pending::message(
+        Ok(vec![super::pending::message(
             self.repo,
             self.repo_name,
             self.repo_id,
             repo_path,
             "modified",
-        )?);
-        Ok(msgs)
-    }
-
-    fn gen_list(&self) -> Result<Vec<ServerMessage>> {
-        let docs = self.repo.list_local_docs(Some(self.repo_name))?;
-        Ok(vec![ServerMessage::DocList {
-            request_id: None,
-            repo_id: Some(self.repo_id),
-            branch: None,
-            scope_nonce: None,
-            docs,
-        }])
+        )?])
     }
 
     fn record_external_rename(
