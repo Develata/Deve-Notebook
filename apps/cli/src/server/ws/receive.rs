@@ -114,11 +114,7 @@ fn record_message(session: &mut WsSession, ch: &DualChannel, peer_id: &str) -> b
 }
 
 fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
-    session.is_browser_session().then(|| {
-        session
-            .sync_scope_nonce()
-            .unwrap_or_else(|| session.scope_nonce())
-    })
+    session.is_browser_session().then(|| session.scope_nonce())
 }
 
 fn invalid_client_message(detail: &'static str) -> ServerError {

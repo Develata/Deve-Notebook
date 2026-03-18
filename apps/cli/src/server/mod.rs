@@ -43,6 +43,8 @@ mod edit_scope_test;
 mod error_classify;
 pub mod handlers;
 #[cfg(test)]
+mod key_exchange_test;
+#[cfg(test)]
 mod listing_scope_cleanup_test;
 pub mod mcp;
 pub mod metrics;
@@ -76,6 +78,8 @@ pub mod session;
 mod setup;
 #[cfg(test)]
 mod source_control_commit_diff_test;
+#[cfg(test)]
+mod source_control_changes_identity_test;
 #[cfg(test)]
 mod source_control_http_test;
 #[cfg(test)]

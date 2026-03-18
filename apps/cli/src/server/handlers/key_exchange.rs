@@ -8,7 +8,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
+use crate::server::repo_scope::{
+    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo_and_sync,
+};
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -18,29 +20,65 @@ use std::sync::Arc;
 /// **Pre-condition**: 客户端已通过 JWT 认证 (middleware 保证)。
 /// **Post-condition**: 成功时单播 `KeyProvide`，失败时单播 `KeyDenied`。
 pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session: &mut WsSession) {
+    let Some(scope_nonce) = browser_scope_nonce(session) else {
+        ch.send_protocol_error_with_scope_nonce(
+            ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                "request key is only supported for browser sessions",
+            ),
+            None,
+        );
+        return;
+    };
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
-            ch.unicast(ServerMessage::KeyDenied {
-                repo_id: session.active_repo_id.or(session.bound_repo_id),
-                scope_nonce: message_scope_nonce(session),
-                branch: session.active_branch.clone(),
-                error: map_repo_scope_error(err),
-            });
+            send_key_denied_error(
+                ch,
+                scope_nonce,
+                session.active_repo_id.or(session.bound_repo_id),
+                session.active_branch.clone(),
+                map_repo_scope_error(err),
+            );
+            return;
+        }
+    };
+    let key_scope = match resolve_local_counterpart_repo(state, &scope) {
+        Ok(Some(local_scope)) => local_scope,
+        Ok(None) => {
+            send_key_denied_error(
+                ch,
+                scope_nonce,
+                Some(scope.repo_id),
+                session.active_branch.clone(),
+                ServerError::with_detail(
+                    ServerErrorCode::ScRepoContextInvalid,
+                    "No local writable repo available for current scope",
+                ),
+            );
+            return;
+        }
+        Err(err) => {
+            send_key_denied_error(
+                ch,
+                scope_nonce,
+                Some(scope.repo_id),
+                session.active_branch.clone(),
+                map_repo_scope_error(err),
+            );
             return;
         }
     };
 
-    let key_dir = match state.repo.local_repo_notegit_keys_root(&scope.repo_name) {
+    let key_dir = match state.repo.local_repo_notegit_keys_root(&key_scope.repo_name) {
         Ok(dir) => dir,
         Err(err) => {
-            send_key_denied(
+            send_key_denied_error(
                 ch,
-                message_scope_nonce(session),
+                scope_nonce,
                 Some(scope.repo_id),
                 session.active_branch.clone(),
-                ServerErrorCode::StoragePersistFailed,
-                err.to_string(),
+                ServerError::with_detail(ServerErrorCode::StoragePersistFailed, err.to_string()),
             );
             return;
         }
@@ -50,47 +88,43 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         Ok(key) => {
             tracing::info!(
                 "Providing RepoKey to authenticated client for {}",
-                scope.repo_name
+                key_scope.repo_name
             );
             ch.unicast(ServerMessage::KeyProvide {
                 repo_id: scope.repo_id,
-                scope_nonce: message_scope_nonce(session),
+                scope_nonce,
                 branch: session.active_branch.clone(),
                 repo_key: key.to_bytes().to_vec(),
             });
         }
         Err(err) => {
-            tracing::warn!("RepoKey request failed for {}: {:?}", scope.repo_name, err);
-            send_key_denied(
+            tracing::warn!("RepoKey request failed for {}: {:?}", key_scope.repo_name, err);
+            send_key_denied_error(
                 ch,
-                message_scope_nonce(session),
+                scope_nonce,
                 Some(scope.repo_id),
                 session.active_branch.clone(),
-                ServerErrorCode::StoragePersistFailed,
-                err.to_string(),
+                ServerError::with_detail(ServerErrorCode::StoragePersistFailed, err.to_string()),
             );
         }
     }
 }
 
-fn send_key_denied(
+fn send_key_denied_error(
     ch: &DualChannel,
     scope_nonce: u64,
     repo_id: Option<deve_core::models::RepoId>,
     branch: Option<deve_core::models::PeerId>,
-    code: ServerErrorCode,
-    detail: impl Into<String>,
+    error: ServerError,
 ) {
     ch.unicast(ServerMessage::KeyDenied {
         repo_id,
         scope_nonce,
         branch,
-        error: ServerError::with_detail(code, detail),
+        error,
     });
 }
 
-fn message_scope_nonce(session: &WsSession) -> u64 {
-    session
-        .sync_scope_nonce()
-        .unwrap_or_else(|| session.scope_nonce())
+fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
+    session.is_browser_session().then(|| session.scope_nonce())
 }

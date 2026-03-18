@@ -22,12 +22,12 @@ fn invalid_client_messages_use_structured_request_failed() {
 }
 
 #[test]
-fn browser_scope_nonce_prefers_sync_scope() {
+fn browser_scope_nonce_uses_current_control_scope() {
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(7));
     session.set_sync_scope_nonce(11);
-    assert_eq!(browser_scope_nonce(&session), Some(11));
+    assert_eq!(browser_scope_nonce(&session), Some(7));
 }
 
 #[test]
@@ -100,7 +100,8 @@ async fn browser_invalid_json_carries_scope_nonce() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn browser_invalid_bincode_prefers_sync_scope_nonce() -> anyhow::Result<()> {
+async fn browser_invalid_bincode_uses_current_scope_nonce_when_sync_scope_is_stale()
+-> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -126,7 +127,57 @@ async fn browser_invalid_bincode_prefers_sync_scope_nonce() -> anyhow::Result<()
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
-            assert_eq!(scope_nonce, Some(23));
+            assert_eq!(scope_nonce, Some(17));
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_rate_limit_error_uses_current_control_scope_when_sync_scope_is_stale()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(256);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let filter = BroadcastFilter::allow_all();
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(19));
+    session.set_sync_scope_nonce(29);
+
+    for _ in 0..200 {
+        let flow = handle_incoming_message(
+            &state,
+            &ch,
+            &mut session,
+            Message::Text("null".into()),
+            &filter,
+            "peer-1",
+        )
+        .await;
+        assert!(matches!(flow, SocketFlow::Continue));
+        let _ = uni_rx.recv().await;
+    }
+
+    let flow = handle_incoming_message(
+        &state,
+        &ch,
+        &mut session,
+        Message::Text("null".into()),
+        &filter,
+        "peer-1",
+    )
+    .await;
+
+    assert!(matches!(flow, SocketFlow::Break));
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.detail.as_deref(), Some("WebSocket rate limit exceeded"));
+            assert_eq!(scope_nonce, Some(19));
         }
         other => panic!("expected scoped ProtocolError, got {:?}", other),
     }

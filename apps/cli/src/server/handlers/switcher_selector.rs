@@ -21,6 +21,7 @@ pub(super) fn select_target_repo(
             target_branch,
             repo_name,
             current_repo_id,
+            false,
         )?
     {
         if let Some(repo_id) = current_repo_id
@@ -64,7 +65,7 @@ pub(super) fn resolve_requested_repo_name(
     repo_id: Option<RepoId>,
 ) -> Result<Option<String>> {
     if let Some(exact_selector) =
-        recover_selector_from_raw_name_for_switch(state, branch, repo_name, repo_id)?
+        recover_selector_from_raw_name_for_switch(state, branch, repo_name, repo_id, true)?
     {
         if let Some(repo_id) = repo_id
             && let Some(selector_by_id) = select_repo_selector_by_id(state, branch, repo_id)?
@@ -164,11 +165,13 @@ fn recover_selector_from_raw_name_for_switch(
     branch: Option<&PeerId>,
     raw_repo_name: &str,
     repo_id: Option<RepoId>,
+    allow_ambiguous_remote_fallback: bool,
 ) -> Result<Option<String>> {
     match recover_selector_from_raw_name(state, branch, raw_repo_name) {
         Ok(selector) => Ok(selector),
         Err(err)
             if branch.is_some()
+                && allow_ambiguous_remote_fallback
                 && repo_id.is_some()
                 && err
                     .to_string()
@@ -192,6 +195,14 @@ fn can_defer_to_repo_id_for_display_collision(
     let Some(peer_id) = branch else {
         return Ok(false);
     };
+    if state
+        .repo
+        .find_remote_repo_selector(peer_id, raw_repo_name)?
+        .as_deref()
+        == Some(raw_repo_name)
+    {
+        return Ok(false);
+    }
     state.repo.has_remote_display_name(peer_id, raw_repo_name)
 }
 

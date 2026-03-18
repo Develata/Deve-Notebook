@@ -89,14 +89,15 @@ fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid() -
 }
 
 #[test]
-fn resolve_requested_repo_name_prefers_repo_id_when_display_name_is_ambiguous() -> anyhow::Result<()>
-{
+fn resolve_requested_repo_name_fails_closed_when_exact_selector_conflicts_with_repo_id()
+-> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let selected = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second_id))?
-        .expect("repo id should recover collision-safe selector");
-    assert_eq!(selected, second_selector);
+    let err = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second_id))
+        .expect_err("exact remote selector must beat stale repo id");
+    assert!(err.to_string().contains("Session repo mismatch:"));
+    assert!(err.to_string().contains(&second_selector));
     Ok(())
 }
 
@@ -198,5 +199,24 @@ fn select_target_repo_prefers_current_repo_url_over_stale_uuid() -> anyhow::Resu
     )?
     .expect("canonical URL match");
     assert_eq!(selected, "wiki");
+    Ok(())
+}
+
+#[test]
+fn select_target_repo_fails_closed_when_exact_current_remote_name_conflicts_with_repo_id()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (peer_id, _first_id, second_id, _second_selector) = seed_duplicate_remote(&state)?;
+
+    let err = select_target_repo(
+        &state,
+        true,
+        Some(second_id),
+        Some("wiki"),
+        None,
+        Some(&peer_id),
+    )
+    .expect_err("exact current remote selector must beat stale repo id");
+    assert!(err.to_string().contains("Session repo mismatch:"));
     Ok(())
 }

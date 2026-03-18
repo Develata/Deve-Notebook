@@ -146,7 +146,12 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             branch,
             repo_key,
         } => {
-            if accepts_current_sync_payload(ctx, repo_id, branch, scope_nonce) {
+            if matches_scoped_message(
+                current_scoped_message_scope(ctx),
+                Some(repo_id),
+                branch,
+                Some(scope_nonce),
+            ) {
                 handle_key_provide(ctx, &repo_key);
             }
         }
@@ -156,10 +161,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
             branch,
             error,
         } => {
-            if repo_id
-                .filter(|repo_id| accepts_current_sync_payload(ctx, *repo_id, branch, scope_nonce))
-                .is_some()
-            {
+            if matches_scoped_message(current_scoped_message_scope(ctx), repo_id, branch, Some(scope_nonce)) {
                 ctx.set_repo_key.set(None);
                 leptos::logging::warn!(
                     "KeyDenied: code={:?} detail={:?}",

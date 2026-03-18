@@ -80,15 +80,12 @@ fn staged_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
 
 fn change_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
     let staged = staged_entries(db, doc_id)?;
-    let staged_paths: HashSet<String> = staged
-        .iter()
-        .map(|entry| to_forward_slash(&entry.path))
-        .collect();
+    let staged_keys: HashSet<_> = staged.iter().map(change_identity_key).collect();
     let mut changes = staged;
     changes.extend(
         pending_entries(db, doc_id)?
             .into_iter()
-            .filter(|entry| !staged_paths.contains(&to_forward_slash(&entry.path))),
+            .filter(|entry| !staged_keys.contains(&change_identity_key(entry))),
     );
     Ok(changes)
 }
@@ -157,7 +154,14 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
     let deleted_exact = exact
         .iter()
         .any(|entry| entry.status == ChangeStatus::Deleted);
+    let exact_doc_ids = exact
+        .iter()
+        .filter_map(|entry| entry.doc_id)
+        .collect::<HashSet<_>>();
     if live_exact.len() > 1 || renamed.len() > 1 {
+        return None;
+    }
+    if renamed.is_empty() && exact_doc_ids.len() > 1 {
         return None;
     }
     if deleted_exact && renamed.len() == 1 {
@@ -175,6 +179,17 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
     (exact.len() == 1)
         .then(|| exact.into_iter().next())
         .flatten()
+}
+
+fn change_identity_key(
+    entry: &ChangeEntry,
+) -> (Option<DocId>, String, Option<String>, ChangeStatus) {
+    (
+        entry.doc_id,
+        to_forward_slash(&entry.path),
+        entry.renamed_from.as_deref().map(to_forward_slash),
+        entry.status,
+    )
 }
 
 #[cfg(test)]

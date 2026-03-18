@@ -125,3 +125,27 @@ fn resolve_from_entries_fails_closed_when_path_only_target_is_ambiguous() {
 
     assert_eq!(resolve_from_entries(&entries, "notes/old.md", None), None);
 }
+
+#[test]
+fn resolve_from_entries_fails_closed_when_same_path_maps_to_distinct_docs() {
+    let old_doc = DocId(uuid::Uuid::nil());
+    let new_doc = DocId(uuid::Uuid::from_u128(1));
+    let entries = vec![
+        ChangeEntry {
+            path: "notes/reused.md".into(),
+            renamed_from: None,
+            doc_id: Some(old_doc),
+            status: ChangeStatus::Deleted,
+            has_conflict: false,
+        },
+        ChangeEntry {
+            path: "notes/reused.md".into(),
+            renamed_from: None,
+            doc_id: Some(new_doc),
+            status: ChangeStatus::Added,
+            has_conflict: false,
+        },
+    ];
+
+    assert_eq!(resolve_from_entries(&entries, "notes/reused.md", None), None);
+}
