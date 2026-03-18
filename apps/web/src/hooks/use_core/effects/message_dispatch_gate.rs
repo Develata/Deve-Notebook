@@ -33,8 +33,7 @@ pub fn accepts_search_results(
     signals: CoreSignals,
 ) -> bool {
     accepts_unscoped_update(signals)
-        && (scope_nonce.is_none()
-            || scope_nonce == Some(signals.current_scope_nonce.get_untracked()))
+        && scope_nonce == Some(signals.current_scope_nonce.get_untracked())
         && signals.search_request_id.get_untracked().as_deref() == Some(request_id)
 }
 
@@ -87,6 +86,7 @@ mod tests {
         signals.set_search_request_id.set(Some("fresh".into()));
         signals.set_current_scope_nonce.set(11);
         assert!(!accepts_search_results("stale", Some(11), signals));
+        assert!(!accepts_search_results("fresh", None, signals));
         assert!(!accepts_search_results("fresh", Some(7), signals));
         assert!(accepts_search_results("fresh", Some(11), signals));
     }
