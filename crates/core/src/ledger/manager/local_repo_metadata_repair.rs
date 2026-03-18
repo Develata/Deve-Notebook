@@ -6,6 +6,49 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 impl RepoManager {
+    pub(crate) fn validate_local_repo_metadata(
+        ledger_dir: &Path,
+        main_repo_name: &str,
+        main_db: &Database,
+    ) -> Result<()> {
+        let local_dir = ledger_dir.join("local");
+        if !local_dir.exists() {
+            return Err(anyhow!(
+                "Broken local repo catalog: local repo directory missing at {:?}",
+                local_dir
+            ));
+        }
+
+        let mut seen = HashMap::new();
+        let mut seen_urls = HashMap::new();
+        validate_local_repo_info(main_repo_name, main_repo_name, Self::read_repo_info_from_db(main_db)?, &mut seen, &mut seen_urls)?;
+
+        let mut entries = Vec::new();
+        for entry in std::fs::read_dir(&local_dir)? {
+            let path = entry?.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
+                let stem = RepoManager::repo_stem_from_path(&path, "validating local catalog")?;
+                entries.push((path, stem));
+            }
+        }
+        entries.sort_by(|(_, left_stem), (_, right_stem)| left_stem.cmp(right_stem));
+
+        for (path, stem) in entries {
+            let db = cached_or_create_database(&path).map_err(|err| {
+                anyhow!("Broken local repo {} while validating catalog: {}", stem, err)
+            })?;
+            let info = Self::read_repo_info_from_db(db.as_ref()).map_err(|err| {
+                anyhow!(
+                    "Broken local repo {} while validating metadata: {}",
+                    stem,
+                    err
+                )
+            })?;
+            validate_local_repo_info(&stem, &stem, info, &mut seen, &mut seen_urls)?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn repair_local_repo_metadata(
         ledger_dir: &Path,
         main_repo_name: &str,
@@ -105,6 +148,55 @@ impl RepoManager {
         }
         Ok(())
     }
+}
+
+fn validate_local_repo_info(
+    stem: &str,
+    expected_name: &str,
+    info: Option<RepoInfo>,
+    seen: &mut HashMap<uuid::Uuid, String>,
+    seen_urls: &mut HashMap<String, String>,
+) -> Result<()> {
+    let info = info.ok_or_else(|| {
+        anyhow!(
+            "Broken local repo {} while validating catalog: repository metadata missing",
+            stem
+        )
+    })?;
+    if info.name != expected_name {
+        return Err(anyhow!(
+            "Broken local repo {} while validating catalog: metadata name drifted to {}",
+            stem,
+            info.name
+        ));
+    }
+    if let Some(owner) = seen.insert(info.uuid, stem.to_string())
+        && owner != stem
+    {
+        return Err(anyhow!(
+            "Broken local repo {} while validating catalog: duplicate local repository UUID {} also used by {}",
+            stem,
+            info.uuid,
+            owner
+        ));
+    }
+    let url = info.url.ok_or_else(|| {
+        anyhow!(
+            "Broken local repo {} while validating catalog: repository URL missing",
+            stem
+        )
+    })?;
+    if let Some(owner) = seen_urls.insert(url.clone(), stem.to_string())
+        && owner != stem
+    {
+        return Err(anyhow!(
+            "Broken local repo {} while validating catalog: duplicate local repository URL {} also used by {}",
+            stem,
+            url,
+            owner
+        ));
+    }
+    Ok(())
 }
 
 fn repair_workspace_root(

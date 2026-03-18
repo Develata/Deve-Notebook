@@ -1,6 +1,15 @@
-use deve_core::ledger::RepoManager;
+use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use deve_core::ledger::listing::RepoListing;
 use tempfile::TempDir;
+
+fn write_info(db: &redb::Database, info: &RepoInfo) {
+    let txn = db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
+        .expect("write metadata");
+    txn.commit().expect("commit");
+}
 
 #[test]
 fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
@@ -95,4 +104,57 @@ fn local_repo_listing_fails_closed_on_invalid_repo_stem() {
         .find_local_repo_name_by_id(uuid::Uuid::new_v4())
         .expect_err("invalid repo stem must fail UUID lookup");
     assert!(lookup_err.to_string().contains("invalid file stem"));
+}
+
+#[test]
+fn runtime_listing_fails_closed_on_duplicate_secondary_uuid_until_explicit_repair() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let main_info = main.get_repo_info().expect("main info").expect("present");
+    let wiki_db = wiki.open_database(None, "wiki").expect("wiki db");
+    write_info(
+        wiki_db.db.as_ref(),
+        &RepoInfo {
+            uuid: main_info.uuid,
+            name: "wiki".into(),
+            url: Some("urn:wiki".into()),
+        },
+    );
+
+    let err = main
+        .list_repos(None)
+        .expect_err("runtime listing must fail closed on duplicate UUID");
+    assert!(err.to_string().contains("duplicate local repository UUID"));
+
+    main.repair_local_repo_catalog()
+        .expect("explicit repair may rewrite duplicate UUID");
+    assert_eq!(
+        main.list_repos(None).expect("listing after repair"),
+        vec!["main".to_string(), "wiki".to_string()]
+    );
+}
+
+#[test]
+fn runtime_listing_fails_closed_on_missing_secondary_metadata_until_explicit_repair() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let local_dir = ledger_dir.join("local");
+    let db = redb::Database::create(local_dir.join("legacy.redb")).expect("create legacy db");
+    db.begin_write().expect("write txn").commit().expect("commit");
+    drop(db);
+
+    let err = repo
+        .list_repos(None)
+        .expect_err("runtime listing must fail closed on missing metadata");
+    assert!(err.to_string().contains("repository metadata missing"));
+
+    repo.repair_local_repo_catalog()
+        .expect("explicit repair may bootstrap missing metadata");
+    assert_eq!(
+        repo.list_repos(None).expect("listing after repair"),
+        vec!["legacy".to_string(), "main".to_string()]
+    );
 }

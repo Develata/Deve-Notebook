@@ -30,7 +30,7 @@ impl RepoManager {
     /// - 测试辅助可继续使用 `set_vault_root` 的宽松包装。
     pub fn set_vault_root_checked(&mut self, root: impl AsRef<Path>) -> Result<()> {
         self.vault_root = Some(root.as_ref().to_path_buf());
-        self.repair_local_repo_catalog()
+        self.refresh_local_repo_catalog()
     }
 
     /// 设置 Vault 根目录 (用于 commit 时读取磁盘文件)
