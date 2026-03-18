@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::engine;
 use super::errors;
-use super::guard::require_bound_peer;
+use super::guard::{require_bound_peer, require_current_sync_scope};
 
 pub(super) async fn handle_request(
     state: &Arc<AppState>,
@@ -17,12 +17,10 @@ pub(super) async fn handle_request(
     _peer_id: PeerId,
     repo_id: RepoId,
 ) {
-    let scope = session.is_browser_session().then(|| {
-        session
-            .sync_scope_nonce()
-            .unwrap_or_else(|| session.scope_nonce())
-    });
-    let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
+    let Some(scope) = require_current_sync_scope(ch, session) else {
+        return;
+    };
+    let Some(source_peer) = require_bound_peer(ch, session, repo_id, scope) else {
         return;
     };
 
@@ -46,9 +44,7 @@ pub(super) async fn handle_request(
             ch.unicast(ServerMessage::SyncPushSnapshot {
                 peer_id: engine.local_peer_id.clone(),
                 repo_id: response.repo_id,
-                scope_nonce: session
-                    .sync_scope_nonce()
-                    .unwrap_or_else(|| session.scope_nonce()),
+                scope_nonce: scope.unwrap_or_default(),
                 branch: session.active_branch.clone(),
                 ops: response.ops,
             });
@@ -68,12 +64,10 @@ pub(super) async fn handle_push(
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
 ) {
-    let scope = session.is_browser_session().then(|| {
-        session
-            .sync_scope_nonce()
-            .unwrap_or_else(|| session.scope_nonce())
-    });
-    let Some(source_peer) = require_bound_peer(ch, session, repo_id) else {
+    let Some(scope) = require_current_sync_scope(ch, session) else {
+        return;
+    };
+    let Some(source_peer) = require_bound_peer(ch, session, repo_id, scope) else {
         return;
     };
 

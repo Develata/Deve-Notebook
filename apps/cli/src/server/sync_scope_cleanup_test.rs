@@ -1,4 +1,6 @@
-use super::handlers::sync::{handle_register_writer, handle_sync_request};
+use super::handlers::sync::{
+    handle_register_writer, handle_sync_request, handle_sync_snapshot_request,
+};
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
@@ -63,6 +65,74 @@ async fn sync_request_on_unbound_remote_clears_stale_db_and_sync_binding() -> an
             assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
         }
         other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_request_rejects_missing_sync_scope_nonce() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("default".into(), Some(repo_id));
+    session.set_scope_nonce(Some(17));
+    session.set_active_db(local_handle);
+    session.set_authenticated(PeerId::new("browser"));
+    session.bind_repo(repo_id);
+
+    handle_sync_request(&state, &ch, &mut session, repo_id, vec![]).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(17));
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_snapshot_request_rejects_missing_sync_scope_nonce() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("default".into(), Some(repo_id));
+    session.set_scope_nonce(Some(19));
+    session.set_active_db(local_handle);
+    session.set_authenticated(PeerId::new("browser"));
+    session.bind_repo(repo_id);
+
+    handle_sync_snapshot_request(&state, &ch, &mut session, PeerId::new("browser"), repo_id).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(19));
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
     }
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());
