@@ -105,6 +105,8 @@ mod switcher_branch_scope_test_fail_closed;
 #[cfg(test)]
 mod switcher_branch_test;
 #[cfg(test)]
+mod switcher_current_scope_binding_test;
+#[cfg(test)]
 mod switcher_current_scope_remote_test;
 #[cfg(test)]
 mod switcher_current_scope_test;

@@ -1,4 +1,5 @@
 use crate::server::AppState;
+use crate::server::error_classify::is_stale_remote_scope_context;
 use crate::server::repo_scope::{ResolvedRepo, map_repo_scope_error, resolve_session_repo};
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -39,8 +40,20 @@ pub(super) fn resolve_current_branch_switch_context(
     Ok(CurrentBranchSwitchContext { scope, repo_url })
 }
 
+pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) {
+    if !should_clear_failed_current_scope(session, error) {
+        return;
+    }
+    session.clear_active_repo();
+    session.clear_active_db();
+    session.clear_sync_binding();
+}
+
 fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) -> bool {
-    if session.active_repo.is_some() || session.active_repo_id.is_some() {
+    if session.active_repo.is_some()
+        || session.active_repo_id.is_some()
+        || has_runtime_scope_binding(session)
+    {
         return false;
     }
     if code == ServerErrorCode::ScRepoContextInvalid {
@@ -69,4 +82,29 @@ fn recover_local_repo_url_from_hint(
         ));
     }
     Ok(None)
+}
+
+fn should_clear_failed_current_scope(session: &WsSession, error: &ServerError) -> bool {
+    if session.active_branch.is_some() {
+        return match error.code {
+            ServerErrorCode::SyncRepoUnbound => true,
+            ServerErrorCode::ScRepoContextInvalid => {
+                let detail = error.detail.as_deref().unwrap_or_default();
+                is_stale_remote_scope_context(&detail.to_ascii_lowercase())
+            }
+            _ => false,
+        };
+    }
+    matches!(
+        error.code,
+        ServerErrorCode::ScRepoContextInvalid | ServerErrorCode::StorageNotFound
+    ) || (error.code == ServerErrorCode::SyncRepoUnbound && has_runtime_scope_binding(session))
+}
+
+fn has_runtime_scope_binding(session: &WsSession) -> bool {
+    session.get_active_db().is_some()
+        || session.authenticated_peer_id.is_some()
+        || session.bound_repo_id.is_some()
+        || session.sync_scope_nonce().is_some()
+        || session.writer_identity.is_some()
 }

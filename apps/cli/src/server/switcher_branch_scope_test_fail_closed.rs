@@ -71,8 +71,10 @@ async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> 
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(session.active_branch, None);
-    assert_eq!(session.active_repo.as_deref(), Some("stale-notes"));
-    assert_eq!(session.active_repo_id, None);
+    assert_eq!(
+        (session.active_repo.as_deref(), session.active_repo_id),
+        (None, None)
+    );
     Ok(())
 }
 
@@ -144,6 +146,7 @@ async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(session.active_branch, Some(peer_id));
-    assert!(session.active_repo.is_some());
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
     Ok(())
 }
