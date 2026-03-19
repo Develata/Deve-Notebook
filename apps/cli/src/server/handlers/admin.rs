@@ -56,7 +56,7 @@ pub async fn node_check(
     State(state): State<Arc<AppState>>,
     Query(query): Query<NodeCheckQuery>,
 ) -> impl IntoResponse {
-    let repo_names = match resolve_target_repos(state.as_ref(), &query.repo) {
+    let repo_names = match resolve_target_repos(state.as_ref(), &query.repo, query.repair) {
         Ok(names) => names,
         Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
     };
@@ -85,12 +85,23 @@ pub async fn node_check(
     Json(reports).into_response()
 }
 
-fn resolve_target_repos(state: &AppState, repo: &RepoSelector) -> anyhow::Result<Vec<String>> {
+fn resolve_target_repos(
+    state: &AppState,
+    repo: &RepoSelector,
+    repair: bool,
+) -> anyhow::Result<Vec<String>> {
     if repo.repo_id.is_some() || repo.repo_name.is_some() {
         return Ok(vec![state.repo.resolve_local_repo_name_for_execution(
             repo.repo_id,
             repo.repo_name.as_deref(),
         )?]);
     }
+    if repair {
+        anyhow::bail!("Repository selector required for repair node-check");
+    }
     state.repo.list_repos(None)
 }
+
+#[cfg(test)]
+#[path = "admin_test.rs"]
+mod tests;
