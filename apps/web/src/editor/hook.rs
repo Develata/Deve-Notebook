@@ -11,6 +11,7 @@
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
 use super::EditorStats;
+use super::buffered_ops::clear_locked_vec;
 use super::delta_input::{DeltaInputCtx, build_on_delta};
 use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
 use super::message_effect;
@@ -20,7 +21,7 @@ use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
-use deve_core::security::RepoKey;
+use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::html::Div;
 use leptos::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -50,6 +51,7 @@ pub fn use_editor(
     let session_generation = Arc::new(AtomicU64::new(0));
     let ready_generation = Arc::new(AtomicU64::new(0));
     let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
+    let buffered_encrypted_ops = Arc::new(Mutex::new(Vec::<EncryptedOp>::new()));
     let set_load_state = core.set_load_state;
     let set_load_progress = core.set_load_progress;
     let set_load_eta_ms = core.set_load_eta_ms;
@@ -78,6 +80,7 @@ pub fn use_editor(
     let open_session_generation = session_generation.clone();
     let open_ready_generation = ready_generation.clone();
     let open_buffered_live_ops = buffered_live_ops.clone();
+    let open_buffered_encrypted_ops = buffered_encrypted_ops.clone();
     Effect::new(move |_| {
         if !can_open_doc(OpenDocScope {
             doc_id,
@@ -94,10 +97,8 @@ pub fn use_editor(
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
         let _ = open_session_generation.fetch_add(1, Ordering::Relaxed);
         open_ready_generation.store(0, Ordering::Relaxed);
-        match open_buffered_live_ops.lock() {
-            Ok(mut buffered) => buffered.clear(),
-            Err(_) => leptos::logging::warn!("清空 buffered live ops 失败: 锁已损坏"),
-        }
+        clear_locked_vec(&open_buffered_live_ops, "清空 buffered live ops");
+        clear_locked_vec(&open_buffered_encrypted_ops, "清空 buffered encrypted ops");
         set_read_only(true);
         set_local_version.set(0);
         set_open_request_id.set(request_id);
@@ -144,6 +145,7 @@ pub fn use_editor(
         session_generation: session_generation.clone(),
         ready_generation: ready_generation.clone(),
         buffered_live_ops: buffered_live_ops.clone(),
+        buffered_encrypted_ops: buffered_encrypted_ops.clone(),
         set_content,
         local_version,
         set_local_version,
@@ -193,13 +195,15 @@ pub fn use_editor(
     let cleanup_session_generation = session_generation.clone();
     let cleanup_ready_generation = ready_generation.clone();
     let cleanup_buffered_live_ops = buffered_live_ops.clone();
+    let cleanup_buffered_encrypted_ops = buffered_encrypted_ops.clone();
     on_cleanup(move || {
         let _ = cleanup_session_generation.fetch_add(1, Ordering::Relaxed);
         cleanup_ready_generation.store(0, Ordering::Relaxed);
-        match cleanup_buffered_live_ops.lock() {
-            Ok(mut buffered) => buffered.clear(),
-            Err(_) => leptos::logging::warn!("编辑器清理时忽略 buffered live ops: 锁已损坏"),
-        }
+        clear_locked_vec(&cleanup_buffered_live_ops, "编辑器清理时忽略 buffered live ops");
+        clear_locked_vec(
+            &cleanup_buffered_encrypted_ops,
+            "编辑器清理时忽略 buffered encrypted ops",
+        );
         destroyEditor();
         leptos::logging::log!("编辑器已清理");
     });

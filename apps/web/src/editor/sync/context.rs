@@ -7,7 +7,7 @@ use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
-use deve_core::security::RepoKey;
+use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -18,12 +18,14 @@ use std::sync::{Arc, Mutex};
 /// - `doc_id` 在整个编辑器会话中保持不变
 /// - `client_id` 唯一标识当前客户端实例
 /// - `repo_key` 仅在内存中持有，页面卸载时清除 (NEVER persisted)
+/// - `buffered_encrypted_ops` 仅在 `repo_key` 未就绪时临时缓存加密推送，绝不静默丢弃
 pub struct SyncContext<'a> {
     pub doc_id: DocId,
     pub client_id: Option<u64>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
+    pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub current_repo_id: ReadSignal<Option<String>>,
@@ -90,6 +92,16 @@ impl SyncContext<'_> {
             Ok(mut buffered) => std::mem::take(&mut *buffered),
             Err(_) => {
                 leptos::logging::warn!("忽略 buffered live ops: 锁已损坏");
+                Vec::new()
+            }
+        }
+    }
+
+    pub fn drain_buffered_encrypted_ops(&self) -> Vec<EncryptedOp> {
+        match self.buffered_encrypted_ops.lock() {
+            Ok(mut buffered) => std::mem::take(&mut *buffered),
+            Err(_) => {
+                leptos::logging::warn!("忽略 buffered encrypted sync pushes: 锁已损坏");
                 Vec::new()
             }
         }

@@ -4,7 +4,7 @@ use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::ConfirmedOp;
-use deve_core::security::RepoKey;
+use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::prelude::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
@@ -18,6 +18,7 @@ pub struct ServerMessageEffectCtx {
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
+    pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub set_content: WriteSignal<String>,
     pub local_version: ReadSignal<u64>,
     pub set_local_version: WriteSignal<u64>,
@@ -39,6 +40,7 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
         session_generation,
         ready_generation,
         buffered_live_ops,
+        buffered_encrypted_ops,
         set_content,
         local_version,
         set_local_version,
@@ -61,6 +63,7 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
                 session_generation: session_generation.clone(),
                 ready_generation: ready_generation.clone(),
                 buffered_live_ops: buffered_live_ops.clone(),
+                buffered_encrypted_ops: buffered_encrypted_ops.clone(),
                 active_branch: core.active_branch,
                 pending_branch_switch: core.pending_branch_switch,
                 current_repo_id: core.current_repo_id,

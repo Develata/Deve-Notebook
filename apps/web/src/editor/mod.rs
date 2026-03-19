@@ -9,6 +9,7 @@ use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
 
+mod buffered_ops;
 mod delta_input;
 pub mod ffi;
 pub mod hook;
