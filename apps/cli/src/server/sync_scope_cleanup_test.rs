@@ -74,6 +74,35 @@ async fn sync_request_on_unbound_remote_clears_stale_db_and_sync_binding() -> an
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_request_on_unbound_non_browser_session_clears_stale_binding() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.set_active_db(local_handle);
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(uuid::Uuid::new_v4());
+    session.set_sync_scope_nonce(9);
+
+    handle_sync_request(&state, &ch, &mut session, repo_id, vec![]).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_sync_request_rejects_missing_sync_scope_nonce() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let local_handle = state
