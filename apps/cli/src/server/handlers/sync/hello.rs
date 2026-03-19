@@ -6,7 +6,7 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
-use super::cleanup::clear_stale_browser_sync_scope;
+use super::cleanup::clear_invalid_sync_hello_scope;
 use super::engine;
 use super::errors;
 
@@ -37,7 +37,7 @@ pub(super) async fn handle(
     let scope = session.is_browser_session().then_some(scope_nonce);
 
     if let Err(error) = validate_scope(session, repo_id, scope_nonce) {
-        clear_stale_browser_sync_scope(session);
+        clear_invalid_sync_hello_scope(session);
         ch.send_protocol_error_with_scope_nonce(error, scope);
         return;
     }

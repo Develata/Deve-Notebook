@@ -182,7 +182,11 @@ async fn sync_hello_rejects_non_browser_repo_rebinding() -> anyhow::Result<()> {
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = super::session::WsSession::new();
     session.switch_repo("notes".into(), Some(repo_id));
+    let local_handle = state.repo.open_database(None, "notes")?;
+    session.set_active_db(local_handle);
+    session.set_authenticated(remote.peer_id());
     session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(3);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
@@ -203,8 +207,11 @@ async fn sync_hello_rejects_non_browser_repo_rebinding() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
-    assert_eq!(session.bound_repo_id, Some(repo_id));
-    assert_eq!(session.active_repo_id, Some(repo_id));
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.active_repo.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
 }
