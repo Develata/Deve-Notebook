@@ -23,6 +23,7 @@ use crate::server::AppState;
 use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
+use deve_core::protocol::ServerErrorCode;
 use std::sync::Arc;
 
 use self::lookup::resolve_repo_by_name;
@@ -80,6 +81,8 @@ pub fn resolve_session_repo_and_sync(
                 should_clear_stale_remote_scope(&mapped)
             } else {
                 should_clear_stale_local_scope(&mapped)
+                    || (mapped.code == ServerErrorCode::SyncRepoUnbound
+                        && session.has_runtime_scope_binding())
             };
             if clear_stale_scope {
                 session.clear_active_repo();

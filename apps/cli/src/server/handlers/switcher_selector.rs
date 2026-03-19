@@ -62,19 +62,28 @@ pub(super) fn resolve_requested_repo_name(
     if let Some(exact_selector) =
         recover_selector_from_raw_name_for_switch(state, branch, repo_name)?
     {
-        if let Some(repo_id) = repo_id
-            && let Some(selector_by_id) = select_repo_selector_by_id(state, branch, repo_id)?
-            && selector_by_id != exact_selector
-        {
-            if can_defer_to_repo_id_for_display_collision(state, branch, repo_name)? {
-                return Ok(Some(selector_by_id));
+        if let Some(repo_id) = repo_id {
+            match select_repo_selector_by_id(state, branch, repo_id)? {
+                Some(selector_by_id) if selector_by_id != exact_selector => {
+                    if can_defer_to_repo_id_for_display_collision(state, branch, repo_name)? {
+                        return Ok(Some(selector_by_id));
+                    }
+                    return Err(anyhow!(
+                        "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
+                        repo_id,
+                        selector_by_id,
+                        repo_name
+                    ));
+                }
+                Some(_) => {}
+                None => {
+                    return Err(anyhow!(
+                        "Repository UUID not resolved for exact repository selector {} ({})",
+                        repo_name,
+                        repo_id
+                    ));
+                }
             }
-            return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
-                repo_id,
-                selector_by_id,
-                repo_name
-            ));
         }
         return Ok(Some(exact_selector));
     }

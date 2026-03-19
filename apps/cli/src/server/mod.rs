@@ -45,6 +45,8 @@ pub mod handlers;
 #[cfg(test)]
 mod key_exchange_test;
 #[cfg(test)]
+mod listing_scope_binding_test;
+#[cfg(test)]
 mod listing_scope_cleanup_test;
 pub mod mcp;
 pub mod metrics;
@@ -110,6 +112,8 @@ mod switcher_current_scope_binding_test;
 mod switcher_current_scope_remote_test;
 #[cfg(test)]
 mod switcher_current_scope_test;
+#[cfg(test)]
+mod switcher_exact_selector_fail_closed_test;
 #[cfg(test)]
 mod switcher_exact_selector_test;
 #[cfg(test)]

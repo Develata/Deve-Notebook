@@ -87,6 +87,14 @@ impl WsSession {
         self.active_repo_id = None;
     }
 
+    pub fn has_runtime_scope_binding(&self) -> bool {
+        self.active_db.is_some()
+            || self.authenticated_peer_id.is_some()
+            || self.bound_repo_id.is_some()
+            || self.current_sync_scope_nonce.is_some()
+            || self.writer_identity.is_some()
+    }
+
     pub fn is_readonly(&self) -> bool {
         self.active_db.as_ref().map(|h| h.readonly).unwrap_or(false)
     }

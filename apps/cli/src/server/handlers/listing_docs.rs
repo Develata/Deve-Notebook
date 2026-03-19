@@ -23,6 +23,7 @@ pub async fn handle_list_docs(
     let resolved = if session.active_branch.is_none()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
+        && !session.has_runtime_scope_binding()
     {
         bootstrap_local_repo(state, session)
     } else {
