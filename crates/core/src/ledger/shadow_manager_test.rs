@@ -1,4 +1,6 @@
 use super::RepoManager;
+use crate::ledger::RepoInfo;
+use crate::models::PeerId;
 
 #[test]
 fn list_loaded_shadows_fails_closed_when_registry_lock_is_poisoned() -> anyhow::Result<()> {
@@ -13,6 +15,40 @@ fn list_loaded_shadows_fails_closed_when_registry_lock_is_poisoned() -> anyhow::
     let err = repo
         .list_loaded_shadows()
         .expect_err("must fail closed after lock poison");
+    assert!(err.to_string().contains("Shadow DB registry lock poisoned"));
+    Ok(())
+}
+
+#[test]
+fn ensure_shadow_repo_info_fails_closed_when_detach_registry_is_poisoned() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    let peer = PeerId::new("peer-a");
+    let repo_id = uuid::Uuid::new_v4();
+    repo.ensure_shadow_repo_info(
+        &peer,
+        &RepoInfo {
+            uuid: repo_id,
+            name: "old".into(),
+            url: Some("urn:test:old".into()),
+        },
+    )?;
+
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _guard = repo.write_shadow_dbs().expect("write lock");
+        panic!("poison shadow registry");
+    }));
+
+    let err = repo
+        .ensure_shadow_repo_info(
+            &peer,
+            &RepoInfo {
+                uuid: repo_id,
+                name: "new".into(),
+                url: Some("urn:test:new".into()),
+            },
+        )
+        .expect_err("must fail closed after poisoned detach registry");
     assert!(err.to_string().contains("Shadow DB registry lock poisoned"));
     Ok(())
 }

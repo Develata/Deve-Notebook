@@ -55,7 +55,7 @@ impl RepoManager {
             Some(entry) => {
                 relocate_database_path(&entry.path, &desired)?;
                 std::fs::rename(&entry.path, &desired)?;
-                self.detach_shadow_repo(peer_id, &info.uuid);
+                self.detach_shadow_repo(peer_id, &info.uuid)?;
                 desired
             }
             None => desired,
@@ -84,21 +84,15 @@ impl RepoManager {
         Ok(self.read_shadow_dbs()?.keys().cloned().collect())
     }
 
-    fn detach_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) {
-        let Ok(mut dbs) = self.write_shadow_dbs() else {
-            tracing::warn!(
-                "Failed to detach shadow repo {}/{}: shadow registry lock poisoned",
-                peer_id,
-                repo_id
-            );
-            return;
-        };
+    fn detach_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
+        let mut dbs = self.write_shadow_dbs()?;
         if let Some(repos) = dbs.get_mut(peer_id) {
             repos.remove(repo_id);
             if repos.is_empty() {
                 dbs.remove(peer_id);
             }
         }
+        Ok(())
     }
 
     // Method moved to listing trait
