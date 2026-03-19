@@ -140,3 +140,52 @@ async fn request_key_on_remote_branch_uses_local_counterpart_keys_root() -> anyh
     );
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn request_key_denies_corrupt_repo_key() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let key_path = state
+        .repo
+        .local_repo_notegit_keys_root("notes")?
+        .join("repo.key");
+    std::fs::create_dir_all(
+        key_path
+            .parent()
+            .expect("repo.key must have a parent directory"),
+    )?;
+    std::fs::write(&key_path, [1, 2, 3, 4])?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.bind_repo(repo_id);
+    session.set_scope_nonce(Some(31));
+    session.set_sync_scope_nonce(9);
+
+    handle_request_key(&state, &ch, &mut session).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::KeyDenied {
+            repo_id: seen,
+            scope_nonce,
+            branch,
+            error,
+        }) => {
+            assert_eq!(seen, Some(repo_id));
+            assert_eq!(scope_nonce, 31);
+            assert_eq!(branch, None);
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Corrupt repo key"))
+            );
+        }
+        other => panic!("expected KeyDenied, got {:?}", other),
+    }
+    assert_eq!(std::fs::read(key_path)?, vec![1, 2, 3, 4]);
+    Ok(())
+}
