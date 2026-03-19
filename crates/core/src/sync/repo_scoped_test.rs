@@ -2,6 +2,7 @@ use super::RepoScopedSyncEngine;
 use crate::config::SyncMode;
 use crate::ledger::RepoManager;
 use crate::models::PeerId;
+use std::fs;
 use std::sync::Arc;
 
 #[test]
@@ -58,5 +59,23 @@ fn clone_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
 
     let cloned = engine.clone();
     assert!(cloned.loaded_repos().is_empty());
+    Ok(())
+}
+
+#[test]
+fn get_or_create_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_vault_root(&vault);
+    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let key_dir = repo.local_repo_notegit_keys_root("notes")?;
+    fs::create_dir_all(&key_dir)?;
+    fs::write(key_dir.join("repo.key"), [1, 2, 3, 4])?;
+
+    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+
+    assert!(engine.get_or_create(repo_id).is_none());
+    assert!(engine.get(repo_id).is_none());
     Ok(())
 }

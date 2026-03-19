@@ -2,7 +2,6 @@
 //! # Repo-Scoped 同步引擎管理器
 //!
 //! 管理多个仓库的 SyncEngine 实例，每个仓库拥有独立的同步状态。
-
 use crate::models::{PeerId, RepoId};
 use crate::security::RepoKey;
 use crate::sync::engine::SyncEngine;
@@ -27,7 +26,6 @@ pub struct RepoScopedSyncEngine {
     sync_mode: crate::config::SyncMode,
     engines: RwLock<HashMap<RepoId, SyncEngine>>,
 }
-
 impl RepoScopedSyncEngine {
     fn read_engines(&self) -> Option<RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>>> {
         match self.engines.read() {
@@ -74,7 +72,7 @@ impl RepoScopedSyncEngine {
     ///
     /// ## 返回值
     /// - `Some(SyncEngine)` - 如果成功获取或创建
-    /// - `None` - 如果锁被污染
+    /// - `None` - 如果锁被污染或 `RepoKey` 无法安全加载
     pub fn get_or_create(&self, repo_id: RepoId) -> Option<SyncEngine> {
         // 先尝试读取
         let engines = self.read_engines()?;
@@ -90,11 +88,12 @@ impl RepoScopedSyncEngine {
             return Some(engine.clone());
         }
 
+        let repo_key = self.load_repo_key(repo_id)?;
         let engine = SyncEngine::new(
             self.local_peer_id.clone(),
             self.repo.clone(),
             self.sync_mode,
-            self.load_repo_key(repo_id),
+            Some(repo_key),
         );
         engines.insert(repo_id, engine.clone());
         Some(engine)
@@ -244,7 +243,6 @@ impl Clone for RepoScopedSyncEngine {
         }
     }
 }
-
 #[cfg(test)]
 #[path = "repo_scoped_test.rs"]
 mod tests;
