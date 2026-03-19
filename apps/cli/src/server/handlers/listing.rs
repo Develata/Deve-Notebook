@@ -61,7 +61,9 @@ pub async fn handle_list_repos(
     request_id: Option<String>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if session.active_branch.is_some()
+    if (session.active_branch.is_some()
+        || session.active_repo.is_some()
+        || session.active_repo_id.is_some())
         && let Err(error) = resolve_session_repo_and_sync(state, session)
     {
         ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(error), scope_nonce);

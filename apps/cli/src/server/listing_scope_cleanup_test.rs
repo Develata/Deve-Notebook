@@ -134,6 +134,32 @@ async fn list_repos_on_unbound_shadow_branch_clears_stale_db_and_sync_binding() 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_repos_rejects_stale_local_selector_and_clears_session() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo("test".into(), Some(default_id));
+
+    handle_list_repos(&state, &ch, &mut session, Some("req-stale".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+        }
+        other => panic!(
+            "expected stale local selector ProtocolError, got {:?}",
+            other
+        ),
+    }
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn list_docs_does_not_emit_partial_repo_view_when_tree_reset_fails() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
