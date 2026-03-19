@@ -105,20 +105,18 @@ pub fn init(
                             continue;
                         }
                     }
-                    tracing::warn!(
-                        "Repo metadata value missing in {:?}; reusing legacy local repo and repairing metadata",
+                    anyhow::bail!(
+                        "Broken local repo {} during init: repository metadata missing in existing database {:?}",
+                        final_name,
                         db_path
                     );
-                    local_db = db;
-                    break;
                 }
                 Err(_) => {
-                    tracing::warn!(
-                        "Repo metadata table missing in {:?}; reusing legacy local repo and repairing metadata",
+                    anyhow::bail!(
+                        "Broken local repo {} during init: repository metadata table missing in existing database {:?}",
+                        final_name,
                         db_path
                     );
-                    local_db = db;
-                    break;
                 }
             }
         } else {
