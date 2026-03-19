@@ -4,6 +4,8 @@ use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
 #[path = "switcher_error.rs"]
 mod switcher_error;
+#[path = "switcher_guard.rs"]
+mod switcher_guard;
 #[path = "switcher_payload.rs"]
 mod switcher_payload;
 #[path = "switcher_prepare.rs"]
@@ -36,6 +38,9 @@ pub async fn handle_switch_branch(
     switch_nonce: Option<u64>,
 ) {
     tracing::info!("Handle SwitchBranch request: PeerID={:?}", peer_id);
+    if !switcher_guard::require_browser_switch_nonce(ch, session, switch_nonce, "branch switch") {
+        return;
+    }
 
     let Some(final_branch) = validate_branch_target(state, ch, &peer_id, switch_nonce) else {
         return;
@@ -150,6 +155,9 @@ pub async fn handle_switch_repo(
         name,
         session.active_branch
     );
+    if !switcher_guard::require_browser_switch_nonce(ch, session, switch_nonce, "repo switch") {
+        return;
+    }
 
     let branch = session.active_branch.clone();
     let repo_name = match resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id) {
@@ -230,3 +238,7 @@ pub async fn handle_switch_repo(
     );
     emit_repo_view(ch, repo_view);
 }
+
+#[cfg(test)]
+#[path = "../switcher_switch_nonce_test.rs"]
+mod switcher_switch_nonce_test;

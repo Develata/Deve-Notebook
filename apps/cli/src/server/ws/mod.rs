@@ -39,13 +39,15 @@ pub async fn ws_handler(
         .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
         .map(|ci| ci.0.ip().is_loopback())
         .unwrap_or(false);
+    let browser_session =
+        is_browser_session_connection(authed, config.allow_anonymous_localhost, is_local);
 
-    if !(authed || config.allow_anonymous_localhost && is_local) {
+    if !browser_session {
         return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
 
     let peer_id = uuid::Uuid::new_v4().to_string();
-    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, authed))
+    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, browser_session))
         .into_response()
 }
 
@@ -104,5 +106,33 @@ pub async fn handle_socket(
         ) {
             break;
         }
+    }
+}
+
+fn is_browser_session_connection(
+    authed: bool,
+    allow_anonymous_localhost: bool,
+    is_local: bool,
+) -> bool {
+    authed || (allow_anonymous_localhost && is_local)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_browser_session_connection;
+
+    #[test]
+    fn localhost_anonymous_ws_still_counts_as_browser_session() {
+        assert!(is_browser_session_connection(false, true, true));
+    }
+
+    #[test]
+    fn remote_anonymous_ws_is_rejected() {
+        assert!(!is_browser_session_connection(false, true, false));
+    }
+
+    #[test]
+    fn authenticated_ws_is_always_browser_session() {
+        assert!(is_browser_session_connection(true, false, false));
     }
 }

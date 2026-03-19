@@ -109,7 +109,51 @@ async fn deleting_active_peer_clears_stale_remote_bindings() -> anyhow::Result<(
         }
         other => panic!("expected scoped ShadowList, got {:?}", other),
     }
-    assert_eq!(session.active_branch, Some(peer_id));
+    assert_eq!(session.active_branch, None);
+    assert!(session.active_repo.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn deleting_active_peer_clears_browser_sync_binding_even_when_auth_peer_differs()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    let repo_id = uuid::Uuid::new_v4();
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: repo_id,
+            name: "wiki".into(),
+            url: Some("urn:test:wiki".into()),
+        },
+    )?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(21));
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("wiki".into(), Some(repo_id));
+    session.set_active_db(state.repo.open_database(Some(&peer_id), "wiki")?);
+    session.set_authenticated(PeerId::new("browser-writer"));
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(21);
+
+    sync::handle_delete_peer(&state, &ch, &mut session, peer_id.to_string()).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ShadowList { scope_nonce, .. }) => {
+            assert_eq!(scope_nonce, Some(21));
+        }
+        other => panic!("expected scoped ShadowList, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
     assert!(session.active_repo.is_none());
     assert!(session.get_active_db().is_none());
     assert!(session.authenticated_peer_id.is_none());

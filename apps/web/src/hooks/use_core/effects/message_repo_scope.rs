@@ -84,7 +84,11 @@ pub fn accepts_protocol_error_message(
     signals: CoreSignals,
 ) -> bool {
     if scope_nonce.is_none() {
-        return switch_nonce.is_some();
+        let Some(switch_nonce) = switch_nonce else {
+            return false;
+        };
+        return signals.pending_branch_switch_nonce.get_untracked() == Some(switch_nonce)
+            || signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);
     }
     signals.pending_repo_switch.get_untracked().is_none()
         && signals.pending_branch_switch.get_untracked().is_none()
@@ -237,6 +241,8 @@ mod tests {
         signals.set_pending_repo_switch.set(None);
         assert!(!accepts_protocol_error_message(Some(9), None, signals));
         assert!(!accepts_protocol_error_message(None, None, signals));
+        assert!(!accepts_protocol_error_message(None, Some(3), signals));
+        signals.set_pending_repo_switch_nonce.set(Some(3));
         assert!(accepts_protocol_error_message(None, Some(3), signals));
         assert!(accepts_protocol_error_message(Some(7), None, signals));
     }

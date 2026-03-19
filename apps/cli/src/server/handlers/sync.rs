@@ -94,8 +94,10 @@ pub async fn handle_delete_peer(
         Ok(_) => {
             tracing::info!("Successfully deleted peer branch: {}", peer_id);
             if session.active_branch.as_ref() == Some(&peer_id) {
+                session.switch_branch(None);
                 session.clear_active_repo();
                 session.clear_active_db();
+                session.clear_sync_binding();
             }
             if session.authenticated_peer_id.as_ref() == Some(&peer_id) {
                 session.clear_sync_binding();

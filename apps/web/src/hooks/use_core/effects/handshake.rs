@@ -17,11 +17,11 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
     let status_signal = ws.status;
     let endpoint_signal = ws.endpoint;
     let last_mode = Rc::new(RefCell::new(None::<String>));
-    let scope_nonce = Rc::new(Cell::new(0u64));
+    let handshake_attempt = Rc::new(Cell::new(0u64));
 
     Effect::new(move |_| {
-        let next_nonce = scope_nonce.get().saturating_add(1);
-        scope_nonce.set(next_nonce);
+        let next_attempt = handshake_attempt.get().saturating_add(1);
+        handshake_attempt.set(next_attempt);
         if status_signal.get() != ConnectionStatus::Connected {
             *last_mode.borrow_mut() = None;
             ws_clone.clear_writer_ready();
@@ -37,6 +37,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let vector = signals.repo_vector.get();
         let repo_name = signals.current_repo.get();
         let branch = signals.active_branch.get();
+        let current_scope_nonce = signals.current_scope_nonce.get();
         let pending_branch_switch = signals.pending_branch_switch.get();
         let pending_repo_switch = signals.pending_repo_switch.get();
         let is_reconnect_bootstrap = last_mode.borrow().is_none();
@@ -80,7 +81,6 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         ws_clone.clear_writer_ready();
         signals.set_handshake_ready.set(false);
         signals.set_handshake_scope_nonce.set(None);
-        let scope_nonce = scope_nonce.clone();
         if let Some(identity) = maybe_identity.as_ref()
             && maybe_mode.is_none()
             && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
@@ -100,7 +100,10 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             signals.set_handshake_scope_nonce.set(None);
             return;
         }
-        signals.set_handshake_scope_nonce.set(Some(next_nonce));
+        signals
+            .set_handshake_scope_nonce
+            .set(Some(current_scope_nonce));
+        let handshake_attempt = handshake_attempt.clone();
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());
@@ -148,7 +151,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
 
             match sign_sync_hello(&identity, &msg).await {
                 Ok(signature) => {
-                    if scope_nonce.get() != next_nonce {
+                    if handshake_attempt.get() != next_attempt {
                         leptos::logging::warn!("忽略过期握手结果: scope 已变更");
                         return;
                     }
@@ -171,12 +174,12 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                                 signature,
                                 vector,
                                 repo_id,
-                                scope_nonce: next_nonce,
+                                scope_nonce: current_scope_nonce,
                             });
                             ws.send(ClientMessage::RegisterWriter {
                                 peer_id: writer_peer_id,
                                 repo_id,
-                                scope_nonce: next_nonce,
+                                scope_nonce: current_scope_nonce,
                             });
                         }
                         Err(err) => leptos::logging::error!(
