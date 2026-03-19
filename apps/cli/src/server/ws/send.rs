@@ -2,7 +2,7 @@ pub(crate) use super::filter::BroadcastFilter;
 use crate::server::channel::try_send_with_delivery_class;
 use axum::extract::ws::{Message, WebSocket};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
-use futures::SinkExt;
+use futures::{Sink, SinkExt};
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{broadcast, mpsc};
 
@@ -22,16 +22,28 @@ pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Recei
 /// ## 协议策略
 /// - **使用二进制 (Bincode)**: 体积更小，解析更快，减少带宽占用。
 pub(crate) fn spawn_unicast_sender_task(
-    mut sender: futures::stream::SplitSink<WebSocket, Message>,
-    mut rx: mpsc::Receiver<ServerMessage>,
+    sender: futures::stream::SplitSink<WebSocket, Message>,
+    rx: mpsc::Receiver<ServerMessage>,
 ) {
+    spawn_unicast_sender_task_with_encoder(sender, rx, encode_server_message);
+}
+
+fn spawn_unicast_sender_task_with_encoder<S, E>(
+    mut sender: S,
+    mut rx: mpsc::Receiver<ServerMessage>,
+    encode: E,
+) where
+    S: Sink<Message> + Unpin + Send + 'static,
+    S::Error: std::fmt::Debug + Send + 'static,
+    E: Fn(&ServerMessage) -> Result<Vec<u8>, String> + Send + 'static,
+{
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            let bytes = match bincode::serialize(&msg) {
-                Ok(b) => b,
-                Err(e) => {
-                    tracing::warn!("Failed to serialize WS message: {:?}", e);
-                    continue;
+            let bytes = match encode(&msg) {
+                Ok(bytes) => bytes,
+                Err(err) => {
+                    tracing::error!("Failed to serialize WS message; closing sender: {err}");
+                    break;
                 }
             };
 
@@ -41,6 +53,10 @@ pub(crate) fn spawn_unicast_sender_task(
             }
         }
     });
+}
+
+fn encode_server_message(msg: &ServerMessage) -> Result<Vec<u8>, String> {
+    bincode::serialize(msg).map_err(|err| err.to_string())
 }
 
 /// 启动广播转发任务：将广播消息尝试写入单播队列。

@@ -1,8 +1,14 @@
-use super::{BroadcastFilter, new_unicast_channel, spawn_broadcast_forwarder};
+use super::{
+    BroadcastFilter, new_unicast_channel, spawn_broadcast_forwarder,
+    spawn_unicast_sender_task_with_encoder,
+};
 use crate::server::session::WsSession;
+use axum::extract::ws::Message;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ConfirmedOp, ServerErrorCode, ServerMessage};
+use futures::StreamExt;
 use tokio::sync::broadcast;
+use tokio::time::{Duration, timeout};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
@@ -191,4 +197,29 @@ async fn lagged_broadcasts_surface_protocol_error() {
         }
         other => panic!("expected lagged ProtocolError, got {:?}", other),
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn serialization_failures_close_unicast_sender_task() {
+    let (sink, mut stream) = futures::channel::mpsc::channel::<Message>(1);
+    let (unicast_tx, unicast_rx) = new_unicast_channel();
+
+    spawn_unicast_sender_task_with_encoder(sink, unicast_rx, |_| {
+        Err("synthetic serialization failure".into())
+    });
+
+    unicast_tx
+        .send(ServerMessage::Pong)
+        .await
+        .expect("queue first message");
+    unicast_tx
+        .send(ServerMessage::Pong)
+        .await
+        .expect("queue second message");
+    drop(unicast_tx);
+
+    let next = timeout(Duration::from_secs(1), stream.next())
+        .await
+        .expect("sender task must stop after serialization failure");
+    assert!(next.is_none(), "sender task must close sink after encode failure");
 }
