@@ -1,3 +1,4 @@
+use crate::server::error_classify::is_stale_remote_scope_context;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub(super) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {
@@ -5,27 +6,10 @@ pub(super) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {
         ServerErrorCode::SyncRepoUnbound => true,
         ServerErrorCode::ScRepoContextInvalid => {
             let detail = error.detail.as_deref().unwrap_or_default();
-            let lower = detail.to_ascii_lowercase();
-            contains_any(
-                &lower,
-                &[
-                    "remote session lost repo name",
-                    "repository uuid not resolved",
-                    "remote repository selector not resolved",
-                    "session repo mismatch",
-                    "repo selector mismatch",
-                    "ambiguous remote repository selector",
-                    "scope mismatch",
-                    "stale scope nonce",
-                ],
-            )
+            is_stale_remote_scope_context(&detail.to_ascii_lowercase())
         }
         _ => false,
     }
-}
-
-fn contains_any(input: &str, patterns: &[&str]) -> bool {
-    patterns.iter().any(|pattern| input.contains(pattern))
 }
 
 #[cfg(test)]
@@ -45,6 +29,14 @@ mod tests {
         assert!(should_clear_stale_remote_scope(&ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
             "Remote repository selector not resolved for wiki",
+        )));
+    }
+
+    #[test]
+    fn clears_exact_selector_repo_mismatch_errors() {
+        assert!(should_clear_stale_remote_scope(&ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "Session repo mismatch: expected a, resolved b for exact repository selector wiki-2",
         )));
     }
 
