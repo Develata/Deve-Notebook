@@ -21,7 +21,10 @@ use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 use self::switcher_error::prepare_switch_error;
-use self::switcher_payload::{emit_repo_view, preload_branch_switch, preload_repo_view};
+pub(crate) use self::switcher_payload::{
+    RepoViewPayload, emit_repo_view, prepare_repo_view_messages, switch_scope_nonce,
+};
+use self::switcher_payload::{preload_branch_switch, preload_repo_view};
 use self::switcher_prepare::{commit_session_switch, prepare_repo_switch, validate_branch_target};
 use self::switcher_selector::{resolve_requested_repo_name, select_target_repo};
 
@@ -102,18 +105,22 @@ pub async fn handle_switch_branch(
             return;
         }
     };
+    let scope_nonce = switch_scope_nonce(session, switch_nonce);
+    let repo_view = match prepare_repo_view_messages(
+        state,
+        final_branch.clone(),
+        None,
+        scope_nonce,
+        switch_nonce,
+        payload.repo_view,
+    ) {
+        Ok(repo_view) => repo_view,
+        Err(error) => {
+            ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
+            return;
+        }
+    };
     commit_session_switch(session, final_branch.clone(), prepared, switch_nonce);
-    tracing::info!(
-        "Session ActiveBranch updated to: {:?}",
-        session.active_branch
-    );
-    if let Some(repo_name) = &session.active_repo {
-        tracing::info!(
-            "Database locked: {} (readonly: {})",
-            repo_name,
-            session.is_readonly()
-        );
-    }
 
     ch.unicast(ServerMessage::BranchSwitched {
         peer_id: final_branch.clone(),
@@ -123,19 +130,10 @@ pub async fn handle_switch_branch(
     ch.unicast(ServerMessage::RepoList {
         request_id: None,
         branch: final_branch.clone(),
-        scope_nonce: session.is_browser_session().then(|| session.scope_nonce()),
+        scope_nonce,
         repos: payload.repo_list,
     });
-    if let Err(error) = emit_repo_view(
-        state,
-        ch,
-        session,
-        final_branch,
-        switch_nonce,
-        payload.repo_view,
-    ) {
-        ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
-    }
+    emit_repo_view(ch, repo_view);
 }
 
 pub async fn handle_switch_repo(
@@ -203,6 +201,21 @@ pub async fn handle_switch_repo(
             return;
         }
     };
+    let scope_nonce = switch_scope_nonce(session, switch_nonce);
+    let repo_view = match prepare_repo_view_messages(
+        state,
+        branch.as_ref().map(ToString::to_string),
+        None,
+        scope_nonce,
+        switch_nonce,
+        Some(repo_view),
+    ) {
+        Ok(repo_view) => repo_view,
+        Err(error) => {
+            ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
+            return;
+        }
+    };
     commit_session_switch(
         session,
         branch.map(|peer| peer.to_string()),
@@ -214,19 +227,5 @@ pub async fn handle_switch_repo(
         repo_name,
         session.active_branch
     );
-    tracing::info!(
-        "Database locked: {} (readonly: {})",
-        repo_name,
-        session.is_readonly()
-    );
-    if let Err(error) = emit_repo_view(
-        state,
-        ch,
-        session,
-        session.active_branch.as_ref().map(ToString::to_string),
-        switch_nonce,
-        Some(repo_view),
-    ) {
-        ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
-    }
+    emit_repo_view(ch, repo_view);
 }

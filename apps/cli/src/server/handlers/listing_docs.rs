@@ -1,13 +1,15 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::document::errors::send_doc_error_with_scope_and_switch_nonce;
+use crate::server::handlers::switcher::{
+    RepoViewPayload, emit_repo_view, prepare_repo_view_messages, switch_scope_nonce,
+};
 use crate::server::repo_scope::{
     bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 pub async fn handle_list_docs(
@@ -62,18 +64,21 @@ pub async fn handle_list_docs(
             return;
         }
     };
-    if session.active_branch.is_none()
-        && (session.active_repo.as_deref() != Some(repo_name.as_str())
-            || session.active_repo_id != Some(repo_id))
-    {
-        session.switch_repo(repo_name.clone(), Some(repo_id));
-    }
-    let branch = session.active_branch.clone();
-    let delta = match state
-        .tree_manager
-        .reset_from_nodes(repo_id, branch.as_ref(), nodes)
-    {
-        Ok(delta) => delta,
+    let branch = session.active_branch.as_ref().map(ToString::to_string);
+    let repo_view = match prepare_repo_view_messages(
+        state,
+        branch,
+        request_id,
+        switch_scope_nonce(session, switch_nonce),
+        switch_nonce,
+        Some(RepoViewPayload {
+            repo_name: repo_name.clone(),
+            repo_id,
+            docs,
+            nodes,
+        }),
+    ) {
+        Ok(repo_view) => repo_view,
         Err(err) => {
             send_doc_error_with_scope_and_switch_nonce(
                 ch,
@@ -85,27 +90,13 @@ pub async fn handle_list_docs(
             return;
         }
     };
-
-    ch.unicast(ServerMessage::RepoSwitched {
-        branch: branch.as_ref().map(ToString::to_string),
-        name: repo_name.clone(),
-        uuid: repo_id.to_string(),
-        switch_nonce,
-    });
-    ch.unicast(ServerMessage::DocList {
-        request_id: request_id.clone(),
-        repo_id: Some(repo_id),
-        branch: branch.clone(),
-        scope_nonce,
-        docs,
-    });
-    ch.unicast(ServerMessage::TreeUpdate {
-        request_id,
-        repo_id: Some(repo_id),
-        branch,
-        scope_nonce,
-        delta,
-    });
+    if session.active_branch.is_none()
+        && (session.active_repo.as_deref() != Some(repo_name.as_str())
+            || session.active_repo_id != Some(repo_id))
+    {
+        session.switch_repo(repo_name, Some(repo_id));
+    }
+    emit_repo_view(ch, repo_view);
 }
 
 fn load_docs(

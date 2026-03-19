@@ -160,6 +160,8 @@ async fn list_docs_does_not_emit_partial_repo_view_when_tree_reset_fails() -> an
         }
         other => panic!("expected tree rebuild ProtocolError, got {:?}", other),
     }
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
     assert!(
         uni_rx.try_recv().is_err(),
         "must not emit partial repo view"
