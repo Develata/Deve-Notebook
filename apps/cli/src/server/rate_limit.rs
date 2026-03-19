@@ -71,7 +71,8 @@ impl RateLimiter {
         let cutoff = now - self.window;
 
         let Ok(mut map) = self.state.lock() else {
-            return true; // Mutex 中毒时放行 (fail-open)
+            tracing::error!("RateLimiter state lock poisoned; failing closed");
+            return false;
         };
 
         // 惰性 GC: IP 数量超阈值时清理所有过期条目
@@ -169,5 +170,18 @@ mod tests {
 
         std::thread::sleep(Duration::from_millis(60));
         assert!(limiter.check_and_record_ip(ip)); // 窗口过期后恢复
+    }
+
+    #[test]
+    fn test_poisoned_state_fails_closed() {
+        let limiter = RateLimiter::new(1, Duration::from_secs(60));
+        let poisoned = limiter.clone();
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = poisoned.state.lock().expect("lock");
+            panic!("poison rate limiter state");
+        }));
+        let ip: IpAddr = "10.0.0.9".parse().unwrap();
+
+        assert!(!limiter.check_and_record_ip(ip));
     }
 }
