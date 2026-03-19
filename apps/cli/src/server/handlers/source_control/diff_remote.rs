@@ -5,6 +5,7 @@ use crate::server::handlers::source_control::repo_scope;
 use crate::server::repo_scope::resolve_local_counterpart_repo;
 use crate::server::session::WsSession;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::DOCID_TO_PATH;
 use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -108,12 +109,26 @@ pub(crate) fn local_counterpart_content(
     };
     repo.run_on_local_repo(name, |db| {
         if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
+            if let Some(path) = legacy_doc_path(db, doc_id)? {
+                anyhow::bail!(
+                    "Tracked document projection missing for legacy-mapped doc: {}",
+                    path
+                );
+            }
             return Ok(None);
         }
         let ops = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
         let entries: Vec<_> = ops.iter().map(|(_, e)| e.clone()).collect();
         Ok(Some(deve_core::state::reconstruct_content(&entries)))
     })
+}
+
+fn legacy_doc_path(db: &redb::Database, doc_id: DocId) -> anyhow::Result<Option<String>> {
+    let read = db.begin_read()?;
+    let table = read.open_table(DOCID_TO_PATH)?;
+    Ok(table
+        .get(doc_id.as_u128())?
+        .map(|path| path.value().to_string()))
 }
 
 pub(super) fn resolve_tracked_doc_id(
