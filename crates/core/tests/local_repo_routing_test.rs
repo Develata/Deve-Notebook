@@ -121,7 +121,7 @@ fn sync_snapshot_uses_requested_local_repo_id() {
 }
 
 #[test]
-fn local_repo_reads_recover_from_stale_metadata_name_selector() {
+fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
     write_repo_info(
@@ -133,27 +133,15 @@ fn local_repo_reads_recover_from_stale_metadata_name_selector() {
         },
     );
 
-    let info = repo
+    let err = repo
         .get_repo_info_for(None, Some("legacy-wiki"))
-        .expect("lookup repo info")
-        .expect("repo info");
-    assert_eq!(info.uuid, extra_id);
+        .expect_err("stale local alias must fail closed");
+    assert!(err.to_string().contains("metadata name drifted to legacy-wiki"));
 
-    let uuid = repo
-        .run_on_local_repo("legacy-wiki", |db| {
-            let txn = db.begin_read()?;
-            let table = txn.open_table(REPO_METADATA)?;
-            let info = table
-                .get(&0)?
-                .map(|bytes| {
-                    bincode::deserialize::<RepoInfo>(bytes.value()).expect("deserialize repo info")
-                })
-                .map(|info| info.uuid);
-            Ok(info)
-        })
-        .expect("run on stale alias")
-        .expect("uuid");
-    assert_eq!(uuid, extra_id);
+    let err = repo
+        .run_on_local_repo("legacy-wiki", |_db| Ok::<_, anyhow::Error>(()))
+        .expect_err("stale local alias must fail closed");
+    assert!(err.to_string().contains("metadata name drifted to legacy-wiki"));
 }
 
 #[test]

@@ -167,7 +167,6 @@ impl RepoManager {
             );
         }
         let target_id = uuid::Uuid::parse_str(selector).ok();
-        let mut by_alias = None::<String>;
         for entry in std::fs::read_dir(local_dir)? {
             let path = entry?.path();
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {
@@ -195,14 +194,8 @@ impl RepoManager {
             if info.as_ref().map(|info| info.uuid) == target_id {
                 return Ok(Some(stem));
             }
-            if info.as_ref().map(|info| info.name.as_str()) == Some(selector) {
-                if by_alias.as_ref().is_some_and(|current| current != &stem) {
-                    return Err(anyhow!("Ambiguous local repository selector: {}", selector));
-                }
-                by_alias = Some(stem);
-            }
         }
-        Ok(by_alias)
+        Ok(None)
     }
 
     fn read_extra_local_dbs(&self) -> Result<RwLockReadGuard<'_, HashMap<String, Arc<Database>>>> {

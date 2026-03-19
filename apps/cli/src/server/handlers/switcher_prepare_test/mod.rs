@@ -94,7 +94,7 @@ fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Resu
 }
 
 #[test]
-fn resolve_requested_repo_name_prefers_canonical_local_stem_after_metadata_drift()
+fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_drift()
 -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
@@ -112,9 +112,9 @@ fn resolve_requested_repo_name_prefers_canonical_local_stem_after_metadata_drift
     )?;
     txn.commit()?;
 
-    let selected = resolve_requested_repo_name(&state, None, "legacy-wiki", None)?
-        .expect("canonical local selector");
-    assert_eq!(selected, "wiki");
+    let err = resolve_requested_repo_name(&state, None, "legacy-wiki", None)
+        .expect_err("stale local alias must fail closed");
+    assert!(err.to_string().contains("metadata name drifted to legacy-wiki"));
     Ok(())
 }
 
@@ -160,11 +160,8 @@ fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<
     }
 
     let err = select_target_repo(&state, false, None, Some("wiki"), None, None)
-        .expect_err("ambiguous local alias must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Ambiguous local repository selector: wiki")
-    );
+        .expect_err("stale local alias must fail closed");
+    assert!(err.to_string().contains("metadata name drifted to wiki"));
     Ok(())
 }
 

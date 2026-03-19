@@ -53,15 +53,15 @@ fn resolve_session_repo_fails_closed_on_stale_local_alias_drift() -> anyhow::Res
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
     assert_eq!(
         mapped.code,
-        deve_core::protocol::ServerErrorCode::StoragePersistFailed
+        deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
     );
-    assert_eq!(session.active_repo.as_deref(), Some("legacy-wiki"));
-    assert_eq!(session.active_repo_id, Some(wiki_info.uuid));
+    assert_eq!(session.active_repo.as_deref(), None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 
 #[test]
-fn open_database_accepts_stale_local_alias_after_metadata_drift() -> anyhow::Result<()> {
+fn open_database_rejects_stale_local_alias_after_metadata_drift() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
@@ -79,9 +79,10 @@ fn open_database_accepts_stale_local_alias_after_metadata_drift() -> anyhow::Res
     )?;
     txn.commit()?;
 
-    let handle = repo.open_database(None, "legacy-wiki")?;
-
-    assert_eq!(handle.repo_name, "wiki");
-    assert_eq!(handle.repo_id, Some(wiki_info.uuid));
+    let err = match repo.open_database(None, "legacy-wiki") {
+        Ok(_) => anyhow::bail!("stale local alias must fail closed"),
+        Err(err) => err,
+    };
+    assert!(err.to_string().contains("legacy-wiki"));
     Ok(())
 }
