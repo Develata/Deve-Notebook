@@ -223,8 +223,10 @@ async fn list_docs_rejects_stale_local_selector() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(default_id));
+    assert_eq!(
+        (session.active_repo.as_deref(), session.active_repo_id),
+        (None, None)
+    );
     Ok(())
 }
 

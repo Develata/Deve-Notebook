@@ -72,8 +72,8 @@ fn resolve_session_repo_and_sync_rejects_stale_local_repo_id_mismatch() -> anyho
         err.to_string()
             .contains("Local repository selector not resolved")
     );
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(default_id));
+    assert_eq!(session.active_repo, None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 
@@ -88,6 +88,8 @@ fn resolve_session_repo_rejects_local_name_recovery_from_stale_uuid() -> anyhow:
         err.to_string()
             .contains("Local repository selector not resolved")
     );
+    assert_eq!(session.active_repo, None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 

@@ -10,6 +10,7 @@ use tempfile::{TempDir, tempdir};
 use tokio::sync::broadcast;
 
 mod remote;
+mod remote_fail_closed;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;

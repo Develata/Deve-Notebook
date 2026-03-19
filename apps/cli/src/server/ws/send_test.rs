@@ -221,5 +221,8 @@ async fn serialization_failures_close_unicast_sender_task() {
     let next = timeout(Duration::from_secs(1), stream.next())
         .await
         .expect("sender task must stop after serialization failure");
-    assert!(next.is_none(), "sender task must close sink after encode failure");
+    assert!(
+        next.is_none(),
+        "sender task must close sink after encode failure"
+    );
 }

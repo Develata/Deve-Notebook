@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use self::lookup::resolve_repo_by_name;
 use self::repo_scope_bootstrap::fallback_local_repo_name;
-use self::repo_scope_cleanup::should_clear_stale_remote_scope;
+use self::repo_scope_cleanup::{should_clear_stale_local_scope, should_clear_stale_remote_scope};
 pub use self::repo_scope_error::map_repo_scope_error;
 use self::repo_scope_selector::resolve_repo_name_from_session;
 pub use self::repo_scope_workspace::{
@@ -76,7 +76,12 @@ pub fn resolve_session_repo_and_sync(
         Ok(scope) => scope,
         Err(err) => {
             let mapped = map_repo_scope_error(anyhow!(err.to_string()));
-            if session.active_branch.is_some() && should_clear_stale_remote_scope(&mapped) {
+            let clear_stale_scope = if session.active_branch.is_some() {
+                should_clear_stale_remote_scope(&mapped)
+            } else {
+                should_clear_stale_local_scope(&mapped)
+            };
+            if clear_stale_scope {
                 session.clear_active_repo();
                 session.clear_active_db();
                 session.clear_sync_binding();

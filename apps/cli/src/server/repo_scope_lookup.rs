@@ -82,7 +82,16 @@ pub(super) fn resolve_repo_by_name(
             repo_name
         ));
     }
-    let repo_name = recover_repo_selector(state, branch.as_ref(), info.uuid)?.unwrap_or(repo_name);
+    let repo_name = match recover_repo_selector(state, branch.as_ref(), info.uuid)? {
+        Some(selector) => selector,
+        None if branch.is_some() => {
+            return Err(anyhow!(
+                "Remote repository selector not resolved for {}",
+                repo_name
+            ));
+        }
+        None => repo_name,
+    };
     Ok(ResolvedRepo {
         repo_id: info.uuid,
         repo_name,

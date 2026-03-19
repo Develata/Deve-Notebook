@@ -3,9 +3,8 @@ use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoInfo;
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -123,8 +122,8 @@ async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(default_id));
+    assert_eq!(session.active_repo, None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 
@@ -158,7 +157,8 @@ async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
-    assert_eq!(session.active_repo_id, Some(default_id));
+    assert_eq!(session.active_repo, None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 

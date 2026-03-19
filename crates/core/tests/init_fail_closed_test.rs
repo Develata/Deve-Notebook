@@ -1,5 +1,5 @@
-use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::ledger::schema::REPO_METADATA;
+use deve_core::ledger::{RepoInfo, RepoManager};
 use tempfile::TempDir;
 
 #[test]
@@ -14,7 +14,10 @@ fn init_fails_closed_when_existing_local_repo_lacks_metadata_table() {
         Ok(_) => panic!("missing repo metadata table must fail init"),
         Err(err) => err,
     };
-    assert!(err.to_string().contains("repository metadata table missing"));
+    assert!(
+        err.to_string()
+            .contains("repository metadata table missing")
+    );
 }
 
 #[test]

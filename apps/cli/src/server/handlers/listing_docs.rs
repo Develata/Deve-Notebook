@@ -20,7 +20,10 @@ pub async fn handle_list_docs(
     switch_nonce: Option<u64>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let resolved = if session.active_branch.is_none() {
+    let resolved = if session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+    {
         bootstrap_local_repo(state, session)
     } else {
         resolve_session_repo_and_sync(state, session)

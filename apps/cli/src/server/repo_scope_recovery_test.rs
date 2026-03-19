@@ -34,6 +34,8 @@ fn resolve_session_repo_rejects_local_uuid_string_selector_without_bound_id() ->
         err.to_string()
             .contains("Local repository selector not resolved")
     );
+    assert_eq!(session.active_repo, None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 
