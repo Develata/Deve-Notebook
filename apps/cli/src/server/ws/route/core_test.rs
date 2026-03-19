@@ -70,7 +70,7 @@ async fn browser_edit_requires_current_scope_nonce() -> anyhow::Result<()> {
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, None);
+            assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -107,7 +107,7 @@ async fn browser_open_doc_requires_current_scope_nonce() -> anyhow::Result<()> {
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, None);
+            assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -140,7 +140,7 @@ async fn browser_request_history_requires_current_scope_nonce() -> anyhow::Resul
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, None);
+            assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -169,7 +169,7 @@ async fn browser_request_key_requires_current_scope_nonce() -> anyhow::Result<()
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, None);
+            assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -203,7 +203,7 @@ async fn browser_search_requires_current_scope_nonce() -> anyhow::Result<()> {
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, None);
+            assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -235,7 +235,7 @@ async fn browser_delete_peer_requires_current_scope_nonce() -> anyhow::Result<()
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, None);
+            assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

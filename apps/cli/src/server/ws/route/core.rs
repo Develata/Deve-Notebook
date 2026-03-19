@@ -19,7 +19,10 @@ pub(super) async fn route_core(
             if let Err(error) =
                 super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "open doc")
             {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             document::handle_open_doc(state, ch, session, doc_id, request_id).await;
@@ -34,7 +37,10 @@ pub(super) async fn route_core(
                 scope_nonce,
                 "document history",
             ) {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             document::handle_request_history(state, ch, session, doc_id, request_id).await;
@@ -49,7 +55,10 @@ pub(super) async fn route_core(
             if let Err(error) =
                 super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "edit")
             {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             document::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
@@ -63,7 +72,10 @@ pub(super) async fn route_core(
                 scope_nonce,
                 "document list",
             ) {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             listing::handle_list_docs(state, ch, session, Some(request_id), None).await;
@@ -77,7 +89,10 @@ pub(super) async fn route_core(
                 scope_nonce,
                 "shadow list",
             ) {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             listing::handle_list_shadows(state, ch, Some(session), Some(request_id)).await;
@@ -89,7 +104,10 @@ pub(super) async fn route_core(
             if let Err(error) =
                 super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "repo list")
             {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             listing::handle_list_repos(state, ch, session, Some(request_id)).await;
@@ -103,7 +121,10 @@ pub(super) async fn route_core(
             if let Err(error) =
                 super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "search")
             {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             search::handle_search(state, ch, request_id, query, limit, scope_nonce).await;
@@ -142,7 +163,10 @@ pub(super) async fn route_core(
                 scope_nonce,
                 "delete peer",
             ) {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             sync::handle_delete_peer(state, ch, session, peer_id).await;
@@ -179,7 +203,10 @@ pub(super) async fn route_core(
                 scope_nonce,
                 "request key",
             ) {
-                ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    super::scope_guard::response_scope_nonce(session, scope_nonce),
+                );
                 return;
             }
             key_exchange::handle_request_key(state, ch, session).await;
