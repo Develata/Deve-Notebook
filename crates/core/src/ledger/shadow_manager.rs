@@ -80,13 +80,8 @@ impl RepoManager {
     /// # 返回
     ///
     /// 当前已加载的所有 PeerId 列表
-    pub fn list_loaded_shadows(&self) -> Vec<PeerId> {
-        self.read_shadow_dbs()
-            .map(|dbs| dbs.keys().cloned().collect())
-            .unwrap_or_else(|err| {
-                tracing::warn!("Failed to list loaded shadows: {err}");
-                Vec::new()
-            })
+    pub fn list_loaded_shadows(&self) -> Result<Vec<PeerId>> {
+        Ok(self.read_shadow_dbs()?.keys().cloned().collect())
     }
 
     fn detach_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) {
@@ -151,3 +146,7 @@ impl RepoManager {
             .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))
     }
 }
+
+#[cfg(test)]
+#[path = "shadow_manager_test.rs"]
+mod tests;

@@ -25,9 +25,11 @@ use std::sync::Mutex;
 /// - 有 key 时，成功解密的 op 被应用到编辑器 (与 handle_new_op 相同路径)
 /// - 失败的 op 被跳过并记录错误
 pub fn handle_sync_push(ctx: &SyncContext, ops: &[EncryptedOp]) {
-    let Some(key) =
-        buffer_encrypted_ops_until_key(&ctx.buffered_encrypted_ops, ctx.repo_key.get_untracked(), ops)
-    else {
+    let Some(key) = buffer_encrypted_ops_until_key(
+        &ctx.buffered_encrypted_ops,
+        ctx.repo_key.get_untracked(),
+        ops,
+    ) else {
         return;
     };
 
@@ -53,7 +55,10 @@ pub(super) fn buffer_encrypted_ops_until_key(
     ops: &[EncryptedOp],
 ) -> Option<RepoKey> {
     let Some(key) = key else {
-        leptos::logging::warn!("SyncPush: buffering {} encrypted ops (no RepoKey)", ops.len());
+        leptos::logging::warn!(
+            "SyncPush: buffering {} encrypted ops (no RepoKey)",
+            ops.len()
+        );
         match buffered.lock() {
             Ok(mut pending) => pending.extend_from_slice(ops),
             Err(_) => {

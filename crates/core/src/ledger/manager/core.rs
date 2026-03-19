@@ -35,7 +35,9 @@ impl RepoManager {
 
     /// 设置 Vault 根目录 (用于 commit 时读取磁盘文件)
     pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
+        let previous_root = self.vault_root.clone();
         if let Err(error) = self.set_vault_root_checked(root) {
+            self.vault_root = previous_root;
             tracing::warn!("Failed to repair local repo catalog after mounting vault: {error}");
         }
     }
@@ -217,3 +219,7 @@ impl RepoManager {
             .map_err(|_| anyhow!("Local repo registry lock poisoned"))
     }
 }
+
+#[cfg(test)]
+#[path = "core_test.rs"]
+mod tests;

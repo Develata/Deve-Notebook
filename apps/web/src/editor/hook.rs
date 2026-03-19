@@ -199,7 +199,10 @@ pub fn use_editor(
     on_cleanup(move || {
         let _ = cleanup_session_generation.fetch_add(1, Ordering::Relaxed);
         cleanup_ready_generation.store(0, Ordering::Relaxed);
-        clear_locked_vec(&cleanup_buffered_live_ops, "编辑器清理时忽略 buffered live ops");
+        clear_locked_vec(
+            &cleanup_buffered_live_ops,
+            "编辑器清理时忽略 buffered live ops",
+        );
         clear_locked_vec(
             &cleanup_buffered_encrypted_ops,
             "编辑器清理时忽略 buffered encrypted ops",
