@@ -75,10 +75,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(session.active_branch, None);
-    assert_eq!(
-        session.active_repo.as_deref(),
-        Some(local_info.uuid.to_string().as_str())
-    );
+    assert!(session.active_repo.is_none());
     assert_eq!(session.active_repo_id, None);
     Ok(())
 }

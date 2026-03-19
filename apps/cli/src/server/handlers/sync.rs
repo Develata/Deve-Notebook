@@ -93,6 +93,13 @@ pub async fn handle_delete_peer(
     match state.repo.delete_peer_branch(&peer_id) {
         Ok(_) => {
             tracing::info!("Successfully deleted peer branch: {}", peer_id);
+            if session.active_branch.as_ref() == Some(&peer_id) {
+                session.clear_active_repo();
+                session.clear_active_db();
+            }
+            if session.authenticated_peer_id.as_ref() == Some(&peer_id) {
+                session.clear_sync_binding();
+            }
             ch.broadcast(deve_core::protocol::ServerMessage::PeerDeleted {
                 peer_id: peer_id_str,
                 scope_nonce: None,

@@ -59,7 +59,7 @@ async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
             .as_deref(),
         Some("missing-shadow")
     );
-    assert_eq!(session.active_repo.as_deref(), Some("ghost"));
+    assert!(session.active_repo.is_none());
     assert_eq!(session.active_repo_id, None);
     Ok(())
 }
