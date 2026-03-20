@@ -44,24 +44,31 @@ pub(super) async fn handle_remote_diff(
         };
 
     let local_repo_name = match resolve_local_counterpart_repo(state, &scope) {
-        Ok(Some(local_scope)) => Some(local_scope.repo_name),
-        Ok(None) => None,
+        Ok(Some(local_scope)) => local_scope.repo_name,
+        Ok(None) => {
+            return errors::send_ws_code_scoped(
+                ch,
+                ServerErrorCode::StorageNotFound,
+                "No local repository matched the active remote branch",
+                scope_nonce,
+            );
+        }
         Err(err) => {
             return errors::send_ws_scoped(ch, errors::map_repo_scope_error(err), scope_nonce);
         }
     };
-    let old_content =
-        match local_counterpart_content(state.repo.as_ref(), doc_id, local_repo_name.as_deref()) {
-            Ok(Some(content)) => content,
-            Ok(None) => String::new(),
-            Err(err) => {
-                return errors::send_ws_scoped(
-                    ch,
-                    errors::map_repo_error(errors::ScOp::DiffDoc(path.clone()), err),
-                    scope_nonce,
-                );
-            }
-        };
+    let old_content = match local_counterpart_content(state.repo.as_ref(), doc_id, &local_repo_name)
+    {
+        Ok(Some(content)) => content,
+        Ok(None) => String::new(),
+        Err(err) => {
+            return errors::send_ws_scoped(
+                ch,
+                errors::map_repo_error(errors::ScOp::DiffDoc(path.clone()), err),
+                scope_nonce,
+            );
+        }
+    };
 
     ch.unicast(ServerMessage::DocDiff {
         request_id: Some(request_id),
@@ -102,12 +109,9 @@ pub(super) fn resolve_remote_content(
 pub(crate) fn local_counterpart_content(
     repo: &RepoManager,
     doc_id: DocId,
-    repo_name: Option<&str>,
+    repo_name: &str,
 ) -> anyhow::Result<Option<String>> {
-    let Some(name) = repo_name else {
-        return Ok(None);
-    };
-    repo.run_on_local_repo(name, |db| {
+    repo.run_on_local_repo(repo_name, |db| {
         if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
             if let Some(path) = legacy_doc_path(db, doc_id)? {
                 anyhow::bail!(

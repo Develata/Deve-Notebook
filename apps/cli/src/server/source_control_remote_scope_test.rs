@@ -50,12 +50,22 @@ fn seed_shadow_doc(
     peer_id: &PeerId,
     repo_id: uuid::Uuid,
 ) -> anyhow::Result<DocId> {
+    seed_shadow_doc_with_url(repo, peer_id, repo_id, "shadow-notes", "urn:test")
+}
+
+fn seed_shadow_doc_with_url(
+    repo: &RepoManager,
+    peer_id: &PeerId,
+    repo_id: uuid::Uuid,
+    repo_name: &str,
+    repo_url: &str,
+) -> anyhow::Result<DocId> {
     repo.ensure_shadow_repo_info(
         peer_id,
         &RepoInfo {
             uuid: repo_id,
-            name: "shadow-notes".into(),
-            url: Some("urn:test".into()),
+            name: repo_name.into(),
+            url: Some(repo_url.into()),
         },
     )?;
     let doc_id = DocId::new();
@@ -162,5 +172,53 @@ async fn remote_diff_without_repo_selection_clears_stale_db_and_sync_binding() -
     assert!(session.bound_repo_id.is_none());
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remote_diff_fails_closed_when_no_local_counterpart_repo_exists() -> anyhow::Result<()> {
+    let (_dir, state, _test_id) = build_state()?;
+    let peer_id = PeerId::new("peer-remote-only");
+    let remote_repo_id = uuid::Uuid::new_v4();
+    let doc_id = seed_shadow_doc_with_url(
+        state.repo.as_ref(),
+        &peer_id,
+        remote_repo_id,
+        "shadow-remote-only",
+        "urn:remote-only",
+    )?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("shadow-remote-only".into(), Some(remote_repo_id));
+
+    handle_get_doc_diff(
+        &state,
+        &ch,
+        &mut session,
+        "req-no-local".into(),
+        ScPathTarget {
+            path: "notes/a.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::StorageNotFound
+            );
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("No local repository matched"))
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
     Ok(())
 }

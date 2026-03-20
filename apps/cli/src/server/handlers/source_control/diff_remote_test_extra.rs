@@ -44,7 +44,7 @@ fn remote_diff_rejects_deleted_doc_even_with_doc_id_hint() -> anyhow::Result<()>
         )
     })?;
     assert!(resolved.is_none());
-    assert!(local_counterpart_content(&repo, doc_id, Some(repo.local_repo_name()))?.is_none());
+    assert!(local_counterpart_content(&repo, doc_id, repo.local_repo_name())?.is_none());
     Ok(())
 }
 
@@ -110,7 +110,7 @@ fn remote_diff_fails_closed_when_local_doc_has_only_legacy_mapping() -> anyhow::
         Ok(())
     })?;
 
-    let err = local_counterpart_content(&repo, doc_id, Some(repo.local_repo_name()))
+    let err = local_counterpart_content(&repo, doc_id, repo.local_repo_name())
         .expect_err("legacy-only local counterpart must fail closed");
     assert!(
         err.to_string()
