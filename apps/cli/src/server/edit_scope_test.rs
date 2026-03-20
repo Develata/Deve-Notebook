@@ -4,6 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::CLIENT_OP_INDEX;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -114,5 +115,64 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
             .is_none(),
         "must not append orphan op into active repo"
     );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
+    let default_repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
+    let op_count_before = state.repo.get_local_ops(doc_id)?.len();
+    state.repo.run_on_local_repo("default", |db| {
+        let write = db.begin_write()?;
+        write.delete_table(CLIENT_OP_INDEX)?;
+        write.commit()?;
+        Ok(())
+    })?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(23));
+    session.switch_repo("default".into(), Some(default_repo_id));
+    session.set_writer_identity(default_repo_id, PeerId::new("writer"));
+
+    handle_edit(
+        &state,
+        &ch,
+        &mut session,
+        doc_id,
+        Op::Insert {
+            pos: 5,
+            content: "!".into(),
+        },
+        7,
+        9,
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(scope_nonce, Some(23));
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Broken client op index")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!(
+            "expected ProtocolError(StoragePersistFailed), got {:?}",
+            other
+        ),
+    }
+    assert_eq!(state.repo.get_local_ops(doc_id)?.len(), op_count_before);
     Ok(())
 }

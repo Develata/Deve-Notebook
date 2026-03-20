@@ -1,6 +1,6 @@
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS};
 use crate::models::{DocId, LedgerEntry, NodeId, deserialize_ledger_entry};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 
 pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
@@ -91,7 +91,9 @@ pub fn find_client_op_in_db(
     let read_txn = db.begin_read()?;
     let client_ops = match read_txn.open_table(CLIENT_OP_INDEX) {
         Ok(table) => table,
-        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+        Err(redb::TableError::TableDoesNotExist(_)) => {
+            return Err(broken_client_op_index("table missing"));
+        }
         Err(err) => return Err(err.into()),
     };
     let Some(global_seq) = client_ops
@@ -102,7 +104,14 @@ pub fn find_client_op_in_db(
     };
     let ops_table = read_txn.open_table(LEDGER_OPS)?;
     let Some(bytes) = ops_table.get(global_seq)? else {
-        return Ok(None);
+        return Err(broken_client_op_index(format!(
+            "missing ledger op at seq {}",
+            global_seq
+        )));
     };
     Ok(Some((global_seq, deserialize_ledger_entry(bytes.value())?)))
+}
+
+fn broken_client_op_index(detail: impl Into<String>) -> anyhow::Error {
+    anyhow!("Broken client op index: {}", detail.into())
 }

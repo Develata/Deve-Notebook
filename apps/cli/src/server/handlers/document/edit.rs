@@ -62,30 +62,39 @@ pub(super) async fn handle_edit(
             return;
         }
     };
-    if let Ok(Some((_global_seq, entry))) =
-        state
-            .repo
-            .find_client_op_in_local_repo(&scope.repo_name, doc_id, client_id, client_op_id)
+    match state
+        .repo
+        .find_client_op_in_local_repo(&scope.repo_name, doc_id, client_id, client_op_id)
     {
-        if entry.content_op() != Some(&op) {
+        Ok(Some((_global_seq, entry))) => {
+            if entry.content_op() != Some(&op) {
+                ch.send_protocol_error_with_scope_nonce(
+                    ServerError::with_detail(
+                        ServerErrorCode::SyncEditRejected,
+                        "client_op_id conflicts with a different op",
+                    ),
+                    scope_nonce,
+                );
+                return;
+            }
+            ch.unicast(ServerMessage::Ack {
+                repo_id: scope.repo_id,
+                branch: session.active_branch.clone(),
+                scope_nonce,
+                doc_id,
+                seq: entry.seq,
+                client_op_id,
+            });
+            return;
+        }
+        Ok(None) => {}
+        Err(err) => {
             ch.send_protocol_error_with_scope_nonce(
-                ServerError::with_detail(
-                    ServerErrorCode::SyncEditRejected,
-                    "client_op_id conflicts with a different op",
-                ),
+                ServerError::with_detail(ServerErrorCode::StoragePersistFailed, err.to_string()),
                 scope_nonce,
             );
             return;
         }
-        ch.unicast(ServerMessage::Ack {
-            repo_id: scope.repo_id,
-            branch: session.active_branch.clone(),
-            scope_nonce,
-            doc_id,
-            seq: entry.seq,
-            client_op_id,
-        });
-        return;
     }
     let op_clone = op.clone();
     let peer_id_clone = local_peer_id.clone();
