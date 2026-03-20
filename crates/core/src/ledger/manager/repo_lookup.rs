@@ -76,16 +76,6 @@ impl RepoManager {
             if let Some(info) = entry.info {
                 return Ok(Some(info));
             }
-            if let Some(info) = Self::read_repo_info_from_path(&entry.path)? {
-                return Ok(Some(info));
-            }
-            if let Ok(repo_id) = uuid::Uuid::parse_str(&entry.stem) {
-                return Ok(Some(RepoInfo {
-                    uuid: repo_id,
-                    name: entry.stem,
-                    url: None,
-                }));
-            }
             return Ok(None);
         }
         Ok(None)

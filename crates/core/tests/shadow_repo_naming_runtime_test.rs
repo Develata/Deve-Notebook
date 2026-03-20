@@ -52,6 +52,45 @@ fn runtime_remote_repo_listing_does_not_repair_legacy_remote_filename() {
 }
 
 #[test]
+fn runtime_remote_display_name_selector_fails_closed_when_stem_drifted() {
+    let (_dir, repo) = new_repo();
+    let peer_id = PeerId::new("peer-remote");
+    let repo_id = Uuid::new_v4();
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    let legacy_path = peer_dir.join("legacy.redb");
+    {
+        let db = Database::create(&legacy_path).expect("legacy db");
+        let txn = db.begin_write().expect("write txn");
+        txn.open_table(REPO_METADATA)
+            .expect("repo metadata")
+            .insert(
+                &0,
+                bincode::serialize(&RepoInfo {
+                    uuid: repo_id,
+                    name: "wiki".into(),
+                    url: Some("urn:test:wiki".into()),
+                })
+                .expect("serialize")
+                .as_slice(),
+            )
+            .expect("write metadata");
+        txn.commit().expect("commit");
+    }
+
+    assert_eq!(
+        repo.find_remote_repo_selector(&peer_id, "wiki")
+            .expect("resolve legacy display name"),
+        None
+    );
+    let err = match repo.open_database(Some(&peer_id), "wiki") {
+        Ok(_) => panic!("display-only selector must fail closed"),
+        Err(err) => err,
+    };
+    assert!(err.to_string().contains("Repository not found: wiki"));
+}
+
+#[test]
 fn explicit_remote_catalog_repair_repairs_legacy_remote_filename() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
