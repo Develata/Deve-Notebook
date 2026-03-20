@@ -36,7 +36,7 @@ pub(super) async fn handle(
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
     let scope = session.is_browser_session().then_some(scope_nonce);
 
-    if let Err(error) = validate_scope(session, repo_id, scope_nonce) {
+    if let Err(error) = validate_scope(session, &peer_id, repo_id, scope_nonce) {
         clear_invalid_sync_hello_scope(session);
         ch.send_protocol_error_with_scope_nonce(error, scope);
         return;
@@ -161,10 +161,22 @@ pub(super) async fn handle(
 
 fn validate_scope(
     session: &WsSession,
+    peer_id: &PeerId,
     repo_id: RepoId,
     scope_nonce: u64,
 ) -> Result<(), ServerError> {
     if !session.is_browser_session() {
+        if let Some(authenticated_peer_id) = session.authenticated_peer_id.as_ref()
+            && authenticated_peer_id != peer_id
+        {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                format!(
+                    "SyncHello peer mismatch: authenticated_peer_id={}, requested_peer_id={}",
+                    authenticated_peer_id, peer_id
+                ),
+            ));
+        }
         if let Some(bound_repo_id) = session.bound_repo_id
             && bound_repo_id != repo_id
         {

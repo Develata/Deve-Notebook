@@ -215,3 +215,45 @@ async fn sync_hello_rejects_non_browser_repo_rebinding() -> anyhow::Result<()> {
     assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_non_browser_peer_rebinding() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let current_peer = IdentityKeyPair::generate();
+    let incoming_peer = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&incoming_peer, &VersionVector::new());
+    hello.repo_id = repo_id;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.set_authenticated(current_peer.peer_id());
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(3);
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("requested_peer_id")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.active_repo.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    Ok(())
+}
