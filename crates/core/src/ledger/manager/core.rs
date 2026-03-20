@@ -124,6 +124,13 @@ impl RepoManager {
         F: FnOnce(&redb::Database) -> Result<R>,
     {
         if stem == self.local_repo_name {
+            source_control::validate_tables(self.local_db.as_ref()).map_err(|err| {
+                anyhow!(
+                    "Broken local repo {} while validating source control tables: {}",
+                    self.local_repo_name,
+                    err
+                )
+            })?;
             return f(self.local_db.as_ref());
         }
         {

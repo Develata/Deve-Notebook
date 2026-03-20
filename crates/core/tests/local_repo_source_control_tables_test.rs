@@ -1,5 +1,7 @@
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::models::DocId;
+use deve_core::source_control::staging;
 use tempfile::TempDir;
 
 fn seed_legacy_local_repo(path: &std::path::Path, info: &RepoInfo) {
@@ -50,6 +52,51 @@ fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_r
     assert!(
         repo.list_pending_fs_in_local_repo("legacy")
             .expect("list pending after repair")
+            .is_empty()
+    );
+}
+
+#[test]
+fn main_local_repo_fails_closed_on_missing_source_control_tables_until_repair() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+
+    let handle = repo.open_database(None, "main").expect("open main db");
+    let write = handle.db.begin_write().expect("write txn");
+    let _ = write
+        .delete_table(staging::STAGED_TABLE)
+        .expect("delete staged table");
+    write.commit().expect("commit table delete");
+
+    let staged_err = repo
+        .list_staged()
+        .expect_err("missing source control tables must fail staged listing");
+    assert!(staged_err.to_string().contains("Broken local repo main"));
+    assert!(staged_err.to_string().contains("source control tables"));
+
+    let commits_err = repo
+        .list_commits(10)
+        .expect_err("missing source control tables must fail commit listing");
+    assert!(commits_err.to_string().contains("Broken local repo main"));
+    assert!(commits_err.to_string().contains("source control tables"));
+
+    let content_err = repo
+        .get_committed_content(DocId::new())
+        .expect_err("missing source control tables must fail committed content lookup");
+    assert!(content_err.to_string().contains("Broken local repo main"));
+    assert!(content_err.to_string().contains("source control tables"));
+
+    repo.repair_local_repo_catalog()
+        .expect("repair local repo catalog");
+    assert!(
+        repo.list_staged()
+            .expect("list staged after repair")
+            .is_empty()
+    );
+    assert!(
+        repo.list_commits(10)
+            .expect("list commits after repair")
             .is_empty()
     );
 }

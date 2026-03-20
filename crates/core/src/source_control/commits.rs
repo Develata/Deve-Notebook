@@ -8,7 +8,7 @@
 //! - Table: `commits_order` - 存储提交顺序索引
 
 use crate::source_control::CommitInfo;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable, TableDefinition};
 
 /// 提交表定义 (commit_id -> JSON)
@@ -75,11 +75,9 @@ fn next_seq_inner(table: &redb::Table<u64, &str>) -> Result<u64> {
 /// 获取最新提交的 ID（作为新提交的 parent_id）— O(log n) via `last()`
 pub fn get_latest_id(db: &Database) -> Result<Option<String>> {
     let read_txn = db.begin_read()?;
-    let order_table = match read_txn.open_table(COMMITS_ORDER_TABLE) {
-        Ok(table) => table,
-        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
-        Err(err) => return Err(err.into()),
-    };
+    let order_table = read_txn
+        .open_table(COMMITS_ORDER_TABLE)
+        .map_err(|err| broken_commit_history("opening commit order table", err))?;
     match order_table.last()? {
         Some((_, commit_id)) => Ok(Some(commit_id.value().to_string())),
         None => Ok(None),
@@ -89,16 +87,12 @@ pub fn get_latest_id(db: &Database) -> Result<Option<String>> {
 /// 获取提交历史 (最新的在前)
 pub fn list(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
     let read_txn = db.begin_read()?;
-    let order_table = match read_txn.open_table(COMMITS_ORDER_TABLE) {
-        Ok(table) => table,
-        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(Vec::new()),
-        Err(err) => return Err(err.into()),
-    };
-    let commits_table = match read_txn.open_table(COMMITS_TABLE) {
-        Ok(table) => table,
-        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(Vec::new()),
-        Err(err) => return Err(err.into()),
-    };
+    let order_table = read_txn
+        .open_table(COMMITS_ORDER_TABLE)
+        .map_err(|err| broken_commit_history("opening commit order table", err))?;
+    let commits_table = read_txn
+        .open_table(COMMITS_TABLE)
+        .map_err(|err| broken_commit_history("opening commit payload table", err))?;
 
     // 收集所有序号并降序排列
     let mut seqs = Vec::new();
@@ -111,20 +105,33 @@ pub fn list(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
 
     let mut commits = Vec::new();
     for seq in seqs {
-        if let Some(commit_id) = order_table.get(seq)?
-            && let Some(json) = commits_table.get(commit_id.value())?
-        {
-            let info = serde_json::from_str::<CommitInfo>(json.value())?;
-            commits.push(info);
-        }
+        let commit_id = order_table.get(seq)?.ok_or_else(|| {
+            anyhow!(
+                "Broken commit history while reading order row {}: commit id missing",
+                seq
+            )
+        })?;
+        let json = commits_table.get(commit_id.value())?.ok_or_else(|| {
+            anyhow!(
+                "Broken commit history while reading order row {}: missing commit payload for {}",
+                seq,
+                commit_id.value()
+            )
+        })?;
+        let info = serde_json::from_str::<CommitInfo>(json.value())?;
+        commits.push(info);
     }
 
     Ok(commits)
 }
 
+fn broken_commit_history(action: &str, err: redb::TableError) -> anyhow::Error {
+    anyhow!("Broken commit history while {action}: {err}")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{COMMITS_ORDER_TABLE, COMMITS_TABLE, create, list};
+    use super::{COMMITS_ORDER_TABLE, COMMITS_TABLE, create, get_latest_id, list};
     use tempfile::TempDir;
 
     #[test]
@@ -165,5 +172,35 @@ mod tests {
         let order = txn.open_table(COMMITS_ORDER_TABLE).expect("order table");
         assert!(order.get(1).expect("order first").is_some());
         assert!(order.get(2).expect("order second").is_some());
+    }
+
+    #[test]
+    fn commit_list_fails_closed_when_tables_are_missing() {
+        let dir = TempDir::new().expect("tempdir");
+        let db = redb::Database::create(dir.path().join("commits.redb")).expect("db");
+
+        let err = list(&db, 10).expect_err("missing commit tables must fail closed");
+        assert!(err.to_string().contains("Broken commit history"));
+
+        let err = get_latest_id(&db).expect_err("missing order table must fail closed");
+        assert!(err.to_string().contains("Broken commit history"));
+    }
+
+    #[test]
+    fn commit_list_fails_closed_when_order_row_points_to_missing_payload() {
+        let dir = TempDir::new().expect("tempdir");
+        let db = redb::Database::create(dir.path().join("commits.redb")).expect("db");
+        super::init_table(&db).expect("init tables");
+        let info = create(&db, "initial", 1, 1).expect("create commit");
+
+        let txn = db.begin_write().expect("write txn");
+        txn.open_table(COMMITS_TABLE)
+            .expect("commits table")
+            .remove(info.id.as_str())
+            .expect("remove commit payload");
+        txn.commit().expect("commit poison");
+
+        let err = list(&db, 10).expect_err("missing commit payload must fail closed");
+        assert!(err.to_string().contains("Broken commit history"));
     }
 }

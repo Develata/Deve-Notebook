@@ -44,6 +44,13 @@ impl RepoManager {
 
     /// 获取文档的已提交内容 (用于 Diff)
     pub fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
+        source_control::validate_tables(self.local_db.as_ref()).map_err(|err| {
+            anyhow::anyhow!(
+                "Broken local repo {} while validating source control tables: {}",
+                self.local_repo_name,
+                err
+            )
+        })?;
         source_control::get_committed_content(&self.local_db, doc_id)
     }
 
