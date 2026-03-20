@@ -130,7 +130,13 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
     assert_eq!(pending[0].path, "notes/b.md");
     assert_eq!(pending[0].renamed_from.as_deref(), Some("notes/a.md"));
 
-    proxy.stage_pending_in_repo(&selector, &path_target("notes/b.md"))?;
+    proxy.stage_pending_in_repo(
+        &selector,
+        &ScPathTarget {
+            path: "notes/b.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )?;
     assert!(proxy.list_pending_fs_in_repo(&selector)?.is_empty());
     harness.shutdown().await;
     Ok(())

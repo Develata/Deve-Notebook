@@ -111,11 +111,6 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
         .iter()
         .filter(|entry| normalized(&entry.path) == path)
         .collect::<Vec<_>>();
-    let live_exact = exact
-        .iter()
-        .copied()
-        .filter(|entry| entry.status != ChangeStatus::Deleted)
-        .collect::<Vec<_>>();
     let renamed = entries
         .iter()
         .filter(|entry| {
@@ -126,17 +121,22 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
                     .is_some_and(|old_path| normalized(old_path) == path)
         })
         .collect::<Vec<_>>();
+    if exact
+        .iter()
+        .chain(renamed.iter())
+        .any(|entry| entry.doc_id.is_some())
+    {
+        return None;
+    }
+    let live_exact = exact
+        .iter()
+        .copied()
+        .filter(|entry| entry.status != ChangeStatus::Deleted)
+        .collect::<Vec<_>>();
     let deleted_exact = exact
         .iter()
         .any(|entry| entry.status == ChangeStatus::Deleted);
-    let exact_doc_ids = exact
-        .iter()
-        .filter_map(|entry| entry.doc_id)
-        .collect::<HashSet<_>>();
     if live_exact.len() > 1 || renamed.len() > 1 {
-        return None;
-    }
-    if renamed.is_empty() && exact_doc_ids.len() > 1 {
         return None;
     }
     if deleted_exact && renamed.len() == 1 {

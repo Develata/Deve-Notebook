@@ -109,7 +109,8 @@ impl BroadcastFilter {
                 ) && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
             }
             ServerMessage::PeerDeleted { scope_nonce, .. } => {
-                scope.browser_session && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
+                scope.browser_session
+                    && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
             }
             _ => true,
         }

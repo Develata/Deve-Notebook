@@ -28,13 +28,14 @@ pub(super) fn resolve_change_path(
         ));
     }
     let entries = repo.list_changes_in_local_repo(repo_name)?;
+    if has_tracked_path_only_candidates(&entries, &path) {
+        return Err(anyhow!(
+            "Tracked source control target requires document identity: {}",
+            path
+        ));
+    }
     if let Some(resolved) = resolve_from_entries(&entries, &path, None) {
         return Ok(resolved);
-    }
-    if let Some(doc_id) = repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, &path)?
-        && let Some(canonical) = resolve_canonical_path(repo, repo_name, doc_id)?
-    {
-        return Ok(canonical);
     }
     Err(anyhow!(
         "Source control target not resolved for path {}",
@@ -136,11 +137,6 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
         .iter()
         .filter(|entry| to_forward_slash(&entry.path) == path)
         .collect::<Vec<_>>();
-    let live_exact = exact
-        .iter()
-        .copied()
-        .filter(|entry| entry.status != ChangeStatus::Deleted)
-        .collect::<Vec<_>>();
     let renamed = entries
         .iter()
         .filter(|entry| {
@@ -151,17 +147,22 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
                     .is_some_and(|old_path| to_forward_slash(old_path) == path)
         })
         .collect::<Vec<_>>();
+    if exact
+        .iter()
+        .chain(renamed.iter())
+        .any(|entry| entry.doc_id.is_some())
+    {
+        return None;
+    }
+    let live_exact = exact
+        .iter()
+        .copied()
+        .filter(|entry| entry.status != ChangeStatus::Deleted)
+        .collect::<Vec<_>>();
     let deleted_exact = exact
         .iter()
         .any(|entry| entry.status == ChangeStatus::Deleted);
-    let exact_doc_ids = exact
-        .iter()
-        .filter_map(|entry| entry.doc_id)
-        .collect::<HashSet<_>>();
     if live_exact.len() > 1 || renamed.len() > 1 {
-        return None;
-    }
-    if renamed.is_empty() && exact_doc_ids.len() > 1 {
         return None;
     }
     if deleted_exact && renamed.len() == 1 {
@@ -179,6 +180,17 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
     (exact.len() == 1)
         .then(|| exact.into_iter().next())
         .flatten()
+}
+
+fn has_tracked_path_only_candidates(entries: &[ChangeEntry], path: &str) -> bool {
+    entries.iter().any(|entry| {
+        entry.doc_id.is_some()
+            && (to_forward_slash(&entry.path) == path
+                || entry
+                    .renamed_from
+                    .as_ref()
+                    .is_some_and(|old_path| to_forward_slash(old_path) == path))
+    })
 }
 
 fn change_identity_key(

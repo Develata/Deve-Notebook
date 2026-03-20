@@ -11,7 +11,7 @@ pub fn get_for_target(db: &Database, target: &ScPathTarget) -> Result<Option<Pen
     if let Some(doc_id) = target.doc_id {
         return resolve_for_doc(db, &path, doc_id);
     }
-    if let Some(entry) = get(db, &path)? {
+    if let Some(entry) = get(db, &path)?.filter(|entry| entry.doc_id.is_none()) {
         return Ok(Some(entry));
     }
     resolve_without_doc(db, &path)
@@ -82,17 +82,24 @@ fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<
         .filter(|entry| entry.path == path)
         .cloned()
         .collect::<Vec<_>>();
-    let live_exact = exact
-        .iter()
-        .filter(|entry| entry.status_is_live())
-        .cloned()
-        .collect::<Vec<_>>();
     let renamed = entries
         .iter()
         .filter(|entry| {
             entry.status_is_live()
                 && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
         })
+        .cloned()
+        .collect::<Vec<_>>();
+    if exact
+        .iter()
+        .chain(renamed.iter())
+        .any(|entry| entry.doc_id.is_some())
+    {
+        return None;
+    }
+    let live_exact = exact
+        .iter()
+        .filter(|entry| entry.status_is_live())
         .cloned()
         .collect::<Vec<_>>();
     let deleted_exact = exact
@@ -129,6 +136,7 @@ impl PendingEntryStatus for PendingFsEntry {
 #[cfg(test)]
 mod tests {
     use super::select_entry_without_doc;
+    use crate::models::DocId;
     use crate::source_control::ChangeStatus;
     use crate::source_control::pending_fs::PendingFsEntry;
 
@@ -188,6 +196,33 @@ mod tests {
                 path: "notes/new.md".into(),
                 renamed_from: Some("notes/old.md".into()),
                 doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: String::new(),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        ];
+
+        assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
+    }
+
+    #[test]
+    fn fails_closed_when_path_only_target_matches_tracked_entries() {
+        let doc_id = DocId(uuid::Uuid::nil());
+        let entries = vec![
+            PendingFsEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Deleted,
+                content_hash: String::new(),
+                detected_at: 1,
+                has_conflict: false,
+            },
+            PendingFsEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(doc_id),
                 change_type: ChangeStatus::Added,
                 content_hash: String::new(),
                 detected_at: 2,

@@ -114,7 +114,10 @@ fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_
 
     let err = resolve_requested_repo_name(&state, None, "legacy-wiki", None)
         .expect_err("stale local alias must fail closed");
-    assert!(err.to_string().contains("metadata name drifted to legacy-wiki"));
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-wiki")
+    );
     Ok(())
 }
 

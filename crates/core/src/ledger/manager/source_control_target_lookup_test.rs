@@ -98,10 +98,7 @@ fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
         },
     ];
 
-    assert_eq!(
-        resolve_from_entries(&entries, "notes/old.md", None),
-        Some("notes/new.md".into())
-    );
+    assert_eq!(resolve_from_entries(&entries, "notes/old.md", None), None);
 }
 
 #[test]

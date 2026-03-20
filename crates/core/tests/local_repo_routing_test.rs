@@ -136,12 +136,18 @@ fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
     let err = repo
         .get_repo_info_for(None, Some("legacy-wiki"))
         .expect_err("stale local alias must fail closed");
-    assert!(err.to_string().contains("metadata name drifted to legacy-wiki"));
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-wiki")
+    );
 
     let err = repo
         .run_on_local_repo("legacy-wiki", |_db| Ok::<_, anyhow::Error>(()))
         .expect_err("stale local alias must fail closed");
-    assert!(err.to_string().contains("metadata name drifted to legacy-wiki"));
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-wiki")
+    );
 }
 
 #[test]

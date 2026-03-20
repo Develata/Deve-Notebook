@@ -69,7 +69,13 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
             has_conflict: false,
         },
     );
-    proxy.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/b.md"))?;
+    proxy.stage_pending_in_repo(
+        &selector,
+        &ScPathTarget {
+            path: "notes/b.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )?;
     let second = proxy.commit_staged_in_repo(&selector, "rename")?;
 
     let diffs = proxy.diff_commits_in_repo(&selector, Some(&first.id), &second.id)?;

@@ -123,3 +123,74 @@ fn unstage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
     .expect_err("mismatched staged doc target must fail");
     assert!(err.to_string().contains("Path is not staged"));
 }
+
+#[test]
+fn stage_path_only_target_fails_closed_for_tracked_entry() {
+    let (dir, repo) = new_repo();
+    let doc_id = commit_doc(&dir, &repo, "notes/b.md", "beta");
+
+    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("beta changed"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed tracked pending");
+
+    let err = <RepoManager as Repository>::stage_pending_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget::from_path("notes/b.md"),
+    )
+    .expect_err("tracked path-only stage must fail closed");
+    assert!(err.to_string().contains("Path is not in pending_fs_ops"));
+}
+
+#[test]
+fn unstage_path_only_target_fails_closed_for_tracked_entry() {
+    let (dir, repo) = new_repo();
+    let doc_id = commit_doc(&dir, &repo, "notes/b.md", "beta");
+
+    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("beta changed"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )?;
+        let entry = pending_fs::take_for_target(
+            db,
+            &ScPathTarget {
+                path: "notes/b.md".into(),
+                doc_id: Some(doc_id),
+            },
+        )?
+        .expect("pending b");
+        staging::stage_pending_entry(db, &entry)
+    })
+    .expect("seed tracked staged");
+
+    let err = <RepoManager as Repository>::unstage_file_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        &ScPathTarget::from_path("notes/b.md"),
+    )
+    .expect_err("tracked path-only unstage must fail closed");
+    assert!(err.to_string().contains("Path is not staged"));
+}

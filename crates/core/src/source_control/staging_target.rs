@@ -16,7 +16,7 @@ pub fn get_staged_for_target(
     if let Some(doc_id) = target.doc_id {
         return resolve_for_doc(db, &path, doc_id);
     }
-    if let Some(entry) = get_staged(db, &path)? {
+    if let Some(entry) = get_staged(db, &path)?.filter(|entry| entry.doc_id.is_none()) {
         return Ok(Some((path, entry)));
     }
     resolve_without_doc(db, &path)
@@ -100,17 +100,24 @@ fn select_entry_without_doc(
         .cloned()
         .into_iter()
         .collect::<Vec<_>>();
-    let live_exact = exact
-        .iter()
-        .filter(|(_, entry)| entry.status != ChangeStatus::Deleted)
-        .cloned()
-        .collect::<Vec<_>>();
     let renamed = entries
         .iter()
         .filter(|(_, entry)| {
             entry.status != ChangeStatus::Deleted
                 && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
         })
+        .cloned()
+        .collect::<Vec<_>>();
+    if exact
+        .iter()
+        .chain(renamed.iter())
+        .any(|(_, entry)| entry.doc_id.is_some())
+    {
+        return None;
+    }
+    let live_exact = exact
+        .iter()
+        .filter(|(_, entry)| entry.status != ChangeStatus::Deleted)
         .cloned()
         .collect::<Vec<_>>();
     let deleted_exact = entries
@@ -135,83 +142,5 @@ fn select_entry_without_doc(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::select_entry_without_doc;
-    use crate::source_control::{ChangeStatus, staging::StagedEntry};
-
-    #[test]
-    fn prefers_rename_successor_when_old_path_is_reused() {
-        let entries = vec![
-            (
-                "notes/old.md".into(),
-                StagedEntry {
-                    timestamp: 1,
-                    doc_id: None,
-                    status: ChangeStatus::Deleted,
-                    content_hash: String::new(),
-                    has_conflict: false,
-                    renamed_from: None,
-                },
-            ),
-            (
-                "notes/new.md".into(),
-                StagedEntry {
-                    timestamp: 2,
-                    doc_id: None,
-                    status: ChangeStatus::Added,
-                    content_hash: String::new(),
-                    has_conflict: false,
-                    renamed_from: Some("notes/old.md".into()),
-                },
-            ),
-            (
-                "notes/old.md".into(),
-                StagedEntry {
-                    timestamp: 3,
-                    doc_id: None,
-                    status: ChangeStatus::Added,
-                    content_hash: String::new(),
-                    has_conflict: false,
-                    renamed_from: None,
-                },
-            ),
-        ];
-
-        assert_eq!(
-            select_entry_without_doc(entries, "notes/old.md")
-                .expect("rename successor should win")
-                .0,
-            "notes/new.md"
-        );
-    }
-
-    #[test]
-    fn fails_closed_when_path_only_target_is_ambiguous() {
-        let entries = vec![
-            (
-                "notes/old.md".into(),
-                StagedEntry {
-                    timestamp: 1,
-                    doc_id: None,
-                    status: ChangeStatus::Added,
-                    content_hash: String::new(),
-                    has_conflict: false,
-                    renamed_from: None,
-                },
-            ),
-            (
-                "notes/new.md".into(),
-                StagedEntry {
-                    timestamp: 2,
-                    doc_id: None,
-                    status: ChangeStatus::Added,
-                    content_hash: String::new(),
-                    has_conflict: false,
-                    renamed_from: Some("notes/old.md".into()),
-                },
-            ),
-        ];
-
-        assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
-    }
-}
+#[path = "staging_target_test.rs"]
+mod tests;

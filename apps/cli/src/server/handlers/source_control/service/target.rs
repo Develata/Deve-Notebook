@@ -12,7 +12,24 @@ pub fn resolve_target(
     entries: &[ChangeEntry],
     target: &ScPathTarget,
 ) -> super::ScResult<ScPathTarget> {
-    let resolved = present::resolve_target(entries, target);
+    let Some(path) = present::resolve_target_path(entries, target) else {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScConflictTargetMissing,
+            format!(
+                "Source control target not found in current change set: {}",
+                target.path
+            ),
+        ));
+    };
+    let resolved = ScPathTarget {
+        doc_id: target.doc_id.or_else(|| {
+            entries
+                .iter()
+                .find(|entry| to_forward_slash(&entry.path) == path)
+                .and_then(|entry| entry.doc_id)
+        }),
+        path,
+    };
     if target_exists(entries, &resolved) {
         return Ok(resolved);
     }
@@ -55,6 +72,7 @@ fn target_exists(entries: &[ChangeEntry], target: &ScPathTarget) -> bool {
 #[cfg(test)]
 mod tests {
     use super::resolve_target;
+    use deve_core::models::DocId;
     use deve_core::protocol::{ScPathTarget, ServerErrorCode};
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
 
@@ -88,5 +106,29 @@ mod tests {
                 .expect("rename successor should resolve"),
             ScPathTarget::from_path("notes/new.md")
         );
+    }
+
+    #[test]
+    fn rejects_path_only_tracked_rename_successor() {
+        let doc_id = DocId(uuid::Uuid::nil());
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
+        let err = resolve_target(&entries, &ScPathTarget::from_path("notes/old.md"))
+            .expect_err("tracked path-only target must fail closed");
+        assert_eq!(err.code, ServerErrorCode::ScConflictTargetMissing);
     }
 }

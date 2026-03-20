@@ -17,7 +17,7 @@ impl RepoManager {
                 target
                     .doc_id
                     .map(|doc_id| entry.doc_id == Some(doc_id))
-                    .unwrap_or(true)
+                    .unwrap_or(entry.doc_id.is_none())
             });
             let entry = if let Some(entry) = exact {
                 pending_fs::remove(db, &entry.path)?;

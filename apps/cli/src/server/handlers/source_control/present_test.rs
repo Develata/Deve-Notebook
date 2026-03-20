@@ -69,7 +69,13 @@ fn expand_related_targets_preserves_doc_id_for_rename_pair() {
     ];
 
     assert_eq!(
-        expand_related_targets(&entries, &ScPathTarget::from_path("notes/new.md")),
+        expand_related_targets(
+            &entries,
+            &ScPathTarget {
+                path: "notes/new.md".into(),
+                doc_id: Some(doc_id),
+            },
+        ),
         vec![
             ScPathTarget {
                 path: "notes/new.md".into(),
@@ -113,7 +119,7 @@ fn resolve_target_prefers_rename_successor_over_reused_old_path() {
 
     assert_eq!(
         resolve_target_path(&entries, &ScPathTarget::from_path("notes/old.md")),
-        Some("notes/new.md".into())
+        None
     );
 }
 
