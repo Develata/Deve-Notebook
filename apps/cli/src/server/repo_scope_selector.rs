@@ -6,6 +6,7 @@
 //! - 本模块只负责把 session hint 收敛成可执行 selector；不负责最终 `RepoUUID` 解析。
 
 use super::repo_scope_remote::recover_remote_repo_name_from_selector;
+use super::repo_scope_error::stale_remote_scope_detail;
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
@@ -72,8 +73,11 @@ fn resolve_remote_repo_name_from_session(
             return Ok(Some(selector));
         }
         return Err(anyhow!(
-            "Remote repository selector not resolved for {}",
-            repo_name
+            "{}",
+            stale_remote_scope_detail(format!(
+                "Remote repository selector not resolved for {}",
+                repo_name
+            ))
         ));
     }
     let Some(repo_id) = session.active_repo_id else {
@@ -92,7 +96,10 @@ fn resolve_remote_repo_name_from_session(
         return Ok(Some(selector));
     }
     Err(anyhow!(
-        "Remote session lost repo name for bound repo {}",
-        repo_id
+        "{}",
+        stale_remote_scope_detail(format!(
+            "Remote session lost repo name for bound repo {}",
+            repo_id
+        ))
     ))
 }

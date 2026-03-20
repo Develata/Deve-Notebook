@@ -5,6 +5,12 @@ use crate::server::error_classify::{
 use anyhow::Error;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
+pub const STALE_REMOTE_SCOPE_PREFIX: &str = "stale remote scope:";
+
+pub fn stale_remote_scope_detail(detail: impl AsRef<str>) -> String {
+    format!("{STALE_REMOTE_SCOPE_PREFIX} {}", detail.as_ref())
+}
+
 pub fn map_repo_scope_error(error: Error) -> ServerError {
     let detail = error.to_string();
     let lower = detail.to_ascii_lowercase();

@@ -48,6 +48,14 @@ mod tests {
     }
 
     #[test]
+    fn clears_prefixed_stale_remote_scope_errors() {
+        assert!(should_clear_stale_remote_scope(&ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "stale remote scope: selector drifted after branch switch",
+        )));
+    }
+
+    #[test]
     fn preserves_non_stale_remote_context_errors() {
         assert!(!should_clear_stale_remote_scope(&ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,

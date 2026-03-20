@@ -78,19 +78,20 @@ pub(super) fn is_repo_context_invalid(lower: &str) -> bool {
 }
 
 pub(super) fn is_stale_remote_scope_context(lower: &str) -> bool {
-    contains_any(
-        lower,
-        &[
-            "remote session lost repo name",
-            "repository uuid not resolved",
-            "remote repository selector not resolved",
-            "session repo mismatch",
-            "repo selector mismatch",
-            "ambiguous remote repository selector",
-            "scope mismatch",
-            "stale scope nonce",
-        ],
-    )
+    lower.starts_with("stale remote scope:")
+        || contains_any(
+            lower,
+            &[
+                "remote session lost repo name",
+                "repository uuid not resolved",
+                "remote repository selector not resolved",
+                "session repo mismatch",
+                "repo selector mismatch",
+                "ambiguous remote repository selector",
+                "scope mismatch",
+                "stale scope nonce",
+            ],
+        )
 }
 
 fn contains_any(input: &str, patterns: &[&str]) -> bool {
