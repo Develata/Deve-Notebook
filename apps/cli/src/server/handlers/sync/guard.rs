@@ -70,7 +70,9 @@ pub(super) fn require_delivery_scope_nonce(
                     ServerErrorCode::ScRepoContextInvalid,
                     "sync scope nonce not bound",
                 ),
-                scope_nonce.or(session.is_browser_session().then_some(session.scope_nonce())),
+                scope_nonce.or(session
+                    .is_browser_session()
+                    .then_some(session.scope_nonce())),
             );
             None
         }

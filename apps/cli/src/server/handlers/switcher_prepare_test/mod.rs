@@ -75,7 +75,9 @@ fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Res
         .expect_err("local uuid string without repo_id must fail closed");
     assert!(
         err.to_string().contains("Local repo not found for name")
-            || err.to_string().contains("Local repository selector not resolved")
+            || err
+                .to_string()
+                .contains("Local repository selector not resolved")
     );
     Ok(())
 }
@@ -125,8 +127,8 @@ fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_
 }
 
 #[test]
-fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift()
--> anyhow::Result<()> {
+fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift() -> anyhow::Result<()>
+{
     let (dir, state) = build_state()?;
     let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");

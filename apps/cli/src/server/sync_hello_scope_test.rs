@@ -106,7 +106,9 @@ async fn sync_hello_rejects_non_browser_stale_sync_scope_nonce_rebind() -> anyho
     let remote = IdentityKeyPair::generate();
     let mut hello = signed_hello(&remote, repo_id);
     hello.scope_nonce = 9;
-    let local_handle = state.repo.open_database(None, state.repo.local_repo_name())?;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
@@ -146,7 +148,9 @@ async fn sync_hello_rejects_non_browser_unresolved_active_repo_selector() -> any
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
     let hello = signed_hello(&remote, repo_id);
-    let local_handle = state.repo.open_database(None, state.repo.local_repo_name())?;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();

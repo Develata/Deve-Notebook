@@ -50,11 +50,22 @@ impl RepoManager {
 
     pub fn ensure_shadow_repo_info(&self, peer_id: &PeerId, info: &RepoInfo) -> Result<()> {
         let desired = self.allocate_remote_repo_path(peer_id, info)?;
-        let db_path = match self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)? {
-            Some(entry) if entry.path == desired => entry.path,
-            Some(entry) => {
-                relocate_database_path(&entry.path, &desired)?;
-                std::fs::rename(&entry.path, &desired)?;
+        let legacy = self
+            .remotes_dir()
+            .join(peer_id.to_filename())
+            .join(format!("{}.redb", info.uuid));
+        let db_path = match if desired.exists() {
+            Some(desired.clone())
+        } else if legacy.exists() {
+            Some(legacy)
+        } else {
+            self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)?
+                .map(|entry| entry.path)
+        } {
+            Some(path) if path == desired => path,
+            Some(path) => {
+                relocate_database_path(&path, &desired)?;
+                std::fs::rename(&path, &desired)?;
                 self.detach_shadow_repo(peer_id, &info.uuid)?;
                 desired
             }

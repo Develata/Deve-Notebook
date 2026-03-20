@@ -9,10 +9,10 @@ use std::sync::Arc;
 #[path = "hello_scope.rs"]
 mod hello_scope;
 
+use self::hello_scope::validate_scope;
 use super::cleanup::{clear_invalid_sync_hello_scope, clear_stale_non_browser_sync_scope};
 use super::engine;
 use super::errors;
-use self::hello_scope::validate_scope;
 
 pub struct SyncHelloInput {
     pub peer_id: PeerId,

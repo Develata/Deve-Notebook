@@ -109,7 +109,7 @@ fn init_fails_closed_on_broken_shadow_catalogs() {
 }
 
 #[test]
-fn local_catalog_repair_leaves_irrecoverable_legacy_uuid_shadow_as_uuid_selector() {
+fn local_catalog_repair_does_not_make_legacy_shadow_runtime_readable() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
@@ -143,20 +143,13 @@ fn local_catalog_repair_leaves_irrecoverable_legacy_uuid_shadow_as_uuid_selector
     main.repair_local_repo_catalog()
         .expect("repair local catalog");
 
-    assert_eq!(
-        main.list_repos(Some(&peer_id))
-            .expect("list repaired shadows"),
-        vec![wiki_info.uuid.to_string()]
-    );
-    let selector = main
-        .find_remote_repo_selector_by_id(&peer_id, wiki_info.uuid)
-        .expect("resolve repaired shadow selector")
-        .expect("shadow selector");
     assert!(
-        main.remotes_dir()
-            .join(peer_id.to_filename())
-            .join(format!("{}.redb", selector))
-            .exists()
+        main.list_repos(Some(&peer_id))
+            .expect_err("runtime listing must stay fail-closed after local-only repair")
+            .to_string()
+            .contains(
+                format!("Broken shadow repo {} for peer {}", wiki_info.uuid, peer_id).as_str()
+            )
     );
 }
 
@@ -190,6 +183,8 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
 
     main.ensure_shadow_db(&peer_id, &wiki_info.uuid)
         .expect("create legacy uuid shadow");
+    main.repair_remote_repo_catalogs()
+        .expect("repair remote catalogs");
 
     let selectors = main
         .list_repos(Some(&peer_id))
@@ -229,10 +224,11 @@ fn remote_catalog_repair_fails_closed_on_broken_peer() {
         .expect_err("broken peer must fail remote catalog repair");
     assert!(err.to_string().contains("Broken shadow peer peer-bad"));
 
-    assert_eq!(
+    assert!(
         repo.list_repos(Some(&good_peer))
-            .expect("list healthy peer"),
-        vec![info.uuid.to_string()]
+            .expect_err("healthy peer must stay unreadable until repair completes")
+            .to_string()
+            .contains(format!("Broken shadow repo {} for peer {}", info.uuid, good_peer).as_str())
     );
     let err = repo
         .list_shadows_on_disk()

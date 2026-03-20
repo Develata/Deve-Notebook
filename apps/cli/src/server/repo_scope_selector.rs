@@ -64,8 +64,12 @@ fn resolve_remote_repo_name_from_session(
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));
         };
-        let selector =
-            recover_remote_repo_name_from_selector(state, branch, &repo_name, session.active_repo_id)?;
+        let selector = recover_remote_repo_name_from_selector(
+            state,
+            branch,
+            &repo_name,
+            session.active_repo_id,
+        )?;
         return Ok(Some(selector));
     }
     let Some(repo_id) = session.active_repo_id else {
