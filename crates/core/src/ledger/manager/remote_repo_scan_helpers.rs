@@ -8,16 +8,9 @@ use std::path::Path;
 pub(super) fn read_remote_repo_info_without_repair(
     _repo: &RepoManager,
     path: &Path,
-    stem: &str,
+    _stem: &str,
 ) -> Result<Option<RepoInfo>> {
-    if let Some(info) = RepoManager::read_repo_info_from_path(path)? {
-        return Ok(Some(info));
-    }
-    Ok(uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
-        uuid: repo_id,
-        name: stem.to_string(),
-        url: None,
-    }))
+    RepoManager::read_repo_info_from_path(path)
 }
 
 pub(super) fn scanned_remote_repo_info(

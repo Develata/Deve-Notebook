@@ -13,13 +13,6 @@ fn new_repo() -> (TempDir, RepoManager) {
     (dir, repo)
 }
 
-fn read_repo_info(db: &redb::Database) -> Option<RepoInfo> {
-    let read = db.begin_read().expect("read txn");
-    let table = read.open_table(REPO_METADATA).expect("repo metadata");
-    let raw = table.get(&0).expect("read metadata")?;
-    Some(bincode::deserialize(raw.value()).expect("deserialize repo info"))
-}
-
 #[test]
 fn runtime_remote_repo_listing_does_not_repair_legacy_remote_filename() {
     let (_dir, repo) = new_repo();
@@ -89,7 +82,7 @@ fn explicit_remote_catalog_repair_repairs_legacy_remote_filename() {
 }
 
 #[test]
-fn runtime_remote_repo_listing_keeps_legacy_uuid_shadow_metadata_absent() {
+fn runtime_remote_repo_listing_fails_closed_on_legacy_uuid_shadow_without_metadata() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let repo_id = Uuid::new_v4();
@@ -97,18 +90,21 @@ fn runtime_remote_repo_listing_keeps_legacy_uuid_shadow_metadata_absent() {
     repo.ensure_shadow_db(&peer_id, &repo_id)
         .expect("create legacy uuid shadow");
 
-    assert_eq!(
-        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
-        vec![repo_id.to_string()]
+    let list_err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("runtime listing must fail closed on metadata-less uuid shadow");
+    assert!(
+        list_err
+            .to_string()
+            .contains(format!("Broken shadow repo {} for peer {}", repo_id, peer_id).as_str())
     );
-    let handle = repo
-        .open_database(Some(&peer_id), &repo_id.to_string())
-        .expect("open legacy uuid shadow");
-    assert!(read_repo_info(handle.db.as_ref()).is_none());
-    assert_eq!(
-        repo.find_remote_repo_selector_by_id(&peer_id, repo_id)
-            .expect("resolve remote selector"),
-        Some(repo_id.to_string())
+    let open_err = match repo.open_database(Some(&peer_id), &repo_id.to_string()) {
+        Ok(_) => panic!("runtime open must fail closed on metadata-less uuid shadow"),
+        Err(err) => err,
+    };
+    assert!(
+        open_err
+            .to_string()
+            .contains(format!("Broken shadow repo {} for peer {}", repo_id, peer_id).as_str())
     );
-    assert!(read_repo_info(handle.db.as_ref()).is_none());
 }
