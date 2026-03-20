@@ -30,18 +30,14 @@ impl RepoManager {
         let mut repairs = Vec::new();
         for path in paths {
             let stem = Self::repo_stem_from_path(&path, "repairing remote catalog")?;
-            let repair = match repaired_remote_repo_info(&path, &stem) {
-                Ok(Some(repair)) => repair,
-                Ok(None) => continue,
-                Err(err) => {
-                    return Err(anyhow!(
-                        "Broken shadow repo {} for peer {} while repairing catalog: {}",
-                        stem,
-                        peer_id,
-                        err
-                    ));
-                }
-            };
+            let repair = repaired_remote_repo_info(&path, &stem).map_err(|err| {
+                anyhow!(
+                    "Broken shadow repo {} for peer {} while repairing catalog: {}",
+                    stem,
+                    peer_id,
+                    err
+                )
+            })?;
             repairs.push((path, repair));
         }
         let duplicate_ids = duplicate_catalog_ids(

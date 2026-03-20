@@ -28,10 +28,7 @@ pub(super) fn scanned_remote_repo_info(
     read_remote_repo_info_without_repair(repo, path, stem)
 }
 
-pub(super) fn repaired_remote_repo_info(
-    path: &Path,
-    stem: &str,
-) -> Result<Option<RemoteRepoCatalogInfo>> {
+pub(super) fn repaired_remote_repo_info(path: &Path, stem: &str) -> Result<RemoteRepoCatalogInfo> {
     let original = RepoManager::read_repo_info_from_path(path)?;
     let Some(mut info) = original.clone().or_else(|| {
         uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
@@ -40,7 +37,7 @@ pub(super) fn repaired_remote_repo_info(
             url: None,
         })
     }) else {
-        return Ok(None);
+        return Err(anyhow!("repo metadata missing and file stem is not a UUID"));
     };
     let mut write_back = original.is_none();
     if info.name.trim().is_empty() {
@@ -54,7 +51,7 @@ pub(super) fn repaired_remote_repo_info(
     if original.as_ref() != Some(&info) {
         write_back = true;
     }
-    Ok(Some(RemoteRepoCatalogInfo { info, write_back }))
+    Ok(RemoteRepoCatalogInfo { info, write_back })
 }
 
 pub(super) fn duplicate_catalog_ids(ids: Vec<uuid::Uuid>) -> HashSet<uuid::Uuid> {
