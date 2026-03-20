@@ -10,6 +10,12 @@ use std::rc::Rc;
 
 use super::super::types::HandshakeSignals;
 use super::handshake_bootstrap::restore_session_scope;
+#[path = "handshake_state.rs"]
+mod handshake_state;
+use self::handshake_state::{
+    handshake_mode_key, reset_handshake_attempt, should_restore_session_scope,
+    should_suspend_handshake,
+};
 
 /// 设置握手 Effect。
 pub fn setup(ws: &WsService, signals: HandshakeSignals) {
@@ -104,6 +110,8 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             .set_handshake_scope_nonce
             .set(Some(current_scope_nonce));
         let handshake_attempt = handshake_attempt.clone();
+        let failure_last_mode = last_mode.clone();
+        let failure_ws = ws.clone();
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());
@@ -141,6 +149,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                 Ok(bytes) => bytes,
                 Err(err) => {
                     leptos::logging::error!("序列化握手向量失败: {}", err);
+                    reset_handshake_attempt(&failure_last_mode, &failure_ws, signals);
                     return;
                 }
             };
@@ -182,51 +191,23 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                                 scope_nonce: current_scope_nonce,
                             });
                         }
-                        Err(err) => leptos::logging::error!(
-                            "跳过 SyncHello: 非法 repo_id {} ({})",
-                            identity.repo_id,
-                            err
-                        ),
+                        Err(err) => {
+                            leptos::logging::error!(
+                                "跳过 SyncHello: 非法 repo_id {} ({})",
+                                identity.repo_id,
+                                err
+                            );
+                            reset_handshake_attempt(&failure_last_mode, &failure_ws, signals);
+                        }
                     }
                 }
-                Err(err) => leptos::logging::error!("WebCrypto 握手签名失败: {}", err),
+                Err(err) => {
+                    leptos::logging::error!("WebCrypto 握手签名失败: {}", err);
+                    reset_handshake_attempt(&failure_last_mode, &failure_ws, signals);
+                }
             }
         });
     });
-}
-
-fn handshake_mode_key(
-    endpoint: &str,
-    degraded: Option<()>,
-    repo_id: Option<&str>,
-    branch: Option<&PeerId>,
-) -> Option<String> {
-    degraded
-        .map(|_| format!("{endpoint}::degraded"))
-        .or_else(|| {
-            repo_id.map(|repo_id| {
-                let branch_key = branch
-                    .map(PeerId::to_string)
-                    .unwrap_or_else(|| "local".to_string());
-                format!("{endpoint}::{repo_id}::{branch_key}")
-            })
-        })
-}
-
-fn should_suspend_handshake(
-    branch: &Option<PeerId>,
-    pending_branch_switch: Option<&super::super::PendingBranchTarget>,
-    pending_repo_switch: Option<&str>,
-) -> bool {
-    branch.is_some() || pending_branch_switch.is_some() || pending_repo_switch.is_some()
-}
-
-fn should_restore_session_scope(
-    is_reconnect_bootstrap: bool,
-    pending_branch_switch: Option<&super::super::PendingBranchTarget>,
-    pending_repo_switch: Option<&str>,
-) -> bool {
-    is_reconnect_bootstrap && pending_branch_switch.is_none() && pending_repo_switch.is_none()
 }
 
 #[cfg(test)]
