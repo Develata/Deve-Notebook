@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::engine;
 use super::errors;
-use super::guard::{require_bound_peer, require_current_sync_scope};
+use super::guard::{require_bound_peer, require_current_sync_scope, require_delivery_scope_nonce};
 
 pub(super) async fn handle_request(
     state: &Arc<AppState>,
@@ -36,6 +36,10 @@ pub(super) async fn handle_request(
 
     match engine.get_snapshot_for_sync(&request) {
         Ok(response) => {
+            let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope)
+            else {
+                return;
+            };
             tracing::info!(
                 "Sending snapshot with {} ops to {}",
                 response.ops.len(),
@@ -44,7 +48,7 @@ pub(super) async fn handle_request(
             ch.unicast(ServerMessage::SyncPushSnapshot {
                 peer_id: engine.local_peer_id.clone(),
                 repo_id: response.repo_id,
-                scope_nonce: scope.unwrap_or_default(),
+                scope_nonce: delivery_scope_nonce,
                 branch: session.active_branch.clone(),
                 ops: response.ops,
             });

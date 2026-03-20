@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use super::engine;
 use super::errors;
-use super::guard::{require_bound_peer, require_current_sync_scope};
+use super::guard::{require_bound_peer, require_current_sync_scope, require_delivery_scope_nonce};
 
 pub(super) async fn handle_request(
     state: &Arc<AppState>,
@@ -65,9 +65,12 @@ pub(super) async fn handle_request(
     }
 
     if !ops_to_push.is_empty() {
+        let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope) else {
+            return;
+        };
         ch.unicast(ServerMessage::SyncPush {
             repo_id,
-            scope_nonce: scope.unwrap_or_default(),
+            scope_nonce: delivery_scope_nonce,
             branch: session.active_branch.clone(),
             ops: ops_to_push,
         });

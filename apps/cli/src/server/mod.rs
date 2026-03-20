@@ -124,6 +124,8 @@ mod sync_hello_browser_test;
 mod sync_hello_test;
 #[cfg(test)]
 mod sync_scope_cleanup_test;
+#[cfg(test)]
+mod sync_transfer_scope_test;
 mod tree_state;
 pub mod ws;
 

@@ -53,6 +53,27 @@ pub(super) fn require_bound_peer(
     Some(peer_id)
 }
 
+pub(super) fn require_delivery_scope_nonce(
+    ch: &DualChannel,
+    session: &mut WsSession,
+    scope_nonce: Option<u64>,
+) -> Option<u64> {
+    if let Some(scope_nonce) = scope_nonce {
+        return Some(scope_nonce);
+    }
+    match session.sync_scope_nonce() {
+        Some(scope_nonce) => Some(scope_nonce),
+        None => {
+            clear_remote_unbound_state(session);
+            ch.send_protocol_error(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                "sync scope nonce not bound",
+            ));
+            None
+        }
+    }
+}
+
 fn validate_browser_sync_scope(session: &mut WsSession) -> Result<u64, ServerError> {
     let scope_nonce = session.scope_nonce();
     let Some(sync_scope_nonce) = session.sync_scope_nonce() else {
