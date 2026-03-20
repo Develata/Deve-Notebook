@@ -12,12 +12,14 @@ use leptos::prelude::*;
 mod buffered_ops;
 mod delta_input;
 pub mod ffi;
+mod handshake_reset;
 pub mod hook;
 mod message_effect;
 pub mod op_id;
 mod open_scope;
 pub mod playback;
 pub mod prefetch;
+mod request_key;
 pub mod sync;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

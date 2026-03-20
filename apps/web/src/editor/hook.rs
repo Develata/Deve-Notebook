@@ -11,13 +11,15 @@
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
 use super::EditorStats;
-use super::buffered_ops::clear_locked_vec;
+use super::buffered_ops::clear_sync_buffers;
 use super::delta_input::{DeltaInputCtx, build_on_delta};
 use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
+use super::handshake_reset::{HandshakeResetCtx, setup_handshake_reset_effect};
 use super::message_effect;
 use super::open_scope::{OpenDocScope, can_open_doc};
 use super::playback;
-use crate::api::{ConnectionStatus, WsService};
+use super::request_key::setup_request_key_effect;
+use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
@@ -97,8 +99,12 @@ pub fn use_editor(
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
         let _ = open_session_generation.fetch_add(1, Ordering::Relaxed);
         open_ready_generation.store(0, Ordering::Relaxed);
-        clear_locked_vec(&open_buffered_live_ops, "清空 buffered live ops");
-        clear_locked_vec(&open_buffered_encrypted_ops, "清空 buffered encrypted ops");
+        clear_sync_buffers(
+            &open_buffered_live_ops,
+            &open_buffered_encrypted_ops,
+            "清空 buffered live ops",
+            "清空 buffered encrypted ops",
+        );
         set_read_only(true);
         set_local_version.set(0);
         set_open_request_id.set(request_id);
@@ -115,21 +121,7 @@ pub fn use_editor(
         });
     });
 
-    // E2EE: 仅在当前 repo 握手完成后请求 RepoKey
-    let ws_key = ws.clone();
-    let handshake_ready_for_key = core.handshake_ready;
-    let active_branch_for_key = core.active_branch;
-    Effect::new(move |_| {
-        if active_branch_for_key.get().is_some() || !handshake_ready_for_key.get() {
-            set_repo_key.set(None);
-            return;
-        }
-        if ws_key.status.get() == ConnectionStatus::Connected {
-            ws_key.send(ClientMessage::RequestKey {
-                scope_nonce: Some(core.current_scope_nonce.get()),
-            });
-        }
-    });
+    setup_request_key_effect(ws.clone(), core.clone(), set_repo_key);
 
     // 同步本地版本到 Core
     Effect::new(move |_| {
@@ -155,6 +147,14 @@ pub fn use_editor(
         set_playback_version,
         on_stats: on_stats.clone(),
         repo_key,
+        set_repo_key,
+    });
+    setup_handshake_reset_effect(HandshakeResetCtx {
+        ws: ws.clone(),
+        core: core.clone(),
+        ready_generation: ready_generation.clone(),
+        buffered_live_ops: buffered_live_ops.clone(),
+        buffered_encrypted_ops: buffered_encrypted_ops.clone(),
         set_repo_key,
     });
 
@@ -199,12 +199,10 @@ pub fn use_editor(
     on_cleanup(move || {
         let _ = cleanup_session_generation.fetch_add(1, Ordering::Relaxed);
         cleanup_ready_generation.store(0, Ordering::Relaxed);
-        clear_locked_vec(
+        clear_sync_buffers(
             &cleanup_buffered_live_ops,
-            "编辑器清理时忽略 buffered live ops",
-        );
-        clear_locked_vec(
             &cleanup_buffered_encrypted_ops,
+            "编辑器清理时忽略 buffered live ops",
             "编辑器清理时忽略 buffered encrypted ops",
         );
         destroyEditor();

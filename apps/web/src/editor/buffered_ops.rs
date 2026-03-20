@@ -7,3 +7,13 @@ pub fn clear_locked_vec<T>(buffer: &Arc<Mutex<Vec<T>>>, label: &str) {
         Err(_) => leptos::logging::warn!("忽略 {}: 锁已损坏", label),
     }
 }
+
+pub fn clear_sync_buffers<T, U>(
+    live_ops: &Arc<Mutex<Vec<T>>>,
+    encrypted_ops: &Arc<Mutex<Vec<U>>>,
+    live_label: &str,
+    encrypted_label: &str,
+) {
+    clear_locked_vec(live_ops, live_label);
+    clear_locked_vec(encrypted_ops, encrypted_label);
+}

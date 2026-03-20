@@ -95,10 +95,9 @@ fn recover_repo_selector(
 
 fn missing_repo_uuid_detail(branch: Option<&PeerId>, repo_name: &str) -> String {
     match branch {
-        Some(_) => stale_remote_scope_detail(format!(
-            "Repository UUID not resolved for {}",
-            repo_name
-        )),
+        Some(_) => {
+            stale_remote_scope_detail(format!("Repository UUID not resolved for {}", repo_name))
+        }
         None => format!("Repository UUID not resolved for {}", repo_name),
     }
 }
