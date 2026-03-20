@@ -19,7 +19,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)>
     repo.set_vault_root(&vault);
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, local_info.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;

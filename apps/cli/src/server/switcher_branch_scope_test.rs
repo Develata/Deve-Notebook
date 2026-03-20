@@ -40,7 +40,7 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
         .get_repo_info_for(None, Some("notes"))?
         .expect("local repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, local.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &local)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -109,10 +109,8 @@ async fn switch_branch_fails_closed_when_target_branch_lacks_current_repo_match(
     let peer_id = PeerId::new("peer-remote");
     state
         .repo
-        .ensure_shadow_repo_binding(&peer_id, default_info.uuid)?;
-    state
-        .repo
-        .ensure_shadow_repo_binding(&peer_id, notes_info.uuid)?;
+        .ensure_shadow_repo_info(&peer_id, &default_info)?;
+    state.repo.ensure_shadow_repo_info(&peer_id, &notes_info)?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);

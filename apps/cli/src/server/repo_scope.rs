@@ -93,12 +93,31 @@ pub fn resolve_session_repo_and_sync(
             return Err(err);
         }
     };
+    if runtime_binding_mismatch(session, &scope) {
+        session.clear_active_db();
+        session.clear_sync_binding();
+    }
     if session.active_repo.as_deref() != Some(scope.repo_name.as_str())
         || session.active_repo_id != Some(scope.repo_id)
     {
         session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
     }
     Ok(scope)
+}
+
+fn runtime_binding_mismatch(session: &WsSession, scope: &ResolvedRepo) -> bool {
+    let active_db_mismatch = session.get_active_db().is_some()
+        && session
+            .active_db_for(scope.branch.as_ref(), &scope.repo_name, Some(scope.repo_id))
+            .is_none();
+    let bound_repo_mismatch = session
+        .bound_repo_id
+        .is_some_and(|repo_id| repo_id != scope.repo_id);
+    let writer_mismatch = session
+        .writer_identity
+        .as_ref()
+        .is_some_and(|writer| writer.repo_id != scope.repo_id);
+    active_db_mismatch || bound_repo_mismatch || writer_mismatch
 }
 
 /// 将当前 resolved scope 收敛到本地可写仓库。

@@ -89,7 +89,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     repo.set_vault_root(&vault);
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, local_info.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
     let db = repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
     txn.open_table(REPO_METADATA)?

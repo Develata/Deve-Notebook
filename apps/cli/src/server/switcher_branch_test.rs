@@ -138,7 +138,7 @@ async fn switch_branch_accepts_shadow_peer_even_if_local_repo_stem_matches() -> 
     let local = RepoManager::init(dir.path(), 10, Some("peer-remote"), Some("urn:local:peer"))?;
     let local_info = local.get_repo_info()?.expect("local peer repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, local_info.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -179,9 +179,7 @@ async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Resul
         .get_repo_info()?
         .expect("local repo info must exist");
     let peer_id = PeerId::new("peer-remote");
-    state
-        .repo
-        .ensure_shadow_repo_binding(&peer_id, local.uuid)?;
+    state.repo.ensure_shadow_repo_info(&peer_id, &local)?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();

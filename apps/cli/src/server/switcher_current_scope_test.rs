@@ -21,7 +21,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
     let default_info = repo.get_repo_info()?.expect("default repo info");
     RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, default_info.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &default_info)?;
 
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
@@ -83,7 +83,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid() 
     repo.set_vault_root(&vault);
     let default_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, default_info.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &default_info)?;
 
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
@@ -146,7 +146,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_stale_name(
     repo.set_vault_root(&vault);
     let default_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_binding(&peer_id, default_info.uuid)?;
+    repo.ensure_shadow_repo_info(&peer_id, &default_info)?;
 
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
