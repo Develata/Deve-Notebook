@@ -39,6 +39,7 @@ pub(super) fn is_storage_corruption(lower: &str) -> bool {
         || contains_any(
             lower,
             &[
+                "broken remote repo",
                 "broken remote repo catalog",
                 "remote repo directory missing",
                 "broken repo entry",

@@ -35,3 +35,38 @@ fn resolve_requested_repo_name_fails_closed_when_remote_display_name_is_ambiguou
     );
     Ok(())
 }
+
+#[test]
+fn select_target_repo_fails_closed_when_remote_url_recovery_sees_repo_without_url()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let peer_id = PeerId::new("peer-remote");
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "notes".into(),
+            url: Some("urn:test:notes".into()),
+        },
+    )?;
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: uuid::Uuid::new_v4(),
+            name: "broken".into(),
+            url: None,
+        },
+    )?;
+
+    let err = super::select_target_repo(
+        &state,
+        false,
+        None,
+        None,
+        Some("urn:test:notes".into()),
+        Some(&peer_id),
+    )
+    .expect_err("remote URL recovery must fail closed on missing candidate URL");
+    assert!(err.to_string().contains("repository URL not resolved"));
+    Ok(())
+}

@@ -27,15 +27,29 @@ pub(super) fn resolve_current_branch_switch_context(
         }
     };
     let repo_url = match scope.as_ref() {
-        Some(scope) => state
+        Some(scope) => match state
             .repo
             .get_repo_url(scope.branch.as_ref(), &scope.repo_name)
-            .map_err(|err| {
-                map_repo_scope_error(anyhow::anyhow!(
+        {
+            Ok(Some(url)) => Some(url),
+            Ok(None) => {
+                let kind = if scope.branch.is_some() {
+                    "remote"
+                } else {
+                    "local"
+                };
+                return Err(map_repo_scope_error(anyhow::anyhow!(
+                    "Broken {kind} repo {} while resolving current repo URL before branch switch: repository URL missing",
+                    scope.repo_name
+                )));
+            }
+            Err(err) => {
+                return Err(map_repo_scope_error(anyhow::anyhow!(
                     "Failed to resolve current repo URL before branch switch: {}",
                     err
-                ))
-            })?,
+                )));
+            }
+        },
         None => recover_local_repo_url_from_hint(state, session)?,
     };
     Ok(CurrentBranchSwitchContext { scope, repo_url })

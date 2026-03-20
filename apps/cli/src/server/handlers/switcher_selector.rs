@@ -23,8 +23,7 @@ pub(super) fn select_target_repo(
         );
     }
     if let Some(repo_name) = current_repo_name {
-        let exact_selector =
-            recover_selector_from_raw_name_for_switch(state, target_branch, repo_name)?;
+        let exact_selector = recover_selector_from_raw_name(state, target_branch, repo_name)?;
         if let Some(exact_selector) = exact_selector {
             if let Some(repo_id) = current_repo_id
                 && let Some(selector_by_id) =
@@ -76,9 +75,7 @@ pub(super) fn resolve_requested_repo_name(
     repo_name: &str,
     repo_id: Option<RepoId>,
 ) -> Result<Option<String>> {
-    if let Some(exact_selector) =
-        recover_selector_from_raw_name_for_switch(state, branch, repo_name)?
-    {
+    if let Some(exact_selector) = recover_selector_from_raw_name(state, branch, repo_name)? {
         if let Some(repo_id) = repo_id {
             match select_repo_selector_by_id(state, branch, repo_id)? {
                 Some(selector_by_id) if selector_by_id != exact_selector => {
@@ -130,7 +127,16 @@ fn select_target_repo_by_url(
     let mut matches = Vec::new();
     for repo_name in &repos {
         let Some(repo_url) = state.repo.get_repo_url(target_branch, repo_name)? else {
-            continue;
+            let scope = if target_branch.is_some() {
+                "remote"
+            } else {
+                "local"
+            };
+            return Err(anyhow!(
+                "Broken {scope} repo {} while resolving target repository by URL {}: repository URL not resolved",
+                repo_name,
+                url
+            ));
         };
         if repo_url == url {
             matches.push(repo_name.clone());
@@ -187,14 +193,6 @@ fn recover_selector_from_raw_name(
         .repo
         .find_remote_repo_selector(branch, raw_repo_name)?
         .filter(|selector| selector == raw_repo_name))
-}
-
-fn recover_selector_from_raw_name_for_switch(
-    state: &Arc<AppState>,
-    branch: Option<&PeerId>,
-    raw_repo_name: &str,
-) -> Result<Option<String>> {
-    recover_selector_from_raw_name(state, branch, raw_repo_name)
 }
 
 fn can_defer_to_repo_id_for_display_collision(

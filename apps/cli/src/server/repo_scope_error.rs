@@ -84,6 +84,14 @@ mod tests {
     }
 
     #[test]
+    fn classifies_broken_remote_repo_as_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Broken remote repo wiki while resolving current repo URL before branch switch: repository URL missing"
+        ));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
+
+    #[test]
     fn classifies_missing_local_selector_as_repo_context_invalid() {
         let err = map_repo_scope_error(anyhow::anyhow!(
             "Local repository selector not resolved for stale-name"
