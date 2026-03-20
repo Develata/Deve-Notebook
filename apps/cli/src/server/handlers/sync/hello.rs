@@ -3,12 +3,16 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-use super::cleanup::clear_invalid_sync_hello_scope;
+#[path = "hello_scope.rs"]
+mod hello_scope;
+
+use super::cleanup::{clear_invalid_sync_hello_scope, clear_stale_non_browser_sync_scope};
 use super::engine;
 use super::errors;
+use self::hello_scope::validate_scope;
 
 pub struct SyncHelloInput {
     pub peer_id: PeerId,
@@ -36,9 +40,13 @@ pub(super) async fn handle(
     tracing::info!("Handling SyncHello from {} for repo {}", peer_id, repo_id);
     let scope = session.is_browser_session().then_some(scope_nonce);
 
-    if let Err(error) = validate_scope(session, &peer_id, repo_id, scope_nonce) {
-        clear_invalid_sync_hello_scope(session);
-        ch.send_protocol_error_with_scope_nonce(error, scope);
+    if let Err(failure) = validate_scope(session, &peer_id, repo_id, scope_nonce) {
+        if failure.clear_active_repo {
+            clear_invalid_sync_hello_scope(session);
+        } else {
+            clear_stale_non_browser_sync_scope(session);
+        }
+        ch.send_protocol_error_with_scope_nonce(failure.error, scope);
         return;
     }
 
@@ -157,79 +165,4 @@ pub(super) async fn handle(
             ops: ops_to_push,
         });
     }
-}
-
-fn validate_scope(
-    session: &WsSession,
-    peer_id: &PeerId,
-    repo_id: RepoId,
-    scope_nonce: u64,
-) -> Result<(), ServerError> {
-    if !session.is_browser_session() {
-        if let Some(active_branch) = session.active_branch.as_ref()
-            && active_branch != peer_id
-        {
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                format!(
-                    "SyncHello peer mismatch: active_branch={}, requested_peer_id={}",
-                    active_branch, peer_id
-                ),
-            ));
-        }
-        if let Some(authenticated_peer_id) = session.authenticated_peer_id.as_ref()
-            && authenticated_peer_id != peer_id
-        {
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                format!(
-                    "SyncHello peer mismatch: authenticated_peer_id={}, requested_peer_id={}",
-                    authenticated_peer_id, peer_id
-                ),
-            ));
-        }
-        if let Some(bound_repo_id) = session.bound_repo_id
-            && bound_repo_id != repo_id
-        {
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                format!(
-                    "SyncHello repo mismatch: bound_repo_id={}, requested_repo_id={}",
-                    bound_repo_id, repo_id
-                ),
-            ));
-        }
-        if let Some(active_repo_id) = session.active_repo_id
-            && active_repo_id != repo_id
-        {
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                format!(
-                    "SyncHello repo mismatch: active_repo_id={}, requested_repo_id={}",
-                    active_repo_id, repo_id
-                ),
-            ));
-        }
-        return Ok(());
-    }
-    if session.active_branch.is_some() || session.active_repo_id != Some(repo_id) {
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            format!(
-                "Browser SyncHello scope mismatch: active_branch={:?}, active_repo_id={:?}, requested_repo_id={}",
-                session.active_branch, session.active_repo_id, repo_id
-            ),
-        ));
-    }
-    if session.scope_nonce() != scope_nonce {
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            format!(
-                "Browser SyncHello stale scope nonce: current_scope_nonce={}, requested_scope_nonce={}",
-                session.scope_nonce(),
-                scope_nonce
-            ),
-        ));
-    }
-    Ok(())
 }

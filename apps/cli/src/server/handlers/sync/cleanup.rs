@@ -5,6 +5,13 @@ pub(super) fn clear_remote_unbound_state(session: &mut WsSession) {
     session.clear_sync_binding();
 }
 
+pub(super) fn clear_stale_non_browser_sync_scope(session: &mut WsSession) {
+    if session.is_browser_session() {
+        return;
+    }
+    clear_remote_unbound_state(session);
+}
+
 pub(super) fn clear_stale_browser_sync_scope(session: &mut WsSession) {
     if !session.is_browser_session() {
         return;
@@ -18,7 +25,6 @@ pub(super) fn clear_invalid_sync_hello_scope(session: &mut WsSession) {
         clear_stale_browser_sync_scope(session);
         return;
     }
-    session.clear_active_db();
-    session.clear_sync_binding();
+    clear_stale_non_browser_sync_scope(session);
     session.clear_active_repo();
 }

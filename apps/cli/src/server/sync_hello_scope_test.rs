@@ -99,3 +99,84 @@ async fn sync_hello_rejects_non_browser_active_branch_peer_mismatch() -> anyhow:
     assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_non_browser_stale_sync_scope_nonce_rebind() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello(&remote, repo_id);
+    hello.scope_nonce = 9;
+    let local_handle = state.repo.open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo("default".into(), Some(repo_id));
+    session.set_active_db(local_handle);
+    session.set_authenticated(remote.peer_id());
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(3);
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("current_sync_scope_nonce")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(repo_id));
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_non_browser_unresolved_active_repo_selector() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let hello = signed_hello(&remote, repo_id);
+    let local_handle = state.repo.open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo("stale-notes".into(), None);
+    session.set_active_db(local_handle);
+    session.set_authenticated(remote.peer_id());
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(5);
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("selector not resolved")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    Ok(())
+}

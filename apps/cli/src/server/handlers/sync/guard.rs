@@ -65,10 +65,13 @@ pub(super) fn require_delivery_scope_nonce(
         Some(scope_nonce) => Some(scope_nonce),
         None => {
             clear_remote_unbound_state(session);
-            ch.send_protocol_error(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                "sync scope nonce not bound",
-            ));
+            ch.send_protocol_error_with_scope_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::ScRepoContextInvalid,
+                    "sync scope nonce not bound",
+                ),
+                scope_nonce.or(session.is_browser_session().then_some(session.scope_nonce())),
+            );
             None
         }
     }

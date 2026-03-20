@@ -21,19 +21,7 @@ pub(super) async fn handle_request(
     let Some(scope) = require_current_sync_scope(ch, session) else {
         return;
     };
-    if !session.is_repo_bound(&repo_id) {
-        super::cleanup::clear_remote_unbound_state(session);
-        tracing::warn!(
-            "SyncRequest repo mismatch: session bound to {:?}, got {}",
-            session.bound_repo_id,
-            repo_id
-        );
-        ch.send_protocol_error_with_scope_nonce(
-            deve_core::protocol::ServerError::new(
-                deve_core::protocol::ServerErrorCode::SyncRepoUnbound,
-            ),
-            scope,
-        );
+    if require_bound_peer(ch, session, repo_id, scope).is_none() {
         return;
     }
 

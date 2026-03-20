@@ -146,3 +146,35 @@ async fn non_browser_sync_request_rejects_missing_sync_scope_nonce() -> anyhow::
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn non_browser_sync_request_rejects_missing_authenticated_peer_even_when_repo_bound()
+-> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    append_local_doc(&state)?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(23);
+
+    handle_sync_request(
+        &state,
+        &ch,
+        &mut session,
+        repo_id,
+        vec![(PeerId::new("test-peer"), (1, 2))],
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
