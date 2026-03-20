@@ -170,7 +170,14 @@ fn resolve_local_counterpart_repo_requires_uuid_or_url_match() -> anyhow::Result
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let remote_repo_id = uuid::Uuid::new_v4();
-    seed_remote_shadow(&state, &peer_id, remote_repo_id, "test")?;
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &deve_core::ledger::RepoInfo {
+            uuid: remote_repo_id,
+            name: "test".into(),
+            url: Some("urn:remote-only".into()),
+        },
+    )?;
 
     let local = resolve_local_counterpart_repo(
         &state,
@@ -182,6 +189,34 @@ fn resolve_local_counterpart_repo_requires_uuid_or_url_match() -> anyhow::Result
     )?;
 
     assert!(local.is_none());
+    Ok(())
+}
+
+#[test]
+fn resolve_local_counterpart_repo_fails_closed_when_resolved_remote_scope_has_no_url()
+-> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    let remote_repo_id = uuid::Uuid::new_v4();
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &deve_core::ledger::RepoInfo {
+            uuid: remote_repo_id,
+            name: "shadow-no-url".into(),
+            url: None,
+        },
+    )?;
+
+    let err = resolve_local_counterpart_repo(
+        &state,
+        &super::repo_scope::ResolvedRepo {
+            repo_id: remote_repo_id,
+            repo_name: "shadow-no-url".into(),
+            branch: Some(peer_id),
+        },
+    )
+    .expect_err("remote scope without URL must fail closed");
+    assert!(err.to_string().contains("repository URL missing"));
     Ok(())
 }
 

@@ -136,7 +136,10 @@ pub fn resolve_local_counterpart_repo(
         .repo
         .get_repo_url(scope.branch.as_ref(), &scope.repo_name)?
     else {
-        return Ok(None);
+        return Err(anyhow!(
+            "Broken remote repo {} while resolving local counterpart: repository URL missing",
+            scope.repo_name
+        ));
     };
     let Some(repo_name) = state.repo.find_local_repo_name_by_url(&url)? else {
         return Ok(None);
