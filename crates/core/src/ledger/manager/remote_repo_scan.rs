@@ -141,11 +141,8 @@ impl RepoManager {
             return Ok(Some(entry));
         }
         reject_duplicate_remote_matches(selector, &by_id, &duplicate_ids)?;
-        if let Some(entry) = single_remote_entry(by_id) {
-            return Ok(Some(entry));
-        }
         reject_duplicate_remote_matches(selector, &by_name, &duplicate_ids)?;
-        Ok(single_remote_entry(by_name))
+        Ok(single_remote_entry(by_id))
     }
 
     pub fn find_remote_repo_selector_by_id(
