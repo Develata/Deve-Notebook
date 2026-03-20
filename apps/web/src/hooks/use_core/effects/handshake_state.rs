@@ -20,6 +20,9 @@ pub(super) fn reset_handshake_attempt_state(
     signals: HandshakeSignals,
 ) {
     *last_mode.borrow_mut() = None;
+    signals.set_repo_list_request_id.set(None);
+    signals.set_doc_list_request_id.set(None);
+    signals.set_tree_request_id.set(None);
     signals.set_handshake_ready.set(false);
     signals.set_handshake_scope_nonce.set(None);
 }

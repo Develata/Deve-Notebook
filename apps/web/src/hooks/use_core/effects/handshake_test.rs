@@ -71,9 +71,9 @@ fn reset_handshake_attempt_state_clears_retry_blockers() {
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
     let (_pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
     let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(Some(7u64));
-    let (_repo_list_request_id, set_repo_list_request_id) = signal(None::<String>);
-    let (_doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
-    let (_tree_request_id, set_tree_request_id) = signal(None::<String>);
+    let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));
+    let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
+    let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
     let (handshake_ready, set_handshake_ready) = signal(true);
 
     let signals = HandshakeSignals {
@@ -103,4 +103,7 @@ fn reset_handshake_attempt_state_clears_retry_blockers() {
     assert!(last_mode.borrow().is_none());
     assert!(!handshake_ready.get_untracked());
     assert_eq!(handshake_scope_nonce.get_untracked(), None);
+    assert_eq!(repo_list_request_id.get_untracked(), None);
+    assert_eq!(doc_list_request_id.get_untracked(), None);
+    assert_eq!(tree_request_id.get_untracked(), None);
 }

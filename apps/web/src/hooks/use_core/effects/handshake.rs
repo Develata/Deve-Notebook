@@ -26,6 +26,9 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
     let handshake_attempt = Rc::new(Cell::new(0u64));
 
     Effect::new(move |_| {
+        // 失败重置会把 handshake_scope_nonce 清回 None；这里显式订阅它，
+        // 以便同一 scope 内的握手准备失败后能重新触发一次 attempt。
+        let _handshake_retry_gate = signals.handshake_scope_nonce.get();
         let next_attempt = handshake_attempt.get().saturating_add(1);
         handshake_attempt.set(next_attempt);
         if status_signal.get() != ConnectionStatus::Connected {
