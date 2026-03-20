@@ -1,8 +1,8 @@
 use crate::ledger::range;
 use crate::models::{DocId, LedgerEvent, NodeId, StructureOp};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 struct NodeState {
     name: String,
@@ -16,19 +16,23 @@ pub(super) fn doc_paths_at_seq(db: &Database, seq: u64) -> Result<HashMap<DocId,
         let LedgerEvent::Structure(op) = entry.event else {
             continue;
         };
-        apply_structure(&mut nodes, op);
+        apply_structure(&mut nodes, op)?;
     }
     let mut cache = HashMap::<NodeId, String>::new();
+    let mut visiting = HashSet::<NodeId>::new();
     let mut paths = HashMap::<DocId, String>::new();
     for (node_id, state) in &nodes {
         if let Some(doc_id) = state.doc_id {
-            paths.insert(doc_id, path_for(*node_id, &nodes, &mut cache));
+            paths.insert(
+                doc_id,
+                path_for(*node_id, &nodes, &mut cache, &mut visiting)?,
+            );
         }
     }
     Ok(paths)
 }
 
-fn apply_structure(nodes: &mut HashMap<NodeId, NodeState>, op: StructureOp) {
+fn apply_structure(nodes: &mut HashMap<NodeId, NodeState>, op: StructureOp) -> Result<()> {
     match op {
         StructureOp::CreateFile {
             node_id,
@@ -62,21 +66,30 @@ fn apply_structure(nodes: &mut HashMap<NodeId, NodeState>, op: StructureOp) {
         StructureOp::RenameNode {
             node_id, new_name, ..
         } => {
-            if let Some(state) = nodes.get_mut(&node_id) {
-                state.name = new_name;
-            }
+            let state = nodes.get_mut(&node_id).ok_or_else(|| {
+                anyhow!(
+                    "Commit diff structure rename references missing node {}",
+                    node_id
+                )
+            })?;
+            state.name = new_name;
         }
         StructureOp::MoveNode {
             node_id,
             new_parent_id,
             ..
         } => {
-            if let Some(state) = nodes.get_mut(&node_id) {
-                state.parent_id = new_parent_id;
-            }
+            let state = nodes.get_mut(&node_id).ok_or_else(|| {
+                anyhow!(
+                    "Commit diff structure move references missing node {}",
+                    node_id
+                )
+            })?;
+            state.parent_id = new_parent_id;
         }
         StructureOp::DeleteNode { node_id, .. } => remove_subtree(nodes, node_id),
     }
+    Ok(())
 }
 
 fn remove_subtree(nodes: &mut HashMap<NodeId, NodeState>, root: NodeId) {
@@ -95,16 +108,27 @@ fn path_for(
     node_id: NodeId,
     nodes: &HashMap<NodeId, NodeState>,
     cache: &mut HashMap<NodeId, String>,
-) -> String {
+    visiting: &mut HashSet<NodeId>,
+) -> Result<String> {
     if let Some(path) = cache.get(&node_id) {
-        return path.clone();
+        return Ok(path.clone());
+    }
+    if !visiting.insert(node_id) {
+        return Err(anyhow!(
+            "Commit diff structure contains cycle at node {}",
+            node_id
+        ));
     }
     let Some(state) = nodes.get(&node_id) else {
-        return String::new();
+        visiting.remove(&node_id);
+        return Err(anyhow!(
+            "Commit diff structure references missing node {}",
+            node_id
+        ));
     };
     let path = match state.parent_id {
         Some(parent_id) if nodes.contains_key(&parent_id) => {
-            let parent_path = path_for(parent_id, nodes, cache);
+            let parent_path = path_for(parent_id, nodes, cache, visiting)?;
             if parent_path.is_empty() {
                 state.name.clone()
             } else {
@@ -113,6 +137,7 @@ fn path_for(
         }
         _ => state.name.clone(),
     };
+    visiting.remove(&node_id);
     cache.insert(node_id, path.clone());
-    path
+    Ok(path)
 }

@@ -1,6 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, NodeId, Op, PeerId, StructureOp};
 use deve_core::sync::SyncManager;
 use redb::ReadableTable;
 use tempfile::TempDir;
@@ -134,4 +134,26 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
         Ok(())
     })
     .expect("verify rebuilt projection");
+}
+
+#[test]
+fn rebuild_projection_fails_closed_on_missing_structure_targets() {
+    let (dir, repo) = new_repo();
+    repo.append_local_op(&LedgerEntry::new_structure(
+        StructureOp::RenameNode {
+            node_id: NodeId::new(),
+            doc_id: None,
+            new_name: "broken".into(),
+        },
+        1,
+        PeerId::new("test"),
+        1,
+    ))
+    .expect("append malformed structure op");
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let err = sync
+        .rebuild_projection_local_repo("default")
+        .expect_err("malformed structure facts must fail closed");
+    assert!(err.to_string().contains("missing node"));
 }

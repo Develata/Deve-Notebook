@@ -1,5 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
+use deve_core::models::{LedgerEntry, NodeId, PeerId, StructureOp};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
@@ -182,4 +183,31 @@ fn commit_diff_fails_closed_for_content_only_docs_without_structure_projection()
         err.to_string()
             .contains("Commit diff lost projected path for doc")
     );
+}
+
+#[test]
+fn commit_diff_fails_closed_on_missing_structure_targets() {
+    let (_dir, repo) = new_repo();
+    repo.append_local_op(&LedgerEntry::new_structure(
+        StructureOp::MoveNode {
+            node_id: NodeId::new(),
+            doc_id: None,
+            new_parent_id: None,
+        },
+        1,
+        PeerId::new("test"),
+        1,
+    ))
+    .expect("append malformed structure op");
+    let commit = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            let ledger_seq = deve_core::ledger::range::get_max_seq(db)?;
+            deve_core::source_control::commits::create(db, "broken-structure", 0, ledger_seq)
+        })
+        .expect("create broken commit");
+
+    let err = repo
+        .diff_commits(None, &commit.id)
+        .expect_err("broken structure diff must fail closed");
+    assert!(err.to_string().contains("missing node"));
 }

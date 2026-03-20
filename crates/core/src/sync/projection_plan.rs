@@ -1,7 +1,7 @@
 use crate::ledger::RepoManager;
 use crate::ledger::schema::LEDGER_OPS;
 use crate::models::{DocId, LedgerEvent, NodeId, NodeKind, deserialize_ledger_entry};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::ReadableTable;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -31,7 +31,10 @@ pub(super) fn build(repo: &RepoManager, repo_name: &str) -> Result<ProjectionPla
             continue;
         }
         let Some(doc_id) = meta.doc_id else {
-            continue;
+            return Err(anyhow!(
+                "Structure projection lost doc identity for file node {}",
+                node_id
+            ));
         };
         insert_parents(&mut dirs, &path);
         docs.insert(path, doc_id);
@@ -94,18 +97,26 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
             crate::models::StructureOp::RenameNode {
                 node_id, new_name, ..
             } => {
-                if let Some(node) = nodes.get_mut(&node_id) {
-                    node.name = new_name;
-                }
+                let node = nodes.get_mut(&node_id).ok_or_else(|| {
+                    anyhow!(
+                        "Structure projection rename references missing node {}",
+                        node_id
+                    )
+                })?;
+                node.name = new_name;
             }
             crate::models::StructureOp::MoveNode {
                 node_id,
                 new_parent_id,
                 ..
             } => {
-                if let Some(node) = nodes.get_mut(&node_id) {
-                    node.parent_id = new_parent_id;
-                }
+                let node = nodes.get_mut(&node_id).ok_or_else(|| {
+                    anyhow!(
+                        "Structure projection move references missing node {}",
+                        node_id
+                    )
+                })?;
+                node.parent_id = new_parent_id;
             }
             crate::models::StructureOp::DeleteNode { node_id, .. } => {
                 remove_subtree(&mut nodes, node_id);

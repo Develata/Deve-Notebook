@@ -53,10 +53,7 @@ fn select_entry_for_doc(
         .iter()
         .find(|entry| entry.path == path && entry.doc_id == Some(doc_id))
         .cloned();
-    if exact
-        .as_ref()
-        .is_some_and(PendingEntryStatus::status_is_live)
-    {
+    if exact.is_some() {
         return exact;
     }
     entries
@@ -231,5 +228,37 @@ mod tests {
         ];
 
         assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
+    }
+
+    #[test]
+    fn doc_target_prefers_exact_deleted_half_of_rename_pair() {
+        let doc_id = DocId(uuid::Uuid::nil());
+        let entries = vec![
+            PendingFsEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Deleted,
+                content_hash: String::new(),
+                detected_at: 1,
+                has_conflict: false,
+            },
+            PendingFsEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Added,
+                content_hash: String::new(),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        ];
+
+        assert_eq!(
+            super::select_entry_for_doc(entries, "notes/old.md", doc_id)
+                .expect("exact deleted half should win")
+                .path,
+            "notes/old.md"
+        );
     }
 }
