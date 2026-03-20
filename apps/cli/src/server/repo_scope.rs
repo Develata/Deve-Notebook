@@ -28,7 +28,8 @@ use std::sync::Arc;
 
 use self::lookup::resolve_repo_by_name;
 use self::repo_scope_bootstrap::fallback_local_repo_name;
-use self::repo_scope_cleanup::{should_clear_stale_local_scope, should_clear_stale_remote_scope};
+use self::repo_scope_cleanup::should_clear_stale_local_scope;
+pub(crate) use self::repo_scope_cleanup::should_clear_stale_remote_scope;
 pub use self::repo_scope_error::map_repo_scope_error;
 use self::repo_scope_selector::resolve_repo_name_from_session;
 pub use self::repo_scope_workspace::{

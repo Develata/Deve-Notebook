@@ -1,6 +1,7 @@
 use crate::server::AppState;
-use crate::server::error_classify::is_stale_remote_scope_context;
-use crate::server::repo_scope::{ResolvedRepo, map_repo_scope_error, resolve_session_repo};
+use crate::server::repo_scope::{
+    ResolvedRepo, map_repo_scope_error, resolve_session_repo, should_clear_stale_remote_scope,
+};
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
@@ -87,10 +88,8 @@ fn recover_local_repo_url_from_hint(
 fn should_clear_failed_current_scope(session: &WsSession, error: &ServerError) -> bool {
     if session.active_branch.is_some() {
         return match error.code {
-            ServerErrorCode::SyncRepoUnbound => true,
-            ServerErrorCode::ScRepoContextInvalid => {
-                let detail = error.detail.as_deref().unwrap_or_default();
-                is_stale_remote_scope_context(&detail.to_ascii_lowercase())
+            ServerErrorCode::SyncRepoUnbound | ServerErrorCode::ScRepoContextInvalid => {
+                should_clear_stale_remote_scope(error)
             }
             _ => false,
         };

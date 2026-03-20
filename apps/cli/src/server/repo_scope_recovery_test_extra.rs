@@ -61,6 +61,7 @@ fn resolve_session_repo_rejects_stale_exact_remote_selector_uuid_pair() -> anyho
 
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("stale exact selector must fail closed");
+    assert!(err.to_string().contains("stale remote scope:"));
     assert!(err.to_string().contains("Session repo mismatch"));
     Ok(())
 }

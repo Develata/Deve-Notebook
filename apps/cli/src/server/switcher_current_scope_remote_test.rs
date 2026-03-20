@@ -61,6 +61,12 @@ async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
             ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
+            );
             assert_eq!(switch_nonce, Some(73));
         }
         other => panic!("expected ProtocolError, got {:?}", other),

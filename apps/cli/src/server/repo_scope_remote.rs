@@ -5,6 +5,7 @@
 //! - UUID 形态输入若与真实 display name 冲突，必须 fail-closed。
 //! - 返回 `Ok(Some(selector))` 时，结果必须可直接用于 remote repo 执行路径。
 
+use super::repo_scope_error::stale_remote_scope_detail;
 use crate::server::AppState;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
@@ -26,10 +27,11 @@ pub(super) fn recover_remote_repo_name_from_selector(
             && selector != repo_name
         {
             return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
-                expected_repo_id,
-                selector,
-                repo_name
+                "{}",
+                stale_remote_scope_detail(format!(
+                    "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
+                    expected_repo_id, selector, repo_name
+                ))
             ));
         }
         return Ok(resolved);

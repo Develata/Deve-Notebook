@@ -1,13 +1,13 @@
-use crate::server::error_classify::is_stale_remote_scope_context;
+use super::repo_scope_error::STALE_REMOTE_SCOPE_PREFIX;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
-pub(super) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {
+pub(crate) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {
     match error.code {
         ServerErrorCode::SyncRepoUnbound => true,
-        ServerErrorCode::ScRepoContextInvalid => {
-            let detail = error.detail.as_deref().unwrap_or_default();
-            is_stale_remote_scope_context(&detail.to_ascii_lowercase())
-        }
+        ServerErrorCode::ScRepoContextInvalid => error
+            .detail
+            .as_deref()
+            .is_some_and(|detail| detail.starts_with(STALE_REMOTE_SCOPE_PREFIX)),
         _ => false,
     }
 }
@@ -35,7 +35,7 @@ mod tests {
     fn clears_stale_remote_selector_context_errors() {
         assert!(should_clear_stale_remote_scope(&ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
-            "Remote repository selector not resolved for wiki",
+            "stale remote scope: Remote repository selector not resolved for wiki",
         )));
     }
 
@@ -43,7 +43,7 @@ mod tests {
     fn clears_exact_selector_repo_mismatch_errors() {
         assert!(should_clear_stale_remote_scope(&ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
-            "Session repo mismatch: expected a, resolved b for exact repository selector wiki-2",
+            "stale remote scope: Session repo mismatch: expected a, resolved b for exact repository selector wiki-2",
         )));
     }
 
@@ -60,6 +60,14 @@ mod tests {
         assert!(!should_clear_stale_remote_scope(&ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
             "Local workspace path requested on remote branch: wiki",
+        )));
+    }
+
+    #[test]
+    fn preserves_unprefixed_remote_context_errors() {
+        assert!(!should_clear_stale_remote_scope(&ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "Session repo mismatch: expected a, resolved b for exact repository selector wiki-2",
         )));
     }
 
