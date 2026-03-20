@@ -22,26 +22,7 @@ pub(super) fn resolve_repo_by_name(
         .get_repo_info_for(branch.as_ref(), Some(&repo_name))?
     {
         Some(info) => info,
-        None => {
-            if branch.is_some()
-                && let Some(expected_repo_id) = expected_repo_id
-                && let Some(selector) =
-                    recover_repo_selector(state, branch.as_ref(), expected_repo_id)?
-            {
-                tracing::warn!(
-                    "Recovering repo selector from UUID after stale name miss: branch={:?}, stale_name={}, resolved_name={}",
-                    branch,
-                    repo_name,
-                    selector
-                );
-                return Ok(ResolvedRepo {
-                    repo_id: expected_repo_id,
-                    repo_name: selector,
-                    branch,
-                });
-            }
-            return Err(anyhow!("Repository UUID not resolved for {}", repo_name));
-        }
+        None => return Err(anyhow!("Repository UUID not resolved for {}", repo_name)),
     };
     if let Some(expected_repo_id) = expected_repo_id
         && expected_repo_id != info.uuid
@@ -59,21 +40,6 @@ pub(super) fn resolve_repo_by_name(
                 info.uuid,
                 repo_name
             ));
-        }
-        if branch.is_some()
-            && let Some(selector) = recover_repo_selector(state, branch.as_ref(), expected_repo_id)?
-        {
-            tracing::warn!(
-                "Recovering repo selector from UUID after mismatch: branch={:?}, stale_name={}, resolved_name={}",
-                branch,
-                repo_name,
-                selector
-            );
-            return Ok(ResolvedRepo {
-                repo_id: expected_repo_id,
-                repo_name: selector,
-                branch,
-            });
         }
         return Err(anyhow!(
             "Session repo mismatch: expected {}, resolved {} for {}",

@@ -237,7 +237,7 @@ fn matches_scope(
 }
 
 fn matches_runtime_scope_nonce(current_scope_nonce: u64, message_scope_nonce: Option<u64>) -> bool {
-    message_scope_nonce.is_none_or(|scope_nonce| scope_nonce == current_scope_nonce)
+    message_scope_nonce == Some(current_scope_nonce)
 }
 
 #[cfg(test)]

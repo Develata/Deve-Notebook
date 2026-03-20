@@ -15,25 +15,30 @@ pub(super) fn select_target_repo(
     if let Some(url) = current_repo_url {
         return select_target_repo_by_url(state, had_current_repo_hint, target_branch, &url);
     }
-    if let Some(repo_name) = current_repo_name
-        && let Some(exact_selector) =
-            recover_selector_from_raw_name_for_switch(state, target_branch, repo_name)?
-    {
-        if let Some(repo_id) = current_repo_id
-            && let Some(selector_by_id) = select_repo_selector_by_id(state, target_branch, repo_id)?
-            && selector_by_id != exact_selector
-        {
-            if can_defer_to_repo_id_for_display_collision(state, target_branch, repo_name)? {
-                return Ok(Some(selector_by_id));
+    if let Some(repo_name) = current_repo_name {
+        let exact_selector =
+            recover_selector_from_raw_name_for_switch(state, target_branch, repo_name)?;
+        if let Some(exact_selector) = exact_selector {
+            if let Some(repo_id) = current_repo_id
+                && let Some(selector_by_id) =
+                    select_repo_selector_by_id(state, target_branch, repo_id)?
+                && selector_by_id != exact_selector
+            {
+                if can_defer_to_repo_id_for_display_collision(state, target_branch, repo_name)? {
+                    return Ok(Some(selector_by_id));
+                }
+                return Err(anyhow!(
+                    "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
+                    repo_id,
+                    selector_by_id,
+                    repo_name
+                ));
             }
-            return Err(anyhow!(
-                "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
-                repo_id,
-                selector_by_id,
-                repo_name
-            ));
+            return Ok(Some(exact_selector));
         }
-        return Ok(Some(exact_selector));
+        if target_branch.is_some() && uuid::Uuid::parse_str(repo_name).is_ok() {
+            return Ok(None);
+        }
     }
     if let Some(repo_id) = current_repo_id
         && let Some(selector) = select_repo_selector_by_id(state, target_branch, repo_id)?
@@ -86,6 +91,9 @@ pub(super) fn resolve_requested_repo_name(
             }
         }
         return Ok(Some(exact_selector));
+    }
+    if branch.is_some() && uuid::Uuid::parse_str(repo_name).is_ok() {
+        return Err(anyhow!("Repository UUID not resolved for {}", repo_name));
     }
     if let Some(repo_id) = repo_id
         && let Some(selector) = select_repo_selector_by_id(state, branch, repo_id)?
@@ -160,9 +168,6 @@ fn recover_selector_from_raw_name(
             Err(err) => Err(err),
         };
     };
-    if let Ok(repo_id) = uuid::Uuid::parse_str(raw_repo_name) {
-        return select_repo_selector_by_id(state, Some(branch), repo_id);
-    }
     Ok(state
         .repo
         .find_remote_repo_selector(branch, raw_repo_name)?

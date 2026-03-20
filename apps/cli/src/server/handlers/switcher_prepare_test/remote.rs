@@ -34,10 +34,9 @@ fn select_target_repo_prefers_exact_remote_selector_over_stale_uuid() -> anyhow:
 }
 
 #[test]
-fn select_target_repo_recovers_remote_selector_from_uuid_string_without_repo_id()
--> anyhow::Result<()> {
+fn select_target_repo_rejects_remote_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
+    let (peer_id, _first_id, second_id, _second_selector) = seed_duplicate_remote(&state)?;
 
     let selected = select_target_repo(
         &state,
@@ -46,22 +45,25 @@ fn select_target_repo_recovers_remote_selector_from_uuid_string_without_repo_id(
         Some(&second_id.to_string()),
         None,
         Some(&peer_id),
-    )?
-    .expect("selector for second wiki repo");
-    assert_eq!(selected, second_selector);
+    )?;
+    assert!(
+        selected.is_none(),
+        "remote uuid string without repo_id must not auto-bind"
+    );
     Ok(())
 }
 
 #[test]
-fn resolve_requested_repo_name_recovers_remote_selector_from_uuid_string_without_repo_id()
--> anyhow::Result<()> {
+fn resolve_requested_repo_name_rejects_remote_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
+    let (peer_id, _first_id, second_id, _second_selector) = seed_duplicate_remote(&state)?;
 
-    let selected =
-        resolve_requested_repo_name(&state, Some(&peer_id), &second_id.to_string(), None)?
-            .expect("selector for second wiki repo");
-    assert_eq!(selected, second_selector);
+    let err = resolve_requested_repo_name(&state, Some(&peer_id), &second_id.to_string(), None)
+        .expect_err("remote uuid string without repo_id must fail closed");
+    assert!(
+        err.to_string().contains("Repository UUID not resolved")
+            || err.to_string().contains("Remote repository selector")
+    );
     Ok(())
 }
 
@@ -135,7 +137,10 @@ fn resolve_requested_repo_name_rejects_uuid_shaped_remote_display_name_with_stal
         Some(stale_uuid),
     )
     .expect_err("uuid-shaped display name must not be overridden by stale uuid");
-    assert!(err.to_string().contains("Session repo mismatch:"));
+    assert!(
+        err.to_string().contains("Session repo mismatch:")
+            || err.to_string().contains("Repository UUID not resolved")
+    );
     Ok(())
 }
 

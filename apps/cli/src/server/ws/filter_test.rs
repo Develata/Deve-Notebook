@@ -276,3 +276,60 @@ fn rejects_runtime_broadcasts_with_stale_scope_nonce() {
         ),
     }));
 }
+
+#[test]
+fn rejects_repo_scoped_runtime_broadcasts_without_scope_nonce() {
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    session.set_scope_nonce(Some(9));
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(!filter.should_forward(&ServerMessage::CommitAck {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: None,
+        commit_id: "c1".into(),
+        timestamp: 1,
+    }));
+    assert!(!filter.should_forward(&ServerMessage::FsChangeDetected {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: None,
+        path: "notes/a.md".into(),
+        change_type: "modified".into(),
+        has_conflict: false,
+    }));
+    assert!(!filter.should_forward(&ServerMessage::MergeComplete {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: None,
+        merged_count: 2,
+    }));
+    assert!(!filter.should_forward(&ServerMessage::NewOp {
+        repo_id: uuid::Uuid::nil(),
+        branch: None,
+        scope_nonce: None,
+        doc_id: DocId::new(),
+        entry: ConfirmedOp::new(
+            1,
+            Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            None,
+        ),
+    }));
+}
+
+#[test]
+fn rejects_peer_deleted_without_scope_nonce() {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(7));
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(!filter.should_forward(&ServerMessage::PeerDeleted {
+        peer_id: "peer-a".into(),
+        scope_nonce: None,
+    }));
+}

@@ -63,41 +63,12 @@ fn resolve_remote_repo_name_from_session(
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));
         };
-        let uuid_shaped_name = uuid::Uuid::parse_str(&repo_name).ok();
         if let Some(selector) = recover_remote_repo_name_from_selector(
             state,
             branch,
             &repo_name,
             session.active_repo_id,
         )? {
-            if selector != repo_name {
-                tracing::warn!(
-                    "Recovering remote repo selector from stale name: branch={}, stale_name={}, resolved_selector={}",
-                    branch,
-                    repo_name,
-                    selector
-                );
-            }
-            return Ok(Some(selector));
-        }
-        if uuid_shaped_name.is_some() && state.repo.has_remote_display_name(branch, &repo_name)? {
-            return Err(anyhow!(
-                "Remote repository selector not resolved for {}",
-                repo_name
-            ));
-        }
-        if let Some(repo_id) = session.active_repo_id
-            && let Some(selector) = state
-                .repo
-                .find_remote_repo_selector_by_id(branch, repo_id)?
-        {
-            tracing::warn!(
-                "Recovering remote repo selector from UUID after stale name miss: branch={}, repo_id={}, stale_name={}, resolved_selector={}",
-                branch,
-                repo_id,
-                repo_name,
-                selector
-            );
             return Ok(Some(selector));
         }
         return Err(anyhow!(

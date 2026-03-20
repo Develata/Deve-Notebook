@@ -34,10 +34,7 @@ pub(super) fn recover_remote_repo_name_from_selector(
         }
         return Ok(resolved);
     }
-    if let Ok(raw_uuid) = uuid::Uuid::parse_str(repo_name) {
-        if expected_repo_id == Some(raw_uuid) {
-            return state.repo.find_remote_repo_selector_by_id(branch, raw_uuid);
-        }
+    if uuid::Uuid::parse_str(repo_name).is_ok() {
         if has_remote_display_name(state, branch, repo_name)? {
             tracing::warn!(
                 "Refusing to recover UUID-shaped remote selector without bound UUID because matching display name exists: branch={}, raw_name={}, resolved_selector={:?}",
@@ -47,7 +44,13 @@ pub(super) fn recover_remote_repo_name_from_selector(
             );
             return Ok(None);
         }
-        return state.repo.find_remote_repo_selector_by_id(branch, raw_uuid);
+        tracing::warn!(
+            "Refusing to recover UUID-shaped remote selector from repo_name slot during runtime scope resolution: branch={}, raw_name={}, expected_repo_id={:?}",
+            branch,
+            repo_name,
+            expected_repo_id
+        );
+        return Ok(None);
     }
     tracing::warn!(
         "Refusing to recover remote repo selector from display-only name without UUID: branch={}, raw_name={}, resolved_selector={:?}",

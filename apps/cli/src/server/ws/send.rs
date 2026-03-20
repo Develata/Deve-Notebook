@@ -69,12 +69,12 @@ pub(crate) fn spawn_broadcast_forwarder(
         loop {
             match broadcast_rx.recv().await {
                 Ok(msg) => {
-                    if !filter.should_forward(&msg) {
-                        continue;
-                    }
                     let Some(msg) = filter.stamp_scope_nonce(msg) else {
                         continue;
                     };
+                    if !filter.should_forward(&msg) {
+                        continue;
+                    }
                     let must_deliver = must_deliver_broadcast(&msg);
                     try_send_with_delivery_class(&unicast_tx, msg, must_deliver);
                 }
