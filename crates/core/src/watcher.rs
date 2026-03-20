@@ -12,7 +12,7 @@
 //! 监听器在阻塞线程中运行，并将事件转发给同步管理器。
 
 use crate::sync::SyncManager;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
 use std::sync::Arc;
 use std::time::Duration;
@@ -65,7 +65,7 @@ impl Watcher {
 
         for result in rx {
             match result {
-                Ok(events) => self.process_events(&events, &root_absolute),
+                Ok(events) => self.process_events(&events, &root_absolute)?,
                 Err(e) => error!("Watch error: {:?}", e),
             }
         }
@@ -77,7 +77,7 @@ impl Watcher {
         &self,
         events: &[notify_debouncer_mini::DebouncedEvent],
         root: &std::path::Path,
-    ) {
+    ) -> Result<()> {
         for event in events {
             let path = &event.path;
             if let Ok(rel) = path.strip_prefix(root) {
@@ -93,8 +93,10 @@ impl Watcher {
                 // 目录事件检测 (路径存在且是目录，或不存在但无扩展名)
                 let is_dir = path.is_dir() || (!path.exists() && path.extension().is_none());
                 if is_dir {
-                    if let Ok(Some((repo_id, repo_path))) =
-                        self.sync_manager.handle_dir_change(&path_str)
+                    if let Some((repo_id, repo_path)) = self
+                        .sync_manager
+                        .handle_dir_change(&path_str)
+                        .with_context(|| format!("Failed to handle dir change for {path_str}"))?
                         && let Some(cb) = &self.on_event
                     {
                         cb(FsEventType::DirChange {
@@ -125,5 +127,10 @@ impl Watcher {
                 }
             }
         }
+        Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "watcher_test.rs"]
+mod tests;
