@@ -40,10 +40,13 @@ fn runtime_remote_repo_listing_does_not_repair_legacy_remote_filename() {
         txn.commit().expect("commit");
     }
 
-    assert_eq!(
-        repo.list_repos(Some(&peer_id)).expect("list remote repos"),
-        vec!["wiki".to_string()]
-    );
+    let repos = repo.list_repos(Some(&peer_id)).expect("list remote repos");
+    assert_eq!(repos, vec!["legacy".to_string()]);
+    let handle = repo
+        .open_database(Some(&peer_id), &repos[0])
+        .expect("open remote shadow by exact selector");
+    assert_eq!(handle.repo_name, "legacy");
+    assert_eq!(handle.repo_id, Some(repo_id));
     assert!(!peer_dir.join("wiki.redb").exists());
     assert!(peer_dir.join("legacy.redb").exists());
 }

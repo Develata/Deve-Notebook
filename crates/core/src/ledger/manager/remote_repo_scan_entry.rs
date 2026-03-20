@@ -12,13 +12,6 @@ impl RemoteRepoEntry {
     pub(crate) fn is_readable(&self) -> bool {
         self.info.is_some()
     }
-
-    pub(crate) fn display_name(&self) -> String {
-        self.info
-            .as_ref()
-            .map(|info| info.name.clone())
-            .unwrap_or_else(|| self.stem.clone())
-    }
 }
 
 pub(super) struct RemoteRepoCatalogInfo {

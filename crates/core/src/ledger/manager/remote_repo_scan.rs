@@ -11,8 +11,6 @@ use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
 use anyhow::{Result, anyhow};
-use std::collections::HashMap;
-
 impl RepoManager {
     pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
         let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
@@ -183,12 +181,9 @@ impl RepoManager {
     }
 
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
-        let entries = self
-            .scan_remote_repo_entries(peer_id)?
-            .into_iter()
-            .collect::<Vec<_>>();
+        let entries = self.scan_remote_repo_entries(peer_id)?;
         let duplicate_ids = duplicate_entry_ids(&entries);
-        let entries = entries
+        let mut repos: Vec<_> = entries
             .into_iter()
             .filter(|entry| {
                 entry
@@ -196,23 +191,7 @@ impl RepoManager {
                     .as_ref()
                     .is_some_and(|info| !duplicate_ids.contains(&info.uuid))
             })
-            .collect::<Vec<_>>();
-        let mut counts = HashMap::<String, usize>::new();
-        let mut named = Vec::new();
-        for entry in entries {
-            let display = entry.display_name();
-            *counts.entry(display.clone()).or_default() += 1;
-            named.push((entry, display));
-        }
-        let mut repos: Vec<_> = named
-            .into_iter()
-            .map(|(entry, display)| {
-                if counts.get(&display).copied().unwrap_or(0) > 1 {
-                    entry.stem
-                } else {
-                    display
-                }
-            })
+            .map(|entry| entry.stem)
             .collect();
         repos.sort();
         Ok(repos)
