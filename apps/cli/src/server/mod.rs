@@ -121,6 +121,8 @@ mod switcher_scope_rebind_test;
 #[cfg(test)]
 mod sync_hello_browser_test;
 #[cfg(test)]
+mod sync_hello_scope_test;
+#[cfg(test)]
 mod sync_hello_test;
 #[cfg(test)]
 mod sync_scope_cleanup_test;

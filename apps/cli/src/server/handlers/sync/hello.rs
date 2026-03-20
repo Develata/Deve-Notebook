@@ -166,6 +166,17 @@ fn validate_scope(
     scope_nonce: u64,
 ) -> Result<(), ServerError> {
     if !session.is_browser_session() {
+        if let Some(active_branch) = session.active_branch.as_ref()
+            && active_branch != peer_id
+        {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                format!(
+                    "SyncHello peer mismatch: active_branch={}, requested_peer_id={}",
+                    active_branch, peer_id
+                ),
+            ));
+        }
         if let Some(authenticated_peer_id) = session.authenticated_peer_id.as_ref()
             && authenticated_peer_id != peer_id
         {
