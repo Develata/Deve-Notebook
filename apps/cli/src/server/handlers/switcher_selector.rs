@@ -37,7 +37,7 @@ pub(super) fn select_target_repo(
             return Ok(Some(exact_selector));
         }
         if target_branch.is_some() && uuid::Uuid::parse_str(repo_name).is_ok() {
-            return Ok(None);
+            return Err(anyhow!("Repository UUID not resolved for {}", repo_name));
         }
     }
     if let Some(repo_id) = current_repo_id
@@ -159,14 +159,10 @@ fn recover_selector_from_raw_name(
     raw_repo_name: &str,
 ) -> Result<Option<String>> {
     let Some(branch) = branch else {
-        return match state
+        return state
             .repo
             .resolve_local_repo_name_for_execution(None, Some(raw_repo_name))
-        {
-            Ok(selector) => Ok(Some(selector)),
-            Err(err) if local_selector_miss(&err) => Ok(None),
-            Err(err) => Err(err),
-        };
+            .map(Some);
     };
     Ok(state
         .repo
@@ -202,12 +198,4 @@ fn can_defer_to_repo_id_for_display_collision(
         return Ok(false);
     }
     state.repo.has_remote_display_name(peer_id, raw_repo_name)
-}
-
-fn local_selector_miss(err: &anyhow::Error) -> bool {
-    matches!(
-        err.to_string().as_str(),
-        detail if detail.contains("Local repo not found for name")
-            || detail.contains("No local repositories available")
-    )
 }

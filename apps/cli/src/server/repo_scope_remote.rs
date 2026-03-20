@@ -16,7 +16,7 @@ pub(super) fn recover_remote_repo_name_from_selector(
     branch: &PeerId,
     repo_name: &str,
     expected_repo_id: Option<RepoId>,
-) -> Result<Option<String>> {
+) -> Result<String> {
     let resolved = state.repo.find_remote_repo_selector(branch, repo_name)?;
     if resolved.as_deref() == Some(repo_name) {
         if let Some(expected_repo_id) = expected_repo_id
@@ -34,33 +34,33 @@ pub(super) fn recover_remote_repo_name_from_selector(
                 ))
             ));
         }
-        return Ok(resolved);
+        return Ok(repo_name.to_string());
     }
     if uuid::Uuid::parse_str(repo_name).is_ok() {
         if has_remote_display_name(state, branch, repo_name)? {
-            tracing::warn!(
-                "Refusing to recover UUID-shaped remote selector without bound UUID because matching display name exists: branch={}, raw_name={}, resolved_selector={:?}",
-                branch,
-                repo_name,
-                resolved
-            );
-            return Ok(None);
+            return Err(anyhow!(
+                "{}",
+                stale_remote_scope_detail(format!(
+                    "Remote repository selector not resolved for {}",
+                    repo_name
+                ))
+            ));
         }
-        tracing::warn!(
-            "Refusing to recover UUID-shaped remote selector from repo_name slot during runtime scope resolution: branch={}, raw_name={}, expected_repo_id={:?}",
-            branch,
-            repo_name,
-            expected_repo_id
-        );
-        return Ok(None);
+        return Err(anyhow!(
+            "{}",
+            stale_remote_scope_detail(format!(
+                "Remote repository selector not resolved for {}",
+                repo_name
+            ))
+        ));
     }
-    tracing::warn!(
-        "Refusing to recover remote repo selector from display-only name without UUID: branch={}, raw_name={}, resolved_selector={:?}",
-        branch,
-        repo_name,
-        resolved
-    );
-    Ok(None)
+    Err(anyhow!(
+        "{}",
+        stale_remote_scope_detail(format!(
+            "Remote repository selector not resolved for {}",
+            repo_name
+        ))
+    ))
 }
 
 fn has_remote_display_name(state: &Arc<AppState>, branch: &PeerId, raw_name: &str) -> Result<bool> {

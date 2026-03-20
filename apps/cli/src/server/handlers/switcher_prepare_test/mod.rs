@@ -71,8 +71,11 @@ fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Res
         .expect("test repo info")
         .uuid;
 
+    let err = select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)
+        .expect_err("local uuid string without repo_id must fail closed");
     assert!(
-        select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)?.is_none()
+        err.to_string().contains("Local repo not found for name")
+            || err.to_string().contains("Local repository selector not resolved")
     );
     Ok(())
 }
@@ -113,6 +116,34 @@ fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_
     txn.commit()?;
 
     let err = resolve_requested_repo_name(&state, None, "legacy-wiki", None)
+        .expect_err("stale local alias must fail closed");
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-wiki")
+    );
+    Ok(())
+}
+
+#[test]
+fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift()
+-> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
+    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
+    let wiki_db = state.repo.open_database(None, "wiki")?.db;
+    let txn = wiki_db.begin_write()?;
+    txn.open_table(REPO_METADATA)?.insert(
+        &0,
+        bincode::serialize(&RepoInfo {
+            uuid: wiki_info.uuid,
+            name: "legacy-wiki".into(),
+            url: wiki_info.url.clone(),
+        })?
+        .as_slice(),
+    )?;
+    txn.commit()?;
+
+    let err = select_target_repo(&state, false, None, Some("legacy-wiki"), None, None)
         .expect_err("stale local alias must fail closed");
     assert!(
         err.to_string()

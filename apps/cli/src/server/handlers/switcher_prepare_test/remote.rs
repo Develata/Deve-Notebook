@@ -38,17 +38,18 @@ fn select_target_repo_rejects_remote_uuid_string_without_repo_id() -> anyhow::Re
     let (_dir, state) = build_state()?;
     let (peer_id, _first_id, second_id, _second_selector) = seed_duplicate_remote(&state)?;
 
-    let selected = select_target_repo(
+    let err = select_target_repo(
         &state,
         false,
         None,
         Some(&second_id.to_string()),
         None,
         Some(&peer_id),
-    )?;
+    )
+    .expect_err("remote uuid string without repo_id must fail closed");
     assert!(
-        selected.is_none(),
-        "remote uuid string without repo_id must not auto-bind"
+        err.to_string().contains("Repository UUID not resolved"),
+        "remote uuid string without repo_id must fail closed"
     );
     Ok(())
 }

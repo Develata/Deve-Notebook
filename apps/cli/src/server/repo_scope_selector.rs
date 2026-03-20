@@ -64,21 +64,9 @@ fn resolve_remote_repo_name_from_session(
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));
         };
-        if let Some(selector) = recover_remote_repo_name_from_selector(
-            state,
-            branch,
-            &repo_name,
-            session.active_repo_id,
-        )? {
-            return Ok(Some(selector));
-        }
-        return Err(anyhow!(
-            "{}",
-            stale_remote_scope_detail(format!(
-                "Remote repository selector not resolved for {}",
-                repo_name
-            ))
-        ));
+        let selector =
+            recover_remote_repo_name_from_selector(state, branch, &repo_name, session.active_repo_id)?;
+        return Ok(Some(selector));
     }
     let Some(repo_id) = session.active_repo_id else {
         return Ok(None);
