@@ -13,7 +13,14 @@ pub(super) fn select_target_repo(
     target_branch: Option<&PeerId>,
 ) -> Result<Option<String>> {
     if let Some(url) = current_repo_url {
-        return select_target_repo_by_url(state, had_current_repo_hint, target_branch, &url);
+        return select_target_repo_by_url(
+            state,
+            had_current_repo_hint,
+            target_branch,
+            current_repo_name,
+            current_repo_id,
+            &url,
+        );
     }
     if let Some(repo_name) = current_repo_name {
         let exact_selector =
@@ -53,7 +60,12 @@ pub(super) fn select_target_repo(
     }
     let repos = state.repo.list_repos(target_branch)?;
     if had_current_repo_hint || current_repo_name.is_some() || current_repo_id.is_some() {
-        return Ok(None);
+        return Err(unresolved_target_repo_error(
+            target_branch,
+            current_repo_name,
+            current_repo_id,
+            None,
+        ));
     }
     Ok((repos.len() == 1).then(|| repos[0].clone()))
 }
@@ -110,6 +122,8 @@ fn select_target_repo_by_url(
     state: &Arc<AppState>,
     had_current_repo_hint: bool,
     target_branch: Option<&PeerId>,
+    current_repo_name: Option<&str>,
+    current_repo_id: Option<RepoId>,
     url: &str,
 ) -> Result<Option<String>> {
     let repos = state.repo.list_repos(target_branch)?;
@@ -137,7 +151,12 @@ fn select_target_repo_by_url(
         return Ok(Some(matches.remove(0)));
     }
     if had_current_repo_hint {
-        return Ok(None);
+        return Err(unresolved_target_repo_error(
+            target_branch,
+            current_repo_name,
+            current_repo_id,
+            Some(url),
+        ));
     }
     Ok((repos.len() == 1).then(|| repos[0].clone()))
 }
@@ -198,4 +217,27 @@ fn can_defer_to_repo_id_for_display_collision(
         return Ok(false);
     }
     state.repo.has_remote_display_name(peer_id, raw_repo_name)
+}
+
+fn unresolved_target_repo_error(
+    target_branch: Option<&PeerId>,
+    current_repo_name: Option<&str>,
+    current_repo_id: Option<RepoId>,
+    current_repo_url: Option<&str>,
+) -> anyhow::Error {
+    let scope = if target_branch.is_some() {
+        "Remote"
+    } else {
+        "Local"
+    };
+    if let Some(repo_name) = current_repo_name {
+        return anyhow!("{scope} repository selector not resolved for {}", repo_name);
+    }
+    if let Some(repo_id) = current_repo_id {
+        return anyhow!("Repository UUID not resolved for {}", repo_id);
+    }
+    if let Some(url) = current_repo_url {
+        return anyhow!("{scope} repository selector not resolved for URL {}", url);
+    }
+    anyhow!("{scope} repository selector not resolved")
 }

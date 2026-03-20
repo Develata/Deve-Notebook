@@ -76,7 +76,8 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_keeps_repo_unbound_when_target_branch_is_ambiguous() -> anyhow::Result<()> {
+async fn switch_branch_fails_closed_when_target_branch_lacks_current_repo_match()
+-> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -120,30 +121,28 @@ async fn switch_branch_keeps_repo_unbound_when_target_branch_is_ambiguous() -> a
 
     handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
 
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::BranchSwitched { success: true, .. })
-    ));
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::RepoList {
-            branch: Some(_),
-            repos,
-            ..
-        }) if repos.len() == 2
-    ));
-    assert!(
-        uni_rx.try_recv().is_err(),
-        "ambiguous target must not auto-switch repo"
-    );
-    assert_eq!(session.active_branch, Some(peer_id));
-    assert_eq!(session.active_repo, None);
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("repository selector not resolved")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
+    assert_eq!(session.active_repo.as_deref(), Some("ghost"));
     assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_keeps_repo_unbound_when_only_same_name_repo_has_different_url()
+async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
@@ -185,20 +184,22 @@ async fn switch_branch_keeps_repo_unbound_when_only_same_name_repo_has_different
 
     handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
 
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::BranchSwitched { success: true, .. })
-    ));
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::RepoList { repos, .. }) if repos == vec!["wiki".to_string()]
-    ));
-    assert!(
-        uni_rx.try_recv().is_err(),
-        "same-name but different-url remote repo must not auto-bind"
-    );
-    assert_eq!(session.active_branch, Some(peer_id));
-    assert_eq!(session.active_repo, None);
-    assert_eq!(session.active_repo_id, None);
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("repository selector not resolved")),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
+    assert_eq!(session.active_repo.as_deref(), Some("wiki"));
+    assert_eq!(session.active_repo_id, Some(local_info.uuid));
     Ok(())
 }
