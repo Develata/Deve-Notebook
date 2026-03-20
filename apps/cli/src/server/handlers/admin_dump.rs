@@ -17,11 +17,11 @@ pub async fn dump(
         .resolve_local_repo_name_for_execution(query.repo.repo_id, query.repo.repo_name.as_deref())
     {
         Ok(name) => name,
-        Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
+        Err(err) => return super::admin_error_response(err, StatusCode::BAD_REQUEST),
     };
     match dump_support::build_dump(&state.repo, &repo_name, &query.path) {
         Ok(Some(dump)) => Json(dump).into_response(),
         Ok(None) => (StatusCode::NOT_FOUND, "Path not found in Ledger.").into_response(),
-        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response(),
+        Err(err) => super::admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

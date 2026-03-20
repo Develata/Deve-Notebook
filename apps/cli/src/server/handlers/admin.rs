@@ -1,6 +1,10 @@
 use crate::admin_api::NodeCheckResponse;
 use crate::export_entries;
 use crate::server::AppState;
+use crate::server::error_classify::{
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
+    is_storage_not_found,
+};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -40,15 +44,11 @@ pub async fn export(
         .resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())
     {
         Ok(name) => name,
-        Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
+        Err(err) => return admin_error_response(err, StatusCode::BAD_REQUEST),
     };
     match export_entries::build(&state.repo, &repo_name) {
         Ok(entries) => Json(entries).into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to export ledger facts".to_string(),
-        )
-            .into_response(),
+        Err(err) => admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
@@ -58,23 +58,21 @@ pub async fn node_check(
 ) -> impl IntoResponse {
     let repo_names = match resolve_target_repos(state.as_ref(), &query.repo, query.repair) {
         Ok(names) => names,
-        Err(err) => return (StatusCode::BAD_REQUEST, err.to_string()).into_response(),
+        Err(err) => return admin_error_response(err, StatusCode::BAD_REQUEST),
     };
     let mut reports = Vec::with_capacity(repo_names.len());
     for repo_name in repo_names {
-        let result = state.repo.run_on_local_repo(&repo_name, |db| {
+        let report = match state.repo.run_on_local_repo(&repo_name, |db| {
             if query.repair {
                 repair_missing_nodes(db)
             } else {
                 check_node_consistency(db)
             }
-        });
-        let Ok(report) = result else {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to inspect repo consistency".to_string(),
-            )
-                .into_response();
+        }) {
+            Ok(report) => report,
+            Err(err) => {
+                return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR);
+            }
         };
         reports.push(NodeCheckResponse {
             repo_name,
@@ -100,6 +98,31 @@ fn resolve_target_repos(
         anyhow::bail!("Repository selector required for repair node-check");
     }
     state.repo.list_repos(None)
+}
+
+pub(super) fn admin_error_response(
+    error: impl ToString,
+    fallback: StatusCode,
+) -> axum::response::Response {
+    let detail = error.to_string();
+    (classify_admin_error(&detail, fallback), detail).into_response()
+}
+
+pub(super) fn classify_admin_error(detail: &str, fallback: StatusCode) -> StatusCode {
+    let lower = detail.to_ascii_lowercase();
+    if is_storage_not_found(&lower) {
+        return StatusCode::NOT_FOUND;
+    }
+    if is_db_locked(&lower) {
+        return StatusCode::SERVICE_UNAVAILABLE;
+    }
+    if is_storage_corruption(&lower) {
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    if is_repo_not_selected(&lower) || is_repo_context_invalid(&lower) {
+        return StatusCode::CONFLICT;
+    }
+    fallback
 }
 
 #[cfg(test)]

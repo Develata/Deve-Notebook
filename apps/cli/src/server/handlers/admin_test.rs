@@ -1,5 +1,6 @@
-use super::resolve_target_repos;
+use super::{classify_admin_error, resolve_target_repos};
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+use axum::http::StatusCode;
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::traits::RepoSelector;
@@ -87,4 +88,22 @@ fn repair_node_check_accepts_exact_repo_selector() -> anyhow::Result<()> {
     )?;
     assert_eq!(repos, vec!["notes".to_string()]);
     Ok(())
+}
+
+#[test]
+fn classify_admin_error_marks_broken_local_repo_as_internal_server_error() {
+    let status = classify_admin_error(
+        "Broken local repo notes while validating catalog: repository URL missing",
+        StatusCode::BAD_REQUEST,
+    );
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+}
+
+#[test]
+fn classify_admin_error_marks_local_selector_mismatch_as_conflict() {
+    let status = classify_admin_error(
+        "Local repository selector not resolved for notes",
+        StatusCode::BAD_REQUEST,
+    );
+    assert_eq!(status, StatusCode::CONFLICT);
 }
