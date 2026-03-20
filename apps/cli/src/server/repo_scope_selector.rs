@@ -8,6 +8,7 @@
 use super::repo_scope_error::stale_remote_scope_detail;
 use super::repo_scope_remote::recover_remote_repo_name_from_selector;
 use crate::server::AppState;
+use crate::server::error_classify::{is_db_locked, is_storage_corruption};
 use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
 use std::sync::Arc;
@@ -33,10 +34,21 @@ fn resolve_local_repo_name_from_session(
                 repo_name
             ));
         }
-        let resolved = state
+        let resolved = match state
             .repo
             .resolve_local_repo_name_for_execution(None, Some(&repo_name))
-            .map_err(|_| anyhow!("Local repository selector not resolved for {}", repo_name))?;
+        {
+            Ok(resolved) => resolved,
+            Err(err) if should_preserve_local_selector_error(&err) => {
+                return Err(err);
+            }
+            Err(_) => {
+                return Err(anyhow!(
+                    "Local repository selector not resolved for {}",
+                    repo_name
+                ));
+            }
+        };
         if let Some(repo_id) = session.active_repo_id
             && state.repo.find_local_repo_name_by_id(repo_id)?.as_deref() != Some(resolved.as_str())
         {
@@ -94,4 +106,9 @@ fn resolve_remote_repo_name_from_session(
             repo_id
         ))
     ))
+}
+
+fn should_preserve_local_selector_error(err: &anyhow::Error) -> bool {
+    let lower = err.to_string().to_ascii_lowercase();
+    is_storage_corruption(&lower) || is_db_locked(&lower)
 }
