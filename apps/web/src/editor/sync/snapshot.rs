@@ -35,11 +35,13 @@ struct SnapshotRequestGate {
     pending_repo_switch: ReadSignal<Option<String>>,
     active_branch: ReadSignal<Option<PeerId>>,
     pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    current_scope_nonce: ReadSignal<u64>,
     session_generation: Arc<AtomicU64>,
     expected_generation: u64,
     repo_id: RepoId,
     branch: Option<PeerId>,
     request_id: u64,
+    scope_nonce: u64,
 }
 
 #[derive(Clone, Copy)]
@@ -67,11 +69,13 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
         pending_repo_switch: ctx.pending_repo_switch,
         active_branch: ctx.active_branch,
         pending_branch_switch: ctx.pending_branch_switch,
+        current_scope_nonce: ctx.current_scope_nonce,
         session_generation: ctx.session_generation.clone(),
         expected_generation: message.expected_generation,
         repo_id: message.repo_id,
         branch: message.branch.clone(),
         request_id: message.request_id,
+        scope_nonce: ctx.current_scope_nonce.get_untracked(),
     };
 
     leptos::logging::log!(
@@ -164,6 +168,7 @@ fn build_progress_handler(
 
 fn snapshot_request_matches(args: SnapshotRequestMatch) -> bool {
     args.open_request_id == args.request_id
+        && args.current_scope_nonce == args.scope_nonce
         && args.current_generation == args.expected_generation
         && matches_scope(
             args.current_repo_id,
@@ -183,6 +188,8 @@ struct SnapshotRequestMatch {
     pending_repo_switch: Option<String>,
     active_branch: Option<PeerId>,
     pending_branch_switch: Option<PendingBranchTarget>,
+    current_scope_nonce: u64,
+    scope_nonce: u64,
     current_generation: u64,
     expected_generation: u64,
     repo_id: RepoId,
@@ -198,6 +205,8 @@ impl SnapshotRequestGate {
             pending_repo_switch: self.pending_repo_switch.get_untracked(),
             active_branch: self.active_branch.get_untracked(),
             pending_branch_switch: self.pending_branch_switch.get_untracked(),
+            current_scope_nonce: self.current_scope_nonce.get_untracked(),
+            scope_nonce: self.scope_nonce,
             current_generation: self.session_generation.load(Ordering::Relaxed),
             expected_generation: self.expected_generation,
             repo_id: self.repo_id,

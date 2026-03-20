@@ -156,7 +156,7 @@ fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
 }
 
 #[test]
-fn init_repairs_existing_local_repo_without_metadata() {
+fn init_fails_closed_on_existing_local_repo_without_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let local_dir = ledger_dir.join("local");
@@ -167,17 +167,13 @@ fn init_repairs_existing_local_repo_without_metadata() {
     txn.commit().expect("commit empty db");
     drop(db);
 
-    let repo = RepoManager::init(&ledger_dir, 8, Some("legacy"), None).expect("init legacy repo");
-    let info = repo.get_repo_info().expect("repo info").expect("present");
-
-    assert_eq!(info.name, "legacy");
-    assert_eq!(
-        info.url.as_deref(),
-        Some(format!("urn:uuid:{}", info.uuid).as_str())
-    );
-    assert_eq!(
-        repo.list_repos(None).expect("list repos"),
-        vec!["legacy".to_string()]
+    let err = match RepoManager::init(&ledger_dir, 8, Some("legacy"), None) {
+        Ok(_) => panic!("missing repo metadata must fail closed"),
+        Err(err) => err,
+    };
+    assert!(
+        err.to_string()
+            .contains("repository metadata table missing")
     );
 }
 

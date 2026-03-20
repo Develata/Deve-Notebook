@@ -167,20 +167,24 @@ fn workspace_resolution_keeps_execution_repo_stem_after_metadata_drift() {
 }
 
 #[test]
-fn execution_resolution_accepts_uuid_string_selector() {
+fn execution_resolution_rejects_uuid_string_in_repo_name_slot() {
     let (_dir, repo, extra_id, _extra_name) = new_local_repos();
+    let uuid_selector = extra_id.to_string();
 
-    assert_eq!(
-        repo.resolve_local_repo_name_for_execution(None, Some(&extra_id.to_string()))
-            .expect("resolve execution selector"),
-        "wiki"
-    );
-    assert_eq!(
-        repo.get_repo_info_for(None, Some(&extra_id.to_string()))
+    let err = repo
+        .resolve_local_repo_name_for_execution(None, Some(&uuid_selector))
+        .expect_err("uuid-shaped repo_name must fail closed");
+    assert!(err.to_string().contains(&uuid_selector));
+
+    assert!(
+        repo.get_repo_info_for(None, Some(&uuid_selector))
             .expect("lookup repo info")
-            .expect("repo info")
-            .uuid,
-        extra_id
+            .is_none()
+    );
+    assert!(
+        repo.resolve_local_workspace_path(&format!("{uuid_selector}/notes/extra.md"))
+            .expect("resolve workspace path")
+            .is_none()
     );
 }
 

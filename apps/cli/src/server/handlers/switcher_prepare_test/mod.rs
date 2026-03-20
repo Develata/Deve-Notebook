@@ -62,7 +62,7 @@ pub(super) fn seed_duplicate_remote(
 }
 
 #[test]
-fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> anyhow::Result<()> {
+fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
     let test_id = state
@@ -71,9 +71,9 @@ fn select_target_repo_recovers_local_stem_from_uuid_string_without_repo_id() -> 
         .expect("test repo info")
         .uuid;
 
-    let selected = select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)?
-        .expect("canonical local repo stem");
-    assert_eq!(selected, "test");
+    assert!(
+        select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)?.is_none()
+    );
     Ok(())
 }
 

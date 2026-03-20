@@ -55,7 +55,7 @@ mod tests {
     }
 
     #[test]
-    fn execution_repo_names_use_repaired_file_stems() {
+    fn execution_repo_names_fail_closed_on_duplicate_main_metadata_drift() {
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
@@ -71,10 +71,9 @@ mod tests {
             },
         );
 
-        assert_eq!(
-            main.list_local_repo_names_for_execution()
-                .expect("execution repo names"),
-            vec!["main".to_string(), "wiki".to_string()]
-        );
+        let err = main
+            .list_local_repo_names_for_execution()
+            .expect_err("duplicate main metadata drift must fail closed");
+        assert!(err.to_string().contains("metadata name drifted to main"));
     }
 }

@@ -69,30 +69,48 @@ impl BroadcastFilter {
 
         match msg {
             ServerMessage::FsChangeDetected {
-                repo_id, branch, ..
+                repo_id,
+                branch,
+                scope_nonce,
+                ..
             }
             | ServerMessage::CommitAck {
-                repo_id, branch, ..
+                repo_id,
+                branch,
+                scope_nonce,
+                ..
             }
             | ServerMessage::MergeComplete {
-                repo_id, branch, ..
-            } => matches_scope(
-                scope.active_repo_id,
-                scope.active_branch.as_ref(),
                 repo_id,
-                branch.as_ref(),
-                true,
-            ),
+                branch,
+                scope_nonce,
+                ..
+            } => {
+                matches_scope(
+                    scope.active_repo_id,
+                    scope.active_branch.as_ref(),
+                    repo_id,
+                    branch.as_ref(),
+                    true,
+                ) && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
+            }
             ServerMessage::NewOp {
-                repo_id, branch, ..
-            } => matches_scope(
-                scope.active_repo_id,
-                scope.active_branch.as_ref(),
-                &Some(*repo_id),
-                branch.as_ref(),
-                false,
-            ),
-            ServerMessage::PeerDeleted { .. } => scope.browser_session,
+                repo_id,
+                branch,
+                scope_nonce,
+                ..
+            } => {
+                matches_scope(
+                    scope.active_repo_id,
+                    scope.active_branch.as_ref(),
+                    &Some(*repo_id),
+                    branch.as_ref(),
+                    false,
+                ) && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
+            }
+            ServerMessage::PeerDeleted { scope_nonce, .. } => {
+                scope.browser_session && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
+            }
             _ => true,
         }
     }
@@ -115,11 +133,11 @@ impl BroadcastFilter {
                 path,
                 change_type,
                 has_conflict,
-                ..
+                scope_nonce,
             } => ServerMessage::FsChangeDetected {
                 repo_id,
                 branch,
-                scope_nonce: Some(scope.scope_nonce),
+                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
                 path,
                 change_type,
                 has_conflict,
@@ -129,11 +147,11 @@ impl BroadcastFilter {
                 branch,
                 commit_id,
                 timestamp,
-                ..
+                scope_nonce,
             } => ServerMessage::CommitAck {
                 repo_id,
                 branch,
-                scope_nonce: Some(scope.scope_nonce),
+                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
                 commit_id,
                 timestamp,
             },
@@ -142,11 +160,11 @@ impl BroadcastFilter {
                 branch,
                 doc_id,
                 entry,
-                ..
+                scope_nonce,
             } => ServerMessage::NewOp {
                 repo_id,
                 branch,
-                scope_nonce: Some(scope.scope_nonce),
+                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
                 doc_id,
                 entry,
             },
@@ -154,11 +172,11 @@ impl BroadcastFilter {
                 repo_id,
                 branch,
                 merged_count,
-                ..
+                scope_nonce,
             } => ServerMessage::MergeComplete {
                 repo_id,
                 branch,
-                scope_nonce: Some(scope.scope_nonce),
+                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
                 merged_count,
             },
             ServerMessage::PeerDeleted { peer_id, .. } => ServerMessage::PeerDeleted {
@@ -215,6 +233,10 @@ fn matches_scope(
         }
         _ => true,
     }
+}
+
+fn matches_runtime_scope_nonce(current_scope_nonce: u64, message_scope_nonce: Option<u64>) -> bool {
+    message_scope_nonce.is_none_or(|scope_nonce| scope_nonce == current_scope_nonce)
 }
 
 #[cfg(test)]

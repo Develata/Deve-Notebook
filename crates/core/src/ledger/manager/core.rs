@@ -133,7 +133,8 @@ impl RepoManager {
             }
         }
         let db_path = self.ledger_dir.join("local").join(format!("{}.redb", stem));
-        let db = cached_database(&db_path)?;
+        let db = cached_database(&db_path)
+            .map_err(|err| anyhow!("Broken local repo {} while opening database: {}", stem, err))?;
         source_control::validate_tables(db.as_ref()).map_err(|err| {
             anyhow!(
                 "Broken local repo {} while validating source control tables: {}",
@@ -166,33 +167,25 @@ impl RepoManager {
                 local_dir
             );
         }
-        let target_id = uuid::Uuid::parse_str(selector).ok();
         for entry in std::fs::read_dir(local_dir)? {
             let path = entry?.path();
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {
                 continue;
             }
             let stem = Self::repo_stem_from_path(&path, "resolving local selector")?;
-            let info = if stem == self.local_repo_name {
-                self.get_repo_info()?
-            } else {
-                match Self::read_repo_info_from_path(&path) {
-                    Ok(info) => info,
-                    Err(err) => {
-                        return Err(anyhow!(
-                            "Broken local repo {} while resolving selector {}: {}",
-                            stem,
-                            selector,
-                            err
-                        ));
-                    }
-                }
-            };
             if stem == selector {
                 return Ok(Some(stem));
             }
-            if info.as_ref().map(|info| info.uuid) == target_id {
-                return Ok(Some(stem));
+            if stem == self.local_repo_name {
+                continue;
+            }
+            if let Err(err) = Self::read_repo_info_from_path(&path) {
+                return Err(anyhow!(
+                    "Broken local repo {} while resolving selector {}: {}",
+                    stem,
+                    selector,
+                    err
+                ));
             }
         }
         Ok(None)

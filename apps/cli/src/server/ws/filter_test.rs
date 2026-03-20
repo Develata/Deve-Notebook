@@ -219,3 +219,60 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
         other => panic!("unexpected peer-deleted message: {:?}", other),
     }
 }
+
+#[test]
+fn preserves_existing_runtime_scope_nonce_when_stamping() {
+    let mut session = WsSession::new();
+    session.set_scope_nonce(Some(9));
+    let filter = BroadcastFilter::for_session(&session);
+
+    let new_op = filter.stamp_scope_nonce(ServerMessage::NewOp {
+        repo_id: uuid::Uuid::nil(),
+        branch: None,
+        scope_nonce: Some(7),
+        doc_id: DocId::new(),
+        entry: ConfirmedOp::new(
+            1,
+            Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            None,
+        ),
+    });
+
+    match new_op {
+        Some(ServerMessage::NewOp { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(7)),
+        other => panic!("unexpected new-op message: {:?}", other),
+    }
+}
+
+#[test]
+fn rejects_runtime_broadcasts_with_stale_scope_nonce() {
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(uuid::Uuid::nil()));
+    session.set_scope_nonce(Some(9));
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(!filter.should_forward(&ServerMessage::CommitAck {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: None,
+        scope_nonce: Some(7),
+        commit_id: "c1".into(),
+        timestamp: 1,
+    }));
+    assert!(!filter.should_forward(&ServerMessage::NewOp {
+        repo_id: uuid::Uuid::nil(),
+        branch: None,
+        scope_nonce: Some(7),
+        doc_id: DocId::new(),
+        entry: ConfirmedOp::new(
+            1,
+            Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            None,
+        ),
+    }));
+}
