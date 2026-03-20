@@ -130,4 +130,28 @@ mod tests {
         assert_eq!(looked_up.name, "alias");
         assert_eq!(looked_up.url.as_deref(), Some("urn:alias"));
     }
+
+    #[test]
+    fn local_repo_info_lookup_without_repair_fails_closed_on_broken_main_metadata() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        let main_info = main.get_repo_info().expect("main info").expect("present");
+        let main_db = main.open_database(None, "main").expect("main db");
+
+        let txn = main_db.db.begin_write().expect("write txn");
+        txn.open_table(REPO_METADATA)
+            .expect("repo metadata")
+            .insert(&0, b"not-bincode".as_slice())
+            .expect("poison metadata");
+        txn.commit().expect("commit poison");
+
+        let err = main
+            .get_local_repo_info_by_id_without_repair(main_info.uuid)
+            .expect_err("broken main metadata must fail closed");
+        assert!(
+            err.to_string()
+                .contains("Broken local repo main while resolving UUID")
+        );
+    }
 }

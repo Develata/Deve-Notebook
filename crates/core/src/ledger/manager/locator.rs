@@ -20,8 +20,14 @@ impl RepoManager {
         &self,
         target_id: RepoId,
     ) -> Result<Option<String>> {
-        if let Ok(Some(info)) = Self::read_repo_info_from_db(&self.local_db)
-            && info.uuid == target_id
+        if let Some(info) = Self::read_repo_info_from_db(&self.local_db).map_err(|err| {
+            anyhow!(
+                "Broken local repo {} while resolving UUID {} without repair: {}",
+                self.local_repo_name,
+                target_id,
+                err
+            )
+        })? && info.uuid == target_id
         {
             return Ok(Some(self.local_repo_name.clone()));
         }
