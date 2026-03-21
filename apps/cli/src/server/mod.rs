@@ -211,6 +211,7 @@ pub async fn start_server(
     // 启动系统指标广播任务 (每 5 秒)
     metrics::spawn_broadcaster(app_state.clone());
 
+    static_files::validate_static_dir_override()?;
     let app = router::build_app(app_state, port, auth_config);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Server running on ws://{}", addr);

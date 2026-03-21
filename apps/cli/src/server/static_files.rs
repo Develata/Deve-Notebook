@@ -14,6 +14,7 @@
 //! - API 路由 (`/api/*`, `/ws`) 优先级高于静态文件
 
 use axum::Router;
+use anyhow::{Context, Result, anyhow};
 use std::path::PathBuf;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -30,6 +31,41 @@ fn resolve_static_dir() -> PathBuf {
     std::env::var(ENV_STATIC_DIR)
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(DEFAULT_STATIC_DIR))
+}
+
+/// 校验显式配置的静态目录。
+///
+/// Invariants:
+/// - 显式 `DEVE_STATIC_DIR` 代表操作者声明需要托管静态资源。
+/// - 显式配置损坏时必须 fail-closed，不能静默降级成 API-only。
+pub fn validate_static_dir_override() -> Result<()> {
+    let Ok(raw_dir) = std::env::var(ENV_STATIC_DIR) else {
+        return Ok(());
+    };
+    let dir = PathBuf::from(raw_dir);
+    validate_static_root(&dir)
+}
+
+fn validate_static_root(dir: &std::path::Path) -> Result<()> {
+    match dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => {
+            return Err(anyhow!(
+                "Configured static dir missing: {:?}",
+                dir
+            ));
+        }
+        Err(err) => {
+            return Err(err).with_context(|| format!("Failed to stat static dir {:?}", dir));
+        }
+    }
+
+    let index = dir.join("index.html");
+    match index.try_exists() {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(anyhow!("Configured static index missing: {:?}", index)),
+        Err(err) => Err(err).with_context(|| format!("Failed to stat index.html {:?}", index)),
+    }
 }
 
 /// 构建 SPA 静态文件 fallback 服务
@@ -94,5 +130,35 @@ mod tests {
         let dir = resolve_static_dir();
         assert_eq!(dir, PathBuf::from("/custom/path"));
         unsafe { std::env::remove_var(ENV_STATIC_DIR) };
+    }
+
+    #[test]
+    fn validate_static_dir_override_fails_closed_when_dir_missing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let missing = dir.path().join("missing-static");
+        unsafe { std::env::set_var(ENV_STATIC_DIR, &missing) };
+
+        let err = validate_static_dir_override()
+            .expect_err("configured missing static dir must fail closed");
+
+        unsafe { std::env::remove_var(ENV_STATIC_DIR) };
+        assert!(err.to_string().contains("Configured static dir missing"));
+    }
+
+    #[test]
+    fn validate_static_dir_override_fails_closed_when_index_missing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let static_dir = dir.path().join("static");
+        std::fs::create_dir_all(&static_dir).expect("mkdir static");
+        unsafe { std::env::set_var(ENV_STATIC_DIR, &static_dir) };
+
+        let err = validate_static_dir_override()
+            .expect_err("configured static dir without index must fail closed");
+
+        unsafe { std::env::remove_var(ENV_STATIC_DIR) };
+        assert!(
+            err.to_string().contains("Configured static index missing")
+                || err.to_string().contains("index.html")
+        );
     }
 }

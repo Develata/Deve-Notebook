@@ -6,6 +6,8 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 #[cfg(feature = "search")]
+use crate::server::error_classify::is_storage_corruption;
+#[cfg(feature = "search")]
 use deve_core::protocol::ServerMessage;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
@@ -36,7 +38,7 @@ pub async fn handle_search(
             Err(e) => {
                 ch.send_protocol_error_with_scope_nonce(
                     ServerError::with_detail(
-                        ServerErrorCode::RequestFailed,
+                        classify_search_error(&e.to_string()),
                         format!("Search failed: {}", e),
                     ),
                     scope_nonce,
@@ -64,4 +66,43 @@ pub async fn handle_search(
         ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature not enabled"),
         scope_nonce,
     );
+}
+
+#[cfg(feature = "search")]
+#[cfg_attr(not(test), allow(dead_code))]
+fn classify_search_error(detail: &str) -> ServerErrorCode {
+    let lower = detail.to_lowercase();
+    if is_storage_corruption(&lower)
+        || lower.contains("search index document missing required stored field")
+        || lower.contains("searchservice writer lock poisoned")
+    {
+        return ServerErrorCode::StoragePersistFailed;
+    }
+    ServerErrorCode::RequestFailed
+}
+
+#[cfg(all(test, feature = "search"))]
+mod tests {
+    use super::classify_search_error;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn classifies_search_index_corruption_as_storage_persist_failed() {
+        assert_eq!(
+            classify_search_error("Search index document missing required stored field: path"),
+            ServerErrorCode::StoragePersistFailed
+        );
+        assert_eq!(
+            classify_search_error("SearchService writer lock poisoned"),
+            ServerErrorCode::StoragePersistFailed
+        );
+    }
+
+    #[test]
+    fn keeps_user_query_errors_as_request_failed() {
+        assert_eq!(
+            classify_search_error("The query parser expected a term"),
+            ServerErrorCode::RequestFailed
+        );
+    }
 }
