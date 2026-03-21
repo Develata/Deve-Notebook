@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;
-use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use std::path::PathBuf;
+use deve_core::source_control::pending_fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub(super) fn repair_repo_prefixed_paths(
@@ -25,10 +25,7 @@ pub(super) fn repair_repo_prefixed_paths(
             if stripped.is_empty() || path_exists_for_repair(repo, repo_name, stripped, doc_id)? {
                 continue;
             }
-            validate_workspace_rename_target(repo, repo_name, &old_path, stripped)?;
-            repo.repair_rename_doc_mapping_in_local_repo(repo_name, &old_path, stripped)?;
-            rename_workspace_file(repo, repo_name, &old_path, stripped)?;
-            move_pending(repo, repo_name, doc_id, &old_path, stripped)?;
+            repair_doc_path(repo, repo_name, doc_id, &old_path, stripped)?;
             println!(
                 "repair: normalized repo path {}:{} -> {}",
                 repo_name, old_path, stripped
@@ -37,6 +34,26 @@ pub(super) fn repair_repo_prefixed_paths(
         }
     }
     Ok(fixed)
+}
+
+fn repair_doc_path(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    doc_id: deve_core::models::DocId,
+    old_path: &str,
+    new_path: &str,
+) -> Result<()> {
+    validate_workspace_rename_target(repo, repo_name, old_path, new_path)?;
+    let workspace_moved = rename_workspace_file(repo, repo_name, old_path, new_path)?;
+    if let Err(err) = repo.repair_rename_doc_mapping_in_local_repo(repo_name, old_path, new_path) {
+        rollback_workspace_rename_if_needed(repo, repo_name, new_path, old_path, workspace_moved)?;
+        return Err(err);
+    }
+    if let Err(err) = move_pending(repo, repo_name, doc_id, old_path, new_path) {
+        rollback_path_repair(repo, repo_name, old_path, new_path, workspace_moved)?;
+        return Err(err);
+    }
+    Ok(())
 }
 
 fn path_exists_for_repair(
@@ -57,11 +74,23 @@ fn validate_workspace_rename_target(
     new_path: &str,
 ) -> Result<()> {
     let old_abs = repo.local_repo_workspace_path(repo_name, old_path)?;
-    if !old_abs.exists() {
+    if !checked_exists(
+        &old_abs,
+        &format!(
+            "Failed to stat workspace path while validating repair source {}",
+            old_path
+        ),
+    )? {
         return Ok(());
     }
     let new_abs = repo.local_repo_workspace_path(repo_name, new_path)?;
-    if new_abs.exists() {
+    if checked_exists(
+        &new_abs,
+        &format!(
+            "Failed to stat workspace path while validating repair target {}",
+            new_path
+        ),
+    )? {
         anyhow::bail!(
             "Repair target path already exists in workspace: {}",
             new_path
@@ -75,13 +104,25 @@ fn rename_workspace_file(
     repo_name: &str,
     old_path: &str,
     new_path: &str,
-) -> Result<()> {
+) -> Result<bool> {
     let old_abs = repo.local_repo_workspace_path(repo_name, old_path)?;
-    if !old_abs.exists() {
-        return Ok(());
+    if !checked_exists(
+        &old_abs,
+        &format!(
+            "Failed to stat workspace path while renaming repair source {}",
+            old_path
+        ),
+    )? {
+        return Ok(false);
     }
     let new_abs = repo.local_repo_workspace_path(repo_name, new_path)?;
-    if new_abs.exists() {
+    if checked_exists(
+        &new_abs,
+        &format!(
+            "Failed to stat workspace path while renaming repair target {}",
+            new_path
+        ),
+    )? {
         anyhow::bail!(
             "Repair target path already exists in workspace: {}",
             new_path
@@ -92,7 +133,7 @@ fn rename_workspace_file(
     }
     std::fs::rename(&old_abs, &new_abs)?;
     prune_empty_parents(repo.local_repo_workspace_root(repo_name)?, old_abs.parent());
-    Ok(())
+    Ok(true)
 }
 
 fn move_pending(
@@ -103,19 +144,67 @@ fn move_pending(
     new_path: &str,
 ) -> Result<()> {
     repo.run_on_local_repo(repo_name, |db| {
-        let Some(entry) = pending_fs::list_for_doc(db, doc_id)?
-            .into_iter()
-            .find(|entry| entry.path == old_path)
-        else {
-            return Ok(());
-        };
-        pending_fs::remove(db, old_path)?;
-        let moved = PendingFsEntry {
-            path: new_path.to_string(),
-            ..entry
-        };
-        pending_fs::upsert(db, &moved)
+        let _ = pending_fs::move_for_doc(db, doc_id, old_path, new_path)?;
+        Ok(())
     })
+}
+
+fn rollback_path_repair(
+    repo: &RepoManager,
+    repo_name: &str,
+    old_path: &str,
+    new_path: &str,
+    workspace_moved: bool,
+) -> Result<()> {
+    repo.repair_rename_doc_mapping_in_local_repo(repo_name, new_path, old_path)?;
+    rollback_workspace_rename_if_needed(repo, repo_name, new_path, old_path, workspace_moved)
+}
+
+fn rollback_workspace_rename_if_needed(
+    repo: &RepoManager,
+    repo_name: &str,
+    moved_path: &str,
+    original_path: &str,
+    workspace_moved: bool,
+) -> Result<()> {
+    if !workspace_moved {
+        return Ok(());
+    }
+    let moved_abs = repo.local_repo_workspace_path(repo_name, moved_path)?;
+    if !checked_exists(
+        &moved_abs,
+        &format!(
+            "Failed to stat workspace rollback source while restoring {}",
+            moved_path
+        ),
+    )? {
+        anyhow::bail!(
+            "Repair rollback source path missing in workspace: {}",
+            moved_path
+        );
+    }
+    let original_abs = repo.local_repo_workspace_path(repo_name, original_path)?;
+    if checked_exists(
+        &original_abs,
+        &format!(
+            "Failed to stat workspace rollback target while restoring {}",
+            original_path
+        ),
+    )? {
+        anyhow::bail!(
+            "Repair rollback target already exists in workspace: {}",
+            original_path
+        );
+    }
+    if let Some(parent) = original_abs.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::rename(&moved_abs, &original_abs)?;
+    prune_empty_parents(
+        repo.local_repo_workspace_root(repo_name)?,
+        moved_abs.parent(),
+    );
+    Ok(())
 }
 
 fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
@@ -137,6 +226,16 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
     }
 }
 
+fn checked_exists(path: &Path, context: &str) -> Result<bool> {
+    match path.try_exists() {
+        Ok(exists) => Ok(exists),
+        Err(err) => Err(err).context(context.to_string()),
+    }
+}
+
+#[cfg(test)]
+#[path = "path_fix_rollback_test.rs"]
+mod rollback_tests;
 #[cfg(test)]
 #[path = "path_fix_test.rs"]
 mod tests;

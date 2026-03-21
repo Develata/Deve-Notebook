@@ -107,6 +107,75 @@ pub fn remove(db: &Database, path: &str) -> Result<()> {
     Ok(())
 }
 
+/// 按稳定 `DocId` 原子移动单条 pending 记录。
+///
+/// Invariants:
+/// - 若 `old_path` 对应条目不存在或 `doc_id` 不匹配，则不做任何修改。
+/// - 若 `new_path` 已存在其他 pending 条目，则必须 fail-closed。
+pub fn move_for_doc(db: &Database, doc_id: DocId, old_path: &str, new_path: &str) -> Result<bool> {
+    let write_txn = db.begin_write()?;
+    let moved = {
+        let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+        let previous = table
+            .get(old_path)?
+            .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+            .transpose()?;
+        if let Some(entry) = previous.filter(|entry| entry.doc_id == Some(doc_id)) {
+            if table.get(new_path)?.is_some() {
+                anyhow::bail!("Pending FS target already exists: {}", new_path);
+            }
+            let moved = PendingFsEntry {
+                path: new_path.to_string(),
+                ..entry
+            };
+            let bytes = serde_json::to_vec(&moved)?;
+            index::remove(&write_txn, moved.doc_id, old_path)?;
+            table.remove(old_path)?;
+            index::replace(&write_txn, None, moved.doc_id, new_path)?;
+            table.insert(new_path, bytes.as_slice())?;
+            true
+        } else {
+            false
+        }
+    };
+    write_txn.commit()?;
+    if moved {
+        tracing::debug!("Pending FS moved: {} -> {}", old_path, new_path);
+    }
+    Ok(moved)
+}
+
+/// 原子移除某个路径前缀下的所有 pending 记录。
+///
+/// Invariant:
+/// - 同一事务内同时更新 `pending_fs_ops` 与 doc 索引。
+pub fn remove_subtree(db: &Database, prefix: &str) -> Result<usize> {
+    let write_txn = db.begin_write()?;
+    let removed = {
+        let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+        let mut to_remove = Vec::new();
+        let prefix_slash = format!("{prefix}/");
+        for item in table.iter()? {
+            let (path_guard, value_guard) = item?;
+            let path = path_guard.value().to_string();
+            if path != prefix && !path.starts_with(&prefix_slash) {
+                continue;
+            }
+            let entry = serde_json::from_slice::<PendingFsEntry>(value_guard.value())?;
+            to_remove.push((path, entry.doc_id));
+        }
+        let removed = to_remove.len();
+        for (path, doc_id) in to_remove {
+            index::remove(&write_txn, doc_id, &path)?;
+            table.remove(path.as_str())?;
+        }
+        removed
+    };
+    write_txn.commit()?;
+    tracing::debug!("Pending FS subtree removed: {} ({})", prefix, removed);
+    Ok(removed)
+}
+
 /// 清空所有待确认变更
 pub fn clear(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
