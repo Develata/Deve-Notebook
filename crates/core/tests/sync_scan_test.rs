@@ -38,3 +38,23 @@ fn scan_fails_closed_on_unreadable_repo_dir() {
     restore.set_mode(0o755);
     std::fs::set_permissions(&unreadable, restore).expect("restore perms");
 }
+
+#[test]
+fn scan_fails_closed_on_markdown_path_that_is_not_a_file() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let vault_dir = dir.path().join("vault");
+    let mut repo =
+        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
+    repo.set_vault_root(&vault_dir);
+    let repo = Arc::new(repo);
+    let sync = SyncManager::new(repo, vault_dir.clone());
+
+    std::fs::create_dir_all(vault_dir.join("default").join("broken.md"))
+        .expect("create invalid markdown directory");
+
+    let err = sync
+        .scan()
+        .expect_err("non-file markdown path must fail closed");
+    assert!(err.to_string().contains("markdown path is not a file"));
+}

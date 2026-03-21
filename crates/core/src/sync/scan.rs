@@ -30,8 +30,15 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
         let entry =
             entry.map_err(|err| anyhow!("Failed to walk local repo {}: {}", repo_name, err))?;
         let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("md") {
+        if path.extension().and_then(|ext| ext.to_str()) != Some("md") {
             continue;
+        }
+        if !entry.file_type().is_file() {
+            return Err(anyhow!(
+                "Broken local repo {} while scanning workspace: markdown path is not a file: {}",
+                repo_name,
+                path.display()
+            ));
         }
         let Ok(rel) = path.strip_prefix(&repo_root) else {
             continue;
