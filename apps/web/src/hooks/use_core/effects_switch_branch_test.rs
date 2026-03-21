@@ -17,7 +17,6 @@ fn branch_switch_reports_when_scope_changed() {
         true,
         Some(11),
         BranchSwitchSignals {
-            active_branch,
             pending_branch_switch,
             pending_branch_switch_nonce,
             set_pending_branch_switch,
@@ -46,7 +45,6 @@ fn ignores_branch_switched_without_pending_target() {
         true,
         Some(3),
         BranchSwitchSignals {
-            active_branch,
             pending_branch_switch,
             pending_branch_switch_nonce,
             set_pending_branch_switch,
@@ -72,7 +70,6 @@ fn ignores_branch_switched_with_stale_nonce() {
         true,
         Some(7),
         BranchSwitchSignals {
-            active_branch,
             pending_branch_switch,
             pending_branch_switch_nonce,
             set_pending_branch_switch,
@@ -81,4 +78,31 @@ fn ignores_branch_switched_with_stale_nonce() {
         },
     ));
     assert_eq!(active_branch.get_untracked(), Some(PeerId::new("peer-a")));
+}
+
+#[test]
+fn accepts_same_branch_rebind_with_new_scope_nonce() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+
+    let (active_branch, set_active_branch) = signal(Some(PeerId::new("peer-a")));
+    let (pending_branch_switch, set_pending_branch_switch) =
+        signal(Some(PendingBranchTarget::Shadow("peer-a".into())));
+    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(Some(13));
+
+    assert!(handle_branch_switched(
+        Some("peer-a".into()),
+        true,
+        Some(13),
+        BranchSwitchSignals {
+            pending_branch_switch,
+            pending_branch_switch_nonce,
+            set_pending_branch_switch,
+            set_pending_branch_switch_nonce,
+            set_active_branch,
+        },
+    ));
+    assert_eq!(active_branch.get_untracked(), Some(PeerId::new("peer-a")));
+    assert_eq!(pending_branch_switch.get_untracked(), None);
+    assert_eq!(pending_branch_switch_nonce.get_untracked(), None);
 }

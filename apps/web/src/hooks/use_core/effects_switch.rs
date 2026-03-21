@@ -18,7 +18,6 @@ pub struct RepoSwitchOutcome {
 
 #[derive(Clone, Copy)]
 pub struct BranchSwitchSignals {
-    pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
     pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
@@ -53,9 +52,8 @@ pub fn handle_branch_switched(
     }
 
     let next_branch = peer_id.map(PeerId::new);
-    let changed = signals.active_branch.get_untracked() != next_branch;
     signals.set_active_branch.set(next_branch);
-    changed
+    true
 }
 
 pub fn handle_repo_switched(

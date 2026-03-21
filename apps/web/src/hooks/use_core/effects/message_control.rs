@@ -21,7 +21,6 @@ pub fn handle_branch_switched(
         success,
         switch_nonce,
         effects_switch::BranchSwitchSignals {
-            active_branch: signals.active_branch,
             pending_branch_switch: signals.pending_branch_switch,
             pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
             set_pending_branch_switch: signals.set_pending_branch_switch,
