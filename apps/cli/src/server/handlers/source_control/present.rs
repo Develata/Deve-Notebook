@@ -1,3 +1,4 @@
+use anyhow::{Result, anyhow};
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use std::collections::HashSet;
@@ -81,9 +82,16 @@ pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) ->
 }
 
 pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> Option<String> {
+    resolve_target_path_strict(entries, target).ok().flatten()
+}
+
+pub(crate) fn resolve_target_path_strict(
+    entries: &[ChangeEntry],
+    target: &ScPathTarget,
+) -> Result<Option<String>> {
     let path = normalized(&target.path);
     if let Some(doc_id) = target.doc_id {
-        return entries
+        return Ok(entries
             .iter()
             .find(|entry| {
                 entry.doc_id == Some(doc_id)
@@ -101,12 +109,15 @@ pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> Op
                     .find(|entry| entry.doc_id == Some(doc_id) && normalized(&entry.path) == path)
             })
             .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
-            .map(|entry| normalized(&entry.path));
+            .map(|entry| normalized(&entry.path)));
     }
-    resolve_without_doc_id(entries, &path).map(|entry| normalized(&entry.path))
+    Ok(resolve_without_doc_id(entries, &path)?.map(|entry| normalized(&entry.path)))
 }
 
-fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {
+fn resolve_without_doc_id<'a>(
+    entries: &'a [ChangeEntry],
+    path: &str,
+) -> Result<Option<&'a ChangeEntry>> {
     let exact = entries
         .iter()
         .filter(|entry| normalized(&entry.path) == path)
@@ -126,7 +137,10 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
         .chain(renamed.iter())
         .any(|entry| entry.doc_id.is_some())
     {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous source control target: {} matched tracked entries",
+            path
+        ));
     }
     let live_exact = exact
         .iter()
@@ -137,21 +151,27 @@ fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<
         .iter()
         .any(|entry| entry.status == ChangeStatus::Deleted);
     if live_exact.len() > 1 || renamed.len() > 1 {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous source control target: {} matched multiple live entries",
+            path
+        ));
     }
     if deleted_exact && renamed.len() == 1 {
-        return renamed.into_iter().next();
+        return Ok(renamed.into_iter().next());
     }
     if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous source control target: {} matched reused path and rename successor",
+            path
+        ));
     }
     if let Some(entry) = live_exact.into_iter().next() {
-        return Some(entry);
+        return Ok(Some(entry));
     }
     if let Some(entry) = renamed.into_iter().next() {
-        return Some(entry);
+        return Ok(Some(entry));
     }
-    (exact.len() == 1).then_some(exact[0])
+    Ok((exact.len() == 1).then_some(exact[0]))
 }
 
 fn normalized(path: &str) -> String {
