@@ -58,6 +58,10 @@ fn set_vault_root_checked_fails_closed_on_broken_secondary_repo() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let first_vault = dir.path().join("vault-ok");
+    std::fs::create_dir_all(&first_vault).expect("first vault dir");
+    repo.set_vault_root_checked(&first_vault)
+        .expect("initial vault mount");
     let local_dir = ledger_dir.join("local");
     std::fs::write(local_dir.join("broken.redb"), b"not-a-redb").expect("broken local repo");
     let vault_dir = dir.path().join("vault");
@@ -67,6 +71,11 @@ fn set_vault_root_checked_fails_closed_on_broken_secondary_repo() {
         .set_vault_root_checked(&vault_dir)
         .expect_err("broken local repo must fail checked vault mount");
     assert!(err.to_string().contains("Broken local repo broken"));
+    assert_eq!(
+        repo.local_repo_workspace_root("main")
+            .expect("workspace root after failed mount"),
+        first_vault.join("main")
+    );
 }
 
 #[cfg(unix)]

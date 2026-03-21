@@ -29,8 +29,13 @@ impl RepoManager {
     /// - 生产态在挂载 Vault 后，必须立即暴露本地 repo catalog 损坏。
     /// - 测试辅助可继续使用 `set_vault_root` 的宽松包装。
     pub fn set_vault_root_checked(&mut self, root: impl AsRef<Path>) -> Result<()> {
+        let previous_root = self.vault_root.clone();
         self.vault_root = Some(root.as_ref().to_path_buf());
-        self.refresh_local_repo_catalog()
+        if let Err(err) = self.refresh_local_repo_catalog() {
+            self.vault_root = previous_root;
+            return Err(err);
+        }
+        Ok(())
     }
 
     /// 设置 Vault 根目录 (用于 commit 时读取磁盘文件)
