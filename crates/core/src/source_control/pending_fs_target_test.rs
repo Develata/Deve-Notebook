@@ -37,6 +37,7 @@ fn prefers_rename_successor_when_old_path_is_reused() {
 
     assert_eq!(
         select_entry_without_doc(entries, "notes/old.md")
+            .expect("path-only resolution should succeed")
             .expect("rename successor should win")
             .path,
         "notes/new.md"
@@ -66,7 +67,12 @@ fn fails_closed_when_path_only_target_is_ambiguous() {
         },
     ];
 
-    assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
+    let err = select_entry_without_doc(entries, "notes/old.md")
+        .expect_err("ambiguous path-only target must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Ambiguous pending_fs target: notes/old.md")
+    );
 }
 
 #[test]
@@ -93,7 +99,12 @@ fn fails_closed_when_path_only_target_matches_tracked_entries() {
         },
     ];
 
-    assert!(select_entry_without_doc(entries, "notes/old.md").is_none());
+    let err = select_entry_without_doc(entries, "notes/old.md")
+        .expect_err("tracked path-only target must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Ambiguous pending_fs target: notes/old.md")
+    );
 }
 
 #[test]

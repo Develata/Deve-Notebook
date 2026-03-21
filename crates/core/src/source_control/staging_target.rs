@@ -5,7 +5,7 @@ use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::to_forward_slash;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 
 pub fn get_staged_for_target(
@@ -38,24 +38,20 @@ fn resolve_for_doc(
     path: &str,
     doc_id: DocId,
 ) -> Result<Option<(String, StagedEntry)>> {
-    Ok(select_entry(
-        list_staged_entries_for_doc(db, doc_id)?,
-        path,
-        Some(doc_id),
-    ))
+    select_entry(list_staged_entries_for_doc(db, doc_id)?, path, Some(doc_id))
 }
 
 fn resolve_without_doc(db: &Database, path: &str) -> Result<Option<(String, StagedEntry)>> {
-    Ok(select_entry(list_staged_entries(db)?, path, None))
+    select_entry(list_staged_entries(db)?, path, None)
 }
 
 fn select_entry(
     entries: Vec<(String, StagedEntry)>,
     path: &str,
     doc_id: Option<DocId>,
-) -> Option<(String, StagedEntry)> {
+) -> Result<Option<(String, StagedEntry)>> {
     if let Some(doc_id) = doc_id {
-        return select_entry_for_doc(entries, path, doc_id);
+        return Ok(select_entry_for_doc(entries, path, doc_id));
     }
     select_entry_without_doc(entries, path)
 }
@@ -93,7 +89,7 @@ fn select_entry_for_doc(
 fn select_entry_without_doc(
     entries: Vec<(String, StagedEntry)>,
     path: &str,
-) -> Option<(String, StagedEntry)> {
+) -> Result<Option<(String, StagedEntry)>> {
     let exact = entries
         .iter()
         .find(|(entry_path, _)| entry_path == path)
@@ -113,7 +109,10 @@ fn select_entry_without_doc(
         .chain(renamed.iter())
         .any(|(_, entry)| entry.doc_id.is_some())
     {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous staged target: {} matched tracked entries",
+            path
+        ));
     }
     let live_exact = exact
         .iter()
@@ -124,21 +123,27 @@ fn select_entry_without_doc(
         .iter()
         .any(|(entry_path, entry)| entry_path == path && entry.status == ChangeStatus::Deleted);
     if live_exact.len() > 1 || renamed.len() > 1 {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous staged target: {} matched multiple live entries",
+            path
+        ));
     }
     if deleted_exact && renamed.len() == 1 {
-        return renamed.into_iter().next();
+        return Ok(renamed.into_iter().next());
     }
     if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous staged target: {} matched reused path and rename successor",
+            path
+        ));
     }
     if let Some(entry) = live_exact.into_iter().next() {
-        return Some(entry);
+        return Ok(Some(entry));
     }
     if let Some(entry) = renamed.into_iter().next() {
-        return Some(entry);
+        return Ok(Some(entry));
     }
-    (exact.len() == 1).then(|| exact[0].clone())
+    Ok((exact.len() == 1).then(|| exact[0].clone()))
 }
 
 #[cfg(test)]

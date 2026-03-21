@@ -3,7 +3,7 @@ use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::to_forward_slash;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::Database;
 
 pub fn get_for_target(db: &Database, target: &ScPathTarget) -> Result<Option<PendingFsEntry>> {
@@ -26,20 +26,20 @@ pub fn take_for_target(db: &Database, target: &ScPathTarget) -> Result<Option<Pe
 }
 
 fn resolve_for_doc(db: &Database, path: &str, doc_id: DocId) -> Result<Option<PendingFsEntry>> {
-    Ok(select_entry(list_for_doc(db, doc_id)?, path, Some(doc_id)))
+    select_entry(list_for_doc(db, doc_id)?, path, Some(doc_id))
 }
 
 fn resolve_without_doc(db: &Database, path: &str) -> Result<Option<PendingFsEntry>> {
-    Ok(select_entry(list_all(db)?, path, None))
+    select_entry(list_all(db)?, path, None)
 }
 
 fn select_entry(
     entries: Vec<PendingFsEntry>,
     path: &str,
     doc_id: Option<DocId>,
-) -> Option<PendingFsEntry> {
+) -> Result<Option<PendingFsEntry>> {
     if let Some(doc_id) = doc_id {
-        return select_entry_for_doc(entries, path, doc_id);
+        return Ok(select_entry_for_doc(entries, path, doc_id));
     }
     select_entry_without_doc(entries, path)
 }
@@ -73,7 +73,10 @@ fn select_entry_for_doc(
         })
 }
 
-fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<PendingFsEntry> {
+fn select_entry_without_doc(
+    entries: Vec<PendingFsEntry>,
+    path: &str,
+) -> Result<Option<PendingFsEntry>> {
     let exact = entries
         .iter()
         .filter(|entry| entry.path == path)
@@ -92,7 +95,10 @@ fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<
         .chain(renamed.iter())
         .any(|entry| entry.doc_id.is_some())
     {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous pending_fs target: {} matched tracked entries",
+            path
+        ));
     }
     let live_exact = exact
         .iter()
@@ -103,21 +109,27 @@ fn select_entry_without_doc(entries: Vec<PendingFsEntry>, path: &str) -> Option<
         .iter()
         .any(|entry| entry.change_type == ChangeStatus::Deleted);
     if live_exact.len() > 1 || renamed.len() > 1 {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous pending_fs target: {} matched multiple live entries",
+            path
+        ));
     }
     if deleted_exact && renamed.len() == 1 {
-        return renamed.into_iter().next();
+        return Ok(renamed.into_iter().next());
     }
     if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous pending_fs target: {} matched reused path and rename successor",
+            path
+        ));
     }
     if let Some(entry) = live_exact.into_iter().next() {
-        return Some(entry);
+        return Ok(Some(entry));
     }
     if let Some(entry) = renamed.into_iter().next() {
-        return Some(entry);
+        return Ok(Some(entry));
     }
-    (exact.len() == 1).then(|| exact[0].clone())
+    Ok((exact.len() == 1).then(|| exact[0].clone()))
 }
 
 trait PendingEntryStatus {

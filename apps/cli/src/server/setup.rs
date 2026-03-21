@@ -77,7 +77,9 @@ pub(super) fn load_mcp_manager(ledger_dir: &std::path::Path) -> Result<McpManage
     match cfg_path.try_exists() {
         Ok(true) => {}
         Ok(false) => return Ok(manager),
-        Err(err) => return Err(err).with_context(|| format!("Failed to stat MCP config {:?}", cfg_path)),
+        Err(err) => {
+            return Err(err).with_context(|| format!("Failed to stat MCP config {:?}", cfg_path));
+        }
     }
 
     let content = std::fs::read_to_string(&cfg_path)

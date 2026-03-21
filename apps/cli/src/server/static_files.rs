@@ -13,8 +13,8 @@
 //! - 所有非 API / 非 WS 路由 fallback 到 `index.html`（SPA 路由）
 //! - API 路由 (`/api/*`, `/ws`) 优先级高于静态文件
 
-use axum::Router;
 use anyhow::{Context, Result, anyhow};
+use axum::Router;
 use std::path::PathBuf;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -50,10 +50,7 @@ fn validate_static_root(dir: &std::path::Path) -> Result<()> {
     match dir.try_exists() {
         Ok(true) => {}
         Ok(false) => {
-            return Err(anyhow!(
-                "Configured static dir missing: {:?}",
-                dir
-            ));
+            return Err(anyhow!("Configured static dir missing: {:?}", dir));
         }
         Err(err) => {
             return Err(err).with_context(|| format!("Failed to stat static dir {:?}", dir));

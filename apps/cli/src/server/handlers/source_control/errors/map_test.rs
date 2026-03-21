@@ -11,6 +11,36 @@ fn maps_pending_miss_with_operation_context() {
 }
 
 #[test]
+fn maps_pending_ambiguity_to_storage_conflict() {
+    let err = map_repo_error(
+        ScOp::StagePending("notes/a.md".into()),
+        anyhow::anyhow!("Ambiguous pending_fs target: notes/a.md matched tracked entries"),
+    );
+    assert_eq!(err.code, ServerErrorCode::StorageConflict);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}
+
+#[test]
+fn maps_staged_ambiguity_to_storage_conflict() {
+    let err = map_repo_error(
+        ScOp::Unstage("notes/a.md".into()),
+        anyhow::anyhow!("Ambiguous staged target: notes/a.md matched multiple live entries"),
+    );
+    assert_eq!(err.code, ServerErrorCode::StorageConflict);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}
+
+#[test]
+fn maps_diff_ambiguity_to_storage_conflict() {
+    let err = map_repo_error(
+        ScOp::DiffDoc("notes/a.md".into()),
+        anyhow::anyhow!("Ambiguous pending_fs target: notes/a.md matched tracked entries"),
+    );
+    assert_eq!(err.code, ServerErrorCode::StorageConflict);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}
+
+#[test]
 fn maps_repo_scope_miss_to_repo_not_selected() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "Active repository not selected for current session"

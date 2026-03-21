@@ -18,11 +18,11 @@ use deve_core::plugin::runtime::host;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 
+#[cfg(feature = "search")]
+use deve_core::search::SearchService;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-#[cfg(feature = "search")]
-use deve_core::search::SearchService;
 use tree_state::RepoTreeRegistry;
 
 pub mod agent_bridge;

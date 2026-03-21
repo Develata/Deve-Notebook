@@ -44,15 +44,35 @@ pub fn map_repo_error(op: ScOp, error: Error) -> ServerError {
 
 fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<ServerError> {
     match op {
+        ScOp::StagePending(path) if detail.contains("Ambiguous pending_fs target") => Some(
+            ServerError::with_detail(ServerErrorCode::StorageConflict, path.clone()),
+        ),
         ScOp::StagePending(path) if detail.contains("Path is not in pending_fs_ops") => Some(
             ServerError::with_detail(ServerErrorCode::ScPendingNotFound, path.clone()),
+        ),
+        ScOp::DiscardPending(path) if detail.contains("Ambiguous pending_fs target") => Some(
+            ServerError::with_detail(ServerErrorCode::StorageConflict, path.clone()),
         ),
         ScOp::DiscardPending(path) if detail.contains("Path is not in pending_fs_ops") => Some(
             ServerError::with_detail(ServerErrorCode::ScPendingNotFound, path.clone()),
         ),
+        ScOp::Unstage(path) if detail.contains("Ambiguous staged target") => Some(
+            ServerError::with_detail(ServerErrorCode::StorageConflict, path.clone()),
+        ),
         ScOp::Unstage(path) if detail.contains("Path is not staged") => Some(
             ServerError::with_detail(ServerErrorCode::ScStagedNotFound, path.clone()),
         ),
+        ScOp::DiffDoc(path)
+            if contains_any(
+                detail,
+                &["Ambiguous pending_fs target", "Ambiguous staged target"],
+            ) =>
+        {
+            Some(ServerError::with_detail(
+                ServerErrorCode::StorageConflict,
+                path.clone(),
+            ))
+        }
         ScOp::DiffDoc(path)
             if contains_any(
                 detail,

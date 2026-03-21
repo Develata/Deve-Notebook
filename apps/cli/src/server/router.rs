@@ -4,11 +4,11 @@
 //! 负责 Axum Router 的组装：认证路由、公开路由、中间件层叠。
 //! 从 `mod.rs` 拆分以保持单文件行数在 130 行目标以内。
 
+use anyhow::Result;
 use axum::{
     Router,
     routing::{get, post},
 };
-use anyhow::Result;
 use std::sync::Arc;
 
 use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
