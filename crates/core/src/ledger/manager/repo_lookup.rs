@@ -32,9 +32,15 @@ impl RepoManager {
         self.refresh_local_repo_catalog()?;
         let mut matches = Vec::new();
         for repo_name in self.list_local_repo_names_for_execution()? {
-            let Some(info) = self.get_repo_info_for(None, Some(&repo_name))? else {
-                continue;
-            };
+            let info = self
+                .get_repo_info_for(None, Some(&repo_name))?
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Broken local repo {} while resolving URL {}: repository metadata missing",
+                        repo_name,
+                        target_url
+                    )
+                })?;
             if info.url.as_deref() == Some(target_url) {
                 matches.push(repo_name);
             }
@@ -143,5 +149,22 @@ mod tests {
             err.to_string()
                 .contains("Broken local repo main while resolving UUID")
         );
+    }
+
+    #[test]
+    fn local_repo_name_by_url_fails_closed_on_missing_main_metadata() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        let main_db = main.open_database(None, "main").expect("main db");
+
+        let txn = main_db.db.begin_write().expect("write txn");
+        txn.delete_table(REPO_METADATA).expect("delete metadata");
+        txn.commit().expect("commit");
+
+        let err = main
+            .find_local_repo_name_by_url("urn:main")
+            .expect_err("missing main metadata must fail closed");
+        assert!(err.to_string().contains("repository metadata missing"));
     }
 }

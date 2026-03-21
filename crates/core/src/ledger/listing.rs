@@ -45,7 +45,15 @@ impl RepoListing for RepoManager {
         let mut named = Vec::new();
         for (path, stem) in redb_repo_entries(&target_dir, "listing repos")? {
             let display = if stem == self.local_repo_name {
-                self.get_repo_info()?.map(|info| info.name)
+                Some(
+                    self.get_repo_info()?.ok_or_else(|| {
+                        anyhow!(
+                            "Broken local repo {} while listing repos: repository metadata missing",
+                            stem
+                        )
+                    })?
+                    .name,
+                )
             } else {
                 RepoManager::read_repo_info_from_path(&path)
                     .map_err(|err| {

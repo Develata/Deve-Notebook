@@ -14,6 +14,12 @@ impl RepoManager {
         let mut repos = Vec::new();
         for (path, stem) in redb_repo_entries(&local_dir, "listing execution names")? {
             if stem == self.local_repo_name {
+                self.get_repo_info()?.ok_or_else(|| {
+                    anyhow!(
+                        "Broken local repo {} while listing execution names: repository metadata missing",
+                        stem
+                    )
+                })?;
                 repos.push(stem);
                 continue;
             }
@@ -66,5 +72,22 @@ mod tests {
             .list_local_repo_names_for_execution()
             .expect_err("duplicate main metadata drift must fail closed");
         assert!(err.to_string().contains("metadata name drifted to main"));
+    }
+
+    #[test]
+    fn execution_repo_names_fail_closed_on_missing_main_metadata() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        let main_db = main.open_database(None, "main").expect("main db").db;
+        let txn = main_db.begin_write().expect("write txn");
+        txn.delete_table(REPO_METADATA)
+            .expect("delete repo metadata");
+        txn.commit().expect("commit");
+
+        let err = main
+            .list_local_repo_names_for_execution()
+            .expect_err("missing main metadata must fail closed");
+        assert!(err.to_string().contains("repository metadata missing"));
     }
 }
