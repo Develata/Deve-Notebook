@@ -35,15 +35,22 @@ fn validate(
     peer_id: &PeerId,
     scope_nonce: u64,
 ) -> Result<(), ServerError> {
-    if session.is_readonly() {
-        return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
-    }
     if session.is_browser_session() {
-        if session.active_branch.is_some() || session.active_repo_id != Some(repo_id) {
+        if session.active_branch.is_some() {
+            return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
+        }
+        if session.active_repo_id != Some(repo_id) {
             clear_stale_browser_sync_scope(session);
             return Err(ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
                 "writer scope does not match active repo",
+            ));
+        }
+        if browser_active_db_mismatch(session, repo_id) {
+            clear_stale_browser_sync_scope(session);
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                "writer active db does not match active repo",
             ));
         }
         if session.scope_nonce() != scope_nonce || session.sync_scope_nonce() != Some(scope_nonce) {
@@ -53,6 +60,9 @@ fn validate(
                 "writer scope nonce is stale",
             ));
         }
+    }
+    if session.is_readonly() {
+        return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
     }
     if !session.is_repo_bound(&repo_id) {
         clear_remote_unbound_state(session);
@@ -70,6 +80,16 @@ fn validate(
         ));
     }
     Ok(())
+}
+
+fn browser_active_db_mismatch(session: &WsSession, repo_id: RepoId) -> bool {
+    let Some(repo_name) = session.active_repo.as_deref() else {
+        return session.get_active_db().is_some();
+    };
+    session.get_active_db().is_some()
+        && session
+            .active_db_for(None, repo_name, Some(repo_id))
+            .is_none()
 }
 
 #[cfg(test)]
@@ -169,6 +189,35 @@ mod tests {
         });
         session.set_authenticated(peer_id.clone());
         session.bind_repo(repo_id);
+        let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
+        assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+        assert!(session.get_active_db().is_none());
+        assert!(session.bound_repo_id.is_none());
+        assert!(session.authenticated_peer_id.is_none());
+        assert_eq!(session.sync_scope_nonce(), None);
+    }
+
+    #[test]
+    fn rejects_browser_writer_with_stale_remote_readonly_binding() {
+        let mut session = WsSession::new();
+        let repo_id = uuid::Uuid::new_v4();
+        let peer_id = PeerId::new("browser-a");
+        session.mark_browser_session();
+        session.switch_repo("notes".into(), Some(repo_id));
+        session.set_scope_nonce(Some(9));
+        session.set_sync_scope_nonce(9);
+        session.set_authenticated(peer_id.clone());
+        session.bind_repo(repo_id);
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
+        session.set_active_db(DatabaseHandle {
+            db,
+            readonly: true,
+            branch: Some(PeerId::new("remote")),
+            repo_id: Some(uuid::Uuid::new_v4()),
+            repo_name: "shadow".into(),
+        });
+
         let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
         assert!(session.get_active_db().is_none());
