@@ -164,7 +164,7 @@ pub async fn start_server(
     let host_dir = notegit::prepare(repo.as_ref(), &vault_path)?;
     setup::write_main_port_hint(&host_dir, port)?;
     let auth_config = Arc::new(router::load_auth_config());
-    let mcp_manager = Arc::new(setup::load_mcp_manager(repo.ledger_dir()));
+    let mcp_manager = Arc::new(setup::load_mcp_manager(repo.ledger_dir())?);
     host::set_mcp_manager(mcp_manager.clone())?;
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
