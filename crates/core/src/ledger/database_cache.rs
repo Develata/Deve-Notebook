@@ -71,7 +71,7 @@ pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Databas
     }
     if let (Some(previous), Some(current)) = (entry.stamp, current_stamp)
         && previous.same_file_identity(current)
-        && path_looks_like_redb(path)
+        && path_looks_like_redb(path)?
     {
         drop(cache);
         let mut cache = OPENED_DBS.write().map_err(|_| {
@@ -101,16 +101,14 @@ pub(crate) fn current_file_stamp(path: &Path) -> Result<Option<FileStamp>> {
     }
 }
 
-pub(crate) fn path_looks_like_redb(path: &Path) -> bool {
+pub(crate) fn path_looks_like_redb(path: &Path) -> Result<bool> {
     const REDB_MAGIC: [u8; 9] = [b'r', b'e', b'd', b'b', 0x1A, 0x0A, 0xA9, 0x0D, 0x0A];
-    let Ok(mut file) = std::fs::File::open(path) else {
-        return false;
-    };
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open database header while checking {:?}", path))?;
     let mut buf = [0u8; REDB_MAGIC.len()];
-    match std::io::Read::read_exact(&mut file, &mut buf) {
-        Ok(()) => buf == REDB_MAGIC,
-        Err(_) => false,
-    }
+    std::io::Read::read_exact(&mut file, &mut buf)
+        .with_context(|| format!("Failed to read database header while checking {:?}", path))?;
+    Ok(buf == REDB_MAGIC)
 }
 
 #[cfg(unix)]
@@ -194,54 +192,5 @@ pub(crate) fn evict_database_paths_under(root: &Path) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{OPENED_DBS, register_database, reusable_cached_database};
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt;
-    use std::sync::Arc;
-
-    #[cfg(unix)]
-    #[test]
-    fn reusable_cached_database_fails_closed_when_path_is_unstatable() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let blocked = dir.path().join("blocked");
-        std::fs::create_dir_all(&blocked).expect("mkdir");
-        let original = std::fs::metadata(&blocked).expect("metadata").permissions();
-        let mut perms = original.clone();
-        perms.set_mode(0o000);
-        std::fs::set_permissions(&blocked, perms).expect("chmod 000");
-
-        let err = reusable_cached_database(&blocked.join("notes.redb"))
-            .expect_err("unstatable path must fail closed");
-
-        std::fs::set_permissions(&blocked, original).expect("restore perms");
-        assert!(
-            err.to_string()
-                .contains("Failed to read database cache metadata")
-                || err.to_string().contains("Permission denied")
-        );
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn register_database_fails_closed_when_path_is_unstatable() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let db = Arc::new(redb::Database::create(dir.path().join("main.redb")).expect("create db"));
-        let blocked = dir.path().join("blocked");
-        std::fs::create_dir_all(&blocked).expect("mkdir");
-        let original = std::fs::metadata(&blocked).expect("metadata").permissions();
-        let mut perms = original.clone();
-        perms.set_mode(0o000);
-        std::fs::set_permissions(&blocked, perms).expect("chmod 000");
-
-        let err = register_database(&blocked.join("notes.redb"), db).expect_err("must fail closed");
-
-        std::fs::set_permissions(&blocked, original).expect("restore perms");
-        OPENED_DBS.write().expect("cache").clear();
-        assert!(
-            err.to_string()
-                .contains("Failed to read database cache metadata")
-                || err.to_string().contains("Permission denied")
-        );
-    }
-}
+#[path = "database_cache_test.rs"]
+mod tests;
