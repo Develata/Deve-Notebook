@@ -17,6 +17,7 @@ use super::RepoManager;
 use super::database::relocate_database_path;
 use super::ops;
 use super::shadow;
+use crate::ledger::source_control;
 use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId, RepoType};
 use redb::Database;
 
@@ -83,6 +84,7 @@ impl RepoManager {
             .get(peer_id)
             .and_then(|repos| repos.get(&info.uuid))
             .ok_or_else(|| anyhow!("Shadow DB not loaded for {}/{}", peer_id, info.uuid))?;
+        source_control::init_tables(db.as_ref())?;
         Self::write_repo_info_to_db(db, info)
     }
 

@@ -8,7 +8,7 @@ pub fn resolve_current_repo_scope(
     session: &mut WsSession,
 ) -> Result<ResolvedRepo, ServerError> {
     if session.active_repo.is_none() && session.active_repo_id.is_none() {
-        if session.active_branch.is_some() {
+        if session.active_branch.is_some() || session.has_runtime_scope_binding() {
             session.clear_active_db();
             session.clear_sync_binding();
         }

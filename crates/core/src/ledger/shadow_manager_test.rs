@@ -1,5 +1,6 @@
 use super::RepoManager;
 use crate::ledger::RepoInfo;
+use crate::ledger::source_control;
 use crate::models::PeerId;
 
 #[test]
@@ -50,5 +51,25 @@ fn ensure_shadow_repo_info_fails_closed_when_detach_registry_is_poisoned() -> an
         )
         .expect_err("must fail closed after poisoned detach registry");
     assert!(err.to_string().contains("Shadow DB registry lock poisoned"));
+    Ok(())
+}
+
+#[test]
+fn ensure_shadow_repo_info_initializes_source_control_tables() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    let peer = PeerId::new("peer-a");
+    let remote = RepoInfo {
+        uuid: uuid::Uuid::new_v4(),
+        name: "wiki".into(),
+        url: Some("urn:test:wiki".into()),
+    };
+
+    repo.ensure_shadow_repo_info(&peer, &remote)?;
+
+    let commits = repo.run_on_shadow_repo_by_id(&peer, &remote.uuid, |db| {
+        source_control::list_commits(db, 10)
+    })?;
+    assert!(commits.is_empty());
     Ok(())
 }
