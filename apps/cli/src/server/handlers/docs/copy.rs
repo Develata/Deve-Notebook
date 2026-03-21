@@ -9,9 +9,9 @@ use super::copy_utils::copy_dir_assets_only;
 use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
+use super::resolve_local_write_scope;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use prepare::prepare_copy_paths;
 use register::CopyRegisterCtx;
@@ -25,17 +25,8 @@ pub async fn handle_copy_doc(
     dest_path: String,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if session.is_readonly() {
-        tracing::debug!("Copy rejected: session is readonly (remote branch)");
-        errors::remote_branch_readonly_scoped(ch, scope_nonce);
+    let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
-    }
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return;
-        }
     };
     let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path, scope_nonce) {
         Some(paths) => paths,

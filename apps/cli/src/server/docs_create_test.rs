@@ -4,6 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -114,5 +115,37 @@ async fn create_doc_rejects_invalid_browser_path_with_scoped_error() -> anyhow::
         }
         other => panic!("expected scoped ProtocolError, got {:?}", other),
     }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_ignores_stale_remote_readonly_binding_after_scope_recovery()
+-> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    let stale_db = Arc::new(redb::Database::create(
+        dir.path().join("stale-remote.redb"),
+    )?);
+    let (uni_tx, _uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+    session.set_scope_nonce(Some(31));
+    session.set_active_db(DatabaseHandle {
+        db: stale_db,
+        readonly: true,
+        branch: Some(PeerId::new("remote")),
+        repo_id: Some(uuid::Uuid::new_v4()),
+        repo_name: "shadow".into(),
+    });
+
+    handle_create_doc(&state, &ch, &mut session, "notes/local.md".into()).await;
+
+    assert!(session.get_active_db().is_none());
+    assert!(
+        state.repo.get_docid("notes/local.md")?.is_some(),
+        "local create should succeed after stale readonly binding is cleared"
+    );
+    assert!(dir.path().join("vault/default/notes/local.md").exists());
     Ok(())
 }

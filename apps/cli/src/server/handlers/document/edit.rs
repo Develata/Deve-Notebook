@@ -14,14 +14,6 @@ pub(super) async fn handle_edit(
     client_op_id: u64,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if session.is_readonly() {
-        tracing::debug!("Edit rejected: session is readonly (remote branch)");
-        ch.unicast(ServerMessage::EditRejected {
-            scope_nonce,
-            error: ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
-        });
-        return;
-    }
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(e) => {
@@ -29,6 +21,14 @@ pub(super) async fn handle_edit(
             return;
         }
     };
+    if scope.branch.is_some() {
+        tracing::debug!("Edit rejected: resolved scope is readonly (remote branch)");
+        ch.unicast(ServerMessage::EditRejected {
+            scope_nonce,
+            error: ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
+        });
+        return;
+    }
     match state
         .repo
         .get_file_meta_for_doc_in_local_repo(&scope.repo_name, doc_id)

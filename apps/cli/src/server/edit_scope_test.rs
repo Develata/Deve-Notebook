@@ -4,6 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::database::DatabaseHandle;
 use deve_core::ledger::schema::CLIENT_OP_INDEX;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
@@ -174,5 +175,64 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
         ),
     }
     assert_eq!(state.repo.get_local_ops(doc_id)?.len(), op_count_before);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn edit_clears_stale_remote_readonly_binding_before_local_scope_checks() -> anyhow::Result<()>
+{
+    let (dir, state, _test_repo_id) = build_state()?;
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
+    let default_repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
+    let stale_db = Arc::new(redb::Database::create(
+        dir.path().join("stale-remote.redb"),
+    )?);
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("default".into(), Some(default_repo_id));
+    session.set_scope_nonce(Some(29));
+    session.set_authenticated(PeerId::new("writer"));
+    session.bind_repo(default_repo_id);
+    session.set_writer_identity(default_repo_id, PeerId::new("writer"));
+    session.set_active_db(DatabaseHandle {
+        db: stale_db,
+        readonly: true,
+        branch: Some(PeerId::new("remote")),
+        repo_id: Some(uuid::Uuid::new_v4()),
+        repo_name: "shadow".into(),
+    });
+
+    handle_edit(
+        &state,
+        &ch,
+        &mut session,
+        doc_id,
+        Op::Insert {
+            pos: 5,
+            content: "!".into(),
+        },
+        7,
+        9,
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(scope_nonce, Some(29));
+            assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+        }
+        other => panic!(
+            "expected ProtocolError(SyncPeerUnauthenticated), got {:?}",
+            other
+        ),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.writer_identity.is_none());
     Ok(())
 }

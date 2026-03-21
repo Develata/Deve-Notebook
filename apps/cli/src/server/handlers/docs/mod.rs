@@ -28,9 +28,15 @@ pub use create::handle_create_doc;
 pub use delete::handle_delete_doc;
 pub use rename::{handle_move_doc, handle_rename_doc};
 
+use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::{
+    ResolvedRepo, map_repo_scope_error, resolve_session_repo_and_sync,
+};
+use crate::server::session::WsSession;
 use deve_core::models::RepoId;
 use deve_core::protocol::ServerMessage;
+use std::sync::Arc;
 
 /// 目录深度限制 (防止文件系统资源耗尽)
 pub const MAX_DEPTH: usize = 10;
@@ -118,4 +124,25 @@ pub fn notify_fs_refresh(ch: &DualChannel, repo_id: RepoId, path: &str, change_t
         change_type: change_type.to_string(),
         has_conflict: false,
     });
+}
+
+pub(super) fn resolve_local_write_scope(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    scope_nonce: Option<u64>,
+) -> Option<ResolvedRepo> {
+    let scope = match resolve_session_repo_and_sync(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
+            return None;
+        }
+    };
+    if scope.branch.is_some() {
+        tracing::debug!("Docs write rejected: resolved scope is readonly (remote branch)");
+        errors::remote_branch_readonly_scoped(ch, scope_nonce);
+        return None;
+    }
+    Some(scope)
 }

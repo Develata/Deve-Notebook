@@ -5,9 +5,9 @@ use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::node_target::resolve_node_target;
 use super::notify_fs_refresh;
+use super::resolve_local_write_scope;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use std::sync::Arc;
@@ -26,17 +26,8 @@ pub async fn handle_delete_doc(
     path: String,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if session.is_readonly() {
-        tracing::debug!("Delete rejected: session is readonly (remote branch)");
-        errors::remote_branch_readonly_scoped(ch, scope_nonce);
+    let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
-    }
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return;
-        }
     };
 
     tracing::info!("handle_delete_doc: path={}", path);

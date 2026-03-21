@@ -4,12 +4,10 @@
 use super::create_file::handle_file_create;
 use super::create_folder::handle_folder_create;
 use super::errors;
-use super::{validate_file_path, validate_folder_path};
+use super::{resolve_local_write_scope, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{
-    local_repo_path, map_repo_scope_error, resolve_session_repo_and_sync,
-};
+use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
@@ -28,17 +26,8 @@ pub async fn handle_create_doc(
     name: String,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if session.is_readonly() {
-        tracing::debug!("Create rejected: session is readonly (remote branch)");
-        errors::remote_branch_readonly_scoped(ch, scope_nonce);
+    let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
-    }
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return;
-        }
     };
 
     let filename = normalize_name(name);

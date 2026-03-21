@@ -5,12 +5,10 @@ use super::errors;
 use super::node_target::resolve_node_target;
 use super::rename_dir::handle_dir_rename;
 use super::rename_file::handle_file_rename;
-use super::{validate_file_path, validate_folder_path};
+use super::{resolve_local_write_scope, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{
-    local_repo_path, map_repo_scope_error, resolve_session_repo_and_sync,
-};
+use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use std::sync::Arc;
@@ -30,17 +28,8 @@ pub async fn handle_rename_doc(
     new_path: String,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if session.is_readonly() {
-        tracing::debug!("Rename rejected: session is readonly (remote branch)");
-        errors::remote_branch_readonly_scoped(ch, scope_nonce);
+    let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
-    }
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return;
-        }
     };
 
     let src = match resolve_node_target(state, &scope, &old_path) {
