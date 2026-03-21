@@ -199,12 +199,29 @@ impl RepoManager {
         let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
         for (path, stem) in redb_repo_entries(&local_dir, "resolving local selector")? {
             if stem == selector {
+                if stem != self.local_repo_name {
+                    Self::read_required_repo_info_from_path(
+                        &path,
+                        &stem,
+                        "resolving local selector",
+                    )
+                    .map_err(|err| {
+                        anyhow!(
+                            "Broken local repo {} while resolving selector {}: {}",
+                            stem,
+                            selector,
+                            err
+                        )
+                    })?;
+                }
                 return Ok(Some(stem));
             }
             if stem == self.local_repo_name {
                 continue;
             }
-            if let Err(err) = Self::read_repo_info_from_path(&path) {
+            if let Err(err) =
+                Self::read_required_repo_info_from_path(&path, &stem, "resolving local selector")
+            {
                 return Err(anyhow!(
                     "Broken local repo {} while resolving selector {}: {}",
                     stem,

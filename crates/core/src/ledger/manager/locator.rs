@@ -44,7 +44,12 @@ impl RepoManager {
             if file_stem == self.local_repo_name {
                 continue;
             }
-            let repo_uuid = Self::read_repo_info_from_path(&path)
+            let repo_uuid = Some(
+                Self::read_required_repo_info_from_path(
+                    &path,
+                    &file_stem,
+                    "resolving UUID without repair",
+                )
                 .map_err(|err| {
                     anyhow!(
                         "Broken local repo {} while resolving UUID {} without repair: {}",
@@ -53,7 +58,8 @@ impl RepoManager {
                         err
                     )
                 })?
-                .map(|info| info.uuid);
+                .uuid,
+            );
             if repo_uuid == Some(target_id) {
                 return Ok(Some(file_stem));
             }
@@ -77,14 +83,19 @@ impl RepoManager {
         let by_name = match repo_name {
             Some(repo_name) => {
                 let normalized = repo_name.trim_end_matches(".redb");
-                self.get_repo_info_for(None, Some(normalized))?
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Local repo not found for name {}", normalized)
-                    })?;
-                Some(
-                    self.resolve_local_repo_stem(normalized)?
-                        .unwrap_or_else(|| normalized.to_string()),
-                )
+                if let Some(stem) = self.resolve_local_repo_stem(normalized)? {
+                    self.get_repo_info_for(None, Some(&stem))?
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Broken local repo {} while resolving selector {}: repository metadata missing",
+                                stem,
+                                normalized
+                            )
+                        })?;
+                    Some(stem)
+                } else {
+                    anyhow::bail!("Local repo not found for name {}", normalized);
+                }
             }
             None => None,
         };
@@ -231,5 +242,24 @@ mod tests {
                 .expect("lookup without repair"),
             None
         );
+    }
+
+    #[test]
+    fn local_repo_id_lookup_without_repair_fails_closed_on_missing_secondary_metadata() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+        let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
+        let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
+
+        let txn = wiki_db.begin_write().expect("write txn");
+        txn.delete_table(REPO_METADATA).expect("delete metadata");
+        txn.commit().expect("commit");
+
+        let err = main
+            .find_local_repo_name_by_id_without_repair(wiki_info.uuid)
+            .expect_err("missing secondary metadata must fail closed");
+        assert!(err.to_string().contains("repository metadata missing"));
     }
 }

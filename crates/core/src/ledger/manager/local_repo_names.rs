@@ -23,13 +23,14 @@ impl RepoManager {
                 repos.push(stem);
                 continue;
             }
-            RepoManager::read_repo_info_from_path(&path).map_err(|err| {
-                anyhow!(
-                    "Broken local repo {} while listing execution names: {}",
-                    stem,
-                    err
-                )
-            })?;
+            RepoManager::read_required_repo_info_from_path(&path, &stem, "listing execution names")
+                .map_err(|err| {
+                    anyhow!(
+                        "Broken local repo {} while listing execution names: {}",
+                        stem,
+                        err
+                    )
+                })?;
             repos.push(stem);
         }
         repos.sort();

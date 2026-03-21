@@ -30,6 +30,20 @@ impl RepoManager {
         Self::read_repo_info_from_db(db.as_ref())
     }
 
+    pub(crate) fn read_required_repo_info_from_path(
+        path: &Path,
+        stem: &str,
+        context: &str,
+    ) -> Result<RepoInfo> {
+        Self::read_repo_info_from_path(path)?.ok_or_else(|| {
+            anyhow!(
+                "Broken local repo {} while {}: repository metadata missing",
+                stem,
+                context
+            )
+        })
+    }
+
     pub(crate) fn repo_stem_from_path(path: &Path, context: &str) -> Result<String> {
         path.file_stem()
             .and_then(|s| s.to_str())
