@@ -1,6 +1,4 @@
-use super::{
-    StagedEntry, get_staged, list_staged_entries, list_staged_entries_for_doc, take_staged,
-};
+use super::{StagedEntry, list_staged_entries, list_staged_entries_for_doc, take_staged};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
@@ -15,9 +13,6 @@ pub fn get_staged_for_target(
     let path = to_forward_slash(&target.path);
     if let Some(doc_id) = target.doc_id {
         return resolve_for_doc(db, &path, doc_id);
-    }
-    if let Some(entry) = get_staged(db, &path)?.filter(|entry| entry.doc_id.is_none()) {
-        return Ok(Some((path, entry)));
     }
     resolve_without_doc(db, &path)
 }

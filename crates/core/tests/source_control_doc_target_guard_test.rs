@@ -152,7 +152,10 @@ fn stage_path_only_target_fails_closed_for_tracked_entry() {
         &ScPathTarget::from_path("notes/b.md"),
     )
     .expect_err("tracked path-only stage must fail closed");
-    assert!(err.to_string().contains("Path is not in pending_fs_ops"));
+    assert!(
+        err.to_string()
+            .contains("Ambiguous pending_fs target: notes/b.md")
+    );
 }
 
 #[test]
@@ -192,5 +195,8 @@ fn unstage_path_only_target_fails_closed_for_tracked_entry() {
         &ScPathTarget::from_path("notes/b.md"),
     )
     .expect_err("tracked path-only unstage must fail closed");
-    assert!(err.to_string().contains("Path is not staged"));
+    assert!(
+        err.to_string()
+            .contains("Ambiguous staged target: notes/b.md")
+    );
 }

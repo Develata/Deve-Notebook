@@ -2,7 +2,6 @@ use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;
 use crate::source_control::diff;
 use crate::source_control::{pending_fs, staging};
-use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
 impl RepoManager {
@@ -12,17 +11,7 @@ impl RepoManager {
         target: &ScPathTarget,
     ) -> Result<()> {
         self.run_on_local_repo(repo_name, |db| {
-            let exact_path = to_forward_slash(&target.path);
-            let exact = pending_fs::get(db, &exact_path)?.filter(|entry| {
-                target
-                    .doc_id
-                    .map(|doc_id| entry.doc_id == Some(doc_id))
-                    .unwrap_or(entry.doc_id.is_none())
-            });
-            let entry = if let Some(entry) = exact {
-                pending_fs::remove(db, &entry.path)?;
-                entry
-            } else if let Some(entry) = pending_fs::take_for_target(db, target)? {
+            let entry = if let Some(entry) = pending_fs::take_for_target(db, target)? {
                 entry
             } else {
                 anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);

@@ -1,4 +1,4 @@
-use super::{PendingFsEntry, get, list_all, list_for_doc, remove};
+use super::{PendingFsEntry, list_all, list_for_doc, remove};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
@@ -10,9 +10,6 @@ pub fn get_for_target(db: &Database, target: &ScPathTarget) -> Result<Option<Pen
     let path = to_forward_slash(&target.path);
     if let Some(doc_id) = target.doc_id {
         return resolve_for_doc(db, &path, doc_id);
-    }
-    if let Some(entry) = get(db, &path)?.filter(|entry| entry.doc_id.is_none()) {
-        return Ok(Some(entry));
     }
     resolve_without_doc(db, &path)
 }
