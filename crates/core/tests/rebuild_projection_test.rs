@@ -3,6 +3,8 @@ use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PA
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::sync::SyncManager;
 use redb::ReadableTable;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
@@ -201,5 +203,29 @@ fn rebuild_projection_recovers_when_node_projection_is_missing() {
     assert_eq!(
         std::fs::read_to_string(root.join("notes/sub/a.md")).expect("read canonical doc"),
         "ledger"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn rebuild_projection_fails_closed_on_unreadable_stale_directory() {
+    let (dir, repo) = new_repo();
+    let root = dir.path().join("vault").join("default");
+    let stale = root.join("notes/private");
+    std::fs::create_dir_all(&stale).expect("mkdir stale");
+    std::fs::write(stale.join("old.md"), "stale").expect("write stale");
+    let original = std::fs::metadata(&stale).expect("metadata").permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&stale, blocked).expect("chmod 000");
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let err = sync
+        .rebuild_projection_local_repo("default")
+        .expect_err("unreadable stale directory must fail closed");
+
+    std::fs::set_permissions(&stale, original).expect("restore perms");
+    assert!(
+        err.to_string().contains("Permission denied") || err.to_string().contains("Failed to stat")
     );
 }

@@ -75,9 +75,20 @@ impl PersistGuard {
                 true
             }
             PersistedAction::Delete => {
-                if vault_root.join(path).exists() {
-                    guard.remove(path);
-                    return false;
+                match vault_root.join(path).try_exists() {
+                    Ok(true) => {
+                        guard.remove(path);
+                        return false;
+                    }
+                    Ok(false) => {}
+                    Err(err) => {
+                        warn!(
+                            "PersistGuard: failed to stat delete target {}: {}",
+                            path, err
+                        );
+                        guard.remove(path);
+                        return false;
+                    }
                 }
                 true
             }
@@ -126,6 +137,8 @@ impl PersistGuard {
 #[cfg(test)]
 mod tests {
     use super::PersistGuard;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use std::panic::{AssertUnwindSafe, catch_unwind};
     use tempfile::tempdir;
 
@@ -142,5 +155,25 @@ mod tests {
         guard.record("notes/a.md", "content");
         guard.record_delete("notes/a.md");
         guard.clear("notes/a.md");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_guard_fails_closed_when_target_is_unstatable() {
+        let guard = PersistGuard::new();
+        let dir = tempdir().expect("tempdir");
+        let notes = dir.path().join("notes");
+        std::fs::create_dir_all(&notes).expect("mkdir");
+        std::fs::write(notes.join("a.md"), "content").expect("write");
+        let original = std::fs::metadata(&notes).expect("metadata").permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        guard.record_delete("notes/a.md");
+        std::fs::set_permissions(&notes, blocked).expect("chmod 000");
+
+        let ignored = guard.should_ignore(dir.path(), "notes/a.md");
+
+        std::fs::set_permissions(&notes, original).expect("restore perms");
+        assert!(!ignored);
     }
 }

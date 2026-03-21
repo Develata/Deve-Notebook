@@ -225,7 +225,15 @@ fn repair_workspace_root(
     }
     let old_root = repo_root(vault_root, previous_name);
     let new_root = repo_root(vault_root, current_name);
-    if !old_root.exists() || new_root.exists() {
+    let old_exists = old_root.try_exists().with_context(|| {
+        format!(
+            "Failed to stat previous workspace root while repairing local catalog: {old_root:?}"
+        )
+    })?;
+    let new_exists = new_root.try_exists().with_context(|| {
+        format!("Failed to stat current workspace root while repairing local catalog: {new_root:?}")
+    })?;
+    if !old_exists || new_exists {
         return Ok(());
     }
     std::fs::rename(&old_root, &new_root)?;

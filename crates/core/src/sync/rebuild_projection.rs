@@ -76,7 +76,7 @@ fn prune_stale_paths(
             format!("{relative}/{name}")
         };
         let path = entry.path();
-        if path.is_dir() {
+        if entry.file_type()?.is_dir() {
             let empty = prune_stale_paths(
                 repo_name,
                 guard,
