@@ -45,6 +45,27 @@ fn non_directory_shadow_peer_entry_fails_closed_for_listing_and_repair() {
 }
 
 #[test]
+fn hidden_shadow_peer_dir_fails_closed_for_listing_and_repair() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    std::fs::create_dir_all(repo.remotes_dir().join(".peer-hidden")).expect("create hidden peer");
+
+    let list_err = repo
+        .list_shadows_on_disk()
+        .expect_err("hidden peer dir must fail closed");
+    assert!(list_err.to_string().contains("unexpected hidden directory"));
+
+    let repair_err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("hidden peer dir must fail repair");
+    assert!(
+        repair_err
+            .to_string()
+            .contains("unexpected hidden directory")
+    );
+}
+
+#[test]
 fn non_file_shadow_repo_entry_fails_closed_for_listing_and_repair() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");

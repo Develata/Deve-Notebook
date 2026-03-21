@@ -126,8 +126,14 @@ fn shadow_peer_dirs(repo: &RepoManager) -> Result<Vec<PeerId>> {
                 path
             ));
         };
-        if name.starts_with('.') || name.is_empty() {
+        if name == ".invalid" {
             continue;
+        }
+        if name.starts_with('.') || name.is_empty() {
+            return Err(anyhow!(
+                "Broken shadow peer entry {:?} while listing shadows: unexpected hidden directory",
+                path
+            ));
         }
         if !entry.file_type()?.is_dir() {
             return Err(anyhow!(

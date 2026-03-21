@@ -20,8 +20,14 @@ pub(super) fn quarantine_nil_shadow_repos(remotes_dir: &Path) -> Result<usize> {
             .file_name()
             .and_then(|s| s.to_str())
             .context("invalid peer dir name")?;
-        if peer_name == ".invalid" || peer_name.starts_with('.') {
+        if peer_name == ".invalid" {
             continue;
+        }
+        if peer_name.starts_with('.') {
+            anyhow::bail!(
+                "Broken shadow peer entry {:?} while quarantining nil shadows: unexpected hidden directory",
+                peer_dir
+            );
         }
         if !peer_dir.is_dir() {
             anyhow::bail!(
@@ -106,6 +112,18 @@ mod tests {
         let err = quarantine_nil_shadow_repos(&remotes)
             .expect_err("non-directory peer entry must fail closed");
         assert!(err.to_string().contains("expected directory"));
+    }
+
+    #[test]
+    fn fails_closed_on_unexpected_hidden_peer_dir() {
+        let dir = tempdir().expect("tempdir");
+        let remotes = dir.path().join("remotes");
+        let hidden = remotes.join(".peer-a");
+        std::fs::create_dir_all(&hidden).expect("hidden dir");
+
+        let err = quarantine_nil_shadow_repos(&remotes)
+            .expect_err("unexpected hidden peer dir must fail closed");
+        assert!(err.to_string().contains("unexpected hidden directory"));
     }
 
     #[cfg(unix)]

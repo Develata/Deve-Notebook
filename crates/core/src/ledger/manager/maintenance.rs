@@ -49,8 +49,14 @@ impl RepoManager {
                     path
                 ));
             };
-            if name.starts_with('.') || name.is_empty() {
+            if name == ".invalid" {
                 continue;
+            }
+            if name.starts_with('.') || name.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "Broken shadow peer entry {:?} while repairing catalogs: unexpected hidden directory",
+                    path
+                ));
             }
             if !entry.file_type()?.is_dir() {
                 return Err(anyhow::anyhow!(

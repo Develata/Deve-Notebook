@@ -162,8 +162,14 @@ pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
                 path
             ));
         };
-        if name.starts_with('.') || name.is_empty() {
+        if name == ".invalid" {
             continue;
+        }
+        if name.starts_with('.') || name.is_empty() {
+            return Err(anyhow::anyhow!(
+                "Broken shadow peer entry {:?} while listing shadows on disk: unexpected hidden directory",
+                path
+            ));
         }
         if !entry.file_type()?.is_dir() {
             return Err(anyhow::anyhow!(
