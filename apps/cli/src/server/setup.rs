@@ -1,6 +1,7 @@
 // apps/cli/src/server/setup.rs
 //! 服务器启动辅助: CORS 配置、MCP 加载、文件监视器
 
+use anyhow::{Context, Result, anyhow};
 use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::protocol::ServerMessage;
 
@@ -48,6 +49,15 @@ fn allowed_origins_from_env() -> Vec<axum::http::HeaderValue> {
 /// 判断当前是否为开发模式；仅显式 `DEVE_ENV=development` 视为开发环境。
 fn is_development() -> bool {
     matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
+}
+
+pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Result<()> {
+    let Some(host_root) = host_dir.parent() else {
+        return Err(anyhow!("Host directory has no parent while writing main port hint"));
+    };
+    let hint_path = host_root.join("main_port");
+    std::fs::write(&hint_path, port.to_string())
+        .with_context(|| format!("Failed to write main port hint: {:?}", hint_path))
 }
 
 pub(super) fn load_mcp_manager(ledger_dir: &std::path::Path) -> McpManager {
@@ -126,4 +136,24 @@ pub(super) fn spawn_file_watcher(
             tracing::error!("Watcher failed: {:?}", e);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_main_port_hint;
+
+    #[test]
+    fn write_main_port_hint_fails_closed_when_parent_is_not_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let bad_root = dir.path().join("host-root");
+        std::fs::write(&bad_root, "not-a-dir").expect("bad root file");
+
+        let err = write_main_port_hint(&bad_root.join(".host"), 3001)
+            .expect_err("invalid host root must fail closed");
+
+        assert!(
+            err.to_string().contains("Failed to write main port hint")
+                || err.to_string().contains("Not a directory")
+        );
+    }
 }
