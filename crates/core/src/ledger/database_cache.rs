@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -55,7 +55,7 @@ pub(crate) static OPENED_DBS: std::sync::LazyLock<
 > = std::sync::LazyLock::new(|| RwLock::new(HashMap::new()));
 
 pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Database>>> {
-    let current_stamp = current_file_stamp(path);
+    let current_stamp = current_file_stamp(path)?;
     let cache = OPENED_DBS.read().map_err(|_| {
         anyhow!(
             "Database cache lock poisoned while reading cached entry for {:?}",
@@ -90,10 +90,15 @@ pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Databas
     Ok(None)
 }
 
-pub(crate) fn current_file_stamp(path: &Path) -> Option<FileStamp> {
-    std::fs::metadata(path)
-        .ok()
-        .map(|metadata| file_stamp(&metadata))
+pub(crate) fn current_file_stamp(path: &Path) -> Result<Option<FileStamp>> {
+    match std::fs::metadata(path) {
+        Ok(metadata) => Ok(Some(file_stamp(&metadata))),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(anyhow!(err)).context(format!(
+            "Failed to read database cache metadata: {:?}",
+            path
+        )),
+    }
 }
 
 pub(crate) fn path_looks_like_redb(path: &Path) -> bool {
@@ -149,7 +154,7 @@ pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) -> Result<()>
             db_path.to_path_buf(),
             CachedDatabaseEntry {
                 db,
-                stamp: current_file_stamp(db_path),
+                stamp: current_file_stamp(db_path)?,
             },
         );
     Ok(())
@@ -164,7 +169,7 @@ pub(crate) fn relocate_database_path(old_path: &Path, new_path: &Path) -> Result
         )
     })?;
     if let Some(mut entry) = cache.remove(old_path) {
-        entry.stamp = current_file_stamp(new_path);
+        entry.stamp = current_file_stamp(new_path)?;
         cache.insert(new_path.to_path_buf(), entry);
     } else {
         warn!(
@@ -186,4 +191,57 @@ pub(crate) fn evict_database_paths_under(root: &Path) -> Result<()> {
         })?
         .retain(|path, _| !path.starts_with(root));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{OPENED_DBS, register_database, reusable_cached_database};
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+    use std::sync::Arc;
+
+    #[cfg(unix)]
+    #[test]
+    fn reusable_cached_database_fails_closed_when_path_is_unstatable() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let blocked = dir.path().join("blocked");
+        std::fs::create_dir_all(&blocked).expect("mkdir");
+        let original = std::fs::metadata(&blocked).expect("metadata").permissions();
+        let mut perms = original.clone();
+        perms.set_mode(0o000);
+        std::fs::set_permissions(&blocked, perms).expect("chmod 000");
+
+        let err = reusable_cached_database(&blocked.join("notes.redb"))
+            .expect_err("unstatable path must fail closed");
+
+        std::fs::set_permissions(&blocked, original).expect("restore perms");
+        assert!(
+            err.to_string()
+                .contains("Failed to read database cache metadata")
+                || err.to_string().contains("Permission denied")
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn register_database_fails_closed_when_path_is_unstatable() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = Arc::new(redb::Database::create(dir.path().join("main.redb")).expect("create db"));
+        let blocked = dir.path().join("blocked");
+        std::fs::create_dir_all(&blocked).expect("mkdir");
+        let original = std::fs::metadata(&blocked).expect("metadata").permissions();
+        let mut perms = original.clone();
+        perms.set_mode(0o000);
+        std::fs::set_permissions(&blocked, perms).expect("chmod 000");
+
+        let err = register_database(&blocked.join("notes.redb"), db).expect_err("must fail closed");
+
+        std::fs::set_permissions(&blocked, original).expect("restore perms");
+        OPENED_DBS.write().expect("cache").clear();
+        assert!(
+            err.to_string()
+                .contains("Failed to read database cache metadata")
+                || err.to_string().contains("Permission denied")
+        );
+    }
 }

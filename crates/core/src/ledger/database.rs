@@ -50,7 +50,7 @@ pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>>
             db_path.to_path_buf(),
             CachedDatabaseEntry {
                 db: arc_db.clone(),
-                stamp: current_file_stamp(db_path),
+                stamp: current_file_stamp(db_path)?,
             },
         );
     }
@@ -196,7 +196,7 @@ impl RepoManager {
                 cache_key.clone(),
                 CachedDatabaseEntry {
                     db: arc_db.clone(),
-                    stamp: current_file_stamp(&cache_key),
+                    stamp: current_file_stamp(&cache_key)?,
                 },
             );
         }
