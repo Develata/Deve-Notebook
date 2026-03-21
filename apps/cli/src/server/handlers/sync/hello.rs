@@ -10,7 +10,7 @@ use std::sync::Arc;
 mod hello_scope;
 
 use self::hello_scope::validate_scope;
-use super::cleanup::{clear_invalid_sync_hello_scope, clear_stale_non_browser_sync_scope};
+use super::cleanup::clear_sync_hello_scope_failure;
 use super::engine;
 use super::errors;
 
@@ -41,11 +41,7 @@ pub(super) async fn handle(
     let scope = session.is_browser_session().then_some(scope_nonce);
 
     if let Err(failure) = validate_scope(session, &peer_id, repo_id, scope_nonce) {
-        if failure.clear_active_repo {
-            clear_invalid_sync_hello_scope(session);
-        } else {
-            clear_stale_non_browser_sync_scope(session);
-        }
+        clear_sync_hello_scope_failure(session, failure.clear_active_repo);
         ch.send_protocol_error_with_scope_nonce(failure.error, scope);
         return;
     }

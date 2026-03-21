@@ -28,3 +28,15 @@ pub(super) fn clear_invalid_sync_hello_scope(session: &mut WsSession) {
     clear_stale_non_browser_sync_scope(session);
     session.clear_active_repo();
 }
+
+pub(super) fn clear_sync_hello_scope_failure(session: &mut WsSession, clear_active_repo: bool) {
+    if clear_active_repo {
+        clear_invalid_sync_hello_scope(session);
+        return;
+    }
+    if session.is_browser_session() {
+        clear_stale_browser_sync_scope(session);
+        return;
+    }
+    clear_stale_non_browser_sync_scope(session);
+}
