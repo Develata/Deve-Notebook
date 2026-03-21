@@ -152,8 +152,15 @@ fn build_path(
         anyhow::bail!("Structure projection contains cycle at node {}", node_id);
     }
     let path = match nodes.get(&node_id) {
-        Some(node) => match node.parent_id.filter(|parent| nodes.contains_key(parent)) {
+        Some(node) => match node.parent_id {
             Some(parent_id) => {
+                if !nodes.contains_key(&parent_id) {
+                    anyhow::bail!(
+                        "Structure projection references missing parent {} for node {}",
+                        parent_id,
+                        node_id
+                    );
+                }
                 let parent = build_path(parent_id, nodes, cache, visiting)?;
                 if parent.is_empty() {
                     node.name.clone()

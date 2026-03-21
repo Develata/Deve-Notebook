@@ -157,3 +157,26 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
         .expect_err("malformed structure facts must fail closed");
     assert!(err.to_string().contains("missing node"));
 }
+
+#[test]
+fn rebuild_projection_fails_closed_on_missing_structure_parent() {
+    let (dir, repo) = new_repo();
+    repo.append_local_op(&LedgerEntry::new_structure(
+        StructureOp::CreateFile {
+            node_id: NodeId::new(),
+            doc_id: deve_core::models::DocId::new(),
+            parent_id: Some(NodeId::new()),
+            name: "orphan.md".into(),
+        },
+        1,
+        PeerId::new("test"),
+        1,
+    ))
+    .expect("append malformed structure op");
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let err = sync
+        .rebuild_projection_local_repo("default")
+        .expect_err("missing structure parent must fail closed");
+    assert!(err.to_string().contains("missing parent"));
+}
