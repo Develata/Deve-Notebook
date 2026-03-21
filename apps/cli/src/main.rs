@@ -99,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     // Initialize configuration from Env
-    let config = deve_core::config::Config::load();
+    let config = deve_core::config::Config::load_checked()?;
 
     // Use config values
     let ledger_dir = PathBuf::from(&config.ledger_dir);

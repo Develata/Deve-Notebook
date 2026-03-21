@@ -14,6 +14,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -135,29 +136,31 @@ fn default_concurrency() -> usize {
 }
 
 impl Config {
-    /// 加载配置 (Env > .env > config.toml > Default)
-    pub fn load() -> Self {
-        // 1. Load .env file if present
+    /// 严格加载配置 (Env > .env > config.toml > Default)。
+    ///
+    /// Invariants:
+    /// - 生产入口遇到坏配置时必须 fail-closed。
+    /// - 只有显式宽松调用方才允许回退到默认配置。
+    pub fn load_checked() -> anyhow::Result<Self> {
         if let Err(e) = dotenvy::dotenv() {
             tracing::debug!(".env file not found or invalid: {}", e);
         }
 
-        // 2. Build Config Source
-        // Layering: Defaults -> File(config.toml) -> Env(DEVE_*)
         let settings = config::Config::builder()
-            // Default Fallbacks implemented via Serde defaults, so we just build empty source initially
-            // Add config file (optional)
             .add_source(config::File::with_name("config").required(false))
-            // Add environment variables (prefix DEVE_)
-            // e.g. DEVE_LEDGER_DIR -> ledger_dir
             .add_source(config::Environment::with_prefix("DEVE").separator("_"))
             .build()
-            .expect("Failed to build configuration");
+            .context("Failed to build configuration")?;
 
-        // 3. Deserialize
-        settings.try_deserialize::<Self>().unwrap_or_else(|e| {
+        settings
+            .try_deserialize::<Self>()
+            .context("Failed to parse configuration")
+    }
+
+    /// 加载配置 (Env > .env > config.toml > Default)
+    pub fn load() -> Self {
+        Self::load_checked().unwrap_or_else(|e| {
             tracing::warn!("Failed to parse config, using defaults: {}", e);
-            // Fallback to manual construction if partial parsing fails heavily
             Config {
                 profile: default_profile(),
                 ledger_dir: default_ledger(),
@@ -172,13 +175,5 @@ impl Config {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_default_config() {
-        // Just verify it builds without panic
-        let config = Config::load();
-        assert!(!config.ledger_dir.is_empty());
-    }
-}
+#[path = "config_test.rs"]
+mod tests;
