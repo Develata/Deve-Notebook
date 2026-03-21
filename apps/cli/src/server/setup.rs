@@ -53,8 +53,13 @@ fn is_development() -> bool {
 pub(super) fn load_mcp_manager(ledger_dir: &std::path::Path) -> McpManager {
     let mut manager = McpManager::new();
     let cfg_path = deve_core::utils::notegit::host_mcp_config_path(ledger_dir);
-    if !cfg_path.exists() {
-        return manager;
+    match cfg_path.try_exists() {
+        Ok(true) => {}
+        Ok(false) => return manager,
+        Err(err) => {
+            tracing::warn!("Failed to stat MCP config {:?}: {}", cfg_path, err);
+            return manager;
+        }
     }
 
     let content = match std::fs::read_to_string(&cfg_path) {

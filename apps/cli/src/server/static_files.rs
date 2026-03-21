@@ -43,15 +43,29 @@ fn resolve_static_dir() -> PathBuf {
 pub fn static_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
     let dir = resolve_static_dir();
 
-    if !dir.exists() {
-        tracing::warn!("Static dir {:?} not found — SPA fallback disabled", dir);
-        return Router::new();
+    match dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => {
+            tracing::warn!("Static dir {:?} not found — SPA fallback disabled", dir);
+            return Router::new();
+        }
+        Err(err) => {
+            tracing::warn!("Failed to stat static dir {:?}: {}", dir, err);
+            return Router::new();
+        }
     }
 
     let index = dir.join("index.html");
-    if !index.exists() {
-        tracing::warn!("index.html not found in {:?} — SPA fallback disabled", dir);
-        return Router::new();
+    match index.try_exists() {
+        Ok(true) => {}
+        Ok(false) => {
+            tracing::warn!("index.html not found in {:?} — SPA fallback disabled", dir);
+            return Router::new();
+        }
+        Err(err) => {
+            tracing::warn!("Failed to stat index.html {:?}: {}", index, err);
+            return Router::new();
+        }
     }
 
     tracing::info!("Serving static files from {:?}", dir);

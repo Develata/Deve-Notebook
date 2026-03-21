@@ -11,6 +11,7 @@
 //! - 其他平台: 安全降级 (CPU=0, 内存=0)
 
 use crate::server::AppState;
+use anyhow::Context;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -94,8 +95,15 @@ fn local_doc_count(state: &AppState) -> anyhow::Result<u32> {
 /// 计算 ledger 目录下所有 .redb 文件总大小
 fn db_file_size(ledger_dir: &std::path::Path) -> anyhow::Result<u64> {
     let local_dir = ledger_dir.join("local");
-    if !local_dir.exists() {
-        return Ok(0);
+    match local_dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => return Ok(0),
+        Err(err) => {
+            return Err(err).context(format!(
+                "Failed to stat local metrics directory: {:?}",
+                local_dir
+            ));
+        }
     }
 
     let mut total = 0u64;
@@ -188,6 +196,8 @@ mod linux {
 mod tests {
     use super::db_file_size;
     use std::fs;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
 
     #[test]
@@ -201,5 +211,26 @@ mod tests {
 
         assert_eq!(db_file_size(dir.path())?, 8);
         Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn db_file_size_fails_closed_on_unstatable_local_dir() {
+        let dir = tempdir().expect("tempdir");
+        let local = dir.path().join("local");
+        fs::create_dir_all(&local).expect("mkdir");
+        let original = fs::metadata(&local).expect("metadata").permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        fs::set_permissions(&local, blocked).expect("chmod 000");
+
+        let err = db_file_size(dir.path()).expect_err("unstatable local dir must fail closed");
+
+        fs::set_permissions(&local, original).expect("restore perms");
+        assert!(
+            err.to_string()
+                .contains("Failed to stat local metrics directory")
+                || err.to_string().contains("Permission denied")
+        );
     }
 }
