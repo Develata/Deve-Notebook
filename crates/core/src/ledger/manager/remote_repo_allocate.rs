@@ -25,16 +25,21 @@ impl RepoManager {
             {
                 return Ok(path);
             }
-            if let Some(current) = Self::read_repo_info_from_path(&path)?
-                && current.uuid == info.uuid
-            {
-                if stem_matches_base(&stem, &base) {
-                    return Ok(path);
+            match Self::read_repo_info_from_path(&path)? {
+                Some(current) if current.uuid == info.uuid => {
+                    if stem_matches_base(&stem, &base) {
+                        return Ok(path);
+                    }
+                    continue;
                 }
-                continue;
-            }
-            if stem == info.uuid.to_string() {
-                return Ok(path);
+                Some(_) => {}
+                None if stem == info.uuid.to_string() => return Ok(path),
+                None => {
+                    anyhow::bail!(
+                        "Broken shadow repo {:?} while allocating remote repo path: repository metadata missing",
+                        path
+                    );
+                }
             }
         }
         unreachable!("remote repo path allocator must terminate")
@@ -108,5 +113,29 @@ mod tests {
                 .contains("Failed to stat remote repo path candidate")
                 || err.to_string().contains("Permission denied")
         );
+    }
+
+    #[test]
+    fn allocate_remote_repo_path_fails_closed_on_named_path_missing_metadata() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
+            .expect("repo");
+        let peer = PeerId::new("peer-a");
+        let peer_dir = repo.remotes_dir().join(peer.to_filename());
+        std::fs::create_dir_all(&peer_dir).expect("peer dir");
+        redb::Database::create(peer_dir.join("notes.redb")).expect("create broken shadow db");
+
+        let err = repo
+            .allocate_remote_repo_path(
+                &peer,
+                &RepoInfo {
+                    uuid: uuid::Uuid::new_v4(),
+                    name: "notes".into(),
+                    url: Some("urn:test:notes".into()),
+                },
+            )
+            .expect_err("named shadow path missing metadata must fail closed");
+
+        assert!(err.to_string().contains("repository metadata missing"));
     }
 }
