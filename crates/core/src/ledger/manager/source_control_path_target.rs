@@ -1,6 +1,6 @@
 use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{pending_fs, staging};
+use crate::source_control::{ChangeEntry, ChangeStatus};
 use crate::utils::path::to_forward_slash;
 use anyhow::Result;
 
@@ -18,22 +18,67 @@ impl RepoManager {
         let path = to_forward_slash(path);
         let doc_id = match self.tracked_docid_or_legacy_error_in_local_repo(repo_name, &path)? {
             Some(doc_id) => Some(doc_id),
-            None => self.run_on_local_repo(repo_name, |db| {
-                if let Some(entry) = pending_fs::get(db, &path)?
-                    && entry.doc_id.is_some()
-                {
-                    return Ok(entry.doc_id);
-                }
-                if let Some(entry) = staging::get_staged(db, &path)?
-                    && entry.doc_id.is_some()
-                {
-                    return Ok(entry.doc_id);
-                }
-                Ok(None)
-            })?,
+            None => {
+                tracked_doc_id_from_changes(&self.list_changes_in_local_repo(repo_name)?, &path)
+            }
         };
         Ok(ScPathTarget { doc_id, path })
     }
+}
+
+fn tracked_doc_id_from_changes(
+    entries: &[ChangeEntry],
+    path: &str,
+) -> Option<crate::models::DocId> {
+    let exact = entries
+        .iter()
+        .filter(|entry| normalized(&entry.path) == path)
+        .collect::<Vec<_>>();
+    let renamed = entries
+        .iter()
+        .filter(|entry| {
+            entry.status != ChangeStatus::Deleted
+                && entry
+                    .renamed_from
+                    .as_ref()
+                    .is_some_and(|old_path| normalized(old_path) == path)
+        })
+        .collect::<Vec<_>>();
+    if exact
+        .iter()
+        .chain(renamed.iter())
+        .all(|entry| entry.doc_id.is_none())
+    {
+        return None;
+    }
+    let live_exact = exact
+        .iter()
+        .copied()
+        .filter(|entry| entry.status != ChangeStatus::Deleted)
+        .collect::<Vec<_>>();
+    let deleted_exact = exact
+        .iter()
+        .any(|entry| entry.status == ChangeStatus::Deleted);
+    if live_exact.len() > 1 || renamed.len() > 1 {
+        return None;
+    }
+    if deleted_exact && renamed.len() == 1 {
+        return renamed[0].doc_id;
+    }
+    if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
+        return None;
+    }
+    if let Some(entry) = live_exact.into_iter().next() {
+        return entry.doc_id;
+    }
+    if let Some(entry) = renamed.into_iter().next() {
+        return entry.doc_id;
+    }
+    (exact.len() == 1).then_some(exact[0].doc_id).flatten()
+}
+
+fn normalized(path: &str) -> String {
+    to_forward_slash(path)
 }
 
 #[cfg(test)]
@@ -41,6 +86,7 @@ mod tests {
     use super::RepoManager;
     use crate::source_control::ChangeStatus;
     use crate::source_control::pending_fs::{self, PendingFsEntry};
+    use crate::source_control::staging;
 
     #[test]
     fn path_wrapper_preserves_doc_identity_from_exact_pending_entry() -> anyhow::Result<()> {
@@ -71,6 +117,116 @@ mod tests {
         let target =
             repo.tracked_target_for_path_in_local_repo(repo.local_repo_name(), "docs/a.md")?;
         assert_eq!(target.doc_id, Some(doc_id));
+        Ok(())
+    }
+
+    #[test]
+    fn path_wrapper_preserves_doc_identity_from_renamed_from_pending_entry() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+        repo.set_vault_root(dir.path().join("vault"));
+        let doc_id = repo.apply_file_structure_in_local_repo(
+            repo.local_repo_name(),
+            "notes/a.md",
+            None,
+            "test",
+        )?;
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "docs/a.md".into(),
+                    renamed_from: Some("notes/a.md".into()),
+                    doc_id: Some(doc_id),
+                    change_type: ChangeStatus::Added,
+                    content_hash: pending_fs::content_hash("hello"),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })?;
+
+        let target =
+            repo.tracked_target_for_path_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
+        assert_eq!(target.path, "notes/a.md");
+        assert_eq!(target.doc_id, Some(doc_id));
+        Ok(())
+    }
+
+    #[test]
+    fn path_wrapper_fails_closed_when_old_path_is_reused() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+        repo.set_vault_root(dir.path().join("vault"));
+        let doc_id = crate::models::DocId::new();
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "docs/a.md".into(),
+                    renamed_from: Some("notes/a.md".into()),
+                    doc_id: Some(doc_id),
+                    change_type: ChangeStatus::Added,
+                    content_hash: pending_fs::content_hash("hello"),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )?;
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "notes/a.md".into(),
+                    renamed_from: None,
+                    doc_id: None,
+                    change_type: ChangeStatus::Added,
+                    content_hash: pending_fs::content_hash("new"),
+                    detected_at: 2,
+                    has_conflict: false,
+                },
+            )
+        })?;
+
+        let target =
+            repo.tracked_target_for_path_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
+        assert_eq!(target.path, "notes/a.md");
+        assert_eq!(target.doc_id, None);
+        Ok(())
+    }
+
+    #[test]
+    fn stage_wrapper_stages_renamed_entry_from_old_path() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+        repo.set_vault_root(dir.path().join("vault"));
+        let doc_id = repo.apply_file_structure_in_local_repo(
+            repo.local_repo_name(),
+            "notes/a.md",
+            None,
+            "test",
+        )?;
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "docs/a.md".into(),
+                    renamed_from: Some("notes/a.md".into()),
+                    doc_id: Some(doc_id),
+                    change_type: ChangeStatus::Added,
+                    content_hash: pending_fs::content_hash("hello"),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })?;
+
+        repo.stage_pending_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
+        let staged = repo
+            .run_on_local_repo(repo.local_repo_name(), |db| -> anyhow::Result<_> {
+                staging::get_staged(db, "docs/a.md")
+            })?
+            .expect("renamed entry staged");
+        assert_eq!(staged.doc_id, Some(doc_id));
+        assert_eq!(staged.renamed_from.as_deref(), Some("notes/a.md"));
         Ok(())
     }
 }
