@@ -8,8 +8,9 @@
 //! 影子库用于存储远端 Peer 的数据副本，实现 Trinity Isolation 架构中的
 //! "Receive Only" 隔离策略。每个 Peer 拥有独立的 `.redb` 文件。
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 use super::RepoInfo;
@@ -55,9 +56,9 @@ impl RepoManager {
             .remotes_dir()
             .join(peer_id.to_filename())
             .join(format!("{}.redb", info.uuid));
-        let db_path = match if desired.exists() {
+        let db_path = match if checked_exists(&desired, "shadow repo destination")? {
             Some(desired.clone())
-        } else if legacy.exists() {
+        } else if checked_exists(&legacy, "shadow repo legacy path")? {
             Some(legacy)
         } else {
             self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)?
@@ -152,6 +153,11 @@ impl RepoManager {
             .write()
             .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))
     }
+}
+
+fn checked_exists(path: &Path, context: &str) -> Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }
 
 #[cfg(test)]

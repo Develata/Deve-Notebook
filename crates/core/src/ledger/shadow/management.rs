@@ -136,11 +136,22 @@ fn write_shadow_dbs<'a>(
 /// 扫描磁盘上所有影子库文件夹并返回 PeerId 列表。
 pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
     let mut peers = Vec::new();
-    if !remotes_dir.exists() {
-        anyhow::bail!(
-            "Broken remote repo catalog: remote repo directory missing at {:?}",
-            remotes_dir
-        );
+    match remotes_dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => {
+            anyhow::bail!(
+                "Broken remote repo catalog: remote repo directory missing at {:?}",
+                remotes_dir
+            );
+        }
+        Err(err) => {
+            return Err(err).with_context(|| {
+                format!(
+                    "Failed to stat remote repo directory while listing shadows on disk: {:?}",
+                    remotes_dir
+                )
+            });
+        }
     }
     for entry in std::fs::read_dir(remotes_dir)? {
         let entry = entry?;
@@ -154,7 +165,7 @@ pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
         if name.starts_with('.') || name.is_empty() {
             continue;
         }
-        if !path.is_dir() {
+        if !entry.file_type()?.is_dir() {
             return Err(anyhow::anyhow!(
                 "Broken shadow peer entry {:?} while listing shadows on disk: expected directory",
                 path

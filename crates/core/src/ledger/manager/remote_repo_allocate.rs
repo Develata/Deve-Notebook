@@ -1,6 +1,6 @@
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 impl RepoManager {
@@ -19,7 +19,10 @@ impl RepoManager {
                 format!("{}-{}", base, suffix)
             };
             let path = peer_dir.join(format!("{}.redb", stem));
-            if !path.exists() {
+            if !path
+                .try_exists()
+                .with_context(|| format!("Failed to stat remote repo path candidate: {:?}", path))?
+            {
                 return Ok(path);
             }
             if let Some(current) = Self::read_repo_info_from_path(&path)?
@@ -58,6 +61,10 @@ fn stem_matches_base(stem: &str, base: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::stem_matches_base;
+    use crate::ledger::{RepoInfo, RepoManager};
+    use crate::models::PeerId;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
 
     #[test]
     fn collision_suffix_is_treated_as_same_selector_family() {
@@ -66,5 +73,40 @@ mod tests {
         assert!(stem_matches_base("wiki-23", "wiki"));
         assert!(!stem_matches_base("legacy", "wiki"));
         assert!(!stem_matches_base("wiki-copy", "wiki"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn allocate_remote_repo_path_fails_closed_on_unstatable_peer_dir() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
+            .expect("repo");
+        let peer = PeerId::new("peer-a");
+        let peer_dir = repo.remotes_dir().join(peer.to_filename());
+        std::fs::create_dir_all(&peer_dir).expect("peer dir");
+        let original = std::fs::metadata(&peer_dir)
+            .expect("metadata")
+            .permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        std::fs::set_permissions(&peer_dir, blocked).expect("chmod 000");
+
+        let err = repo
+            .allocate_remote_repo_path(
+                &peer,
+                &RepoInfo {
+                    uuid: uuid::Uuid::new_v4(),
+                    name: "notes".into(),
+                    url: Some("urn:test:notes".into()),
+                },
+            )
+            .expect_err("unstatable peer dir must fail closed");
+
+        std::fs::set_permissions(&peer_dir, original).expect("restore perms");
+        assert!(
+            err.to_string()
+                .contains("Failed to stat remote repo path candidate")
+                || err.to_string().contains("Permission denied")
+        );
     }
 }

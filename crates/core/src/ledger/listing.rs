@@ -125,7 +125,7 @@ fn shadow_peer_dirs(repo: &RepoManager) -> Result<Vec<PeerId>> {
         if name.starts_with('.') || name.is_empty() {
             continue;
         }
-        if !path.is_dir() {
+        if !entry.file_type()?.is_dir() {
             return Err(anyhow!(
                 "Broken shadow peer entry {:?} while listing shadows: expected directory",
                 path

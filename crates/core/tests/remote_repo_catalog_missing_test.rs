@@ -118,3 +118,40 @@ fn remote_repo_catalog_calls_fail_closed_when_peer_dir_is_unstatable() {
             || repair_err.to_string().contains("Permission denied")
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_unstatable() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let remotes_dir = repo.remotes_dir();
+    let original = std::fs::metadata(&remotes_dir)
+        .expect("metadata")
+        .permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&remotes_dir, blocked).expect("chmod 000");
+
+    let list_err = repo
+        .list_shadows_on_disk()
+        .expect_err("unstatable remotes dir must fail shadow listing");
+    let switchable_err = repo
+        .list_switchable_shadows_on_disk()
+        .expect_err("unstatable remotes dir must fail switchable shadow listing");
+    let repair_err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("unstatable remotes dir must fail remote repair");
+    let shadow_err = shadow::list_shadows_on_disk(&remotes_dir)
+        .expect_err("unstatable remotes dir must fail shadow management listing");
+
+    std::fs::set_permissions(&remotes_dir, original).expect("restore perms");
+    for err in [&list_err, &switchable_err, &repair_err, &shadow_err] {
+        let detail = err.to_string();
+        assert!(
+            detail.contains("Failed to stat remote repo directory")
+                || detail.contains("Permission denied"),
+            "unexpected error detail: {detail}"
+        );
+    }
+}
