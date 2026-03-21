@@ -1,6 +1,6 @@
 use crate::ledger::database::cached_or_create_database;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -11,13 +11,7 @@ impl RepoManager {
         main_repo_name: &str,
         main_db: &Database,
     ) -> Result<()> {
-        let local_dir = ledger_dir.join("local");
-        if !local_dir.exists() {
-            return Err(anyhow!(
-                "Broken local repo catalog: local repo directory missing at {:?}",
-                local_dir
-            ));
-        }
+        let local_dir = RepoManager::checked_local_dir_for(ledger_dir, "validating local catalog")?;
 
         let mut seen = HashMap::new();
         let mut seen_urls = HashMap::new();
@@ -67,8 +61,17 @@ impl RepoManager {
         allow_workspace_root_rewrite: bool,
     ) -> Result<()> {
         let local_dir = ledger_dir.join("local");
-        if !local_dir.exists() {
-            return Ok(());
+        match local_dir.try_exists() {
+            Ok(true) => {}
+            Ok(false) => return Ok(()),
+            Err(err) => {
+                return Err(err).with_context(|| {
+                    format!(
+                        "Failed to stat local repo directory while repairing local catalog: {:?}",
+                        local_dir
+                    )
+                });
+            }
         }
 
         let mut entries = Vec::new();

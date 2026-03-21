@@ -32,13 +32,10 @@ impl RepoManager {
             return Ok(Some(self.local_repo_name.clone()));
         }
 
-        let local_dir = self.ledger_dir.join("local");
-        if !local_dir.exists() {
-            anyhow::bail!(
-                "Broken local repo catalog: local repo directory missing at {:?}",
-                local_dir
-            );
-        }
+        let local_dir = Self::checked_local_dir_for(
+            &self.ledger_dir,
+            "resolving local repo UUID without repair",
+        )?;
 
         for entry in std::fs::read_dir(local_dir)? {
             let entry = entry?;

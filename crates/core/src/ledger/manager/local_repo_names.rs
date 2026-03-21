@@ -7,13 +7,8 @@ impl RepoManager {
     /// - 返回前必须先修复本地 repo catalog，避免 name drift 污染执行路径。
     pub fn list_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
         self.refresh_local_repo_catalog()?;
-        let local_dir = self.ledger_dir.join("local");
-        if !local_dir.exists() {
-            anyhow::bail!(
-                "Broken local repo catalog: local repo directory missing at {:?}",
-                local_dir
-            );
-        }
+        let local_dir =
+            RepoManager::checked_local_dir_for(&self.ledger_dir, "listing execution names")?;
 
         let mut repos = Vec::new();
         for entry in std::fs::read_dir(local_dir)? {

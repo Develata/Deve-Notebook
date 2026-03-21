@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -113,6 +113,23 @@ impl RepoManager {
         Ok(remotes_dir)
     }
 
+    pub(crate) fn checked_local_dir_for(ledger_dir: &Path, context: &str) -> Result<PathBuf> {
+        let local_dir = ledger_dir.join("local");
+        match local_dir.try_exists() {
+            Ok(true) => Ok(local_dir),
+            Ok(false) => Err(anyhow!(
+                "Broken local repo catalog: local repo directory missing at {:?}",
+                local_dir
+            )),
+            Err(err) => Err(err).with_context(|| {
+                format!(
+                    "Failed to stat local repo directory while {}: {:?}",
+                    context, local_dir
+                )
+            }),
+        }
+    }
+
     /// 获取本地数据库的只读事务 (用于高级查询)
     pub fn local_db_read_txn(&self) -> Result<redb::ReadTransaction> {
         Ok(self.local_db.begin_read()?)
@@ -178,13 +195,7 @@ impl RepoManager {
         if selector == self.local_repo_name {
             return Ok(Some(self.local_repo_name.clone()));
         }
-        let local_dir = self.ledger_dir.join("local");
-        if !local_dir.exists() {
-            anyhow::bail!(
-                "Broken local repo catalog: local repo directory missing at {:?}",
-                local_dir
-            );
-        }
+        let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
         for entry in std::fs::read_dir(local_dir)? {
             let path = entry?.path();
             if path.extension().and_then(|s| s.to_str()) != Some("redb") {

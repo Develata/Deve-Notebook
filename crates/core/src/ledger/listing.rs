@@ -39,14 +39,7 @@ impl RepoListing for RepoManager {
             return self.list_remote_repo_names(peer_id);
         }
         self.refresh_local_repo_catalog()?;
-        let target_dir = self.ledger_dir.join("local");
-
-        if !target_dir.exists() {
-            anyhow::bail!(
-                "Broken local repo catalog: local repo directory missing at {:?}",
-                target_dir
-            );
-        }
+        let target_dir = RepoManager::checked_local_dir_for(&self.ledger_dir, "listing repos")?;
 
         let mut named = Vec::new();
         for entry in std::fs::read_dir(target_dir)? {

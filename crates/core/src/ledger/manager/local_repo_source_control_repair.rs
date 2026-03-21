@@ -78,13 +78,7 @@ impl RepoManager {
 }
 
 fn local_repo_paths(ledger_dir: &Path, action: &str) -> Result<Vec<(PathBuf, String)>> {
-    let local_dir = ledger_dir.join("local");
-    if !local_dir.exists() {
-        return Err(anyhow!(
-            "Broken local repo catalog: local repo directory missing at {:?}",
-            local_dir
-        ));
-    }
+    let local_dir = RepoManager::checked_local_dir_for(ledger_dir, action)?;
     let mut entries = Vec::new();
     for entry in std::fs::read_dir(&local_dir)? {
         let path = entry?.path();
