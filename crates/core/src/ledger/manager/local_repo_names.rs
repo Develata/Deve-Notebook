@@ -1,3 +1,4 @@
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use anyhow::{Result, anyhow};
 
@@ -11,12 +12,7 @@ impl RepoManager {
             RepoManager::checked_local_dir_for(&self.ledger_dir, "listing execution names")?;
 
         let mut repos = Vec::new();
-        for entry in std::fs::read_dir(local_dir)? {
-            let path = entry?.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
-                continue;
-            }
-            let stem = RepoManager::repo_stem_from_path(&path, "listing execution names")?;
+        for (path, stem) in redb_repo_entries(&local_dir, "listing execution names")? {
             if stem == self.local_repo_name {
                 repos.push(stem);
                 continue;

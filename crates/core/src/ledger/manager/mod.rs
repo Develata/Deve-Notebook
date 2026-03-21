@@ -27,6 +27,7 @@ mod projection_cleanup;
 mod remote_repo_allocate;
 mod remote_repo_scan;
 mod remote_repo_scan_entry;
+pub(crate) mod repo_catalog_entries;
 mod repo_db;
 mod repo_info;
 mod repo_lookup;

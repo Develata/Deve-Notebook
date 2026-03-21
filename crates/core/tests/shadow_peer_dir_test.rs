@@ -43,3 +43,26 @@ fn non_directory_shadow_peer_entry_fails_closed_for_listing_and_repair() {
         .expect_err("non-directory peer entry must fail repair");
     assert!(repair_err.to_string().contains("expected directory"));
 }
+
+#[test]
+fn non_file_shadow_repo_entry_fails_closed_for_listing_and_repair() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let peer = deve_core::models::PeerId::new("peer-dir");
+    let peer_dir = repo.remotes_dir().join(peer.to_filename());
+    std::fs::create_dir_all(peer_dir.join("notes.redb")).expect("create fake shadow dir");
+
+    let list_err = repo
+        .list_repos(Some(&peer))
+        .expect_err("non-file shadow entry must fail listing");
+    assert!(list_err.to_string().contains("expected file"));
+
+    let repair_err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("non-file shadow entry must fail repair");
+    assert!(
+        repair_err
+            .to_string()
+            .contains("Broken shadow peer peer-dir while repairing catalogs")
+    );
+}

@@ -3,6 +3,7 @@
 //!
 //! 提供 `RepoListing` trait，扩展 `RepoManager` 的列表查询能力。
 
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::{RepoManager, node_meta};
 use crate::models::{DocId, NodeId, NodeMeta, PeerId, RepoType};
 use anyhow::{Result, anyhow};
@@ -42,23 +43,18 @@ impl RepoListing for RepoManager {
         let target_dir = RepoManager::checked_local_dir_for(&self.ledger_dir, "listing repos")?;
 
         let mut named = Vec::new();
-        for entry in std::fs::read_dir(target_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                let stem = RepoManager::repo_stem_from_path(&path, "listing repos")?;
-                let display = if stem == self.local_repo_name {
-                    self.get_repo_info()?.map(|info| info.name)
-                } else {
-                    RepoManager::read_repo_info_from_path(&path)
-                        .map_err(|err| {
-                            anyhow!("Broken local repo {} while listing repos: {}", stem, err)
-                        })?
-                        .map(|info| info.name)
-                }
-                .unwrap_or_else(|| stem.clone());
-                named.push((stem, display));
+        for (path, stem) in redb_repo_entries(&target_dir, "listing repos")? {
+            let display = if stem == self.local_repo_name {
+                self.get_repo_info()?.map(|info| info.name)
+            } else {
+                RepoManager::read_repo_info_from_path(&path)
+                    .map_err(|err| {
+                        anyhow!("Broken local repo {} while listing repos: {}", stem, err)
+                    })?
+                    .map(|info| info.name)
             }
+            .unwrap_or_else(|| stem.clone());
+            named.push((stem, display));
         }
 
         let mut counts = std::collections::HashMap::<String, usize>::new();

@@ -1,4 +1,5 @@
 use crate::ledger::database::cached_or_create_database;
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
 use anyhow::{Result, anyhow};
@@ -79,14 +80,7 @@ impl RepoManager {
 
 fn local_repo_paths(ledger_dir: &Path, action: &str) -> Result<Vec<(PathBuf, String)>> {
     let local_dir = RepoManager::checked_local_dir_for(ledger_dir, action)?;
-    let mut entries = Vec::new();
-    for entry in std::fs::read_dir(&local_dir)? {
-        let path = entry?.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("redb") {
-            let stem = RepoManager::repo_stem_from_path(&path, action)?;
-            entries.push((path, stem));
-        }
-    }
+    let mut entries = redb_repo_entries(&local_dir, action)?;
     entries.sort_by(|(_, left), (_, right)| left.cmp(right));
     Ok(entries)
 }

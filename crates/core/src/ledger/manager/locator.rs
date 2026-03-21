@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 
 use crate::ledger::listing::RepoListing;
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 
@@ -37,14 +38,9 @@ impl RepoManager {
             "resolving local repo UUID without repair",
         )?;
 
-        for entry in std::fs::read_dir(local_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
-                continue;
-            }
-            let file_stem =
-                Self::repo_stem_from_path(&path, "resolving local repo UUID without repair")?;
+        for (path, file_stem) in
+            redb_repo_entries(&local_dir, "resolving local repo UUID without repair")?
+        {
             if file_stem == self.local_repo_name {
                 continue;
             }

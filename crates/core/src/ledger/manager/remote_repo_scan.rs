@@ -8,6 +8,7 @@ use self::helpers::{
 };
 use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
 use anyhow::{Result, anyhow};
@@ -25,17 +26,8 @@ impl RepoManager {
                 ));
             }
         }
-        let mut paths = Vec::new();
-        for entry in std::fs::read_dir(&peer_dir)? {
-            let path = entry?.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                paths.push(path);
-            }
-        }
-        paths.sort();
         let mut repairs = Vec::new();
-        for path in paths {
-            let stem = Self::repo_stem_from_path(&path, "repairing remote catalog")?;
+        for (path, stem) in redb_repo_entries(&peer_dir, "repairing remote catalog")? {
             let repair = repaired_remote_repo_info(&path, &stem).map_err(|err| {
                 anyhow!(
                     "Broken shadow repo {} for peer {} while repairing catalog: {}",
@@ -107,12 +99,7 @@ impl RepoManager {
             }
         }
         let mut repos = Vec::new();
-        for entry in std::fs::read_dir(peer_dir)? {
-            let path = entry?.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
-                continue;
-            }
-            let stem = Self::repo_stem_from_path(&path, "pure scanning remote catalog")?;
+        for (path, stem) in redb_repo_entries(&peer_dir, "pure scanning remote catalog")? {
             let info = scanned_remote_repo_info(self, &path, &stem).map_err(|err| {
                 anyhow!(
                     "Broken shadow repo {} for peer {} while pure scanning catalog: {}",

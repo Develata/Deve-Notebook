@@ -1,4 +1,5 @@
 use crate::ledger::database::cached_or_create_database;
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use anyhow::{Context, Result, anyhow};
 use redb::Database;
@@ -23,14 +24,7 @@ impl RepoManager {
             &mut seen_urls,
         )?;
 
-        let mut entries = Vec::new();
-        for entry in std::fs::read_dir(&local_dir)? {
-            let path = entry?.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                let stem = RepoManager::repo_stem_from_path(&path, "validating local catalog")?;
-                entries.push((path, stem));
-            }
-        }
+        let mut entries = redb_repo_entries(&local_dir, "validating local catalog")?;
         entries.sort_by(|(_, left_stem), (_, right_stem)| left_stem.cmp(right_stem));
 
         for (path, stem) in entries {
@@ -74,14 +68,7 @@ impl RepoManager {
             }
         }
 
-        let mut entries = Vec::new();
-        for entry in std::fs::read_dir(&local_dir)? {
-            let path = entry?.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("redb") {
-                let stem = RepoManager::repo_stem_from_path(&path, "repairing local catalog")?;
-                entries.push((path, stem));
-            }
-        }
+        let mut entries = redb_repo_entries(&local_dir, "repairing local catalog")?;
         entries.sort_by(|(left_path, left_stem), (right_path, right_stem)| {
             usize::from(left_stem != main_repo_name)
                 .cmp(&usize::from(right_stem != main_repo_name))

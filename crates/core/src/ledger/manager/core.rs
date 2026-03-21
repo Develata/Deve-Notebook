@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::ledger::database::cached_database;
+use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
 use crate::ledger::{init, range, source_control};
@@ -196,12 +197,7 @@ impl RepoManager {
             return Ok(Some(self.local_repo_name.clone()));
         }
         let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
-        for entry in std::fs::read_dir(local_dir)? {
-            let path = entry?.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("redb") {
-                continue;
-            }
-            let stem = Self::repo_stem_from_path(&path, "resolving local selector")?;
+        for (path, stem) in redb_repo_entries(&local_dir, "resolving local selector")? {
             if stem == selector {
                 return Ok(Some(stem));
             }
