@@ -153,7 +153,21 @@ impl ContentResolver for RepoManager {
 }
 
 fn cleanup(path: &Path) {
-    if path.exists() {
-        let _ = fs::remove_dir_all(path);
+    match path.try_exists() {
+        Ok(true) => {
+            if let Err(err) = fs::remove_dir_all(path) {
+                warn!(
+                    "Failed to cleanup temporary P2P verification dir {:?}: {}",
+                    path, err
+                );
+            }
+        }
+        Ok(false) => {}
+        Err(err) => {
+            warn!(
+                "Failed to stat temporary P2P verification dir {:?}: {}",
+                path, err
+            );
+        }
     }
 }

@@ -27,7 +27,16 @@ pub async fn login(
         return reject(StatusCode::UNAUTHORIZED, AuthErrorCode::InvalidPassword);
     }
 
-    let ok = password::verify_password(&body.password, &config.password_hash).unwrap_or(false);
+    let ok = match verify_login_password(&body.password, &config.password_hash) {
+        Ok(ok) => ok,
+        Err(err) => {
+            tracing::error!("Password verification failed: {:?}", err);
+            return reject(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                AuthErrorCode::InternalError,
+            );
+        }
+    };
     if !ok {
         guard.record_failure(&ip);
         log_login(false, &ip, &body.username);
@@ -62,3 +71,11 @@ fn reject(
         Json(LoginResponse::failure(code)),
     )
 }
+
+fn verify_login_password(password_input: &str, password_hash: &str) -> anyhow::Result<bool> {
+    password::verify_password(password_input, password_hash)
+}
+
+#[cfg(test)]
+#[path = "login_test.rs"]
+mod tests;
