@@ -1,5 +1,5 @@
 use super::super::node_target::resolve_node_target;
-use super::super::{errors, validate_file_path, validate_folder_path};
+use super::super::{checked_exists, errors, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path};
@@ -44,7 +44,18 @@ pub(super) fn prepare_copy_paths(
             return None;
         }
     };
-    if dst.exists() {
+    let dst_exists = match checked_exists(&dst, "copy destination") {
+        Ok(exists) => exists,
+        Err(err) => {
+            errors::classified_failure_scoped(
+                ch,
+                format!("Failed to check copy destination: {}", err),
+                scope_nonce,
+            );
+            return None;
+        }
+    };
+    if dst_exists {
         errors::storage_conflict_scoped(
             ch,
             format!("Destination exists: {}", dest_path),
@@ -60,20 +71,42 @@ pub(super) fn prepare_copy_paths(
     if !valid {
         return None;
     }
-    if src.kind == NodeKind::Dir
-        && !src.abs_path.exists()
-        && let Err(err) = state
+    let mut src_exists = match checked_exists(&src.abs_path, "copy source projection") {
+        Ok(exists) => exists,
+        Err(err) => {
+            errors::classified_failure_scoped(
+                ch,
+                format!("Failed to check source projection: {}", err),
+                scope_nonce,
+            );
+            return None;
+        }
+    };
+    if src.kind == NodeKind::Dir && !src_exists {
+        if let Err(err) = state
             .sync_manager
             .rebuild_projection_local_repo(&scope.repo_name)
-    {
-        errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to rebuild source projection: {}", err),
-            scope_nonce,
-        );
-        return None;
+        {
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to rebuild source projection: {}", err),
+                scope_nonce,
+            );
+            return None;
+        }
+        src_exists = match checked_exists(&src.abs_path, "rebuilt copy source projection") {
+            Ok(exists) => exists,
+            Err(err) => {
+                errors::classified_failure_scoped(
+                    ch,
+                    format!("Failed to recheck source projection: {}", err),
+                    scope_nonce,
+                );
+                return None;
+            }
+        };
     }
-    if src.kind == NodeKind::Dir && !src.abs_path.exists() {
+    if src.kind == NodeKind::Dir && !src_exists {
         errors::storage_not_found_scoped(
             ch,
             format!("Source projection missing: {}", src_path),

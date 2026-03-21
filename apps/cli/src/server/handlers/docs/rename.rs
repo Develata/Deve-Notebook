@@ -5,7 +5,7 @@ use super::errors;
 use super::node_target::resolve_node_target;
 use super::rename_dir::handle_dir_rename;
 use super::rename_file::handle_file_rename;
-use super::{resolve_local_write_scope, validate_file_path, validate_folder_path};
+use super::{checked_exists, resolve_local_write_scope, validate_file_path, validate_folder_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::local_repo_path;
@@ -77,14 +77,25 @@ pub async fn handle_rename_doc(
         }
     };
 
-    if dst.exists() {
-        tracing::error!("重命名失败: 目标已存在: {:?}", dst);
-        errors::storage_conflict_scoped(
-            ch,
-            format!("Destination exists: {}", dst_name),
-            scope_nonce,
-        );
-        return;
+    match checked_exists(&dst, "rename destination") {
+        Ok(true) => {
+            tracing::error!("重命名失败: 目标已存在: {:?}", dst);
+            errors::storage_conflict_scoped(
+                ch,
+                format!("Destination exists: {}", dst_name),
+                scope_nonce,
+            );
+            return;
+        }
+        Ok(false) => {}
+        Err(err) => {
+            errors::classified_failure_scoped(
+                ch,
+                format!("Failed to check rename destination: {}", err),
+                scope_nonce,
+            );
+            return;
+        }
     }
 
     // 3. 执行重命名

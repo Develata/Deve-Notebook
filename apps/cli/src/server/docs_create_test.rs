@@ -8,6 +8,8 @@ use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
@@ -147,5 +149,39 @@ async fn create_doc_ignores_stale_remote_readonly_binding_after_scope_recovery()
         "local create should succeed after stale readonly binding is cleared"
     );
     assert!(dir.path().join("vault/default/notes/local.md").exists());
+    Ok(())
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_fails_closed_when_target_path_is_unstatable() -> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    let blocked = dir.path().join("vault/default/blocked");
+    std::fs::create_dir_all(&blocked)?;
+    std::fs::set_permissions(&blocked, std::fs::Permissions::from_mode(0o000))?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+
+    handle_create_doc(&state, &ch, &mut session, "blocked/new.md".into()).await;
+
+    std::fs::set_permissions(&blocked, std::fs::Permissions::from_mode(0o755))?;
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .unwrap_or_default()
+                    .contains("Failed to check create target"),
+                "unexpected detail: {:?}",
+                error.detail
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(state.repo.get_docid("blocked/new.md")?.is_none());
     Ok(())
 }

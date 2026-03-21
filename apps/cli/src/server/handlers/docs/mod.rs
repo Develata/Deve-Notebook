@@ -34,8 +34,10 @@ use crate::server::repo_scope::{
     ResolvedRepo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
 use crate::server::session::WsSession;
+use anyhow::Context;
 use deve_core::models::RepoId;
 use deve_core::protocol::ServerMessage;
+use std::path::Path;
 use std::sync::Arc;
 
 /// 目录深度限制 (防止文件系统资源耗尽)
@@ -145,4 +147,26 @@ pub(super) fn resolve_local_write_scope(
         return None;
     }
     Some(scope)
+}
+
+pub(super) fn checked_exists(path: &Path, context: &str) -> anyhow::Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {}: {}", context, path.display()))
+}
+
+pub(super) fn checked_existing_is_dir(path: &Path, context: &str) -> anyhow::Result<Option<bool>> {
+    if !checked_exists(path, context)? {
+        return Ok(None);
+    }
+    Ok(Some(
+        std::fs::metadata(path)
+            .with_context(|| {
+                format!(
+                    "Failed to read metadata for {}: {}",
+                    context,
+                    path.display()
+                )
+            })?
+            .is_dir(),
+    ))
 }

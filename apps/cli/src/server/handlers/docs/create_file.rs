@@ -1,5 +1,6 @@
 //! 文件创建逻辑。
 
+use super::checked_exists;
 use super::errors;
 use super::file_register::create_file_from_content;
 use super::node_helpers::broadcast_local_projection_refresh;
@@ -19,14 +20,26 @@ pub async fn handle_file_create(
     filename: &str,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if path.exists() {
-        tracing::error!("目标路径已存在，拒绝从磁盘回填创建: {:?}", path);
-        errors::storage_conflict_scoped(
-            ch,
-            format!("Target already exists: {}", filename),
-            scope_nonce,
-        );
-        return;
+    match checked_exists(path, "create target") {
+        Ok(true) => {
+            tracing::error!("目标路径已存在，拒绝从磁盘回填创建: {:?}", path);
+            errors::storage_conflict_scoped(
+                ch,
+                format!("Target already exists: {}", filename),
+                scope_nonce,
+            );
+            return;
+        }
+        Ok(false) => {}
+        Err(e) => {
+            tracing::error!("检查创建目标失败: {:?}", e);
+            errors::classified_failure_scoped(
+                ch,
+                format!("Failed to check create target: {}", e),
+                scope_nonce,
+            );
+            return;
+        }
     }
     match state
         .repo

@@ -1,3 +1,4 @@
+use super::checked_exists;
 use crate::server::AppState;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path};
 use anyhow::Result;
@@ -14,7 +15,7 @@ pub(super) fn create_file_from_content(
     peer_label: &str,
 ) -> Result<DocId> {
     let path = local_repo_path(state, scope, rel_path)?;
-    if path.exists() {
+    if checked_exists(&path, "file register target")? {
         anyhow::bail!("Target file already exists on disk: {}", rel_path);
     }
     if state

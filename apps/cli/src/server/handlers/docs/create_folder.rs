@@ -1,5 +1,6 @@
 //! 目录创建逻辑。
 
+use super::checked_existing_is_dir;
 use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
@@ -19,10 +20,22 @@ pub async fn handle_folder_create(
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let folder_path = filename.trim_end_matches('/');
-    if path.exists() && !path.is_dir() {
-        tracing::error!("目标路径不是目录: {:?}", path);
-        errors::storage_conflict_scoped(ch, "Target path is not a directory", scope_nonce);
-        return;
+    match checked_existing_is_dir(path, "folder create target") {
+        Ok(Some(false)) => {
+            tracing::error!("目标路径不是目录: {:?}", path);
+            errors::storage_conflict_scoped(ch, "Target path is not a directory", scope_nonce);
+            return;
+        }
+        Ok(Some(true)) | Ok(None) => {}
+        Err(e) => {
+            tracing::error!("检查目录创建目标失败: {:?}", e);
+            errors::classified_failure_scoped(
+                ch,
+                format!("Failed to check folder target: {}", e),
+                scope_nonce,
+            );
+            return;
+        }
     }
     if let Err(e) = state.repo.apply_dir_create_structure_in_local_repo(
         &scope.repo_name,
