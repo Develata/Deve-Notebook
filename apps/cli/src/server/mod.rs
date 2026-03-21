@@ -207,7 +207,7 @@ pub async fn start_server(
     let tree_manager = Arc::new(RepoTreeRegistry::new());
 
     // SPAWN WATCHER
-    setup::spawn_file_watcher(sync_manager.clone(), vault_path.clone(), tx.clone());
+    setup::spawn_file_watcher(sync_manager.clone(), vault_path.clone(), tx.clone())?;
 
     let app_state = Arc::new(AppState {
         repo: repo.clone(),

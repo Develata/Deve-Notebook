@@ -57,7 +57,6 @@ impl Watcher {
         let (tx, rx) = std::sync::mpsc::channel();
         let root_absolute = std::fs::canonicalize(&self.root_path)?;
         let mut debouncer = new_debouncer(Duration::from_millis(300), tx)?;
-
         debouncer
             .watcher()
             .watch(&root_absolute, RecursiveMode::Recursive)?;
@@ -131,6 +130,18 @@ impl Watcher {
         }
         Ok(())
     }
+}
+
+pub fn validate_watch_root(root_path: &Path) -> Result<()> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let root_absolute = std::fs::canonicalize(root_path)?;
+    let mut debouncer = new_debouncer(Duration::from_millis(300), tx)?;
+    debouncer
+        .watcher()
+        .watch(&root_absolute, RecursiveMode::Recursive)?;
+    drop(debouncer);
+    drop(rx);
+    Ok(())
 }
 
 fn classify_dir_event(path: &Path) -> Result<bool> {

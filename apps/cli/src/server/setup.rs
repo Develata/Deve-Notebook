@@ -99,7 +99,8 @@ pub(super) fn spawn_file_watcher(
     sync_manager: Arc<deve_core::sync::SyncManager>,
     vault_path: std::path::PathBuf,
     tx: broadcast::Sender<ServerMessage>,
-) {
+) -> Result<()> {
+    validate_file_watcher_startup(&vault_path)?;
     tokio::task::spawn_blocking(move || {
         use deve_core::watcher::FsEventType;
 
@@ -138,11 +139,17 @@ pub(super) fn spawn_file_watcher(
             tracing::error!("Watcher failed: {:?}", e);
         }
     });
+    Ok(())
+}
+
+fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
+    deve_core::watcher::validate_watch_root(vault_path)
+        .with_context(|| format!("Watcher startup preflight failed for {:?}", vault_path))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::write_main_port_hint;
+    use super::{validate_file_watcher_startup, write_main_port_hint};
 
     #[test]
     fn write_main_port_hint_fails_closed_when_parent_is_not_directory() {
@@ -156,6 +163,19 @@ mod tests {
         assert!(
             err.to_string().contains("Failed to write main port hint")
                 || err.to_string().contains("Not a directory")
+        );
+    }
+
+    #[test]
+    fn validate_file_watcher_startup_fails_closed_on_missing_vault_root() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let err = validate_file_watcher_startup(&dir.path().join("missing-vault"))
+            .expect_err("missing vault root must fail closed");
+
+        assert!(
+            err.to_string().contains("Watcher startup preflight failed")
+                || err.to_string().contains("canonicalize")
+                || err.to_string().contains("No such file")
         );
     }
 }
