@@ -12,10 +12,11 @@
 //! **类型**: Core MUST (核心必选)
 
 use crate::ledger::database::cached_or_create_database;
+use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::*;
 use crate::models::{PeerId, RepoId};
 use anyhow::{Context, Result};
-use redb::Database;
+use redb::{Database, ReadableTable};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -23,6 +24,10 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 type ShadowRepoMap = HashMap<PeerId, HashMap<RepoId, Arc<Database>>>;
 
 /// 确保指定 Peer 的特定影子库已加载。
+///
+/// Invariants:
+/// - 一旦显式 `repo_id` 已知，runtime 创建的 shadow DB 必须至少写入最小 `RepoInfo`。
+/// - `REPO_METADATA` 缺失只允许来自显式构造的 legacy/broken 测试输入，不应由正常运行时路径制造。
 pub fn ensure_shadow_db(
     remotes_dir: &Path,
     shadow_dbs: &RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
@@ -78,7 +83,16 @@ pub fn load_shadow_db(
     // Initialize tables
     let write_txn = db.begin_write()?;
     {
-        let _ = write_txn.open_table(REPO_METADATA)?;
+        let mut repo_meta = write_txn.open_table(REPO_METADATA)?;
+        if repo_meta.get(&0)?.is_none() {
+            let info = RepoInfo {
+                uuid: *repo_id,
+                name: repo_id.to_string(),
+                url: None,
+            };
+            let bytes = bincode::serialize(&info)?;
+            repo_meta.insert(&0, bytes.as_slice())?;
+        }
         let _ = write_txn.open_table(LEDGER_OPS)?;
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
         let _ = write_txn.open_multimap_table(NODE_OPS)?;

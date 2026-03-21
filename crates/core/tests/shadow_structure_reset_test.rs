@@ -1,11 +1,13 @@
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::Op;
 use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, RepoType, StructureOp};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::protocol::SyncSnapshotRequest;
+use redb::Database;
 use tempfile::TempDir;
 use uuid::Uuid;
 
@@ -13,6 +15,15 @@ fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     (dir, repo)
+}
+
+fn create_legacy_shadow_without_metadata(repo: &RepoManager, peer_id: &PeerId, repo_id: Uuid) {
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    let db = Database::create(peer_dir.join(format!("{repo_id}.redb"))).expect("legacy shadow");
+    let txn = db.begin_write().expect("write txn");
+    let _ = txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.commit().expect("commit legacy shadow");
 }
 
 #[test]
@@ -104,21 +115,20 @@ fn append_remote_structure_updates_shadow_projection() {
 }
 
 #[test]
-fn remote_repo_info_falls_back_to_repo_id_when_metadata_missing() {
+fn remote_repo_info_fails_closed_when_metadata_missing() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let repo_id = Uuid::new_v4();
 
-    repo.ensure_shadow_db(&peer_id, &repo_id)
-        .expect("ensure shadow db");
+    create_legacy_shadow_without_metadata(&repo, &peer_id, repo_id);
 
-    let info = repo
+    let err = repo
         .get_repo_info_for(Some(&peer_id), Some(&repo_id.to_string()))
-        .expect("read remote repo info")
-        .expect("fallback repo info");
-    assert_eq!(info.uuid, repo_id);
-    assert_eq!(info.name, repo_id.to_string());
-    assert_eq!(info.url, None);
+        .expect_err("metadata-less remote repo info lookup must fail closed");
+    assert!(
+        err.to_string()
+            .contains(format!("Broken shadow repo {} for peer {}", repo_id, peer_id).as_str())
+    );
 }
 
 #[test]

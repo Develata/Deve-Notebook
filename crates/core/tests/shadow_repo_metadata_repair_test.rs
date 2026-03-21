@@ -2,6 +2,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
+use redb::Database;
 use tempfile::TempDir;
 
 fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
@@ -9,6 +10,19 @@ fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
     let table = read.open_table(REPO_METADATA).expect("repo metadata");
     let raw = table.get(&0).expect("read metadata")?;
     Some(bincode::deserialize(raw.value()).expect("deserialize repo info"))
+}
+
+fn create_legacy_shadow_without_metadata(
+    repo: &RepoManager,
+    peer_id: &PeerId,
+    repo_id: uuid::Uuid,
+) {
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    let db = Database::create(peer_dir.join(format!("{repo_id}.redb"))).expect("legacy shadow");
+    let txn = db.begin_write().expect("write txn");
+    let _ = txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.commit().expect("commit legacy shadow");
 }
 
 #[test]
@@ -28,8 +42,7 @@ fn remote_catalog_keeps_legacy_uuid_shadow_as_uuid_selector_without_remote_metad
         .expect("local repo exists");
     let peer_id = PeerId::new("peer-remote");
 
-    repo.ensure_shadow_db(&peer_id, &info.uuid)
-        .expect("create legacy uuid shadow");
+    create_legacy_shadow_without_metadata(&repo, &peer_id, info.uuid);
     repo.repair_remote_repo_catalogs()
         .expect("repair remote catalogs explicitly");
     assert_eq!(
@@ -65,8 +78,7 @@ fn init_keeps_uuid_shadow_path_without_remote_metadata() {
         .expect("local repo exists");
     let peer_id = PeerId::new("peer-remote");
 
-    repo.ensure_shadow_db(&peer_id, &info.uuid)
-        .expect("create legacy uuid shadow");
+    create_legacy_shadow_without_metadata(&repo, &peer_id, info.uuid);
     assert!(
         repo.remotes_dir()
             .join(peer_id.to_filename())
@@ -117,8 +129,7 @@ fn local_catalog_repair_does_not_make_legacy_shadow_runtime_readable() {
     let peer_id = PeerId::new("peer-remote");
     let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
 
-    main.ensure_shadow_db(&peer_id, &wiki_info.uuid)
-        .expect("create legacy uuid shadow");
+    create_legacy_shadow_without_metadata(&main, &peer_id, wiki_info.uuid);
 
     let main_info = main.get_repo_info().expect("main info").expect("present");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
@@ -181,8 +192,7 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
         .expect("write poisoned metadata");
     write.commit().expect("commit metadata");
 
-    main.ensure_shadow_db(&peer_id, &wiki_info.uuid)
-        .expect("create legacy uuid shadow");
+    create_legacy_shadow_without_metadata(&main, &peer_id, wiki_info.uuid);
     main.repair_remote_repo_catalogs()
         .expect("repair remote catalogs");
 
@@ -213,8 +223,7 @@ fn remote_catalog_repair_fails_closed_on_broken_peer() {
     let good_peer = PeerId::new("peer-good");
     let bad_peer = PeerId::new("peer-bad");
 
-    repo.ensure_shadow_db(&good_peer, &info.uuid)
-        .expect("create healthy legacy uuid shadow");
+    create_legacy_shadow_without_metadata(&repo, &good_peer, info.uuid);
     let bad_dir = repo.remotes_dir().join(bad_peer.to_filename());
     std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
     std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("write broken shadow");

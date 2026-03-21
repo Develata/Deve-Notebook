@@ -13,6 +13,15 @@ fn new_repo() -> (TempDir, RepoManager) {
     (dir, repo)
 }
 
+fn create_legacy_shadow_without_metadata(repo: &RepoManager, peer_id: &PeerId, repo_id: Uuid) {
+    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("peer dir");
+    let db = Database::create(peer_dir.join(format!("{repo_id}.redb"))).expect("legacy db");
+    let txn = db.begin_write().expect("write txn");
+    let _ = txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.commit().expect("commit");
+}
+
 #[test]
 fn runtime_remote_repo_listing_does_not_repair_legacy_remote_filename() {
     let (_dir, repo) = new_repo();
@@ -129,8 +138,7 @@ fn runtime_remote_repo_listing_fails_closed_on_legacy_uuid_shadow_without_metada
     let peer_id = PeerId::new("peer-remote");
     let repo_id = Uuid::new_v4();
 
-    repo.ensure_shadow_db(&peer_id, &repo_id)
-        .expect("create legacy uuid shadow");
+    create_legacy_shadow_without_metadata(&repo, &peer_id, repo_id);
 
     let list_err = repo
         .list_repos(Some(&peer_id))
