@@ -7,7 +7,8 @@
 use crate::ledger::RepoManager;
 use crate::ledger::{doc_lookup, inode_index, metadata, node_meta};
 use crate::models::{DocId, NodeMeta};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
+use std::path::Path;
 
 impl RepoManager {
     /// 根据路径获取 DocId
@@ -103,7 +104,7 @@ impl RepoManager {
         doc_id: DocId,
     ) -> Result<()> {
         let file_path = self.local_repo_workspace_path(repo_name, path)?;
-        if !file_path.exists() {
+        if !checked_exists(&file_path, "workspace path while binding inode")? {
             return Ok(());
         }
         let file_id = file_id::get_file_id(&file_path)?;
@@ -116,4 +117,9 @@ impl RepoManager {
         };
         self.bind_inode_in_local_repo(repo_name, &inode, doc_id)
     }
+}
+
+fn checked_exists(path: &Path, context: &str) -> Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }

@@ -60,7 +60,7 @@ pub(super) fn remove_projection_path(
     path: &str,
 ) -> Result<()> {
     let file_path = sync.repo.local_repo_workspace_path(repo_name, path)?;
-    if !file_path.exists() {
+    if !super::checked_exists(&file_path, "workspace path while removing projection")? {
         return Ok(());
     }
     let relative_path = sync.repo.local_repo_workspace_relative(repo_name, path);

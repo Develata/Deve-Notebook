@@ -41,7 +41,7 @@ impl<'a> FsEventHandler<'a> {
             .repo
             .local_repo_workspace_path(self.repo_name, repo_path)?;
 
-        if !file_path.exists() {
+        if !super::checked_exists(&file_path, "workspace path while handling fs event")? {
             return self.handle_delete(repo_path);
         }
 

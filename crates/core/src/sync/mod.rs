@@ -50,7 +50,7 @@ use crate::models::DocId;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
-use anyhow::Result;
+use anyhow::{Context, Result};
 #[cfg(not(target_arch = "wasm32"))]
 use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
@@ -114,7 +114,7 @@ impl SyncManager {
         {
             let file_path = self.repo.local_repo_workspace_path(repo_name, &path_str)?;
 
-            if file_path.exists() {
+            if checked_exists(&file_path, "workspace document path while reconciling")? {
                 let disk_content = std::fs::read_to_string(&file_path)?;
                 let ops = self.repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
 
@@ -226,4 +226,10 @@ impl SyncManager {
     pub fn rebuild_projection_local_repo(&self, repo_name: &str) -> Result<()> {
         rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn checked_exists(path: &std::path::Path, context: &str) -> Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }

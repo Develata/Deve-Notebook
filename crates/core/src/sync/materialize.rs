@@ -40,7 +40,7 @@ pub(super) fn materialize_local_repo(
 
     for (repo_path, doc_id) in plan.docs {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
-        if file_path.exists() {
+        if super::checked_exists(&file_path, "workspace path while materializing projection")? {
             continue;
         }
         let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
