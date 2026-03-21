@@ -4,6 +4,8 @@ use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::changes;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -118,5 +120,33 @@ fn workdir_diff_does_not_fallback_to_legacy_snapshot_path_index() {
     assert!(
         err.to_string()
             .contains("Tracked document projection missing for legacy-mapped path")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn workdir_diff_fails_closed_on_unstatable_workspace_file() {
+    let (dir, repo) = new_repo();
+    let _doc_id = seed_file(&repo, "notes/a.md", "hello");
+    let notes_dir = dir.path().join("vault").join("default").join("notes");
+    let file = notes_dir.join("a.md");
+    std::fs::create_dir_all(&notes_dir).expect("mkdir");
+    std::fs::write(&file, "workspace hello").expect("write workspace");
+
+    let original = std::fs::metadata(&notes_dir)
+        .expect("metadata")
+        .permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&notes_dir, blocked).expect("chmod 000");
+
+    let err = repo
+        .workdir_diff_inputs_in_local_repo(repo.local_repo_name(), "notes/a.md")
+        .expect_err("unstatable workspace file must fail closed");
+
+    std::fs::set_permissions(&notes_dir, original).expect("restore perms");
+    assert!(
+        err.to_string().contains("Failed to stat workspace path")
+            || err.to_string().contains("Permission denied")
     );
 }

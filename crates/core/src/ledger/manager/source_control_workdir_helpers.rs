@@ -2,7 +2,8 @@ use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::source_control::pending_fs;
 use crate::state::reconstruct_content;
-use anyhow::Result;
+use anyhow::{Context, Result};
+use std::path::Path;
 
 use super::projection_cleanup::drop_unanchored_projection_path;
 
@@ -19,7 +20,13 @@ pub(super) fn rebuild_doc_projection(
 pub(super) fn discard_added(repo: &RepoManager, repo_name: &str, path: &str) -> Result<()> {
     repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?;
     let file_path = repo.local_repo_workspace_path(repo_name, path)?;
-    if file_path.exists() {
+    if workspace_path_exists(
+        &file_path,
+        &format!(
+            "Failed to stat workspace path while discarding added file {}",
+            path
+        ),
+    )? {
         repo.record_projection_delete(repo_name, path);
         if let Err(err) = std::fs::remove_file(&file_path) {
             repo.clear_projection_guard(repo_name, path);
@@ -40,7 +47,13 @@ pub(super) fn discard_tracked_add(
     doc_id: DocId,
 ) -> Result<()> {
     let file_path = repo.local_repo_workspace_path(repo_name, path)?;
-    if file_path.exists() {
+    if workspace_path_exists(
+        &file_path,
+        &format!(
+            "Failed to stat workspace path while discarding tracked add {}",
+            path
+        ),
+    )? {
         repo.record_projection_delete(repo_name, path);
         if let Err(err) = std::fs::remove_file(&file_path) {
             repo.clear_projection_guard(repo_name, path);
@@ -72,4 +85,11 @@ pub(super) fn restore_doc_projection_at_path(
         return Err(err.into());
     }
     repo.bind_workspace_inode_in_local_repo(repo_name, path, doc_id)
+}
+
+pub(super) fn workspace_path_exists(path: &Path, context: &str) -> Result<bool> {
+    match path.try_exists() {
+        Ok(exists) => Ok(exists),
+        Err(err) => Err(err).context(context.to_string()),
+    }
 }

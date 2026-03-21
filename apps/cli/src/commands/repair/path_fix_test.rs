@@ -7,6 +7,8 @@ use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use tempfile::tempdir;
 
@@ -181,6 +183,67 @@ fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()>
     assert!(
         err.to_string()
             .contains("Repair target path already exists")
+    );
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    let vault = dir.path().join("vault");
+    repo.set_vault_root(&vault);
+    let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
+    let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
+    std::fs::create_dir_all(&notes_dir)?;
+    std::fs::write(&old_abs, "old")?;
+    let original = std::fs::metadata(&notes_dir)?.permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&notes_dir, blocked)?;
+
+    let err = validate_workspace_rename_target(
+        &repo,
+        "default",
+        "default/notes/live.md",
+        "notes/live.md",
+    )
+    .expect_err("unstatable source must fail closed");
+
+    std::fs::set_permissions(&notes_dir, original)?;
+    assert!(
+        err.to_string()
+            .contains("Failed to stat workspace path while validating repair source")
+            || err.to_string().contains("Permission denied")
+    );
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn rename_workspace_file_fails_closed_when_source_is_unstatable() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    let vault = dir.path().join("vault");
+    repo.set_vault_root(&vault);
+    let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
+    let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
+    std::fs::create_dir_all(&notes_dir)?;
+    std::fs::write(&old_abs, "old")?;
+    let original = std::fs::metadata(&notes_dir)?.permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&notes_dir, blocked)?;
+
+    let err = rename_workspace_file(&repo, "default", "default/notes/live.md", "notes/live.md")
+        .expect_err("unstatable source must fail closed");
+
+    std::fs::set_permissions(&notes_dir, original)?;
+    assert!(
+        err.to_string()
+            .contains("Failed to stat workspace path while renaming repair source")
+            || err.to_string().contains("Permission denied")
     );
     Ok(())
 }

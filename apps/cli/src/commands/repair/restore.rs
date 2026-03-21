@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;
 use deve_core::models::Op;
 use deve_core::sync::{SyncManager, reconcile};
@@ -41,7 +41,7 @@ fn restore_repo(
             println!("repair: skip {}:{}, doc not found", repo_name, repo_path);
             continue;
         };
-        let Some(backup_path) = resolve_backup_path(backup_root, repo_name, &repo_path) else {
+        let Some(backup_path) = resolve_backup_path(backup_root, repo_name, &repo_path)? else {
             println!("repair: skip {}:{}, backup missing", repo_name, repo_path);
             continue;
         };
@@ -109,9 +109,20 @@ fn normalize_restore_path(repo_name: &str, path: &str) -> String {
         .unwrap_or(path)
 }
 
-fn resolve_backup_path(backup_root: &Path, repo_name: &str, repo_path: &str) -> Option<PathBuf> {
+fn resolve_backup_path(
+    backup_root: &Path,
+    repo_name: &str,
+    repo_path: &str,
+) -> Result<Option<PathBuf>> {
     let prefixed = backup_root.join(repo_name).join(repo_path);
-    prefixed.exists().then_some(prefixed)
+    match prefixed.try_exists() {
+        Ok(true) => Ok(Some(prefixed)),
+        Ok(false) => Ok(None),
+        Err(err) => Err(err).context(format!(
+            "Failed to stat backup path for {}:{}",
+            repo_name, repo_path
+        )),
+    }
 }
 
 fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {

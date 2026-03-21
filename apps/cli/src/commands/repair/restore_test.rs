@@ -5,6 +5,8 @@ use super::{
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use tempfile::tempdir;
 
@@ -65,8 +67,30 @@ fn resolve_backup_path_requires_repo_scoped_backup_layout() -> anyhow::Result<()
     std::fs::write(&direct, "backup")?;
 
     assert_eq!(
-        resolve_backup_path(dir.path(), "default", "notes/live.md"),
+        resolve_backup_path(dir.path(), "default", "notes/live.md")?,
         None
+    );
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_backup_path_fails_closed_on_unstatable_repo_backup_dir() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let repo_dir = dir.path().join("default");
+    std::fs::create_dir_all(repo_dir.join("notes"))?;
+    let original = std::fs::metadata(&repo_dir)?.permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&repo_dir, blocked)?;
+
+    let err = resolve_backup_path(dir.path(), "default", "notes/live.md")
+        .expect_err("unstatable backup dir must fail closed");
+
+    std::fs::set_permissions(&repo_dir, original)?;
+    assert!(
+        err.to_string().contains("Failed to stat backup path")
+            || err.to_string().contains("Permission denied")
     );
     Ok(())
 }

@@ -14,6 +14,7 @@ use anyhow::Result;
 use super::source_control_target_lookup;
 use super::source_control_workdir_helpers::{
     discard_added, discard_tracked_add, rebuild_doc_projection, restore_doc_projection_at_path,
+    workspace_path_exists,
 };
 
 impl RepoManager {
@@ -28,7 +29,13 @@ impl RepoManager {
             None => String::new(),
         };
         let file_path = self.local_repo_workspace_path(repo_name, &normalized)?;
-        let new_content = if file_path.exists() {
+        let new_content = if workspace_path_exists(
+            &file_path,
+            &format!(
+                "Failed to stat workspace path while reading workdir diff {}",
+                normalized
+            ),
+        )? {
             std::fs::read_to_string(file_path)?
         } else {
             String::new()
