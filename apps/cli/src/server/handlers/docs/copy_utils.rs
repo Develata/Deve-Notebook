@@ -68,10 +68,8 @@ pub fn collect_md_files(dir: &Path, base: &Path) -> io::Result<Vec<String>> {
             } else if file_type.is_file()
                 && let Some(ext) = path.extension()
                 && ext == "md"
-                && let Ok(rel) = path.strip_prefix(base)
             {
-                let rel_str = rel.to_string_lossy().replace('\\', "/");
-                results.push(rel_str);
+                results.push(relative_path_under_base(base, &path)?);
             }
         }
     }
@@ -85,11 +83,9 @@ pub fn collect_dirs(dir: &Path, base: &Path) -> io::Result<Vec<String>> {
     let mut stack: Vec<PathBuf> = vec![dir.to_path_buf()];
 
     while let Some(current_dir) = stack.pop() {
-        if let Ok(rel) = current_dir.strip_prefix(base) {
-            let rel_str = rel.to_string_lossy().replace('\\', "/");
-            if !rel_str.is_empty() {
-                results.push(rel_str);
-            }
+        let rel_str = relative_path_under_base(base, &current_dir)?;
+        if !rel_str.is_empty() {
+            results.push(rel_str);
         }
 
         for entry in std::fs::read_dir(&current_dir)? {
@@ -102,6 +98,16 @@ pub fn collect_dirs(dir: &Path, base: &Path) -> io::Result<Vec<String>> {
     }
 
     Ok(results)
+}
+
+fn relative_path_under_base(base: &Path, path: &Path) -> io::Result<String> {
+    let rel = path.strip_prefix(base).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("docs copy traversal escaped base {:?}: {:?}", base, path),
+        )
+    })?;
+    Ok(rel.to_string_lossy().replace('\\', "/"))
 }
 
 #[cfg(test)]
@@ -147,6 +153,29 @@ mod tests {
         assert!(files.contains(&"index.md".to_string()));
         assert!(files.contains(&"notes/daily.md".to_string()));
         assert!(!files.iter().any(|f| f.ends_with(".txt")));
+    }
+
+    #[test]
+    fn test_collect_md_files_fails_closed_when_file_escapes_base() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("vault");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("index.md"), "").unwrap();
+
+        let err = collect_md_files(&dir, &tmp.path().join("other"))
+            .expect_err("base mismatch must fail closed");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn test_collect_dirs_fails_closed_when_dir_escapes_base() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("vault");
+        fs::create_dir_all(dir.join("notes")).unwrap();
+
+        let err =
+            collect_dirs(&dir, &tmp.path().join("other")).expect_err("base mismatch must fail");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
     }
 
     #[test]

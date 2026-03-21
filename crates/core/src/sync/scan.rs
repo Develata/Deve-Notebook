@@ -40,10 +40,7 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
                 path.display()
             ));
         }
-        let Ok(rel) = path.strip_prefix(&repo_root) else {
-            continue;
-        };
-        let repo_path = path_to_forward_slash(rel);
+        let repo_path = repo_relative_path(repo_name, &repo_root, path)?;
         if crate::utils::notegit::is_internal_repo_path(&repo_path) {
             continue;
         }
@@ -94,4 +91,32 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
 
 fn clear_scan_pending(repo: &Arc<RepoManager>, repo_name: &str, repo_path: &str) -> Result<()> {
     super::pending::clear(repo, repo_name, repo_path)
+}
+
+fn repo_relative_path(repo_name: &str, repo_root: &Path, path: &Path) -> Result<String> {
+    let rel = path.strip_prefix(repo_root).map_err(|_| {
+        anyhow!(
+            "Broken local repo {} while scanning workspace: path escaped repo root: {}",
+            repo_name,
+            path.display()
+        )
+    })?;
+    Ok(path_to_forward_slash(rel))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::repo_relative_path;
+    use std::path::Path;
+
+    #[test]
+    fn repo_relative_path_fails_closed_when_path_escapes_repo_root() {
+        let err = repo_relative_path(
+            "default",
+            Path::new("/vault/default"),
+            Path::new("/tmp/a.md"),
+        )
+        .expect_err("escaped path must fail closed");
+        assert!(err.to_string().contains("path escaped repo root"));
+    }
 }
