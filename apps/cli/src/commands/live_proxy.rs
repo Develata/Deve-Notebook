@@ -1,5 +1,5 @@
 use crate::admin_api::{DumpResponse, ExportEntry, NodeCheckResponse};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use reqwest::Client;
 use serde::Deserialize;
 use std::future::Future;
@@ -65,15 +65,32 @@ pub fn node_check(
 }
 
 fn main_base_url(ledger_dir: &Path) -> Result<String> {
-    let port = read_main_port_hint(ledger_dir)
-        .or_else(|| block_on_safe(detect_main_port()).ok())
-        .ok_or_else(|| anyhow!("Main process not detected on localhost"))?;
+    let port = match read_main_port_hint(ledger_dir)? {
+        Some(port) => port,
+        None => block_on_safe(detect_main_port())?,
+    };
     Ok(format!("http://127.0.0.1:{port}"))
 }
 
-fn read_main_port_hint(ledger_dir: &Path) -> Option<u16> {
+fn read_main_port_hint(ledger_dir: &Path) -> Result<Option<u16>> {
     let path = ledger_dir.join(".host").join("main_port");
-    std::fs::read_to_string(path).ok()?.trim().parse().ok()
+    match path.try_exists() {
+        Ok(true) => {}
+        Ok(false) => return Ok(None),
+        Err(err) => {
+            return Err(err)
+                .with_context(|| format!("Failed to stat main port hint file: {:?}", path));
+        }
+    }
+    let raw = std::fs::read_to_string(&path)
+        .with_context(|| format!("Failed to read main port hint file: {:?}", path))?;
+    let port = raw.trim().parse().with_context(|| {
+        format!(
+            "Invalid main port hint in {:?}: expected u16, got {:?}",
+            path, raw
+        )
+    })?;
+    Ok(Some(port))
 }
 
 async fn detect_main_port() -> Result<u16> {
@@ -101,7 +118,10 @@ async fn parse_json<T: for<'de> Deserialize<'de>>(response: reqwest::Response) -
     if status.is_success() {
         return Ok(response.json::<T>().await?);
     }
-    let body = response.text().await.unwrap_or_default();
+    let body = response
+        .text()
+        .await
+        .unwrap_or_else(|err| format!("<failed to read error body: {err}>"));
     Err(anyhow!("Proxy request failed ({status}): {body}"))
 }
 
@@ -127,3 +147,7 @@ where
 {
     tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(fut))
 }
+
+#[cfg(test)]
+#[path = "live_proxy_test.rs"]
+mod tests;

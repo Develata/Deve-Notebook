@@ -91,11 +91,17 @@ mod tests {
         let bad_parent = root.join("config-base");
         std::fs::write(&bad_parent, "not-a-dir").expect("bad parent");
 
-        let err = run(&root.join("ledger"), &root.join("vault"), bad_parent.clone(), 8)
-            .expect_err("unreadable config target must fail closed");
+        let err = run(
+            &root.join("ledger"),
+            &root.join("vault"),
+            bad_parent.clone(),
+            8,
+        )
+        .expect_err("unreadable config target must fail closed");
 
         assert!(
-            err.to_string().contains("Failed to stat config.toml target")
+            err.to_string()
+                .contains("Failed to stat config.toml target")
                 || err.to_string().contains("Not a directory")
         );
     }
