@@ -29,7 +29,7 @@ pub(super) fn quarantine_nil_shadow_repos(remotes_dir: &Path) -> Result<usize> {
                 peer_dir
             );
         }
-        if !peer_dir.is_dir() {
+        if !entry.file_type()?.is_dir() {
             anyhow::bail!(
                 "Broken shadow peer entry {:?} while quarantining nil shadows: expected directory",
                 peer_dir
@@ -155,5 +155,33 @@ mod tests {
             err.to_string().contains("failed to stat nil shadow")
                 || err.to_string().contains("Permission denied")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unreadable_peer_dir_is_not_misclassified_as_non_directory() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().expect("tempdir");
+        let remotes = dir.path().join("remotes");
+        let peer_dir = remotes.join("peer-a");
+        std::fs::create_dir_all(&peer_dir).expect("peer dir");
+        let original = std::fs::metadata(&peer_dir)
+            .expect("metadata")
+            .permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        std::fs::set_permissions(&peer_dir, blocked).expect("chmod 000");
+
+        let err = quarantine_nil_shadow_repos(&remotes)
+            .expect_err("unreadable peer dir must fail closed");
+
+        std::fs::set_permissions(&peer_dir, original).expect("restore perms");
+        let detail = err.to_string();
+        assert!(
+            detail.contains("failed to stat nil shadow") || detail.contains("Permission denied"),
+            "unexpected error detail: {detail}"
+        );
+        assert!(!detail.contains("expected directory"));
     }
 }
