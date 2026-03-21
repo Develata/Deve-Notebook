@@ -138,17 +138,8 @@ impl SearchService {
         for (score, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
 
-            let doc_id = retrieved_doc
-                .get_first(self.field_doc_id)
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_default();
-
-            let path = retrieved_doc
-                .get_first(self.field_path)
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_default();
+            let doc_id = required_text_field(&retrieved_doc, self.field_doc_id, "doc_id")?;
+            let path = required_text_field(&retrieved_doc, self.field_path, "path")?;
 
             results.push(SearchResult {
                 doc_id,
@@ -165,6 +156,17 @@ impl SearchService {
             .lock()
             .map_err(|_| anyhow!("SearchService writer lock poisoned"))
     }
+}
+
+fn required_text_field(
+    doc: &TantivyDocument,
+    field: Field,
+    name: &str,
+) -> anyhow::Result<String> {
+    doc.get_first(field)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow!("Search index document missing required stored field: {}", name))
 }
 
 #[cfg(test)]
@@ -215,6 +217,19 @@ mod tests {
                 .is_err()
         );
         assert!(service.delete_document(DocId::new()).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn search_fails_closed_on_missing_stored_fields() -> anyhow::Result<()> {
+        let service = SearchService::new_in_memory()?;
+        let mut writer = service.lock_writer()?;
+        writer.add_document(doc!(service.field_content => "hello"))?;
+        writer.commit()?;
+        drop(writer);
+
+        let err = service.search("hello", 10).expect_err("broken stored fields must fail");
+        assert!(err.to_string().contains("missing required stored field"));
         Ok(())
     }
 }
