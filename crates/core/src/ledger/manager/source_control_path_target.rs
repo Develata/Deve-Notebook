@@ -2,7 +2,7 @@ use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, ChangeStatus};
 use crate::utils::path::to_forward_slash;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 impl RepoManager {
     /// 将旧的 path-only Source Control 入口提升为 tracked target。
@@ -19,7 +19,7 @@ impl RepoManager {
         let doc_id = match self.tracked_docid_or_legacy_error_in_local_repo(repo_name, &path)? {
             Some(doc_id) => Some(doc_id),
             None => {
-                tracked_doc_id_from_changes(&self.list_changes_in_local_repo(repo_name)?, &path)
+                tracked_doc_id_from_changes(&self.list_changes_in_local_repo(repo_name)?, &path)?
             }
         };
         Ok(ScPathTarget { doc_id, path })
@@ -29,7 +29,7 @@ impl RepoManager {
 fn tracked_doc_id_from_changes(
     entries: &[ChangeEntry],
     path: &str,
-) -> Option<crate::models::DocId> {
+) -> Result<Option<crate::models::DocId>> {
     let exact = entries
         .iter()
         .filter(|entry| normalized(&entry.path) == path)
@@ -49,7 +49,7 @@ fn tracked_doc_id_from_changes(
         .chain(renamed.iter())
         .all(|entry| entry.doc_id.is_none())
     {
-        return None;
+        return Ok(None);
     }
     let live_exact = exact
         .iter()
@@ -60,21 +60,27 @@ fn tracked_doc_id_from_changes(
         .iter()
         .any(|entry| entry.status == ChangeStatus::Deleted);
     if live_exact.len() > 1 || renamed.len() > 1 {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous source control path target: {} matched multiple live tracked entries",
+            path
+        ));
     }
     if deleted_exact && renamed.len() == 1 {
-        return renamed[0].doc_id;
+        return Ok(renamed[0].doc_id);
     }
     if !deleted_exact && !live_exact.is_empty() && !renamed.is_empty() {
-        return None;
+        return Err(anyhow!(
+            "Ambiguous source control path target: {} matched reused path and rename successor",
+            path
+        ));
     }
     if let Some(entry) = live_exact.into_iter().next() {
-        return entry.doc_id;
+        return Ok(entry.doc_id);
     }
     if let Some(entry) = renamed.into_iter().next() {
-        return entry.doc_id;
+        return Ok(entry.doc_id);
     }
-    (exact.len() == 1).then_some(exact[0].doc_id).flatten()
+    Ok((exact.len() == 1).then_some(exact[0].doc_id).flatten())
 }
 
 fn normalized(path: &str) -> String {
@@ -186,10 +192,13 @@ mod tests {
             )
         })?;
 
-        let target =
-            repo.tracked_target_for_path_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
-        assert_eq!(target.path, "notes/a.md");
-        assert_eq!(target.doc_id, None);
+        let err = repo
+            .tracked_target_for_path_in_local_repo(repo.local_repo_name(), "notes/a.md")
+            .expect_err("reused old path must fail closed");
+        assert!(
+            err.to_string()
+                .contains("Ambiguous source control path target: notes/a.md")
+        );
         Ok(())
     }
 

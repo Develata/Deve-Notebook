@@ -13,7 +13,7 @@ pub fn stage_pending(
         .map_err(|e| errors::map_repo_error(ScOp::StagePending(target.path.clone()), e))?;
     let resolved = super::resolve_target(&entries, target)?;
     let path = resolved.path.clone();
-    for related_target in super::related_targets(&entries, &resolved) {
+    for related_target in super::related_targets(&entries, &resolved)? {
         repo.stage_pending_in_repo(selector, &related_target)
             .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
     }
@@ -35,7 +35,7 @@ pub fn stage_pending_many(
         .collect();
     for target in &resolved_targets {
         let path = target.path.clone();
-        for related_target in super::related_targets(&entries, target) {
+        for related_target in super::related_targets(&entries, target)? {
             repo.stage_pending_in_repo(selector, &related_target)
                 .map_err(|e| errors::map_repo_error(ScOp::StagePending(path.clone()), e))?;
         }
@@ -68,7 +68,7 @@ pub fn unstage_file(
         .map_err(|e| errors::map_repo_error(ScOp::Unstage(target.path.clone()), e))?;
     let resolved = super::resolve_target(&entries, target)?;
     let path = resolved.path.clone();
-    for related_target in super::related_targets(&entries, &resolved) {
+    for related_target in super::related_targets(&entries, &resolved)? {
         repo.unstage_file_in_repo(selector, &related_target)
             .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
     }
@@ -90,7 +90,7 @@ pub fn unstage_many(
         .collect();
     for target in &resolved_targets {
         let path = target.path.clone();
-        for related_target in super::related_targets(&entries, target) {
+        for related_target in super::related_targets(&entries, target)? {
             repo.unstage_file_in_repo(selector, &related_target)
                 .map_err(|e| errors::map_repo_error(ScOp::Unstage(path.clone()), e))?;
         }

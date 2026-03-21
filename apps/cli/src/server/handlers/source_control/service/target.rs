@@ -4,8 +4,50 @@ use deve_core::source_control::ChangeEntry;
 use deve_core::utils::path::to_forward_slash;
 use std::collections::HashSet;
 
-pub fn related_targets(entries: &[ChangeEntry], target: &ScPathTarget) -> Vec<ScPathTarget> {
-    present::expand_related_targets(entries, target)
+pub fn related_targets(
+    entries: &[ChangeEntry],
+    target: &ScPathTarget,
+) -> super::ScResult<Vec<ScPathTarget>> {
+    let path = match present::resolve_target_path_strict(entries, target) {
+        Ok(Some(path)) => path,
+        Ok(None) => {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScConflictTargetMissing,
+                format!(
+                    "Source control target not found in current change set: {}",
+                    target.path
+                ),
+            ));
+        }
+        Err(err) => {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::StorageConflict,
+                err.to_string(),
+            ));
+        }
+    };
+    let resolved = ScPathTarget {
+        doc_id: target.doc_id.or_else(|| {
+            entries
+                .iter()
+                .find(|entry| to_forward_slash(&entry.path) == path)
+                .and_then(|entry| entry.doc_id)
+        }),
+        path,
+    };
+    let mut targets = vec![];
+    for path in present::expand_related_paths(entries, &resolved.path) {
+        let doc_id = entries
+            .iter()
+            .find(|entry| to_forward_slash(&entry.path) == path)
+            .and_then(|entry| entry.doc_id)
+            .or(resolved.doc_id);
+        let candidate = ScPathTarget { path, doc_id };
+        if !targets.contains(&candidate) {
+            targets.push(candidate);
+        }
+    }
+    Ok(targets)
 }
 
 pub fn resolve_target(
@@ -80,10 +122,11 @@ fn target_exists(entries: &[ChangeEntry], target: &ScPathTarget) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_target, target_exists};
+    use super::{related_targets, resolve_target, target_exists};
     use deve_core::models::DocId;
     use deve_core::protocol::{ScPathTarget, ServerErrorCode};
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
+    use uuid::Uuid;
 
     #[test]
     fn rejects_unresolved_path_only_target() {
@@ -119,7 +162,7 @@ mod tests {
 
     #[test]
     fn rejects_path_only_tracked_rename_successor_as_conflict() {
-        let doc_id = DocId(uuid::Uuid::nil());
+        let doc_id = DocId(Uuid::nil());
         let entries = vec![
             ChangeEntry {
                 path: "notes/old.md".into(),
@@ -169,7 +212,7 @@ mod tests {
         let entries = vec![ChangeEntry {
             path: "notes/a.md".into(),
             renamed_from: None,
-            doc_id: Some(DocId(uuid::Uuid::nil())),
+            doc_id: Some(DocId(Uuid::nil())),
             status: ChangeStatus::Modified,
             has_conflict: false,
         }];
@@ -192,5 +235,29 @@ mod tests {
             &entries,
             &ScPathTarget::from_path("notes/a.md")
         ));
+    }
+
+    #[test]
+    fn related_targets_rejects_tracked_path_only_ambiguity_as_conflict() {
+        let doc_id = DocId(Uuid::nil());
+        let entries = vec![
+            ChangeEntry {
+                path: "notes/old.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Deleted,
+                has_conflict: false,
+            },
+            ChangeEntry {
+                path: "notes/new.md".into(),
+                renamed_from: Some("notes/old.md".into()),
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Added,
+                has_conflict: false,
+            },
+        ];
+        let err = related_targets(&entries, &ScPathTarget::from_path("notes/old.md"))
+            .expect_err("tracked path-only ambiguity must fail closed");
+        assert_eq!(err.code, ServerErrorCode::StorageConflict);
     }
 }
