@@ -108,3 +108,20 @@ fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
     )?);
     Ok(())
 }
+
+#[test]
+fn find_loading_corruption_fails_closed_on_unreadable_workspace_target() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    repo.set_vault_root(dir.path());
+    let repo = Arc::new(repo);
+    let doc_id = DocId::new();
+    repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
+    let live = repo.local_repo_workspace_path("default", "notes/live.md")?;
+    std::fs::create_dir_all(&live)?;
+
+    let err = find_loading_corruption(&repo, "default")
+        .expect_err("directory-backed workspace target must fail closed");
+    assert!(err.to_string().contains("Is a directory") || err.to_string().contains("directory"));
+    Ok(())
+}

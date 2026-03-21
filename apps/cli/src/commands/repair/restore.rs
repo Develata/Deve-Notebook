@@ -85,9 +85,11 @@ fn workspace_starts_with_loading(
     repo_path: &str,
 ) -> Result<bool> {
     let path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-    Ok(std::fs::read_to_string(path)
-        .map(|current| current.starts_with("# Loading..."))
-        .unwrap_or(false))
+    match std::fs::read_to_string(path) {
+        Ok(current) => Ok(current.starts_with("# Loading...")),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(err.into()),
+    }
 }
 
 fn resolve_repair_docid(
