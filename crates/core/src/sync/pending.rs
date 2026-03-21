@@ -13,10 +13,7 @@ use anyhow::Result;
 use std::sync::Arc;
 
 pub(super) fn clear(repo: &Arc<RepoManager>, repo_name: &str, path: &str) -> Result<()> {
-    repo.run_on_local_repo(repo_name, |db| {
-        let _ = pending_fs::remove(db, path);
-        Ok(())
-    })
+    repo.run_on_local_repo(repo_name, |db| pending_fs::remove(db, path))
 }
 
 pub(super) fn has_pending_added(
@@ -90,3 +87,7 @@ pub(super) fn message(
         has_conflict,
     })
 }
+
+#[cfg(test)]
+#[path = "pending_test.rs"]
+mod tests;
