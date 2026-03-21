@@ -62,6 +62,8 @@ pub use manager::types::*; // Export RepoManager and RepoInfo // Export core imp
 #[cfg(test)]
 mod client_op_tests;
 #[cfg(test)]
+mod init_node_check_fail_closed_test;
+#[cfg(test)]
 mod ops_query_fail_closed_test;
 #[cfg(test)]
 mod tests;

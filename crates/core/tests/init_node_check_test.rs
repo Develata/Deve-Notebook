@@ -5,7 +5,7 @@ use deve_core::models::DocId;
 use tempfile::TempDir;
 
 #[test]
-fn init_does_not_auto_repair_missing_nodes() -> anyhow::Result<()> {
+fn node_check_detects_missing_nodes() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let ledger_dir = tmp.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
@@ -16,9 +16,6 @@ fn init_does_not_auto_repair_missing_nodes() -> anyhow::Result<()> {
         node_meta::remove_node_by_path(db, path)?;
         Ok(())
     })?;
-    drop(repo);
-
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let report = repo.run_on_local_repo(repo.local_repo_name(), check_node_consistency)?;
     assert_eq!(report.missing_nodes, vec![(doc_id, path.to_string())]);
     Ok(())

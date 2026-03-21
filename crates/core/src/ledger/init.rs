@@ -141,10 +141,10 @@ pub fn init(
     // 6. Node 表一致性检查（repair 需显式触发）
     let report = node_check::check_node_consistency(local_db.as_ref())?;
     if !report.is_clean() {
-        tracing::warn!(
-            "Node consistency drift detected: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
+        anyhow::bail!(
+            "Node consistency drift detected during init: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
             report.missing_nodes.len(),
-            report.orphan_nodes.len()
+            report.orphan_nodes.len(),
         );
     }
 
