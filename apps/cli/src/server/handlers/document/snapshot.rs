@@ -43,12 +43,12 @@ fn rebuild_full_snapshot(
         .collect();
     let full_content = deve_core::state::reconstruct_content(&ops);
     let full_version = full_entries.last().map(|(seq, _)| *seq).unwrap_or(0);
-    let _ = deve_core::ledger::snapshot::save_snapshot(
+    deve_core::ledger::snapshot::save_snapshot(
         db,
         doc_id,
         full_version,
         &full_content,
         snapshot_depth,
-    );
+    )?;
     Ok((full_content, full_version, Vec::new(), full_version))
 }

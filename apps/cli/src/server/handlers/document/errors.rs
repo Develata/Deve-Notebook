@@ -15,6 +15,11 @@ fn error_code(err: &anyhow::Error) -> ServerErrorCode {
     {
         return ServerErrorCode::StoragePersistFailed;
     }
+    if detail.to_ascii_lowercase().contains("table")
+        && detail.to_ascii_lowercase().contains("does not exist")
+    {
+        return ServerErrorCode::StoragePersistFailed;
+    }
     ServerErrorCode::RequestFailed
 }
 
@@ -94,6 +99,14 @@ mod tests {
             error_code(&anyhow::anyhow!(
                 "Tracked document projection missing for legacy-mapped path: notes/legacy.md"
             )),
+            ServerErrorCode::StoragePersistFailed
+        );
+    }
+
+    #[test]
+    fn classifies_missing_snapshot_tables_as_storage_persist_failed() {
+        assert_eq!(
+            error_code(&anyhow::anyhow!("Table 'snapshot_index' does not exist")),
             ServerErrorCode::StoragePersistFailed
         );
     }
