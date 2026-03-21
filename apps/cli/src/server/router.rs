@@ -8,6 +8,7 @@ use axum::{
     Router,
     routing::{get, post},
 };
+use anyhow::Result;
 use std::sync::Arc;
 
 use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
@@ -22,7 +23,11 @@ use deve_core::security::AuthConfig;
 ///
 /// ## 中间件层叠顺序（外 → 内）
 /// CORS → 速率限制 → 安全头 → Extension 注入
-pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfig>) -> Router {
+pub fn build_app(
+    app_state: Arc<AppState>,
+    port: u16,
+    auth_config: Arc<AuthConfig>,
+) -> Result<Router> {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
     let api_limiter = rate_limit::RateLimiter::new(120, std::time::Duration::from_secs(60));
@@ -80,7 +85,7 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
 
     let public = Router::new().route("/api/node/role", get(node_role_http::role));
 
-    Router::new()
+    Ok(Router::new()
         .merge(protected)
         .merge(public)
         .merge(login_route)
@@ -91,7 +96,7 @@ pub fn build_app(app_state: Arc<AppState>, port: u16, auth_config: Arc<AuthConfi
         .layer(axum::Extension(auth_config))
         .layer(axum::Extension(brute_force))
         .layer(axum::Extension(api_limiter))
-        .layer(setup::build_cors_layer(port))
+        .layer(setup::build_cors_layer(port)?))
 }
 
 /// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。

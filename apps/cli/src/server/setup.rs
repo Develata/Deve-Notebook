@@ -13,13 +13,13 @@ use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 /// 按环境变量构建 CORS 层；默认不信任任何跨站来源，禁止生产硬编码 localhost。
-pub(super) fn build_cors_layer(_port: u16) -> CorsLayer {
-    let origins = allowed_origins_from_env();
+pub(super) fn build_cors_layer(_port: u16) -> Result<CorsLayer> {
+    let origins = allowed_origins_from_env()?;
     if is_development() && !origins.is_empty() {
         tracing::warn!("WARNING: CORS development allow list active");
     }
 
-    CorsLayer::new()
+    Ok(CorsLayer::new()
         .allow_origin(AllowOrigin::list(origins))
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers([
@@ -28,22 +28,29 @@ pub(super) fn build_cors_layer(_port: u16) -> CorsLayer {
             header::CONTENT_TYPE,
             header::ORIGIN,
         ])
-        .allow_credentials(true)
+        .allow_credentials(true))
 }
 
 /// 从 `ALLOWED_ORIGINS` 解析允许的跨站来源列表，使用逗号分隔。
-fn allowed_origins_from_env() -> Vec<axum::http::HeaderValue> {
-    std::env::var("ALLOWED_ORIGINS")
-        .unwrap_or_default()
+fn allowed_origins_from_env() -> Result<Vec<axum::http::HeaderValue>> {
+    let Ok(origins) = std::env::var("ALLOWED_ORIGINS") else {
+        return Ok(Vec::new());
+    };
+
+    origins
         .split(',')
         .map(str::trim)
         .filter(|origin| !origin.is_empty() && *origin != "*")
-        .filter_map(|origin| match origin.parse() {
-            Ok(value) => Some(value),
-            Err(err) => {
-                tracing::warn!(origin, ?err, "Ignoring invalid CORS origin");
-                None
+        .map(|origin| {
+            let uri: axum::http::Uri = origin
+                .parse()
+                .with_context(|| format!("Invalid CORS origin {}", origin))?;
+            if uri.scheme().is_none() || uri.authority().is_none() {
+                return Err(anyhow!("Invalid CORS origin {}", origin));
             }
+            origin
+                .parse()
+                .with_context(|| format!("Invalid CORS origin {}", origin))
         })
         .collect()
 }
@@ -147,7 +154,10 @@ fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
 mod tests {
     #[cfg(feature = "search")]
     use super::load_search_service;
-    use super::{load_mcp_manager, validate_file_watcher_startup, write_main_port_hint};
+    use super::{
+        allowed_origins_from_env, load_mcp_manager, validate_file_watcher_startup,
+        write_main_port_hint,
+    };
 
     #[test]
     fn write_main_port_hint_fails_closed_when_parent_is_not_directory() {
@@ -189,6 +199,17 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("Invalid MCP config"));
+    }
+
+    #[test]
+    fn allowed_origins_from_env_fails_closed_on_invalid_origin() {
+        unsafe { std::env::set_var("ALLOWED_ORIGINS", "http://valid.test, not a url") };
+        let err = match allowed_origins_from_env() {
+            Ok(_) => panic!("invalid cors origin must fail closed"),
+            Err(err) => err,
+        };
+        unsafe { std::env::remove_var("ALLOWED_ORIGINS") };
+        assert!(err.to_string().contains("Invalid CORS origin"));
     }
 
     #[cfg(feature = "search")]

@@ -46,7 +46,7 @@ impl ProxyHarness {
             search_service: None,
             identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
         });
-        let app = router::build_app(state, 3001, Arc::new(AuthConfig::dev_default()?))
+        let app = router::build_app(state, 3001, Arc::new(AuthConfig::dev_default()?))?
             .into_make_service_with_connect_info::<std::net::SocketAddr>();
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         let base_url = format!("http://{}", listener.local_addr()?);
