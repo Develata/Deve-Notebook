@@ -124,7 +124,7 @@ pub(super) fn active_db_matches_scope(
 ) -> bool {
     match (repo_id, handle.repo_id) {
         (Some(expected), Some(active)) => active == expected,
-        (Some(_), None) => handle.repo_name.as_str() == repo_name,
+        (Some(_), None) => false,
         (None, _) => handle.repo_name.as_str() == repo_name,
     }
 }

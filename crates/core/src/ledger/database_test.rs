@@ -1,4 +1,6 @@
 use super::{RepoManager, cached_database};
+use crate::ledger::schema::REPO_METADATA;
+use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
@@ -52,5 +54,65 @@ fn open_local_database_fails_closed_when_path_is_unstatable() {
                 .to_string()
                 .contains("Failed to stat local database path")
             || err.to_string().contains("Permission denied")
+    );
+}
+
+#[test]
+fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
+        .expect("repo");
+    RepoManager::init(dir.path().join("ledger"), 8, Some("wiki"), Some("urn:wiki"))
+        .expect("extra repo");
+    let wiki_db = repo.open_database(None, "wiki").expect("wiki db");
+    let txn = wiki_db.db.begin_write().expect("write txn");
+    txn.delete_table(REPO_METADATA).expect("delete metadata");
+    txn.commit().expect("commit");
+
+    let err = match repo.open_database(None, "wiki") {
+        Ok(_) => panic!("missing local metadata must fail closed"),
+        Err(err) => err,
+    };
+    assert!(
+        err.to_string()
+            .contains("Local repo not found for name wiki")
+            || (err.to_string().contains("wiki") && err.to_string().contains("metadata missing")),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn open_remote_database_fails_closed_when_selector_metadata_is_missing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
+        .expect("repo");
+    let peer_id = PeerId::new("peer-a");
+    let repo_id = uuid::Uuid::new_v4();
+    repo.ensure_shadow_repo_info(
+        &peer_id,
+        &crate::ledger::RepoInfo {
+            uuid: repo_id,
+            name: "wiki".into(),
+            url: Some("urn:wiki".into()),
+        },
+    )
+    .expect("shadow repo info");
+    let remote = repo
+        .open_database(Some(&peer_id), "wiki")
+        .expect("remote db");
+    let txn = remote.db.begin_write().expect("write txn");
+    txn.delete_table(REPO_METADATA).expect("delete metadata");
+    txn.commit().expect("commit");
+
+    let err = match repo.open_database(Some(&peer_id), "wiki") {
+        Ok(_) => panic!("missing remote metadata must fail closed"),
+        Err(err) => err,
+    };
+    assert!(
+        err.to_string().contains("wiki")
+            && err.to_string().contains("peer-a")
+            && (err.to_string().contains("metadata missing")
+                || err.to_string().contains("scanning catalog")),
+        "unexpected error: {err}"
     );
 }

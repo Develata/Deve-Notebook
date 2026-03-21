@@ -102,12 +102,18 @@ impl RepoManager {
                 let db = self.get_or_open_local_db(&stem)?;
                 let repo_id = self
                     .get_repo_info_for(None, Some(&stem))?
-                    .map(|info| info.uuid);
+                    .map(|info| info.uuid)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Broken local repo {} while opening database: repository metadata missing",
+                            stem
+                        )
+                    })?;
                 Ok(DatabaseHandle {
                     db,
                     readonly: false,
                     branch: None,
-                    repo_id,
+                    repo_id: Some(repo_id),
                     repo_name: stem,
                 })
             }
@@ -118,23 +124,26 @@ impl RepoManager {
                     .ok_or_else(|| anyhow::anyhow!("Repository not found: {}", name))?;
                 let repo_name = resolved.stem.clone();
                 let repo_id = match &resolved.info {
-                    Some(info) => Some(info.uuid),
-                    None => uuid::Uuid::parse_str(&resolved.stem).ok(),
+                    Some(info) => info.uuid,
+                    None => uuid::Uuid::parse_str(&resolved.stem).map_err(|_| {
+                        anyhow::anyhow!(
+                            "Broken remote repo {} for peer {} while opening database: repository metadata missing",
+                            resolved.stem,
+                            peer_id
+                        )
+                    })?,
                 };
-                let loaded = if let Some(repo_id) = repo_id {
-                    self.read_shadow_dbs()?
-                        .get(peer_id)
-                        .and_then(|repos| repos.get(&repo_id))
-                        .cloned()
-                } else {
-                    None
-                };
+                let loaded = self
+                    .read_shadow_dbs()?
+                    .get(peer_id)
+                    .and_then(|repos| repos.get(&repo_id))
+                    .cloned();
                 if let Some(db) = loaded {
                     return Ok(DatabaseHandle {
                         db,
                         readonly: true,
                         branch: Some(peer_id.clone()),
-                        repo_id,
+                        repo_id: Some(repo_id),
                         repo_name,
                     });
                 }
@@ -143,7 +152,7 @@ impl RepoManager {
                     db,
                     readonly: true, // 远端分支始终只读
                     branch: Some(peer_id.clone()),
-                    repo_id,
+                    repo_id: Some(repo_id),
                     repo_name,
                 })
             }

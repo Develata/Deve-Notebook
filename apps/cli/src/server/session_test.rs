@@ -50,3 +50,13 @@ fn active_db_prefers_repo_id_over_name() {
         Some(uuid::Uuid::new_v4())
     ));
 }
+
+#[test]
+fn active_db_rejects_name_match_when_expected_repo_id_is_missing_from_handle() {
+    let handle = handle("wiki", None, Some(PeerId::new("peer-a")));
+    assert!(!active_db_matches_scope(
+        &handle,
+        "wiki",
+        Some(uuid::Uuid::new_v4())
+    ));
+}
