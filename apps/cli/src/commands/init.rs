@@ -29,7 +29,7 @@ pub fn run(
 
     // 2. Generate default config.toml
     let config_path = path.join("config.toml");
-    if !config_path.exists() {
+    if !checked_exists(&config_path, "config.toml target")? {
         let default_config = r#"# Deve-Note Configuration
 
 # Application Profile (standard | low-spec)
@@ -56,7 +56,7 @@ concurrency = 4
 
     // 3. Generate default .env
     let env_path = path.join(".env");
-    if !env_path.exists() {
+    if !checked_exists(&env_path, ".env target")? {
         let default_env = r#"# Deve-Note Environment Overrides
 # Uncomment to override config.toml settings
 
@@ -71,4 +71,32 @@ concurrency = 4
 
     println!("Initialization complete.");
     Ok(())
+}
+
+fn checked_exists(path: &Path, context: &str) -> anyhow::Result<bool> {
+    path.try_exists()
+        .map_err(|err| anyhow::anyhow!("Failed to stat {} {:?}: {}", context, path, err))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run;
+
+    #[cfg(unix)]
+    #[test]
+    fn init_fails_closed_on_unreadable_config_target() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path().join("workspace");
+        std::fs::create_dir_all(&root).expect("root");
+        let bad_parent = root.join("config-base");
+        std::fs::write(&bad_parent, "not-a-dir").expect("bad parent");
+
+        let err = run(&root.join("ledger"), &root.join("vault"), bad_parent.clone(), 8)
+            .expect_err("unreadable config target must fail closed");
+
+        assert!(
+            err.to_string().contains("Failed to stat config.toml target")
+                || err.to_string().contains("Not a directory")
+        );
+    }
 }
