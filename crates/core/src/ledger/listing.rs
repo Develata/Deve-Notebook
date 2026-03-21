@@ -123,9 +123,6 @@ fn shadow_peer_dirs(repo: &RepoManager) -> Result<Vec<PeerId>> {
     for entry in std::fs::read_dir(&remotes_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
         let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
             return Err(anyhow!(
                 "Broken shadow peer entry {:?} while listing shadows: invalid directory name",
@@ -134,6 +131,12 @@ fn shadow_peer_dirs(repo: &RepoManager) -> Result<Vec<PeerId>> {
         };
         if name.starts_with('.') || name.is_empty() {
             continue;
+        }
+        if !path.is_dir() {
+            return Err(anyhow!(
+                "Broken shadow peer entry {:?} while listing shadows: expected directory",
+                path
+            ));
         }
         peers.push(PeerId::new(name));
     }

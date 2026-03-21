@@ -42,9 +42,6 @@ impl RepoManager {
         let mut peers = Vec::new();
         for entry in std::fs::read_dir(remotes_dir)? {
             let path = entry?.path();
-            if !path.is_dir() {
-                continue;
-            }
             let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
                 return Err(anyhow::anyhow!(
                     "Broken shadow peer entry {:?} while repairing catalogs: invalid directory name",
@@ -53,6 +50,12 @@ impl RepoManager {
             };
             if name.starts_with('.') || name.is_empty() {
                 continue;
+            }
+            if !path.is_dir() {
+                return Err(anyhow::anyhow!(
+                    "Broken shadow peer entry {:?} while repairing catalogs: expected directory",
+                    path
+                ));
             }
             peers.push(PeerId::new(name));
         }
