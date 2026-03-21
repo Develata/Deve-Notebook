@@ -63,6 +63,7 @@ fn validate(
         return Err(ServerError::new(ServerErrorCode::SyncPeerUnauthenticated));
     };
     if auth_peer_id != peer_id {
+        clear_remote_unbound_state(session);
         return Err(ServerError::with_detail(
             ServerErrorCode::SyncPeerUnauthenticated,
             "writer peer mismatch",
@@ -112,6 +113,11 @@ mod tests {
         session.bind_repo(repo_id);
         let error = validate(&mut session, repo_id, &PeerId::new("browser-b"), 1).unwrap_err();
         assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+        assert!(session.get_active_db().is_none());
+        assert!(session.bound_repo_id.is_none());
+        assert!(session.authenticated_peer_id.is_none());
+        assert_eq!(session.sync_scope_nonce(), None);
+        assert!(session.writer_identity.is_none());
     }
 
     #[test]
