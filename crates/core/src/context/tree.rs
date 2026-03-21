@@ -56,7 +56,11 @@ impl DirectoryTree {
 
                         let prefix = "  ".repeat(entry.depth().saturating_sub(1));
                         let name = entry.file_name().to_string_lossy();
-                        let indicator = if path.is_dir() { "/" } else { "" };
+                        let indicator = if entry.file_type().is_some_and(|ft| ft.is_dir()) {
+                            "/"
+                        } else {
+                            ""
+                        };
 
                         output.push_str(&format!("{}{}{}\n", prefix, name, indicator));
                         count += 1;
