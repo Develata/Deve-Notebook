@@ -25,7 +25,7 @@ fn walk(
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_dir() {
+        if !entry.file_type()?.is_dir() {
             continue;
         }
         let rel = path.strip_prefix(root)?;
@@ -81,7 +81,7 @@ fn move_tree_to_quarantine(
     let quarantine_root = repo
         .local_repo_notegit_root(repo_name)?
         .join("legacy-md-dir");
-    let dst = unique_path(quarantine_root.join(rel));
+    let dst = unique_path(quarantine_root.join(rel))?;
     if let Some(parent) = dst.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -90,13 +90,13 @@ fn move_tree_to_quarantine(
 }
 
 fn rollback_quarantined_tree(quarantine_path: &Path, original_path: &Path) -> Result<()> {
-    if !quarantine_path.exists() {
+    if !checked_exists(quarantine_path, "quarantine rollback source")? {
         anyhow::bail!(
             "Quarantined tree rollback source missing: {:?}",
             quarantine_path
         );
     }
-    if original_path.exists() {
+    if checked_exists(original_path, "quarantine rollback target")? {
         anyhow::bail!(
             "Quarantined tree rollback target already exists: {:?}",
             original_path
@@ -109,9 +109,9 @@ fn rollback_quarantined_tree(quarantine_path: &Path, original_path: &Path) -> Re
     Ok(())
 }
 
-fn unique_path(path: PathBuf) -> PathBuf {
-    if !path.exists() {
-        return path;
+fn unique_path(path: PathBuf) -> Result<PathBuf> {
+    if !checked_exists(&path, "quarantine target path")? {
+        return Ok(path);
     }
     for idx in 1.. {
         let candidate = path.with_extension(format!(
@@ -121,11 +121,16 @@ fn unique_path(path: PathBuf) -> PathBuf {
                 .unwrap_or("bak"),
             idx
         ));
-        if !candidate.exists() {
-            return candidate;
+        if !checked_exists(&candidate, "quarantine candidate path")? {
+            return Ok(candidate);
         }
     }
     unreachable!()
+}
+
+fn checked_exists(path: &Path, context: &str) -> Result<bool> {
+    path.try_exists()
+        .map_err(|err| anyhow::anyhow!("failed to stat {} {:?}: {}", context, path, err))
 }
 
 #[cfg(test)]
