@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn allowed_origins_from_env_fails_closed_on_invalid_origin() {
-        unsafe { std::env::set_var("ALLOWED_ORIGINS", "http://valid.test, not a url") };
+        unsafe { std::env::set_var("ALLOWED_ORIGINS", "http://valid.test,\ninvalid") };
         let err = match allowed_origins_from_env() {
             Ok(_) => panic!("invalid cors origin must fail closed"),
             Err(err) => err,
