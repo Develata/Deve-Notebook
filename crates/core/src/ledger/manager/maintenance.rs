@@ -182,9 +182,13 @@ impl RepoManager {
     pub fn delete_peer_branch(&self, peer_id: &PeerId) -> Result<()> {
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
 
-        // 1. Check if exists
-        if !peer_dir.exists() {
-            return Ok(()); // Idempotent success
+        match peer_dir.try_exists() {
+            Ok(true) => {}
+            Ok(false) => return Ok(()),
+            Err(err) => {
+                return Err(err)
+                    .with_context(|| format!("无法检测 Peer 目录是否存在: {:?}", peer_dir));
+            }
         }
 
         // 2. Remove from cache (shadow_dbs)

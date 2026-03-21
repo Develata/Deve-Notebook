@@ -98,11 +98,17 @@ impl RepoManager {
 
     pub(crate) fn checked_remotes_dir(&self) -> Result<PathBuf> {
         let remotes_dir = self.remotes_dir();
-        if !remotes_dir.exists() {
-            anyhow::bail!(
-                "Broken remote repo catalog: remote repo directory missing at {:?}",
-                remotes_dir
-            );
+        match remotes_dir.try_exists() {
+            Ok(true) => {}
+            Ok(false) => {
+                anyhow::bail!(
+                    "Broken remote repo catalog: remote repo directory missing at {:?}",
+                    remotes_dir
+                );
+            }
+            Err(err) => {
+                return Err(err.into());
+            }
         }
         Ok(remotes_dir)
     }

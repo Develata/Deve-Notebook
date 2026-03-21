@@ -2,8 +2,13 @@ use anyhow::{Context, Result};
 use std::path::Path;
 
 pub(super) fn quarantine_nil_shadow_repos(remotes_dir: &Path) -> Result<usize> {
-    if !remotes_dir.exists() {
-        return Ok(0);
+    match remotes_dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => return Ok(0),
+        Err(err) => {
+            return Err(err)
+                .with_context(|| format!("failed to stat remotes dir {:?}", remotes_dir));
+        }
     }
     let nil_name = format!("{}.redb", uuid::Uuid::nil());
     let quarantine_root = remotes_dir.join(".invalid");
@@ -25,8 +30,13 @@ pub(super) fn quarantine_nil_shadow_repos(remotes_dir: &Path) -> Result<usize> {
             );
         }
         let invalid = peer_dir.join(&nil_name);
-        if !invalid.exists() {
-            continue;
+        match invalid.try_exists() {
+            Ok(true) => {}
+            Ok(false) => continue,
+            Err(err) => {
+                return Err(err)
+                    .with_context(|| format!("failed to stat nil shadow {:?}", invalid));
+            }
         }
         let dst_dir = quarantine_root.join(peer_name);
         std::fs::create_dir_all(&dst_dir)?;
@@ -96,5 +106,36 @@ mod tests {
         let err = quarantine_nil_shadow_repos(&remotes)
             .expect_err("non-directory peer entry must fail closed");
         assert!(err.to_string().contains("expected directory"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fails_closed_on_unstatable_nil_shadow_path() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().expect("tempdir");
+        let remotes = dir.path().join("remotes");
+        let peer_dir = remotes.join("peer-a");
+        std::fs::create_dir_all(&peer_dir).expect("peer dir");
+        std::fs::write(
+            peer_dir.join(format!("{}.redb", uuid::Uuid::nil())),
+            b"broken",
+        )
+        .expect("nil db");
+        let original = std::fs::metadata(&peer_dir)
+            .expect("metadata")
+            .permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        std::fs::set_permissions(&peer_dir, blocked).expect("chmod 000");
+
+        let err = quarantine_nil_shadow_repos(&remotes)
+            .expect_err("unstatable nil shadow must fail closed");
+
+        std::fs::set_permissions(&peer_dir, original).expect("restore perms");
+        assert!(
+            err.to_string().contains("failed to stat nil shadow")
+                || err.to_string().contains("Permission denied")
+        );
     }
 }

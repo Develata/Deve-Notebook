@@ -14,8 +14,16 @@ use anyhow::{Result, anyhow};
 impl RepoManager {
     pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
         let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
-        if !peer_dir.exists() {
-            return Ok(());
+        match peer_dir.try_exists() {
+            Ok(true) => {}
+            Ok(false) => return Ok(()),
+            Err(err) => {
+                return Err(anyhow!(
+                    "Failed to stat remote peer directory {:?} while repairing catalog: {}",
+                    peer_dir,
+                    err
+                ));
+            }
         }
         let mut paths = Vec::new();
         for entry in std::fs::read_dir(&peer_dir)? {
@@ -87,8 +95,16 @@ impl RepoManager {
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
         let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
-        if !peer_dir.exists() {
-            return Ok(vec![]);
+        match peer_dir.try_exists() {
+            Ok(true) => {}
+            Ok(false) => return Ok(vec![]),
+            Err(err) => {
+                return Err(anyhow!(
+                    "Failed to stat remote peer directory {:?} while pure scanning catalog: {}",
+                    peer_dir,
+                    err
+                ));
+            }
         }
         let mut repos = Vec::new();
         for entry in std::fs::read_dir(peer_dir)? {
