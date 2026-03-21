@@ -85,7 +85,7 @@ pub fn init(
         }
         let db_path = local_dir.join(format!("{}.redb", final_name));
 
-        if db_path.exists() {
+        if checked_exists(&db_path, "local database path during init")? {
             // 尝试打开现有库检查 Metadata
             let db = cached_or_create_database(&db_path)
                 .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", db_path))?;
@@ -188,6 +188,11 @@ pub fn init(
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during init")?;
     Ok(repo)
+}
+
+fn checked_exists(path: &Path, context: &str) -> Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }
 
 /// 初始化本地数据库的核心表

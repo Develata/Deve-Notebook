@@ -1,5 +1,7 @@
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 
 fn write_info(db: &redb::Database, info: &RepoInfo) {
@@ -51,6 +53,33 @@ fn init_fails_closed_on_broken_secondary_repo() {
         .expect("broken local repo must fail init");
     let detail = format!("{err:#}");
     assert!(detail.contains("Broken local repo broken"));
+}
+
+#[cfg(unix)]
+#[test]
+fn init_fails_closed_on_unstatable_local_db_path() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let _repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let local_dir = ledger_dir.join("local");
+    let original = std::fs::metadata(&local_dir)
+        .expect("metadata")
+        .permissions();
+    let mut perms = original.clone();
+    perms.set_mode(0o000);
+    std::fs::set_permissions(&local_dir, perms).expect("chmod 000");
+
+    let err = match RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")) {
+        Ok(_) => panic!("unstatable local db path must fail init"),
+        Err(err) => err,
+    };
+
+    std::fs::set_permissions(&local_dir, original).expect("restore perms");
+    assert!(
+        err.to_string()
+            .contains("Failed to stat local database path during init")
+            || err.to_string().contains("Permission denied")
+    );
 }
 
 #[test]
@@ -168,5 +197,46 @@ fn runtime_listing_fails_closed_on_missing_secondary_metadata_until_explicit_rep
     assert_eq!(
         repo.list_repos(None).expect("listing after repair"),
         vec!["legacy".to_string(), "main".to_string()]
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let vault_root = dir.path().join("vault");
+    std::fs::create_dir_all(vault_root.join("notes")).expect("workspace root");
+    main.set_vault_root_checked(&vault_root)
+        .expect("mount vault");
+    let wiki_db = wiki.open_database(None, "wiki").expect("wiki db").db;
+    let info = wiki.get_repo_info().expect("wiki info").expect("present");
+    write_info(
+        wiki_db.as_ref(),
+        &RepoInfo {
+            uuid: info.uuid,
+            name: "notes".into(),
+            url: info.url.clone(),
+        },
+    );
+
+    let original = std::fs::metadata(&vault_root)
+        .expect("metadata")
+        .permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&vault_root, blocked).expect("chmod 000");
+
+    let err = main
+        .repair_local_repo_catalog()
+        .expect_err("unstatable workspace root must fail closed");
+
+    std::fs::set_permissions(&vault_root, original).expect("restore perms");
+    assert!(
+        err.to_string()
+            .contains("Failed to stat previous workspace root while repairing local catalog")
+            || err.to_string().contains("Permission denied")
     );
 }
