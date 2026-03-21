@@ -88,7 +88,7 @@ fn prewarm_doc(repo: &RepoManager, repo_name: &str, doc_id: DocId) -> Result<()>
     if snapshot.is_none() || policy.should_snapshot(doc_len, delta, 0) {
         let ops: Vec<_> = entries.iter().map(|(_, e)| e.clone()).collect();
         let content = state::reconstruct_content(&ops);
-        let _ = repo.save_snapshot_in_local_repo(repo_name, doc_id, max_seq, &content);
+        repo.save_snapshot_in_local_repo(repo_name, doc_id, max_seq, &content)?;
     }
     Ok(())
 }

@@ -154,7 +154,7 @@ pub async fn start_server(
 ) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
-    let _ = host::set_repo_manager(repo.clone());
+    host::set_repo_manager(repo.clone())?;
     node_role::set_node_role(node_role::NodeRole {
         role: "main".into(),
         ws_port: port,
@@ -166,7 +166,7 @@ pub async fn start_server(
     setup::write_main_port_hint(&host_dir, port)?;
     let auth_config = Arc::new(router::load_auth_config());
     let mcp_manager = Arc::new(setup::load_mcp_manager(repo.ledger_dir()));
-    let _ = host::set_mcp_manager(mcp_manager.clone());
+    host::set_mcp_manager(mcp_manager.clone())?;
     // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
 
@@ -174,7 +174,7 @@ pub async fn start_server(
         repo.clone(),
         vault_path.clone(),
     ));
-    let _ = host::set_sync_manager(sync_manager.clone());
+    host::set_sync_manager(sync_manager.clone())?;
 
     prewarm::spawn_prewarm(repo.clone());
 

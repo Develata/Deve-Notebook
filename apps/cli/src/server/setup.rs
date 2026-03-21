@@ -53,7 +53,9 @@ fn is_development() -> bool {
 
 pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Result<()> {
     let Some(host_root) = host_dir.parent() else {
-        return Err(anyhow!("Host directory has no parent while writing main port hint"));
+        return Err(anyhow!(
+            "Host directory has no parent while writing main port hint"
+        ));
     };
     let hint_path = host_root.join("main_port");
     std::fs::write(&hint_path, port.to_string())
