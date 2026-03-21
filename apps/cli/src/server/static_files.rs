@@ -115,9 +115,19 @@ pub fn static_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_guard() -> std::sync::MutexGuard<'static, ()> {
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("env lock")
+    }
 
     #[test]
     fn test_default_static_dir() {
+        let _guard = env_guard();
         // 确保默认路径不 panic
         unsafe { std::env::remove_var(ENV_STATIC_DIR) };
         let dir = resolve_static_dir();
@@ -126,6 +136,7 @@ mod tests {
 
     #[test]
     fn test_env_override() {
+        let _guard = env_guard();
         unsafe { std::env::set_var(ENV_STATIC_DIR, "/custom/path") };
         let dir = resolve_static_dir();
         assert_eq!(dir, PathBuf::from("/custom/path"));
@@ -134,6 +145,7 @@ mod tests {
 
     #[test]
     fn validate_static_dir_override_fails_closed_when_dir_missing() {
+        let _guard = env_guard();
         let dir = tempfile::tempdir().expect("tempdir");
         let missing = dir.path().join("missing-static");
         unsafe { std::env::set_var(ENV_STATIC_DIR, &missing) };
@@ -147,6 +159,7 @@ mod tests {
 
     #[test]
     fn validate_static_dir_override_fails_closed_when_index_missing() {
+        let _guard = env_guard();
         let dir = tempfile::tempdir().expect("tempdir");
         let static_dir = dir.path().join("static");
         std::fs::create_dir_all(&static_dir).expect("mkdir static");
