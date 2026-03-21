@@ -42,16 +42,7 @@ pub async fn run(
     }
 
     // 1. 初始化 RepoManager
-    let mut repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
-        Ok(r) => r,
-        Err(e) => {
-            let msg = e.to_string();
-            if msg.contains("Database already open") {
-                return start_proxy_mode(port).await;
-            }
-            return Err(e);
-        }
-    };
+    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.set_vault_root_checked(&vault_path)?;
     let repo_arc = Arc::new(repo);
 
@@ -68,7 +59,12 @@ pub async fn run(
 
 /// 代理模式: 检测已运行的主进程并以 plugin-host 方式启动
 async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
-    let main_port = detect_main_port(port).await;
+    let Some(main_port) = detect_main_port(port).await else {
+        anyhow::bail!(
+            "Serve port {} is already in use, but no healthy Deve main process was detected",
+            port
+        );
+    };
     tracing::info!(
         "Main process detected on port {}. Switching to client proxy mode...",
         main_port
@@ -107,7 +103,7 @@ fn load_plugins() -> Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>> {
     }
 }
 
-async fn detect_main_port(port: u16) -> u16 {
+async fn detect_main_port(port: u16) -> Option<u16> {
     let mut ports = vec![port];
     for p in port.saturating_sub(2)..=port + 4 {
         if !ports.contains(&p) {
@@ -124,10 +120,10 @@ async fn detect_main_port(port: u16) -> u16 {
             Ok(Ok(resp)) if resp.status().is_success()
         );
         if is_ok {
-            return p;
+            return Some(p);
         }
     }
-    port
+    None
 }
 
 fn find_free_port(start: u16, span: u16) -> Option<u16> {
@@ -138,4 +134,49 @@ fn find_free_port(start: u16, span: u16) -> Option<u16> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::detect_main_port;
+    use axum::{Router, routing::get};
+    use std::net::{SocketAddr, TcpListener};
+
+    fn free_port() -> u16 {
+        TcpListener::bind("127.0.0.1:0")
+            .expect("bind ephemeral port")
+            .local_addr()
+            .expect("read local addr")
+            .port()
+    }
+
+    async fn spawn_status_server(status: axum::http::StatusCode) -> SocketAddr {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind test server");
+        let addr = listener.local_addr().expect("server addr");
+        let app = Router::new().route("/api/repo/docs", get(move || async move { status }));
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test app");
+        });
+        addr
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn detect_main_port_returns_none_without_healthy_server() {
+        let port = free_port();
+        assert_eq!(detect_main_port(port).await, None);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn detect_main_port_finds_healthy_repo_docs_endpoint() {
+        let addr = spawn_status_server(axum::http::StatusCode::OK).await;
+        assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn detect_main_port_ignores_unhealthy_repo_docs_endpoint() {
+        let addr = spawn_status_server(axum::http::StatusCode::SERVICE_UNAVAILABLE).await;
+        assert_eq!(detect_main_port(addr.port()).await, None);
+    }
 }
