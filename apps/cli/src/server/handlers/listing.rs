@@ -61,8 +61,7 @@ pub async fn handle_list_repos(
     request_id: Option<String>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if (session.active_branch.is_some()
-        || session.active_repo.is_some()
+    if (session.active_repo.is_some()
         || session.active_repo_id.is_some()
         || session.has_runtime_scope_binding())
         && let Err(error) = resolve_session_repo_and_sync(state, session)
