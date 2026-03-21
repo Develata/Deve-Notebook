@@ -15,13 +15,13 @@ use super::database_cache::{
 pub(crate) use super::database_cache::{register_database, relocate_database_path};
 use crate::models::PeerId;
 use crate::models::RepoId;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use redb::Database;
 use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
-    if !db_path.exists() {
+    if !checked_exists(db_path, "database path")? {
         return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
     }
     cached_or_create_database(db_path)
@@ -180,7 +180,7 @@ impl RepoManager {
         }
 
         // 3. 检查文件是否存在
-        if !cache_key.exists() {
+        if !checked_exists(&cache_key, "local database path")? {
             return Err(anyhow::anyhow!("Repository not found: {}", name));
         }
 
@@ -210,3 +210,12 @@ impl RepoManager {
         cached_database(db_path)
     }
 }
+
+fn checked_exists(path: &Path, context: &str) -> Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
+}
+
+#[cfg(test)]
+#[path = "database_test.rs"]
+mod tests;
