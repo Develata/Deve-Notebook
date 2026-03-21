@@ -51,7 +51,7 @@ pub async fn run(
     sync_manager.scan()?;
 
     // 2. 加载插件 (Plugins)
-    let plugins = load_plugins();
+    let plugins = load_plugins()?;
 
     server::start_server(repo_arc, vault_path, port, plugins).await?;
     Ok(())
@@ -75,7 +75,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = remote;
     host::set_repository(repo_api)?;
 
-    let plugins = load_plugins();
+    let plugins = load_plugins()?;
 
     let plugin_port = find_free_port(main_port + 1, 5).unwrap_or(main_port + 1);
     tracing::info!("Plugin host will listen on port {}", plugin_port);
@@ -88,19 +88,12 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
 }
 
 /// 加载 `plugins/` 目录下的所有 Rhai 插件
-fn load_plugins() -> Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>> {
+fn load_plugins() -> anyhow::Result<Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>> {
     let plugin_dir = PathBuf::from("plugins");
     let loader = PluginLoader::new(plugin_dir);
-    match loader.load_all() {
-        Ok(p) => {
-            tracing::info!("Loaded {} plugins.", p.len());
-            p
-        }
-        Err(e) => {
-            tracing::warn!("Failed to load plugins: {}", e);
-            vec![]
-        }
-    }
+    let plugins = loader.load_all_strict()?;
+    tracing::info!("Loaded {} plugins.", plugins.len());
+    Ok(plugins)
 }
 
 async fn detect_main_port(port: u16) -> Option<u16> {

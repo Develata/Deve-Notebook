@@ -35,6 +35,19 @@ impl PluginLoader {
 
     /// Scan and load all plugins in the plugin directory.
     pub fn load_all(&self) -> Result<Vec<Box<dyn PluginRuntime>>> {
+        self.load_all_with_mode(false)
+    }
+
+    /// Scan and load all plugins in the plugin directory.
+    ///
+    /// Invariants:
+    /// - `serve` 路径下，坏插件不能被静默忽略。
+    /// - 任一插件加载失败时，调用方必须能显式得到错误。
+    pub fn load_all_strict(&self) -> Result<Vec<Box<dyn PluginRuntime>>> {
+        self.load_all_with_mode(true)
+    }
+
+    fn load_all_with_mode(&self, fail_closed: bool) -> Result<Vec<Box<dyn PluginRuntime>>> {
         let mut plugins = Vec::new();
 
         if !self
@@ -50,12 +63,18 @@ impl PluginLoader {
             let path = entry.path();
 
             if entry.file_type()?.is_dir() {
-                match self.load_plugin(&path) {
+                match self
+                    .load_plugin(&path)
+                    .with_context(|| format!("Failed to load plugin at {:?}", path))
+                {
                     Ok(runtime) => {
                         println!("Loaded plugin: {}", runtime.manifest().name);
                         plugins.push(runtime);
                     }
                     Err(e) => {
+                        if fail_closed {
+                            return Err(e);
+                        }
                         eprintln!("Failed to load plugin at {:?}: {}", path, e);
                     }
                 }
@@ -154,6 +173,50 @@ mod tests {
         assert!(
             err.to_string().contains("Failed to stat plugin directory")
                 || err.to_string().contains("Permission denied")
+        );
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn load_all_strict_fails_closed_when_any_plugin_is_broken() {
+        let dir = tempdir().expect("tempdir");
+
+        let good = dir.path().join("good-plugin");
+        fs::create_dir(&good).expect("mkdir good");
+        fs::write(
+            good.join("manifest.json"),
+            r#"{
+                "id": "good-plugin",
+                "name": "Good Plugin",
+                "version": "1.0.0",
+                "entry": "index.rhai"
+            }"#,
+        )
+        .expect("write good manifest");
+        fs::write(good.join("index.rhai"), "fn hello() { \"ok\" }").expect("write good entry");
+
+        let broken = dir.path().join("broken-plugin");
+        fs::create_dir(&broken).expect("mkdir broken");
+        fs::write(
+            broken.join("manifest.json"),
+            r#"{
+                "id": "broken-plugin",
+                "name": "Broken Plugin",
+                "version": "1.0.0",
+                "entry": "missing.rhai"
+            }"#,
+        )
+        .expect("write broken manifest");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_all_strict() {
+            Ok(_) => panic!("broken plugin must fail closed in strict mode"),
+            Err(err) => err,
+        };
+
+        assert!(
+            err.to_string().contains("Failed to load plugin at")
+                || err.to_string().contains("Missing entry script")
         );
     }
 }

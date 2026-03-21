@@ -158,15 +158,16 @@ impl SearchService {
     }
 }
 
-fn required_text_field(
-    doc: &TantivyDocument,
-    field: Field,
-    name: &str,
-) -> anyhow::Result<String> {
+fn required_text_field(doc: &TantivyDocument, field: Field, name: &str) -> anyhow::Result<String> {
     doc.get_first(field)
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow!("Search index document missing required stored field: {}", name))
+        .ok_or_else(|| {
+            anyhow!(
+                "Search index document missing required stored field: {}",
+                name
+            )
+        })
 }
 
 #[cfg(test)]
@@ -228,7 +229,9 @@ mod tests {
         writer.commit()?;
         drop(writer);
 
-        let err = service.search("hello", 10).expect_err("broken stored fields must fail");
+        let err = service
+            .search("hello", 10)
+            .expect_err("broken stored fields must fail");
         assert!(err.to_string().contains("missing required stored field"));
         Ok(())
     }

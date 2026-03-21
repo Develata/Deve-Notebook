@@ -21,7 +21,6 @@ use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-
 #[cfg(feature = "search")]
 use deve_core::search::SearchService;
 use tree_state::RepoTreeRegistry;
@@ -179,19 +178,7 @@ pub async fn start_server(
     prewarm::spawn_prewarm(repo.clone());
 
     #[cfg(feature = "search")]
-    let search_service = {
-        let index_path = host_dir.join("search-index");
-        match SearchService::new_on_disk(&index_path) {
-            Ok(s) => {
-                tracing::info!("Search service initialized at {:?}", index_path);
-                Some(s)
-            }
-            Err(e) => {
-                tracing::warn!("Failed to initialize search service: {:?}", e);
-                None
-            }
-        }
-    };
+    let search_service = Some(setup::load_search_service(&host_dir)?);
 
     // Load or generate Identity Key
     let key_pair = security::load_or_generate_identity_key(&host_dir)?;
