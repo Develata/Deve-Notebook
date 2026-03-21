@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -23,7 +23,10 @@ impl SkillManager {
     pub fn get(&self, name: &str) -> Result<Option<Skill>> {
         // Assume skill file is name.md
         let path = self.skills_dir.join(format!("{}.md", name));
-        if !path.exists() {
+        if !path
+            .try_exists()
+            .with_context(|| format!("Failed to stat skill path: {:?}", path))?
+        {
             return Ok(None);
         }
 
@@ -33,17 +36,22 @@ impl SkillManager {
     /// List all available skills
     pub fn list(&self) -> Result<Vec<Skill>> {
         let mut skills = Vec::new();
-        if !self.skills_dir.exists() {
+        if !self
+            .skills_dir
+            .try_exists()
+            .with_context(|| format!("Failed to stat skills directory: {:?}", self.skills_dir))?
+        {
             return Ok(skills);
         }
 
         for entry in std::fs::read_dir(&self.skills_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().is_some_and(|ext| ext == "md")
-                && let Ok(skill) = self.load_skill_from_path(&path)
-            {
-                skills.push(skill);
+            if path.extension().is_some_and(|ext| ext == "md") {
+                skills.push(
+                    self.load_skill_from_path(&path)
+                        .with_context(|| format!("Failed to load skill from {:?}", path))?,
+                );
             }
         }
         Ok(skills)

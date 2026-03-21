@@ -37,7 +37,11 @@ impl PluginLoader {
     pub fn load_all(&self) -> Result<Vec<Box<dyn PluginRuntime>>> {
         let mut plugins = Vec::new();
 
-        if !self.plugin_dir.exists() {
+        if !self
+            .plugin_dir
+            .try_exists()
+            .with_context(|| format!("Failed to stat plugin directory: {:?}", self.plugin_dir))?
+        {
             return Ok(plugins);
         }
 
@@ -45,7 +49,7 @@ impl PluginLoader {
             let entry = entry?;
             let path = entry.path();
 
-            if path.is_dir() {
+            if entry.file_type()?.is_dir() {
                 match self.load_plugin(&path) {
                     Ok(runtime) => {
                         println!("Loaded plugin: {}", runtime.manifest().name);
@@ -87,6 +91,8 @@ impl PluginLoader {
 mod tests {
     use super::*;
     use std::fs;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
 
     #[test]
@@ -127,5 +133,27 @@ mod tests {
 
         let res = plugin.call("hello", vec![]).expect("Failed to call");
         assert_eq!(res.clone().into_string().unwrap(), "world");
+    }
+
+    #[test]
+    #[cfg(all(not(target_arch = "wasm32"), unix))]
+    fn load_all_fails_closed_when_plugin_dir_is_unstatable() {
+        let dir = tempdir().expect("tempdir");
+        let original = fs::metadata(dir.path()).expect("metadata").permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        fs::set_permissions(dir.path(), blocked).expect("chmod 000");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_all() {
+            Ok(_) => panic!("unstatable plugin dir must fail closed"),
+            Err(err) => err,
+        };
+
+        fs::set_permissions(dir.path(), original).expect("restore perms");
+        assert!(
+            err.to_string().contains("Failed to stat plugin directory")
+                || err.to_string().contains("Permission denied")
+        );
     }
 }
