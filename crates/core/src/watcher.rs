@@ -14,6 +14,7 @@
 use crate::sync::SyncManager;
 use anyhow::{Context, Result};
 use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
@@ -91,7 +92,8 @@ impl Watcher {
                 }
 
                 // 目录事件检测 (路径存在且是目录，或不存在但无扩展名)
-                let is_dir = path.is_dir() || (!path.exists() && path.extension().is_none());
+                let is_dir = classify_dir_event(path)
+                    .with_context(|| format!("Failed to classify watcher event for {path_str}"))?;
                 if is_dir {
                     if let Some((repo_id, repo_path)) = self
                         .sync_manager
@@ -128,6 +130,14 @@ impl Watcher {
             }
         }
         Ok(())
+    }
+}
+
+fn classify_dir_event(path: &Path) -> Result<bool> {
+    match path.try_exists() {
+        Ok(false) => Ok(path.extension().is_none()),
+        Ok(true) => Ok(std::fs::metadata(path)?.is_dir()),
+        Err(err) => Err(err.into()),
     }
 }
 

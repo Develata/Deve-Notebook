@@ -10,7 +10,7 @@
 //! VFS 层仅保留文件系统标识抽象，repo-aware 扫描逻辑已迁移到 `sync::scan`。
 
 use crate::models::FileNodeId;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 pub struct Vfs {
@@ -26,7 +26,10 @@ impl Vfs {
 
     pub fn get_inode(&self, rel_path: &str) -> Result<Option<FileNodeId>> {
         let full_path = self.root.join(rel_path);
-        if !full_path.exists() {
+        if !full_path
+            .try_exists()
+            .with_context(|| format!("Failed to stat VFS path: {:?}", full_path))?
+        {
             return Ok(None);
         }
 
@@ -42,5 +45,38 @@ impl Vfs {
         // FileId hash is u64. We can use it. FileNodeId wraps u128.
 
         Ok(Some(FileNodeId { id: hash as u128 }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Vfs;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+    use tempfile::tempdir;
+
+    #[cfg(unix)]
+    #[test]
+    fn get_inode_fails_closed_on_unstatable_path() {
+        let dir = tempdir().expect("tempdir");
+        let vault = dir.path().join("vault");
+        let notes = vault.join("default/notes");
+        std::fs::create_dir_all(&notes).expect("mkdir");
+        std::fs::write(notes.join("a.md"), "hello").expect("write");
+        let original = std::fs::metadata(&notes).expect("metadata").permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        std::fs::set_permissions(&notes, blocked).expect("chmod 000");
+
+        let vfs = Vfs::new(&vault);
+        let err = vfs
+            .get_inode("default/notes/a.md")
+            .expect_err("unstatable path must fail closed");
+
+        std::fs::set_permissions(&notes, original).expect("restore perms");
+        assert!(
+            err.to_string().contains("Failed to stat VFS path")
+                || err.to_string().contains("Permission denied")
+        );
     }
 }
