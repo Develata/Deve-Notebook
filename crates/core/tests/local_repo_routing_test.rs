@@ -214,3 +214,22 @@ fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
             || err.to_string().contains("unexpected end")
     );
 }
+
+#[test]
+fn workspace_resolution_fails_closed_when_secondary_repo_info_is_missing() {
+    let (_dir, repo, _extra_id, extra_name) = new_local_repos();
+    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    let txn = extra_db.db.begin_write().expect("write txn");
+    let _ = txn
+        .delete_table(REPO_METADATA)
+        .expect("delete repo metadata");
+    txn.commit().expect("commit missing metadata");
+
+    let err = repo
+        .resolve_local_workspace_path("wiki/notes/extra.md")
+        .expect_err("missing repo info must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Broken local repo wiki while resolving workspace path")
+    );
+}

@@ -77,7 +77,11 @@ impl RepoManager {
             return Ok(None);
         };
         let Some(info) = self.get_repo_info_for(None, Some(&repo_stem))? else {
-            return Ok(None);
+            anyhow::bail!(
+                "Broken local repo {} while resolving workspace path {}: repository info missing",
+                repo_stem,
+                normalized
+            );
         };
 
         Ok(Some((repo_stem, info.uuid, repo_path.to_string())))
