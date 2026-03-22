@@ -224,13 +224,11 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
         }) => {
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .unwrap_or_default()
-                    .contains("Source control target not resolved")
+            assert_eq!(
+                error.code,
+                deve_core::protocol::ServerErrorCode::ScDocNotFound
             );
+            assert_eq!(error.detail.as_deref(), Some("notes/a.md"));
             assert_eq!(scope_nonce, Some(19));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
