@@ -55,6 +55,8 @@ mod listing_scope_binding_test;
 mod listing_scope_cleanup_test;
 #[cfg(test)]
 mod listing_scope_remote_branch_test;
+#[cfg(test)]
+mod listing_shadow_scope_test;
 pub mod mcp;
 pub mod metrics;
 pub mod node_role;

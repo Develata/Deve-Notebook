@@ -23,13 +23,28 @@ pub use listing_docs::handle_list_docs;
 pub async fn handle_list_shadows(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    session: Option<&WsSession>,
+    mut session: Option<&mut WsSession>,
     request_id: Option<String>,
 ) {
-    let scope_nonce = browser_scope_nonce(session);
+    let scope_nonce = browser_scope_nonce(session.as_deref());
+    if let Some(session) = session.as_deref_mut() {
+        if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
+            return;
+        }
+        if session.active_branch.is_some()
+            && (session.active_repo.is_some()
+                || session.active_repo_id.is_some()
+                || session.has_runtime_scope_binding())
+            && let Err(error) = resolve_session_repo_and_sync(state, session)
+        {
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(error), scope_nonce);
+            return;
+        }
+    }
     match state.repo.list_switchable_shadows_on_disk() {
         Ok(peers) => {
             let self_peer = session
+                .as_deref()
                 .filter(|session| session.is_browser_session())
                 .and_then(|session| session.authenticated_peer_id.clone());
             let shadows: Vec<String> = peers
