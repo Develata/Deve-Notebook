@@ -104,7 +104,12 @@ impl RepoManager {
         let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
         match peer_dir.try_exists() {
             Ok(true) => {}
-            Ok(false) => return Ok(vec![]),
+            Ok(false) => {
+                return Err(anyhow!(
+                    "Broken shadow peer {} while pure scanning catalog: directory missing",
+                    peer_id
+                ));
+            }
             Err(err) => {
                 return Err(anyhow!(
                     "Failed to stat remote peer directory {:?} while pure scanning catalog: {}",
