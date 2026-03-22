@@ -9,7 +9,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo_and_sync,
+    ResolvedRepo, bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -30,7 +30,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
         );
         return;
     };
-    let scope = match resolve_session_repo_and_sync(state, session) {
+    let scope = match resolve_key_request_scope(state, session) {
         Ok(scope) => scope,
         Err(err) => {
             send_key_denied_error(
@@ -134,6 +134,28 @@ fn send_key_denied_error(
 
 fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
     session.is_browser_session().then(|| session.scope_nonce())
+}
+
+fn resolve_key_request_scope(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> anyhow::Result<ResolvedRepo> {
+    let resolved = if session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+        && !session.has_runtime_scope_binding()
+    {
+        bootstrap_local_repo(state, session)
+    } else {
+        resolve_session_repo_and_sync(state, session)
+    }?;
+    if resolved.branch.is_none()
+        && (session.active_repo.as_deref() != Some(resolved.repo_name.as_str())
+            || session.active_repo_id != Some(resolved.repo_id))
+    {
+        session.switch_repo(resolved.repo_name.clone(), Some(resolved.repo_id));
+    }
+    Ok(resolved)
 }
 
 fn resolve_key_scope(

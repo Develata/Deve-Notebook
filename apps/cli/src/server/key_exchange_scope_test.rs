@@ -81,3 +81,33 @@ async fn request_key_denies_remote_scope_when_only_url_matches_local_repo() -> a
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn request_key_without_repo_selection_bootstraps_single_repo() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(61));
+
+    handle_request_key(&state, &ch, &mut session).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::KeyProvide {
+            repo_id: seen,
+            scope_nonce,
+            branch,
+            ..
+        }) => {
+            assert_eq!(seen, repo_id);
+            assert_eq!(scope_nonce, 61);
+            assert_eq!(branch, None);
+        }
+        other => panic!("expected KeyProvide, got {:?}", other),
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("notes"));
+    assert_eq!(session.active_repo_id, Some(repo_id));
+    Ok(())
+}
