@@ -203,3 +203,23 @@ fn resolve_session_repo_preserves_missing_local_catalog_failure() -> anyhow::Res
     );
     Ok(())
 }
+
+#[test]
+fn resolve_session_repo_and_sync_clears_missing_remote_branch_scope() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, _test_id) = build_state()?;
+    let mut session = WsSession::new();
+    session.switch_branch(Some("missing-shadow".into()));
+    session.switch_repo("ghost".into(), None);
+
+    let err =
+        resolve_session_repo_and_sync(&state, &mut session).expect_err("missing shadow must fail");
+
+    assert!(err.to_string().contains("Remote branch not available:"));
+    assert!(session.active_branch.is_none());
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}

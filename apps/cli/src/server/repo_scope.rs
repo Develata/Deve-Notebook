@@ -117,6 +117,12 @@ pub fn resolve_session_repo_and_sync(
                 err
             };
             let mapped = map_repo_scope_error(anyhow!(err.to_string()));
+            if session.active_branch.is_some()
+                && shadow_scope::should_clear_missing_remote_branch(&mapped)
+            {
+                shadow_scope::clear_stale_remote_branch(session);
+                return Err(err);
+            }
             let clear_stale_scope = if session.active_branch.is_some() {
                 should_clear_stale_remote_scope(&mapped)
             } else {
