@@ -127,19 +127,19 @@ async fn switch_branch_fails_closed_when_current_remote_scope_has_no_url() -> an
             switch_nonce,
             ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert!(
                 error
                     .detail
                     .as_deref()
-                    .is_some_and(|detail| detail.contains("repository URL missing"))
+                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
             );
             assert_eq!(switch_nonce, Some(74));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(session.active_branch, Some(peer_id));
-    assert_eq!(session.active_repo.as_deref(), Some("wiki"));
+    assert_eq!(session.active_repo.as_deref(), None);
     assert_eq!(session.active_repo_id, None);
     Ok(())
 }

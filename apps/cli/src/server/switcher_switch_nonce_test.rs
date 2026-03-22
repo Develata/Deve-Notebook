@@ -83,3 +83,67 @@ async fn switch_repo_requires_switch_nonce_for_browser_sessions() -> anyhow::Res
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_rejects_stale_switch_nonce_for_browser_sessions() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(7));
+
+    handle_switch_branch(&state, &ch, &mut session, None, Some(7)).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            scope_nonce,
+            switch_nonce,
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(7));
+            assert_eq!(switch_nonce, Some(7));
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("stale"))
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_repo_rejects_stale_switch_nonce_for_browser_sessions() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(11));
+
+    handle_switch_repo(&state, &ch, &mut session, "default".into(), None, Some(10)).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            scope_nonce,
+            switch_nonce,
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(11));
+            assert_eq!(switch_nonce, Some(10));
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("stale"))
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}

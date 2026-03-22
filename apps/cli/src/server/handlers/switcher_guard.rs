@@ -8,16 +8,34 @@ pub(super) fn require_browser_switch_nonce(
     switch_nonce: Option<u64>,
     action: &str,
 ) -> bool {
-    if !session.is_browser_session() || switch_nonce.is_some() {
+    if !session.is_browser_session() {
+        return true;
+    }
+    let Some(switch_nonce) = switch_nonce else {
+        ch.send_protocol_error_with_scope_and_switch_nonce(
+            ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                format!("{action} switch nonce missing"),
+            ),
+            Some(session.scope_nonce()),
+            None,
+        );
+        return false;
+    };
+    if switch_nonce > session.scope_nonce() {
         return true;
     }
     ch.send_protocol_error_with_scope_and_switch_nonce(
         ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
-            format!("{action} switch nonce missing"),
+            format!(
+                "{action} switch nonce is stale: current_scope_nonce={}, requested_switch_nonce={}",
+                session.scope_nonce(),
+                switch_nonce
+            ),
         ),
         Some(session.scope_nonce()),
-        None,
+        Some(switch_nonce),
     );
     false
 }
@@ -54,6 +72,42 @@ mod tests {
                 assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
                 assert_eq!(scope_nonce, Some(9));
                 assert_eq!(switch_nonce, None);
+            }
+            other => panic!("expected ProtocolError, got {:?}", other),
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn browser_switch_nonce_must_advance_scope_generation() {
+        let (broadcast_tx, _) = broadcast::channel(4);
+        let (uni_tx, mut uni_rx) = mpsc::channel(4);
+        let ch = DualChannel::new(broadcast_tx, uni_tx);
+        let mut session = WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(9));
+
+        assert!(!require_browser_switch_nonce(
+            &ch,
+            &session,
+            Some(9),
+            "branch switch"
+        ));
+
+        match uni_rx.recv().await {
+            Some(ServerMessage::ProtocolError {
+                error,
+                scope_nonce,
+                switch_nonce,
+            }) => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(scope_nonce, Some(9));
+                assert_eq!(switch_nonce, Some(9));
+                assert!(
+                    error
+                        .detail
+                        .as_deref()
+                        .is_some_and(|detail| detail.contains("stale"))
+                );
             }
             other => panic!("expected ProtocolError, got {:?}", other),
         }
