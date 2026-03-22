@@ -189,3 +189,45 @@ async fn request_key_denies_corrupt_repo_key() -> anyhow::Result<()> {
     assert_eq!(std::fs::read(key_path)?, vec![1, 2, 3, 4]);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn request_key_on_missing_shadow_branch_clears_remote_scope() -> anyhow::Result<()> {
+    let (_dir, state, _repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(41));
+    session.switch_branch(Some("missing-shadow".into()));
+    session.switch_repo("ghost".into(), None);
+
+    handle_request_key(&state, &ch, &mut session).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::KeyDenied {
+            repo_id,
+            scope_nonce,
+            branch,
+            error,
+        }) => {
+            assert_eq!(repo_id, None);
+            assert_eq!(scope_nonce, 41);
+            assert_eq!(branch, None);
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
+            );
+        }
+        other => panic!("expected KeyDenied, got {:?}", other),
+    }
+    assert!(session.active_branch.is_none());
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}

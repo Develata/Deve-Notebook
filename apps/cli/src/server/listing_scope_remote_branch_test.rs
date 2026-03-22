@@ -70,3 +70,41 @@ async fn list_repos_on_missing_shadow_branch_without_repo_hint_marks_scope_inval
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_repos_on_missing_shadow_branch_with_repo_hint_clears_session() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some("missing-shadow".into()));
+    session.switch_repo("ghost".into(), None);
+
+    handle_list_repos(
+        &state,
+        &ch,
+        &mut session,
+        Some("req-missing-shadow-hint".into()),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
+            );
+        }
+        other => panic!("expected scoped ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
