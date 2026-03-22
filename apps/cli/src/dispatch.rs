@@ -26,6 +26,7 @@ pub async fn run(
                 port,
                 config.snapshot_depth,
                 dev,
+                config.profile,
             )
             .await?
         }

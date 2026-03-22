@@ -165,6 +165,8 @@ pub async fn start_server(
     vault_path: std::path::PathBuf,
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
+    #[cfg_attr(not(feature = "search"), allow(unused_variables))]
+    profile: deve_core::config::AppProfile,
 ) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
@@ -193,7 +195,12 @@ pub async fn start_server(
     prewarm::spawn_prewarm(repo.clone());
 
     #[cfg(feature = "search")]
-    let search_service = Some(setup::load_search_service(&host_dir)?);
+    let search_service = if profile == deve_core::config::AppProfile::LowSpec {
+        tracing::info!("LowSpec profile: search service disabled");
+        None
+    } else {
+        Some(setup::load_search_service(&host_dir)?)
+    };
 
     // Load or generate Identity Key
     let key_pair = security::load_or_generate_identity_key(&host_dir)?;

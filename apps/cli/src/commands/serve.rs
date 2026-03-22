@@ -22,6 +22,7 @@ pub async fn run(
     port: u16,
     snapshot_depth: usize,
     dev: bool,
+    profile: deve_core::config::AppProfile,
 ) -> anyhow::Result<()> {
     if dev {
         if std::env::var("DEVE_ENV").is_err() {
@@ -53,7 +54,7 @@ pub async fn run(
     // 2. 加载插件 (Plugins)
     let plugins = load_plugins()?;
 
-    server::start_server(repo_arc, vault_path, port, plugins).await?;
+    server::start_server(repo_arc, vault_path, port, plugins, profile).await?;
     Ok(())
 }
 
