@@ -114,3 +114,36 @@ fn maps_plain_text_missing_local_repo_name() {
         Some("Local repo not found for name wiki")
     );
 }
+
+#[test]
+fn maps_target_identity_guard_with_operation_context() {
+    let err = decode_error_with_op(
+        StatusCode::CONFLICT,
+        b"Tracked source control target requires document identity: notes/a.md",
+        Some(&ProxyScOp::Unstage("notes/a.md".into())),
+    );
+    assert_eq!(err.code, ServerErrorCode::StorageConflict);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}
+
+#[test]
+fn maps_target_resolution_miss_with_stage_context() {
+    let err = decode_error_with_op(
+        StatusCode::CONFLICT,
+        b"Source control target not resolved for path notes/a.md",
+        Some(&ProxyScOp::StagePending("notes/a.md".into())),
+    );
+    assert_eq!(err.code, ServerErrorCode::ScPendingNotFound);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}
+
+#[test]
+fn maps_target_resolution_miss_with_diff_context() {
+    let err = decode_error_with_op(
+        StatusCode::CONFLICT,
+        b"Source control target not resolved for doc 00000000-0000-0000-0000-000000000000 at notes/a.md",
+        Some(&ProxyScOp::DiffDoc("notes/a.md".into())),
+    );
+    assert_eq!(err.code, ServerErrorCode::ScDocNotFound);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}

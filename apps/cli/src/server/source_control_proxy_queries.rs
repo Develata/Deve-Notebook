@@ -1,3 +1,4 @@
+use super::http::ProxyScOp;
 use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;
@@ -62,7 +63,7 @@ pub(super) fn diff_doc_path(
         if let Some(doc_id) = target.doc_id {
             req = req.query(&[("doc_id", doc_id.to_string())]);
         }
-        http::send_text(req).await
+        http::send_text_with_op(req, ProxyScOp::DiffDoc(target.path.clone())).await
     })?;
     Ok(res)
 }
