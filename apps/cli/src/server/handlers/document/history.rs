@@ -1,6 +1,5 @@
 use super::confirmed;
 use super::errors::send_doc_error_with_scope_nonce;
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, PeerId, RepoId, RepoType};
 use deve_core::protocol::ServerMessage;
@@ -14,14 +13,10 @@ pub(super) async fn handle_request_history(
     request_id: u64,
 ) {
     let scope_nonce = browser_scope_nonce(session);
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return;
-        }
+    let Some(scope) = super::resolve_document_scope(state, ch, session, scope_nonce) else {
+        return;
     };
-    let ops = match load_doc_history(state, session, scope.repo_id, doc_id) {
+    let ops = match load_doc_history(state, &scope, doc_id) {
         Ok(ops) => ops,
         Err(err) => {
             send_doc_error_with_scope_nonce(
@@ -35,7 +30,7 @@ pub(super) async fn handle_request_history(
     };
     ch.unicast(ServerMessage::History {
         repo_id: scope.repo_id,
-        branch: session.active_branch.clone(),
+        branch: scope.branch.clone(),
         scope_nonce,
         doc_id,
         request_id,
@@ -49,12 +44,11 @@ fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
 
 fn load_doc_history(
     state: &Arc<AppState>,
-    session: &WsSession,
-    repo_id: RepoId,
+    scope: &super::ResolvedRepo,
     doc_id: DocId,
 ) -> anyhow::Result<Vec<deve_core::protocol::ConfirmedOp>> {
     state.repo.run_on_repo_db(
-        &resolved_repo_type(session.active_branch.as_ref(), repo_id),
+        &resolved_repo_type(scope.branch.as_ref(), scope.repo_id),
         |db| {
             if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
                 anyhow::bail!("Document not found: {}", doc_id);

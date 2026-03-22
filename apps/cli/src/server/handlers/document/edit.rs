@@ -1,4 +1,3 @@
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, LedgerEntry, Op};
 use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
@@ -14,12 +13,8 @@ pub(super) async fn handle_edit(
     client_op_id: u64,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(e) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(e), scope_nonce);
-            return;
-        }
+    let Some(scope) = super::resolve_document_scope(state, ch, session, scope_nonce) else {
+        return;
     };
     if scope.branch.is_some() {
         tracing::debug!("Edit rejected: resolved scope is readonly (remote branch)");
@@ -79,7 +74,7 @@ pub(super) async fn handle_edit(
             }
             ch.unicast(ServerMessage::Ack {
                 repo_id: scope.repo_id,
-                branch: session.active_branch.clone(),
+                branch: scope.branch.clone(),
                 scope_nonce,
                 doc_id,
                 seq: entry.seq,
@@ -130,7 +125,7 @@ pub(super) async fn handle_edit(
             }
             ch.broadcast(ServerMessage::NewOp {
                 repo_id: scope.repo_id,
-                branch: session.active_branch.clone(),
+                branch: scope.branch.clone(),
                 scope_nonce,
                 doc_id,
                 entry: ConfirmedOp::new(
@@ -144,7 +139,7 @@ pub(super) async fn handle_edit(
             });
             ch.unicast(ServerMessage::Ack {
                 repo_id: scope.repo_id,
-                branch: session.active_branch.clone(),
+                branch: scope.branch.clone(),
                 scope_nonce,
                 doc_id,
                 seq: local_seq,

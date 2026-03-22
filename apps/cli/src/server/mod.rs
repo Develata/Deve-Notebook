@@ -38,6 +38,8 @@ mod docs_projection_repair_test;
 #[cfg(test)]
 mod document_remote_scope_test;
 #[cfg(test)]
+mod document_scope_bootstrap_test;
+#[cfg(test)]
 mod edit_scope_test;
 mod error_classify;
 pub mod handlers;

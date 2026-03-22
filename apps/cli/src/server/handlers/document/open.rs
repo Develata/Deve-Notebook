@@ -1,6 +1,5 @@
 use super::errors::send_doc_error_with_scope_nonce;
 use super::snapshot::{SnapshotPayload, build_snapshot_payload};
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, PeerId, RepoId, RepoType};
 use deve_core::protocol::ServerMessage;
@@ -23,26 +22,16 @@ pub(super) async fn handle_open_doc(
 
     let start = Instant::now();
     let scope_nonce = browser_scope_nonce(session);
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
+    let Some(scope) = super::resolve_document_scope(state, ch, session, scope_nonce) else {
+        return;
+    };
+    let (content, base_seq, delta_ops, version) = match load_snapshot(state, &scope, doc_id) {
+        Ok(payload) => payload,
         Err(e) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(e), scope_nonce);
+            send_doc_error_with_scope_nonce(ch, "Failed to load document snapshot", e, scope_nonce);
             return;
         }
     };
-    let (content, base_seq, delta_ops, version) =
-        match load_snapshot(state, session, scope.repo_id, doc_id) {
-            Ok(payload) => payload,
-            Err(e) => {
-                send_doc_error_with_scope_nonce(
-                    ch,
-                    "Failed to load document snapshot",
-                    e,
-                    scope_nonce,
-                );
-                return;
-            }
-        };
 
     tracing::info!(
         "OpenDoc Prepared: doc={}, base_seq={}, version={}, pending_ops={}, elapsed_ms={}",
@@ -55,7 +44,7 @@ pub(super) async fn handle_open_doc(
 
     ch.unicast(ServerMessage::Snapshot {
         repo_id: scope.repo_id,
-        branch: session.active_branch.clone(),
+        branch: scope.branch.clone(),
         scope_nonce,
         doc_id,
         request_id,
@@ -72,12 +61,11 @@ fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
 
 fn load_snapshot(
     state: &Arc<AppState>,
-    session: &WsSession,
-    repo_id: RepoId,
+    scope: &super::ResolvedRepo,
     doc_id: DocId,
 ) -> anyhow::Result<SnapshotPayload> {
     state.repo.run_on_repo_db(
-        &resolved_repo_type(session.active_branch.as_ref(), repo_id),
+        &resolved_repo_type(scope.branch.as_ref(), scope.repo_id),
         |db| build_snapshot_payload(db, doc_id, state.repo.snapshot_depth),
     )
 }
