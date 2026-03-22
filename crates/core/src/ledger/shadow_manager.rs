@@ -59,7 +59,11 @@ impl RepoManager {
         let db_path = match if checked_exists(&desired, "shadow repo destination")? {
             Some(desired.clone())
         } else if checked_exists(&legacy, "shadow repo legacy path")? {
-            Some(legacy)
+            match Self::read_repo_info_from_path(&legacy)? {
+                Some(current) if current.uuid == info.uuid => Some(legacy),
+                Some(_) => None,
+                None => Some(legacy),
+            }
         } else {
             self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)?
                 .map(|entry| entry.path)

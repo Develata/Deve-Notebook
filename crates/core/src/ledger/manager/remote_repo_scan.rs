@@ -190,6 +190,7 @@ impl RepoManager {
     ) -> Result<Option<String>> {
         Ok(self
             .resolve_remote_repo_entry_by_id(peer_id, repo_id)?
+            .filter(|entry| entry.is_switchable())
             .map(|entry| entry.stem))
     }
 
@@ -200,6 +201,7 @@ impl RepoManager {
     ) -> Result<Option<String>> {
         Ok(self
             .resolve_remote_repo_entry(peer_id, selector)?
+            .filter(|entry| entry.is_switchable())
             .map(|entry| entry.stem))
     }
 
@@ -211,7 +213,7 @@ impl RepoManager {
                 entry
                     .info
                     .as_ref()
-                    .is_some_and(|info| info.name == raw_name)
+                    .is_some_and(|info| entry.is_switchable() && info.name == raw_name)
             }))
     }
 
@@ -221,10 +223,9 @@ impl RepoManager {
         let mut repos: Vec<_> = entries
             .into_iter()
             .filter(|entry| {
-                entry
-                    .info
-                    .as_ref()
-                    .is_some_and(|info| !duplicate_ids.contains(&info.uuid))
+                entry.info.as_ref().is_some_and(|info| {
+                    entry.is_switchable() && !duplicate_ids.contains(&info.uuid)
+                })
             })
             .map(|entry| entry.stem)
             .collect();

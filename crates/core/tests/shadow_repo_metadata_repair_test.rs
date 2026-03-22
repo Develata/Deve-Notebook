@@ -26,7 +26,7 @@ fn create_legacy_shadow_without_metadata(
 }
 
 #[test]
-fn remote_catalog_keeps_legacy_uuid_shadow_as_uuid_selector_without_remote_metadata() {
+fn remote_catalog_keeps_legacy_uuid_shadow_non_switchable_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let local = RepoManager::init(
@@ -45,12 +45,16 @@ fn remote_catalog_keeps_legacy_uuid_shadow_as_uuid_selector_without_remote_metad
     create_legacy_shadow_without_metadata(&repo, &peer_id, info.uuid);
     repo.repair_remote_repo_catalogs()
         .expect("repair remote catalogs explicitly");
-    assert_eq!(
+    assert!(
         repo.list_repos(Some(&peer_id))
-            .expect("list repaired shadows"),
-        vec![info.uuid.to_string()]
+            .expect("list repaired shadows")
+            .is_empty()
     );
-
+    assert_eq!(
+        repo.find_remote_repo_selector_by_id(&peer_id, info.uuid)
+            .expect("resolve repaired shadow selector"),
+        None
+    );
     let handle = repo
         .open_database(Some(&peer_id), &info.uuid.to_string())
         .expect("open repaired shadow");
@@ -66,7 +70,7 @@ fn remote_catalog_keeps_legacy_uuid_shadow_as_uuid_selector_without_remote_metad
 }
 
 #[test]
-fn init_keeps_uuid_shadow_path_without_remote_metadata() {
+fn init_keeps_uuid_shadow_non_switchable_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
@@ -87,11 +91,11 @@ fn init_keeps_uuid_shadow_path_without_remote_metadata() {
     );
 
     let repaired = RepoManager::init(&ledger_dir, 10, None, None).expect("re-init repo");
-    assert_eq!(
+    assert!(
         repaired
             .list_repos(Some(&peer_id))
-            .expect("list repaired shadows"),
-        vec![info.uuid.to_string()]
+            .expect("list repaired shadows")
+            .is_empty()
     );
     assert!(
         repaired
@@ -196,15 +200,15 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
     main.repair_remote_repo_catalogs()
         .expect("repair remote catalogs");
 
-    let selectors = main
-        .list_repos(Some(&peer_id))
-        .expect("list repaired shadows");
-    assert_eq!(selectors, vec![wiki_info.uuid.to_string()]);
-    let selector = selectors[0].clone();
+    assert!(
+        main.list_repos(Some(&peer_id))
+            .expect("list repaired shadows")
+            .is_empty()
+    );
     assert!(
         main.remotes_dir()
             .join(peer_id.to_filename())
-            .join(format!("{}.redb", selector))
+            .join(format!("{}.redb", wiki_info.uuid))
             .exists()
     );
 }

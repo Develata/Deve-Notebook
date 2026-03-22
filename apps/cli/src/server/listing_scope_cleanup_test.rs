@@ -144,9 +144,14 @@ async fn list_repos_on_clean_unbound_shadow_branch_succeeds() -> anyhow::Result<
     let (_dir, state) = build_state()?;
     let shadow_peer = PeerId::new("peer-a");
     let shadow_repo = uuid::Uuid::new_v4();
-    state
-        .repo
-        .ensure_shadow_repo_binding(&shadow_peer, shadow_repo)?;
+    state.repo.ensure_shadow_repo_info(
+        &shadow_peer,
+        &deve_core::ledger::RepoInfo {
+            uuid: shadow_repo,
+            name: shadow_repo.to_string(),
+            url: Some(format!("urn:shadow:{shadow_repo}")),
+        },
+    )?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();

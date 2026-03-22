@@ -2,7 +2,6 @@ use super::handlers::sync::{SyncHelloInput, handle_sync_hello};
 use super::{AppState, channel::DualChannel, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::ServerMessage;
 use deve_core::security::IdentityKeyPair;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -86,7 +85,13 @@ async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
     let _ = uni_rx.recv().await;
 
-    assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    assert!(
+        !state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename())
+            .try_exists()?
+    );
     Ok(())
 }
 

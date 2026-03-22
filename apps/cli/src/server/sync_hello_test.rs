@@ -24,9 +24,14 @@ async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata(
     handle_sync_hello(&state, &ch, &mut session, hello).await;
     let _ = uni_rx.recv().await;
 
-    assert_eq!(
-        state.repo.list_repos(Some(&remote.peer_id()))?,
-        vec![repo_id.to_string()]
+    assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    assert!(
+        state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename())
+            .join(format!("{repo_id}.redb"))
+            .exists()
     );
     Ok(())
 }
@@ -73,7 +78,13 @@ async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Res
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.bound_repo_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
-    assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
+    assert!(
+        !state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename())
+            .try_exists()?
+    );
     Ok(())
 }
 
