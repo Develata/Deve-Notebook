@@ -71,6 +71,33 @@ async fn local_changes_without_repo_selection_clear_stale_runtime_binding() -> a
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn local_changes_without_repo_selection_bootstrap_single_repo() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_get_changes(
+        &state,
+        &ch,
+        &mut session,
+        Some("req-local-bootstrap".into()),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ChangesList { repo_id, .. }) => {
+            assert_eq!(repo_id, Some(default_id));
+        }
+        other => panic!("expected ChangesList, got {:?}", other),
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(default_id));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn remote_changes_without_repo_selection_report_stale_remote_scope() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let repo_id = state.repo.get_repo_info()?.expect("default info").uuid;

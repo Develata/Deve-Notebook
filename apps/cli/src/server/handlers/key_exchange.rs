@@ -9,7 +9,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo_and_sync,
+    ResolvedRepo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -43,7 +43,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             return;
         }
     };
-    let key_scope = match resolve_local_counterpart_repo(state, &scope) {
+    let key_scope = match resolve_key_scope(state, &scope) {
         Ok(Some(local_scope)) => local_scope,
         Ok(None) => {
             send_key_denied_error(
@@ -134,4 +134,21 @@ fn send_key_denied_error(
 
 fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
     session.is_browser_session().then(|| session.scope_nonce())
+}
+
+fn resolve_key_scope(
+    state: &Arc<AppState>,
+    scope: &ResolvedRepo,
+) -> anyhow::Result<Option<ResolvedRepo>> {
+    if scope.branch.is_none() {
+        return Ok(Some(scope.clone()));
+    }
+    let Some(repo_name) = state.repo.find_local_repo_name_by_id(scope.repo_id)? else {
+        return Ok(None);
+    };
+    Ok(Some(ResolvedRepo {
+        repo_id: scope.repo_id,
+        repo_name,
+        branch: None,
+    }))
 }

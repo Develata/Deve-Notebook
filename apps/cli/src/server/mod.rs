@@ -42,6 +42,8 @@ mod edit_scope_test;
 mod error_classify;
 pub mod handlers;
 #[cfg(test)]
+mod key_exchange_scope_test;
+#[cfg(test)]
 mod key_exchange_test;
 #[cfg(test)]
 mod list_docs_scope_test;

@@ -2,8 +2,8 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
+use deve_core::source_control::ChangeEntry;
 use deve_core::source_control::SourceControlApi;
-use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use std::sync::Arc;
 
 pub async fn handle_get_changes(
@@ -69,37 +69,5 @@ fn detect_unstaged_changes(
     scope: &crate::server::repo_scope::ResolvedRepo,
 ) -> super::service::ScResult<Vec<ChangeEntry>> {
     let selector = super::service::selector_from_scope(scope);
-    let pending = super::service::list_pending(state.repo.as_ref(), &selector)?;
-
-    let staged_keys: std::collections::HashSet<_> = state
-        .repo
-        .list_staged_in_repo(&selector)
-        .map_err(|e| super::errors::map_repo_error(super::errors::ScOp::ListChanges, e))?
-        .into_iter()
-        .map(|entry| change_identity_key(&entry))
-        .collect();
-
-    Ok(pending
-        .into_iter()
-        .filter(|entry| !staged_keys.contains(&change_identity_key(entry)))
-        .collect())
-}
-
-fn change_identity_key(
-    entry: &ChangeEntry,
-) -> (
-    Option<deve_core::models::DocId>,
-    String,
-    Option<String>,
-    ChangeStatus,
-) {
-    (
-        entry.doc_id,
-        deve_core::utils::path::to_forward_slash(&entry.path),
-        entry
-            .renamed_from
-            .as_deref()
-            .map(deve_core::utils::path::to_forward_slash),
-        entry.status,
-    )
+    super::service::list_pending(state.repo.as_ref(), &selector)
 }

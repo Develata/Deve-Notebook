@@ -1,5 +1,6 @@
 use crate::server::repo_scope::{
-    ResolvedRepo, resolve_session_repo_and_sync, stale_unbound_remote_scope_detail,
+    ResolvedRepo, bootstrap_local_repo, resolve_session_repo_and_sync,
+    stale_unbound_remote_scope_detail,
 };
 use crate::server::shadow_scope;
 use crate::server::{AppState, session::WsSession};
@@ -38,8 +39,12 @@ pub fn resolve_current_repo_scope(
         if session.active_branch.is_some() || session.has_runtime_scope_binding() {
             session.clear_active_db();
             session.clear_sync_binding();
+            return Err(ServerError::new(ServerErrorCode::ScRepoNotSelected));
         }
-        return Err(ServerError::new(ServerErrorCode::ScRepoNotSelected));
+        let scope =
+            bootstrap_local_repo(state, session).map_err(super::errors::map_repo_scope_error)?;
+        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        return Ok(scope);
     }
     resolve_session_repo_and_sync(state, session).map_err(super::errors::map_repo_scope_error)
 }
