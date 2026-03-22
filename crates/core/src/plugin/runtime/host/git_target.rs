@@ -58,7 +58,7 @@ fn target_for_resolved_path(
     let doc_id = match fallback_doc_id {
         Some(doc_id) => Some(doc_id),
         None => repo_manager
-            .tracked_docid_or_legacy_error_in_local_repo(repo_manager.local_repo_name(), &path)
+            .get_tracked_docid_in_local_repo(repo_manager.local_repo_name(), &path)
             .map_err(|e| e.to_string())?,
     };
     Ok(ScPathTarget { path, doc_id })
@@ -70,7 +70,6 @@ mod tests {
     use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use crate::ledger::{RepoManager, node_meta};
     use crate::models::DocId;
-    use crate::protocol::ScPathTarget;
     use crate::source_control::{ChangeEntry, ChangeStatus, pending_fs};
     use tempfile::tempdir;
 
@@ -107,7 +106,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_local_sc_target_fails_closed_for_legacy_only_path_mapping() -> anyhow::Result<()> {
+    fn resolve_local_sc_target_returns_none_for_legacy_only_path_mapping() -> anyhow::Result<()> {
         let dir = tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
         repo.set_vault_root(dir.path().join("vault"));
@@ -124,16 +123,13 @@ mod tests {
             Ok::<_, anyhow::Error>(())
         })?;
 
-        let err = resolve_local_sc_target(&repo, &repo, "notes/legacy.md")
-            .expect_err("legacy-only plugin target must fail closed");
+        let target = resolve_local_sc_target(&repo, &repo, "notes/legacy.md")
+            .expect("legacy-only path returns Ok with no doc_id");
 
-        assert!(
-            err.to_string()
-                .contains("Tracked document projection missing")
-        );
-        assert_ne!(
-            ScPathTarget::from_path("notes/legacy.md").doc_id,
-            Some(doc_id)
+        assert_eq!(target.path, "notes/legacy.md");
+        assert_eq!(
+            target.doc_id, None,
+            "legacy-only mapping must not resolve to doc_id"
         );
         Ok(())
     }

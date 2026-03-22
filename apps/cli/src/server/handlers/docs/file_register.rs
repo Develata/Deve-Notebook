@@ -20,7 +20,7 @@ pub(super) fn create_file_from_content(
     }
     if state
         .repo
-        .tracked_docid_or_legacy_error_in_local_repo(&scope.repo_name, rel_path)?
+        .get_tracked_docid_in_local_repo(&scope.repo_name, rel_path)?
         .is_some()
     {
         anyhow::bail!("Target already tracked: {}", rel_path);

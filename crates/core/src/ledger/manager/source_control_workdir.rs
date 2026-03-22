@@ -62,7 +62,7 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
     ) -> Result<Option<DocId>> {
-        self.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)
+        self.get_tracked_docid_in_local_repo(repo_name, path)
     }
 
     pub(crate) fn resolve_workdir_doc_id_in_local_repo(

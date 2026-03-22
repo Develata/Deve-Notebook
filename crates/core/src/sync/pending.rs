@@ -46,7 +46,7 @@ pub(super) fn upsert(
     };
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?,
+        None => repo.get_tracked_docid_in_local_repo(repo_name, path)?,
     };
     let has_conflict = match doc_id {
         Some(doc_id) => repo.run_on_local_repo(repo_name, |db| {

@@ -63,7 +63,7 @@ fn path_exists_for_repair(
     doc_id: deve_core::models::DocId,
 ) -> Result<bool> {
     Ok(repo
-        .tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?
+        .get_tracked_docid_in_local_repo(repo_name, path)?
         .is_some_and(|existing| existing != doc_id))
 }
 

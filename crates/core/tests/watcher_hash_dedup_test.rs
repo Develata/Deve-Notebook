@@ -6,13 +6,8 @@ use tempfile::TempDir;
 
 fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = deve_core::ledger::RepoManager::init(
-        dir.path().join("ledger"),
-        10,
-        None,
-        None,
-    )
-    .expect("init repo");
+    let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
+        .expect("init repo");
     repo.set_vault_root(dir.path().join("vault"));
     (dir, std::sync::Arc::new(repo))
 }
@@ -21,12 +16,8 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
 fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
     let (dir, repo) = new_repo();
     let name = repo.local_repo_name().to_string();
-    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
-        &name,
-        "dedup.md",
-        None,
-        "test",
-    )?;
+    let (doc_id, _ops) =
+        repo.apply_file_structure_in_local_repo(&name, "dedup.md", None, "test")?;
     let peer = PeerId::new("local");
     repo.append_generated_op_in_local_repo(&name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
@@ -54,7 +45,10 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
     let file = dir.path().join("vault/default/dedup.md");
     std::fs::write(&file, "modified")?;
     let first = sync.handle_fs_event("default/dedup.md")?;
-    assert!(!first.is_empty(), "first modification should produce change");
+    assert!(
+        !first.is_empty(),
+        "first modification should produce change"
+    );
 
     // Write same modified content again — hash dedup
     let second = sync.handle_fs_event("default/dedup.md")?;
@@ -70,12 +64,8 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
 fn revert_to_original_clears_pending() -> anyhow::Result<()> {
     let (dir, repo) = new_repo();
     let name = repo.local_repo_name().to_string();
-    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
-        &name,
-        "revert.md",
-        None,
-        "test",
-    )?;
+    let (doc_id, _ops) =
+        repo.apply_file_structure_in_local_repo(&name, "revert.md", None, "test")?;
     let peer = PeerId::new("local");
     repo.append_generated_op_in_local_repo(&name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(

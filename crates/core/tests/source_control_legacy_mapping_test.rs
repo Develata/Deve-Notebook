@@ -43,7 +43,7 @@ fn seed_file(repo: &RepoManager, path: &str, content: &str) -> DocId {
 }
 
 #[test]
-fn discard_pending_added_fails_closed_on_legacy_only_projection() {
+fn discard_pending_added_succeeds_on_legacy_only_projection() {
     let (dir, repo) = new_repo();
     let file = dir
         .path()
@@ -78,25 +78,17 @@ fn discard_pending_added_fails_closed_on_legacy_only_projection() {
     })
     .expect("seed legacy mapping");
 
-    let err = repo
-        .discard_pending("notes/new.md")
-        .expect_err("legacy-only discard must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
-    );
+    repo.discard_pending("notes/new.md")
+        .expect("discard succeeds; legacy-only mapping is ignored");
 
-    assert!(file.exists());
-    let legacy = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| {
-            deve_core::ledger::metadata::get_docid(db, "notes/new.md")
-        })
-        .expect("legacy lookup");
-    assert!(legacy.is_some());
+    assert!(
+        !file.exists(),
+        "workspace file should be removed after discard"
+    );
 }
 
 #[test]
-fn workdir_diff_does_not_fallback_to_legacy_snapshot_path_index() {
+fn workdir_diff_returns_empty_old_content_for_legacy_only_path() {
     let (dir, repo) = new_repo();
     let doc_id = seed_file(&repo, "notes/a.md", "hello");
     let file = dir.path().join("vault").join("default").join("notes/a.md");
@@ -114,13 +106,14 @@ fn workdir_diff_does_not_fallback_to_legacy_snapshot_path_index() {
     })
     .expect("poison path lookup");
 
-    let err = repo
+    let (old, new) = repo
         .workdir_diff_inputs_in_local_repo(repo.local_repo_name(), "notes/a.md")
-        .expect_err("legacy-only workdir diff must fail closed");
+        .expect("diff succeeds; legacy path returns empty old content");
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
+        old.is_empty(),
+        "old content should be empty for poisoned node-first path"
     );
+    assert_eq!(new, "workspace hello");
 }
 
 #[cfg(unix)]

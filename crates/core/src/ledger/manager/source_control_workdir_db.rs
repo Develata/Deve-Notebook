@@ -11,7 +11,7 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
     ) -> Result<()> {
-        self.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?;
+        self.get_tracked_docid_in_local_repo(repo_name, path)?;
         self.run_on_local_repo(repo_name, |db| {
             pending_fs::remove(db, path)?;
             drop_unanchored_projection_path(db, path)?;

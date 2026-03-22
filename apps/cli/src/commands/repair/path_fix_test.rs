@@ -32,7 +32,7 @@ fn path_exists_for_repair_prefers_tracked_lookup() -> anyhow::Result<()> {
 }
 
 #[test]
-fn path_exists_for_repair_fails_closed_for_legacy_only_path_mapping() -> anyhow::Result<()> {
+fn path_exists_for_repair_returns_false_for_legacy_only_path_mapping() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = Arc::new(RepoManager::init(
         dir.path(),
@@ -53,11 +53,9 @@ fn path_exists_for_repair_fails_closed_for_legacy_only_path_mapping() -> anyhow:
         Ok(())
     })?;
 
-    let err = path_exists_for_repair(&repo, "default", "notes/legacy.md", DocId::new())
-        .expect_err("legacy-only repair collision check must fail closed");
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
+        !path_exists_for_repair(&repo, "default", "notes/legacy.md", DocId::new())?,
+        "legacy-only path must not be treated as existing tracked doc"
     );
     Ok(())
 }

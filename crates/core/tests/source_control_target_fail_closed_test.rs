@@ -60,7 +60,7 @@ fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow
 }
 
 #[test]
-fn repo_diff_path_fails_closed_when_only_legacy_path_mapping_exists() -> anyhow::Result<()> {
+fn repo_diff_path_returns_not_found_when_only_legacy_path_mapping_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
     repo.set_vault_root(dir.path().join("vault"));
@@ -79,11 +79,12 @@ fn repo_diff_path_fails_closed_when_only_legacy_path_mapping_exists() -> anyhow:
 
     let err = repo
         .diff_doc_path("notes/legacy.md")
-        .expect_err("legacy-only path wrapper must fail closed");
+        .expect_err("legacy-only path must fail with doc not found");
 
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
+        err.to_string().contains("Doc not found") || err.to_string().contains("not resolved"),
+        "expected not-found error, got: {}",
+        err
     );
     Ok(())
 }

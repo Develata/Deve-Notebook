@@ -15,7 +15,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>) {
 }
 
 #[test]
-fn watcher_fails_closed_when_only_legacy_path_mapping_exists() {
+fn watcher_treats_legacy_only_path_as_new_file() {
     let (dir, repo) = new_repo();
     let path = dir.path().join("vault/default/notes/legacy.md");
     std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
@@ -36,23 +36,18 @@ fn watcher_fails_closed_when_only_legacy_path_mapping_exists() {
     .expect("seed legacy mapping");
 
     let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
-    let err = sync
+    let messages = sync
         .handle_fs_event("default/notes/legacy.md")
-        .expect_err("legacy-only watcher target must fail closed");
+        .expect("legacy-only path treated as new file");
 
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
-    );
-    assert!(
-        repo.list_pending_fs_in_local_repo(repo.local_repo_name())
-            .expect("pending list")
-            .is_empty()
+        !messages.is_empty(),
+        "watcher must produce pending added event for legacy-only path"
     );
 }
 
 #[test]
-fn full_scan_fails_closed_when_only_legacy_path_mapping_exists() {
+fn full_scan_treats_legacy_only_path_as_new_file() {
     let (dir, repo) = new_repo();
     let path = dir.path().join("vault/default/notes/legacy.md");
     std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
@@ -73,16 +68,14 @@ fn full_scan_fails_closed_when_only_legacy_path_mapping_exists() {
     .expect("seed legacy mapping");
 
     let vfs = Vfs::new(dir.path().join("vault"));
-    let err = scan_vault(&repo, &vfs, &dir.path().join("vault"))
-        .expect_err("legacy-only full scan target must fail closed");
+    scan_vault(&repo, &vfs, &dir.path().join("vault"))
+        .expect("full scan succeeds; legacy-only path treated as new");
 
+    let pending = repo
+        .list_pending_fs_in_local_repo(repo.local_repo_name())
+        .expect("pending list");
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
-    );
-    assert!(
-        repo.list_pending_fs_in_local_repo(repo.local_repo_name())
-            .expect("pending list")
-            .is_empty()
+        !pending.is_empty(),
+        "full scan must create pending entry for legacy-only path"
     );
 }

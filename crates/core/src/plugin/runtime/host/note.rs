@@ -77,7 +77,7 @@ fn ensure_managed_note_target(path: &Path) -> Result<DocId> {
 fn resolve_managed_note_target(path: &Path) -> Result<DocId> {
     let (repo_name, repo_path) = managed_target_parts(path)?;
     super::repo_manager()?
-        .tracked_docid_or_legacy_error_in_local_repo(&repo_name, &repo_path)?
+        .get_tracked_docid_in_local_repo(&repo_name, &repo_path)?
         .ok_or_else(|| anyhow::anyhow!("managed note not found: {}", repo_path))
 }
 

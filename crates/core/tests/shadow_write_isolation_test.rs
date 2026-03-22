@@ -2,9 +2,7 @@
 
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{
-    DocId, LedgerEntry, NodeId, Op, PeerId, RepoType, StructureOp,
-};
+use deve_core::models::{DocId, LedgerEntry, NodeId, Op, PeerId, RepoType, StructureOp};
 use tempfile::TempDir;
 use uuid::Uuid;
 

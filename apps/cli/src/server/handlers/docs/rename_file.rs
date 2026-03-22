@@ -18,7 +18,7 @@ pub(super) async fn handle_file_rename(
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let doc_id = match state
         .repo
-        .tracked_docid_or_legacy_error_in_local_repo(&scope.repo_name, src_path)
+        .get_tracked_docid_in_local_repo(&scope.repo_name, src_path)
     {
         Ok(Some(doc_id)) => doc_id,
         Ok(None) => {

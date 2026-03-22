@@ -60,9 +60,7 @@ pub fn broadcast_incremental_tree_deltas(
         .tree_manager
         .apply_structure_ops(scope.repo_id, None, ops)?;
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let docs = state
-        .repo
-        .list_docs(&RepoType::Local(scope.repo_id))?;
+    let docs = state.repo.list_docs(&RepoType::Local(scope.repo_id))?;
     ch.unicast(ServerMessage::DocList {
         request_id: None,
         repo_id: Some(scope.repo_id),

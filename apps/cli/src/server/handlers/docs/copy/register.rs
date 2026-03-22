@@ -131,7 +131,7 @@ fn register_file(ctx: CopyRegisterCtx<'_>, src_rel: &str, dest_rel: &str) -> boo
     let doc_id = match ctx
         .state
         .repo
-        .tracked_docid_or_legacy_error_in_local_repo(&ctx.scope.repo_name, src_rel)
+        .get_tracked_docid_in_local_repo(&ctx.scope.repo_name, src_rel)
     {
         Ok(Some(doc_id)) => doc_id,
         Ok(None) => {

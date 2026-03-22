@@ -36,7 +36,7 @@ fn commit_staged_fails_when_workspace_file_is_missing() {
 }
 
 #[test]
-fn apply_file_structure_fails_closed_when_only_legacy_path_mapping_exists() {
+fn apply_file_structure_fails_closed_when_legacy_path_binding_conflicts() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
     repo.set_vault_root(dir.path().join("vault"));
@@ -56,15 +56,16 @@ fn apply_file_structure_fails_closed_when_only_legacy_path_mapping_exists() {
 
     let err = repo
         .apply_file_structure_in_local_repo("default", "notes/legacy.md", None, "test")
-        .expect_err("legacy-only path must fail closed");
+        .expect_err("legacy path binding conflict must fail closed");
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
+        err.to_string().contains("already bound"),
+        "expected binding conflict, got: {}",
+        err
     );
 }
 
 #[test]
-fn apply_file_delete_structure_fails_closed_when_only_legacy_path_mapping_exists() {
+fn apply_file_delete_structure_returns_none_when_only_legacy_path_mapping_exists() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
     repo.set_vault_root(dir.path().join("vault"));
@@ -82,16 +83,16 @@ fn apply_file_delete_structure_fails_closed_when_only_legacy_path_mapping_exists
     })
     .expect("seed legacy path mapping");
 
-    let err = repo
+    let result = repo
         .apply_file_delete_structure_in_local_repo(
             "default",
             "notes/legacy-delete.md",
             None,
             "test",
         )
-        .expect_err("legacy-only delete path must fail closed");
+        .expect("legacy-only path is ignored");
     assert!(
-        err.to_string()
-            .contains("Tracked document projection missing for legacy-mapped path")
+        result.is_none(),
+        "legacy-only path must not resolve for delete"
     );
 }

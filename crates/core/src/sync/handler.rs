@@ -62,7 +62,7 @@ impl<'a> FsEventHandler<'a> {
 
         if let Some(existing_id) = self
             .repo
-            .tracked_docid_or_legacy_error_in_local_repo(self.repo_name, repo_path)?
+            .get_tracked_docid_in_local_repo(self.repo_name, repo_path)?
         {
             info!("Handler: Inode change (Atomic Save?) for {}", repo_path);
             self.repo

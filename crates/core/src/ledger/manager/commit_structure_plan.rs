@@ -50,7 +50,7 @@ pub(super) fn plan_delete(
 ) -> Result<Option<StructuredCommitTarget>> {
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)?,
+        None => repo.get_tracked_docid_in_local_repo(repo_name, path)?,
     };
     Ok(doc_id.map(|doc_id| StructuredCommitTarget {
         doc_id,
@@ -70,7 +70,7 @@ fn resolve_doc_id(
     if let Some(doc_id) = doc_id_hint {
         return Ok(doc_id);
     }
-    if let Some(doc_id) = repo.tracked_docid_or_legacy_error_in_local_repo(repo_name, path)? {
+    if let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, path)? {
         return Ok(doc_id);
     }
     Ok(DocId::new())
