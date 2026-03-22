@@ -117,11 +117,8 @@ fn test_local_and_shadow_isolation() -> Result<()> {
     assert_eq!(remote_ops.len(), 1);
 
     // 验证影子库文件存在：运行时必须先经 UUID 恢复 execution-safe selector。
-    let shadow_selector = repo
-        .find_remote_repo_selector_by_id(&peer_id, repo_id)?
-        .expect("shadow selector");
     let shadow_path = repo
-        .resolve_remote_repo_entry(&peer_id, &shadow_selector)?
+        .resolve_remote_repo_entry_by_id(&peer_id, repo_id)?
         .expect("shadow entry")
         .path;
     assert!(shadow_path.exists());

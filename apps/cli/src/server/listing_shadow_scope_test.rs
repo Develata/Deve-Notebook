@@ -80,6 +80,70 @@ async fn list_shadows_on_missing_remote_branch_clears_stale_scope() -> anyhow::R
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_repos_on_unbound_remote_with_stale_runtime_binding_clears_scope() -> anyhow::Result<()>
+{
+    use super::handlers::listing::handle_list_repos;
+
+    let (_dir, state) = build_state()?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(55));
+    session.switch_branch(Some("valid-peer".into()));
+    session.set_active_db(local_handle);
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(default_id);
+    session.set_sync_scope_nonce(55);
+
+    handle_list_repos(&state, &ch, &mut session, Some("req-repos".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+        }
+        other => panic!(
+            "expected ProtocolError for stale runtime binding, got {:?}",
+            other
+        ),
+    }
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_shadows_on_missing_remote_preserves_scope_nonce_in_error() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(77));
+    session.switch_branch(Some("ghost-peer".into()));
+
+    handle_list_shadows(&state, &ch, Some(&mut session), Some("req-scope".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(77));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.active_branch.is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn list_shadows_on_clean_remote_branch_still_succeeds() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let peer_id = PeerId::new("peer-a");

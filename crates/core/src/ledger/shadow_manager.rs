@@ -33,14 +33,21 @@ impl RepoManager {
     ///
     /// * `peer_id` - 远端 Peer 的唯一标识
     pub fn ensure_shadow_db(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
-        let db_path = self
-            .resolve_remote_repo_entry_by_id(peer_id, *repo_id)?
-            .map(|entry| entry.path)
-            .unwrap_or_else(|| {
-                self.remotes_dir()
-                    .join(peer_id.to_filename())
-                    .join(format!("{}.redb", repo_id))
-            });
+        let peer_dir = self.remotes_dir().join(peer_id.to_filename());
+        let db_path = match peer_dir.try_exists() {
+            Ok(true) => self
+                .resolve_remote_repo_entry_by_id(peer_id, *repo_id)?
+                .map(|entry| entry.path),
+            Ok(false) => None,
+            Err(err) => {
+                return Err(anyhow!(
+                    "Failed to stat remote peer directory for {} while ensuring shadow db: {}",
+                    peer_id,
+                    err
+                ));
+            }
+        }
+        .unwrap_or_else(|| peer_dir.join(format!("{}.redb", repo_id)));
         shadow::load_shadow_db(
             &self.remotes_dir(),
             &self.shadow_dbs,

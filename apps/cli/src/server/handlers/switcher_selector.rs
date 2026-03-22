@@ -127,6 +127,9 @@ fn select_target_repo_by_url(
     current_repo_id: Option<RepoId>,
     url: &str,
 ) -> Result<Option<String>> {
+    if let Some(peer_id) = target_branch {
+        state.repo.validate_remote_repo_url_coverage(peer_id)?;
+    }
     let repos = state.repo.list_repos(target_branch)?;
     let mut matches = Vec::new();
     for repo_name in &repos {

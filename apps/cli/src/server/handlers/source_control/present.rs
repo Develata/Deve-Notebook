@@ -174,7 +174,7 @@ fn resolve_without_doc_id<'a>(
     if let Some(entry) = renamed.into_iter().next() {
         return Ok(Some(entry));
     }
-    Ok((exact.len() == 1).then_some(exact[0]))
+    Ok((exact.len() == 1).then(|| exact[0]))
 }
 
 fn normalized(path: &str) -> String {

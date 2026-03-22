@@ -109,3 +109,44 @@ async fn switch_repo_on_missing_shadow_branch_reports_scope_invalid_and_clears_r
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_from_missing_shadow_with_stale_runtime_binding_clears_all_scope()
+-> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    let local_handle = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some("missing-shadow".into()));
+    session.switch_repo("ghost".into(), Some(default_id));
+    session.set_active_db(local_handle);
+    session.set_authenticated(deve_core::models::PeerId::new("stale-peer"));
+    session.bind_repo(default_id);
+    session.set_sync_scope_nonce(42);
+
+    handle_switch_repo(&state, &ch, &mut session, "ghost".into(), None, Some(99)).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+            ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(switch_nonce, Some(99));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(session.active_branch, None);
+    assert!(session.active_repo.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}

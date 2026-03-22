@@ -232,6 +232,24 @@ impl RepoManager {
         repos.sort();
         Ok(repos)
     }
+
+    /// 校验远端 branch 下所有可读 repo 的 URL 完整性。
+    ///
+    /// 若任一可读 repo 缺少 URL，则 fail-closed 返回错误。
+    /// 用于 URL-based 仓库选择前的防御性校验。
+    pub fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
+        for entry in self.scan_remote_repo_entries(peer_id)? {
+            if let Some(info) = &entry.info
+                && info.url.as_deref().is_none_or(|u| u.trim().is_empty())
+            {
+                anyhow::bail!(
+                    "Broken remote repo {} while validating URL coverage: repository URL not resolved",
+                    entry.stem
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 impl RepoManager {

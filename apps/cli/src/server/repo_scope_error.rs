@@ -112,4 +112,18 @@ mod tests {
         ));
         assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
+
+    #[test]
+    fn classifies_unmapped_error_as_request_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!("something completely unexpected"));
+        assert_eq!(err.code, ServerErrorCode::RequestFailed);
+    }
+
+    #[test]
+    fn classifies_url_coverage_validation_as_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Broken remote repo wiki while validating URL coverage: repository URL not resolved"
+        ));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
 }

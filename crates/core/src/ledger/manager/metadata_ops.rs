@@ -41,8 +41,16 @@ impl RepoManager {
         self.run_on_local_repo(repo_name, |db| inode_index::get_docid(db, inode))
     }
 
-    /// legacy path-mapping 查询；repair/兼容路径可用，运行时主链应优先走 node-first lookup。
-    pub fn get_docid_in_local_repo(&self, repo_name: &str, path: &str) -> Result<Option<DocId>> {
+    /// 按路径查询 DocId（已走 node-first 路径）。
+    ///
+    /// 运行时主链应优先使用 `tracked_docid_or_legacy_error_in_local_repo` 以获得 fail-closed 护栏。
+    /// 保留供 repair / rebuild 路径使用。
+    #[allow(dead_code)]
+    pub(crate) fn get_docid_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+    ) -> Result<Option<DocId>> {
         self.run_on_local_repo(repo_name, |db| doc_lookup::resolve_doc_id(db, path))
     }
 

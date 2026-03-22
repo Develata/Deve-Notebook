@@ -95,6 +95,8 @@ impl WsSession {
             || self.writer_identity.is_some()
     }
 
+    /// active_db 为 None 时返回 false（非只读），但这不代表"可写"——
+    /// 调用方必须额外检查 `is_repo_bound` 或 `active_db.is_some()` 才能确认写权限。
     pub fn is_readonly(&self) -> bool {
         self.active_db.as_ref().map(|h| h.readonly).unwrap_or(false)
     }

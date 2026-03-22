@@ -118,15 +118,11 @@ fn recover_local_repo_url_from_hint(
     if session.active_branch.is_some() {
         return Ok(None);
     }
-    let Some(raw_name) = session.active_repo.as_deref() else {
-        return Ok(None);
-    };
-    if uuid::Uuid::parse_str(raw_name).is_ok() {
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            format!("Local repository selector not resolved for {}", raw_name),
-        ));
-    }
+    // can_ignore_missing_current_scope 已经阻止 active_repo.is_some() 的路径到达这里。
+    debug_assert!(
+        session.active_repo.is_none(),
+        "recover_local_repo_url_from_hint reached with active_repo set"
+    );
     Ok(None)
 }
 

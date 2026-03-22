@@ -53,7 +53,13 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
             has_conflict: false,
         },
     );
-    repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/b.md"))?;
+    repo.stage_pending_in_repo(
+        &selector,
+        &ScPathTarget {
+            path: "notes/b.md".into(),
+            doc_id: Some(doc_id),
+        },
+    )?;
     repo.commit_staged_in_repo(&selector, "rename")?;
 
     let content = local_counterpart_content(&repo, doc_id, repo.local_repo_name())?;

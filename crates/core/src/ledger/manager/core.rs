@@ -39,7 +39,10 @@ impl RepoManager {
         Ok(())
     }
 
-    /// 设置 Vault 根目录 (用于 commit 时读取磁盘文件)
+    /// 设置 Vault 根目录——宽松包装，仅供测试辅助使用。
+    ///
+    /// 生产代码必须使用 `set_vault_root_checked`，它会在 catalog 校验失败时返回错误。
+    /// 本方法无法标记 `#[cfg(test)]`，因为下游 crate 的测试模块也会调用它。
     pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
         let previous_root = self.vault_root.clone();
         if let Err(error) = self.set_vault_root_checked(root) {

@@ -147,3 +147,48 @@ fn maps_target_resolution_miss_with_diff_context() {
     assert_eq!(err.code, ServerErrorCode::ScDocNotFound);
     assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
 }
+
+#[test]
+fn maps_plain_text_path_not_staged() {
+    let err = decode_error(StatusCode::CONFLICT, b"Path is not staged: notes/a.md");
+    assert_eq!(err.code, ServerErrorCode::ScStagedNotFound);
+}
+
+#[test]
+fn maps_plain_text_commit_not_found() {
+    let err = decode_error(StatusCode::NOT_FOUND, b"commit not found for sequence 42");
+    assert_eq!(err.code, ServerErrorCode::ScCommitNotFound);
+}
+
+#[test]
+fn maps_plain_text_nothing_to_commit() {
+    let err = decode_error(StatusCode::CONFLICT, b"nothing to commit");
+    assert_eq!(err.code, ServerErrorCode::ScNothingToCommit);
+}
+
+#[test]
+fn maps_plain_text_doc_not_found() {
+    let err = decode_error(StatusCode::NOT_FOUND, b"doc not found: notes/a.md");
+    assert_eq!(err.code, ServerErrorCode::ScDocNotFound);
+}
+
+#[test]
+fn maps_plain_text_generic_conflict_fallback() {
+    let err = decode_error(StatusCode::CONFLICT, b"some unknown conflict scenario");
+    assert_eq!(err.code, ServerErrorCode::StorageConflict);
+}
+
+#[test]
+fn maps_db_locked_via_status_503() {
+    let err = decode_error(StatusCode::SERVICE_UNAVAILABLE, b"server overloaded");
+    assert_eq!(err.code, ServerErrorCode::StorageDbLocked);
+}
+
+#[test]
+fn maps_unmapped_error_as_request_failed() {
+    let err = decode_error(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        b"something completely unexpected",
+    );
+    assert_eq!(err.code, ServerErrorCode::RequestFailed);
+}
