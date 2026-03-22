@@ -47,6 +47,7 @@ pub(super) async fn handle(
     }
 
     let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
+        clear_sync_hello_scope_failure(session, false);
         return;
     };
     let local_peer_id = engine.local_peer_id.clone();
@@ -60,6 +61,7 @@ pub(super) async fn handle(
     ) {
         Ok(res) => res,
         Err(e) => {
+            clear_sync_hello_scope_failure(session, false);
             tracing::error!("Handshake failed with {}: {}", peer_id, e);
             errors::classified_failure(ch, format!("Handshake failed: {}", e), scope);
             return;
@@ -75,6 +77,7 @@ pub(super) async fn handle(
             repo_id,
             err
         );
+        clear_sync_hello_scope_failure(session, false);
         errors::storage_persist_failed(
             ch,
             format!(
@@ -94,6 +97,7 @@ pub(super) async fn handle(
     let vec_bytes = match serde_json::to_vec(&local_vector) {
         Ok(bytes) => bytes,
         Err(err) => {
+            clear_sync_hello_scope_failure(session, false);
             errors::request_failed(ch, format!("Failed to encode local vector: {}", err), scope);
             return;
         }
@@ -143,6 +147,7 @@ pub(super) async fn handle(
         match engine.get_ops_for_sync(&req) {
             Ok(response) => ops_to_push.extend(response.ops),
             Err(err) => {
+                clear_sync_hello_scope_failure(session, false);
                 errors::classified_failure(
                     ch,
                     format!("Failed to build sync payload for repo {}: {}", repo_id, err),

@@ -102,6 +102,7 @@ async fn sync_hello_fails_closed_when_shadow_binding_fails() -> anyhow::Result<(
     )?;
     let mut hello = signed_hello(&remote, &VersionVector::new());
     hello.repo_id = repo_id;
+    hello.scope_nonce = 7;
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = super::session::WsSession::new();
@@ -109,12 +110,41 @@ async fn sync_hello_fails_closed_when_shadow_binding_fails() -> anyhow::Result<(
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(
-                error.code,
-                deve_core::protocol::ServerErrorCode::StoragePersistFailed
-            );
-        }
+        Some(ServerMessage::ProtocolError { .. }) => {}
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_shadow_binding_failure_clears_existing_runtime_binding() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    std::fs::create_dir_all(state.repo.remotes_dir())?;
+    std::fs::write(
+        state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename()),
+        b"blocked",
+    )?;
+    let mut hello = signed_hello(&remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    hello.scope_nonce = 7;
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = super::session::WsSession::new();
+    session.set_authenticated(remote.peer_id());
+    session.bind_repo(repo_id);
+    session.set_sync_scope_nonce(7);
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { .. }) => {}
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert!(session.authenticated_peer_id.is_none());
