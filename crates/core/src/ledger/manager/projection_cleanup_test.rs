@@ -43,7 +43,7 @@ fn drops_legacy_projection_without_ledger_facts() {
 #[test]
 fn keeps_empty_file_projection_backed_by_structure_facts() {
     let (_dir, repo) = new_repo();
-    let doc_id = repo
+    let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/empty.md", None, "test")
         .expect("create empty file structure");
 
@@ -111,7 +111,7 @@ fn drops_legacy_doc_mapping_backed_only_by_content_facts() {
 #[test]
 fn drops_stale_legacy_doc_mapping_when_node_projection_points_elsewhere() {
     let (_dir, repo) = new_repo();
-    let doc_id = repo
+    let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(
             repo.local_repo_name(),
             "notes/current.md",

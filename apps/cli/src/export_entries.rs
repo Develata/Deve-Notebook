@@ -61,7 +61,7 @@ mod tests {
     fn file_entry_prefers_node_projection_path() {
         let dir = TempDir::new().expect("create tempdir");
         let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-        let doc_id = repo
+        let (doc_id, _ops) = repo
             .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
             .expect("create file");
         repo.append_generated_op_in_local_repo(

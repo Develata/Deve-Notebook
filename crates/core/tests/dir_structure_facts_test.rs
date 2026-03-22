@@ -29,7 +29,7 @@ fn dir_entries(repo: &RepoManager, node_id: NodeId) -> Vec<(u64, deve_core::mode
 #[test]
 fn dir_create_and_rename_emit_structure_facts() {
     let (_dir, repo) = new_repo();
-    let node_id = repo
+    let (node_id, _ops) = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir structure");
     let ops = dir_ops(&repo, node_id);
@@ -58,7 +58,7 @@ fn dir_create_and_rename_emit_structure_facts() {
 #[test]
 fn dir_delete_emits_delete_structure_fact() {
     let (_dir, repo) = new_repo();
-    let node_id = repo
+    let (node_id, _ops) = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir structure");
     repo.apply_dir_delete_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
@@ -73,7 +73,7 @@ fn dir_delete_emits_delete_structure_fact() {
 #[test]
 fn dir_structure_seq_is_monotonic_per_node() {
     let (_dir, repo) = new_repo();
-    let node_id = repo
+    let (node_id, _ops) = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir structure");
     repo.apply_dir_rename_structure_in_local_repo(

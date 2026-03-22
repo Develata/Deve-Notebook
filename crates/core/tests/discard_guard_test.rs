@@ -16,7 +16,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>) {
 #[test]
 fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result<()> {
     let (dir, repo) = new_repo();
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,
@@ -81,7 +81,7 @@ fn projection_delete_marks_watcher_ignore() -> anyhow::Result<()> {
 #[test]
 fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
     let (dir, repo) = new_repo();
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,

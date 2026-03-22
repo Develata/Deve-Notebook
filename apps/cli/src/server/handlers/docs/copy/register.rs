@@ -172,7 +172,7 @@ fn register_file(ctx: CopyRegisterCtx<'_>, src_rel: &str, dest_rel: &str) -> boo
     };
     let doc_id =
         match create_file_from_content(ctx.state, ctx.scope, dest_rel, &content, "local_copy") {
-            Ok(doc_id) => doc_id,
+            Ok((doc_id, _ops)) => doc_id,
             Err(err) => {
                 tracing::error!("Ledger 注册失败 {}: {:?}", dest_rel, err);
                 errors::storage_persist_failed_scoped(

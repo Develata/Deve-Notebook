@@ -32,7 +32,7 @@ fn write_repo_info(db: &redb::Database, info: &RepoInfo) {
 }
 
 fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::DocId {
-    let doc_id = repo
+    let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo_name, "notes/extra.md", None, "test")
         .expect("create extra file");
     repo.append_generated_op_in_local_repo(repo_name, doc_id, PeerId::new("local"), |seq| {

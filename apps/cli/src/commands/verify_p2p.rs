@@ -55,7 +55,7 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     let doc_path = "hello.md";
     let doc_content = "Hello from Peer A";
 
-    let doc_id =
+    let (doc_id, _ops) =
         repo_a.apply_file_structure_in_local_repo(&repo_a_name, doc_path, None, "peer_a_sim")?;
     let op = Op::Insert {
         pos: 0,

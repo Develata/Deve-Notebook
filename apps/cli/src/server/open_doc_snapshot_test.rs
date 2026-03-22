@@ -40,7 +40,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
 }
 
 fn seed_doc(state: &Arc<AppState>, path: &str, content: &str) -> anyhow::Result<DocId> {
-    let doc_id = state
+    let (doc_id, _ops) = state
         .repo
         .apply_file_structure_in_local_repo("default", path, None, "test")?;
     state.repo.append_generated_op_in_local_repo(

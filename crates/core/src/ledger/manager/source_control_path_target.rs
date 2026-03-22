@@ -99,7 +99,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
         repo.set_vault_root(dir.path().join("vault"));
-        let doc_id = repo.apply_file_structure_in_local_repo(
+        let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
             repo.local_repo_name(),
             "notes/a.md",
             None,
@@ -131,7 +131,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
         repo.set_vault_root(dir.path().join("vault"));
-        let doc_id = repo.apply_file_structure_in_local_repo(
+        let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
             repo.local_repo_name(),
             "notes/a.md",
             None,
@@ -207,7 +207,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
         repo.set_vault_root(dir.path().join("vault"));
-        let doc_id = repo.apply_file_structure_in_local_repo(
+        let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
             repo.local_repo_name(),
             "notes/a.md",
             None,

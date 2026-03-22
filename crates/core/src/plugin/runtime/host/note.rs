@@ -69,8 +69,9 @@ fn write_managed_note(path: &Path, content: &str) -> Result<()> {
 
 fn ensure_managed_note_target(path: &Path) -> Result<DocId> {
     let (repo_name, repo_path) = managed_target_parts(path)?;
-    super::repo_manager()?
-        .apply_file_structure_in_local_repo(&repo_name, &repo_path, None, "plugin")
+    let (doc_id, _ops) = super::repo_manager()?
+        .apply_file_structure_in_local_repo(&repo_name, &repo_path, None, "plugin")?;
+    Ok(doc_id)
 }
 
 fn resolve_managed_note_target(path: &Path) -> Result<DocId> {

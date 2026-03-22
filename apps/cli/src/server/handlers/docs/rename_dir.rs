@@ -1,5 +1,5 @@
 use super::errors;
-use super::node_helpers::broadcast_local_projection_refresh;
+use super::node_helpers::broadcast_incremental_tree_deltas;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -16,13 +16,13 @@ pub(super) async fn handle_dir_rename(
     dst_name: &str,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    match state.repo.apply_dir_rename_structure_in_local_repo(
+    let ops = match state.repo.apply_dir_rename_structure_in_local_repo(
         &scope.repo_name,
         old_path,
         dst_name,
         "local_rename",
     ) {
-        Ok(Some(_)) => {}
+        Ok(Some((_node_id, ops))) => ops,
         Ok(None) => {
             errors::storage_not_found_scoped(
                 ch,
@@ -53,7 +53,7 @@ pub(super) async fn handle_dir_rename(
         );
         return;
     }
-    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
+    if let Err(e) = broadcast_incremental_tree_deltas(state, ch, session, scope, &ops) {
         tracing::error!("目录重命名后刷新视图失败: {:?}", e);
         errors::projection_refresh_failed_scoped(
             ch,

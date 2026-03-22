@@ -148,7 +148,7 @@ fn apply_remote_snapshot_replaces_stale_shadow_repo_contents() {
         .expect("present")
         .uuid;
     let local_name = engine.repo.local_repo_name().to_string();
-    let live_doc = engine
+    let (live_doc, _ops) = engine
         .repo
         .apply_file_structure_in_local_repo(&local_name, "notes/live.md", None, "test")
         .expect("create local file");

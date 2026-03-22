@@ -17,7 +17,7 @@ fn new_repo() -> Result<(TempDir, RepoManager)> {
 #[test]
 fn test_doc_ops_queries_fail_closed_on_dangling_index() -> Result<()> {
     let (_tmp_dir, repo) = new_repo()?;
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,
@@ -65,7 +65,7 @@ fn test_doc_ops_queries_fail_closed_on_dangling_index() -> Result<()> {
 #[test]
 fn test_node_ops_queries_fail_closed_on_dangling_index() -> Result<()> {
     let (_tmp_dir, repo) = new_repo()?;
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,

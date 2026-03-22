@@ -13,10 +13,10 @@ impl RepoManager {
         path: &str,
         doc_id_hint: Option<DocId>,
         peer_label: &str,
-    ) -> Result<DocId> {
+    ) -> Result<(DocId, Vec<StructureOp>)> {
         let plan = commit_structure_plan::plan_file_upsert(self, repo_name, path, doc_id_hint)?;
         self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
-        Ok(plan.doc_id)
+        Ok((plan.doc_id, plan.ops))
     }
 
     pub fn apply_file_delete_structure_in_local_repo(
@@ -25,13 +25,13 @@ impl RepoManager {
         path: &str,
         doc_id_hint: Option<DocId>,
         peer_label: &str,
-    ) -> Result<Option<DocId>> {
+    ) -> Result<Option<(DocId, Vec<StructureOp>)>> {
         let Some(plan) = commit_structure_plan::plan_delete(self, repo_name, path, doc_id_hint)?
         else {
             return Ok(None);
         };
         self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
-        Ok(Some(plan.doc_id))
+        Ok(Some((plan.doc_id, plan.ops)))
     }
 
     pub fn apply_dir_create_structure_in_local_repo(
@@ -39,10 +39,10 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
         peer_label: &str,
-    ) -> Result<NodeId> {
+    ) -> Result<(NodeId, Vec<StructureOp>)> {
         let plan = dir_structure_plan::plan_create(self, repo_name, path)?;
         self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
-        Ok(plan.node_id)
+        Ok((plan.node_id, plan.ops))
     }
 
     pub fn apply_dir_rename_structure_in_local_repo(
@@ -51,13 +51,13 @@ impl RepoManager {
         old_path: &str,
         new_path: &str,
         peer_label: &str,
-    ) -> Result<Option<NodeId>> {
+    ) -> Result<Option<(NodeId, Vec<StructureOp>)>> {
         let Some(plan) = dir_structure_plan::plan_rename(self, repo_name, old_path, new_path)?
         else {
             return Ok(None);
         };
         self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
-        Ok(Some(plan.node_id))
+        Ok(Some((plan.node_id, plan.ops)))
     }
 
     pub fn apply_dir_delete_structure_in_local_repo(
@@ -65,12 +65,12 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
         peer_label: &str,
-    ) -> Result<Option<NodeId>> {
+    ) -> Result<Option<(NodeId, Vec<StructureOp>)>> {
         let Some(plan) = dir_structure_plan::plan_delete(self, repo_name, path)? else {
             return Ok(None);
         };
         self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
-        Ok(Some(plan.node_id))
+        Ok(Some((plan.node_id, plan.ops)))
     }
 
     /// Invariants:

@@ -2,7 +2,7 @@
 
 use super::checked_existing_is_dir;
 use super::errors;
-use super::node_helpers::broadcast_local_projection_refresh;
+use super::node_helpers::broadcast_incremental_tree_deltas;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -37,19 +37,22 @@ pub async fn handle_folder_create(
             return;
         }
     }
-    if let Err(e) = state.repo.apply_dir_create_structure_in_local_repo(
+    let ops = match state.repo.apply_dir_create_structure_in_local_repo(
         &scope.repo_name,
         folder_path,
         "local_create",
     ) {
-        tracing::error!("目录结构事实追加失败: {:?}", e);
-        errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to create folder: {}", e),
-            scope_nonce,
-        );
-        return;
-    }
+        Ok((_node_id, ops)) => ops,
+        Err(e) => {
+            tracing::error!("目录结构事实追加失败: {:?}", e);
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to create folder: {}", e),
+                scope_nonce,
+            );
+            return;
+        }
+    };
     if let Err(e) = state
         .sync_manager
         .rebuild_projection_local_repo(&scope.repo_name)
@@ -62,7 +65,7 @@ pub async fn handle_folder_create(
         );
         return;
     }
-    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
+    if let Err(e) = broadcast_incremental_tree_deltas(state, ch, session, scope, &ops) {
         tracing::error!("目录创建后刷新视图失败: {:?}", e);
         errors::projection_refresh_failed_scoped(
             ch,

@@ -13,7 +13,7 @@ fn new_repo() -> (TempDir, RepoManager) {
 #[test]
 fn list_docs_prefers_node_projection_over_stale_metadata_path() {
     let (_dir, repo) = new_repo();
-    let doc_id = repo
+    let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
         .expect("create file structure");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {

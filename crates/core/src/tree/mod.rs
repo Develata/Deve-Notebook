@@ -22,6 +22,9 @@ mod from_docs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod manager;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tree_delta_bridge;
+
 // 重导出常用类型
 pub use delta::TreeDelta;
 pub use node::FileNode;

@@ -3,7 +3,7 @@
 use super::checked_exists;
 use super::errors;
 use super::file_register::create_file_from_content;
-use super::node_helpers::broadcast_local_projection_refresh;
+use super::node_helpers::broadcast_incremental_tree_deltas;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -65,17 +65,20 @@ pub async fn handle_file_create(
         }
     }
 
-    if let Err(e) = create_file_from_content(state, scope, filename, "", "local_create") {
-        tracing::error!("文件创建失败: {:?}", e);
-        errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to create file: {}", e),
-            scope_nonce,
-        );
-        return;
-    }
+    let ops = match create_file_from_content(state, scope, filename, "", "local_create") {
+        Ok((_doc_id, ops)) => ops,
+        Err(e) => {
+            tracing::error!("文件创建失败: {:?}", e);
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to create file: {}", e),
+                scope_nonce,
+            );
+            return;
+        }
+    };
 
-    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
+    if let Err(e) = broadcast_incremental_tree_deltas(state, ch, session, scope, &ops) {
         tracing::error!("文件创建后刷新视图失败: {:?}", e);
         errors::projection_refresh_failed_scoped(
             ch,

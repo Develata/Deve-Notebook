@@ -12,7 +12,7 @@ fn new_repo() -> (TempDir, RepoManager) {
 #[test]
 fn repo_manager_reads_structure_ops_by_node_for_local_and_remote() {
     let (_dir, repo) = new_repo();
-    let local_node = repo
+    let (local_node, _ops) = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes", "test")
         .expect("create local dir");
     assert_eq!(

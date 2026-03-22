@@ -48,7 +48,7 @@ fn seed_doc(
     path: &str,
     content: &str,
 ) -> anyhow::Result<DocId> {
-    let doc_id = state
+    let (doc_id, _ops) = state
         .repo
         .apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
     state.repo.append_generated_op_in_local_repo(

@@ -14,7 +14,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>) {
 }
 
 fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) -> deve_core::models::DocId {
-    let doc_id = repo
+    let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), doc_path, None, "test")
         .expect("create file");
     repo.append_generated_op_in_local_repo(

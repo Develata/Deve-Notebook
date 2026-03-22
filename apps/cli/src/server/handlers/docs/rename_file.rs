@@ -1,5 +1,5 @@
 use super::errors;
-use super::node_helpers::broadcast_local_projection_refresh;
+use super::node_helpers::broadcast_incremental_tree_deltas;
 use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -38,20 +38,23 @@ pub(super) async fn handle_file_rename(
             return;
         }
     };
-    if let Err(e) = state.repo.apply_file_structure_in_local_repo(
+    let ops = match state.repo.apply_file_structure_in_local_repo(
         &scope.repo_name,
         dst_path,
         Some(doc_id),
         "local_rename",
     ) {
-        tracing::error!("重命名结构事实失败: {:?}", e);
-        errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to rename file: {}", e),
-            scope_nonce,
-        );
-        return;
-    }
+        Ok((_doc_id, ops)) => ops,
+        Err(e) => {
+            tracing::error!("重命名结构事实失败: {:?}", e);
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to rename file: {}", e),
+                scope_nonce,
+            );
+            return;
+        }
+    };
     if let Err(e) = state
         .sync_manager
         .persist_doc_in_local_repo(&scope.repo_name, doc_id)
@@ -76,7 +79,7 @@ pub(super) async fn handle_file_rename(
         );
         return;
     }
-    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, scope) {
+    if let Err(e) = broadcast_incremental_tree_deltas(state, ch, session, scope, &ops) {
         tracing::error!("文件重命名后刷新视图失败: {:?}", e);
         errors::projection_refresh_failed_scoped(
             ch,

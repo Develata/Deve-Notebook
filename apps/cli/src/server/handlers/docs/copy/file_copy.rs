@@ -40,7 +40,7 @@ pub(super) fn copy_file(
     };
     let doc_id =
         match create_file_from_content(ctx.state, ctx.scope, dest_path, &content, "local_copy") {
-            Ok(doc_id) => doc_id,
+            Ok((doc_id, _ops)) => doc_id,
             Err(err) => {
                 tracing::error!("复制文档注册失败 {}: {:?}", dest_path, err);
                 errors::storage_persist_failed_scoped(

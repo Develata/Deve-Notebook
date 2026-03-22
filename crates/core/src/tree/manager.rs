@@ -114,6 +114,39 @@ impl TreeManager {
         TreeDelta::add_folder(node_id, parent_id, name, path)
     }
 
+    /// 计算子节点的完整路径
+    pub fn compute_child_path(&self, parent_id: Option<NodeId>, name: &str) -> String {
+        match parent_id.and_then(|pid| self.nodes.get(&pid)) {
+            Some(parent) if !parent.path_cache.is_empty() => {
+                format!("{}/{}", parent.path_cache, name)
+            }
+            _ => name.to_string(),
+        }
+    }
+
+    /// 仅重命名节点 (不移动)
+    pub fn rename_node(&mut self, node_id: NodeId, new_name: String) -> TreeDelta {
+        let (parent_id, old_path) = match self.nodes.get(&node_id) {
+            Some(info) => (info.parent_id, info.path_cache.clone()),
+            None => return TreeDelta::update(node_id, None, new_name, String::new()),
+        };
+        let new_path = match old_path.rsplit_once('/') {
+            Some((prefix, _)) => format!("{}/{}", prefix, new_name),
+            None => new_name.clone(),
+        };
+        self.update_node(node_id, parent_id, new_name, new_path)
+    }
+
+    /// 仅移动节点 (不重命名)
+    pub fn move_node(&mut self, node_id: NodeId, new_parent_id: Option<NodeId>) -> TreeDelta {
+        let name = match self.nodes.get(&node_id) {
+            Some(info) => info.name.clone(),
+            None => return TreeDelta::update(node_id, new_parent_id, String::new(), String::new()),
+        };
+        let new_path = self.compute_child_path(new_parent_id, &name);
+        self.update_node(node_id, new_parent_id, name, new_path)
+    }
+
     /// 删除节点，返回 Delta
     pub fn remove(&mut self, node_id: NodeId) -> TreeDelta {
         remove_iterative(&mut self.nodes, node_id);

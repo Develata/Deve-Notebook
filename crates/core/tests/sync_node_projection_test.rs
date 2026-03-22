@@ -13,7 +13,7 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
 #[test]
 fn persist_doc_prefers_node_projection_path() {
     let (dir, repo) = new_repo();
-    let doc_id = repo
+    let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
         .expect("create file structure");
     repo.append_generated_op_in_local_repo(

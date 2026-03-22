@@ -11,7 +11,7 @@ impl RepoManager {
         normalized_path: &str,
         doc_id_hint: Option<crate::models::DocId>,
     ) -> Result<()> {
-        let doc_id = self.apply_file_structure_in_local_repo(
+        let (doc_id, _ops) = self.apply_file_structure_in_local_repo(
             repo_name,
             normalized_path,
             doc_id_hint,
@@ -36,7 +36,7 @@ impl RepoManager {
         normalized_path: &str,
         doc_id_hint: Option<crate::models::DocId>,
     ) -> Result<()> {
-        let Some(doc_id) = self.apply_file_delete_structure_in_local_repo(
+        let Some((doc_id, _ops)) = self.apply_file_delete_structure_in_local_repo(
             repo_name,
             normalized_path,
             doc_id_hint,

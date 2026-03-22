@@ -13,7 +13,7 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
 #[test]
 fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow::Result<()> {
     let (dir, repo) = new_repo();
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,

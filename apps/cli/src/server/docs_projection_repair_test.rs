@@ -41,7 +41,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
 }
 
 fn seed_file(state: &Arc<AppState>, path: &str, content: &str) -> anyhow::Result<()> {
-    let doc_id = state.repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = state.repo.apply_file_structure_in_local_repo(
         state.repo.local_repo_name(),
         path,
         None,

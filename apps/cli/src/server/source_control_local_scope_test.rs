@@ -174,7 +174,7 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         Some(tracked_doc_id),
         "test",
     )?;
-    let reused_doc_id = state.repo.apply_file_structure_in_local_repo(
+    let (reused_doc_id, _ops) = state.repo.apply_file_structure_in_local_repo(
         "default",
         "notes/reused.md",
         None,

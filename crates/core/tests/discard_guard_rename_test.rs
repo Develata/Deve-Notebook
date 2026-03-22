@@ -15,7 +15,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>) {
 }
 
 fn seed_ledger_doc(repo: &RepoManager) -> anyhow::Result<DocId> {
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,
@@ -107,7 +107,7 @@ fn repo_discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> 
 #[test]
 fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
     let (dir, repo) = new_repo();
-    let doc_id = repo.apply_file_structure_in_local_repo(
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,

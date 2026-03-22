@@ -11,7 +11,7 @@ fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Resu
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
     repo.set_vault_root(dir.path().join("vault"));
-    let doc_id =
+    let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo("default", "notes/live.md", None, "test")?;
     repo.run_on_local_repo("default", |db| {
         pending_fs::upsert(

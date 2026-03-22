@@ -5,8 +5,8 @@
 //! - 任一会话只能读写其当前 repo 对应的树状态。
 
 use anyhow::{Result, anyhow};
-use deve_core::models::{NodeId, NodeMeta, PeerId, RepoId};
-use deve_core::tree::{TreeDelta, TreeManager};
+use deve_core::models::{NodeId, NodeMeta, PeerId, RepoId, StructureOp};
+use deve_core::tree::{TreeDelta, TreeManager, tree_delta_bridge};
 use std::collections::HashMap;
 use std::sync::{RwLock, RwLockWriteGuard};
 
@@ -42,6 +42,17 @@ impl RepoTreeRegistry {
         self.with_tree_mut(repo_id, branch, |tree| {
             tree.init_from_nodes(nodes);
             tree.build_init_delta()
+        })
+    }
+
+    pub fn apply_structure_ops(
+        &self,
+        repo_id: RepoId,
+        branch: Option<&PeerId>,
+        ops: &[StructureOp],
+    ) -> Result<Vec<TreeDelta>> {
+        self.with_tree_mut(repo_id, branch, |tree| {
+            tree_delta_bridge::apply_structure_ops(tree, ops)
         })
     }
 
