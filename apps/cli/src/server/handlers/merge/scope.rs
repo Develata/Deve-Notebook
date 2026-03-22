@@ -54,7 +54,7 @@ pub(super) fn resolve_write_repo_id(
     Some(scope.repo_id)
 }
 
-fn resolve_merge_scope(
+pub(super) fn resolve_merge_scope(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,

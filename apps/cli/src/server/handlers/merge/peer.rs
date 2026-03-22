@@ -1,6 +1,4 @@
-use crate::server::repo_scope::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo_and_sync,
-};
+use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::MergeResult;
 use deve_core::models::{DocId, PeerId};
@@ -10,6 +8,7 @@ use std::sync::Arc;
 
 use super::errors;
 use super::peer_support::{resolve_doc_path, resolve_local_merge_scope};
+use super::scope::resolve_merge_scope;
 
 /// Invariants:
 /// - 合并目标必须是当前会话解析出的本地 repo。
@@ -22,12 +21,8 @@ pub(super) async fn handle_merge_peer(
     doc_id: DocId,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(e) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(e), scope_nonce);
-            return;
-        }
+    let Some(scope) = resolve_merge_scope(state, ch, session, scope_nonce) else {
+        return;
     };
     let Some(local_scope) = resolve_local_merge_scope(state, scope, ch, scope_nonce) else {
         return;
