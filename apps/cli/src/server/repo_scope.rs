@@ -44,6 +44,13 @@ pub struct ResolvedRepo {
     pub branch: Option<PeerId>,
 }
 
+pub fn stale_unbound_remote_scope_detail(branch: &PeerId) -> String {
+    stale_remote_scope_detail(format!(
+        "Active repository not selected for remote branch {} while runtime binding was still present",
+        branch
+    ))
+}
+
 /// 仅允许首次本地引导时回退到主本地库。
 /// Invariants: 只在 `active_branch == None` 时允许默认回退；引导完成后统一走 `resolve_session_repo`。
 pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
@@ -68,6 +75,9 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
         None => {
             if let Some(branch) = session.active_branch.as_ref() {
                 shadow_scope::ensure_remote_branch_available(state, branch)?;
+                if session.has_runtime_scope_binding() {
+                    return Err(anyhow!("{}", stale_unbound_remote_scope_detail(branch)));
+                }
             }
             return Err(anyhow!(
                 "Active repository not selected for current session"
@@ -87,6 +97,25 @@ pub fn resolve_session_repo_and_sync(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
         Err(err) => {
+            let err = if session.active_branch.is_some()
+                && session.active_repo.is_none()
+                && session.active_repo_id.is_none()
+                && session.has_runtime_scope_binding()
+                && map_repo_scope_error(anyhow!(err.to_string())).code
+                    == ServerErrorCode::SyncRepoUnbound
+            {
+                anyhow!(
+                    "{}",
+                    stale_unbound_remote_scope_detail(
+                        session
+                            .active_branch
+                            .as_ref()
+                            .expect("checked active branch")
+                    )
+                )
+            } else {
+                err
+            };
             let mapped = map_repo_scope_error(anyhow!(err.to_string()));
             let clear_stale_scope = if session.active_branch.is_some() {
                 should_clear_stale_remote_scope(&mapped)

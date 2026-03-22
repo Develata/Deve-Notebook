@@ -1,4 +1,6 @@
-use crate::server::repo_scope::{ResolvedRepo, resolve_session_repo_and_sync};
+use crate::server::repo_scope::{
+    ResolvedRepo, resolve_session_repo_and_sync, stale_unbound_remote_scope_detail,
+};
 use crate::server::shadow_scope;
 use crate::server::{AppState, session::WsSession};
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -19,6 +21,19 @@ pub fn resolve_current_repo_scope(
                 session.clear_sync_binding();
             }
             return Err(error);
+        }
+        if session.active_branch.is_some() && session.has_runtime_scope_binding() {
+            session.clear_active_db();
+            session.clear_sync_binding();
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                stale_unbound_remote_scope_detail(
+                    session
+                        .active_branch
+                        .as_ref()
+                        .expect("checked active branch"),
+                ),
+            ));
         }
         if session.active_branch.is_some() || session.has_runtime_scope_binding() {
             session.clear_active_db();

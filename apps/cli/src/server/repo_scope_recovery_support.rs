@@ -50,7 +50,7 @@ pub(super) fn seed_remote_shadow(
     let info = deve_core::ledger::RepoInfo {
         uuid: repo_id,
         name: repo_name.to_string(),
-        url: None,
+        url: Some(format!("urn:test:{}", repo_id)),
     };
     state.repo.ensure_shadow_repo_info(peer_id, &info)?;
     Ok(())

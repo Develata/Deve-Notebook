@@ -6,10 +6,13 @@ use crate::server::handlers::switcher::{
 };
 use crate::server::repo_scope::{
     bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
+    stale_unbound_remote_scope_detail,
 };
 use crate::server::session::WsSession;
+use crate::server::shadow_scope;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 pub async fn handle_list_docs(
@@ -20,6 +23,34 @@ pub async fn handle_list_docs(
     switch_nonce: Option<u64>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    if let Some(branch) = session.active_branch.as_ref().cloned()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+    {
+        if let Err(error) = shadow_scope::map_remote_branch_availability(state, &branch) {
+            if shadow_scope::should_clear_missing_remote_branch(&error) {
+                shadow_scope::clear_stale_remote_branch(session);
+            } else {
+                session.clear_active_db();
+                session.clear_sync_binding();
+            }
+            ch.send_protocol_error_with_scope_and_switch_nonce(error, scope_nonce, switch_nonce);
+            return;
+        }
+        if session.has_runtime_scope_binding() {
+            session.clear_active_db();
+            session.clear_sync_binding();
+            ch.send_protocol_error_with_scope_and_switch_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::ScRepoContextInvalid,
+                    stale_unbound_remote_scope_detail(&branch),
+                ),
+                scope_nonce,
+                switch_nonce,
+            );
+            return;
+        }
+    }
     let resolved = if session.active_branch.is_none()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()

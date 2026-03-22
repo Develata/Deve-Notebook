@@ -5,8 +5,8 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::repo_scope::resolve_session_repo_and_sync;
+use crate::server::repo_scope::{map_repo_scope_error, stale_unbound_remote_scope_detail};
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
 use anyhow::anyhow;
@@ -62,14 +62,7 @@ pub async fn handle_list_repos(
     request_id: Option<String>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if let Some(branch) = session.active_branch.as_ref()
-        && session.active_repo.is_none()
-        && session.active_repo_id.is_none()
-        && !session.has_runtime_scope_binding()
-        && let Err(error) = shadow_scope::map_remote_branch_availability(state, branch)
-    {
-        shadow_scope::clear_stale_remote_branch(session);
-        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+    if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
         return;
     }
     if (session.active_repo.is_some()
@@ -95,6 +88,38 @@ pub async fn handle_list_repos(
             send_listing_error(ch, format!("Failed to list repos: {}", e), scope_nonce);
         }
     }
+}
+
+pub(super) fn precheck_remote_unbound_scope(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    scope_nonce: Option<u64>,
+) -> bool {
+    let Some(branch) = session.active_branch.as_ref().cloned() else {
+        return false;
+    };
+    if session.active_repo.is_some() || session.active_repo_id.is_some() {
+        return false;
+    }
+    if let Err(error) = shadow_scope::map_remote_branch_availability(state, &branch) {
+        shadow_scope::clear_stale_remote_branch(session);
+        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+        return true;
+    }
+    if session.has_runtime_scope_binding() {
+        session.clear_active_db();
+        session.clear_sync_binding();
+        ch.send_protocol_error_with_scope_nonce(
+            ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                stale_unbound_remote_scope_detail(&branch),
+            ),
+            scope_nonce,
+        );
+        return true;
+    }
+    false
 }
 
 fn send_listing_error(ch: &DualChannel, detail: impl Into<String>, scope_nonce: Option<u64>) {

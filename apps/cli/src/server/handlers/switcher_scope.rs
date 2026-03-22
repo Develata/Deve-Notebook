@@ -1,6 +1,7 @@
 use crate::server::AppState;
 use crate::server::repo_scope::{
     ResolvedRepo, map_repo_scope_error, resolve_session_repo, should_clear_stale_remote_scope,
+    stale_unbound_remote_scope_detail,
 };
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
@@ -19,7 +20,7 @@ pub(super) fn resolve_current_branch_switch_context(
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => Some(scope),
         Err(err) => {
-            let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
+            let mapped = map_current_scope_error(session, err);
             if can_ignore_missing_current_scope(session, mapped.code) {
                 if let Some(branch) = session.active_branch.as_ref() {
                     shadow_scope::map_remote_branch_availability(state, branch)?;
@@ -86,6 +87,28 @@ fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) 
         code,
         ServerErrorCode::StorageNotFound | ServerErrorCode::SyncRepoUnbound
     )
+}
+
+fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerError {
+    if session.active_branch.is_some()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+        && has_runtime_scope_binding(session)
+    {
+        let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
+        if mapped.code == ServerErrorCode::SyncRepoUnbound {
+            return ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                stale_unbound_remote_scope_detail(
+                    session
+                        .active_branch
+                        .as_ref()
+                        .expect("checked active branch"),
+                ),
+            );
+        }
+    }
+    map_repo_scope_error(anyhow::anyhow!(err.to_string()))
 }
 
 fn recover_local_repo_url_from_hint(

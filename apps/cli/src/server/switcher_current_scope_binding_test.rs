@@ -111,7 +111,13 @@ async fn switch_branch_rejects_unbound_remote_scope_with_stale_runtime_binding()
             switch_nonce,
             ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
+            );
             assert_eq!(switch_nonce, Some(82));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
