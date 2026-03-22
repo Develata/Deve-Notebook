@@ -12,6 +12,7 @@
 //! 监听器在阻塞线程中运行，并将事件转发给同步管理器。
 
 use crate::sync::SyncManager;
+use crate::watcher_ignore::IgnoreRules;
 use anyhow::{Context, Result};
 use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
 use std::path::Path;
@@ -33,14 +34,17 @@ pub enum FsEventType {
 pub struct Watcher {
     sync_manager: Arc<SyncManager>,
     root_path: std::path::PathBuf,
+    ignore_rules: IgnoreRules,
     on_event: Option<Box<dyn Fn(FsEventType) + Send + Sync>>,
 }
 
 impl Watcher {
     pub fn new(sync_manager: Arc<SyncManager>, root_path: std::path::PathBuf) -> Self {
+        let ignore_rules = IgnoreRules::load(&root_path);
         Self {
             sync_manager,
             root_path,
+            ignore_rules,
             on_event: None,
         }
     }
@@ -87,6 +91,11 @@ impl Watcher {
                 if path_str.starts_with(".git")
                     || crate::utils::notegit::is_internal_repo_path(&path_str)
                 {
+                    continue;
+                }
+
+                // 用户自定义忽略规则 (.deveignore)
+                if self.ignore_rules.is_ignored(&path_str) {
                     continue;
                 }
 

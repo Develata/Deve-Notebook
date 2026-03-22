@@ -78,3 +78,46 @@ fn watcher_fails_closed_on_unstatable_dir_event() {
             || err.to_string().contains("Permission denied")
     );
 }
+
+#[test]
+fn deveignore_skips_matching_file_events() {
+    let (_dir, repo, vault) = new_repo();
+    std::fs::create_dir_all(vault.join("default")).expect("mkdir default");
+    std::fs::write(vault.join(".deveignore"), "*.tmp\n").expect("write .deveignore");
+    std::fs::write(vault.join("default/scratch.tmp"), "x").expect("write tmp");
+
+    let sync = Arc::new(SyncManager::new(repo, vault.clone()));
+    let watcher = Watcher::new(sync, vault.clone());
+
+    // .tmp file should be silently ignored (no error, no processing)
+    watcher
+        .process_events(
+            &[DebouncedEvent::new(
+                vault.join("default/scratch.tmp"),
+                DebouncedEventKind::Any,
+            )],
+            &vault,
+        )
+        .expect("ignored file must not cause error");
+}
+
+#[test]
+fn deveignore_allows_non_matching_md_files() {
+    let (_dir, repo, vault) = new_repo();
+    std::fs::create_dir_all(vault.join("default")).expect("mkdir default");
+    std::fs::write(vault.join(".deveignore"), "*.tmp\n").expect("write .deveignore");
+
+    let sync = Arc::new(SyncManager::new(repo, vault.clone()));
+    let watcher = Watcher::new(sync, vault.clone());
+
+    // .md file not matching ignore rules should pass through (may produce sync event or not)
+    watcher
+        .process_events(
+            &[DebouncedEvent::new(
+                vault.join("default/keep.md"),
+                DebouncedEventKind::Any,
+            )],
+            &vault,
+        )
+        .expect("non-ignored .md file must not error");
+}

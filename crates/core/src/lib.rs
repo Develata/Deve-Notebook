@@ -38,7 +38,9 @@ pub mod utils;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod vfs;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod watcher; // [NEW] Context Engine (Tree, etc.)
+pub mod watcher;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod watcher_ignore;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;
