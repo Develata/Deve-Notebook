@@ -152,6 +152,29 @@ async fn create_doc_ignores_stale_remote_readonly_binding_after_scope_recovery()
     Ok(())
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_without_repo_selection_bootstraps_single_repo() -> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    let (uni_tx, _uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_create_doc(&state, &ch, &mut session, "notes/bootstrapped.md".into()).await;
+
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(repo_id));
+    assert!(
+        state.repo.get_docid("notes/bootstrapped.md")?.is_some(),
+        "single local repo writes should bootstrap before create"
+    );
+    assert!(
+        dir.path()
+            .join("vault/default/notes/bootstrapped.md")
+            .exists()
+    );
+    Ok(())
+}
+
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_doc_fails_closed_when_target_path_is_unstatable() -> anyhow::Result<()> {

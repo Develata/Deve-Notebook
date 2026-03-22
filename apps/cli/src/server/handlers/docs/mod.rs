@@ -31,7 +31,7 @@ pub use rename::{handle_move_doc, handle_rename_doc};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo_and_sync,
+    ResolvedRepo, bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
 };
 use crate::server::session::WsSession;
 use anyhow::Context;
@@ -134,6 +134,21 @@ pub(super) fn resolve_local_write_scope(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<ResolvedRepo> {
+    if session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+        && !session.has_runtime_scope_binding()
+    {
+        let scope = match bootstrap_local_repo(state, session) {
+            Ok(scope) => scope,
+            Err(err) => {
+                ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
+                return None;
+            }
+        };
+        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        return Some(scope);
+    }
     let scope = match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => scope,
         Err(err) => {
