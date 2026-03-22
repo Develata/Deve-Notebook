@@ -4,7 +4,7 @@ use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use anyhow::Result;
 
 /// 重建结果：用于调用方决定是否保存快照、上报版本等。
-pub(crate) struct RebuildResult {
+pub struct RebuildResult {
     pub content: String,
     pub base_seq: u64,
     pub max_seq: u64,
@@ -21,7 +21,7 @@ pub(crate) struct RebuildResult {
 ///
 /// Post-conditions:
 /// - 返回内容等价于从空状态依次应用该文档全部操作后的结果。
-pub(crate) fn rebuild_local_doc_in_repo(
+pub fn rebuild_local_doc_in_repo(
     repo: &RepoManager,
     repo_name: &str,
     doc_id: DocId,

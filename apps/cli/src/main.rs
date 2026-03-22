@@ -78,6 +78,11 @@ pub(crate) enum Commands {
         #[arg(long)]
         repo: Option<String>,
     },
+    /// Recover vault files from ledger data
+    Recover {
+        #[arg(long)]
+        repo: Option<String>,
+    },
     /// Repair known local corruption from backups and quarantine invalid shadows
     Repair {
         #[arg(long, default_value = "Vault_old/vault")]

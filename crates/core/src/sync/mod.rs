@@ -26,7 +26,7 @@ mod projection_io;
 mod projection_plan;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod rebuild;
+pub mod rebuild;
 #[cfg(not(target_arch = "wasm32"))]
 mod rebuild_projection;
 #[cfg(not(target_arch = "wasm32"))]
