@@ -21,6 +21,7 @@ mod repo_scope_workspace;
 
 use crate::server::AppState;
 use crate::server::session::WsSession;
+use crate::server::shadow_scope;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerErrorCode;
@@ -62,8 +63,17 @@ pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
 }
 
 pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
-    let repo_name = resolve_repo_name_from_session(state, session)?
-        .ok_or_else(|| anyhow!("Active repository not selected for current session"))?;
+    let repo_name = match resolve_repo_name_from_session(state, session)? {
+        Some(repo_name) => repo_name,
+        None => {
+            if let Some(branch) = session.active_branch.as_ref() {
+                shadow_scope::ensure_remote_branch_available(state, branch)?;
+            }
+            return Err(anyhow!(
+                "Active repository not selected for current session"
+            ));
+        }
+    };
     let branch = session.active_branch.clone();
     resolve_repo_by_name(state, branch, session.active_repo_id, repo_name)
 }

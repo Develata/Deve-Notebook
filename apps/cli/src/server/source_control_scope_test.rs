@@ -237,7 +237,13 @@ async fn remote_changes_without_repo_selection_clear_stale_db_and_sync_binding()
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(
                 error.code,
-                deve_core::protocol::ServerErrorCode::ScRepoNotSelected
+                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+            );
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
             );
         }
         other => panic!("expected ProtocolError, got {:?}", other),

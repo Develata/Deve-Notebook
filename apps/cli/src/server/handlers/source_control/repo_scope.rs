@@ -1,4 +1,5 @@
 use crate::server::repo_scope::{ResolvedRepo, resolve_session_repo_and_sync};
+use crate::server::shadow_scope;
 use crate::server::{AppState, session::WsSession};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
@@ -8,6 +9,17 @@ pub fn resolve_current_repo_scope(
     session: &mut WsSession,
 ) -> Result<ResolvedRepo, ServerError> {
     if session.active_repo.is_none() && session.active_repo_id.is_none() {
+        if let Some(branch) = session.active_branch.as_ref()
+            && let Err(error) = shadow_scope::map_remote_branch_availability(state, branch)
+        {
+            if shadow_scope::should_clear_missing_remote_branch(&error) {
+                shadow_scope::clear_stale_remote_branch(session);
+            } else {
+                session.clear_active_db();
+                session.clear_sync_binding();
+            }
+            return Err(error);
+        }
         if session.active_branch.is_some() || session.has_runtime_scope_binding() {
             session.clear_active_db();
             session.clear_sync_binding();
