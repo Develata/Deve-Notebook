@@ -41,7 +41,10 @@ fn get_or_create_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
 
     assert!(engine.get_or_create(repo_id).is_none());
     assert!(engine.get(repo_id).is_none());
-    assert!(engine.loaded_repos().is_empty());
+    let err = engine
+        .loaded_repos()
+        .expect_err("loaded repos must fail closed after lock poison");
+    assert!(err.to_string().contains("poisoned"));
     Ok(())
 }
 
@@ -58,7 +61,29 @@ fn clone_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
     }));
 
     let cloned = engine.clone();
-    assert!(cloned.loaded_repos().is_empty());
+    let err = cloned
+        .loaded_repos()
+        .expect_err("cloned registry must fail closed after poison");
+    assert!(err.to_string().contains("poisoned"));
+    Ok(())
+}
+
+#[test]
+fn clear_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_vault_root(&vault);
+    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _guard = engine.engines.write().expect("write lock");
+        panic!("poison repo scoped sync engine");
+    }));
+
+    let err = engine
+        .clear()
+        .expect_err("clear must fail closed after lock poison");
+    assert!(err.to_string().contains("poisoned"));
     Ok(())
 }
 

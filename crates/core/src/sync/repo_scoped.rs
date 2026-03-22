@@ -2,51 +2,31 @@
 //! # Repo-Scoped 同步引擎管理器
 //!
 //! 管理多个仓库的 SyncEngine 实例，每个仓库拥有独立的同步状态。
+#[path = "repo_scoped_lock.rs"]
+mod lock;
+
 use crate::models::{PeerId, RepoId};
 use crate::security::RepoKey;
 use crate::sync::engine::SyncEngine;
 use anyhow::{Result, anyhow};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
 
-/// Repo-Scoped 同步引擎管理器
+/// Repo-Scoped 同步引擎管理器。
 ///
-/// **功能**:
-/// - 为每个仓库维护独立的 SyncEngine 实例
-/// - 确保不同仓库的同步状态完全隔离 (INV-1)
-///
-/// ## 不变量 (Invariants)
-///
-/// - 每个 `RepoId` 对应唯一的 `SyncEngine` 实例
-/// - 仓库间不会共享 Version Vector 或 pending ops
-/// - 自动按需创建 SyncEngine，无需预先初始化所有仓库
+/// 不变量:
+/// - 每个 `RepoId` 对应唯一的 `SyncEngine`
+/// - 仓库间不同步状态完全隔离
+/// - registry 一旦锁污染，后续必须 fail-closed
 pub struct RepoScopedSyncEngine {
     local_peer_id: PeerId,
     repo: Arc<crate::ledger::RepoManager>,
     sync_mode: crate::config::SyncMode,
     engines: RwLock<HashMap<RepoId, SyncEngine>>,
+    poisoned: AtomicBool,
 }
 impl RepoScopedSyncEngine {
-    fn read_engines(&self) -> Option<RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>>> {
-        match self.engines.read() {
-            Ok(guard) => Some(guard),
-            Err(_) => {
-                tracing::error!("RepoScopedSyncEngine read lock poisoned; failing closed");
-                None
-            }
-        }
-    }
-
-    fn write_engines(&self) -> Option<RwLockWriteGuard<'_, HashMap<RepoId, SyncEngine>>> {
-        match self.engines.write() {
-            Ok(guard) => Some(guard),
-            Err(_) => {
-                tracing::error!("RepoScopedSyncEngine write lock poisoned; failing closed");
-                None
-            }
-        }
-    }
-
     /// 创建新的 Repo-Scoped 同步引擎管理器
     ///
     /// ## 后置条件 (Post-conditions)
@@ -62,6 +42,7 @@ impl RepoScopedSyncEngine {
             repo,
             sync_mode,
             engines: RwLock::new(HashMap::new()),
+            poisoned: AtomicBool::new(false),
         }
     }
 
@@ -169,19 +150,20 @@ impl RepoScopedSyncEngine {
     }
 
     /// 获取所有已加载的仓库 ID
-    pub fn loaded_repos(&self) -> Vec<RepoId> {
-        let Some(engines) = self.read_engines() else {
-            return Vec::new();
-        };
-        engines.keys().cloned().collect()
+    pub fn loaded_repos(&self) -> Result<Vec<RepoId>> {
+        let engines = self
+            .read_engines()
+            .ok_or_else(|| anyhow!("RepoScopedSyncEngine registry poisoned"))?;
+        Ok(engines.keys().cloned().collect())
     }
 
     /// 清空所有 SyncEngine
-    pub fn clear(&self) {
-        let Some(mut engines) = self.write_engines() else {
-            return;
-        };
+    pub fn clear(&self) -> Result<()> {
+        let mut engines = self
+            .write_engines()
+            .ok_or_else(|| anyhow!("RepoScopedSyncEngine registry poisoned"))?;
         engines.clear();
+        Ok(())
     }
 
     fn load_repo_key(&self, repo_id: RepoId) -> Option<RepoKey> {
@@ -225,13 +207,23 @@ impl RepoScopedSyncEngine {
 
 impl Clone for RepoScopedSyncEngine {
     fn clone(&self) -> Self {
-        let engines = match self.read_engines() {
-            Some(engines) => engines.clone(),
-            None => {
-                tracing::error!(
-                    "RepoScopedSyncEngine clone observed poisoned engine registry; cloning closed"
-                );
-                HashMap::new()
+        let mut poisoned = self.registry_poisoned();
+        let engines = if poisoned {
+            tracing::error!(
+                "RepoScopedSyncEngine clone observed poisoned engine registry; cloning closed"
+            );
+            HashMap::new()
+        } else {
+            match self.engines.read() {
+                Ok(engines) => engines.clone(),
+                Err(_) => {
+                    self.poisoned.store(true, Ordering::Relaxed);
+                    poisoned = true;
+                    tracing::error!(
+                        "RepoScopedSyncEngine clone observed poisoned engine registry; cloning closed"
+                    );
+                    HashMap::new()
+                }
             }
         };
 
@@ -240,6 +232,7 @@ impl Clone for RepoScopedSyncEngine {
             repo: self.repo.clone(),
             sync_mode: self.sync_mode,
             engines: RwLock::new(engines),
+            poisoned: AtomicBool::new(poisoned),
         }
     }
 }
