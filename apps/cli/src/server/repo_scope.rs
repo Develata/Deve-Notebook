@@ -30,7 +30,7 @@ use self::lookup::resolve_repo_by_name;
 use self::repo_scope_bootstrap::fallback_local_repo_name;
 use self::repo_scope_cleanup::should_clear_stale_local_scope;
 pub(crate) use self::repo_scope_cleanup::should_clear_stale_remote_scope;
-pub use self::repo_scope_error::map_repo_scope_error;
+pub use self::repo_scope_error::{map_repo_scope_error, stale_remote_scope_detail};
 use self::repo_scope_selector::resolve_repo_name_from_session;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,

@@ -51,14 +51,7 @@ async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
             ..
         }) if error.code == deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
     ));
-    assert_eq!(
-        session
-            .active_branch
-            .as_ref()
-            .map(ToString::to_string)
-            .as_deref(),
-        Some("missing-shadow")
-    );
+    assert!(session.active_branch.is_none());
     assert!(session.active_repo.is_none());
     assert_eq!(session.active_repo_id, None);
     Ok(())

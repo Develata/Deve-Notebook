@@ -1,4 +1,5 @@
 use crate::server::AppState;
+use crate::server::shadow_scope;
 use anyhow::{Result, anyhow};
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{PeerId, RepoId};
@@ -75,6 +76,9 @@ pub(super) fn resolve_requested_repo_name(
     repo_name: &str,
     repo_id: Option<RepoId>,
 ) -> Result<Option<String>> {
+    if let Some(branch) = branch {
+        shadow_scope::ensure_remote_branch_available(state, branch)?;
+    }
     if let Some(exact_selector) = recover_selector_from_raw_name(state, branch, repo_name)? {
         if let Some(repo_id) = repo_id {
             match select_repo_selector_by_id(state, branch, repo_id)? {

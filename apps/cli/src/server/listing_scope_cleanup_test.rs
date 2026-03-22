@@ -90,8 +90,14 @@ async fn list_docs_on_unbound_shadow_branch_preserves_switch_nonce() -> anyhow::
             switch_nonce,
             ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(17));
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
+            );
         }
         other => panic!("expected ProtocolError with switch nonce, got {:?}", other),
     }

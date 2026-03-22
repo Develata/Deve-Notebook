@@ -47,6 +47,8 @@ mod key_exchange_test;
 mod listing_scope_binding_test;
 #[cfg(test)]
 mod listing_scope_cleanup_test;
+#[cfg(test)]
+mod listing_scope_remote_branch_test;
 pub mod mcp;
 pub mod metrics;
 pub mod node_role;
@@ -77,6 +79,7 @@ mod router;
 pub mod security;
 pub mod session;
 mod setup;
+mod shadow_scope;
 #[cfg(test)]
 mod source_control_changes_identity_test;
 #[cfg(test)]
@@ -109,6 +112,8 @@ mod switcher_branch_scope_test_fail_closed;
 mod switcher_branch_test;
 #[cfg(test)]
 mod switcher_current_scope_binding_test;
+#[cfg(test)]
+mod switcher_current_scope_remote_missing_test;
 #[cfg(test)]
 mod switcher_current_scope_remote_test;
 #[cfg(test)]

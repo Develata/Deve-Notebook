@@ -3,6 +3,7 @@ use crate::server::repo_scope::{
     ResolvedRepo, map_repo_scope_error, resolve_session_repo, should_clear_stale_remote_scope,
 };
 use crate::server::session::WsSession;
+use crate::server::shadow_scope;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
@@ -20,6 +21,9 @@ pub(super) fn resolve_current_branch_switch_context(
         Err(err) => {
             let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
             if can_ignore_missing_current_scope(session, mapped.code) {
+                if let Some(branch) = session.active_branch.as_ref() {
+                    shadow_scope::map_remote_branch_availability(state, branch)?;
+                }
                 None
             } else {
                 return Err(mapped);
@@ -57,6 +61,10 @@ pub(super) fn resolve_current_branch_switch_context(
 
 pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) {
     if !should_clear_failed_current_scope(session, error) {
+        return;
+    }
+    if session.active_branch.is_some() && shadow_scope::should_clear_missing_remote_branch(error) {
+        shadow_scope::clear_stale_remote_branch(session);
         return;
     }
     session.clear_active_repo();

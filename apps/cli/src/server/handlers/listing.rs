@@ -8,6 +8,7 @@ use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
+use crate::server::shadow_scope;
 use anyhow::anyhow;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -61,6 +62,16 @@ pub async fn handle_list_repos(
     request_id: Option<String>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    if let Some(branch) = session.active_branch.as_ref()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+        && !session.has_runtime_scope_binding()
+        && let Err(error) = shadow_scope::map_remote_branch_availability(state, branch)
+    {
+        shadow_scope::clear_stale_remote_branch(session);
+        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+        return;
+    }
     if (session.active_repo.is_some()
         || session.active_repo_id.is_some()
         || session.has_runtime_scope_binding())

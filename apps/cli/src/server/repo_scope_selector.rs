@@ -10,6 +10,7 @@ use super::repo_scope_remote::recover_remote_repo_name_from_selector;
 use crate::server::AppState;
 use crate::server::error_classify::{is_db_locked, is_storage_corruption};
 use crate::server::session::WsSession;
+use crate::server::shadow_scope;
 use anyhow::{Result, anyhow};
 use std::sync::Arc;
 
@@ -72,6 +73,9 @@ fn resolve_remote_repo_name_from_session(
     state: &Arc<AppState>,
     session: &WsSession,
 ) -> Result<Option<String>> {
+    if let Some(branch) = session.active_branch.as_ref() {
+        shadow_scope::ensure_remote_branch_available(state, branch)?;
+    }
     if let Some(repo_name) = session.active_repo.clone() {
         let Some(branch) = session.active_branch.as_ref() else {
             return Ok(Some(repo_name));

@@ -2,6 +2,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
+use crate::server::shadow_scope;
 #[path = "switcher_error.rs"]
 mod switcher_error;
 #[path = "switcher_guard.rs"]
@@ -179,10 +180,11 @@ pub async fn handle_switch_repo(
             return;
         }
         Err(err) => {
-            ch.send_protocol_error_with_switch_nonce(
-                map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err)),
-                switch_nonce,
-            );
+            let error = map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err));
+            if shadow_scope::should_clear_missing_remote_branch(&error) {
+                shadow_scope::clear_stale_remote_branch(session);
+            }
+            ch.send_protocol_error_with_switch_nonce(error, switch_nonce);
             return;
         }
     };

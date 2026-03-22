@@ -62,6 +62,8 @@ pub(super) fn is_repo_context_invalid(lower: &str) -> bool {
     contains_any(
         lower,
         &[
+            "stale remote scope:",
+            "remote branch not available:",
             "remote session lost repo name",
             "cannot bootstrap local repo while on remote branch",
             "repository uuid not resolved",
