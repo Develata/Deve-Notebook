@@ -44,6 +44,8 @@ pub mod handlers;
 #[cfg(test)]
 mod key_exchange_test;
 #[cfg(test)]
+mod list_docs_scope_test;
+#[cfg(test)]
 mod listing_scope_binding_test;
 #[cfg(test)]
 mod listing_scope_cleanup_test;
@@ -56,6 +58,8 @@ pub mod node_role_http;
 mod notegit;
 #[cfg(test)]
 mod open_doc_scope_test;
+#[cfg(test)]
+mod open_doc_snapshot_test;
 pub mod plugin_host;
 pub mod plugin_response;
 pub mod prewarm;

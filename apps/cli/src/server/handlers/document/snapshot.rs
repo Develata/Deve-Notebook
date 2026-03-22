@@ -9,6 +9,7 @@ pub(super) fn build_snapshot_payload(
     doc_id: DocId,
     snapshot_depth: usize,
 ) -> anyhow::Result<SnapshotPayload> {
+    ensure_doc_exists(db, doc_id)?;
     let snapshot = deve_core::ledger::snapshot::load_latest_snapshot(db, doc_id)?;
     let has_snapshot = snapshot.is_some();
     let (base_seq, content) = snapshot.unwrap_or((0, String::new()));
@@ -28,9 +29,7 @@ fn rebuild_full_snapshot(
     doc_id: DocId,
     snapshot_depth: usize,
 ) -> anyhow::Result<SnapshotPayload> {
-    if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
-        anyhow::bail!("Document not found: {}", doc_id);
-    }
+    ensure_doc_exists(db, doc_id)?;
 
     let full_entries = deve_core::ledger::ops::get_ops_from_db(db, doc_id)?;
     if full_entries.is_empty() {
@@ -51,4 +50,11 @@ fn rebuild_full_snapshot(
         snapshot_depth,
     )?;
     Ok((full_content, full_version, Vec::new(), full_version))
+}
+
+fn ensure_doc_exists(db: &redb::Database, doc_id: DocId) -> anyhow::Result<()> {
+    if deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.is_none() {
+        anyhow::bail!("Document not found: {}", doc_id);
+    }
+    Ok(())
 }

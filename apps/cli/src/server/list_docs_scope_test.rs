@@ -1,4 +1,4 @@
-use super::handlers::document::{handle_open_doc, handle_request_history};
+use super::handlers::listing::handle_list_docs;
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
@@ -20,14 +20,13 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     test_repo.set_vault_root(&vault);
     let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
     let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     Ok((
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
             sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
+            tx: broadcast::channel(16).0,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(
                 PeerId::new("test-peer"),
@@ -75,103 +74,84 @@ fn seed_doc(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow::Result<()> {
-    let (_dir, state, test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(7));
-    session.switch_repo("test".into(), Some(test_repo_id));
-
-    handle_open_doc(&state, &ch, &mut session, doc_id, 7).await;
-
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { scope_nonce, .. }) => {
-            assert_eq!(scope_nonce, Some(7));
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    assert!(uni_rx.try_recv().is_err(), "must not send empty snapshot");
-    Ok(())
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()> {
+async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
-    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
-    state.repo.apply_file_delete_structure_in_local_repo(
-        state.repo.local_repo_name(),
-        "notes/a.md",
-        Some(doc_id),
-        "test",
-    )?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.switch_repo("default".into(), Some(default_id));
+    session.switch_branch(Some("missing-shadow".into()));
 
-    handle_open_doc(&state, &ch, &mut session, doc_id, 8).await;
+    handle_list_docs(&state, &ch, &mut session, None, None).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::StorageNotFound);
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
+            );
         }
-        other => panic!("expected ProtocolError, got {:?}", other),
+        other => panic!("expected stale shadow ProtocolError, got {:?}", other),
     }
-    assert!(uni_rx.try_recv().is_err(), "must not send deleted snapshot");
+    assert!(
+        uni_rx.try_recv().is_err(),
+        "must not send empty doc/tree payload"
+    );
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow::Result<()> {
-    let (_dir, state, test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
+async fn list_docs_rejects_stale_local_selector() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let _ = seed_doc(&state, "test", "notes/b.md", "from test")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.mark_browser_session();
+    session.set_scope_nonce(Some(13));
+    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
+    session.switch_repo("test".into(), Some(default_id));
+
+    handle_list_docs(&state, &ch, &mut session, Some("req-1".into()), None).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(13));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert_eq!(
+        (session.active_repo.as_deref(), session.active_repo_id),
+        (None, None)
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_on_scoped_local_unbound_state_returns_repo_unbound() -> anyhow::Result<()> {
+    let (_dir, state, _test_repo_id) = build_state()?;
+    let local_db = state
+        .repo
+        .open_database(None, state.repo.local_repo_name())?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
     session.set_scope_nonce(Some(9));
-    session.switch_repo("test".into(), Some(test_repo_id));
+    session.set_active_db(local_db);
 
-    handle_request_history(&state, &ch, &mut session, doc_id, 9).await;
-
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { scope_nonce, .. }) => {
-            assert_eq!(scope_nonce, Some(9));
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    assert!(uni_rx.try_recv().is_err(), "must not send empty history");
-    Ok(())
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn request_history_on_deleted_doc_returns_error_without_history() -> anyhow::Result<()> {
-    let (_dir, state, _test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
-    let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
-    state.repo.apply_file_delete_structure_in_local_repo(
-        state.repo.local_repo_name(),
-        "notes/a.md",
-        Some(doc_id),
-        "test",
-    )?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.switch_repo("default".into(), Some(default_id));
-
-    handle_request_history(&state, &ch, &mut session, doc_id, 10).await;
+    handle_list_docs(&state, &ch, &mut session, None, None).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::StorageNotFound);
+            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
         }
-        other => panic!("expected ProtocolError, got {:?}", other),
+        other => panic!("expected SyncRepoUnbound error, got {:?}", other),
     }
-    assert!(uni_rx.try_recv().is_err(), "must not send deleted history");
+    assert!(session.get_active_db().is_none());
     Ok(())
 }

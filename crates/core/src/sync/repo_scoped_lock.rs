@@ -9,9 +9,7 @@ impl RepoScopedSyncEngine {
         self.poisoned.load(std::sync::atomic::Ordering::Relaxed)
     }
 
-    pub(super) fn read_engines(
-        &self,
-    ) -> Option<RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>>> {
+    pub(super) fn read_engines(&self) -> Option<RwLockReadGuard<'_, HashMap<RepoId, SyncEngine>>> {
         if self.registry_poisoned() {
             tracing::error!("RepoScopedSyncEngine registry poisoned; failing closed");
             return None;
