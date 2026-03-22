@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use redb::Database;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -97,40 +97,6 @@ impl RepoManager {
         self.ledger_dir.join("remotes")
     }
 
-    pub(crate) fn checked_remotes_dir(&self) -> Result<PathBuf> {
-        let remotes_dir = self.remotes_dir();
-        match remotes_dir.try_exists() {
-            Ok(true) => {}
-            Ok(false) => {
-                anyhow::bail!(
-                    "Broken remote repo catalog: remote repo directory missing at {:?}",
-                    remotes_dir
-                );
-            }
-            Err(err) => {
-                return Err(err.into());
-            }
-        }
-        Ok(remotes_dir)
-    }
-
-    pub(crate) fn checked_local_dir_for(ledger_dir: &Path, context: &str) -> Result<PathBuf> {
-        let local_dir = ledger_dir.join("local");
-        match local_dir.try_exists() {
-            Ok(true) => Ok(local_dir),
-            Ok(false) => Err(anyhow!(
-                "Broken local repo catalog: local repo directory missing at {:?}",
-                local_dir
-            )),
-            Err(err) => Err(err).with_context(|| {
-                format!(
-                    "Failed to stat local repo directory while {}: {:?}",
-                    context, local_dir
-                )
-            }),
-        }
-    }
-
     /// 获取本地数据库的只读事务 (用于高级查询)
     pub fn local_db_read_txn(&self) -> Result<redb::ReadTransaction> {
         Ok(self.local_db.begin_read()?)
@@ -196,38 +162,35 @@ impl RepoManager {
         if selector == self.local_repo_name {
             return Ok(Some(self.local_repo_name.clone()));
         }
+        if let Some(info) = Self::read_repo_info_from_db(&self.local_db)?
+            && info.name == selector
+        {
+            return Err(local_selector_metadata_drift(
+                &self.local_repo_name,
+                selector,
+                &info.name,
+            ));
+        }
         let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
         for (path, stem) in redb_repo_entries(&local_dir, "resolving local selector")? {
-            if stem == selector {
-                if stem != self.local_repo_name {
-                    Self::read_required_repo_info_from_path(
-                        &path,
-                        &stem,
-                        "resolving local selector",
-                    )
-                    .map_err(|err| {
-                        anyhow!(
-                            "Broken local repo {} while resolving selector {}: {}",
-                            stem,
-                            selector,
-                            err
-                        )
-                    })?;
-                }
-                return Ok(Some(stem));
-            }
             if stem == self.local_repo_name {
                 continue;
             }
-            if let Err(err) =
+            let info =
                 Self::read_required_repo_info_from_path(&path, &stem, "resolving local selector")
-            {
-                return Err(anyhow!(
-                    "Broken local repo {} while resolving selector {}: {}",
-                    stem,
-                    selector,
-                    err
-                ));
+                    .map_err(|err| {
+                    anyhow!(
+                        "Broken local repo {} while resolving selector {}: {}",
+                        stem,
+                        selector,
+                        err
+                    )
+                })?;
+            if stem != selector && info.name == selector {
+                return Err(local_selector_metadata_drift(&stem, selector, &info.name));
+            }
+            if stem == selector {
+                return Ok(Some(stem));
             }
         }
         Ok(None)
@@ -246,6 +209,15 @@ impl RepoManager {
             .write()
             .map_err(|_| anyhow!("Local repo registry lock poisoned"))
     }
+}
+
+fn local_selector_metadata_drift(stem: &str, selector: &str, name: &str) -> anyhow::Error {
+    anyhow!(
+        "Broken local repo {} while resolving selector {}: metadata name drifted to {}",
+        stem,
+        selector,
+        name
+    )
 }
 
 #[cfg(test)]

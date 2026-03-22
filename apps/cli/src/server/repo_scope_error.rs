@@ -104,4 +104,12 @@ mod tests {
         let err = map_repo_scope_error(anyhow::anyhow!("failed to deserialize repo metadata"));
         assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
+
+    #[test]
+    fn classifies_local_catalog_stat_failure_as_storage_persist_failed() {
+        let err = map_repo_scope_error(anyhow::anyhow!(
+            "Failed to stat local repo directory while resolving local selector: \"/tmp/ledger/local\""
+        ));
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+    }
 }

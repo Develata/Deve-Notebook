@@ -67,6 +67,20 @@ impl RepoManager {
                 });
             }
         }
+        if !std::fs::metadata(&local_dir)
+            .with_context(|| {
+                format!(
+                    "Failed to read local repo directory metadata while repairing local catalog: {:?}",
+                    local_dir
+                )
+            })?
+            .is_dir()
+        {
+            return Err(anyhow!(
+                "Broken local repo catalog: expected directory at {:?}",
+                local_dir
+            ));
+        }
 
         let mut entries = redb_repo_entries(&local_dir, "repairing local catalog")?;
         entries.sort_by(|(left_path, left_stem), (right_path, right_stem)| {

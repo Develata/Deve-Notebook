@@ -109,3 +109,29 @@ fn local_repo_catalog_fails_closed_on_non_file_redb_entry() {
         assert!(err.to_string().contains("expected file"));
     }
 }
+
+#[test]
+fn local_repo_catalog_calls_fail_closed_when_local_catalog_path_is_file() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    std::fs::remove_dir_all(ledger_dir.join("local")).expect("remove local dir");
+    std::fs::write(ledger_dir.join("local"), b"not-a-directory").expect("poison local path");
+
+    let list_err = repo
+        .list_repos(None)
+        .expect_err("file local path must fail listing");
+    let exec_err = repo
+        .list_local_repo_names_for_execution()
+        .expect_err("file local path must fail execution listing");
+    let lookup_err = repo
+        .find_local_repo_name_by_id(uuid::Uuid::new_v4())
+        .expect_err("file local path must fail UUID lookup");
+    let repair_err = repo
+        .repair_local_repo_catalog()
+        .expect_err("file local path must fail repair");
+
+    for err in [&list_err, &exec_err, &lookup_err, &repair_err] {
+        assert!(err.to_string().contains("expected directory"));
+    }
+}

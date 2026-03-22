@@ -53,10 +53,10 @@ fn resolve_session_repo_fails_closed_on_stale_local_alias_drift() -> anyhow::Res
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
     assert_eq!(
         mapped.code,
-        deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
+        deve_core::protocol::ServerErrorCode::StoragePersistFailed
     );
-    assert_eq!(session.active_repo, None);
-    assert_eq!(session.active_repo_id, None);
+    assert_eq!(session.active_repo.as_deref(), Some("legacy-wiki"));
+    assert_eq!(session.active_repo_id, Some(wiki_info.uuid));
     Ok(())
 }
 

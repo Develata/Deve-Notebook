@@ -181,3 +181,25 @@ fn map_repo_scope_error_marks_remote_bootstrap_as_context_invalid() {
     ));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }
+
+#[test]
+fn resolve_session_repo_preserves_missing_local_catalog_failure() -> anyhow::Result<()> {
+    let (dir, state, _default_id, _test_id) = build_state()?;
+    std::fs::remove_dir_all(dir.path().join("local"))?;
+
+    let mut session = WsSession::new();
+    session.switch_repo("test".into(), None);
+    let err =
+        resolve_session_repo(&state, &session).expect_err("missing local catalog must fail closed");
+
+    let detail = err.to_string();
+    assert!(
+        detail.contains("local repo directory missing"),
+        "unexpected error detail: {detail}"
+    );
+    assert_eq!(
+        map_repo_scope_error(anyhow::anyhow!(detail)).code,
+        ServerErrorCode::StoragePersistFailed
+    );
+    Ok(())
+}

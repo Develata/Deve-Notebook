@@ -4,6 +4,7 @@
 //! 将 `RepoManager` 的方法按功能域拆分为子模块。
 
 pub mod core;
+mod core_dirs;
 pub mod locator;
 pub mod maintenance;
 pub mod types;

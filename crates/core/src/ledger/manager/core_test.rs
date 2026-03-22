@@ -36,3 +36,64 @@ fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow
     assert!(err.to_string().contains("repository metadata missing"));
     Ok(())
 }
+
+#[test]
+fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
+    let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki"))?;
+    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
+    let wiki_db = main.open_database(None, "wiki")?.db;
+
+    let txn = wiki_db.begin_write()?;
+    txn.open_table(crate::ledger::REPO_METADATA)?.insert(
+        &0,
+        bincode::serialize(&crate::ledger::RepoInfo {
+            uuid: wiki_info.uuid,
+            name: "legacy-wiki".into(),
+            url: wiki_info.url.clone(),
+        })?
+        .as_slice(),
+    )?;
+    txn.commit()?;
+
+    let err = main
+        .resolve_local_repo_stem("legacy-wiki")
+        .expect_err("stale secondary alias must fail selector resolution");
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-wiki")
+    );
+    Ok(())
+}
+
+#[test]
+fn resolve_local_selector_fails_closed_on_stale_main_alias_drift() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
+    let info = main.get_repo_info()?.expect("main info");
+    let main_db = main.open_database(None, "main")?.db;
+
+    let txn = main_db.begin_write()?;
+    txn.open_table(crate::ledger::REPO_METADATA)?.insert(
+        &0,
+        bincode::serialize(&crate::ledger::RepoInfo {
+            uuid: info.uuid,
+            name: "legacy-main".into(),
+            url: info.url.clone(),
+        })?
+        .as_slice(),
+    )?;
+    txn.commit()?;
+
+    let err = main
+        .resolve_local_repo_stem("legacy-main")
+        .expect_err("stale main alias must fail selector resolution");
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-main")
+    );
+    Ok(())
+}

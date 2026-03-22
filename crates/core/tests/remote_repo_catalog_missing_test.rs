@@ -155,3 +155,69 @@ fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_unstatable() {
         );
     }
 }
+
+#[test]
+fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_file() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let peer_id = PeerId::new("peer-a");
+    std::fs::remove_dir_all(ledger_dir.join("remotes")).expect("remove remotes dir");
+    std::fs::write(ledger_dir.join("remotes"), b"not-a-directory").expect("poison remotes path");
+
+    let list_err = repo
+        .list_shadows_on_disk()
+        .expect_err("file remotes path must fail shadow listing");
+    let switchable_err = repo
+        .list_switchable_shadows_on_disk()
+        .expect_err("file remotes path must fail switchable listing");
+    let repair_err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("file remotes path must fail remote repair");
+    let remote_list_err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("file remotes path must fail remote repo listing");
+    let selector_err = repo
+        .find_remote_repo_selector(&peer_id, "notes")
+        .expect_err("file remotes path must fail selector recovery");
+    let shadow_err = shadow::list_shadows_on_disk(&repo.remotes_dir())
+        .expect_err("file remotes path must fail shadow management listing");
+
+    for err in [
+        &list_err,
+        &switchable_err,
+        &repair_err,
+        &remote_list_err,
+        &selector_err,
+        &shadow_err,
+    ] {
+        assert!(err.to_string().contains("expected directory"));
+    }
+}
+
+#[test]
+fn remote_repo_catalog_calls_fail_closed_when_peer_path_is_file() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let peer_id = PeerId::new("peer-a");
+    std::fs::write(
+        repo.remotes_dir().join(peer_id.to_filename()),
+        b"not-a-directory",
+    )
+    .expect("poison peer path");
+
+    let list_err = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("file peer path must fail remote repo listing");
+    let selector_err = repo
+        .find_remote_repo_selector(&peer_id, "notes")
+        .expect_err("file peer path must fail selector recovery");
+    let repair_err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("file peer path must fail remote repair");
+
+    for err in [&list_err, &selector_err, &repair_err] {
+        assert!(err.to_string().contains("expected directory"));
+    }
+}

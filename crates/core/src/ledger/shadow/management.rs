@@ -153,6 +153,20 @@ pub fn list_shadows_on_disk(remotes_dir: &Path) -> Result<Vec<PeerId>> {
             });
         }
     }
+    if !std::fs::metadata(remotes_dir)
+        .with_context(|| {
+            format!(
+                "Failed to read remote repo directory metadata while listing shadows on disk: {:?}",
+                remotes_dir
+            )
+        })?
+        .is_dir()
+    {
+        anyhow::bail!(
+            "Broken remote repo catalog: expected directory at {:?}",
+            remotes_dir
+        );
+    }
     for entry in std::fs::read_dir(remotes_dir)? {
         let entry = entry?;
         let path = entry.path();

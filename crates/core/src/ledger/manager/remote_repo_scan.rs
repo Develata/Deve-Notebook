@@ -26,6 +26,21 @@ impl RepoManager {
                 ));
             }
         }
+        if !std::fs::metadata(&peer_dir)
+            .map_err(|err| {
+                anyhow!(
+                    "Failed to read remote peer directory metadata {:?} while repairing catalog: {}",
+                    peer_dir,
+                    err
+                )
+            })?
+            .is_dir()
+        {
+            return Err(anyhow!(
+                "Broken shadow peer {} while repairing catalog: expected directory",
+                peer_id
+            ));
+        }
         let mut repairs = Vec::new();
         for (path, stem) in redb_repo_entries(&peer_dir, "repairing remote catalog")? {
             let repair = repaired_remote_repo_info(&path, &stem).map_err(|err| {
@@ -97,6 +112,21 @@ impl RepoManager {
                     err
                 ));
             }
+        }
+        if !std::fs::metadata(&peer_dir)
+            .map_err(|err| {
+                anyhow!(
+                    "Failed to read remote peer directory metadata {:?} while pure scanning catalog: {}",
+                    peer_dir,
+                    err
+                )
+            })?
+            .is_dir()
+        {
+            return Err(anyhow!(
+                "Broken shadow peer {} while pure scanning catalog: expected directory",
+                peer_id
+            ));
         }
         let mut repos = Vec::new();
         for (path, stem) in redb_repo_entries(&peer_dir, "pure scanning remote catalog")? {

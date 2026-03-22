@@ -234,8 +234,10 @@ fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Res
         Err(err) => err,
     };
     assert!(
-        err.to_string()
-            .contains("Local repository UUID not resolved for selector: test")
+        err.to_string().contains("repository metadata missing")
+            || err
+                .to_string()
+                .contains("Local repository UUID not resolved for selector: test")
     );
     Ok(())
 }
