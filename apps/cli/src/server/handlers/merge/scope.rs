@@ -1,6 +1,7 @@
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo_and_sync,
+    bootstrap_local_repo, map_repo_scope_error, resolve_local_counterpart_repo,
+    resolve_session_repo_and_sync,
 };
 use crate::server::{AppState, session::WsSession};
 use deve_core::models::RepoId;
@@ -15,13 +16,7 @@ pub(super) fn resolve_read_repo_id(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<RepoId> {
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return None;
-        }
-    };
+    let scope = resolve_merge_scope(state, ch, session, scope_nonce)?;
     if scope.branch.is_none() {
         return Some(scope.repo_id);
     }
@@ -48,13 +43,7 @@ pub(super) fn resolve_write_repo_id(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<RepoId> {
-    let scope = match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return None;
-        }
-    };
+    let scope = resolve_merge_scope(state, ch, session, scope_nonce)?;
     if scope.branch.is_some() {
         ch.send_protocol_error_with_scope_nonce(
             ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
@@ -65,9 +54,41 @@ pub(super) fn resolve_write_repo_id(
     Some(scope.repo_id)
 }
 
+fn resolve_merge_scope(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    scope_nonce: Option<u64>,
+) -> Option<crate::server::repo_scope::ResolvedRepo> {
+    let resolved = if session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+        && !session.has_runtime_scope_binding()
+    {
+        bootstrap_local_repo(state, session)
+    } else {
+        resolve_session_repo_and_sync(state, session)
+    };
+    match resolved {
+        Ok(scope) => {
+            if scope.branch.is_none()
+                && (session.active_repo.as_deref() != Some(scope.repo_name.as_str())
+                    || session.active_repo_id != Some(scope.repo_id))
+            {
+                session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+            }
+            Some(scope)
+        }
+        Err(err) => {
+            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::resolve_read_repo_id;
+    use super::{resolve_read_repo_id, resolve_write_repo_id};
     use crate::server::{AppState, channel::DualChannel, tree_state::RepoTreeRegistry};
     use deve_core::config::SyncMode;
     use deve_core::ledger::RepoManager;
@@ -120,6 +141,94 @@ mod tests {
             Some(test_id)
         );
         assert_eq!(session.active_repo_id, Some(test_id));
+        Ok(())
+    }
+
+    #[test]
+    fn read_repo_id_bootstraps_single_local_repo() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let vault = dir.path().join("vault");
+        let mut repo = RepoManager::init(
+            dir.path().join("ledger"),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?;
+        repo.set_vault_root(&vault);
+        let default_id = repo.get_repo_info()?.expect("default info").uuid;
+        let repo = Arc::new(repo);
+        let (tx, _rx) = broadcast::channel(16);
+        let state = Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            tx,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                PeerId::new("local"),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_service: None,
+            identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
+        });
+        let ch = DualChannel::new(
+            broadcast::channel(8).0,
+            crate::server::ws::send::new_unicast_channel().0,
+        );
+        let mut session = crate::server::session::WsSession::new();
+
+        assert_eq!(
+            resolve_read_repo_id(&state, &ch, &mut session, None),
+            Some(default_id)
+        );
+        assert_eq!(session.active_repo.as_deref(), Some("default"));
+        assert_eq!(session.active_repo_id, Some(default_id));
+        Ok(())
+    }
+
+    #[test]
+    fn write_repo_id_bootstraps_single_local_repo() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let vault = dir.path().join("vault");
+        let mut repo = RepoManager::init(
+            dir.path().join("ledger"),
+            10,
+            Some("default"),
+            Some("urn:default"),
+        )?;
+        repo.set_vault_root(&vault);
+        let default_id = repo.get_repo_info()?.expect("default info").uuid;
+        let repo = Arc::new(repo);
+        let (tx, _rx) = broadcast::channel(16);
+        let state = Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            tx,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                PeerId::new("local"),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_service: None,
+            identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
+        });
+        let ch = DualChannel::new(
+            broadcast::channel(8).0,
+            crate::server::ws::send::new_unicast_channel().0,
+        );
+        let mut session = crate::server::session::WsSession::new();
+
+        assert_eq!(
+            resolve_write_repo_id(&state, &ch, &mut session, None),
+            Some(default_id)
+        );
+        assert_eq!(session.active_repo.as_deref(), Some("default"));
+        assert_eq!(session.active_repo_id, Some(default_id));
         Ok(())
     }
 }
