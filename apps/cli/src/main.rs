@@ -55,12 +55,14 @@ pub(crate) enum Commands {
         #[arg(long)]
         dev: bool,
     },
-    /// Export ledger to JSONL
+    /// Export ledger to JSONL or Markdown
     Export {
         #[arg(short, long)]
         output: Option<String>,
         #[arg(long)]
         repo: Option<String>,
+        #[arg(long, default_value = "json")]
+        format: String,
     },
     /// Verify P2P Sync Logic (Simulation)
     VerifyP2P,

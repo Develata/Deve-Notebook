@@ -30,8 +30,8 @@ pub async fn run(
             )
             .await?
         }
-        Some(Commands::Export { output, repo }) => {
-            commands::export::run(ledger_dir, output, repo, config.snapshot_depth)?
+        Some(Commands::Export { output, repo, format }) => {
+            commands::export::run(ledger_dir, output, repo, config.snapshot_depth, &format)?
         }
         Some(Commands::Recover { repo }) => {
             commands::recover::run(ledger_dir, &vault_path.to_path_buf(), repo, config.snapshot_depth)?
