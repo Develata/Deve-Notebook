@@ -1,0 +1,39 @@
+<!-- Parent: ../AGENTS.md -->
+<!-- Generated: 2026-03-22 -->
+
+# i18n
+
+## Purpose
+
+Internationalization strings organized by UI feature. Provides localized text for all components via the Locale context.
+
+## Key Files
+
+| File | Description |
+|------|-------------|
+| `mod.rs` | Locale enum and i18n module entry |
+| `common.rs` | Common shared strings |
+| `header.rs` | Header strings |
+| `sidebar.rs` | Sidebar strings |
+| `bottom_bar.rs` | Bottom bar strings |
+| `login.rs` | Login page strings |
+| `dashboard.rs` | Dashboard strings |
+| `source_control.rs` | Source control strings |
+| `diff.rs` | Diff view strings |
+| `search.rs` | Search strings |
+| `chat.rs` | Chat strings |
+| `command_palette.rs` | Command palette strings |
+| `settings.rs` | Settings strings |
+| `merge.rs` | Merge strings |
+| `playback.rs` | Playback strings |
+| `context_menu.rs` | Context menu strings |
+| `server_error.rs` | Server error message strings |
+
+## For AI Agents
+
+### Working In This Directory
+
+- See `10_i18n.md` in deve-note plan for i18n strategy.
+- Add new strings to the appropriate feature file, not to `common.rs`.
+
+<!-- MANUAL: -->
