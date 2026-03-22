@@ -26,7 +26,10 @@ pub fn run(
     match format {
         "json" => run_json(ledger_dir, output, repo_name, snapshot_depth),
         "markdown" | "md" => run_markdown(ledger_dir, output, repo_name, snapshot_depth),
-        _ => bail!("Unsupported export format: {}. Use 'json' or 'markdown'.", format),
+        _ => bail!(
+            "Unsupported export format: {}. Use 'json' or 'markdown'.",
+            format
+        ),
     }
 }
 
@@ -57,7 +60,7 @@ fn run_markdown(
     let output_dir = PathBuf::from(output.unwrap_or_else(|| "export".into()));
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_name = resolve_local_repo_arg(&repo, repo_name.as_deref())?;
-    let docs = repo.run_on_local_repo(&repo_name, |db| metadata::list_docs(db))?;
+    let docs = repo.run_on_local_repo(&repo_name, metadata::list_docs)?;
 
     let mut exported = 0u32;
     for (doc_id, path) in docs {

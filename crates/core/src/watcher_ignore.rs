@@ -19,10 +19,10 @@ impl IgnoreRules {
     pub fn load(vault_root: &Path) -> Self {
         let ignore_path = vault_root.join(".deveignore");
         let mut builder = GitignoreBuilder::new(vault_root);
-        if ignore_path.is_file() {
-            if let Some(err) = builder.add(&ignore_path) {
-                tracing::warn!("Failed to parse .deveignore: {}", err);
-            }
+        if ignore_path.is_file()
+            && let Some(err) = builder.add(&ignore_path)
+        {
+            tracing::warn!("Failed to parse .deveignore: {}", err);
         }
         let matcher = builder.build().unwrap_or_else(|err| {
             tracing::warn!("Failed to build ignore rules: {}", err);

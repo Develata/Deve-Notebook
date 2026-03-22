@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::metadata;
 use deve_core::sync::rebuild;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Recover vault files from ledger data.
 ///
@@ -11,7 +11,7 @@ use std::path::PathBuf;
 /// ledger ops + snapshots, and writes the result to the vault directory.
 pub fn run(
     ledger_dir: &PathBuf,
-    vault_path: &PathBuf,
+    vault_path: &Path,
     repo_name: Option<String>,
     snapshot_depth: usize,
 ) -> Result<()> {
@@ -22,7 +22,7 @@ pub fn run(
     let mut skipped = 0u32;
 
     for rn in &repo_names {
-        let docs = repo.run_on_local_repo(rn, |db| metadata::list_docs(db))?;
+        let docs = repo.run_on_local_repo(rn, metadata::list_docs)?;
 
         for (doc_id, path) in docs {
             if path.is_empty() {

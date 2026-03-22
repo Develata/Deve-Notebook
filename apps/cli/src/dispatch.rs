@@ -30,11 +30,13 @@ pub async fn run(
             )
             .await?
         }
-        Some(Commands::Export { output, repo, format }) => {
-            commands::export::run(ledger_dir, output, repo, config.snapshot_depth, &format)?
-        }
+        Some(Commands::Export {
+            output,
+            repo,
+            format,
+        }) => commands::export::run(ledger_dir, output, repo, config.snapshot_depth, &format)?,
         Some(Commands::Recover { repo }) => {
-            commands::recover::run(ledger_dir, &vault_path.to_path_buf(), repo, config.snapshot_depth)?
+            commands::recover::run(ledger_dir, vault_path, repo, config.snapshot_depth)?
         }
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {
