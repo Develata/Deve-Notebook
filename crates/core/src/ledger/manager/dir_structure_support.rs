@@ -1,6 +1,7 @@
 use crate::ledger::RepoManager;
 use crate::ledger::node_meta;
 use crate::models::{NodeId, NodeKind, StructureOp};
+use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
 
 pub(super) fn load_meta(
@@ -19,9 +20,10 @@ pub(super) fn plan_parent_chain(
     repo_name: &str,
     path: &str,
 ) -> Result<(Vec<StructureOp>, Option<NodeId>, String)> {
+    let path = to_forward_slash(path);
     let (parent_path, name) = path
         .rfind('/')
-        .map_or(("", path), |idx| (&path[..idx], &path[idx + 1..]));
+        .map_or(("", path.as_str()), |idx| (&path[..idx], &path[idx + 1..]));
     let mut ops = Vec::new();
     let mut parent_id = None;
     let mut current = String::new();

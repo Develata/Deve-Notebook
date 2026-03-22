@@ -2,6 +2,7 @@ use super::dir_structure_support::{load_meta, plan_parent_chain};
 use crate::ledger::RepoManager;
 use crate::ledger::node_meta;
 use crate::models::{NodeId, NodeKind, StructureOp};
+use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
 pub(super) struct StructuredDirTarget {
     pub node_id: NodeId,
@@ -13,8 +14,9 @@ pub(super) fn plan_create(
     repo_name: &str,
     path: &str,
 ) -> Result<StructuredDirTarget> {
+    let path = to_forward_slash(path);
     if let Some(node_id) =
-        repo.run_on_local_repo(repo_name, |db| node_meta::get_node_id(db, path))?
+        repo.run_on_local_repo(repo_name, |db| node_meta::get_node_id(db, &path))?
     {
         let meta = load_meta(repo, repo_name, node_id)?;
         if meta.kind != NodeKind::Dir {
@@ -25,7 +27,7 @@ pub(super) fn plan_create(
             ops: Vec::new(),
         });
     }
-    let (mut ops, parent_id, name) = plan_parent_chain(repo, repo_name, path)?;
+    let (mut ops, parent_id, name) = plan_parent_chain(repo, repo_name, &path)?;
     let node_id = NodeId::new();
     ops.push(StructureOp::CreateDir {
         node_id,
@@ -41,8 +43,9 @@ pub(super) fn plan_rename(
     old_path: &str,
     new_path: &str,
 ) -> Result<Option<StructuredDirTarget>> {
+    let old_path = to_forward_slash(old_path);
     let Some(node_id) =
-        repo.run_on_local_repo(repo_name, |db| node_meta::get_node_id(db, old_path))?
+        repo.run_on_local_repo(repo_name, |db| node_meta::get_node_id(db, &old_path))?
     else {
         return Ok(None);
     };
@@ -70,7 +73,9 @@ pub(super) fn plan_delete(
     repo_name: &str,
     path: &str,
 ) -> Result<Option<StructuredDirTarget>> {
-    let Some(node_id) = repo.run_on_local_repo(repo_name, |db| node_meta::get_node_id(db, path))?
+    let path = to_forward_slash(path);
+    let Some(node_id) =
+        repo.run_on_local_repo(repo_name, |db| node_meta::get_node_id(db, &path))?
     else {
         return Ok(None);
     };
