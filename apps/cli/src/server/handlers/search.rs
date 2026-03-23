@@ -69,7 +69,6 @@ pub async fn handle_search(
 }
 
 #[cfg(feature = "search")]
-#[cfg_attr(not(test), allow(dead_code))]
 fn classify_search_error(detail: &str) -> ServerErrorCode {
     let lower = detail.to_lowercase();
     if is_storage_corruption(&lower)

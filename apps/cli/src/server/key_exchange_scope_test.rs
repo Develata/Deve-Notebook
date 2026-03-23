@@ -3,6 +3,7 @@ use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
 use deve_core::config::SyncMode;
+use deve_core::ledger::database::DatabaseHandle;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
@@ -109,5 +110,50 @@ async fn request_key_without_repo_selection_bootstraps_single_repo() -> anyhow::
     }
     assert_eq!(session.active_repo.as_deref(), Some("notes"));
     assert_eq!(session.active_repo_id, Some(repo_id));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn request_key_with_stale_local_binding_bootstraps_single_repo() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    let repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
+    let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(71));
+    session.set_active_db(DatabaseHandle {
+        db: stale_db,
+        readonly: false,
+        branch: None,
+        repo_id: Some(uuid::Uuid::new_v4()),
+        repo_name: "ghost".into(),
+    });
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(uuid::Uuid::new_v4());
+    session.set_sync_scope_nonce(71);
+
+    handle_request_key(&state, &ch, &mut session).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::KeyProvide {
+            repo_id: seen,
+            scope_nonce,
+            branch,
+            ..
+        }) => {
+            assert_eq!(seen, repo_id);
+            assert_eq!(scope_nonce, 71);
+            assert_eq!(branch, None);
+        }
+        other => panic!("expected KeyProvide, got {:?}", other),
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("notes"));
+    assert_eq!(session.active_repo_id, Some(repo_id));
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }

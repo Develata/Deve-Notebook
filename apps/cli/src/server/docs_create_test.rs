@@ -175,6 +175,41 @@ async fn create_doc_without_repo_selection_bootstraps_single_repo() -> anyhow::R
     Ok(())
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_with_stale_local_binding_bootstraps_single_repo() -> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
+    let (uni_tx, _uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.set_active_db(DatabaseHandle {
+        db: stale_db,
+        readonly: false,
+        branch: None,
+        repo_id: Some(uuid::Uuid::new_v4()),
+        repo_name: "ghost".into(),
+    });
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(uuid::Uuid::new_v4());
+    session.set_sync_scope_nonce(33);
+
+    handle_create_doc(&state, &ch, &mut session, "notes/local-stale.md".into()).await;
+
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(repo_id));
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
+    assert!(state.repo.get_docid("notes/local-stale.md")?.is_some());
+    assert!(
+        dir.path()
+            .join("vault/default/notes/local-stale.md")
+            .exists()
+    );
+    Ok(())
+}
+
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_doc_fails_closed_when_target_path_is_unstatable() -> anyhow::Result<()> {

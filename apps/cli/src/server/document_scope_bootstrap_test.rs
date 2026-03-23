@@ -4,6 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -115,5 +116,46 @@ async fn request_history_without_repo_selection_bootstraps_single_repo() -> anyh
     }
     assert_eq!(session.active_repo.as_deref(), Some("default"));
     assert_eq!(session.active_repo_id, Some(default_id));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn open_doc_with_stale_local_binding_bootstraps_single_repo() -> anyhow::Result<()> {
+    let (dir, state, default_id) = build_state()?;
+    let doc_id = seed_doc(&state, "notes/a.md", "hello")?;
+    let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.set_active_db(DatabaseHandle {
+        db: stale_db,
+        readonly: false,
+        branch: None,
+        repo_id: Some(uuid::Uuid::new_v4()),
+        repo_name: "ghost".into(),
+    });
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(uuid::Uuid::new_v4());
+    session.set_sync_scope_nonce(41);
+
+    handle_open_doc(&state, &ch, &mut session, doc_id, 3).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::Snapshot {
+            repo_id,
+            doc_id: seen,
+            ..
+        }) => {
+            assert_eq!(repo_id, default_id);
+            assert_eq!(seen, doc_id);
+        }
+        other => panic!("expected Snapshot, got {:?}", other),
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(default_id));
+    assert!(session.get_active_db().is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }

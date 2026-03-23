@@ -1,7 +1,6 @@
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    bootstrap_local_repo, map_repo_scope_error, resolve_local_counterpart_repo,
-    resolve_session_repo_and_sync,
+    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::{AppState, session::WsSession};
 use deve_core::models::RepoId;
@@ -60,15 +59,7 @@ pub(super) fn resolve_merge_scope(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<crate::server::repo_scope::ResolvedRepo> {
-    let resolved = if session.active_branch.is_none()
-        && session.active_repo.is_none()
-        && session.active_repo_id.is_none()
-        && !session.has_runtime_scope_binding()
-    {
-        bootstrap_local_repo(state, session)
-    } else {
-        resolve_session_repo_and_sync(state, session)
-    };
+    let resolved = resolve_session_repo_or_bootstrap_local(state, session);
     match resolved {
         Ok(scope) => {
             if scope.branch.is_none()

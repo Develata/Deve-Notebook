@@ -9,7 +9,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    ResolvedRepo, bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
+    ResolvedRepo, map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
@@ -140,15 +140,7 @@ fn resolve_key_request_scope(
     state: &Arc<AppState>,
     session: &mut WsSession,
 ) -> anyhow::Result<ResolvedRepo> {
-    let resolved = if session.active_branch.is_none()
-        && session.active_repo.is_none()
-        && session.active_repo_id.is_none()
-        && !session.has_runtime_scope_binding()
-    {
-        bootstrap_local_repo(state, session)
-    } else {
-        resolve_session_repo_and_sync(state, session)
-    }?;
+    let resolved = resolve_session_repo_or_bootstrap_local(state, session)?;
     if resolved.branch.is_none()
         && (session.active_repo.as_deref() != Some(resolved.repo_name.as_str())
             || session.active_repo_id != Some(resolved.repo_id))

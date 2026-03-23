@@ -48,7 +48,7 @@ pub fn expand_related_paths(entries: &[ChangeEntry], path: &str) -> Vec<String> 
     paths
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
+#[cfg(test)]
 pub fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathTarget {
     let Some(path) = resolve_target_path(entries, target) else {
         return target.clone();
@@ -62,7 +62,7 @@ pub fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathT
     ScPathTarget { path, doc_id }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
+#[cfg(test)]
 pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) -> Vec<ScPathTarget> {
     let resolved = resolve_target(entries, target);
     if resolve_target_path(entries, &resolved).is_none() {
@@ -83,7 +83,7 @@ pub fn expand_related_targets(entries: &[ChangeEntry], target: &ScPathTarget) ->
     targets
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
+#[cfg(test)]
 pub fn resolve_target_path(entries: &[ChangeEntry], target: &ScPathTarget) -> Option<String> {
     resolve_target_path_strict(entries, target).ok().flatten()
 }

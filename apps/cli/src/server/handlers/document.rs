@@ -8,7 +8,7 @@ mod open;
 mod snapshot;
 
 use crate::server::repo_scope::{
-    ResolvedRepo, bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
+    ResolvedRepo, map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, Op};
@@ -52,23 +52,16 @@ pub(super) fn resolve_document_scope(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<ResolvedRepo> {
-    if session.active_branch.is_none()
-        && session.active_repo.is_none()
-        && session.active_repo_id.is_none()
-        && !session.has_runtime_scope_binding()
-    {
-        let scope = match bootstrap_local_repo(state, session) {
-            Ok(scope) => scope,
-            Err(err) => {
-                ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-                return None;
+    match resolve_session_repo_or_bootstrap_local(state, session) {
+        Ok(scope) => {
+            if scope.branch.is_none()
+                && (session.active_repo.as_deref() != Some(scope.repo_name.as_str())
+                    || session.active_repo_id != Some(scope.repo_id))
+            {
+                session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
             }
-        };
-        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
-        return Some(scope);
-    }
-    match resolve_session_repo_and_sync(state, session) {
-        Ok(scope) => Some(scope),
+            Some(scope)
+        }
         Err(err) => {
             ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
             None

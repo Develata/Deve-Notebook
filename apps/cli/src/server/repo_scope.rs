@@ -150,6 +150,42 @@ pub fn resolve_session_repo_and_sync(
     Ok(scope)
 }
 
+/// 在本地 single-repo 入口上，允许先清 stale runtime binding，再重新执行 local bootstrap。
+///
+/// Invariants:
+/// - 仅当当前会话没有 `active_branch/active_repo/active_repo_id` 时才允许 bootstrap。
+/// - 若 stale local binding 已被 `resolve_session_repo_and_sync` 清理干净，则允许重试 bootstrap。
+pub fn resolve_session_repo_or_bootstrap_local(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo> {
+    let wants_local_bootstrap = session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none();
+    if !wants_local_bootstrap {
+        return resolve_session_repo_and_sync(state, session);
+    }
+    if !session.has_runtime_scope_binding() {
+        let scope = bootstrap_local_repo(state, session)?;
+        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        return Ok(scope);
+    }
+    match resolve_session_repo_and_sync(state, session) {
+        Ok(scope) => Ok(scope),
+        Err(err)
+            if session.active_branch.is_none()
+                && session.active_repo.is_none()
+                && session.active_repo_id.is_none()
+                && !session.has_runtime_scope_binding() =>
+        {
+            let scope = bootstrap_local_repo(state, session)?;
+            session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+            Ok(scope)
+        }
+        Err(err) => Err(err),
+    }
+}
+
 fn runtime_binding_mismatch(session: &WsSession, scope: &ResolvedRepo) -> bool {
     let active_db_mismatch = session.get_active_db().is_some()
         && session
