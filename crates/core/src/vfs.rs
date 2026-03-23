@@ -12,7 +12,6 @@
 use crate::models::FileNodeId;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
-use tracing::warn;
 
 pub struct Vfs {
     pub root: PathBuf,
@@ -20,15 +19,8 @@ pub struct Vfs {
 
 impl Vfs {
     pub fn new(root: impl AsRef<Path>) -> Self {
-        let root = root.as_ref();
-        let abs_root = std::fs::canonicalize(root).unwrap_or_else(|err| {
-            warn!(
-                "Failed to canonicalize VFS root {:?}; falling back to raw path: {}",
-                root, err
-            );
-            root.to_path_buf()
-        });
-        Self { root: abs_root }
+        Self::new_checked(root)
+            .unwrap_or_else(|err| panic!("Vfs::new requires canonicalizable root: {err}"))
     }
 
     pub fn new_checked(root: impl AsRef<Path>) -> Result<Self> {
@@ -78,6 +70,14 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("Failed to canonicalize VFS root"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Failed to canonicalize VFS root")]
+    fn new_panics_on_missing_root() {
+        let dir = tempdir().expect("tempdir");
+        let missing = dir.path().join("missing-vault");
+        let _ = Vfs::new(&missing);
     }
 
     #[cfg(unix)]
