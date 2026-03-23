@@ -4,16 +4,14 @@ use crate::server::handlers::document::errors::send_doc_error_with_scope_and_swi
 use crate::server::handlers::switcher::{
     RepoViewPayload, emit_repo_view, prepare_repo_view_messages, switch_scope_nonce,
 };
-use crate::server::repo_scope::{
-    map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
-    stale_unbound_remote_scope_detail,
-};
+use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_or_bootstrap_local};
 use crate::server::session::WsSession;
-use crate::server::shadow_scope;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{NodeId, NodeMeta, RepoId, RepoType};
-use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
+
+#[path = "listing_docs_scope.rs"]
+mod listing_docs_scope;
+
+use self::listing_docs_scope::LocalBootstrapGuard;
 
 pub async fn handle_list_docs(
     state: &Arc<AppState>,
@@ -23,33 +21,9 @@ pub async fn handle_list_docs(
     switch_nonce: Option<u64>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if let Some(branch) = session.active_branch.as_ref().cloned()
-        && session.active_repo.is_none()
-        && session.active_repo_id.is_none()
-    {
-        if let Err(error) = shadow_scope::map_remote_branch_availability(state, &branch) {
-            if shadow_scope::should_clear_missing_remote_branch(&error) {
-                shadow_scope::clear_stale_remote_branch(session);
-            } else {
-                session.clear_active_db();
-                session.clear_sync_binding();
-            }
-            ch.send_protocol_error_with_scope_and_switch_nonce(error, scope_nonce, switch_nonce);
-            return;
-        }
-        if session.has_runtime_scope_binding() {
-            session.clear_active_db();
-            session.clear_sync_binding();
-            ch.send_protocol_error_with_scope_and_switch_nonce(
-                ServerError::with_detail(
-                    ServerErrorCode::ScRepoContextInvalid,
-                    stale_unbound_remote_scope_detail(&branch),
-                ),
-                scope_nonce,
-                switch_nonce,
-            );
-            return;
-        }
+    let local_bootstrap_guard = LocalBootstrapGuard::new(session);
+    if listing_docs_scope::precheck_remote_scope(state, ch, session, scope_nonce, switch_nonce) {
+        return;
     }
     let resolved = resolve_session_repo_or_bootstrap_local(state, session);
     let (repo_name, repo_id) = match resolved {
@@ -63,9 +37,10 @@ pub async fn handle_list_docs(
         }
     };
 
-    let docs = match load_docs(state, session, repo_id) {
+    let docs = match listing_docs_scope::load_docs(state, session, repo_id) {
         Ok(docs) => docs,
         Err(err) => {
+            local_bootstrap_guard.rollback_after_error(session);
             tracing::error!("Failed to list docs for repo {}: {:?}", repo_name, err);
             send_doc_error_with_scope_and_switch_nonce(
                 ch,
@@ -77,9 +52,10 @@ pub async fn handle_list_docs(
             return;
         }
     };
-    let nodes = match load_nodes(state, session, repo_id) {
+    let nodes = match listing_docs_scope::load_nodes(state, session, repo_id) {
         Ok(nodes) => nodes,
         Err(err) => {
+            local_bootstrap_guard.rollback_after_error(session);
             tracing::error!("Failed to list nodes for repo {}: {:?}", repo_name, err);
             send_doc_error_with_scope_and_switch_nonce(
                 ch,
@@ -107,6 +83,7 @@ pub async fn handle_list_docs(
     ) {
         Ok(repo_view) => repo_view,
         Err(err) => {
+            local_bootstrap_guard.rollback_after_error(session);
             send_doc_error_with_scope_and_switch_nonce(
                 ch,
                 "Failed to rebuild tree projection",
@@ -124,27 +101,4 @@ pub async fn handle_list_docs(
         session.switch_repo(repo_name, Some(repo_id));
     }
     emit_repo_view(ch, repo_view);
-}
-
-fn load_docs(
-    state: &Arc<AppState>,
-    session: &WsSession,
-    repo_id: RepoId,
-) -> anyhow::Result<Vec<(deve_core::models::DocId, String)>> {
-    state.repo.list_docs(&resolved_repo_type(session, repo_id))
-}
-
-fn load_nodes(
-    state: &Arc<AppState>,
-    session: &WsSession,
-    repo_id: RepoId,
-) -> anyhow::Result<Vec<(NodeId, NodeMeta)>> {
-    state.repo.list_nodes(&resolved_repo_type(session, repo_id))
-}
-
-fn resolved_repo_type(session: &WsSession, repo_id: RepoId) -> RepoType {
-    match session.active_branch.clone() {
-        Some(peer_id) => RepoType::Remote(peer_id, repo_id),
-        None => RepoType::Local(repo_id),
-    }
 }

@@ -8,9 +8,6 @@ pub(crate) fn redb_repo_entries(dir: &Path, context: &str) -> Result<Vec<(PathBu
         let entry = entry?;
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("redb") {
-            if entry.file_name().to_string_lossy().starts_with('.') {
-                continue;
-            }
             return Err(anyhow!(
                 "Broken repo entry {:?} while {}: unexpected non-redb entry",
                 path,

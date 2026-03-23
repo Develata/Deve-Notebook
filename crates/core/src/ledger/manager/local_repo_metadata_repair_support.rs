@@ -73,7 +73,14 @@ pub(super) fn repair_workspace_root(
     let new_exists = new_root.try_exists().with_context(|| {
         format!("Failed to stat current workspace root while repairing local catalog: {new_root:?}")
     })?;
-    if !old_exists || new_exists {
+    if old_exists && new_exists {
+        return Err(anyhow!(
+            "Broken local repo {} while repairing local catalog: current workspace root {:?} already exists",
+            current_name,
+            new_root
+        ));
+    }
+    if !old_exists {
         return Ok(());
     }
     std::fs::rename(&old_root, &new_root)?;

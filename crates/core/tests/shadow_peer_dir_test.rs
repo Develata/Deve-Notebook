@@ -87,3 +87,28 @@ fn non_file_shadow_repo_entry_fails_closed_for_listing_and_repair() {
             .contains("Broken shadow peer peer-dir while repairing catalogs")
     );
 }
+
+#[test]
+fn hidden_non_redb_shadow_repo_entry_fails_closed_for_listing_and_repair() {
+    let dir = TempDir::new().expect("create tempdir");
+    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let peer = deve_core::models::PeerId::new("peer-hidden-entry");
+    let peer_dir = repo.remotes_dir().join(peer.to_filename());
+    std::fs::create_dir_all(&peer_dir).expect("create peer dir");
+    std::fs::write(peer_dir.join(".stale"), b"shadow-junk").expect("create hidden junk");
+
+    let list_err = repo
+        .list_repos(Some(&peer))
+        .expect_err("hidden non-redb shadow entry must fail listing");
+    assert!(list_err.to_string().contains("unexpected non-redb entry"));
+
+    let repair_err = repo
+        .repair_remote_repo_catalogs()
+        .expect_err("hidden non-redb shadow entry must fail repair");
+    let detail = repair_err.to_string();
+    assert!(
+        detail.contains("Broken shadow peer peer-hidden-entry while repairing catalogs")
+            || detail.contains("unexpected non-redb entry"),
+        "unexpected repair error: {detail}"
+    );
+}
