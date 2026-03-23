@@ -73,7 +73,15 @@ impl RepoManager {
             return Ok(None);
         }
 
-        let Some(repo_stem) = self.resolve_local_repo_stem(repo_name)? else {
+        let Some(repo_stem) = self.resolve_local_repo_stem(repo_name).map_err(|err| {
+            anyhow!(
+                "Broken local repo {} while resolving workspace path {}: {}",
+                repo_name,
+                normalized,
+                err
+            )
+        })?
+        else {
             return Ok(None);
         };
         let Some(info) = self.get_repo_info_for(None, Some(&repo_stem))? else {

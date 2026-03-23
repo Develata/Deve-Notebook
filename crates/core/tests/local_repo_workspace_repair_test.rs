@@ -35,6 +35,8 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
     );
 
     repo.set_vault_root(&vault_dir);
+    repo.repair_local_repo_catalog()
+        .expect("repair local catalog realigns workspace");
 
     assert!(vault_dir.join("main/.notegit").exists());
     assert!(vault_dir.join("main/note.md").exists());
@@ -65,16 +67,19 @@ fn runtime_catalog_refresh_does_not_realign_workspace_root() {
     std::fs::create_dir_all(vault_dir.join("legacy/.notegit")).expect("legacy workspace");
     std::fs::write(vault_dir.join("legacy/note.md"), "hello").expect("write note");
 
-    assert_eq!(
-        repo.list_repos(None).expect("runtime repo listing"),
-        vec!["main".to_string()]
+    let err = repo
+        .list_repos(None)
+        .expect_err("runtime catalog refresh must fail closed on drift");
+    assert!(
+        err.to_string().contains("metadata name drifted to legacy"),
+        "unexpected error: {err:#}"
     );
     assert_eq!(
         repo.get_repo_info()
-            .expect("repaired metadata")
+            .expect("repo info")
             .expect("present")
             .name,
-        "main"
+        "legacy"
     );
     assert!(vault_dir.join("legacy/.notegit").exists());
     assert!(vault_dir.join("legacy/note.md").exists());

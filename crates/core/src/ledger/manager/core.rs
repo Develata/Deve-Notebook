@@ -45,8 +45,9 @@ impl RepoManager {
     /// 本方法无法标记 `#[cfg(test)]`，因为下游 crate 的测试模块也会调用它。
     pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
         let previous_root = self.vault_root.clone();
+        let requested_root = root.as_ref().to_path_buf();
         if let Err(error) = self.set_vault_root_checked(root) {
-            self.vault_root = previous_root;
+            self.vault_root = previous_root.or(Some(requested_root));
             tracing::warn!("Failed to repair local repo catalog after mounting vault: {error}");
         }
     }
