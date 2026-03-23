@@ -20,6 +20,11 @@ use std::sync::Arc;
 mod output;
 #[path = "search_scope.rs"]
 mod scope;
+#[cfg(test)]
+#[path = "search_test.rs"]
+mod tests;
+#[path = "search_walk.rs"]
+mod walk;
 
 /// 最大返回结果数（768 MB 内存安全阈值）
 const MAX_RESULTS: usize = 200;
@@ -54,10 +59,13 @@ fn register_search_files(engine: &mut Engine, caps: Arc<Capability>) {
                 .build();
 
             let mut matches = Vec::new();
-            for entry in walker.flatten() {
+            for entry in walker {
                 if matches.len() >= MAX_RESULTS {
                     break;
                 }
+                let Some(entry) = walk::next_walk_entry(entry, &root, "Search walk")? else {
+                    continue;
+                };
                 if !entry.path().is_file() {
                     continue;
                 }
@@ -90,15 +98,18 @@ fn register_grep_files(engine: &mut Engine, caps: Arc<Capability>) {
                 .build();
 
             let mut results = Vec::new();
-            for entry in walker.flatten() {
+            for entry in walker {
                 if results.len() >= MAX_RESULTS {
                     break;
                 }
+                let Some(entry) = walk::next_walk_entry(entry, &search_root, "Grep walk")? else {
+                    continue;
+                };
                 let p = entry.path();
                 if !p.is_file() {
                     continue;
                 }
-                let Ok(content) = std::fs::read_to_string(p) else {
+                let Some(content) = walk::read_searchable_text(p)? else {
                     continue;
                 };
                 output::collect_grep_matches(&re, p, &root, &content, &mut results, MAX_RESULTS)?;
