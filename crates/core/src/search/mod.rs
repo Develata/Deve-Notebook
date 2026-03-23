@@ -33,8 +33,6 @@ pub struct SearchResult {
 pub struct SearchService {
     index: Index,
     writer: Mutex<IndexWriter>,
-    #[allow(dead_code)]
-    schema: Schema,
     field_doc_id: Field,
     field_path: Field,
     field_content: Field,
@@ -56,7 +54,6 @@ impl SearchService {
         Ok(Self {
             index,
             writer: Mutex::new(writer),
-            schema,
             field_doc_id,
             field_path,
             field_content,
@@ -79,7 +76,6 @@ impl SearchService {
         Ok(Self {
             index,
             writer: Mutex::new(writer),
-            schema,
             field_doc_id,
             field_path,
             field_content,

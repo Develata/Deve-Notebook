@@ -41,18 +41,6 @@ impl RepoManager {
         self.run_on_local_repo(repo_name, |db| inode_index::get_docid(db, inode))
     }
 
-    /// 按路径查询 DocId（已走 node-first 路径）。
-    ///
-    /// 保留供 repair / rebuild 路径使用。运行时主链使用 `get_tracked_docid_in_local_repo`。
-    #[allow(dead_code)]
-    pub(crate) fn get_docid_in_local_repo(
-        &self,
-        repo_name: &str,
-        path: &str,
-    ) -> Result<Option<DocId>> {
-        self.run_on_local_repo(repo_name, |db| doc_lookup::resolve_doc_id(db, path))
-    }
-
     /// 运行时主链的 tracked doc 查询：
     /// 先走 `path -> node_id -> node_meta.doc_id`，避免将旧 path mapping 当作权威真值。
     pub fn get_tracked_docid_in_local_repo(
