@@ -16,6 +16,11 @@ use regex::Regex;
 use rhai::{Engine, EvalAltResult};
 use std::sync::Arc;
 
+#[path = "search_output.rs"]
+mod output;
+#[path = "search_scope.rs"]
+mod scope;
+
 /// 最大返回结果数（768 MB 内存安全阈值）
 const MAX_RESULTS: usize = 200;
 
@@ -56,12 +61,11 @@ fn register_search_files(engine: &mut Engine, caps: Arc<Capability>) {
                 if !entry.path().is_file() {
                     continue;
                 }
-                if let Ok(rel) = entry.path().strip_prefix(&root) {
-                    matches.push(rel.to_string_lossy().to_string());
-                }
+                let rel = scope::relative_search_path(&root, entry.path())?;
+                matches.push(rel);
             }
 
-            format_file_results(pattern, &matches)
+            output::format_file_results(pattern, &matches, MAX_RESULTS)
         },
     );
 }
@@ -76,11 +80,7 @@ fn register_grep_files(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: search access not allowed by manifest.".into());
             }
             let root = std::env::current_dir().map_err(|e| e.to_string())?;
-            let search_root = if path.is_empty() {
-                root.clone()
-            } else {
-                root.join(path)
-            };
+            let search_root = scope::resolve_search_root(&root, path)?;
             let re = Regex::new(pattern).map_err(|e| format!("Invalid regex: {e}"))?;
 
             let walker = WalkBuilder::new(&search_root)
@@ -101,64 +101,10 @@ fn register_grep_files(engine: &mut Engine, caps: Arc<Capability>) {
                 let Ok(content) = std::fs::read_to_string(p) else {
                     continue;
                 };
-                collect_grep_matches(&re, p, &root, &content, &mut results);
+                output::collect_grep_matches(&re, p, &root, &content, &mut results, MAX_RESULTS)?;
             }
 
-            format_grep_results(pattern, &results)
+            output::format_grep_results(pattern, &results, MAX_RESULTS)
         },
     );
-}
-
-/// 收集单个文件中的匹配行
-fn collect_grep_matches(
-    re: &Regex,
-    path: &std::path::Path,
-    root: &std::path::Path,
-    content: &str,
-    results: &mut Vec<String>,
-) {
-    let rel = path.strip_prefix(root).unwrap_or(path);
-    for (i, line) in content.lines().enumerate() {
-        if results.len() >= MAX_RESULTS {
-            break;
-        }
-        if re.is_match(line) {
-            let truncated: String = line.chars().take(200).collect();
-            results.push(format!("{}:{}:{}", rel.display(), i + 1, truncated));
-        }
-    }
-}
-
-/// 格式化文件搜索结果
-fn format_file_results(pattern: &str, matches: &[String]) -> Result<String, Box<EvalAltResult>> {
-    if matches.is_empty() {
-        return Ok(format!("No files matching '{pattern}'"));
-    }
-    let count = matches.len();
-    let suffix = if count >= MAX_RESULTS {
-        format!("\n... (truncated at {MAX_RESULTS})")
-    } else {
-        String::new()
-    };
-    Ok(format!(
-        "Found {count} file(s):\n{}{suffix}",
-        matches.join("\n")
-    ))
-}
-
-/// 格式化 grep 搜索结果
-fn format_grep_results(pattern: &str, results: &[String]) -> Result<String, Box<EvalAltResult>> {
-    if results.is_empty() {
-        return Ok(format!("No matches for '{pattern}'"));
-    }
-    let count = results.len();
-    let suffix = if count >= MAX_RESULTS {
-        format!("\n... (truncated at {MAX_RESULTS})")
-    } else {
-        String::new()
-    };
-    Ok(format!(
-        "Found {count} match(es):\n{}{suffix}",
-        results.join("\n")
-    ))
 }
