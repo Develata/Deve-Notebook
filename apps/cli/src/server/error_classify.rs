@@ -53,6 +53,8 @@ pub(super) fn is_storage_corruption(lower: &str) -> bool {
                 "failed to read remote peer directory metadata",
                 "failed to stat remote repo directory",
                 "failed to stat remote repo path candidate",
+                "tree registry lock poisoned",
+                "repotreeregistry write lock poisoned",
                 "deserialize",
                 "decode",
                 "unexpected end",
@@ -105,6 +107,13 @@ mod tests {
     fn classifies_remote_peer_directory_metadata_errors_as_storage_corruption() {
         assert!(is_storage_corruption(
             "failed to read remote peer directory metadata \"/tmp/remotes/peer-a\" while validating branch availability: input/output error",
+        ));
+    }
+
+    #[test]
+    fn classifies_tree_registry_poison_as_storage_corruption() {
+        assert!(is_storage_corruption(
+            "repotreeregistry write lock poisoned while rebuilding repo view",
         ));
     }
 }

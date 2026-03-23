@@ -232,7 +232,7 @@ async fn list_docs_does_not_emit_partial_repo_view_when_tree_reset_fails() -> an
             switch_nonce,
             ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert_eq!(switch_nonce, Some(41));
         }
         other => panic!("expected tree rebuild ProtocolError, got {:?}", other),

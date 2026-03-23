@@ -196,7 +196,7 @@ async fn switch_repo_does_not_emit_partial_repo_view_when_tree_reset_fails() -> 
         }) => {
             assert_eq!(
                 error.code,
-                deve_core::protocol::ServerErrorCode::RequestFailed
+                deve_core::protocol::ServerErrorCode::StoragePersistFailed
             );
             assert_eq!(switch_nonce, Some(11));
         }
