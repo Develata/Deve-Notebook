@@ -45,7 +45,13 @@ impl RepoManager {
                 matches.push(repo_name);
             }
         }
-        Ok((matches.len() == 1).then(|| matches[0].clone()))
+        if matches.len() > 1 {
+            return Err(anyhow::anyhow!(
+                "Ambiguous local repository selector for URL {}",
+                target_url
+            ));
+        }
+        Ok(matches.into_iter().next())
     }
 
     pub fn get_repo_info_for(
@@ -184,5 +190,31 @@ mod tests {
             .find_local_repo_name_by_url("urn:main")
             .expect_err("missing main metadata must fail closed");
         assert!(err.to_string().contains("repository metadata missing"));
+    }
+
+    #[test]
+    fn local_repo_name_by_url_fails_closed_on_duplicate_url_matches() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+        create_secondary_repo(&ledger_dir, "wiki", "urn:test");
+        let mirror_info = create_secondary_repo(&ledger_dir, "mirror", "urn:mirror");
+        let mirror_db = main.open_database(None, "mirror").expect("mirror db").db;
+        write_info(
+            mirror_db.as_ref(),
+            &RepoInfo {
+                uuid: mirror_info.uuid,
+                name: "mirror".into(),
+                url: Some("urn:test".into()),
+            },
+        );
+
+        let err = main
+            .find_local_repo_name_by_url("urn:test")
+            .expect_err("duplicate local URL owners must fail closed");
+        assert!(
+            err.to_string()
+                .contains("duplicate local repository URL urn:test")
+        );
     }
 }

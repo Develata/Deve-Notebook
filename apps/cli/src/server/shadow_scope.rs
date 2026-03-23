@@ -4,10 +4,11 @@ use crate::server::session::WsSession;
 use anyhow::{Result, anyhow};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub(crate) fn ensure_remote_branch_available(state: &Arc<AppState>, branch: &PeerId) -> Result<()> {
-    let peer_dir = state.repo.remotes_dir().join(branch.to_filename());
+    let peer_dir = checked_remotes_dir(state)?.join(branch.to_filename());
     match peer_dir.try_exists() {
         Ok(true) => {}
         Ok(false) => {
@@ -40,6 +41,42 @@ pub(crate) fn ensure_remote_branch_available(state: &Arc<AppState>, branch: &Pee
         ));
     }
     Ok(())
+}
+
+fn checked_remotes_dir(state: &Arc<AppState>) -> Result<PathBuf> {
+    let remotes_dir = state.repo.remotes_dir();
+    match remotes_dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => {
+            return Err(anyhow!(
+                "Broken remote repo catalog: remote repo directory missing at {:?}",
+                remotes_dir
+            ));
+        }
+        Err(err) => {
+            return Err(anyhow!(
+                "Broken remote repo catalog: failed to stat remote repo directory {:?}: {}",
+                remotes_dir,
+                err
+            ));
+        }
+    }
+    if !std::fs::metadata(&remotes_dir)
+        .map_err(|err| {
+            anyhow!(
+                "Broken remote repo catalog: failed to read remote repo directory metadata {:?}: {}",
+                remotes_dir,
+                err
+            )
+        })?
+        .is_dir()
+    {
+        return Err(anyhow!(
+            "Broken remote repo catalog: expected directory at {:?}",
+            remotes_dir
+        ));
+    }
+    Ok(remotes_dir)
 }
 
 pub(crate) fn map_remote_branch_availability(

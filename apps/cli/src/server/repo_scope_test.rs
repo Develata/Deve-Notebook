@@ -223,3 +223,25 @@ fn resolve_session_repo_and_sync_clears_missing_remote_branch_scope() -> anyhow:
     assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }
+
+#[test]
+fn resolve_session_repo_preserves_missing_remote_catalog_failure() -> anyhow::Result<()> {
+    let (dir, state, _default_id, _test_id) = build_state()?;
+    std::fs::remove_dir_all(dir.path().join("remotes"))?;
+
+    let mut session = WsSession::new();
+    session.switch_branch(Some("peer-a".into()));
+    let err = resolve_session_repo(&state, &session)
+        .expect_err("missing remote catalog must fail closed");
+
+    let detail = err.to_string();
+    assert!(
+        detail.contains("Broken remote repo catalog"),
+        "unexpected error detail: {detail}"
+    );
+    assert_eq!(
+        map_repo_scope_error(anyhow::anyhow!(detail)).code,
+        ServerErrorCode::StoragePersistFailed
+    );
+    Ok(())
+}
