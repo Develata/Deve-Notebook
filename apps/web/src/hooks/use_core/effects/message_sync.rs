@@ -68,8 +68,7 @@ pub fn handle_sc_or_remaining<F>(
 ) where
     F: Fn(),
 {
-    if !effects_sc::handle_sc_message(
-        &msg,
+    let ctx = effects_sc::sc_message_context(
         signals.set_staged_changes,
         signals.set_unstaged_changes,
         signals.changes_request_id,
@@ -92,7 +91,8 @@ pub fn handle_sc_or_remaining<F>(
         signals.current_scope_nonce,
         schedule_refresh,
         ws,
-    ) {
+    );
+    if !effects_sc::handle_sc_message(&msg, &ctx) {
         effects_msg::handle_remaining(msg, signals.set_system_metrics);
     }
 }

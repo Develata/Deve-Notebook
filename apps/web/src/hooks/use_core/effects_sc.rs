@@ -1,29 +1,30 @@
 //! Source Control 消息分发。
 
-use deve_core::protocol::ServerMessage;
+#[path = "effects_sc_context.rs"]
+mod context;
+#[path = "effects_sc_dispatch.rs"]
+mod dispatch;
+
+use crate::api::WsService;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
 use super::diff_session::DiffSessionWire;
-use super::effects_sc_apply::{
-    FsRefreshSignals, apply_doc_diff, refresh_after_commit, refresh_after_fs_change,
-};
 use super::types::PendingBranchTarget;
+pub(crate) use context::ScMessageContext;
+pub(crate) use dispatch::handle_sc_message;
 
 #[allow(unused_imports)]
 pub(crate) use super::effects_sc_scope::{matches_current_repo, matches_current_scope};
+pub(crate) use super::effects_sc_state::clear_repo_scoped_state;
+#[cfg(test)]
 pub(crate) use super::effects_sc_state::{
-    changes_list_matches_request, clear_repo_scoped_state, commit_diff_matches_request,
-    commit_history_matches_request, doc_diff_matches_request, scoped_ack_matches,
+    changes_list_matches_request, commit_diff_matches_request, commit_history_matches_request,
+    doc_diff_matches_request, scoped_ack_matches,
 };
 
-#[cfg(test)]
-#[path = "effects_sc_test.rs"]
-mod tests;
-
 #[allow(clippy::too_many_arguments)]
-pub fn handle_sc_message(
-    msg: &ServerMessage,
+pub(crate) fn sc_message_context<'a>(
     set_staged: WriteSignal<Vec<ChangeEntry>>,
     set_unstaged: WriteSignal<Vec<ChangeEntry>>,
     changes_request_id: ReadSignal<Option<String>>,
@@ -44,205 +45,35 @@ pub fn handle_sc_message(
     pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pending_repo_switch: ReadSignal<Option<String>>,
     current_scope_nonce: ReadSignal<u64>,
-    schedule_refresh: &dyn Fn(),
-    ws: &crate::api::WsService,
-) -> bool {
-    let active_scope_nonce = current_scope_nonce.get_untracked();
-    let in_scope = |repo_id, branch| {
-        matches_current_scope(
-            repo_id,
-            branch,
-            current_repo_id,
-            active_branch,
-            pending_branch_switch,
-            pending_repo_switch,
-        )
-    };
-    let in_ack_scope = |repo_id, branch, scope_nonce| {
-        in_scope(repo_id, branch) && scoped_ack_matches(scope_nonce, active_scope_nonce)
-    };
-    match msg {
-        ServerMessage::ChangesList {
-            request_id,
-            repo_id,
-            branch,
-            scope_nonce,
-            staged,
-            unstaged,
-        } => {
-            if !in_scope(repo_id, branch) {
-                return true;
-            }
-            if !changes_list_matches_request(
-                request_id,
-                changes_request_id.get_untracked(),
-                *scope_nonce,
-                active_scope_nonce,
-            ) {
-                return true;
-            }
-            set_changes_request_id.set(None);
-            set_staged.set(staged.clone());
-            set_unstaged.set(unstaged.clone());
-        }
-        ServerMessage::CommitHistory {
-            request_id,
-            repo_id,
-            branch,
-            scope_nonce,
-            commits,
-        } => {
-            if !in_scope(repo_id, branch) {
-                return true;
-            }
-            if !commit_history_matches_request(
-                request_id,
-                commit_history_request_id.get_untracked(),
-                *scope_nonce,
-                active_scope_nonce,
-            ) {
-                return true;
-            }
-            set_commit_history_request_id.set(None);
-            set_history.set(commits.clone());
-        }
-        ServerMessage::StageAck {
-            repo_id,
-            branch,
-            scope_nonce,
-            path,
-        } => {
-            if !in_ack_scope(repo_id, branch, *scope_nonce) {
-                return true;
-            }
-            leptos::logging::log!("已暂存: {}", path);
-            schedule_refresh();
-        }
-        ServerMessage::UnstageAck {
-            repo_id,
-            branch,
-            scope_nonce,
-            path,
-        } => {
-            if !in_ack_scope(repo_id, branch, *scope_nonce) {
-                return true;
-            }
-            leptos::logging::log!("已取消暂存: {}", path);
-            schedule_refresh();
-        }
-        ServerMessage::DiscardAck {
-            repo_id,
-            branch,
-            scope_nonce,
-            path,
-        } => {
-            if !in_ack_scope(repo_id, branch, *scope_nonce) {
-                return true;
-            }
-            leptos::logging::log!("已放弃变更: {}", path);
-            schedule_refresh();
-        }
-        ServerMessage::CommitAck {
-            commit_id,
-            repo_id,
-            branch,
-            scope_nonce,
-            ..
-        } => {
-            if !in_ack_scope(repo_id, branch, *scope_nonce) {
-                return true;
-            }
-            refresh_after_commit(
-                commit_id,
-                active_scope_nonce,
-                set_changes_request_id,
-                set_commit_history_request_id,
-                ws,
-            );
-        }
-        ServerMessage::DocDiff {
-            request_id,
-            repo_id,
-            branch,
-            scope_nonce,
-            path,
-            old_content,
-            new_content,
-        } => {
-            if !in_scope(repo_id, branch) {
-                return true;
-            }
-            if !doc_diff_matches_request(
-                request_id,
-                doc_diff_request_id.get_untracked(),
-                *scope_nonce,
-                active_scope_nonce,
-            ) {
-                return true;
-            }
-            set_doc_diff_request_id.set(None);
-            apply_doc_diff(path, old_content, new_content, set_diff);
-        }
-        ServerMessage::FsChangeDetected {
-            repo_id,
-            branch,
-            scope_nonce,
-            path,
-            change_type,
-            has_conflict,
-        } => {
-            if !in_ack_scope(repo_id, branch, *scope_nonce) {
-                return true;
-            }
-            refresh_after_fs_change(
-                path,
-                change_type,
-                *has_conflict,
-                FsRefreshSignals {
-                    current_scope_nonce: active_scope_nonce,
-                    set_doc_list_request_id,
-                    set_tree_request_id,
-                },
-                schedule_refresh,
-                ws,
-            );
-        }
-        ServerMessage::CommitDiffResult {
-            request_id,
-            repo_id,
-            branch,
-            scope_nonce,
-            diffs,
-        } => {
-            if !in_scope(repo_id, branch) {
-                return true;
-            }
-            if !commit_diff_matches_request(
-                request_id,
-                commit_diff_request_id.get_untracked(),
-                *scope_nonce,
-                active_scope_nonce,
-            ) {
-                return true;
-            }
-            set_commit_diff_request_id.set(None);
-            leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
-            set_commit_diff.set(diffs.clone());
-        }
-        ServerMessage::ConflictResolved {
-            repo_id,
-            branch,
-            scope_nonce,
-            path,
-            resolution,
-        } => {
-            if !in_ack_scope(repo_id, branch, *scope_nonce) {
-                return true;
-            }
-            leptos::logging::log!("冲突已解决: {} ({})", path, resolution);
-            schedule_refresh();
-        }
-        _ => return false,
+    schedule_refresh: &'a dyn Fn(),
+    ws: &'a WsService,
+) -> ScMessageContext<'a> {
+    ScMessageContext {
+        set_staged,
+        set_unstaged,
+        changes_request_id,
+        set_changes_request_id,
+        set_history,
+        commit_history_request_id,
+        set_commit_history_request_id,
+        set_doc_list_request_id,
+        set_tree_request_id,
+        doc_diff_request_id,
+        set_doc_diff_request_id,
+        set_diff,
+        commit_diff_request_id,
+        set_commit_diff_request_id,
+        set_commit_diff,
+        current_repo_id,
+        active_branch,
+        pending_branch_switch,
+        pending_repo_switch,
+        current_scope_nonce,
+        schedule_refresh,
+        ws,
     }
-    true
 }
+
+#[cfg(test)]
+#[path = "effects_sc_test.rs"]
+mod tests;
