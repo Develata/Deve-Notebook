@@ -30,8 +30,6 @@ pub struct RhaiRuntime {
     ast: Option<AST>,
     scope: Mutex<Scope<'static>>,
     manifest: PluginManifest,
-    #[allow(dead_code)]
-    base_dir: PathBuf,
 }
 
 impl RhaiRuntime {
@@ -60,7 +58,6 @@ impl RhaiRuntime {
             ast: None,
             scope: Mutex::new(Scope::new()),
             manifest,
-            base_dir,
         }
     }
 }

@@ -33,16 +33,6 @@ pub struct ShadowRepo<'a> {
 }
 
 impl<'a> ShadowRepo<'a> {
-    /// 创建影子库的只读视图
-    #[allow(dead_code)] // 用于测试和未来扩展
-    pub(crate) fn new(peer_id: PeerId, repo_id: RepoId, db: &'a Database) -> Self {
-        Self {
-            peer_id,
-            repo_id,
-            db,
-        }
-    }
-
     /// 获取指定文档的所有操作 (只读)
     pub fn get_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
         ops::get_ops_from_db(self.db, doc_id)
@@ -153,7 +143,11 @@ mod tests {
         let dbs = shadow_dbs.read().unwrap();
         let peer_repos = dbs.get(&peer_id).unwrap();
         let db = peer_repos.get(&repo_id).unwrap();
-        let shadow_repo = ShadowRepo::new(peer_id.clone(), repo_id, db);
+        let shadow_repo = ShadowRepo {
+            peer_id: peer_id.clone(),
+            repo_id,
+            db,
+        };
 
         // Verify read-only access works
         let max_seq = shadow_repo.get_global_max_seq()?;
@@ -201,7 +195,11 @@ mod tests {
 
         let dbs = shadow_dbs.read().unwrap();
         let db = dbs.get(&peer_id).unwrap().get(&repo_id).unwrap();
-        let shadow_repo = ShadowRepo::new(peer_id, repo_id, db);
+        let shadow_repo = ShadowRepo {
+            peer_id,
+            repo_id,
+            db,
+        };
         assert_eq!(shadow_repo.get_structure_ops(node_id)?.len(), 1);
         Ok(())
     }
