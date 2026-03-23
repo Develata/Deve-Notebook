@@ -28,6 +28,7 @@ pub async fn handle_list_shadows(
 ) {
     let scope_nonce = browser_scope_nonce(session.as_deref());
     if let Some(session) = session.as_deref_mut() {
+        clear_local_unbound_runtime_binding(session);
         if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
             return;
         }
@@ -102,6 +103,17 @@ pub async fn handle_list_repos(
             tracing::error!("Failed to list repos: {:?}", e);
             send_listing_error(ch, format!("Failed to list repos: {}", e), scope_nonce);
         }
+    }
+}
+
+fn clear_local_unbound_runtime_binding(session: &mut WsSession) {
+    if session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none()
+        && session.has_runtime_scope_binding()
+    {
+        session.clear_active_db();
+        session.clear_sync_binding();
     }
 }
 
