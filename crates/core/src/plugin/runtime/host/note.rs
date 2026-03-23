@@ -87,6 +87,7 @@ fn managed_target_parts(path: &Path) -> Result<(String, String)> {
     }
     let cwd = std::env::current_dir()?;
     let rel = project_relative_path(&cwd, path)
+        .map_err(anyhow::Error::msg)?
         .ok_or_else(|| anyhow::anyhow!("note target is outside project root"))?;
     split_managed_note_target(&rel)
         .ok_or_else(|| anyhow::anyhow!("note API requires a managed markdown path"))
