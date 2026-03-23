@@ -55,6 +55,12 @@ pub(super) fn is_storage_corruption(lower: &str) -> bool {
                 "failed to stat remote repo path candidate",
                 "tree registry lock poisoned",
                 "repotreeregistry write lock poisoned",
+                "local repo registry lock poisoned",
+                "shadow db registry lock poisoned",
+                "database cache lock poisoned",
+                "reposcopedsyncengine registry poisoned",
+                "reposcopedsyncengine read lock poisoned",
+                "reposcopedsyncengine write lock poisoned",
                 "deserialize",
                 "decode",
                 "unexpected end",
@@ -114,6 +120,17 @@ mod tests {
     fn classifies_tree_registry_poison_as_storage_corruption() {
         assert!(is_storage_corruption(
             "repotreeregistry write lock poisoned while rebuilding repo view",
+        ));
+    }
+
+    #[test]
+    fn classifies_registry_poison_as_storage_corruption() {
+        assert!(is_storage_corruption("shadow db registry lock poisoned"));
+        assert!(is_storage_corruption(
+            "database cache lock poisoned while storing /tmp/repo.redb",
+        ));
+        assert!(is_storage_corruption(
+            "reposcopedsyncengine write lock poisoned",
         ));
     }
 }
