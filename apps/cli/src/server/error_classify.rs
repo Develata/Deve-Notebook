@@ -49,6 +49,8 @@ pub(super) fn is_storage_corruption(lower: &str) -> bool {
                 "failed to walk local repo",
                 "failed to stat local repo directory",
                 "failed to read repo entry type",
+                "failed to stat remote peer directory",
+                "failed to read remote peer directory metadata",
                 "failed to stat remote repo directory",
                 "failed to stat remote repo path candidate",
                 "deserialize",
@@ -86,4 +88,23 @@ pub(super) fn is_repo_context_invalid(lower: &str) -> bool {
 
 fn contains_any(input: &str, patterns: &[&str]) -> bool {
     patterns.iter().any(|pattern| input.contains(pattern))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_storage_corruption;
+
+    #[test]
+    fn classifies_remote_peer_directory_stat_errors_as_storage_corruption() {
+        assert!(is_storage_corruption(
+            "failed to stat remote peer directory \"/tmp/remotes/peer-a\" while validating branch availability: permission denied",
+        ));
+    }
+
+    #[test]
+    fn classifies_remote_peer_directory_metadata_errors_as_storage_corruption() {
+        assert!(is_storage_corruption(
+            "failed to read remote peer directory metadata \"/tmp/remotes/peer-a\" while validating branch availability: input/output error",
+        ));
+    }
 }

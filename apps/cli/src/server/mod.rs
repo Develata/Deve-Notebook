@@ -126,6 +126,8 @@ mod switcher_exact_selector_test;
 #[cfg(test)]
 mod switcher_scope_rebind_test;
 #[cfg(test)]
+mod sync_hello_browser_scope_test;
+#[cfg(test)]
 mod sync_hello_browser_test;
 #[cfg(test)]
 mod sync_hello_scope_test;

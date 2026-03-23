@@ -9,12 +9,8 @@ pub(super) fn prepare_switch_error(branch: Option<&PeerId>, err: anyhow::Error) 
     if mapped.code != ServerErrorCode::RequestFailed {
         return mapped;
     }
-    let code = if branch.is_some() {
-        ServerErrorCode::StorageDbLocked
-    } else {
-        ServerErrorCode::StoragePersistFailed
-    };
-    ServerError::with_detail(code, detail)
+    let _ = branch;
+    ServerError::with_detail(ServerErrorCode::StoragePersistFailed, detail)
 }
 
 #[cfg(test)]
@@ -45,5 +41,14 @@ mod tests {
             anyhow::anyhow!("Database already open. Cannot acquire lock."),
         );
         assert_eq!(err.code, ServerErrorCode::StorageDbLocked);
+    }
+
+    #[test]
+    fn keeps_remote_non_lock_prepare_failures_as_storage_persist_failed() {
+        let err = prepare_switch_error(
+            Some(&PeerId::new("peer-a")),
+            anyhow::anyhow!("permission denied while opening shadow repo"),
+        );
+        assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
     }
 }
