@@ -3,11 +3,11 @@ use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::protocol::ServerMessage;
 use deve_core::models::PeerId;
+use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-use super::{
+use super::listing_scope::{
     browser_scope_nonce, clear_local_unbound_runtime_binding, precheck_remote_unbound_scope,
     send_listing_error,
 };
