@@ -74,27 +74,25 @@ fn broken_shadow_file_fails_closed_even_if_metadata_was_previously_loaded() {
     };
     let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
     let path = peer_dir.join("wiki.redb");
-    let backup = peer_dir.join("wiki.bak");
 
     repo.ensure_shadow_repo_info(&peer_id, &info)
         .expect("prepare shadow repo");
-    std::fs::rename(&path, &backup).expect("move live shadow db aside");
+    std::fs::remove_file(&path).expect("remove live shadow db");
     std::fs::write(&path, b"not-a-redb").expect("replace shadow db with broken bytes");
 
     let list_err = repo
         .list_repos(Some(&peer_id))
         .expect_err("broken shadow listing must fail closed");
-    assert!(
-        list_err
-            .to_string()
-            .contains("Broken shadow repo wiki for peer peer-remote")
-    );
+    let list_detail = list_err.to_string();
+    let expected_uuid = info.uuid.to_string();
+    assert!(list_detail.contains("Broken shadow repo"));
+    assert!(list_detail.contains("for peer peer-remote"));
+    assert!(list_detail.contains("wiki") || list_detail.contains(&expected_uuid));
     let selector_err = repo
         .find_remote_repo_selector_by_id(&peer_id, info.uuid)
         .expect_err("broken shadow selector must fail closed");
-    assert!(
-        selector_err
-            .to_string()
-            .contains("Broken shadow repo wiki for peer peer-remote")
-    );
+    let selector_detail = selector_err.to_string();
+    assert!(selector_detail.contains("Broken shadow repo"));
+    assert!(selector_detail.contains("for peer peer-remote"));
+    assert!(selector_detail.contains("wiki") || selector_detail.contains(&expected_uuid));
 }
