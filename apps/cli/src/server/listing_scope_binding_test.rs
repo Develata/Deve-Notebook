@@ -68,7 +68,8 @@ fn seed_remote_branch(state: &Arc<AppState>, peer_id: &PeerId, repo_id: uuid::Uu
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn list_docs_rejects_unbound_local_scope_with_stale_runtime_binding() -> anyhow::Result<()> {
+async fn list_docs_bootstrap_single_repo_after_clearing_stale_runtime_binding(
+) -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -85,12 +86,13 @@ async fn list_docs_rejects_unbound_local_scope_with_stale_runtime_binding() -> a
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+        Some(ServerMessage::RepoSwitched { uuid, .. }) => {
+            assert_eq!(uuid, repo_id.to_string());
         }
-        other => panic!("expected ProtocolError, got {:?}", other),
+        other => panic!("expected RepoSwitched, got {:?}", other),
     }
-    assert!(session.active_repo.is_none());
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(repo_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());
     assert!(session.authenticated_peer_id.is_none());
@@ -99,7 +101,7 @@ async fn list_docs_rejects_unbound_local_scope_with_stale_runtime_binding() -> a
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn list_repos_rejects_unbound_local_scope_with_stale_runtime_binding() -> anyhow::Result<()> {
+async fn list_repos_clear_unbound_local_scope_with_stale_runtime_binding() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -109,10 +111,10 @@ async fn list_repos_rejects_unbound_local_scope_with_stale_runtime_binding() -> 
     handle_list_repos(&state, &ch, &mut session, Some("req-local-repos".into())).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+        Some(ServerMessage::RepoList { repos, .. }) => {
+            assert_eq!(repos, vec!["default".to_string()]);
         }
-        other => panic!("expected ProtocolError, got {:?}", other),
+        other => panic!("expected RepoList, got {:?}", other),
     }
     assert!(session.active_repo.is_none());
     assert!(session.get_active_db().is_none());
