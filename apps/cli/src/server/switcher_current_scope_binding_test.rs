@@ -12,6 +12,13 @@ use tempfile::TempDir;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
@@ -62,7 +69,7 @@ async fn switch_branch_rejects_unbound_local_scope_with_stale_runtime_binding() 
     let (_dir, state, repo_id, peer_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(80);
     seed_stale_runtime_binding(&mut session, &state, repo_id);
 
     handle_switch_branch(
@@ -99,7 +106,7 @@ async fn switch_branch_rejects_unbound_remote_scope_with_stale_runtime_binding()
     let (_dir, state, repo_id, peer_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(81);
     session.switch_branch(Some(peer_id.to_string()));
     seed_stale_runtime_binding(&mut session, &state, repo_id);
 

@@ -12,6 +12,13 @@ use std::sync::Arc;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow_peer()
 -> anyhow::Result<()> {
@@ -61,9 +68,16 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(0);
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(1),
+    )
+    .await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
@@ -114,10 +128,17 @@ async fn switch_branch_fails_closed_when_target_branch_lacks_current_repo_match(
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(0);
     session.switch_repo("ghost".into(), None);
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(1),
+    )
+    .await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
@@ -177,10 +198,17 @@ async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(0);
     session.switch_repo("wiki".into(), Some(local_info.uuid));
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(1),
+    )
+    .await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {

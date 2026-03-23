@@ -12,6 +12,13 @@ use std::sync::Arc;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_string()
 -> anyhow::Result<()> {
@@ -51,7 +58,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(28);
     session.switch_repo(local_info.uuid.to_string(), None);
 
     handle_switch_branch(
@@ -116,7 +123,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(40);
     session.switch_repo("default".into(), Some(local_info.uuid));
 
     handle_switch_branch(

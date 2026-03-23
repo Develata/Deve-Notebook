@@ -11,6 +11,13 @@ use std::sync::Arc;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale()
 -> anyhow::Result<()> {
@@ -48,7 +55,7 @@ async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(72);
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("stale-wiki".into(), None);
 
@@ -115,7 +122,7 @@ async fn switch_branch_fails_closed_when_current_remote_scope_has_no_url() -> an
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(73);
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("wiki".into(), None);
 

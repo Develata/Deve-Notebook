@@ -32,10 +32,9 @@ pub async fn handle_list_shadows(
         if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
             return;
         }
-        if session.active_branch.is_some()
-            && (session.active_repo.is_some()
-                || session.active_repo_id.is_some()
-                || session.has_runtime_scope_binding())
+        if (session.active_repo.is_some()
+            || session.active_repo_id.is_some()
+            || session.has_runtime_scope_binding())
             && let Err(error) = resolve_session_repo_and_sync(state, session)
         {
             ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(error), scope_nonce);
@@ -131,7 +130,12 @@ pub(super) fn precheck_remote_unbound_scope(
         return false;
     }
     if let Err(error) = shadow_scope::map_remote_branch_availability(state, &branch) {
-        shadow_scope::clear_stale_remote_branch(session);
+        if shadow_scope::should_clear_missing_remote_branch(&error) {
+            shadow_scope::clear_stale_remote_branch(session);
+        } else {
+            session.clear_active_db();
+            session.clear_sync_binding();
+        }
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return true;
     }

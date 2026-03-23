@@ -11,6 +11,13 @@ use std::sync::Arc;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow::Result<()> {
     let dir = tempdir()?;
@@ -53,11 +60,18 @@ async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow
     });
     let (uni_tx, _uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(0);
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo(selector.clone(), None);
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(1),
+    )
+    .await;
 
     assert_eq!(session.active_branch, Some(peer_id));
     assert_eq!(session.active_repo.as_deref(), Some(selector.as_str()));
@@ -108,7 +122,7 @@ async fn switch_repo_fails_closed_when_exact_remote_selector_conflicts_with_repo
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(4);
     session.switch_branch(Some(peer_id.to_string()));
 
     handle_switch_repo(
@@ -170,7 +184,7 @@ async fn switch_repo_does_not_emit_partial_repo_view_when_tree_reset_fails() -> 
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(10);
 
     handle_switch_repo(&state, &ch, &mut session, "default".into(), None, Some(11)).await;
 

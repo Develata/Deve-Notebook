@@ -147,3 +147,55 @@ async fn switch_repo_rejects_stale_switch_nonce_for_browser_sessions() -> anyhow
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_rejects_non_browser_sessions() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_switch_branch(&state, &ch, &mut session, Some("peer-a".into()), None).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("browser sessions"))
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.active_branch.is_none());
+    assert!(session.active_repo.is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_repo_rejects_non_browser_sessions() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    handle_switch_repo(&state, &ch, &mut session, "default".into(), None, None).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("browser sessions"))
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.active_branch.is_none());
+    assert!(session.active_repo.is_none());
+    Ok(())
+}

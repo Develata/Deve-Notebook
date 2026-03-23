@@ -11,6 +11,13 @@ use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
@@ -44,7 +51,7 @@ async fn switch_branch_rejects_unknown_shadow_peer() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(10);
 
     handle_switch_branch(
         &state,
@@ -75,7 +82,7 @@ async fn switch_branch_rejects_local_repo_selector() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(12);
 
     handle_switch_branch(&state, &ch, &mut session, Some("default".into()), Some(13)).await;
 
@@ -103,7 +110,7 @@ async fn switch_branch_rejects_peer_with_only_broken_shadow_repos() -> anyhow::R
     std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(22);
 
     handle_switch_branch(
         &state,
@@ -159,9 +166,16 @@ async fn switch_branch_accepts_shadow_peer_even_if_local_repo_stem_matches() -> 
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(1);
 
-    handle_switch_branch(&state, &ch, &mut session, Some(peer_id.to_string()), None).await;
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(2),
+    )
+    .await;
 
     assert!(matches!(
         uni_rx.recv().await,
@@ -182,7 +196,7 @@ async fn switch_branch_emits_scope_messages_after_success_ack() -> anyhow::Resul
     state.repo.ensure_shadow_repo_info(&peer_id, &local)?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(16);
 
     handle_switch_branch(
         &state,

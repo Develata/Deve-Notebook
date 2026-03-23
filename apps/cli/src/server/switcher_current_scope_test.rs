@@ -11,6 +11,13 @@ use std::sync::Arc;
 use tempfile::tempdir;
 use tokio::sync::{broadcast, mpsc};
 
+fn browser_session(scope_nonce: u64) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
 -> anyhow::Result<()> {
@@ -43,7 +50,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(54);
     session.switch_repo("notes".into(), Some(default_info.uuid));
 
     handle_switch_branch(
@@ -105,7 +112,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid() 
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(56);
     let raw_selector = default_info.uuid.to_string();
     session.switch_repo(raw_selector.clone(), None);
 
@@ -168,7 +175,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_stale_name(
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
+    let mut session = browser_session(57);
     session.switch_repo("stale-default".into(), None);
 
     handle_switch_branch(
