@@ -68,8 +68,8 @@ fn seed_remote_branch(state: &Arc<AppState>, peer_id: &PeerId, repo_id: uuid::Uu
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn list_docs_bootstrap_single_repo_after_clearing_stale_runtime_binding(
-) -> anyhow::Result<()> {
+async fn list_docs_bootstrap_single_repo_after_clearing_stale_runtime_binding() -> anyhow::Result<()>
+{
     let (_dir, state, repo_id) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
