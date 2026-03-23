@@ -107,19 +107,18 @@ mod tests {
     #[test]
     fn resolves_local_merge_scope_from_remote_repo_id() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let repo = Arc::new(
-            RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo"),
-        );
+        let vault = dir.path().join("vault");
+        let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)
+            .expect("init repo");
+        repo.set_vault_root(&vault);
+        let repo = Arc::new(repo);
         let info = repo
             .get_repo_info_for(None, Some(repo.local_repo_name()))
             .expect("repo info")
             .expect("repo info exists");
         let state = Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(
-                repo.clone(),
-                dir.path().join("vault"),
-            )),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
             tx: broadcast::channel(8).0,
             plugins: vec![],
             sync_engine: Arc::new(deve_core::sync::repo_scoped::RepoScopedSyncEngine::new(
