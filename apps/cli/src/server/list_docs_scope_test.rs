@@ -4,6 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -39,6 +40,35 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
             identity_key,
         }),
         test_id,
+    ))
+}
+
+fn build_single_repo_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
+    let dir = tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    repo.set_vault_root(&vault);
+    let default_id = repo.get_repo_info()?.expect("default info").uuid;
+    let repo = Arc::new(repo);
+    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    Ok((
+        dir,
+        Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            tx: broadcast::channel(16).0,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                PeerId::new("test-peer"),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_service: None,
+            identity_key,
+        }),
+        default_id,
     ))
 }
 
@@ -153,5 +183,55 @@ async fn list_docs_on_scoped_local_unbound_state_returns_repo_unbound() -> anyho
         other => panic!("expected SyncRepoUnbound error, got {:?}", other),
     }
     assert!(session.get_active_db().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_docs_with_stale_local_binding_bootstraps_single_repo() -> anyhow::Result<()> {
+    let (dir, state, default_id) = build_single_repo_state()?;
+    let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
+    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.set_active_db(DatabaseHandle {
+        db: stale_db,
+        readonly: false,
+        branch: None,
+        repo_id: Some(uuid::Uuid::new_v4()),
+        repo_name: "ghost".into(),
+    });
+    session.set_authenticated(PeerId::new("stale-peer"));
+    session.bind_repo(uuid::Uuid::new_v4());
+    session.set_sync_scope_nonce(17);
+
+    handle_list_docs(
+        &state,
+        &ch,
+        &mut session,
+        Some("req-bootstrap".into()),
+        None,
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::RepoSwitched { uuid, .. }) => {
+            assert_eq!(uuid, default_id.to_string());
+        }
+        other => panic!("expected RepoSwitched, got {:?}", other),
+    }
+    match uni_rx.recv().await {
+        Some(ServerMessage::DocList { repo_id, docs, .. }) => {
+            assert_eq!(repo_id, Some(default_id));
+            assert!(docs.iter().any(|(seen, _)| *seen == doc_id));
+        }
+        other => panic!("expected DocList, got {:?}", other),
+    }
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(default_id));
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.sync_scope_nonce().is_none());
     Ok(())
 }

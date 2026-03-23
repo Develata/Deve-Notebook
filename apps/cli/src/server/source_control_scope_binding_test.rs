@@ -39,7 +39,8 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn local_changes_without_repo_selection_clear_stale_runtime_binding() -> anyhow::Result<()> {
+async fn local_changes_without_repo_selection_bootstrap_after_clearing_stale_runtime_binding()
+-> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     let local_handle = state
@@ -56,13 +57,13 @@ async fn local_changes_without_repo_selection_clear_stale_runtime_binding() -> a
     handle_get_changes(&state, &ch, &mut session, Some("req-local-miss".into())).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoNotSelected);
+        Some(ServerMessage::ChangesList { repo_id, .. }) => {
+            assert_eq!(repo_id, Some(default_id));
         }
-        other => panic!("expected ProtocolError, got {:?}", other),
+        other => panic!("expected ChangesList, got {:?}", other),
     }
-    assert!(session.active_repo.is_none());
-    assert!(session.active_repo_id.is_none());
+    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo_id, Some(default_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());
     assert!(session.authenticated_peer_id.is_none());

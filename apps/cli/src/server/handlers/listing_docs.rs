@@ -5,7 +5,7 @@ use crate::server::handlers::switcher::{
     RepoViewPayload, emit_repo_view, prepare_repo_view_messages, switch_scope_nonce,
 };
 use crate::server::repo_scope::{
-    bootstrap_local_repo, map_repo_scope_error, resolve_session_repo_and_sync,
+    map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
     stale_unbound_remote_scope_detail,
 };
 use crate::server::session::WsSession;
@@ -51,15 +51,7 @@ pub async fn handle_list_docs(
             return;
         }
     }
-    let resolved = if session.active_branch.is_none()
-        && session.active_repo.is_none()
-        && session.active_repo_id.is_none()
-        && !session.has_runtime_scope_binding()
-    {
-        bootstrap_local_repo(state, session)
-    } else {
-        resolve_session_repo_and_sync(state, session)
-    };
+    let resolved = resolve_session_repo_or_bootstrap_local(state, session);
     let (repo_name, repo_id) = match resolved {
         Ok(scope) => (scope.repo_name, scope.repo_id),
         Err(err) => {

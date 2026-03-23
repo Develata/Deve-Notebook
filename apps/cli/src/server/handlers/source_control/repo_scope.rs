@@ -36,10 +36,14 @@ pub fn resolve_current_repo_scope(
                 ),
             ));
         }
-        if session.active_branch.is_some() || session.has_runtime_scope_binding() {
+        if session.active_branch.is_some() {
             session.clear_active_db();
             session.clear_sync_binding();
             return Err(ServerError::new(ServerErrorCode::ScRepoNotSelected));
+        }
+        if session.has_runtime_scope_binding() {
+            session.clear_active_db();
+            session.clear_sync_binding();
         }
         let scope =
             bootstrap_local_repo(state, session).map_err(super::errors::map_repo_scope_error)?;
