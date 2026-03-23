@@ -6,7 +6,8 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::plugin_response::{
-    send_plugin_request_failed, send_plugin_result, send_plugin_unsupported_message,
+    send_plugin_invalid_message, send_plugin_request_failed, send_plugin_result,
+    send_plugin_unsupported_message,
 };
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
 use std::sync::Arc;
@@ -41,10 +42,13 @@ pub async fn handle_plugin_call_with_plugins(
     let plugin = plugins.iter().find(|p| p.manifest().id == plugin_id);
 
     if let Some(plugin) = plugin {
-        let rhai_args: Vec<rhai::Dynamic> = args
-            .into_iter()
-            .map(|v| rhai::serde::to_dynamic(&v).unwrap_or(rhai::Dynamic::UNIT))
-            .collect();
+        let rhai_args = match json_args_to_dynamic(args) {
+            Ok(args) => args,
+            Err(detail) => {
+                send_plugin_invalid_message(ch, &req_id, detail);
+                return;
+            }
+        };
 
         let ch_for_stream = ch.clone();
         let stream_sink = ChatStreamSink::new(move |msg| ch_for_stream.unicast(msg));
@@ -54,16 +58,42 @@ pub async fn handle_plugin_call_with_plugins(
         });
 
         match call_result {
-            Ok(result) => {
-                let json_result: serde_json::Value =
-                    rhai::serde::from_dynamic(&result).unwrap_or(serde_json::Value::Null);
-                send_plugin_result(ch, req_id, json_result);
-            }
+            Ok(result) => match dynamic_result_to_json(result) {
+                Ok(json_result) => send_plugin_result(ch, req_id, json_result),
+                Err(detail) => send_plugin_request_failed(ch, &req_id, detail),
+            },
             Err(e) => {
                 send_plugin_request_failed(ch, &req_id, format!("Plugin runtime error: {}", e));
             }
         }
     } else {
         send_plugin_unsupported_message(ch, &req_id, format!("Plugin not found: {}", plugin_id));
+    }
+}
+
+fn json_args_to_dynamic(args: Vec<serde_json::Value>) -> Result<Vec<rhai::Dynamic>, String> {
+    args.into_iter()
+        .enumerate()
+        .map(|(idx, value)| {
+            rhai::serde::to_dynamic(&value)
+                .map_err(|err| format!("Failed to encode plugin arg[{idx}] into Rhai: {err}"))
+        })
+        .collect()
+}
+
+fn dynamic_result_to_json(result: rhai::Dynamic) -> Result<serde_json::Value, String> {
+    rhai::serde::from_dynamic(&result)
+        .map_err(|err| format!("Plugin returned non-JSON-serializable result: {err}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dynamic_result_to_json;
+
+    #[test]
+    fn plugin_result_fails_closed_when_dynamic_is_not_json_serializable() {
+        let result = rhai::FnPtr::new("hidden").expect("fn ptr").into();
+        let err = dynamic_result_to_json(result).unwrap_err();
+        assert!(err.contains("non-JSON-serializable"));
     }
 }
