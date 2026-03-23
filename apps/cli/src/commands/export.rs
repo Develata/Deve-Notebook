@@ -58,7 +58,17 @@ fn run_markdown(
     snapshot_depth: usize,
 ) -> Result<()> {
     let output_dir = PathBuf::from(output.unwrap_or_else(|| "export".into()));
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
+        Ok(repo) => repo,
+        Err(err) if live_proxy::is_db_lock_error(&err) => {
+            bail!(
+                "Markdown export requires direct DB access, but the database is locked by a \
+                 running serve process. Stop the server first, or use 'deve export --format json' \
+                 which supports live proxy fallback."
+            );
+        }
+        Err(err) => return Err(err),
+    };
     let repo_name = resolve_local_repo_arg(&repo, repo_name.as_deref())?;
     let docs = repo.run_on_local_repo(&repo_name, metadata::list_docs)?;
 

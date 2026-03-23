@@ -107,13 +107,13 @@ async fn detect_main_port(port: u16) -> Option<u16> {
 
     let client = Client::new();
     for p in ports {
-        let url = format!("http://127.0.0.1:{}/api/repo/docs", p);
+        let url = format!("http://127.0.0.1:{}/api/node/role", p);
         let req = client.get(&url);
-        let is_ok = matches!(
+        let is_alive = matches!(
             timeout(Duration::from_millis(300), req.send()).await,
-            Ok(Ok(resp)) if resp.status().is_success()
+            Ok(Ok(_))
         );
-        if is_ok {
+        if is_alive {
             return Some(p);
         }
     }
@@ -149,7 +149,7 @@ mod tests {
             .await
             .expect("bind test server");
         let addr = listener.local_addr().expect("server addr");
-        let app = Router::new().route("/api/repo/docs", get(move || async move { status }));
+        let app = Router::new().route("/api/node/role", get(move || async move { status }));
         tokio::spawn(async move {
             axum::serve(listener, app).await.expect("serve test app");
         });
@@ -163,14 +163,16 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn detect_main_port_finds_healthy_repo_docs_endpoint() {
+    async fn detect_main_port_finds_deve_process_via_node_role() {
         let addr = spawn_status_server(axum::http::StatusCode::OK).await;
         assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn detect_main_port_ignores_unhealthy_repo_docs_endpoint() {
-        let addr = spawn_status_server(axum::http::StatusCode::SERVICE_UNAVAILABLE).await;
-        assert_eq!(detect_main_port(addr.port()).await, None);
+    async fn detect_main_port_accepts_non_success_status() {
+        // A running Deve process may return non-2xx (e.g. auth required).
+        // As long as it responds, the process is alive.
+        let addr = spawn_status_server(axum::http::StatusCode::UNAUTHORIZED).await;
+        assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
     }
 }

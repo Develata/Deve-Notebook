@@ -5,10 +5,14 @@ use deve_core::ledger::metadata;
 use deve_core::sync::rebuild;
 use std::path::{Path, PathBuf};
 
-/// Recover vault files from ledger data.
+/// Materialize current documents from ledger data into the vault directory.
 ///
 /// Iterates all documents in each local repo, rebuilds content from
 /// ledger ops + snapshots, and writes the result to the vault directory.
+///
+/// **Note**: this re-materializes documents that currently exist in the ledger.
+/// It does NOT remove stale files (deleted documents, renamed leftovers) from
+/// the vault. For a clean rebuild, clear the target directory first.
 pub fn run(
     ledger_dir: &PathBuf,
     vault_path: &Path,
