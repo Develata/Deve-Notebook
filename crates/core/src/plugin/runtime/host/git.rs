@@ -77,8 +77,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let repo = super::repository().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
-            let target =
-                git_target::resolve_local_sc_target(repo.as_ref(), repo_manager.as_ref(), path)?;
+            let target = git_target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
             let diff = repo
                 .diff_doc_path_in_repo(&selector, &target)
                 .map_err(|e| e.to_string())?;
@@ -95,8 +94,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let repo = super::repository().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
-            let target =
-                git_target::resolve_local_sc_target(repo.as_ref(), repo_manager.as_ref(), path)?;
+            let target = git_target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
             repo.stage_pending_in_repo(&selector, &target)
                 .map_err(|e| e.to_string().into())
         },

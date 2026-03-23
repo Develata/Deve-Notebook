@@ -10,7 +10,7 @@ impl RepoManager {
     /// Invariants:
     /// - 若当前 path 已被 node projection 跟踪，则必须补上 `doc_id`。
     /// - 若 path 不是当前 tracked projection，只保留规范化 path，不猜测旧 mapping。
-    pub(super) fn tracked_target_for_path_in_local_repo(
+    pub(crate) fn tracked_target_for_path_in_local_repo(
         &self,
         repo_name: &str,
         path: &str,
