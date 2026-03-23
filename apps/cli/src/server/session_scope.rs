@@ -101,12 +101,10 @@ impl WsSession {
         self.active_db.as_ref().map(|h| h.readonly).unwrap_or(false)
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn get_active_db(&self) -> Option<&DatabaseHandle> {
         self.active_db.as_ref()
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn active_db_for(
         &self,
         branch: Option<&PeerId>,
