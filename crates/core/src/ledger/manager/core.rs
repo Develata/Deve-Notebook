@@ -43,6 +43,7 @@ impl RepoManager {
     ///
     /// 生产代码必须使用 `set_vault_root_checked`，它会在 catalog 校验失败时返回错误。
     /// 本方法会在目录缺失时尝试创建 Vault，以兼容测试辅助。
+    /// 若仅 catalog 校验失败，则仍保留请求的 Vault root，供后续显式 repair 使用。
     /// 本方法无法标记 `#[cfg(test)]`，因为下游 crate 的测试模块也会调用它。
     pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
         let previous_root = self.vault_root.clone();
@@ -57,7 +58,7 @@ impl RepoManager {
             return;
         }
         if let Err(error) = self.set_vault_root_checked(root) {
-            self.vault_root = previous_root;
+            self.vault_root = previous_root.or(Some(requested_root));
             tracing::warn!("Failed to repair local repo catalog after mounting vault: {error}");
         }
     }
