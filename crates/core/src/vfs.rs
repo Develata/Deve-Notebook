@@ -12,6 +12,7 @@
 use crate::models::FileNodeId;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
+use tracing::warn;
 
 pub struct Vfs {
     pub root: PathBuf,
@@ -20,8 +21,21 @@ pub struct Vfs {
 impl Vfs {
     pub fn new(root: impl AsRef<Path>) -> Self {
         let root = root.as_ref();
-        let abs_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+        let abs_root = std::fs::canonicalize(root).unwrap_or_else(|err| {
+            warn!(
+                "Failed to canonicalize VFS root {:?}; falling back to raw path: {}",
+                root, err
+            );
+            root.to_path_buf()
+        });
         Self { root: abs_root }
+    }
+
+    pub fn new_checked(root: impl AsRef<Path>) -> Result<Self> {
+        let root = root.as_ref();
+        let abs_root = std::fs::canonicalize(root)
+            .with_context(|| format!("Failed to canonicalize VFS root: {:?}", root))?;
+        Ok(Self { root: abs_root })
     }
 
     pub fn get_inode(&self, rel_path: &str) -> Result<Option<FileNodeId>> {
@@ -54,6 +68,17 @@ mod tests {
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
+
+    #[test]
+    fn new_checked_fails_closed_on_missing_root() {
+        let dir = tempdir().expect("tempdir");
+        let missing = dir.path().join("missing-vault");
+        let err = match Vfs::new_checked(&missing) {
+            Ok(_) => panic!("missing root must fail closed"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("Failed to canonicalize VFS root"));
+    }
 
     #[cfg(unix)]
     #[test]

@@ -46,40 +46,6 @@ impl RepoScopedSyncEngine {
         }
     }
 
-    /// 获取或创建指定仓库的 SyncEngine
-    ///
-    /// ## 参数
-    /// - `repo_id`: 仓库 ID
-    ///
-    /// ## 返回值
-    /// - `Some(SyncEngine)` - 如果成功获取或创建
-    /// - `None` - 如果锁被污染或 `RepoKey` 无法安全加载
-    pub fn get_or_create(&self, repo_id: RepoId) -> Option<SyncEngine> {
-        // 先尝试读取
-        let engines = self.read_engines()?;
-        if let Some(engine) = engines.get(&repo_id) {
-            return Some(engine.clone());
-        }
-        drop(engines);
-
-        // 需要创建新的 engine
-        let mut engines = self.write_engines()?;
-
-        if let Some(engine) = engines.get(&repo_id) {
-            return Some(engine.clone());
-        }
-
-        let repo_key = self.load_repo_key(repo_id)?;
-        let engine = SyncEngine::new(
-            self.local_peer_id.clone(),
-            self.repo.clone(),
-            self.sync_mode,
-            Some(repo_key),
-        );
-        engines.insert(repo_id, engine.clone());
-        Some(engine)
-    }
-
     /// 严格获取指定仓库的 SyncEngine。
     ///
     /// Invariants:
@@ -164,14 +130,6 @@ impl RepoScopedSyncEngine {
             .ok_or_else(|| anyhow!("RepoScopedSyncEngine registry poisoned"))?;
         engines.clear();
         Ok(())
-    }
-
-    fn load_repo_key(&self, repo_id: RepoId) -> Option<RepoKey> {
-        self.load_repo_key_strict(repo_id)
-            .map_err(|err| {
-                tracing::warn!("RepoScopedSyncEngine failed to load repo key {repo_id}: {err}");
-            })
-            .ok()
     }
 
     fn load_repo_key_strict(&self, repo_id: RepoId) -> Result<RepoKey> {

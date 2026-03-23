@@ -26,7 +26,6 @@ pub async fn handle_edit(
     edit::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
 }
 
-#[allow(dead_code)]
 pub async fn handle_request_history(
     state: &Arc<AppState>,
     ch: &DualChannel,

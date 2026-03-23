@@ -2,47 +2,15 @@
 //! # 响应通道抽象 (Response Channel)
 //!
 //! **功能**:
-//! 提供统一的消息发送接口，区分广播 (Broadcast) 和单播 (Unicast)。
-//!
-//! **设计原则**:
-//! - Broadcast: 用于全局事件（文件变更、同步完成）
-//! - Unicast: 用于单客户端响应（Error、Ack、Pong）
-//!
-//! **使用场景**:
-//! Handler 函数接收 `ResponseChannel` 参数，根据消息类型选择合适的通道发送。
+//! 提供统一的双通道发送接口，区分广播 (Broadcast) 和单播 (Unicast)。
 
+#[path = "channel_delivery.rs"]
+mod delivery;
+
+use delivery::send_unicast;
+pub(crate) use delivery::try_send_with_delivery_class;
 use deve_core::protocol::{ServerError, ServerMessage};
-use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::{broadcast, mpsc};
-
-/// 响应通道类型
-///
-/// 封装广播和单播两种发送方式，提供统一的 API。
-#[allow(dead_code)] // 为 Handler 模块预留的通道抽象
-#[derive(Clone)]
-pub enum ResponseChannel {
-    /// 广播通道 - 发送给所有连接的客户端
-    Broadcast(broadcast::Sender<ServerMessage>),
-    /// 单播通道 - 仅发送给当前客户端
-    Unicast(mpsc::Sender<ServerMessage>),
-}
-
-#[allow(dead_code)] // 为 Handler 模块预留的通道抽象
-impl ResponseChannel {
-    /// 发送消息
-    ///
-    /// 根据通道类型选择合适的发送方式
-    pub fn send(&self, msg: ServerMessage) {
-        match self {
-            ResponseChannel::Broadcast(tx) => {
-                let _ = tx.send(msg);
-            }
-            ResponseChannel::Unicast(tx) => {
-                send_unicast(tx, msg);
-            }
-        }
-    }
-}
 
 /// 双通道上下文
 ///
@@ -105,77 +73,6 @@ impl DualChannel {
             switch_nonce,
             scope_nonce,
         });
-    }
-}
-
-pub(crate) fn try_send_with_delivery_class(
-    tx: &mpsc::Sender<ServerMessage>,
-    msg: ServerMessage,
-    must_deliver: bool,
-) {
-    if let Err(error) = tx.try_send(msg) {
-        match error {
-            TrySendError::Full(msg) if must_deliver => schedule_must_deliver(tx.clone(), msg),
-            TrySendError::Full(_) => {
-                tracing::warn!("Unicast channel full; dropping message");
-            }
-            TrySendError::Closed(_) => {
-                tracing::debug!("Unicast channel closed; dropping message");
-            }
-        }
-    }
-}
-
-fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
-    let must_deliver = must_deliver_unicast(&msg);
-    try_send_with_delivery_class(tx, msg, must_deliver);
-}
-
-fn must_deliver_unicast(msg: &ServerMessage) -> bool {
-    matches!(
-        msg,
-        ServerMessage::ProtocolError { .. }
-            | ServerMessage::EditRejected { .. }
-            | ServerMessage::SyncHello { .. }
-            | ServerMessage::SyncRequest { .. }
-            | ServerMessage::SyncSnapshotRequest { .. }
-            | ServerMessage::SyncPush { .. }
-            | ServerMessage::SyncPushSnapshot { .. }
-            | ServerMessage::BranchSwitched { .. }
-            | ServerMessage::RepoSwitched { .. }
-            | ServerMessage::WriteReady { .. }
-            | ServerMessage::KeyProvide { .. }
-            | ServerMessage::KeyDenied { .. }
-            | ServerMessage::Ack { .. }
-            | ServerMessage::Snapshot { .. }
-            | ServerMessage::History { .. }
-            | ServerMessage::RepoList { .. }
-            | ServerMessage::DocList { .. }
-            | ServerMessage::TreeUpdate { .. }
-            | ServerMessage::ShadowList { .. }
-            | ServerMessage::PluginResponse { .. }
-            | ServerMessage::SearchResults { .. }
-            | ServerMessage::SyncModeStatus { .. }
-            | ServerMessage::PendingOpsInfo { .. }
-            | ServerMessage::PendingDiscarded { .. }
-            | ServerMessage::ChangesList { .. }
-            | ServerMessage::StageAck { .. }
-            | ServerMessage::UnstageAck { .. }
-            | ServerMessage::DiscardAck { .. }
-            | ServerMessage::CommitHistory { .. }
-            | ServerMessage::DocDiff { .. }
-            | ServerMessage::CommitDiffResult { .. }
-            | ServerMessage::ConflictResolved { .. }
-    )
-}
-
-fn schedule_must_deliver(tx: mpsc::Sender<ServerMessage>, msg: ServerMessage) {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        handle.spawn(async move {
-            let _ = tx.send(msg).await;
-        });
-    } else if tx.blocking_send(msg).is_err() {
-        tracing::debug!("Unicast channel closed outside runtime; dropping critical message");
     }
 }
 

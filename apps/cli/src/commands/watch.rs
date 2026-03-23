@@ -27,10 +27,10 @@ pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Resul
     let repo = Arc::new(repo);
 
     // 2. 初始化 SyncManager
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(
         repo.clone(),
         vault_path.to_path_buf(),
-    ));
+    )?);
     sync_manager.scan()?;
 
     // 3. 注册 Ctrl+C 信号处理 (必须在 watcher.watch() 之前)

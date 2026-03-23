@@ -13,7 +13,7 @@ pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> anyho
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.set_vault_root_checked(vault_path)?;
     let repo = Arc::new(repo);
-    let sync_manager = deve_core::sync::SyncManager::new(repo, vault_path.to_path_buf());
+    let sync_manager = deve_core::sync::SyncManager::new_checked(repo, vault_path.to_path_buf())?;
     println!("Scanning vault at {:?}...", vault_path);
     sync_manager.scan()?;
     println!("Scanned repo-scoped workspaces successfully.");

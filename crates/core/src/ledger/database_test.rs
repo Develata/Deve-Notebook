@@ -1,12 +1,41 @@
 use super::{RepoManager, cached_database};
-use crate::ledger::schema::REPO_METADATA;
+use crate::ledger::{RepoInfo, schema::REPO_METADATA};
 use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
+
+fn create_secondary_repo(ledger_dir: &Path, name: &str, url: &str) {
+    let local_dir = ledger_dir.join("local");
+    std::fs::create_dir_all(&local_dir).expect("create local dir");
+    let path = local_dir.join(format!("{name}.redb"));
+    let db = redb::Database::create(&path).expect("create secondary db");
+    crate::ledger::source_control::init_tables(&db).expect("init source control tables");
+    let txn = db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.commit().expect("commit metadata table");
+    let txn = db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(
+            &0,
+            bincode::serialize(&RepoInfo {
+                uuid: uuid::Uuid::new_v4(),
+                name: name.into(),
+                url: Some(url.into()),
+            })
+            .expect("serialize")
+            .as_slice(),
+        )
+        .expect("write metadata");
+    txn.commit().expect("commit metadata");
+    drop(db);
+}
 
 #[cfg(unix)]
 #[test]
 fn cached_database_fails_closed_when_path_is_unstatable() {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
     let blocked = dir.path().join("blocked");
     std::fs::create_dir_all(&blocked).expect("blocked dir");
@@ -28,11 +57,11 @@ fn cached_database_fails_closed_when_path_is_unstatable() {
 #[cfg(unix)]
 #[test]
 fn open_local_database_fails_closed_when_path_is_unstatable() {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
-        .expect("repo");
-    RepoManager::init(dir.path().join("ledger"), 8, Some("wiki"), Some("urn:wiki"))
-        .expect("extra repo");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
+    create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
     let local_dir = dir.path().join("ledger/local");
     let original = std::fs::metadata(&local_dir)
         .expect("metadata")
@@ -59,11 +88,11 @@ fn open_local_database_fails_closed_when_path_is_unstatable() {
 
 #[test]
 fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
-        .expect("repo");
-    RepoManager::init(dir.path().join("ledger"), 8, Some("wiki"), Some("urn:wiki"))
-        .expect("extra repo");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
+    create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = repo.open_database(None, "wiki").expect("wiki db");
     let txn = wiki_db.db.begin_write().expect("write txn");
     txn.delete_table(REPO_METADATA).expect("delete metadata");
@@ -83,6 +112,7 @@ fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
 
 #[test]
 fn open_remote_database_fails_closed_when_selector_metadata_is_missing() {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
         .expect("repo");

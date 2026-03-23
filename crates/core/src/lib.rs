@@ -44,3 +44,6 @@ pub mod watcher_ignore;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;
+
+#[cfg(test)]
+mod test_support;

@@ -48,7 +48,8 @@ pub async fn run(
     let repo_arc = Arc::new(repo);
 
     // 启动时通过 SyncManager 自动扫描
-    let sync_manager = deve_core::sync::SyncManager::new(repo_arc.clone(), vault_path.clone());
+    let sync_manager =
+        deve_core::sync::SyncManager::new_checked(repo_arc.clone(), vault_path.clone())?;
     sync_manager.scan()?;
 
     // 2. 加载插件 (Plugins)

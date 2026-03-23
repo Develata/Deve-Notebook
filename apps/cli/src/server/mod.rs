@@ -1,16 +1,5 @@
 // apps\cli\src\server
-//! # WebSocket 服务器模块
-//!
-//! 本模块实现 Deve-Note 的后端 WebSocket 服务器。
-//!
-//! ## 组件说明
-//!
-//! - `AppState`: 共享应用状态（Ledger、同步管理器、广播通道）
-//! - `start_server`: 启动 HTTP/WebSocket 服务器的主入口
-//! - `ws`: WebSocket 连接处理和消息路由
-//! - `handlers`: 客户端消息的业务逻辑
-//!
-//! 服务器使用 Axum 处理 HTTP/WebSocket，并向所有客户端广播变更。
+//! Deve-Note 后端 WebSocket/HTTP 服务器入口。
 
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
@@ -183,13 +172,12 @@ pub async fn start_server(
     let auth_config = Arc::new(router::load_auth_config());
     let mcp_manager = Arc::new(setup::load_mcp_manager(repo.ledger_dir())?);
     host::set_mcp_manager(mcp_manager.clone())?;
-    // Create broadcast channel for WS server
     let (tx, _rx) = broadcast::channel(100);
 
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(
         repo.clone(),
         vault_path.clone(),
-    ));
+    )?);
     host::set_sync_manager(sync_manager.clone())?;
 
     prewarm::spawn_prewarm(repo.clone());
@@ -202,12 +190,10 @@ pub async fn start_server(
         Some(setup::load_search_service(&host_dir)?)
     };
 
-    // Load or generate Identity Key
     let key_pair = security::load_or_generate_identity_key(&host_dir)?;
     let peer_id = key_pair.peer_id();
     tracing::info!("Server PeerID: {}", peer_id);
 
-    // Initialize RepoScopedSyncEngine (Relay Mode -> Auto)
     let sync_engine = Arc::new(RepoScopedSyncEngine::new(
         peer_id.clone(),
         repo.clone(),
@@ -215,7 +201,6 @@ pub async fn start_server(
     ));
     let tree_manager = Arc::new(RepoTreeRegistry::new());
 
-    // SPAWN WATCHER
     setup::spawn_file_watcher(sync_manager.clone(), vault_path.clone(), tx.clone())?;
 
     let app_state = Arc::new(AppState {
@@ -230,7 +215,6 @@ pub async fn start_server(
         identity_key: key_pair,
     });
 
-    // 启动系统指标广播任务 (每 5 秒)
     metrics::spawn_broadcaster(app_state.clone());
 
     static_files::validate_static_dir_override()?;

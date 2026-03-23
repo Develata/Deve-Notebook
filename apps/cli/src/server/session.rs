@@ -1,33 +1,23 @@
 // apps/cli/src/server/session.rs
 //! # WebSocket 会话状态 (Session State)
 //!
-//! **功能**:
-//! 管理单个 WebSocket 连接的会话状态。
-//!
-//! **状态内容**:
-//! - `authenticated_peer_id`: P2P 握手后的对端 ID
-//! - `writer_identity`: 浏览器写入身份（repo-scoped）
-//! - `active_branch`: 当前活动分支 (None = 本地, Some = 影子库)
-//! - `active_db`: 当前锁定的数据库句柄
+//! 管理单个 WebSocket 连接的 repo-scoped 会话状态。
 
 use deve_core::ledger::database::DatabaseHandle;
-use deve_core::models::PeerId;
-use deve_core::models::RepoId;
+use deve_core::models::{PeerId, RepoId};
 use std::time::{Duration, Instant};
 
 const WS_MESSAGE_WINDOW: Duration = Duration::from_secs(60);
 const WS_MAX_MESSAGES_PER_WINDOW: u16 = 200;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WriterIdentity {
-    pub peer_id: PeerId,
-    pub repo_id: RepoId,
-}
+#[path = "session_writer.rs"]
+mod writer;
+
+pub use writer::WriterIdentity;
 
 /// WebSocket 会话状态
 ///
 /// 每个 WebSocket 连接维护独立的会话状态实例。
-#[allow(dead_code)] // 为 P2P 握手和分支切换预留的字段
 pub struct WsSession {
     /// 当前 UI/控制面 scope 的代际 token。
     ///
@@ -50,14 +40,10 @@ pub struct WsSession {
     /// - 浏览器 SyncHello 仅用于 repo-scoped thin-client 协商，不应被当作 shadow branch 物化。
     pub browser_session: bool,
 
-    /// 已认证的对端 Peer ID
-    ///
-    /// 在 SyncHello 握手成功后设置，用于后续 SyncPush 验证。
+    /// 已认证的对端 Peer ID，用于后续 SyncPush 验证。
     pub authenticated_peer_id: Option<PeerId>,
 
-    /// 当前绑定的仓库 ID (在 SyncHello 成功后设置)
-    ///
-    /// 用于后续同步消息的 repo 一致性校验。
+    /// 当前绑定的仓库 ID，用于后续同步消息的 repo 一致性校验。
     pub bound_repo_id: Option<RepoId>,
 
     /// 浏览器写入身份。
@@ -76,9 +62,7 @@ pub struct WsSession {
     /// 当前活动仓库 ID（UUID-first）
     pub active_repo_id: Option<RepoId>,
 
-    /// 当前锁定的数据库句柄
-    ///
-    /// 在切换 branch/repo 时更新，所有后续操作使用此句柄
+    /// 当前锁定的数据库句柄。
     pub active_db: Option<DatabaseHandle>,
 
     /// WebSocket 固定时间窗限流状态。

@@ -43,6 +43,26 @@ mod tests {
     use crate::ledger::{REPO_METADATA, RepoInfo, RepoManager};
     use tempfile::TempDir;
 
+    fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) {
+        let local_dir = ledger_dir.join("local");
+        std::fs::create_dir_all(&local_dir).expect("create local dir");
+        let path = local_dir.join(format!("{name}.redb"));
+        let db = redb::Database::create(&path).expect("create secondary db");
+        crate::ledger::source_control::init_tables(&db).expect("init source control tables");
+        let txn = db.begin_write().expect("write txn");
+        txn.open_table(REPO_METADATA).expect("repo metadata");
+        txn.commit().expect("commit metadata table");
+        write_info(
+            &db,
+            &RepoInfo {
+                uuid: uuid::Uuid::new_v4(),
+                name: name.into(),
+                url: Some(url.into()),
+            },
+        );
+        drop(db);
+    }
+
     fn write_info(db: &redb::Database, info: &RepoInfo) {
         let txn = db.begin_write().expect("write txn");
         txn.open_table(REPO_METADATA)
@@ -54,10 +74,11 @@ mod tests {
 
     #[test]
     fn execution_repo_names_fail_closed_on_duplicate_main_metadata_drift() {
+        let _guard = crate::test_support::local_repo_catalog_test_guard();
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-        RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+        create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
         let main_info = main.get_repo_info().expect("main info").expect("present");
         let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
         write_info(
@@ -77,6 +98,7 @@ mod tests {
 
     #[test]
     fn execution_repo_names_fail_closed_on_missing_main_metadata() {
+        let _guard = crate::test_support::local_repo_catalog_test_guard();
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");

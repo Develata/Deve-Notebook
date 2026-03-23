@@ -99,8 +99,8 @@ pub fn delete_doc(db: &Database, path: &str) -> Result<()> {
 
 /// 重命名文件夹
 ///
-/// TODO: Optimization - splitting into batches locally is difficult due to Atomicity requirements.
-/// Consider using a Journal/WAL if performance issues arise with >10k files.
+/// 保持单事务更新以维持 repair 路径的原子性。
+/// 当前 768 MB VPS 目标和 repair-only 调用频率下，不引入额外 WAL/分批复杂度。
 pub fn rename_folder(db: &Database, old_prefix: &str, new_prefix: &str) -> Result<()> {
     let write_txn = db.begin_write()?;
     {

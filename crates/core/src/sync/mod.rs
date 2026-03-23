@@ -85,6 +85,17 @@ impl SyncManager {
         }
     }
 
+    pub fn new_checked(repo: Arc<RepoManager>, vault_root: PathBuf) -> Result<Self> {
+        let vfs = Vfs::new_checked(&vault_root)?;
+        Ok(Self {
+            dir_refresh_guard: DirRefreshGuard::new(),
+            persist_guard: repo.persist_guard.clone(),
+            repo,
+            vault_root,
+            vfs,
+        })
+    }
+
     pub fn scan(&self) -> Result<()> {
         materialize::prepare_local_workspaces(&self.repo, &self.vault_root, &self.persist_guard)?;
         scan::scan_vault(&self.repo, &self.vfs, &self.vault_root)

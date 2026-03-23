@@ -24,7 +24,7 @@ pub fn run(
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.set_vault_root_checked(vault_path)?;
     let repo = Arc::new(repo);
-    let sync_manager = SyncManager::new(repo.clone(), vault_path.to_path_buf());
+    let sync_manager = SyncManager::new_checked(repo.clone(), vault_path.to_path_buf())?;
 
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     let fixed_paths = path_fix::repair_repo_prefixed_paths(&repo, &repo_names)?;

@@ -1,10 +1,10 @@
-use super::{OPENED_DBS, register_database, reusable_cached_database};
+use super::{OPENED_DBS, evict_database_paths_under, register_database, reusable_cached_database};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 
-fn clear_cache() {
-    OPENED_DBS.write().expect("cache").clear();
+fn clear_temp_entries(root: &std::path::Path) {
+    evict_database_paths_under(root).expect("evict temp cache entries");
 }
 
 #[cfg(unix)]
@@ -44,7 +44,7 @@ fn register_database_fails_closed_when_path_is_unstatable() {
     let err = register_database(&blocked.join("notes.redb"), db).expect_err("must fail closed");
 
     std::fs::set_permissions(&blocked, original).expect("restore perms");
-    clear_cache();
+    clear_temp_entries(dir.path());
     assert!(
         err.to_string()
             .contains("Failed to read database cache metadata")
@@ -60,12 +60,15 @@ fn reusable_cached_database_fails_closed_when_header_cannot_be_read() {
     let db = Arc::new(redb::Database::create(&path).expect("create db"));
     register_database(&path, db).expect("register");
 
-    {
-        let mut cache = OPENED_DBS.write().expect("cache");
-        let stamp = cache
+    let stamp = {
+        let cache = OPENED_DBS.read().expect("cache");
+        cache
             .get(&path)
             .and_then(|entry| entry.stamp)
-            .expect("registered stamp");
+            .expect("registered stamp")
+    };
+    {
+        let mut cache = OPENED_DBS.write().expect("cache");
         let entry = cache.get_mut(&path).expect("cached entry");
         let mut stale = stamp;
         stale.modified = None;
@@ -80,7 +83,7 @@ fn reusable_cached_database_fails_closed_when_header_cannot_be_read() {
     let err = reusable_cached_database(&path).expect_err("unreadable redb header must fail closed");
 
     std::fs::set_permissions(&path, original).expect("restore perms");
-    clear_cache();
+    clear_temp_entries(dir.path());
     assert!(
         err.to_string().contains("Failed to open database header")
             || err.to_string().contains("Failed to read database header")

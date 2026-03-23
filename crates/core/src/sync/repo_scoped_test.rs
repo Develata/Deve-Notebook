@@ -27,7 +27,7 @@ fn strict_engine_load_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()>
 }
 
 #[test]
-fn get_or_create_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
+fn get_returns_none_when_lock_is_poisoned() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
@@ -39,7 +39,6 @@ fn get_or_create_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
         panic!("poison repo scoped sync engine");
     }));
 
-    assert!(engine.get_or_create(repo_id).is_none());
     assert!(engine.get(repo_id).is_none());
     let err = engine
         .loaded_repos()
@@ -88,7 +87,7 @@ fn clear_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
 }
 
 #[test]
-fn get_or_create_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<()> {
+fn strict_engine_load_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
@@ -100,7 +99,11 @@ fn get_or_create_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<()> {
 
     let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
 
-    assert!(engine.get_or_create(repo_id).is_none());
+    let err = match engine.get_or_create_strict(repo_id) {
+        Ok(_) => panic!("strict engine load must fail closed on corrupt repo key"),
+        Err(err) => err,
+    };
+    assert!(err.to_string().contains("Failed to load repo key"));
     assert!(engine.get(repo_id).is_none());
     Ok(())
 }
