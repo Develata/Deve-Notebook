@@ -1,0 +1,176 @@
+use super::lookup::resolve_repo_by_name;
+use super::repo_scope_bootstrap::fallback_local_repo_name;
+use super::repo_scope_cleanup::{should_clear_stale_local_scope, should_clear_stale_remote_scope};
+use super::repo_scope_selector::resolve_repo_name_from_session;
+use super::{map_repo_scope_error, stale_remote_scope_detail};
+use crate::server::AppState;
+use crate::server::session::WsSession;
+use crate::server::shadow_scope;
+use anyhow::{Result, anyhow};
+use deve_core::models::{PeerId, RepoId};
+use deve_core::protocol::ServerErrorCode;
+use std::sync::Arc;
+
+#[derive(Clone, Debug)]
+pub struct ResolvedRepo {
+    pub repo_id: RepoId,
+    pub repo_name: String,
+    pub branch: Option<PeerId>,
+}
+
+pub fn stale_unbound_remote_scope_detail(branch: &PeerId) -> String {
+    stale_remote_scope_detail(format!(
+        "Active repository not selected for remote branch {} while runtime binding was still present",
+        branch
+    ))
+}
+
+/// 仅允许首次本地引导时回退到主本地库。
+/// Invariants: 只在 `active_branch == None` 时允许默认回退；引导完成后统一走 `resolve_session_repo`。
+pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
+    if session.active_branch.is_some() {
+        return Err(anyhow!(
+            "Cannot bootstrap local repo while on remote branch"
+        ));
+    }
+    if session.active_repo.is_some() || session.active_repo_id.is_some() {
+        return resolve_session_repo(state, session);
+    }
+    let repo_name = match resolve_repo_name_from_session(state, session)? {
+        Some(repo_name) => repo_name,
+        None => fallback_local_repo_name(state, session)?,
+    };
+    resolve_repo_by_name(state, None, session.active_repo_id, repo_name)
+}
+
+pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
+    let repo_name = match resolve_repo_name_from_session(state, session)? {
+        Some(repo_name) => repo_name,
+        None => {
+            if let Some(branch) = session.active_branch.as_ref() {
+                shadow_scope::ensure_remote_branch_available(state, branch)?;
+                if session.has_runtime_scope_binding() {
+                    return Err(anyhow!("{}", stale_unbound_remote_scope_detail(branch)));
+                }
+            }
+            return Err(anyhow!(
+                "Active repository not selected for current session"
+            ));
+        }
+    };
+    let branch = session.active_branch.clone();
+    resolve_repo_by_name(state, branch, session.active_repo_id, repo_name)
+}
+
+/// 解析并回写会话中的 repo 绑定，收敛 stale `active_repo_id/name`。
+/// Invariants: 会话级 repo-scoped 读写应尽量先调用本函数；若解析结果与会话不一致，以解析结果为准。
+pub fn resolve_session_repo_and_sync(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo> {
+    let scope = match resolve_session_repo(state, session) {
+        Ok(scope) => scope,
+        Err(err) => {
+            let err = if session.active_branch.is_some()
+                && session.active_repo.is_none()
+                && session.active_repo_id.is_none()
+                && session.has_runtime_scope_binding()
+                && map_repo_scope_error(anyhow!(err.to_string())).code
+                    == ServerErrorCode::SyncRepoUnbound
+            {
+                anyhow!(
+                    "{}",
+                    stale_unbound_remote_scope_detail(
+                        session
+                            .active_branch
+                            .as_ref()
+                            .expect("checked active branch")
+                    )
+                )
+            } else {
+                err
+            };
+            let mapped = map_repo_scope_error(anyhow!(err.to_string()));
+            if session.active_branch.is_some()
+                && shadow_scope::should_clear_missing_remote_branch(&mapped)
+            {
+                shadow_scope::clear_stale_remote_branch(session);
+                return Err(err);
+            }
+            let clear_stale_scope = if session.active_branch.is_some() {
+                should_clear_stale_remote_scope(&mapped)
+            } else {
+                should_clear_stale_local_scope(&mapped)
+                    || (mapped.code == ServerErrorCode::SyncRepoUnbound
+                        && session.has_runtime_scope_binding())
+            };
+            if clear_stale_scope {
+                session.clear_active_repo();
+                session.clear_active_db();
+                session.clear_sync_binding();
+            }
+            return Err(err);
+        }
+    };
+    if runtime_binding_mismatch(session, &scope) {
+        session.clear_active_db();
+        session.clear_sync_binding();
+    }
+    if session.active_repo.as_deref() != Some(scope.repo_name.as_str())
+        || session.active_repo_id != Some(scope.repo_id)
+    {
+        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+    }
+    Ok(scope)
+}
+
+/// 在本地 single-repo 入口上，允许先清 stale runtime binding，再重新执行 local bootstrap。
+///
+/// Invariants:
+/// - 仅当当前会话没有 `active_branch/active_repo/active_repo_id` 时才允许 bootstrap。
+/// - 若 stale local binding 已被 `resolve_session_repo_and_sync` 清理干净，则允许重试 bootstrap。
+pub fn resolve_session_repo_or_bootstrap_local(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo> {
+    let wants_local_bootstrap = session.active_branch.is_none()
+        && session.active_repo.is_none()
+        && session.active_repo_id.is_none();
+    if !wants_local_bootstrap {
+        return resolve_session_repo_and_sync(state, session);
+    }
+    if !session.has_runtime_scope_binding() {
+        let scope = bootstrap_local_repo(state, session)?;
+        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        return Ok(scope);
+    }
+    match resolve_session_repo_and_sync(state, session) {
+        Ok(scope) => Ok(scope),
+        Err(err)
+            if session.active_branch.is_none()
+                && session.active_repo.is_none()
+                && session.active_repo_id.is_none()
+                && !session.has_runtime_scope_binding() =>
+        {
+            let scope = bootstrap_local_repo(state, session)?;
+            session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+            Ok(scope)
+        }
+        Err(err) => Err(err),
+    }
+}
+
+fn runtime_binding_mismatch(session: &WsSession, scope: &ResolvedRepo) -> bool {
+    let active_db_mismatch = session.get_active_db().is_some()
+        && session
+            .active_db_for(scope.branch.as_ref(), &scope.repo_name, Some(scope.repo_id))
+            .is_none();
+    let bound_repo_mismatch = session
+        .bound_repo_id
+        .is_some_and(|repo_id| repo_id != scope.repo_id);
+    let writer_mismatch = session
+        .writer_identity
+        .as_ref()
+        .is_some_and(|writer| writer.repo_id != scope.repo_id);
+    active_db_mismatch || bound_repo_mismatch || writer_mismatch
+}
