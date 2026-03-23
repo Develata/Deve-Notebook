@@ -1,15 +1,15 @@
 use anyhow::{Result, anyhow};
-use redb::Database;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::ledger::database::cached_database;
-use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
-use crate::ledger::{init, range, source_control};
+use crate::ledger::{init, range};
 use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
+
+#[path = "core_local_registry.rs"]
+mod local_registry;
+#[path = "core_mount.rs"]
+mod mount;
 
 impl RepoManager {
     /// 初始化仓库管理器
@@ -22,45 +22,6 @@ impl RepoManager {
         repo_url: Option<&str>,
     ) -> Result<Self> {
         init::init(ledger_dir, snapshot_depth, repo_name, repo_url)
-    }
-
-    /// 设置 Vault 根目录并强制校验本地 catalog。
-    ///
-    /// Invariants:
-    /// - 生产态在挂载 Vault 后，必须立即暴露本地 repo catalog 损坏。
-    /// - 测试辅助可继续使用 `set_vault_root` 的宽松包装。
-    pub fn set_vault_root_checked(&mut self, root: impl AsRef<Path>) -> Result<()> {
-        let previous_root = self.vault_root.clone();
-        self.vault_root = Some(root.as_ref().to_path_buf());
-        if let Err(err) = self.refresh_local_repo_catalog() {
-            self.vault_root = previous_root;
-            return Err(err);
-        }
-        Ok(())
-    }
-
-    /// 设置 Vault 根目录——宽松包装，仅供测试辅助使用。
-    ///
-    /// 生产代码必须使用 `set_vault_root_checked`，它会在 catalog 校验失败时返回错误。
-    /// 本方法会在目录缺失时尝试创建 Vault，以兼容测试辅助。
-    /// 若仅 catalog 校验失败，则仍保留请求的 Vault root，供后续显式 repair 使用。
-    /// 本方法无法标记 `#[cfg(test)]`，因为下游 crate 的测试模块也会调用它。
-    pub fn set_vault_root(&mut self, root: impl AsRef<Path>) {
-        let previous_root = self.vault_root.clone();
-        let requested_root = root.as_ref().to_path_buf();
-        if let Err(error) = std::fs::create_dir_all(&requested_root) {
-            self.vault_root = previous_root;
-            tracing::warn!(
-                "Failed to create vault root before mounting {:?}: {}",
-                requested_root,
-                error
-            );
-            return;
-        }
-        if let Err(error) = self.set_vault_root_checked(root) {
-            self.vault_root = previous_root.or(Some(requested_root));
-            tracing::warn!("Failed to repair local repo catalog after mounting vault: {error}");
-        }
     }
 
     /// 执行闭包于指定的本地仓库 (按名称)
@@ -128,111 +89,6 @@ impl RepoManager {
             range::get_ops_in_range(db, start_seq, end_seq)
         })
     }
-
-    pub(crate) fn run_on_local_repo_stem<F, R>(&self, stem: &str, f: F) -> Result<R>
-    where
-        F: FnOnce(&redb::Database) -> Result<R>,
-    {
-        if stem == self.local_repo_name {
-            source_control::validate_tables(self.local_db.as_ref()).map_err(|err| {
-                anyhow!(
-                    "Broken local repo {} while validating source control tables: {}",
-                    self.local_repo_name,
-                    err
-                )
-            })?;
-            return f(self.local_db.as_ref());
-        }
-        {
-            let guard = self.read_extra_local_dbs()?;
-            if let Some(db) = guard.get(stem) {
-                return f(db);
-            }
-        }
-        let db_path = self.ledger_dir.join("local").join(format!("{}.redb", stem));
-        let db = cached_database(&db_path)
-            .map_err(|err| anyhow!("Broken local repo {} while opening database: {}", stem, err))?;
-        source_control::validate_tables(db.as_ref()).map_err(|err| {
-            anyhow!(
-                "Broken local repo {} while validating source control tables: {}",
-                stem,
-                err
-            )
-        })?;
-        {
-            let mut guard = self.write_extra_local_dbs()?;
-            if let std::collections::hash_map::Entry::Vacant(e) = guard.entry(stem.to_string()) {
-                e.insert(db);
-            }
-        }
-        let guard = self.read_extra_local_dbs()?;
-        guard
-            .get(stem)
-            .map(|db| f(db.as_ref()))
-            .transpose()?
-            .ok_or_else(|| anyhow!("Failed into cache repo"))
-    }
-
-    pub(crate) fn resolve_local_repo_stem(&self, selector: &str) -> Result<Option<String>> {
-        if selector == self.local_repo_name {
-            return Ok(Some(self.local_repo_name.clone()));
-        }
-        if let Some(info) = Self::read_repo_info_from_db(&self.local_db)?
-            && info.name == selector
-        {
-            return Err(local_selector_metadata_drift(
-                &self.local_repo_name,
-                selector,
-                &info.name,
-            ));
-        }
-        let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
-        for (path, stem) in redb_repo_entries(&local_dir, "resolving local selector")? {
-            if stem == self.local_repo_name {
-                continue;
-            }
-            let info =
-                Self::read_required_repo_info_from_path(&path, &stem, "resolving local selector")
-                    .map_err(|err| {
-                    anyhow!(
-                        "Broken local repo {} while resolving selector {}: {}",
-                        stem,
-                        selector,
-                        err
-                    )
-                })?;
-            if stem != selector && info.name == selector {
-                return Err(local_selector_metadata_drift(&stem, selector, &info.name));
-            }
-            if stem == selector {
-                return Ok(Some(stem));
-            }
-        }
-        Ok(None)
-    }
-
-    fn read_extra_local_dbs(&self) -> Result<RwLockReadGuard<'_, HashMap<String, Arc<Database>>>> {
-        self.extra_local_dbs
-            .read()
-            .map_err(|_| anyhow!("Local repo registry lock poisoned"))
-    }
-
-    fn write_extra_local_dbs(
-        &self,
-    ) -> Result<RwLockWriteGuard<'_, HashMap<String, Arc<Database>>>> {
-        self.extra_local_dbs
-            .write()
-            .map_err(|_| anyhow!("Local repo registry lock poisoned"))
-    }
-}
-
-fn local_selector_metadata_drift(stem: &str, selector: &str, name: &str) -> anyhow::Error {
-    anyhow!(
-        "Broken local repo {} while resolving selector {}: metadata name drifted to {}",
-        stem,
-        selector,
-        name
-    )
 }
 
 #[cfg(test)]
