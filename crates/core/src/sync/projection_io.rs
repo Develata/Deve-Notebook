@@ -1,17 +1,21 @@
 use super::{SnapshotPolicy, SyncManager, rebuild};
 use crate::models::DocId;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use tracing::{info, warn};
 
 pub(super) fn persist_doc(sync: &SyncManager, repo_name: &str, doc_id: DocId) -> Result<()> {
-    if let Some(path_str) = sync
+    let Some(path_str) = sync
         .repo
         .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
         .map(|meta| meta.path)
-    {
-        persist_doc_at_path(sync, repo_name, doc_id, &path_str)?;
-    }
-    Ok(())
+    else {
+        return Err(anyhow!(
+            "Tracked document projection missing for {} in repo {} while persisting projection",
+            doc_id,
+            repo_name
+        ));
+    };
+    persist_doc_at_path(sync, repo_name, doc_id, &path_str)
 }
 
 pub(super) fn persist_doc_at_path(

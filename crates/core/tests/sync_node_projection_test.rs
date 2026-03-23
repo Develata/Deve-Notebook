@@ -1,4 +1,5 @@
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::ledger::schema::NODEID_TO_META;
+use deve_core::models::{LedgerEntry, NodeId, Op, PeerId};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
@@ -65,5 +66,33 @@ fn persist_doc_prefers_node_projection_path() {
             .join("default")
             .join("stale/a.md")
             .exists()
+    );
+}
+
+#[test]
+fn persist_doc_fails_closed_when_tracked_projection_is_missing() {
+    let (dir, repo) = new_repo();
+    let (doc_id, _ops) = repo
+        .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
+        .expect("create file structure");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write_txn = db.begin_write()?;
+        {
+            let mut node_table = write_txn.open_table(NODEID_TO_META)?;
+            node_table.remove(NodeId::from_doc_id(doc_id).as_u128())?;
+        }
+        write_txn.commit()?;
+        Ok::<_, anyhow::Error>(())
+    })
+    .expect("remove tracked node meta");
+
+    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let err = sync
+        .persist_doc(doc_id)
+        .expect_err("missing tracked projection must fail closed");
+    assert!(
+        err.to_string()
+            .contains("Tracked document projection missing"),
+        "unexpected error: {err:#}"
     );
 }
