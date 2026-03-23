@@ -12,12 +12,7 @@ use tokio::sync::broadcast;
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(
-        dir.path(),
-        10,
-        Some("default"),
-        Some("urn:default"),
-    )?;
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     repo.set_vault_root(&vault);
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(32);

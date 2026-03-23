@@ -108,8 +108,8 @@ mod tests {
     fn resolves_local_merge_scope_from_remote_repo_id() {
         let dir = tempfile::tempdir().expect("tempdir");
         let vault = dir.path().join("vault");
-        let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)
-            .expect("init repo");
+        let mut repo =
+            RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
         repo.set_vault_root(&vault);
         let repo = Arc::new(repo);
         let info = repo
