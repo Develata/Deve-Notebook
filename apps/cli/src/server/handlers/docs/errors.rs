@@ -84,6 +84,9 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
         return repo_scope_code;
     }
     let lower = detail.to_ascii_lowercase();
+    if lower.contains("source not found:") {
+        return ServerErrorCode::StorageNotFound;
+    }
     if lower.contains("node meta missing")
         || lower.contains("tracked document projection missing")
         || lower.contains("canonical node path resolution failed")
@@ -132,6 +135,10 @@ mod tests {
     fn classifies_missing_docs_as_storage_not_found() {
         assert_eq!(
             classify_failure_code("Document not found: abc"),
+            ServerErrorCode::StorageNotFound
+        );
+        assert_eq!(
+            classify_failure_code("Source not found: notes/a.md"),
             ServerErrorCode::StorageNotFound
         );
     }
