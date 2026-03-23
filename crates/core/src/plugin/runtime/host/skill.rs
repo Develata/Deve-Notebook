@@ -6,6 +6,7 @@
 
 use crate::plugin::manifest::Capability;
 use crate::skill::SkillManager;
+use anyhow::Result;
 use rhai::{Engine, EvalAltResult};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,25 +20,31 @@ fn skill_dirs() -> Vec<PathBuf> {
     ]
 }
 
-fn list_all_skills() -> Vec<crate::skill::Skill> {
+fn list_all_skills_in(dirs: &[PathBuf]) -> Result<Vec<crate::skill::Skill>> {
     let mut all = Vec::new();
-    for dir in skill_dirs() {
-        let manager = SkillManager::new(dir);
-        if let Ok(skills) = manager.list() {
-            all.extend(skills);
-        }
+    for dir in dirs {
+        let manager = SkillManager::new(dir.clone());
+        all.extend(manager.list()?);
     }
-    all
+    Ok(all)
 }
 
-fn load_skill_by_name(name: &str) -> Option<crate::skill::Skill> {
-    for dir in skill_dirs() {
-        let manager = SkillManager::new(dir);
-        if let Ok(Some(skill)) = manager.get(name) {
-            return Some(skill);
+fn list_all_skills() -> Result<Vec<crate::skill::Skill>> {
+    list_all_skills_in(&skill_dirs())
+}
+
+fn load_skill_by_name_in(name: &str, dirs: &[PathBuf]) -> Result<Option<crate::skill::Skill>> {
+    for dir in dirs {
+        let manager = SkillManager::new(dir.clone());
+        if let Some(skill) = manager.get(name)? {
+            return Ok(Some(skill));
         }
     }
-    None
+    Ok(None)
+}
+
+fn load_skill_by_name(name: &str) -> Result<Option<crate::skill::Skill>> {
+    load_skill_by_name_in(name, &skill_dirs())
 }
 
 /// 注册 Skill API
@@ -50,7 +57,7 @@ pub fn register_skill_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_list.check_skill() {
                 return Err("Permission denied: skill access not allowed by manifest.".into());
             }
-            let skills = list_all_skills();
+            let skills = list_all_skills().map_err(|e| e.to_string())?;
             let items: Vec<serde_json::Value> = skills
                 .into_iter()
                 .map(|s| {
@@ -73,7 +80,7 @@ pub fn register_skill_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_get.check_skill() {
                 return Err("Permission denied: skill access not allowed by manifest.".into());
             }
-            match load_skill_by_name(name) {
+            match load_skill_by_name(name).map_err(|e| e.to_string())? {
                 Some(skill) => {
                     let json = serde_json::json!({
                         "name": skill.name,
@@ -87,3 +94,7 @@ pub fn register_skill_api(engine: &mut Engine, caps: Arc<Capability>) {
         },
     );
 }
+
+#[cfg(test)]
+#[path = "skill_test.rs"]
+mod tests;
