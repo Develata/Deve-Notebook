@@ -13,7 +13,6 @@ use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
-
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, uuid::Uuid)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
@@ -112,7 +111,6 @@ async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {
     session.switch_repo("test".into(), Some(default_id));
 
     handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
-
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(
@@ -147,7 +145,6 @@ async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
     session.switch_repo("test".into(), Some(default_id));
 
     handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
-
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(
@@ -182,7 +179,6 @@ async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
     session.switch_repo("shadow-notes".into(), Some(test_id));
 
     handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
-
     let (repo_id, first_message) = recv_history(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));
     assert_eq!(first_message, None);
@@ -208,7 +204,6 @@ async fn readonly_remote_changes_are_allowed_without_locked_db() -> anyhow::Resu
     session.switch_repo("shadow-notes".into(), Some(test_id));
 
     handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
-
     let (repo_id, paths) = recv_changes(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));
     assert!(paths.is_empty());
@@ -232,7 +227,6 @@ async fn remote_changes_without_repo_selection_clear_stale_db_and_sync_binding()
     session.set_sync_scope_nonce(13);
 
     handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
-
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(

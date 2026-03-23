@@ -1,7 +1,5 @@
 //! P2P 同步消息处理器入口。
 
-#![allow(dead_code)]
-
 mod cleanup;
 mod engine;
 mod errors;

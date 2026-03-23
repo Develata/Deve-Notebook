@@ -14,15 +14,6 @@ fn send(
     ch.send_protocol_error_with_scope_nonce(ServerError::with_detail(code, detail), scope_nonce);
 }
 
-pub(super) fn engine_unavailable(ch: &DualChannel, scope_nonce: Option<u64>) {
-    send(
-        ch,
-        ServerErrorCode::StoragePersistFailed,
-        "Failed to get or create sync engine",
-        scope_nonce,
-    );
-}
-
 pub(super) fn request_failed(
     ch: &DualChannel,
     detail: impl Into<String>,

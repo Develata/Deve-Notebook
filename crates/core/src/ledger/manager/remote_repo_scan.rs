@@ -1,11 +1,14 @@
 #[path = "remote_repo_scan_helpers.rs"]
 mod helpers;
+#[path = "remote_repo_scan_validate.rs"]
+mod validate;
 
 use self::helpers::{
     duplicate_catalog_ids, duplicate_entry_ids, reject_duplicate_remote_matches,
-    repaired_remote_repo_info, resolve_remote_repo_entry_by_id, scanned_remote_repo_info,
-    single_remote_entry, validate_scanned_remote_entries,
+    repaired_remote_repo_info, scanned_remote_repo_info, single_remote_entry,
+    validate_scanned_remote_entries,
 };
+use self::validate::validate_remote_repo_url_coverage;
 use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
@@ -233,31 +236,7 @@ impl RepoManager {
         Ok(repos)
     }
 
-    /// 校验远端 branch 下所有可读 repo 的 URL 完整性。
-    ///
-    /// 若任一可读 repo 缺少 URL，则 fail-closed 返回错误。
-    /// 用于 URL-based 仓库选择前的防御性校验。
     pub fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
-        for entry in self.scan_remote_repo_entries(peer_id)? {
-            if let Some(info) = &entry.info
-                && info.url.as_deref().is_none_or(|u| u.trim().is_empty())
-            {
-                anyhow::bail!(
-                    "Broken remote repo {} while validating URL coverage: repository URL not resolved",
-                    entry.stem
-                );
-            }
-        }
-        Ok(())
-    }
-}
-
-impl RepoManager {
-    pub(crate) fn resolve_remote_repo_entry_by_id(
-        &self,
-        peer_id: &PeerId,
-        repo_id: uuid::Uuid,
-    ) -> Result<Option<RemoteRepoEntry>> {
-        resolve_remote_repo_entry_by_id(self, peer_id, repo_id)
+        validate_remote_repo_url_coverage(self, peer_id)
     }
 }
