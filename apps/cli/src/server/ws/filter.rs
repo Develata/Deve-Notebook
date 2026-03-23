@@ -1,26 +1,13 @@
 use crate::server::session::WsSession;
-use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerMessage};
 use std::sync::{Arc, RwLock};
 
-#[derive(Clone, Default)]
-struct SessionBroadcastScope {
-    browser_session: bool,
-    active_repo_id: Option<RepoId>,
-    active_branch: Option<PeerId>,
-    scope_nonce: u64,
-}
+#[path = "filter_scope.rs"]
+mod scope;
+#[path = "filter_stamp.rs"]
+mod stamp;
 
-impl SessionBroadcastScope {
-    fn from_session(session: &WsSession) -> Self {
-        Self {
-            browser_session: session.is_browser_session(),
-            active_repo_id: session.active_repo_id,
-            active_branch: session.active_branch.clone(),
-            scope_nonce: session.scope_nonce(),
-        }
-    }
-}
+use scope::{SessionBroadcastScope, matches_runtime_scope_nonce, matches_scope};
 
 /// 广播过滤器：按连接的 repo/branch 视图裁剪广播消息。
 ///
@@ -127,65 +114,7 @@ impl BroadcastFilter {
             return None;
         };
 
-        Some(match msg {
-            ServerMessage::FsChangeDetected {
-                repo_id,
-                branch,
-                path,
-                change_type,
-                has_conflict,
-                scope_nonce,
-            } => ServerMessage::FsChangeDetected {
-                repo_id,
-                branch,
-                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
-                path,
-                change_type,
-                has_conflict,
-            },
-            ServerMessage::CommitAck {
-                repo_id,
-                branch,
-                commit_id,
-                timestamp,
-                scope_nonce,
-            } => ServerMessage::CommitAck {
-                repo_id,
-                branch,
-                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
-                commit_id,
-                timestamp,
-            },
-            ServerMessage::NewOp {
-                repo_id,
-                branch,
-                doc_id,
-                entry,
-                scope_nonce,
-            } => ServerMessage::NewOp {
-                repo_id,
-                branch,
-                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
-                doc_id,
-                entry,
-            },
-            ServerMessage::MergeComplete {
-                repo_id,
-                branch,
-                merged_count,
-                scope_nonce,
-            } => ServerMessage::MergeComplete {
-                repo_id,
-                branch,
-                scope_nonce: scope_nonce.or(Some(scope.scope_nonce)),
-                merged_count,
-            },
-            ServerMessage::PeerDeleted { peer_id, .. } => ServerMessage::PeerDeleted {
-                peer_id,
-                scope_nonce: Some(scope.scope_nonce),
-            },
-            other => other,
-        })
+        Some(stamp::stamp_scope_nonce(msg, scope.scope_nonce))
     }
 
     pub(crate) fn scoped_protocol_error(
@@ -205,39 +134,12 @@ impl BroadcastFilter {
                 }
             },
         };
-        Some(ServerMessage::ProtocolError {
+        Some(stamp::scoped_protocol_error(
             error,
             switch_nonce,
             scope_nonce,
-        })
+        ))
     }
-}
-
-fn matches_scope(
-    active_repo_id: Option<RepoId>,
-    active_branch: Option<&PeerId>,
-    message_repo_id: &Option<RepoId>,
-    message_branch: Option<&PeerId>,
-    local_only: bool,
-) -> bool {
-    if local_only && active_branch.is_some() {
-        return false;
-    }
-    match (active_repo_id, message_repo_id, message_branch) {
-        (None, Some(_), _) => false,
-        (Some(_), None, _) => false,
-        (Some(active_repo_id), Some(message_repo_id), Some(branch)) => {
-            active_repo_id == *message_repo_id && active_branch == Some(branch)
-        }
-        (Some(active_repo_id), Some(message_repo_id), None) => {
-            active_repo_id == *message_repo_id && active_branch.is_none()
-        }
-        _ => true,
-    }
-}
-
-fn matches_runtime_scope_nonce(current_scope_nonce: u64, message_scope_nonce: Option<u64>) -> bool {
-    message_scope_nonce == Some(current_scope_nonce)
 }
 
 #[cfg(test)]
