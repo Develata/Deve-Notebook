@@ -1,7 +1,7 @@
 use crate::ledger::manager::types::RepoInfo;
 use std::path::PathBuf;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct RemoteRepoEntry {
     pub path: PathBuf,
     pub stem: String,

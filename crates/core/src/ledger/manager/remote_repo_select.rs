@@ -2,7 +2,7 @@ use super::helpers::{duplicate_entry_ids, reject_duplicate_remote_matches, singl
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 impl RepoManager {
     pub(crate) fn resolve_remote_repo_entry(
@@ -13,14 +13,19 @@ impl RepoManager {
         let selector = selector.trim_end_matches(".redb");
         let target_id = uuid::Uuid::parse_str(selector).ok();
         let entries = self.scan_remote_repo_entries(peer_id)?;
+        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+            return Err(anyhow!(
+                "Broken shadow repo {} for peer {} while resolving selector",
+                entry.stem,
+                peer_id
+            ));
+        }
         let duplicate_ids = duplicate_entry_ids(&entries);
         let mut by_id = Vec::new();
         let mut by_stem = Vec::new();
         let mut by_name = Vec::new();
         for entry in entries {
-            let Some(info) = &entry.info else {
-                continue;
-            };
+            let info = entry.info.as_ref().expect("validated readable");
             if entry.stem == selector {
                 by_stem.push(entry.clone());
             }
@@ -63,19 +68,31 @@ impl RepoManager {
     }
 
     pub fn has_remote_display_name(&self, peer_id: &PeerId, raw_name: &str) -> Result<bool> {
-        Ok(self
-            .scan_remote_repo_entries(peer_id)?
-            .into_iter()
-            .any(|entry| {
-                entry
-                    .info
-                    .as_ref()
-                    .is_some_and(|info| entry.is_switchable() && info.name == raw_name)
-            }))
+        let entries = self.scan_remote_repo_entries(peer_id)?;
+        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+            return Err(anyhow!(
+                "Broken shadow repo {} for peer {} while checking display name",
+                entry.stem,
+                peer_id
+            ));
+        }
+        Ok(entries.into_iter().any(|entry| {
+            entry
+                .info
+                .as_ref()
+                .is_some_and(|info| entry.is_switchable() && info.name == raw_name)
+        }))
     }
 
     pub(crate) fn list_remote_repo_names(&self, peer_id: &PeerId) -> Result<Vec<String>> {
         let entries = self.scan_remote_repo_entries(peer_id)?;
+        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+            return Err(anyhow!(
+                "Broken shadow repo {} for peer {} while listing remote repos",
+                entry.stem,
+                peer_id
+            ));
+        }
         let duplicate_ids = duplicate_entry_ids(&entries);
         let mut repos: Vec<_> = entries
             .into_iter()
