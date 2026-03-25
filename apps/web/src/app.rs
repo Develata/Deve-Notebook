@@ -32,7 +32,7 @@ pub fn App() -> impl IntoView {
 
     // 认证状态
     let (auth_state, set_auth_state) = signal(if debug_bypass {
-        leptos::logging::warn!("Debug auth bypass enabled: always rendering MainLayout");
+        leptos::logging::log!("Debug auth bypass enabled: always rendering MainLayout");
         AuthState::Authenticated
     } else {
         AuthState::Unauthenticated
@@ -57,7 +57,7 @@ pub fn App() -> impl IntoView {
             view! {
                 <MainLayout
                     on_session_expired=Callback::new(move |_| {
-                        leptos::logging::warn!("Debug auth bypass ignored session expiration");
+                        leptos::logging::log!("Debug auth bypass ignored session expiration");
                     })
                 />
             }.into_any()

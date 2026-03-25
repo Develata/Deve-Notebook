@@ -180,7 +180,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             match sign_sync_hello(&identity, &msg).await {
                 Ok(signature) => {
                     if handshake_attempt.get() != next_attempt {
-                        leptos::logging::warn!("忽略过期握手结果: scope 已变更");
+                        leptos::logging::log!("忽略过期握手结果: scope 已变更");
                         return;
                     }
                     let peer_id = PeerId::new(&identity.peer_id);

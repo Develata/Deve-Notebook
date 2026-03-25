@@ -79,6 +79,13 @@ pub fn handle_remaining(
 ) {
     match msg {
         ServerMessage::Pong => {}
+        ServerMessage::Snapshot { .. }
+        | ServerMessage::History { .. }
+        | ServerMessage::NewOp { .. }
+        | ServerMessage::SyncPush { .. }
+        | ServerMessage::SyncPushSnapshot { .. }
+        | ServerMessage::KeyProvide { .. }
+        | ServerMessage::KeyDenied { .. } => {}
         ServerMessage::SystemMetrics {
             cpu_usage_percent,
             memory_used_mb,
