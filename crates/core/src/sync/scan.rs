@@ -33,16 +33,16 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
         if path.extension().and_then(|ext| ext.to_str()) != Some("md") {
             continue;
         }
+        let repo_path = repo_relative_path(repo_name, &repo_root, path)?;
+        if crate::utils::notegit::is_internal_repo_path(&repo_path) {
+            continue;
+        }
         if !entry.file_type().is_file() {
             return Err(anyhow!(
                 "Broken local repo {} while scanning workspace: markdown path is not a file: {}",
                 repo_name,
                 path.display()
             ));
-        }
-        let repo_path = repo_relative_path(repo_name, &repo_root, path)?;
-        if crate::utils::notegit::is_internal_repo_path(&repo_path) {
-            continue;
         }
         on_disk.insert(repo_path.clone());
         if let Some(doc_id) = super::scan_file::scan_disk_file(repo, vfs, repo_name, &repo_path)? {
