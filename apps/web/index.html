@@ -46,13 +46,13 @@
         const titleEl = document.getElementById("boot-panel-title");
         const detailEl = document.getElementById("boot-panel-detail");
         if (!panel || !titleEl || !detailEl) return;
+        if (tone !== "error") {
+          panel.style.display = "none";
+          return;
+        }
         panel.style.display = "block";
         panel.className =
-          tone === "error"
-            ? "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-red-400 bg-red-50 px-4 py-3 text-red-900 shadow-lg"
-            : tone === "success"
-              ? "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-lg"
-              : "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-sky-400 bg-sky-50 px-4 py-3 text-sky-950 shadow-lg";
+          "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-red-400 bg-red-50 px-4 py-3 text-red-900 shadow-lg";
         titleEl.textContent = title;
         detailEl.textContent = detail;
       };
@@ -80,11 +80,9 @@
           el.appendChild(line);
         }
         console.log("[Overlay]", msg);
-        window.setBootPanel(
-          isError ? "Boot Error" : "HTML Shell Running",
-          msg,
-          isError ? "error" : "info",
-        );
+        if (isError) {
+          window.setBootPanel("Boot Error", msg, "error");
+        }
       };
 
       window.onerror = function (msg, url, line, col, error) {
@@ -197,11 +195,6 @@
     <script src="js/init.js"></script>
     <script type="module">
       window.logToOverlay("Module Script Started. Adapter will lazy-load on demand.");
-      window.setBootPanel(
-        "HTML Shell Running",
-        "Editor adapter is deferred until the editor actually mounts.",
-        "info",
-      );
 
       const attachEditorAdapter = (module) => {
         const {
@@ -303,11 +296,6 @@
         }
 
         window.logToOverlay("Adapter imported successfully.");
-        window.setBootPanel(
-          "HTML Module Ready",
-          "Editor adapter loaded. Waiting for Rust/WASM mount.",
-          "success",
-        );
 
         window._realInit = (element, onUpdate) => {
           window.logToOverlay("Initializing Editor View");
@@ -370,7 +358,7 @@
         window.setBootPanel(
           "Loading Editor Adapter",
           "Editor requested CodeMirror. Loading adapter bundle now.",
-          "info",
+          "success",
         );
         window.logToOverlay("Lazy-loading editor adapter bundle...");
 
@@ -397,11 +385,6 @@
       };
 
       window.addEventListener("TrunkApplicationStarted", () => {
-        window.setBootPanel(
-          "Trunk WASM Started",
-          "Trunk finished booting the WASM app. Waiting for Rust main() UI state.",
-          "success",
-        );
         console.log("[Overlay]", "TrunkApplicationStarted event received.");
       }, { once: true });
     </script>
@@ -410,13 +393,13 @@
     <div
       id="boot-panel"
       class="fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-sky-400 bg-sky-50 px-4 py-3 text-sky-950 shadow-lg"
-      style="font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;"
+      style="display: none; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;"
     >
       <div id="boot-panel-title" style="font-weight: 700; margin-bottom: 4px;">
-        HTML Shell Loaded
+        Boot Error
       </div>
       <div id="boot-panel-detail">
-        Waiting for module script execution.
+        Unexpected boot failure.
       </div>
     </div>
     <div

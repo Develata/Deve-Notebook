@@ -60,22 +60,20 @@ export function applyRemoteOpsBatch(ops_json) {
     try {
       const ops = JSON.parse(ops_json);
       if (!Array.isArray(ops) || ops.length === 0) return;
-
-      // Collect all changes and apply in a single dispatch to avoid O(N²)
-      const changes = [];
       for (const op of ops) {
         if (op.Insert) {
-          changes.push({ from: op.Insert.pos, insert: op.Insert.content });
+          ctx.activeView.dispatch({
+            changes: { from: op.Insert.pos, insert: op.Insert.content },
+          });
         } else if (op.Delete) {
-          changes.push({
-            from: op.Delete.pos,
-            to: op.Delete.pos + op.Delete.len,
-            insert: "",
+          ctx.activeView.dispatch({
+            changes: {
+              from: op.Delete.pos,
+              to: op.Delete.pos + op.Delete.len,
+              insert: "",
+            },
           });
         }
-      }
-      if (changes.length > 0) {
-        ctx.activeView.dispatch({ changes });
       }
     } catch (e) {
       console.error("applyRemoteOpsBatch Error:", e);
