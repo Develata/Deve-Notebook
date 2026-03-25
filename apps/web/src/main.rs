@@ -31,20 +31,42 @@ mod storage;
 mod utils;
 use app::App;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 
 pub fn main() {
     console_error_panic_hook::set_once();
     tracing_wasm::set_as_global_default();
     tracing::info!("Initializing Deve-Note Web App");
 
-    // 挂载时手动隐藏覆盖层，以防止在未选择文档时卡住
     let window = web_sys::window().unwrap();
     let doc = window.document().unwrap();
+
+    if let Ok(set_boot_panel) =
+        js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("setBootPanel"))
+        && let Some(func) = set_boot_panel.dyn_ref::<js_sys::Function>()
+    {
+        let _ = func.call3(
+            &window,
+            &wasm_bindgen::JsValue::from_str("Rust/WASM Mounted"),
+            &wasm_bindgen::JsValue::from_str(
+                "Leptos main() has started and mount_to_body is running.",
+            ),
+            &wasm_bindgen::JsValue::from_str("success"),
+        );
+    }
+
     if let Some(el) = doc.get_element_by_id("loading-overlay") {
         let _ = el.class_list().add_1("hidden");
     }
 
     mount_to_body(|| {
         view! { <App/> }
-    })
+    });
+
+    if let Ok(hide_boot_panel) =
+        js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("hideBootPanel"))
+        && let Some(func) = hide_boot_panel.dyn_ref::<js_sys::Function>()
+    {
+        let _ = func.call0(&window);
+    }
 }

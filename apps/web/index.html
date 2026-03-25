@@ -34,15 +34,57 @@
 
     <script>
       // 0. Global Error Handler
+      window.showOverlay = () => {
+        const el = document.getElementById("loading-overlay");
+        if (!el) return;
+        el.classList.remove("hidden");
+        el.style.display = "flex";
+      };
+
+      window.setBootPanel = (title, detail, tone = "info") => {
+        const panel = document.getElementById("boot-panel");
+        const titleEl = document.getElementById("boot-panel-title");
+        const detailEl = document.getElementById("boot-panel-detail");
+        if (!panel || !titleEl || !detailEl) return;
+        panel.style.display = "block";
+        panel.className =
+          tone === "error"
+            ? "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-red-400 bg-red-50 px-4 py-3 text-red-900 shadow-lg"
+            : tone === "success"
+              ? "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-lg"
+              : "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-sky-400 bg-sky-50 px-4 py-3 text-sky-950 shadow-lg";
+        titleEl.textContent = title;
+        detailEl.textContent = detail;
+      };
+
+      window.hideBootPanel = () => {
+        const panel = document.getElementById("boot-panel");
+        if (!panel) return;
+        panel.style.display = "none";
+      };
+
+      window.hideOverlay = () => {
+        const el = document.getElementById("loading-overlay");
+        if (!el) return;
+        el.classList.add("hidden");
+        el.style.display = "none";
+      };
+
       window.logToOverlay = (msg, isError = false) => {
         const el = document.getElementById("loading-overlay");
         if (el) {
+          if (isError) window.showOverlay();
           const line = document.createElement("div");
           if (isError) line.style.color = "red";
           line.innerText = msg;
           el.appendChild(line);
         }
         console.log("[Overlay]", msg);
+        window.setBootPanel(
+          isError ? "Boot Error" : "HTML Shell Running",
+          msg,
+          isError ? "error" : "info",
+        );
       };
 
       window.onerror = function (msg, url, line, col, error) {
@@ -56,7 +98,16 @@
 
       // 1. Synchronous Bridge (Queue Logic only)
       window._editor_queue = [];
+      window._pending_editor_actions = [];
       window._cm_loaded = false;
+      window._editor_bridge_ready = false;
+
+      window.queueEditorAction = (kind, payload) => {
+        window._pending_editor_actions.push({ kind, payload });
+        if (window._pending_editor_actions.length > 256) {
+          window._pending_editor_actions.shift();
+        }
+      };
 
       // Rust calls this immediately, so we queue it until Modules are loaded
       window.setupCodeMirror = function (element, onUpdate) {
@@ -65,17 +116,31 @@
           window._realInit(element, onUpdate);
         } else {
           window._editor_queue.push({ element, onUpdate });
+          if (window.ensureEditorAdapter) {
+            window.ensureEditorAdapter();
+          }
         }
       };
 
       // Safety Stubs
-      window.applyRemoteContent = () =>
-        console.warn("Too Early: applyRemoteContent");
-      window.applyRemoteOp = () => console.warn("Too Early: applyRemoteOp");
+      window.applyRemoteContent = (text) => {
+        window.queueEditorAction("content", String(text ?? ""));
+      };
+      window.applyRemoteOp = (opJson) => {
+        window.queueEditorAction("op", String(opJson ?? ""));
+      };
+      window.applyRemoteOpsBatch = (opsJson) => {
+        window.queueEditorAction("opsBatch", String(opsJson ?? "[]"));
+      };
       window.getEditorContent = () => "";
       window.scrollGlobal = () => {};
-      window.setReadOnly = () => {};
-      window.destroyEditor = () => {};
+      window.setReadOnly = (readOnly) => {
+        window.queueEditorAction("readOnly", !!readOnly);
+      };
+      window.destroyEditor = () => {
+        window._editor_bridge_ready = false;
+        window._pending_editor_actions = [];
+      };
 
       window.mobileInsertText = (text) => {
         const view = window._debug_view;
@@ -131,11 +196,14 @@
     <!-- 3. Module Initialization -->
     <script src="js/init.js"></script>
     <script type="module">
-      window.logToOverlay("Module Script Started. Importing adapter...");
+      window.logToOverlay("Module Script Started. Adapter will lazy-load on demand.");
+      window.setBootPanel(
+        "HTML Shell Running",
+        "Editor adapter is deferred until the editor actually mounts.",
+        "info",
+      );
 
-      try {
-        // Import all adapter functions from LOCAL BUNDLE
-        const module = await import("./js/editor.bundle.js?rev=20260308-buildfix");
+      const attachEditorAdapter = (module) => {
         const {
           initCodeMirror,
           applyRemoteContent,
@@ -149,29 +217,84 @@
           getEditorSelection,
         } = module;
 
-        // --- BINDING: Expose Module Functions to Global Scope for Rust FFI ---
-        window.applyRemoteContent = applyRemoteContent;
-        window.applyRemoteOp = applyRemoteOp;
-        window.applyRemoteOpsBatch =
+        const rawApplyRemoteOp = (opJson) => {
+          applyRemoteOp(opJson);
+        };
+        const rawApplyRemoteOpsBatch =
           applyRemoteOpsBatch ||
           ((opsJson) => {
             try {
               const ops = JSON.parse(opsJson);
               if (!Array.isArray(ops)) return;
               for (const op of ops) {
-                window.applyRemoteOp(JSON.stringify(op));
+                rawApplyRemoteOp(JSON.stringify(op));
               }
             } catch (e) {
               console.error("applyRemoteOpsBatch Fallback Error:", e);
             }
           });
+        const rawSetReadOnly = (readOnly) => {
+          setReadOnly(readOnly);
+        };
+        const rawDestroyEditor = () => {
+          destroyEditor();
+        };
+        const replayEditorAction = (action) => {
+          switch (action.kind) {
+            case "content":
+              applyRemoteContent(action.payload);
+              break;
+            case "op":
+              rawApplyRemoteOp(action.payload);
+              break;
+            case "opsBatch":
+              rawApplyRemoteOpsBatch(action.payload);
+              break;
+            case "readOnly":
+              rawSetReadOnly(action.payload);
+              break;
+            default:
+              break;
+          }
+        };
+
+        window.applyRemoteContent = (text) => {
+          if (!window._editor_bridge_ready) {
+            window.queueEditorAction("content", String(text ?? ""));
+            return;
+          }
+          applyRemoteContent(text);
+        };
+        window.applyRemoteOp = (opJson) => {
+          if (!window._editor_bridge_ready) {
+            window.queueEditorAction("op", String(opJson ?? ""));
+            return;
+          }
+          rawApplyRemoteOp(opJson);
+        };
+        window.applyRemoteOpsBatch = (opsJson) => {
+          if (!window._editor_bridge_ready) {
+            window.queueEditorAction("opsBatch", String(opsJson ?? "[]"));
+            return;
+          }
+          rawApplyRemoteOpsBatch(opsJson);
+        };
         window.getEditorContent = getEditorContent;
         window.scrollGlobal = scrollGlobal;
-        window.setReadOnly = setReadOnly;
-        window.destroyEditor = destroyEditor;
+        window.setReadOnly = (readOnly) => {
+          if (!window._editor_bridge_ready) {
+            window.queueEditorAction("readOnly", !!readOnly);
+            return;
+          }
+          rawSetReadOnly(readOnly);
+        };
+        window.destroyEditor = () => {
+          window._editor_bridge_ready = false;
+          window._pending_editor_actions = [];
+          rawDestroyEditor();
+        };
         window.updateGutterDiff = updateGutterDiff || (() => {});
         window.getEditorSelection = getEditorSelection || (() => "null");
-        // -------------------------------------------------------------------
 
         if (typeof initCodeMirror !== "function") {
           throw new Error(
@@ -180,31 +303,51 @@
         }
 
         window.logToOverlay("Adapter imported successfully.");
+        window.setBootPanel(
+          "HTML Module Ready",
+          "Editor adapter loaded. Waiting for Rust/WASM mount.",
+          "success",
+        );
 
-        // Define the Real Init Bridge
         window._realInit = (element, onUpdate) => {
           window.logToOverlay("Initializing Editor View");
-          const overlay = document.getElementById("loading-overlay");
-          if (overlay) overlay.classList.add("hidden");
+          window.hideOverlay();
 
           try {
-            // Initialize. The View is now managed internally by the adapter.
             initCodeMirror(element, onUpdate);
-            // Force a safe post-init baseline even when a stale bundle is loaded.
-            // Invariants:
-            // - editor must start readonly before Snapshot arrives
-            // - placeholder text must not leak into ledger writes
-            setReadOnly(true);
-            applyRemoteContent("");
+            window._editor_bridge_ready = true;
+            rawSetReadOnly(true);
+            if (window._pending_editor_actions.length > 0) {
+              const pending = window._pending_editor_actions.slice();
+              window._pending_editor_actions = [];
+              window.logToOverlay(
+                `Replaying ${pending.length} queued editor actions...`,
+              );
+              pending.forEach(replayEditorAction);
+            }
           } catch (e) {
             window.logToOverlay("Init call failed: " + e.message, true);
             throw e;
           }
         };
 
+        // The adapter bundle assigns `window.setupCodeMirror = initCodeMirror`
+        // at module top-level. Re-route later mounts back through the bridge so
+        // queue replay and readiness state still work after editor remounts.
+        window.setupCodeMirror = (element, onUpdate) => {
+          window.logToOverlay("Rust called setupCodeMirror");
+          if (window._realInit) {
+            window._realInit(element, onUpdate);
+            return;
+          }
+          window._editor_queue.push({ element, onUpdate });
+          if (window.ensureEditorAdapter) {
+            window.ensureEditorAdapter();
+          }
+        };
+
         window._cm_loaded = true;
 
-        // Flush Queue
         if (window._editor_queue.length > 0) {
           window.logToOverlay(
             `Flushing ${window._editor_queue.length} queued items...`,
@@ -214,20 +357,72 @@
           });
           window._editor_queue = [];
         }
-      } catch (e) {
-        console.error("Failed to load editor adapter:", e);
-        window.logToOverlay(
-          "Failed to load editor adapter: " + e.message,
-          true,
+      };
+
+      window.ensureEditorAdapter = () => {
+        if (window._cm_loaded) {
+          return Promise.resolve();
+        }
+        if (window._adapter_loading) {
+          return window._adapter_loading;
+        }
+
+        window.setBootPanel(
+          "Loading Editor Adapter",
+          "Editor requested CodeMirror. Loading adapter bundle now.",
+          "info",
         );
-        if (e.stack) window.logToOverlay(e.stack, true);
-      }
+        window.logToOverlay("Lazy-loading editor adapter bundle...");
+
+        window._adapter_loading = import("./js/editor.bundle.js?rev=20260308-buildfix")
+          .then((module) => {
+            attachEditorAdapter(module);
+          })
+          .catch((e) => {
+            console.error("Failed to load editor adapter:", e);
+            window.logToOverlay(
+              "Failed to load editor adapter: " + e.message,
+              true,
+            );
+            if (e.stack) window.logToOverlay(e.stack, true);
+            throw e;
+          })
+          .finally(() => {
+            if (!window._cm_loaded) {
+              window._adapter_loading = null;
+            }
+          });
+
+        return window._adapter_loading;
+      };
+
+      window.addEventListener("TrunkApplicationStarted", () => {
+        window.setBootPanel(
+          "Trunk WASM Started",
+          "Trunk finished booting the WASM app. Waiting for Rust main() UI state.",
+          "success",
+        );
+        console.log("[Overlay]", "TrunkApplicationStarted event received.");
+      }, { once: true });
     </script>
   </head>
   <body>
     <div
+      id="boot-panel"
+      class="fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-sky-400 bg-sky-50 px-4 py-3 text-sky-950 shadow-lg"
+      style="font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;"
+    >
+      <div id="boot-panel-title" style="font-weight: 700; margin-bottom: 4px;">
+        HTML Shell Loaded
+      </div>
+      <div id="boot-panel-detail">
+        Waiting for module script execution.
+      </div>
+    </div>
+    <div
       id="loading-overlay"
-      style="display: flex; flex-direction: column; padding: 20px"
+      class="hidden"
+      style="display: none; flex-direction: column; padding: 20px"
     >
       <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px">
         Initializing Hybrid Components...
