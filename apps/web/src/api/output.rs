@@ -2,131 +2,57 @@
 //! # WebSocket 输出管理器
 //!
 //! ## 职责
-//! 1. 接收应用层消息
-//! 2. 维护离线消息队列 (有容量上限)
-//! 3. 新连接建立时刷新队列
-//! 4. 向服务器发送消息
+//! 1. 维护离线消息队列 (有容量上限)
+//! 2. 过滤断连期间不允许缓存的写入类消息
+//! 3. 提供发送失败时的重排队辅助
 //!
 //! ## 队列策略
 //! 队列有 `MAX_QUEUE_SIZE` 上限。超过限制时丢弃最旧的消息并警告。
 //! 这防止了网络断开时因持续操作导致的内存耗尽。
 
 use deve_core::protocol::ClientMessage;
-use futures::channel::mpsc::UnboundedReceiver;
-use futures::stream::SplitSink;
-use futures::{SinkExt, StreamExt};
-use gloo_net::websocket::{Message, futures::WebSocket};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
 use super::ConnectionStatus;
+use super::socket::BrowserSocket;
 /// 离线队列最大容量
 /// 防止网络断开时内存无限增长
 const MAX_QUEUE_SIZE: usize = 500;
 
-/// 输出管理器循环的内部消息类型
-pub enum OutputEvent {
-    /// 应用程序要发送到服务器的消息
-    Client(Box<ClientMessage>),
-    /// 来自成功连接的新 WebSocket 写入端
-    NewLink(SplitSink<WebSocket, Message>),
-}
-
-/// 启动输出管理器任务
-///
-/// ## WebLightPeer 在线依赖
-/// 当连接断开时，禁止写入类消息入队（只读模式）。
-/// 允许的消息：ListDocs, ListRepos, SyncHello, GetChanges 等查询类。
-/// 禁止的消息：Edit, SyncPush, CommitAndPush, CreateDoc 等写入类。
-pub fn spawn_output_manager(
-    rx: UnboundedReceiver<ClientMessage>,
-    link_rx: UnboundedReceiver<SplitSink<WebSocket, Message>>,
-    connection_status: ReadSignal<ConnectionStatus>,
-    set_status: WriteSignal<ConnectionStatus>,
-) {
-    spawn_local(async move {
-        let mut current_sink: Option<SplitSink<WebSocket, Message>> = None;
-        let mut queue: VecDeque<ClientMessage> = VecDeque::new();
-
-        // 合并流: 客户端消息 + 新连接链接
-        let mut events = futures::stream::select(
-            rx.map(|m| OutputEvent::Client(Box::new(m))),
-            link_rx.map(OutputEvent::NewLink),
-        );
-
-        while let Some(event) = events.next().await {
-            match event {
-                OutputEvent::NewLink(sink) => {
-                    handle_new_link(sink, &mut current_sink, &mut queue).await;
-                }
-                OutputEvent::Client(msg) => {
-                    // WebLightPeer: 断连时禁止写入类消息
-                    if connection_status.get() != ConnectionStatus::Connected
-                        && is_write_message(&msg)
-                    {
-                        leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
-                        continue;
-                    }
-                    handle_client_message(*msg, &mut current_sink, &mut queue, set_status).await;
-                }
-            }
-        }
-    });
-}
-
-/// 处理新的 WebSocket 连接链接
-async fn handle_new_link(
-    sink: SplitSink<WebSocket, Message>,
-    current_sink: &mut Option<SplitSink<WebSocket, Message>>,
-    queue: &mut VecDeque<ClientMessage>,
-) {
+pub(crate) fn prepare_queue_for_new_connection(queue: &mut VecDeque<ClientMessage>) {
     drop_queued_writes(queue);
     leptos::logging::log!("OutputLoop: 收到新连接。刷新 {} 条消息。", queue.len() + 1);
-    *current_sink = Some(sink);
-
-    // 注入 Ping 到队首，以无副作用方式确认新连接已可收发。
     queue.push_front(ClientMessage::Ping);
-
-    // 刷新队列
-    flush_queue(current_sink, queue).await;
 }
 
-/// 处理要发送的客户端消息
-///
-/// ## 协议策略
-/// - **使用 JSON 文本**: 与服务端协议约定保持一致，便于调试。
-async fn handle_client_message(
+pub(crate) fn send_or_requeue(
+    socket: &BrowserSocket,
     msg: ClientMessage,
-    current_sink: &mut Option<SplitSink<WebSocket, Message>>,
     queue: &mut VecDeque<ClientMessage>,
     set_status: WriteSignal<ConnectionStatus>,
-) {
-    if let Some(writer) = current_sink.as_mut() {
-        let text = match serde_json::to_string(&msg) {
-            Ok(t) => t,
-            Err(e) => {
-                leptos::logging::error!("消息序列化失败: {:?}, 消息: {:?}", e, msg);
-                return;
-            }
-        };
-
-        if let Err(e) = writer.send(Message::Text(text)).await {
-            leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
-            enqueue_with_limit(queue, msg);
-            *current_sink = None; // 标记连接已死
-            set_status.set(ConnectionStatus::Disconnected);
+) -> bool {
+    let text = match serde_json::to_string(&msg) {
+        Ok(t) => t,
+        Err(e) => {
+            leptos::logging::error!("消息序列化失败: {:?}, 消息: {:?}", e, msg);
+            return true;
         }
-    } else {
-        // 离线状态，入队等待
+    };
+
+    if let Err(e) = socket.send_text(&text) {
+        leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
         enqueue_with_limit(queue, msg);
+        set_status.set(ConnectionStatus::Disconnected);
+        return false;
     }
+    true
 }
 
 /// 带容量限制的入队操作
 ///
 /// 如果队列已满，丢弃最旧的消息并警告
-fn enqueue_with_limit(queue: &mut VecDeque<ClientMessage>, msg: ClientMessage) {
+pub(crate) fn enqueue_with_limit(queue: &mut VecDeque<ClientMessage>, msg: ClientMessage) {
     if queue.len() >= MAX_QUEUE_SIZE {
         let dropped = queue.pop_front();
         leptos::logging::warn!(
@@ -142,47 +68,10 @@ fn drop_queued_writes(queue: &mut VecDeque<ClientMessage>) {
     queue.retain(|msg| !is_write_message(msg));
 }
 
-/// 将队列中的所有消息刷新到当前连接
-///
-/// ## 协议策略
-/// - **使用 JSON 文本**: 与服务端协议约定保持一致。
-async fn flush_queue(
-    current_sink: &mut Option<SplitSink<WebSocket, Message>>,
-    queue: &mut VecDeque<ClientMessage>,
-) {
-    let count = queue.len();
-    for _ in 0..count {
-        if let Some(msg) = queue.pop_front() {
-            let text = match serde_json::to_string(&msg) {
-                Ok(t) => t,
-                Err(e) => {
-                    leptos::logging::error!("刷新队列时序列化失败: {:?}", e);
-                    continue;
-                }
-            };
-
-            let writer = match current_sink.as_mut() {
-                Some(w) => w,
-                None => {
-                    queue.push_front(msg);
-                    break;
-                }
-            };
-
-            if let Err(e) = writer.send(Message::Text(text)).await {
-                leptos::logging::error!("WS 刷新错误: {:?}. 连接可能已断开。", e);
-                queue.push_front(msg);
-                *current_sink = None;
-                break;
-            }
-        }
-    }
-}
-
 /// 判断消息是否为写入类操作
 ///
 /// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
-fn is_write_message(msg: &ClientMessage) -> bool {
+pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
     match msg {
         // 编辑操作
         ClientMessage::Edit { .. } => true,

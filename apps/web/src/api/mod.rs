@@ -12,10 +12,10 @@
 //! ## 架构设计
 //!
 //! ### 所有权转移模式 (神来之笔)
-//! 使用 `unbounded` channel 将 WebSocket 写入句柄从连接任务"过继"给输出任务：
-//! - Connection Manager: 负责建立连接、重连、读取
-//! - Output Manager: 负责队列缓冲、写入
-//! - 避免了 `Arc<Mutex<Option<Sink>>>` 带来的锁竞争和死锁风险
+//! 连接管理器独占持有 unsplit `WebSocket`：
+//! - Connection Manager: 负责建立连接、重连、读取、写入刷新
+//! - Output helpers: 负责离线队列策略和消息过滤
+//! - 避免了浏览器环境下 `split()` 带来的收发链路不稳定
 //!
 //! ### 性能提示
 //! 入站消息会进入一个有序小队列。消费端必须按顺序 drain，不能依赖“最新值槽位”。
@@ -25,18 +25,16 @@ mod backoff;
 mod connection;
 mod incoming;
 mod output;
+mod socket;
 mod writer_id;
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use futures::channel::mpsc::{UnboundedSender, unbounded};
-use futures::stream::SplitSink;
-use gloo_net::websocket::{Message, futures::WebSocket};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
 use self::connection::spawn_connection_manager;
-use self::output::spawn_output_manager;
 use self::writer_id::derive_writer_client_id;
 
 // ============================================================================
@@ -132,20 +130,15 @@ impl WsService {
         let (node_role, set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
 
-        // 所有权转移通道: 将 WebSocket 写入句柄从 Connection 传递给 Output
-        // 这避免了使用 Arc<Mutex<Option<Sink>>> 带来的锁竞争
-        let (link_tx, link_rx) = unbounded::<SplitSink<WebSocket, Message>>();
-
-        // 启动两个异步任务
+        // 启动连接任务，内部负责收发和离线队列刷新
         spawn_connection_manager(
+            rx,
             set_status,
             set_msg_seq,
             set_msg_queue,
             set_endpoint,
             set_node_role,
-            link_tx,
         );
-        spawn_output_manager(rx, link_rx, status, set_status);
 
         // 启动心跳任务 (30秒间隔)
         let tx_clone = tx.clone();
