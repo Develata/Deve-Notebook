@@ -3,12 +3,8 @@
 
 use crate::api::ConnectionStatus;
 use crate::components::activity_bar::SidebarView;
-use crate::components::desktop_layout::DesktopLayout;
-use crate::components::disconnect_overlay::DisconnectedOverlay;
 pub use crate::components::layout_context::{ChatControl, SearchControl};
-use crate::components::merge_modal_slot::MergeModalSlot;
-use crate::components::mobile_layout::MobileLayout;
-use crate::components::pending_navigation_modal::PendingNavigationModal;
+use crate::components::main_layout_runtime::MainLayoutRuntime;
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_ctrl_key::use_ctrl_key;
@@ -19,7 +15,7 @@ use leptos::prelude::*;
 use web_sys::UiEvent;
 
 #[component]
-pub fn MainLayout(on_session_expired: Callback<()>) -> impl IntoView {
+pub fn MainLayout(on_session_expired: Callback<()>) -> AnyView {
     let _locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let core = use_core();
     let ws_status = core.ws.status;
@@ -134,83 +130,29 @@ pub fn MainLayout(on_session_expired: Callback<()>) -> impl IntoView {
         );
     });
 
-    let core_for_layout = core.clone();
-
     view! {
-        <div
-            class="h-screen w-screen flex flex-col bg-sidebar text-primary font-sans"
-            on:pointermove=move |ev| do_resize.run(ev)
-            on:pointerup=move |_| stop_resize.run(())
-            on:pointerleave=move |_| stop_resize.run(())
-            on:pointercancel=move |_| stop_resize.run(())
-            tabindex="-1"
-            style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
-        >
-            <crate::components::search_box::UnifiedSearch
-                show=show_search
-                set_show=set_show_search
-                mode_signal=Signal::derive(move || search_mode.get())
-                ui_mode=Signal::derive(move || {
-                    if is_mobile.get() {
-                        crate::components::search_box::SearchUiMode::Sheet
-                    } else {
-                        crate::components::search_box::SearchUiMode::Overlay
-                    }
-                })
-                on_settings=on_settings
-                on_open=on_open
-            />
-
-            <crate::components::settings::SettingsModal
-                show=show_settings
-                set_show=set_show_settings
-            />
-
-            <MergeModalSlot />
-            <PendingNavigationModal
-                pending=core.pending_navigation
-                set_pending=core.set_pending_navigation
-            />
-
-            {move || if is_mobile.get() {
-                view! {
-                    <MobileLayout
-                        core=core_for_layout.clone()
-                        active_view=active_view
-                        set_active_view=set_active_view
-                        pinned_views=pinned_views
-                        set_pinned_views=set_pinned_views
-                        on_home=on_home
-                        on_open=on_open
-                        on_command=on_command
-                    />
-                }
-                .into_any()
-            } else {
-                view! {
-                    <DesktopLayout
-                        core=core_for_layout.clone()
-                        layout=desktop_layout
-                        active_view=active_view
-                        set_active_view=set_active_view
-                        pinned_views=pinned_views
-                        set_pinned_views=set_pinned_views
-                        on_home=on_home
-                        on_open=on_open
-                        on_command=on_command
-                        chat_visible=chat_visible
-                    />
-                }
-                .into_any()
-            }}
-
-            {move || if !is_mobile.get() {
-                view! { <crate::components::bottom_bar::BottomBar status=core.ws.status stats=core.stats /> }
-                    .into_any()
-            } else {
-                view! {}.into_any()
-            }}
-            <DisconnectedOverlay status=core.ws.status.into() />
-        </div>
+        <MainLayoutRuntime
+            core=core
+            desktop_layout=desktop_layout
+            is_mobile=is_mobile
+            is_resizing=is_resizing
+            do_resize=do_resize
+            stop_resize=stop_resize
+            show_search=show_search
+            set_show_search=set_show_search
+            search_mode=search_mode
+            show_settings=show_settings
+            set_show_settings=set_show_settings
+            active_view=active_view
+            set_active_view=set_active_view
+            pinned_views=pinned_views
+            set_pinned_views=set_pinned_views
+            chat_visible=chat_visible
+            on_home=on_home
+            on_open=on_open
+            on_command=on_command
+            on_settings=on_settings
+        />
     }
+    .into_any()
 }
