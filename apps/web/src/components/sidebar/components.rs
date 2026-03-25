@@ -51,7 +51,7 @@ pub fn ItemActions(
                 <EllipsisVertical />
             </button>
 
-            {if is_folder && !is_readonly.get() {
+            {move || if is_folder && !is_readonly.get() {
                 view! {
                     // 新建文件按钮 (仅文件夹显示)
                     <button

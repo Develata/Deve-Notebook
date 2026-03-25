@@ -21,7 +21,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                     {move || t::common::read_only_mode(locale.get())}
                 </div>
             </Show>
-            <div class="flex-1 overflow-hidden">
+            <div class="flex-1 min-h-0 overflow-hidden">
                 {move || {
                     if let Some(session) = core.diff_content.get() {
                         return view! {

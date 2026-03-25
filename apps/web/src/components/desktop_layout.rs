@@ -124,30 +124,41 @@ pub fn DesktopLayout(
             </div>
 
             <div class="flex-1 bg-panel shadow-sm border border-default rounded-lg overflow-hidden relative flex flex-col min-w-0">
-                {move || {
-                    if let Some(session) = core.diff_content.get() {
-                        return view! {
-                            <DiffView
-                                repo_scope=core
-                                    .current_repo_id
-                                    .get()
-                                    .or_else(|| core.current_repo.get())
-                                    .unwrap_or_default()
-                                path=session.path
-                                old_content=session.old_content
-                                new_content=session.new_content
-                                is_readonly=core.is_spectator.get()
-                                on_close=Callback::new(move |_| core.set_diff_content.set(None))
-                            />
+                <div class="flex-1 min-h-0 overflow-hidden">
+                    {move || {
+                        if let Some(session) = core.diff_content.get() {
+                            return view! {
+                                <DiffView
+                                    repo_scope=core
+                                        .current_repo_id
+                                        .get()
+                                        .or_else(|| core.current_repo.get())
+                                        .unwrap_or_default()
+                                    path=session.path
+                                    old_content=session.old_content
+                                    new_content=session.new_content
+                                    is_readonly=core.is_spectator.get()
+                                    on_close=Callback::new(move |_| core.set_diff_content.set(None))
+                                />
+                            }
+                            .into_any();
                         }
-                        .into_any();
-                    }
 
-                    match core.current_doc.get() {
-                        Some(id) => view! { <Editor doc_id=id on_stats=core.on_stats /> }.into_any(),
-                        None => view! { <Dashboard /> }.into_any(),
-                    }
-                }}
+                        match core.current_doc.get() {
+                            Some(id)
+                                if core
+                                    .docs
+                                    .get()
+                                    .iter()
+                                    .any(|(listed_doc_id, _)| *listed_doc_id == id) =>
+                            {
+                                view! { <Editor doc_id=id on_stats=core.on_stats /> }.into_any()
+                            }
+                            None => view! { <Dashboard /> }.into_any(),
+                            Some(_) => view! { <Dashboard /> }.into_any(),
+                        }
+                    }}
+                </div>
             </div>
 
             <DesktopChatPanel
