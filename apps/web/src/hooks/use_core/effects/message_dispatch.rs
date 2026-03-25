@@ -12,6 +12,7 @@ use super::message_dispatch_gate::{
 use super::message_dispatch_protocol::{handle_shadow_list_message, protocol_control_signals};
 use super::message_projection::{handle_doc_list, handle_tree_update};
 use super::message_protocol::handle_protocol_error;
+use super::message_repo_bootstrap::maybe_switch_to_first_repo;
 use super::message_repo_scope::{
     accepts_edit_rejected_message, accepts_protocol_error_message, accepts_write_ready_message,
     matches_current_message_scope,
@@ -154,6 +155,7 @@ pub fn handle_message<F>(
                     signals.set_repo_list_request_id.set(None);
                 }
                 signals.set_repo_list.set(repos);
+                maybe_switch_to_first_repo(&signals.repo_list.get_untracked(), ws, signals);
             }
         }
         ServerMessage::BranchSwitched {

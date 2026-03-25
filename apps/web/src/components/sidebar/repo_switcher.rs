@@ -9,13 +9,6 @@ pub fn RepoSwitcher() -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (show_menu, set_show_menu) = signal(false);
 
-    // Derived active repo label
-    let active_repo_label = Signal::derive(move || {
-        core.current_repo
-            .get()
-            .unwrap_or_else(|| "default".to_string())
-    });
-
     view! {
         <div class="relative">
              // Trigger Arrow
@@ -46,15 +39,18 @@ pub fn RepoSwitcher() -> impl IntoView {
                                  each=move || core.repo_list.get()
                                  key=|repo| repo.clone()
                                  children=move |repo_name| {
-                                     let repo_name_c = repo_name.clone();
-                                     let is_active = repo_name == active_repo_label.get();
+                                     let active_bg_name = repo_name.clone();
+                                     let active_text_name = repo_name.clone();
+                                     let click_name = repo_name.clone();
+                                     let badge_name = repo_name.clone();
+                                     let label_name = repo_name.clone();
                                      view! {
                                          <div
                                              class="px-3 py-2 hover:bg-accent-subtle cursor-pointer text-xs flex items-center justify-between"
-                                             class:bg-accent-subtle=move || is_active
-                                             class:text-accent=move || is_active
+                                             class:bg-accent-subtle=move || core.current_repo.get().as_deref() == Some(active_bg_name.as_str())
+                                             class:text-accent=move || core.current_repo.get().as_deref() == Some(active_text_name.as_str())
                                              on:click=move |_| {
-                                                 let name = repo_name_c.clone();
+                                                 let name = click_name.clone();
                                                  let cb = core.on_switch_repo.clone();
                                                  let set_menu = set_show_menu;
                                                  request_animation_frame(move || {
@@ -63,8 +59,8 @@ pub fn RepoSwitcher() -> impl IntoView {
                                                  });
                                              }
                                          >
-                                             <span class="truncate">{repo_name}</span>
-                                             {if is_active {
+                                             <span class="truncate">{label_name}</span>
+                                             {move || if core.current_repo.get().as_deref() == Some(badge_name.as_str()) {
                                                  view! { <span class="text-accent">"✓"</span> }.into_any()
                                              } else {
                                                  view! {}.into_any()

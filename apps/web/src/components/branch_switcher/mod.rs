@@ -24,11 +24,6 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
     let search_control = expect_context::<SearchControl>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
-    // 挂载时请求 Shadow 列表
-    Effect::new(move |_| {
-        core.on_list_shadows.run(());
-    });
-
     // 获取当前分支名称
     let current_branch = move || match core.active_branch.get() {
         None => {

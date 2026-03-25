@@ -11,6 +11,7 @@ mod message_dispatch_protocol;
 mod message_projection;
 mod message_protocol;
 mod message_refresh;
+mod message_repo_bootstrap;
 mod message_repo_scope;
 mod message_runtime;
 mod message_scope;
