@@ -198,6 +198,10 @@ struct SnapshotRequestMatch {
 
 impl SnapshotRequestGate {
     fn matches(&self) -> bool {
+        let current_generation = self.session_generation.load(Ordering::Relaxed);
+        if current_generation != self.expected_generation {
+            return false;
+        }
         snapshot_request_matches(SnapshotRequestMatch {
             open_request_id: self.open_request_id.get_untracked(),
             request_id: self.request_id,
@@ -207,7 +211,7 @@ impl SnapshotRequestGate {
             pending_branch_switch: self.pending_branch_switch.get_untracked(),
             current_scope_nonce: self.current_scope_nonce.get_untracked(),
             scope_nonce: self.scope_nonce,
-            current_generation: self.session_generation.load(Ordering::Relaxed),
+            current_generation,
             expected_generation: self.expected_generation,
             repo_id: self.repo_id,
             branch: self.branch.clone(),
