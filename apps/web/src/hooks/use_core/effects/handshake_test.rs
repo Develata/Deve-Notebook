@@ -1,5 +1,8 @@
 use super::handshake_state::reset_handshake_attempt_state;
-use super::{handshake_mode_key, should_restore_session_scope, should_suspend_handshake};
+use super::{
+    handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
+    should_suspend_handshake,
+};
 use crate::hooks::use_core::{PendingBranchTarget, types::HandshakeSignals};
 use crate::storage::DegradedSyncMode;
 use crate::storage::identity::StoredPeerIdentity;
@@ -53,6 +56,31 @@ fn handshake_mode_key_distinguishes_local_and_shadow_scope() {
     let local = handshake_mode_key("ws://a", None, Some("repo-1"), None);
     let shadow = handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")));
     assert_ne!(local, shadow);
+}
+
+#[test]
+fn restore_bootstrap_key_runs_once_per_unbound_scope() {
+    let restore_key = restore_bootstrap_key("ws://a", None, None, 7, true, None)
+        .expect("missing identity should still bootstrap session restore");
+    assert_eq!(
+        restore_bootstrap_key("ws://a", None, None, 7, true, Some(&restore_key)),
+        None
+    );
+    assert_ne!(
+        restore_key,
+        restore_bootstrap_key("ws://a", Some("default"), None, 7, true, None)
+            .expect("changing repo hint should reopen bootstrap")
+    );
+}
+
+#[test]
+fn restore_bootstrap_key_does_not_reopen_on_scope_nonce_churn() {
+    let restore_key = restore_bootstrap_key("ws://a", Some("default"), None, 7, true, None)
+        .expect("repo-bound reconnect should bootstrap once");
+    assert_eq!(
+        restore_bootstrap_key("ws://a", Some("default"), None, 8, true, Some(&restore_key)),
+        None
+    );
 }
 
 #[test]

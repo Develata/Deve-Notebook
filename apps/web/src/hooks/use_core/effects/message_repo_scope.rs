@@ -35,6 +35,18 @@ pub fn matches_current_message_scope(
     )
 }
 
+pub fn matches_projection_message_scope(
+    repo_id: &Option<uuid::Uuid>,
+    branch: &Option<PeerId>,
+    signals: CoreSignals,
+) -> bool {
+    peer_branch_matches_scope(
+        branch,
+        signals.active_branch.get_untracked(),
+        signals.pending_branch_switch.get_untracked(),
+    ) && current_repo_matches(repo_id, signals.current_repo_id.get_untracked())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn accepts_write_ready(
     repo_id: &str,
@@ -76,6 +88,15 @@ pub fn accepts_edit_rejected_message(scope_nonce: Option<u64>, signals: CoreSign
     signals.pending_repo_switch.get_untracked().is_none()
         && signals.pending_branch_switch.get_untracked().is_none()
         && scope_nonce == Some(signals.current_scope_nonce.get_untracked())
+}
+
+fn current_repo_matches(repo_id: &Option<uuid::Uuid>, current_repo_id: Option<String>) -> bool {
+    match (repo_id, current_repo_id) {
+        (Some(repo_id), Some(current_repo_id)) => current_repo_id == repo_id.to_string(),
+        (Some(_), None) => false,
+        (None, None) => true,
+        (None, Some(_)) => false,
+    }
 }
 
 pub fn accepts_protocol_error_message(

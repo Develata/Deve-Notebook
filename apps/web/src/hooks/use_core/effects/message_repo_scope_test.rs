@@ -1,6 +1,6 @@
 use super::{
     accepts_edit_rejected_message, accepts_protocol_error_message, accepts_write_ready,
-    matches_repo_scope,
+    matches_projection_message_scope, matches_repo_scope,
 };
 use crate::api::ConnectionStatus;
 use crate::hooks::use_core::PendingBranchTarget;
@@ -37,6 +37,31 @@ fn rejects_repo_scoped_messages_while_branch_switch_pending() {
         None,
         Some(PendingBranchTarget::Shadow("peer-a".into())),
         None,
+    ));
+}
+
+#[test]
+fn projection_messages_accept_exact_current_repo_during_repo_switch_settle() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(status);
+    let repo_id = uuid::Uuid::new_v4();
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+    signals.set_pending_repo_switch.set(Some("default".into()));
+
+    assert!(matches_projection_message_scope(
+        &Some(repo_id),
+        &None,
+        signals,
+    ));
+    assert!(!matches_repo_scope(
+        &Some(repo_id),
+        &None,
+        signals.current_repo_id,
+        signals.active_branch.get_untracked(),
+        signals.pending_branch_switch.get_untracked(),
+        signals.pending_repo_switch.get_untracked(),
     ));
 }
 

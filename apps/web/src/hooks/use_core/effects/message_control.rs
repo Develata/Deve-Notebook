@@ -53,11 +53,19 @@ pub fn handle_repo_switched(
     ws: &WsService,
     signals: CoreSignals,
 ) {
+    leptos::logging::log!(
+        "收到 RepoSwitched: branch={:?}, name={}, uuid={}, switch_nonce={:?}",
+        branch,
+        name,
+        uuid,
+        switch_nonce
+    );
     if !string_branch_matches_scope(
         &branch,
         signals.active_branch.get_untracked(),
         signals.pending_branch_switch.get_untracked(),
     ) {
+        leptos::logging::warn!("忽略 RepoSwitched: branch 与当前 scope 不匹配");
         return;
     }
     let outcome = effects_switch::handle_repo_switched(
@@ -78,13 +86,20 @@ pub fn handle_repo_switched(
             set_current_doc: signals.set_current_doc,
         },
     );
+    leptos::logging::log!(
+        "处理 RepoSwitched 结果: accepted={}, should_refresh={}, current_repo={:?}, current_repo_id={:?}, scope_nonce={}",
+        outcome.accepted,
+        outcome.should_refresh,
+        signals.current_repo.get_untracked(),
+        signals.current_repo_id.get_untracked(),
+        signals.current_scope_nonce.get_untracked()
+    );
     if outcome.should_refresh {
         ws.clear_writer_ready();
         signals.set_handshake_ready.set(false);
         signals.set_docs.set(Vec::new());
         signals.set_tree_nodes.set(Vec::new());
         clear_repo_scoped_runtime(signals);
-        request_repo_projection(ws, signals);
         request_repo_list(ws, signals);
         request_repo_sync_state(ws, signals);
         message_shadow::request_shadow_list(ws, signals);
@@ -166,18 +181,6 @@ fn request_repo_list(ws: &WsService, signals: CoreSignals) {
     });
 }
 
-fn request_repo_projection(ws: &WsService, signals: CoreSignals) {
-    let request_id = next_request_id();
-    signals
-        .set_doc_list_request_id
-        .set(Some(request_id.clone()));
-    signals.set_tree_request_id.set(Some(request_id.clone()));
-    ws.send(ClientMessage::ListDocs {
-        request_id,
-        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
-    });
-}
-
 fn next_request_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
@@ -207,15 +210,15 @@ mod tests {
     }
 
     #[test]
-    fn list_docs_request_keeps_shared_request_id_shape() {
+    fn list_repos_request_keeps_shared_request_id_shape() {
         let request_id = next_request_id();
-        let msg = ClientMessage::ListDocs {
+        let msg = ClientMessage::ListRepos {
             request_id: request_id.clone(),
             scope_nonce: Some(7),
         };
         assert!(matches!(
             msg,
-            ClientMessage::ListDocs {
+            ClientMessage::ListRepos {
                 request_id: actual,
                 scope_nonce: Some(7),
             } if actual == request_id

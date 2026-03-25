@@ -13,8 +13,8 @@ use super::handshake_bootstrap::restore_session_scope;
 #[path = "handshake_state.rs"]
 mod handshake_state;
 use self::handshake_state::{
-    handshake_mode_key, reset_handshake_attempt, should_restore_session_scope,
-    should_suspend_handshake,
+    handshake_mode_key, reset_handshake_attempt, restore_bootstrap_key,
+    set_handshake_scope_nonce_if_changed, should_restore_session_scope, should_suspend_handshake,
 };
 
 /// 设置握手 Effect。
@@ -35,7 +35,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             *last_mode.borrow_mut() = None;
             ws_clone.clear_writer_ready();
             signals.set_handshake_ready.set(false);
-            signals.set_handshake_scope_nonce.set(None);
+            set_handshake_scope_nonce_if_changed(signals, None);
             return;
         }
 
@@ -60,7 +60,6 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             pending_branch_switch.as_ref(),
             pending_repo_switch.as_deref(),
         ) {
-            *last_mode.borrow_mut() = None;
             if should_restore {
                 restore_session_scope(
                     &ws,
@@ -72,15 +71,34 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
-            signals.set_handshake_scope_nonce.set(None);
+            set_handshake_scope_nonce_if_changed(signals, None);
             return;
         }
+        let endpoint = endpoint_signal.get();
         let Some(mode_key) = handshake_mode_key(
-            &endpoint_signal.get(),
+            &endpoint,
             maybe_mode.as_ref().map(|_| ()),
             maybe_identity.as_ref().map(|id| id.repo_id.as_str()),
             branch.as_ref(),
         ) else {
+            let Some(restore_key) = restore_bootstrap_key(
+                &endpoint,
+                repo_name.as_deref(),
+                branch.as_ref(),
+                current_scope_nonce,
+                should_restore,
+                last_mode.borrow().as_deref(),
+            ) else {
+                return;
+            };
+            *last_mode.borrow_mut() = Some(restore_key);
+            restore_session_scope(
+                &ws,
+                signals,
+                repo_name.clone(),
+                active_repo_id.clone(),
+                branch.clone(),
+            );
             return;
         };
         if last_mode.borrow().as_deref() == Some(mode_key.as_str()) {
@@ -89,7 +107,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         *last_mode.borrow_mut() = Some(mode_key);
         ws_clone.clear_writer_ready();
         signals.set_handshake_ready.set(false);
-        signals.set_handshake_scope_nonce.set(None);
+        set_handshake_scope_nonce_if_changed(signals, None);
         if let Some(identity) = maybe_identity.as_ref()
             && maybe_mode.is_none()
             && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
@@ -106,12 +124,10 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             }
             ws.clear_writer_ready();
             signals.set_handshake_ready.set(false);
-            signals.set_handshake_scope_nonce.set(None);
+            set_handshake_scope_nonce_if_changed(signals, None);
             return;
         }
-        signals
-            .set_handshake_scope_nonce
-            .set(Some(current_scope_nonce));
+        set_handshake_scope_nonce_if_changed(signals, Some(current_scope_nonce));
         let handshake_attempt = handshake_attempt.clone();
         let failure_last_mode = last_mode.clone();
         let failure_ws = ws.clone();
@@ -129,7 +145,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                 }
                 ws.clear_writer_ready();
                 signals.set_handshake_ready.set(true);
-                signals.set_handshake_scope_nonce.set(None);
+                set_handshake_scope_nonce_if_changed(signals, None);
                 return;
             }
             let Some(identity) = maybe_identity else {

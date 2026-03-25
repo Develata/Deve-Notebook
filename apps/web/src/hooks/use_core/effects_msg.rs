@@ -13,8 +13,19 @@ use super::types::{ChatMessage, PeerSession};
 /// 处理 DocList 消息。
 ///
 /// 为保持 Dashboard 根页面稳定，不再自动选中首篇文档。
-pub fn handle_doc_list(list: Vec<(DocId, String)>, set_docs: WriteSignal<Vec<(DocId, String)>>) {
+pub fn handle_doc_list(
+    list: Vec<(DocId, String)>,
+    current_doc: ReadSignal<Option<DocId>>,
+    set_current_doc: WriteSignal<Option<DocId>>,
+    set_docs: WriteSignal<Vec<(DocId, String)>>,
+) {
     leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
+    if let Some(selected) = current_doc.get_untracked()
+        && !list.iter().any(|(doc_id, _)| *doc_id == selected)
+    {
+        leptos::logging::warn!("清理过期 current_doc: {} 不在当前 DocList 中", selected);
+        set_current_doc.set(None);
+    }
     set_docs.set(list);
 }
 
@@ -67,6 +78,7 @@ pub fn handle_remaining(
     set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
 ) {
     match msg {
+        ServerMessage::Pong => {}
         ServerMessage::SystemMetrics {
             cpu_usage_percent,
             memory_used_mb,
@@ -95,7 +107,8 @@ pub fn handle_remaining(
 #[cfg(test)]
 mod tests {
     use super::ChatMessage;
-    use super::handle_chat_chunk;
+    use super::{handle_chat_chunk, handle_doc_list};
+    use deve_core::models::DocId;
     use leptos::prelude::*;
 
     #[test]
@@ -114,5 +127,42 @@ mod tests {
         );
 
         assert!(messages.get_untracked().is_empty());
+    }
+
+    #[test]
+    fn doc_list_clears_stale_current_doc() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let stale = DocId::new();
+        let fresh = DocId::new();
+        let (current_doc, set_current_doc) = signal(Some(stale));
+        let (_docs, set_docs) = signal(Vec::<(DocId, String)>::new());
+
+        handle_doc_list(
+            vec![(fresh, "notes/fresh.md".into())],
+            current_doc,
+            set_current_doc,
+            set_docs,
+        );
+
+        assert_eq!(current_doc.get_untracked(), None);
+    }
+
+    #[test]
+    fn doc_list_preserves_current_doc_when_it_still_exists() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let selected = DocId::new();
+        let (current_doc, set_current_doc) = signal(Some(selected));
+        let (_docs, set_docs) = signal(Vec::<(DocId, String)>::new());
+
+        handle_doc_list(
+            vec![(selected, "notes/selected.md".into())],
+            current_doc,
+            set_current_doc,
+            set_docs,
+        );
+
+        assert_eq!(current_doc.get_untracked(), Some(selected));
     }
 }

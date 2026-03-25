@@ -72,11 +72,9 @@ pub fn use_editor(
     // 初始请求: 打开文档
     let ws_clone = ws.clone();
     let set_doc_ver = core.set_doc_version;
-    let handshake_ready = core.handshake_ready;
     let current_doc = core.current_doc;
     let docs = core.docs;
     let current_repo_id = core.current_repo_id;
-    let active_branch = core.active_branch;
     let pending_branch_switch = core.pending_branch_switch;
     let pending_repo_switch = core.pending_repo_switch;
     let open_session_generation = session_generation.clone();
@@ -87,8 +85,6 @@ pub fn use_editor(
         if !can_open_doc(OpenDocScope {
             doc_id,
             docs: &docs.get(),
-            handshake_ready: handshake_ready.get(),
-            active_branch: active_branch.get(),
             doc_selected: current_doc.get() == Some(doc_id),
             has_repo_scope: current_repo_id.get().is_some(),
             branch_switch_idle: pending_branch_switch.get().is_none(),
@@ -114,6 +110,12 @@ pub fn use_editor(
         set_load_state.set("loading".to_string());
         set_load_progress.set((0, 0));
         set_load_eta_ms.set(0);
+        leptos::logging::log!(
+            "OpenDoc send: doc={}, request_id={}, scope_nonce={}",
+            doc_id,
+            request_id,
+            core.current_scope_nonce.get()
+        );
         ws_clone.send(ClientMessage::OpenDoc {
             doc_id,
             request_id,
