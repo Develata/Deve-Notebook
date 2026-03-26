@@ -2,6 +2,7 @@ use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::{to_target, to_targets};
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
@@ -40,6 +41,7 @@ pub struct SourceControlRequestSignals {
 pub fn create_source_control_callbacks(
     ws: &WsService,
     scope: SourceControlScopeSignals,
+    write_gate: RepoWriteSignals,
     request: SourceControlRequestSignals,
 ) -> SourceControlCallbacks {
     let ws_changes = ws.clone();
@@ -57,6 +59,10 @@ pub fn create_source_control_callbacks(
 
     let ws_stage = ws.clone();
     let on_stage_file = Callback::new(move |entry: ChangeEntry| {
+        if let Some(block) = repo_write_block_untracked(&ws_stage, write_gate) {
+            leptos::logging::warn!("忽略 StageFile: {}", block.label());
+            return;
+        }
         send_targeted(scope, &ws_stage, move |scope_nonce| {
             ClientMessage::StageFile {
                 target: to_target(&entry),
@@ -67,6 +73,10 @@ pub fn create_source_control_callbacks(
 
     let ws_stage_many = ws.clone();
     let on_stage_files = Callback::new(move |entries: Vec<ChangeEntry>| {
+        if let Some(block) = repo_write_block_untracked(&ws_stage_many, write_gate) {
+            leptos::logging::warn!("忽略 StageFiles: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
@@ -82,6 +92,10 @@ pub fn create_source_control_callbacks(
 
     let ws_unstage = ws.clone();
     let on_unstage_file = Callback::new(move |entry: ChangeEntry| {
+        if let Some(block) = repo_write_block_untracked(&ws_unstage, write_gate) {
+            leptos::logging::warn!("忽略 UnstageFile: {}", block.label());
+            return;
+        }
         send_targeted(scope, &ws_unstage, move |scope_nonce| {
             ClientMessage::UnstageFile {
                 target: to_target(&entry),
@@ -92,6 +106,10 @@ pub fn create_source_control_callbacks(
 
     let ws_unstage_many = ws.clone();
     let on_unstage_files = Callback::new(move |entries: Vec<ChangeEntry>| {
+        if let Some(block) = repo_write_block_untracked(&ws_unstage_many, write_gate) {
+            leptos::logging::warn!("忽略 UnstageFiles: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
@@ -107,6 +125,10 @@ pub fn create_source_control_callbacks(
 
     let ws_discard = ws.clone();
     let on_discard_file = Callback::new(move |entry: ChangeEntry| {
+        if let Some(block) = repo_write_block_untracked(&ws_discard, write_gate) {
+            leptos::logging::warn!("忽略 DiscardFile: {}", block.label());
+            return;
+        }
         send_targeted(scope, &ws_discard, move |scope_nonce| {
             ClientMessage::DiscardFile {
                 target: to_target(&entry),
@@ -117,6 +139,10 @@ pub fn create_source_control_callbacks(
 
     let ws_commit = ws.clone();
     let on_commit = Callback::new(move |message: String| {
+        if let Some(block) = repo_write_block_untracked(&ws_commit, write_gate) {
+            leptos::logging::warn!("忽略 Commit: {}", block.label());
+            return;
+        }
         send_simple(scope, &ws_commit, move |scope_nonce| {
             ClientMessage::Commit {
                 message,
@@ -160,6 +186,10 @@ pub fn create_source_control_callbacks(
     let ws_conflict = ws.clone();
     let on_resolve_conflict = Callback::new(
         move |(entry, resolution): (ChangeEntry, ConflictResolution)| {
+            if let Some(block) = repo_write_block_untracked(&ws_conflict, write_gate) {
+                leptos::logging::warn!("忽略 ResolveConflict: {}", block.label());
+                return;
+            }
             send_simple(scope, &ws_conflict, move |scope_nonce| {
                 ClientMessage::ResolveConflict {
                     target: to_target(&entry),
@@ -189,6 +219,10 @@ pub fn create_source_control_callbacks(
 
     let ws_commit_and_push = ws.clone();
     let on_commit_and_push = Callback::new(move |message: String| {
+        if let Some(block) = repo_write_block_untracked(&ws_commit_and_push, write_gate) {
+            leptos::logging::warn!("忽略 CommitAndPush: {}", block.label());
+            return;
+        }
         send_simple(scope, &ws_commit_and_push, move |scope_nonce| {
             ClientMessage::CommitAndPush {
                 message,

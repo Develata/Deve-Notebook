@@ -14,6 +14,8 @@ use leptos::prelude::*;
 
 use crate::components::dropdown::AnchorRect;
 use crate::components::main_layout::SearchControl;
+use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::write_gate::repo_write_allowed_for_core;
 
 #[component]
 pub fn ExplorerView(
@@ -24,6 +26,7 @@ pub fn ExplorerView(
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let core = expect_context::<CoreState>();
     let search_control = expect_context::<SearchControl>();
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
@@ -93,6 +96,7 @@ pub fn ExplorerView(
             .get()
             .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
     });
+    let can_write = Signal::derive(move || repo_write_allowed_for_core(&core));
 
     view! {
         <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none relative">
@@ -106,7 +110,7 @@ pub fn ExplorerView(
                     </div>
                 </div>
 
-                <Show when=move || !is_readonly.get()>
+                <Show when=move || can_write.get() && !is_readonly.get()>
                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                        <button
                             class="p-1 rounded hover:bg-hover text-secondary"

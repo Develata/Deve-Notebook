@@ -3,20 +3,16 @@
 //!
 //! 底部状态栏，显示分支切换器、连接状态和编辑器统计信息 (字数、行数、字符数)。
 
-use crate::api::ConnectionStatus;
 use crate::components::branch_switcher::BranchSwitcher;
-use crate::editor::EditorStats;
-use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::status_summary::{SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
-pub fn BottomBar(
-    status: ReadSignal<ConnectionStatus>,
-    stats: ReadSignal<EditorStats>,
-) -> impl IntoView {
-    let core = expect_context::<EditorContext>();
+pub fn BottomBar(core: CoreState) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let stats = core.stats;
     let max_ver = core.doc_version;
     let curr_ver = core.playback_version;
     let set_ver = core.set_playback_version;
@@ -25,19 +21,74 @@ pub fn BottomBar(
     let load_eta_ms = core.load_eta_ms;
 
     let status_view = move || {
-        let (color, text) = match status.get() {
-            ConnectionStatus::Connected => ("bg-green-500", t::bottom_bar::ready(locale.get())),
-            ConnectionStatus::Connecting => ("bg-yellow-500", t::bottom_bar::syncing(locale.get())),
-            ConnectionStatus::Unauthorized => {
-                ("bg-amber-500", t::bottom_bar::unauthorized(locale.get()))
-            }
-            ConnectionStatus::Disconnected => ("bg-red-500", t::bottom_bar::offline(locale.get())),
+        let current_doc = core.current_doc.get();
+        let pending_ack_count = current_doc
+            .and_then(|doc_id| core.pending_local_edits.get().get(&doc_id).map(Vec::len))
+            .unwrap_or_default();
+        let summary = derive_sync_status(
+            core.ws.status.get(),
+            &load_state.get(),
+            core.active_branch.get().is_some(),
+            core.is_spectator.get() && core.active_branch.get().is_none(),
+            core.handshake_ready.get(),
+            core.ws
+                .writer_ready_for(core.current_repo_id.get().as_deref()),
+            core.current_repo_id.get().as_deref(),
+            core.current_repo.get().as_deref(),
+            core.pending_repo_switch.get().as_deref(),
+            core.pending_branch_switch.get().is_some(),
+            pending_ack_count,
+        );
+        let repo_label = if matches!(summary.kind, SyncStatusKind::HandshakingRepo) {
+            summary.repo_name.clone().unwrap_or_default()
+        } else {
+            String::new()
+        };
+        let show_repo_label = !repo_label.is_empty();
+        let (color, text) = match summary.kind {
+            SyncStatusKind::Ready => (
+                "bg-green-500",
+                t::bottom_bar::ready(locale.get()).to_string(),
+            ),
+            SyncStatusKind::PendingAck => (
+                "bg-sky-500",
+                t::bottom_bar::pending_ack(locale.get(), summary.pending_ack_count),
+            ),
+            SyncStatusKind::ReadOnly => (
+                "bg-slate-400",
+                t::bottom_bar::read_only(locale.get()).to_string(),
+            ),
+            SyncStatusKind::HandshakingRepo => (
+                "bg-yellow-500",
+                t::bottom_bar::handshaking_repo(locale.get()).to_string(),
+            ),
+            SyncStatusKind::SnapshotLoading => (
+                "bg-blue-500",
+                t::bottom_bar::snapshot_loading(locale.get()).to_string(),
+            ),
+            SyncStatusKind::Reconnecting => (
+                "bg-yellow-500",
+                t::bottom_bar::reconnecting(locale.get()).to_string(),
+            ),
+            SyncStatusKind::SessionExpired => (
+                "bg-amber-500",
+                t::bottom_bar::unauthorized(locale.get()).to_string(),
+            ),
+            SyncStatusKind::Offline => (
+                "bg-red-500",
+                t::bottom_bar::offline(locale.get()).to_string(),
+            ),
         };
 
         view! {
-             <div class="flex items-center gap-2">
+             <div class="flex items-center gap-2 min-w-0">
                 <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
                 <span class="text-xs text-secondary font-medium">{text}</span>
+                <Show when=move || show_repo_label>
+                    <span class="text-[10px] text-muted font-mono truncate">
+                        {repo_label.clone()}
+                    </span>
+                </Show>
             </div>
         }
     };
@@ -110,7 +161,7 @@ pub fn BottomBar(
                     <span class="font-mono text-primary">{move || stats.get().lines}</span>
                 </div>
                 <div class="flex gap-1">
-                    <span>{move || t::bottom_bar::col(locale.get())}</span>
+                    <span>{move || t::bottom_bar::chars(locale.get())}</span>
                     <span class="font-mono text-primary">{move || stats.get().chars}</span>
                 </div>
             </div>

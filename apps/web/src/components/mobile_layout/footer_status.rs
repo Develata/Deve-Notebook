@@ -1,26 +1,74 @@
 // apps/web/src/components/mobile_layout/footer_status.rs
 //! # Mobile Footer — Status & Load Indicators
 
-use crate::api::ConnectionStatus;
+use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::status_summary::{SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 /// Connection status indicator (green/yellow/red dot + text).
 #[component]
-pub fn StatusView(status: ReadSignal<ConnectionStatus>, locale: RwSignal<Locale>) -> impl IntoView {
-    let (color, text) = match status.get() {
-        ConnectionStatus::Connected => ("bg-green-500", t::bottom_bar::ready(locale.get())),
-        ConnectionStatus::Connecting => ("bg-yellow-500", t::bottom_bar::syncing(locale.get())),
-        ConnectionStatus::Unauthorized => {
-            ("bg-amber-500", t::bottom_bar::unauthorized(locale.get()))
+pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
+    move || {
+        let current_doc = core.current_doc.get();
+        let pending_ack_count = current_doc
+            .and_then(|doc_id| core.pending_local_edits.get().get(&doc_id).map(Vec::len))
+            .unwrap_or_default();
+        let summary = derive_sync_status(
+            core.ws.status.get(),
+            &core.load_state.get(),
+            core.active_branch.get().is_some(),
+            core.is_spectator.get() && core.active_branch.get().is_none(),
+            core.handshake_ready.get(),
+            core.ws
+                .writer_ready_for(core.current_repo_id.get().as_deref()),
+            core.current_repo_id.get().as_deref(),
+            core.current_repo.get().as_deref(),
+            core.pending_repo_switch.get().as_deref(),
+            core.pending_branch_switch.get().is_some(),
+            pending_ack_count,
+        );
+        let (color, text) = match summary.kind {
+            SyncStatusKind::Ready => (
+                "bg-green-500",
+                t::bottom_bar::ready(locale.get()).to_string(),
+            ),
+            SyncStatusKind::PendingAck => (
+                "bg-sky-500",
+                t::bottom_bar::pending_ack(locale.get(), summary.pending_ack_count),
+            ),
+            SyncStatusKind::ReadOnly => (
+                "bg-slate-400",
+                t::bottom_bar::read_only(locale.get()).to_string(),
+            ),
+            SyncStatusKind::HandshakingRepo => (
+                "bg-yellow-500",
+                t::bottom_bar::handshaking_repo(locale.get()).to_string(),
+            ),
+            SyncStatusKind::SnapshotLoading => (
+                "bg-blue-500",
+                t::bottom_bar::snapshot_loading(locale.get()).to_string(),
+            ),
+            SyncStatusKind::Reconnecting => (
+                "bg-yellow-500",
+                t::bottom_bar::reconnecting(locale.get()).to_string(),
+            ),
+            SyncStatusKind::SessionExpired => (
+                "bg-amber-500",
+                t::bottom_bar::unauthorized(locale.get()).to_string(),
+            ),
+            SyncStatusKind::Offline => (
+                "bg-red-500",
+                t::bottom_bar::offline(locale.get()).to_string(),
+            ),
+        };
+        view! {
+            <div class="flex items-center gap-1.5">
+                <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
+                <span class="text-[11px] text-secondary font-medium">{text}</span>
+            </div>
         }
-        ConnectionStatus::Disconnected => ("bg-red-500", t::bottom_bar::offline(locale.get())),
-    };
-    view! {
-        <div class="flex items-center gap-1.5">
-            <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
-            <span class="text-[11px] text-secondary font-medium">{text}</span>
-        </div>
+        .into_any()
     }
 }
 

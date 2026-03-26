@@ -32,8 +32,6 @@ pub fn MainLayoutRuntime(
     on_settings: Callback<()>,
 ) -> impl IntoView {
     let core_for_layout = core.clone();
-    let status = core.ws.status;
-
     view! {
         <div
             class="h-screen w-screen flex flex-col bg-sidebar text-primary font-sans"
@@ -102,13 +100,16 @@ pub fn MainLayoutRuntime(
                 .into_any()
             }}
 
-            {move || if !is_mobile.get() {
-                view! { <crate::components::bottom_bar::BottomBar status=status stats=core.stats /> }
-                    .into_any()
-            } else {
-                view! {}.into_any()
+            {{
+                let bottom_bar_core = core.clone();
+                move || if !is_mobile.get() {
+                    view! { <crate::components::bottom_bar::BottomBar core=bottom_bar_core.clone() /> }
+                        .into_any()
+                } else {
+                    view! {}.into_any()
+                }
             }}
-            <DisconnectedOverlay status=status.into() />
+            <DisconnectedOverlay status=core.ws.status.into() />
         </div>
     }
 }

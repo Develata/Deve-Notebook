@@ -29,8 +29,6 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         // 失败重置会把 handshake_scope_nonce 清回 None；这里显式订阅它，
         // 以便同一 scope 内的握手准备失败后能重新触发一次 attempt。
         let _handshake_retry_gate = signals.handshake_scope_nonce.get();
-        let next_attempt = handshake_attempt.get().saturating_add(1);
-        handshake_attempt.set(next_attempt);
         if status_signal.get() != ConnectionStatus::Connected {
             *last_mode.borrow_mut() = None;
             ws_clone.clear_writer_ready();
@@ -131,6 +129,8 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let handshake_attempt = handshake_attempt.clone();
         let failure_last_mode = last_mode.clone();
         let failure_ws = ws.clone();
+        let next_attempt = handshake_attempt.get().saturating_add(1);
+        handshake_attempt.set(next_attempt);
         spawn_local(async move {
             if let Some(mode) = maybe_mode {
                 leptos::logging::warn!("{}", mode.banner_text());

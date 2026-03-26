@@ -4,6 +4,7 @@
 //! 提供 "New Doc" 和 "Sync Now" 按钮。
 
 use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::write_gate::repo_write_allowed_for_core;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -11,8 +12,13 @@ use leptos::prelude::*;
 pub fn ActionsCard() -> impl IntoView {
     let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
+    let core_for_gate = core.clone();
+    let can_write = Signal::derive(move || repo_write_allowed_for_core(&core_for_gate));
 
     let on_new_doc = move |_| {
+        if !can_write.get_untracked() {
+            return;
+        }
         core.on_doc_create.run("Untitled.md".to_string());
     };
 
@@ -26,7 +32,8 @@ pub fn ActionsCard() -> impl IntoView {
             <div class="flex gap-2">
                 <button
                     class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
-                           bg-accent text-on-accent hover:bg-accent/90 transition-colors"
+                           bg-accent text-on-accent hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled=move || !can_write.get()
                     on:click=on_new_doc
                 >
                     {move || t::dashboard::new_doc(locale.get())}

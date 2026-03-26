@@ -17,10 +17,10 @@ pub fn lines(locale: Locale) -> &'static str {
     }
 }
 
-pub fn col(locale: Locale) -> &'static str {
+pub fn chars(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Col",
-        Locale::Zh => "列",
+        Locale::En => "Chars",
+        Locale::Zh => "字符",
     }
 }
 
@@ -31,10 +31,10 @@ pub fn ready(locale: Locale) -> &'static str {
     }
 }
 
-pub fn syncing(locale: Locale) -> &'static str {
+pub fn reconnecting(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Syncing...",
-        Locale::Zh => "同步中...",
+        Locale::En => "Reconnecting",
+        Locale::Zh => "重连中",
     }
 }
 
@@ -42,6 +42,34 @@ pub fn offline(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Offline",
         Locale::Zh => "离线",
+    }
+}
+
+pub fn handshaking_repo(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Handshaking repo...",
+        Locale::Zh => "仓库握手中...",
+    }
+}
+
+pub fn read_only(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Read-only",
+        Locale::Zh => "只读",
+    }
+}
+
+pub fn snapshot_loading(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Loading snapshot...",
+        Locale::Zh => "加载快照中...",
+    }
+}
+
+pub fn pending_ack(locale: Locale, count: usize) -> String {
+    match locale {
+        Locale::En => format!("Pending Ack ({count})"),
+        Locale::Zh => format!("等待确认 ({count})"),
     }
 }
 

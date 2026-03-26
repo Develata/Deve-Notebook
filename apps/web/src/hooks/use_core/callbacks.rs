@@ -16,6 +16,7 @@ pub use super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
 pub use super::callbacks_sync::{SyncCallbacks, create_sync_callbacks};
 use super::navigation::{NavigationTarget, PendingNavigation, guard_navigation};
 use super::pending::PendingLocalEdits;
+use super::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 
 // Re-export from submodule
 #[allow(unused_imports)] // SourceControlCallbacks 为外部模块预留
@@ -36,6 +37,7 @@ pub fn create_doc_callbacks(
     ws: &WsService,
     current_doc: ReadSignal<Option<DocId>>,
     local_scope: LocalScopeSignals,
+    write_gate: RepoWriteSignals,
     pending_local_edits: ReadSignal<PendingLocalEdits>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     set_current_doc: WriteSignal<Option<DocId>>,
@@ -62,6 +64,10 @@ pub fn create_doc_callbacks(
 
     let ws_for_create = ws.clone();
     let on_doc_create = Callback::new(move |name: String| {
+        if let Some(block) = repo_write_block_untracked(&ws_for_create, write_gate) {
+            leptos::logging::warn!("忽略 CreateDoc: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 CreateDoc: local repo scope 尚未稳定");
             return;
@@ -74,6 +80,10 @@ pub fn create_doc_callbacks(
 
     let ws_for_rename = ws.clone();
     let on_doc_rename = Callback::new(move |(old_path, new_path): (String, String)| {
+        if let Some(block) = repo_write_block_untracked(&ws_for_rename, write_gate) {
+            leptos::logging::warn!("忽略 RenameDoc: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 RenameDoc: local repo scope 尚未稳定");
             return;
@@ -88,6 +98,10 @@ pub fn create_doc_callbacks(
 
     let ws_for_delete = ws.clone();
     let on_doc_delete = Callback::new(move |path: String| {
+        if let Some(block) = repo_write_block_untracked(&ws_for_delete, write_gate) {
+            leptos::logging::warn!("忽略 DeleteDoc: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 DeleteDoc: local repo scope 尚未稳定");
             return;
@@ -101,6 +115,10 @@ pub fn create_doc_callbacks(
 
     let ws_for_copy = ws.clone();
     let on_doc_copy = Callback::new(move |(src_path, dest_path): (String, String)| {
+        if let Some(block) = repo_write_block_untracked(&ws_for_copy, write_gate) {
+            leptos::logging::warn!("忽略 CopyDoc: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 CopyDoc: local repo scope 尚未稳定");
             return;
@@ -115,6 +133,10 @@ pub fn create_doc_callbacks(
 
     let ws_for_move = ws.clone();
     let on_doc_move = Callback::new(move |(src_path, dest_path): (String, String)| {
+        if let Some(block) = repo_write_block_untracked(&ws_for_move, write_gate) {
+            leptos::logging::warn!("忽略 MoveDoc: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 MoveDoc: local repo scope 尚未稳定");
             return;
@@ -163,7 +185,7 @@ pub fn create_misc_callbacks(
     search_scope: SearchScopeSignals,
     request_signals: MiscRequestSignals,
 ) -> MiscCallbacks {
-    let on_stats = Callback::new(move |s| set_stats.set(s));
+    let on_stats = Callback::new(move |s: crate::editor::EditorStats| set_stats.set(s));
 
     let ws_plugin = ws.clone();
     let on_plugin_call = Callback::new(

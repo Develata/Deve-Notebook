@@ -218,6 +218,7 @@ pub fn handle_message<F>(
             let repo_id = repo_id.to_string();
             if accepts_write_ready_message(&repo_id, &branch, scope_nonce, signals) {
                 leptos::logging::log!("Writer ready for repo {} via {}", repo_id, peer_id);
+                signals.set_handshake_ready.set(true);
                 ws.mark_writer_ready(repo_id, peer_id.as_str());
             }
         }

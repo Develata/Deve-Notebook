@@ -19,7 +19,6 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
     let max_ver = core.doc_version;
     let curr_ver = core.playback_version;
     let set_ver = core.set_playback_version;
-    let status = core.ws.status;
     let stats = core.stats;
     let load_state = core.load_state;
     let load_progress = core.load_progress;
@@ -62,7 +61,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                 <div class="flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-hidden">
                     <div class="shrink-0"><BranchSwitcher compact=true /></div>
                     <div class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
-                        {move || view! { <StatusView status=status locale=locale /> }}
+                        {move || view! { <StatusView core=core.clone() locale=locale /> }}
                     </div>
                     <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                         <span>{move || if is_narrow.get() { "W".to_string() } else { t::bottom_bar::words(locale.get()).to_string() }}</span>
@@ -73,7 +72,7 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                         <span class="font-mono text-primary">{move || stats.get().lines}</span>
                     </div>
                     <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
-                        <span>{move || if is_narrow.get() { "C".to_string() } else { t::bottom_bar::col(locale.get()).to_string() }}</span>
+                        <span>{move || if is_narrow.get() { "Ch".to_string() } else { t::bottom_bar::chars(locale.get()).to_string() }}</span>
                         <span class="font-mono text-primary">{move || stats.get().chars}</span>
                     </div>
                 </div>

@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -19,6 +20,7 @@ pub fn create_sync_callbacks(
     ws: &WsService,
     current_doc: ReadSignal<Option<DocId>>,
     local_scope: LocalScopeSignals,
+    write_gate: RepoWriteSignals,
     set_shadow_list_request_id: WriteSignal<Option<String>>,
     set_sync_mode_request_id: WriteSignal<Option<String>>,
     set_pending_ops_request_id: WriteSignal<Option<String>>,
@@ -39,6 +41,10 @@ pub fn create_sync_callbacks(
 
     let ws2 = ws.clone();
     let on_set_sync_mode = Callback::new(move |mode: String| {
+        if let Some(block) = repo_write_block_untracked(&ws2, write_gate) {
+            leptos::logging::warn!("忽略 SetSyncMode: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 SetSyncMode: local repo scope 尚未稳定");
             return;
@@ -65,6 +71,10 @@ pub fn create_sync_callbacks(
 
     let ws4 = ws.clone();
     let on_confirm_merge = Callback::new(move |_: ()| {
+        if let Some(block) = repo_write_block_untracked(&ws4, write_gate) {
+            leptos::logging::warn!("忽略 ConfirmMerge: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 ConfirmMerge: local repo scope 尚未稳定");
             return;
@@ -76,6 +86,10 @@ pub fn create_sync_callbacks(
 
     let ws5 = ws.clone();
     let on_discard_pending = Callback::new(move |_: ()| {
+        if let Some(block) = repo_write_block_untracked(&ws5, write_gate) {
+            leptos::logging::warn!("忽略 DiscardPending: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 DiscardPending: local repo scope 尚未稳定");
             return;
@@ -101,6 +115,10 @@ pub fn create_sync_callbacks(
 
     let ws7 = ws.clone();
     let on_merge_peer = Callback::new(move |peer_id: String| {
+        if let Some(block) = repo_write_block_untracked(&ws7, write_gate) {
+            leptos::logging::warn!("忽略 MergePeer: {}", block.label());
+            return;
+        }
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
             leptos::logging::warn!("忽略 MergePeer: local repo scope 尚未稳定");
             return;
