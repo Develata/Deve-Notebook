@@ -19,12 +19,17 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
     let max_ver = core.doc_version;
     let curr_ver = core.playback_version;
     let set_ver = core.set_playback_version;
+    let current_doc = core.current_doc;
     let stats = core.stats;
     let load_state = core.load_state;
     let load_progress = core.load_progress;
     let load_eta_ms = core.load_eta_ms;
     let (is_narrow, set_is_narrow) = signal(false);
     let (expanded, set_expanded) = signal(false);
+    let displayed_max_ver =
+        Signal::derive(move || if current_doc.get().is_some() { max_ver.get() } else { 0 });
+    let displayed_curr_ver =
+        Signal::derive(move || if current_doc.get().is_some() { curr_ver.get() } else { 0 });
 
     let update_narrow = move || {
         let width = web_sys::window()
@@ -107,15 +112,15 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                         </div>
                     </Show>
                     <div class="shrink-0 text-[10px] text-muted font-mono px-1">
-                        {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
+                        {move || format!("v{}/{}", displayed_curr_ver.get(), displayed_max_ver.get())}
                     </div>
                 </div>
 
                 <Show
                     when=move || is_narrow.get()
-                    fallback=move || view! { <PlaybackWide curr_ver=curr_ver max_ver=max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale /> }
+                    fallback=move || view! { <PlaybackWide curr_ver=displayed_curr_ver max_ver=displayed_max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale /> }
                 >
-                    <PlaybackNarrow curr_ver=curr_ver max_ver=max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale />
+                    <PlaybackNarrow curr_ver=displayed_curr_ver max_ver=displayed_max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale />
                 </Show>
             </Show>
         </footer>

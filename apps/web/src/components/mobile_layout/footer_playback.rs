@@ -7,8 +7,8 @@ use leptos::prelude::*;
 /// Wide-screen playback: horizontal button row + range slider.
 #[component]
 pub fn PlaybackWide(
-    curr_ver: ReadSignal<u64>,
-    max_ver: ReadSignal<u64>,
+    curr_ver: Signal<u64>,
+    max_ver: Signal<u64>,
     on_to_start: Callback<()>,
     on_prev: Callback<()>,
     on_next: Callback<()>,
@@ -50,8 +50,8 @@ pub fn PlaybackWide(
 /// Narrow-screen playback: stacked buttons + version label + range slider.
 #[component]
 pub fn PlaybackNarrow(
-    curr_ver: ReadSignal<u64>,
-    max_ver: ReadSignal<u64>,
+    curr_ver: Signal<u64>,
+    max_ver: Signal<u64>,
     on_to_start: Callback<()>,
     on_prev: Callback<()>,
     on_next: Callback<()>,

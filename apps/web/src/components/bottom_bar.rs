@@ -16,9 +16,14 @@ pub fn BottomBar(core: CoreState) -> impl IntoView {
     let max_ver = core.doc_version;
     let curr_ver = core.playback_version;
     let set_ver = core.set_playback_version;
+    let current_doc = core.current_doc;
     let load_state = core.load_state;
     let load_progress = core.load_progress;
     let load_eta_ms = core.load_eta_ms;
+    let displayed_max_ver =
+        Signal::derive(move || if current_doc.get().is_some() { max_ver.get() } else { 0 });
+    let displayed_curr_ver =
+        Signal::derive(move || if current_doc.get().is_some() { curr_ver.get() } else { 0 });
 
     let status_view = move || {
         let current_doc = core.current_doc.get();
@@ -97,14 +102,14 @@ pub fn BottomBar(core: CoreState) -> impl IntoView {
         view! {
             <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span class="text-[10px] text-muted font-mono">
-                    {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
+                    {move || format!("v{}/{}", displayed_curr_ver.get(), displayed_max_ver.get())}
                 </span>
                 <input
                     name="time-travel"
                     type="range"
                     min="0"
-                    max=move || max_ver.get().to_string()
-                    value=move || curr_ver.get().to_string()
+                    max=move || displayed_max_ver.get().to_string()
+                    value=move || displayed_curr_ver.get().to_string()
                     on:input=move |ev| {
                         let val = event_target_value(&ev).parse::<u64>().unwrap_or(0);
                         set_ver.set(val);

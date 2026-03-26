@@ -5,7 +5,7 @@
 
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::doc_name::next_untitled_doc_name;
-use crate::hooks::use_core::write_gate::repo_write_allowed_for_core;
+use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -14,7 +14,7 @@ pub fn ActionsCard() -> impl IntoView {
     let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let core_for_gate = core.clone();
-    let can_write = Signal::derive(move || repo_write_allowed_for_core(&core_for_gate));
+    let can_write = Signal::derive(move || repo_write_allowed_for_core_tracked(&core_for_gate));
     let core_for_create = core.clone();
 
     let on_new_doc = move |_| {

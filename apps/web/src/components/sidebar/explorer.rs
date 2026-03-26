@@ -15,7 +15,7 @@ use leptos::prelude::*;
 use crate::components::dropdown::AnchorRect;
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::write_gate::repo_write_allowed_for_core;
+use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
 
 #[component]
 pub fn ExplorerView(
@@ -96,7 +96,7 @@ pub fn ExplorerView(
             .get()
             .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
     });
-    let can_write = Signal::derive(move || repo_write_allowed_for_core(&core));
+    let can_write = Signal::derive(move || repo_write_allowed_for_core_tracked(&core));
 
     view! {
         <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none relative">
