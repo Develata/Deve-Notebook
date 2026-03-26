@@ -10,6 +10,15 @@ use leptos::prelude::*;
 #[component]
 pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let editor_doc_core = core.clone();
+    let current_editor_doc = Signal::derive(move || {
+        let selected = editor_doc_core.current_doc.get();
+        editor_doc_core.docs.with(|docs| {
+            selected.filter(|id| docs.iter().any(|(listed_doc_id, _)| *listed_doc_id == *id))
+        })
+    });
+    let diff_core = core.clone();
+    let editor_core = core.clone();
     view! {
         <div
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"
@@ -22,35 +31,42 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                 </div>
             </Show>
             <div class="flex-1 min-h-0 overflow-hidden">
-                {move || {
-                    if let Some(session) = core.diff_content.get() {
-                        return view! {
-                            <crate::components::diff_view::DiffView
-                                repo_scope=core
-                                    .current_repo_id
+                <Show
+                    when=move || diff_core.diff_content.get().is_some()
+                    fallback=move || view! {
+                        <Show
+                            when=move || current_editor_doc.get().is_some()
+                            fallback=move || view! { <Dashboard /> }
+                        >
+                            {move || {
+                                current_editor_doc
                                     .get()
-                                    .or_else(|| core.current_repo.get())
-                                    .unwrap_or_default()
-                                path=session.path
-                                old_content=session.old_content
-                                new_content=session.new_content
-                                is_readonly=core.is_spectator.get()
-                                force_unified=true
-                                mobile=true
-                                on_close=Callback::new(move |_| core.set_diff_content.set(None))
-                            />
-                        }
-                        .into_any();
+                                    .map(|doc_id| view! { <Editor doc_id=doc_id on_stats=editor_core.on_stats embedded=true /> })
+                            }}
+                        </Show>
                     }
-
-                    match core.current_doc.get() {
-                        Some(id) => {
-                            view! { <Editor doc_id=id on_stats=core.on_stats embedded=true /> }
-                                .into_any()
-                        }
-                        None => view! { <Dashboard /> }.into_any(),
-                    }
-                }}
+                >
+                    {move || {
+                        diff_core.diff_content.get().map(|session| {
+                            view! {
+                                <crate::components::diff_view::DiffView
+                                    repo_scope=diff_core
+                                        .current_repo_id
+                                        .get()
+                                        .or_else(|| diff_core.current_repo.get())
+                                        .unwrap_or_default()
+                                    path=session.path
+                                    old_content=session.old_content
+                                    new_content=session.new_content
+                                    is_readonly=diff_core.is_spectator.get()
+                                    force_unified=true
+                                    mobile=true
+                                    on_close=Callback::new(move |_| diff_core.set_diff_content.set(None))
+                                />
+                            }
+                        })
+                    }}
+                </Show>
             </div>
         </div>
     }
