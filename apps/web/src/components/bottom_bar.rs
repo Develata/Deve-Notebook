@@ -4,6 +4,7 @@
 //! 底部状态栏，显示分支切换器、连接状态和编辑器统计信息 (字数、行数、字符数)。
 
 use crate::components::branch_switcher::BranchSwitcher;
+use crate::editor::EditorStats;
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::status_summary::{SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
@@ -20,6 +21,13 @@ pub fn BottomBar(core: CoreState) -> impl IntoView {
     let load_state = core.load_state;
     let load_progress = core.load_progress;
     let load_eta_ms = core.load_eta_ms;
+    let displayed_stats = Signal::derive(move || {
+        if current_doc.get().is_some() {
+            stats.get()
+        } else {
+            EditorStats::default()
+        }
+    });
     let displayed_max_ver =
         Signal::derive(move || if current_doc.get().is_some() { max_ver.get() } else { 0 });
     let displayed_curr_ver =
@@ -159,15 +167,15 @@ pub fn BottomBar(core: CoreState) -> impl IntoView {
                 {load_status}
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::words(locale.get())}</span>
-                    <span class="font-mono text-primary">{move || stats.get().words}</span>
+                    <span class="font-mono text-primary">{move || displayed_stats.get().words}</span>
                 </div>
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::lines(locale.get())}</span>
-                    <span class="font-mono text-primary">{move || stats.get().lines}</span>
+                    <span class="font-mono text-primary">{move || displayed_stats.get().lines}</span>
                 </div>
                 <div class="flex gap-1">
                     <span>{move || t::bottom_bar::chars(locale.get())}</span>
-                    <span class="font-mono text-primary">{move || stats.get().chars}</span>
+                    <span class="font-mono text-primary">{move || displayed_stats.get().chars}</span>
                 </div>
             </div>
         </footer>

@@ -8,6 +8,7 @@ use super::footer_playback::{PlaybackNarrow, PlaybackWide};
 use super::footer_status::{LoadStatus, StatusView};
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::components::icons::{ChevronDown, ChevronUp};
+use crate::editor::EditorStats;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -26,6 +27,13 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
     let load_eta_ms = core.load_eta_ms;
     let (is_narrow, set_is_narrow) = signal(false);
     let (expanded, set_expanded) = signal(false);
+    let displayed_stats = Signal::derive(move || {
+        if current_doc.get().is_some() {
+            stats.get()
+        } else {
+            EditorStats::default()
+        }
+    });
     let displayed_max_ver =
         Signal::derive(move || if current_doc.get().is_some() { max_ver.get() } else { 0 });
     let displayed_curr_ver =
@@ -70,15 +78,15 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                     </div>
                     <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                         <span>{move || if is_narrow.get() { "W".to_string() } else { t::bottom_bar::words(locale.get()).to_string() }}</span>
-                        <span class="font-mono text-primary">{move || stats.get().words}</span>
+                        <span class="font-mono text-primary">{move || displayed_stats.get().words}</span>
                     </div>
                     <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                         <span>{move || if is_narrow.get() { "L".to_string() } else { t::bottom_bar::lines(locale.get()).to_string() }}</span>
-                        <span class="font-mono text-primary">{move || stats.get().lines}</span>
+                        <span class="font-mono text-primary">{move || displayed_stats.get().lines}</span>
                     </div>
                     <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                         <span>{move || if is_narrow.get() { "Ch".to_string() } else { t::bottom_bar::chars(locale.get()).to_string() }}</span>
-                        <span class="font-mono text-primary">{move || stats.get().chars}</span>
+                        <span class="font-mono text-primary">{move || displayed_stats.get().chars}</span>
                     </div>
                 </div>
 
