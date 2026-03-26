@@ -54,6 +54,10 @@ pub(super) fn handshake_mode_key(
         })
 }
 
+pub(super) fn suspended_handshake_mode_key(endpoint: &str) -> String {
+    format!("{endpoint}::suspended")
+}
+
 pub(super) fn restore_bootstrap_key(
     endpoint: &str,
     repo_name: Option<&str>,

@@ -1,7 +1,7 @@
 use super::handshake_state::reset_handshake_attempt_state;
 use super::{
     handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
-    should_suspend_handshake,
+    should_suspend_handshake, suspended_handshake_mode_key,
 };
 use crate::hooks::use_core::{PendingBranchTarget, types::HandshakeSignals};
 use crate::storage::DegradedSyncMode;
@@ -56,6 +56,17 @@ fn handshake_mode_key_distinguishes_local_and_shadow_scope() {
     let local = handshake_mode_key("ws://a", None, Some("repo-1"), None);
     let shadow = handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")));
     assert_ne!(local, shadow);
+}
+
+#[test]
+fn suspended_mode_key_does_not_collide_with_active_scope_keys() {
+    let local = handshake_mode_key("ws://a", None, Some("repo-1"), None)
+        .expect("local scope should have handshake mode key");
+    let shadow = handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")))
+        .expect("shadow scope should have handshake mode key");
+    let suspended = suspended_handshake_mode_key("ws://a");
+    assert_ne!(suspended, local);
+    assert_ne!(suspended, shadow);
 }
 
 #[test]

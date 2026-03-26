@@ -15,6 +15,7 @@ mod handshake_state;
 use self::handshake_state::{
     handshake_mode_key, reset_handshake_attempt, restore_bootstrap_key,
     set_handshake_scope_nonce_if_changed, should_restore_session_scope, should_suspend_handshake,
+    suspended_handshake_mode_key,
 };
 
 /// 设置握手 Effect。
@@ -47,6 +48,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         let current_scope_nonce = signals.current_scope_nonce.get();
         let pending_branch_switch = signals.pending_branch_switch.get();
         let pending_repo_switch = signals.pending_repo_switch.get();
+        let endpoint = endpoint_signal.get();
         let is_reconnect_bootstrap = last_mode.borrow().is_none();
         let should_restore = should_restore_session_scope(
             is_reconnect_bootstrap,
@@ -58,6 +60,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             pending_branch_switch.as_ref(),
             pending_repo_switch.as_deref(),
         ) {
+            *last_mode.borrow_mut() = Some(suspended_handshake_mode_key(&endpoint));
             if should_restore {
                 restore_session_scope(
                     &ws,
@@ -72,7 +75,6 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             set_handshake_scope_nonce_if_changed(signals, None);
             return;
         }
-        let endpoint = endpoint_signal.get();
         let Some(mode_key) = handshake_mode_key(
             &endpoint,
             maybe_mode.as_ref().map(|_| ()),
