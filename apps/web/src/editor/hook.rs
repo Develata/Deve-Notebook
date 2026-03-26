@@ -16,9 +16,10 @@ use super::delta_input::{DeltaInputCtx, build_on_delta};
 use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
 use super::handshake_reset::{HandshakeResetCtx, setup_handshake_reset_effect};
 use super::message_effect;
-use super::open_scope::{OpenDocScope, can_open_doc};
+use super::open_scope::{OpenDocScope, OpenRequestKey, open_request_key};
 use super::playback;
 use super::request_key::setup_request_key_effect;
+use crate::api::ConnectionStatus;
 use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
@@ -50,6 +51,7 @@ pub fn use_editor(
     let (content, set_content) = signal("".to_string());
     let (local_version, set_local_version) = signal(0u64);
     let (open_request_id, set_open_request_id) = signal(0u64);
+    let (last_open_request_key, set_last_open_request_key) = signal(None::<OpenRequestKey>);
     let session_generation = Arc::new(AtomicU64::new(0));
     let ready_generation = Arc::new(AtomicU64::new(0));
     let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
@@ -82,16 +84,29 @@ pub fn use_editor(
     let open_buffered_live_ops = buffered_live_ops.clone();
     let open_buffered_encrypted_ops = buffered_encrypted_ops.clone();
     Effect::new(move |_| {
-        if !can_open_doc(OpenDocScope {
-            doc_id,
-            docs: &docs.get(),
-            doc_selected: current_doc.get() == Some(doc_id),
-            has_repo_scope: current_repo_id.get().is_some(),
-            branch_switch_idle: pending_branch_switch.get().is_none(),
-            repo_switch_idle: pending_repo_switch.get().is_none(),
-        }) {
+        let maybe_key = open_request_key(
+            OpenDocScope {
+                doc_id,
+                docs: &docs.get(),
+                doc_selected: current_doc.get() == Some(doc_id),
+                has_repo_scope: current_repo_id.get().is_some(),
+                branch_switch_idle: pending_branch_switch.get().is_none(),
+                repo_switch_idle: pending_repo_switch.get().is_none(),
+            },
+            ws_clone.status.get() == ConnectionStatus::Connected,
+            core.current_scope_nonce.get(),
+        );
+        if maybe_key.is_none() {
+            set_last_open_request_key.set(None);
             return;
         }
+        if last_open_request_key.get_untracked() == maybe_key {
+            return;
+        }
+        let Some(open_key) = maybe_key else {
+            return;
+        };
+        set_last_open_request_key.set(Some(open_key));
         let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
         let _ = open_session_generation.fetch_add(1, Ordering::Relaxed);
         open_ready_generation.store(0, Ordering::Relaxed);
@@ -112,14 +127,14 @@ pub fn use_editor(
         set_load_eta_ms.set(0);
         leptos::logging::log!(
             "OpenDoc send: doc={}, request_id={}, scope_nonce={}",
-            doc_id,
+            open_key.doc_id,
             request_id,
-            core.current_scope_nonce.get()
+            open_key.scope_nonce
         );
         ws_clone.send(ClientMessage::OpenDoc {
-            doc_id,
+            doc_id: open_key.doc_id,
             request_id,
-            scope_nonce: Some(core.current_scope_nonce.get()),
+            scope_nonce: Some(open_key.scope_nonce),
         });
     });
 

@@ -41,10 +41,13 @@ pub fn DesktopLayout(
     let banner_text = core.clone();
     let editor_doc_core = core.clone();
     let current_editor_doc = Signal::derive(move || {
-        let selected = editor_doc_core.current_doc.get();
-        editor_doc_core.docs.with(|docs| {
-            selected.filter(|id| docs.iter().any(|(listed_doc_id, _)| *listed_doc_id == *id))
-        })
+        if editor_doc_core.pending_branch_switch.get().is_some()
+            || editor_doc_core.pending_repo_switch.get().is_some()
+        {
+            None
+        } else {
+            editor_doc_core.current_doc.get()
+        }
     });
     let diff_core = core.clone();
     let editor_core = core.clone();
