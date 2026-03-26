@@ -1,10 +1,13 @@
+use crate::components::branch_label::current_branch_label;
 use crate::components::icons::*;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<crate::hooks::use_core::BranchContext>();
+    let source_control = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     // Derived State for Active Repo Name
@@ -12,6 +15,17 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
         core.current_repo
             .get()
             .unwrap_or_else(|| "default.redb".to_string())
+    });
+    let current_branch =
+        Signal::derive(move || current_branch_label(core.active_branch.get(), locale.get()));
+    let branch_suffix = Signal::derive(move || {
+        if source_control.staged_changes.get().is_empty()
+            && source_control.unstaged_changes.get().is_empty()
+        {
+            ""
+        } else {
+            "*"
+        }
     });
 
     view! {
@@ -40,10 +54,12 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
                                     <span class="truncate font-medium flex-1">{active_repo_label}</span>
 
                                     // Branch Info (Right side)
-                                    <div class="flex items-center gap-2 text-xs opacity-80">
-                                        <div class="flex items-center gap-1 hover:text-accent">
+                                        <div class="flex items-center gap-2 text-xs opacity-80">
+                                            <div class="flex items-center gap-1 hover:text-accent">
                                             <GitBranch class="w-3 h-3" />
-                                            <span>{move || t::source_control::branch_main(locale.get())}</span>
+                                            <span>
+                                                {move || format!("{}{}", current_branch.get(), branch_suffix.get())}
+                                            </span>
                                         </div>
                                         <div class="flex items-center gap-1 hover:text-accent">
                                                 <Upload class="w-3.5 h-3.5" />

@@ -34,10 +34,20 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
             EditorStats::default()
         }
     });
-    let displayed_max_ver =
-        Signal::derive(move || if current_doc.get().is_some() { max_ver.get() } else { 0 });
-    let displayed_curr_ver =
-        Signal::derive(move || if current_doc.get().is_some() { curr_ver.get() } else { 0 });
+    let displayed_max_ver = Signal::derive(move || {
+        if current_doc.get().is_some() {
+            max_ver.get()
+        } else {
+            0
+        }
+    });
+    let displayed_curr_ver = Signal::derive(move || {
+        if current_doc.get().is_some() {
+            curr_ver.get()
+        } else {
+            0
+        }
+    });
 
     let update_narrow = move || {
         let width = web_sys::window()

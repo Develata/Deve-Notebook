@@ -25,6 +25,7 @@ pub struct SourceControlCallbacks {
 #[derive(Clone, Copy)]
 pub struct SourceControlScopeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,

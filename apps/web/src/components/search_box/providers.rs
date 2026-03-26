@@ -3,7 +3,7 @@ use crate::components::command_palette::Command;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;
 
-const LOCAL_BRANCH_LABEL: &str = "Local (Master)";
+pub const LOCAL_BRANCH_LABEL: &str = "Local";
 
 // --- File Provider ---
 pub struct FileProvider {
@@ -155,7 +155,7 @@ pub struct BranchProvider {
 
 impl BranchProvider {
     pub fn new(shadows: Vec<String>, current: Option<String>) -> Self {
-        // Collect all branches: "Local (Master)" + shadows
+        // Collect all branches: "Local" + shadows
         let mut branches = vec![LOCAL_BRANCH_LABEL.to_string()];
         branches.extend(shadows);
         Self {
@@ -188,14 +188,12 @@ impl SearchProvider for BranchProvider {
                 (name, score)
             })
             .filter(|(_, score)| *score > 0.0)
-            .map(|(name, score)| {
-                SearchResult {
-                    id: name.clone(),
-                    title: name.clone(),
-                    detail: branch_detail(name, self.current_branch.as_deref()),
-                    score,
-                    action: SearchAction::SwitchBranch(name.clone()),
-                }
+            .map(|(name, score)| SearchResult {
+                id: name.clone(),
+                title: name.clone(),
+                detail: branch_detail(name, self.current_branch.as_deref()),
+                score,
+                action: SearchAction::SwitchBranch(name.clone()),
             })
             .collect();
 
@@ -226,7 +224,7 @@ mod tests {
     #[test]
     fn branch_detail_keeps_local_entry_local_when_remote_is_current() {
         assert_eq!(
-            branch_detail("Local (Master)", Some("peer-a")),
+            branch_detail("Local", Some("peer-a")),
             Some("Local Branch".to_string())
         );
     }
@@ -237,7 +235,7 @@ mod tests {
         let results = provider.search("@");
         let local = results
             .iter()
-            .find(|result| result.title == "Local (Master)")
+            .find(|result| result.title == "Local")
             .expect("missing local branch entry");
         assert_eq!(local.detail.as_deref(), Some("Local Branch"));
     }

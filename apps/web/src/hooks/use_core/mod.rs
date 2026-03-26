@@ -166,6 +166,7 @@ pub fn use_core() -> CoreState {
         &ws,
         callbacks_sc::SourceControlScopeSignals {
             current_repo_id: signals.current_repo_id,
+            active_branch: signals.active_branch,
             current_scope_nonce: signals.current_scope_nonce,
             pending_branch_switch: signals.pending_branch_switch,
             pending_repo_switch: signals.pending_repo_switch,

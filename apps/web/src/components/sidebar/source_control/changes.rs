@@ -21,12 +21,12 @@ pub fn Changes() -> impl IntoView {
 
     Effect::new(move |_| {
         if core.current_repo_id.get().is_none()
+            || core.active_branch.get().is_some()
             || core.pending_branch_switch.get().is_some()
             || core.pending_repo_switch.get().is_some()
         {
             return;
         }
-        let _ = core.active_branch.get();
         core.on_get_changes.run(());
     });
 

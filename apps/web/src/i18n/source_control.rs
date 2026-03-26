@@ -142,8 +142,8 @@ pub fn generating(locale: Locale) -> &'static str {
 
 pub fn branch_main(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "main*",
-        Locale::Zh => "主分支*",
+        Locale::En => "Local",
+        Locale::Zh => "本地",
     }
 }
 
@@ -165,5 +165,19 @@ pub fn generate_prompt(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Generate a concise git commit message for these staged changes:",
         Locale::Zh => "为以下暂存的更改生成简洁的 Git 提交信息：",
+    }
+}
+
+pub fn remote_branch_readonly(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Remote branches are read-only in Source Control.",
+        Locale::Zh => "远端分支在源代码管理中为只读。",
+    }
+}
+
+pub fn remote_branch_readonly_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switch back to Local to view changes, stage files, or commit.",
+        Locale::Zh => "切回本地分支后才能查看变更、暂存文件或提交。",
     }
 }

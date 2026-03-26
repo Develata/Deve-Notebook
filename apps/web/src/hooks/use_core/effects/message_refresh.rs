@@ -15,7 +15,7 @@ pub fn capture_refresh_scope(
     pending_repo_switch: Option<String>,
     scope_nonce: u64,
 ) -> Option<RefreshScope> {
-    if pending_branch_switch.is_some() || pending_repo_switch.is_some() {
+    if branch.is_some() || pending_branch_switch.is_some() || pending_repo_switch.is_some() {
         return None;
     }
     Some(RefreshScope {
@@ -59,6 +59,20 @@ mod tests {
                 Some(PendingBranchTarget::Local),
                 None,
                 3,
+            ),
+            None,
+        );
+    }
+
+    #[test]
+    fn does_not_capture_refresh_scope_for_remote_branch() {
+        assert_eq!(
+            capture_refresh_scope(
+                Some("repo-a".into()),
+                Some(PeerId::new("peer-a")),
+                None,
+                None,
+                4,
             ),
             None,
         );

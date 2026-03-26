@@ -101,13 +101,6 @@ pub fn local_branch(locale: Locale) -> &'static str {
     }
 }
 
-pub fn local_master_branch(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Local (Master)",
-        Locale::Zh => "本地 (主分支)",
-    }
-}
-
 pub fn extensions_desc(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Extension system under development",

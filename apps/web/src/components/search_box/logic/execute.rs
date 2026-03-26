@@ -1,4 +1,5 @@
 use crate::components::search_box::file_ops;
+use crate::components::search_box::providers::LOCAL_BRANCH_LABEL;
 use crate::components::search_box::types::{InsertQuery, SearchAction};
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::write_gate::repo_write_allowed_for_core;
@@ -20,7 +21,7 @@ pub(crate) fn execute_action(
         }
         SearchAction::RunCommand(cmd) => cmd.action.run(()),
         SearchAction::SwitchBranch(branch) => {
-            if branch == "Local (Master)" {
+            if branch == LOCAL_BRANCH_LABEL {
                 core.on_switch_branch.run(None);
             } else {
                 core.on_switch_branch.run(Some(branch.clone()));

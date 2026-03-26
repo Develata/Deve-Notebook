@@ -12,6 +12,7 @@
 //!
 //! **类型**: Core MAY (扩展可选)
 
+use crate::components::branch_label::current_branch_label;
 use crate::components::icons::GitBranch;
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::BranchContext;
@@ -26,15 +27,9 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
 
     // 获取当前分支名称
     let current_branch = move || match core.active_branch.get() {
-        None => {
-            if compact {
-                t::sidebar::local_branch(locale.get()).to_string()
-            } else {
-                t::sidebar::local_master_branch(locale.get()).to_string()
-            }
-        }
+        None => current_branch_label(None, locale.get()),
         Some(peer) => {
-            let s = peer.to_string();
+            let s = current_branch_label(Some(peer), locale.get());
             if compact { compact_branch_name(&s) } else { s }
         }
     };

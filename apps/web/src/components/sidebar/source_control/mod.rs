@@ -14,6 +14,7 @@ pub mod changes;
 pub mod commit;
 pub mod context_menu;
 pub mod history;
+pub mod readonly_notice;
 pub mod repositories;
 
 pub mod staged_section;
@@ -23,11 +24,14 @@ use self::changes::Changes;
 use self::commit::Commit;
 use self::context_menu::SectionMenu;
 use self::history::History;
+use self::readonly_notice::ReadonlyNotice;
 use crate::components::icons::*;
+use crate::hooks::use_core::SourceControlContext;
 use leptos::prelude::*;
 
 #[component]
 pub fn SourceControlView() -> impl IntoView {
+    let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
 
     // Section Expansion States
@@ -41,6 +45,7 @@ pub fn SourceControlView() -> impl IntoView {
     let show_graph = RwSignal::new(true);
 
     let show_menu = RwSignal::new(false);
+    let is_remote_branch = move || core.active_branch.get().is_some();
 
     use crate::i18n::t;
 
@@ -91,50 +96,56 @@ pub fn SourceControlView() -> impl IntoView {
                     expanded=expand_repos
                     visible=show_repos
                 />
-                // 2. Changes Section
-                {move || if show_changes.get() {
+                {move || if is_remote_branch() {
+                    view! { <ReadonlyNotice /> }.into_any()
+                } else {
                     view! {
-                        <div class="border-t border-default">
-                            <button
-                                 class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
-                                 on:click=move |_| expand_changes.update(|b| *b = !*b)
-                            >
-                                <span class=move || if expand_changes.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
-                                    <ChevronRight class="w-3 h-3" />
-                                </span>
-                                <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
-                                <div class="hidden group-hover:flex items-center gap-1">
-                                    // Actions
-                                    <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::discard_all_changes(locale.get())>
-                                        <RefreshCw class="w-3.5 h-3.5" />
-                                    </div>
-                                    <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::stage_all_changes(locale.get())>
-                                        <Plus class="w-3.5 h-3.5" />
-                                    </div>
+                        // 2. Changes Section
+                        {move || if show_changes.get() {
+                            view! {
+                                <div class="border-t border-default">
+                                    <button
+                                         class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
+                                         on:click=move |_| expand_changes.update(|b| *b = !*b)
+                                    >
+                                        <span class=move || if expand_changes.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
+                                            <ChevronRight class="w-3 h-3" />
+                                        </span>
+                                        <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
+                                        <div class="hidden group-hover:flex items-center gap-1">
+                                            <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::discard_all_changes(locale.get())>
+                                                <RefreshCw class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::stage_all_changes(locale.get())>
+                                                <Plus class="w-3.5 h-3.5" />
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    {move || if expand_changes.get() {
+                                        view! {
+                                            <div>
+                                                <Commit />
+                                                <Changes />
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        view! {}.into_any()
+                                    }}
                                 </div>
-                            </button>
+                            }.into_any()
+                        } else {
+                            view! {}.into_any()
+                        }}
 
-                            {move || if expand_changes.get() {
-                                view! {
-                                    <div>
-                                        <Commit />
-                                        <Changes />
-                                    </div>
-                                }.into_any()
-                            } else {
-                                view! {}.into_any()
-                            }}
-                        </div>
-                    }.into_any()
-                } else {
-                    view! {}.into_any()
-                }}
-
-                // 3. History Section
-                {move || if show_graph.get() {
-                    view! { <History expanded=expand_history /> }.into_any()
-                } else {
-                    view! {}.into_any()
+                        // 3. History Section
+                        {move || if show_graph.get() {
+                            view! { <History expanded=expand_history /> }.into_any()
+                        } else {
+                            view! {}.into_any()
+                        }}
+                    }
+                        .into_any()
                 }}
 
                 <div class="h-8"></div>

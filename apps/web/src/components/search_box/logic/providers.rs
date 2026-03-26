@@ -1,6 +1,8 @@
 use crate::components::command_palette::registry::create_static_commands;
 use crate::components::search_box::file_ops;
-use crate::components::search_box::providers::{self, CommandProvider, FileProvider};
+use crate::components::search_box::providers::{
+    self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
+};
 use crate::components::search_box::types::{SearchProvider, SearchResult};
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
@@ -41,7 +43,7 @@ pub fn create_results_memo(
                 .active_branch
                 .get()
                 .map(|p| p.to_string())
-                .or(Some("Local (Master)".to_string()));
+                .or(Some(LOCAL_BRANCH_LABEL.to_string()));
             return providers::BranchProvider::new(core.shadow_repos.get(), current).search(&q);
         }
         if let Some(stripped) = q.strip_prefix('+') {
