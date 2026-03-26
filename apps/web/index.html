@@ -203,6 +203,7 @@
           applyRemoteOp,
           applyRemoteOpsBatch,
           getEditorContent,
+          syncEditorStateToRust,
           scrollGlobal,
           setReadOnly,
           destroyEditor,
@@ -313,6 +314,7 @@
               );
               pending.forEach(replayEditorAction);
             }
+            syncEditorStateToRust?.();
           } catch (e) {
             window.logToOverlay("Init call failed: " + e.message, true);
             throw e;

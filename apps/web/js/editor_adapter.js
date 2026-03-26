@@ -141,6 +141,12 @@ export function destroyEditor() {
   }
 }
 
+export function syncEditorStateToRust() {
+  if (typeof ctx.onDeltaCallback === "function") {
+    ctx.onDeltaCallback("[]");
+  }
+}
+
 // --- Re-export for window bindings ---
 function getEditorSelection() {
   const view = ctx.activeView;
