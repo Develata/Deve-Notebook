@@ -3,6 +3,8 @@ use crate::components::command_palette::Command;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;
 
+const LOCAL_BRANCH_LABEL: &str = "Local (Master)";
+
 // --- File Provider ---
 pub struct FileProvider {
     docs: Vec<(DocId, String)>,
@@ -154,7 +156,7 @@ pub struct BranchProvider {
 impl BranchProvider {
     pub fn new(shadows: Vec<String>, current: Option<String>) -> Self {
         // Collect all branches: "Local (Master)" + shadows
-        let mut branches = vec!["Local (Master)".to_string()];
+        let mut branches = vec![LOCAL_BRANCH_LABEL.to_string()];
         branches.extend(shadows);
         Self {
             branches,
@@ -187,21 +189,10 @@ impl SearchProvider for BranchProvider {
             })
             .filter(|(_, score)| *score > 0.0)
             .map(|(name, score)| {
-                let is_current = self
-                    .current_branch
-                    .as_ref()
-                    .map(|c| c == name)
-                    .unwrap_or(false);
-                let detail = if is_current {
-                    Some("Current Branch".to_string())
-                } else {
-                    Some("Remote Branch".to_string())
-                };
-
                 SearchResult {
                     id: name.clone(),
                     title: name.clone(),
-                    detail,
+                    detail: branch_detail(name, self.current_branch.as_deref()),
                     score,
                     action: SearchAction::SwitchBranch(name.clone()),
                 }
@@ -214,5 +205,40 @@ impl SearchProvider for BranchProvider {
 
     fn execute(&self, _action: &SearchAction) {
         // Validation only
+    }
+}
+
+fn branch_detail(name: &str, current_branch: Option<&str>) -> Option<String> {
+    if current_branch == Some(name) {
+        Some("Current Branch".to_string())
+    } else if name == LOCAL_BRANCH_LABEL {
+        Some("Local Branch".to_string())
+    } else {
+        Some("Remote Branch".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BranchProvider, branch_detail};
+    use crate::components::search_box::types::SearchProvider;
+
+    #[test]
+    fn branch_detail_keeps_local_entry_local_when_remote_is_current() {
+        assert_eq!(
+            branch_detail("Local (Master)", Some("peer-a")),
+            Some("Local Branch".to_string())
+        );
+    }
+
+    #[test]
+    fn branch_provider_marks_local_entry_as_local_when_viewing_remote() {
+        let provider = BranchProvider::new(vec!["peer-a".into()], Some("peer-a".into()));
+        let results = provider.search("@");
+        let local = results
+            .iter()
+            .find(|result| result.title == "Local (Master)")
+            .expect("missing local branch entry");
+        assert_eq!(local.detail.as_deref(), Some("Local Branch"));
     }
 }
