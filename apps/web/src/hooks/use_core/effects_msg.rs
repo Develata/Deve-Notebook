@@ -23,7 +23,7 @@ pub fn handle_doc_list(
     if let Some(selected) = current_doc.get_untracked()
         && !list.iter().any(|(doc_id, _)| *doc_id == selected)
     {
-        leptos::logging::warn!("清理过期 current_doc: {} 不在当前 DocList 中", selected);
+        leptos::logging::log!("清理过期 current_doc: {} 不在当前 DocList 中", selected);
         set_current_doc.set(None);
     }
     set_docs.set(list);
