@@ -100,8 +100,8 @@ pub fn discard_all_changes(locale: Locale) -> &'static str {
 
 pub fn commit_message_placeholder(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Message (Ctrl+Enter to commit on \"main\")",
-        Locale::Zh => "提交信息（Ctrl+Enter 在“main”分支提交）",
+        Locale::En => "Message (Ctrl+Enter to commit on the current branch)",
+        Locale::Zh => "提交信息（Ctrl+Enter 在当前分支提交）",
     }
 }
 
