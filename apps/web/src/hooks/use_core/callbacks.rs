@@ -41,6 +41,7 @@ pub fn create_doc_callbacks(
     pending_local_edits: ReadSignal<PendingLocalEdits>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     set_current_doc: WriteSignal<Option<DocId>>,
+    set_pending_created_doc_path: WriteSignal<Option<String>>,
     set_explicit_home: WriteSignal<bool>,
 ) -> DocCallbacks {
     let on_doc_select = Callback::new(move |id: DocId| {
@@ -72,6 +73,12 @@ pub fn create_doc_callbacks(
             leptos::logging::warn!("忽略 CreateDoc: local repo scope 尚未稳定");
             return;
         };
+        if current_doc.get_untracked().is_none() {
+            set_explicit_home.set(false);
+            set_pending_created_doc_path.set(Some(name.clone()));
+        } else {
+            set_pending_created_doc_path.set(None);
+        }
         ws_for_create.send(ClientMessage::CreateDoc {
             name,
             scope_nonce: Some(scope_nonce),

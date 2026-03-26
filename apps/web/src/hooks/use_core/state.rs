@@ -36,6 +36,8 @@ pub struct CoreSignals {
     pub set_docs: WriteSignal<Vec<(DocId, String)>>,
     pub current_doc: ReadSignal<Option<DocId>>,
     pub set_current_doc: WriteSignal<Option<DocId>>,
+    pub pending_created_doc_path: ReadSignal<Option<String>>,
+    pub set_pending_created_doc_path: WriteSignal<Option<String>>,
 
     // 编辑器统计
     pub stats: ReadSignal<EditorStats>,

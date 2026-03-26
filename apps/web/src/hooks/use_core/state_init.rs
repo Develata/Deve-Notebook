@@ -23,6 +23,7 @@ use super::types::{PeerSession, PendingBranchTarget};
 pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSignals {
     let (docs, set_docs) = signal(Vec::<(DocId, String)>::new());
     let (current_doc, set_current_doc) = signal(None::<DocId>);
+    let (pending_created_doc_path, set_pending_created_doc_path) = signal(None::<String>);
     let (stats, set_stats) = signal(EditorStats::default());
     let (peers, set_peers) = signal(HashMap::<PeerId, PeerSession>::new());
     let (handshake_ready, set_handshake_ready) = signal(false);
@@ -84,6 +85,8 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
         set_docs,
         current_doc,
         set_current_doc,
+        pending_created_doc_path,
+        set_pending_created_doc_path,
         stats,
         set_stats,
         peers,

@@ -50,6 +50,8 @@ pub fn handle_doc_list(
         signals.current_doc,
         signals.set_current_doc,
         signals.set_docs,
+        signals.pending_created_doc_path,
+        signals.set_pending_created_doc_path,
     );
 }
 

@@ -137,6 +137,7 @@ pub fn use_core() -> CoreState {
         signals.pending_local_edits,
         signals.set_pending_navigation,
         signals.set_current_doc,
+        signals.set_pending_created_doc_path,
         signals.set_explicit_home,
     );
     let sync_callbacks = callbacks::create_sync_callbacks(

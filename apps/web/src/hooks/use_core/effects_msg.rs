@@ -18,6 +18,8 @@ pub fn handle_doc_list(
     current_doc: ReadSignal<Option<DocId>>,
     set_current_doc: WriteSignal<Option<DocId>>,
     set_docs: WriteSignal<Vec<(DocId, String)>>,
+    pending_created_doc_path: ReadSignal<Option<String>>,
+    set_pending_created_doc_path: WriteSignal<Option<String>>,
 ) {
     leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
     if let Some(selected) = current_doc.get_untracked()
@@ -25,6 +27,13 @@ pub fn handle_doc_list(
     {
         leptos::logging::log!("清理过期 current_doc: {} 不在当前 DocList 中", selected);
         set_current_doc.set(None);
+    }
+    if current_doc.get_untracked().is_none()
+        && let Some(pending_path) = pending_created_doc_path.get_untracked()
+        && let Some((doc_id, _)) = list.iter().find(|(_, path)| *path == pending_path)
+    {
+        set_current_doc.set(Some(*doc_id));
+        set_pending_created_doc_path.set(None);
     }
     set_docs.set(list);
 }
@@ -144,12 +153,15 @@ mod tests {
         let fresh = DocId::new();
         let (current_doc, set_current_doc) = signal(Some(stale));
         let (_docs, set_docs) = signal(Vec::<(DocId, String)>::new());
+        let (pending_created_doc_path, set_pending_created_doc_path) = signal(None::<String>);
 
         handle_doc_list(
             vec![(fresh, "notes/fresh.md".into())],
             current_doc,
             set_current_doc,
             set_docs,
+            pending_created_doc_path,
+            set_pending_created_doc_path,
         );
 
         assert_eq!(current_doc.get_untracked(), None);
@@ -162,14 +174,40 @@ mod tests {
         let selected = DocId::new();
         let (current_doc, set_current_doc) = signal(Some(selected));
         let (_docs, set_docs) = signal(Vec::<(DocId, String)>::new());
+        let (pending_created_doc_path, set_pending_created_doc_path) = signal(None::<String>);
 
         handle_doc_list(
             vec![(selected, "notes/selected.md".into())],
             current_doc,
             set_current_doc,
             set_docs,
+            pending_created_doc_path,
+            set_pending_created_doc_path,
         );
 
         assert_eq!(current_doc.get_untracked(), Some(selected));
+    }
+
+    #[test]
+    fn doc_list_selects_pending_created_doc_when_no_doc_is_open() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let created = DocId::new();
+        let (current_doc, set_current_doc) = signal(None::<DocId>);
+        let (_docs, set_docs) = signal(Vec::<(DocId, String)>::new());
+        let (pending_created_doc_path, set_pending_created_doc_path) =
+            signal(Some("Untitled.md".to_string()));
+
+        handle_doc_list(
+            vec![(created, "Untitled.md".into())],
+            current_doc,
+            set_current_doc,
+            set_docs,
+            pending_created_doc_path,
+            set_pending_created_doc_path,
+        );
+
+        assert_eq!(current_doc.get_untracked(), Some(created));
+        assert_eq!(pending_created_doc_path.get_untracked(), None);
     }
 }
