@@ -1,31 +1,26 @@
 use crate::api::WsService;
 use deve_core::protocol::ServerMessage;
-use leptos::prelude::*;
 
-use super::super::effects_msg;
-use super::super::pending;
 use super::super::state::CoreSignals;
-use super::message_control;
-use super::message_dispatch_gate::{
-    accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
+use super::message_dispatch_control::{
+    handle_branch_switched_message, handle_peer_deleted_message, handle_repo_list_message,
+    handle_repo_switched_message,
 };
-use super::message_dispatch_protocol::{handle_shadow_list_message, protocol_control_signals};
+use super::message_dispatch_protocol::{
+    handle_edit_rejected_message, handle_protocol_error_message,
+};
+use super::message_dispatch_runtime::{
+    handle_chat_chunk_message, handle_plugin_response_message, handle_search_results_message,
+};
+use super::message_dispatch_shadow::handle_shadow_list_message;
+use super::message_dispatch_write::{handle_ack_message, handle_write_ready_message};
 use super::message_projection::{handle_doc_list, handle_tree_update};
-use super::message_protocol::handle_protocol_error;
-use super::message_repo_bootstrap::maybe_switch_to_first_repo;
-use super::message_repo_scope::{
-    accepts_edit_rejected_message, accepts_protocol_error_message, accepts_write_ready_message,
-    matches_current_message_scope,
-};
-use super::message_runtime::{
+use super::message_runtime_sync::{
     handle_merge_complete, handle_pending_discarded, handle_pending_ops_info,
     handle_sync_mode_status,
 };
-use super::message_scope::{
-    RepoListScope, RequestMatch, accepts_system_or_matching_request, repo_list_matches_scope,
-};
-use super::message_shadow;
-use super::message_sync::{handle_sc_or_remaining, handle_sync_hello};
+use super::message_sync::handle_sync_hello;
+use super::message_sync_dispatch::handle_sc_or_remaining;
 
 pub fn handle_message<F>(
     msg: ServerMessage,
@@ -55,43 +50,17 @@ pub fn handle_message<F>(
             req_id,
             result,
             error,
-        } => {
-            if !accepts_plugin_response(&req_id, signals) {
-                return;
-            }
-            signals
-                .set_plugin_request_ids
-                .update(|ids| ids.retain(|id| id != &req_id));
-            signals
-                .set_plugin_response
-                .set(Some((req_id, result, error)));
-        }
+        } => handle_plugin_response_message(req_id, result, error, signals),
         ServerMessage::ChatChunk {
             req_id,
             delta,
             finish_reason,
-        } => {
-            if !accepts_chat_chunk(&req_id, signals) {
-                return;
-            }
-            effects_msg::handle_chat_chunk(
-                req_id,
-                delta,
-                finish_reason,
-                signals.set_chat_messages,
-                signals.set_is_chat_streaming,
-            );
-        }
+        } => handle_chat_chunk_message(req_id, delta, finish_reason, signals),
         ServerMessage::SearchResults {
             request_id,
             scope_nonce,
             results,
-        } => {
-            if !accepts_search_results(&request_id, scope_nonce, signals) {
-                return;
-            }
-            signals.set_search_results.set(results);
-        }
+        } => handle_search_results_message(request_id, scope_nonce, results, signals),
         ServerMessage::SyncModeStatus {
             request_id,
             repo_id,
@@ -136,91 +105,36 @@ pub fn handle_message<F>(
             branch,
             scope_nonce,
             repos,
-        } => {
-            if repo_list_matches_scope(
-                RequestMatch {
-                    message_id: request_id.as_deref(),
-                    expected_id: signals.repo_list_request_id.get_untracked().as_deref(),
-                    scope_nonce,
-                    current_scope_nonce: signals.current_scope_nonce.get_untracked(),
-                },
-                branch,
-                &RepoListScope {
-                    active_branch: signals.active_branch.get_untracked(),
-                    pending_branch_switch: signals.pending_branch_switch.get_untracked(),
-                    pending_repo_switch: signals.pending_repo_switch.get_untracked(),
-                },
-            ) {
-                if request_id.is_some() {
-                    signals.set_repo_list_request_id.set(None);
-                }
-                signals.set_repo_list.set(repos);
-                maybe_switch_to_first_repo(&signals.repo_list.get_untracked(), ws, signals);
-            }
-        }
+        } => handle_repo_list_message(request_id, branch, scope_nonce, repos, ws, signals),
         ServerMessage::BranchSwitched {
             peer_id,
             success,
             switch_nonce,
-        } => {
-            message_control::handle_branch_switched(peer_id, success, switch_nonce, ws, signals);
-        }
+        } => handle_branch_switched_message(peer_id, success, switch_nonce, ws, signals),
         ServerMessage::RepoSwitched {
             branch,
             name,
             uuid,
             switch_nonce,
-        } => {
-            message_control::handle_repo_switched(branch, name, uuid, switch_nonce, ws, signals);
-        }
+        } => handle_repo_switched_message(branch, name, uuid, switch_nonce, ws, signals),
         ServerMessage::PeerDeleted {
             peer_id,
             scope_nonce,
-        } => {
-            if !accepts_system_or_matching_request(
-                None,
-                None,
-                scope_nonce,
-                signals.current_scope_nonce.get_untracked(),
-            ) {
-                return;
-            }
-            message_shadow::handle_peer_deleted(peer_id, ws, signals);
-        }
+        } => handle_peer_deleted_message(peer_id, scope_nonce, ws, signals),
         ServerMessage::EditRejected { scope_nonce, error } => {
-            if !accepts_edit_rejected_message(scope_nonce, signals) {
-                return;
-            }
-            handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
+            handle_edit_rejected_message(scope_nonce, error, ws, locale, signals);
         }
         ServerMessage::ProtocolError {
             error,
             switch_nonce,
             scope_nonce,
-        } => {
-            if !accepts_protocol_error_message(scope_nonce, switch_nonce, signals) {
-                return;
-            }
-            handle_protocol_error(
-                ws,
-                locale,
-                &error,
-                switch_nonce,
-                protocol_control_signals(signals),
-            );
-        }
+        } => handle_protocol_error_message(error, switch_nonce, scope_nonce, ws, locale, signals),
         ServerMessage::WriteReady {
             peer_id,
             repo_id,
             scope_nonce,
             branch,
-        } => {
-            let repo_id = repo_id.to_string();
-            if accepts_write_ready_message(&repo_id, &branch, scope_nonce, signals) {
-                signals.set_handshake_ready.set(true);
-                ws.mark_writer_ready(repo_id, peer_id.as_str());
-            }
-        }
+        } => handle_write_ready_message(peer_id, repo_id, scope_nonce, branch, ws, signals),
         ServerMessage::TreeUpdate {
             request_id,
             repo_id,
@@ -235,16 +149,7 @@ pub fn handle_message<F>(
             doc_id,
             client_op_id,
             ..
-        } => {
-            if !matches_current_message_scope(&Some(repo_id), &branch, signals)
-                || scope_nonce != Some(signals.current_scope_nonce.get_untracked())
-            {
-                return;
-            }
-            signals.set_pending_local_edits.update(|pending_edits| {
-                let _ = pending::ack_pending_edit(pending_edits, doc_id, client_op_id);
-            });
-        }
+        } => handle_ack_message(repo_id, branch, scope_nonce, doc_id, client_op_id, signals),
         other => handle_sc_or_remaining(other, ws, signals, schedule_refresh),
     }
 }

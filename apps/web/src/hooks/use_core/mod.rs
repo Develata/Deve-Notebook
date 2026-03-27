@@ -16,7 +16,6 @@ mod dashboard_context;
 pub mod diff_session;
 pub(crate) mod doc_name;
 pub mod effects;
-pub mod effects_msg;
 pub mod effects_sc;
 mod effects_sc_apply;
 mod effects_sc_scope;

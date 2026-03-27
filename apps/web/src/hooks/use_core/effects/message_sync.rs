@@ -1,13 +1,10 @@
-use crate::api::WsService;
 use crate::storage::identity::{note_handshake, save_repo_vector};
 use deve_core::models::{PeerId, VersionVector};
-use deve_core::protocol::ServerMessage;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
-use super::super::effects_msg;
-use super::super::effects_sc;
 use super::super::state::CoreSignals;
+use super::super::types::PeerSession;
 use super::message_scope::peer_branch_matches_scope;
 
 pub fn handle_sync_hello(
@@ -32,7 +29,16 @@ pub fn handle_sync_hello(
     if !accepted {
         return;
     }
-    effects_msg::handle_sync_hello(peer_id, vector.clone(), signals.set_peers);
+    signals.set_peers.update(|map| {
+        map.insert(
+            peer_id.clone(),
+            PeerSession {
+                id: peer_id,
+                vector: vector.clone(),
+                last_seen: js_sys::Date::now() as u64,
+            },
+        );
+    });
     spawn_local(async move {
         match serde_json::to_string(&vector) {
             Ok(vector_json) => {
@@ -60,117 +66,6 @@ fn should_accept_sync_hello(
         && current_repo_id.as_deref() == Some(repo_id)
 }
 
-pub fn handle_sc_or_remaining<F>(
-    msg: ServerMessage,
-    ws: &WsService,
-    signals: CoreSignals,
-    schedule_refresh: &F,
-) where
-    F: Fn(),
-{
-    let ctx = effects_sc::sc_message_context(
-        signals.set_staged_changes,
-        signals.set_unstaged_changes,
-        signals.changes_request_id,
-        signals.set_changes_request_id,
-        signals.set_commit_history,
-        signals.commit_history_request_id,
-        signals.set_commit_history_request_id,
-        signals.set_doc_list_request_id,
-        signals.set_tree_request_id,
-        signals.doc_diff_request_id,
-        signals.set_doc_diff_request_id,
-        signals.set_diff_content,
-        signals.commit_diff_request_id,
-        signals.set_commit_diff_request_id,
-        signals.set_commit_diff_result,
-        signals.current_repo_id,
-        signals.active_branch,
-        signals.pending_branch_switch,
-        signals.pending_repo_switch,
-        signals.current_scope_nonce,
-        schedule_refresh,
-        ws,
-    );
-    if !effects_sc::handle_sc_message(&msg, &ctx) {
-        effects_msg::handle_remaining(msg, signals.set_system_metrics);
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::should_accept_sync_hello;
-    use deve_core::models::PeerId;
-
-    #[test]
-    fn ignores_sync_hello_while_viewing_remote_branch() {
-        let repo_id = uuid::Uuid::new_v4().to_string();
-        assert!(!should_accept_sync_hello(
-            Some(repo_id.clone()),
-            Some(PeerId::new("peer-a")),
-            None,
-            None,
-            Some(3),
-            &repo_id,
-            3,
-        ));
-    }
-
-    #[test]
-    fn ignores_sync_hello_while_pending_shadow_switch() {
-        let repo_id = uuid::Uuid::new_v4().to_string();
-        assert!(!should_accept_sync_hello(
-            Some(repo_id.clone()),
-            None,
-            Some(crate::hooks::use_core::PendingBranchTarget::Shadow(
-                "peer-a".into(),
-            )),
-            None,
-            Some(3),
-            &repo_id,
-            3,
-        ));
-    }
-
-    #[test]
-    fn ignores_sync_hello_while_pending_local_switch() {
-        let repo_id = uuid::Uuid::new_v4().to_string();
-        assert!(!should_accept_sync_hello(
-            Some(repo_id.clone()),
-            Some(PeerId::new("peer-a")),
-            Some(crate::hooks::use_core::PendingBranchTarget::Local),
-            None,
-            Some(3),
-            &repo_id,
-            3,
-        ));
-    }
-
-    #[test]
-    fn ignores_sync_hello_while_pending_repo_switch() {
-        let repo_id = uuid::Uuid::new_v4().to_string();
-        assert!(!should_accept_sync_hello(
-            Some(repo_id.clone()),
-            None,
-            None,
-            Some("test".into()),
-            Some(3),
-            &repo_id,
-            3,
-        ));
-    }
-
-    #[test]
-    fn ignores_sync_hello_with_stale_scope_nonce() {
-        let repo_id = uuid::Uuid::new_v4().to_string();
-        assert!(!should_accept_sync_hello(
-            Some(repo_id.clone()),
-            None,
-            None,
-            None,
-            Some(4),
-            &repo_id,
-            3,
-        ));
-    }
-}
+#[path = "message_sync_test.rs"]
+mod tests;

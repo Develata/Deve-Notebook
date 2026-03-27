@@ -1,96 +1,65 @@
 use crate::hooks::use_core::state::CoreSignals;
-use deve_core::models::{PeerId, RepoId};
-use leptos::prelude::{GetUntracked, Set};
+use leptos::prelude::{Set, Update};
 
-use super::message_repo_scope::matches_current_message_scope;
-use super::message_scope::accepts_system_or_matching_request;
-
-fn accepts_runtime_message(
-    repo_id: &Option<RepoId>,
-    branch: &Option<PeerId>,
-    scope_nonce: Option<u64>,
-    signals: CoreSignals,
-) -> bool {
-    matches_current_message_scope(repo_id, branch, signals)
-        && accepts_system_or_matching_request(
-            None,
-            None,
-            scope_nonce,
-            signals.current_scope_nonce.get_untracked(),
-        )
-}
-
-pub fn handle_sync_mode_status(
-    request_id: Option<String>,
-    repo_id: Option<RepoId>,
-    branch: Option<PeerId>,
-    scope_nonce: Option<u64>,
-    mode: String,
+pub fn handle_chat_chunk(
+    req_id: String,
+    delta: Option<String>,
+    finish_reason: Option<String>,
     signals: CoreSignals,
 ) {
-    if !matches_current_message_scope(&repo_id, &branch, signals)
-        || !accepts_system_or_matching_request(
-            request_id.as_deref(),
-            signals.sync_mode_request_id.get_untracked().as_deref(),
-            scope_nonce,
-            signals.current_scope_nonce.get_untracked(),
-        )
-    {
-        return;
+    if let Some(delta) = delta.filter(|text| !text.is_empty()) {
+        signals.set_chat_messages.update(|messages| {
+            if let Some(existing) = messages
+                .iter_mut()
+                .rev()
+                .find(|msg| msg.req_id.as_deref() == Some(req_id.as_str()))
+            {
+                existing.content.push_str(&delta);
+            }
+        });
     }
-    signals.set_sync_mode_request_id.set(None);
-    signals.set_sync_mode.set(mode);
-}
 
-pub fn handle_pending_ops_info(
-    request_id: Option<String>,
-    repo_id: Option<RepoId>,
-    branch: Option<PeerId>,
-    scope_nonce: Option<u64>,
-    count: u32,
-    previews: Vec<(String, String, String)>,
-    signals: CoreSignals,
-) {
-    if !matches_current_message_scope(&repo_id, &branch, signals)
-        || !accepts_system_or_matching_request(
-            request_id.as_deref(),
-            signals.pending_ops_request_id.get_untracked().as_deref(),
-            scope_nonce,
-            signals.current_scope_nonce.get_untracked(),
-        )
-    {
-        return;
+    if finish_reason.is_some() {
+        signals.set_is_chat_streaming.set(false);
     }
-    signals.set_pending_ops_request_id.set(None);
-    signals.set_pending_ops_count.set(count);
-    signals.set_pending_ops_previews.set(previews);
 }
+#[cfg(test)]
+mod tests {
+    use super::handle_chat_chunk;
+    use crate::hooks::use_core::state_init::init_signals;
+    use leptos::prelude::*;
 
-pub fn handle_merge_complete(
-    repo_id: Option<RepoId>,
-    branch: Option<PeerId>,
-    scope_nonce: Option<u64>,
-    merged_count: u32,
-    signals: CoreSignals,
-) {
-    if !accepts_runtime_message(&repo_id, &branch, scope_nonce, signals) {
-        return;
-    }
-    leptos::logging::log!("已合并 {} 个操作", merged_count);
-    signals.set_pending_ops_count.set(0);
-    signals.set_pending_ops_previews.set(vec![]);
-}
+    #[test]
+    fn chat_chunk_ignores_unknown_req_after_scope_reset() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
+        signals.set_is_chat_streaming.set(true);
 
-pub fn handle_pending_discarded(
-    repo_id: Option<RepoId>,
-    branch: Option<PeerId>,
-    scope_nonce: Option<u64>,
-    signals: CoreSignals,
-) {
-    if !accepts_runtime_message(&repo_id, &branch, scope_nonce, signals) {
-        return;
+        handle_chat_chunk("req-1".into(), Some("late".into()), None, signals);
+
+        assert!(signals.chat_messages.get_untracked().is_empty());
     }
-    leptos::logging::log!("待处理操作已丢弃");
-    signals.set_pending_ops_count.set(0);
-    signals.set_pending_ops_previews.set(vec![]);
+
+    #[test]
+    fn chat_chunk_appends_to_matching_message() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
+        signals
+            .set_chat_messages
+            .set(vec![crate::hooks::use_core::types::ChatMessage {
+                role: "assistant".into(),
+                content: "hello".into(),
+                req_id: Some("req-1".into()),
+                ts_ms: 1,
+            }]);
+
+        handle_chat_chunk("req-1".into(), Some(" world".into()), None, signals);
+
+        assert_eq!(
+            signals.chat_messages.get_untracked()[0].content,
+            "hello world"
+        );
+    }
 }

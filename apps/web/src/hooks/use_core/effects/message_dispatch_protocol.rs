@@ -1,10 +1,10 @@
-use crate::api::WsService;
-use leptos::prelude::{GetUntracked, Set};
-
 use super::super::state::CoreSignals;
 use super::message_protocol::ProtocolControlSignals;
-use super::message_scope::{RequestMatch, ShadowListScope, shadow_list_matches_scope};
-use super::message_shadow;
+use super::message_protocol::handle_protocol_error;
+use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
+use crate::api::WsService;
+use crate::i18n::Locale;
+use deve_core::protocol::ServerError;
 
 pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals {
     ProtocolControlSignals {
@@ -28,44 +28,35 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
     }
 }
 
-pub fn handle_shadow_list_message(
-    request_id: Option<String>,
+pub fn handle_edit_rejected_message(
     scope_nonce: Option<u64>,
-    shadows: Vec<String>,
+    error: ServerError,
     ws: &WsService,
+    locale: Locale,
     signals: CoreSignals,
 ) {
-    let scope = ShadowListScope {
-        pending_branch_switch: signals.pending_branch_switch.get_untracked(),
-        pending_repo_switch: signals.pending_repo_switch.get_untracked(),
-    };
-    let accepts_system_shadow = request_id.is_none()
-        && shadow_list_matches_scope(
-            RequestMatch {
-                message_id: None,
-                expected_id: None,
-                scope_nonce,
-                current_scope_nonce: signals.current_scope_nonce.get_untracked(),
-            },
-            &scope,
-        );
-    if accepts_system_shadow {
-        signals.set_shadow_list_request_id.set(None);
-        message_shadow::handle_shadow_list(shadows, true, ws, signals);
+    if !accepts_edit_rejected_message(scope_nonce, signals) {
         return;
     }
-    if shadow_list_matches_scope(
-        RequestMatch {
-            message_id: request_id.as_deref(),
-            expected_id: signals.shadow_list_request_id.get_untracked().as_deref(),
-            scope_nonce,
-            current_scope_nonce: signals.current_scope_nonce.get_untracked(),
-        },
-        &scope,
-    ) {
-        if request_id.is_some() {
-            signals.set_shadow_list_request_id.set(None);
-        }
-        message_shadow::handle_shadow_list(shadows, request_id.is_some(), ws, signals);
+    handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
+}
+
+pub fn handle_protocol_error_message(
+    error: ServerError,
+    switch_nonce: Option<u64>,
+    scope_nonce: Option<u64>,
+    ws: &WsService,
+    locale: Locale,
+    signals: CoreSignals,
+) {
+    if !accepts_protocol_error_message(scope_nonce, switch_nonce, signals) {
+        return;
     }
+    handle_protocol_error(
+        ws,
+        locale,
+        &error,
+        switch_nonce,
+        protocol_control_signals(signals),
+    );
 }

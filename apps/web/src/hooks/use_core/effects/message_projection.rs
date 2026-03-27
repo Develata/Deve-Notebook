@@ -1,5 +1,4 @@
 use crate::hooks::use_core::apply::apply_tree_delta;
-use crate::hooks::use_core::effects_msg;
 use crate::hooks::use_core::state::CoreSignals;
 use deve_core::models::PeerId;
 use deve_core::models::RepoId;
@@ -34,14 +33,20 @@ pub fn handle_doc_list(
     if request_id.is_none() {
         signals.set_tree_request_id.set(None);
     }
-    effects_msg::handle_doc_list(
-        docs,
-        signals.current_doc,
-        signals.set_current_doc,
-        signals.set_docs,
-        signals.pending_created_doc_path,
-        signals.set_pending_created_doc_path,
-    );
+    if let Some(selected) = signals.current_doc.get_untracked()
+        && !docs.iter().any(|(doc_id, _)| *doc_id == selected)
+    {
+        leptos::logging::log!("清理过期 current_doc: {} 不在当前 DocList 中", selected);
+        signals.set_current_doc.set(None);
+    }
+    if signals.current_doc.get_untracked().is_none()
+        && let Some(pending_path) = signals.pending_created_doc_path.get_untracked()
+        && let Some((doc_id, _)) = docs.iter().find(|(_, path)| *path == pending_path)
+    {
+        signals.set_current_doc.set(Some(*doc_id));
+        signals.set_pending_created_doc_path.set(None);
+    }
+    signals.set_docs.set(docs);
 }
 
 pub fn handle_tree_update(
@@ -72,4 +77,76 @@ pub fn handle_tree_update(
     signals
         .set_tree_nodes
         .update(|nodes| apply_tree_delta(nodes, delta));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::handle_doc_list;
+    use crate::hooks::use_core::state_init::init_signals;
+    use deve_core::models::DocId;
+    use leptos::prelude::*;
+
+    #[test]
+    fn doc_list_clears_stale_current_doc() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
+        let stale = DocId::new();
+        let fresh = DocId::new();
+        signals.set_current_doc.set(Some(stale));
+
+        handle_doc_list(
+            None,
+            None,
+            None,
+            Some(0),
+            vec![(fresh, "notes/fresh.md".into())],
+            signals,
+        );
+
+        assert_eq!(signals.current_doc.get_untracked(), None);
+    }
+
+    #[test]
+    fn doc_list_preserves_current_doc_when_it_still_exists() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
+        let selected = DocId::new();
+        signals.set_current_doc.set(Some(selected));
+
+        handle_doc_list(
+            None,
+            None,
+            None,
+            Some(0),
+            vec![(selected, "notes/selected.md".into())],
+            signals,
+        );
+
+        assert_eq!(signals.current_doc.get_untracked(), Some(selected));
+    }
+
+    #[test]
+    fn doc_list_selects_pending_created_doc_when_no_doc_is_open() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
+        let created = DocId::new();
+        signals
+            .set_pending_created_doc_path
+            .set(Some("Untitled.md".to_string()));
+
+        handle_doc_list(
+            None,
+            None,
+            None,
+            Some(0),
+            vec![(created, "Untitled.md".into())],
+            signals,
+        );
+
+        assert_eq!(signals.current_doc.get_untracked(), Some(created));
+        assert_eq!(signals.pending_created_doc_path.get_untracked(), None);
+    }
 }
