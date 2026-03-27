@@ -5,7 +5,7 @@
 //! 支持 Stage/Unstage/Open/Discard 操作。
 
 use crate::components::icons::*;
-use crate::hooks::use_core::SourceControlContext;
+use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::{Locale, t};
 use deve_core::source_control::{ChangeEntry, ChangeStatus, ConflictResolution};
 use leptos::prelude::*;
@@ -24,6 +24,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let pending_repo_switch = core.pending_repo_switch;
 
     let has_conflict = entry.has_conflict;
+    let can_open_diff = can_request_doc_diff(&entry);
     let full_path = entry.path.clone();
     let renamed_from = entry.renamed_from.clone();
     let path_parts: Vec<&str> = full_path.split('/').collect();
@@ -60,11 +61,16 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     view! {
         <div
-            class=format!("flex items-center px-4 py-0.5 hover:bg-hover text-[13px] group cursor-pointer h-[22px] {}", if has_conflict { "text-warning bg-warning/5" } else { "text-primary" })
+            class=format!(
+                "flex items-center px-4 py-0.5 hover:bg-hover text-[13px] group h-[22px] {} {}",
+                if has_conflict { "text-warning bg-warning/5" } else { "text-primary" },
+                if can_open_diff { "cursor-pointer" } else { "cursor-default" }
+            )
             on:click=move |_| {
                 if current_repo_id.get().is_none()
                     || pending_branch_switch.get().is_some()
                     || pending_repo_switch.get().is_some()
+                    || !can_open_diff
                 {
                     return;
                 }
@@ -132,18 +138,24 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     } else {
                         // 工作区: Open, Discard, Stage
                         view! {
-                            <button
-                                class="p-0.5 hover:bg-active rounded text-secondary"
-                                disabled=move || {
-                                    current_repo_id.get().is_none()
-                                        || pending_branch_switch.get().is_some()
-                                        || pending_repo_switch.get().is_some()
-                                }
-                                title=move || t::source_control::open_file(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(entry_for_open.clone()); }
-                            >
-                                <ExternalLink class="w-3.5 h-3.5" />
-                            </button>
+                            {if can_open_diff {
+                                view! {
+                                    <button
+                                        class="p-0.5 hover:bg-active rounded text-secondary"
+                                        disabled=move || {
+                                            current_repo_id.get().is_none()
+                                                || pending_branch_switch.get().is_some()
+                                                || pending_repo_switch.get().is_some()
+                                        }
+                                        title=move || t::source_control::open_file(locale.get())
+                                        on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(entry_for_open.clone()); }
+                                    >
+                                        <ExternalLink class="w-3.5 h-3.5" />
+                                    </button>
+                                }.into_any()
+                            } else {
+                                view! {}.into_any()
+                            }}
                             <button
                                 class="p-0.5 hover:bg-active rounded text-secondary"
                                 disabled=move || {

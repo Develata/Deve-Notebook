@@ -9,7 +9,7 @@ pub(super) fn to_target(entry: &ChangeEntry) -> ScPathTarget {
     }
 }
 
-pub(super) fn can_request_doc_diff(entry: &ChangeEntry) -> bool {
+pub(crate) fn can_request_doc_diff(entry: &ChangeEntry) -> bool {
     !(entry.status == ChangeStatus::Deleted && entry.doc_id.is_none())
 }
 

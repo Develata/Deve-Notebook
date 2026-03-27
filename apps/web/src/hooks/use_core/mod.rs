@@ -34,6 +34,7 @@ mod switch_nonce;
 pub mod types;
 pub(crate) mod write_gate;
 
+pub(crate) use callbacks_sc_target::can_request_doc_diff;
 pub use contexts::*;
 pub use types::*;
 
