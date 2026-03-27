@@ -11,7 +11,6 @@ use leptos::prelude::Set;
 pub(super) fn handle_key_provide(ctx: &SyncContext, raw: &[u8]) {
     match RepoKey::from_bytes(raw) {
         Some(key) => {
-            leptos::logging::log!("E2EE: RepoKey received ({} bytes)", raw.len());
             let buffered = ctx.drain_buffered_encrypted_ops();
             ctx.set_repo_key.set(Some(key.clone()));
             if !buffered.is_empty() {

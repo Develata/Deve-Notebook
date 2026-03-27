@@ -28,35 +28,6 @@ pub struct DeltaInputCtx {
 
 pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
     Closure::wrap(Box::new(move |delta_json: String| {
-        let writer_ready = ctx
-            .ws
-            .writer_ready_for(ctx.current_repo_id.get_untracked().as_deref());
-        if !can_send_delta(
-            ctx.is_playback.get_untracked(),
-            ctx.pending_branch_switch.get_untracked().is_some(),
-            ctx.pending_repo_switch.get_untracked().is_some(),
-            ctx.handshake_ready.get_untracked(),
-            writer_ready,
-        ) {
-            return;
-        }
-        let Some(client_id) = ctx
-            .ws
-            .writer_client_id_for(ctx.current_repo_id.get_untracked().as_deref())
-        else {
-            leptos::logging::warn!("Delta ignored: writer client id unavailable.");
-            return;
-        };
-        let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
-            current_repo_id: ctx.current_repo_id,
-            current_scope_nonce: ctx.current_scope_nonce,
-            active_branch: ctx.active_branch,
-            pending_branch_switch: ctx.pending_branch_switch,
-            pending_repo_switch: ctx.pending_repo_switch,
-        }) else {
-            leptos::logging::warn!("Delta ignored: local scope nonce unavailable.");
-            return;
-        };
         let deltas: Vec<Delta> = match serde_json::from_str(&delta_json) {
             Ok(deltas) => deltas,
             Err(err) => {
@@ -64,32 +35,68 @@ pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
                 return;
             }
         };
-        for delta in deltas {
-            for op in delta.to_ops() {
-                let client_op_id = next_client_op_id();
-                ctx.set_pending_local_edits.update(|pending_edits| {
-                    pending::push_pending_edit(
-                        pending_edits,
-                        ctx.doc_id,
+        let writer_ready = ctx
+            .ws
+            .writer_ready_for(ctx.current_repo_id.get_untracked().as_deref());
+        let can_forward = can_send_delta(
+            ctx.is_playback.get_untracked(),
+            ctx.pending_branch_switch.get_untracked().is_some(),
+            ctx.pending_repo_switch.get_untracked().is_some(),
+            ctx.handshake_ready.get_untracked(),
+            writer_ready,
+        );
+
+        if can_forward && !deltas.is_empty() {
+            let Some(client_id) = ctx
+                .ws
+                .writer_client_id_for(ctx.current_repo_id.get_untracked().as_deref())
+            else {
+                leptos::logging::warn!("Delta ignored: writer client id unavailable.");
+                sync_local_state(ctx.on_stats, ctx.set_content);
+                return;
+            };
+            let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
+                current_repo_id: ctx.current_repo_id,
+                current_scope_nonce: ctx.current_scope_nonce,
+                active_branch: ctx.active_branch,
+                pending_branch_switch: ctx.pending_branch_switch,
+                pending_repo_switch: ctx.pending_repo_switch,
+            }) else {
+                leptos::logging::warn!("Delta ignored: local scope nonce unavailable.");
+                sync_local_state(ctx.on_stats, ctx.set_content);
+                return;
+            };
+            for delta in deltas {
+                for op in delta.to_ops() {
+                    let client_op_id = next_client_op_id();
+                    ctx.set_pending_local_edits.update(|pending_edits| {
+                        pending::push_pending_edit(
+                            pending_edits,
+                            ctx.doc_id,
+                            client_id,
+                            client_op_id,
+                            ctx.local_version.get_untracked(),
+                            op.clone(),
+                        );
+                    });
+                    ctx.ws.send(ClientMessage::Edit {
+                        doc_id: ctx.doc_id,
+                        op: op.clone(),
                         client_id,
                         client_op_id,
-                        ctx.local_version.get_untracked(),
-                        op.clone(),
-                    );
-                });
-                ctx.ws.send(ClientMessage::Edit {
-                    doc_id: ctx.doc_id,
-                    op: op.clone(),
-                    client_id,
-                    client_op_id,
-                    scope_nonce: Some(scope_nonce),
-                });
+                        scope_nonce: Some(scope_nonce),
+                    });
+                }
             }
         }
-        let text = getEditorContent();
-        emit_stats(ctx.on_stats, &text);
-        ctx.set_content.set(text);
+        sync_local_state(ctx.on_stats, ctx.set_content);
     }) as Box<dyn FnMut(String)>)
+}
+
+fn sync_local_state(on_stats: Option<Callback<EditorStats>>, set_content: WriteSignal<String>) {
+    let text = getEditorContent();
+    emit_stats(on_stats, &text);
+    set_content.set(text);
 }
 
 fn emit_stats(on_stats: Option<Callback<EditorStats>>, text: &str) {

@@ -223,7 +223,6 @@ pub fn use_editor(
             "编辑器清理时忽略 buffered encrypted ops",
         );
         destroyEditor();
-        leptos::logging::log!("编辑器已清理");
     });
 
     // 回放逻辑

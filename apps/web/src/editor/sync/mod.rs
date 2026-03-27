@@ -106,7 +106,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
         ServerMessage::SyncHello {
             peer_id, vector: _, ..
         } => {
-            leptos::logging::log!("P2P Handshake from Peer: {}", peer_id);
+            let _ = peer_id;
         }
         ServerMessage::WriteReady {
             repo_id,
