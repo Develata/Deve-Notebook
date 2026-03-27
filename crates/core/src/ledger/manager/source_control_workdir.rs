@@ -24,23 +24,25 @@ impl RepoManager {
         path: &str,
     ) -> Result<(String, String)> {
         let normalized = to_forward_slash(path);
-        let old_content = match self.resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)? {
+        let old_doc_id = self.resolve_workdir_doc_id_in_local_repo(repo_name, &normalized)?;
+        let old_content = match old_doc_id {
             Some(doc_id) => rebuild_doc_projection(self, repo_name, doc_id)?,
             None => String::new(),
         };
         let file_path = self.local_repo_workspace_path(repo_name, &normalized)?;
-        let new_content = if workspace_path_exists(
+        let workspace_exists = workspace_path_exists(
             &file_path,
             &format!(
                 "Failed to stat workspace path while reading workdir diff {}",
                 normalized
             ),
-        )? {
+        )?;
+        let new_content = if workspace_exists {
             std::fs::read_to_string(file_path)?
         } else {
             String::new()
         };
-        if old_content.is_empty() && new_content.is_empty() {
+        if old_doc_id.is_none() && !workspace_exists {
             anyhow::bail!("Doc not found: {}", normalized);
         }
         Ok((old_content, new_content))
