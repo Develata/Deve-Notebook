@@ -4,6 +4,10 @@
 mod context;
 #[path = "effects_sc_dispatch.rs"]
 mod dispatch;
+#[path = "effects_sc_dispatch_acks.rs"]
+mod dispatch_acks;
+#[path = "effects_sc_dispatch_lists.rs"]
+mod dispatch_lists;
 
 use crate::api::WsService;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
