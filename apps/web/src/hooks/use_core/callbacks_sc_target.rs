@@ -1,5 +1,5 @@
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use std::collections::HashSet;
 
 pub(super) fn to_target(entry: &ChangeEntry) -> ScPathTarget {
@@ -7,6 +7,10 @@ pub(super) fn to_target(entry: &ChangeEntry) -> ScPathTarget {
         path: normalized(&entry.path),
         doc_id: entry.doc_id,
     }
+}
+
+pub(super) fn can_request_doc_diff(entry: &ChangeEntry) -> bool {
+    !(entry.status == ChangeStatus::Deleted && entry.doc_id.is_none())
 }
 
 pub(super) fn to_targets(entries: Vec<ChangeEntry>) -> Vec<ScPathTarget> {
@@ -25,7 +29,7 @@ fn normalized(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{to_target, to_targets};
+    use super::{can_request_doc_diff, to_target, to_targets};
     use deve_core::models::DocId;
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
 
@@ -75,5 +79,27 @@ mod tests {
         assert_eq!(targets.len(), 2);
         assert!(targets.iter().any(|target| target.doc_id == Some(first)));
         assert!(targets.iter().any(|target| target.doc_id == Some(second)));
+    }
+
+    #[test]
+    fn doc_diff_is_blocked_for_docless_deleted_entry() {
+        assert!(!can_request_doc_diff(&ChangeEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            status: ChangeStatus::Deleted,
+            has_conflict: false,
+        }));
+    }
+
+    #[test]
+    fn doc_diff_is_allowed_for_deleted_entry_with_doc_id() {
+        assert!(can_request_doc_diff(&ChangeEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: Some(DocId::new()),
+            status: ChangeStatus::Deleted,
+            has_conflict: false,
+        }));
     }
 }

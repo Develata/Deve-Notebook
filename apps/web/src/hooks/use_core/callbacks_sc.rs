@@ -1,7 +1,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
-use crate::hooks::use_core::callbacks_sc_target::{to_target, to_targets};
+use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target, to_targets};
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
@@ -170,6 +170,13 @@ pub fn create_source_control_callbacks(
 
     let ws_doc_diff = ws.clone();
     let on_get_doc_diff = Callback::new(move |entry: ChangeEntry| {
+        if !can_request_doc_diff(&entry) {
+            leptos::logging::log!(
+                "跳过 GetDocDiff: deleted change has no doc_id for {}",
+                entry.path
+            );
+            return;
+        }
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
