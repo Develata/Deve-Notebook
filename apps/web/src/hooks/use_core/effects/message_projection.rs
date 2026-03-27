@@ -26,17 +26,6 @@ pub fn handle_doc_list(
         scope_nonce,
         signals.current_scope_nonce.get_untracked(),
     );
-    leptos::logging::log!(
-        "收到 DocList: request_id={:?}, repo_id={:?}, branch={:?}, scope_nonce={:?}, docs={}, matches_scope={}, matches_projection_scope={}, matches_request={}",
-        request_id,
-        repo_id,
-        branch,
-        scope_nonce,
-        docs.len(),
-        matches_scope,
-        matches_projection_scope,
-        matches_request
-    );
     if !(matches_scope || matches_projection_scope) || !matches_request {
         leptos::logging::warn!("忽略 DocList: repo-scope 或 request gate 不匹配");
         return;
@@ -71,16 +60,6 @@ pub fn handle_tree_update(
         signals.tree_request_id.get_untracked().as_deref(),
         scope_nonce,
         signals.current_scope_nonce.get_untracked(),
-    );
-    leptos::logging::log!(
-        "收到 TreeUpdate: request_id={:?}, repo_id={:?}, branch={:?}, scope_nonce={:?}, matches_scope={}, matches_projection_scope={}, matches_request={}",
-        request_id,
-        repo_id,
-        branch,
-        scope_nonce,
-        matches_scope,
-        matches_projection_scope,
-        matches_request
     );
     if !(matches_scope || matches_projection_scope) || !matches_request {
         leptos::logging::warn!("忽略 TreeUpdate: repo-scope 或 request gate 不匹配");

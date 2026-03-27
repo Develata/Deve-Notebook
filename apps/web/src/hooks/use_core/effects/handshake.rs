@@ -163,8 +163,6 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
                     branch.clone(),
                 );
             }
-
-            leptos::logging::log!("已连接! 发送 SyncHello...");
             let sorted_map: BTreeMap<_, _> = vector.iter().collect();
             let vec_bytes = match serde_json::to_vec(&sorted_map) {
                 Ok(bytes) => bytes,

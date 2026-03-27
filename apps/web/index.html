@@ -34,6 +34,8 @@
 
     <script>
       // 0. Global Error Handler
+      window.__DEVE_DEBUG_OVERLAY__ = false;
+
       window.showOverlay = () => {
         const el = document.getElementById("loading-overlay");
         if (!el) return;
@@ -72,16 +74,18 @@
 
       window.logToOverlay = (msg, isError = false) => {
         const el = document.getElementById("loading-overlay");
-        if (el) {
+        if (el && (isError || window.__DEVE_DEBUG_OVERLAY__)) {
           if (isError) window.showOverlay();
           const line = document.createElement("div");
           if (isError) line.style.color = "red";
           line.innerText = msg;
           el.appendChild(line);
         }
-        console.log("[Overlay]", msg);
         if (isError) {
+          console.error("[Overlay]", msg);
           window.setBootPanel("Boot Error", msg, "error");
+        } else if (window.__DEVE_DEBUG_OVERLAY__) {
+          console.log("[Overlay]", msg);
         }
       };
 
@@ -387,7 +391,9 @@
       };
 
       window.addEventListener("TrunkApplicationStarted", () => {
-        console.log("[Overlay]", "TrunkApplicationStarted event received.");
+        if (window.__DEVE_DEBUG_OVERLAY__) {
+          console.log("[Overlay]", "TrunkApplicationStarted event received.");
+        }
       }, { once: true });
     </script>
   </head>

@@ -23,7 +23,6 @@ pub fn maybe_switch_to_first_repo(repos: &[String], ws: &WsService, signals: Cor
     signals
         .set_pending_repo_switch_nonce
         .set(Some(switch_nonce));
-    leptos::logging::log!("Bootstrap: auto-switching to first repo {}", first_repo);
     ws.send(ClientMessage::SwitchRepo {
         name: first_repo,
         switch_nonce: Some(switch_nonce),

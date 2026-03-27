@@ -69,10 +69,6 @@ pub fn init_storage_runtime(
         // 必须等到有有效的 UUID 格式的 repo_id
         let Some(repo_id) = repo_scope(current_scope.clone()) else {
             reset_repo_runtime(&last_repo, set_identity, set_repo_vector);
-            leptos::logging::log!(
-                "Storage: waiting for valid repo UUID, current: {:?}",
-                current_scope
-            );
             return;
         };
 
@@ -152,8 +148,6 @@ pub fn init_storage_runtime(
             if let Err(err) = touch_offline_cache(&repo_id, "bootstrap").await {
                 leptos::logging::warn!("离线缓存触点更新失败: {}", err);
             }
-
-            leptos::logging::log!("Frontend PeerId: {}", identity.peer_id);
         });
     });
 

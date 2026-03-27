@@ -21,7 +21,6 @@ pub fn handle_doc_list(
     pending_created_doc_path: ReadSignal<Option<String>>,
     set_pending_created_doc_path: WriteSignal<Option<String>>,
 ) {
-    leptos::logging::log!("收到 DocList: {} 篇文档", list.len());
     if let Some(selected) = current_doc.get_untracked()
         && !list.iter().any(|(doc_id, _)| *doc_id == selected)
     {

@@ -53,13 +53,6 @@ pub fn handle_repo_switched(
     ws: &WsService,
     signals: CoreSignals,
 ) {
-    leptos::logging::log!(
-        "收到 RepoSwitched: branch={:?}, name={}, uuid={}, switch_nonce={:?}",
-        branch,
-        name,
-        uuid,
-        switch_nonce
-    );
     if !string_branch_matches_scope(
         &branch,
         signals.active_branch.get_untracked(),
@@ -85,14 +78,6 @@ pub fn handle_repo_switched(
             set_current_repo_id: signals.set_current_repo_id,
             set_current_doc: signals.set_current_doc,
         },
-    );
-    leptos::logging::log!(
-        "处理 RepoSwitched 结果: accepted={}, should_refresh={}, current_repo={:?}, current_repo_id={:?}, scope_nonce={}",
-        outcome.accepted,
-        outcome.should_refresh,
-        signals.current_repo.get_untracked(),
-        signals.current_repo_id.get_untracked(),
-        signals.current_scope_nonce.get_untracked()
     );
     if outcome.should_refresh {
         ws.clear_writer_ready();
