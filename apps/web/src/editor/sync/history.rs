@@ -1,5 +1,5 @@
-use super::apply_live_op;
 use super::context::SyncContext;
+use super::live::apply_live_op;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOpsBatch, getEditorContent};
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};

@@ -11,23 +11,22 @@
 //! - 添加了 `on_cleanup` 确保编辑器资源正确释放
 
 use super::EditorStats;
-use super::buffered_ops::clear_sync_buffers;
-use super::delta_input::{DeltaInputCtx, build_on_delta};
-use super::ffi::{destroyEditor, set_read_only, setupCodeMirror};
 use super::handshake_reset::{HandshakeResetCtx, setup_handshake_reset_effect};
+use super::hook_editor::{
+    EditorCleanupCtx, EditorMountEffectCtx, setup_editor_cleanup, setup_editor_mount_effect,
+};
+use super::hook_open::{OpenDocEffectCtx, setup_open_doc_effect};
+use super::hook_playback::{PlaybackEffectCtx, setup_playback_effect};
 use super::message_effect;
-use super::open_scope::{OpenDocScope, OpenRequestKey, open_request_key};
-use super::playback;
+use super::open_scope::OpenRequestKey;
 use super::request_key::setup_request_key_effect;
-use crate::api::ConnectionStatus;
 use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
 use deve_core::models::DocId;
-use deve_core::protocol::ClientMessage;
 use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::html::Div;
 use leptos::prelude::*;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
 
 #[allow(dead_code)] // 为回放功能预留的字段
@@ -56,10 +55,7 @@ pub fn use_editor(
     let ready_generation = Arc::new(AtomicU64::new(0));
     let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
     let buffered_encrypted_ops = Arc::new(Mutex::new(Vec::<EncryptedOp>::new()));
-    let set_load_state = core.set_load_state;
-    let set_load_progress = core.set_load_progress;
-    let set_load_eta_ms = core.set_load_eta_ms;
-    let set_pending_local_edits = core.set_pending_local_edits;
+    let set_doc_ver = core.set_doc_version;
 
     // 回放状态
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
@@ -71,71 +67,19 @@ pub fn use_editor(
     // E2EE: RepoKey 信号 (RAM-only, 页面卸载时自动清除)
     let (repo_key, set_repo_key) = signal(None::<RepoKey>);
 
-    // 初始请求: 打开文档
-    let ws_clone = ws.clone();
-    let set_doc_ver = core.set_doc_version;
-    let current_doc = core.current_doc;
-    let docs = core.docs;
-    let current_repo_id = core.current_repo_id;
-    let pending_branch_switch = core.pending_branch_switch;
-    let pending_repo_switch = core.pending_repo_switch;
-    let open_session_generation = session_generation.clone();
-    let open_ready_generation = ready_generation.clone();
-    let open_buffered_live_ops = buffered_live_ops.clone();
-    let open_buffered_encrypted_ops = buffered_encrypted_ops.clone();
-    Effect::new(move |_| {
-        let maybe_key = open_request_key(
-            OpenDocScope {
-                doc_id,
-                docs: &docs.get(),
-                doc_selected: current_doc.get() == Some(doc_id),
-                has_repo_scope: current_repo_id.get().is_some(),
-                branch_switch_idle: pending_branch_switch.get().is_none(),
-                repo_switch_idle: pending_repo_switch.get().is_none(),
-            },
-            ws_clone.status.get() == ConnectionStatus::Connected,
-            core.current_scope_nonce.get(),
-        );
-        if maybe_key.is_none() {
-            set_last_open_request_key.set(None);
-            return;
-        }
-        if last_open_request_key.get_untracked() == maybe_key {
-            return;
-        }
-        let Some(open_key) = maybe_key else {
-            return;
-        };
-        set_last_open_request_key.set(Some(open_key));
-        let request_id = js_sys::Math::floor(js_sys::Math::random() * u64::MAX as f64) as u64;
-        let _ = open_session_generation.fetch_add(1, Ordering::Relaxed);
-        open_ready_generation.store(0, Ordering::Relaxed);
-        clear_sync_buffers(
-            &open_buffered_live_ops,
-            &open_buffered_encrypted_ops,
-            "清空 buffered live ops",
-            "清空 buffered encrypted ops",
-        );
-        set_read_only(true);
-        set_local_version.set(0);
-        set_open_request_id.set(request_id);
-        set_history.set(Vec::new());
-        set_doc_ver.set(0);
-        set_playback_version.set(0);
-        set_load_state.set("loading".to_string());
-        set_load_progress.set((0, 0));
-        set_load_eta_ms.set(0);
-        leptos::logging::log!(
-            "OpenDoc send: doc={}, request_id={}, scope_nonce={}",
-            open_key.doc_id,
-            request_id,
-            open_key.scope_nonce
-        );
-        ws_clone.send(ClientMessage::OpenDoc {
-            doc_id: open_key.doc_id,
-            request_id,
-            scope_nonce: Some(open_key.scope_nonce),
-        });
+    setup_open_doc_effect(OpenDocEffectCtx {
+        ws: ws.clone(),
+        core: core.clone(),
+        doc_id,
+        last_open_request_key,
+        set_last_open_request_key,
+        session_generation: session_generation.clone(),
+        ready_generation: ready_generation.clone(),
+        buffered_live_ops: buffered_live_ops.clone(),
+        buffered_encrypted_ops: buffered_encrypted_ops.clone(),
+        set_local_version,
+        set_open_request_id,
+        set_history,
     });
 
     setup_request_key_effect(ws.clone(), core.clone(), set_repo_key);
@@ -175,75 +119,30 @@ pub fn use_editor(
         set_repo_key,
     });
 
-    // 编辑器初始化 (Delta 模式)
-    let ws_editor = ws.clone();
-    Effect::new(move |_| {
-        if let Some(element) = editor_ref.get() {
-            let raw_element: &web_sys::HtmlElement = &element;
-            let on_delta = build_on_delta(DeltaInputCtx {
-                doc_id,
-                ws: ws_editor.clone(),
-                current_repo_id: core.current_repo_id,
-                current_scope_nonce: core.current_scope_nonce,
-                active_branch: core.active_branch,
-                pending_branch_switch: core.pending_branch_switch,
-                pending_repo_switch: core.pending_repo_switch,
-                handshake_ready: core.handshake_ready,
-                is_playback,
-                set_pending_local_edits,
-                local_version,
-                on_stats,
-                set_content,
-            });
-
-            setupCodeMirror(raw_element, &on_delta);
-            // Store the closure so it gets dropped on cleanup instead of leaking
-            let on_delta = StoredValue::new_local(Some(on_delta));
-            on_cleanup(move || {
-                // Drop the closure to prevent memory leak
-                on_delta.update_value(|v| {
-                    v.take();
-                });
-            });
-        }
+    setup_editor_mount_effect(EditorMountEffectCtx {
+        doc_id,
+        editor_ref,
+        ws: ws.clone(),
+        core: core.clone(),
+        is_playback,
+        local_version,
+        on_stats,
+        set_content,
     });
-
-    // 清理: 组件卸载时销毁编辑器
-    let cleanup_session_generation = session_generation.clone();
-    let cleanup_ready_generation = ready_generation.clone();
-    let cleanup_buffered_live_ops = buffered_live_ops.clone();
-    let cleanup_buffered_encrypted_ops = buffered_encrypted_ops.clone();
-    on_cleanup(move || {
-        let _ = cleanup_session_generation.fetch_add(1, Ordering::Relaxed);
-        cleanup_ready_generation.store(0, Ordering::Relaxed);
-        clear_sync_buffers(
-            &cleanup_buffered_live_ops,
-            &cleanup_buffered_encrypted_ops,
-            "编辑器清理时忽略 buffered live ops",
-            "编辑器清理时忽略 buffered encrypted ops",
-        );
-        destroyEditor();
+    setup_editor_cleanup(EditorCleanupCtx {
+        session_generation,
+        ready_generation,
+        buffered_live_ops,
+        buffered_encrypted_ops,
     });
-
-    // 回放逻辑
-    let ws_playback = ws.clone();
-    Effect::new(move |_| {
-        let ver = playback_version.get();
-        let local = local_version.get_untracked();
-
-        playback::handle_playback_change(ver, doc_id, local, history, set_is_playback);
-
-        let is_pb = ver < local;
-        let spectator = core.is_spectator.get_untracked();
-        let loading = core.load_state.get_untracked() != "ready";
-        let handshake_ready = core.handshake_ready.get_untracked();
-        let switching = core.pending_branch_switch.get_untracked().is_some()
-            || core.pending_repo_switch.get_untracked().is_some();
-        let writer_ready =
-            ws_playback.writer_ready_for(core.current_repo_id.get_untracked().as_deref());
-        let should_readonly =
-            is_pb || spectator || loading || switching || !handshake_ready || !writer_ready;
-        set_read_only(should_readonly);
+    setup_playback_effect(PlaybackEffectCtx {
+        ws: ws.clone(),
+        core: core.clone(),
+        doc_id,
+        history,
+        playback_version,
+        local_version,
+        set_is_playback,
     });
 
     let on_playback_change = Box::new(move |ver: u64| {
