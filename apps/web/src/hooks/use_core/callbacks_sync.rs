@@ -1,10 +1,14 @@
 use crate::api::WsService;
-use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::models::DocId;
-use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-use super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
+#[path = "callbacks_sync_read.rs"]
+mod read;
+#[path = "callbacks_sync_write.rs"]
+mod write;
+
+use super::callbacks_scope::LocalScopeSignals;
 
 pub struct SyncCallbacks {
     pub on_get_sync_mode: Callback<()>,
@@ -25,120 +29,22 @@ pub fn create_sync_callbacks(
     set_sync_mode_request_id: WriteSignal<Option<String>>,
     set_pending_ops_request_id: WriteSignal<Option<String>>,
 ) -> SyncCallbacks {
-    let ws1 = ws.clone();
-    let on_get_sync_mode = Callback::new(move |_: ()| {
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 GetSyncMode: local repo scope 尚未稳定");
-            return;
-        };
-        let request_id = uuid::Uuid::new_v4().to_string();
-        set_sync_mode_request_id.set(Some(request_id.clone()));
-        ws1.send(ClientMessage::GetSyncMode {
-            request_id,
-            scope_nonce: Some(scope_nonce),
-        });
-    });
-
-    let ws2 = ws.clone();
-    let on_set_sync_mode = Callback::new(move |mode: String| {
-        if let Some(block) = repo_write_block_untracked(&ws2, write_gate) {
-            leptos::logging::warn!("忽略 SetSyncMode: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 SetSyncMode: local repo scope 尚未稳定");
-            return;
-        };
-        ws2.send(ClientMessage::SetSyncMode {
-            mode,
-            scope_nonce: Some(scope_nonce),
-        });
-    });
-
-    let ws3 = ws.clone();
-    let on_get_pending_ops = Callback::new(move |_: ()| {
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 GetPendingOps: local repo scope 尚未稳定");
-            return;
-        };
-        let request_id = uuid::Uuid::new_v4().to_string();
-        set_pending_ops_request_id.set(Some(request_id.clone()));
-        ws3.send(ClientMessage::GetPendingOps {
-            request_id,
-            scope_nonce: Some(scope_nonce),
-        });
-    });
-
-    let ws4 = ws.clone();
-    let on_confirm_merge = Callback::new(move |_: ()| {
-        if let Some(block) = repo_write_block_untracked(&ws4, write_gate) {
-            leptos::logging::warn!("忽略 ConfirmMerge: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 ConfirmMerge: local repo scope 尚未稳定");
-            return;
-        };
-        ws4.send(ClientMessage::ConfirmMerge {
-            scope_nonce: Some(scope_nonce),
-        });
-    });
-
-    let ws5 = ws.clone();
-    let on_discard_pending = Callback::new(move |_: ()| {
-        if let Some(block) = repo_write_block_untracked(&ws5, write_gate) {
-            leptos::logging::warn!("忽略 DiscardPending: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 DiscardPending: local repo scope 尚未稳定");
-            return;
-        };
-        ws5.send(ClientMessage::DiscardPending {
-            scope_nonce: Some(scope_nonce),
-        });
-    });
-
-    let ws6 = ws.clone();
-    let on_list_shadows = Callback::new(move |_: ()| {
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 ListShadows: local repo scope 尚未稳定");
-            return;
-        };
-        let request_id = uuid::Uuid::new_v4().to_string();
-        set_shadow_list_request_id.set(Some(request_id.clone()));
-        ws6.send(ClientMessage::ListShadows {
-            request_id,
-            scope_nonce: Some(scope_nonce),
-        });
-    });
-
-    let ws7 = ws.clone();
-    let on_merge_peer = Callback::new(move |peer_id: String| {
-        if let Some(block) = repo_write_block_untracked(&ws7, write_gate) {
-            leptos::logging::warn!("忽略 MergePeer: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 MergePeer: local repo scope 尚未稳定");
-            return;
-        };
-        if let Some(doc_id) = current_doc.get_untracked() {
-            ws7.send(ClientMessage::MergePeer {
-                peer_id,
-                doc_id,
-                scope_nonce: Some(scope_nonce),
-            });
-        }
-    });
+    let read = read::create_sync_read_callbacks(
+        ws,
+        local_scope,
+        set_shadow_list_request_id,
+        set_sync_mode_request_id,
+        set_pending_ops_request_id,
+    );
+    let write = write::create_sync_write_callbacks(ws, current_doc, local_scope, write_gate);
 
     SyncCallbacks {
-        on_get_sync_mode,
-        on_set_sync_mode,
-        on_get_pending_ops,
-        on_confirm_merge,
-        on_discard_pending,
-        on_list_shadows,
-        on_merge_peer,
+        on_get_sync_mode: read.on_get_sync_mode,
+        on_set_sync_mode: write.on_set_sync_mode,
+        on_get_pending_ops: read.on_get_pending_ops,
+        on_confirm_merge: write.on_confirm_merge,
+        on_discard_pending: write.on_discard_pending,
+        on_list_shadows: read.on_list_shadows,
+        on_merge_peer: write.on_merge_peer,
     }
 }

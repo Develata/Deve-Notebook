@@ -2,36 +2,8 @@ use crate::api::WsService;
 use leptos::prelude::*;
 
 use super::CoreState;
-use super::callbacks::{
-    DocCallbacks, MiscCallbacks, SourceControlCallbacks, SwitchCallbacks, SyncCallbacks,
-};
 use super::state::CoreSignals;
-
-pub(super) struct CoreStateCallbacks {
-    doc: DocCallbacks,
-    sync: SyncCallbacks,
-    sc: SourceControlCallbacks,
-    misc: MiscCallbacks,
-    switch: SwitchCallbacks,
-}
-
-impl CoreStateCallbacks {
-    pub(super) fn new(
-        doc: DocCallbacks,
-        sync: SyncCallbacks,
-        sc: SourceControlCallbacks,
-        misc: MiscCallbacks,
-        switch: SwitchCallbacks,
-    ) -> Self {
-        Self {
-            doc,
-            sync,
-            sc,
-            misc,
-            switch,
-        }
-    }
-}
+use super::state_callbacks::CoreStateCallbacks;
 
 pub(super) fn build_core_state(
     ws: WsService,

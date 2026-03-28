@@ -1,7 +1,18 @@
-// apps/web/src/hooks/use_core/provide.rs
-//! 将 CoreState 分发为 6 个独立子上下文，各组件按需拉取。
+//! 子上下文提供入口。
 
-use super::contexts::*;
+#[path = "provide_branch.rs"]
+mod branch;
+#[path = "provide_chat.rs"]
+mod chat;
+#[path = "provide_doc.rs"]
+mod doc;
+#[path = "provide_editor.rs"]
+mod editor;
+#[path = "provide_source_control.rs"]
+mod source_control;
+#[path = "provide_sync.rs"]
+mod sync;
+
 use super::types::CoreState;
 use leptos::prelude::*;
 
@@ -10,102 +21,10 @@ use leptos::prelude::*;
 /// ## Invariant
 /// 子上下文与 CoreState 共享同一组 Signal —— 无额外分配。
 pub fn provide_sub_contexts(state: &CoreState) {
-    provide_context(DocContext {
-        docs: state.docs,
-        current_doc: state.current_doc,
-        set_current_doc: state.set_current_doc,
-        tree_nodes: state.tree_nodes,
-        on_doc_select: state.on_doc_select,
-        on_doc_create: state.on_doc_create,
-        on_doc_rename: state.on_doc_rename,
-        on_doc_delete: state.on_doc_delete,
-        on_doc_copy: state.on_doc_copy,
-        on_doc_move: state.on_doc_move,
-        search_results: state.search_results,
-        on_search: state.on_search,
-    });
-    provide_context(EditorContext {
-        docs: state.docs,
-        current_doc: state.current_doc,
-        stats: state.stats,
-        on_stats: state.on_stats,
-        load_state: state.load_state,
-        set_load_state: state.set_load_state,
-        load_progress: state.load_progress,
-        set_load_progress: state.set_load_progress,
-        load_eta_ms: state.load_eta_ms,
-        set_load_eta_ms: state.set_load_eta_ms,
-        doc_version: state.doc_version,
-        set_doc_version: state.set_doc_version,
-        playback_version: state.playback_version,
-        set_playback_version: state.set_playback_version,
-        is_spectator: state.is_spectator,
-        active_branch: state.active_branch,
-        pending_branch_switch: state.pending_branch_switch,
-        current_repo_id: state.current_repo_id,
-        current_scope_nonce: state.current_scope_nonce,
-        pending_repo_switch: state.pending_repo_switch,
-        handshake_ready: state.handshake_ready,
-        handshake_scope_nonce: state.handshake_scope_nonce,
-        pending_local_edits: state.pending_local_edits,
-        set_pending_local_edits: state.set_pending_local_edits,
-    });
-    provide_context(ChatContext {
-        messages: state.chat_messages,
-        set_messages: state.set_chat_messages,
-        is_streaming: state.is_chat_streaming,
-        set_is_streaming: state.set_is_chat_streaming,
-        ai_mode: state.ai_mode,
-        set_ai_mode: state.set_ai_mode,
-        plugin_last_response: state.plugin_last_response,
-        on_plugin_call: state.on_plugin_call,
-    });
-    provide_context(SyncMergeContext {
-        sync_mode: state.sync_mode,
-        pending_ops_count: state.pending_ops_count,
-        pending_ops_previews: state.pending_ops_previews,
-        on_get_sync_mode: state.on_get_sync_mode,
-        on_set_sync_mode: state.on_set_sync_mode,
-        on_get_pending_ops: state.on_get_pending_ops,
-        on_confirm_merge: state.on_confirm_merge,
-        on_discard_pending: state.on_discard_pending,
-        on_merge_peer: state.on_merge_peer,
-    });
-    provide_context(SourceControlContext {
-        staged_changes: state.staged_changes,
-        unstaged_changes: state.unstaged_changes,
-        commit_history: state.commit_history,
-        current_repo_id: state.current_repo_id,
-        active_branch: state.active_branch,
-        pending_branch_switch: state.pending_branch_switch,
-        pending_repo_switch: state.pending_repo_switch,
-        on_get_changes: state.on_get_changes,
-        on_stage_file: state.on_stage_file,
-        on_stage_files: state.on_stage_files,
-        on_unstage_file: state.on_unstage_file,
-        on_unstage_files: state.on_unstage_files,
-        on_discard_file: state.on_discard_file,
-        on_commit: state.on_commit,
-        on_get_history: state.on_get_history,
-        diff_content: state.diff_content,
-        set_diff_content: state.set_diff_content,
-        on_get_doc_diff: state.on_get_doc_diff,
-        commit_diff_result: state.commit_diff_result,
-        on_resolve_conflict: state.on_resolve_conflict,
-        on_get_commit_diff: state.on_get_commit_diff,
-        on_commit_and_push: state.on_commit_and_push,
-    });
-    provide_context(BranchContext {
-        active_branch: state.active_branch,
-        set_active_branch: state.set_active_branch,
-        on_switch_branch: state.on_switch_branch,
-        current_repo: state.current_repo,
-        set_current_repo: state.set_current_repo,
-        current_repo_id: state.current_repo_id,
-        set_current_repo_id: state.set_current_repo_id,
-        on_switch_repo: state.on_switch_repo,
-        shadow_repos: state.shadow_repos,
-        on_list_shadows: state.on_list_shadows,
-        repo_list: state.repo_list,
-    });
+    provide_context(doc::build_doc_context(state));
+    provide_context(editor::build_editor_context(state));
+    provide_context(chat::build_chat_context(state));
+    provide_context(sync::build_sync_context(state));
+    provide_context(source_control::build_source_control_context(state));
+    provide_context(branch::build_branch_context(state));
 }

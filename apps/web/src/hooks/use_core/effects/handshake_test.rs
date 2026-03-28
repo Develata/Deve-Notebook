@@ -1,7 +1,7 @@
-use super::handshake_state::reset_handshake_attempt_state;
+use super::handshake_state::{reset_handshake_attempt_state, suspended_handshake_mode_key};
 use super::{
     handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
-    should_suspend_handshake, suspended_handshake_mode_key,
+    should_suspend_handshake,
 };
 use crate::hooks::use_core::{PendingBranchTarget, types::HandshakeSignals};
 use crate::storage::DegradedSyncMode;

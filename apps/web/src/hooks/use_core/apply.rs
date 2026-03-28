@@ -3,9 +3,16 @@
 //!
 //! 将 `TreeDelta` 应用到本地树结构。
 
-use deve_core::models::NodeId;
+#[path = "apply_tree_nodes.rs"]
+mod tree_nodes;
+
 use deve_core::tree::{FileNode, TreeDelta};
 use std::collections::HashSet;
+
+use self::tree_nodes::{
+    dedupe_tree, insert_node, remove_node, remove_node_by_path, remove_node_returning,
+    update_children_paths,
+};
 
 /// 将 TreeDelta 应用到现有树结构
 pub fn apply_tree_delta(current: &mut Vec<FileNode>, delta: TreeDelta) {
@@ -52,130 +59,4 @@ pub fn apply_tree_delta(current: &mut Vec<FileNode>, delta: TreeDelta) {
     }
 
     dedupe_tree(current, &mut HashSet::new(), &mut HashSet::new());
-}
-
-/// 在指定父节点下插入新节点
-fn insert_node(roots: &mut Vec<FileNode>, parent_id: Option<NodeId>, new_node: FileNode) {
-    match parent_id {
-        None => {
-            roots.push(new_node);
-            sort_nodes(roots);
-        }
-        Some(pid) => {
-            if let Some(parent) = find_node_mut(roots, pid) {
-                parent.children.push(new_node);
-                sort_nodes(&mut parent.children);
-            } else {
-                let parent_path = parent_path_of(&new_node.path);
-                if let Some(pp) = parent_path {
-                    if let Some(parent) = find_node_mut_by_path(roots, pp) {
-                        parent.children.push(new_node);
-                        sort_nodes(&mut parent.children);
-                    }
-                } else {
-                    roots.push(new_node);
-                    sort_nodes(roots);
-                }
-            }
-        }
-    }
-}
-
-/// 移除并返回节点 (用于移动/重命名)
-fn remove_node_returning(roots: &mut Vec<FileNode>, node_id: NodeId) -> Option<FileNode> {
-    if let Some(idx) = roots.iter().position(|n| n.node_id == node_id) {
-        return Some(roots.remove(idx));
-    }
-
-    for node in roots.iter_mut() {
-        if let Some(found) = remove_node_returning(&mut node.children, node_id) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-/// 删除节点
-fn remove_node(roots: &mut Vec<FileNode>, node_id: NodeId) {
-    let _ = remove_node_returning(roots, node_id);
-}
-
-fn remove_node_by_path(roots: &mut Vec<FileNode>, path: &str) -> Option<FileNode> {
-    if let Some(idx) = roots.iter().position(|n| n.path == path) {
-        return Some(roots.remove(idx));
-    }
-    for node in roots.iter_mut() {
-        if let Some(found) = remove_node_by_path(&mut node.children, path) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-/// 递归更新子节点的路径前缀
-fn update_children_paths(node: &mut FileNode, old_prefix: &str, new_prefix: &str) {
-    let old_prefix = old_prefix.trim_end_matches('/');
-    let old_prefix_slash = format!("{}/", old_prefix);
-    for child in node.children.iter_mut() {
-        if child.path.starts_with(&old_prefix_slash) {
-            child.path = format!("{}{}", new_prefix, &child.path[old_prefix.len()..]);
-        }
-        update_children_paths(child, old_prefix, new_prefix);
-    }
-}
-
-/// 排序节点 (文件夹优先，然后按字母顺序)
-fn sort_nodes(nodes: &mut [FileNode]) {
-    nodes.sort_by(|a, b| match (a.doc_id.is_none(), b.doc_id.is_none()) {
-        (true, false) => std::cmp::Ordering::Less,
-        (false, true) => std::cmp::Ordering::Greater,
-        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-    });
-}
-
-fn find_node_mut(roots: &mut [FileNode], node_id: NodeId) -> Option<&mut FileNode> {
-    for node in roots.iter_mut() {
-        if node.node_id == node_id {
-            return Some(node);
-        }
-        if let Some(found) = find_node_mut(&mut node.children, node_id) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn find_node_mut_by_path<'a>(roots: &'a mut [FileNode], path: &str) -> Option<&'a mut FileNode> {
-    for node in roots.iter_mut() {
-        if normalize_path(&node.path) == normalize_path(path) {
-            return Some(node);
-        }
-        if let Some(found) = find_node_mut_by_path(&mut node.children, path) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn parent_path_of(path: &str) -> Option<&str> {
-    path.rsplit_once('/').map(|(parent, _)| parent)
-}
-
-fn normalize_path(path: &str) -> String {
-    path.replace('\\', "/")
-}
-
-fn dedupe_tree(
-    nodes: &mut Vec<FileNode>,
-    seen_ids: &mut HashSet<NodeId>,
-    seen_paths: &mut HashSet<String>,
-) {
-    nodes.retain(|n| {
-        let path_key = normalize_path(&n.path);
-        seen_ids.insert(n.node_id) && seen_paths.insert(path_key)
-    });
-    for node in nodes.iter_mut() {
-        dedupe_tree(&mut node.children, seen_ids, seen_paths);
-    }
-    sort_nodes(nodes);
 }

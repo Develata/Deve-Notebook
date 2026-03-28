@@ -1,21 +1,23 @@
 use crate::api::{ConnectionStatus, WsService};
-use crate::storage::identity::{note_handshake, save_repo_vector, sign_sync_hello};
-use deve_core::models::PeerId;
-use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use super::super::types::HandshakeSignals;
 use super::handshake_bootstrap::restore_session_scope;
+#[path = "handshake_reset.rs"]
+mod handshake_reset;
+#[path = "handshake_send.rs"]
+mod handshake_send;
 #[path = "handshake_state.rs"]
 mod handshake_state;
+use self::handshake_reset::{
+    reset_disconnected_state, reset_scope_mismatch, suspend_current_handshake,
+};
+use self::handshake_send::{HandshakeAttemptCtx, spawn_handshake_attempt};
 use self::handshake_state::{
-    handshake_mode_key, reset_handshake_attempt, restore_bootstrap_key,
-    set_handshake_scope_nonce_if_changed, should_restore_session_scope, should_suspend_handshake,
-    suspended_handshake_mode_key,
+    handshake_mode_key, restore_bootstrap_key, set_handshake_scope_nonce_if_changed,
+    should_restore_session_scope, should_suspend_handshake,
 };
 
 /// 设置握手 Effect。
@@ -31,10 +33,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
         // 以便同一 scope 内的握手准备失败后能重新触发一次 attempt。
         let _handshake_retry_gate = signals.handshake_scope_nonce.get();
         if status_signal.get() != ConnectionStatus::Connected {
-            *last_mode.borrow_mut() = None;
-            ws_clone.clear_writer_ready();
-            signals.set_handshake_ready.set(false);
-            set_handshake_scope_nonce_if_changed(signals, None);
+            reset_disconnected_state(&last_mode, &ws_clone, signals);
             return;
         }
 
@@ -60,19 +59,16 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             pending_branch_switch.as_ref(),
             pending_repo_switch.as_deref(),
         ) {
-            *last_mode.borrow_mut() = Some(suspended_handshake_mode_key(&endpoint));
-            if should_restore {
-                restore_session_scope(
-                    &ws,
-                    signals,
-                    repo_name.clone(),
-                    active_repo_id.clone(),
-                    branch.clone(),
-                );
-            }
-            ws.clear_writer_ready();
-            signals.set_handshake_ready.set(false);
-            set_handshake_scope_nonce_if_changed(signals, None);
+            suspend_current_handshake(
+                &last_mode,
+                &ws,
+                signals,
+                &endpoint,
+                should_restore,
+                repo_name.clone(),
+                active_repo_id.clone(),
+                branch.clone(),
+            );
             return;
         }
         let Some(mode_key) = handshake_mode_key(
@@ -112,119 +108,31 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             && maybe_mode.is_none()
             && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
         {
-            *last_mode.borrow_mut() = None;
-            if should_restore {
-                restore_session_scope(
-                    &ws,
-                    signals,
-                    repo_name.clone(),
-                    active_repo_id.clone(),
-                    branch.clone(),
-                );
-            }
-            ws.clear_writer_ready();
-            signals.set_handshake_ready.set(false);
-            set_handshake_scope_nonce_if_changed(signals, None);
+            reset_scope_mismatch(
+                &last_mode,
+                &ws,
+                signals,
+                should_restore,
+                repo_name.clone(),
+                active_repo_id.clone(),
+                branch.clone(),
+            );
             return;
         }
         set_handshake_scope_nonce_if_changed(signals, Some(current_scope_nonce));
-        let handshake_attempt = handshake_attempt.clone();
-        let failure_last_mode = last_mode.clone();
-        let failure_ws = ws.clone();
-        let next_attempt = handshake_attempt.get().saturating_add(1);
-        handshake_attempt.set(next_attempt);
-        spawn_local(async move {
-            if let Some(mode) = maybe_mode {
-                leptos::logging::warn!("{}", mode.banner_text());
-                if should_restore {
-                    restore_session_scope(
-                        &ws,
-                        signals,
-                        repo_name.clone(),
-                        active_repo_id.clone(),
-                        branch.clone(),
-                    );
-                }
-                ws.clear_writer_ready();
-                signals.set_handshake_ready.set(true);
-                set_handshake_scope_nonce_if_changed(signals, None);
-                return;
-            }
-            let Some(identity) = maybe_identity else {
-                return;
-            };
-
-            if should_restore {
-                restore_session_scope(
-                    &ws,
-                    signals,
-                    repo_name.clone(),
-                    active_repo_id.clone(),
-                    branch.clone(),
-                );
-            }
-            let sorted_map: BTreeMap<_, _> = vector.iter().collect();
-            let vec_bytes = match serde_json::to_vec(&sorted_map) {
-                Ok(bytes) => bytes,
-                Err(err) => {
-                    leptos::logging::error!("序列化握手向量失败: {}", err);
-                    reset_handshake_attempt(&failure_last_mode, &failure_ws, signals);
-                    return;
-                }
-            };
-            let mut msg = Vec::new();
-            msg.extend_from_slice(b"deve-handshake");
-            msg.extend_from_slice(identity.peer_id.as_bytes());
-            msg.extend_from_slice(&vec_bytes);
-
-            match sign_sync_hello(&identity, &msg).await {
-                Ok(signature) => {
-                    if handshake_attempt.get() != next_attempt {
-                        leptos::logging::log!("忽略过期握手结果: scope 已变更");
-                        return;
-                    }
-                    let peer_id = PeerId::new(&identity.peer_id);
-                    match uuid::Uuid::parse_str(&identity.repo_id) {
-                        Ok(repo_id) => {
-                            match serde_json::to_string(&vector) {
-                                Ok(vector_json) => {
-                                    let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
-                                }
-                                Err(err) => {
-                                    leptos::logging::warn!("保存握手向量失败: {}", err);
-                                }
-                            }
-                            let _ = note_handshake(&identity.repo_id).await;
-                            let writer_peer_id = peer_id.clone();
-                            ws.send(ClientMessage::SyncHello {
-                                peer_id,
-                                pub_key: identity.public_key.clone(),
-                                signature,
-                                vector,
-                                repo_id,
-                                scope_nonce: current_scope_nonce,
-                            });
-                            ws.send(ClientMessage::RegisterWriter {
-                                peer_id: writer_peer_id,
-                                repo_id,
-                                scope_nonce: current_scope_nonce,
-                            });
-                        }
-                        Err(err) => {
-                            leptos::logging::error!(
-                                "跳过 SyncHello: 非法 repo_id {} ({})",
-                                identity.repo_id,
-                                err
-                            );
-                            reset_handshake_attempt(&failure_last_mode, &failure_ws, signals);
-                        }
-                    }
-                }
-                Err(err) => {
-                    leptos::logging::error!("WebCrypto 握手签名失败: {}", err);
-                    reset_handshake_attempt(&failure_last_mode, &failure_ws, signals);
-                }
-            }
+        spawn_handshake_attempt(HandshakeAttemptCtx {
+            ws: ws.clone(),
+            signals,
+            maybe_mode,
+            maybe_identity,
+            vector,
+            repo_name,
+            active_repo_id,
+            branch,
+            current_scope_nonce,
+            should_restore,
+            handshake_attempt: handshake_attempt.clone(),
+            failure_last_mode: last_mode.clone(),
         });
     });
 }

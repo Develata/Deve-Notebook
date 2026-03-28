@@ -1,134 +1,25 @@
-// apps/web/src/hooks/use_core/contexts.rs
-//! 子上下文定义：将 CoreState 按领域拆分为 6 个独立上下文。
-//! 组件按需 `expect_context::<XxxContext>()` 而非依赖单一巨型结构。
-//!
-//! 部分字段暂未被组件直接读取（仅通过 CoreState 兼容层使用），
-//! 待后续组件全部迁移后自然消除。
+//! 子上下文导出入口。
 #![allow(dead_code)]
 
-pub use super::dashboard_context::{DashboardContext, SystemMetricsData};
-use super::diff_session::DiffSessionWire;
-use super::pending::PendingLocalEdits;
-use super::state::PluginResponse;
-use super::types::{ChatMessage, PendingBranchTarget};
-use crate::editor::EditorStats;
-use deve_core::models::{DocId, PeerId};
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
-use deve_core::tree::FileNode;
-use leptos::prelude::*;
+#[path = "contexts_branch.rs"]
+mod branch;
+#[path = "contexts_chat.rs"]
+mod chat;
+#[path = "contexts_dashboard.rs"]
+mod dashboard;
+#[path = "contexts_doc.rs"]
+mod doc;
+#[path = "contexts_editor.rs"]
+mod editor;
+#[path = "contexts_source_control.rs"]
+mod source_control;
+#[path = "contexts_sync.rs"]
+mod sync;
 
-/// 文档与文件树上下文
-#[derive(Clone)]
-pub struct DocContext {
-    pub docs: ReadSignal<Vec<(DocId, String)>>,
-    pub current_doc: ReadSignal<Option<DocId>>,
-    pub set_current_doc: WriteSignal<Option<DocId>>,
-    pub tree_nodes: ReadSignal<Vec<FileNode>>,
-    pub on_doc_select: Callback<DocId>,
-    pub on_doc_create: Callback<String>,
-    pub on_doc_rename: Callback<(String, String)>,
-    pub on_doc_delete: Callback<String>,
-    pub on_doc_copy: Callback<(String, String)>,
-    pub on_doc_move: Callback<(String, String)>,
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
-    pub on_search: Callback<String>,
-}
-
-/// 编辑器状态上下文
-#[derive(Clone)]
-pub struct EditorContext {
-    pub docs: ReadSignal<Vec<(DocId, String)>>,
-    pub current_doc: ReadSignal<Option<DocId>>,
-    pub stats: ReadSignal<EditorStats>,
-    pub on_stats: Callback<EditorStats>,
-    pub load_state: ReadSignal<String>,
-    pub set_load_state: WriteSignal<String>,
-    pub load_progress: ReadSignal<(usize, usize)>,
-    pub set_load_progress: WriteSignal<(usize, usize)>,
-    pub load_eta_ms: ReadSignal<u64>,
-    pub set_load_eta_ms: WriteSignal<u64>,
-    pub doc_version: ReadSignal<u64>,
-    pub set_doc_version: WriteSignal<u64>,
-    pub playback_version: ReadSignal<u64>,
-    pub set_playback_version: WriteSignal<u64>,
-    pub is_spectator: Signal<bool>,
-    pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub current_repo_id: ReadSignal<Option<String>>,
-    pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub handshake_ready: ReadSignal<bool>,
-    pub handshake_scope_nonce: ReadSignal<Option<u64>>,
-    pub pending_local_edits: ReadSignal<PendingLocalEdits>,
-    pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
-}
-
-/// AI 聊天与插件上下文
-#[derive(Clone)]
-pub struct ChatContext {
-    pub messages: ReadSignal<Vec<ChatMessage>>,
-    pub set_messages: WriteSignal<Vec<ChatMessage>>,
-    pub is_streaming: ReadSignal<bool>,
-    pub set_is_streaming: WriteSignal<bool>,
-    pub ai_mode: ReadSignal<String>,
-    pub set_ai_mode: WriteSignal<String>,
-    pub plugin_last_response: ReadSignal<PluginResponse>,
-    pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
-}
-
-/// 同步 / 合并上下文
-#[derive(Clone)]
-pub struct SyncMergeContext {
-    pub sync_mode: ReadSignal<String>,
-    pub pending_ops_count: ReadSignal<u32>,
-    pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
-    pub on_get_sync_mode: Callback<()>,
-    pub on_set_sync_mode: Callback<String>,
-    pub on_get_pending_ops: Callback<()>,
-    pub on_confirm_merge: Callback<()>,
-    pub on_discard_pending: Callback<()>,
-    pub on_merge_peer: Callback<String>,
-}
-
-/// 版本控制 (Source Control) 上下文
-#[derive(Clone)]
-pub struct SourceControlContext {
-    pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
-    pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
-    pub commit_history: ReadSignal<Vec<CommitInfo>>,
-    pub current_repo_id: ReadSignal<Option<String>>,
-    pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub on_get_changes: Callback<()>,
-    pub on_stage_file: Callback<ChangeEntry>,
-    pub on_stage_files: Callback<Vec<ChangeEntry>>,
-    pub on_unstage_file: Callback<ChangeEntry>,
-    pub on_unstage_files: Callback<Vec<ChangeEntry>>,
-    pub on_discard_file: Callback<ChangeEntry>,
-    pub on_commit: Callback<String>,
-    pub on_get_history: Callback<u32>,
-    pub diff_content: ReadSignal<Option<DiffSessionWire>>,
-    pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
-    pub on_get_doc_diff: Callback<ChangeEntry>,
-    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
-    pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
-    pub on_get_commit_diff: Callback<(Option<String>, String)>,
-    pub on_commit_and_push: Callback<String>,
-}
-
-/// 分支 / 仓库上下文
-#[derive(Clone)]
-pub struct BranchContext {
-    pub active_branch: ReadSignal<Option<PeerId>>,
-    pub set_active_branch: WriteSignal<Option<PeerId>>,
-    pub on_switch_branch: Callback<Option<String>>,
-    pub current_repo: ReadSignal<Option<String>>,
-    pub set_current_repo: WriteSignal<Option<String>>,
-    pub current_repo_id: ReadSignal<Option<String>>,
-    pub set_current_repo_id: WriteSignal<Option<String>>,
-    pub on_switch_repo: Callback<String>,
-    pub shadow_repos: ReadSignal<Vec<String>>,
-    pub on_list_shadows: Callback<()>,
-    pub repo_list: ReadSignal<Vec<String>>,
-}
+pub use branch::BranchContext;
+pub use chat::ChatContext;
+pub use dashboard::{DashboardContext, SystemMetricsData};
+pub use doc::DocContext;
+pub use editor::EditorContext;
+pub use source_control::SourceControlContext;
+pub use sync::SyncMergeContext;
