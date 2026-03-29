@@ -111,13 +111,17 @@
         }
       };
 
+      window.queueEditorMount = (element, onUpdate) => {
+        window._editor_queue = [{ element, onUpdate }];
+      };
+
       // Rust calls this immediately, so we queue it until Modules are loaded
       window.setupCodeMirror = function (element, onUpdate) {
         window.logToOverlay("Rust called setupCodeMirror");
         if (window._cm_loaded && window._realInit) {
           window._realInit(element, onUpdate);
         } else {
-          window._editor_queue.push({ element, onUpdate });
+          window.queueEditorMount(element, onUpdate);
           if (window.ensureEditorAdapter) {
             window.ensureEditorAdapter();
           }
@@ -334,7 +338,7 @@
             window._realInit(element, onUpdate);
             return;
           }
-          window._editor_queue.push({ element, onUpdate });
+          window.queueEditorMount(element, onUpdate);
           if (window.ensureEditorAdapter) {
             window.ensureEditorAdapter();
           }
@@ -343,12 +347,12 @@
         window._cm_loaded = true;
 
         if (window._editor_queue.length > 0) {
+          const pendingMounts = window._editor_queue.slice();
+          const latestMount = pendingMounts[pendingMounts.length - 1];
           window.logToOverlay(
-            `Flushing ${window._editor_queue.length} queued items...`,
+            `Flushing latest editor mount from ${pendingMounts.length} queued item(s)...`,
           );
-          window._editor_queue.forEach((item) => {
-            window._realInit(item.element, item.onUpdate);
-          });
+          window._realInit(latestMount.element, latestMount.onUpdate);
           window._editor_queue = [];
         }
       };

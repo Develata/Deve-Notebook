@@ -13,7 +13,6 @@ pub(super) fn create_doc_select_callback(
     Callback::new(move |id: DocId| {
         if current_doc.get_untracked() == Some(id) {
             set_explicit_home.set(false);
-            set_current_doc.set(Some(id));
             return;
         }
         let action = Callback::new(move |_: ()| {
