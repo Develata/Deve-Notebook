@@ -4,6 +4,12 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
 use super::super::types::PendingBranchTarget;
+#[path = "repo_projection.rs"]
+mod repo_projection;
+#[path = "repo_scope.rs"]
+mod repo_scope;
+use self::repo_projection::init_repo_projection_signals;
+use self::repo_scope::init_repo_scope_signals;
 
 #[derive(Clone, Copy)]
 pub(super) struct RepoSignals {
@@ -44,58 +50,43 @@ pub(super) struct RepoSignals {
 }
 
 pub(super) fn init_repo_signals() -> RepoSignals {
-    let (active_branch, set_active_branch) = signal(None::<PeerId>);
-    let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchTarget>);
-    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(None::<u64>);
-    let (current_repo, set_current_repo) = signal(None::<String>);
-    let (current_repo_id, set_current_repo_id) = signal(None::<String>);
-    let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
-    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
-    let (current_scope_nonce, set_current_scope_nonce) = signal(0u64);
-    let (shadow_repos, set_shadow_repos) = signal(Vec::new());
-    let (shadow_list_request_id, set_shadow_list_request_id) = signal(None::<String>);
-    let (repo_list, set_repo_list) = signal(Vec::new());
-    let (repo_list_request_id, set_repo_list_request_id) = signal(None::<String>);
-    let (doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
-    let (tree_request_id, set_tree_request_id) = signal(None::<String>);
-    let (tree_nodes, set_tree_nodes) = signal(Vec::<FileNode>::new());
-    let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
-    let (sync_banner, set_sync_banner) = signal(None::<String>);
+    let scope = init_repo_scope_signals();
+    let projection = init_repo_projection_signals();
 
     RepoSignals {
-        active_branch,
-        set_active_branch,
-        pending_branch_switch,
-        set_pending_branch_switch,
-        pending_branch_switch_nonce,
-        set_pending_branch_switch_nonce,
-        current_repo,
-        set_current_repo,
-        current_repo_id,
-        set_current_repo_id,
-        pending_repo_switch,
-        set_pending_repo_switch,
-        pending_repo_switch_nonce,
-        set_pending_repo_switch_nonce,
-        current_scope_nonce,
-        set_current_scope_nonce,
-        shadow_repos,
-        set_shadow_repos,
-        shadow_list_request_id,
-        set_shadow_list_request_id,
-        repo_list,
-        set_repo_list,
-        repo_list_request_id,
-        set_repo_list_request_id,
-        doc_list_request_id,
-        set_doc_list_request_id,
-        tree_request_id,
-        set_tree_request_id,
-        tree_nodes,
-        set_tree_nodes,
-        degraded_sync_mode,
-        set_degraded_sync_mode,
-        sync_banner,
-        set_sync_banner,
+        active_branch: scope.active_branch,
+        set_active_branch: scope.set_active_branch,
+        pending_branch_switch: scope.pending_branch_switch,
+        set_pending_branch_switch: scope.set_pending_branch_switch,
+        pending_branch_switch_nonce: scope.pending_branch_switch_nonce,
+        set_pending_branch_switch_nonce: scope.set_pending_branch_switch_nonce,
+        current_repo: scope.current_repo,
+        set_current_repo: scope.set_current_repo,
+        current_repo_id: scope.current_repo_id,
+        set_current_repo_id: scope.set_current_repo_id,
+        pending_repo_switch: scope.pending_repo_switch,
+        set_pending_repo_switch: scope.set_pending_repo_switch,
+        pending_repo_switch_nonce: scope.pending_repo_switch_nonce,
+        set_pending_repo_switch_nonce: scope.set_pending_repo_switch_nonce,
+        current_scope_nonce: scope.current_scope_nonce,
+        set_current_scope_nonce: scope.set_current_scope_nonce,
+        shadow_repos: projection.shadow_repos,
+        set_shadow_repos: projection.set_shadow_repos,
+        shadow_list_request_id: projection.shadow_list_request_id,
+        set_shadow_list_request_id: projection.set_shadow_list_request_id,
+        repo_list: projection.repo_list,
+        set_repo_list: projection.set_repo_list,
+        repo_list_request_id: projection.repo_list_request_id,
+        set_repo_list_request_id: projection.set_repo_list_request_id,
+        doc_list_request_id: projection.doc_list_request_id,
+        set_doc_list_request_id: projection.set_doc_list_request_id,
+        tree_request_id: projection.tree_request_id,
+        set_tree_request_id: projection.set_tree_request_id,
+        tree_nodes: projection.tree_nodes,
+        set_tree_nodes: projection.set_tree_nodes,
+        degraded_sync_mode: scope.degraded_sync_mode,
+        set_degraded_sync_mode: scope.set_degraded_sync_mode,
+        sync_banner: scope.sync_banner,
+        set_sync_banner: scope.set_sync_banner,
     }
 }
