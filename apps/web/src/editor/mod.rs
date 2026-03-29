@@ -40,15 +40,15 @@ pub fn Editor(
 ) -> impl IntoView {
     let editor_ref = NodeRef::<Div>::new();
     let state = hook::use_editor(doc_id, editor_ref, on_stats);
-    let local_version = state.local_version;
     let playback_version = state.playback_version;
     let content = state.content;
     let core = expect_context::<EditorContext>();
+    let doc_version = core.doc_version;
     let ws = use_context::<WsService>().expect("WsService should be provided");
     provide_context(EditorContentContext { content });
     Effect::new(move |_| {
         let spectator = core.is_spectator.get();
-        let is_pb = playback_version.get() < local_version.get_untracked();
+        let is_pb = playback_version.get() < doc_version.get();
         let loading = core.load_state.get() != "ready";
         let switching =
             core.pending_branch_switch.get().is_some() || core.pending_repo_switch.get().is_some();
@@ -70,9 +70,9 @@ pub fn Editor(
                     <div
                         node_ref=editor_ref
                         class="absolute inset-0"
-                        class:bg-gray-100=move || playback_version.get() < local_version.get()
+                        class:bg-gray-100=move || playback_version.get() < doc_version.get()
                     ></div>
-                    {move || if !embedded && playback_version.get() < local_version.get() {
+                    {move || if !embedded && playback_version.get() < doc_version.get() {
                         view! {
                             <div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
                                 "Spectator Mode (Read Only)"
