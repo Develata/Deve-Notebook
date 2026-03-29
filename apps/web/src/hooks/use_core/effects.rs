@@ -6,6 +6,7 @@ mod handshake_bootstrap;
 mod message;
 mod message_control;
 mod message_control_runtime;
+mod message_control_runtime_repo;
 mod message_dispatch;
 mod message_dispatch_control;
 mod message_dispatch_gate;

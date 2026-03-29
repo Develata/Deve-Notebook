@@ -1,4 +1,4 @@
-use super::{next_request_id, should_request_repo_sync_state};
+use super::message_control_runtime_repo::{next_request_id, should_request_repo_sync_state};
 use deve_core::protocol::ClientMessage;
 
 #[test]
