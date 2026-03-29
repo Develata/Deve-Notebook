@@ -3,6 +3,8 @@
 //!
 //! 将 `TreeDelta` 应用到本地树结构。
 
+#[path = "apply_tree_lookup.rs"]
+mod tree_lookup;
 #[path = "apply_tree_nodes.rs"]
 mod tree_nodes;
 
