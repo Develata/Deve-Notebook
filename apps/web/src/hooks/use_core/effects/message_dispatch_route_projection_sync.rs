@@ -1,10 +1,10 @@
 use deve_core::protocol::ServerMessage;
 
+use super::super::super::state::CoreSignals;
 use super::super::message_dispatch_sync::{
     handle_merge_complete_message, handle_pending_discarded_message,
     handle_pending_ops_info_message, handle_sync_hello_message, handle_sync_mode_status_message,
 };
-use super::super::super::state::CoreSignals;
 
 pub fn route_projection_sync_message(
     msg: ServerMessage,

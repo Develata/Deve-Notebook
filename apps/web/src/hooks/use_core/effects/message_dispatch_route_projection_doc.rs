@@ -1,7 +1,9 @@
 use deve_core::protocol::ServerMessage;
 
-use super::super::message_dispatch_projection::{handle_doc_list_message, handle_tree_update_message};
 use super::super::super::state::CoreSignals;
+use super::super::message_dispatch_projection::{
+    handle_doc_list_message, handle_tree_update_message,
+};
 
 pub fn route_projection_doc_message(
     msg: ServerMessage,
