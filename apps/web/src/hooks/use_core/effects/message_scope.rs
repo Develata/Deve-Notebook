@@ -10,15 +10,10 @@ use deve_core::models::PeerId;
 
 #[path = "message_scope_branch.rs"]
 mod branch;
+#[path = "message_scope_request.rs"]
+mod request;
 use self::branch::{expected_branch_string, expected_peer_branch};
-
-#[derive(Clone, Copy)]
-pub struct RequestMatch<'a> {
-    pub message_id: Option<&'a str>,
-    pub expected_id: Option<&'a str>,
-    pub scope_nonce: Option<u64>,
-    pub current_scope_nonce: u64,
-}
+pub use self::request::{RequestMatch, accepts_system_or_matching_request};
 
 #[derive(Clone)]
 pub struct RepoListScope {
@@ -54,7 +49,7 @@ pub fn repo_list_matches_scope(
     branch: Option<String>,
     scope: &RepoListScope,
 ) -> bool {
-    request_matches(request)
+    request::request_matches(request)
         && scope.pending_repo_switch.is_none()
         && scope.pending_branch_switch.is_none()
         && branch
@@ -65,34 +60,9 @@ pub fn repo_list_matches_scope(
 }
 
 pub fn shadow_list_matches_scope(request: RequestMatch<'_>, scope: &ShadowListScope) -> bool {
-    request_matches(request)
+    request::request_matches(request)
         && scope.pending_branch_switch.is_none()
         && scope.pending_repo_switch.is_none()
-}
-
-pub fn accepts_system_or_matching_request(
-    message_id: Option<&str>,
-    expected_id: Option<&str>,
-    scope_nonce: Option<u64>,
-    current_scope_nonce: u64,
-) -> bool {
-    request_matches(RequestMatch {
-        message_id,
-        expected_id,
-        scope_nonce,
-        current_scope_nonce,
-    })
-}
-
-fn request_matches(request: RequestMatch<'_>) -> bool {
-    let scoped_match = request.scope_nonce == Some(request.current_scope_nonce);
-    match request.message_id {
-        Some(message_id) => request.expected_id == Some(message_id) && scoped_match,
-        None => {
-            request.expected_id.is_none()
-                && request.scope_nonce == Some(request.current_scope_nonce)
-        }
-    }
 }
 
 #[cfg(test)]
