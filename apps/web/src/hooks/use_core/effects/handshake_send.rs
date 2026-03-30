@@ -1,19 +1,17 @@
 use crate::api::WsService;
 use crate::storage::DegradedSyncMode;
-use crate::storage::identity::{
-    StoredPeerIdentity, note_handshake, save_repo_vector, sign_sync_hello,
-};
+use crate::storage::identity::{StoredPeerIdentity, sign_sync_hello};
 use deve_core::models::{PeerId, VersionVector};
-use deve_core::protocol::ClientMessage;
 use leptos::prelude::Set;
 use leptos::task::spawn_local;
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use super::super::super::types::HandshakeSignals;
 use super::handshake_reset::restore_scope_if_needed;
 use super::handshake_state::{reset_handshake_attempt, set_handshake_scope_nonce_if_changed};
+#[path = "handshake_send_delivery.rs"]
+mod delivery;
 
 pub(super) struct HandshakeAttemptCtx {
     pub ws: WsService,
@@ -49,7 +47,7 @@ pub(super) fn spawn_handshake_attempt(ctx: HandshakeAttemptCtx) {
             set_handshake_scope_nonce_if_changed(ctx.signals, None);
             return;
         }
-        let Some(identity) = ctx.maybe_identity else {
+        let Some(ref identity) = ctx.maybe_identity else {
             return;
         };
 
@@ -61,62 +59,18 @@ pub(super) fn spawn_handshake_attempt(ctx: HandshakeAttemptCtx) {
             ctx.active_repo_id.clone(),
             ctx.branch.clone(),
         );
-        let sorted_map: BTreeMap<_, _> = ctx.vector.iter().collect();
-        let vec_bytes = match serde_json::to_vec(&sorted_map) {
-            Ok(bytes) => bytes,
+        let msg = match delivery::build_handshake_message(&identity.peer_id, &ctx.vector) {
+            Ok(msg) => msg,
             Err(err) => {
                 leptos::logging::error!("序列化握手向量失败: {}", err);
                 reset_handshake_attempt(&ctx.failure_last_mode, &ctx.ws, ctx.signals);
                 return;
             }
         };
-        let mut msg = Vec::new();
-        msg.extend_from_slice(b"deve-handshake");
-        msg.extend_from_slice(identity.peer_id.as_bytes());
-        msg.extend_from_slice(&vec_bytes);
 
         match sign_sync_hello(&identity, &msg).await {
             Ok(signature) => {
-                if ctx.handshake_attempt.get() != next_attempt {
-                    leptos::logging::log!("忽略过期握手结果: scope 已变更");
-                    return;
-                }
-                let peer_id = PeerId::new(&identity.peer_id);
-                match uuid::Uuid::parse_str(&identity.repo_id) {
-                    Ok(repo_id) => {
-                        match serde_json::to_string(&ctx.vector) {
-                            Ok(vector_json) => {
-                                let _ = save_repo_vector(&identity.repo_id, &vector_json).await;
-                            }
-                            Err(err) => {
-                                leptos::logging::warn!("保存握手向量失败: {}", err);
-                            }
-                        }
-                        let _ = note_handshake(&identity.repo_id).await;
-                        let writer_peer_id = peer_id.clone();
-                        ctx.ws.send(ClientMessage::SyncHello {
-                            peer_id,
-                            pub_key: identity.public_key.clone(),
-                            signature,
-                            vector: ctx.vector,
-                            repo_id,
-                            scope_nonce: ctx.current_scope_nonce,
-                        });
-                        ctx.ws.send(ClientMessage::RegisterWriter {
-                            peer_id: writer_peer_id,
-                            repo_id,
-                            scope_nonce: ctx.current_scope_nonce,
-                        });
-                    }
-                    Err(err) => {
-                        leptos::logging::error!(
-                            "跳过 SyncHello: 非法 repo_id {} ({})",
-                            identity.repo_id,
-                            err
-                        );
-                        reset_handshake_attempt(&ctx.failure_last_mode, &ctx.ws, ctx.signals);
-                    }
-                }
+                delivery::deliver_signed_handshake(&ctx, next_attempt, &identity, signature).await;
             }
             Err(err) => {
                 leptos::logging::error!("WebCrypto 握手签名失败: {}", err);
