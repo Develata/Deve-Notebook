@@ -24,7 +24,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let current_repo_id = core.current_repo_id;
     let pending_branch_switch = core.pending_branch_switch;
     let pending_repo_switch = core.pending_repo_switch;
-    let action_busy = Arc::new(AtomicBool::new(false));
+    let write_block = core.write_block;
+    let action_busy = StoredValue::new(Arc::new(AtomicBool::new(false)));
 
     let has_conflict = entry.has_conflict;
     let can_open_diff = can_request_doc_diff(&entry);
@@ -46,12 +47,12 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     };
 
     let entry_for_click = entry.clone();
-    let entry_for_unstage = entry.clone();
-    let entry_for_keep_fs = entry.clone();
-    let entry_for_keep_ledger = entry.clone();
-    let entry_for_open = entry.clone();
-    let entry_for_discard = entry.clone();
-    let entry_for_stage = entry.clone();
+    let entry_for_unstage = StoredValue::new(entry.clone());
+    let entry_for_keep_fs = StoredValue::new(entry.clone());
+    let entry_for_keep_ledger = StoredValue::new(entry.clone());
+    let entry_for_open_value = StoredValue::new(entry.clone());
+    let entry_for_discard = StoredValue::new(entry.clone());
+    let entry_for_stage = StoredValue::new(entry.clone());
 
     // 状态图标和颜色
     let (icon_char, color_cls) = match entry.status {
@@ -62,19 +63,15 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         ChangeStatus::Renamed => ("R", "text-added"),
     };
 
-    let action_busy_reset = action_busy.clone();
+    let action_busy_reset = action_busy;
     Effect::new(move |_| {
         let _ = core.staged_changes.get();
         let _ = core.unstaged_changes.get();
         let _ = core.notice.get();
-        action_busy_reset.store(false, Ordering::Release);
+        action_busy_reset
+            .get_value()
+            .store(false, Ordering::Release);
     });
-
-    let action_busy_unstage = action_busy.clone();
-    let action_busy_keep_fs = action_busy.clone();
-    let action_busy_keep_ledger = action_busy.clone();
-    let action_busy_discard = action_busy.clone();
-    let action_busy_stage = action_busy.clone();
 
     view! {
         <div
@@ -108,7 +105,31 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             <div class="flex items-center gap-2 pl-2">
                 // 操作按钮 (悬停显示)
                 <div class="hidden group-hover:!flex items-center gap-0.5 mr-1">
-                    {if is_staged {
+                    {move || {
+                        let blocked = write_block.get().is_some();
+                        if blocked {
+                            if !is_staged && can_open_diff {
+                                view! {
+                                    <button
+                                        class="p-0.5 hover:bg-active rounded text-secondary"
+                                        disabled=move || {
+                                            current_repo_id.get().is_none()
+                                                || pending_branch_switch.get().is_some()
+                                                || pending_repo_switch.get().is_some()
+                                        }
+                                        title=move || t::source_control::open_file(locale.get())
+                                        on:click=move |ev| {
+                                            ev.stop_propagation();
+                                            core.on_get_doc_diff.run(entry_for_open_value.get_value());
+                                        }
+                                    >
+                                        <ExternalLink class="w-3.5 h-3.5" />
+                                    </button>
+                                }.into_any()
+                            } else {
+                                view! {}.into_any()
+                            }
+                        } else if is_staged {
                         // 暂存区: 仅显示 Unstage 按钮
                         view! {
                                 <button
@@ -117,11 +138,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::unstage_changes(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
-                                    if action_busy_unstage.swap(true, Ordering::AcqRel) {
+                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
                                         return;
                                     }
                                     core.clear_notice.run(());
-                                    core.on_unstage_file.run(entry_for_unstage.clone());
+                                    core.on_unstage_file.run(entry_for_unstage.get_value());
                                 }
                             >
                                 <Minus class="w-3.5 h-3.5" />
@@ -136,11 +157,14 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::keep_file_system(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
-                                    if action_busy_keep_fs.swap(true, Ordering::AcqRel) {
+                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
                                         return;
                                     }
                                     core.clear_notice.run(());
-                                    core.on_resolve_conflict.run((entry_for_keep_fs.clone(), ConflictResolution::KeepFs));
+                                    core.on_resolve_conflict.run((
+                                        entry_for_keep_fs.get_value(),
+                                        ConflictResolution::KeepFs,
+                                    ));
                                 }
                             >
                                 <Upload class="w-3.5 h-3.5" />
@@ -151,11 +175,14 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::keep_ledger(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
-                                    if action_busy_keep_ledger.swap(true, Ordering::AcqRel) {
+                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
                                         return;
                                     }
                                     core.clear_notice.run(());
-                                    core.on_resolve_conflict.run((entry_for_keep_ledger.clone(), ConflictResolution::KeepLedger));
+                                    core.on_resolve_conflict.run((
+                                        entry_for_keep_ledger.get_value(),
+                                        ConflictResolution::KeepLedger,
+                                    ));
                                 }
                             >
                                 <Download class="w-3.5 h-3.5" />
@@ -174,7 +201,10 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                                 || pending_repo_switch.get().is_some()
                                         }
                                         title=move || t::source_control::open_file(locale.get())
-                                        on:click=move |ev| { ev.stop_propagation(); core.on_get_doc_diff.run(entry_for_open.clone()); }
+                                        on:click=move |ev| {
+                                            ev.stop_propagation();
+                                            core.on_get_doc_diff.run(entry_for_open_value.get_value());
+                                        }
                                     >
                                         <ExternalLink class="w-3.5 h-3.5" />
                                     </button>
@@ -188,11 +218,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::discard_changes(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
-                                    if action_busy_discard.swap(true, Ordering::AcqRel) {
+                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
                                         return;
                                     }
                                     core.clear_notice.run(());
-                                    core.on_discard_file.run(entry_for_discard.clone());
+                                    core.on_discard_file.run(entry_for_discard.get_value());
                                 }
                             >
                                 <RotateCcw class="w-3.5 h-3.5" />
@@ -203,17 +233,17 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::stage_changes(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
-                                    if action_busy_stage.swap(true, Ordering::AcqRel) {
+                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
                                         return;
                                     }
                                     core.clear_notice.run(());
-                                    core.on_stage_file.run(entry_for_stage.clone());
+                                    core.on_stage_file.run(entry_for_stage.get_value());
                                 }
                             >
                                 <Plus class="w-3.5 h-3.5" />
                             </button>
                         }.into_any()
-                    }}
+                    }}}
                 </div>
 
                 // 冲突指示 + 状态标记

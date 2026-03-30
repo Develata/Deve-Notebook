@@ -2,7 +2,7 @@ use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, bottom_bar, source_control as sc};
 use leptos::prelude::*;
 
-fn title(locale: Locale, block: RepoWriteBlock) -> String {
+pub(crate) fn blocked_title(locale: Locale, block: RepoWriteBlock) -> String {
     match block {
         RepoWriteBlock::SessionExpired => bottom_bar::unauthorized(locale).to_string(),
         RepoWriteBlock::Offline => bottom_bar::offline(locale).to_string(),
@@ -21,7 +21,7 @@ fn title(locale: Locale, block: RepoWriteBlock) -> String {
     }
 }
 
-fn hint(locale: Locale, block: RepoWriteBlock) -> &'static str {
+pub(crate) fn blocked_hint(locale: Locale, block: RepoWriteBlock) -> &'static str {
     match block {
         RepoWriteBlock::SessionExpired => match locale {
             Locale::En => "Sign in again before staging, discarding, or committing changes.",
@@ -67,10 +67,10 @@ pub fn StatusNotice(block: Signal<Option<RepoWriteBlock>>) -> impl IntoView {
         <Show when=move || block.get().is_some()>
             <div class="px-4 py-3 text-sm border-b border-default bg-panel">
                 <p class="text-primary font-medium">
-                    {move || block.get().map(|current| title(locale.get(), current)).unwrap_or_default()}
+                    {move || block.get().map(|current| blocked_title(locale.get(), current)).unwrap_or_default()}
                 </p>
                 <p class="mt-1 text-xs text-muted">
-                    {move || block.get().map(|current| hint(locale.get(), current)).unwrap_or_default()}
+                    {move || block.get().map(|current| blocked_hint(locale.get(), current)).unwrap_or_default()}
                 </p>
             </div>
         </Show>

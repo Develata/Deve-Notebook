@@ -6,6 +6,9 @@
 //! - Blue "Commit" button with dropdown (Commit & Push 占位)
 
 use crate::components::icons::*;
+use crate::components::sidebar::source_control::status_notice::{
+    blocked_hint as blocked_status_hint, blocked_title as blocked_status_title,
+};
 use crate::hooks::use_core::{ChatContext, ChatMessage, SourceControlContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -22,6 +25,7 @@ pub fn Commit() -> impl IntoView {
     let dropdown_open = RwSignal::new(false);
     let active_req_id = RwSignal::new(None::<String>);
     let saw_streaming = RwSignal::new(false);
+    let write_block = core.write_block;
 
     // 是否有暂存文件 (VS Code allows commiting all if none staged, but we keep it safe for now)
     let has_staged = move || !core.staged_changes.get().is_empty();
@@ -78,7 +82,12 @@ pub fn Commit() -> impl IntoView {
                     <textarea
                         name="commit-message"
                         class="w-full h-9 p-1.5 pr-20 text-[13px] bg-input border border-default rounded-[2px] focus:outline-none focus:border-b-accent focus:ring-1 focus:ring-accent placeholder:text-muted text-primary font-sans resize-none block leading-tight"
-                        placeholder=move || t::source_control::commit_message_placeholder(locale.get())
+                        placeholder=move || {
+                            write_block
+                                .get()
+                                .map(|block| blocked_status_hint(locale.get(), block))
+                                .unwrap_or_else(|| t::source_control::commit_message_placeholder(locale.get()))
+                        }
                         prop:value=msg
                         on:input=move |ev| set_msg.set(event_target_value(&ev))
                         on:keydown=on_keydown
@@ -86,7 +95,12 @@ pub fn Commit() -> impl IntoView {
                     />
                     <button
                         class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title=move || t::source_control::generate_commit_message(locale.get())
+                        title=move || {
+                            write_block
+                                .get()
+                                .map(|block| blocked_status_title(locale.get(), block))
+                                .unwrap_or_else(|| t::source_control::generate_commit_message(locale.get()).to_string())
+                        }
                         disabled=move || !can_prepare_commit() || is_generating.get()
                         on:click=move |_| {
                             if !(core.can_write.get_untracked()
@@ -147,6 +161,12 @@ pub fn Commit() -> impl IntoView {
                     <button
                         class="flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 rounded-l-[2px] flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm"
                         disabled=move || !can_commit_now()
+                        title=move || {
+                            write_block
+                                .get()
+                                .map(|block| blocked_status_title(locale.get(), block))
+                                .unwrap_or_else(|| t::source_control::commit(locale.get()).to_string())
+                        }
                         on:click=move |_| { dropdown_open.set(false); do_commit(); }
                     >
                         <span class="codicon codicon-check"></span>
@@ -155,6 +175,12 @@ pub fn Commit() -> impl IntoView {
                     <button
                         class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
                         disabled=move || !can_prepare_commit()
+                        title=move || {
+                            write_block
+                                .get()
+                                .map(|block| blocked_status_title(locale.get(), block))
+                                .unwrap_or_else(|| t::source_control::commit(locale.get()).to_string())
+                        }
                         on:click=move |_| dropdown_open.update(|b| *b = !*b)
                     >
                          <ChevronDown class="w-3.5 h-3.5" />

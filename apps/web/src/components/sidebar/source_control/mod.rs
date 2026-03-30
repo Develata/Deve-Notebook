@@ -52,6 +52,7 @@ pub fn SourceControlView() -> impl IntoView {
     let show_menu = RwSignal::new(false);
     let is_remote_branch = move || core.active_branch.get().is_some();
     let has_unstaged_changes = move || !core.unstaged_changes.get().is_empty();
+    let write_block = core.write_block;
     let header_bulk_busy = StoredValue::new(Arc::new(AtomicBool::new(false)));
 
     let header_bulk_busy_reset = header_bulk_busy;
@@ -126,8 +127,6 @@ pub fn SourceControlView() -> impl IntoView {
                         view! {
                         // 2. Changes Section
                         {move || {
-                            let header_bulk_busy_discard = header_bulk_busy.get_value();
-                            let header_bulk_busy_stage = header_bulk_busy.get_value();
                             if show_changes.get() {
                             view! {
                                 <div class="border-t border-default">
@@ -140,6 +139,7 @@ pub fn SourceControlView() -> impl IntoView {
                                         </span>
                                         <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
                                         <div class="hidden group-hover:flex items-center gap-1">
+                                            <Show when=move || write_block.get().is_none() && has_unstaged_changes()>
                                             <button
                                                 class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title=move || t::source_control::discard_all_changes(locale.get())
@@ -148,6 +148,8 @@ pub fn SourceControlView() -> impl IntoView {
                                                 }
                                                 on:click=move |ev| {
                                                     ev.stop_propagation();
+                                                    let header_bulk_busy_discard =
+                                                        header_bulk_busy.get_value();
                                                     if header_bulk_busy_discard.swap(true, Ordering::AcqRel) {
                                                         return;
                                                     }
@@ -167,6 +169,8 @@ pub fn SourceControlView() -> impl IntoView {
                                                 }
                                                 on:click=move |ev| {
                                                     ev.stop_propagation();
+                                                    let header_bulk_busy_stage =
+                                                        header_bulk_busy.get_value();
                                                     if header_bulk_busy_stage.swap(true, Ordering::AcqRel) {
                                                         return;
                                                     }
@@ -176,6 +180,7 @@ pub fn SourceControlView() -> impl IntoView {
                                             >
                                                 <Plus class="w-3.5 h-3.5" />
                                             </button>
+                                            </Show>
                                         </div>
                                     </button>
 

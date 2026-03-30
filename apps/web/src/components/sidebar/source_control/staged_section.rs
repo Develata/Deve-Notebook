@@ -16,6 +16,7 @@ use leptos::prelude::*;
 pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let write_block = core.write_block;
     let (bulk_busy, set_bulk_busy) = signal(false);
 
     // 折叠状态
@@ -55,6 +56,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                 // 操作按钮 + 计数徽章
                 <div class="flex items-center gap-2">
                     <div class="hidden group-hover:!flex items-center gap-1 text-primary" on:click=move |e| e.stop_propagation()>
+                        <Show when=move || write_block.get().is_none()>
                         <button
                             class="p-0.5 hover:bg-active rounded"
                             title=move || t::source_control::unstage_all_changes(locale.get())
@@ -67,6 +69,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                         >
                             <Minus class="w-3.5 h-3.5" />
                         </button>
+                        </Show>
                     </div>
                     <span class="bg-badge-count text-on-accent text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{staged_count}</span>
                 </div>
