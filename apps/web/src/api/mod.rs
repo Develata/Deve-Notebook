@@ -15,5 +15,6 @@ mod socket;
 mod status;
 mod writer_id;
 
+pub use self::auth_probe::{AuthProbe, probe_auth_status};
 pub use self::service::WsService;
 pub use self::status::ConnectionStatus;

@@ -38,14 +38,6 @@ pub(super) async fn attempt_login(
     }
 }
 
-pub async fn check_auth_status() -> Result<bool, String> {
-    Request::get("/api/auth/me")
-        .send()
-        .await
-        .map(|response| response.ok())
-        .map_err(|e| format!("网络错误: {}", e))
-}
-
 #[allow(dead_code)]
 pub async fn logout() -> Result<(), String> {
     let response = Request::post("/api/auth/logout")

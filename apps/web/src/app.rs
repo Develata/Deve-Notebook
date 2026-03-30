@@ -8,7 +8,8 @@
 //!
 //! - `App`: 根组件，提供语言环境上下文和认证状态管理。
 
-use crate::components::login::{AuthState, LoginPage, check_auth_status};
+use crate::api::{AuthProbe, probe_auth_status};
+use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage};
 use crate::components::main_layout::MainLayout;
 use crate::i18n::Locale;
 use gloo_timers::future::TimeoutFuture;
@@ -29,16 +30,24 @@ pub fn App() -> impl IntoView {
     provide_context(locale);
 
     // 认证状态
-    let (auth_state, set_auth_state) = signal(AuthState::Unauthenticated);
+    let (auth_state, set_auth_state) = signal(AuthState::Checking);
 
     // 启动时检查认证状态
     spawn_local(async move {
-        match check_auth_status().await {
-            Ok(true) => set_auth_state.set(AuthState::Authenticated),
-            Ok(false) => set_auth_state.set(AuthState::Unauthenticated),
-            Err(e) => {
-                leptos::logging::warn!("Auth check failed: {}", e);
-                set_auth_state.set(AuthState::Unauthenticated);
+        loop {
+            match probe_auth_status().await {
+                AuthProbe::Valid => {
+                    set_auth_state.set(AuthState::Authenticated);
+                    break;
+                }
+                AuthProbe::Invalid => {
+                    set_auth_state.set(AuthState::Unauthenticated);
+                    break;
+                }
+                AuthProbe::Unknown => {
+                    set_auth_state.set(AuthState::Unavailable);
+                    TimeoutFuture::new(AUTH_MONITOR_MS).await;
+                }
             }
         }
     });
@@ -51,10 +60,10 @@ pub fn App() -> impl IntoView {
             if auth_state.get_untracked() != AuthState::Authenticated {
                 continue;
             }
-            match check_auth_status().await {
-                Ok(true) => {}
-                Ok(false) => set_auth_state.set(AuthState::Unauthenticated),
-                Err(_) => {}
+            match probe_auth_status().await {
+                AuthProbe::Valid => {}
+                AuthProbe::Invalid => set_auth_state.set(AuthState::Unauthenticated),
+                AuthProbe::Unknown => {}
             }
         }
     });
@@ -65,6 +74,9 @@ pub fn App() -> impl IntoView {
                 <MainLayout
                     on_session_expired=Callback::new(move |_| set_auth_state.set(AuthState::Unauthenticated))
                 />
+            }.into_any(),
+            AuthState::Checking | AuthState::Unavailable => view! {
+                <AuthUnavailablePage />
             }.into_any(),
             _ => view! {
                 <LoginPage auth_state=auth_state set_auth_state=set_auth_state/>
