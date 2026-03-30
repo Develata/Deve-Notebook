@@ -51,7 +51,7 @@ pub fn create_source_control_callbacks(
     request: SourceControlRequestSignals,
 ) -> SourceControlCallbacks {
     let (on_get_changes, on_get_history, on_get_doc_diff, on_get_commit_diff) =
-        create_read_callbacks(ws, scope, request);
+        create_read_callbacks(ws, scope, write_gate, request);
     let (
         on_stage_file,
         on_stage_files,

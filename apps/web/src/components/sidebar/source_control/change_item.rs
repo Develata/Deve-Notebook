@@ -84,6 +84,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 if current_repo_id.get().is_none()
                     || pending_branch_switch.get().is_some()
                     || pending_repo_switch.get().is_some()
+                    || write_block.get().is_some()
                     || !can_open_diff
                 {
                     return;
@@ -108,27 +109,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     {move || {
                         let blocked = write_block.get().is_some();
                         if blocked {
-                            if !is_staged && can_open_diff {
-                                view! {
-                                    <button
-                                        class="p-0.5 hover:bg-active rounded text-secondary"
-                                        disabled=move || {
-                                            current_repo_id.get().is_none()
-                                                || pending_branch_switch.get().is_some()
-                                                || pending_repo_switch.get().is_some()
-                                        }
-                                        title=move || t::source_control::open_file(locale.get())
-                                        on:click=move |ev| {
-                                            ev.stop_propagation();
-                                            core.on_get_doc_diff.run(entry_for_open_value.get_value());
-                                        }
-                                    >
-                                        <ExternalLink class="w-3.5 h-3.5" />
-                                    </button>
-                                }.into_any()
-                            } else {
-                                view! {}.into_any()
-                            }
+                            view! {}.into_any()
                         } else if is_staged {
                         // 暂存区: 仅显示 Unstage 按钮
                         view! {
