@@ -9,6 +9,8 @@ use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::{Locale, t};
 use deve_core::source_control::{ChangeEntry, ChangeStatus, ConflictResolution};
 use leptos::prelude::*;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// 变更条目组件
 ///
@@ -22,6 +24,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let current_repo_id = core.current_repo_id;
     let pending_branch_switch = core.pending_branch_switch;
     let pending_repo_switch = core.pending_repo_switch;
+    let action_busy = Arc::new(AtomicBool::new(false));
 
     let has_conflict = entry.has_conflict;
     let can_open_diff = can_request_doc_diff(&entry);
@@ -58,6 +61,20 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         ChangeStatus::Deleted => ("D", "text-deleted"),
         ChangeStatus::Renamed => ("R", "text-added"),
     };
+
+    let action_busy_reset = action_busy.clone();
+    Effect::new(move |_| {
+        let _ = core.staged_changes.get();
+        let _ = core.unstaged_changes.get();
+        let _ = core.notice.get();
+        action_busy_reset.store(false, Ordering::Release);
+    });
+
+    let action_busy_unstage = action_busy.clone();
+    let action_busy_keep_fs = action_busy.clone();
+    let action_busy_keep_ledger = action_busy.clone();
+    let action_busy_discard = action_busy.clone();
+    let action_busy_stage = action_busy.clone();
 
     view! {
         <div
@@ -100,6 +117,9 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::unstage_changes(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
+                                    if action_busy_unstage.swap(true, Ordering::AcqRel) {
+                                        return;
+                                    }
                                     core.clear_notice.run(());
                                     core.on_unstage_file.run(entry_for_unstage.clone());
                                 }
@@ -116,6 +136,9 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::keep_file_system(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
+                                    if action_busy_keep_fs.swap(true, Ordering::AcqRel) {
+                                        return;
+                                    }
                                     core.clear_notice.run(());
                                     core.on_resolve_conflict.run((entry_for_keep_fs.clone(), ConflictResolution::KeepFs));
                                 }
@@ -128,6 +151,9 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::keep_ledger(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
+                                    if action_busy_keep_ledger.swap(true, Ordering::AcqRel) {
+                                        return;
+                                    }
                                     core.clear_notice.run(());
                                     core.on_resolve_conflict.run((entry_for_keep_ledger.clone(), ConflictResolution::KeepLedger));
                                 }
@@ -162,6 +188,9 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::discard_changes(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
+                                    if action_busy_discard.swap(true, Ordering::AcqRel) {
+                                        return;
+                                    }
                                     core.clear_notice.run(());
                                     core.on_discard_file.run(entry_for_discard.clone());
                                 }
@@ -174,6 +203,9 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 title=move || t::source_control::stage_changes(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
+                                    if action_busy_stage.swap(true, Ordering::AcqRel) {
+                                        return;
+                                    }
                                     core.clear_notice.run(());
                                     core.on_stage_file.run(entry_for_stage.clone());
                                 }

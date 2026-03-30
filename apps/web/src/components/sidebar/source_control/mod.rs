@@ -31,6 +31,8 @@ use self::status_notice::StatusNotice;
 use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
 use leptos::prelude::*;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[component]
 pub fn SourceControlView() -> impl IntoView {
@@ -50,6 +52,17 @@ pub fn SourceControlView() -> impl IntoView {
     let show_menu = RwSignal::new(false);
     let is_remote_branch = move || core.active_branch.get().is_some();
     let has_unstaged_changes = move || !core.unstaged_changes.get().is_empty();
+    let header_bulk_busy = StoredValue::new(Arc::new(AtomicBool::new(false)));
+
+    let header_bulk_busy_reset = header_bulk_busy;
+    Effect::new(move |_| {
+        let _ = core.staged_changes.get();
+        let _ = core.unstaged_changes.get();
+        let _ = core.notice.get();
+        header_bulk_busy_reset
+            .get_value()
+            .store(false, Ordering::Release);
+    });
 
     use crate::i18n::t;
 
@@ -106,12 +119,16 @@ pub fn SourceControlView() -> impl IntoView {
                     block=core.write_block
                     clear_notice=core.clear_notice
                 />
-                {move || if is_remote_branch() {
-                    view! {}.into_any()
-                } else {
-                    view! {
+                {move || {
+                    if is_remote_branch() {
+                        view! {}.into_any()
+                    } else {
+                        view! {
                         // 2. Changes Section
-                        {move || if show_changes.get() {
+                        {move || {
+                            let header_bulk_busy_discard = header_bulk_busy.get_value();
+                            let header_bulk_busy_stage = header_bulk_busy.get_value();
+                            if show_changes.get() {
                             view! {
                                 <div class="border-t border-default">
                                     <button
@@ -126,9 +143,14 @@ pub fn SourceControlView() -> impl IntoView {
                                             <button
                                                 class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title=move || t::source_control::discard_all_changes(locale.get())
-                                                disabled=move || !core.can_write.get() || !has_unstaged_changes()
+                                                disabled=move || {
+                                                    !core.can_write.get() || !has_unstaged_changes()
+                                                }
                                                 on:click=move |ev| {
                                                     ev.stop_propagation();
+                                                    if header_bulk_busy_discard.swap(true, Ordering::AcqRel) {
+                                                        return;
+                                                    }
                                                     core.clear_notice.run(());
                                                     for entry in core.unstaged_changes.get_untracked() {
                                                         core.on_discard_file.run(entry);
@@ -140,9 +162,14 @@ pub fn SourceControlView() -> impl IntoView {
                                             <button
                                                 class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title=move || t::source_control::stage_all_changes(locale.get())
-                                                disabled=move || !core.can_write.get() || !has_unstaged_changes()
+                                                disabled=move || {
+                                                    !core.can_write.get() || !has_unstaged_changes()
+                                                }
                                                 on:click=move |ev| {
                                                     ev.stop_propagation();
+                                                    if header_bulk_busy_stage.swap(true, Ordering::AcqRel) {
+                                                        return;
+                                                    }
                                                     core.clear_notice.run(());
                                                     core.on_stage_files.run(core.unstaged_changes.get_untracked());
                                                 }
@@ -166,7 +193,7 @@ pub fn SourceControlView() -> impl IntoView {
                             }.into_any()
                         } else {
                             view! {}.into_any()
-                        }}
+                        }}}
 
                         // 3. History Section
                         {move || if show_graph.get() {
@@ -174,8 +201,9 @@ pub fn SourceControlView() -> impl IntoView {
                         } else {
                             view! {}.into_any()
                         }}
+                        }
+                            .into_any()
                     }
-                        .into_any()
                 }}
 
                 <div class="h-8"></div>
