@@ -7,11 +7,11 @@ use leptos::prelude::*;
 mod accept;
 #[path = "message_repo_scope_logic.rs"]
 mod logic;
+#[cfg(test)]
+pub use self::accept::accepts_write_ready;
 pub use self::accept::{
     accepts_edit_rejected_message, accepts_protocol_error_message, accepts_write_ready_message,
 };
-#[cfg(test)]
-pub use self::accept::accepts_write_ready;
 
 use super::super::effects_sc_scope::matches_current_repo;
 use super::message_scope::peer_branch_matches_scope;
