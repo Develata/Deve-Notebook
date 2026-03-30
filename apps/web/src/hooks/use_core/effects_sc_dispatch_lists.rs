@@ -33,6 +33,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
+            ctx.set_notice.set(None);
             ctx.set_changes_request_id.set(None);
             ctx.set_staged.set(staged.clone());
             ctx.set_unstaged.set(unstaged.clone());
@@ -56,6 +57,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
+            ctx.set_notice.set(None);
             ctx.set_commit_history_request_id.set(None);
             ctx.set_history.set(commits.clone());
             true
@@ -80,6 +82,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
+            ctx.set_notice.set(None);
             ctx.set_doc_diff_request_id.set(None);
             apply_doc_diff(path, old_content, new_content, ctx.set_diff);
             true
@@ -102,6 +105,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
+            ctx.set_notice.set(None);
             ctx.set_commit_diff_request_id.set(None);
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
             ctx.set_commit_diff.set(diffs.clone());

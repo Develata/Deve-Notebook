@@ -1,5 +1,6 @@
 use super::*;
 use crate::hooks::use_core::effects_sc_state;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
 #[test]
 fn clear_repo_scoped_state_resets_source_control_view() {
@@ -40,6 +41,10 @@ fn clear_repo_scoped_state_resets_source_control_view() {
         old_content: "old".into(),
         new_content: "new".into(),
     }]);
+    let (notice, set_notice) = signal(Some(SourceControlNotice {
+        code: deve_core::protocol::ServerErrorCode::ScNothingToCommit,
+        detail: None,
+    }));
 
     clear_repo_scoped_state(effects_sc_state::ScStateResetSignals {
         set_staged,
@@ -51,6 +56,7 @@ fn clear_repo_scoped_state_resets_source_control_view() {
         set_diff,
         set_commit_diff_request_id,
         set_commit_diff,
+        set_notice,
     });
 
     assert!(staged.get_untracked().is_empty());
@@ -62,4 +68,5 @@ fn clear_repo_scoped_state_resets_source_control_view() {
     assert_eq!(diff.get_untracked(), None);
     assert_eq!(commit_diff_request_id.get_untracked(), None);
     assert!(commit_diff.get_untracked().is_empty());
+    assert_eq!(notice.get_untracked(), None);
 }

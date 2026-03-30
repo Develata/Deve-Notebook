@@ -90,6 +90,8 @@ pub(super) fn assemble_core_state(
         set_diff_content: sc.set_diff_content,
         on_get_doc_diff: sc.on_get_doc_diff,
         commit_diff_result: sc.commit_diff_result,
+        source_control_notice: sc.source_control_notice,
+        set_source_control_notice: sc.set_source_control_notice,
         on_resolve_conflict: sc.on_resolve_conflict,
         on_get_commit_diff: sc.on_get_commit_diff,
         on_commit_and_push: sc.on_commit_and_push,

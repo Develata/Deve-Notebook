@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use super::super::diff_session::DiffSessionWire;
 use super::super::effects_sc_scope::matches_current_scope;
 use super::super::effects_sc_state::scoped_ack_matches;
+use super::super::source_control_notice::SourceControlNotice;
 use super::super::types::PendingBranchTarget;
 
 pub(crate) struct ScMessageContext<'a> {
@@ -24,6 +25,7 @@ pub(crate) struct ScMessageContext<'a> {
     pub(crate) commit_diff_request_id: ReadSignal<Option<String>>,
     pub(crate) set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub(crate) set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
+    pub(crate) set_notice: WriteSignal<Option<SourceControlNotice>>,
     pub(crate) current_repo_id: ReadSignal<Option<String>>,
     pub(crate) active_branch: ReadSignal<Option<PeerId>>,
     pub(crate) pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,

@@ -35,6 +35,7 @@ pub fn Commit() -> impl IntoView {
         {
             return;
         }
+        core.clear_notice.run(());
         core.on_commit.run(msg.get());
         set_msg.set(String::new());
     };
@@ -81,7 +82,7 @@ pub fn Commit() -> impl IntoView {
                         prop:value=msg
                         on:input=move |ev| set_msg.set(event_target_value(&ev))
                         on:keydown=on_keydown
-                        disabled=can_prepare_commit
+                        disabled=move || !can_prepare_commit()
                     />
                     <button
                         class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -145,7 +146,7 @@ pub fn Commit() -> impl IntoView {
                 <div class="flex relative">
                     <button
                         class="flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 rounded-l-[2px] flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm"
-                        disabled=can_commit_now
+                        disabled=move || !can_commit_now()
                         on:click=move |_| { dropdown_open.set(false); do_commit(); }
                     >
                         <span class="codicon codicon-check"></span>
@@ -176,6 +177,7 @@ pub fn Commit() -> impl IntoView {
                                     disabled=move || !can_commit_now()
                                     on:click=move |_| {
                                         dropdown_open.set(false);
+                                        core.clear_notice.run(());
                                         core.on_commit_and_push.run(msg.get());
                                         set_msg.set(String::new());
                                     }

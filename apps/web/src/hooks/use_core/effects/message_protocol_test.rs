@@ -2,8 +2,9 @@
 mod support;
 
 use super::clear_failed_scope_switch;
+use super::record_source_control_notice;
 use crate::hooks::use_core::PendingBranchTarget;
-use deve_core::protocol::ServerErrorCode;
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use leptos::prelude::GetUntracked;
 use support::protocol_signal_harness;
 
@@ -84,4 +85,28 @@ fn matching_switch_nonce_always_clears_pending_scope_switches() {
         assert_eq!(harness.pending_branch_switch.get_untracked(), None);
         assert_eq!(harness.pending_repo_switch.get_untracked(), None);
     }
+}
+
+#[test]
+fn source_control_errors_are_recorded_as_panel_notice() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    let stored = record_source_control_notice(
+        &ServerError::with_detail(ServerErrorCode::ScNothingToCommit, "no staged changes"),
+        harness.control().set_source_control_notice,
+    );
+    assert!(stored);
+    let notice = harness.source_control_notice.get_untracked().unwrap();
+    assert_eq!(notice.code, ServerErrorCode::ScNothingToCommit);
+    assert_eq!(notice.detail.as_deref(), Some("no staged changes"));
+}
+
+#[test]
+fn non_source_control_errors_do_not_record_panel_notice() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    let stored = record_source_control_notice(
+        &ServerError::new(ServerErrorCode::RequestFailed),
+        harness.control().set_source_control_notice,
+    );
+    assert!(!stored);
+    assert_eq!(harness.source_control_notice.get_untracked(), None);
 }

@@ -29,6 +29,7 @@ pub fn handle_sc_or_remaining<F>(
         signals.commit_diff_request_id,
         signals.set_commit_diff_request_id,
         signals.set_commit_diff_result,
+        signals.set_source_control_notice,
         signals.current_repo_id,
         signals.active_branch,
         signals.pending_branch_switch,

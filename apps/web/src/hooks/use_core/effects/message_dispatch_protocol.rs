@@ -25,6 +25,7 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
         set_commit_history_request_id: signals.set_commit_history_request_id,
         set_doc_diff_request_id: signals.set_doc_diff_request_id,
         set_commit_diff_request_id: signals.set_commit_diff_request_id,
+        set_source_control_notice: signals.set_source_control_notice,
     }
 }
 

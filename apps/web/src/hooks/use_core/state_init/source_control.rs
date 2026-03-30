@@ -2,6 +2,7 @@ use deve_core::source_control::CommitFileDiff;
 use leptos::prelude::*;
 
 use super::super::diff_session::DiffSessionWire;
+use super::super::source_control_notice::SourceControlNotice;
 
 #[derive(Clone, Copy)]
 pub(super) struct SourceControlSignals {
@@ -23,6 +24,8 @@ pub(super) struct SourceControlSignals {
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
     pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
+    pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
 }
 
 pub(super) fn init_source_control_signals() -> SourceControlSignals {
@@ -35,6 +38,7 @@ pub(super) fn init_source_control_signals() -> SourceControlSignals {
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
     let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
+    let (source_control_notice, set_source_control_notice) = signal(None::<SourceControlNotice>);
 
     SourceControlSignals {
         staged_changes,
@@ -55,5 +59,7 @@ pub(super) fn init_source_control_signals() -> SourceControlSignals {
         set_commit_diff_request_id,
         commit_diff_result,
         set_commit_diff_result,
+        source_control_notice,
+        set_source_control_notice,
     }
 }

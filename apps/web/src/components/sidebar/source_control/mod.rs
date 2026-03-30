@@ -13,6 +13,7 @@ pub mod change_item;
 pub mod changes;
 pub mod commit;
 pub mod context_menu;
+pub mod error_notice;
 pub mod history;
 pub mod readonly_notice;
 pub mod repositories;
@@ -24,6 +25,7 @@ pub mod unstaged_section;
 use self::changes::Changes;
 use self::commit::Commit;
 use self::context_menu::SectionMenu;
+use self::error_notice::ErrorNotice;
 use self::history::History;
 use self::status_notice::StatusNotice;
 use crate::components::icons::*;
@@ -99,6 +101,11 @@ pub fn SourceControlView() -> impl IntoView {
                     visible=show_repos
                 />
                 <StatusNotice block=core.write_block />
+                <ErrorNotice
+                    notice=core.notice
+                    block=core.write_block
+                    clear_notice=core.clear_notice
+                />
                 {move || if is_remote_branch() {
                     view! {}.into_any()
                 } else {
@@ -122,6 +129,7 @@ pub fn SourceControlView() -> impl IntoView {
                                                 disabled=move || !core.can_write.get() || !has_unstaged_changes()
                                                 on:click=move |ev| {
                                                     ev.stop_propagation();
+                                                    core.clear_notice.run(());
                                                     for entry in core.unstaged_changes.get_untracked() {
                                                         core.on_discard_file.run(entry);
                                                     }
@@ -135,6 +143,7 @@ pub fn SourceControlView() -> impl IntoView {
                                                 disabled=move || !core.can_write.get() || !has_unstaged_changes()
                                                 on:click=move |ev| {
                                                     ev.stop_propagation();
+                                                    core.clear_notice.run(());
                                                     core.on_stage_files.run(core.unstaged_changes.get_untracked());
                                                 }
                                             >

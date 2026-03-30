@@ -1,4 +1,5 @@
 use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
@@ -12,6 +13,7 @@ pub(crate) struct ScStateResetSignals {
     pub set_diff: WriteSignal<Option<DiffSessionWire>>,
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
+    pub set_notice: WriteSignal<Option<SourceControlNotice>>,
 }
 
 pub(crate) fn clear_repo_scoped_state(signals: ScStateResetSignals) {
@@ -24,6 +26,7 @@ pub(crate) fn clear_repo_scoped_state(signals: ScStateResetSignals) {
     signals.set_diff.set(None);
     signals.set_commit_diff_request_id.set(None);
     signals.set_commit_diff.set(Vec::new());
+    signals.set_notice.set(None);
 }
 
 pub(crate) fn scoped_ack_matches(scope_nonce: Option<u64>, current_scope_nonce: u64) -> bool {

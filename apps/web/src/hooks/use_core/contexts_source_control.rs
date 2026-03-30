@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use super::super::diff_session::DiffSessionWire;
+use super::super::source_control_notice::SourceControlNotice;
 use super::super::types::PendingBranchTarget;
 use super::super::write_gate::RepoWriteBlock;
 use deve_core::models::PeerId;
@@ -13,6 +14,8 @@ pub struct SourceControlContext {
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub can_write: Signal<bool>,
     pub write_block: Signal<Option<RepoWriteBlock>>,
+    pub notice: ReadSignal<Option<SourceControlNotice>>,
+    pub clear_notice: Callback<()>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,

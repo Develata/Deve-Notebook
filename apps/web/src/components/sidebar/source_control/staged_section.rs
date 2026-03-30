@@ -61,6 +61,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                             disabled=move || bulk_busy.get() || !core.can_write.get()
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
+                                core.clear_notice.run(());
                                 core.on_unstage_files.run(staged_list_for_action.get_value());
                             }
                         >

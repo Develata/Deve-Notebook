@@ -46,6 +46,7 @@ pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {
         set_diff: signals.set_diff_content,
         set_commit_diff_request_id: signals.set_commit_diff_request_id,
         set_commit_diff: signals.set_commit_diff_result,
+        set_notice: signals.set_source_control_notice,
     });
 }
 

@@ -14,6 +14,7 @@ use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
 use super::diff_session::DiffSessionWire;
+use super::source_control_notice::SourceControlNotice;
 use super::types::PendingBranchTarget;
 pub(crate) use context::ScMessageContext;
 pub(crate) use dispatch::handle_sc_message;
@@ -44,6 +45,7 @@ pub(crate) fn sc_message_context<'a>(
     commit_diff_request_id: ReadSignal<Option<String>>,
     set_commit_diff_request_id: WriteSignal<Option<String>>,
     set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
+    set_notice: WriteSignal<Option<SourceControlNotice>>,
     current_repo_id: ReadSignal<Option<String>>,
     active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
     pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
@@ -68,6 +70,7 @@ pub(crate) fn sc_message_context<'a>(
         commit_diff_request_id,
         set_commit_diff_request_id,
         set_commit_diff,
+        set_notice,
         current_repo_id,
         active_branch,
         pending_branch_switch,

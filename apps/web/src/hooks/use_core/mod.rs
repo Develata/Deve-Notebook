@@ -25,6 +25,7 @@ pub mod effects_switch;
 pub mod navigation;
 pub mod pending;
 mod provide;
+pub(crate) mod source_control_notice;
 pub mod state;
 mod state_build;
 mod state_callbacks;

@@ -1,5 +1,6 @@
 use super::super::ProtocolControlSignals;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use leptos::prelude::{GetUntracked, ReadSignal, signal};
 
 pub struct ProtocolSignalHarness {
@@ -17,6 +18,7 @@ pub struct ProtocolSignalHarness {
     commit_history_request_id: ReadSignal<Option<String>>,
     doc_diff_request_id: ReadSignal<Option<String>>,
     commit_diff_request_id: ReadSignal<Option<String>>,
+    pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
     control: ProtocolControlSignals,
 }
 
@@ -46,6 +48,7 @@ pub fn protocol_signal_harness(
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("diff-1".to_string()));
     let (commit_diff_request_id, set_commit_diff_request_id) =
         signal(Some("commit-diff-1".to_string()));
+    let (source_control_notice, set_source_control_notice) = signal(None::<SourceControlNotice>);
 
     ProtocolSignalHarness {
         _runtime: runtime,
@@ -62,6 +65,7 @@ pub fn protocol_signal_harness(
         commit_history_request_id,
         doc_diff_request_id,
         commit_diff_request_id,
+        source_control_notice,
         control: ProtocolControlSignals {
             pending_branch_switch,
             pending_branch_switch_nonce,
@@ -80,6 +84,7 @@ pub fn protocol_signal_harness(
             set_commit_history_request_id,
             set_doc_diff_request_id,
             set_commit_diff_request_id,
+            set_source_control_notice,
         },
     }
 }

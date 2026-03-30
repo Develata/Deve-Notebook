@@ -10,6 +10,7 @@ use super::super::contexts::SystemMetricsData;
 use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
 use super::super::pending::PendingLocalEdits;
+use super::super::source_control_notice::SourceControlNotice;
 use super::super::types::{ChatMessage, PeerSession, PendingBranchTarget};
 use super::state_types::PluginResponse;
 
@@ -117,6 +118,8 @@ pub struct CoreSignals {
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
     pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
+    pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub tree_nodes: ReadSignal<Vec<FileNode>>,
     pub set_tree_nodes: WriteSignal<Vec<FileNode>>,
     pub system_metrics: ReadSignal<Option<SystemMetricsData>>,

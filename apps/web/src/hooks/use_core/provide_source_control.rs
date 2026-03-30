@@ -3,11 +3,15 @@ use super::super::types::CoreState;
 use super::super::write_gate::{
     RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
 };
-use leptos::prelude::Signal;
+use leptos::prelude::{Callback, Set, Signal};
 
 pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlContext {
     let state_for_can_write = state.clone();
     let state_for_block = state.clone();
+    let clear_notice = Callback::new({
+        let set_notice = state.set_source_control_notice;
+        move |_| set_notice.set(None)
+    });
 
     SourceControlContext {
         staged_changes: state.staged_changes,
@@ -29,6 +33,8 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
                 },
             )
         }),
+        notice: state.source_control_notice,
+        clear_notice,
         current_repo_id: state.current_repo_id,
         active_branch: state.active_branch,
         pending_branch_switch: state.pending_branch_switch,

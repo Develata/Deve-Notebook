@@ -1,4 +1,5 @@
 use deve_core::protocol::ServerMessage;
+use leptos::prelude::Set;
 
 use super::super::effects_sc_apply::{
     FsRefreshSignals, refresh_after_commit, refresh_after_fs_change,
@@ -20,6 +21,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
+            ctx.set_notice.set(None);
             leptos::logging::log!("已暂存: {}", path);
             ctx.schedule_refresh();
             true
@@ -33,6 +35,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
+            ctx.set_notice.set(None);
             leptos::logging::log!("已取消暂存: {}", path);
             ctx.schedule_refresh();
             true
@@ -46,6 +49,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
+            ctx.set_notice.set(None);
             leptos::logging::log!("已放弃变更: {}", path);
             ctx.schedule_refresh();
             true
@@ -60,6 +64,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
+            ctx.set_notice.set(None);
             refresh_after_commit(
                 commit_id,
                 active_scope_nonce,
@@ -80,6 +85,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
+            ctx.set_notice.set(None);
             refresh_after_fs_change(
                 path,
                 change_type,
@@ -104,6 +110,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
+            ctx.set_notice.set(None);
             leptos::logging::log!("冲突已解决: {} ({})", path, resolution);
             ctx.schedule_refresh();
             true

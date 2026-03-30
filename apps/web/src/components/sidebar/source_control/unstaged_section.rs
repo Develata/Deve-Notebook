@@ -63,6 +63,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                             disabled=move || bulk_busy.get() || !core.can_write.get()
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
+                                core.clear_notice.run(());
                                 for entry in unstaged_list_for_discard.get_value() {
                                     core.on_discard_file.run(entry);
                                 }
@@ -77,6 +78,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                             disabled=move || bulk_busy.get() || !core.can_write.get()
                             on:click=move |_| {
                                 set_bulk_busy.set(true);
+                                core.clear_notice.run(());
                                 core.on_stage_files.run(unstaged_list_for_stage.get_value());
                             }
                         >

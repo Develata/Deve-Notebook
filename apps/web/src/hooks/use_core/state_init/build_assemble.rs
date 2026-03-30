@@ -113,6 +113,8 @@ pub(super) fn assemble_core_signals_with_spectator(
         set_commit_diff_request_id: source_control.set_commit_diff_request_id,
         commit_diff_result: source_control.commit_diff_result,
         set_commit_diff_result: source_control.set_commit_diff_result,
+        source_control_notice: source_control.source_control_notice,
+        set_source_control_notice: source_control.set_source_control_notice,
         tree_nodes: repo.tree_nodes,
         set_tree_nodes: repo.set_tree_nodes,
         system_metrics: runtime.system_metrics,

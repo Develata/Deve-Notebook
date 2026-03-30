@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
 use super::super::pending::PendingLocalEdits;
+use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::PluginResponse;
 use super::shared::{ChatMessage, PeerSession, PendingBranchTarget};
 
@@ -94,6 +95,8 @@ pub struct CoreState {
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
+    pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
     pub on_commit_and_push: Callback<String>,

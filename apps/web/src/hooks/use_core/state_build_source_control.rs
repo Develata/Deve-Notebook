@@ -3,6 +3,7 @@ use leptos::prelude::*;
 
 use super::super::callbacks_sc::SourceControlCallbacks;
 use super::super::diff_session::DiffSessionWire;
+use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::CoreSignals;
 
 pub(super) struct SourceControlStateSection {
@@ -21,6 +22,8 @@ pub(super) struct SourceControlStateSection {
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
+    pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
     pub on_commit_and_push: Callback<String>,
@@ -46,6 +49,8 @@ pub(super) fn build_source_control_section(
         set_diff_content: signals.set_diff_content,
         on_get_doc_diff: sc.on_get_doc_diff,
         commit_diff_result: signals.commit_diff_result,
+        source_control_notice: signals.source_control_notice,
+        set_source_control_notice: signals.set_source_control_notice,
         on_resolve_conflict: sc.on_resolve_conflict,
         on_get_commit_diff: sc.on_get_commit_diff,
         on_commit_and_push: sc.on_commit_and_push,

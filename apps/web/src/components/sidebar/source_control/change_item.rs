@@ -95,11 +95,15 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                         // 暂存区: 仅显示 Unstage 按钮
                         view! {
                                 <button
-                                    class="p-0.5 hover:bg-active rounded text-secondary"
-                                    disabled=move || !core.can_write.get()
-                                    title=move || t::source_control::unstage_changes(locale.get())
-                                    on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(entry_for_unstage.clone()); }
-                                >
+                                class="p-0.5 hover:bg-active rounded text-secondary"
+                                disabled=move || !core.can_write.get()
+                                title=move || t::source_control::unstage_changes(locale.get())
+                                on:click=move |ev| {
+                                    ev.stop_propagation();
+                                    core.clear_notice.run(());
+                                    core.on_unstage_file.run(entry_for_unstage.clone());
+                                }
+                            >
                                 <Minus class="w-3.5 h-3.5" />
                             </button>
                         }.into_any()
@@ -110,7 +114,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 class="p-0.5 hover:bg-active rounded text-warning"
                                 disabled=move || !core.can_write.get()
                                 title=move || t::source_control::keep_file_system(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((entry_for_keep_fs.clone(), ConflictResolution::KeepFs)); }
+                                on:click=move |ev| {
+                                    ev.stop_propagation();
+                                    core.clear_notice.run(());
+                                    core.on_resolve_conflict.run((entry_for_keep_fs.clone(), ConflictResolution::KeepFs));
+                                }
                             >
                                 <Upload class="w-3.5 h-3.5" />
                             </button>
@@ -118,7 +126,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 class="p-0.5 hover:bg-active rounded text-warning"
                                 disabled=move || !core.can_write.get()
                                 title=move || t::source_control::keep_ledger(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((entry_for_keep_ledger.clone(), ConflictResolution::KeepLedger)); }
+                                on:click=move |ev| {
+                                    ev.stop_propagation();
+                                    core.clear_notice.run(());
+                                    core.on_resolve_conflict.run((entry_for_keep_ledger.clone(), ConflictResolution::KeepLedger));
+                                }
                             >
                                 <Download class="w-3.5 h-3.5" />
                             </button>
@@ -148,7 +160,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 class="p-0.5 hover:bg-active rounded text-secondary"
                                 disabled=move || !core.can_write.get()
                                 title=move || t::source_control::discard_changes(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_discard_file.run(entry_for_discard.clone()); }
+                                on:click=move |ev| {
+                                    ev.stop_propagation();
+                                    core.clear_notice.run(());
+                                    core.on_discard_file.run(entry_for_discard.clone());
+                                }
                             >
                                 <RotateCcw class="w-3.5 h-3.5" />
                             </button>
@@ -156,7 +172,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                                 class="p-0.5 hover:bg-active rounded text-secondary"
                                 disabled=move || !core.can_write.get()
                                 title=move || t::source_control::stage_changes(locale.get())
-                                on:click=move |ev| { ev.stop_propagation(); core.on_stage_file.run(entry_for_stage.clone()); }
+                                on:click=move |ev| {
+                                    ev.stop_propagation();
+                                    core.clear_notice.run(());
+                                    core.on_stage_file.run(entry_for_stage.clone());
+                                }
                             >
                                 <Plus class="w-3.5 h-3.5" />
                             </button>
