@@ -18,12 +18,14 @@ use super::unstaged_section::UnstagedSection;
 #[component]
 pub fn Changes() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
+    let write_block = core.write_block;
 
     Effect::new(move |_| {
         if core.current_repo_id.get().is_none()
             || core.active_branch.get().is_some()
             || core.pending_branch_switch.get().is_some()
             || core.pending_repo_switch.get().is_some()
+            || write_block.get().is_some()
         {
             return;
         }
