@@ -15,7 +15,6 @@ pub mod commit;
 pub mod context_menu;
 pub mod error_notice;
 pub mod history;
-pub mod readonly_notice;
 pub mod repositories;
 pub mod status_notice;
 

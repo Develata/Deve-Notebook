@@ -26,6 +26,7 @@ pub fn Commit() -> impl IntoView {
     let active_req_id = RwSignal::new(None::<String>);
     let saw_streaming = RwSignal::new(false);
     let write_block = core.write_block;
+    let show_write_actions = move || write_block.get().is_none();
 
     // 是否有暂存文件 (VS Code allows commiting all if none staged, but we keep it safe for now)
     let has_staged = move || !core.staged_changes.get().is_empty();
@@ -93,73 +94,78 @@ pub fn Commit() -> impl IntoView {
                         on:keydown=on_keydown
                         disabled=move || !can_prepare_commit()
                     />
-                    <button
-                        class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title=move || {
-                            write_block
-                                .get()
-                                .map(|block| blocked_status_title(locale.get(), block))
-                                .unwrap_or_else(|| t::source_control::generate_commit_message(locale.get()).to_string())
-                        }
-                        disabled=move || !can_prepare_commit() || is_generating.get()
-                        on:click=move |_| {
-                            if !(core.can_write.get_untracked()
-                                && !core.staged_changes.get_untracked().is_empty())
-                            {
-                                return;
+                    <Show when=show_write_actions>
+                        <button
+                            class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title=move || {
+                                write_block
+                                    .get()
+                                    .map(|block| blocked_status_title(locale.get(), block))
+                                    .unwrap_or_else(|| t::source_control::generate_commit_message(locale.get()).to_string())
                             }
-                            let req_id = uuid::Uuid::new_v4().to_string();
-                            let joined_paths = core
-                                .staged_changes
-                                .get()
-                                .into_iter()
-                                .map(|entry| entry.path)
-                                .collect::<Vec<_>>()
-                                .join("\n");
-                            let prompt = format!(
-                                "{}\n{}",
-                                t::source_control::generate_prompt(locale.get()),
-                                joined_paths
-                            );
-                            let args = vec![
-                                serde_json::json!(req_id),
-                                serde_json::json!(prompt),
-                                serde_json::json!(""),
-                            ];
-                            active_req_id.set(Some(req_id.clone()));
-                            saw_streaming.set(false);
-                            set_is_generating.set(true);
-                            chat_ctx.set_messages.update(|messages| {
-                                messages.push(ChatMessage {
-                                    role: "assistant".into(),
-                                    content: String::new(),
-                                    req_id: Some(req_id.clone()),
-                                    ts_ms: js_sys::Date::now() as u64,
+                            disabled=move || !can_prepare_commit() || is_generating.get()
+                            on:click=move |_| {
+                                if !(core.can_write.get_untracked()
+                                    && !core.staged_changes.get_untracked().is_empty())
+                                {
+                                    return;
+                                }
+                                let req_id = uuid::Uuid::new_v4().to_string();
+                                let joined_paths = core
+                                    .staged_changes
+                                    .get()
+                                    .into_iter()
+                                    .map(|entry| entry.path)
+                                    .collect::<Vec<_>>()
+                                    .join("\n");
+                                let prompt = format!(
+                                    "{}\n{}",
+                                    t::source_control::generate_prompt(locale.get()),
+                                    joined_paths
+                                );
+                                let args = vec![
+                                    serde_json::json!(req_id),
+                                    serde_json::json!(prompt),
+                                    serde_json::json!(""),
+                                ];
+                                active_req_id.set(Some(req_id.clone()));
+                                saw_streaming.set(false);
+                                set_is_generating.set(true);
+                                chat_ctx.set_messages.update(|messages| {
+                                    messages.push(ChatMessage {
+                                        role: "assistant".into(),
+                                        content: String::new(),
+                                        req_id: Some(req_id.clone()),
+                                        ts_ms: js_sys::Date::now() as u64,
+                                    });
                                 });
-                            });
-                            chat_ctx.set_is_streaming.set(true);
-                            chat_ctx.on_plugin_call.run((
-                                req_id,
-                                "agent-bridge".to_string(),
-                                "chat".to_string(),
-                                args,
-                            ));
-                        }
-                    >
-                         <Sparkles class="w-3 h-3" />
-                         {move || {
-                             if is_generating.get() {
-                                 t::source_control::generating(locale.get())
-                             } else {
-                                 t::source_control::generate(locale.get())
-                             }
-                         }}
-                    </button>
+                                chat_ctx.set_is_streaming.set(true);
+                                chat_ctx.on_plugin_call.run((
+                                    req_id,
+                                    "agent-bridge".to_string(),
+                                    "chat".to_string(),
+                                    args,
+                                ));
+                            }
+                        >
+                             <Sparkles class="w-3 h-3" />
+                             {move || {
+                                 if is_generating.get() {
+                                     t::source_control::generating(locale.get())
+                                 } else {
+                                     t::source_control::generate(locale.get())
+                                 }
+                             }}
+                        </button>
+                    </Show>
                 </div>
 
                 <div class="flex relative">
                     <button
-                        class="flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 rounded-l-[2px] flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm"
+                        class=move || format!(
+                            "flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 {} flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm",
+                            if show_write_actions() { "rounded-l-[2px]" } else { "rounded-[2px]" }
+                        )
                         disabled=move || !can_commit_now()
                         title=move || {
                             write_block
@@ -172,22 +178,24 @@ pub fn Commit() -> impl IntoView {
                         <span class="codicon codicon-check"></span>
                         <span>{move || t::source_control::commit(locale.get())}</span>
                     </button>
-                    <button
-                        class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
-                        disabled=move || !can_prepare_commit()
-                        title=move || {
-                            write_block
-                                .get()
-                                .map(|block| blocked_status_title(locale.get(), block))
-                                .unwrap_or_else(|| t::source_control::commit(locale.get()).to_string())
-                        }
-                        on:click=move |_| dropdown_open.update(|b| *b = !*b)
-                    >
-                         <ChevronDown class="w-3.5 h-3.5" />
-                    </button>
+                    <Show when=show_write_actions>
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
+                            disabled=move || !can_prepare_commit()
+                            title=move || {
+                                write_block
+                                    .get()
+                                    .map(|block| blocked_status_title(locale.get(), block))
+                                    .unwrap_or_else(|| t::source_control::commit(locale.get()).to_string())
+                            }
+                            on:click=move |_| dropdown_open.update(|b| *b = !*b)
+                        >
+                             <ChevronDown class="w-3.5 h-3.5" />
+                        </button>
+                    </Show>
 
                     // 下拉菜单 (Commit 操作变体)
-                    {move || if dropdown_open.get() {
+                    {move || if show_write_actions() && dropdown_open.get() {
                         view! {
                             <div class="absolute top-full left-0 right-0 mt-1 bg-dropdown border border-default rounded shadow-lg z-20 text-[13px]">
                                 <button
