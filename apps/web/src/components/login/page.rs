@@ -21,12 +21,13 @@ pub fn LoginPage(
         _ => None,
     };
 
-    let do_login = move |_: leptos::ev::MouseEvent| {
+    let do_login = move |ev: leptos::ev::SubmitEvent| {
+        ev.prevent_default();
         let user = username.get();
         let pass = password.get();
         if user.is_empty() || pass.is_empty() {
             set_auth_state.set(AuthState::Failed(
-                login_i18n::empty_fields(locale.get()).to_string(),
+                login_i18n::empty_fields(locale.get_untracked()).to_string(),
             ));
             return;
         }
@@ -35,7 +36,7 @@ pub fn LoginPage(
         set_auth_state.set(AuthState::Authenticating);
 
         spawn_local(async move {
-            let locale_value = locale.get();
+            let locale_value = locale.get_untracked();
             let result = attempt_login(user, pass).await;
             set_is_loading.set(false);
             match result {
@@ -61,37 +62,54 @@ pub fn LoginPage(
                         {msg}
                     </div>
                 })}
-                <div class="space-y-4">
+                <form class="space-y-4" on:submit=do_login>
                     <div>
-                        <label class="block text-xs font-medium text-muted mb-1">{move || login_i18n::username(locale.get())}</label>
+                        <label
+                            for="login-username"
+                            class="block text-xs font-medium text-muted mb-1"
+                        >
+                            {move || login_i18n::username(locale.get())}
+                        </label>
                         <input
+                            id="login-username"
+                            name="username"
                             type="text"
                             class="w-full px-3 py-2 bg-bg border border-border rounded text-primary text-sm focus:outline-none focus:border-accent"
                             prop:value=move || username.get()
                             on:input=move |e| set_username.set(event_target_value(&e))
                             placeholder=move || login_i18n::username_placeholder(locale.get())
+                            autocomplete="username"
                         />
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-muted mb-1">{move || login_i18n::password(locale.get())}</label>
+                        <label
+                            for="login-password"
+                            class="block text-xs font-medium text-muted mb-1"
+                        >
+                            {move || login_i18n::password(locale.get())}
+                        </label>
                         <input
+                            id="login-password"
+                            name="password"
                             type="password"
                             class="w-full px-3 py-2 bg-bg border border-border rounded text-primary text-sm focus:outline-none focus:border-accent"
                             prop:value=move || password.get()
                             on:input=move |e| set_password.set(event_target_value(&e))
                             placeholder=move || login_i18n::password_placeholder(locale.get())
+                            autocomplete="current-password"
                         />
                     </div>
                     <button
+                        type="submit"
                         class=move || format!(
                             "w-full py-2 px-4 rounded font-medium text-sm transition-colors {}",
                             if is_loading.get() { "bg-accent/50 cursor-not-allowed text-white" } else { "bg-accent hover:bg-accent/80 text-white" }
                         )
-                        on:click=do_login
+                        disabled=move || is_loading.get()
                     >
                         {move || if is_loading.get() { login_i18n::loading(locale.get()).to_string() } else { login_i18n::button(locale.get()).to_string() }}
                     </button>
-                </div>
+                </form>
             </div>
         </div>
     }
