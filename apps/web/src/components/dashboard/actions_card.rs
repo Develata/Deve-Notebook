@@ -13,12 +13,11 @@ use leptos::prelude::*;
 pub fn ActionsCard() -> impl IntoView {
     let core = expect_context::<CoreState>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let core_for_gate = core.clone();
-    let can_write = Signal::derive(move || repo_write_allowed_for_core_tracked(&core_for_gate));
     let core_for_create = core.clone();
+    let core_for_disabled = core.clone();
 
     let on_new_doc = move |_| {
-        if !can_write.get_untracked() {
+        if !repo_write_allowed_for_core_tracked(&core_for_create) {
             return;
         }
         let name = next_untitled_doc_name(
@@ -42,7 +41,7 @@ pub fn ActionsCard() -> impl IntoView {
                 <button
                     class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
                            bg-accent text-on-accent hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled=move || !can_write.get()
+                    disabled=move || !repo_write_allowed_for_core_tracked(&core_for_disabled)
                     on:click=on_new_doc
                 >
                     {move || t::dashboard::new_doc(locale.get())}
