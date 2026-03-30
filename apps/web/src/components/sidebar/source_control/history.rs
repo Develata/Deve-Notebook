@@ -19,7 +19,8 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let selected_commit = RwSignal::new(Option::<String>::None);
 
     Effect::new(move |_| {
-        if core.current_repo_id.get().is_none()
+        if !expanded.get()
+            || core.current_repo_id.get().is_none()
             || core.active_branch.get().is_some()
             || core.pending_branch_switch.get().is_some()
             || core.pending_repo_switch.get().is_some()
