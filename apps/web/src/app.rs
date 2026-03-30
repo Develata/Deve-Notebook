@@ -11,6 +11,7 @@
 use crate::components::login::{AuthState, LoginPage, check_auth_status};
 use crate::components::main_layout::MainLayout;
 use crate::i18n::Locale;
+use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
@@ -21,6 +22,8 @@ use leptos::task::spawn_local;
 /// - 已认证时显示主布局
 #[component]
 pub fn App() -> impl IntoView {
+    const AUTH_MONITOR_MS: u32 = 5_000;
+
     // 全局语言环境状态
     let locale = RwSignal::new(Locale::default());
     provide_context(locale);
@@ -36,6 +39,22 @@ pub fn App() -> impl IntoView {
             Err(e) => {
                 leptos::logging::warn!("Auth check failed: {}", e);
                 set_auth_state.set(AuthState::Unauthenticated);
+            }
+        }
+    });
+
+    // 已登录状态下定期探测认证是否仍然有效。
+    // 网络错误保持当前 UI，不把断线误判成 session 失效。
+    spawn_local(async move {
+        loop {
+            TimeoutFuture::new(AUTH_MONITOR_MS).await;
+            if auth_state.get_untracked() != AuthState::Authenticated {
+                continue;
+            }
+            match check_auth_status().await {
+                Ok(true) => {}
+                Ok(false) => set_auth_state.set(AuthState::Unauthenticated),
+                Err(_) => {}
             }
         }
     });
