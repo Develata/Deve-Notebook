@@ -78,13 +78,14 @@ impl AuthConfig {
     }
 
     /// 创建用于显式开发模式的默认配置，禁止作为生产环境静默回退。
+    /// 开发模式也默认要求真实登录；localhost 免密必须显式通过环境变量开启。
     pub fn dev_default() -> Result<Self> {
         let password_hash = super::password::hash_password("admin")?;
         Ok(Self {
             secret: "deve_dev_secret_key_32bytes_ok!!".into(),
             username: "admin".into(),
             password_hash,
-            allow_anonymous_localhost: true,
+            allow_anonymous_localhost: env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false),
             token_version: 1,
         })
     }
@@ -110,7 +111,7 @@ mod tests {
     fn test_dev_default() {
         let cfg = AuthConfig::dev_default().unwrap();
         assert_eq!(cfg.username, "admin");
-        assert!(cfg.allow_anonymous_localhost);
+        assert!(!cfg.allow_anonymous_localhost);
         assert!(cfg.secret.len() >= 32);
     }
 }
