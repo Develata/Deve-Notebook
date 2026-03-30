@@ -8,6 +8,19 @@ use leptos::prelude::{Callback, Set, WriteSignal};
 
 use super::{SourceControlRequestSignals, SourceControlScopeSignals};
 
+fn log_blocked_sc_read(
+    action: &str,
+    detail: &str,
+    block: crate::hooks::use_core::write_gate::RepoWriteBlock,
+) {
+    leptos::logging::log!(
+        "跳过 {}: source control blocked by {} for {}",
+        action,
+        block.label(),
+        detail
+    );
+}
+
 pub(super) fn create_get_changes_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
@@ -30,10 +43,15 @@ pub(super) fn create_get_changes_callback(
 pub(super) fn create_get_history_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
+    read_gate: RepoWriteSignals,
     set_request_id: WriteSignal<Option<String>>,
 ) -> Callback<u32> {
     let ws = ws.clone();
     Callback::new(move |limit: u32| {
+        if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
+            log_blocked_sc_read("GetCommitHistory", &format!("limit={limit}"), block);
+            return;
+        }
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
@@ -63,11 +81,7 @@ pub(super) fn create_get_doc_diff_callback(
             return;
         }
         if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
-            leptos::logging::log!(
-                "跳过 GetDocDiff: source control blocked by {} for {}",
-                block.label(),
-                entry.path
-            );
+            log_blocked_sc_read("GetDocDiff", &entry.path, block);
             return;
         }
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
@@ -86,10 +100,19 @@ pub(super) fn create_get_doc_diff_callback(
 pub(super) fn create_get_commit_diff_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
+    read_gate: RepoWriteSignals,
     set_request_id: WriteSignal<Option<String>>,
 ) -> Callback<(Option<String>, String)> {
     let ws = ws.clone();
-    Callback::new(move |(commit_a, commit_b)| {
+    Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
+        if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
+            let detail = match commit_a.as_deref() {
+                Some(base) => format!("{base}..{commit_b}"),
+                None => commit_b.clone(),
+            };
+            log_blocked_sc_read("GetCommitDiff", &detail, block);
+            return;
+        }
         let Some(scope_nonce) = source_control_scope_nonce(scope) else {
             return;
         };
@@ -117,8 +140,8 @@ pub(super) fn create_read_callbacks(
 ) {
     (
         create_get_changes_callback(ws, scope, request.set_changes_request_id),
-        create_get_history_callback(ws, scope, request.set_commit_history_request_id),
+        create_get_history_callback(ws, scope, read_gate, request.set_commit_history_request_id),
         create_get_doc_diff_callback(ws, scope, read_gate, request.set_doc_diff_request_id),
-        create_get_commit_diff_callback(ws, scope, request.set_commit_diff_request_id),
+        create_get_commit_diff_callback(ws, scope, read_gate, request.set_commit_diff_request_id),
     )
 }
