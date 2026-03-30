@@ -1,8 +1,12 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::i18n::{Locale, t};
-use deve_core::protocol::{ServerError, ServerErrorCode};
-use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal};
+use deve_core::protocol::ServerError;
+use leptos::prelude::{ReadSignal, WriteSignal};
+
+#[path = "message_protocol_control.rs"]
+mod control;
+use self::control::is_auth_error;
 
 #[derive(Clone, Copy)]
 pub struct ProtocolControlSignals {
@@ -47,45 +51,11 @@ pub fn handle_protocol_error(
 }
 
 fn clear_failed_scope_switch(
-    _code: ServerErrorCode,
+    code: deve_core::protocol::ServerErrorCode,
     switch_nonce: Option<u64>,
     signals: ProtocolControlSignals,
 ) {
-    if switch_nonce.is_none() {
-        return;
-    }
-    let switch_nonce = switch_nonce.expect("checked above");
-    let clear_branch = signals.pending_branch_switch.get_untracked().is_some()
-        && signals.pending_branch_switch_nonce.get_untracked() == Some(switch_nonce);
-    let clear_repo = signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);
-    if !clear_branch && !clear_repo {
-        return;
-    }
-    signals.set_shadow_list_request_id.set(None);
-    signals.set_repo_list_request_id.set(None);
-    signals.set_doc_list_request_id.set(None);
-    signals.set_tree_request_id.set(None);
-    signals.set_sync_mode_request_id.set(None);
-    signals.set_pending_ops_request_id.set(None);
-    signals.set_changes_request_id.set(None);
-    signals.set_commit_history_request_id.set(None);
-    signals.set_doc_diff_request_id.set(None);
-    signals.set_commit_diff_request_id.set(None);
-    if clear_branch {
-        signals.set_pending_branch_switch.set(None);
-        signals.set_pending_branch_switch_nonce.set(None);
-    }
-    if clear_repo {
-        signals.set_pending_repo_switch.set(None);
-        signals.set_pending_repo_switch_nonce.set(None);
-    }
-}
-
-fn is_auth_error(code: ServerErrorCode) -> bool {
-    matches!(
-        code,
-        ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing
-    )
+    control::clear_failed_scope_switch(code, switch_nonce, signals);
 }
 
 #[cfg(test)]
