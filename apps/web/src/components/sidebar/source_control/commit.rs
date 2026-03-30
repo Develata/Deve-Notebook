@@ -16,9 +16,6 @@ pub fn Commit() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let chat_ctx = expect_context::<ChatContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let current_repo_id = core.current_repo_id;
-    let pending_branch_switch = core.pending_branch_switch;
-    let pending_repo_switch = core.pending_repo_switch;
 
     let (msg, set_msg) = signal(String::new());
     let (is_generating, set_is_generating) = signal(false);
@@ -28,13 +25,13 @@ pub fn Commit() -> impl IntoView {
 
     // 是否有暂存文件 (VS Code allows commiting all if none staged, but we keep it safe for now)
     let has_staged = move || !core.staged_changes.get().is_empty();
+    let can_prepare_commit = move || core.can_write.get() && has_staged();
+    let can_commit_now = move || can_prepare_commit() && !msg.get().trim().is_empty();
 
     let do_commit = move || {
-        if current_repo_id.get().is_none()
-            || pending_branch_switch.get().is_some()
-            || pending_repo_switch.get().is_some()
-            || !has_staged()
-            || msg.get().trim().is_empty()
+        if !(core.can_write.get_untracked()
+            && !core.staged_changes.get_untracked().is_empty()
+            && !msg.get_untracked().trim().is_empty())
         {
             return;
         }
@@ -84,28 +81,15 @@ pub fn Commit() -> impl IntoView {
                         prop:value=msg
                         on:input=move |ev| set_msg.set(event_target_value(&ev))
                         on:keydown=on_keydown
-                        disabled=move || {
-                            current_repo_id.get().is_none()
-                                || pending_branch_switch.get().is_some()
-                                || pending_repo_switch.get().is_some()
-                                || !has_staged()
-                        }
+                        disabled=can_prepare_commit
                     />
                     <button
                         class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed"
                         title=move || t::source_control::generate_commit_message(locale.get())
-                        disabled=move || {
-                            current_repo_id.get().is_none()
-                                || pending_branch_switch.get().is_some()
-                                || pending_repo_switch.get().is_some()
-                                || !has_staged()
-                                || is_generating.get()
-                        }
+                        disabled=move || !can_prepare_commit() || is_generating.get()
                         on:click=move |_| {
-                            if current_repo_id.get().is_none()
-                                || pending_branch_switch.get().is_some()
-                                || pending_repo_switch.get().is_some()
-                                || !has_staged()
+                            if !(core.can_write.get_untracked()
+                                && !core.staged_changes.get_untracked().is_empty())
                             {
                                 return;
                             }
@@ -161,13 +145,7 @@ pub fn Commit() -> impl IntoView {
                 <div class="flex relative">
                     <button
                         class="flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 rounded-l-[2px] flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm"
-                        disabled=move || {
-                            current_repo_id.get().is_none()
-                                || pending_branch_switch.get().is_some()
-                                || pending_repo_switch.get().is_some()
-                                || !has_staged()
-                                || msg.get().trim().is_empty()
-                        }
+                        disabled=can_commit_now
                         on:click=move |_| { dropdown_open.set(false); do_commit(); }
                     >
                         <span class="codicon codicon-check"></span>
@@ -175,6 +153,7 @@ pub fn Commit() -> impl IntoView {
                     </button>
                     <button
                         class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
+                        disabled=move || !can_prepare_commit()
                         on:click=move |_| dropdown_open.update(|b| *b = !*b)
                     >
                          <ChevronDown class="w-3.5 h-3.5" />
@@ -186,6 +165,7 @@ pub fn Commit() -> impl IntoView {
                             <div class="absolute top-full left-0 right-0 mt-1 bg-dropdown border border-default rounded shadow-lg z-20 text-[13px]">
                                 <button
                                     class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2"
+                                    disabled=move || !can_commit_now()
                                     on:click=move |_| { dropdown_open.set(false); do_commit(); }
                                 >
                                     <Check class="w-3.5 h-3.5" />
@@ -193,13 +173,7 @@ pub fn Commit() -> impl IntoView {
                                 </button>
                                 <button
                                     class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled=move || {
-                                        current_repo_id.get().is_none()
-                                            || pending_branch_switch.get().is_some()
-                                            || pending_repo_switch.get().is_some()
-                                            || !has_staged()
-                                            || msg.get().trim().is_empty()
-                                    }
+                                    disabled=move || !can_commit_now()
                                     on:click=move |_| {
                                         dropdown_open.set(false);
                                         core.on_commit_and_push.run(msg.get());

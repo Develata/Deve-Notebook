@@ -16,6 +16,7 @@ pub mod context_menu;
 pub mod history;
 pub mod readonly_notice;
 pub mod repositories;
+pub mod status_notice;
 
 pub mod staged_section;
 pub mod unstaged_section;
@@ -24,7 +25,7 @@ use self::changes::Changes;
 use self::commit::Commit;
 use self::context_menu::SectionMenu;
 use self::history::History;
-use self::readonly_notice::ReadonlyNotice;
+use self::status_notice::StatusNotice;
 use crate::components::icons::*;
 use crate::hooks::use_core::SourceControlContext;
 use leptos::prelude::*;
@@ -46,6 +47,7 @@ pub fn SourceControlView() -> impl IntoView {
 
     let show_menu = RwSignal::new(false);
     let is_remote_branch = move || core.active_branch.get().is_some();
+    let has_unstaged_changes = move || !core.unstaged_changes.get().is_empty();
 
     use crate::i18n::t;
 
@@ -96,8 +98,9 @@ pub fn SourceControlView() -> impl IntoView {
                     expanded=expand_repos
                     visible=show_repos
                 />
+                <StatusNotice block=core.write_block />
                 {move || if is_remote_branch() {
-                    view! { <ReadonlyNotice /> }.into_any()
+                    view! {}.into_any()
                 } else {
                     view! {
                         // 2. Changes Section
@@ -113,12 +116,30 @@ pub fn SourceControlView() -> impl IntoView {
                                         </span>
                                         <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
                                         <div class="hidden group-hover:flex items-center gap-1">
-                                            <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::discard_all_changes(locale.get())>
+                                            <button
+                                                class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title=move || t::source_control::discard_all_changes(locale.get())
+                                                disabled=move || !core.can_write.get() || !has_unstaged_changes()
+                                                on:click=move |ev| {
+                                                    ev.stop_propagation();
+                                                    for entry in core.unstaged_changes.get_untracked() {
+                                                        core.on_discard_file.run(entry);
+                                                    }
+                                                }
+                                            >
                                                 <RefreshCw class="w-3.5 h-3.5" />
-                                            </div>
-                                            <div class="p-0.5 hover:bg-active rounded" title=move || t::source_control::stage_all_changes(locale.get())>
+                                            </button>
+                                            <button
+                                                class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title=move || t::source_control::stage_all_changes(locale.get())
+                                                disabled=move || !core.can_write.get() || !has_unstaged_changes()
+                                                on:click=move |ev| {
+                                                    ev.stop_propagation();
+                                                    core.on_stage_files.run(core.unstaged_changes.get_untracked());
+                                                }
+                                            >
                                                 <Plus class="w-3.5 h-3.5" />
-                                            </div>
+                                            </button>
                                         </div>
                                     </button>
 

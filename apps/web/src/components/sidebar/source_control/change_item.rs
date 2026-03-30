@@ -96,11 +96,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                         view! {
                                 <button
                                     class="p-0.5 hover:bg-active rounded text-secondary"
-                                    disabled=move || {
-                                        current_repo_id.get().is_none()
-                                            || pending_branch_switch.get().is_some()
-                                            || pending_repo_switch.get().is_some()
-                                    }
+                                    disabled=move || !core.can_write.get()
                                     title=move || t::source_control::unstage_changes(locale.get())
                                     on:click=move |ev| { ev.stop_propagation(); core.on_unstage_file.run(entry_for_unstage.clone()); }
                                 >
@@ -112,11 +108,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                         view! {
                             <button
                                 class="p-0.5 hover:bg-active rounded text-warning"
-                                disabled=move || {
-                                    current_repo_id.get().is_none()
-                                        || pending_branch_switch.get().is_some()
-                                        || pending_repo_switch.get().is_some()
-                                }
+                                disabled=move || !core.can_write.get()
                                 title=move || t::source_control::keep_file_system(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((entry_for_keep_fs.clone(), ConflictResolution::KeepFs)); }
                             >
@@ -124,11 +116,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                             </button>
                             <button
                                 class="p-0.5 hover:bg-active rounded text-warning"
-                                disabled=move || {
-                                    current_repo_id.get().is_none()
-                                        || pending_branch_switch.get().is_some()
-                                        || pending_repo_switch.get().is_some()
-                                }
+                                disabled=move || !core.can_write.get()
                                 title=move || t::source_control::keep_ledger(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_resolve_conflict.run((entry_for_keep_ledger.clone(), ConflictResolution::KeepLedger)); }
                             >
@@ -158,11 +146,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                             }}
                             <button
                                 class="p-0.5 hover:bg-active rounded text-secondary"
-                                disabled=move || {
-                                    current_repo_id.get().is_none()
-                                        || pending_branch_switch.get().is_some()
-                                        || pending_repo_switch.get().is_some()
-                                }
+                                disabled=move || !core.can_write.get()
                                 title=move || t::source_control::discard_changes(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_discard_file.run(entry_for_discard.clone()); }
                             >
@@ -170,11 +154,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                             </button>
                             <button
                                 class="p-0.5 hover:bg-active rounded text-secondary"
-                                disabled=move || {
-                                    current_repo_id.get().is_none()
-                                        || pending_branch_switch.get().is_some()
-                                        || pending_repo_switch.get().is_some()
-                                }
+                                disabled=move || !core.can_write.get()
                                 title=move || t::source_control::stage_changes(locale.get())
                                 on:click=move |ev| { ev.stop_propagation(); core.on_stage_file.run(entry_for_stage.clone()); }
                             >
