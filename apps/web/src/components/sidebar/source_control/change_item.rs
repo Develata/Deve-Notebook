@@ -5,9 +5,10 @@
 //! 支持 Stage/Unstage/Open/Discard 操作。
 
 use crate::components::icons::*;
+use crate::components::sidebar::source_control::change_item_actions::ChangeItemActions;
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
-use crate::i18n::{Locale, t};
-use deve_core::source_control::{ChangeEntry, ChangeStatus, ConflictResolution};
+use crate::i18n::Locale;
+use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,13 +48,6 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     };
 
     let entry_for_click = entry.clone();
-    let entry_for_unstage = StoredValue::new(entry.clone());
-    let entry_for_keep_fs = StoredValue::new(entry.clone());
-    let entry_for_keep_ledger = StoredValue::new(entry.clone());
-    let entry_for_open_value = StoredValue::new(entry.clone());
-    let entry_for_discard = StoredValue::new(entry.clone());
-    let entry_for_stage = StoredValue::new(entry.clone());
-
     // 状态图标和颜色
     let (icon_char, color_cls) = match entry.status {
         ChangeStatus::Modified => ("M", "text-modified"),
@@ -106,125 +100,15 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             <div class="flex items-center gap-2 pl-2">
                 // 操作按钮 (悬停显示)
                 <div class="hidden group-hover:!flex items-center gap-0.5 mr-1">
-                    {move || {
-                        let blocked = write_block.get().is_some();
-                        if blocked {
-                            view! {}.into_any()
-                        } else if is_staged {
-                        // 暂存区: 仅显示 Unstage 按钮
-                        view! {
-                                <button
-                                class="p-0.5 hover:bg-active rounded text-secondary"
-                                disabled=move || !core.can_write.get()
-                                title=move || t::source_control::unstage_changes(locale.get())
-                                on:click=move |ev| {
-                                    ev.stop_propagation();
-                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
-                                        return;
-                                    }
-                                    core.clear_notice.run(());
-                                    core.on_unstage_file.run(entry_for_unstage.get_value());
-                                }
-                            >
-                                <Minus class="w-3.5 h-3.5" />
-                            </button>
-                        }.into_any()
-                    } else if has_conflict {
-                        // 冲突状态: Keep FS / Keep Ledger / Stage
-                        view! {
-                            <button
-                                class="p-0.5 hover:bg-active rounded text-warning"
-                                disabled=move || !core.can_write.get()
-                                title=move || t::source_control::keep_file_system(locale.get())
-                                on:click=move |ev| {
-                                    ev.stop_propagation();
-                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
-                                        return;
-                                    }
-                                    core.clear_notice.run(());
-                                    core.on_resolve_conflict.run((
-                                        entry_for_keep_fs.get_value(),
-                                        ConflictResolution::KeepFs,
-                                    ));
-                                }
-                            >
-                                <Upload class="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                class="p-0.5 hover:bg-active rounded text-warning"
-                                disabled=move || !core.can_write.get()
-                                title=move || t::source_control::keep_ledger(locale.get())
-                                on:click=move |ev| {
-                                    ev.stop_propagation();
-                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
-                                        return;
-                                    }
-                                    core.clear_notice.run(());
-                                    core.on_resolve_conflict.run((
-                                        entry_for_keep_ledger.get_value(),
-                                        ConflictResolution::KeepLedger,
-                                    ));
-                                }
-                            >
-                                <Download class="w-3.5 h-3.5" />
-                            </button>
-                        }.into_any()
-                    } else {
-                        // 工作区: Open, Discard, Stage
-                        view! {
-                            {if can_open_diff {
-                                view! {
-                                    <button
-                                        class="p-0.5 hover:bg-active rounded text-secondary"
-                                        disabled=move || {
-                                            current_repo_id.get().is_none()
-                                                || pending_branch_switch.get().is_some()
-                                                || pending_repo_switch.get().is_some()
-                                        }
-                                        title=move || t::source_control::open_file(locale.get())
-                                        on:click=move |ev| {
-                                            ev.stop_propagation();
-                                            core.on_get_doc_diff.run(entry_for_open_value.get_value());
-                                        }
-                                    >
-                                        <ExternalLink class="w-3.5 h-3.5" />
-                                    </button>
-                                }.into_any()
-                            } else {
-                                view! {}.into_any()
-                            }}
-                            <button
-                                class="p-0.5 hover:bg-active rounded text-secondary"
-                                disabled=move || !core.can_write.get()
-                                title=move || t::source_control::discard_changes(locale.get())
-                                on:click=move |ev| {
-                                    ev.stop_propagation();
-                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
-                                        return;
-                                    }
-                                    core.clear_notice.run(());
-                                    core.on_discard_file.run(entry_for_discard.get_value());
-                                }
-                            >
-                                <RotateCcw class="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                class="p-0.5 hover:bg-active rounded text-secondary"
-                                disabled=move || !core.can_write.get()
-                                title=move || t::source_control::stage_changes(locale.get())
-                                on:click=move |ev| {
-                                    ev.stop_propagation();
-                                    if action_busy.get_value().swap(true, Ordering::AcqRel) {
-                                        return;
-                                    }
-                                    core.clear_notice.run(());
-                                    core.on_stage_file.run(entry_for_stage.get_value());
-                                }
-                            >
-                                <Plus class="w-3.5 h-3.5" />
-                            </button>
-                        }.into_any()
-                    }}}
+                    <ChangeItemActions
+                        core=core.clone()
+                        locale
+                        entry=entry.clone()
+                        is_staged
+                        has_conflict
+                        can_open_diff
+                        action_busy
+                    />
                 </div>
 
                 // 冲突指示 + 状态标记

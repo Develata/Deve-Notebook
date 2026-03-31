@@ -36,7 +36,9 @@ pub(super) fn refresh_after_fs_change(
     ws: &WsService,
 ) {
     let conflict_tag = if has_conflict { " [冲突]" } else { "" };
-    leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
+    if has_conflict || change_type != "dir_changed" {
+        leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
+    }
     schedule_refresh();
     let request_id = uuid::Uuid::new_v4().to_string();
     signals
