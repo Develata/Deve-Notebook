@@ -12,25 +12,23 @@ mod footer_status;
 mod footer_summary;
 mod gesture;
 mod header;
+mod layout_backdrop;
+mod layout_banner;
+mod layout_frame;
+mod layout_runtime;
 mod outline_button;
 mod toolbar;
 
 use crate::components::activity_bar::SidebarView;
-use crate::components::layout_context::EditorContentContext;
 use crate::editor::ffi::getEditorContent;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::Locale;
-use chat_sheet::MobileChatSheet;
-use content::MobileContent;
-use drawers::MobileDrawers;
 use effects::apply_body_scroll_lock;
 use effects::apply_visual_viewport_offset;
-use footer::MobileFooter;
 use gesture::{build_touch_end, build_touch_start};
-use header::MobileHeader;
+use layout_frame::MobileLayoutFrame;
+use layout_runtime::{build_doc_select_callback, build_mobile_title, resolve_content_signal};
 use leptos::prelude::*;
-use outline_button::OutlineToggleButton;
-use toolbar::MobileAccessoryToolbar;
 
 #[component]
 pub fn MobileLayout(
@@ -52,25 +50,8 @@ pub fn MobileLayout(
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
     let (chat_expanded, set_chat_expanded) = signal(false);
 
-    let title = Memo::new(move |_| {
-        let current = core.current_doc.get();
-        if let Some(id) = current {
-            let docs = core.docs.get();
-            if let Some((_, path)) = docs.iter().find(|(doc_id, _)| *doc_id == id) {
-                return path.clone();
-            }
-        }
-        "Deve-Note".to_string()
-    });
-
-    let content_ctx = use_context::<EditorContentContext>();
-    let (outline_content, set_outline_content) = signal(String::new());
-    let content_signal = match content_ctx {
-        Some(ctx) => Some(ctx.content),
-        None => Some(outline_content),
-    };
-    let current_doc = core.current_doc;
-    let diff_content = core.diff_content;
+    let title = build_mobile_title(core.clone());
+    let (content_signal, set_outline_content) = resolve_content_signal();
     let banner_toggle = core.clone();
     let banner_text = core.clone();
 
@@ -94,14 +75,7 @@ pub fn MobileLayout(
         set_swipe_target,
     );
 
-    let on_doc_select = {
-        let on_select = core.on_doc_select;
-        let close = close_drawers.clone();
-        Callback::new(move |id| {
-            on_select.run(id);
-            close.run(());
-        })
-    };
+    let on_doc_select = build_doc_select_callback(core.on_doc_select, close_drawers);
 
     apply_body_scroll_lock(drawer_open);
     apply_visual_viewport_offset(set_keyboard_offset);
@@ -113,89 +87,33 @@ pub fn MobileLayout(
     });
 
     view! {
-        <div
-            class="flex flex-col flex-1 overflow-hidden bg-sidebar"
-            style="touch-action: pan-y;"
-            on:touchstart=move |ev| on_touch_start.run(ev)
-            on:touchend=move |ev| on_touch_end.run(ev)
-            on:touchcancel=move |_| set_swipe_target.set(None)
-        >
-            <MobileHeader
-                title=title
-                on_menu=Callback::new(move |_| {
-                    set_show_outline.set(false);
-                    set_show_sidebar.set(true);
-                })
-                on_home=on_home
-                on_open=on_open
-                on_command=on_command
-            />
-
-            <Show when=move || banner_toggle.sync_banner.get().is_some()>
-                <div class="mx-3 mt-2 rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-[11px] font-medium text-amber-950">
-                    {move || banner_text.sync_banner.get().unwrap_or_default()}
-                </div>
-            </Show>
-
-            <MobileContent core=core.clone() drawer_open=drawer_open />
-
-            <Show when=move || current_doc.get().is_some() && diff_content.get().is_none() && !show_sidebar.get()>
-                <OutlineToggleButton
-                    show_outline=show_outline
-                    set_show_outline=set_show_outline
-                    set_show_sidebar=set_show_sidebar
-                    locale=locale
-                />
-            </Show>
-
-            {move || if drawer_open.get() {
-                view! {
-                    <div
-                        class="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200 ease-out"
-                        on:click=move |_| close_drawers.run(())
-                    ></div>
-                }
-                .into_any()
-            } else {
-                view! {}.into_any()
-            }}
-
-            <MobileDrawers
-                core=core.clone()
-                active_view=active_view
-                set_active_view=set_active_view
-                pinned_views=pinned_views
-                set_pinned_views=set_pinned_views
-                show_sidebar=show_sidebar
-                show_outline=show_outline
-                on_doc_select=on_doc_select
-                on_close=close_drawers
-                content_signal=content_signal
-            />
-
-            <MobileAccessoryToolbar
-                keyboard_offset=keyboard_offset
-                readonly=core.is_spectator
-                visible=Signal::derive(move || {
-                    current_doc.get().is_some()
-                        && diff_content.get().is_none()
-                        && !drawer_open.get()
-                        && keyboard_offset.get() > 0
-                        && !chat_expanded.get()
-                })
-            />
-
-            <MobileChatSheet
-                keyboard_offset=keyboard_offset
-                drawer_open=drawer_open
-                diff_open=Signal::derive(move || diff_content.get().is_some())
-                expanded=chat_expanded
-                set_expanded=set_chat_expanded
-            />
-
-            <Show when=move || keyboard_offset.get() <= 0 && !chat_expanded.get()>
-                <MobileFooter core=core.clone() />
-            </Show>
-        </div>
+        <MobileLayoutFrame
+            core=core.clone()
+            locale=locale
+            title=title
+            active_view=active_view
+            set_active_view=set_active_view
+            pinned_views=pinned_views
+            set_pinned_views=set_pinned_views
+            show_sidebar=show_sidebar
+            set_show_sidebar=set_show_sidebar
+            show_outline=show_outline
+            set_show_outline=set_show_outline
+            drawer_open=drawer_open
+            keyboard_offset=keyboard_offset
+            chat_expanded=chat_expanded
+            set_chat_expanded=set_chat_expanded
+            on_home=on_home
+            on_open=on_open
+            on_command=on_command
+            on_doc_select=on_doc_select
+            on_close_drawers=close_drawers
+            banner_toggle=banner_toggle
+            banner_text=banner_text
+            content_signal=content_signal
+            on_touch_start=on_touch_start
+            on_touch_end=on_touch_end
+            on_touch_cancel=Callback::new(move |_| set_swipe_target.set(None))
+        />
     }
 }
