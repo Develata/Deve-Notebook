@@ -6,11 +6,15 @@ mod decrypt;
 mod dispatch_doc;
 mod dispatch_payload;
 mod history;
+mod history_replay;
+mod history_resend;
 mod key;
 mod live;
+mod route_doc;
+mod route_payload;
 mod scope;
-mod snapshot_apply;
 mod snapshot;
+mod snapshot_apply;
 mod snapshot_finish;
 mod snapshot_gate;
 
@@ -18,106 +22,22 @@ use context::SyncContext;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::GetUntracked;
+use route_doc::route_doc_message;
+use route_payload::route_payload_message;
 use scope::{ScopedMessageScope, SyncPayloadScope, accepts_sync_payload};
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
-    match msg {
-        ServerMessage::Snapshot {
-            repo_id,
-            branch,
-            scope_nonce,
-            doc_id: msg_doc_id,
-            request_id,
-            content,
-            base_seq,
-            version,
-            delta_ops,
-        } => dispatch_doc::handle_snapshot_message(
-            ctx,
-            repo_id,
-            branch,
-            scope_nonce,
-            msg_doc_id,
-            request_id,
-            content,
-            base_seq,
-            version,
-            delta_ops,
-        ),
-        ServerMessage::History {
-            repo_id,
-            branch,
-            scope_nonce,
-            doc_id: msg_doc_id,
-            request_id,
-            ops,
-        } => dispatch_doc::handle_history_message(
-            ctx,
-            repo_id,
-            branch,
-            scope_nonce,
-            msg_doc_id,
-            request_id,
-            ops,
-        ),
-        ServerMessage::NewOp {
-            repo_id,
-            branch,
-            scope_nonce,
-            doc_id: msg_doc_id,
-            entry,
-        } => dispatch_doc::handle_new_op_message(
-            ctx,
-            repo_id,
-            branch,
-            scope_nonce,
-            msg_doc_id,
-            entry,
-        ),
-        ServerMessage::SyncHello {
-            peer_id, vector: _, ..
-        } => {
-            let _ = peer_id;
-        }
-        ServerMessage::WriteReady {
-            repo_id,
-            scope_nonce,
-            branch,
-            ..
-        } => dispatch_payload::handle_write_ready_message(ctx, repo_id, branch, scope_nonce),
-        ServerMessage::Pong => {}
-        ServerMessage::SyncPush {
-            repo_id,
-            scope_nonce,
-            branch,
-            ops,
-        } => dispatch_payload::handle_sync_push_message(ctx, repo_id, branch, scope_nonce, &ops),
-        ServerMessage::SyncPushSnapshot {
-            repo_id,
-            scope_nonce,
-            branch,
-            ops,
-            ..
-        } => dispatch_payload::handle_sync_push_message(ctx, repo_id, branch, scope_nonce, &ops),
-        ServerMessage::KeyProvide {
-            repo_id,
-            scope_nonce,
-            branch,
-            repo_key,
-        } => dispatch_payload::handle_key_provide_message(
-            ctx,
-            repo_id,
-            branch,
-            scope_nonce,
-            &repo_key,
-        ),
-        ServerMessage::KeyDenied {
-            repo_id,
-            scope_nonce,
-            branch,
-            error,
-        } => dispatch_payload::handle_key_denied_message(ctx, repo_id, branch, scope_nonce, &error),
-        _ => {}
+    let Some(msg) = route_doc_message(msg, ctx) else {
+        return;
+    };
+    let Some(msg) = route_payload_message(msg, ctx) else {
+        return;
+    };
+    if let ServerMessage::SyncHello {
+        peer_id, vector: _, ..
+    } = msg
+    {
+        let _ = peer_id;
     }
 }
 

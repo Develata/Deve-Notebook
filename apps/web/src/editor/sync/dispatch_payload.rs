@@ -1,6 +1,6 @@
 use super::context::SyncContext;
 use super::decrypt;
-use super::history;
+use super::history_resend;
 use super::key::handle_key_provide;
 use super::scope::matches_scoped_message;
 use deve_core::protocol::ServerError;
@@ -14,7 +14,7 @@ pub fn handle_write_ready_message(
     scope_nonce: u64,
 ) {
     if super::accepts_current_sync_payload(ctx, repo_id, branch, scope_nonce) {
-        history::resend_pending_edits(ctx);
+        history_resend::resend_pending_edits(ctx);
     }
 }
 
