@@ -4,13 +4,11 @@
 //! Entry point. Delegates status/load to `footer_status`,
 //! playback controls to `footer_playback`.
 
-use super::footer_playback::{PlaybackNarrow, PlaybackWide};
-use super::footer_status::{LoadStatus, StatusView};
-use crate::components::branch_switcher::BranchSwitcher;
-use crate::components::icons::{ChevronDown, ChevronUp};
+use super::footer_details::FooterDetails;
+use super::footer_summary::FooterSummaryRow;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::Locale;
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
@@ -22,9 +20,6 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
     let set_ver = core.set_playback_version;
     let current_doc = core.current_doc;
     let stats = core.stats;
-    let load_state = core.load_state;
-    let load_progress = core.load_progress;
-    let load_eta_ms = core.load_eta_ms;
     let (is_narrow, set_is_narrow) = signal(false);
     let (expanded, set_expanded) = signal(false);
     let displayed_stats = Signal::derive(move || {
@@ -80,66 +75,30 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
             class="relative z-50 bg-panel border-t border-default px-2 py-1.5 flex flex-col gap-1.5"
             style="padding-bottom: env(safe-area-inset-bottom);"
         >
-            <div class="flex items-center gap-1.5">
-                <div class="flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-hidden">
-                    <div class="shrink-0"><BranchSwitcher compact=true /></div>
-                    <div class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
-                        {move || view! { <StatusView core=core.clone() locale=locale /> }}
-                    </div>
-                    <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
-                        <span>{move || if is_narrow.get() { "W".to_string() } else { t::bottom_bar::words(locale.get()).to_string() }}</span>
-                        <span class="font-mono text-primary">{move || displayed_stats.get().words}</span>
-                    </div>
-                    <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
-                        <span>{move || if is_narrow.get() { "L".to_string() } else { t::bottom_bar::lines(locale.get()).to_string() }}</span>
-                        <span class="font-mono text-primary">{move || displayed_stats.get().lines}</span>
-                    </div>
-                    <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
-                        <span>{move || if is_narrow.get() { "Ch".to_string() } else { t::bottom_bar::chars(locale.get()).to_string() }}</span>
-                        <span class="font-mono text-primary">{move || displayed_stats.get().chars}</span>
-                    </div>
-                </div>
-
-                <button
-                    class="h-11 min-w-11 p-1.5 rounded-md active:bg-hover flex items-center justify-center"
-                    title=move || t::bottom_bar::toggle_status_details(locale.get())
-                    aria-label=move || t::bottom_bar::toggle_status_details(locale.get())
-                    on:click=move |_| set_expanded.update(|v| *v = !*v)
-                >
-                    {move || if expanded.get() {
-                        view! {
-                            <span class="h-8 w-8 rounded-md border border-default bg-panel text-secondary flex items-center justify-center">
-                                <ChevronDown class="w-4 h-4"/>
-                            </span>
-                        }.into_any()
-                    } else {
-                        view! {
-                            <span class="h-8 w-8 rounded-md border border-default bg-panel text-secondary flex items-center justify-center">
-                                <ChevronUp class="w-4 h-4"/>
-                            </span>
-                        }.into_any()
-                    }}
-                </button>
-            </div>
+            <FooterSummaryRow
+                core=core.clone()
+                locale=locale
+                is_narrow=is_narrow
+                expanded=expanded
+                set_expanded=set_expanded
+                displayed_stats=displayed_stats
+            />
 
             <Show when=move || expanded.get()>
-                <div class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-                    <Show when=move || load_state.get() != "ready">
-                        <div class="shrink-0 px-2 h-7 rounded-md bg-sidebar border border-default flex items-center">
-                            <LoadStatus load_state=load_state load_progress=load_progress load_eta_ms=load_eta_ms is_narrow=is_narrow locale=locale />
-                        </div>
-                    </Show>
-                    <div class="shrink-0 text-[10px] text-muted font-mono px-1">
-                        {move || format!("v{}/{}", displayed_curr_ver.get(), displayed_max_ver.get())}
-                    </div>
-                </div>
-
-                <Show
-                    when=move || is_narrow.get()
-                    fallback=move || view! { <PlaybackWide curr_ver=displayed_curr_ver max_ver=displayed_max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale /> }
-                >
-                    <PlaybackNarrow curr_ver=displayed_curr_ver max_ver=displayed_max_ver on_to_start=on_to_start on_prev=on_prev on_next=on_next on_to_end=on_to_end set_ver=set_ver locale=locale />
-                </Show>
+                <FooterDetails
+                    load_state=core.load_state
+                    load_progress=core.load_progress
+                    load_eta_ms=core.load_eta_ms
+                    is_narrow=is_narrow
+                    locale=locale
+                    displayed_curr_ver=displayed_curr_ver
+                    displayed_max_ver=displayed_max_ver
+                    on_to_start=on_to_start
+                    on_prev=on_prev
+                    on_next=on_next
+                    on_to_end=on_to_end
+                    set_ver=set_ver
+                />
             </Show>
         </footer>
     }
