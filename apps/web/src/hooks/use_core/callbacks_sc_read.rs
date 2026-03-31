@@ -1,7 +1,11 @@
 use crate::api::WsService;
-use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
+use crate::hooks::use_core::callbacks_sc_scope::{
+    source_control_read_scope_nonce, source_control_scope_nonce,
+};
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
-use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::write_gate::{
+    RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
+};
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::{Callback, Set, WriteSignal};
@@ -28,7 +32,7 @@ pub(super) fn create_get_changes_callback(
 ) -> Callback<()> {
     let ws = ws.clone();
     Callback::new(move |_: ()| {
-        let Some(scope_nonce) = source_control_scope_nonce(scope) else {
+        let Some(scope_nonce) = source_control_read_scope_nonce(scope) else {
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -48,11 +52,11 @@ pub(super) fn create_get_history_callback(
 ) -> Callback<u32> {
     let ws = ws.clone();
     Callback::new(move |limit: u32| {
-        if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
+        if let Some(block) = repo_source_control_read_block_untracked(&ws, read_gate) {
             log_blocked_sc_read("GetCommitHistory", &format!("limit={limit}"), block);
             return;
         }
-        let Some(scope_nonce) = source_control_scope_nonce(scope) else {
+        let Some(scope_nonce) = source_control_read_scope_nonce(scope) else {
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -105,7 +109,7 @@ pub(super) fn create_get_commit_diff_callback(
 ) -> Callback<(Option<String>, String)> {
     let ws = ws.clone();
     Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
-        if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
+        if let Some(block) = repo_source_control_read_block_untracked(&ws, read_gate) {
             let detail = match commit_a.as_deref() {
                 Some(base) => format!("{base}..{commit_b}"),
                 None => commit_b.clone(),

@@ -14,17 +14,14 @@ use leptos::prelude::*;
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let write_block = core.write_block;
+    let read_block = core.read_block;
     // 当前展开的提交 ID (点击切换)
     let selected_commit = RwSignal::new(Option::<String>::None);
 
     Effect::new(move |_| {
         if !expanded.get()
             || core.current_repo_id.get().is_none()
-            || core.active_branch.get().is_some()
-            || core.pending_branch_switch.get().is_some()
-            || core.pending_repo_switch.get().is_some()
-            || write_block.get().is_some()
+            || read_block.get().is_some()
         {
             return;
         }
@@ -62,7 +59,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
 
                                             <div
                                                 class=move || {
-                                                    if write_block.get().is_some() {
+                                                    if read_block.get().is_some() {
                                                         "pr-2 cursor-default".to_string()
                                                     } else {
                                                         "pr-2 cursor-pointer".to_string()
@@ -72,7 +69,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                                                     let cid = commit.id.clone();
                                                     let pid = commit.parent_id.clone();
                                                     move |_| {
-                                                        if write_block.get_untracked().is_some() {
+                                                        if read_block.get_untracked().is_some() {
                                                             return;
                                                         }
                                                         if selected_commit.get_untracked().as_deref() == Some(&cid) {

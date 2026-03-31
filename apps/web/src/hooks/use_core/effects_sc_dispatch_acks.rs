@@ -85,7 +85,6 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
             refresh_after_fs_change(
                 path,
                 change_type,

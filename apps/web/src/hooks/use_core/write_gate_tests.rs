@@ -1,4 +1,4 @@
-use super::{RepoWriteBlock, repo_write_block};
+use super::{RepoWriteBlock, repo_source_control_read_block, repo_write_block};
 use crate::api::ConnectionStatus;
 
 #[test]
@@ -42,6 +42,23 @@ fn repo_write_gate_allows_ready_local_repo() {
             ConnectionStatus::Connected,
             "ready",
             false,
+            true,
+            true,
+            true,
+            false,
+            false
+        ),
+        None
+    );
+}
+
+#[test]
+fn repo_source_control_read_gate_allows_read_only_branch() {
+    assert_eq!(
+        repo_source_control_read_block(
+            ConnectionStatus::Connected,
+            "ready",
+            true,
             true,
             true,
             true,

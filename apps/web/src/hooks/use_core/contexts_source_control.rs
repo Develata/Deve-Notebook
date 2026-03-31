@@ -14,6 +14,7 @@ pub struct SourceControlContext {
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub can_write: Signal<bool>,
     pub write_block: Signal<Option<RepoWriteBlock>>,
+    pub read_block: Signal<Option<RepoWriteBlock>>,
     pub notice: ReadSignal<Option<SourceControlNotice>>,
     pub clear_notice: Callback<()>,
     pub current_repo_id: ReadSignal<Option<String>>,

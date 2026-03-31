@@ -2,8 +2,8 @@ use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, t};
-use deve_core::protocol::ServerError;
-use leptos::prelude::{ReadSignal, Set, WriteSignal};
+use deve_core::protocol::{ServerError, ServerErrorCode};
+use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal};
 
 #[path = "message_protocol_control.rs"]
 mod control;
@@ -24,22 +24,40 @@ pub struct ProtocolControlSignals {
     pub set_tree_request_id: WriteSignal<Option<String>>,
     pub set_sync_mode_request_id: WriteSignal<Option<String>>,
     pub set_pending_ops_request_id: WriteSignal<Option<String>>,
+    pub changes_request_id: ReadSignal<Option<String>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
+    pub commit_history_request_id: ReadSignal<Option<String>>,
     pub set_commit_history_request_id: WriteSignal<Option<String>>,
+    pub doc_diff_request_id: ReadSignal<Option<String>>,
     pub set_doc_diff_request_id: WriteSignal<Option<String>>,
+    pub commit_diff_request_id: ReadSignal<Option<String>>,
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
 }
 
 fn record_source_control_notice(
     error: &ServerError,
-    set_notice: WriteSignal<Option<SourceControlNotice>>,
+    signals: ProtocolControlSignals,
 ) -> bool {
+    if error.code == ServerErrorCode::RequestFailed && has_pending_source_control_request(signals) {
+        signals.set_source_control_notice.set(Some(SourceControlNotice {
+            code: error.code,
+            detail: error.detail.clone(),
+        }));
+        return true;
+    }
     if let Some(notice) = SourceControlNotice::from_server_error(error) {
-        set_notice.set(Some(notice));
+        signals.set_source_control_notice.set(Some(notice));
         return true;
     }
     false
+}
+
+fn has_pending_source_control_request(signals: ProtocolControlSignals) -> bool {
+    signals.changes_request_id.get_untracked().is_some()
+        || signals.commit_history_request_id.get_untracked().is_some()
+        || signals.doc_diff_request_id.get_untracked().is_some()
+        || signals.commit_diff_request_id.get_untracked().is_some()
 }
 
 pub fn handle_protocol_error(
@@ -54,8 +72,7 @@ pub fn handle_protocol_error(
         ws.mark_unauthorized();
     }
     let message = t::server_error::message(locale, error.code);
-    let handled_in_source_control =
-        record_source_control_notice(error, signals.set_source_control_notice);
+    let handled_in_source_control = record_source_control_notice(error, signals);
     match (handled_in_source_control, error.detail.as_deref()) {
         (true, Some(detail)) => {
             leptos::logging::log!("Source Control notice {}: {}", message, detail)

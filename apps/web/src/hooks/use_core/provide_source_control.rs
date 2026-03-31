@@ -1,13 +1,15 @@
 use super::super::contexts::SourceControlContext;
 use super::super::types::CoreState;
 use super::super::write_gate::{
-    RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
+    RepoWriteSignals, repo_source_control_read_block_tracked,
+    repo_write_allowed_for_core_tracked, repo_write_block_tracked,
 };
 use leptos::prelude::{Callback, Set, Signal};
 
 pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlContext {
     let state_for_can_write = state.clone();
     let state_for_block = state.clone();
+    let state_for_read_block = state.clone();
     let clear_notice = Callback::new({
         let set_notice = state.set_source_control_notice;
         move |_| set_notice.set(None)
@@ -30,6 +32,19 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
                     current_repo_id: state_for_block.current_repo_id,
                     pending_branch_switch: state_for_block.pending_branch_switch,
                     pending_repo_switch: state_for_block.pending_repo_switch,
+                },
+            )
+        }),
+        read_block: Signal::derive(move || {
+            repo_source_control_read_block_tracked(
+                &state_for_read_block.ws,
+                RepoWriteSignals {
+                    load_state: state_for_read_block.load_state,
+                    is_spectator: state_for_read_block.is_spectator,
+                    handshake_ready: state_for_read_block.handshake_ready,
+                    current_repo_id: state_for_read_block.current_repo_id,
+                    pending_branch_switch: state_for_read_block.pending_branch_switch,
+                    pending_repo_switch: state_for_read_block.pending_repo_switch,
                 },
             )
         }),

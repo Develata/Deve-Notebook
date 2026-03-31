@@ -5,7 +5,7 @@ use super::clear_failed_scope_switch;
 use super::record_source_control_notice;
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::protocol::{ServerError, ServerErrorCode};
-use leptos::prelude::GetUntracked;
+use leptos::prelude::{GetUntracked, Set};
 use support::protocol_signal_harness;
 
 #[test]
@@ -92,7 +92,7 @@ fn source_control_errors_are_recorded_as_panel_notice() {
     let harness = protocol_signal_harness(None, None, None, None);
     let stored = record_source_control_notice(
         &ServerError::with_detail(ServerErrorCode::ScNothingToCommit, "no staged changes"),
-        harness.control().set_source_control_notice,
+        harness.control(),
     );
     assert!(stored);
     let notice = harness.source_control_notice.get_untracked().unwrap();
@@ -105,7 +105,23 @@ fn non_source_control_errors_do_not_record_panel_notice() {
     let harness = protocol_signal_harness(None, None, None, None);
     let stored = record_source_control_notice(
         &ServerError::new(ServerErrorCode::RequestFailed),
-        harness.control().set_source_control_notice,
+        harness.control(),
+    );
+    assert!(stored);
+    let notice = harness.source_control_notice.get_untracked().unwrap();
+    assert_eq!(notice.code, ServerErrorCode::RequestFailed);
+}
+
+#[test]
+fn request_failed_without_sc_request_does_not_record_panel_notice() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    harness.control().set_changes_request_id.set(None);
+    harness.control().set_commit_history_request_id.set(None);
+    harness.control().set_doc_diff_request_id.set(None);
+    harness.control().set_commit_diff_request_id.set(None);
+    let stored = record_source_control_notice(
+        &ServerError::new(ServerErrorCode::RequestFailed),
+        harness.control(),
     );
     assert!(!stored);
     assert_eq!(harness.source_control_notice.get_untracked(), None);

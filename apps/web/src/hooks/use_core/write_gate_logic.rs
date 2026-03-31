@@ -55,3 +55,26 @@ pub(crate) fn repo_write_block(
         ConnectionStatus::Connected => None,
     }
 }
+
+pub(crate) fn repo_source_control_read_block(
+    connection_status: ConnectionStatus,
+    load_state: &str,
+    is_read_only: bool,
+    handshake_ready: bool,
+    writer_ready: bool,
+    has_repo: bool,
+    pending_branch_switch: bool,
+    pending_repo_switch: bool,
+) -> Option<RepoWriteBlock> {
+    repo_write_block(
+        connection_status,
+        load_state,
+        is_read_only,
+        handshake_ready,
+        writer_ready,
+        has_repo,
+        pending_branch_switch,
+        pending_repo_switch,
+    )
+    .filter(|block| *block != RepoWriteBlock::ReadOnly)
+}

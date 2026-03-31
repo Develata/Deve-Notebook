@@ -13,9 +13,20 @@ pub(super) fn source_control_scope_nonce(scope: SourceControlScopeSignals) -> Op
     }
 }
 
+pub(super) fn source_control_read_scope_nonce(scope: SourceControlScopeSignals) -> Option<u64> {
+    if scope.current_repo_id.get_untracked().is_some()
+        && scope.pending_branch_switch.get_untracked().is_none()
+        && scope.pending_repo_switch.get_untracked().is_none()
+    {
+        Some(scope.current_scope_nonce.get_untracked())
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::source_control_scope_nonce;
+    use super::{source_control_read_scope_nonce, source_control_scope_nonce};
     use crate::hooks::use_core::{PendingBranchTarget, callbacks_sc::SourceControlScopeSignals};
     use leptos::prelude::*;
 
@@ -94,6 +105,28 @@ mod tests {
                 pending_repo_switch,
             }),
             None
+        );
+    }
+
+    #[test]
+    fn source_control_read_scope_allows_remote_branches() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (current_repo_id, _) = signal(Some("repo-a".to_string()));
+        let (active_branch, _) = signal(Some(deve_core::models::PeerId::new("peer-a")));
+        let (current_scope_nonce, _) = signal(11u64);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_repo_switch, _) = signal(None::<String>);
+
+        assert_eq!(
+            source_control_read_scope_nonce(SourceControlScopeSignals {
+                current_repo_id,
+                active_branch,
+                current_scope_nonce,
+                pending_branch_switch,
+                pending_repo_switch,
+            }),
+            Some(11)
         );
     }
 }

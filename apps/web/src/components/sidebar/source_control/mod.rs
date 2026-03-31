@@ -49,7 +49,6 @@ pub fn SourceControlView() -> impl IntoView {
     let show_graph = RwSignal::new(true);
 
     let show_menu = RwSignal::new(false);
-    let is_remote_branch = move || core.active_branch.get().is_some();
     let has_unstaged_changes = move || !core.unstaged_changes.get().is_empty();
     let write_block = core.write_block;
     let header_bulk_busy = StoredValue::new(Arc::new(AtomicBool::new(false)));
@@ -116,88 +115,86 @@ pub fn SourceControlView() -> impl IntoView {
                 <StatusNotice block=core.write_block />
                 <ErrorNotice
                     notice=core.notice
-                    block=core.write_block
+                    block=core.read_block
                     clear_notice=core.clear_notice
                 />
                 {move || {
-                    if is_remote_branch() {
-                        view! {}.into_any()
-                    } else {
-                        view! {
+                    view! {
                         // 2. Changes Section
                         {move || {
-                            if show_changes.get() {
-                            view! {
-                                <div class="border-t border-default">
-                                    <button
-                                         class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
-                                         on:click=move |_| expand_changes.update(|b| *b = !*b)
-                                    >
-                                        <span class=move || if expand_changes.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
-                                            <ChevronRight class="w-3 h-3" />
-                                        </span>
-                                        <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
-                                        <div class="hidden group-hover:flex items-center gap-1">
-                                            <Show when=move || write_block.get().is_none() && has_unstaged_changes()>
-                                            <button
-                                                class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title=move || t::source_control::discard_all_changes(locale.get())
-                                                disabled=move || {
-                                                    !core.can_write.get() || !has_unstaged_changes()
-                                                }
-                                                on:click=move |ev| {
-                                                    ev.stop_propagation();
-                                                    let header_bulk_busy_discard =
-                                                        header_bulk_busy.get_value();
-                                                    if header_bulk_busy_discard.swap(true, Ordering::AcqRel) {
-                                                        return;
+                            if show_changes.get() && core.active_branch.get().is_none() {
+                                view! {
+                                    <div class="border-t border-default">
+                                        <button
+                                             class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
+                                             on:click=move |_| expand_changes.update(|b| *b = !*b)
+                                        >
+                                            <span class=move || if expand_changes.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
+                                                <ChevronRight class="w-3 h-3" />
+                                            </span>
+                                            <span class="flex-1 text-left">{move || t::source_control::changes(locale.get())}</span>
+                                            <div class="hidden group-hover:flex items-center gap-1">
+                                                <Show when=move || write_block.get().is_none() && has_unstaged_changes()>
+                                                <button
+                                                    class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title=move || t::source_control::discard_all_changes(locale.get())
+                                                    disabled=move || {
+                                                        !core.can_write.get() || !has_unstaged_changes()
                                                     }
-                                                    core.clear_notice.run(());
-                                                    for entry in core.unstaged_changes.get_untracked() {
-                                                        core.on_discard_file.run(entry);
+                                                    on:click=move |ev| {
+                                                        ev.stop_propagation();
+                                                        let header_bulk_busy_discard =
+                                                            header_bulk_busy.get_value();
+                                                        if header_bulk_busy_discard.swap(true, Ordering::AcqRel) {
+                                                            return;
+                                                        }
+                                                        core.clear_notice.run(());
+                                                        for entry in core.unstaged_changes.get_untracked() {
+                                                            core.on_discard_file.run(entry);
+                                                        }
                                                     }
-                                                }
-                                            >
-                                                <RefreshCw class="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title=move || t::source_control::stage_all_changes(locale.get())
-                                                disabled=move || {
-                                                    !core.can_write.get() || !has_unstaged_changes()
-                                                }
-                                                on:click=move |ev| {
-                                                    ev.stop_propagation();
-                                                    let header_bulk_busy_stage =
-                                                        header_bulk_busy.get_value();
-                                                    if header_bulk_busy_stage.swap(true, Ordering::AcqRel) {
-                                                        return;
+                                                >
+                                                    <RefreshCw class="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    class="p-0.5 hover:bg-active rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title=move || t::source_control::stage_all_changes(locale.get())
+                                                    disabled=move || {
+                                                        !core.can_write.get() || !has_unstaged_changes()
                                                     }
-                                                    core.clear_notice.run(());
-                                                    core.on_stage_files.run(core.unstaged_changes.get_untracked());
-                                                }
-                                            >
-                                                <Plus class="w-3.5 h-3.5" />
-                                            </button>
-                                            </Show>
-                                        </div>
-                                    </button>
-
-                                    {move || if expand_changes.get() {
-                                        view! {
-                                            <div>
-                                                <Commit />
-                                                <Changes />
+                                                    on:click=move |ev| {
+                                                        ev.stop_propagation();
+                                                        let header_bulk_busy_stage =
+                                                            header_bulk_busy.get_value();
+                                                        if header_bulk_busy_stage.swap(true, Ordering::AcqRel) {
+                                                            return;
+                                                        }
+                                                        core.clear_notice.run(());
+                                                        core.on_stage_files.run(core.unstaged_changes.get_untracked());
+                                                    }
+                                                >
+                                                    <Plus class="w-3.5 h-3.5" />
+                                                </button>
+                                                </Show>
                                             </div>
-                                        }.into_any()
-                                    } else {
-                                        view! {}.into_any()
-                                    }}
-                                </div>
-                            }.into_any()
-                        } else {
-                            view! {}.into_any()
-                        }}}
+                                        </button>
+
+                                        {move || if expand_changes.get() {
+                                            view! {
+                                                <div>
+                                                    <Commit />
+                                                    <Changes />
+                                                </div>
+                                            }.into_any()
+                                        } else {
+                                            view! {}.into_any()
+                                        }}
+                                    </div>
+                                }.into_any()
+                            } else {
+                                view! {}.into_any()
+                            }
+                        }}
 
                         // 3. History Section
                         {move || if show_graph.get() {
@@ -205,9 +202,7 @@ pub fn SourceControlView() -> impl IntoView {
                         } else {
                             view! {}.into_any()
                         }}
-                        }
-                            .into_any()
-                    }
+                    }.into_any()
                 }}
 
                 <div class="h-8"></div>

@@ -15,7 +15,7 @@ pub(crate) struct RepoWriteSignals {
     pub pending_repo_switch: ReadSignal<Option<String>>,
 }
 
-pub(crate) use self::logic::{RepoWriteBlock, repo_write_block};
+pub(crate) use self::logic::{RepoWriteBlock, repo_source_control_read_block, repo_write_block};
 
 pub(crate) fn repo_write_block_untracked(
     ws: &WsService,
@@ -40,6 +40,40 @@ pub(crate) fn repo_write_block_tracked(
 ) -> Option<RepoWriteBlock> {
     let repo_id = signals.current_repo_id.get();
     repo_write_block(
+        ws.status.get(),
+        &signals.load_state.get(),
+        signals.is_spectator.get(),
+        signals.handshake_ready.get(),
+        ws.writer_ready_for(repo_id.as_deref()),
+        repo_id.is_some(),
+        signals.pending_branch_switch.get().is_some(),
+        signals.pending_repo_switch.get().is_some(),
+    )
+}
+
+pub(crate) fn repo_source_control_read_block_untracked(
+    ws: &WsService,
+    signals: RepoWriteSignals,
+) -> Option<RepoWriteBlock> {
+    let repo_id = signals.current_repo_id.get_untracked();
+    repo_source_control_read_block(
+        ws.status.get_untracked(),
+        &signals.load_state.get_untracked(),
+        signals.is_spectator.get_untracked(),
+        signals.handshake_ready.get_untracked(),
+        ws.writer_ready_for(repo_id.as_deref()),
+        repo_id.is_some(),
+        signals.pending_branch_switch.get_untracked().is_some(),
+        signals.pending_repo_switch.get_untracked().is_some(),
+    )
+}
+
+pub(crate) fn repo_source_control_read_block_tracked(
+    ws: &WsService,
+    signals: RepoWriteSignals,
+) -> Option<RepoWriteBlock> {
+    let repo_id = signals.current_repo_id.get();
+    repo_source_control_read_block(
         ws.status.get(),
         &signals.load_state.get(),
         signals.is_spectator.get(),
