@@ -37,6 +37,7 @@ pub struct ProtocolControlSignals {
 
 fn record_source_control_notice(error: &ServerError, signals: ProtocolControlSignals) -> bool {
     if error.code == ServerErrorCode::RequestFailed && has_pending_source_control_request(signals) {
+        clear_source_control_requests(signals);
         signals
             .set_source_control_notice
             .set(Some(SourceControlNotice {
@@ -46,6 +47,7 @@ fn record_source_control_notice(error: &ServerError, signals: ProtocolControlSig
         return true;
     }
     if let Some(notice) = SourceControlNotice::from_server_error(error) {
+        clear_source_control_requests(signals);
         signals.set_source_control_notice.set(Some(notice));
         return true;
     }
@@ -57,6 +59,13 @@ fn has_pending_source_control_request(signals: ProtocolControlSignals) -> bool {
         || signals.commit_history_request_id.get_untracked().is_some()
         || signals.doc_diff_request_id.get_untracked().is_some()
         || signals.commit_diff_request_id.get_untracked().is_some()
+}
+
+fn clear_source_control_requests(signals: ProtocolControlSignals) {
+    signals.set_changes_request_id.set(None);
+    signals.set_commit_history_request_id.set(None);
+    signals.set_doc_diff_request_id.set(None);
+    signals.set_commit_diff_request_id.set(None);
 }
 
 pub fn handle_protocol_error(

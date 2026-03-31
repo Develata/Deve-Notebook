@@ -110,4 +110,11 @@ impl ProtocolSignalHarness {
         assert_eq!(self.doc_diff_request_id.get_untracked(), None);
         assert_eq!(self.commit_diff_request_id.get_untracked(), None);
     }
+
+    pub fn assert_source_control_requests_cleared(&self) {
+        assert_eq!(self.changes_request_id.get_untracked(), None);
+        assert_eq!(self.commit_history_request_id.get_untracked(), None);
+        assert_eq!(self.doc_diff_request_id.get_untracked(), None);
+        assert_eq!(self.commit_diff_request_id.get_untracked(), None);
+    }
 }

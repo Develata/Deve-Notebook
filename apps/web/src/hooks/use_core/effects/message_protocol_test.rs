@@ -98,6 +98,7 @@ fn source_control_errors_are_recorded_as_panel_notice() {
     let notice = harness.source_control_notice.get_untracked().unwrap();
     assert_eq!(notice.code, ServerErrorCode::ScNothingToCommit);
     assert_eq!(notice.detail.as_deref(), Some("no staged changes"));
+    harness.assert_source_control_requests_cleared();
 }
 
 #[test]
@@ -110,6 +111,7 @@ fn non_source_control_errors_do_not_record_panel_notice() {
     assert!(stored);
     let notice = harness.source_control_notice.get_untracked().unwrap();
     assert_eq!(notice.code, ServerErrorCode::RequestFailed);
+    harness.assert_source_control_requests_cleared();
 }
 
 #[test]

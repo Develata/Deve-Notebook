@@ -20,6 +20,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
         unstaged_changes: state.unstaged_changes,
         commit_history: state.commit_history,
         commit_history_request_id: state.commit_history_request_id,
+        commit_diff_request_id: state.commit_diff_request_id,
         can_write: Signal::derive(move || {
             repo_write_allowed_for_core_tracked(&state_for_can_write)
         }),
