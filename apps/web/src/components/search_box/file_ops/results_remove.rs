@@ -1,0 +1,30 @@
+use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction, SearchResult};
+
+use super::super::path_utils::normalize_doc_path;
+
+pub(super) fn build_remove_results(args: &[String]) -> Vec<SearchResult> {
+    if args.is_empty() {
+        return vec![super::error_result("Usage: >rm <path>".to_string())];
+    }
+    if args.len() > 1 {
+        return vec![super::error_result(
+            "Paths with spaces must be quoted".to_string(),
+        )];
+    }
+    if args[0].trim().is_empty() {
+        return vec![super::error_result("Path required".to_string())];
+    }
+
+    let path = normalize_doc_path(&args[0]);
+    vec![SearchResult {
+        id: format!("rm-{}", path),
+        title: format!("Remove: {}", path),
+        detail: Some("FileOp".to_string()),
+        score: 1.0,
+        action: SearchAction::FileOp(FileOpAction {
+            kind: FileOpKind::Remove,
+            src: path,
+            dst: None,
+        }),
+    }]
+}
