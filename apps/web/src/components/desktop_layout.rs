@@ -1,16 +1,23 @@
 // apps/web/src/components/desktop_layout.rs
 //! # Desktop Layout
 
+use self::desktop_layout_banner::DesktopSyncBanner;
+use self::desktop_layout_content::DesktopLayoutContent;
+use self::desktop_layout_sidebar::DesktopSidebar;
 use crate::components::activity_bar::SidebarView;
-use crate::components::dashboard::Dashboard;
 use crate::components::desktop_chat_panel::DesktopChatPanel;
-use crate::components::diff_view::DiffView;
 use crate::components::header::Header;
-use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_layout::LayoutHookReturn;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
+
+#[path = "desktop_layout_banner.rs"]
+mod desktop_layout_banner;
+#[path = "desktop_layout_content.rs"]
+mod desktop_layout_content;
+#[path = "desktop_layout_sidebar.rs"]
+mod desktop_layout_sidebar;
 
 #[component]
 pub fn DesktopLayout(
@@ -37,20 +44,6 @@ pub fn DesktopLayout(
         _do_resize,
         _is_resizing,
     ) = layout;
-    let banner_toggle = core.clone();
-    let banner_text = core.clone();
-    let editor_doc_core = core.clone();
-    let current_editor_doc = Signal::derive(move || {
-        if editor_doc_core.pending_branch_switch.get().is_some()
-            || editor_doc_core.pending_repo_switch.get().is_some()
-        {
-            None
-        } else {
-            editor_doc_core.current_doc.get()
-        }
-    });
-    let diff_core = core.clone();
-    let editor_core = core.clone();
 
     view! {
         <Header
@@ -59,11 +52,7 @@ pub fn DesktopLayout(
             on_open=on_open
             on_command=on_command
         />
-        <Show when=move || banner_toggle.sync_banner.get().is_some()>
-            <div class="mx-4 mt-2 rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-xs font-medium text-amber-950">
-                {move || banner_text.sync_banner.get().unwrap_or_default()}
-            </div>
-        </Show>
+        <DesktopSyncBanner sync_banner=core.sync_banner />
         <main
             class="flex-1 w-full flex overflow-hidden relative"
             style=move || {
@@ -99,27 +88,14 @@ pub fn DesktopLayout(
                 }
             ></div>
 
-            <aside
-                class="flex-none bg-panel rounded-lg shadow-sm border border-default flex flex-col z-20"
-                style=move || format!("width: {}px", sidebar_width.get())
-            >
-                <crate::components::activity_bar::ActivityBar
-                    active_view=active_view
-                    set_active_view=set_active_view
-                    pinned_views=pinned_views
-                    set_pinned_views=set_pinned_views
-                />
-                <div class="flex-1 overflow-hidden">
-                    <crate::components::sidebar::Sidebar
-                        active_view=active_view
-                        docs=core.docs
-                        current_doc=core.current_doc
-                        is_readonly=core.is_spectator
-                        on_select=core.on_doc_select
-                        on_delete=core.on_doc_delete
-                    />
-                </div>
-            </aside>
+            <DesktopSidebar
+                core=core.clone()
+                sidebar_width=sidebar_width
+                active_view=active_view
+                set_active_view=set_active_view
+                pinned_views=pinned_views
+                set_pinned_views=set_pinned_views
+            />
 
             <div
                 class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
@@ -135,44 +111,7 @@ pub fn DesktopLayout(
                 <div class="w-[1px] h-8 bg-active group-hover:bg-accent transition-colors"></div>
             </div>
 
-            <div class="flex-1 bg-panel shadow-sm border border-default rounded-lg overflow-hidden relative flex flex-col min-w-0">
-                <div class="flex-1 min-h-0 overflow-hidden">
-                    <Show
-                        when=move || diff_core.diff_content.get().is_some()
-                        fallback=move || view! {
-                            <Show
-                                when=move || current_editor_doc.get().is_some()
-                                fallback=move || view! { <Dashboard /> }
-                            >
-                                {move || {
-                                    current_editor_doc
-                                        .get()
-                                        .map(|doc_id| view! { <Editor doc_id=doc_id on_stats=editor_core.on_stats /> })
-                                }}
-                            </Show>
-                        }
-                    >
-                        {move || {
-                            diff_core.diff_content.get().map(|session| {
-                                view! {
-                                    <DiffView
-                                        repo_scope=diff_core
-                                            .current_repo_id
-                                            .get()
-                                            .or_else(|| diff_core.current_repo.get())
-                                            .unwrap_or_default()
-                                        path=session.path
-                                        old_content=session.old_content
-                                        new_content=session.new_content
-                                        is_readonly=diff_core.is_spectator.get()
-                                        on_close=Callback::new(move |_| diff_core.set_diff_content.set(None))
-                                    />
-                                }
-                            })
-                        }}
-                    </Show>
-                </div>
-            </div>
+            <DesktopLayoutContent core=core.clone() />
 
             <DesktopChatPanel
                 chat_visible=chat_visible
