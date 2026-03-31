@@ -11,6 +11,9 @@ use leptos::prelude::*;
 
 mod buffered_ops;
 mod delta_input;
+mod delta_input_forward;
+mod delta_input_gate;
+mod delta_input_state;
 pub mod ffi;
 mod handshake_reset;
 pub mod hook;
