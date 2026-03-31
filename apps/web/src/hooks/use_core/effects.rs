@@ -15,6 +15,7 @@ mod message_dispatch_protocol;
 mod message_dispatch_route_control;
 mod message_dispatch_route_projection;
 mod message_dispatch_route_protocol;
+mod message_dispatch_route_runtime;
 mod message_dispatch_runtime;
 mod message_dispatch_shadow;
 mod message_dispatch_sync;

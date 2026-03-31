@@ -6,41 +6,14 @@ use super::message_dispatch_control::{
     handle_branch_switched_message, handle_peer_deleted_message, handle_repo_list_message,
     handle_repo_switched_message,
 };
-use super::message_dispatch_runtime::{
-    handle_chat_chunk_message, handle_plugin_response_message, handle_search_results_message,
-};
 use super::message_dispatch_shadow::handle_shadow_list_message;
 
-pub fn route_control_and_runtime_message(
+pub fn route_control_message(
     msg: ServerMessage,
     ws: &WsService,
     signals: CoreSignals,
 ) -> Result<(), ServerMessage> {
     match msg {
-        ServerMessage::PluginResponse {
-            req_id,
-            result,
-            error,
-        } => {
-            handle_plugin_response_message(req_id, result, error, signals);
-            Ok(())
-        }
-        ServerMessage::ChatChunk {
-            req_id,
-            delta,
-            finish_reason,
-        } => {
-            handle_chat_chunk_message(req_id, delta, finish_reason, signals);
-            Ok(())
-        }
-        ServerMessage::SearchResults {
-            request_id,
-            scope_nonce,
-            results,
-        } => {
-            handle_search_results_message(request_id, scope_nonce, results, signals);
-            Ok(())
-        }
         ServerMessage::ShadowList {
             request_id,
             scope_nonce,

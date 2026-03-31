@@ -2,9 +2,10 @@ use crate::api::WsService;
 use deve_core::protocol::ServerMessage;
 
 use super::super::state::CoreSignals;
-use super::message_dispatch_route_control::route_control_and_runtime_message;
+use super::message_dispatch_route_control::route_control_message;
 use super::message_dispatch_route_projection::route_projection_and_sync_message;
 use super::message_dispatch_route_protocol::route_protocol_and_write_message;
+use super::message_dispatch_route_runtime::route_runtime_message;
 use super::message_sync_dispatch::handle_sc_or_remaining;
 
 pub fn handle_message<F>(
@@ -20,7 +21,11 @@ pub fn handle_message<F>(
         Ok(()) => return,
         Err(msg) => msg,
     };
-    let msg = match route_control_and_runtime_message(msg, ws, signals) {
+    let msg = match route_runtime_message(msg, ws, signals) {
+        Ok(()) => return,
+        Err(msg) => msg,
+    };
+    let msg = match route_control_message(msg, ws, signals) {
         Ok(()) => return,
         Err(msg) => msg,
     };
