@@ -9,8 +9,10 @@ mod history;
 mod key;
 mod live;
 mod scope;
+mod snapshot_apply;
 mod snapshot;
 mod snapshot_finish;
+mod snapshot_gate;
 
 use context::SyncContext;
 use deve_core::models::{PeerId, RepoId};
