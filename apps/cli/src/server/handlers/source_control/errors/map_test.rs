@@ -216,5 +216,5 @@ fn maps_commit_diff_projection_gap_to_sc_commit_diff_unprojectable() {
         ),
     );
     assert_eq!(err.code, ServerErrorCode::ScCommitDiffUnprojectable);
-    assert_eq!(err.detail, None);
+    assert_eq!(err.detail.as_deref(), Some("387cc45d"));
 }

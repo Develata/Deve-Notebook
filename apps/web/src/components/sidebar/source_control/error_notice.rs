@@ -4,10 +4,28 @@ use crate::i18n::{Locale, server_error};
 use leptos::prelude::*;
 
 fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
-    if let Some(detail) = notice.detail.as_deref() {
-        return detail.to_string();
-    }
     match notice.code {
+        deve_core::protocol::ServerErrorCode::ScCommitDiffUnprojectable => {
+            let commit = notice
+                .detail
+                .as_deref()
+                .map(|detail| detail.chars().take(7).collect::<String>());
+            match (locale, commit.as_deref()) {
+                (Locale::En, Some(commit)) => format!(
+                    "Commit {commit} contains legacy content without structure projection, so Deve-Note cannot reconstruct a path-safe diff."
+                ),
+                (Locale::Zh, Some(commit)) => format!(
+                    "提交 {commit} 包含缺少结构投影的旧内容，Deve-Note 无法安全重建带路径语义的差异。"
+                ),
+                (Locale::En, None) => {
+                    "This legacy commit contains content without structure projection, so Deve-Note cannot reconstruct a path-safe diff.".to_string()
+                }
+                (Locale::Zh, None) => {
+                    "该旧提交包含缺少结构投影的内容，Deve-Note 无法安全重建带路径语义的差异。".to_string()
+                }
+            }
+        }
+        _ if notice.detail.is_some() => notice.detail.clone().unwrap_or_default(),
         deve_core::protocol::ServerErrorCode::ScNothingToCommit => match locale {
             Locale::En => "Stage files before trying to commit.",
             Locale::Zh => "请先暂存文件，再执行提交。",
@@ -24,13 +42,6 @@ fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
         | deve_core::protocol::ServerErrorCode::ScCommitNotFound => match locale {
             Locale::En => "The selected Source Control item is no longer available.",
             Locale::Zh => "当前选中的源代码管理条目已不存在。",
-        }
-        .to_string(),
-        deve_core::protocol::ServerErrorCode::ScCommitDiffUnprojectable => match locale {
-            Locale::En => {
-                "This legacy commit contains content without structure projection, so Deve-Note cannot reconstruct a path-safe diff."
-            }
-            Locale::Zh => "该旧提交包含缺少结构投影的内容，Deve-Note 无法安全重建带路径语义的差异。",
         }
         .to_string(),
         _ => server_error::message(locale, notice.code).to_string(),
