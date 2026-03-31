@@ -78,6 +78,7 @@ pub(super) fn assemble_core_state(
         staged_changes: sc.staged_changes,
         unstaged_changes: sc.unstaged_changes,
         commit_history: sc.commit_history,
+        commit_history_request_id: sc.commit_history_request_id,
         on_get_changes: sc.on_get_changes,
         on_stage_file: sc.on_stage_file,
         on_stage_files: sc.on_stage_files,

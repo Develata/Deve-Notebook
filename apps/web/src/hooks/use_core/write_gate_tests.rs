@@ -68,3 +68,20 @@ fn repo_source_control_read_gate_allows_read_only_branch() {
         None
     );
 }
+
+#[test]
+fn repo_source_control_read_gate_allows_read_only_branch_without_writer_handshake() {
+    assert_eq!(
+        repo_source_control_read_block(
+            ConnectionStatus::Connected,
+            "ready",
+            true,
+            false,
+            false,
+            true,
+            false,
+            false
+        ),
+        None
+    );
+}

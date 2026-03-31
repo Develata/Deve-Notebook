@@ -12,6 +12,7 @@ pub struct SourceControlContext {
     pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
+    pub commit_history_request_id: ReadSignal<Option<String>>,
     pub can_write: Signal<bool>,
     pub write_block: Signal<Option<RepoWriteBlock>>,
     pub read_block: Signal<Option<RepoWriteBlock>>,

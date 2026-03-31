@@ -66,6 +66,22 @@ pub(crate) fn repo_source_control_read_block(
     pending_branch_switch: bool,
     pending_repo_switch: bool,
 ) -> Option<RepoWriteBlock> {
+    if is_read_only {
+        return match connection_status {
+            ConnectionStatus::Unauthorized => Some(RepoWriteBlock::SessionExpired),
+            ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline),
+            ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
+            ConnectionStatus::Connected if load_state != "ready" => {
+                Some(RepoWriteBlock::SnapshotLoading)
+            }
+            ConnectionStatus::Connected if pending_branch_switch || pending_repo_switch => {
+                Some(RepoWriteBlock::ScopeSwitching)
+            }
+            ConnectionStatus::Connected if !has_repo => Some(RepoWriteBlock::NoRepo),
+            ConnectionStatus::Connected => None,
+        };
+    }
+
     repo_write_block(
         connection_status,
         load_state,

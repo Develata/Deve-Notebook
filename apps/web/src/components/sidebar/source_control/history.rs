@@ -15,6 +15,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let read_block = core.read_block;
+    let history_loading = Signal::derive(move || core.commit_history_request_id.get().is_some());
     // 当前展开的提交 ID (点击切换)
     let selected_commit = RwSignal::new(Option::<String>::None);
 
@@ -40,94 +41,118 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
             {move || if expanded.get() {
                 view! {
                     <div class="pb-2">
-                        // Timeline List
-                        <div class="relative pl-6 pt-2">
-                            // Vertical Line
-                            <div class="absolute left-[19px] top-2 bottom-0 w-[1px] bg-active"></div>
+                        {move || {
+                            if history_loading.get() {
+                                view! {
+                                    <div class="px-6 pt-2 text-[12px] text-muted">
+                                        {match locale.get() {
+                                            Locale::En => "Loading history...",
+                                            Locale::Zh => "正在加载历史记录...",
+                                        }}
+                                    </div>
+                                }.into_any()
+                            } else if core.commit_history.get().is_empty() && core.notice.get().is_none() {
+                                view! {
+                                    <div class="px-6 pt-2 text-[12px] text-muted">
+                                        {match locale.get() {
+                                            Locale::En => "No commit history yet on this branch.",
+                                            Locale::Zh => "这个分支上还没有提交历史。",
+                                        }}
+                                    </div>
+                                }.into_any()
+                            } else {
+                                view! {
+                                    // Timeline List
+                                    <div class="relative pl-6 pt-2">
+                                        // Vertical Line
+                                        <div class="absolute left-[19px] top-2 bottom-0 w-[1px] bg-active"></div>
 
-                            <For
-                                each=move || core.commit_history.get()
-                                key=|c| c.id.clone()
-                                children=move |commit| {
-                                    view! {
-                                        <div class="relative mb-3 group">
-                                            // Dot
-                                            <div class="absolute -left-[19px] top-[3px] w-2.5 h-2.5 rounded-full border-2 border-white bg-accent shadow-sm z-10"></div>
+                                        <For
+                                            each=move || core.commit_history.get()
+                                            key=|c| c.id.clone()
+                                            children=move |commit| {
+                                                view! {
+                                                    <div class="relative mb-3 group">
+                                                        // Dot
+                                                        <div class="absolute -left-[19px] top-[3px] w-2.5 h-2.5 rounded-full border-2 border-white bg-accent shadow-sm z-10"></div>
 
-                                            <div
-                                                class=move || {
-                                                    if read_block.get().is_some() {
-                                                        "pr-2 cursor-default".to_string()
-                                                    } else {
-                                                        "pr-2 cursor-pointer".to_string()
-                                                    }
-                                                }
-                                                on:click={
-                                                    let cid = commit.id.clone();
-                                                    let pid = commit.parent_id.clone();
-                                                    move |_| {
-                                                        if read_block.get_untracked().is_some() {
-                                                            return;
-                                                        }
-                                                        if selected_commit.get_untracked().as_deref() == Some(&cid) {
-                                                            core.set_commit_diff_result.set(Vec::new());
-                                                            selected_commit.set(None);
-                                                        } else {
-                                                            core.set_commit_diff_result.set(Vec::new());
-                                                            core.on_get_commit_diff.run((pid.clone(), cid.clone()));
-                                                            selected_commit.set(Some(cid.clone()));
-                                                        }
-                                                    }
-                                                }
-                                            >
-                                                <div class="text-[13px] text-primary leading-tight mb-0.5 font-medium truncate" title={commit.message.clone()}>
-                                                    {commit.message.clone()}
-                                                </div>
-                                                <div class="flex items-center gap-2 text-[11px] text-muted">
-                                                    <span class="font-mono bg-hover px-1 rounded text-secondary">{commit.id[0..7].to_string()}</span>
-                                                    <span>{format_relative(commit.timestamp)}</span>
-                                                </div>
-                                            </div>
-
-                                            // 内联展开: 提交的文件差异列表
-                                            {
-                                                let cid = commit.id.clone();
-                                                move || {
-                                                    if selected_commit.get().as_deref() == Some(&cid) {
-                                                        let diffs = core.commit_diff_result.get();
-                                                        view! {
-                                                            <div class="ml-2 mt-1 border-l border-active pl-2">
-                                                                {diffs.into_iter().map(|f| {
-                                                                    let path_label = f.previous_path
-                                                                        .as_ref()
-                                                                        .map(|old| format!("{old} -> {}", f.path))
-                                                                        .unwrap_or_else(|| f.path.clone());
-                                                                    let (ch, cls) = match f.status {
-                                                                        ChangeStatus::Modified => ("M", "text-modified"),
-                                                                        ChangeStatus::Added => ("A", "text-added"),
-                                                                        ChangeStatus::Deleted => ("D", "text-deleted"),
-                                                                        ChangeStatus::Renamed => ("R", "text-added"),
-                                                                    };
-                                                                    view! {
-                                                                        <div class="flex items-center gap-1 text-[12px] text-secondary py-0.5 hover:bg-hover px-1 rounded cursor-pointer">
-                                                                            <FileText class="w-3 h-3 text-muted" />
-                                                                            <span class="truncate flex-1">{path_label}</span>
-                                                                            <span class=format!("{cls} text-[10px] font-bold")>{ch}</span>
-                                                                        </div>
+                                                        <div
+                                                            class=move || {
+                                                                if read_block.get().is_some() {
+                                                                    "pr-2 cursor-default".to_string()
+                                                                } else {
+                                                                    "pr-2 cursor-pointer".to_string()
+                                                                }
+                                                            }
+                                                            on:click={
+                                                                let cid = commit.id.clone();
+                                                                let pid = commit.parent_id.clone();
+                                                                move |_| {
+                                                                    if read_block.get_untracked().is_some() {
+                                                                        return;
                                                                     }
-                                                                }).collect_view()}
+                                                                    if selected_commit.get_untracked().as_deref() == Some(&cid) {
+                                                                        core.set_commit_diff_result.set(Vec::new());
+                                                                        selected_commit.set(None);
+                                                                    } else {
+                                                                        core.set_commit_diff_result.set(Vec::new());
+                                                                        core.on_get_commit_diff.run((pid.clone(), cid.clone()));
+                                                                        selected_commit.set(Some(cid.clone()));
+                                                                    }
+                                                                }
+                                                            }
+                                                        >
+                                                            <div class="text-[13px] text-primary leading-tight mb-0.5 font-medium truncate" title={commit.message.clone()}>
+                                                                {commit.message.clone()}
                                                             </div>
-                                                        }.into_any()
-                                                    } else {
-                                                        view! {}.into_any()
-                                                    }
+                                                            <div class="flex items-center gap-2 text-[11px] text-muted">
+                                                                <span class="font-mono bg-hover px-1 rounded text-secondary">{commit.id[0..7].to_string()}</span>
+                                                                <span>{format_relative(commit.timestamp)}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        // 内联展开: 提交的文件差异列表
+                                                        {
+                                                            let cid = commit.id.clone();
+                                                            move || {
+                                                                if selected_commit.get().as_deref() == Some(&cid) {
+                                                                    let diffs = core.commit_diff_result.get();
+                                                                    view! {
+                                                                        <div class="ml-2 mt-1 border-l border-active pl-2">
+                                                                            {diffs.into_iter().map(|f| {
+                                                                                let path_label = f.previous_path
+                                                                                    .as_ref()
+                                                                                    .map(|old| format!("{old} -> {}", f.path))
+                                                                                    .unwrap_or_else(|| f.path.clone());
+                                                                                let (ch, cls) = match f.status {
+                                                                                    ChangeStatus::Modified => ("M", "text-modified"),
+                                                                                    ChangeStatus::Added => ("A", "text-added"),
+                                                                                    ChangeStatus::Deleted => ("D", "text-deleted"),
+                                                                                    ChangeStatus::Renamed => ("R", "text-added"),
+                                                                                };
+                                                                                view! {
+                                                                                    <div class="flex items-center gap-1 text-[12px] text-secondary py-0.5 hover:bg-hover px-1 rounded cursor-pointer">
+                                                                                        <FileText class="w-3 h-3 text-muted" />
+                                                                                        <span class="truncate flex-1">{path_label}</span>
+                                                                                        <span class=format!("{cls} text-[10px] font-bold")>{ch}</span>
+                                                                                    </div>
+                                                                                }
+                                                                            }).collect_view()}
+                                                                        </div>
+                                                                    }.into_any()
+                                                                } else {
+                                                                    view! {}.into_any()
+                                                                }
+                                                            }
+                                                        }
+                                                    </div>
                                                 }
                                             }
-                                        </div>
-                                    }
-                                }
-                            />
-                        </div>
+                                        />
+                                    </div>
+                                }.into_any()
+                            }
+                        }}
                     </div>
                 }.into_any()
             } else {
