@@ -2,20 +2,23 @@
 //! # ExplorerView 组件 (ExplorerView Component)
 //!
 //! 侧边栏的主要文件浏览器视图。
-//! 管理文件树的渲染，以及创建、重命名、移动、删除和上下文菜单的状态。
+//! 管理文件树、顶部动作和上下文菜单状态。
 
-use crate::components::icons::Plus;
-use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::types::FileActionsContext;
-use crate::hooks::use_core::{BranchContext, DocContext};
-use crate::i18n::{Locale, t};
+use crate::hooks::use_core::DocContext;
+use crate::i18n::Locale;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
 use crate::components::dropdown::AnchorRect;
-use crate::components::main_layout::SearchControl;
-use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
+
+#[path = "explorer_header.rs"]
+mod header;
+#[path = "explorer_tree.rs"]
+mod tree_view;
+
+use header::ExplorerHeader;
+use tree_view::ExplorerTree;
 
 #[component]
 pub fn ExplorerView(
@@ -26,13 +29,12 @@ pub fn ExplorerView(
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let core = expect_context::<CoreState>();
-    let search_control = expect_context::<SearchControl>();
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
     let (menu_anchor, set_menu_anchor) = signal(None::<AnchorRect>);
 
     // 回调函数
+    let search_control = expect_context::<crate::components::main_layout::SearchControl>();
     let open_search = Callback::new(move |query: String| {
         search_control.set_mode.set(query);
         search_control.set_show.set(true);
@@ -86,72 +88,19 @@ pub fn ExplorerView(
 
     // 使用 TreeDelta 增量更新的树
     let doc = expect_context::<DocContext>();
-    let branch = expect_context::<BranchContext>();
-    let tree_nodes = Memo::new(move |_| doc.tree_nodes.get());
-
-    // Derived active repo label
-    let active_repo_label = Signal::derive(move || {
-        branch
-            .current_repo
-            .get()
-            .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
-    });
-    let can_write = Signal::derive(move || repo_write_allowed_for_core_tracked(&core));
+    let branch = expect_context::<crate::hooks::use_core::BranchContext>();
+    let core = expect_context::<crate::hooks::use_core::CoreState>();
 
     view! {
         <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none relative">
-            <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-default hover:bg-hover transition-colors group">
-                <div class="flex items-center gap-2 flex-1 min-w-0 text-primary">
-                    <crate::components::sidebar::repo_switcher::RepoSwitcher />
-                    <div class="overflow-hidden flex-1">
-                        <span class="font-medium text-sm truncate block" title=move || active_repo_label.get()>
-                            {move || active_repo_label.get()}
-                        </span>
-                    </div>
-                </div>
-
-                <Show when=move || can_write.get() && !is_readonly.get()>
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <button
-                            class="p-1 rounded hover:bg-hover text-secondary"
-                            title=move || t::sidebar::new_doc(locale.get())
-                            on:click=move |_| request_create.run(None)
-                        >
-                            <Plus />
-                        </button>
-                    </div>
-                </Show>
-            </div>
-
-            <div class="flex-1 overflow-y-auto py-2">
-                {move || {
-                    let nodes = tree_nodes.get();
-                    if nodes.is_empty() {
-                         view! {
-                            <div class="flex flex-col items-center justify-center h-32 text-muted text-sm italic select-none">
-                                {move || crate::i18n::t::sidebar::no_docs(locale.get())}
-                            </div>
-                        }.into_any()
-                    } else {
-                        view! {
-                            <For
-                                each=move || nodes.clone()
-                                key=|node| node.path.clone()
-                                children=move |node| {
-                                    view! {
-                                        <div class="relative">
-                                            <FileTreeItem
-                                                node=node.clone()
-                                                depth=0
-                                            />
-                                        </div>
-                                    }
-                                }
-                            />
-                        }.into_any()
-                    }
-                }}
-            </div>
+            <ExplorerHeader
+                locale
+                branch
+                core
+                search_control
+                is_readonly
+            />
+            <ExplorerTree locale doc />
         </div>
     }
 }

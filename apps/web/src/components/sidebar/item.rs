@@ -11,13 +11,15 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use crate::components::dropdown::AnchorRect;
 use crate::components::sidebar::types::FileActionsContext;
-use crate::components::sidebar_menu::{MenuAction, SidebarMenu};
+use crate::components::sidebar_menu::SidebarMenu;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
-use leptos::reactive::traits::GetUntracked;
-use wasm_bindgen::JsCast;
+
+#[path = "item_action.rs"]
+mod action;
+
+use action::{create_action_handler, create_menu_anchor};
 
 #[component]
 pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl IntoView {
@@ -40,26 +42,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let path_menu = node.path.clone();
     let trigger_menu = move |ev: web_sys::MouseEvent| {
         ev.stop_propagation();
-        if let Some(target) = ev.current_target()
-            && let Ok(el) = target.dyn_into::<web_sys::Element>()
-        {
-            let rect = el.get_bounding_client_rect();
-            let anchor = AnchorRect {
-                top: rect.top(),
-                bottom: rect.bottom(),
-                left: rect.left(),
-                right: rect.right(),
-            };
-            on_menu_clone.run((path_menu.clone(), anchor));
-            return;
-        }
-        let anchor = AnchorRect {
-            top: 0.0,
-            bottom: 0.0,
-            left: 0.0,
-            right: 0.0,
-        };
-        on_menu_clone.run((path_menu.clone(), anchor));
+        on_menu_clone.run((path_menu.clone(), create_menu_anchor(ev.current_target())));
     };
 
     let path_check = node.path.clone();
@@ -71,35 +54,8 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let delete_req = actions.on_delete.clone();
     let is_readonly = actions.is_readonly;
     let open_search = actions.on_open_search.clone();
-    let path_for_action = node.path.clone();
-    let handle_action = Callback::new(move |action: MenuAction| {
-        leptos::logging::log!("item.rs handle_action called: action={:?}", action);
-        if is_readonly.get_untracked() && !matches!(action, MenuAction::OpenInNewWindow) {
-            return;
-        }
-        let path = path_for_action.clone();
-        match action {
-            MenuAction::Rename => {
-                open_search.run(build_prefill_command("mv", &path, None));
-            }
-            MenuAction::Delete => delete_req.run(path),
-            MenuAction::Copy => {
-                open_search.run(build_prefill_command("cp", &path, None));
-            }
-            MenuAction::OpenInNewWindow => {
-                // 在新浏览器标签页中打开
-                if let Some(window) = web_sys::window()
-                    && let Ok(href) = window.location().href()
-                {
-                    let url = format!("{}?doc={}", href, path);
-                    let _ = window.open_with_url_and_target(&url, "_blank");
-                }
-            }
-            MenuAction::MoveTo => {
-                open_search.run(build_prefill_command("mv", &path, None));
-            }
-        }
-    });
+    let handle_action =
+        create_action_handler(is_readonly, delete_req, open_search, node.path.clone());
 
     let on_close_clone = actions.on_menu_close.clone();
     let current_doc = actions.current_doc;
@@ -171,21 +127,4 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
             </div>
         </div>
     }.into_any()
-}
-
-fn build_prefill_command(cmd: &str, src: &str, dst_with_cursor: Option<String>) -> String {
-    let src_text = quote_arg(src);
-    let dst_text = match dst_with_cursor {
-        Some(dst) => format!("\"{}\"", sanitize_arg(&dst)),
-        None => "\"|\"".to_string(),
-    };
-    format!(">{} {} {}", cmd, src_text, dst_text)
-}
-
-fn quote_arg(arg: &str) -> String {
-    format!("\"{}\"", sanitize_arg(arg))
-}
-
-fn sanitize_arg(arg: &str) -> String {
-    arg.replace('"', "'")
 }
