@@ -42,6 +42,7 @@ fn status(code: ServerErrorCode) -> StatusCode {
         | ServerErrorCode::ScRepoContextInvalid
         | ServerErrorCode::ScPendingNotFound
         | ServerErrorCode::ScStagedNotFound
+        | ServerErrorCode::ScCommitDiffUnprojectable
         | ServerErrorCode::ScNothingToCommit
         | ServerErrorCode::ScConflictTargetMissing
         | ServerErrorCode::SyncRepoUnbound

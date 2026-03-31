@@ -51,6 +51,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
         set_diff_content: state.set_diff_content,
         on_get_doc_diff: state.on_get_doc_diff,
         commit_diff_result: state.commit_diff_result,
+        set_commit_diff_result: state.set_commit_diff_result,
         on_resolve_conflict: state.on_resolve_conflict,
         on_get_commit_diff: state.on_get_commit_diff,
         on_commit_and_push: state.on_commit_and_push,

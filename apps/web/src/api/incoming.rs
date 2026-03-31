@@ -129,6 +129,8 @@ mod tests {
     use super::push_server_message;
     use deve_core::models::Op;
     use deve_core::protocol::ConfirmedOp;
+    use deve_core::protocol::ServerError;
+    use deve_core::protocol::ServerErrorCode;
     use deve_core::protocol::ServerMessage;
     use std::collections::VecDeque;
 
@@ -183,6 +185,23 @@ mod tests {
         assert!(matches!(
             decode_binary_message(&bytes),
             Some(ServerMessage::History { .. })
+        ));
+    }
+
+    #[test]
+    fn binary_bincode_decodes_protocol_error_with_none_detail() {
+        let bytes = bincode::serialize(&ServerMessage::ProtocolError {
+            error: ServerError::new(ServerErrorCode::ScCommitDiffUnprojectable),
+            switch_nonce: None,
+            scope_nonce: Some(7),
+        })
+        .unwrap();
+        assert!(matches!(
+            decode_binary_message(&bytes),
+            Some(ServerMessage::ProtocolError { error, scope_nonce, .. })
+                if error.code == ServerErrorCode::ScCommitDiffUnprojectable
+                    && error.detail.is_none()
+                    && scope_nonce == Some(7)
         ));
     }
 }

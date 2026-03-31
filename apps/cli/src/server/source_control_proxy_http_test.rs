@@ -161,6 +161,16 @@ fn maps_plain_text_commit_not_found() {
 }
 
 #[test]
+fn maps_plain_text_commit_diff_projection_gap() {
+    let err = decode_error(
+        StatusCode::CONFLICT,
+        b"Commit diff lost projected path for doc 310d949b-6a72-4ea5-91e4-4dab77b9ef3e between seq 2590 and 2828",
+    );
+    assert_eq!(err.code, ServerErrorCode::ScCommitDiffUnprojectable);
+    assert_eq!(err.detail, None);
+}
+
+#[test]
 fn maps_plain_text_nothing_to_commit() {
     let err = decode_error(StatusCode::CONFLICT, b"nothing to commit");
     assert_eq!(err.code, ServerErrorCode::ScNothingToCommit);

@@ -46,12 +46,13 @@ pub enum ServerErrorCode {
     PluginInvalidMessage,
     #[serde(rename = "PLUGIN_UNSUPPORTED_MESSAGE")]
     PluginUnsupportedMessage,
+    #[serde(rename = "SC_COMMIT_DIFF_UNPROJECTABLE")]
+    ScCommitDiffUnprojectable,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ServerError {
     pub code: ServerErrorCode,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
 }
 
@@ -65,5 +66,33 @@ impl ServerError {
             code,
             detail: Some(detail.into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ServerError, ServerErrorCode};
+
+    #[test]
+    fn bincode_roundtrip_preserves_none_detail() {
+        let encoded = bincode::serialize(&ServerError::new(
+            ServerErrorCode::ScCommitDiffUnprojectable,
+        ))
+        .unwrap();
+        let decoded: ServerError = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(decoded.code, ServerErrorCode::ScCommitDiffUnprojectable);
+        assert_eq!(decoded.detail, None);
+    }
+
+    #[test]
+    fn bincode_roundtrip_preserves_some_detail() {
+        let encoded = bincode::serialize(&ServerError::with_detail(
+            ServerErrorCode::ScDocNotFound,
+            "missing doc",
+        ))
+        .unwrap();
+        let decoded: ServerError = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(decoded.code, ServerErrorCode::ScDocNotFound);
+        assert_eq!(decoded.detail.as_deref(), Some("missing doc"));
     }
 }

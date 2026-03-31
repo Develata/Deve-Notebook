@@ -33,6 +33,8 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
         (Locale::Zh, ServerErrorCode::ScDocNotFound) => "文档不存在",
         (Locale::En, ServerErrorCode::ScCommitNotFound) => "Commit not found",
         (Locale::Zh, ServerErrorCode::ScCommitNotFound) => "提交不存在",
+        (Locale::En, ServerErrorCode::ScCommitDiffUnprojectable) => "Commit diff unavailable",
+        (Locale::Zh, ServerErrorCode::ScCommitDiffUnprojectable) => "提交差异不可用",
         (Locale::En, ServerErrorCode::ScNothingToCommit) => "Nothing to commit",
         (Locale::Zh, ServerErrorCode::ScNothingToCommit) => "没有可提交内容",
         (Locale::En, ServerErrorCode::ScConflictTargetMissing) => "Conflict target missing",

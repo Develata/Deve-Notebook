@@ -109,6 +109,9 @@ fn decode_plain_text_error(
     if lower.contains("commit not found") {
         return ServerError::with_detail(ServerErrorCode::ScCommitNotFound, raw_detail);
     }
+    if lower.contains("commit diff lost projected path for doc") {
+        return ServerError::new(ServerErrorCode::ScCommitDiffUnprojectable);
+    }
     if lower.contains("nothing to commit") {
         return ServerError::new(ServerErrorCode::ScNothingToCommit);
     }

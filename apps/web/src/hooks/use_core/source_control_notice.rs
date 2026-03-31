@@ -25,6 +25,7 @@ pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
             | ServerErrorCode::ScStagedNotFound
             | ServerErrorCode::ScDocNotFound
             | ServerErrorCode::ScCommitNotFound
+            | ServerErrorCode::ScCommitDiffUnprojectable
             | ServerErrorCode::ScNothingToCommit
             | ServerErrorCode::ScConflictTargetMissing
     )
@@ -40,6 +41,9 @@ mod tests {
         assert!(is_source_control_error(ServerErrorCode::ScNothingToCommit));
         assert!(is_source_control_error(
             ServerErrorCode::ScRemoteBranchReadonly
+        ));
+        assert!(is_source_control_error(
+            ServerErrorCode::ScCommitDiffUnprojectable
         ));
         assert!(!is_source_control_error(ServerErrorCode::RequestFailed));
     }

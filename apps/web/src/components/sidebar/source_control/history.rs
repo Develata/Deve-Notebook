@@ -75,9 +75,11 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                                                         if write_block.get_untracked().is_some() {
                                                             return;
                                                         }
-                                                        if selected_commit.get().as_deref() == Some(&cid) {
+                                                        if selected_commit.get_untracked().as_deref() == Some(&cid) {
+                                                            core.set_commit_diff_result.set(Vec::new());
                                                             selected_commit.set(None);
                                                         } else {
+                                                            core.set_commit_diff_result.set(Vec::new());
                                                             core.on_get_commit_diff.run((pid.clone(), cid.clone()));
                                                             selected_commit.set(Some(cid.clone()));
                                                         }

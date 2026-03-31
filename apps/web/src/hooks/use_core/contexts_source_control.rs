@@ -32,6 +32,7 @@ pub struct SourceControlContext {
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
     pub on_commit_and_push: Callback<String>,

@@ -26,6 +26,13 @@ fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
             Locale::Zh => "当前选中的源代码管理条目已不存在。",
         }
         .to_string(),
+        deve_core::protocol::ServerErrorCode::ScCommitDiffUnprojectable => match locale {
+            Locale::En => {
+                "This legacy commit contains content without structure projection, so Deve-Note cannot reconstruct a path-safe diff."
+            }
+            Locale::Zh => "该旧提交包含缺少结构投影的内容，Deve-Note 无法安全重建带路径语义的差异。",
+        }
+        .to_string(),
         _ => server_error::message(locale, notice.code).to_string(),
     }
 }

@@ -206,3 +206,15 @@ fn maps_diff_legacy_projection_gap_to_storage_persist_failed() {
     );
     assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
 }
+
+#[test]
+fn maps_commit_diff_projection_gap_to_sc_commit_diff_unprojectable() {
+    let err = map_repo_error(
+        ScOp::CommitDiff("387cc45d".into()),
+        anyhow::anyhow!(
+            "Commit diff lost projected path for doc 310d949b-6a72-4ea5-91e4-4dab77b9ef3e between seq 2590 and 2828"
+        ),
+    );
+    assert_eq!(err.code, ServerErrorCode::ScCommitDiffUnprojectable);
+    assert_eq!(err.detail, None);
+}

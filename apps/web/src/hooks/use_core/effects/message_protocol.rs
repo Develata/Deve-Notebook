@@ -56,9 +56,13 @@ pub fn handle_protocol_error(
     let message = t::server_error::message(locale, error.code);
     let handled_in_source_control =
         record_source_control_notice(error, signals.set_source_control_notice);
-    match error.detail.as_deref() {
-        Some(detail) => leptos::logging::warn!("协议错误 {}: {}", message, detail),
-        None => leptos::logging::warn!("协议错误 {}", message),
+    match (handled_in_source_control, error.detail.as_deref()) {
+        (true, Some(detail)) => {
+            leptos::logging::log!("Source Control notice {}: {}", message, detail)
+        }
+        (true, None) => leptos::logging::log!("Source Control notice {}", message),
+        (false, Some(detail)) => leptos::logging::warn!("协议错误 {}: {}", message, detail),
+        (false, None) => leptos::logging::warn!("协议错误 {}", message),
     }
     if !handled_in_source_control {
         if let Some(window) = web_sys::window() {

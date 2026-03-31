@@ -95,6 +95,7 @@ pub struct CoreState {
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
     pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
     pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,

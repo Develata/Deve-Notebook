@@ -166,6 +166,9 @@ fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<ServerError> {
         ScOp::CommitDiff(commit_id) if detail.contains("Commit not found") => Some(
             ServerError::with_detail(ServerErrorCode::ScCommitNotFound, commit_id.clone()),
         ),
+        ScOp::CommitDiff(_) if detail.contains("Commit diff lost projected path for doc") => {
+            Some(ServerError::new(ServerErrorCode::ScCommitDiffUnprojectable))
+        }
         ScOp::Commit if detail.to_ascii_lowercase().contains("nothing to commit") => {
             Some(ServerError::new(ServerErrorCode::ScNothingToCommit))
         }
