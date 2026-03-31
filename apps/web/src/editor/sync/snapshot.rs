@@ -1,10 +1,8 @@
 // apps/web/src/editor/sync/snapshot.rs
 //! Snapshot 消息处理: 接收文档快照并渐进式应用 delta ops
 
-use super::snapshot_apply::{
-    SnapshotApplySignals, build_apply_batch, build_progress_handler,
-};
 use super::context::SyncContext;
+use super::snapshot_apply::{SnapshotApplySignals, build_apply_batch, build_progress_handler};
 use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use super::snapshot_gate::SnapshotRequestGate;
 use crate::editor::ffi::applyRemoteContent;

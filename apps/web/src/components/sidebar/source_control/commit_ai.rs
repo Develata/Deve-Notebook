@@ -44,12 +44,9 @@ pub fn build_generate_callback(
             });
         });
         chat_ctx.set_is_streaming.set(true);
-        chat_ctx.on_plugin_call.run((
-            req_id,
-            "agent-bridge".to_string(),
-            "chat".to_string(),
-            args,
-        ));
+        chat_ctx
+            .on_plugin_call
+            .run((req_id, "agent-bridge".to_string(), "chat".to_string(), args));
     })
 }
 
