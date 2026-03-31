@@ -1,11 +1,11 @@
 // apps\web\src\components\sidebar\source_control
 //! # UnstagedSection 组件 (工作区组件)
 //!
-//! 渲染工作区 (Unstaged Changes) 的文件列表和操作按钮。
-//! 支持折叠/展开 (VS Code 风格)。
+//! 渲染工作区 (Unstaged Changes) 的文件列表。
 
 use super::change_item::ChangeItem;
-use crate::components::icons::*;
+use super::unstaged_section_actions::UnstagedSectionActions;
+use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
@@ -16,10 +16,7 @@ use leptos::prelude::*;
 pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let write_block = core.write_block;
     let (bulk_busy, set_bulk_busy) = signal(false);
-
-    // 折叠状态
     let expanded = RwSignal::new(true);
 
     let unstaged_count = unstaged.len();
@@ -33,14 +30,12 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
         set_bulk_busy.set(false);
     });
 
-    // 如果没有未暂存文件，不渲染此区块
     if unstaged_count == 0 {
         return view! {}.into_any();
     }
 
     view! {
         <div>
-            // 区块标题 (可折叠)
             <div
                 class="px-2 py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
                 on:click=move |_| expanded.update(|v| *v = !*v)
@@ -53,46 +48,15 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         {move || t::source_control::changes(locale.get())}
                     </span>
                 </div>
-
-                // 操作按钮 + 计数徽章
-                <div class="flex items-center gap-2">
-                    <div class="hidden group-hover:!flex items-center gap-1 text-primary" on:click=move |e| e.stop_propagation()>
-                        <Show when=move || write_block.get().is_none()>
-                        // Discard All (刷新图标 - 恢复到已提交状态)
-                        <button
-                            class="p-0.5 hover:bg-active rounded"
-                            title=move || t::source_control::discard_all_changes(locale.get())
-                            disabled=move || bulk_busy.get() || !core.can_write.get()
-                            on:click=move |_| {
-                                set_bulk_busy.set(true);
-                                core.clear_notice.run(());
-                                for entry in unstaged_list_for_discard.get_value() {
-                                    core.on_discard_file.run(entry);
-                                }
-                            }
-                        >
-                            <RotateCcw class="w-3.5 h-3.5" />
-                        </button>
-                        // Stage All
-                        <button
-                            class="p-0.5 hover:bg-active rounded"
-                            title=move || t::source_control::stage_all_changes(locale.get())
-                            disabled=move || bulk_busy.get() || !core.can_write.get()
-                            on:click=move |_| {
-                                set_bulk_busy.set(true);
-                                core.clear_notice.run(());
-                                core.on_stage_files.run(unstaged_list_for_stage.get_value());
-                            }
-                        >
-                        <Plus class="w-3.5 h-3.5" />
-                        </button>
-                        </Show>
-                    </div>
-                    <span class="bg-badge-count text-on-accent text-[10px] px-1.5 rounded-full min-w-[16px] text-center">{unstaged_count}</span>
-                </div>
+                <UnstagedSectionActions
+                    count=unstaged_count
+                    bulk_busy=bulk_busy
+                    set_bulk_busy=set_bulk_busy
+                    entries_for_stage=unstaged_list_for_stage
+                    entries_for_discard=unstaged_list_for_discard
+                />
             </div>
 
-            // 文件列表 (可折叠)
             {move || if expanded.get() {
                 view! {
                     <For

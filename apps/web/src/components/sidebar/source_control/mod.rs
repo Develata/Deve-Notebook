@@ -28,10 +28,12 @@ pub mod history_commit_item;
 pub mod history_diff_row;
 pub mod history_timeline;
 pub mod repositories;
+pub mod staged_section_actions;
 pub mod status_notice;
 
 pub mod staged_section;
 pub mod unstaged_section;
+pub mod unstaged_section_actions;
 
 use self::changes_panel::ChangesPanel;
 use self::error_notice::ErrorNotice;
