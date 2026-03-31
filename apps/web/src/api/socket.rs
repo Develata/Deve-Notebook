@@ -1,25 +1,11 @@
+use self::socket_message::decode_socket_message;
+pub use self::socket_types::{SocketCloseInfo, SocketEvent, SocketMessage};
 use futures::channel::mpsc::{UnboundedReceiver, unbounded};
-use js_sys::{ArrayBuffer, JsString, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{BinaryType, CloseEvent, Event, MessageEvent, WebSocket};
 
-pub enum SocketEvent {
-    Opened,
-    Message(SocketMessage),
-    Error,
-    Closed(SocketCloseInfo),
-}
-
-pub enum SocketMessage {
-    Bytes(Vec<u8>),
-    Text(String),
-}
-
-pub struct SocketCloseInfo {
-    pub code: u16,
-    pub reason: String,
-    pub was_clean: bool,
-}
+mod socket_message;
+mod socket_types;
 
 pub struct BrowserSocket {
     ws: WebSocket,
@@ -44,17 +30,8 @@ impl BrowserSocket {
 
         let onmessage_tx = tx.clone();
         let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
-            let data = event.data();
-            if let Ok(buffer) = data.clone().dyn_into::<ArrayBuffer>() {
-                let bytes = Uint8Array::new(&buffer).to_vec();
-                let _ =
-                    onmessage_tx.unbounded_send(SocketEvent::Message(SocketMessage::Bytes(bytes)));
-                return;
-            }
-            if let Ok(text) = data.dyn_into::<JsString>() {
-                let _ = onmessage_tx.unbounded_send(SocketEvent::Message(SocketMessage::Text(
-                    String::from(&text),
-                )));
+            if let Some(message) = decode_socket_message(event.data()) {
+                let _ = onmessage_tx.unbounded_send(SocketEvent::Message(message));
             }
         }) as Box<dyn FnMut(MessageEvent)>);
         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
