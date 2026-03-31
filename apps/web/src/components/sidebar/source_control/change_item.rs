@@ -6,9 +6,10 @@
 
 use crate::components::icons::*;
 use crate::components::sidebar::source_control::change_item_actions::ChangeItemActions;
+use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::Locale;
-use deve_core::source_control::{ChangeEntry, ChangeStatus};
+use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -30,32 +31,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     let has_conflict = entry.has_conflict;
     let can_open_diff = can_request_doc_diff(&entry);
-    let full_path = entry.path.clone();
-    let renamed_from = entry.renamed_from.clone();
-    let path_parts: Vec<&str> = full_path.split('/').collect();
-    let filename = path_parts.last().unwrap_or(&"?").to_string();
-    let display_name = renamed_from
-        .as_ref()
-        .and_then(|old_path| old_path.rsplit('/').next())
-        .map(|old_name| format!("{} -> {}", old_name, filename))
-        .unwrap_or_else(|| filename.clone());
-
-    // 目录路径 (不含文件名)
-    let directory = if path_parts.len() > 1 {
-        path_parts[..path_parts.len() - 1].join("/")
-    } else {
-        String::new()
-    };
-
+    let meta = build_change_item_meta(&entry);
     let entry_for_click = entry.clone();
-    // 状态图标和颜色
-    let (icon_char, color_cls) = match entry.status {
-        ChangeStatus::Modified => ("M", "text-modified"),
-        ChangeStatus::Added if renamed_from.is_some() => ("R", "text-added"),
-        ChangeStatus::Added => ("A", "text-added"),
-        ChangeStatus::Deleted => ("D", "text-deleted"),
-        ChangeStatus::Renamed => ("R", "text-added"),
-    };
 
     let action_busy_reset = action_busy;
     Effect::new(move |_| {
@@ -88,12 +65,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             }
         >
             <div class="flex items-center gap-1.5 flex-1 overflow-hidden">
-                // 文件图标
-                <FileText class=format!("w-3.5 h-3.5 min-w-3.5 {}", if filename.ends_with(".rs") { "text-[var(--color-file-rust)]" } else { "text-muted" }) />
+                <FileText class=format!("w-3.5 h-3.5 min-w-3.5 {}", meta.file_icon_class) />
 
-                <span class="truncate">{display_name}</span>
+                <span class="truncate">{meta.display_name}</span>
                 <span class="text-xs text-muted truncate shrink-0 ml-1">
-                    {directory}
+                    {meta.directory}
                 </span>
             </div>
 
@@ -117,8 +93,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 } else {
                     view! {}.into_any()
                 }}
-                <span class=format!("{} text-[11px] font-bold w-3 text-center", color_cls)>
-                    {icon_char}
+                <span class=format!("{} text-[11px] font-bold w-3 text-center", meta.color_class)>
+                    {meta.icon_char}
                 </span>
             </div>
         </div>
