@@ -1,12 +1,14 @@
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
+use self::service_ping::spawn_ping_loop;
 use super::connection::spawn_connection_manager;
 use super::status::ConnectionStatus;
 use super::writer_id::derive_writer_client_id;
+
+mod service_ping;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -44,28 +46,7 @@ impl WsService {
             set_node_role,
         );
 
-        let tx_check = StoredValue::new_local(Some(tx.clone()));
-        let status_check = StoredValue::new_local(Some(status));
-        spawn_local(async move {
-            loop {
-                gloo_timers::future::TimeoutFuture::new(30_000).await;
-                let Some(status_check) = status_check.try_get_value().flatten() else {
-                    break;
-                };
-                let Some(tx_check) = tx_check.try_get_value().flatten() else {
-                    break;
-                };
-                if status_check.get_untracked() == ConnectionStatus::Connected {
-                    let _ = tx_check.unbounded_send(ClientMessage::Ping);
-                }
-            }
-        });
-        on_cleanup(move || {
-            status_check.update_value(|value| {
-                let _ = value.take();
-            });
-            tx_check.update_value(|value| drop(value.take()));
-        });
+        spawn_ping_loop(status, tx.clone());
 
         Self {
             status,
