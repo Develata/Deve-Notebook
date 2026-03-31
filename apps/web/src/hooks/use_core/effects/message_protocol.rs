@@ -35,15 +35,14 @@ pub struct ProtocolControlSignals {
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
 }
 
-fn record_source_control_notice(
-    error: &ServerError,
-    signals: ProtocolControlSignals,
-) -> bool {
+fn record_source_control_notice(error: &ServerError, signals: ProtocolControlSignals) -> bool {
     if error.code == ServerErrorCode::RequestFailed && has_pending_source_control_request(signals) {
-        signals.set_source_control_notice.set(Some(SourceControlNotice {
-            code: error.code,
-            detail: error.detail.clone(),
-        }));
+        signals
+            .set_source_control_notice
+            .set(Some(SourceControlNotice {
+                code: error.code,
+                detail: error.detail.clone(),
+            }));
         return true;
     }
     if let Some(notice) = SourceControlNotice::from_server_error(error) {

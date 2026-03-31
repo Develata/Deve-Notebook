@@ -166,7 +166,9 @@ fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<ServerError> {
         ScOp::CommitDiff(commit_id) if detail.contains("Commit not found") => Some(
             ServerError::with_detail(ServerErrorCode::ScCommitNotFound, commit_id.clone()),
         ),
-        ScOp::CommitDiff(commit_id) if detail.contains("Commit diff lost projected path for doc") => {
+        ScOp::CommitDiff(commit_id)
+            if detail.contains("Commit diff lost projected path for doc") =>
+        {
             Some(ServerError::with_detail(
                 ServerErrorCode::ScCommitDiffUnprojectable,
                 commit_id.clone(),

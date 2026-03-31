@@ -19,10 +19,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let selected_commit = RwSignal::new(Option::<String>::None);
 
     Effect::new(move |_| {
-        if !expanded.get()
-            || core.current_repo_id.get().is_none()
-            || read_block.get().is_some()
-        {
+        if !expanded.get() || core.current_repo_id.get().is_none() || read_block.get().is_some() {
             return;
         }
         core.on_get_history.run(20);

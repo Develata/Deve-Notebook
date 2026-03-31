@@ -1,8 +1,8 @@
 use super::super::contexts::SourceControlContext;
 use super::super::types::CoreState;
 use super::super::write_gate::{
-    RepoWriteSignals, repo_source_control_read_block_tracked,
-    repo_write_allowed_for_core_tracked, repo_write_block_tracked,
+    RepoWriteSignals, repo_source_control_read_block_tracked, repo_write_allowed_for_core_tracked,
+    repo_write_block_tracked,
 };
 use leptos::prelude::{Callback, Set, Signal};
 
