@@ -5,6 +5,11 @@
 
 use leptos::prelude::*;
 
+#[path = "dropdown_position.rs"]
+mod position;
+
+use position::{build_panel_style, measure_dropdown};
+
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum Align {
     Left,
@@ -51,26 +56,9 @@ pub fn Dropdown(
             let Some(anchor) = anchor.get_untracked() else {
                 return;
             };
-            let rect = el.get_bounding_client_rect();
-            let height = rect.height();
-            let window = web_sys::window().expect("window");
-            let viewport = window
-                .inner_height()
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.0);
-            let space_below = (viewport - anchor.bottom - offset).max(0.0);
-            let space_above = (anchor.top - offset).max(0.0);
-            if space_below < height && space_above >= height {
-                set_open_up.set(true);
-                set_max_height.set(None);
-            } else if space_below < height && space_above < height {
-                set_open_up.set(true);
-                set_max_height.set(Some(space_above.max(120.0)));
-            } else {
-                set_open_up.set(false);
-                set_max_height.set(None);
-            }
+            let placement = measure_dropdown(el.as_ref(), anchor, offset);
+            set_open_up.set(placement.open_up);
+            set_max_height.set(placement.max_height);
             set_ready.set(true);
         });
     });
@@ -79,38 +67,14 @@ pub fn Dropdown(
         let Some(anchor) = anchor.get() else {
             return "display: none;".to_string();
         };
-        let mut style = String::new();
-        let window = web_sys::window().expect("window");
-        let viewport = window
-            .inner_height()
-            .ok()
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-
-        match align {
-            Align::Left => style.push_str(&format!("left: {}px;", anchor.left)),
-            Align::Right => {
-                style.push_str(&format!("left: {}px;", anchor.right));
-                style.push_str("transform: translateX(-100%);");
-            }
-        }
-
-        if open_up.get() {
-            let bottom = (viewport - anchor.top + offset).max(0.0);
-            style.push_str(&format!("bottom: {}px;", bottom));
-        } else {
-            style.push_str(&format!("top: {}px;", anchor.bottom + offset));
-        }
-
-        if let Some(max_h) = max_height.get() {
-            style.push_str(&format!("max-height: {}px; overflow-y: auto;", max_h));
-        }
-
-        if !ready.get() {
-            style.push_str("visibility: hidden;");
-        }
-
-        style
+        build_panel_style(
+            anchor,
+            align,
+            offset,
+            open_up.get(),
+            max_height.get(),
+            ready.get(),
+        )
     });
 
     view! {
