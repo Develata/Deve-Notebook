@@ -1,0 +1,73 @@
+use crate::api::WsService;
+use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
+use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
+use crate::hooks::use_core::write_gate::{
+    RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
+};
+use deve_core::protocol::ClientMessage;
+use deve_core::source_control::ChangeEntry;
+use leptos::prelude::{Callback, Set, WriteSignal};
+
+use super::{SourceControlScopeSignals, log_blocked_sc_read};
+
+pub(super) fn create_get_doc_diff_callback(
+    ws: &WsService,
+    scope: SourceControlScopeSignals,
+    read_gate: RepoWriteSignals,
+    set_request_id: WriteSignal<Option<String>>,
+) -> Callback<ChangeEntry> {
+    let ws = ws.clone();
+    Callback::new(move |entry: ChangeEntry| {
+        if !can_request_doc_diff(&entry) {
+            leptos::logging::log!(
+                "跳过 GetDocDiff: deleted change has no doc_id for {}",
+                entry.path
+            );
+            return;
+        }
+        if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
+            log_blocked_sc_read("GetDocDiff", &entry.path, block);
+            return;
+        }
+        let Some(scope_nonce) = source_control_scope_nonce(scope) else {
+            return;
+        };
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_request_id.set(Some(request_id.clone()));
+        ws.send(ClientMessage::GetDocDiff {
+            request_id,
+            target: to_target(&entry),
+            scope_nonce: Some(scope_nonce),
+        });
+    })
+}
+
+pub(super) fn create_get_commit_diff_callback(
+    ws: &WsService,
+    scope: SourceControlScopeSignals,
+    read_gate: RepoWriteSignals,
+    set_request_id: WriteSignal<Option<String>>,
+) -> Callback<(Option<String>, String)> {
+    let ws = ws.clone();
+    Callback::new(move |(commit_a, commit_b): (Option<String>, String)| {
+        if let Some(block) = repo_source_control_read_block_untracked(&ws, read_gate) {
+            let detail = match commit_a.as_deref() {
+                Some(base) => format!("{base}..{commit_b}"),
+                None => commit_b.clone(),
+            };
+            log_blocked_sc_read("GetCommitDiff", &detail, block);
+            return;
+        }
+        let Some(scope_nonce) = source_control_scope_nonce(scope) else {
+            return;
+        };
+        let request_id = uuid::Uuid::new_v4().to_string();
+        set_request_id.set(Some(request_id.clone()));
+        ws.send(ClientMessage::GetCommitDiff {
+            request_id,
+            commit_a,
+            commit_b,
+            scope_nonce: Some(scope_nonce),
+        });
+    })
+}
