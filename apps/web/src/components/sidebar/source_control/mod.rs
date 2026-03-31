@@ -24,6 +24,8 @@ pub mod context_menu;
 pub mod error_notice;
 pub mod header;
 pub mod history;
+pub mod history_commit_item;
+pub mod history_diff_row;
 pub mod history_timeline;
 pub mod repositories;
 pub mod status_notice;
