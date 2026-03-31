@@ -1,15 +1,16 @@
 use crate::api::WsService;
-use leptos::prelude::{Get, Set};
+use leptos::prelude::Get;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::super::super::super::types::HandshakeSignals;
 use super::super::super::handshake_bootstrap::restore_session_scope;
-use super::super::handshake_reset::{reset_scope_mismatch, suspend_current_handshake};
-use super::super::handshake_send::{HandshakeAttemptCtx, spawn_handshake_attempt};
+#[path = "handshake_cycle_connected_attempt.rs"]
+mod attempt;
+use super::super::handshake_reset::suspend_current_handshake;
 use super::super::handshake_state::{
-    handshake_mode_key, restore_bootstrap_key, set_handshake_scope_nonce_if_changed,
-    should_restore_session_scope, should_suspend_handshake,
+    handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
+    should_suspend_handshake,
 };
 
 pub(super) fn run_connected_handshake_cycle(
@@ -81,28 +82,11 @@ pub(super) fn run_connected_handshake_cycle(
         return;
     }
     *last_mode.borrow_mut() = Some(mode_key);
-    ws.clear_writer_ready();
-    signals.set_handshake_ready.set(false);
-    set_handshake_scope_nonce_if_changed(signals, None);
-    if let Some(identity) = maybe_identity.as_ref()
-        && maybe_mode.is_none()
-        && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
-    {
-        reset_scope_mismatch(
-            last_mode,
-            ws,
-            signals,
-            should_restore,
-            repo_name.clone(),
-            active_repo_id.clone(),
-            branch.clone(),
-        );
-        return;
-    }
-    set_handshake_scope_nonce_if_changed(signals, Some(current_scope_nonce));
-    spawn_handshake_attempt(HandshakeAttemptCtx {
-        ws: ws.clone(),
+    attempt::start_connected_handshake_attempt(
+        ws,
         signals,
+        last_mode,
+        handshake_attempt,
         maybe_mode,
         maybe_identity,
         vector,
@@ -111,7 +95,5 @@ pub(super) fn run_connected_handshake_cycle(
         branch,
         current_scope_nonce,
         should_restore,
-        handshake_attempt: handshake_attempt.clone(),
-        failure_last_mode: last_mode.clone(),
-    });
+    );
 }
