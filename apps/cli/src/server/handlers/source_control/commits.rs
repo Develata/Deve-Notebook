@@ -109,6 +109,7 @@ fn list_commit_history(
         return state
             .repo
             .run_on_shadow_repo_by_id(peer_id, &scope.repo_id, |db| {
+                ledger_source_control::repair_missing_commit_order_table(db)?;
                 ledger_source_control::list_commits(db, limit)
             })
             .map_err(|e| super::errors::map_repo_error(super::errors::ScOp::CommitHistory, e));

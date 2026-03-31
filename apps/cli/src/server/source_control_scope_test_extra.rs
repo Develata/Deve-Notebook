@@ -3,6 +3,7 @@ use super::*;
 use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 use deve_core::protocol::ServerMessage;
+use deve_core::source_control::commits::{self, COMMITS_ORDER_TABLE};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
@@ -27,6 +28,42 @@ async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
     let (repo_id, first_message) = recv_history(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));
     assert_eq!(first_message, None);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn readonly_remote_history_repairs_legacy_missing_order_table() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let peer_id = PeerId::new("peer-a");
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: test_id,
+            name: "shadow-notes".into(),
+            url: Some("urn:test".into()),
+        },
+    )?;
+    state
+        .repo
+        .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
+            let _first = commits::create(db, "first", 1, 1)?;
+            let _second = commits::create(db, "second", 1, 2)?;
+            let write_txn = db.begin_write()?;
+            let _ = write_txn.delete_table(COMMITS_ORDER_TABLE)?;
+            write_txn.commit()?;
+            Ok::<(), anyhow::Error>(())
+        })?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("shadow-notes".into(), Some(test_id));
+
+    handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
+    let (repo_id, first_message) = recv_history(&mut uni_rx).await;
+    assert_eq!(repo_id, Some(test_id));
+    assert_eq!(first_message.as_deref(), Some("second"));
     Ok(())
 }
 

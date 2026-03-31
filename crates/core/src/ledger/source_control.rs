@@ -68,6 +68,10 @@ pub fn list_commits(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
     commits::list(db, limit)
 }
 
+pub fn repair_missing_commit_order_table(db: &Database) -> Result<()> {
+    commits::repair_missing_order_table(db)
+}
+
 /// 获取文档的已提交内容 (快照)
 pub fn get_committed_content(db: &Database, doc_id: DocId) -> Result<Option<String>> {
     changes::get_committed_content(db, doc_id)

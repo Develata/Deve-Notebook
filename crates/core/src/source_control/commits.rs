@@ -11,6 +11,10 @@ use crate::source_control::CommitInfo;
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable, TableDefinition};
 
+#[path = "commits_repair.rs"]
+mod repair;
+pub use self::repair::repair_missing_order_table;
+
 /// 提交表定义 (commit_id -> JSON)
 pub const COMMITS_TABLE: TableDefinition<&str, &str> = TableDefinition::new("commits");
 /// 提交顺序表 (序号 -> commit_id)
