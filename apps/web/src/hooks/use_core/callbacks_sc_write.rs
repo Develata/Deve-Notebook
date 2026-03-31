@@ -9,6 +9,8 @@ use super::SourceControlScopeSignals;
 mod commit;
 #[path = "callbacks_sc_write_targets.rs"]
 mod targets;
+#[path = "callbacks_sc_write_targets_guard.rs"]
+mod targets_guard;
 
 use commit::create_commit_write_callbacks;
 use targets::create_target_write_callbacks;
