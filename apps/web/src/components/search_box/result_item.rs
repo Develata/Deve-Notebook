@@ -6,10 +6,14 @@
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
-use crate::components::icons::{ArrowRight, File, Folder, GitBranch, Plus, Terminal};
 use crate::components::search_box::logic;
-use crate::components::search_box::types::{SearchAction, SearchResult};
+use crate::components::search_box::types::SearchResult;
 use crate::hooks::use_core::CoreState;
+
+#[path = "result_item_sections.rs"]
+mod result_item_sections;
+#[path = "result_item_state.rs"]
+mod result_item_state;
 
 /// 单条结果项，支持鼠标与键盘操作。
 #[allow(clippy::too_many_arguments)]
@@ -25,43 +29,22 @@ pub fn result_item(
     core: CoreState,
     set_recent_move_dirs: WriteSignal<Vec<String>>,
 ) -> impl IntoView {
-    let is_mobile = window_width().map(|w| w <= 768).unwrap_or(false);
+    let is_mobile = result_item_state::is_mobile();
     let detail_text = item.detail.clone();
     let detail_text_cond = detail_text.clone();
-    let is_group =
-        matches!(item.action, SearchAction::Noop) && item.detail.as_deref() == Some("Group");
-    let is_error =
-        matches!(item.action, SearchAction::Noop) && item.detail.as_deref() == Some("Error");
+    let is_group = result_item_state::is_group(&item);
+    let is_error = result_item_state::is_error(&item);
     let is_selectable = logic::is_selectable(Some(&item));
 
     if is_group {
-        let group_class = if is_mobile {
-            "px-3 py-2 text-[10px] uppercase tracking-wide text-muted"
-        } else {
-            "px-4 py-2 text-[11px] uppercase tracking-widest text-muted"
-        };
-        return view! { <div class=group_class>{item.title}</div> }.into_any();
+        return result_item_sections::group_row(item.title, is_mobile).into_any();
     }
 
     if is_error {
-        let error_class = if is_mobile {
-            "px-3 py-2 text-xs text-red-500"
-        } else {
-            "px-4 py-2 text-sm text-red-500"
-        };
-        return view! {
-            <div class=error_class>
-                {item.title}
-            </div>
-        }
-        .into_any();
+        return result_item_sections::error_row(item.title, is_mobile).into_any();
     }
 
-    let base = if is_mobile {
-        "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 group transition-colors active:bg-hover"
-    } else {
-        "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors active:bg-hover"
-    };
+    let base = result_item_state::base_row_class(is_mobile);
 
     let action_clone = item.action.clone();
     let detail_clone = item.detail.clone();
@@ -111,70 +94,21 @@ pub fn result_item(
             {move || if is_mobile {
                 view! {}.into_any()
             } else {
-                item_icon(is_sel, action_clone.clone(), detail_clone.clone()).into_any()
+                result_item_sections::item_icon(is_sel, action_clone.clone(), detail_clone.clone())
+                    .into_any()
             }}
-            {item_content(item.title.clone(), detail_text_cond, detail_text)}
+            {result_item_sections::item_content(
+                item.title.clone(),
+                detail_text_cond,
+                detail_text,
+                is_mobile,
+            )}
             {move || if is_mobile {
                 view! {}.into_any()
             } else {
-                selection_arrow(is_sel).into_any()
+                result_item_sections::selection_arrow(is_sel).into_any()
             }}
         </button>
     }
     .into_any()
-}
-
-fn item_icon(is_sel: bool, action: SearchAction, detail: Option<String>) -> impl IntoView {
-    let cls = "w-5 h-5";
-    let icon_view = match action {
-        SearchAction::RunCommand(_) => view! { <Terminal class=cls/> }.into_any(),
-        SearchAction::SwitchBranch(_) => view! { <GitBranch class=cls/> }.into_any(),
-        SearchAction::CreateDoc(_) => view! { <Plus class=cls/> }.into_any(),
-        SearchAction::InsertQuery(_) => view! { <Folder class=cls/> }.into_any(),
-        SearchAction::OpenDoc(_) | SearchAction::FileOp(_) | SearchAction::Noop => {
-            view! { <File class=cls/> }.into_any()
-        }
-    };
-    view! {
-        <div class=format!("flex-none {}", if is_sel { "text-accent" } else { "text-muted" })>
-            {icon_view}
-            {move || if detail.as_deref() == Some("Error") {
-                view! { <span class="text-xs font-semibold text-red-500">"!"</span> }.into_any()
-            } else {
-                view! {}.into_any()
-            }}
-        </div>
-    }
-}
-
-fn item_content(
-    title: String,
-    detail_cond: Option<String>,
-    detail_text: Option<String>,
-) -> impl IntoView {
-    let is_mobile = window_width().map(|w| w <= 768).unwrap_or(false);
-    view! {
-        <div class="flex-1 truncate flex flex-col items-start gap-0.5">
-            <span class="font-medium">{title}</span>
-            <Show when=move || detail_cond.is_some()>
-                <span class=if is_mobile { "text-[11px] opacity-60 font-mono" } else { "text-xs opacity-60 font-mono" }>
-                    {detail_text.clone().unwrap()}
-                </span>
-            </Show>
-        </div>
-    }
-}
-
-fn selection_arrow(is_sel: bool) -> impl IntoView {
-    view! {
-        <Show when=move || is_sel>
-            <ArrowRight class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity"/>
-        </Show>
-    }
-}
-
-fn window_width() -> Option<i32> {
-    let window = web_sys::window()?;
-    let width = window.inner_width().ok()?.as_f64()?;
-    Some(width as i32)
 }
