@@ -34,15 +34,28 @@
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。
     *   底部状态栏仅展示 AI 模式与基础统计。
 
-*   **AI / Agents**:
-    *   `AI: 切换到 PLAN 模式`: 将 AI 进入计划模式.
-    *   `AI: 切换到 BUILD 模式`: 将 AI 进入执行模式.
+*   **AI**:
+    *   `AI: Open Chat`: 打开统一 AI 面板。
+    *   `AI: Retry Last Request`: 重试上一条失败请求。
+    *   `AI: Switch Backend`: 在 Native AI Chat 与 Trusted CLI Agent（若启用）之间切换。
+    *   `AI: Switch to PLAN Mode`: 将原生 AI 切换到只读规划模式。
+    *   `AI: Switch to BUILD Mode`: 将原生 AI 切换到执行模式。
 
 ## Chat Slash Commands (聊天命令)
 
-*   `/plan`: 切换到 PLAN 模式.
-*   `/build`: 切换到 BUILD 模式.
-*   `/agents`: 在 PLAN ↔ BUILD 之间顺序切换.
+*   `/plan`: 切换到原生 `PLAN` 模式。
+*   `/build`: 切换到原生 `BUILD` 模式。
+*   `/agents`: 在原生 `PLAN ↔ BUILD` 之间顺序切换。
+
+### Slash Command 语义
+
+*   `PLAN`：
+    - 禁止调用任何工具。
+    - 只输出分析、计划、步骤与建议。
+*   `BUILD`：
+    - 允许直接修改当前 Markdown。
+    - 允许调用受控的程序执行路径来完成 Markdown 修改。
+    - 不等于开放 MCP / Skills / 任意 shell。
 
 ## 本章相关命令
 

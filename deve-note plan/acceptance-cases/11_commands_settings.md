@@ -51,11 +51,14 @@
   steps:
     - ui_type: "/plan"
     - ui_submit: true
+    - ui_assert: ai_mode_eq "plan"
     - ui_type: "/build"
+    - ui_submit: true
+    - ui_assert: ai_mode_eq "build"
+    - ui_type: "/agents"
     - ui_submit: true
   assertions:
     - ui_assert: ai_mode_eq "plan"
-    - ui_assert: ai_mode_eq "build"
 
 - case_id: SET-001
   goal: 环境变量默认值。
