@@ -1,98 +1,121 @@
-## 插件与运行时
+## AI Agent / Plugins & Runtime
 
 ```markdown
-- case_id: PLUG-001
-  goal: Rhai 与 WASM 插件可加载。
+- case_id: AI-001
+  goal: Native AI Chat 可读取当前 Markdown 并返回基础回答。
   preconditions:
-    - 已安装 demo.rhai 与 demo.wasm 插件
+    - 已打开一篇 Markdown 文档
+    - Native AI Chat 已启用
   steps:
-    - run: deve plugin install demo.rhai
-    - run: deve plugin install demo.wasm
-    - run: deve plugin list
+    - ui_open: ai_chat
+    - ui_type: "Summarize this markdown file"
+    - ui_submit: true
   assertions:
-    - stdout_contains: "demo.rhai"
-    - stdout_contains: "demo.wasm"
+    - ui_assert: chat_response_visible true
+    - ui_assert: chat_response_mentions_current_doc true
+
+- case_id: AI-002
+  goal: `/plan` 进入原生 PLAN 模式，且不会调用任何工具。
+  preconditions:
+    - 聊天面板可用
+    - 当前文档已打开
+  steps:
+    - ui_type: "/plan"
+    - ui_submit: true
+    - ui_type: "How should we restructure this markdown?"
+    - ui_submit: true
+  assertions:
+    - ui_assert: ai_mode_eq "plan"
+    - log_not_contains_any: ["tool call", "mcp", "skill", "spawn subprocess"]
+    - ui_assert: markdown_unchanged true
+
+- case_id: AI-003
+  goal: `/build` 进入原生 BUILD 模式，并可修改当前 Markdown。
+  preconditions:
+    - 聊天面板可用
+    - 当前 Markdown 文档可写
+  steps:
+    - ui_type: "/build"
+    - ui_submit: true
+    - ui_type: "Append a short summary section at the end of this markdown."
+    - ui_submit: true
+  assertions:
+    - ui_assert: ai_mode_eq "build"
+    - ui_assert: current_markdown_changed true
+    - log_not_contains_any: ["mcp", "skill"]
+
+- case_id: AI-004
+  goal: `/agents` 在原生 `PLAN ↔ BUILD` 间顺序切换。
+  preconditions:
+    - 聊天面板可用
+  steps:
+    - ui_type: "/plan"
+    - ui_submit: true
+    - ui_type: "/agents"
+    - ui_submit: true
+    - ui_type: "/agents"
+    - ui_submit: true
+  assertions:
+    - ui_assert_sequence:
+        - ai_mode_eq "plan"
+        - ai_mode_eq "build"
+        - ai_mode_eq "plan"
+
+- case_id: AI-005
+  goal: Trusted External Agent 默认关闭。
+  preconditions:
+    - 未显式启用 trusted-cli
+  steps:
+    - ui_open: settings
+  assertions:
+    - ui_assert: ai_backend_option_visible "native"
+    - ui_assert: ai_backend_option_disabled "trusted-cli"
+
+- case_id: AI-006
+  goal: 未满足 trusted 条件时不得启动外部 CLI。
+  preconditions:
+    - `AGENT_CLI_PATH` 已设置
+    - `ai.agent_bridge.enabled = true`
+    - `ai.agent_bridge.trusted = false`
+  steps:
+    - ui_set: "ai.mode" = "trusted-cli"
+    - ui_type: "hello"
+    - ui_submit: true
+  assertions:
+    - ui_assert: chat_error_visible true
+    - stdout_contains_any: ["trusted mode required", "external agent disabled"]
+    - log_not_contains: "spawn subprocess"
+
+- case_id: PLUG-001
+  goal: Trusted External Agent 仅保留接口位，不要求当前 release 完整实现。
+  preconditions:
+    - 打开 Extensions / Settings
+  steps:
+    - ui_open: extensions
+  assertions:
+    - ui_assert: text_visible "Plugin Runtime"
+    - ui_assert: text_visible "Trusted"
+    - ui_assert: text_visible "default off"
 
 - case_id: PLUG-002
-  goal: Capability Gates 强制执行 (H4 收口)。
+  goal: Calculation Runtime 仅保留接口位，不要求当前 release 可执行代码。
   preconditions:
-    - 插件 manifest 未声明 "search" capability
+    - 打开 Extensions / Settings
   steps:
-    - run: deve plugin call demo.rhai search_docs "test"
+    - ui_open: extensions
   assertions:
-    - stdout_contains: "Capability denied: search"
-    - log_contains: "Security: blocked unauthorized host function call"
+    - ui_assert: text_visible "Calculation Runtime"
+    - ui_assert: text_visible "planned"
+    - ui_assert: code_execution_entry_hidden_or_disabled true
 
 - case_id: PLUG-003
-  goal: Rhai 运行时限制 (H4 收口)。
+  goal: Ledger-Managed Boundary 仍然是未来插件运行时的硬约束。
   preconditions:
-    - 插件脚本包含无限循环 while(true) {}
+    - 存在未来 host api / plugin capability 文档
   steps:
-    - run: deve plugin call demo.rhai infinite_loop
+    - doc_read: "deve-note plan/17_plugins.md"
   assertions:
-    - stdout_contains_any: ["Execution quota exceeded", "Timeout"]
-    - log_contains: "Rhai runtime terminated due to resource limits"
-
-- case_id: PLUG-004
-  goal: WASM 不直接操作 DOM。
-  preconditions:
-    - wasm 插件尝试 DOM 操作
-  steps:
-    - run: deve plugin call demo.wasm dom_test
-  assertions:
-    - stdout_contains: "dom access denied"
-
-- case_id: PLUG-005
-  goal: Podman Rootless/No Net/Ephemeral。
-  preconditions:
-    - Podman 可用
-  steps:
-    - run: deve exec run python "print('ok')"
-  assertions:
-    - log_contains: "rootless"
-    - log_contains: "network disabled"
-    - log_contains: "container removed"
-
-- case_id: PLUG-006
-  goal: AI 插件上下文安全。
-  preconditions:
-    - AI 插件请求上下文
-  steps:
-    - run: deve plugin call ai.get_context
-  assertions:
-    - stdout_contains_any: ["permission required", "context denied"]
-
-- case_id: PLUG-007
-  goal: KaTeX 扩展按配置加载。
-  preconditions:
-    - config.tex_extensions 为空
-  steps:
-    - ui_type: "\\ce{H2O}"
-    - ui_wait_render: true
-    - config_set: "config.tex_extensions" = ["mhchem"]
-    - ui_reload: true
-  assertions:
-    - ui_assert: chemistry_not_rendered_before true
-    - ui_assert: chemistry_rendered_after true
-
-- case_id: PLUG-008
-  goal: 插件不得通过 fs_write 直接修改账本托管 Markdown。
-  preconditions:
-    - 插件 manifest 声明了目标 repo 路径的 allow_fs_write
-    - 目标文件位于 vault/default/notes/a.md
-  steps:
-    - run: deve plugin call demo.rhai fs_write_managed_md
-  assertions:
-    - stdout_contains_any: ["ledger-managed write denied", "managed markdown denied"]
-    - log_contains: "Plugin fs_write blocked on ledger-managed path"
-
-- case_id: PLUG-009
-  goal: 插件可写白名单内的非账本资产。
-  preconditions:
-    - 插件 manifest 声明 allow_fs_write 指向 vault/default/exports
-  steps:
-    - run: deve plugin call demo.rhai fs_write_export
-  assertions:
-    - stdout_contains_any: ["ok", "write success"]
-    - file_exists: "vault/default/exports/report.txt"
+    - doc_contains: "vault/<repo>/**/*.md"
+    - doc_contains: ".notegit"
+    - doc_contains: "ledger-aware host functions"
 ```
