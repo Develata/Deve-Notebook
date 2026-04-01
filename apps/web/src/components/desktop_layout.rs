@@ -3,6 +3,7 @@
 
 use self::desktop_layout_banner::DesktopSyncBanner;
 use self::desktop_layout_content::DesktopLayoutContent;
+use self::desktop_layout_handles::{DesktopInnerResizeHandle, DesktopOuterResizeHandle};
 use self::desktop_layout_sidebar::DesktopSidebar;
 use crate::components::activity_bar::SidebarView;
 use crate::components::desktop_chat_panel::DesktopChatPanel;
@@ -10,12 +11,13 @@ use crate::components::header::Header;
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_layout::LayoutHookReturn;
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
 
 #[path = "desktop_layout_banner.rs"]
 mod desktop_layout_banner;
 #[path = "desktop_layout_content.rs"]
 mod desktop_layout_content;
+#[path = "desktop_layout_handles.rs"]
+mod desktop_layout_handles;
 #[path = "desktop_layout_sidebar.rs"]
 mod desktop_layout_sidebar;
 
@@ -63,30 +65,16 @@ pub fn DesktopLayout(
                 )
             }
         >
-            <div
-                class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
-                style=move || format!("left: {}px; transform: translateX(-50%);", outer_gutter.get())
-                on:pointerdown=move |ev| {
-                    if let Some(target) = ev.target()
-                        && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                    {
-                        let _ = el.set_pointer_capture(ev.pointer_id());
-                    }
-                    start_resize_outer_left.run(ev)
-                }
-            ></div>
-            <div
-                class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
-                style=move || format!("right: {}px; transform: translateX(50%);", outer_gutter.get())
-                on:pointerdown=move |ev| {
-                    if let Some(target) = ev.target()
-                        && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                    {
-                        let _ = el.set_pointer_capture(ev.pointer_id());
-                    }
-                    start_resize_outer_right.run(ev)
-                }
-            ></div>
+            <DesktopOuterResizeHandle
+                side="left"
+                outer_gutter=outer_gutter
+                on_resize=start_resize_outer_left
+            />
+            <DesktopOuterResizeHandle
+                side="right"
+                outer_gutter=outer_gutter
+                on_resize=start_resize_outer_right
+            />
 
             <DesktopSidebar
                 core=core.clone()
@@ -97,19 +85,7 @@ pub fn DesktopLayout(
                 set_pinned_views=set_pinned_views
             />
 
-            <div
-                class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
-                on:pointerdown=move |ev| {
-                    if let Some(target) = ev.target()
-                        && let Ok(el) = target.dyn_into::<web_sys::Element>()
-                    {
-                        let _ = el.set_pointer_capture(ev.pointer_id());
-                    }
-                    start_resize_left.run(ev)
-                }
-            >
-                <div class="w-[1px] h-8 bg-active group-hover:bg-accent transition-colors"></div>
-            </div>
+            <DesktopInnerResizeHandle on_resize=start_resize_left />
 
             <DesktopLayoutContent core=core.clone() />
 
