@@ -1,4 +1,4 @@
-﻿// apps\web\src\components\source_control
+// apps\web\src\components\source_control
 //! # Source Control Module (代码控制模块)
 //!
 //! 包含用于版本控制的所有组件。
@@ -26,6 +26,8 @@ pub mod error_notice;
 pub mod header;
 pub mod history;
 pub mod history_commit_item;
+pub mod history_compare_banner;
+pub mod history_compare_logic;
 pub mod history_diff_row;
 pub mod history_timeline;
 pub mod repositories;

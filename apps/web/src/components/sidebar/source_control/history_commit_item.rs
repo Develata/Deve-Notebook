@@ -1,3 +1,6 @@
+use crate::components::sidebar::source_control::history_compare_logic::{
+    HistorySelectionAction, resolve_history_selection, short_commit_id,
+};
 use crate::components::sidebar::source_control::history_diff_row::HistoryDiffRow;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::Locale;
@@ -10,6 +13,7 @@ pub fn HistoryCommitItem(
     locale: RwSignal<Locale>,
     read_blocked: Signal<bool>,
     selected_commit: RwSignal<Option<String>>,
+    compare_base_commit_id: RwSignal<Option<String>>,
     commit: CommitInfo,
     commit_diff_request_id: ReadSignal<Option<String>>,
     commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
@@ -18,8 +22,8 @@ pub fn HistoryCommitItem(
     on_get_commit_diff: Callback<(Option<String>, String)>,
 ) -> impl IntoView {
     let commit_id = commit.id.clone();
-    let parent_id = commit.parent_id.clone();
     let selected_commit_id = commit_id.clone();
+    let commit_for_click = commit.clone();
 
     view! {
         <div class="relative mb-3 group">
@@ -36,13 +40,29 @@ pub fn HistoryCommitItem(
                     if read_blocked.get_untracked() {
                         return;
                     }
-                    if selected_commit.get_untracked().as_deref() == Some(commit_id.as_str()) {
-                        set_commit_diff_result.set(Vec::new());
-                        selected_commit.set(None);
-                    } else {
-                        set_commit_diff_result.set(Vec::new());
-                        on_get_commit_diff.run((parent_id.clone(), commit_id.clone()));
-                        selected_commit.set(Some(commit_id.clone()));
+                    match resolve_history_selection(
+                        selected_commit.get_untracked().as_deref(),
+                        compare_base_commit_id.get_untracked().as_deref(),
+                        &commit_for_click,
+                    ) {
+                        HistorySelectionAction::ToggleClosed => {
+                            set_commit_diff_result.set(Vec::new());
+                            selected_commit.set(None);
+                        }
+                        HistorySelectionAction::ShowParentDiff {
+                            parent_id,
+                            target_id,
+                        } => {
+                            set_commit_diff_result.set(Vec::new());
+                            on_get_commit_diff.run((parent_id, target_id.clone()));
+                            selected_commit.set(Some(target_id));
+                        }
+                        HistorySelectionAction::ShowRangeDiff { base_id, target_id } => {
+                            set_commit_diff_result.set(Vec::new());
+                            on_get_commit_diff.run((Some(base_id), target_id.clone()));
+                            selected_commit.set(Some(target_id));
+                        }
+                        HistorySelectionAction::IgnoreBaseCommit => {}
                     }
                 }
             >
@@ -50,8 +70,16 @@ pub fn HistoryCommitItem(
                     {commit.message.clone()}
                 </div>
                 <div class="flex items-center gap-2 text-[11px] text-muted">
-                    <span class="font-mono bg-hover px-1 rounded text-secondary">{commit.id[0..7].to_string()}</span>
+                    <span class="font-mono bg-hover px-1 rounded text-secondary">{short_commit_id(&commit.id)}</span>
                     <span>{format_relative(commit.timestamp)}</span>
+                    <Show when=move || compare_base_commit_id.get().as_deref() == Some(commit_id.as_str())>
+                        <span class="ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium bg-accent/15 text-accent">
+                            {move || match locale.get() {
+                                Locale::En => "Base",
+                                Locale::Zh => "基准",
+                            }}
+                        </span>
+                    </Show>
                 </div>
             </div>
             <Show when=move || selected_commit.get().as_deref() == Some(selected_commit_id.as_str())>

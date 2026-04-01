@@ -9,6 +9,7 @@ pub fn HistoryTimeline(
     locale: RwSignal<Locale>,
     read_blocked: Signal<bool>,
     selected_commit: RwSignal<Option<String>>,
+    compare_base_commit_id: RwSignal<Option<String>>,
     commit_history: ReadSignal<Vec<CommitInfo>>,
     commit_diff_request_id: ReadSignal<Option<String>>,
     commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
@@ -28,6 +29,7 @@ pub fn HistoryTimeline(
                             locale
                             read_blocked
                             selected_commit
+                            compare_base_commit_id
                             commit
                             commit_diff_request_id
                             commit_diff_result
