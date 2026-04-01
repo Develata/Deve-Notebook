@@ -10,6 +10,7 @@ use leptos::html::Div;
 use leptos::prelude::*;
 
 mod buffered_ops;
+mod delta;
 mod delta_input;
 mod delta_input_forward;
 mod delta_input_gate;

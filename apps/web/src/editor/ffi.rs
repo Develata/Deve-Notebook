@@ -8,6 +8,7 @@
 //! - 避免了每次按键时的 JS->WASM 全文拷贝
 //! - 添加了 `destroyEditor` 用于清理资源
 
+use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
@@ -65,75 +66,9 @@ unsafe extern "C" {
     pub fn get_editor_selection() -> String;
 }
 
-/// Delta 结构 (从 JS 传入)
-///
-/// 说明：
-/// - `from/to` 为 UTF-16 code unit 索引（与 JS/CodeMirror 一致）
-#[derive(serde::Deserialize, Debug)]
-pub struct Delta {
-    pub from: usize,
-    pub to: usize,
-    pub insert: String,
-}
-
-impl Delta {
-    /// 将 Delta 转换为单个 Op (⚠️ Replace 时仅返回 Delete，丢弃 Insert)
-    ///
-    /// **已废弃**: 请使用 `to_ops()` 代替，它能正确处理 Replace = Delete + Insert
-    #[allow(dead_code)]
-    #[deprecated(note = "Replace 场景会丢弃 Insert，请改用 to_ops()")]
-    pub fn to_op(&self) -> Option<deve_core::models::Op> {
-        let delete_len = self.to.saturating_sub(self.from);
-        let has_delete = delete_len > 0;
-        let has_insert = !self.insert.is_empty();
-        let pos = to_u32(self.from)?;
-        let len = if has_delete { to_u32(delete_len)? } else { 0 };
-
-        match (has_delete, has_insert) {
-            (true, true) => {
-                // Replace = Delete + Insert. For simplicity, return only the more significant one.
-                Some(deve_core::models::Op::Delete { pos, len })
-            }
-            (true, false) => Some(deve_core::models::Op::Delete { pos, len }),
-            (false, true) => Some(deve_core::models::Op::Insert {
-                pos,
-                content: self.insert.clone().into(),
-            }),
-            (false, false) => None,
-        }
-    }
-
-    /// 将 Delta 转换为 Op 列表 (处理 Replace 情况)
-    pub fn to_ops(&self) -> Vec<deve_core::models::Op> {
-        let delete_len = self.to.saturating_sub(self.from);
-        let has_delete = delete_len > 0;
-        let has_insert = !self.insert.is_empty();
-        let pos = match to_u32(self.from) {
-            Some(v) => v,
-            None => return Vec::new(),
-        };
-        let len = match to_u32(delete_len) {
-            Some(v) => v,
-            None => return Vec::new(),
-        };
-
-        let mut ops = Vec::new();
-
-        if has_delete {
-            ops.push(deve_core::models::Op::Delete { pos, len });
-        }
-
-        if has_insert {
-            ops.push(deve_core::models::Op::Insert {
-                pos,
-                content: self.insert.clone().into(),
-            });
-        }
-
-        ops
-    }
-}
-
-fn to_u32(value: usize) -> Option<u32> {
-    u32::try_from(value).ok()
+pub fn try_get_editor_selection() -> Option<String> {
+    let window = web_sys::window()?;
+    let value = js_sys::Reflect::get(window.as_ref(), &"getEditorSelection".into()).ok()?;
+    let func = value.dyn_ref::<js_sys::Function>()?;
+    func.call0(window.as_ref()).ok()?.as_string()
 }

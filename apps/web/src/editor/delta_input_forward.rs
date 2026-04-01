@@ -1,5 +1,5 @@
+use super::delta::Delta;
 use super::delta_input::DeltaInputCtx;
-use super::ffi::Delta;
 use super::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::pending;
