@@ -30,7 +30,7 @@
 - case_id: UI-MOB-CHAT-REG-003
   goal: 错误态与重试态闭环。
   preconditions:
-    - AI 插件返回错误
+    - 当前 AI 后端返回错误
   steps:
     - ui_send_chat_text: "trigger_error"
     - ui_assert: chat_error_banner_visible true
