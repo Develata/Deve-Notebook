@@ -10,6 +10,11 @@
 
 #![allow(dead_code)] // 快捷键系统模块预留
 
+#[path = "global_handlers.rs"]
+mod handlers;
+#[path = "global_search_box.rs"]
+mod search_box;
+
 use super::types::KeyCombo;
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
@@ -56,41 +61,13 @@ pub fn create_global_shortcut_handler(
     set_search_mode: WriteSignal<String>,
 ) -> impl Fn(KeyboardEvent) + Clone + 'static {
     move |ev: KeyboardEvent| {
-        let is_ctrl = ev.meta_key() || ev.ctrl_key();
-        let shift = ev.shift_key();
-        let key = ev.key().to_lowercase();
-
-        // Ctrl+Shift+P: 命令面板 (必须先检查，因为也包含 Ctrl+P)
-        if is_ctrl && shift && key == "p" {
-            ev.prevent_default();
-            ev.stop_propagation();
-
-            // 如果已打开且为命令模式，则关闭；否则切换到命令模式并打开
-            if show_search.get() && search_mode.get() == ">" {
-                set_show_search.set(false);
-            } else {
-                set_search_mode.set(">".to_string());
-                set_show_search.set(true);
-            }
-            return;
-        }
-
-        // Ctrl+P: 文件搜索
-        if is_ctrl && !shift && key == "p" {
-            ev.prevent_default();
-            ev.stop_propagation();
-
-            // 如果已打开且为文件模式，则关闭；否则切换到文件模式并打开
-            let current_mode = search_mode.get();
-            let is_file_mode = current_mode.is_empty();
-
-            if show_search.get() && is_file_mode {
-                set_show_search.set(false);
-            } else {
-                set_search_mode.set(String::new());
-                set_show_search.set(true);
-            }
-        }
+        handlers::handle_global_shortcut(
+            &ev,
+            show_search,
+            set_show_search,
+            search_mode,
+            set_search_mode,
+        )
     }
 }
 
@@ -103,48 +80,12 @@ pub fn handle_search_box_keydown(
     set_selected_index: WriteSignal<usize>,
     input_ref: NodeRef<leptos::html::Input>,
 ) {
-    let key = ev.key();
-    let is_ctrl = ev.ctrl_key() || ev.meta_key();
-    let shift = ev.shift_key();
-    let key_lower = key.to_lowercase();
-
-    // Escape: Close
-    if key == "Escape" {
-        ev.prevent_default();
-        ev.stop_propagation();
-        set_show.set(false);
-        return;
-    }
-
-    // Ctrl+P / Shift+P Logic
-    if is_ctrl && key_lower == "p" {
-        ev.prevent_default();
-        ev.stop_propagation();
-
-        if shift {
-            // Command Palette logic using local query
-            if query.get_untracked().starts_with('>') {
-                set_show.set(false);
-            } else {
-                set_query.set(">".to_string());
-                set_selected_index.set(0);
-                if let Some(el) = input_ref.get_untracked() {
-                    let _ = el.focus();
-                }
-            }
-        } else {
-            // File Search logic
-            let q = query.get_untracked();
-            let is_file = !q.starts_with('>') && !q.starts_with('@');
-            if is_file {
-                set_show.set(false);
-            } else {
-                set_query.set(String::new());
-                set_selected_index.set(0);
-                if let Some(el) = input_ref.get_untracked() {
-                    let _ = el.focus();
-                }
-            }
-        }
-    }
+    search_box::handle_search_box_shortcut(
+        ev,
+        set_show,
+        query,
+        set_query,
+        set_selected_index,
+        input_ref,
+    );
 }
