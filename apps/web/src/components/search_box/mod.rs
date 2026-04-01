@@ -11,6 +11,7 @@ mod sheet_gesture;
 mod ui;
 mod ui_footer;
 mod ui_sections;
+mod ui_sheet;
 
 use crate::hooks::use_core::CoreState;
 use crate::i18n::Locale;
