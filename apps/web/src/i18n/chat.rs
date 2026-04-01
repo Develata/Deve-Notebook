@@ -138,6 +138,13 @@ pub fn agent_bridge(locale: Locale) -> &'static str {
     }
 }
 
+pub fn ai_chat(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "AI Chat",
+        Locale::Zh => "AI Chat",
+    }
+}
+
 pub fn drop_files(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Drop files to add to context",
