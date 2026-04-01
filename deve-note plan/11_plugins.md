@@ -1,4 +1,4 @@
-# 11_plugins.md - 插件篇 (Plugins)
+# 11_plugins.md - 插件篇 (Plugins)（目前只需要制作接口，不需要具体实现）
 
 ## 双引擎插件运行时 (Dual-Engine Plugin Runtime)
 
