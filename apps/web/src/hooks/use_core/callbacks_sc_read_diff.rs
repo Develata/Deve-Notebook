@@ -31,10 +31,6 @@ pub(super) fn create_get_doc_diff_callback(
     Callback::new(move |entry: ChangeEntry| {
         if let Some(notice) = unavailable_doc_diff_notice(&entry) {
             set_notice.set(Some(notice));
-            leptos::logging::log!(
-                "跳过 GetDocDiff: deleted change has no doc_id for {}",
-                entry.path
-            );
             return;
         }
         if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
