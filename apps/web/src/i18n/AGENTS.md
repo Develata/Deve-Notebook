@@ -33,7 +33,7 @@ Internationalization strings organized by UI feature. Provides localized text fo
 
 ### Working In This Directory
 
-- See `10_i18n.md` in deve-note plan for i18n strategy.
+- See `11_i18n.md` in deve-note plan for i18n strategy.
 - Add new strings to the appropriate feature file, not to `common.rs`.
 
 <!-- MANUAL: -->

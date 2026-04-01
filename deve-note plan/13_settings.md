@@ -18,6 +18,12 @@
 | `AUTH_PASS`                      | *(none)*         | Argon2 哈希后的管理员密码（PHC 格式）。生产环境 MUST 设置。          |
 | `AUTH_ALLOW_ANONYMOUS_LOCALHOST` | `false`          | 是否允许 Localhost / LAN 免密访问 (`true` / `false`).               |
 | `ALLOWED_ORIGINS`                | *(none)*         | 允许的 CORS Origin 列表 (逗号分隔). 生产环境 MUST 显式设置。        |
+| **AI**                           |                  |                                                                     |
+| `AI_API_KEY`                     | *(none)*         | Native AI Chat 的服务密钥。                                         |
+| `AI_BASE_URL`                    | `https://api.openai.com/v1` | Native AI Chat API 端点。                               |
+| `AI_MODEL`                       | `gpt-4o-mini`    | Native AI Chat 默认模型。                                           |
+| `AI_MAX_TOKENS`                  | `4096`           | Native AI Chat 输出上限。                                           |
+| `AGENT_CLI_PATH`                 | *(none)*         | Trusted External Agent 可执行路径。未显式启用时不得读取。           |
 | **TLS (可选)**                   |                  |                                                                     |
 | `TLS_CERT_PATH`                  | *(none)*         | PEM 证书路径. 设置后启用 HTTPS.                                     |
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
@@ -52,6 +58,15 @@
 | `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (仅交换 Vector). |
 | `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
+
+### 2.3 AI (人工智能)
+| Key                        | Type   | Default      | Description |
+| :------------------------- | :----- | :----------- | :---------- |
+| `ai.mode`                  | String | `native`     | `native` = Native AI Chat；`trusted-cli` = 受信任外部 CLI（仅在显式启用时可选）。 |
+| `ai.native.enabled`        | Bool   | `true`       | 是否启用 Native AI Chat。 |
+| `ai.agent_bridge.enabled`  | Bool   | `false`      | 是否启用 Trusted External Agent。默认关闭。 |
+| `ai.agent_bridge.trusted`  | Bool   | `false`      | 是否确认当前部署为受信任本地环境。未确认时 MUST NOT 起 CLI。 |
+| `ai.agent_bridge.timeout_ms` | Number | `30000`    | 外部 CLI 单次请求超时。 |
 
 ## 3. Keyboard Shortcuts (快捷键)
 

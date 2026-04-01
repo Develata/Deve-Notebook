@@ -22,6 +22,6 @@ Model Context Protocol (MCP) server endpoints. Exposes notebook capabilities to 
 ### Working In This Directory
 
 - MCP allows AI tools to read/write notes, search, and interact with the ledger.
-- See `11b_ai_integration.md` in deve-note plan.
+- See `10_ai_agent.md` and `17_plugins.md` in deve-note plan.
 
 <!-- MANUAL: -->

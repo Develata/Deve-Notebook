@@ -21,7 +21,7 @@ AI chat streaming integration. Handles SSE-based streaming from AI providers, co
 
 ### Working In This Directory
 
-- See `docs/ai-chat-streaming.md` and `11b_ai_integration.md` in deve-note plan.
+- See `docs/ai-chat-streaming.md` and `10_ai_agent.md` in deve-note plan.
 - Stream handler is initialized once at server startup.
 
 <!-- MANUAL: -->

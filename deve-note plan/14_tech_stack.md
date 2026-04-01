@@ -19,11 +19,13 @@
 | **CLI**      | **Clap v4**              | Verified          | 命令行解析。                        |
 | **Async**    | **Tokio v1**             | Verified          | 异步运行时。                        |
 | **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
+| **AI Chat**  | **OpenAI-compatible SSE** | Planned (Native) | 第一方最小 chat 能力，读取 Markdown + 对话。 |
+| **Agent Bridge** | **External CLI Bridge** | Planned (Trusted Only) | 外部 CLI Agent，可选、默认关闭。 |
 | **Graph**    | **d3-force + Pixi.js**   | Planned           | 高性能图谱渲染 (Web Canvas).        |
 | **Search**   | **Tantivy** (Rust)       | Planned           | 全文检索、模糊搜索 (Backend).       |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
 | **Build**    | **Tauri v2**             | Planned           | 跨平台外壳 (Mobile/Desktop)。       |
-| **Plugins**  | **Rhai + WASM (Extism)** | Planned           | 双层插件体系 (Scripting + Binary)。 |
+| **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted Agent / Calculation Runtime 接口，不要求实现。 |
 
 ## Markdown 兼容性与回归清单 (Compatibility Checklist)
 
@@ -49,7 +51,7 @@
 | Graph Visualization | ❌ | ✅ |
 | Snapshot Depth default | 10 | 100 |
 | MEM_CACHE_MB default | 32 | 128 |
-| Plugin Podman | ❌ | ✅ |
+| Plugin Podman / Calculation Runtime | ❌ | ✅ (Future) |
 
 ## WASM 内存约束
 

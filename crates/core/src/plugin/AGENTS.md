@@ -25,7 +25,7 @@ Plugin system: manifest parsing, plugin loading, and runtime orchestration.
 
 ### Working In This Directory
 
-- See `11_plugins.md` in deve-note plan for plugin design.
+- See `17_plugins.md` in deve-note plan for plugin design.
 - Plugins are Rhai scripts with a `manifest.json` descriptor.
 
 <!-- MANUAL: -->

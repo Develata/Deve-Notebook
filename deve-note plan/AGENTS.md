@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Comprehensive design document for Deve-Notebook, organized into 16 chapters covering every aspect of the system — from terminology and storage architecture to UI design, networking, authentication, and release strategy. This is the primary reference for all implementation work.
+Comprehensive design document for Deve-Notebook, organized into 17 chapters covering every aspect of the system — from terminology and storage architecture to UI design, AI behavior, networking, authentication, and release strategy. This is the primary reference for all implementation work.
 
 ## Key Files
 
@@ -24,14 +24,14 @@ Comprehensive design document for Deve-Notebook, organized into 16 chapters cove
 | `08_ui_design_02_desktop.md` | Desktop UI — native integration |
 | `08_ui_design_03_mobile.md` | Mobile UI — touch gestures, drawers |
 | `09_auth.md` | Authentication, E2E encryption, key exchange |
-| `10_i18n.md` | Internationalization strategy |
-| `11_plugins.md` | Plugin boundary, ledger-aware note host API |
-| `11b_ai_integration.md` | AI chat integration and tool-use protocol |
+| `10_ai_agent.md` | Native AI chat baseline and trusted external agent boundary |
+| `11_i18n.md` | Internationalization strategy |
 | `12_commands.md` | Command palette and keyboard shortcuts |
 | `13_settings.md` | Settings system and persistence |
 | `14_tech_stack.md` | Technology choices and rationale |
 | `15_release.md` | Build, packaging, and deployment |
 | `16_web_thin_client_ledger.md` | Web thin client, repo-scoped state machine, scope gates |
+| `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
 | `验收清单.md` | Acceptance checklist (Chinese) |
 
 ## Subdirectories
