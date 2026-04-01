@@ -1,5 +1,6 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
@@ -49,9 +50,10 @@ pub fn create_source_control_callbacks(
     scope: SourceControlScopeSignals,
     write_gate: RepoWriteSignals,
     request: SourceControlRequestSignals,
+    set_notice: WriteSignal<Option<SourceControlNotice>>,
 ) -> SourceControlCallbacks {
     let (on_get_changes, on_get_history, on_get_doc_diff, on_get_commit_diff) =
-        create_read_callbacks(ws, scope, write_gate, request);
+        create_read_callbacks(ws, scope, write_gate, request, set_notice);
     let (
         on_stage_file,
         on_stage_files,

@@ -12,6 +12,7 @@
 pub mod change_item;
 pub mod change_item_actions;
 pub mod change_item_conflict_actions;
+pub mod change_item_counterpart;
 pub mod change_item_meta;
 pub mod change_item_workspace_actions;
 pub mod changes;

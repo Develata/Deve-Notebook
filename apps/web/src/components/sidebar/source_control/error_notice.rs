@@ -3,8 +3,40 @@ use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, server_error};
 use leptos::prelude::*;
 
+const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
+
+fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
+    notice
+        .detail
+        .as_deref()
+        .and_then(|detail| detail.strip_prefix(DELETED_NO_DOC_ID_NOTICE_PREFIX))
+}
+
+fn title(locale: Locale, notice: &SourceControlNotice) -> String {
+    if deleted_no_doc_id_path(notice).is_some() {
+        return match locale {
+            Locale::En => "Diff unavailable".to_string(),
+            Locale::Zh => "无法显示差异".to_string(),
+        };
+    }
+    server_error::message(locale, notice.code).to_string()
+}
+
 fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
     match notice.code {
+        deve_core::protocol::ServerErrorCode::ScDocNotFound
+            if deleted_no_doc_id_path(notice).is_some() =>
+        {
+            let path = deleted_no_doc_id_path(notice).unwrap_or_default();
+            match locale {
+                Locale::En => format!(
+                    "No diff is available for deleted change {path} because it has no document identity."
+                ),
+                Locale::Zh => {
+                    format!("删除变更 {path} 没有文档身份，因此当前无法生成可显示的差异。")
+                }
+            }
+        }
         deve_core::protocol::ServerErrorCode::ScCommitDiffUnprojectable => {
             let commit = notice
                 .detail
@@ -65,7 +97,7 @@ pub fn ErrorNotice(
                             {move || {
                                 notice
                                     .get()
-                                    .map(|current| server_error::message(locale.get(), current.code).to_string())
+                                    .map(|current| title(locale.get(), &current))
                                     .unwrap_or_default()
                             }}
                         </p>

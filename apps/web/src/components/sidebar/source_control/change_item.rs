@@ -6,6 +6,9 @@
 
 use crate::components::icons::*;
 use crate::components::sidebar::source_control::change_item_actions::ChangeItemActions;
+use crate::components::sidebar::source_control::change_item_counterpart::{
+    counterpart_badge_text, counterpart_badge_title, find_counterpart_kind,
+};
 use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::Locale;
@@ -33,6 +36,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let can_open_diff = can_request_doc_diff(&entry);
     let meta = build_change_item_meta(&entry);
     let entry_for_click = entry.clone();
+    let entry_for_counterpart = entry.clone();
 
     let action_busy_reset = action_busy;
     Effect::new(move |_| {
@@ -49,18 +53,17 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             class=format!(
                 "flex items-center px-4 py-0.5 hover:bg-hover text-[13px] group h-[22px] {} {}",
                 if has_conflict { "text-warning bg-warning/5" } else { "text-primary" },
-                if can_open_diff { "cursor-pointer" } else { "cursor-default" }
+                if can_open_diff { "cursor-pointer" } else { "cursor-help" }
             )
             on:click=move |_| {
                 if current_repo_id.get().is_none()
                     || pending_branch_switch.get().is_some()
                     || pending_repo_switch.get().is_some()
                     || write_block.get().is_some()
-                    || !can_open_diff
                 {
                     return;
                 }
-                // 点击任何条目都打开 diff 视图 (与 VS Code 行为一致)
+                // Diff 不可用的条目会在回调里写入明确的 Source Control notice。
                 core.on_get_doc_diff.run(entry_for_click.clone());
             }
         >
@@ -71,6 +74,25 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 <span class="text-xs text-muted truncate shrink-0 ml-1">
                     {meta.directory}
                 </span>
+                {move || {
+                    let counterpart = find_counterpart_kind(
+                        &entry_for_counterpart,
+                        is_staged,
+                        &core.staged_changes.get(),
+                        &core.unstaged_changes.get(),
+                    );
+                    counterpart.map(|kind| {
+                        let locale_value = locale.get();
+                        view! {
+                            <span
+                                class="ml-1 shrink-0 rounded border border-border px-1 py-px text-[10px] font-semibold text-muted"
+                                title=counterpart_badge_title(kind, locale_value)
+                            >
+                                {counterpart_badge_text(kind, locale_value)}
+                            </span>
+                        }
+                    })
+                }}
             </div>
 
             <div class="flex items-center gap-2 pl-2">
