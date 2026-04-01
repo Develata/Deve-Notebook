@@ -29,15 +29,18 @@ pub fn attach_focus_effect(
                 }
             });
         } else {
-            // 关闭后把焦点交还给编辑器，维持流畅体验。
+            // Delay editor refocus by one extra frame so the closing Enter/Click
+            // does not fall through into CodeMirror as a fresh edit.
             request_animation_frame(move || {
-                if let Some(window) = web_sys::window()
-                    && let Some(document) = window.document()
-                    && let Ok(Some(el)) = document.query_selector(".cm-content")
-                    && let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>()
-                {
-                    let _ = html_el.focus();
-                }
+                request_animation_frame(move || {
+                    if let Some(window) = web_sys::window()
+                        && let Some(document) = window.document()
+                        && let Ok(Some(el)) = document.query_selector(".cm-content")
+                        && let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>()
+                    {
+                        let _ = html_el.focus();
+                    }
+                });
             });
         }
     });
