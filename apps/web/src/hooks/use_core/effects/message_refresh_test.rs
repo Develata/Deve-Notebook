@@ -1,4 +1,4 @@
-use super::{RefreshScope, can_issue_sc_refresh, capture_refresh_scope, should_send_refresh};
+use super::{RefreshScope, capture_refresh_scope, should_send_refresh};
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 
@@ -78,10 +78,4 @@ fn keeps_refresh_only_when_scope_is_unchanged() {
         None,
         5,
     ));
-}
-
-#[test]
-fn sc_refresh_waits_for_inflight_request_to_finish() {
-    assert!(!can_issue_sc_refresh(Some("req-1".into())));
-    assert!(can_issue_sc_refresh(None));
 }

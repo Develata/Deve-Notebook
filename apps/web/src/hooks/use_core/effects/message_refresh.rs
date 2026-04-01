@@ -43,7 +43,3 @@ pub fn should_send_refresh(
         && scope.branch == branch
         && scope.scope_nonce == scope_nonce
 }
-
-pub fn can_issue_sc_refresh(pending_changes_request_id: Option<String>) -> bool {
-    pending_changes_request_id.is_none()
-}

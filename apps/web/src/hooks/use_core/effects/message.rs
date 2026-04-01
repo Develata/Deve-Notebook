@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use super::super::state::CoreSignals;
 use super::message_dispatch;
-use super::message_refresh::{can_issue_sc_refresh, capture_refresh_scope, should_send_refresh};
+use super::message_refresh::{capture_refresh_scope, should_send_refresh};
 
 /// 设置消息处理 Effect。
 pub fn setup(ws: &WsService, signals: &CoreSignals) {
@@ -46,7 +46,6 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     t.cancel();
                 }
                 let ws_for_timer = ws.clone();
-                let changes_request_id = signals.changes_request_id;
                 let set_changes_request_id = signals.set_changes_request_id;
                 let current_repo_id = signals.current_repo_id;
                 let active_branch = signals.active_branch;
@@ -61,9 +60,6 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                         pending_repo_switch.get_untracked(),
                         signals.current_scope_nonce.get_untracked(),
                     ) {
-                        return;
-                    }
-                    if !can_issue_sc_refresh(changes_request_id.get_untracked()) {
                         return;
                     }
                     let request_id = uuid::Uuid::new_v4().to_string();
