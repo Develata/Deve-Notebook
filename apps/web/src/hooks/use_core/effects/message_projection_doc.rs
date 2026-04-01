@@ -27,7 +27,7 @@ pub fn handle_doc_list(
         signals.current_scope_nonce.get_untracked(),
     );
     if !(matches_scope || matches_projection_scope) || !matches_request {
-        leptos::logging::warn!("忽略 DocList: repo-scope 或 request gate 不匹配");
+        leptos::logging::log!("忽略 DocList: repo-scope 或 request gate 不匹配");
         return;
     }
     signals.set_doc_list_request_id.set(None);

@@ -27,7 +27,7 @@ pub fn handle_tree_update(
         signals.current_scope_nonce.get_untracked(),
     );
     if !(matches_scope || matches_projection_scope) || !matches_request {
-        leptos::logging::warn!("忽略 TreeUpdate: repo-scope 或 request gate 不匹配");
+        leptos::logging::log!("忽略 TreeUpdate: repo-scope 或 request gate 不匹配");
         return;
     }
     signals.set_tree_request_id.set(None);
