@@ -28,6 +28,14 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let is_user = msg.role == "user";
     let content = msg.content.clone();
+    let sender_text = move || {
+        if is_user {
+            t::chat::you(locale.get())
+        } else {
+            t::chat::assistant(locale.get())
+        }
+    };
+    let content_html = move || render_markdown(&content, t::chat::apply(locale.get()));
     let ts_text = {
         let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(msg.ts_ms as f64));
         format!("{:02}:{:02}", date.get_hours(), date.get_minutes())
@@ -41,11 +49,7 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
                 )}>
                     {if is_user { "U" } else { "AI" }}
                 </div>
-                <span class="text-xs text-muted">{if is_user {
-                    t::chat::you(locale.get())
-                } else {
-                    t::chat::assistant(locale.get())
-                }}</span>
+                <span class="text-xs text-muted">{sender_text}</span>
             </div>
 
             <div class={format!("rounded px-3 py-2 text-sm leading-relaxed {} {}",
@@ -64,7 +68,7 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
             )}>
                 <div
                     class="markdown-body break-words overflow-x-auto"
-                    inner_html={render_markdown(&content, t::chat::apply(locale.get()))}
+                    inner_html=content_html
                     on:click=handle_link_click
                 ></div>
                 <div class="mt-1 text-[10px] text-muted text-right">{ts_text}</div>

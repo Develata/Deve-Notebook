@@ -8,9 +8,17 @@ use crate::components::chat::header::ChatHeader;
 use crate::components::chat::input_area::InputArea;
 use crate::components::chat::message_list::MessageList;
 use crate::hooks::use_core::CoreState;
-use crate::i18n::{Locale, t};
+use crate::i18n::Locale;
 use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;
+
+#[path = "panel_effects.rs"]
+mod panel_effects;
+#[path = "panel_status.rs"]
+mod panel_status;
+
+use self::panel_effects::{attach_plugin_response_effect, attach_scope_reset_effect};
+use self::panel_status::{error_notice, loading_notice};
 
 #[component]
 pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl IntoView {
@@ -49,34 +57,13 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
         }
     });
 
-    Effect::new(move |_| {
-        let _ = (
-            core.current_repo.get(),
-            core.active_branch.get(),
-            core.pending_repo_switch.get(),
-            core.pending_branch_switch.get(),
-        );
-        set_pending_reqs.set(Vec::new());
-        set_error_code.set(None);
-        set_last_prompt.set(String::new());
-    });
-
-    Effect::new(move |_| {
-        let Some((req_id, _result, error)) = core.plugin_last_response.get() else {
-            return;
-        };
-        let matched = pending_reqs.get_untracked().iter().any(|id| id == &req_id);
-        if !matched {
-            return;
-        }
-        set_pending_reqs.update(|v| v.retain(|id| id != &req_id));
-        if let Some(err) = error {
-            if let Some(detail) = err.detail.as_deref() {
-                leptos::logging::warn!("Plugin request {} failed: {}", req_id, detail);
-            }
-            set_error_code.set(Some(err.code));
-        }
-    });
+    attach_scope_reset_effect(
+        core.clone(),
+        set_pending_reqs,
+        set_error_code,
+        set_last_prompt,
+    );
+    attach_plugin_response_effect(core.clone(), pending_reqs, set_pending_reqs, set_error_code);
 
     let loading = Signal::derive(move || is_streaming.get() || !pending_reqs.get().is_empty());
 
@@ -100,28 +87,8 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
                 on_apply=on_apply
                 mobile=mobile
             />
-            <Show when=move || error_code.get().is_some()>
-                <div class="mx-2 mb-2 rounded border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-700 flex items-center justify-between gap-2">
-                    <div class="min-w-0 truncate">
-                        {move || {
-                            let suffix = error_code
-                                .get()
-                                .map(|code| t::server_error::message(locale.get(), code))
-                                .unwrap_or("");
-                            format!("{}: {}", t::chat::send_failed(locale.get()), suffix)
-                        }}
-                    </div>
-                    <button
-                        class="h-11 min-w-11 px-3 rounded bg-panel border border-red-200 text-red-700 active:bg-red-100"
-                        on:click=move |_| retry.run(())
-                    >
-                        {move || t::chat::retry(locale.get())}
-                    </button>
-                </div>
-            </Show>
-            <Show when=move || loading.get()>
-                <div class="px-3 pb-1 text-[11px] text-muted">{move || t::chat::loading(locale.get())}</div>
-            </Show>
+            {error_notice(error_code, locale, retry)}
+            {loading_notice(loading, locale)}
             <InputArea
                 input=input
                 set_input=set_input
