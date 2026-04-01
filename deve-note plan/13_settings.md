@@ -68,6 +68,16 @@
 | `ai.agent_bridge.trusted`  | Bool   | `false`      | 是否确认当前部署为受信任本地环境。未确认时 MUST NOT 起 CLI。 |
 | `ai.agent_bridge.timeout_ms` | Number | `30000`    | 外部 CLI 单次请求超时。 |
 
+补充约束：
+
+*   `ai.mode = trusted-cli` 仅在以下条件全部满足时才有效：
+    - `ai.agent_bridge.enabled = true`
+    - `ai.agent_bridge.trusted = true`
+    - `AGENT_CLI_PATH` 已设置
+*   任一条件不满足时，系统 **MUST** 自动退回 `ai.mode = native`，并向用户显示明确原因。
+*   `PLAN / BUILD` 是 Native AI Chat 的会话模式，不是单独的配置后端键。
+*   Settings 中的后端切换与 Chat 内的 `/plan /build /agents` 必须明确分离，避免混淆“后端”与“模式”。
+
 ## 3. Keyboard Shortcuts (快捷键)
 
 | 场景 (Scope)          | 快捷键 (Mac / Win)             | 命令 (Command)                          |

@@ -53,6 +53,10 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
     - **MAY** 通过受控的程序执行路径完成 Markdown 修改或转换。
     - 上述执行路径 **MUST** 是受限的宿主能力，不得等价于开放式 shell / MCP / Skills。
     - 当前阶段默认只针对 Markdown 工作流，不自动扩展到任意工程文件。
+*   **`/agents` 模式切换**：
+    - 仅在原生 `PLAN ↔ BUILD` 间顺序切换。
+    - **MUST NOT** 用作后端切换命令。
+    - **MUST NOT** 隐式拉起 Trusted External Agent。
 
 ## 3. Trusted External Agent Bridge（可选，高风险）
 
@@ -90,6 +94,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 统一要求：
 
 *   Settings 中的模式切换必须清楚提示当前后端类型。
+*   Native `PLAN / BUILD` 与 `Backend(native / trusted-cli)` 必须是两组独立概念，不得混用。
 *   移动端 Chat Sheet、Markdown 渲染、错误重试逻辑共享。
 *   `Disconnected`、`Unauthorized`、`Session Expired` 与 AI 请求失败必须分开处理。
 

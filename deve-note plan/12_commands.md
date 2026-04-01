@@ -37,7 +37,7 @@
 *   **AI**:
     *   `AI: Open Chat`: 打开统一 AI 面板。
     *   `AI: Retry Last Request`: 重试上一条失败请求。
-    *   `AI: Switch Backend`: 在 Native AI Chat 与 Trusted CLI Agent（若启用）之间切换。
+    *   `AI: Switch Backend`: 在 Native AI Chat 与 Trusted CLI Agent（仅在显式启用且满足 trusted 条件时）之间切换。
     *   `AI: Switch to PLAN Mode`: 将原生 AI 切换到只读规划模式。
     *   `AI: Switch to BUILD Mode`: 将原生 AI 切换到执行模式。
 
@@ -56,6 +56,17 @@
     - 允许直接修改当前 Markdown。
     - 允许调用受控的程序执行路径来完成 Markdown 修改。
     - 不等于开放 MCP / Skills / 任意 shell。
+*   `agents`：
+    - 仅作用于原生 `PLAN / BUILD` 两种聊天模式。
+    - 不负责切换 `native / trusted-cli` 后端。
+
+### Backend 命令可见性
+
+*   `AI: Switch Backend` 仅在以下条件都成立时才应可见或可用：
+    - `ai.agent_bridge.enabled = true`
+    - `ai.agent_bridge.trusted = true`
+    - `AGENT_CLI_PATH` 已配置
+*   条件不满足时，系统 **MUST** 保持 `native` 后端，并对用户给出明确说明，而不是静默尝试拉起 CLI。
 
 ## 本章相关命令
 
