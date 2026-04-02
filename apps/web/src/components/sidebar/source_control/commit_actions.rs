@@ -41,11 +41,12 @@ pub fn CommitActions(
                 <button
                     class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
                     disabled=move || !can_prepare_commit.get()
+                    aria-label=move || t::sidebar::more_actions(locale.get())
                     title=move || {
                         write_block
                             .get()
                             .map(|block| blocked_status_title(locale.get(), block))
-                            .unwrap_or_else(|| t::source_control::commit(locale.get()).to_string())
+                            .unwrap_or_else(|| t::sidebar::more_actions(locale.get()).to_string())
                     }
                     on:click=move |_| dropdown_open.update(|is_open| *is_open = !*is_open)
                 >

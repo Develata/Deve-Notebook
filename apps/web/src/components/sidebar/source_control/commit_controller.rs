@@ -22,6 +22,12 @@ pub struct CommitController {
     pub on_commit_and_push: Callback<()>,
 }
 
+fn can_submit_commit_now(core: &SourceControlContext, message: &str) -> bool {
+    core.can_write.get_untracked()
+        && !core.staged_changes.get_untracked().is_empty()
+        && !message.trim().is_empty()
+}
+
 pub fn use_commit_controller(
     core: SourceControlContext,
     chat_ctx: ChatContext,
@@ -44,9 +50,7 @@ pub fn use_commit_controller(
         move |ev: KeyboardEvent| {
             if ev.ctrl_key()
                 && ev.key() == "Enter"
-                && core.can_write.get_untracked()
-                && !core.staged_changes.get_untracked().is_empty()
-                && !msg.get_untracked().trim().is_empty()
+                && can_submit_commit_now(&core, &msg.get_untracked())
             {
                 dropdown_open.set(false);
                 core.clear_notice.run(());
@@ -68,10 +72,7 @@ pub fn use_commit_controller(
     let on_commit = Callback::new({
         let core = core.clone();
         move |_| {
-            if !(core.can_write.get_untracked()
-                && !core.staged_changes.get_untracked().is_empty()
-                && !msg.get_untracked().trim().is_empty())
-            {
+            if !can_submit_commit_now(&core, &msg.get_untracked()) {
                 return;
             }
             dropdown_open.set(false);
@@ -84,10 +85,7 @@ pub fn use_commit_controller(
     let on_commit_and_push = Callback::new({
         let core = core.clone();
         move |_| {
-            if !(core.can_write.get_untracked()
-                && !core.staged_changes.get_untracked().is_empty()
-                && !msg.get_untracked().trim().is_empty())
-            {
+            if !can_submit_commit_now(&core, &msg.get_untracked()) {
                 return;
             }
             dropdown_open.set(false);

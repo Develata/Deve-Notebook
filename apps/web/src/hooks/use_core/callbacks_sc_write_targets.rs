@@ -8,17 +8,19 @@ use leptos::prelude::Callback;
 use super::SourceControlScopeSignals;
 use super::targets_guard::{guarded_entries_callback, guarded_entry_callback};
 
+type SourceControlTargetWriteCallbacks = (
+    Callback<ChangeEntry>,
+    Callback<Vec<ChangeEntry>>,
+    Callback<ChangeEntry>,
+    Callback<Vec<ChangeEntry>>,
+    Callback<ChangeEntry>,
+);
+
 pub(super) fn create_target_write_callbacks(
     ws: &WsService,
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
-) -> (
-    Callback<ChangeEntry>,
-    Callback<Vec<ChangeEntry>>,
-    Callback<ChangeEntry>,
-    Callback<Vec<ChangeEntry>>,
-    Callback<ChangeEntry>,
-) {
+) -> SourceControlTargetWriteCallbacks {
     (
         guarded_entry_callback(ws, scope, gate, "StageFile", |entry, scope_nonce| {
             ClientMessage::StageFile {

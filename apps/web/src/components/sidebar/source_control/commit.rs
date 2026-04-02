@@ -1,10 +1,3 @@
-// apps\web\src\components\source_control
-//! # Commit Component (提交组件)
-//!
-//! VS Code 风格:
-//! - Input Message Box + AI 生成按钮 (Phase 5 占位)
-//! - Blue "Commit" button with dropdown (Commit & Push 占位)
-
 use crate::components::sidebar::source_control::commit_actions::CommitActions;
 use crate::components::sidebar::source_control::commit_controller::use_commit_controller;
 use crate::components::sidebar::source_control::commit_message_box::CommitMessageBox;
