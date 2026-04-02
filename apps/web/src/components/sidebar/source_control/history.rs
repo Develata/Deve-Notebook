@@ -1,9 +1,24 @@
-use crate::components::sidebar::source_control::history_compare_banner::HistoryCompareBanner;
-use crate::components::sidebar::source_control::history_timeline::HistoryTimeline;
+use crate::components::sidebar::source_control::history_body::HistoryBody;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
+use deve_core::source_control::CommitFileDiff;
 use leptos::prelude::*;
-use wasm_bindgen_futures::spawn_local;
+
+fn reset_compare_state(
+    selected_commit: RwSignal<Option<String>>,
+    compare_base_commit_id: RwSignal<Option<String>>,
+    set_commit_diff_request_id: WriteSignal<Option<String>>,
+    set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    set_notice: WriteSignal<
+        Option<crate::hooks::use_core::source_control_notice::SourceControlNotice>,
+    >,
+) {
+    compare_base_commit_id.set(None);
+    selected_commit.set(None);
+    set_commit_diff_request_id.set(None);
+    set_commit_diff_result.set(Vec::new());
+    set_notice.set(None);
+}
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
@@ -16,30 +31,30 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     let compare_base_commit_id = RwSignal::new(Option::<String>::None);
 
     let clear_compare_base = Callback::new(move |_| {
-        let compare_base_commit_id = compare_base_commit_id;
-        let selected_commit = selected_commit;
-        let set_commit_diff_result = core.set_commit_diff_result;
-        spawn_local(async move {
-            compare_base_commit_id.set(None);
-            selected_commit.set(None);
-            set_commit_diff_result.set(Vec::new());
-        });
+        reset_compare_state(
+            selected_commit,
+            compare_base_commit_id,
+            core.set_commit_diff_request_id,
+            core.set_commit_diff_result,
+            core.set_notice,
+        );
     });
 
     let on_toggle_compare_base = Callback::new(move |commit_id: String| {
         let compare_base_commit_id = compare_base_commit_id;
-        let selected_commit = selected_commit;
+        let set_commit_diff_request_id = core.set_commit_diff_request_id;
         let set_commit_diff_result = core.set_commit_diff_result;
-        spawn_local(async move {
-            set_commit_diff_result.set(Vec::new());
-            selected_commit.set(None);
-            compare_base_commit_id.update(|base| {
-                if base.as_deref() == Some(commit_id.as_str()) {
-                    *base = None;
-                } else {
-                    *base = Some(commit_id);
-                }
-            });
+        let set_notice = core.set_notice;
+        selected_commit.set(None);
+        set_commit_diff_request_id.set(None);
+        set_commit_diff_result.set(Vec::new());
+        set_notice.set(None);
+        compare_base_commit_id.update(|base| {
+            if base.as_deref() == Some(commit_id.as_str()) {
+                *base = None;
+            } else {
+                *base = Some(commit_id);
+            }
         });
     });
 
@@ -59,9 +74,13 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
 
     Effect::new(move |_| {
         if !expanded.get() || core.current_repo_id.get().is_none() {
-            selected_commit.set(None);
-            compare_base_commit_id.set(None);
-            core.set_commit_diff_result.set(Vec::new());
+            reset_compare_state(
+                selected_commit,
+                compare_base_commit_id,
+                core.set_commit_diff_request_id,
+                core.set_commit_diff_result,
+                core.set_notice,
+            );
         }
     });
 
@@ -77,52 +96,15 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                 {move || t::source_control::graph(locale.get())}
             </button>
             <Show when=move || expanded.get()>
-                <div class="pb-2">
-                    <HistoryCompareBanner
-                        locale
-                        compare_base_commit_id
-                        commit_history=core.commit_history
-                        selected_commit
-                        clear_compare_base
-                        use_selected_as_base
-                    />
-                    {move || {
-                        if history_loading.get() {
-                            view! {
-                                <div class="px-6 pt-2 text-[12px] text-muted">
-                                    {match locale.get() {
-                                        Locale::En => "Loading history...",
-                                        Locale::Zh => "正在加载历史记录...",
-                                    }}
-                                </div>
-                            }.into_any()
-                        } else if core.commit_history.get().is_empty() && core.notice.get().is_none() {
-                            view! {
-                                <div class="px-6 pt-2 text-[12px] text-muted">
-                                    {match locale.get() {
-                                        Locale::En => "No commit history yet on this branch.",
-                                        Locale::Zh => "这个分支上还没有提交历史。",
-                                    }}
-                                </div>
-                            }.into_any()
-                        } else {
-                            view! {
-                                <HistoryTimeline
-                                    locale
-                                    read_blocked
-                                    selected_commit
-                                    compare_base_commit_id
-                                    commit_history=core.commit_history
-                                    commit_diff_request_id=core.commit_diff_request_id
-                                    commit_diff_result=core.commit_diff_result
-                                    notice=core.notice
-                                    set_commit_diff_result=core.set_commit_diff_result
-                                    on_get_commit_diff=core.on_get_commit_diff
-                                />
-                            }.into_any()
-                        }
-                    }}
-                </div>
+                <HistoryBody
+                    locale
+                    history_loading
+                    read_blocked
+                    selected_commit
+                    compare_base_commit_id
+                    clear_compare_base
+                    use_selected_as_base
+                />
             </Show>
         </div>
     }

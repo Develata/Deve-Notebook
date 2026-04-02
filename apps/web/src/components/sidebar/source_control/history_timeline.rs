@@ -12,8 +12,10 @@ pub fn HistoryTimeline(
     compare_base_commit_id: RwSignal<Option<String>>,
     commit_history: ReadSignal<Vec<CommitInfo>>,
     commit_diff_request_id: ReadSignal<Option<String>>,
+    set_commit_diff_request_id: WriteSignal<Option<String>>,
     commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
     notice: ReadSignal<Option<SourceControlNotice>>,
+    set_notice: WriteSignal<Option<SourceControlNotice>>,
     set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
     on_get_commit_diff: Callback<(Option<String>, String)>,
 ) -> impl IntoView {
@@ -32,8 +34,10 @@ pub fn HistoryTimeline(
                             compare_base_commit_id
                             commit
                             commit_diff_request_id
+                            set_commit_diff_request_id
                             commit_diff_result
                             notice
+                            set_notice
                             set_commit_diff_result
                             on_get_commit_diff
                         />

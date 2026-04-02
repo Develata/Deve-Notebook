@@ -3,6 +3,7 @@ use deve_core::source_control::CommitInfo;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HistorySelectionAction {
     ToggleClosed,
+    ClearBaseSelection,
     ShowParentDiff {
         parent_id: Option<String>,
         target_id: String,
@@ -11,7 +12,6 @@ pub enum HistorySelectionAction {
         base_id: String,
         target_id: String,
     },
-    IgnoreBaseCommit,
 }
 
 pub fn resolve_history_selection(
@@ -25,7 +25,7 @@ pub fn resolve_history_selection(
 
     if let Some(base_id) = compare_base_commit_id {
         if base_id == commit.id {
-            return HistorySelectionAction::IgnoreBaseCommit;
+            return HistorySelectionAction::ClearBaseSelection;
         }
 
         return HistorySelectionAction::ShowRangeDiff {
@@ -95,11 +95,11 @@ mod tests {
     }
 
     #[test]
-    fn clicking_base_commit_does_not_request_self_diff() {
+    fn clicking_base_commit_clears_compare_mode() {
         let base = commit("base123", Some("older01"));
         assert_eq!(
             resolve_history_selection(None, Some(base.id.as_str()), &base),
-            HistorySelectionAction::IgnoreBaseCommit
+            HistorySelectionAction::ClearBaseSelection
         );
     }
 }

@@ -4,11 +4,8 @@
 //! 渲染单个文件变更条目，包含文件图标、名称、路径和状态标记。
 //! 支持 Stage/Unstage/Open/Discard 操作。
 
-use crate::components::icons::*;
 use crate::components::sidebar::source_control::change_item_actions::ChangeItemActions;
-use crate::components::sidebar::source_control::change_item_counterpart::{
-    counterpart_badge_text, counterpart_badge_title, find_counterpart_kind,
-};
+use crate::components::sidebar::source_control::change_item_content::ChangeItemContent;
 use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::Locale;
@@ -36,7 +33,6 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let can_open_diff = can_request_doc_diff(&entry);
     let meta = build_change_item_meta(&entry);
     let entry_for_click = entry.clone();
-    let entry_for_counterpart = entry.clone();
 
     let action_busy_reset = action_busy;
     Effect::new(move |_| {
@@ -67,33 +63,15 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 core.on_get_doc_diff.run(entry_for_click.clone());
             }
         >
-            <div class="flex items-center gap-1.5 flex-1 overflow-hidden">
-                <FileText class=format!("w-3.5 h-3.5 min-w-3.5 {}", meta.file_icon_class) />
-
-                <span class="truncate">{meta.display_name}</span>
-                <span class="text-xs text-muted truncate shrink-0 ml-1">
-                    {meta.directory}
-                </span>
-                {move || {
-                    let counterpart = find_counterpart_kind(
-                        &entry_for_counterpart,
-                        is_staged,
-                        &core.staged_changes.get(),
-                        &core.unstaged_changes.get(),
-                    );
-                    counterpart.map(|kind| {
-                        let locale_value = locale.get();
-                        view! {
-                            <span
-                                class="ml-1 shrink-0 rounded border border-border px-1 py-px text-[10px] font-semibold text-muted"
-                                title=counterpart_badge_title(kind, locale_value)
-                            >
-                                {counterpart_badge_text(kind, locale_value)}
-                            </span>
-                        }
-                    })
-                }}
-            </div>
+            <ChangeItemContent
+                locale
+                entry=entry.clone()
+                is_staged
+                meta
+                has_conflict
+                staged_changes=core.staged_changes
+                unstaged_changes=core.unstaged_changes
+            />
 
             <div class="flex items-center gap-2 pl-2">
                 // 操作按钮 (悬停显示)
@@ -109,15 +87,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     />
                 </div>
 
-                // 冲突指示 + 状态标记
-                {if has_conflict {
-                    view! { <AlertTriangle class="w-3 h-3 text-warning mr-0.5" /> }.into_any()
-                } else {
-                    view! {}.into_any()
-                }}
-                <span class=format!("{} text-[11px] font-bold w-3 text-center", meta.color_class)>
-                    {meta.icon_char}
-                </span>
+                // 右侧 hover 操作区与主内容分离，避免挤压文件名。
             </div>
         </div>
     }

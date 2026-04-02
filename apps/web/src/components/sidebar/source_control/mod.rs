@@ -1,17 +1,7 @@
-// apps\web\src\components\source_control
-//! # Source Control Module (代码控制模块)
-//!
-//! 包含用于版本控制的所有组件。
-//! 采用 VS Code 风格的紧凑布局。
-//!
-//! 样式更新 (Refined):
-//! - Header: "源代码管理"
-//! - Section: "存储库" (Repositories) - Only shows active repo
-//! - Section: "更改" (Changes)
-//!
 pub mod change_item;
 pub mod change_item_actions;
 pub mod change_item_conflict_actions;
+pub mod change_item_content;
 pub mod change_item_counterpart;
 pub mod change_item_meta;
 pub mod change_item_workspace_actions;
@@ -26,10 +16,14 @@ pub mod context_menu;
 pub mod error_notice;
 pub mod header;
 pub mod history;
+pub mod history_body;
+pub mod history_commit_details;
 pub mod history_commit_item;
+pub mod history_commit_state;
 pub mod history_compare_banner;
 pub mod history_compare_logic;
 pub mod history_diff_row;
+pub mod history_empty_state;
 pub mod history_timeline;
 pub mod repositories;
 pub mod staged_section_actions;
@@ -52,12 +46,10 @@ pub fn SourceControlView() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
 
-    // Section Expansion States
     let expand_repos = RwSignal::new(true);
     let expand_changes = RwSignal::new(true);
     let expand_history = RwSignal::new(false);
 
-    // Section Visibility (Can be toggled via menu, simplified for now)
     let show_repos = RwSignal::new(true);
     let show_changes = RwSignal::new(true);
     let show_graph = RwSignal::new(true);

@@ -80,6 +80,7 @@ pub(super) fn assemble_core_state(
         commit_history: sc.commit_history,
         commit_history_request_id: sc.commit_history_request_id,
         commit_diff_request_id: sc.commit_diff_request_id,
+        set_commit_diff_request_id: sc.set_commit_diff_request_id,
         on_get_changes: sc.on_get_changes,
         on_stage_file: sc.on_stage_file,
         on_stage_files: sc.on_stage_files,

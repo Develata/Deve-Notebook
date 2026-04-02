@@ -21,6 +21,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
         commit_history: state.commit_history,
         commit_history_request_id: state.commit_history_request_id,
         commit_diff_request_id: state.commit_diff_request_id,
+        set_commit_diff_request_id: state.set_commit_diff_request_id,
         can_write: Signal::derive(move || {
             repo_write_allowed_for_core_tracked(&state_for_can_write)
         }),
@@ -51,6 +52,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
             )
         }),
         notice: state.source_control_notice,
+        set_notice: state.set_source_control_notice,
         clear_notice,
         current_repo_id: state.current_repo_id,
         active_branch: state.active_branch,

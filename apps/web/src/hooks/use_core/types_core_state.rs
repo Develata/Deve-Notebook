@@ -85,6 +85,7 @@ pub struct CoreState {
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub commit_history_request_id: ReadSignal<Option<String>>,
     pub commit_diff_request_id: ReadSignal<Option<String>>,
+    pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<ChangeEntry>,
     pub on_stage_files: Callback<Vec<ChangeEntry>>,

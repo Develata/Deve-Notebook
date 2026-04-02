@@ -181,3 +181,17 @@ pub fn remote_branch_readonly_hint(locale: Locale) -> &'static str {
         Locale::Zh => "切回本地分支后才能查看变更、暂存文件或提交。",
     }
 }
+
+pub fn history_base_badge(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Base",
+        Locale::Zh => "基准",
+    }
+}
+
+pub fn history_target_badge(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Target",
+        Locale::Zh => "目标",
+    }
+}
