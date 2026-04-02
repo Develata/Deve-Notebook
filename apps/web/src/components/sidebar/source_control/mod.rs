@@ -14,6 +14,7 @@ pub mod commit_controller;
 pub mod commit_message_box;
 pub mod context_menu;
 pub mod error_notice;
+pub mod error_notice_copy;
 pub mod header;
 pub mod history;
 pub mod history_body;
