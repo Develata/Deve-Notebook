@@ -73,7 +73,8 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     });
 
     Effect::new(move |_| {
-        if !expanded.get() || core.current_repo_id.get().is_none() {
+        let has_file_diff = core.diff_content.get().is_some();
+        if !expanded.get() || core.current_repo_id.get().is_none() || has_file_diff {
             reset_compare_state(
                 selected_commit,
                 compare_base_commit_id,
