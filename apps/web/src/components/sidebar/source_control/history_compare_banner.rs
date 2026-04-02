@@ -1,3 +1,6 @@
+#[path = "history_compare_banner_copy.rs"]
+mod copy;
+
 use crate::components::sidebar::source_control::history_compare_logic::short_commit_id;
 use crate::i18n::Locale;
 use deve_core::source_control::CommitInfo;
@@ -36,45 +39,16 @@ pub fn HistoryCompareBanner(
                             let base_label = short_commit_id(&base.id);
                             if let Some(target) = selected_target.get() {
                                 let target_label = short_commit_id(&target.id);
-                                view! {
-                                    <span>
-                                        {match locale.get() {
-                                            Locale::En => format!("Comparing {base_label} -> {target_label}."),
-                                            Locale::Zh => format!("正在比较 {base_label} -> {target_label}。"),
-                                        }}
-                                    </span>
-                                }
-                                .into_any()
+                                view! { <span>{copy::compare_message(locale.get(), &base_label, &target_label)}</span> }
+                                    .into_any()
                             } else {
-                                view! {
-                                    <span>
-                                        {match locale.get() {
-                                            Locale::En => format!(
-                                                "Base {base_label} selected. Click another commit to compare."
-                                            ),
-                                            Locale::Zh => format!(
-                                                "已选择基准提交 {base_label}。点击另一条提交即可比较。"
-                                            ),
-                                        }}
-                                    </span>
-                                }
-                                .into_any()
+                                view! { <span>{copy::base_selected_message(locale.get(), &base_label)}</span> }
+                                    .into_any()
                             }
                         } else if let Some(target) = selected_target.get() {
                             let target_label = short_commit_id(&target.id);
-                            view! {
-                                <span>
-                                    {match locale.get() {
-                                        Locale::En => format!(
-                                            "Selected {target_label}. Use it as the comparison base?"
-                                        ),
-                                        Locale::Zh => format!(
-                                            "已选择提交 {target_label}。要把它设为比较基准吗？"
-                                        ),
-                                    }}
-                                </span>
-                            }
-                            .into_any()
+                            view! { <span>{copy::selected_target_message(locale.get(), &target_label)}</span> }
+                                .into_any()
                         } else {
                             view! {}.into_any()
                         }
@@ -90,10 +64,7 @@ pub fn HistoryCompareBanner(
                                     clear_compare_base.run(());
                                 }
                             >
-                                {match locale.get() {
-                                    Locale::En => "Clear",
-                                    Locale::Zh => "清除",
-                                }}
+                                {move || copy::clear_label(locale.get())}
                             </button>
                         }
                         .into_any()
@@ -106,10 +77,7 @@ pub fn HistoryCompareBanner(
                                     use_selected_as_base.run(());
                                 }
                             >
-                                {match locale.get() {
-                                    Locale::En => "Use as Base",
-                                    Locale::Zh => "设为基准",
-                                }}
+                                {move || copy::use_as_base_label(locale.get())}
                             </button>
                         }
                         .into_any()

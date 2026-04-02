@@ -14,14 +14,6 @@ pub fn HistoryCommitDetails(
     commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
     notice: ReadSignal<Option<SourceControlNotice>>,
 ) -> impl IntoView {
-    let empty_state_message = Memo::new(move |_| {
-        no_diff_message(
-            locale.get(),
-            compare_base_commit_id.get().as_deref(),
-            target_commit_id.as_str(),
-        )
-    });
-
     view! {
         {move || {
             if commit_diff_request_id.get().is_some() {
@@ -40,8 +32,13 @@ pub fn HistoryCommitDetails(
                 }
                 .into_any()
             } else if notice.get().is_none() {
+                let empty_message = no_diff_message(
+                    locale.get(),
+                    compare_base_commit_id.get().as_deref(),
+                    target_commit_id.as_str(),
+                );
                 view! {
-                    <div class="py-1 text-[12px] text-muted">{move || empty_state_message.get()}</div>
+                    <div class="py-1 text-[12px] text-muted">{empty_message}</div>
                 }
                 .into_any()
             } else {
