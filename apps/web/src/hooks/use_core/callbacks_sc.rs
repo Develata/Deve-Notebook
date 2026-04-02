@@ -1,5 +1,6 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
@@ -51,9 +52,10 @@ pub fn create_source_control_callbacks(
     write_gate: RepoWriteSignals,
     request: SourceControlRequestSignals,
     set_notice: WriteSignal<Option<SourceControlNotice>>,
+    set_diff_content: WriteSignal<Option<DiffSessionWire>>,
 ) -> SourceControlCallbacks {
     let (on_get_changes, on_get_history, on_get_doc_diff, on_get_commit_diff) =
-        create_read_callbacks(ws, scope, write_gate, request, set_notice);
+        create_read_callbacks(ws, scope, write_gate, request, set_notice, set_diff_content);
     let (
         on_stage_file,
         on_stage_files,

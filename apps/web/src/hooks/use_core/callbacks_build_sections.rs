@@ -44,6 +44,7 @@ pub(super) fn build_source_control_callbacks(
         scope::repo_write(signals),
         scope::source_control_requests(signals),
         signals.set_source_control_notice,
+        signals.set_diff_content,
     )
 }
 

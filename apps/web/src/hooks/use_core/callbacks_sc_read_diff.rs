@@ -1,6 +1,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
+use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::{
     RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
@@ -20,17 +21,29 @@ fn unavailable_doc_diff_notice(entry: &ChangeEntry) -> Option<SourceControlNotic
     })
 }
 
+fn clear_stale_doc_diff(
+    set_request_id: WriteSignal<Option<String>>,
+    set_notice: WriteSignal<Option<SourceControlNotice>>,
+    set_diff_content: WriteSignal<Option<DiffSessionWire>>,
+    notice: SourceControlNotice,
+) {
+    set_request_id.set(None);
+    set_diff_content.set(None);
+    set_notice.set(Some(notice));
+}
+
 pub(super) fn create_get_doc_diff_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
     read_gate: RepoWriteSignals,
     set_request_id: WriteSignal<Option<String>>,
     set_notice: WriteSignal<Option<SourceControlNotice>>,
+    set_diff_content: WriteSignal<Option<DiffSessionWire>>,
 ) -> Callback<ChangeEntry> {
     let ws = ws.clone();
     Callback::new(move |entry: ChangeEntry| {
         if let Some(notice) = unavailable_doc_diff_notice(&entry) {
-            set_notice.set(Some(notice));
+            clear_stale_doc_diff(set_request_id, set_notice, set_diff_content, notice);
             return;
         }
         if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
@@ -82,9 +95,12 @@ pub(super) fn create_get_commit_diff_callback(
 
 #[cfg(test)]
 mod tests {
-    use super::unavailable_doc_diff_notice;
+    use super::{clear_stale_doc_diff, unavailable_doc_diff_notice};
+    use crate::hooks::use_core::diff_session::DiffSessionWire;
+    use crate::hooks::use_core::source_control_notice::SourceControlNotice;
     use deve_core::protocol::ServerErrorCode;
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
+    use leptos::prelude::{GetUntracked, signal};
 
     #[test]
     fn deleted_docless_entry_reports_unavailable_diff_notice() {
@@ -102,6 +118,34 @@ mod tests {
                 .detail
                 .as_deref()
                 .is_some_and(|detail| detail.ends_with("deleted.md"))
+        );
+    }
+
+    #[test]
+    fn unavailable_doc_diff_clears_stale_session() {
+        let (_request_id, set_request_id) = signal(Some("doc-diff-req".to_string()));
+        let (notice, set_notice) = signal(None);
+        let (diff_content, set_diff_content) = signal(Some(DiffSessionWire {
+            path: "note.md".into(),
+            old_content: "before".into(),
+            new_content: "after".into(),
+            opened_at_ms: 1,
+        }));
+
+        clear_stale_doc_diff(
+            set_request_id,
+            set_notice,
+            set_diff_content,
+            SourceControlNotice {
+                code: ServerErrorCode::ScDocNotFound,
+                detail: Some("deleted-no-doc-id:deleted.md".into()),
+            },
+        );
+
+        assert!(diff_content.get_untracked().is_none());
+        assert_eq!(
+            notice.get_untracked().map(|notice| notice.code),
+            Some(ServerErrorCode::ScDocNotFound)
         );
     }
 }
