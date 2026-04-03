@@ -17,6 +17,20 @@ pub fn should_reset_compare_state(
         || has_missing_selected_commit(compare_base_commit_id, commit_history)
 }
 
+pub fn has_compare_state_to_clear(
+    selected_commit_id: Option<&str>,
+    compare_base_commit_id: Option<&str>,
+    commit_diff_request_id: Option<&str>,
+    commit_diff_count: usize,
+    has_notice: bool,
+) -> bool {
+    selected_commit_id.is_some()
+        || compare_base_commit_id.is_some()
+        || commit_diff_request_id.is_some()
+        || commit_diff_count > 0
+        || has_notice
+}
+
 fn has_missing_selected_commit(
     selected_commit_id: Option<&str>,
     commit_history: &[CommitInfo],
@@ -104,5 +118,20 @@ mod tests {
             Some("bbb2222"),
             &[commit("aaa1111"), commit("bbb2222")]
         ));
+    }
+
+    #[test]
+    fn only_resets_when_there_is_compare_state_to_clear() {
+        assert!(!super::has_compare_state_to_clear(None, None, None, 0, false));
+        assert!(super::has_compare_state_to_clear(
+            Some("aaa1111"),
+            None,
+            None,
+            0,
+            false
+        ));
+        assert!(super::has_compare_state_to_clear(None, None, Some("req-1"), 0, false));
+        assert!(super::has_compare_state_to_clear(None, None, None, 1, false));
+        assert!(super::has_compare_state_to_clear(None, None, None, 0, true));
     }
 }

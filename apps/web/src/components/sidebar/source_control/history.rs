@@ -9,7 +9,7 @@ mod history_compare_reset;
 #[path = "history_compare_state.rs"]
 mod history_compare_state;
 
-use self::history_compare_reset::should_reset_compare_state;
+use self::history_compare_reset::{has_compare_state_to_clear, should_reset_compare_state};
 use self::history_compare_state::reset_compare_state;
 
 #[component]
@@ -66,22 +66,32 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     });
 
     Effect::new(move |_| {
+        if !expanded.get() {
+            return;
+        }
         let has_file_diff = core.diff_content.get().is_some();
         let commit_history = core.commit_history.get();
-        let selected_deleted_notice = core
-            .notice
-            .get()
-            .as_ref()
-            .is_some_and(is_deleted_no_doc_id_notice);
-        if should_reset_compare_state(
-            expanded.get(),
+        let notice = core.notice.get();
+        let selected_deleted_notice =
+            notice.as_ref().is_some_and(is_deleted_no_doc_id_notice);
+        let should_reset = should_reset_compare_state(
+            true,
             core.current_repo_id.get().is_some(),
             has_file_diff,
             selected_deleted_notice,
             selected_commit.get().as_deref(),
             compare_base_commit_id.get().as_deref(),
             &commit_history,
-        ) {
+        );
+        if should_reset
+            && has_compare_state_to_clear(
+                selected_commit.get().as_deref(),
+                compare_base_commit_id.get().as_deref(),
+                core.commit_diff_request_id.get().as_deref(),
+                core.commit_diff_result.get().len(),
+                notice.is_some(),
+            )
+        {
             reset_compare_state(
                 selected_commit,
                 compare_base_commit_id,
@@ -96,7 +106,19 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
         <div class="border-t border-default">
             <button
                 class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase"
-                on:click=move |_| expanded.update(|is_open| *is_open = !*is_open)
+                on:click=move |_| {
+                    let next_open = !expanded.get_untracked();
+                    if !next_open {
+                        reset_compare_state(
+                            selected_commit,
+                            compare_base_commit_id,
+                            core.set_commit_diff_request_id,
+                            core.set_commit_diff_result,
+                            core.set_notice,
+                        );
+                    }
+                    expanded.set(next_open);
+                }
             >
                 <span class=move || if expanded.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
                     <crate::components::icons::ChevronRight class="w-3 h-3" />
