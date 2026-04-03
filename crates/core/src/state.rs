@@ -11,11 +11,14 @@
 use crate::models::{LedgerEntry, Op};
 use rope_utf16::Utf16IndexCache;
 use ropey::Rope;
-use utf16::{add_utf16_pos, utf16_len};
 
+mod diff;
 mod rope_utf16;
 mod utf16;
-// use anyhow::Result; // Not used currently
+mod validate;
+
+pub use diff::compute_diff;
+pub use validate::{InvalidContentOp, describe_invalid_content_op, find_invalid_content_op};
 
 /// 从操作序列重建文档内容
 ///
@@ -90,62 +93,6 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
 fn adaptive_step(total_utf16: u32) -> u32 {
     let step = total_utf16 / 64;
     step.clamp(64, 1024)
-}
-
-/// 计算两个字符串之间的编辑操作差异
-///
-/// **参数**:
-/// * `old`: 旧文本内容。
-/// * `new`: 新文本内容。
-///
-/// **返回值**:
-/// 返回一系列原子操作 (`Op::Insert` 或 `Op::Delete`)，
-/// 按顺序应用这些操作可以将 `old` 转换为 `new`。
-///
-/// **实现**:
-/// 使用 `dissimilar` 库计算 diff，然后转换为我们的 `Op` 枚举。
-///
-/// **注意**:
-/// 所有位置和长度都是 UTF-16 code unit 索引（非字节索引），与 JS/CodeMirror 一致。
-pub fn compute_diff(old: &str, new: &str) -> Vec<Op> {
-    use dissimilar::Chunk;
-    let chunks = dissimilar::diff(old, new);
-    let mut ops = Vec::new();
-    let mut pos: u32 = 0; // UTF-16 位置
-
-    for chunk in chunks {
-        match chunk {
-            Chunk::Equal(text) => {
-                // 使用 UTF-16 code unit 数量
-                if !add_utf16_pos(&mut pos, text) {
-                    return Vec::new();
-                }
-            }
-            Chunk::Insert(text) => {
-                ops.push(Op::Insert {
-                    pos,
-                    content: text.into(),
-                });
-                // 使用 UTF-16 code unit 数量
-                if !add_utf16_pos(&mut pos, text) {
-                    return Vec::new();
-                }
-            }
-            Chunk::Delete(text) => {
-                let len = match utf16_len(text) {
-                    Some(v) => v,
-                    None => return Vec::new(),
-                };
-                ops.push(Op::Delete {
-                    pos,
-                    // 使用 UTF-16 code unit 数量
-                    len,
-                });
-                // 删除内容后，后续字符位置左移，因此 pos 不需要包含被删除的长度
-            }
-        }
-    }
-    ops
 }
 
 #[cfg(test)]

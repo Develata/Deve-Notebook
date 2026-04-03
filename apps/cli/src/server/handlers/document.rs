@@ -6,6 +6,9 @@ pub(crate) mod errors;
 mod history;
 mod open;
 mod snapshot;
+mod snapshot_delta_guard;
+#[cfg(test)]
+mod snapshot_delta_guard_test;
 
 use crate::server::repo_scope::{
     ResolvedRepo, map_repo_scope_error, resolve_session_repo_or_bootstrap_local,

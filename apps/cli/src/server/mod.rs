@@ -56,6 +56,10 @@ pub mod node_role;
 pub mod node_role_http;
 mod notegit;
 #[cfg(test)]
+mod open_doc_invalid_delta_test;
+#[cfg(test)]
+mod open_doc_invalid_delta_test_support;
+#[cfg(test)]
 mod open_doc_scope_test;
 #[cfg(test)]
 mod open_doc_snapshot_test;

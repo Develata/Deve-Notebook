@@ -79,3 +79,24 @@ fn reconstruct_ignores_structure_events() {
     let content = crate::state::reconstruct_content(&ops);
     assert_eq!(content, "abc");
 }
+
+#[test]
+fn find_invalid_content_op_detects_out_of_bounds_insert_after_delete() {
+    let ops = vec![
+        entry(Op::Insert {
+            pos: 0,
+            content: "abcd".into(),
+        }),
+        entry(Op::Delete { pos: 1, len: 2 }),
+        entry(Op::Insert {
+            pos: 4,
+            content: "x".into(),
+        }),
+    ];
+
+    let issue = crate::state::find_invalid_content_op(&ops).expect("issue");
+    assert_eq!(
+        crate::state::describe_invalid_content_op(&issue),
+        "insert beyond end at seq 0: pos=4 current_utf16_len=2"
+    );
+}

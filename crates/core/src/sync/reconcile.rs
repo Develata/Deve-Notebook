@@ -2,7 +2,7 @@
 use crate::ledger::RepoManager;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use crate::state;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use tracing::info;
 
 /// Compares Ledger state with target content.
@@ -11,6 +11,13 @@ pub fn compute_reconcile_patch(
     ledger_ops: &[LedgerEntry],
     target_content: &str,
 ) -> Result<Vec<Op>> {
+    if let Some(issue) = state::find_invalid_content_op(ledger_ops) {
+        return Err(anyhow!(
+            "invalid ledger content ops while reconciling: {}",
+            state::describe_invalid_content_op(&issue)
+        ));
+    }
+
     let ledger_content = state::reconstruct_content(ledger_ops);
 
     // Normalize newlines for comparison
@@ -51,3 +58,7 @@ pub fn append_patch_in_local_repo(
     info!("Reconcile: Applied {} ops for doc {}", ops.len(), doc_id);
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "reconcile_test.rs"]
+mod tests;

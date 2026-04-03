@@ -32,8 +32,9 @@ impl RepoManager {
         repo_id: &RepoId,
         entry: &LedgerEntry,
     ) -> Result<u64> {
+        let repo_scope = ops::shadow_repo_scope(peer_id, repo_id);
         self.run_on_shadow_repo(peer_id, repo_id, |db| {
-            let seq = ops::append_op_to_db(db, entry)?;
+            let seq = ops::append_op_to_db(db, entry, &repo_scope)?;
             if let LedgerEvent::Structure(op) = &entry.event {
                 structure_projection::apply(db, op)?;
             }

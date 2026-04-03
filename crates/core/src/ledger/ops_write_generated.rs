@@ -1,3 +1,4 @@
+use super::validate;
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use crate::models::{DocId, LedgerEntry, PeerId, deserialize_ledger_entry};
 use anyhow::Result;
@@ -8,15 +9,17 @@ pub fn append_generated_op(
     db: &Database,
     doc_id: DocId,
     peer_id: PeerId,
+    repo_scope: &str,
     mut op_entry_builder: impl FnMut(u64) -> LedgerEntry,
 ) -> Result<(u64, u64)> {
-    append_generated_op_inner(db, doc_id, peer_id, None, &mut op_entry_builder)
+    append_generated_op_inner(db, doc_id, peer_id, repo_scope, None, &mut op_entry_builder)
 }
 
 pub fn append_generated_client_op(
     db: &Database,
     doc_id: DocId,
     peer_id: PeerId,
+    repo_scope: &str,
     client_id: u64,
     client_op_id: u64,
     mut op_entry_builder: impl FnMut(u64) -> LedgerEntry,
@@ -25,6 +28,7 @@ pub fn append_generated_client_op(
         db,
         doc_id,
         peer_id,
+        repo_scope,
         Some((client_id, client_op_id)),
         &mut op_entry_builder,
     )
@@ -34,6 +38,7 @@ fn append_generated_op_inner(
     db: &Database,
     doc_id: DocId,
     peer_id: PeerId,
+    repo_scope: &str,
     client_ref: Option<(u64, u64)>,
     op_entry_builder: &mut impl FnMut(u64) -> LedgerEntry,
 ) -> Result<(u64, u64)> {
@@ -50,6 +55,7 @@ fn append_generated_op_inner(
     if entry.seq != next_local_seq {
         return Err(anyhow::anyhow!("Entry sequence mismatch"));
     }
+    validate::validate_content_append(&write_txn, &entry, repo_scope)?;
 
     let mut ops = write_txn.open_table(LEDGER_OPS)?;
     let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;

@@ -4,8 +4,12 @@
 //! 对外保持 `crate::ledger::ops::*` 接口稳定，
 //! 具体实现拆到更小的写入/查询子模块，给路线 2 的 target 重构留出空间。
 
+use crate::models::{PeerId, RepoId};
+
 #[path = "ops_query.rs"]
 mod query;
+#[path = "ops_validate.rs"]
+mod validate;
 #[path = "ops_write_direct.rs"]
 mod write_direct;
 #[path = "ops_write_generated.rs"]
@@ -17,3 +21,11 @@ pub use query::{
 };
 pub use write_direct::append_op_to_db;
 pub use write_generated::{append_generated_client_op, append_generated_op};
+
+pub fn local_repo_scope(repo_name: &str) -> String {
+    format!("local:{}", repo_name.trim_end_matches(".redb"))
+}
+
+pub fn shadow_repo_scope(peer_id: &PeerId, repo_id: &RepoId) -> String {
+    format!("shadow:{peer_id}/{repo_id}")
+}

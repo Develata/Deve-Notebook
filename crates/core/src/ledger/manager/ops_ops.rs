@@ -11,7 +11,8 @@ use anyhow::Result;
 
 impl RepoManager {
     pub fn append_local_op(&self, entry: &LedgerEntry) -> Result<u64> {
-        ops::append_op_to_db(&self.local_db, entry)
+        let repo_scope = ops::local_repo_scope(self.local_repo_name());
+        ops::append_op_to_db(&self.local_db, entry, &repo_scope)
     }
 
     pub fn append_local_op_in_local_repo(
@@ -19,7 +20,8 @@ impl RepoManager {
         repo_name: &str,
         entry: &LedgerEntry,
     ) -> Result<u64> {
-        self.run_on_local_repo(repo_name, |db| ops::append_op_to_db(db, entry))
+        let repo_scope = ops::local_repo_scope(repo_name);
+        self.run_on_local_repo(repo_name, |db| ops::append_op_to_db(db, entry, &repo_scope))
     }
 
     pub fn append_generated_op(
@@ -28,7 +30,14 @@ impl RepoManager {
         peer_id: PeerId,
         op_entry_builder: impl FnMut(u64) -> LedgerEntry,
     ) -> Result<(u64, u64)> {
-        ops::append_generated_op(&self.local_db, doc_id, peer_id, op_entry_builder)
+        let repo_scope = ops::local_repo_scope(self.local_repo_name());
+        ops::append_generated_op(
+            &self.local_db,
+            doc_id,
+            peer_id,
+            &repo_scope,
+            op_entry_builder,
+        )
     }
 
     pub fn append_generated_op_in_local_repo(
@@ -38,8 +47,9 @@ impl RepoManager {
         peer_id: PeerId,
         op_entry_builder: impl FnMut(u64) -> LedgerEntry,
     ) -> Result<(u64, u64)> {
+        let repo_scope = ops::local_repo_scope(repo_name);
         self.run_on_local_repo(repo_name, move |db| {
-            ops::append_generated_op(db, doc_id, peer_id, op_entry_builder)
+            ops::append_generated_op(db, doc_id, peer_id, &repo_scope, op_entry_builder)
         })
     }
 
@@ -52,11 +62,13 @@ impl RepoManager {
         client_op_id: u64,
         op_entry_builder: impl FnMut(u64) -> LedgerEntry,
     ) -> Result<(u64, u64)> {
+        let repo_scope = ops::local_repo_scope(repo_name);
         self.run_on_local_repo(repo_name, move |db| {
             ops::append_generated_client_op(
                 db,
                 doc_id,
                 peer_id,
+                &repo_scope,
                 client_id,
                 client_op_id,
                 op_entry_builder,
