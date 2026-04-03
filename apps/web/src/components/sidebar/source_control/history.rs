@@ -1,24 +1,16 @@
 use crate::components::sidebar::source_control::history_body::HistoryBody;
 use crate::hooks::use_core::SourceControlContext;
+use crate::hooks::use_core::source_control_notice::is_deleted_no_doc_id_notice;
 use crate::i18n::{Locale, t};
-use deve_core::source_control::CommitFileDiff;
 use leptos::prelude::*;
 
-fn reset_compare_state(
-    selected_commit: RwSignal<Option<String>>,
-    compare_base_commit_id: RwSignal<Option<String>>,
-    set_commit_diff_request_id: WriteSignal<Option<String>>,
-    set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
-    set_notice: WriteSignal<
-        Option<crate::hooks::use_core::source_control_notice::SourceControlNotice>,
-    >,
-) {
-    compare_base_commit_id.set(None);
-    selected_commit.set(None);
-    set_commit_diff_request_id.set(None);
-    set_commit_diff_result.set(Vec::new());
-    set_notice.set(None);
-}
+#[path = "history_compare_reset.rs"]
+mod history_compare_reset;
+#[path = "history_compare_state.rs"]
+mod history_compare_state;
+
+use self::history_compare_reset::should_reset_compare_state;
+use self::history_compare_state::reset_compare_state;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
@@ -45,6 +37,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
         let set_commit_diff_request_id = core.set_commit_diff_request_id;
         let set_commit_diff_result = core.set_commit_diff_result;
         let set_notice = core.set_notice;
+        core.set_diff_content.set(None);
         selected_commit.set(None);
         set_commit_diff_request_id.set(None);
         set_commit_diff_result.set(Vec::new());
@@ -74,7 +67,21 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
 
     Effect::new(move |_| {
         let has_file_diff = core.diff_content.get().is_some();
-        if !expanded.get() || core.current_repo_id.get().is_none() || has_file_diff {
+        let commit_history = core.commit_history.get();
+        let selected_deleted_notice = core
+            .notice
+            .get()
+            .as_ref()
+            .is_some_and(is_deleted_no_doc_id_notice);
+        if should_reset_compare_state(
+            expanded.get(),
+            core.current_repo_id.get().is_some(),
+            has_file_diff,
+            selected_deleted_notice,
+            selected_commit.get().as_deref(),
+            compare_base_commit_id.get().as_deref(),
+            &commit_history,
+        ) {
             reset_compare_state(
                 selected_commit,
                 compare_base_commit_id,

@@ -1,17 +1,10 @@
-use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::hooks::use_core::source_control_notice::{
+    SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
+};
 use crate::i18n::{Locale, server_error};
 
-const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
-
-fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
-    notice
-        .detail
-        .as_deref()
-        .and_then(|detail| detail.strip_prefix(DELETED_NO_DOC_ID_NOTICE_PREFIX))
-}
-
 pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
-    if deleted_no_doc_id_path(notice).is_some() {
+    if is_deleted_no_doc_id_notice(notice) {
         return match locale {
             Locale::En => "Diff unavailable".to_string(),
             Locale::Zh => "无法显示差异".to_string(),

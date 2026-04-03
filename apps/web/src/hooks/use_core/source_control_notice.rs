@@ -1,5 +1,7 @@
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
+pub const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceControlNotice {
     pub code: ServerErrorCode,
@@ -13,6 +15,17 @@ impl SourceControlNotice {
             detail: error.detail.clone(),
         })
     }
+}
+
+pub fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
+    notice
+        .detail
+        .as_deref()
+        .and_then(|detail| detail.strip_prefix(DELETED_NO_DOC_ID_NOTICE_PREFIX))
+}
+
+pub fn is_deleted_no_doc_id_notice(notice: &SourceControlNotice) -> bool {
+    deleted_no_doc_id_path(notice).is_some()
 }
 
 pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
@@ -33,7 +46,10 @@ pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{SourceControlNotice, is_source_control_error};
+    use super::{
+        DELETED_NO_DOC_ID_NOTICE_PREFIX, SourceControlNotice, deleted_no_doc_id_path,
+        is_deleted_no_doc_id_notice, is_source_control_error,
+    };
     use deve_core::protocol::{ServerError, ServerErrorCode};
 
     #[test]
@@ -57,5 +73,15 @@ mod tests {
 
         let generic_error = ServerError::new(ServerErrorCode::RequestFailed);
         assert!(SourceControlNotice::from_server_error(&generic_error).is_none());
+    }
+
+    #[test]
+    fn deleted_docless_notice_is_detected() {
+        let notice = SourceControlNotice {
+            code: ServerErrorCode::ScDocNotFound,
+            detail: Some(format!("{DELETED_NO_DOC_ID_NOTICE_PREFIX}deleted.md")),
+        };
+        assert!(is_deleted_no_doc_id_notice(&notice));
+        assert_eq!(deleted_no_doc_id_path(&notice), Some("deleted.md"));
     }
 }

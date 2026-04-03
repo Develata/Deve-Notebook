@@ -12,6 +12,7 @@ mod navigation;
 mod split_columns;
 mod split_pane;
 mod state;
+mod title;
 pub mod unified;
 mod unified_pane;
 mod viewport;
@@ -23,6 +24,7 @@ use self::model::hunk_fold::build_folded_rows;
 use self::model::split_fold::build_folded_split_rows;
 use self::navigation::create_hunk_nav;
 use self::state::create_compute_state;
+use self::title::diff_title;
 use self::viewport::create_unified_viewport;
 use crate::i18n::Locale;
 use fold::create_fold_state;
@@ -33,6 +35,7 @@ use leptos::prelude::*;
 pub fn DiffView(
     repo_scope: String,
     path: String,
+    display_path: String,
     old_content: String,
     new_content: String,
     #[prop(default = false)] is_readonly: bool,
@@ -41,12 +44,7 @@ pub fn DiffView(
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let filename = path
-        .replace('\\', "/")
-        .split('/')
-        .next_back()
-        .unwrap_or("?")
-        .to_string();
+    let filename = diff_title(&path, &display_path);
 
     let compute = create_compute_state(
         repo_scope,

@@ -2,7 +2,9 @@ use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
-use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::hooks::use_core::source_control_notice::{
+    DELETED_NO_DOC_ID_NOTICE_PREFIX, SourceControlNotice,
+};
 use crate::hooks::use_core::write_gate::{
     RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
 };
@@ -11,8 +13,6 @@ use deve_core::source_control::ChangeEntry;
 use leptos::prelude::{Callback, Set, WriteSignal};
 
 use super::{SourceControlScopeSignals, log_blocked_sc_read};
-
-const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
 
 fn unavailable_doc_diff_notice(entry: &ChangeEntry) -> Option<SourceControlNotice> {
     (!can_request_doc_diff(entry)).then(|| SourceControlNotice {
@@ -127,6 +127,7 @@ mod tests {
         let (notice, set_notice) = signal(None);
         let (diff_content, set_diff_content) = signal(Some(DiffSessionWire {
             path: "note.md".into(),
+            display_path: "note.md".into(),
             old_content: "before".into(),
             new_content: "after".into(),
             opened_at_ms: 1,

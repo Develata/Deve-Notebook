@@ -5,6 +5,7 @@ use crate::components::sidebar::source_control::history_commit_state::{
 use crate::components::sidebar::source_control::history_compare_logic::{
     HistorySelectionAction, resolve_history_selection, short_commit_id,
 };
+use crate::hooks::use_core::SourceControlContext;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, source_control};
 use crate::utils::time::format_relative;
@@ -26,6 +27,7 @@ pub fn HistoryCommitItem(
     set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
     on_get_commit_diff: Callback<(Option<String>, String)>,
 ) -> impl IntoView {
+    let source_control = expect_context::<SourceControlContext>();
     let commit_id = commit.id.clone();
     let selected_commit_id = commit_id.clone();
     let commit_for_click = commit.clone();
@@ -46,6 +48,7 @@ pub fn HistoryCommitItem(
                     if read_blocked.get_untracked() {
                         return;
                     }
+                    source_control.set_diff_content.set(None);
                     match resolve_history_selection(
                         selected_commit.get_untracked().as_deref(),
                         compare_base_commit_id.get_untracked().as_deref(),

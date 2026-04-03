@@ -59,6 +59,7 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                                         .or_else(|| diff_core.current_repo.get())
                                         .unwrap_or_default()
                                     path=session.path
+                                    display_path=session.display_path
                                     old_content=session.old_content
                                     new_content=session.new_content
                                     is_readonly=diff_core.is_spectator.get()
