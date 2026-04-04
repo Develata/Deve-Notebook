@@ -19,7 +19,7 @@ fn repo_write_gate_requires_writer_ready() {
 }
 
 #[test]
-fn repo_write_gate_reports_read_only_before_handshake() {
+fn repo_write_gate_blocks_remote_branches_as_read_only() {
     assert_eq!(
         repo_write_block(
             ConnectionStatus::Connected,
@@ -53,7 +53,7 @@ fn repo_write_gate_allows_ready_local_repo() {
 }
 
 #[test]
-fn repo_source_control_read_gate_allows_read_only_branch() {
+fn repo_source_control_read_gate_allows_remote_branch_reads() {
     assert_eq!(
         repo_source_control_read_block(
             ConnectionStatus::Connected,
@@ -70,7 +70,7 @@ fn repo_source_control_read_gate_allows_read_only_branch() {
 }
 
 #[test]
-fn repo_source_control_read_gate_allows_read_only_branch_without_writer_handshake() {
+fn repo_source_control_read_gate_allows_remote_branch_reads_without_writer_handshake() {
     assert_eq!(
         repo_source_control_read_block(
             ConnectionStatus::Connected,

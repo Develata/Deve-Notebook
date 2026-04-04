@@ -21,6 +21,7 @@ pub(super) fn repo_write(signals: &CoreSignals) -> RepoWriteSignals {
         is_spectator: signals.is_spectator.into(),
         handshake_ready: signals.handshake_ready,
         current_repo_id: signals.current_repo_id,
+        active_branch: signals.active_branch,
         pending_branch_switch: signals.pending_branch_switch,
         pending_repo_switch: signals.pending_repo_switch,
     }
