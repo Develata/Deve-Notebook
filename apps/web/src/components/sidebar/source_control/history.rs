@@ -72,8 +72,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
         let has_file_diff = core.diff_content.get().is_some();
         let commit_history = core.commit_history.get();
         let notice = core.notice.get();
-        let selected_deleted_notice =
-            notice.as_ref().is_some_and(is_deleted_no_doc_id_notice);
+        let selected_deleted_notice = notice.as_ref().is_some_and(is_deleted_no_doc_id_notice);
         let should_reset = should_reset_compare_state(
             true,
             core.current_repo_id.get().is_some(),

@@ -122,7 +122,9 @@ mod tests {
 
     #[test]
     fn only_resets_when_there_is_compare_state_to_clear() {
-        assert!(!super::has_compare_state_to_clear(None, None, None, 0, false));
+        assert!(!super::has_compare_state_to_clear(
+            None, None, None, 0, false
+        ));
         assert!(super::has_compare_state_to_clear(
             Some("aaa1111"),
             None,
@@ -130,8 +132,16 @@ mod tests {
             0,
             false
         ));
-        assert!(super::has_compare_state_to_clear(None, None, Some("req-1"), 0, false));
-        assert!(super::has_compare_state_to_clear(None, None, None, 1, false));
+        assert!(super::has_compare_state_to_clear(
+            None,
+            None,
+            Some("req-1"),
+            0,
+            false
+        ));
+        assert!(super::has_compare_state_to_clear(
+            None, None, None, 1, false
+        ));
         assert!(super::has_compare_state_to_clear(None, None, None, 0, true));
     }
 }

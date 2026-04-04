@@ -43,6 +43,8 @@ Rust workspace for a high-performance collaborative notebook application targeti
 - Target environment is 768 MB RAM VPS — evaluate every new dependency for memory footprint.
 - Path handling must use `deve_core::utils::path::to_forward_slash` for Windows compatibility.
 - Edition 2024 Rust. Error handling: `anyhow` (app layer), `thiserror` (library layer).
+- This repo is often used from WSL2. If Chrome MCP is unavailable because `127.0.0.1:9222` is down, run `chrome-mcp` from the shell before retrying MCP browser actions.
+- `chrome-mcp [url]` launches Windows Chrome with `--remote-debugging-port=9222` using a dedicated profile and can optionally open a target URL.
 
 ### Testing Requirements
 
