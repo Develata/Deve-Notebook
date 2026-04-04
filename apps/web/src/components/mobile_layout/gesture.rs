@@ -1,6 +1,7 @@
 // apps/web/src/components/mobile_layout/gesture.rs
 
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::TouchEvent;
 
 const EDGE_ZONE: i32 = 20;
@@ -26,17 +27,13 @@ pub fn build_touch_start(
             None => return,
         };
         let width = window_width().unwrap_or(0);
-        let target = if show_sidebar.get_untracked() {
-            Some(SwipeTarget::CloseLeft)
-        } else if show_outline.get_untracked() {
-            Some(SwipeTarget::CloseRight)
-        } else if x <= EDGE_ZONE {
-            Some(SwipeTarget::OpenLeft)
-        } else if width > 0 && x >= width - EDGE_ZONE {
-            Some(SwipeTarget::OpenRight)
-        } else {
-            None
-        };
+        let target = resolve_swipe_target(
+            x,
+            width,
+            show_sidebar.get_untracked(),
+            show_outline.get_untracked(),
+            is_interactive_target(&ev),
+        );
         set_swipe_start_x.set(x);
         set_swipe_target.set(target);
     })
@@ -79,6 +76,51 @@ fn first_touch_x(ev: &TouchEvent) -> Option<i32> {
     let touches = ev.changed_touches();
     let touch = touches.get(0)?;
     Some(touch.client_x())
+}
+
+pub(super) fn resolve_swipe_target(
+    x: i32,
+    width: i32,
+    show_sidebar: bool,
+    show_outline: bool,
+    interactive_target: bool,
+) -> Option<SwipeTarget> {
+    if interactive_target {
+        return None;
+    }
+    if show_sidebar {
+        Some(SwipeTarget::CloseLeft)
+    } else if show_outline {
+        Some(SwipeTarget::CloseRight)
+    } else if x <= EDGE_ZONE {
+        Some(SwipeTarget::OpenLeft)
+    } else if width > 0 && x >= width - EDGE_ZONE {
+        Some(SwipeTarget::OpenRight)
+    } else {
+        None
+    }
+}
+
+fn is_interactive_target(ev: &TouchEvent) -> bool {
+    let Some(target) = ev.target() else {
+        return false;
+    };
+    let element = target.dyn_ref::<web_sys::Element>().cloned().or_else(|| {
+        target
+            .dyn_ref::<web_sys::Node>()
+            .and_then(|node| node.parent_element())
+    });
+    let Some(element) = element else {
+        return false;
+    };
+    element
+        .closest(
+            "button, a, input, textarea, select, summary, [role='button'], \
+             [contenteditable='true'], [data-no-edge-swipe]",
+        )
+        .ok()
+        .flatten()
+        .is_some()
 }
 
 pub fn window_width() -> Option<i32> {

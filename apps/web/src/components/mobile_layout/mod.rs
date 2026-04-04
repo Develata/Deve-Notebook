@@ -11,6 +11,8 @@ mod footer_playback;
 mod footer_status;
 mod footer_summary;
 mod gesture;
+#[cfg(test)]
+mod gesture_test;
 mod header;
 mod layout_backdrop;
 mod layout_banner;
