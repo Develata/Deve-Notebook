@@ -5,6 +5,7 @@
 
 use crate::components::icons::*;
 use crate::i18n::{Locale, t};
+use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
 #[component]
@@ -20,13 +21,22 @@ pub fn SectionMenu(
             return view! {}.into_any();
         }
         view! {
-            <div
-                class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1"
-                on:click=move |e| e.stop_propagation()
-            >
-                <MenuItem label=move || t::source_control::repositories(locale.get()) checked=show_repos />
-                <MenuItem label=move || t::source_control::changes(locale.get()) checked=show_changes />
-                <MenuItem label=move || t::source_control::graph(locale.get()) checked=show_graph />
+            <div class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1">
+                <MenuItem
+                    label=move || t::source_control::repositories(locale.get())
+                    checked=show_repos
+                    show_menu=show_menu
+                />
+                <MenuItem
+                    label=move || t::source_control::changes(locale.get())
+                    checked=show_changes
+                    show_menu=show_menu
+                />
+                <MenuItem
+                    label=move || t::source_control::graph(locale.get())
+                    checked=show_graph
+                    show_menu=show_menu
+                />
             </div>
         }
         .into_any()
@@ -37,11 +47,19 @@ pub fn SectionMenu(
 fn MenuItem(
     label: impl Fn() -> &'static str + Send + 'static,
     checked: RwSignal<bool>,
+    show_menu: RwSignal<bool>,
 ) -> impl IntoView {
+    let on_click = move |e: MouseEvent| {
+        e.stop_propagation();
+        checked.update(|v| *v = !*v);
+        show_menu.set(false);
+    };
+
     view! {
-        <div
-            class="px-3 py-1.5 hover:bg-hover cursor-pointer flex items-center justify-between"
-            on:click=move |_| checked.update(|v| *v = !*v)
+        <button
+            type="button"
+            class="w-full px-3 py-1.5 hover:bg-hover text-left flex items-center justify-between"
+            on:click=on_click
         >
             <span>{label}</span>
             {move || {
@@ -51,6 +69,6 @@ fn MenuItem(
                     view! {}.into_any()
                 }
             }}
-        </div>
+        </button>
     }
 }

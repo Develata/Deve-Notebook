@@ -58,7 +58,10 @@ pub fn SourceControlView() -> impl IntoView {
     let show_menu = RwSignal::new(false);
 
     view! {
-        <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none overflow-hidden text-[13px] text-primary relative">
+        <div
+            class="h-full w-full bg-sidebar flex flex-col font-sans select-none overflow-hidden text-[13px] text-primary relative"
+            on:click=move |_| show_menu.set(false)
+        >
             <SourceControlHeader
                 locale
                 show_menu
