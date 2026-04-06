@@ -27,4 +27,12 @@ File explorer sidebar with tree view, repo switcher, and source control panel in
 |-----------|---------|
 | `source_control/` | Source control panel |
 
+## For AI Agents
+
+### Working In This Directory
+
+- `repo_switcher.rs` is the canonical repo switch UI for both Explorer and Source Control entry points.
+- Repo switcher trigger and menu items should stay keyboard/click accessible `button` elements, with outside-click dismissal.
+- Explorer-side actions that open new windows must preserve existing query params when appending `doc=...`.
+
 <!-- MANUAL: -->

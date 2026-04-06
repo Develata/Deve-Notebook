@@ -15,4 +15,11 @@ VS Code-style vertical activity bar for switching between sidebar views.
 | `popup_menu.rs` | Popup menu |
 | `types.rs` | Activity bar item types |
 
+## For AI Agents
+
+### Working In This Directory
+
+- In the `More...` popup, the menu row selects a view; pin/unpin is a separate action and must not hijack row clicks.
+- View selection should close the popup immediately after activation.
+
 <!-- MANUAL: -->

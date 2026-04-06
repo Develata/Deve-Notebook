@@ -49,6 +49,8 @@ Client message handlers organized by domain. Each submodule processes a category
 - Every handler must respect repo scope; use `resolve_session_repo_and_sync` or `bootstrap_local_repo` from `repo_scope.rs`.
 - Listing handlers precheck for stale remote unbound scopes before querying data.
 - Switcher is a multi-phase pipeline: guard -> validate target -> select repo -> prepare -> preload view -> commit session -> emit messages.
+- Branch switching now carries a session-level "last local repo" hint so `remote -> Local` returns to the user's previous local repo when possible.
+- Target repo selection stays fail-closed by default, but may fall back to the single available remote repo when a remote target set is unambiguous.
 - Admin handlers classify errors to HTTP status codes via `error_classify.rs` patterns.
 - Plugin handler intercepts `agent-bridge` plugin_id and routes to the agent bridge instead of Rhai.
 

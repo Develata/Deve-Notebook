@@ -46,5 +46,8 @@ Core application state management hub. The largest hook module — manages WebSo
 - This is the state management core — changes here affect the entire UI.
 - `effects/` processes incoming ServerMessages and updates reactive signals.
 - Scope nonce validation happens in `switch_nonce.rs` and `callbacks_scope.rs`.
+- `switch_nonce.rs` must always generate a nonce strictly greater than the current scope nonce; browser switch requests fail closed on stale values.
+- `scope_prefs.rs` persists stable `repo_name + repo_id + active_branch` and should restore scope using UUID-first semantics.
+- Session/auth polling should pause while the page is backgrounded and resume when the document becomes active again.
 
 <!-- MANUAL: -->

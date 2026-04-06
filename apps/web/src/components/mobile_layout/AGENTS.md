@@ -31,5 +31,8 @@ Mobile-responsive layout with touch gestures, swipeable drawers, and compact too
 ### Working In This Directory
 
 - See `08_ui_design_03_mobile.md` in deve-note plan.
+- Edge swipe gestures must not steal taps from interactive controls near the screen edge.
+- Mobile header actions are intentionally limited to a single `Home / Open Index / Command Palette` set.
+- Drawer state should close explicitly on successful navigation or tab switches rather than relying on stale a11y snapshots.
 
 <!-- MANUAL: -->

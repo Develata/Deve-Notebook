@@ -21,4 +21,13 @@ Source control sidebar panel. Shows changes, staged/unstaged sections, commit in
 | `context_menu.rs` | Right-click context menu |
 | `repositories.rs` | Multi-repo listing |
 
+## For AI Agents
+
+### Working In This Directory
+
+- Remote branches are read-only; buttons that mutate Source Control state must visually and behaviorally respect that gate.
+- Header and section menus should be real button-driven menus with outside-click dismissal and automatic close after selection.
+- `repositories.rs` should reuse the shared sidebar repo switcher semantics rather than inventing a second repo-switch flow.
+- History compare reset logic should only clear meaningful compare state; collapsed renders must not continuously wipe selection.
+
 <!-- MANUAL: -->
