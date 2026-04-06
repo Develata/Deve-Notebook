@@ -1,5 +1,6 @@
 use crate::components::branch_label::current_branch_label;
 use crate::components::icons::*;
+use crate::components::sidebar::repo_switcher::RepoSwitcher;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -46,26 +47,22 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
                         view! {
                             <div class="px-0 pb-1">
                                 // Active Repo Row
-                                <div class="flex items-center h-6 px-3 hover:bg-hover cursor-pointer group text-primary">
+                                <div class="flex items-center h-6 px-3 text-primary">
                                     // Icon
                                     <Book class="w-3.5 h-3.5 mr-2 opacity-70" />
 
+                                    <RepoSwitcher />
+
                                     // Repo Name
-                                    <span class="truncate font-medium flex-1">{active_repo_label}</span>
+                                    <span class="truncate font-medium flex-1 ml-2">{active_repo_label}</span>
 
                                     // Branch Info (Right side)
-                                        <div class="flex items-center gap-2 text-xs opacity-80">
-                                            <div class="flex items-center gap-1 hover:text-accent">
+                                        <div class="flex items-center gap-1 text-xs opacity-80 ml-2">
+                                            <div class="flex items-center gap-1">
                                             <GitBranch class="w-3 h-3" />
                                             <span>
                                                 {move || format!("{}{}", current_branch.get(), branch_suffix.get())}
                                             </span>
-                                        </div>
-                                        <div class="flex items-center gap-1 hover:text-accent">
-                                                <Upload class="w-3.5 h-3.5" />
-                                        </div>
-                                        <div class="flex items-center gap-1 hover:text-accent">
-                                                <Download class="w-3.5 h-3.5" />
                                         </div>
                                     </div>
                                 </div>

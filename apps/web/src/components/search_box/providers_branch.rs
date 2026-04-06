@@ -60,7 +60,7 @@ fn branch_detail(name: &str, current_branch: Option<&str>) -> Option<String> {
     if current_branch == Some(name) {
         Some("Current Branch".to_string())
     } else if name == LOCAL_BRANCH_LABEL {
-        Some("Local Branch".to_string())
+        None
     } else {
         Some("Remote Branch".to_string())
     }
@@ -73,10 +73,7 @@ mod tests {
 
     #[test]
     fn branch_detail_keeps_local_entry_local_when_remote_is_current() {
-        assert_eq!(
-            branch_detail("Local", Some("peer-a")),
-            Some("Local Branch".to_string())
-        );
+        assert_eq!(branch_detail("Local", Some("peer-a")), None);
     }
 
     #[test]
@@ -87,6 +84,17 @@ mod tests {
             .iter()
             .find(|result| result.title == "Local")
             .expect("missing local branch entry");
-        assert_eq!(local.detail.as_deref(), Some("Local Branch"));
+        assert_eq!(local.detail, None);
+    }
+
+    #[test]
+    fn branch_provider_marks_remote_entry_as_remote_when_not_current() {
+        let provider = BranchProvider::new(vec!["peer-a".into()], Some("Local".into()));
+        let results = provider.search("@");
+        let remote = results
+            .iter()
+            .find(|result| result.title == "peer-a")
+            .expect("missing remote branch entry");
+        assert_eq!(remote.detail.as_deref(), Some("Remote Branch"));
     }
 }

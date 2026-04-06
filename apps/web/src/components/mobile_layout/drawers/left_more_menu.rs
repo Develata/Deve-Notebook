@@ -10,6 +10,7 @@ pub(super) fn LeftDrawerMoreMenu(
     active_view: ReadSignal<SidebarView>,
     pinned_views: ReadSignal<Vec<SidebarView>>,
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
+    select_view: Callback<SidebarView>,
     show_more: ReadSignal<bool>,
     set_show_more: WriteSignal<bool>,
     more_menu_ref: NodeRef<html::Div>,
@@ -45,22 +46,40 @@ pub(super) fn LeftDrawerMoreMenu(
                     {SidebarView::all().into_iter().map(|item| {
                         let pinned = Signal::derive(move || pinned_views.get().contains(&item));
                         view! {
-                            <button
+                            <div
                                 class=format!(
                                     "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-primary active:bg-hover flex items-center justify-between",
                                     more_item_class(item)
                                 )
-                                role="menuitem"
-                                on:click=move |_| {
-                                    toggle_pin(item);
-                                    set_show_more.set(false);
-                                }
                             >
-                                <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
-                                <span class=move || if pinned.get() { "text-accent" } else { "text-transparent" }>
+                                <button
+                                    class="flex-1 h-full text-left"
+                                    role="menuitem"
+                                    on:click=move |_| {
+                                        select_view.run(item);
+                                        set_show_more.set(false);
+                                    }
+                                >
+                                    <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
+                                </button>
+                                <button
+                                    class=move || format!(
+                                        "rounded-md p-1.5 {}",
+                                        if pinned.get() {
+                                            "text-accent active:bg-hover"
+                                        } else {
+                                            "text-muted active:bg-hover"
+                                        }
+                                    )
+                                    title=move || if pinned.get() { "Unpin" } else { "Pin" }
+                                    on:click=move |ev| {
+                                        ev.stop_propagation();
+                                        toggle_pin(item);
+                                    }
+                                >
                                     <Pin class="w-3.5 h-3.5"/>
-                                </span>
-                            </button>
+                                </button>
+                            </div>
                         }
                     }).collect::<Vec<_>>()}
                 </div>

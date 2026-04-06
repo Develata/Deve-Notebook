@@ -21,23 +21,35 @@ pub fn SectionMenu(
             return view! {}.into_any();
         }
         view! {
-            <div class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1">
-                <MenuItem
-                    label=move || t::source_control::repositories(locale.get())
-                    checked=show_repos
-                    show_menu=show_menu
-                />
-                <MenuItem
-                    label=move || t::source_control::changes(locale.get())
-                    checked=show_changes
-                    show_menu=show_menu
-                />
-                <MenuItem
-                    label=move || t::source_control::graph(locale.get())
-                    checked=show_graph
-                    show_menu=show_menu
-                />
-            </div>
+            <>
+                <div
+                    class="fixed inset-0 z-40"
+                    on:click=move |e: MouseEvent| {
+                        e.stop_propagation();
+                        show_menu.set(false);
+                    }
+                ></div>
+                <div
+                    class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1"
+                    on:click=move |e: MouseEvent| e.stop_propagation()
+                >
+                    <MenuItem
+                        label=move || t::source_control::repositories(locale.get())
+                        checked=show_repos
+                        show_menu=show_menu
+                    />
+                    <MenuItem
+                        label=move || t::source_control::changes(locale.get())
+                        checked=show_changes
+                        show_menu=show_menu
+                    />
+                    <MenuItem
+                        label=move || t::source_control::graph(locale.get())
+                        checked=show_graph
+                        show_menu=show_menu
+                    />
+                </div>
+            </>
         }
         .into_any()
     }

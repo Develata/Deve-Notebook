@@ -74,8 +74,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             />
 
             <div class="flex items-center gap-2 pl-2">
-                // 操作按钮 (悬停显示)
-                <div class="hidden group-hover:!flex items-center gap-0.5 mr-1">
+                // 移动端默认显示，桌面端保持 hover 显示，避免触屏下操作不可达。
+                <div class="flex items-center gap-0.5 mr-1 md:hidden md:group-hover:!flex">
                     <ChangeItemActions
                         core=core.clone()
                         locale

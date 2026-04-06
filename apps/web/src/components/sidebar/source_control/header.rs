@@ -25,8 +25,12 @@ pub fn SourceControlHeader(
                 </span>
             </div>
 
-            <div class="flex gap-1 opacity-100 relative">
+            <div
+                class="flex gap-1 opacity-100 relative"
+                on:click=move |e: MouseEvent| e.stop_propagation()
+            >
                 <button
+                    type="button"
                     class="p-1 hover:bg-hover rounded"
                     title=move || t::sidebar::more_actions(locale.get())
                     on:click=toggle_menu

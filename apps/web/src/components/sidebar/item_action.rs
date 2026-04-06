@@ -1,7 +1,9 @@
 use crate::components::dropdown::AnchorRect;
 use crate::components::sidebar_menu::MenuAction;
+use js_sys::encode_uri_component;
 use leptos::prelude::*;
 use leptos::reactive::traits::GetUntracked;
+use std::path::Path;
 use wasm_bindgen::JsCast;
 
 pub(super) fn create_menu_anchor(target: Option<web_sys::EventTarget>) -> AnchorRect {
@@ -39,7 +41,7 @@ pub(super) fn create_action_handler(
 
         match action {
             MenuAction::Rename => {
-                open_search.run(build_prefill_command("mv", &path, None));
+                open_search.run(build_rename_prefill(&path));
             }
             MenuAction::Delete => delete_req.run(path.clone()),
             MenuAction::Copy => {
@@ -49,7 +51,8 @@ pub(super) fn create_action_handler(
                 if let Some(window) = web_sys::window()
                     && let Ok(href) = window.location().href()
                 {
-                    let url = format!("{}?doc={}", href, path);
+                    let encoded: String = encode_uri_component(&path).into();
+                    let url = build_new_window_url(&href, &encoded);
                     let _ = window.open_with_url_and_target(&url, "_blank");
                 }
             }
@@ -69,6 +72,48 @@ fn build_prefill_command(cmd: &str, src: &str, dst_with_cursor: Option<String>) 
     format!(">{} {} {}", cmd, src_text, dst_text)
 }
 
+fn build_rename_prefill(path: &str) -> String {
+    let normalized = path.replace('\\', "/");
+    let path_ref = Path::new(&normalized);
+    let parent = path_ref
+        .parent()
+        .and_then(|p| p.to_str())
+        .filter(|p| !p.is_empty())
+        .map(|p| p.replace('\\', "/"));
+    let name = path_ref
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(normalized.as_str());
+    let renamed = match path_ref.extension().and_then(|ext| ext.to_str()) {
+        Some(ext) => {
+            let stem = path_ref
+                .file_stem()
+                .and_then(|n| n.to_str())
+                .unwrap_or(name);
+            format!("{stem}|.{ext}")
+        }
+        None => format!("{name}|"),
+    };
+    let dst = match parent {
+        Some(parent) => format!("{parent}/{renamed}"),
+        None => renamed,
+    };
+    build_prefill_command("mv", &normalized, Some(dst))
+}
+
+fn build_new_window_url(href: &str, doc_param: &str) -> String {
+    let (base, hash) = href
+        .split_once('#')
+        .map_or((href, ""), |(base, hash)| (base, hash));
+    let sep = if base.contains('?') { '&' } else { '?' };
+    let suffix = if hash.is_empty() {
+        String::new()
+    } else {
+        format!("#{hash}")
+    };
+    format!("{base}{sep}doc={doc_param}{suffix}")
+}
+
 fn quote_arg(arg: &str) -> String {
     format!("\"{}\"", sanitize_arg(arg))
 }
@@ -76,3 +121,6 @@ fn quote_arg(arg: &str) -> String {
 fn sanitize_arg(arg: &str) -> String {
     arg.replace('"', "'")
 }
+
+#[cfg(test)]
+mod item_action_test;

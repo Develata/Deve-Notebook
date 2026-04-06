@@ -33,6 +33,7 @@ mod tests {
         let (pending_local_edits, _) = signal(Default::default());
         let (_, set_pending_navigation) = signal(None);
         let (current_repo, _) = signal(Some("default".to_string()));
+        let (current_scope_nonce, _) = signal(7u64);
         let (active_branch, _) = signal(None::<deve_core::models::PeerId>);
         let (_, set_handshake_ready) = signal(false);
         let (_, set_handshake_scope_nonce) = signal(None::<u64>);
@@ -46,6 +47,7 @@ mod tests {
             pending_local_edits,
             set_pending_navigation,
             current_repo,
+            current_scope_nonce,
             active_branch,
             pending_branch_switch,
             pending_branch_switch_nonce,
@@ -68,6 +70,7 @@ mod tests {
             pending_local_edits,
             set_pending_navigation,
             current_repo,
+            current_scope_nonce,
             active_branch,
             pending_branch_switch,
             pending_branch_switch_nonce,

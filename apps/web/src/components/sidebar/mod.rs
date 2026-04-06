@@ -25,6 +25,7 @@ pub mod types;
 use self::explorer::ExplorerView;
 use self::extensions::ExtensionsView;
 use crate::components::activity_bar::SidebarView;
+use crate::components::main_layout::SearchControl;
 
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -38,6 +39,15 @@ pub fn Sidebar(
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
+    let search_control = expect_context::<SearchControl>();
+
+    Effect::new(move |_| {
+        if active_view.get() == SidebarView::Search {
+            search_control.set_mode.set(String::new());
+            search_control.set_show.set(true);
+        }
+    });
+
     view! {
         <div class="h-full w-full bg-sidebar border-r border-default">
             {move || match active_view.get() {
@@ -53,12 +63,18 @@ pub fn Sidebar(
                 SidebarView::SourceControl => view! {
                     <crate::components::sidebar::source_control::SourceControlView />
                 }.into_any(),
+                SidebarView::Search => view! {
+                    <ExplorerView
+                        _docs=docs
+                        current_doc=current_doc
+                        is_readonly=is_readonly
+                        on_select=on_select
+                        on_delete=on_delete
+                    />
+                }.into_any(),
                 SidebarView::Extensions => view! {
                     <ExtensionsView />
                 }.into_any(),
-                _ => view! {
-                    <div class="p-4 text-muted text-center">"View not implemented"</div>
-                }.into_any()
             }}
         </div>
     }

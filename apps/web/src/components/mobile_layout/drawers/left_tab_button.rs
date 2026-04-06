@@ -7,7 +7,7 @@ pub(super) fn LeftDrawerTabButton(
     locale: RwSignal<Locale>,
     view: SidebarView,
     active_view: ReadSignal<SidebarView>,
-    set_active_view: WriteSignal<SidebarView>,
+    select_view: Callback<SidebarView>,
     on_open_more: Callback<()>,
 ) -> impl IntoView {
     let label = Signal::derive(move || match view {
@@ -32,7 +32,7 @@ pub(super) fn LeftDrawerTabButton(
                 )
             }
             on:click=move |_| {
-                set_active_view.set(view);
+                select_view.run(view);
                 on_open_more.run(());
             }
             title=move || label.get().to_string()

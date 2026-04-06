@@ -25,6 +25,7 @@ pub mod effects_switch;
 pub mod navigation;
 pub mod pending;
 mod provide;
+mod scope_prefs;
 pub(crate) mod source_control_notice;
 pub mod state;
 mod state_build;
@@ -45,6 +46,7 @@ use crate::api::WsService;
 use leptos::prelude::*;
 
 use self::callbacks_build::build_callbacks;
+use self::scope_prefs::{restore_scope_pref, setup_scope_pref_effect};
 use self::state_build::build_core_state;
 use self::status_text::build_status_text;
 use self::storage_runtime::init_storage_runtime;
@@ -55,6 +57,8 @@ pub fn use_core() -> CoreState {
     provide_context(ws.clone());
 
     let signals = state::init_signals(ws.status);
+    restore_scope_pref(&signals);
+    setup_scope_pref_effect(&signals);
     let status_text = build_status_text(&ws, &signals);
 
     // 浏览器 peer identity 现在必须经由 storage_runtime 间接初始化：

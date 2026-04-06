@@ -1,7 +1,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::state::CoreSignals;
-use crate::hooks::use_core::switch_nonce::next_switch_nonce;
+use crate::hooks::use_core::switch_nonce::next_switch_nonce_after;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Set};
 
@@ -19,7 +19,7 @@ pub fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
 pub fn recover_local_branch(ws: &WsService, signals: CoreSignals) {
     ws.clear_writer_ready();
     signals.set_handshake_ready.set(false);
-    let switch_nonce = next_switch_nonce();
+    let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
     signals
         .set_pending_branch_switch
         .set(Some(PendingBranchTarget::Local));

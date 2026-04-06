@@ -3,7 +3,7 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 use super::super::navigation::{NavigationTarget, guard_navigation};
-use super::super::switch_nonce::next_switch_nonce;
+use super::super::switch_nonce::next_switch_nonce_after;
 use super::super::types::SwitchScopeSignals;
 use super::{can_start_scope_switch, prepare_scope_switch};
 
@@ -23,7 +23,7 @@ pub(super) fn build_switch_repo_callback(
         let target_repo = name.clone();
         let ws_repo_action = ws.clone();
         let action = Callback::new(move |_: ()| {
-            let switch_nonce = next_switch_nonce();
+            let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
             prepare_scope_switch(&ws_repo_action, signals);
             signals
                 .set_pending_repo_switch

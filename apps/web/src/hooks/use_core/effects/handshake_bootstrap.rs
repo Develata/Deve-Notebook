@@ -1,10 +1,10 @@
 use crate::api::WsService;
 use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
-use leptos::prelude::Set;
+use leptos::prelude::{GetUntracked, Set};
 
 use super::super::types::HandshakeSignals;
-use super::super::{PendingBranchTarget, switch_nonce::next_switch_nonce};
+use super::super::{PendingBranchTarget, switch_nonce::next_switch_nonce_after};
 #[path = "handshake_bootstrap_repo.rs"]
 mod handshake_bootstrap_repo;
 use self::handshake_bootstrap_repo::{build_switch_repo, request_repo_list};
@@ -17,7 +17,7 @@ pub(super) fn restore_session_scope(
     active_branch: Option<PeerId>,
 ) {
     if let Some(branch) = active_branch {
-        let switch_nonce = next_switch_nonce();
+        let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
         signals
             .set_pending_branch_switch
             .set(Some(PendingBranchTarget::Shadow(branch.to_string())));
@@ -42,7 +42,7 @@ pub(super) fn restore_session_scope(
     }
 
     if let Some(repo_name) = current_repo {
-        let switch_nonce = next_switch_nonce();
+        let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
         if let Some(msg) = build_switch_repo(repo_name.clone(), current_repo_id, switch_nonce) {
             signals.set_pending_repo_switch.set(Some(repo_name));
             signals

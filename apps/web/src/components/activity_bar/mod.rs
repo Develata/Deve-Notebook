@@ -22,6 +22,7 @@ pub fn ActivityBar(
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let search_control = expect_context::<crate::components::main_layout::SearchControl>();
 
     let backdrop = move || {
         if show_more.get() {
@@ -34,6 +35,16 @@ pub fn ActivityBar(
         }
     };
 
+    let select_view = Callback::new(move |view: SidebarView| {
+        if view == SidebarView::Search {
+            search_control.set_mode.set(String::new());
+            search_control.set_show.set(true);
+        } else {
+            set_active_view.set(view);
+        }
+        set_show_more.set(false);
+    });
+
     let icon_btn = move |view: SidebarView| {
         let is_active = move || active_view.get() == view;
         view! {
@@ -43,7 +54,7 @@ pub fn ActivityBar(
                     if is_active() { "text-accent" } else { "text-muted hover:text-primary" }
                 )
                 title=move || view.title(locale.get())
-                on:click=move |_| set_active_view.set(view)
+                on:click=move |_| select_view.run(view)
             >
                 {view.icon_view("w-4 h-4")}
                 {move || if is_active() {
@@ -91,6 +102,7 @@ pub fn ActivityBar(
                             <ViewPopupMenu
                                 active_view=active_view
                                 pinned_views=pinned_views
+                                select_view=select_view
                                 toggle_pin=toggle_pin
                                 locale=locale
                             />

@@ -18,7 +18,7 @@ pub fn StagedSectionActions(
     view! {
         <div class="flex items-center gap-2">
             <div
-                class="hidden group-hover:!flex items-center gap-1 text-primary"
+                class="flex items-center gap-1 text-primary md:hidden md:group-hover:!flex"
                 on:click=move |e| e.stop_propagation()
             >
                 <Show when=move || write_block.get().is_none()>

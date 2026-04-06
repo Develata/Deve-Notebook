@@ -8,6 +8,9 @@
 //!
 //! - `App`: 根组件，提供语言环境上下文和认证状态管理。
 
+use self::app_auth_monitor::{
+    current_page_active, mount_visibility_listener, should_run_session_probe,
+};
 use crate::api::{AuthProbe, probe_auth_status};
 use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage};
 use crate::components::main_layout::MainLayout;
@@ -15,6 +18,9 @@ use crate::i18n::Locale;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+
+#[path = "app_auth_monitor.rs"]
+mod app_auth_monitor;
 
 /// 根应用程序组件
 ///
@@ -31,6 +37,31 @@ pub fn App() -> impl IntoView {
 
     // 认证状态
     let (auth_state, set_auth_state) = signal(AuthState::Checking);
+    let page_active = RwSignal::new(current_page_active());
+
+    window_event_listener(leptos::ev::focus, move |_| {
+        page_active.set(current_page_active());
+    });
+    window_event_listener(leptos::ev::blur, move |_| {
+        page_active.set(current_page_active());
+    });
+    mount_visibility_listener(page_active);
+
+    let last_page_active = StoredValue::new_local(page_active.get_untracked());
+    Effect::new(move |_| {
+        let active = page_active.get();
+        let was_active = last_page_active.get_value();
+        last_page_active.set_value(active);
+        if was_active || !should_run_session_probe(&auth_state.get(), active) {
+            return;
+        }
+        spawn_local(async move {
+            match probe_auth_status().await {
+                AuthProbe::Invalid => set_auth_state.set(AuthState::Unauthenticated),
+                AuthProbe::Valid | AuthProbe::Unknown => {}
+            }
+        });
+    });
 
     // 启动时检查认证状态
     spawn_local(async move {
@@ -57,7 +88,7 @@ pub fn App() -> impl IntoView {
     spawn_local(async move {
         loop {
             TimeoutFuture::new(AUTH_MONITOR_MS).await;
-            if auth_state.get_untracked() != AuthState::Authenticated {
+            if !should_run_session_probe(&auth_state.get_untracked(), page_active.get_untracked()) {
                 continue;
             }
             match probe_auth_status().await {

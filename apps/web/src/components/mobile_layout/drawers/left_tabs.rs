@@ -20,9 +20,18 @@ pub(super) fn LeftDrawerTabs(
     pinned_views: ReadSignal<Vec<SidebarView>>,
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
     open: ReadSignal<bool>,
+    on_search: Callback<()>,
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
+    let select_view = Callback::new(move |view: SidebarView| {
+        if view == SidebarView::Search {
+            on_search.run(());
+        } else {
+            set_active_view.set(view);
+        }
+        set_show_more.set(false);
+    });
 
     Effect::new(move |_| {
         if !open.get() {
@@ -52,7 +61,7 @@ pub(super) fn LeftDrawerTabs(
                                         locale
                                         view
                                         active_view
-                                        set_active_view
+                                        select_view
                                         on_open_more=Callback::new(move |_| set_show_more.set(false))
                                     />
                                 }
@@ -75,6 +84,7 @@ pub(super) fn LeftDrawerTabs(
                 active_view
                 pinned_views
                 set_pinned_views
+                select_view
                 show_more
                 set_show_more
                 more_menu_ref
