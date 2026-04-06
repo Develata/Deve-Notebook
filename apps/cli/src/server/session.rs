@@ -62,6 +62,14 @@ pub struct WsSession {
     /// 当前活动仓库 ID（UUID-first）
     pub active_repo_id: Option<RepoId>,
 
+    /// 最近一次稳定绑定的本地仓库 hint。
+    ///
+    /// Invariant:
+    /// - 仅在 `active_branch == None` 的本地 scope 下更新。
+    /// - 远端分支临时切仓不得覆盖该 hint，避免切回 Local 时丢失用户原本的本地 repo。
+    pub last_local_repo: Option<String>,
+    pub last_local_repo_id: Option<RepoId>,
+
     /// 当前锁定的数据库句柄。
     pub active_db: Option<DatabaseHandle>,
 
@@ -74,6 +82,8 @@ pub struct WsSession {
     pub message_count_in_window: u16,
 }
 
+#[path = "session_repo.rs"]
+mod session_repo;
 #[path = "session_scope.rs"]
 mod session_scope;
 
@@ -89,6 +99,8 @@ impl Default for WsSession {
             active_branch: None,
             active_repo: None,
             active_repo_id: None,
+            last_local_repo: None,
+            last_local_repo_id: None,
             active_db: None,
             message_window_started_at: Instant::now(),
             message_count_in_window: 0,

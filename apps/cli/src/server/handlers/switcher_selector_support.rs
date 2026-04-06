@@ -3,6 +3,9 @@ use anyhow::{Result, anyhow};
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
+
+use super::resolution::{fallback_single_remote_repo, unresolved_target_repo_error};
+
 pub(super) fn select_target_repo_by_url(
     state: &Arc<AppState>,
     had_current_repo_hint: bool,
@@ -46,6 +49,9 @@ pub(super) fn select_target_repo_by_url(
     }
     if matches.len() == 1 {
         return Ok(Some(matches.remove(0)));
+    }
+    if let Some(selector) = fallback_single_remote_repo(target_branch, &repos) {
+        return Ok(Some(selector));
     }
     if had_current_repo_hint {
         return Err(unresolved_target_repo_error(
@@ -103,27 +109,4 @@ pub(super) fn can_defer_to_repo_id_for_display_collision(
         return Ok(false);
     }
     state.repo.has_remote_display_name(peer_id, raw_repo_name)
-}
-
-pub(super) fn unresolved_target_repo_error(
-    target_branch: Option<&PeerId>,
-    current_repo_name: Option<&str>,
-    current_repo_id: Option<RepoId>,
-    current_repo_url: Option<&str>,
-) -> anyhow::Error {
-    let scope = if target_branch.is_some() {
-        "Remote"
-    } else {
-        "Local"
-    };
-    if let Some(repo_name) = current_repo_name {
-        return anyhow!("{scope} repository selector not resolved for {}", repo_name);
-    }
-    if let Some(repo_id) = current_repo_id {
-        return anyhow!("Repository UUID not resolved for {}", repo_id);
-    }
-    if let Some(url) = current_repo_url {
-        return anyhow!("{scope} repository selector not resolved for URL {}", url);
-    }
-    anyhow!("{scope} repository selector not resolved")
 }

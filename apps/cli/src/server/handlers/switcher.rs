@@ -3,10 +3,15 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 #[path = "switcher_branch.rs"]
 mod switcher_branch;
+#[path = "switcher_branch_hint.rs"]
+mod switcher_branch_hint;
 #[path = "switcher_error.rs"]
 mod switcher_error;
 #[path = "switcher_guard.rs"]
 mod switcher_guard;
+#[cfg(test)]
+#[path = "../switcher_last_local_repo_test.rs"]
+mod switcher_last_local_repo_test;
 #[path = "switcher_payload.rs"]
 mod switcher_payload;
 #[path = "switcher_prepare.rs"]
@@ -20,6 +25,9 @@ mod switcher_repo;
 mod switcher_scope;
 #[path = "switcher_selector.rs"]
 mod switcher_selector;
+#[cfg(test)]
+#[path = "../switcher_selector_single_remote_test.rs"]
+mod switcher_selector_single_remote_test;
 
 use deve_core::models::RepoId;
 use std::sync::Arc;

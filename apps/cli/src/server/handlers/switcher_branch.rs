@@ -1,9 +1,4 @@
-use crate::server::AppState;
-use crate::server::channel::DualChannel;
-use crate::server::repo_scope::map_repo_scope_error;
-use crate::server::session::WsSession;
-use std::sync::Arc;
-
+use super::switcher_branch_hint::build_branch_switch_selector_input;
 use super::switcher_error::prepare_switch_error;
 use super::switcher_payload::{
     emit_repo_view, preload_branch_switch, prepare_repo_view_messages, switch_scope_nonce,
@@ -11,7 +6,11 @@ use super::switcher_payload::{
 use super::switcher_prepare::{commit_session_switch, prepare_repo_switch, validate_branch_target};
 use super::switcher_scope;
 use super::switcher_selector::select_target_repo;
-
+use crate::server::AppState;
+use crate::server::channel::DualChannel;
+use crate::server::repo_scope::map_repo_scope_error;
+use crate::server::session::WsSession;
+use std::sync::Arc;
 pub(super) async fn handle_switch_branch(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -28,12 +27,10 @@ pub(super) async fn handle_switch_branch(
     ) {
         return;
     }
-
     let Some(final_branch) = validate_branch_target(state, ch, &peer_id, switch_nonce) else {
         return;
     };
     let raw_current_repo_hint = session.active_repo.is_some() || session.active_repo_id.is_some();
-
     let current = match switcher_scope::resolve_current_branch_switch_context(state, session) {
         Ok(current) => current,
         Err(err) => {
@@ -44,17 +41,19 @@ pub(super) async fn handle_switch_branch(
     };
     let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
     let target_branch_ref = target_branch.as_ref();
-    let had_current_repo_hint =
-        current.scope.is_some() || (raw_current_repo_hint && target_branch_ref.is_some());
-    let current_scope = current.scope;
-    let current_repo_url = current.repo_url;
-
+    let selector_input = build_branch_switch_selector_input(
+        state,
+        session,
+        raw_current_repo_hint,
+        &current,
+        target_branch_ref,
+    );
     let target_repo = match select_target_repo(
         state,
-        had_current_repo_hint,
-        current_scope.as_ref().map(|scope| scope.repo_id),
-        current_scope.as_ref().map(|scope| scope.repo_name.as_str()),
-        current_repo_url,
+        selector_input.had_current_repo_hint,
+        selector_input.current_repo_id,
+        selector_input.current_repo_name.as_deref(),
+        selector_input.current_repo_url,
         target_branch_ref,
     ) {
         Ok(repo) => repo,
@@ -114,7 +113,6 @@ pub(super) async fn handle_switch_branch(
         }
     };
     commit_session_switch(session, final_branch.clone(), prepared, switch_nonce);
-
     ch.unicast(deve_core::protocol::ServerMessage::BranchSwitched {
         peer_id: final_branch.clone(),
         success: true,

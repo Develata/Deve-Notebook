@@ -69,22 +69,12 @@ impl WsSession {
         self.current_sync_scope_nonce
     }
 
-    pub fn switch_repo(&mut self, repo_name: String, repo_id: Option<RepoId>) {
-        self.active_repo = Some(repo_name);
-        self.active_repo_id = repo_id;
-    }
-
     pub fn set_active_db(&mut self, handle: DatabaseHandle) {
         self.active_db = Some(handle);
     }
 
     pub fn clear_active_db(&mut self) {
         self.active_db = None;
-    }
-
-    pub fn clear_active_repo(&mut self) {
-        self.active_repo = None;
-        self.active_repo_id = None;
     }
 
     pub fn has_runtime_scope_binding(&self) -> bool {

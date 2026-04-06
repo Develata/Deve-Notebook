@@ -1,16 +1,20 @@
 use crate::server::AppState;
-use crate::server::shadow_scope;
 use anyhow::{Result, anyhow};
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
+#[path = "switcher_requested_repo.rs"]
+mod requested_repo;
+#[path = "switcher_selector_resolution.rs"]
+mod resolution;
 #[path = "switcher_selector_support.rs"]
 mod support;
 
+use resolution::{fallback_single_remote_repo, unresolved_target_repo_error};
 use support::{
     can_defer_to_repo_id_for_display_collision, recover_selector_from_raw_name,
-    select_repo_selector_by_id, select_target_repo_by_url, unresolved_target_repo_error,
+    select_repo_selector_by_id, select_target_repo_by_url,
 };
 
 pub(super) fn select_target_repo(
@@ -67,6 +71,9 @@ pub(super) fn select_target_repo(
         return Ok(Some(selector));
     }
     let repos = state.repo.list_repos(target_branch)?;
+    if let Some(selector) = fallback_single_remote_repo(target_branch, &repos) {
+        return Ok(Some(selector));
+    }
     if had_current_repo_hint || current_repo_name.is_some() || current_repo_id.is_some() {
         return Err(unresolved_target_repo_error(
             target_branch,
@@ -84,45 +91,5 @@ pub(super) fn resolve_requested_repo_name(
     repo_name: &str,
     repo_id: Option<RepoId>,
 ) -> Result<Option<String>> {
-    if let Some(branch) = branch {
-        shadow_scope::ensure_remote_branch_available(state, branch)?;
-    }
-    if let Some(exact_selector) = recover_selector_from_raw_name(state, branch, repo_name)? {
-        if let Some(repo_id) = repo_id {
-            match select_repo_selector_by_id(state, branch, repo_id)? {
-                Some(selector_by_id) if selector_by_id != exact_selector => {
-                    if can_defer_to_repo_id_for_display_collision(state, branch, repo_name)? {
-                        return Ok(Some(selector_by_id));
-                    }
-                    return Err(anyhow!(
-                        "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
-                        repo_id,
-                        selector_by_id,
-                        repo_name
-                    ));
-                }
-                Some(_) => {}
-                None => {
-                    return Err(anyhow!(
-                        "Repository UUID not resolved for exact repository selector {} ({})",
-                        repo_name,
-                        repo_id
-                    ));
-                }
-            }
-        }
-        return Ok(Some(exact_selector));
-    }
-    if branch.is_some() && uuid::Uuid::parse_str(repo_name).is_ok() {
-        return Err(anyhow!("Repository UUID not resolved for {}", repo_name));
-    }
-    if let Some(repo_id) = repo_id
-        && let Some(selector) = select_repo_selector_by_id(state, branch, repo_id)?
-    {
-        return Ok(Some(selector));
-    }
-    let repos = state.repo.list_repos(branch)?;
-    Ok(repos
-        .contains(&repo_name.to_string())
-        .then(|| repo_name.to_string()))
+    requested_repo::resolve_requested_repo_name(state, branch, repo_name, repo_id)
 }
