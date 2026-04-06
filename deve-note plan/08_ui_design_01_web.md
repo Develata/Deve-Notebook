@@ -114,6 +114,18 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
 *   **Repo Switch Flow**:
     *   用户切换 repo 时，旧 repo 的同步状态立即清空，新 repo 进入握手态。
     *   若新 repo 无法恢复 IndexedDB identity，则 UI 显示“临时只读 peer”并阻止写入，直到注册成功。
+    *   浏览器刷新后 **SHOULD** 恢复最近一次稳定的 `repo_name + repo_id + active_branch` 组合，但实际绑定 **MUST** 以 `repo_id` 为准，名称仅作展示或辅助恢复。
+    *   `SwitchRepo / SwitchBranch` 发出的 `switch_nonce` **MUST** 严格大于当前 `scope_nonce`，避免旧 scope 的迟到消息污染新 scope。
+
+## 5.2 Web Shell Interaction Rules
+
+*   **Activity Bar More...**:
+    *   菜单项整行点击 **MUST** 执行“切换视图”。
+    *   `Pin/Unpin` **MUST** 是独立操作，不得与视图切换复用同一点击语义。
+*   **Repo Switcher**:
+    *   触发器与菜单项 **SHOULD** 使用按钮语义，并支持点击外部自动收起。
+*   **Open in New Window**:
+    *   新窗口链接 **MUST** 保留现有 query params，并在其上正确追加 `doc=...`，不得生成重复 `?` 或破坏现有 URL 状态。
 
 ## 6. 实现策略边界 (Implementation Boundaries)
 

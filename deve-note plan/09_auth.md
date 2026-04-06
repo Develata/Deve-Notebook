@@ -61,6 +61,13 @@
 *   **Disconnected**：网络、代理或服务暂时不可达。客户端 **MAY** 自动重连，并在恢复后重新握手当前 repo。
 *   **Unauthorized**：JWT 缺失、过期、撤销或服务端明确拒绝当前会话。客户端 **MUST** 立即退出写态，跳转登录页或显示认证失效界面。
 *   **Rule**：`401/403` 与 `AUTH_*` 错误码 **MUST NOT** 被重新包装成普通断网状态。
+
+## Session Probe Policy (会话探测策略)
+
+*   `/api/auth/me` 的周期性探测 **SHOULD** 仅在页面处于前台、可交互状态时运行。
+*   当页面进入后台或不可见状态时，客户端 **SHOULD** 暂停该探测，避免制造无意义轮询噪音。
+*   当页面恢复到前台时，客户端 **SHOULD** 立即补一次探测，以尽快发现 `session expired` 与恢复后的有效会话。
+
 ## 访问控制 (Access Control)
 
 *   **Model**: **Single-User / Owner-Only**。

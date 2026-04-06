@@ -101,6 +101,9 @@
         *   **Content**: 显示该 Peer 下拥有的所有 Repos (redb files)。
     * **Virtual Backup Branch**:
         *   提供一个虚拟远程分支（只读），作为当前版本数据库文件的实时/快照备份。
+* **返回本地分支**：
+    *   当用户从 `Remote Branch` 切回 `Local` 时，系统 **SHOULD** 优先恢复最近一次稳定使用的本地 Repo。
+    *   若该本地 Repo 已不存在或无法解析，系统 **MUST** 回退到现有的 UUID-First / Fail-Closed 解析路径，而不是静默绑定到任意本地 Repo。
 
 ## 本章相关命令
 

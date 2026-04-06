@@ -74,6 +74,9 @@ State_auth = L_confirmed
 
 - 写入闸门必须严格绑定当前仓库。
 - 旧仓库的延迟握手消息不得把新仓库误标成“可写”。
+- `SwitchRepo / SwitchBranch` 的 `switch_nonce` MUST 严格大于当前 `scope_nonce`。
+- 浏览器刷新、重连与 scope 恢复 MUST 以 `repo_id` 作为主绑定键，`repo_name` 仅可作辅助提示或兼容恢复。
+- 当用户从 `Remote Branch` 切回 `Local` 时，客户端 / 服务端 MAY 恢复最近一次稳定的本地 repo，但解析失败时 MUST 回退到 UUID-First / Fail-Closed 规则。
 
 ### 4.4 Structured Error Contract
 

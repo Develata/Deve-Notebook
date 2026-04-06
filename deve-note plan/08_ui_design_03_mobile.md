@@ -67,6 +67,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 仅支持轻量级 Edge Swipe，参数定义如下：
 *   $Zone_{edge} = 20px$ (从屏幕边缘起算的响应区)。
 *   $Threshold_{swipe} = 50px$ (触发滑动的最小距离)。
+*   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。
 
 ## 3. 视觉适配 (Visual Adaptations)
 
@@ -99,6 +100,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
     *   内容：文件树、快速操作、新建。
     *   关闭按钮建议使用 `X` 图标而非文本 `Close`，以符合移动端通用习惯。
     *   行为：点击文件后自动收起。
+    *   `More(...)` 菜单 **MUST** 复用桌面端语义：整行点击切换视图，`Pin/Unpin` 仅修改固定状态，不得伪装成“点击无反应”。
 *   **Outline Drawer**:
     *   内容：标题结构、大纲条目。
     *   行为：点击条目后自动收起并滚动定位。
@@ -210,6 +212,8 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   Drawer 模块化拆分（`mobile_layout/drawers/{mod,left,right}`）。
 *   左右抽屉、边缘滑动开关、抽屉互斥、抽屉打开时 body 锁滚。
 *   Safe-area 适配、Bottom Sheet 搜索面板、空态与 CTA、基础触控反馈。
+*   边缘滑动与靠边交互控件冲突隔离，避免误吞 `File tree / Toggle Outline` 点击。
+*   `More(...)` 菜单项点击与 `Pin/Unpin` 语义分离，并在点击后正确收起。
 
 ### 8.2 本轮优先对齐项
 *   **Bottom Sheet 手势关闭**：
