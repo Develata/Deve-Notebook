@@ -32,25 +32,24 @@ jobs:
       - name: Run speckit sync check
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           Write-Host "Running speckit synchronization validation..."
-          
-          # First run sync to ensure mirrors are up-to-date
-          & .\.specify\scripts\powershell\sync-speckit.ps1
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Sync script failed with exit code $LASTEXITCODE"
-            exit 1
-          }
-          
-          # Then run check to validate consistency
-          & .\.specify\scripts\powershell\check-speckit-sync.ps1
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Speckit directories are not synchronized!"
+
+          try {
+            # First run sync to ensure mirrors are up-to-date
+            & .\.specify\scripts\powershell\sync-speckit.ps1
+
+            # Then run check to validate consistency
+            & .\.specify\scripts\powershell\check-speckit-sync.ps1
+          } catch {
+            Write-Error "Speckit synchronization validation failed."
+            Write-Error $_
             Write-Error "Please run the following commands locally and commit the changes:"
             Write-Error "  pwsh -File .specify/scripts/powershell/sync-speckit.ps1"
             Write-Error "  pwsh -File .specify/scripts/powershell/check-speckit-sync.ps1"
             exit 1
           }
-          
+
           Write-Host "✅ Speckit directories are synchronized" -ForegroundColor Green
           
       - name: Check for uncommitted changes
