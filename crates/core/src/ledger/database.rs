@@ -77,6 +77,23 @@ pub struct DatabaseHandle {
 }
 
 impl RepoManager {
+    fn repair_secondary_local_runtime_tables(
+        &self,
+        repo_name: &str,
+        db: &Arc<Database>,
+    ) -> Result<()> {
+        if repo_name == self.local_repo_name {
+            return Ok(());
+        }
+        if super::runtime_tables::repair_missing_client_op_index(db.as_ref())? {
+            tracing::warn!(
+                "Rebuilt missing client_op_index while opening local repo runtime tables: {}",
+                repo_name
+            );
+        }
+        Ok(())
+    }
+
     /// 打开并返回指定分支和仓库的数据库句柄
     ///
     /// **参数**:
@@ -160,11 +177,12 @@ impl RepoManager {
     }
 
     /// 获取或打开本地数据库 (返回 Arc)
-    fn get_or_open_local_db(&self, name: &str) -> Result<Arc<Database>> {
+    pub(crate) fn get_or_open_local_db(&self, name: &str) -> Result<Arc<Database>> {
         let cache_key = self.ledger_dir.join("local").join(format!("{}.redb", name));
 
         // 1. 检查全局缓存
         if let Some(db) = reusable_cached_database(cache_key.as_path())? {
+            self.repair_secondary_local_runtime_tables(name, &db)?;
             return Ok(db);
         }
         OPENED_DBS
@@ -196,6 +214,7 @@ impl RepoManager {
         // 4. 打开新数据库并缓存
         let db = Database::create(&cache_key)?;
         let arc_db = Arc::new(db);
+        self.repair_secondary_local_runtime_tables(name, &arc_db)?;
 
         {
             let mut cache = OPENED_DBS.write().map_err(|_| {

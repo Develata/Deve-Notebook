@@ -43,6 +43,7 @@ pub mod node_meta;
 mod node_ops;
 pub mod ops;
 pub mod range;
+mod runtime_tables;
 pub mod schema;
 pub mod shadow;
 mod shadow_binding;
@@ -67,5 +68,7 @@ mod init_node_check_fail_closed_test;
 mod ops_query_fail_closed_test;
 #[cfg(test)]
 mod ops_write_validation_test;
+#[cfg(test)]
+mod runtime_tables_test;
 #[cfg(test)]
 mod tests;

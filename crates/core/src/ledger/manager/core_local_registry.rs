@@ -3,7 +3,6 @@ use redb::Database;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::ledger::database::cached_database;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
@@ -26,11 +25,26 @@ impl RepoManager {
         {
             let guard = self.read_extra_local_dbs()?;
             if let Some(db) = guard.get(stem) {
+                crate::ledger::runtime_tables::repair_missing_client_op_index(db.as_ref())
+                    .map_err(|err| {
+                        anyhow!(
+                            "Broken local repo {} while repairing client op index: {}",
+                            stem,
+                            err
+                        )
+                    })?;
+                source_control::validate_tables(db.as_ref()).map_err(|err| {
+                    anyhow!(
+                        "Broken local repo {} while validating source control tables: {}",
+                        stem,
+                        err
+                    )
+                })?;
                 return f(db);
             }
         }
-        let db_path = self.ledger_dir.join("local").join(format!("{}.redb", stem));
-        let db = cached_database(&db_path)
+        let db = self
+            .get_or_open_local_db(stem)
             .map_err(|err| anyhow!("Broken local repo {} while opening database: {}", stem, err))?;
         source_control::validate_tables(db.as_ref()).map_err(|err| {
             anyhow!(
@@ -52,7 +66,6 @@ impl RepoManager {
             .transpose()?
             .ok_or_else(|| anyhow!("Failed into cache repo"))
     }
-
     pub(crate) fn resolve_local_repo_stem(&self, selector: &str) -> Result<Option<String>> {
         if selector == self.local_repo_name {
             return Ok(Some(self.local_repo_name.clone()));
