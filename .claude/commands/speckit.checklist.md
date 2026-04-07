@@ -33,7 +33,7 @@ $ARGUMENTS
 
 ## 执行步骤
 
-1. **准备**：在仓库根目录运行 `.specify/scripts/powershell/check-prerequisites.ps1 -Json`，解析 `FEATURE_DIR` 与 `AVAILABLE_DOCS`。
+1. **准备**：在仓库根目录运行 `pwsh -File .specify/scripts/powershell/check-prerequisites.ps1 -Json`，解析 `FEATURE_DIR` 与 `AVAILABLE_DOCS`。
    - 所有路径必须为绝对路径。
    - 若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义（或改双引号）。
 

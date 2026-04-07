@@ -4,6 +4,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 $targets = @(
     @{ Dir = ".codex/prompts"; Agent = "codex" },
@@ -39,8 +40,7 @@ if (-not (Test-Path -LiteralPath $planPath -PathType Leaf)) {
     throw "Missing plan file in source: $planPath"
 }
 
-$planContent = Get-Content -LiteralPath $planPath -Raw
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$planContent = Get-Content -LiteralPath $planPath -Raw -Encoding UTF8
 foreach ($target in $targets) {
     $destPlan = Join-Path -Path $target.Dir -ChildPath "speckit.plan.md"
     $adapted = $planContent -replace "-AgentType\s+\w+", "-AgentType $($target.Agent)"

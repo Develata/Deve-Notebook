@@ -93,7 +93,7 @@ description: "Feature 实施任务模板（按用户故事与依赖顺序）"
 ## Final Phase: Polish & Cross-Cutting Concerns
 
 - [ ] T021 [P] 文档与注释校对（仅保留必要注释）于 [file path]
-- [ ] T022 运行 `cargo fmt` 并确认无意外改动
+- [ ] T022 运行 `cargo fmt --check`
 - [ ] T023 运行定向测试（列出具体命令）
 - [ ] T024 运行 `cargo clippy --all-targets --all-features -- -D warnings`
 - [ ] T025 记录与上游 plan 的偏差到 `deve-note report/...`

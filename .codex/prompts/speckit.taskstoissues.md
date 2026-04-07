@@ -13,8 +13,8 @@ $ARGUMENTS
 
 ## 大纲
 
-1. 在仓库根目录执行 `.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`，解析 `FEATURE_DIR` 与 `AVAILABLE_DOCS`。所有路径必须为绝对路径。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义。
-1. 从脚本结果中提取 **tasks** 路径。
+1. 在仓库根目录执行 `pwsh -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`，解析 `FEATURE_DIR`、`TASKS` 与 `AVAILABLE_DOCS`。所有路径必须为绝对路径。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义。
+1. 从脚本结果中提取 **TASKS** 路径。
 1. 运行以下命令读取 Git 远程地址：
 
 ```bash

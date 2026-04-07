@@ -26,7 +26,7 @@ $ARGUMENTS
 
 在仓库根目录执行一次：
 
-`.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`
+`pwsh -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`
 
 解析 JSON 的 `FEATURE_DIR` 与 `AVAILABLE_DOCS`，并推导绝对路径：
 

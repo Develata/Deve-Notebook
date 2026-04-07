@@ -20,7 +20,7 @@ $ARGUMENTS
 
 ## 大纲
 
-1. **准备**：在仓库根目录执行 `.specify/scripts/powershell/setup-plan.ps1 -Json`，解析 JSON 中的 `FEATURE_SPEC`、`IMPL_PLAN`、`SPECS_DIR`、`BRANCH`。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义（或尽量改双引号）。
+1. **准备**：在仓库根目录执行 `pwsh -File .specify/scripts/powershell/setup-plan.ps1 -Json`，解析 JSON 中的 `FEATURE_SPEC`、`IMPL_PLAN`、`SPECS_DIR`、`BRANCH`。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义（或尽量改双引号）。
 
 2. **加载上下文**：读取 `FEATURE_SPEC` 与 `.specify/memory/constitution.md`，并加载 `IMPL_PLAN` 模板（已复制到目标目录）。同时读取 spec 中的 Upstream Alignment 节，确定相关的 `deve-note plan/` 条目与验收 ID。
 
@@ -77,7 +77,7 @@ For each technology choice:
    - 若项目纯内部（脚本/一次性工具）可跳过
 
 3. **更新 agent 上下文**：
-   - 运行 `.specify/scripts/powershell/update-agent-context.ps1 -AgentType opencode`
+   - 运行 `pwsh -File .specify/scripts/powershell/update-agent-context.ps1 -AgentType opencode`
    - 脚本会检测当前 AI agent 类型
    - 更新对应 agent 的上下文文件
    - 仅新增当前 plan 中出现的新技术

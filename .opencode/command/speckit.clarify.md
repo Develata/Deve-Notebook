@@ -22,7 +22,7 @@ $ARGUMENTS
 
 执行步骤：
 
-1. 在仓库根目录执行一次 `.specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly`（组合模式），解析最小 JSON 字段：
+1. 在仓库根目录执行一次 `pwsh -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly`（组合模式），解析最小 JSON 字段：
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
    - （可选）`IMPL_PLAN`、`TASKS`（用于后续链路）

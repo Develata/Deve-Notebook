@@ -14,7 +14,7 @@ function Assert-Dir([string]$Path) {
 }
 
 function Normalize-Content([string]$Path) {
-    $content = Get-Content -LiteralPath $Path -Raw
+    $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
     $content = $content -replace "`r`n", "`n"
     $content = $content.TrimEnd("`r", "`n")
     if ([System.IO.Path]::GetFileName($Path) -eq "speckit.plan.md") {

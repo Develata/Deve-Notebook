@@ -54,17 +54,16 @@ $ARGUMENTS
    - 找到最大值 N
    - 新分支编号使用 N+1
 
-   d. 执行脚本 `.specify/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS"`，并传入编号与 short-name：
-   - 传入 `--number N+1` 与 `--short-name "your-short-name"`
-   - Bash 示例：`.specify/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
-   - PowerShell 示例：`.specify/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
+   d. 执行脚本 `pwsh -File .specify/scripts/powershell/create-new-feature.ps1 -Json -Number N+1 -ShortName "your-short-name" -- "$ARGUMENTS"`：
+   - Bash/WSL 示例：`pwsh -File .specify/scripts/powershell/create-new-feature.ps1 -Json -Number 5 -ShortName "user-auth" -- "Add user authentication"`
+   - PowerShell 示例：`pwsh -File .specify/scripts/powershell/create-new-feature.ps1 -Json -Number 5 -ShortName "user-auth" -- "Add user authentication"`
 
    **重要**：
    - 必须同时检查远程分支、本地分支、specs 目录三类来源
    - 仅匹配 exact short-name 模式
    - 若三处均无匹配，从 1 开始
    - 每个 feature 仅运行一次该脚本
-   - 终端 JSON 输出是权威来源，务必使用其中的 `BRANCH_NAME` 与 `SPEC_FILE`
+   - 终端 JSON 输出是权威来源，务必使用其中的 `BRANCH_NAME`、`FEATURE_DIR` 与 `SPEC_FILE`
    - 若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义
 
 3. 读取 `.specify/templates/spec-template.md`，理解必需章节。

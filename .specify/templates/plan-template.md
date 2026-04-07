@@ -13,7 +13,7 @@
 **Primary Dependencies**: [Leptos/Axum/Redb/Tantivy/Rhai 等 or NEEDS CLARIFICATION]
 **Storage**: [Redb/files/N/A]
 **Testing**: [cargo test + targeted tests + clippy]
-**Target Platform**: [Linux VPS 768MB-1GB RAM / WASM / Windows]
+**Target Platform**: [Linux VPS 768MB RAM / WASM / Windows]
 **Project Type**: [library/cli/web-service/web-frontend/workspace]
 **Performance Goals**: [例如 p95、吞吐、内存峰值]
 **Constraints**: [必须量化：内存/延迟/并发/离线能力]

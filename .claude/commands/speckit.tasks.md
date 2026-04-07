@@ -21,7 +21,7 @@ $ARGUMENTS
 
 ## 大纲
 
-1. **准备**：在仓库根目录执行 `.specify/scripts/powershell/check-prerequisites.ps1 -Json`，解析 `FEATURE_DIR` 与 `AVAILABLE_DOCS`。所有路径必须是绝对路径。若参数含单引号（如 `I'm Groot`），用 ` 'I'\''m Groot' ` 转义。
+1. **准备**：在仓库根目录执行 `pwsh -File .specify/scripts/powershell/check-prerequisites.ps1 -Json`，解析 `FEATURE_DIR` 与 `AVAILABLE_DOCS`。所有路径必须是绝对路径。若参数含单引号（如 `I'm Groot`），用 ` 'I'\''m Groot' ` 转义。
 
 2. **加载设计文档**（位于 `FEATURE_DIR`）：
    - **必需**：`plan.md`（技术栈/库/结构）、`spec.md`（含优先级的用户故事）

@@ -12,7 +12,7 @@ $ARGUMENTS
 
 ## 大纲
 
-1. 在仓库根目录执行 `.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`，解析 `FEATURE_DIR` 和 `AVAILABLE_DOCS`。所有路径必须为绝对路径。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义（或尽量改双引号）。
+1. 在仓库根目录执行 `pwsh -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`，解析 `FEATURE_DIR` 和 `AVAILABLE_DOCS`。所有路径必须为绝对路径。若参数含单引号（如 `I'm Groot`），使用 ` 'I'\''m Groot' ` 转义（或尽量改双引号）。
 
 2. **检查 checklist 状态**（若存在 `FEATURE_DIR/checklists/`）：
    - 扫描 `checklists/` 下所有 checklist 文件。
