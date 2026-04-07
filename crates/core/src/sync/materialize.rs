@@ -4,6 +4,7 @@ use super::rebuild;
 use crate::ledger::RepoManager;
 use anyhow::Result;
 use std::path::Path;
+use tracing::warn;
 
 /// 启动时确保所有本地 repo 都拥有独立的 `vault/<repo_name>/` 工作区。
 pub(super) fn prepare_local_workspaces(
@@ -12,7 +13,17 @@ pub(super) fn prepare_local_workspaces(
     guard: &PersistGuard,
 ) -> Result<()> {
     for repo_name in repo.list_local_repo_names_for_execution()? {
-        materialize_local_repo(repo, guard, &repo_name)?;
+        if let Err(err) = materialize_local_repo(repo, guard, &repo_name) {
+            if is_skippable_startup_projection_error(&err) {
+                warn!(
+                    repo_name = %repo_name,
+                    error = %err,
+                    "Sync startup skipped local repo with broken structure projection"
+                );
+                continue;
+            }
+            return Err(err);
+        }
     }
     Ok(())
 }
@@ -56,4 +67,13 @@ pub(super) fn materialize_local_repo(
     }
 
     Ok(())
+}
+
+fn is_skippable_startup_projection_error(err: &anyhow::Error) -> bool {
+    let lower = err.to_string().to_ascii_lowercase();
+    lower.contains("structure projection references missing parent")
+        || lower.contains("structure projection rename references missing node")
+        || lower.contains("structure projection move references missing node")
+        || lower.contains("structure projection contains cycle")
+        || lower.contains("structure projection lost doc identity")
 }
