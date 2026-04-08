@@ -1,4 +1,11 @@
-// apps\cli\src\commands
+//! plan_ref:
+//!   - 04_storage.md §Data Integrity & Recovery (Disaster Recovery)
+//!
+//! Ledger → JSON Lines / Markdown exporter. JSONL path implements the
+//! `MUST` disaster-recovery export guarantee: every authoritative fact in
+//! `LEDGER_OPS` is emitted as one line, global_seq monotonic, via either
+//! direct DB access or live-proxy fallback when the server holds the lock.
+
 use crate::admin_api::ExportEntry;
 use crate::commands::live_proxy;
 use crate::commands::repo_arg::resolve_local_repo_arg;

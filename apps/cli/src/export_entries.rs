@@ -1,3 +1,10 @@
+//! plan_ref:
+//!   - 04_storage.md §Data Integrity & Recovery (Disaster Recovery)
+//!
+//! Builds JSONL export rows from `LEDGER_OPS`. Resolves each entry's
+//! current path through the node/projection layer so exported lines are
+//! self-describing for offline audit and migration.
+
 use crate::admin_api::ExportEntry;
 use anyhow::Result;
 use deve_core::ledger::{RepoManager, node_meta, range};
@@ -43,6 +50,32 @@ mod tests {
     use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
     use deve_core::models::{LedgerEntry, Op, PeerId};
     use tempfile::TempDir;
+
+    #[test]
+    fn jsonl_roundtrip_is_monotonic_and_line_stable() {
+        let dir = TempDir::new().expect("create tempdir");
+        let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+        for name in ["a.md", "b.md", "c.md"] {
+            repo.apply_file_structure_in_local_repo(repo.local_repo_name(), name, None, "test")
+                .expect("create file");
+        }
+        let entries = build(&repo, repo.local_repo_name()).expect("build export");
+        assert!(!entries.is_empty(), "export must emit rows");
+
+        // Serialize each row as one JSONL line and parse it back.
+        let mut last_seq = 0u64;
+        for entry in &entries {
+            let line = serde_json::to_string(entry).expect("serialize");
+            assert!(!line.contains('\n'), "JSONL row must be single-line");
+            let parsed: ExportEntry = serde_json::from_str(&line).expect("roundtrip parse");
+            assert_eq!(parsed.global_seq, entry.global_seq);
+            assert!(
+                parsed.global_seq > last_seq,
+                "global_seq must be strictly monotonic"
+            );
+            last_seq = parsed.global_seq;
+        }
+    }
 
     #[test]
     fn includes_dir_structure_fact_in_export() {
