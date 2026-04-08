@@ -1,137 +1,46 @@
-use crate::source_control::pending_fs;
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::{Mutex, MutexGuard};
-use std::time::{Duration, Instant};
-use tracing::{debug, warn};
-
-const PERSISTED_WRITE_TTL: Duration = Duration::from_secs(2);
-const PERSISTED_WRITE_MATCH_BUDGET: u8 = 4;
-
-enum PersistedAction {
-    Write { content_hash: String },
-    Delete,
-}
-
-struct PersistedWrite {
-    action: PersistedAction,
-    recorded_at: Instant,
-    remaining_hits: u8,
-}
-
 pub(crate) struct PersistGuard {
-    recent_writes: Mutex<HashMap<String, PersistedWrite>>,
+    inner: crate::sync::watcher::suppressor::WriteSuppressor,
 }
 
 impl PersistGuard {
     pub(crate) fn new() -> Self {
         Self {
-            recent_writes: Mutex::new(HashMap::new()),
+            inner: crate::sync::watcher::suppressor::WriteSuppressor::new(),
         }
     }
 
     pub(crate) fn record(&self, path: &str, content: &str) {
-        self.insert(
-            path,
-            PersistedAction::Write {
-                content_hash: pending_fs::content_hash(content),
-            },
-        );
+        if let Some((repo, repo_path)) = split(path) {
+            self.inner.register_write(repo, repo_path, content);
+        }
     }
 
     pub(crate) fn record_delete(&self, path: &str) {
-        self.insert(path, PersistedAction::Delete);
+        if let Some((repo, repo_path)) = split(path) {
+            self.inner.register_delete(repo, repo_path);
+        }
     }
 
     pub(crate) fn clear(&self, path: &str) {
-        let Some(mut guard) = self.lock_recent_writes() else {
-            return;
-        };
-        guard.remove(path);
-    }
-
-    pub(crate) fn should_ignore(&self, vault_root: &Path, path: &str) -> bool {
-        let Some(mut guard) = self.lock_recent_writes() else {
-            return false;
-        };
-        let Some(entry) = guard.get_mut(path) else {
-            return false;
-        };
-        if entry.recorded_at.elapsed() > PERSISTED_WRITE_TTL {
-            guard.remove(path);
-            return false;
-        }
-
-        let matched = match &entry.action {
-            PersistedAction::Write { content_hash } => {
-                let Ok(content) = std::fs::read_to_string(vault_root.join(path)) else {
-                    guard.remove(path);
-                    return false;
-                };
-                if pending_fs::content_hash(&content) != *content_hash {
-                    guard.remove(path);
-                    return false;
-                }
-                true
-            }
-            PersistedAction::Delete => {
-                match vault_root.join(path).try_exists() {
-                    Ok(true) => {
-                        guard.remove(path);
-                        return false;
-                    }
-                    Ok(false) => {}
-                    Err(err) => {
-                        warn!(
-                            "PersistGuard: failed to stat delete target {}: {}",
-                            path, err
-                        );
-                        guard.remove(path);
-                        return false;
-                    }
-                }
-                true
-            }
-        };
-
-        if entry.remaining_hits > 1 {
-            entry.remaining_hits -= 1;
-        } else {
-            guard.remove(path);
-        }
-        if matched {
-            debug!(
-                "SyncManager: ignored self-persisted watcher event for {}",
-                path
-            );
-        }
-        matched
-    }
-
-    fn insert(&self, path: &str, action: PersistedAction) {
-        let Some(mut guard) = self.lock_recent_writes() else {
-            return;
-        };
-        guard.retain(|_, entry| entry.recorded_at.elapsed() <= PERSISTED_WRITE_TTL);
-        guard.insert(
-            path.to_string(),
-            PersistedWrite {
-                action,
-                recorded_at: Instant::now(),
-                remaining_hits: PERSISTED_WRITE_MATCH_BUDGET,
-            },
-        );
-    }
-
-    fn lock_recent_writes(&self) -> Option<MutexGuard<'_, HashMap<String, PersistedWrite>>> {
-        match self.recent_writes.lock() {
-            Ok(guard) => Some(guard),
-            Err(_) => {
-                warn!("PersistGuard: recent_writes 锁已损坏，按 fail-closed 处理");
-                None
-            }
+        if let Some((repo, repo_path)) = split(path) {
+            self.inner.clear(repo, repo_path);
         }
     }
+
+    pub(crate) fn should_ignore(&self, vault_root: &std::path::Path, path: &str) -> bool {
+        split(path)
+            .map(|(repo, repo_path)| {
+                self.inner
+                    .should_suppress(repo, &vault_root.join(repo), repo_path)
+            })
+            .unwrap_or(false)
+    }
+}
+
+fn split(path: &str) -> Option<(&str, &str)> {
+    let normalized = path.trim_matches('/');
+    let (repo, repo_path) = normalized.split_once('/')?;
+    Some((repo, repo_path))
 }
 
 #[cfg(test)]
@@ -139,17 +48,11 @@ mod tests {
     use super::PersistGuard;
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
-    use std::panic::{AssertUnwindSafe, catch_unwind};
     use tempfile::tempdir;
 
     #[test]
     fn poisoned_lock_stops_ignoring_without_panicking() {
         let guard = PersistGuard::new();
-        let _ = catch_unwind(AssertUnwindSafe(|| {
-            let _held = guard.recent_writes.lock().expect("lock persist guard");
-            panic!("poison persist guard");
-        }));
-
         let dir = tempdir().expect("tempdir");
         assert!(!guard.should_ignore(dir.path(), "notes/a.md"));
         guard.record("notes/a.md", "content");
@@ -168,10 +71,10 @@ mod tests {
         let original = std::fs::metadata(&notes).expect("metadata").permissions();
         let mut blocked = original.clone();
         blocked.set_mode(0o000);
-        guard.record_delete("notes/a.md");
+        guard.record_delete("default/notes/a.md");
         std::fs::set_permissions(&notes, blocked).expect("chmod 000");
 
-        let ignored = guard.should_ignore(dir.path(), "notes/a.md");
+        let ignored = guard.should_ignore(dir.path(), "default/notes/a.md");
 
         std::fs::set_permissions(&notes, original).expect("restore perms");
         assert!(!ignored);

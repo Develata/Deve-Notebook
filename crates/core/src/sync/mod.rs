@@ -42,6 +42,8 @@ mod scan_file;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod snapshot_policy;
 pub mod vector;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod watcher;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::RepoManager;
