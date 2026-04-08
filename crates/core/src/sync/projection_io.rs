@@ -29,10 +29,10 @@ pub(super) fn persist_doc_at_path(
     if let Some(parent) = file_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let relative_path = sync.repo.local_repo_workspace_relative(repo_name, path);
-    sync.persist_guard.record(&relative_path, &rebuilt.content);
+    sync.repo
+        .record_projection_write(repo_name, path, &rebuilt.content);
     if let Err(err) = std::fs::write(&file_path, &rebuilt.content) {
-        sync.persist_guard.clear(&relative_path);
+        sync.repo.clear_projection_guard(repo_name, path);
         return Err(err.into());
     }
     sync.repo
@@ -67,10 +67,9 @@ pub(super) fn remove_projection_path(
     if !super::checked_exists(&file_path, "workspace path while removing projection")? {
         return Ok(());
     }
-    let relative_path = sync.repo.local_repo_workspace_relative(repo_name, path);
-    sync.persist_guard.record_delete(&relative_path);
+    sync.repo.record_projection_delete(repo_name, path);
     if let Err(err) = std::fs::remove_file(file_path) {
-        sync.persist_guard.clear(&relative_path);
+        sync.repo.clear_projection_guard(repo_name, path);
         return Err(err.into());
     }
     Ok(())

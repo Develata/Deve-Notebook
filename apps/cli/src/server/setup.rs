@@ -99,54 +99,31 @@ pub(super) fn load_search_service(host_dir: &std::path::Path) -> Result<SearchSe
         .with_context(|| format!("Failed to initialize search service at {:?}", index_path))
 }
 
-/// 启动文件系统监视器 (blocking task)
-pub(super) fn spawn_file_watcher(
+/// 启动每个本地 repo 的 watcher。
+pub(super) fn start_file_watchers(
+    repo: &deve_core::ledger::RepoManager,
     sync_manager: Arc<deve_core::sync::SyncManager>,
-    vault_path: std::path::PathBuf,
     tx: broadcast::Sender<ServerMessage>,
-) -> Result<()> {
-    validate_file_watcher_startup(&vault_path)?;
-    tokio::task::spawn_blocking(move || {
-        use deve_core::watcher::FsEventType;
-
-        let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path).with_callback(
-            move |event| match event {
-                FsEventType::DocChange(msgs) => {
-                    for msg in msgs {
-                        match msg {
-                            ServerMessage::FsChangeDetected { .. } => {
-                                let _ = tx.send(msg);
-                            }
-                            other => {
-                                tracing::error!(
-                                    "Watcher emitted unexpected doc-change message: {:?}",
-                                    other
-                                );
-                            }
-                        }
-                    }
-                }
-                FsEventType::DirChange { repo_id, path } => {
-                    tracing::info!("DirChange detected: repo-scoped refresh ({})", path);
-                    let _ = tx.send(ServerMessage::FsChangeDetected {
-                        repo_id: Some(repo_id),
-                        branch: None,
-                        scope_nonce: None,
-                        path,
-                        change_type: "dir_changed".to_string(),
-                        has_conflict: false,
-                    });
-                }
-            },
-        );
-
-        if let Err(e) = watcher.watch() {
-            tracing::error!("Watcher failed: {:?}", e);
-        }
-    });
-    Ok(())
+) -> Result<Vec<deve_core::models::RepoId>> {
+    let mut ids = Vec::new();
+    for repo_name in repo.list_local_repo_names_for_execution()? {
+        let tx_clone = tx.clone();
+        let callback = Arc::new(move |msg: ServerMessage| {
+            if let ServerMessage::FsChangeDetected { .. } = &msg {
+                let _ = tx_clone.send(msg);
+            }
+        });
+        ids.push(deve_core::sync::watcher::start_repo_watcher(
+            sync_manager.clone(),
+            &repo_name,
+            None,
+            Some(callback),
+        )?);
+    }
+    Ok(ids)
 }
 
+#[cfg(test)]
 fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
     deve_core::watcher::validate_watch_root(vault_path)
         .with_context(|| format!("Watcher startup preflight failed for {:?}", vault_path))

@@ -39,11 +39,12 @@ pub(super) fn rebuild_local_repo(
         if let Some(parent) = file_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        guard.record(
-            &repo.local_repo_workspace_relative(repo_name, repo_path),
-            &rebuilt.content,
-        );
-        std::fs::write(&file_path, rebuilt.content)?;
+        let root_relative = repo.local_repo_workspace_relative(repo_name, repo_path);
+        guard.record(&root_relative, &rebuilt.content);
+        if let Err(err) = std::fs::write(&file_path, rebuilt.content) {
+            guard.clear(&root_relative);
+            return Err(err.into());
+        }
         repo.bind_workspace_inode_in_local_repo(repo_name, repo_path, *doc_id)?;
     }
 
@@ -92,8 +93,12 @@ fn prune_stale_paths(
         }
         let is_md = path.extension().and_then(|ext| ext.to_str()) == Some("md");
         if is_md && !expected_docs.contains_key(&child_rel) {
-            guard.record_delete(&format!("{repo_name}/{child_rel}"));
-            std::fs::remove_file(path)?;
+            let root_relative = format!("{repo_name}/{child_rel}");
+            guard.record_delete(&root_relative);
+            if let Err(err) = std::fs::remove_file(path) {
+                guard.clear(&root_relative);
+                return Err(err.into());
+            }
         }
     }
     let root_rel = relative.is_empty() || expected_dirs.contains(relative);

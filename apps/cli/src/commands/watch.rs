@@ -1,4 +1,4 @@
-﻿// apps/cli/src/commands/watch.rs
+// apps/cli/src/commands/watch.rs
 //! # Watch 命令
 //!
 //! 启动文件系统监听，实时捕获变更并同步到 Ledger。
@@ -31,7 +31,18 @@ pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Resul
         repo.clone(),
         vault_path.to_path_buf(),
     )?);
-    sync_manager.scan()?;
+    let repo_ids = repo
+        .list_local_repo_names_for_execution()?
+        .into_iter()
+        .map(|repo_name| {
+            deve_core::sync::watcher::start_repo_watcher(
+                sync_manager.clone(),
+                &repo_name,
+                None,
+                None,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     // 3. 注册 Ctrl+C 信号处理 (必须在 watcher.watch() 之前)
     ctrlc::set_handler(move || {
@@ -41,16 +52,17 @@ pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Resul
     .expect("无法设置 Ctrl+C 处理器");
 
     // 4. 创建并启动 Watcher
-    let watcher = deve_core::watcher::Watcher::new(sync_manager, vault_path.to_path_buf());
     println!("启动 Watcher: {:?}", vault_path);
     println!("按 Ctrl+C 停止...");
-    watcher.watch()?;
 
     // 5. 阻塞主线程直到收到退出信号
     while RUNNING.load(Ordering::SeqCst) {
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
+    for repo_id in repo_ids {
+        deve_core::sync::watcher::stop_repo_watcher(repo_id)?;
+    }
     println!("Watcher 已停止。");
     Ok(())
 }

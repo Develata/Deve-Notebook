@@ -62,7 +62,10 @@ pub(super) fn materialize_local_repo(
             &repo.local_repo_workspace_relative(repo_name, &repo_path),
             &rebuilt.content,
         );
-        std::fs::write(&file_path, rebuilt.content)?;
+        if let Err(err) = std::fs::write(&file_path, rebuilt.content) {
+            guard.clear(&repo.local_repo_workspace_relative(repo_name, &repo_path));
+            return Err(err.into());
+        }
         repo.bind_workspace_inode_in_local_repo(repo_name, &repo_path, doc_id)?;
     }
 

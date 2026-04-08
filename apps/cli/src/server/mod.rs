@@ -213,7 +213,7 @@ pub async fn start_server(
     ));
     let tree_manager = Arc::new(RepoTreeRegistry::new());
 
-    setup::spawn_file_watcher(sync_manager.clone(), vault_path.clone(), tx.clone())?;
+    let watcher_ids = setup::start_file_watchers(repo.as_ref(), sync_manager.clone(), tx.clone())?;
 
     let app_state = Arc::new(AppState {
         repo: repo.clone(),
@@ -235,11 +235,15 @@ pub async fn start_server(
     println!("Server running on ws://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(
+    let result = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .await?;
+    .await;
+    for repo_id in watcher_ids {
+        let _ = deve_core::sync::watcher::stop_repo_watcher(repo_id);
+    }
+    result?;
     Ok(())
 }
 
