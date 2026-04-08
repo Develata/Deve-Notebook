@@ -1,4 +1,8 @@
 // crates/core/src/source_control/pending_fs.rs
+//! plan_ref:
+//!   - 04_storage.md §Inode/DocId Mapping & Watcher Service
+//!   - 04_storage.md §Watcher Architecture
+//!
 //! # 待确认文件变更管理 (Pending FS Ops)
 //!
 //! 存储 Watcher 检测到但用户尚未确认的文件系统变更。
@@ -6,6 +10,12 @@
 //!
 //! **不变量**: pending_fs_ops 中的条目永远不会自动进入 Ledger，
 //! 必须经过用户显式 Stage → Commit 才会生成 Op。
+//!
+//! **Idempotency Invariant (幂等性不变量)**:
+//! 重复信号触发同一 `(path, status, hash, ...)` 的 upsert **MUST** 产生
+//! 字节相同的 side table 行。`detected_at` 仅在语义字段变化时更新；
+//! 若所有语义字段与已存在条目相等，`upsert` **MUST** 跳过写入，
+//! 保持原行（含原 `detected_at`）不变。详见 plan §Watcher Architecture。
 //!
 //! **存储结构**:
 //! - Table: `pending_fs_ops` (path -> PendingFsEntry 序列化字节)
@@ -16,6 +26,10 @@ mod index;
 mod query;
 #[path = "pending_fs_target.rs"]
 mod target;
+
+#[cfg(test)]
+#[path = "pending_fs_idempotency_test.rs"]
+mod idempotency_test;
 
 use crate::ledger::schema::PENDING_FS_OPS;
 use crate::models::DocId;
@@ -61,32 +75,62 @@ pub fn init_table(db: &Database) -> Result<()> {
     Ok(())
 }
 
+/// 判断两条 entry 的语义字段是否完全相等（忽略 `detected_at`）
+fn semantic_eq(a: &PendingFsEntry, b: &PendingFsEntry) -> bool {
+    a.path == b.path
+        && a.renamed_from == b.renamed_from
+        && a.doc_id == b.doc_id
+        && a.change_type == b.change_type
+        && a.content_hash == b.content_hash
+        && a.has_conflict == b.has_conflict
+}
+
 /// 插入或更新一条待确认变更
 ///
 /// **Invariant**: 同一 path 只保留最新的 entry（幂等写入）。
+/// 若新 entry 与已有行的语义字段完全相等，**MUST** 跳过写入，
+/// 保持原行（含 `detected_at`）字节不变，以满足 plan §Watcher Architecture
+/// 的重复信号幂等性要求。
 pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
-    let bytes = serde_json::to_vec(entry)?;
     let write_txn = db.begin_write()?;
+    let mut skipped = false;
     {
         let mut table = write_txn.open_table(PENDING_FS_OPS)?;
         let previous = table
             .get(entry.path.as_str())?
             .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
             .transpose()?;
-        index::replace(
-            &write_txn,
-            previous.as_ref().and_then(|item| item.doc_id),
-            entry.doc_id,
-            &entry.path,
-        )?;
-        table.insert(entry.path.as_str(), bytes.as_slice())?;
+        if let Some(prev) = previous.as_ref()
+            && semantic_eq(prev, entry)
+        {
+            // Byte-stable idempotency: leave existing row untouched.
+            skipped = true;
+        }
+        if !skipped {
+            let bytes = serde_json::to_vec(entry)?;
+            index::replace(
+                &write_txn,
+                previous.as_ref().and_then(|item| item.doc_id),
+                entry.doc_id,
+                &entry.path,
+            )?;
+            table.insert(entry.path.as_str(), bytes.as_slice())?;
+        }
     }
     write_txn.commit()?;
-    tracing::debug!(
-        "Pending FS upsert: {} ({:?})",
-        entry.path,
-        entry.change_type
-    );
+    if skipped {
+        tracing::trace!(
+            "Pending FS upsert (idempotent skip): {} ({:?})",
+            entry.path,
+            entry.change_type
+        );
+    } else {
+        tracing::debug!(
+            "Pending FS upsert: {} ({:?})",
+            entry.path,
+            entry.change_type
+        );
+    }
     Ok(())
 }
 
