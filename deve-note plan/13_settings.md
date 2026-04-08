@@ -58,6 +58,7 @@
 | `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (仅交换 Vector). |
 | `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
+| `diff.merge_strategy`   | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `07_diff_logic.md §Conflict Resolution`。 |
 
 ### 2.3 AI (人工智能)
 | Key                        | Type   | Default      | Description |

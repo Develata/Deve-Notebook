@@ -99,7 +99,7 @@
     1.  WebLightPeer 通过 `relative /ws`（或显式配置端点）建立连接，并声明自身角色为受限同步端点。
     2.  客户端发送 `SyncHello { repo_id, peer_pubkey, vector, session_proof }`；其中 `repo_id` 是服务器路由与权限校验的主键。
     3.  Server 校验用户会话、仓库访问权限与 `repo_id` 对应的路由上下文，随后绑定该连接到单个 repo。
-    4.  Server 返回 `ServerMessage::SyncHello { peer_id, pub_key, signature, vector }` 作为握手回执，并按 diff 结果追加 `SyncRequest` / `SyncSnapshotRequest` / `SyncPush`。
+    4.  Server 返回 `ServerMessage::SyncHello { repo_id, peer_id, pub_key, signature, vector }` （`repo_id` MUST 回显客户端 step 2 中声明的同一仓库，作为写入闸门与重连恢复主绑定键，权威定义见 `16_web_thin_client_ledger.md §4.3`） 作为握手回执，并按 diff 结果追加 `SyncRequest` / `SyncSnapshotRequest` / `SyncPush`。
     5.  后续 `SyncRequest`、`SyncPush`、`SyncSnapshotRequest`、`SyncPushSnapshot` 与实时同步广播均 **MUST** 沿用同一 `repo_id`，否则服务器必须拒绝或断开连接。
 *   **Deterministic Routing (确定性路由)**:
     *   `SyncHello` **MUST** 提供 `repo_id` 与当前 vector，确保 Server 能决定是走增量同步还是快照回退。

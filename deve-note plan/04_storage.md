@@ -36,7 +36,9 @@
         *   `LEDGER_OPS`: `u64 -> &[u8]` (全局有序日志, Key=SeqNo, Value=Bincode Serialized Entry)
         *   `DOC_OPS`: `u128 -> [u64]` (Multimap, 允许快速检索单一文档的所有变更 Seq)
     *   **Atomic Sequence (原子序号)**:
-        *   `PEER_DOC_SEQ`: `(DocId, PeerId) -> u64`。用于生成严格单调递增的 `LedgerSeq`，防止并发冲突。
+        *   `PEER_DOC_SEQ`: `(DocId, PeerId) -> u64`。**局部序号**，用于单个文档在单个 Peer 维度上的严格单调递增计数（per-doc per-peer），服务于同文档因果序追溯与冲突防护。
+        *   `GlobalSeq`: `u64`，**全局序号**，`LEDGER_OPS` 表的主键，repo 范围内全序。每次向 `L_r` 追加 `LedgerEntry` 时 MUST 原子分配 `GlobalSeq = last_seq + 1`。
+        *   **关系**: `GlobalSeq` 决定 repo 内所有账本事实的落盘顺序与全序关系；`PEER_DOC_SEQ` 仅作为 `LedgerEntry` 内嵌字段，不决定 `LEDGER_OPS` 主键。`LedgerSeq`（术语见 `01 §LedgerSeq`）作为 Peer 维度计数器对应前者；`GlobalSeq` 则是 `01` 中"全序关系"的物理载体。两者分工明确，MUST NOT 混用。
 *   **Repo Runtime Directory**: 系统使用 `vault/<repo_name>/.notegit/` 存储 repo-scoped 运行时元数据（repo keys、pending/staged side tables、迁移归档等）。
     *   **Location**: `.notegit/` 位于对应 Repo 工作区根目录下。
     *   **Watcher Ignore**: `.notegit/` **MUST** 被 Watcher 忽略（不触发变更检测）。
@@ -198,6 +200,39 @@ Intent -> Ledger Facts -> Snapshot / Tree Projection -> Vault
     *   **Idempotency (幂等性)**: 重复的信号触发 **MUST** 产生相同的候选结果状态。
     *   **Stable Identity**: 只要文件逻辑实体未被用户确认删除，`NodeId` **MUST** 保持稳定。
     *   **Repo Isolation**: Watcher 生成的 side table 数据 **MUST** 严格绑定当前 Repo，严禁跨 Repo 污染。
+
+## Watcher Architecture (监听架构)
+
+本节是 `Inode/DocId Mapping & Watcher Service` 的架构补充，定义 Watcher 服务在跨平台、启动、回环、溢出等场景下的强制约束。
+
+*   **Backend Abstraction (后端抽象)**:
+    *   核心 MUST 定义统一的 `FsWatcherBackend` trait，所有平台后端实现 MUST 提供语义一致的 `Create / Modify / Delete / Rename` 事件流。
+    *   必须实现的后端：Desktop（Linux/macOS/Windows，基于 `notify` + `notify-debouncer-full`）、Android（`FileObserver` / JNI）、iOS（`DispatchSource` / `kqueue`）。
+    *   各平台差异（inotify rename pair、FSEvents 历史回放、ReadDirectoryChangesW 缓冲）MUST 在后端层归一化后交给统一的 dispatch 层。
+*   **Initialization Semantics (fail-closed 启动语义)**:
+    *   Repo 打开流程 MUST 以 `watcher_start` 作为最后一步。
+    *   Watcher 初始化失败（句柄耗尽、权限拒绝、平台不支持）MUST 导致 `open_repo` 返回 `Err(WatcherInitFailed)`。
+    *   系统 MUST NOT 静默降级为 scan-only 模式；不具备实时监听能力的 repo MUST 视为不可打开状态。
+*   **Startup Reconciliation (启动对齐)**:
+    *   Watcher 启动前 MUST 对 Vault 执行一次全量 scan，消除启动前的外部修改盲区。
+    *   全量 scan 结果与 watcher 首批事件之间的去重由 `pending_fs_ops_r` 的幂等性保证（重复信号 MUST 产生字节相同的 side table 行）。
+*   **Self-Write Suppression (投影回环防护)**:
+    *   系统自发写盘路径（`projection_io`、`persist_doc`、commit apply）MUST 在写前向 repo-local 的 `WriteSuppressor` 注册写回指纹 `(path, expected_mtime | content_hash)`。
+    *   Watcher dispatch 在匹配窗口内 MUST 丢弃与指纹匹配的自写事件。
+    *   `WriteSuppressor` 状态 MUST 按 repo 隔离，MUST NOT 在全局单例中共享，防止跨 repo 事件串扰。
+    *   未匹配指纹的事件 MUST 作为真实外部编辑进入 `pending_fs_ops_r`。
+*   **Event Overflow (事件溢出)**:
+    *   底层后端报告 queue overflow / dropped events（Linux `IN_Q_OVERFLOW`、Windows `ERROR_NOTIFY_ENUM_DIR` 等）时，watcher MUST 触发一次全量 reconcile 扫描。
+    *   全量 reconcile 完成前，watcher MUST 暂停处理后续增量事件，防止基于残缺状态产生错误候选。
+    *   Reconcile 必须可重入，MUST NOT 依赖"只执行一次"的隐式约束。
+*   **Debounce Window (合并窗口)**:
+    *   Debounce 窗口用于合并同一路径的 burst 事件，窗口语义为"最终状态一致"。
+    *   窗口内最后一次事件的语义为准；中间态 MUST NOT 独立落入 `pending_fs_ops_r`。
+    *   默认窗口 SHOULD 为 50–200ms，可通过配置调整，但 MUST NOT 为 0（零窗口会破坏原子写/临时文件场景的正确性）。
+*   **Lifecycle (生命周期)**:
+    *   Repo 关闭 / 切换 MUST 同步停止对应 watcher 并 drain 未处理事件。
+    *   Drop Watcher 实例时 MUST 释放底层 OS 句柄；泄漏 inotify watch 属于 fail-closed 违规。
+    *   同一 repo MUST NOT 同时存在多个 watcher 实例（由 `registry` 表强制）。
 
 ## Data Integrity & Recovery (数据完整性与灾备)
 

@@ -82,7 +82,7 @@
     *   **Read**: 浏览、搜索、查看 Diff。
     *   **Copy/Export**: 将内容复制到剪贴板，或导出为文件。
     *   **Merge into Local**: 将 Spectator 视角的 Ledger 合并入 **Local Branch** (Pull 操作)。
-    *   **Podman Run**: 在隔离沙箱中运行代码 (不修改 Ledger)。
+    *   **Podman Run**: 在隔离沙箱中运行代码 (不修改 Ledger)。**(Future / Not Required in Current Phase)** —— Calculation Runtime 当前不在实现范围内，权威定义见 `17_plugins.md §Calculation Runtime`。
 *   **Prohibitions (禁止的操作)**:
     *   **No Modification**: 严禁修改、删除、重命名 Spectator 视图下的任何文件。
     *   **No Write-Back**: 严禁将变更直接回写到 Remote Ledger。

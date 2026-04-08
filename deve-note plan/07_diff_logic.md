@@ -20,7 +20,7 @@
 ## Two Diff Domains (两层 Diff 域)
 
 *   **Domain 2 — Working Directory（工作区域）**：
-    *   Watcher 监控 Vault (Store A) 的 markdown 文件变化。
+    *   Watcher 监控 Vault (Store A) 的 markdown 文件变化；**`.notegit/` 目录 MUST 被 Watcher 忽略**（权威定义见 `04_storage.md §Repo Runtime Directory`）。
     *   检测到变更后，**MUST** 写入 `pending_fs_ops` 表（存储于 `.notegit/pending`），**MUST NOT** 直接生成 Ledger Facts 入 Ledger。
     *   通过 WebSocket `FsChangeDetected` 消息实时通知前端，前端显示在 "Changes" 列表。
     *   用户可执行 Stage → 变更进入 "Staged Changes"（写入 `.notegit/staged` 表）。

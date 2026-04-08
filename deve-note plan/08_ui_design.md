@@ -103,6 +103,13 @@ apps/web/src/components/
 }
 ```
 
+**边界约束（与 `16_web_thin_client_ledger.md` 的兼容性）**：
+
+- `deve_config` 的内容 MUST 严格限定为**纯 UI 偏好**：主题、字体、侧栏状态、语言、近期面板等无业务语义的前端呈现参数。
+- `deve_config` MUST NOT 存储任何业务真相的私有副本：严禁包含 `peer_identity`、`session_token`、`repo_vector`、离线缓存内容、`client_op_id` 计数器、`scope_nonce` 等具有一致性语义的字段。
+- 用户清理浏览器站点数据后，`deve_config` 丢失 MUST NOT 影响 Server Ledger 真值，仅回退到默认 UI 偏好。
+- 分层存储规则以 `16 §Browser Storage Layering` 为权威来源；本章仅描述 UI prefs 这一层。
+
 ## 本章相关命令
 
 *   `Cmd+Shift+P`: 呼出 Command Palette。

@@ -34,9 +34,18 @@
     *   **Definition**: 内存中维护的文件树结构缓存 $T_{mem}$ (Managed by `TreeManager`)。
     *   **Role**: 用于快速生成目录树 UI，减少 IO 扫描，并生成 `TreeDelta` 推送前端。
     *   **Authority Rule**: 它是 Structure Facts projection 的内存视图，而不是独立真值源。
-*   **DocId**: 图（Graph）中的不变节点标识。
+*   **NodeId**: 树（Tree）中任意节点（文件或目录）的不变标识。
     *   定义为 128-bit UUID v4。
+    *   在时空上唯一标识一个节点实体；目录与文件统一为 `Node`，以 `NodeId` 为主键。
+    *   **Layer**: 结构层标识（Structure Layer），用于表达父子关系、重命名、移动。
+*   **DocId**: 图（Graph）中的不变节点标识，**仅对 `kind = File` 的节点有效**。
+    *   定义为 128-bit UUID v4（与 `NodeId` 同类型）。
     *   在时空上唯一标识一个逻辑文档，$DocId \perp FilePath$（DocId 正交于文件路径）。
+    *   **Layer**: 内容层标识（Content Layer），用于表达文档内容演化（patch / snapshot）。
+*   **NodeId vs DocId Relationship (关系形式化)**:
+    *   对 `kind = File` 的节点：`doc_id == node_id`（同一 UUID 在结构层与内容层复用），即文件节点的结构身份与内容身份统一。
+    *   对 `kind = Dir` 的节点：仅有 `node_id`，`doc_id = None`。
+    *   **Rule**: Structure Facts 的主键 MUST 是 `NodeId`；Content Facts 的主键 MUST 是 `DocId`。业务层 MUST NOT 交换使用两者。
 *   **Path Mapping (路径映射)**：由 Structure Facts fold 出的一个派生函数 $M: DocId \leftrightarrow FilePath$。
     *   **Description (描述)**：文档的唯一标识（DocId）和它在文件系统中的位置（Path）是分离的。移动文件不会改变文档本身 ID，只会改变投影后的路径结果。
     *   文件重命名/移动操作通过 Structure Facts 改变路径投影，不再依赖 metadata 表副作用直写。

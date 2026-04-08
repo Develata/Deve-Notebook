@@ -56,6 +56,15 @@ State_auth = L_confirmed
 - `client_id`：客户端实例标识
 - `client_op_id`：该次写入意图在客户端内的唯一标识
 
+**`client_op_id` 规范**：
+
+- **Type**: `u64`，客户端单调递增计数器。
+- **Scope**: 唯一性作用域为 `(client_id, client_op_id)` 组合；服务端 MUST 以此复合键做幂等判定。
+- **Initialization**: 每次 `client_id` 生成（通常为 tab 加载或 session 重建）时 MUST 从 `0` 或 `1` 起算，MUST NOT 跨 `client_id` 复用。
+- **Generation**: 由浏览器端在本地生成，MUST NOT 依赖服务端分配，以保证离线编辑也能形成稳定 ID。
+- **Server Idempotency**: 服务端 MUST 对同一 `(client_id, client_op_id)` 的重复 `Edit` 做幂等处理——首次落账本并返回 `Ack`，后续重发 MUST 返回原始 `Ack`（携带相同 `seq`），MUST NOT 重复写入。
+- **Persistence**: 服务端 MUST 在 `PendingAck` 生命周期内保留 `(client_id, client_op_id) -> seq` 的去重记录，至少覆盖 reconnect window。
+
 ### 4.2 Commit Acknowledgement
 
 `ServerMessage::Ack` MUST 回显：
@@ -75,6 +84,15 @@ State_auth = L_confirmed
 - 写入闸门必须严格绑定当前仓库。
 - 旧仓库的延迟握手消息不得把新仓库误标成“可写”。
 - `SwitchRepo / SwitchBranch` 的 `switch_nonce` MUST 严格大于当前 `scope_nonce`。
+
+**`scope_nonce` / `switch_nonce` 规范**：
+
+- **Type**: `u64`，服务端权威分配，per-connection 生命周期。
+- **Initialization**: 连接建立后首次 `SyncHello` 回执时，服务端 MUST 初始化 `scope_nonce = 0`。
+- **Monotonicity**: 每次成功的 `SwitchRepo / SwitchBranch` 使服务端将 `scope_nonce` 原子递增为新的 `switch_nonce` 值，客户端 MUST 以新值替换本地记录。
+- **Validation**: 服务端收到 `SwitchRepo / SwitchBranch` 时，MUST 校验 `switch_nonce > current scope_nonce`，否则 MUST 返回 `SC_STALE_SCOPE` 错误并保持当前 scope 不变。
+- **Scope**: 仅 per-connection 有效；连接断开重建后 `scope_nonce` MUST 重置为 `0`，无需持久化。服务端重启后同样视为新连接。
+- **Rationale**: 防止旧 scope 的延迟消息（包括 `Edit`、`Ack`）在 scope 切换后被误接受，形成跨 repo 写入污染。
 - 浏览器刷新、重连与 scope 恢复 MUST 以 `repo_id` 作为主绑定键，`repo_name` 仅可作辅助提示或兼容恢复。
 - 当用户从 `Remote Branch` 切回 `Local` 时，客户端 / 服务端 MAY 恢复最近一次稳定的本地 repo，但解析失败时 MUST 回退到 UUID-First / Fail-Closed 规则。
 
