@@ -12,7 +12,6 @@ use super::{PendingFsEntry, init_table, upsert};
 use crate::ledger::schema::PENDING_FS_OPS;
 use crate::source_control::ChangeStatus;
 use redb::Database;
-use redb::ReadableTable;
 use tempfile::TempDir;
 
 fn new_db() -> (TempDir, Database) {
@@ -69,10 +68,7 @@ fn semantic_change_rewrites_row() {
     upsert(&db, &changed).unwrap();
     let after = read_raw(&db, "foo/bar.md");
 
-    assert_ne!(
-        before, after,
-        "semantic field change must rewrite the row"
-    );
+    assert_ne!(before, after, "semantic field change must rewrite the row");
 }
 
 #[test]

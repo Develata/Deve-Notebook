@@ -93,7 +93,7 @@ fn append_generated_client_op_rejects_out_of_bounds_content_range() -> Result<()
 }
 
 fn init_repo(root: &std::path::Path) -> Result<RepoManager> {
-    RepoManager::init(&root.join("ledger"), 2, None, None)
+    RepoManager::init(root.join("ledger"), 2, None, None)
 }
 
 fn append_client_op(
