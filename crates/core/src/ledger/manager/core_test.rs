@@ -1,33 +1,12 @@
 use super::RepoManager;
-use crate::ledger::{REPO_METADATA, RepoInfo};
+use crate::ledger::RepoInfo;
 
 fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) -> uuid::Uuid {
-    let local_dir = ledger_dir.join("local");
-    std::fs::create_dir_all(&local_dir).expect("create local dir");
-    let path = local_dir.join(format!("{name}.redb"));
-    let db = redb::Database::create(&path).expect("create secondary db");
-    crate::ledger::source_control::init_tables(&db).expect("init source control tables");
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA).expect("repo metadata");
-    txn.commit().expect("commit metadata table");
-    let repo_id = uuid::Uuid::new_v4();
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(
-            &0,
-            bincode::serialize(&RepoInfo {
-                uuid: repo_id,
-                name: name.into(),
-                url: Some(url.into()),
-            })
-            .expect("serialize")
-            .as_slice(),
-        )
-        .expect("write metadata");
-    txn.commit().expect("commit metadata");
-    drop(db);
-    repo_id
+    let repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
+    repo.get_repo_info()
+        .expect("secondary info")
+        .expect("secondary metadata")
+        .uuid
 }
 
 #[test]

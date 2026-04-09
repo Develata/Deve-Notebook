@@ -44,23 +44,8 @@ mod tests {
     use tempfile::TempDir;
 
     fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) {
-        let local_dir = ledger_dir.join("local");
-        std::fs::create_dir_all(&local_dir).expect("create local dir");
-        let path = local_dir.join(format!("{name}.redb"));
-        let db = redb::Database::create(&path).expect("create secondary db");
-        crate::ledger::source_control::init_tables(&db).expect("init source control tables");
-        let txn = db.begin_write().expect("write txn");
-        txn.open_table(REPO_METADATA).expect("repo metadata");
-        txn.commit().expect("commit metadata table");
-        write_info(
-            &db,
-            &RepoInfo {
-                uuid: uuid::Uuid::new_v4(),
-                name: name.into(),
-                url: Some(url.into()),
-            },
-        );
-        drop(db);
+        let _repo =
+            RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
     }
 
     fn write_info(db: &redb::Database, info: &RepoInfo) {
