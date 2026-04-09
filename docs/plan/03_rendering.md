@@ -1,174 +1,113 @@
-# 03_rendering.md - 渲染篇 (Rendering)
+# 03_rendering.md - 渲染工程蓝图
 
-## 编辑器内核 (The Editor Kernel)
+本章只定义 Markdown 渲染与编辑投影的工程实现，不描述用户功能文案。功能语义见 [../features/03_rendering.md](../features/03_rendering.md)，自动化验收见 [../acceptance-cases/03_rendering.md](../acceptance-cases/03_rendering.md)。
 
-*   **Input Layer**: Web / Desktop 编辑器输入层统一采用 `CodeMirror 6`；移动端在共享前端代码基础上遵循同一模型。
-*   **State Layer**: 绑定自研 Ledger-Facts-based 状态（`Content Facts + Structure Facts`），作为单一真值源。
-*   **Projection Layer (投影层)**: 负责将 Ledger 状态不仅呈现为 **Vault** 中的物理文件，还实时渲染为可视化的视图。支持 Block Mode, Source Mode, 和 Live Preview 三种。
-*   **Technology Stack**:
-	*   **Default (Light Core)**：CodeMirror 6 Source Mode (对应 **Projection** 的纯文本形态)。
-	*   **Extension (Rich)**：Milkdown (Prosemirror) Live Preview (提供富文本交互)。
+## 1. 目标
 
-### 大文档渲染策略 (Large Doc Rendering)
-*   **First Paint**: 打开文档时优先渲染首屏 + 预缓冲区。
-*   **Virtual Render**: 文本已完整加载，但仅渲染可视区。
-*   **Progressive Prefetch**: 后台自适应分批预加载剩余内容。
-*   **Search Gate**: 预加载完成前禁用全文搜索。
+- 保持 `Source-First`：源码文本始终是唯一可编辑真相。
+- 所有可见渲染都是 projection，不得成为第二真相。
+- Web / Desktop / Mobile 共享同一文档投影规则，只允许壳层适配不同。
 
-### Interaction Philosophy (交互哲学)
-*   **Source-First (源码优先)**: 编辑器的核心是文本。任何渲染效果 (Widgets/Decorations) 均视为对源码的"增强"。
-*   **Cursor Reveal (光标揭示)**:
-    *   **Rule**: 当光标 **接触 (Touch)** 或 **进入 (Inside)** 渲染元素的源码范围时，渲染层 **MUST** 立即让位 (Hidden/Removed)，将原始 Markdown 源码完整呈现给用户。
-    *   **Scope**: 此规则适用于所有渲染组件，包括但不限于：
-        *   **Math**: Inline (`$...$`) & Block (`$$...$$`).
-        *   **Diagrams**: Mermaid Code Blocks.
-        *   **Inline Styles**: Bold/Italic/Strikethrough Syntax Marks.
-        *   **Frontmatter**: YAML metadata block.
-    *   **Goal**: 确保用户在编辑时永远面对的是"真理" (Source Code)，而在阅读时享受的是"美观" (Rendered View)。
-*   **Link Navigation (链接跳转)**:
-    *   **Default State**: 渲染视图中的链接（Links）在默认状态下 **不可直接点击**（Cursor: Text/Default），以防止在编辑或选择文本时误触。
-    *   **Activation**: 仅当用户按住 **Ctrl** (Windows/Linux) 或 **Cmd/Meta** (macOS) 键时，链接才通过 CSS 变为可点击状态（Cursor: Pointer + Underline），并允许点击跳转。
-    *   **Implementation Constraint**:
-        *   **Global State**: 使用 Rust/WASM 监听全局 `keydown/keyup` 事件，切换 `body.is-ctrl-pressed` 类。
-        *   **Zero-Copy Logic**: CSS 负责视觉反馈，Rust 负责事件拦截，避免昂贵的 JS 逐个元素绑定。
-        *   **Security**: 所有渲染的外部链接 **MUST** 强制包含 `target="_blank"` 与 `rel="noopener noreferrer"`。
+## 2. 权威实体
 
-## Markdown 解析规则 (Parsing Rules)
+- `Document Text`
+  - 权威文本内容，来自 ledger/document runtime。
+- `Selection / Cursor`
+  - 编辑态局部状态，用于驱动 reveal/hide。
+- `Render Projection`
+  - 从文本派生出的装饰、widget、outline、preview token。
+- `View Adapter`
+  - CodeMirror / shell 对 projection 的平台呈现层。
 
-### Phase 1: Block Level Parsing (块级解析)
-1.  **Fenced Code (```)**: 优先级最高 (Highest Priority)。解析器 **MUST** 将其视为原子块，内部忽略所有 Markdown 标记（包括 `$$`），仅执行语法高亮。
-2.  **Block Math ($$)**: 优先级次高。解析器 **MUST** 将其视为原子块，内容直接传递给 LaTeX 引擎。
-3.  **HTML Block**: 第三优先级。防止公式内的 `< >` 符号破坏 HTML 结构。
-4.  **Structure Elements**: Header, List, Quote, Table 确立结构后，其内容进入行内扫描阶段。
+## 3. 分层
 
-### Phase 2: Inline Level Parsing (行内解析)
-*   **Principle**: First come, first served (先匹配者优先)。高优先级元素内部 **MUST NOT** 渲染低优先级元素。
-1.  **Inline Code (` `)**: 优先级最高。解析器 **MUST** 优先消耗反引号。内部不解析转义字符、公式或样式标记 (e.g., `echo $PATH` 中的 `$` 被保护为普通字符)。
-2.  **Escaping (\)**: 次高。转义紧随其后的单个字符。
-    *   **MUST** 正确处理上下文相关的特殊转义：`\$` (Prevent Math), `\|` (Prevent Table Split), `\` (Literal Backslash)。
-    *   e.g., `\|` 在表格中应渲染为竖线而不切分单元格；`\$` 应渲染为美元符号不触发公式。
-3.  **Inline Math ($...$)**: 核心优先级。视为原子节点，内容传递给 LaTeX 引擎。受 Inline Code 和 Escaping 保护。
-4.  **Auto Link (<url>)**: 防止 URL 中的特殊字符触发格式解析。
-5.  **Containers (Links / Images)**: 允许内部嵌套样式 (e.g., Bold)。
-6.  **Styles**: **Bold** > *Italic* > ~~Strike~~.
+### 3.1 Authority
 
-## 核心渲染能力 (Core Rendering Capabilities)
+- 文本内容与写入确认由 document runtime 控制。
+- 渲染层不得直接写入 ledger、repo state 或 source control state。
 
-本节定义的渲染组件均为系统内置的第一类公民 (First-Class Citizens)，随主包同步加载，具备一致的交互哲学。
+### 3.2 Projection
 
-### 1. 数学公式 (Mathematics)
-*   **Engine**: 默认集成 **KaTeX** (性能优先) 或 **MathJax 3** (精度优先)。
-*   **Typography**: 代码体使用 JetBrains Mono/Fira Code；正文体使用 Merriweather 等衬线字体。
-*   **Delimiters**: Inline `$...$`, Block `$$...$$`.
-*   **Heuristic Logic**: 仅当 `$` 紧邻非空字符时触发渲染。
-*   **Interaction Flow**:
-    1.  **Trigger**: 输入 `$$` 自动切换为 Block Math 状态。
-    2.  **Editing**: 输入 LaTeX 源码，即时渲染 Live Preview。
-    3.  **Completion**: 按下 `Ctrl+Enter` 折叠源码，仅显示渲染后的 SVG 结果。
-    4.  **Protection**: 复制公式时拦截并写入 LaTeX 源码。
+- Markdown parse、syntax decoration、outline、math/diagram widget 都属于 projection。
+- projection 必须可重建，不得持久化为业务真相。
 
-### 2. Mermaid 图表 (Diagrams)
-*   **Syntax**: ` ```mermaid ` 代码块。
-*   **Rendering Logic**: 静态打包，无网络请求，DOM 感知。
-*   **Sizing Strategy**:
-    *   **Constraint**: 容器高度 **Strictly Equals** 源码行数高度。
-    *   **Scaling**: 内容 (SVG) 强制 `100%` 填充并保比 (`preserveAspectRatio="meet"`).
-    *   **Zoom**: 通过添加换行符增加高度来放大图表。
+### 3.3 View
 
-### 3. 标准富文本扩展 (Rich Text Widgets)
+- 视图只消费 projection 和 control surface。
+- 显示层不得直接修改文档真值，只能发出明确 control/intent。
 
-以下扩展增强了标准 Markdown 的表现力：
+## 4. 运行时管线
 
-*   **Smart Tables (智能表格)**:
-    *   **Syntax**: GFM Table Syntax.
-    *   **Behavior**: 渲染为样式化的 HTML `<table>`。
-*   **Interactive Task Lists (交互式任务列表)**:
-    *   **Syntax**: `- [ ]` / `- [x]`.
-    *   **Behavior**: 渲染为可点击的 Checkbox，点击即修改源码。
-*   **List Markers (列表标记)**:
-    *   **Target**: Bullet lists (`-`, `*`) and Ordered lists (`1.`).
-    *   **Behavior**: 将 Markdown 标记 (`-`) 替换为视觉符号 (e.g., `○` or `•`)，有序列表保持数字。
-    *   **Implementation**: `list_marker.js` (Decoration Widget).
-*   **Inline Images (行内图片)**:
-    *   **Syntax**: `![alt](url)`.
-    *   **Behavior**: 渲染为受限宽高的行内图片 (`max-height: 400px`)。
-*   **Block Styling (块级样式)**:
-    *   **Target**: Fenced Code / Blockquotes.
-    *   **Behavior**: 为整行添加背景色装饰 (`cm-code-block-line`, `cm-blockquote-line`)。
-    *   **Note**: 唯一不受光标揭示逻辑影响的持久化装饰。
-*   **Hybrid View (混合视图)**:
-    *   **Scope**: Headings (`#`), Emphasis (`*`, `_`), Strikethrough (`~~`), Quotes (`>`).
-    *   **Behavior**: 当光标离开元素范围时，自动隐藏 Markdown 语法标记；光标进入时显示。
-*   **Frontmatter Support (元数据支持)**:
-    *   **Syntax**: YAML Frontmatter (`---` ... `---`).
-    *   **Behavior**: 自动识别并提供特殊的背景样式 (`cm-frontmatter-block`)。
-    *   **Cursor Reveal**: 光标移出区域时隐藏首尾 `---` 分隔符，仅保留内容区域的视觉提示。
+1. document runtime 提供当前文档文本与选择状态。
+2. rendering runtime 对文本生成 syntax tree / projection fragments。
+3. projection 输出：
+   - inline / block decorations
+   - math / mermaid widgets
+   - task-list control mapping
+   - outline model
+   - link activation hints
+4. platform adapter 把 projection 映射到具体视图。
 
-### 4. 代码块 (Code Blocks)
-*   **Syntax**: Fenced Code (` ``` `).
-*   **Toolbar**: 渲染的代码块右上角 **MUST** 显示两个按钮（从左到右）：
-    *   **Copy**: 点击复制块内所有内容。
-    *   **Ellipsis (...)**: 点击唤出菜单。
-*   **Menu Extensibility**: ✅ **DONE**
-    *   **Plugin API**: 通过 `window.deve_code_actions` 注册 Action。
-    *   **Toggle Behavior**: 再次点击省略号关闭菜单；点击外部也可关闭。
-    *   **Empty State**: 如果没有选项，显示 "No actions available"。
-    *   **Default Actions**: "Run Code", "Send to AI" (Console placeholder).
+## 5. 状态机
 
-### 5. 深度嵌套与混合列表 (The Nested Hell)
+### 5.1 文档渲染状态
 
-*   **Definition**: 测试列表、引用、代码块与数学公式的混合递归嵌套能力。
-*   **Rendering Logic**: 渲染引擎 **MUST** 支持任意层级的递归嵌套 (Recursive Nesting)，不得出现渲染崩坏或样式错位。
-*   **Test Case Criteria (验收标准)**:
-    *   **Indentation (缩进)**: 每一层嵌套 **MUST** 具有清晰的视觉缩进 (Visual Indentation)。
-        *   **Implementation**: 使用 CSS Variable `--depth` 结合 `linear-gradient` 动态计算背景。
-        *   **Formula**: `calc(var(--bq-indent-step) * (var(--depth) - 1))` 用于计算边框线偏移量。
-    *   **Context Preservation (上下文保留)**:
-        *   引用块内的代码块 **MUST** 使用多层背景 (`background-image`) 叠加：底层为引用块边框线，顶层为代码块背景色。
-        *   具体逻辑见 `apps/web/style/_code-block.css`.
-    *   **Complexity Support**: 支持 List -> Blockquote -> List -> Code/Math 的混合结构。
+- `Empty`
+- `SourceReady`
+- `Projected`
+- `RevealActive`
+- `Degraded`
 
-## Markdown 语法限制 (Syntax Whitelist)
+### 5.2 转换规则
 
-### 块级元素 (Block Elements)
-*   **Headings**: `# H1` 到 `###### H6`。
-*   **Paragraphs**: 普通文本段落。
-*   **Blockquotes**: `> 引用`，支持嵌套。
-    *   **Callouts (Admonitions)**: `> [!NOTE]` 语法，支持 INFO, CAUTION, TIP 等类型。
-*   **Lists**: 无序 `-, *, +`，有序 `1.`，任务 `- [ ]` (GFM)。
-*   **Code Blocks**: Fenced Code ` ```language `，支持语法高亮。
-    *   **Indented Code**: 4个空格缩进的代码块。
-    *   **Mermaid**: ` ```mermaid ` 块自动渲染为图表。
-*   **Math Blocks**: `$$...$$` (LaTeX 内容)。
-*   **Tables**: GFM 风格 `| col | col |`，支持对齐语法 `:---`。
-*   **Horizontal Rules**: `---`, `***`。
-*   **HTML Blocks**: 仅支持 `<br>` 换行标签。其他 HTML 标签将被过滤。
-*   **Footnotes Definitions**: `[^1]: ...`。
+- `OpenDoc -> SourceReady`
+- `ProjectionBuilt -> Projected`
+- `CursorTouchesRenderedRange -> RevealActive`
+- `CursorLeavesRenderedRange -> Projected`
+- `RendererUnavailable / ParseGuardTriggered -> Degraded`
 
-### 行内元素 (Inline Elements)
-*   **Code**: `` `code` ``。
-*   **Math**: `$ ... $` (LaTeX 内容)。
-*   **Links**: `[text](url "title")` 及自动链接 `<http://...>`。
-    *   **WikiLinks**: `[[Link]]` 或 `[[Link|Alias]]`。支持内部文档跳转。
-*   **Line Breaks**:
-    *   **GFM Hard Breaks**: 每一个换行符（回车）均视为硬换行。
-    *   **HTML**: 支持 `<br>` 标签强制换行。
-*   **Emoji**: 支持短代码语法 `:smile:` (😃)。
-*   **Footnote Refs**: `[^1]`。
-*   **Images**: `![alt](src)`。
-    *   **Note**: 不支持非标尺寸语法 (e.g. `![|100]`) 以保证通用性。
-*   **Emphasis**: **Bold** (`**` / `__`)，*Italic* (`*` / `_`)。
-*   **Strikethrough**: ~~Strike~~ (`~~`) (GFM)。
-*   **Highlight**: 不支持非标高亮语法 (`==`) 以保证通用性。
-*   **Escaping**: `\` (反斜杠转义)。
-    *   **Support**: `!`, `"`, `#`, `$`, `%`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `-`, `.`, `/`, `:`, `;`, `<`, `=`, `>`, `?`, `@`, `[`, `\`, `]`, `^`, `_`, `` ` ``, `{`, `|`, `}`, `~`.
+## 6. 核心合同
 
-## 本章相关命令
+### 6.1 Cursor Reveal
 
-* 无。
+- 当光标进入 projection 覆盖的源码范围时，projection 必须立即让位。
+- reveal 必须由统一 runtime 决策，不能由每个控件各自实现一套规则。
 
-## 本章相关配置
+### 6.2 Widget 写回
 
-*   `rendering.engine`: `KaTeX` (Default) | `MathJax`.
-*   `rendering.font_family_mono`: Code block font setting.
-*   `rendering.font_family_serif`: Document body font setting.
+- task list、link activation 等交互只能通过 document control surface 回写源码。
+- widget 不得直接修改 DOM 并假装文档已变更。
+
+### 6.3 Preview 边界
+
+- preview 是 projection，不是独立文档模型。
+- 不允许维护第二份富文本权威状态。
+
+### 6.4 Outline 边界
+
+- outline 来源于标题 projection。
+- outline 点击只触发定位 control，不得直接篡改 editor 内部状态缓存。
+
+## 7. 失败合同
+
+- 公式、Mermaid 或其他 renderer 失败时，必须回退到源码可见态。
+- projection 失败不得阻塞文档打开。
+- 大文档预渲染失败时，允许退回纯 source view，但不得让文档不可编辑。
+
+## 8. 禁止事项
+
+- 禁止显示层维护独立的“富文本文档真相”。
+- 禁止 link、checkbox、outline 直接跨层修改 repo / source control 状态。
+- 禁止 renderer 失败时吞掉源码。
+- 禁止把未支持语法静默升级为第一类渲染能力。
+
+## 9. 代码边界
+
+- `apps/web/src/editor/`
+  - editor adapter 与文档视图整合。
+- `apps/web/js/extensions/`
+  - CodeMirror projection / widget 实现。
+- `apps/web/src/components/outline_render/`
+  - outline projection 与显示。
+- `apps/web/src/hooks/use_core/`
+  - 只提供 document runtime state，不直接承载渲染细节。

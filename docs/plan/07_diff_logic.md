@@ -1,96 +1,85 @@
-# 07_diff_logic.md - "Git" Diff 篇 (Diff Logic)
+# 07_diff_logic.md - Diff 工程蓝图
 
-> [!IMPORTANT]
-> **Scope Constraint (作用域约束)**: 本章所述的 Diff 与 Merge 逻辑 **仅适用于同一逻辑仓库 (Same Logical Repo) 下的不同分支**。
-> *   **Identity Check**: 系统判定两个分支是否属于同一 Repo 的唯一标准是 **RepoUUID** (或 Logical URL Hash)，**绝非** 文件名 (RepoName)。
-> *   **Strict Prohibition**: 系统 **严禁** 跨仓库 (Cross-Repo) 的自动化合并 (e.g., `wiki.redb` merge into `blog.redb` where UUIDs differ is undefined behavior)。
+本章只定义 diff、stage、commit、merge 的实现合同，不描述用户交互文案。功能语义见 [../features/07_diff_logic.md](../features/07_diff_logic.md)，自动化验收见 [../acceptance-cases/04_diff.md](../acceptance-cases/04_diff.md)。
 
-## 核心算法 (Core Algorithms)
+## 1. 目标
 
-*   **Text Diff**: 采用 **Myers Algorithm** (implemented via `similar` crate).
-    *   **Index Standard**: 全链路统一为 **UTF-16 code unit** 索引（与 JS/CodeMirror 一致）。
-    *   **Atomicity**: `ContentOp::Insert` 和 `ContentOp::Delete` 均基于 UTF-16 位置而非字节位置 (Byte Pos)。
-    *   **Scope Note**: Text Diff 仅描述 `Content Facts`；不负责表达 rename / move / create / delete 这类结构变化。
-*   **Structural Merge**: 采用 **3-Way Merge** 策略。
-    *   **Base**: 两个分支的最近共同祖先 (LCA - Lowest Common Ancestor)。
-    *   **Left**: 本地当前状态 (Local Branch)。
-    *   **Right**: 远端传入状态 (Remote Branch)。
-    *   **Structure Source**: 目录树、rename、move、delete、create 的冲突与合并必须基于 `Structure Facts` 判断，而不是仅依赖 path 字符串比对。
+- diff 只在同一逻辑 repo 内成立。
+- working directory、staging、commit history 是三层不同状态，不得混用。
+- 文本差异与结构差异必须分域建模。
 
-## Two Diff Domains (两层 Diff 域)
+## 2. 权威实体
 
-*   **Domain 2 — Working Directory（工作区域）**：
-    *   Watcher 监控 Vault (Store A) 的 markdown 文件变化；**`.notegit/` 目录 MUST 被 Watcher 忽略**（权威定义见 `04_storage.md §Repo Runtime Directory`）。
-    *   检测到变更后，**MUST** 写入 `pending_fs_ops` 表（存储于 `.notegit/pending`），**MUST NOT** 直接生成 Ledger Facts 入 Ledger。
-    *   通过 WebSocket `FsChangeDetected` 消息实时通知前端，前端显示在 "Changes" 列表。
-    *   用户可执行 Stage → 变更进入 "Staged Changes"（写入 `.notegit/staged` 表）。
+- `WorkingChanges`
+  - watcher 发现的未确认工作区偏差。
+- `StagedChanges`
+  - 已明确确认、待提交的候选集合。
+- `CommittedFacts`
+  - 已追加进 ledger 的 content/structure facts。
+- `CommitAnchor`
+  - 指向特定 ledger seq 的版本锚点。
 
-*   **Domain 1 — Staging & Commit（暂存与提交）**：
-    *   用户点击 Commit 后，系统：
-        1. 将 Staged 文件与 Ledger 最新快照对比，生成 Ledger Facts。
-        2. 文本内容变化 -> `Content Facts`；rename / move / create / delete -> `Structure Facts`。
-        3. 将这些 Ledger Facts **追加到 Ledger**（唯一真值源），分配 `GlobalSeq`。
-        4. 创建 Commit 记录，锚定到当前 `ledger_seq`，形成版本历史。
-        5. 清空 Staging 区和 `pending_fs_ops` 中已处理的条目。
-    *   此时变更从 Domain 2 正式转入 Domain 1（Committed）。
+## 3. 两个 Diff 域
 
-*   **手动确认原则（Git-like Workflow）**：
-    *   **Watcher Invariant**: Watcher 检测到的后台 Vault 变更 **MUST NOT** 自动入 Ledger；必须等待用户 Stage → Commit。
-    *   **Frontend Rule**: 内置前端编辑器生成的变更 **MUST** 直接入 Ledger，并通过 `pending overlay -> Ack -> confirmed` 收敛；默认 **MUST NOT** 进入 `pending_fs_ops` / Staging。
-    *   **Scope Boundary**: 本章的 Git-like 三阶段仅适用于外部文件系统变更；不适用于默认 Web Thin Client 写路径。
-    *   此设计对外部编辑严格类比 Git 的三阶段：Working Directory (`pending_fs_ops`) → Staging Area (`.notegit/staged`) → Commit (Ledger + `.notegit/commits`)。
-    *   **Structure Rule**: rename / move / create / delete 在 Commit 阶段 **MUST** 转换为结构事实，而不是通过 metadata/path 映射表的副作用完成。
+### 3.1 Working Directory Domain
 
-*   **Conflict Detection**: 
-    *   若 `pending_fs_ops` 与 Ledger 已存在变更冲突（如同一位置被前端和后台同时修改），系统 **MUST** 提示用户选择 "Keep File System" 或 "Keep Ledger"。
+- 比较 `Vault` 与当前 canonical projection。
+- 结果进入 `pending_fs_ops`，不进入 authority。
 
+### 3.2 Commit Domain
 
-## 合并流程 (Merging Flow)
+- 比较 staged 内容与 ledger anchored base。
+- 结果转为 `Content Facts` / `Structure Facts` 并进入 ledger。
 
-### 1. The 3-Way Merge Process
-当用户执行 "Merge Peer-B into Local" 时：
-1.  **LCA Calculation**: 系统根据 Vector Clock 回溯找到 Base Snapshot。
-2.  **Diff Generation**:
-    *   $Diff_{local} = Base \to Local$
-    *   $Diff_{remote} = Base \to Remote$
-3.  **Conflict Detection**:
-    *   若 $Diff_{local}$ 和 $Diff_{remote}$ 修改了不重叠的区域 -> **Auto Merge**。
-    *   若修改了同一区域 -> **Conflict State** -> 暂停并弹出 UI。
+## 4. Merge 合同
 
-### 2. Conflict Resolution UI (冲突解决界面)
-*   **Layout**: **Side-by-Side** (Visual Studio Code 风格)。
-    *   **Left Pane**: Current (Local).
-    *   **Right Pane**: Incoming (Remote).
-    *   **Bottom Pane**: Result (Preview).
-*   **Actions**:
-    *   `Accept Current` (保留本地)。
-    *   `Accept Incoming` (采用远端)。
-    *   `Accept Both` (同时保留，上下排列)。
-*   **Scrubbing**: 支持逐行/逐块 (Hunk) 处理。
+- merge 只允许在同一 `RepoId` 下进行。
+- 文本冲突基于 content diff。
+- rename/move/create/delete 冲突必须基于 structure facts，而不是 path 字符串猜测。
 
-## 差异可视化 (Diff Visualization)
-*   前端需提供 **Diff View**，用于展示 Local 与 Peer 之间的变更，支持 Side-by-Side 对比。
-*   **Gutter Indicators**: 编辑器左侧槽显示变更状态 (相对于 Base)。
-    *   **Green**: Added.
-    *   **Red**: Deleted (Triangles).
-    *   **Blue**: Modified.
-*   **Inline Diff**: 编辑时即时计算与已提交状态的差异。
+## 5. 状态机
 
-## 长文档打开策略 (Large Doc Open Strategy)
+- `Clean`
+- `WorkingChanged`
+- `Staged`
+- `Committing`
+- `Committed`
+- `Conflict`
 
-> 目标：首屏 < 200ms 可见，完整可编辑时间最短化。
+### 转换规则
 
-*   **Snapshot-First**: 打开文档时优先读取最新快照，再仅重放快照之后的 `Content Facts`。
-*   **UTF-16 Index Cache**: 为 UTF-16 索引引入断点缓存，降低定位成本。
-*   **Progressive Prefetch**: 先渲染首屏 + 缓冲区，其余内容后台分批预加载。
-*   **Search Gate**: 见 [03_rendering.md §大文档渲染策略](./03_rendering.md)。
+- `WatcherChange -> WorkingChanged`
+- `Stage -> Staged`
+- `CommitStart -> Committing`
+- `LedgerAppendOk -> Committed`
+- `MergeConflictDetected -> Conflict`
 
-## 本章相关命令
+## 6. 文本与结构分工
 
-*   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地。
+- Myers / UTF-16 index 只负责文本差异表达。
+- create / rename / move / delete 必须作为结构事实表达。
+- diff view 可以统一展示，但底层 authority 必须保持分层。
 
-## 本章相关配置
+## 7. 失败合同
 
-*   `diff.merge_strategy`: `manual` (Default, 推荐) | `auto` (CRDT优先)。
-    *   **manual**: 总是弹出 Diff View 供用户确认，除非差异微小且确信无冲突。
-    *   **auto**: 仅在检测到 Structural Conflict 时才弹出，其余自动通过。
+- 冲突出现时，系统必须进入显式 `Conflict` 状态。
+- stage/commit 失败不得伪装为已提交。
+- remote spectator/source-control readonly 场景下不得允许 commit 成功假象。
+
+## 8. 禁止事项
+
+- 禁止跨 repo 自动 merge。
+- 禁止 watcher 变更直接视为 committed。
+- 禁止把 rename/move 仅当作 path string diff。
+- 禁止 UI diff 视图直接充当 authority merge 结果。
+
+## 9. 代码边界
+
+- `crates/core/src/source_control/`
+  - commit/diff/history/merge authority。
+- `crates/core/src/ledger/`
+  - content/structure facts append。
+- `apps/cli/src/server/handlers/source_control/`
+  - source control handler/runtime glue。
+- `apps/web/src/components/diff_view/`
+  - 只负责展示，不负责 authority merge 决策。

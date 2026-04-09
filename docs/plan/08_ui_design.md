@@ -1,123 +1,77 @@
-# 08_ui_design.md - 使用界面设计篇 (UI Design)
+# 08_ui_design.md - 界面工程蓝图
 
-> **Status**: Core Specification
-> **Modules**: [Web](./08_ui_design_01_web.md) | [Desktop](./08_ui_design_02_desktop.md) | [Mobile](./08_ui_design_03_mobile.md)
+本章只定义 UI shell、control surface 与显示层边界，不描述具体功能实例。功能语义见 [../features/08_ui_design.md](../features/08_ui_design.md)，自动化验收见 [../acceptance-cases/05_ui.md](../acceptance-cases/05_ui.md)。
 
-本章定义了 Deve-Note 的用户界面设计规范 (Design System) 与交互原则。
+## 1. 目标
 
-> **Responsive Mapping**: Web 端界面 **MUST** 在移动端视口匹配 Mobile 规范，在大屏视口匹配 Desktop 规范。
-> **Tauri + Offline-First**: Mobile/Desktop 采用 Tauri v2 外壳，前端代码与 Web 端共享，并在完全离线场景下保持完整可用。
+- 所有端共享同一套 application/runtime control。
+- 显示层必须薄，只负责展示与发出用户意图。
+- 关键能力既可由控件触发，也可由 command/control surface 触发。
 
-## 规范性用语 (Normative Language)
-*   **MUST**: 绝对要求，违反即视为设计错误。
-*   **SHOULD**: 强烈建议，偏离需有充分理由。
-*   **MAY**: 可选实现。
+## 2. 分层
 
-## 1. 体验设计哲学 (Design Philosophy)
+### 2.1 UI Shell
 
-*   **Command First (命令优先)**：
-    *   **Principle**: 系统能力 $C$ 与界面 $UI$ 正交。所有功能 $f \in C$ **MUST** 拥有唯一的 `CommandId`，且可通过命令面板 (`Cmd+K`) 调用。
-    *   **Goal**: 降低 UI 密度，实现“键盘流”操作。
-*   **Context Aware (上下文感知)**：
-    *   **Principle**: 界面布局 $L$ 是当前状态 $S$ 的函数 $L = f(S)$。例如，进入 Diff 模式时，Grid 布局自动分裂。
-*   **Visual Clarity (视觉清晰性)**：
-    *   借鉴 SilverBullet 的清爽阅读感，但在编辑区保持 VS Code 级的代码掌控力。
-*   **Offline Priority (离线优先)**：
-    *   **Principle**: Mobile/Desktop 的所有核心功能在无网络环境下 **MUST** 可用。
-    *   **Goal**: 本地优先、服务内嵌、无依赖可运行。
+- Web / Desktop / Mobile 仅负责布局、导航与平台壳层适配。
 
-## 2. 设计系统 (Design System)
+### 2.2 Feature Views
 
-### 2.1 Color Palette (Design Tokens)
-系统 **MUST** 使用 CSS 变量定义 Design Tokens，严禁硬编码 Hex 值。
+- Explorer、Source Control、Editor、Search、Outline 只消费 runtime 状态。
 
-```css
-:root {
-  /* Layout Backgrounds */
-  --bg-app: #1e1e1e;          /* App container */
-  --bg-sidebar: #252526;      /* Sidebars */
-  --bg-editor: #1e1e1e;       /* Main editor area */
-  --bg-statusbar: #007acc;    /* Bottom bar (Status: OK) */
-  --bg-statusbar-ro: #e06c75; /* Bottom bar (Status: Read-Only) */
+### 2.3 Application Control
 
-  /* Component Backgrounds */
-  --bg-input: #3c3c3c;
-  --bg-overlay: rgba(0, 0, 0, 0.4); /* Backdrop */
-  
-  /* Foreground / Text */
-  --fg-primary: #cccccc;
-  --fg-secondary: #969696;    /* Hints */
-  
-  /* Semantic Colors (Git) */
-  --color-added: #81b88b;     /* Git Added */
-  --color-modified: #e2c08d;  /* Git Modified */
-  --color-deleted: #e06c75;   /* Git Deleted */
-}
-```
+- 文档、repo、source control、session 等 control surface 是唯一业务入口。
+- 显示层不得跨模块直接操作 authority state。
 
-### 2.2 Z-Index Registry (Layer Management)
-为了防止层级冲突 (Z-Fighting)，系统 **MUST** 严格遵循以下分层定义：
+## 3. 平台映射
 
-| Level | Z-Index | Usage Scope |
-| :--- | :--- | :--- |
-| **L0: Editor** | 0 | CodeMirror content, base layout. |
-| **L1: Chrome** | 10 | Status Bar, Title Bar. |
-| **L2: Panels** | 20 | Sidebars (Desktop). |
-| **L3: Floating** | 50 | Toolbars, Floating Action Buttons. |
-| **L4: Overlay** | 100 | Backdrops, Mobile Drawers. |
-| **L5: Modal** | 200 | Unified Search, Dialogs. |
-| **L6: Toast** | 500 | Notifications. |
+- Web
+  - 浏览器壳层，依赖 ws + thin client runtime。
+- Desktop
+  - 桌面容器，复用相同前端 feature/runtime。
+- Mobile
+  - drawer / topbar / bottom actions 只是壳层适配，不拥有独立业务真相。
 
-### 2.3 Iconography
-*   **Standard**: 系统 **MUST** 使用 `lucide-leptos` crate。
-*   **Style**: Stroke width `1.5px` (Elegant), Size `16px`.
+## 4. 控件合同
 
-## 3. 组件架构 (Component Architecture)
+### 4.1 Button / Menu / Drawer
 
-组件组织 **SHOULD** 遵循原子化设计原则，目录结构映射 UI 区域：
+- 每个控件只负责一个语义动作。
+- `More(...)`、`Pin/Unpin`、close、toggle 不能共享含糊回调。
 
-```text
-apps/web/src/components/
-├── activity_bar/       # Leftmost icon strip (L2)
-├── sidebar/            # Resizable sidebar container (L2)
-├── editor/             # CodeMirror wrapper (L0)
-├── overlay/            # Modal & Floating UIs (L5)
-└── shared/             # Atomic UI (Icon, Button)
-```
+### 4.2 Command First
 
-## 4. 交互原则 (Interaction Principles)
+- 所有核心能力必须有稳定 command/control 入口。
+- 控件点击只是触发该入口，不应成为唯一执行路径。
 
-### 4.1 Focus Management (焦点流转)
-焦点管理是键盘操作体验的核心。定义为状态机 $S_{focus} \in \{Editor, Sidebar, Panel, Modal\}$。
+### 4.3 Focus & Overlay
 
-*   **Focus Trap**: 打开模态框 (Modal) 时，系统 **MUST** 捕获焦点，Tab 键仅在 Modal 内部循环。
-*   **Focus Restore**: 模态框关闭后，焦点 **MUST** 还原至 $S_{prev}$ (通常是编辑器内的光标位置)。
+- modal、drawer、sheet、sidebar 必须有明确焦点与关闭合同。
+- overlay 层级必须统一管理，避免靠局部样式抢焦点。
 
-### 4.2 Configuration Schema
-前端配置存储在 LocalStorage 的 `deve_config` 键中：
+## 5. 状态边界
 
-```json
-{
-  "ui": { "sidebar_visible": true, "theme": "dark" },
-  "editor": { "font_size": 14, "vim_mode": false }
-}
-```
+- 纯 UI 偏好可以本地存储。
+- repo scope、session、pending writes、source control state 不得由显示层私自持有第二份真相。
+- 只读、错误、加载、重连等状态必须由 runtime 提供，显示层只消费。
 
-**边界约束（与 `16_web_thin_client_ledger.md` 的兼容性）**：
+## 6. 多端一致性
 
-- `deve_config` 的内容 MUST 严格限定为**纯 UI 偏好**：主题、字体、侧栏状态、语言、近期面板等无业务语义的前端呈现参数。
-- `deve_config` MUST NOT 存储任何业务真相的私有副本：严禁包含 `peer_identity`、`session_token`、`repo_vector`、离线缓存内容、`client_op_id` 计数器、`scope_nonce` 等具有一致性语义的字段。
-- 用户清理浏览器站点数据后，`deve_config` 丢失 MUST NOT 影响 Server Ledger 真值，仅回退到默认 UI 偏好。
-- 分层存储规则以 `16 §Browser Storage Layering` 为权威来源；本章仅描述 UI prefs 这一层。
+- 多端可以有不同布局，但核心 control surface 必须一致。
+- 同一用户动作在不同端应尽量落到同一 runtime/command 链路。
 
-## 本章相关命令
+## 7. 禁止事项
 
-*   `Cmd+Shift+P`: 呼出 Command Palette。
-*   `Cmd+P`: 呼出 Quick Open (文件跳转)。
-*   `Cmd+Shift+K`: 呼出 Branch Switcher。
-*   `Cmd+B`: Toggle Sidebar。
+- 禁止显示层直接修改 ledger、repo scope、sync vector、auth state。
+- 禁止某个控件同时承担多个业务语义。
+- 禁止把平台壳层差异扩展成独立业务逻辑分支。
+- 禁止用显示层缓存替代 runtime 权威状态。
 
-## 本章相关配置
+## 8. 代码边界
 
-*   `ui.theme`: 界面主题 (Default: "dark").
-*   `ui.sidebar_visible`: 侧边栏可见性 (Default: true).
+- `apps/web/src/components/`
+  - shell 与 feature views。
+- `apps/web/src/hooks/use_core/`
+  - application/runtime control，供组件消费。
+- `apps/web/src/i18n/`
+  - 只承载显示文本，不承载业务逻辑。

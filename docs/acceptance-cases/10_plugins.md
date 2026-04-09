@@ -113,7 +113,7 @@
   preconditions:
     - 存在未来 host api / plugin capability 文档
   steps:
-    - doc_read: "deve-note plan/17_plugins.md"
+    - doc_read: "docs/plan/17_plugins.md"
   assertions:
     - doc_contains: "vault/<repo>/**/*.md"
     - doc_contains: ".notegit"

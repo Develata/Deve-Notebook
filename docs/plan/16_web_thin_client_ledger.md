@@ -1,195 +1,102 @@
-# 16. Web Thin Client & Ledger Confirmation
+# 16_web_thin_client_ledger.md - Web Thin Client 工程蓝图
 
-**Status**: Approved target architecture
-**Scope**: WebLightPeer write path, editor confirmation, repo-scoped handshake, Source Control convergence
+本章只定义 Web 写入确认链、repo-scoped write readiness 与 pending lifecycle 的工程合同，不描述用户提示文案。功能语义见 [../features/16_web_thin_client_ledger.md](../features/16_web_thin_client_ledger.md)，自动化验收见 [../acceptance-cases/06_network.md](../acceptance-cases/06_network.md)。
 
-## 1. Goal
+## 1. 目标
 
-本设计将 Web 端明确收敛为 **可写的薄客户端 (Thin Client)**，同时保持 **Server Ledger 为唯一真值源**。
+- Web 是可写 thin client，但 authority 仍在 server ledger。
+- 前端只允许持有 `confirmed + pending overlay`，不允许持有第二真相。
+- repo-scoped handshake 与 write readiness 必须显式建模。
 
-目标不是把 Web 降级成“显示屏”，而是建立如下权威关系：
+## 2. 权威实体
 
-- Web 可以发起写入意图。
-- Server 决定写入是否成立。
-- 只有成功追加到 Ledger 的结果才是业务真相。
-- 前端任何未确认状态都只是短暂 Overlay，不得升格为权威数据。
+- `L_confirmed`
+  - 服务端已确认并落 ledger 的状态。
+- `O_session`
+  - 当前浏览器会话未确认 overlay。
+- `client_op_id`
+  - 浏览器本地写入意图唯一标识。
+- `scope_nonce`
+  - 当前 scope 代次。
 
-## 2. Authoritative State Model
-
-记：
-
-- `L_confirmed` = 服务端已确认并落 Ledger 的状态
-- `O_session` = 当前浏览器会话的未确认本地操作 Overlay
-- `V_web` = Web 端展示给用户的内容
-
-则前端视图必须满足：
+## 3. 核心视图公式
 
 ```text
 V_web = Project(L_confirmed) + O_session
 ```
 
-并且：
+其中：
 
-```text
-State_auth = L_confirmed
-```
+- `L_confirmed` 是唯一权威。
+- `O_session` 只用于交互连续性。
 
-其中 `O_session` 仅用于交互连续性，绝不是第二真源。
+## 4. 写入协议合同
 
-## 3. Non-Negotiable Invariants
+- `Edit` 必须携带：
+  - `doc_id`
+  - `client_id`
+  - `client_op_id`
+- `Ack` 必须回显：
+  - `doc_id`
+  - `seq`
+  - `client_op_id`
+- `EditRejected` / 结构化失败必须足够精确，能让前端回收对应 pending。
 
-1. Ledger 是唯一权威状态。
-2. Web MUST NOT 持有“已确认业务状态”的私有副本。
-3. `Auth for Write` 与 `Handshake for Sync` MUST 分离建模。
-4. 写入就绪状态 MUST 是 repo-scoped，而不是 connection-scoped 猜测值。
-5. 文件切换、重连、快照刷新都 MUST 从 `confirmed + pending overlay` 重建。
-6. Commit、Delete、Merge 的最终成立条件 MUST 是 ledger append / ledger anchor，而不是 metadata 或 snapshot 副作用。
+## 5. Repo-Scoped Handshake
 
-## 4. Mandatory Protocol Rules
+- `SyncHello` 必须回显 `repo_id`。
+- `switch_nonce` 必须严格大于当前 `scope_nonce`。
+- stale scope 恢复失败时，必须清掉旧 scope 并重新请求健康 repo 状态。
 
-### 4.1 Edit Intent
+## 6. 前端状态机
 
-`ClientMessage::Edit` MUST 携带：
+- `Disconnected`
+- `Unauthorized`
+- `SnapshotLoading`
+- `HandshakePending(repo_id)`
+- `EditableConfirmed(repo_id)`
+- `PendingAck`
+- `Resyncing`
 
-- `doc_id`
-- `op`
-- `client_id`：客户端实例标识
-- `client_op_id`：该次写入意图在客户端内的唯一标识
-
-**`client_op_id` 规范**：
-
-- **Type**: `u64`，客户端单调递增计数器。
-- **Scope**: 唯一性作用域为 `(client_id, client_op_id)` 组合；服务端 MUST 以此复合键做幂等判定。
-- **Initialization**: 每次 `client_id` 生成（通常为 tab 加载或 session 重建）时 MUST 从 `0` 或 `1` 起算，MUST NOT 跨 `client_id` 复用。
-- **Generation**: 由浏览器端在本地生成，MUST NOT 依赖服务端分配，以保证离线编辑也能形成稳定 ID。
-- **Server Idempotency**: 服务端 MUST 对同一 `(client_id, client_op_id)` 的重复 `Edit` 做幂等处理——首次落账本并返回 `Ack`，后续重发 MUST 返回原始 `Ack`（携带相同 `seq`），MUST NOT 重复写入。
-- **Persistence**: 服务端 MUST 在 `PendingAck` 生命周期内保留 `(client_id, client_op_id) -> seq` 的去重记录，至少覆盖 reconnect window。
-
-### 4.2 Commit Acknowledgement
-
-`ServerMessage::Ack` MUST 回显：
-
-- `doc_id`
-- `seq`
-- `client_op_id`
-
-这样前端才能把某个 Pending Overlay 精确降格为 Confirmed State。
-
-### 4.3 Repo-Scoped Handshake
-
-`ServerMessage::SyncHello` MUST 回显 `repo_id`。
-
-原因：
-
-- 写入闸门必须严格绑定当前仓库。
-- 旧仓库的延迟握手消息不得把新仓库误标成“可写”。
-- `SwitchRepo / SwitchBranch` 的 `switch_nonce` MUST 严格大于当前 `scope_nonce`。
-
-**`scope_nonce` / `switch_nonce` 规范**：
-
-- **Type**: `u64`，服务端权威分配，per-connection 生命周期。
-- **Initialization**: 连接建立后首次 `SyncHello` 回执时，服务端 MUST 初始化 `scope_nonce = 0`。
-- **Monotonicity**: 每次成功的 `SwitchRepo / SwitchBranch` 使服务端将 `scope_nonce` 原子递增为新的 `switch_nonce` 值，客户端 MUST 以新值替换本地记录。
-- **Validation**: 服务端收到 `SwitchRepo / SwitchBranch` 时，MUST 校验 `switch_nonce > current scope_nonce`，否则 MUST 返回 `SC_STALE_SCOPE` 错误并保持当前 scope 不变。
-- **Scope**: 仅 per-connection 有效；连接断开重建后 `scope_nonce` MUST 重置为 `0`，无需持久化。服务端重启后同样视为新连接。
-- **Rationale**: 防止旧 scope 的延迟消息（包括 `Edit`、`Ack`）在 scope 切换后被误接受，形成跨 repo 写入污染。
-- 浏览器刷新、重连与 scope 恢复 MUST 以 `repo_id` 作为主绑定键，`repo_name` 仅可作辅助提示或兼容恢复。
-- 当用户从 `Remote Branch` 切回 `Local` 时，客户端 / 服务端 MAY 恢复最近一次稳定的本地 repo，但解析失败时 MUST 回退到 UUID-First / Fail-Closed 规则。
-
-### 4.4 Structured Error Contract
-
-错误协议必须满足：
-
-- `WebSocket` 与 `HTTP` MUST 共享同一错误码目录与同一 `code + optional detail` 结构。
-- `WebSocket` MUST 使用结构化 `ProtocolError { error }`；不得新增 `Error(String)` 作为实现目标。
-- `Source Control` 用户态错误 MUST 使用独立 `SC_*` 目录。
-- 仅 DB/Vault/FS 持久化失败可继续落到 `STORAGE_*`。
-
-### 4.5 Reconcile Identity
-
-为保证 `pending overlay` 在快照、历史回放与重连后仍能精确收敛：
-
-- `Ack` / `History` / `NewOp` / `Snapshot delta` SHOULD 携带 `client_id + client_op_id` 或等价确认标识。
-- 前端 MAY 基于内容做临时比对，但 MUST NOT 将“内容相同”当成长期正确的唯一判定方式。
-
-## 5. Frontend State Machine
-
-Web 编辑器必须至少区分以下状态：
-
-1. `Disconnected`
-2. `Unauthorized`
-3. `SnapshotLoading`
-4. `HandshakePending(repo_id)`
-5. `EditableConfirmed(repo_id)`
-6. `PendingAck(doc_id, client_op_id set)`
-7. `Resyncing`
-
-其中可写条件必须是：
+### 可写条件
 
 ```text
 Editable iff SnapshotReady && HandshakeReady(current_repo)
 ```
 
-而不是仅凭 Snapshot Ready。
+## 7. Pending Lifecycle
 
-并且：
+- `LocalIntentCreated`
+- `PendingOverlayVisible`
+- `Acked -> Confirmed`
+- `ExplicitReject -> FailedAndCleared`
+- `ResyncRebuilt -> OverlayReconciled`
 
-```text
-Unauthorized != Disconnected
-```
+导航拦截、切文件、重连恢复都必须基于这条生命周期，而不是只看 DOM 当前内容。
 
-`Unauthorized` 需要重新登录；`Disconnected` 才允许指数退避重连。
+## 8. 失败合同
 
-## 6. Backend State Machine
+- ledger append 成功但 workspace writeback 失败：
+  - authority 视为已提交
+  - 前端不应永久卡在假 pending
+- explicit reject：
+  - 必须清理对应 pending
+  - 不得继续显示“等待服务端确认”
+- stale repo scope：
+  - 必须解绑旧 scope，重新进入健康 repo 恢复链
 
-服务端对浏览器写入必须区分：
+## 9. 禁止事项
 
-- `JWT-authenticated session`
-- `repo binding`
-- `browser writer identity`
-- `P2P sync peer identity`
-- `network disconnected` 与 `session expired`
+- 禁止把快照完成误当成写入 ready。
+- 禁止只靠字符串错误提示驱动状态机。
+- 禁止切文件时静默丢弃未确认写入。
+- 禁止让 pending overlay 升格为已确认业务真相。
 
-长期目标是：
+## 10. 代码边界
 
-- 本地浏览器写入路径不再复用纯 P2P 的 `authenticated_peer_id` 作为唯一准入条件。
-- `SyncHello` 负责同步协商。
-- 浏览器写入身份负责本地 op 归属与确认。
-
-## 7. Required Migration Order
-
-1. 为每个编辑操作引入 `client_op_id`，并让 `Ack` 回显它。
-2. 让握手完成状态显式化、repo-scoped 化，并作为编辑器写闸门的一部分。
-3. 前端建立 `pending local op -> acked op` 的精确集合，而不是只改 DOM。
-4. 为 `History / NewOp / Snapshot delta` 补齐 origin metadata，避免长期依赖内容匹配做 reconcile。
-5. 文件切换前检查未确认写入；不得静默丢弃。
-6. 统一 WS / HTTP / Watcher / SC 的最终 ledger 写入口。
-7. 删除语义改为显式删除结构事实（如 `DeleteNode` 或等价 tombstone fact）。
-
-## 8. Forbidden Patterns
-
-以下做法在本设计下视为错误：
-
-- 把编辑器 DOM 当前内容当成已提交事实。
-- 只因快照加载完成就解除只读。
-- 用通用 `Error(String)` 或 HTTP 裸文本错误替代结构化确认/错误协议。
-- 切文件时丢弃未确认本地改动而不提示。
-- 让 `pending_fs_ops`、metadata、snapshot 充当删除真源。
-- 让 WS 与 HTTP 走两套不同的 Commit 语义。
-
-## 9. Compatibility Notes
-
-- 现有 `ledger-first` 设计原则保持不变。
-- 本文档是对 `01_terminology.md`、`04_storage.md`、`05_network.md`、`07_diff_logic.md` 在 Web 写入模型上的收敛说明。
-- 若未来协议需要新增 `EditRejected`、`WriteReady` 等更细粒度消息，应视为对本文档的自然延伸，而不是另起架构。
-
-## 10. Success Criteria
-
-当以下条件全部成立时，认为迁移完成：
-
-1. Web 切文件不再出现“改动消失但无提示”。
-2. Web 重连后不会把旧仓库握手错误地当成当前仓库可写。
-3. 前端能精确区分 `pending` 与 `confirmed` 本地改动。
-4. `Unauthorized` 与 `Disconnected` 在 UI 与状态机中被明确区分。
-5. 所有最终业务事实都可由 Ledger 唯一追溯。
-6. Source Control 与编辑器写入都回到同一权威模型。
+- `apps/web/src/hooks/use_core/`
+  - document runtime、pending ops、scope/session runtime。
+- `apps/cli/src/server/handlers/document/`
+  - edit/open/ack/reject authority path。
+- `crates/core/src/protocol/`
+  - client/server message contract。

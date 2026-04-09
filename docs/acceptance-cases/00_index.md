@@ -1,6 +1,14 @@
 ## 验收用例索引
 
-本目录内用例均为“可自动化执行”的测试步骤模板，默认由 AI 通过 MCP 工具链执行，无需人工介入。
+本目录内用例均为“可自动化执行”的测试步骤模板，服务于脚本化测试、集成测试与命令级回归。
+
+它们 **不是** Chrome MCP 手工验收脚本；Chrome MCP 场景应记录在 `docs/features/` 中。
+
+自动化验收的优先原则：
+
+- 优先验证 application/control/CLI 层，而不是把显示层当作唯一操控入口
+- 必须覆盖模块级、控件级与多端适配相关的自动化入口
+- Web / Desktop / Android / Docker / CLI 的共享行为应尽量通过统一 control surface 验证
 
 - `acceptance-cases/01_terminology.md`: 术语与规范性用语校验用例。
 - `acceptance-cases/02_positioning.md`: Headless CLI 与核心边界用例。

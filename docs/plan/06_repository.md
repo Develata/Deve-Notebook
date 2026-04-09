@@ -1,115 +1,101 @@
-# 06_repository.md - 仓库与分支篇 (Repository & Branching)
+# 06_repository.md - 仓库工程蓝图
 
-## 仓库管理 (Repository Manager)
+本章只定义 repo / branch / tree / repo health 的工程实现，不描述用户界面工作流。功能语义见 [../features/06_repository.md](../features/06_repository.md)，自动化验收见 [../acceptance-cases/07_storage_repo.md](../acceptance-cases/07_storage_repo.md)。
 
-*   **Repository Identification (仓库标识)**:
-    *   **Basis**: 基于 **Characteristic Parameter** (默认为 URL，可配置) 唯一标识。
-    *   **Logical Identity**: URL `https://my-wiki` 是区分 Repo 的唯一标准。
-        *   **Conflict Rule**: 若 `Name` 相同但 `URL` 不同，视为**完全不同的 Repo**。
-    *   **Physical Storage (Repo Instance)**:
-        *   **Filename**: `branch_path/<repo_name>.redb` (Human Readable).
-        *   **Collision Handling**: 若同一 Branch 下存在同名文件但 URL 不同，系统 **MUST** 自动重命名新文件 (e.g., `wiki.redb` -> `wiki-1.redb`) 以避免覆盖。
-*   **Retrieval Constraint (Resolution First)**:
-        *   **Input Acceptance**: 后端接口 **MAY** 接受 `Url` `Name` 或 `UUID` 作为输入参数。
-        *   **Execution Safety**: 但在执行具体业务逻辑前 (Before Execution)，系统 **MUST** 将非 UUID 参数解析为 `InstanceUUID`。
-        *   **Rule**: 任何文件读写、合并、同步操作的底层算子，**MUST** 操作 `UUID`。名字解析必须在算子调用前完成。
-        *   **Note**: 严禁直接复用 UUID，必须保证每个物理 `.redb` 文件拥有全局唯一的 FileId。
-        *   **Structure Write Rule**: `RenameDoc / MoveDoc / DeleteDoc / CreateDoc` 的最终业务事实 **MUST** 以 `NodeId / DocId` 为主键进入 Ledger；不得通过 path 表或 metadata 直写完成。
-*   **P2P Connection Strategy (连接策略)**:
-    *   **Match**: URL 相同 -> 同一仓库协作 (显示 Shadow Branches)。
-    *   **Mismatch**: URL 不同 -> **Multi-Root Workspace** (侧边栏分列显示 Local Repos + Peer Repos)。
-    *   **Access Control**: Peer-only Repos (URL 不匹配) 强制为 **Read-Only** (仅允许 Copy/Diff)。
-    *   **Retrieval Constraint**:
-        *   **UUID-First**: 所有 Repo 和 Branch 的后端操作 **MUST** 使用 UUID 检索。
-        *   **Name Resolution**: 前端可传递 `RepoName` 或 `PeerName`，但后端必须先解析为 `RepoUUID` 或 `PeerUUID` 再执行文件系统操作。
-    *   **Repo Instance Selection (Switching Strategy)**:
-        *   **UI Layout**: 侧边栏 Source Control 视图 **MUST** 只显示 **当前激活 (Active)** 的仓库状态。禁止同时列出所有 Repo。
-        *   **Switching Interaction**: 用户通过 Sidebar Header 区域的 **"Switch Repository"** 下拉菜单进行切换。
-        *   **Reasoning**: 保持界面整洁，符合 VS Code 单一责权 (Single Responsibility) 的视觉习惯。
+## 1. 目标
 
-## 树状态管理器 (Tree State Manager)
+- 所有 repo 操作都必须先解析到稳定身份，再执行底层算子。
+- tree 是 structure projection，不是权威写源。
+- remote / spectator 必须天然只读。
 
-*   **Implementation**: `crates/core/src/tree/manager.rs`
-*   **Data Structure**:
-    *   **Core**: `HashMap<NodeId, NodeInfo>` (Flat Map with NodeId Keys).
-    *   **NodeInfo**:
-        ```rust
-        struct NodeInfo {
-            node_id: NodeId,
-            kind: NodeKind, // File | Dir
-            name: String,
-            parent_id: Option<NodeId>,
-            children_ids: Vec<NodeId>,
-            path_cache: String,
-            doc_id: Option<DocId>, // 仅 File 节点有效
-        }
-        ```
-    *   **Advantages**: NodeId 作为主键，路径仅缓存；重命名与移动只需更新子树缓存。
-*   **Authority Rule**:
-    *   `Tree State Manager` 是结构 projection 的内存视图，不是权威写源。
-    *   `path_cache` 仅是 projection cache，不能作为最终业务主键。
-    *   `TreeDelta` **SHOULD** 由 Structure Facts 应用后的 projection 差异导出，而不是通过 handler 直接篡改元数据表得到。
-*   **TreeDelta Generation**:
-    *   **Add**: `TreeDelta::add_node` (File/Dir).
-    *   **Remove**: `TreeDelta::remove_node`. 自动递归删除子节点。
-    *   **Rename**: `TreeDelta::rename_node`. 自动处理子树路径重写。
-    *   **Move**: `TreeDelta::move_node`. 仅更新 parent 关系与 path_cache。
-*   **Sorting Logic**:
-    *   构建树视图 (`build_tree_from_root`) 时，严格遵循：**Folder First** > **Alphabetical (Case-Insensitive)**。
-*   **Initialization**: 服务启动时，通过 Node 表全量加载并构建树 (不依赖 FS 扫描)。
-*   **Write Path Contract**:
-    *   `CreateDoc` -> 追加 `CreateFile/CreateDir` 等 Structure Facts，再刷新 tree projection。
-    *   `RenameDoc` -> 追加 `RenameNode`，不得直接改 path 表。
-    *   `MoveDoc` -> 追加 `MoveNode`，不得直接改 path 表。
-    *   `DeleteDoc` -> 追加 `DeleteNode`，不得直接删 metadata 映射。
+## 2. 权威实体
 
-## 严格分支策略 (Strict Branching Policy)
+- `RepoId`
+  - 仓库唯一身份，底层执行主键。
+- `BranchScope`
+  - `Local` 或 `Remote(PeerId)`。
+- `NodeId / DocId`
+  - 结构与文档事实主键。
+- `Structure Facts`
+  - `Create / Rename / Move / Delete` 的唯一权威来源。
+- `RepoHealth`
+  - `Healthy / Degraded / Quarantined / Repairing`。
 
-*   **Logic**: "Branch" 对应 "Writer Identity"，即 Peer 的数据集合 (Folder)。
-*   **Establishment**:
-    *   **Local Branch**: 初始化时自动创建 `ledger/local/` 文件夹。
-    *   **Remote Branch**: 通过 P2P 发现新 Peer 后，在 `ledger/remotes/` 下自动创建对应 UUID 的文件夹。
-*   **Repo Mapping**: 每个 `.redb` 文件是 Branch 文件夹下的一个逻辑单元。
-*   **No Arbitrary Creation**: ❌ 禁止类似 `git checkout -b feature` 的操作。分支由 Peer 身份唯一确定。
-*   **Deletion**: 允许删除某个 Remote Branch 文件夹（即移除该 Peer 的所有数据）。但不建议删除 Local Branch (除非重置应用)。
+## 3. 分层
 
-## Spectator Mode Definition (旁观者模式定义)
+### 3.1 Authority
 
-> [!IMPORTANT]
-> **Core Philosophy**: Spectator Mode 意味着 **"Source Read-Only" (源端只读)**。无论是 P2P 查看远端 Peer，还是登录 Server 浏览，此原则绝对适用。
+- repo、doc、node 的真值在 ledger facts 中。
+- 任何底层读写都必须先完成 `UUID-first` 解析。
 
-*   **Capabilities (允许的操作)**:
-    *   **Read**: 浏览、搜索、查看 Diff。
-    *   **Copy/Export**: 将内容复制到剪贴板，或导出为文件。
-    *   **Merge into Local**: 将 Spectator 视角的 Ledger 合并入 **Local Branch** (Pull 操作)。
-    *   **Podman Run**: 在隔离沙箱中运行代码 (不修改 Ledger)。**(Future / Not Required in Current Phase)** —— Calculation Runtime 当前不在实现范围内，权威定义见 `17_plugins.md §Calculation Runtime`。
-*   **Prohibitions (禁止的操作)**:
-    *   **No Modification**: 严禁修改、删除、重命名 Spectator 视图下的任何文件。
-    *   **No Write-Back**: 严禁将变更直接回写到 Remote Ledger。
-    *   **No Cross-Peer Merge**: 严禁将 Peer A 的 Ledger 合并入 Peer B 的 Ledger (除非你是 Peer B 的 Owner)。
-*   **Interaction Logic**:
-    *   在 Spectator Mode 下，所有 "Edit" 相关的 UI 控件 (Save, Rename, Delete) **MUST** 处于禁用或隐藏状态。
-    *   尝试编辑 **MUST** 触发 "Read-Only" 提示，并引导用户 Fork 或 Merge 到本地。
+### 3.2 Projection
 
-## 分支切换与交互 (Branch Switching)
+- tree manager 是 structure projection 的内存视图。
+- `path_cache` 只是 projection cache，不得作为业务主键。
 
-* **分支切换器**：UI 提供类似 VS Code 左下角的分支切换功能。
-    *   **Local Branch**: Default View. 读写 `ledger/local/*.redb`。
-    *   **Remote Branches (Peer Instances)**:
-        *   **Display Logic**: 侧边栏显示已发现的 Peers (对应 `ledger/remotes/<PeerUUID>/` 文件夹)。
-        *   **Spectator Mode**: 选中某 Peer 后，VFS 切换挂载点至该 Peer 的对应目录。
-        *   **Content**: 显示该 Peer 下拥有的所有 Repos (redb files)。
-    * **Virtual Backup Branch**:
-        *   提供一个虚拟远程分支（只读），作为当前版本数据库文件的实时/快照备份。
-* **返回本地分支**：
-    *   当用户从 `Remote Branch` 切回 `Local` 时，系统 **SHOULD** 优先恢复最近一次稳定使用的本地 Repo。
-    *   若该本地 Repo 已不存在或无法解析，系统 **MUST** 回退到现有的 UUID-First / Fail-Closed 解析路径，而不是静默绑定到任意本地 Repo。
+### 3.3 Runtime
 
-## 本章相关命令
+- repo switch、branch switch、last-local-repo recovery 属于 scope runtime。
+- UI 只能请求切换，不能直接篡改 repo binding。
 
-*   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支 (进入 Spectator Mode)。
-*   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支。
+## 4. 状态机
 
-## 本章相关配置
+### 4.1 Repo 健康状态
 
-* 无。
+- `Healthy`
+- `Degraded`
+- `Quarantined`
+- `Repairing`
+
+### 4.2 激活状态
+
+- `LocalActive`
+- `RemoteActive`
+- `RecoveringLocal`
+- `Unavailable`
+
+### 4.3 转换规则
+
+- `SelectLocalRepo -> LocalActive`
+- `SelectRemoteBranch -> RemoteActive`
+- `LeaveRemote -> RecoveringLocal`
+- `RecoverLastStableLocal -> LocalActive`
+- `ProjectionBroken -> Degraded`
+- `RepairFailed -> Quarantined`
+
+## 5. 写入合同
+
+- `CreateDoc / RenameDoc / MoveDoc / DeleteDoc`
+  - 最终必须以 `NodeId / DocId` 进入 ledger。
+- tree/path metadata 不得绕过 structure facts 直接写入。
+- spectator / remote branch 下所有结构写操作必须 fail-closed。
+
+## 6. 恢复与修复合同
+
+- 启动期如果 projection 失效，可暂时降级，但不得把 projection 当 authority 覆盖回 ledger。
+- 历史坏 repo 必须走受控 repair 或 quarantine。
+- 从 remote 返回 local 时，应优先恢复最近稳定本地 repo；若不可恢复，必须显式走 fail-closed fallback。
+
+## 7. Remote / Spectator 边界
+
+- remote branch 是只读镜像视图，不是可写 branch。
+- 允许 read / diff / export / merge-into-local。
+- 禁止直接写回 remote ledger。
+
+## 8. 禁止事项
+
+- 禁止 name/path-only 直接驱动底层 repo/file 算子。
+- 禁止把 tree projection 当作结构权威。
+- 禁止跨 peer 直接写入别人的 branch。
+- 禁止 repo 损坏时静默绑定到其它 repo。
+
+## 9. 代码边界
+
+- `crates/core/src/ledger/`
+  - repo facts、structure facts、append validation。
+- `crates/core/src/tree/`
+  - tree projection。
+- `apps/cli/src/server/handlers/switcher*`
+  - repo / branch selection runtime。
+- `apps/web/src/hooks/use_core/`
+  - current repo scope、last local repo hint、readonly boundary。

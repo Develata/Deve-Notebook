@@ -64,7 +64,7 @@
   preconditions:
     - 应用使用默认配置启动
   steps:
-    - run: rg -n "Tantivy|AI|Code Execution" "deve-note plan/02_positioning.md"
+    - run: rg -n "Tantivy|AI|Code Execution" "docs/plan/02_positioning.md"
   assertions:
     - stdout_contains: "Core MUST NOT"
 ```

@@ -30,7 +30,9 @@ Rust workspace for a high-performance collaborative notebook application targeti
 | `scripts/` | Build and lint utility scripts (see `scripts/AGENTS.md`) |
 | `tests/` | Integration and plugin tests (see `tests/AGENTS.md`) |
 | `docs/` | Project documentation (see `docs/AGENTS.md`) |
-| `deve-note plan/` | Design chapters 01–16 and acceptance cases (see `deve-note plan/AGENTS.md`) |
+| `docs/plan/` | Engineering blueprint chapters (see `docs/plan/AGENTS.md`) |
+| `docs/features/` | Product feature specifications with Chrome MCP walkthroughs |
+| `docs/acceptance-cases/` | Automation-oriented validation cases |
 | `ledger/` | Runtime ledger data — host keys, local DB, remote peers (see `ledger/AGENTS.md`) |
 | `.github/` | CI workflows (see `.github/AGENTS.md`) |
 
@@ -39,7 +41,7 @@ Rust workspace for a high-performance collaborative notebook application targeti
 ### Working In This Directory
 
 - **Iron rule**: single file < 130 lines, fuse at 250 — refactor immediately if exceeded.
-- Always consult `deve-note plan/` before implementing features.
+- Always consult `docs/plan/` before implementing features.
 - Target environment is 768 MB RAM VPS — evaluate every new dependency for memory footprint.
 - Path handling must use `deve_core::utils::path::to_forward_slash` for Windows compatibility.
 - Edition 2024 Rust. Error handling: `anyhow` (app layer), `thiserror` (library layer).

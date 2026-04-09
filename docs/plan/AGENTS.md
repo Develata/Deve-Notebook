@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Comprehensive design document for Deve-Notebook, organized into 17 chapters covering every aspect of the system — from terminology and storage architecture to UI design, AI behavior, networking, authentication, and release strategy. This is the primary reference for all implementation work.
+Engineering blueprint for Deve-Notebook. `docs/plan/` defines how the system is engineered: infra layers, authority rules, runtime state machines, protocol contracts, recovery semantics, and implementation guardrails. This is the primary reference for code architecture and module boundaries.
 
 ## Key Files
 
@@ -32,15 +32,12 @@ Comprehensive design document for Deve-Notebook, organized into 17 chapters cove
 | `15_release.md` | Build, packaging, and deployment |
 | `16_web_thin_client_ledger.md` | Web thin client, repo-scoped state machine, scope gates |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
-| `18_infra_runtime.md` | Infra-first runtime layering, module boundaries, repair contracts |
-| `19_repo_refactor_blueprint.md` | Staged repo refactor blueprint and migration order |
 | `验收清单.md` | Acceptance checklist (Chinese) |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
-| `acceptance-cases/` | Detailed acceptance test scenarios |
 | `plugins/` | Plugin system design documents |
 
 ## For AI Agents
@@ -50,8 +47,8 @@ Comprehensive design document for Deve-Notebook, organized into 17 chapters cove
 - **Read before implementing.** Every feature should trace back to a plan chapter.
 - Plans are written in Chinese and English. Key architectural concepts are defined in `01_terminology.md`.
 - Critical design patterns: Route 2 (node-first), UUID-first identity, fail-closed semantics, scope nonces.
-- For core feature work, read `18_infra_runtime.md` after `04/05/06/16` to map plan rules onto module boundaries and runtime responsibilities.
-- `19_repo_refactor_blueprint.md` is a migration guide for the current code tree; use it to decide where new code should land before adding more files under existing hubs.
+- `docs/plan/` must stay implementation-oriented. Product-visible scenarios belong in `docs/features/`.
+- When adding or editing plan chapters, prefer state machines, failure contracts, and module boundaries over user-story wording.
 - Do not modify plan files unless asked — they are reference documents.
 
 ## Plan-Code Bijection Enforcement (双射执行机制)
@@ -85,7 +82,7 @@ CI 流水线 MUST 运行此脚本；产出的 `plan-coverage.txt` 作为 PR arti
 
 ### Layer 3 — Acceptance Case Binding (验收用例绑定)
 
-`deve-note plan/acceptance-cases/` 下每个验收用例文件 `ACC-XXX.md` MUST 对应至少一个集成测试函数，命名模式：
+`docs/acceptance-cases/` 下每个验收用例文件 `ACC-XXX.md` MUST 对应至少一个集成测试函数，命名模式：
 
 ```rust
 #[test]

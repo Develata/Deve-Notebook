@@ -2,7 +2,7 @@
 # plan-coverage.sh — Plan-Code Bijection Enforcement
 #
 # Implements Layer 2 (CI Coverage Check) and minimum automated checks
-# defined in `deve-note plan/AGENTS.md §Plan-Code Bijection Enforcement`.
+# defined in `docs/plan/AGENTS.md §Plan-Code Bijection Enforcement`.
 #
 # Exit codes:
 #   0 — all checks passed
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PLAN_DIR="$ROOT/deve-note plan"
+PLAN_DIR="$ROOT/docs/plan"
 CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
 FUSE_LINES=250
 SOFT_LINES=130
