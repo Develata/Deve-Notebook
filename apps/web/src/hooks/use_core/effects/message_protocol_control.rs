@@ -44,3 +44,52 @@ pub(super) fn is_auth_error(code: ServerErrorCode) -> bool {
         ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing
     )
 }
+
+pub(crate) fn should_recover_scope_pref_after_failed_repo_switch(
+    code: ServerErrorCode,
+    switch_nonce: Option<u64>,
+    pending_repo_switch_nonce: Option<u64>,
+) -> bool {
+    matches!(
+        code,
+        ServerErrorCode::ScRepoContextInvalid
+            | ServerErrorCode::SyncRepoUnbound
+            | ServerErrorCode::StorageNotFound
+    ) && switch_nonce.is_some()
+        && switch_nonce == pending_repo_switch_nonce
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_recover_scope_pref_after_failed_repo_switch;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn scope_pref_recovery_requires_matching_repo_switch_nonce() {
+        assert!(should_recover_scope_pref_after_failed_repo_switch(
+            ServerErrorCode::ScRepoContextInvalid,
+            Some(7),
+            Some(7),
+        ));
+        assert!(should_recover_scope_pref_after_failed_repo_switch(
+            ServerErrorCode::StorageNotFound,
+            Some(9),
+            Some(9),
+        ));
+        assert!(!should_recover_scope_pref_after_failed_repo_switch(
+            ServerErrorCode::StoragePersistFailed,
+            Some(7),
+            Some(7),
+        ));
+        assert!(!should_recover_scope_pref_after_failed_repo_switch(
+            ServerErrorCode::ScRepoContextInvalid,
+            None,
+            Some(7),
+        ));
+        assert!(!should_recover_scope_pref_after_failed_repo_switch(
+            ServerErrorCode::ScRepoContextInvalid,
+            Some(7),
+            Some(9),
+        ));
+    }
+}

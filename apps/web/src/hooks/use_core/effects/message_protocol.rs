@@ -8,6 +8,7 @@ use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal};
 #[path = "message_protocol_control.rs"]
 mod control;
 use self::control::is_auth_error;
+pub(crate) use self::control::should_recover_scope_pref_after_failed_repo_switch;
 
 #[derive(Clone, Copy)]
 pub struct ProtocolControlSignals {
@@ -96,7 +97,7 @@ pub fn handle_protocol_error(
     }
 }
 
-fn clear_failed_scope_switch(
+pub(super) fn clear_failed_scope_switch(
     code: deve_core::protocol::ServerErrorCode,
     switch_nonce: Option<u64>,
     signals: ProtocolControlSignals,

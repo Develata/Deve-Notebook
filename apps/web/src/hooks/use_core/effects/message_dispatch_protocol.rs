@@ -1,10 +1,16 @@
 use super::super::state::CoreSignals;
+use super::super::scope_prefs::clear_scope_pref;
+use super::message_control_runtime_repo::{clear_repo_scoped_runtime, request_repo_list};
 use super::message_protocol::ProtocolControlSignals;
-use super::message_protocol::handle_protocol_error;
+use super::message_protocol::{
+    clear_failed_scope_switch, handle_protocol_error,
+    should_recover_scope_pref_after_failed_repo_switch,
+};
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
 use crate::i18n::Locale;
 use deve_core::protocol::ServerError;
+use leptos::prelude::{GetUntracked, Set};
 
 pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals {
     ProtocolControlSignals {
@@ -57,6 +63,19 @@ pub fn handle_protocol_error_message(
     if !accepts_protocol_error_message(scope_nonce, switch_nonce, signals) {
         return;
     }
+    if should_recover_scope_pref_after_failed_repo_switch(
+        error.code,
+        switch_nonce,
+        signals.pending_repo_switch_nonce.get_untracked(),
+    ) {
+        clear_failed_scope_switch(error.code, switch_nonce, protocol_control_signals(signals));
+        recover_from_failed_scope_restore(ws, signals);
+        leptos::logging::warn!(
+            "自动清理失效的 repo scope 偏好并重新请求仓库列表: code={:?}",
+            error.code
+        );
+        return;
+    }
     handle_protocol_error(
         ws,
         locale,
@@ -64,4 +83,19 @@ pub fn handle_protocol_error_message(
         switch_nonce,
         protocol_control_signals(signals),
     );
+}
+
+fn recover_from_failed_scope_restore(ws: &WsService, signals: CoreSignals) {
+    clear_scope_pref();
+    ws.clear_writer_ready();
+    signals.set_handshake_ready.set(false);
+    signals.set_active_branch.set(None);
+    signals.set_current_repo.set(None);
+    signals.set_current_repo_id.set(None);
+    signals.set_current_doc.set(None);
+    signals.set_docs.set(Vec::new());
+    signals.set_tree_nodes.set(Vec::new());
+    signals.set_repo_list.set(Vec::new());
+    clear_repo_scoped_runtime(signals);
+    request_repo_list(ws, signals);
 }
