@@ -35,6 +35,10 @@
 16. **[Web Thin Client & Ledger Confirmation](./16_web_thin_client_ledger.md)**: Web 薄客户端写入模型、Ack 确认链与 repo-scoped write readiness.
 17. **[Plugins & Runtime](./17_plugins.md)**: Trusted External Agent / Calculation Runtime 接口预留（当前不要求代码实现）。
 
+### Phase 6: Infra & Refactoring Governance
+18. **[Infra & Runtime Boundary](./18_infra_runtime.md)**: infra-first 架构分层、运行时边界、失败与修复合同。
+19. **[Repo Refactor Blueprint](./19_repo_refactor_blueprint.md)**: 当前仓库的模块重构蓝图、迁移顺序与边界映射。
+
 ---
 
 ## 文档状态与职责边界
@@ -43,8 +47,21 @@
 
 *   **Current MUST（当前硬约束）**：`01`、`02`、`04`、`05`、`06`、`07`、`09`、`11`。这些章节定义当前实现必须满足的不变量、协议约束与错误契约。
 *   **Current UI Contract（当前界面契约）**：`03`、`08`。这些章节定义当前交互与可见行为，但不得改写 Ledger / Auth / Network 的权威规则。
-*   **Approved Target Architecture（已批准目标架构）**：`16`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
+*   **Approved Runtime Architecture（已批准运行时架构）**：`16`、`18`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当模块职责、修复策略与运行时边界存在交叉时，以 `18` 的 infra-first 合同为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
+*   **Implementation Blueprint（实现蓝图）**：`19`。该章节用于指导当前代码树的目录收敛、迁移顺序与模块职责，不得反向推翻 Current MUST / Approved Runtime Architecture。
 *   **Planned / Optional（规划或扩展）**：`10`、`12`、`13`、`14`、`15`、`17`。这些章节可指导实现，但不得反向推翻 Current MUST。
+
+### Infra-First 阅读顺序
+
+当任务属于核心功能（Markdown / P2P / Source Control / Repo Scope / Pending Writes / Recovery）时，推荐按以下顺序阅读：
+
+1. `01_terminology.md` → 确认术语与规范性用语。
+2. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
+3. `04_storage.md`、`05_network.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、scope、diff 的硬约束。
+4. `16_web_thin_client_ledger.md` → 确认 Web thin-client 写路径与 repo-scoped 状态机。
+5. `18_infra_runtime.md` → 把上述约束翻译为模块边界、运行时职责与修复合同。
+6. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md` → 仅在不改写权威规则的前提下定义可见行为。
+7. `19_repo_refactor_blueprint.md` → 当需要整理目录、拆模块或规划迁移顺序时使用。
 
 ### 章节归属规则
 
@@ -57,12 +74,22 @@
 *   `10_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
 *   `11_i18n.md`：错误码目录与前端文案映射，不负责传输层协议。
 *   `16_web_thin_client_ledger.md`：Web thin-client 写入确认链、pending overlay、repo-scoped write readiness，以及 WS/HTTP 结构化错误契约在 Web 路径上的收敛。
+*   `18_infra_runtime.md`：authority / projection / runtime / feature / peripheral 的分层规则，以及跨模块协作合同。
+*   `19_repo_refactor_blueprint.md`：当前代码树如何向 infra-first 模块边界迁移，哪些目录承担哪些职责。
 
 ### Route 2 Guardrail（Node/Path 一等事实护栏）
 
 *   当实现进入 Node-first 重构时，路径与树结构相关的最终业务事实 **MUST** 进入 Ledger，而不是通过 `metadata` / `path cache` 直写完成。
 *   `metadata`、`DocId <-> Path` 映射、`TreeDelta`、侧边栏树与 Vault 工作区都 **MUST** 视为 projection 或 projection cache。
 *   `RenameDoc / MoveDoc / DeleteDoc / CreateDoc` 与 Source Control rename commit **MUST** 共享同一条结构事实写路径。
+
+### Infra-First Guardrail（基础设施优先护栏）
+
+*   控件、页面与视图层 **MUST NOT** 直接持有业务真相；它们只能消费 runtime 暴露的状态，并发出 typed intents。
+*   feature runtime **MUST** 只拥有本功能的状态机，不得直接篡改其他 runtime 的内部状态。
+*   authority core（ledger / facts / append validation）与 projection / repair **MUST** 明确分层；projection 失败不得回写 authority，也不得伪装为成功写入。
+*   修复逻辑（repair / degraded / quarantine / stale scope recovery）**MUST** 视为第一类基础设施能力，而不是散落在 handler / effect / component 内的临时补丁。
+*   plugin / AI / external runtime **MUST** 视为外围系统；在核心功能未稳定前，不得要求它们反向主导 authority、scope 或 pending write 的主链设计。
 
 ### Global: Code Standards (代码规范)
 
