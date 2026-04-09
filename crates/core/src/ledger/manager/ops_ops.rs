@@ -83,8 +83,9 @@ impl RepoManager {
         structure: StructureOp,
         timestamp: i64,
     ) -> Result<(u64, u64)> {
+        let repo_scope = ops::local_repo_scope(repo_name);
         self.run_on_local_repo(repo_name, move |db| {
-            node_ops::append_generated_structure_op(db, peer_id, structure, timestamp)
+            node_ops::append_generated_structure_op(db, peer_id, structure, timestamp, &repo_scope)
         })
     }
 

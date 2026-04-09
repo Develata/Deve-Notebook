@@ -6,7 +6,7 @@ use redb::{Database, ReadableTable};
 
 pub fn append_op_to_db(db: &Database, entry: &LedgerEntry, repo_scope: &str) -> Result<u64> {
     let write_txn = db.begin_write()?;
-    validate::validate_content_append(&write_txn, entry, repo_scope)?;
+    validate::validate_ledger_append(&write_txn, entry, repo_scope)?;
     let seq = {
         let mut ops = write_txn.open_table(LEDGER_OPS)?;
         let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;

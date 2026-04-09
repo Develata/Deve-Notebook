@@ -7,7 +7,10 @@ use super::PreparedRepoSwitch;
 pub(super) fn load_local_repo_view(
     state: &Arc<AppState>,
     prepared: &PreparedRepoSwitch,
-) -> anyhow::Result<(Vec<(deve_core::models::DocId, String)>, Vec<(NodeId, NodeMeta)>)> {
+) -> anyhow::Result<(
+    Vec<(deve_core::models::DocId, String)>,
+    Vec<(NodeId, NodeMeta)>,
+)> {
     if prepared.degraded_docs_only {
         let docs = state
             .repo

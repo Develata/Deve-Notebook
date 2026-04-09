@@ -1,3 +1,4 @@
+use crate::ledger::append_validate;
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};
 use crate::models::{LedgerEntry, PeerId, StructureOp, deserialize_ledger_entry};
 use anyhow::Result;
@@ -11,6 +12,7 @@ pub fn append_generated_structure_op(
     peer_id: PeerId,
     structure: StructureOp,
     timestamp: i64,
+    repo_scope: &str,
 ) -> Result<(u64, u64)> {
     let node_id = structure.node_id();
     let peer_key = peer_id.as_str().to_string();
@@ -23,6 +25,7 @@ pub fn append_generated_structure_op(
         scan_node_peer_seq(&write_txn, node_id.as_u128(), &peer_id)? + 1
     };
     let entry = LedgerEntry::new_structure(structure, timestamp, peer_id, next_local_seq);
+    append_validate::validate_ledger_append(&write_txn, &entry, repo_scope)?;
     let mut ops = write_txn.open_table(LEDGER_OPS)?;
     let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
     let mut node_ops = write_txn.open_multimap_table(NODE_OPS)?;

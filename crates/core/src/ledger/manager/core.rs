@@ -6,12 +6,12 @@ use crate::ledger::node_meta;
 use crate::ledger::{init, range};
 use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
 
+#[path = "core_docs_fallback.rs"]
+mod docs_fallback;
 #[path = "core_local_registry.rs"]
 mod local_registry;
 #[path = "core_mount.rs"]
 mod mount;
-#[path = "core_docs_fallback.rs"]
-mod docs_fallback;
 
 impl RepoManager {
     /// 初始化仓库管理器

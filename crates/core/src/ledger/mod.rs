@@ -28,6 +28,7 @@
 
 // ========== 子模块声明 ==========
 
+mod append_validate;
 pub mod database;
 mod database_cache;
 pub mod doc_lookup;
@@ -70,5 +71,7 @@ mod ops_query_fail_closed_test;
 mod ops_write_validation_test;
 #[cfg(test)]
 mod runtime_tables_test;
+#[cfg(test)]
+mod structure_write_validation_test;
 #[cfg(test)]
 mod tests;

@@ -55,7 +55,7 @@ fn append_generated_op_inner(
     if entry.seq != next_local_seq {
         return Err(anyhow::anyhow!("Entry sequence mismatch"));
     }
-    validate::validate_content_append(&write_txn, &entry, repo_scope)?;
+    validate::validate_ledger_append(&write_txn, &entry, repo_scope)?;
 
     let mut ops = write_txn.open_table(LEDGER_OPS)?;
     let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
