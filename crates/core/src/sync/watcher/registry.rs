@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage.md §Watcher Architecture
+//!   - 04_storage.md §8. Watcher Contract
 
 use super::WatcherError;
 use crate::models::RepoId;

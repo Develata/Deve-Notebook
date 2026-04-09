@@ -7,38 +7,43 @@
 - [Feature Spec Index](../features/deve-note%20features.md)
 - [Acceptance Case Index](../acceptance-cases/00_index.md)
 - [Coverage Matrix](../coverage-matrix.md)
+- [Gap & Audit Reports](../report/) — 阶段性差距分析与进度快照（时效性文档，非权威约束）
 
 ## 📚 Infra-First 目录
 
 ### A. Foundation
-1. **[01_terminology.md](./01_terminology.md)**: 核心术语、规范性用语、权威定义。
-2. **[02_positioning.md](./02_positioning.md)**: 产品边界、Core MUST / MUST NOT、项目定位。
+- **[01_terminology.md](./01_terminology.md)**: 核心术语、规范性用语、权威定义。
+- **[02_positioning.md](./02_positioning.md)**: 产品边界、Core MUST / MUST NOT、项目定位。
 
 ### B. Authority Core
-3. **[04_storage.md](./04_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
-4. **[06_repository.md](./06_repository.md)**: repo identity、branch scope、tree projection、repo health。
-5. **[07_diff_logic.md](./07_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
+- **[04_storage.md](./04_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
+- **[06_repository.md](./06_repository.md)**: repo identity、branch scope、tree projection、repo health。
+- **[07_diff_logic.md](./07_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
 
 ### C. Runtime Protocols
-6. **[05_network.md](./05_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
-7. **[09_auth.md](./09_auth.md)**: user session、入口鉴权、cookie/JWT、安全头与 TLS 合同。
-8. **[16_web_thin_client_ledger.md](./16_web_thin_client_ledger.md)**: Web 薄客户端 pending/ack/reject/write readiness。
+- **[05_network.md](./05_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
+- **[09_auth.md](./09_auth.md)**: user session、入口鉴权、cookie/JWT、安全头与 TLS 合同。
+- **[16_web_thin_client_ledger.md](./16_web_thin_client_ledger.md)**: Web 薄客户端 pending/ack/reject/write readiness。
 
 ### D. Application / UI Shell
-9. **[03_rendering.md](./03_rendering.md)**: editor runtime、parser、widget、outline、source-first 渲染蓝图。
-10. **[08_ui_design.md](./08_ui_design.md)**: shell/control/runtime 分层与多端共享控制接口。
-11. **[08_ui_design_01_web.md](./08_ui_design_01_web.md)**: Web shell adapter 与布局约束。
-12. **[08_ui_design_02_desktop.md](./08_ui_design_02_desktop.md)**: Desktop shell adapter 与原生边界。
-13. **[08_ui_design_03_mobile.md](./08_ui_design_03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
-14. **[11_i18n.md](./11_i18n.md)**: i18n facade、错误码映射、文案约束。
-15. **[12_commands.md](./12_commands.md)**: command surface、palette、快捷键与 control 映射。
-16. **[13_settings.md](./13_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
+- **[03_rendering.md](./03_rendering.md)**: editor runtime、parser、widget、outline、source-first 渲染蓝图。
+- **[08_ui_design.md](./08_ui_design.md)**: shell/control/runtime 分层与多端共享控制接口。
+- **[08_ui_design_01_web.md](./08_ui_design_01_web.md)**: Web shell adapter 与布局约束。
+- **[08_ui_design_02_desktop.md](./08_ui_design_02_desktop.md)**: Desktop shell adapter 与原生边界。
+- **[08_ui_design_03_mobile.md](./08_ui_design_03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
+- **[11_i18n.md](./11_i18n.md)**: i18n facade、错误码映射、文案约束。
+- **[12_commands.md](./12_commands.md)**: command surface、palette、快捷键与 control 映射。
+- **[13_settings.md](./13_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
 
 ### E. Peripheral / Deferred
-17. **[10_ai_agent.md](./10_ai_agent.md)**: AI chat / trusted CLI / external runtime 的工程边界。
-18. **[14_tech_stack.md](./14_tech_stack.md)**: 技术栈与端侧 adapter 选型。
-19. **[15_release.md](./15_release.md)**: 构建、打包、发布、CI/CD。
-20. **[17_plugins.md](./17_plugins.md)**: plugin / external runtime 接口保留。
+- **[10_ai_agent.md](./10_ai_agent.md)**: AI chat / trusted CLI / external runtime 的工程边界。
+- **[14_tech_stack.md](./14_tech_stack.md)**: 技术栈与端侧 adapter 选型。
+- **[15_release.md](./15_release.md)**: 构建、打包、发布、CI/CD。
+- **[17_plugins.md](./17_plugins.md)**: plugin / external runtime 接口保留。
+
+### F. Implementation Blueprints
+- **[../tasks/18_infra_runtime.md](../tasks/18_infra_runtime.md)**: infra-first 模块拆分与运行时边界收敛蓝图。
+- **[../tasks/19_repo_refactor_blueprint.md](../tasks/19_repo_refactor_blueprint.md)**: 仓库重构迁移顺序与目录调整蓝图。
 
 ---
 

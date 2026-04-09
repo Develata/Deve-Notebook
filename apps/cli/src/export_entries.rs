@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage.md §Data Integrity & Recovery (Disaster Recovery)
+//!   - 04_storage.md §9.4 Backup / Export
 //!
 //! Builds JSONL export rows from `LEDGER_OPS`. Resolves each entry's
 //! current path through the node/projection layer so exported lines are

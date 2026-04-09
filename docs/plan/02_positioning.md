@@ -1,5 +1,13 @@
 # 02_positioning.md - 项目定位与设计篇 (Project Positioning)
 
+## Metadata
+
+- `Layer`: `Foundation`
+- `Status`: `Current MUST`
+- `Counterpart Feature`: `docs/features/02_positioning.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
+- `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`
+
 ## 版本与状态 (Meta)
 
 **版本**: 0.0.1

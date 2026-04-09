@@ -1,5 +1,13 @@
 # 08_ui_design_01_web.md - Web 端设计 (Web UI)
 
+## Metadata
+
+- `Layer`: `Application / UI Shell`
+- `Status`: `Current UI Contract`
+- `Counterpart Feature`: `docs/features/08_ui_design.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
+- `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
+
 > **Status**: Core Specification
 > **Target**: Server Dashboard & PWA
 

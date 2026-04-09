@@ -1,5 +1,13 @@
 # 15_release.md - 发布与运维 (Release & Ops)
 
+## Metadata
+
+- `Layer`: `Peripheral / Deferred`
+- `Status`: `Reference`
+- `Counterpart Feature`: `docs/features/15_release.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
+- `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`
+
 本章定义 `Deve-Note` 的软件发布策略、版本管理规范以及 CI/CD 自动化流程。
 
 ## 1. Distribution Strategy (分发策略)

@@ -1,5 +1,14 @@
 # 10_ai_agent.md - AI Agent 篇 (AI Agent)
 
+## Metadata
+
+- `Layer`: `Peripheral / Deferred`
+- `Status`: `Deferred`
+- `Counterpart Feature`: `docs/features/10_ai_agent.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
+- `Primary Code Areas`: `crates/core/src/plugin/`, `apps/cli/src/server/ai_chat.rs`, `apps/web/src/components/ai_chat/`
+- `Related Design Notes`: [`docs/ai-chat-streaming.md`](../ai-chat-streaming.md) (streaming bridge design), [`docs/plan/plugins/agent_bridge/01_agent_bridge.md`](./plugins/agent_bridge/01_agent_bridge.md) (dual-channel architecture)
+
 > AI 能力是 Deve-Notebook 的**第一方原生产品层**，不再归入插件章节。
 > 当前主线是**最小原生 AI Chat**；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
 > 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用，且当前 release **MAY** 完全不提供该能力。

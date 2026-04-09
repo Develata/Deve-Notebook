@@ -1,6 +1,5 @@
 //! plan_ref:
-//!   - 04_storage.md §Inode/DocId Mapping & Watcher Service
-//!   - 04_storage.md §Watcher Architecture
+//!   - 04_storage.md §8. Watcher Contract
 
 mod watcher_test_support;
 

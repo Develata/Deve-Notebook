@@ -1,5 +1,13 @@
 # 12_commands.md - 命令篇 (Commands)
 
+## Metadata
+
+- `Layer`: `Application / UI Shell`
+- `Status`: `Current UI Contract`
+- `Counterpart Feature`: `docs/features/12_commands.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
+- `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/components/command_palette/`
+
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
 ## CLI Commands (命令行)

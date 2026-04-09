@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage.md §Non-Negotiable Invariants
+//!   - 04_storage.md §7. Projection and Persistence Contract
 
 use super::EntryKind;
 use crate::ledger::RepoManager;

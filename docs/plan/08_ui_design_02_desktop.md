@@ -1,5 +1,13 @@
 # 08_ui_design_02_desktop.md - 桌面端设计 (Desktop UI)
 
+## Metadata
+
+- `Layer`: `Application / UI Shell`
+- `Status`: `Current UI Contract`
+- `Counterpart Feature`: `docs/features/08_ui_design.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
+- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`
+
 > **Status**: Core Specification
 > **Platform**: Desktop (Windows / macOS / Linux)
 

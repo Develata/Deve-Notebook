@@ -11,12 +11,15 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `features/`: product behavior, user-visible workflows, Chrome MCP manual verification scenarios
 - `acceptance-cases/`: automation-oriented validation cases and script entry contracts
 - `coverage-matrix.md`: stable chapter mapping across the three layers
+- `report/`: time-stamped gap analyses, audits, and progress snapshots (non-authoritative)
+- `tasks/`: implementation blueprints for infra-first restructuring (18, 19)
 
 ## Key Files
 
 | File | Description |
 |------|-------------|
-| `ai-chat-streaming.md` | Design doc for AI chat streaming protocol and integration |
+| `coverage-matrix.md` | Three-layer chapter mapping (plan ↔ features ↔ acceptance-cases) |
+| `ai-chat-streaming.md` | Design doc for AI chat streaming protocol (referenced from `plan/10_ai_agent.md`) |
 
 ## For AI Agents
 

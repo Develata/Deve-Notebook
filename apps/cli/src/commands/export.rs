@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage.md §Data Integrity & Recovery (Disaster Recovery)
+//!   - 04_storage.md §9.4 Backup / Export
 //!
 //! Ledger → JSON Lines / Markdown exporter. JSONL path implements the
 //! `MUST` disaster-recovery export guarantee: every authoritative fact in

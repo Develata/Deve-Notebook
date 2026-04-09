@@ -1,5 +1,13 @@
 # 14_tech_stack.md - 技术栈篇 (Technology Stack)
 
+## Metadata
+
+- `Layer`: `Peripheral / Deferred`
+- `Status`: `Reference`
+- `Counterpart Feature`: `docs/features/14_tech_stack.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
+- `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`
+
 ## 技术栈清单 (The Full Stack)
 
 | **Layer**    | **Technology**           | **Status**        | **Selection Reasoning**             |

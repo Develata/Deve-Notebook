@@ -32,14 +32,13 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `15_release.md` | Build, packaging, and deployment |
 | `16_web_thin_client_ledger.md` | Web thin client, repo-scoped state machine, scope gates |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
-| `验收清单.md` | Acceptance checklist (Chinese) |
+| `验收清单.md` | Acceptance checklist (Chinese) — **deprecated**, see `docs/acceptance-cases/` |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
-| `acceptance-cases/` | Detailed acceptance test scenarios |
-| `plugins/` | Plugin system design documents |
+| `plugins/` | Plugin system design documents (referenced from `10_ai_agent.md` Metadata) |
 
 ## For AI Agents
 
@@ -62,15 +61,26 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 
 ```rust
 //! plan_ref:
-//!   - 04_storage.md §Watcher Architecture
-//!   - 04_storage.md §Inode/DocId Mapping & Watcher Service
+//!   - 04_storage.md §8. Watcher Contract
 ```
 
 **规则**：
-- 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter_file> §<section>`。
+- 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter_file> §<section heading>`。
+- `§` 后面的文字 **MUST** 与 plan 中的 `## ` / `### ` 标题完全一致（包含编号）。
 - 纯工具/util 模块（如 `utils/path.rs`）可使用 `//! plan_ref: infra` 标记为基础设施，豁免章节追溯。
 - 同一模块 MAY 引用多个章节；跨域模块应优先拆分而非堆叠引用。
 - 删除代码前 MUST 核对其 `plan_ref` 对应条款是否已从 plan 中移除或重新分配。
+- Plan 章节重命名时 MUST 同步更新所有代码侧 `plan_ref` 引用。
+
+**当前有效的 §section 引用**（2026-04-09）：
+
+| plan_ref | 对应 plan heading |
+|---|---|
+| `04_storage.md §7. Projection and Persistence Contract` | `## 7. Projection and Persistence Contract` |
+| `04_storage.md §8. Watcher Contract` | `## 8. Watcher Contract` |
+| `04_storage.md §9.4 Backup / Export` | `### 9.4 Backup / Export` |
+| `09_auth.md §安全策略` | inline reference in `09_auth.md` |
+| `09_auth.md §本章相关配置` | `## 本章相关配置` |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 

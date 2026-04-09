@@ -31,10 +31,22 @@
 | `16_web_thin_client_ledger` | `16_web_thin_client_ledger` | `06_network`, `07_storage_repo` | pending/ack/reject automation + Chrome MCP |
 | `17_plugins` | `17_plugins` | `10_plugins` | plugin/runtime boundary automation |
 
+### Non-Matrix Documents
+
+The following documents exist under `docs/` but do not participate in the three-layer matrix:
+
+| Document | Type | Notes |
+| --- | --- | --- |
+| `docs/tasks/18_infra_runtime.md` | Implementation Blueprint | Infra-first module boundaries; guided by but does not override A/B/C layer chapters |
+| `docs/tasks/19_repo_refactor_blueprint.md` | Implementation Blueprint | Repo restructuring migration order |
+| `docs/plan/plugins/agent_bridge/01_agent_bridge.md` | Design Note | Dual-channel AI architecture; referenced from `10_ai_agent.md` Metadata |
+| `docs/ai-chat-streaming.md` | Design Note | Streaming bridge design; referenced from `10_ai_agent.md` Metadata |
+| `docs/plan/验收清单.md` | Deprecated | Superseded by `docs/acceptance-cases/` |
+
 ## Rules
 
-- Every `docs/plan/` chapter must have a corresponding row in this matrix.
-- Every `docs/features/` chapter must define at least one Chrome MCP walkthrough.
+- Every `docs/plan/` chapter (01-17 + 08_ui sub-chapters) must have a corresponding row in the Chapter Mapping table.
+- Every `docs/features/` chapter must define at least one Chrome MCP walkthrough, **except** `01_terminology` and `02_positioning` which use `Verification: glossary-only / boundary-only`.
 - Every `docs/acceptance-cases/` file must map to at least one stable automation surface.
 - A single acceptance file may cover multiple blueprint chapters, but the mapping must be explicit here.
 - `08_ui_design.md` remains the shared cross-surface feature chapter.

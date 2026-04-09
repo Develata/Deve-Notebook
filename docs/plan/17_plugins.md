@@ -1,5 +1,13 @@
 # 17_plugins.md - 插件与运行时篇 (Plugins & Runtime)
 
+## Metadata
+
+- `Layer`: `Peripheral / Deferred`
+- `Status`: `Deferred`
+- `Counterpart Feature`: `docs/features/17_plugins.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
+- `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
+
 > 本章当前**只做接口预留，不要求代码实现**。
 > AI Chat 已提升为第 10 章的原生产品能力，不再视为插件主线。
 > 本章当前只保留两类未来扩展：**Trusted External Agent Runtime** 与 **Calculation Runtime**。

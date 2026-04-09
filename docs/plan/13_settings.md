@@ -1,5 +1,13 @@
 # 13_settings.md - 设置篇 (Settings)
 
+## Metadata
+
+- `Layer`: `Application / UI Shell`
+- `Status`: `Current UI Contract`
+- `Counterpart Feature`: `docs/features/13_settings.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
+- `Primary Code Areas`: `apps/cli/src/server/handlers/settings/`, `apps/web/src/hooks/use_core/state_settings.rs`
+
 本章汇总系统所有配置项，包括环境变量、配置文件 (`settings.toml`) 以及快捷键映射。
 
 ## 1. Environment Variables (环境变量)
