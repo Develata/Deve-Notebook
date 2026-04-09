@@ -17,7 +17,7 @@ pub fn ChatHeader(
             .as_ref()
             .map(|signal| signal.get())
             .or_else(|| context_ai_mode.map(|signal| signal.get()))
-            .unwrap_or_else(|| "agent-bridge".to_string());
+            .unwrap_or_else(|| "ai-chat".to_string());
         if mode == "ai-chat" {
             t::chat::ai_chat(locale.get())
         } else {

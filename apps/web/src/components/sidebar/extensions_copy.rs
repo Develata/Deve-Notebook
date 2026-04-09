@@ -2,10 +2,12 @@ use crate::i18n::Locale;
 
 pub fn channel_desc(locale: Locale, mode: &str) -> &'static str {
     match (locale, mode) {
-        (Locale::En, "agent-bridge") => "External CLI bridge with MCP, tools, and history.",
-        (Locale::Zh, "agent-bridge") => "外部 CLI 桥接，支持 MCP、工具与历史能力。",
-        (Locale::En, _) => "Built-in OpenAI-compatible chat for lightweight workflows.",
-        (Locale::Zh, _) => "内置 OpenAI 兼容轻量聊天通道，适合轻量任务。",
+        (Locale::En, "agent-bridge") => {
+            "Trusted external CLI bridge. Advanced mode and not enabled by default."
+        }
+        (Locale::Zh, "agent-bridge") => "受信任的外部 CLI 桥接。属于高级模式，默认不启用。",
+        (Locale::En, _) => "Built-in native chat for lightweight markdown-first workflows.",
+        (Locale::Zh, _) => "内置原生聊天，优先服务轻量、Markdown 优先的工作流。",
     }
 }
 
@@ -18,8 +20,10 @@ pub fn runtime_title(locale: Locale) -> &'static str {
 
 pub fn runtime_desc(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Interface-first: bundled channels are ready, installable plugins come next.",
-        Locale::Zh => "先完成接口层：内置通道已可用，可安装插件运行时仍在开发中。",
+        Locale::En => {
+            "Core notebook workflows ship first; installable plugin/runtime expansion stays optional."
+        }
+        Locale::Zh => "优先交付笔记本核心工作流；可安装插件与运行时扩展保持为可选项。",
     }
 }
 

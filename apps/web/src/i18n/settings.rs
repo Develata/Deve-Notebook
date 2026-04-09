@@ -96,7 +96,21 @@ pub fn ai_backend(locale: Locale) -> &'static str {
 
 pub fn ai_backend_desc(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "CLI: external agent. API: built-in OpenAI-compatible.",
-        Locale::Zh => "CLI: 外部 Agent。API: 内置 OpenAI 兼容接口。",
+        Locale::En => "Native: built-in read-first chat. Trusted CLI: external advanced bridge.",
+        Locale::Zh => "原生: 内置只读优先聊天。受信任 CLI: 外部高级桥接。",
+    }
+}
+
+pub fn native_backend(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Native",
+        Locale::Zh => "原生",
+    }
+}
+
+pub fn trusted_cli_backend(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Trusted CLI",
+        Locale::Zh => "受信任 CLI",
     }
 }

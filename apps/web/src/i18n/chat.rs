@@ -133,15 +133,15 @@ pub fn mobile_chip(locale: Locale) -> &'static str {
 
 pub fn agent_bridge(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Agent Bridge",
-        Locale::Zh => "Agent Bridge",
+        Locale::En => "Trusted CLI",
+        Locale::Zh => "受信任 CLI",
     }
 }
 
 pub fn ai_chat(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "AI Chat",
-        Locale::Zh => "AI Chat",
+        Locale::En => "Native AI",
+        Locale::Zh => "原生 AI",
     }
 }
 

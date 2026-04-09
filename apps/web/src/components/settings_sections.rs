@@ -49,12 +49,12 @@ pub fn SyncModeSection(locale: RwSignal<Locale>) -> impl IntoView {
     }
 }
 
-/// AI backend toggle (CLI / API).
+/// AI backend toggle (Native / Trusted CLI).
 #[component]
 pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
     move || {
         let chat = expect_context::<crate::hooks::use_core::ChatContext>();
-        let is_api = chat.ai_mode.get() == "ai-chat";
+        let is_native = Signal::derive(move || chat.ai_mode.get() == "ai-chat");
         view! {
             <div class="bg-sidebar p-4 rounded-lg border border-default flex justify-between items-center">
                 <div>
@@ -63,21 +63,25 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 </div>
                 <div class="flex gap-2">
                     <button
-                        class=move || if !is_api {
-                            "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors"
-                        } else {
-                            "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
-                        }
-                        on:click=move |_| chat.set_ai_mode.set("agent-bridge".to_string())
-                    >"CLI"</button>
-                    <button
-                        class=move || if is_api {
+                        class=move || if is_native.get() {
                             "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors"
                         } else {
                             "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
                         }
                         on:click=move |_| chat.set_ai_mode.set("ai-chat".to_string())
-                    >"API"</button>
+                    >
+                        {move || t::settings::native_backend(locale.get())}
+                    </button>
+                    <button
+                        class=move || if !is_native.get() {
+                            "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors"
+                        } else {
+                            "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
+                        }
+                        on:click=move |_| chat.set_ai_mode.set("agent-bridge".to_string())
+                    >
+                        {move || t::settings::trusted_cli_backend(locale.get())}
+                    </button>
                 </div>
             </div>
         }

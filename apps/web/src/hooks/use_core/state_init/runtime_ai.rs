@@ -26,7 +26,7 @@ pub(super) fn init_ai_runtime_signals() -> AiRuntimeSignals {
     let (plugin_request_ids, set_plugin_request_ids) = signal(Vec::<String>::new());
     let (chat_messages, set_chat_messages) = signal(Vec::<ChatMessage>::new());
     let (is_chat_streaming, set_is_chat_streaming) = signal(false);
-    let (ai_mode, set_ai_mode) = signal("agent-bridge".to_string());
+    let (ai_mode, set_ai_mode) = signal("ai-chat".to_string());
     let (search_request_id, set_search_request_id) = signal(None::<String>);
     let (search_results, set_search_results) = signal(Vec::<(String, String, f32)>::new());
 
@@ -45,5 +45,17 @@ pub(super) fn init_ai_runtime_signals() -> AiRuntimeSignals {
         set_search_request_id,
         search_results,
         set_search_results,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::init_ai_runtime_signals;
+    use leptos::prelude::GetUntracked;
+
+    #[test]
+    fn defaults_to_native_ai_chat_mode() {
+        let signals = init_ai_runtime_signals();
+        assert_eq!(signals.ai_mode.get_untracked(), "ai-chat");
     }
 }

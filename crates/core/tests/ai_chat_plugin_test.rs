@@ -1,7 +1,7 @@
 // crates/core/tests/ai_chat_plugin_test.rs
 //! # AI Chat Plugin 集成测试
 //!
-//! 验证内置 ai-chat 插件的加载、工具执行路由和配置构建。
+//! 验证内置 ai-chat 插件的加载、默认只读能力和配置构建。
 //! 不涉及真实 API 调用——仅测试 Rhai 脚本层逻辑。
 
 #[cfg(test)]
@@ -36,7 +36,7 @@ mod tests {
         let plugin = load_ai_chat();
         let caps = &plugin.manifest().capabilities;
         assert!(caps.allow_net.contains(&"api.openai.com".to_string()));
-        assert!(caps.allow_source_control);
+        assert!(!caps.allow_source_control);
         assert!(caps.allow_env.contains(&"AI_API_KEY".to_string()));
     }
 

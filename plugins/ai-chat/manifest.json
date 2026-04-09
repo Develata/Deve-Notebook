@@ -16,6 +16,6 @@
             "OPENAI_API_KEY",
             "ANTHROPIC_API_KEY"
         ],
-        "allow_source_control": true
+        "allow_source_control": false
     }
 }

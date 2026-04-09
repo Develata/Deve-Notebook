@@ -35,27 +35,6 @@ pub fn ExtensionsView() -> impl IntoView {
                 </div>
                 <div class="space-y-3">
                     <button
-                        class=move || if chat.ai_mode.get() == "agent-bridge" {
-                            "w-full rounded-xl border border-accent bg-accent/10 p-4 text-left"
-                        } else {
-                            "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
-                        }
-                        on:click=move |_| chat.set_ai_mode.set("agent-bridge".to_string())
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex gap-3">
-                                <div class="rounded-lg bg-active p-2 text-primary"><Terminal class="w-5 h-5" /></div>
-                                <div>
-                                    <div class="text-sm font-semibold text-primary">{move || t::chat::agent_bridge(locale.get())}</div>
-                                    <p class="mt-1 text-xs text-muted">{move || copy::channel_desc(locale.get(), "agent-bridge")}</p>
-                                </div>
-                            </div>
-                            <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                                {move || copy::status_label(locale.get(), chat.ai_mode.get() == "agent-bridge")}
-                            </span>
-                        </div>
-                    </button>
-                    <button
                         class=move || if chat.ai_mode.get() == "ai-chat" {
                             "w-full rounded-xl border border-accent bg-accent/10 p-4 text-left"
                         } else {
@@ -73,6 +52,27 @@ pub fn ExtensionsView() -> impl IntoView {
                             </div>
                             <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
                                 {move || copy::status_label(locale.get(), chat.ai_mode.get() == "ai-chat")}
+                            </span>
+                        </div>
+                    </button>
+                    <button
+                        class=move || if chat.ai_mode.get() == "agent-bridge" {
+                            "w-full rounded-xl border border-accent bg-accent/10 p-4 text-left"
+                        } else {
+                            "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
+                        }
+                        on:click=move |_| chat.set_ai_mode.set("agent-bridge".to_string())
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex gap-3">
+                                <div class="rounded-lg bg-active p-2 text-primary"><Terminal class="w-5 h-5" /></div>
+                                <div>
+                                    <div class="text-sm font-semibold text-primary">{move || t::chat::agent_bridge(locale.get())}</div>
+                                    <p class="mt-1 text-xs text-muted">{move || copy::channel_desc(locale.get(), "agent-bridge")}</p>
+                                </div>
+                            </div>
+                            <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
+                                {move || copy::status_label(locale.get(), chat.ai_mode.get() == "agent-bridge")}
                             </span>
                         </div>
                     </button>
