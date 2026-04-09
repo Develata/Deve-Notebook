@@ -1,0 +1,9 @@
+        subgraph cluster_app_sc_discard {
+            label="discard pending [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_discard [label="sync::discard_pending", fillcolor="#bfdbfe"];
+            app_sc_discard_ack [label="sync::pending_discarded", fillcolor="#eff6ff"];
+        }

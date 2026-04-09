@@ -58,7 +58,7 @@ The current graph also carries three extra architecture cues:
 
 - `architecture-doc.lisp` has been refactored to an operation-first baseline.
 - `architecture.dot` should now be read as the plan-side blueprint graph for that new layer model.
-- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `branch-switch`, `repo-switch`, `stage / unstage`, `source-control commit`, `native ai-chat`, and `open-doc`.
+- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `source-control commit`, `native ai-chat`, and `open-doc`.
 - `architecture-code.lisp` and `architecture-diff.md` still reflect the older implementation-side model and need a later refactor.
 
 ## How To Read The Lisp Files

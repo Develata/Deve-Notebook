@@ -1,0 +1,9 @@
+        subgraph cluster_app_sc_discard_file {
+            label="discard file [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_discard_file [label="sc::discard_file", fillcolor="#bfdbfe"];
+            app_sc_discard_file_ack [label="sc::discard_ack", fillcolor="#eff6ff"];
+        }

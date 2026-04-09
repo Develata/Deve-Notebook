@@ -1,0 +1,10 @@
+        subgraph cluster_core_sc_discard {
+            label="discard pending [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sync_discard [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_ledger_discard [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_discard [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

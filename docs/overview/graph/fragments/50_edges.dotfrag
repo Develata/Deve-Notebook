@@ -25,6 +25,10 @@
     op_sc_stage_ack -> app_sc_stage_ack;
     op_sc_unstage -> app_sc_unstage;
     op_sc_unstage_ack -> app_sc_unstage_ack;
+    op_sc_discard_file -> app_sc_discard_file;
+    op_sc_discard_file_ack -> app_sc_discard_file_ack;
+    op_sc_discard -> app_sc_discard;
+    op_sc_discard_ack -> app_sc_discard_ack;
 
     op_palette_open -> app_palette_shell;
     op_palette_query -> app_palette_shell;
@@ -81,6 +85,17 @@
     app_sc_unstage -> mod_proto_ws_sc;
     app_sc_unstage_ack -> mod_sc_pending;
     app_sc_unstage_ack -> mod_proto_ws_sc;
+    app_sc_discard_file -> mod_sc_pending_discard_file;
+    app_sc_discard_file -> mod_sync_discard_file;
+    app_sc_discard_file -> mod_ledger_discard_file;
+    app_sc_discard_file -> mod_proto_ws_discard_file;
+    app_sc_discard_file_ack -> mod_sync_discard_file;
+    app_sc_discard_file_ack -> mod_proto_ws_discard_file;
+    app_sc_discard -> mod_sync_discard;
+    app_sc_discard -> mod_ledger_discard;
+    app_sc_discard -> mod_proto_ws_discard;
+    app_sc_discard_ack -> mod_sync_discard;
+    app_sc_discard_ack -> mod_proto_ws_discard;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -119,6 +134,13 @@
     mod_sc_pending -> core_sc_stage;
     mod_sc_stage_table -> core_sc_stage;
     mod_proto_ws_sc -> core_proto_sc;
+    mod_sc_pending_discard_file -> core_sc_discard_file;
+    mod_sync_discard_file -> core_sync_discard_file;
+    mod_ledger_discard_file -> core_ledger_discard_file;
+    mod_proto_ws_discard_file -> core_proto_discard_file;
+    mod_sync_discard -> core_sync_discard;
+    mod_ledger_discard -> core_ledger_discard;
+    mod_proto_ws_discard -> core_proto_discard;
     mod_proto_ws -> core_proto;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
@@ -131,4 +153,6 @@
     core_tree_switch -> core_ledger [style=dashed, color="#831843", label="rebinds scope"];
     core_tree_repo -> core_ledger_repo [style=dashed, color="#831843", label="projects repo view"];
     core_sc_commit -> core_ledger_commit [style=dashed, color="#831843", label="anchors commit"];
+    core_sync_discard_file -> core_ledger_discard_file [style=dashed, color="#831843", label="restores target"];
+    core_sync_discard -> core_ledger_discard [style=dashed, color="#831843", label="restores projection"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];

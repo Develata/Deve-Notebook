@@ -6,7 +6,7 @@
 digraph DeveNoteArchitecture {
     rankdir=TB;
     compound=true;
-    splines=ortho;
+    splines=true;
     bgcolor="white";
     node [shape=box, style="rounded,filled", fontname="sans-serif", fontsize=10];
     edge [fontname="sans-serif", fontsize=9, color="#475569"];

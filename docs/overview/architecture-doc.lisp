@@ -23,7 +23,7 @@
 (group :id grp.user.web :layer user-operation :kind platform :label "web" :members ())
 (group :id grp.user.desktop :layer user-operation :kind platform :label "desktop" :members ())
 (group :id grp.user.android :layer user-operation :kind platform :label "android" :members ())
-(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-commit grp.user.ai-chat grp.user.open-doc))
+(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-commit grp.user.ai-chat grp.user.open-doc))
 (group :id grp.user.shared-all :layer user-operation :kind platform-intersection :label "shared(all)" :members ())
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
@@ -31,6 +31,8 @@
 (group :id grp.user.branch-switch :layer user-operation :label "branch-switch" :members (op.repo.branch-switch.open-switcher op.repo.branch-switch.choose-branch op.repo.branch-switch.request-switch op.repo.branch-switch.receive-switch-result))
 (group :id grp.user.repo-switch :layer user-operation :label "repo-switch" :members (op.repo.switch.open-switcher op.repo.switch.choose-repo op.repo.switch.request-switch op.repo.switch.receive-scope))
 (group :id grp.user.sc-stage :layer user-operation :label "stage / unstage" :members (op.sc.stage.entry op.sc.stage.receive-ack op.sc.unstage.entry op.sc.unstage.receive-ack))
+(group :id grp.user.sc-discard-file :layer user-operation :label "discard file" :members (op.sc.discard-file.entry op.sc.discard-file.receive-ack))
+(group :id grp.user.sc-discard :layer user-operation :label "discard pending" :members (op.sc.discard.request op.sc.discard.receive-ack))
 (group :id grp.user.sc-commit :layer user-operation :label "source-control commit" :members (op.sc.commit.focus-input op.sc.commit.type-message op.sc.commit.submit op.sc.commit.receive-result))
 (group :id grp.user.ai-chat :layer user-operation :label "native ai-chat" :members (op.ai.chat.open-panel op.ai.chat.type-message op.ai.chat.submit op.ai.chat.receive-stream))
 (group :id grp.user.open-doc :layer user-operation :label "open-doc" :members (op.repo.open-doc.open-quick-open op.repo.open-doc.type-query op.repo.open-doc.choose-doc op.repo.open-doc.request-open op.repo.open-doc.receive-content))
@@ -39,7 +41,6 @@
 (user-operation :id op.auth.login.type-password :label "Type Password" :kind text-input :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.form.password-update))
 (user-operation :id op.auth.login.submit :label "Submit Login Form" :kind submit :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.login.submit))
 (user-operation :id op.auth.login.receive-result :label "Receive Login Result" :kind async-result :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.login.result))
-
 (user-operation :id op.auth.session.resume-workspace :label "Resume Protected Workspace" :kind resume :surface workspace-shell :chapter 09_auth :feature "docs/features/operations/auth_session_unauthorized.md" :calls (app.auth.session.probe-gate))
 (user-operation :id op.auth.session.issue-protected-request :label "Issue Protected Request" :kind request :surface workspace-runtime :chapter 09_auth :feature "docs/features/operations/auth_session_unauthorized.md" :calls (app.auth.session.probe app.auth.session.protocol-error))
 (user-operation :id op.auth.session.receive-unauthorized :label "Receive Unauthorized Result" :kind async-result :surface workspace-runtime :chapter 09_auth :feature "docs/features/operations/auth_session_unauthorized.md" :calls (app.auth.session.protocol-error))
@@ -49,12 +50,10 @@
 (user-operation :id op.ui.command-palette.navigate :label "Navigate Command Results" :kind navigation :surface keyboard :chapter 12_commands :feature "docs/features/operations/ui_command_palette.md" :calls (app.ui.command-palette.navigate))
 (user-operation :id op.ui.command-palette.execute :label "Execute Selected Command" :kind execute :surface keyboard-or-pointer :chapter 12_commands :feature "docs/features/operations/ui_command_palette.md" :calls (app.ui.command-palette.execute))
 (user-operation :id op.ui.command-palette.close :label "Close Command Palette" :kind dismiss :surface keyboard-or-overlay :chapter 12_commands :feature "docs/features/operations/ui_command_palette.md" :calls (app.ui.command-palette.close))
-
 (user-operation :id op.repo.branch-switch.open-switcher :label "Open Branch Switcher" :kind shortcut :surface keyboard-shortcut :chapter 06_repository :feature "docs/features/operations/repo_branch_switch.md" :calls (app.repo.branch-switch.open))
 (user-operation :id op.repo.branch-switch.choose-branch :label "Choose Branch Target" :kind select :surface keyboard-or-pointer :chapter 06_repository :feature "docs/features/operations/repo_branch_switch.md" :calls (app.repo.branch-switch.select))
 (user-operation :id op.repo.branch-switch.request-switch :label "Request Branch Switch" :kind request :surface ui-state :chapter 16_web_thin_client_ledger :feature "docs/features/operations/repo_branch_switch.md" :calls (app.repo.branch-switch.request))
 (user-operation :id op.repo.branch-switch.receive-switch-result :label "Receive Branch Switch Result" :kind async-result :surface ui-state :chapter 06_repository :feature "docs/features/operations/repo_branch_switch.md" :calls (app.repo.branch-switch.result))
-
 (user-operation :id op.repo.switch.open-switcher :label "Open Repo Switcher" :kind open :surface sidebar :chapter 06_repository :feature "docs/features/operations/repo_switch.md" :calls (app.repo.switch.menu))
 (user-operation :id op.repo.switch.choose-repo :label "Choose Repo Target" :kind select :surface sidebar :chapter 06_repository :feature "docs/features/operations/repo_switch.md" :calls (app.repo.switch.select))
 (user-operation :id op.repo.switch.request-switch :label "Request Repo Switch" :kind request :surface ui-state :chapter 06_repository :feature "docs/features/operations/repo_switch.md" :calls (app.repo.switch.request))
@@ -63,16 +62,18 @@
 (user-operation :id op.sc.stage.receive-ack :label "Receive Stage Ack" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_stage_unstage.md" :calls (app.sc.stage.result))
 (user-operation :id op.sc.unstage.entry :label "Unstage Change Entry" :kind execute :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_stage_unstage.md" :calls (app.sc.unstage.request))
 (user-operation :id op.sc.unstage.receive-ack :label "Receive Unstage Ack" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_stage_unstage.md" :calls (app.sc.unstage.result))
+(user-operation :id op.sc.discard-file.entry :label "Discard Change Entry" :kind execute :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_file.md" :calls (app.sc.discard-file.request))
+(user-operation :id op.sc.discard-file.receive-ack :label "Receive Discard File Ack" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_file.md" :calls (app.sc.discard-file.result))
+(user-operation :id op.sc.discard.request :label "Request Discard Pending" :kind execute :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_pending.md" :calls (app.sc.discard.request))
+(user-operation :id op.sc.discard.receive-ack :label "Receive Discard Ack" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_pending.md" :calls (app.sc.discard.result))
 (user-operation :id op.sc.commit.focus-input :label "Focus Commit Input" :kind focus :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.draft))
 (user-operation :id op.sc.commit.type-message :label "Type Commit Message" :kind text-input :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.draft))
 (user-operation :id op.sc.commit.submit :label "Submit Commit" :kind submit :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.gate app.sc.commit.submit))
 (user-operation :id op.sc.commit.receive-result :label "Receive Commit Result" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.result))
-
 (user-operation :id op.ai.chat.open-panel :label "Open AI Chat Panel" :kind open :surface workspace-shell :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.panel))
 (user-operation :id op.ai.chat.type-message :label "Type AI Prompt" :kind text-input :surface chat-panel :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.panel))
 (user-operation :id op.ai.chat.submit :label "Submit AI Prompt" :kind submit :surface chat-panel :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.send))
 (user-operation :id op.ai.chat.receive-stream :label "Receive AI Stream" :kind async-result :surface chat-panel :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.stream))
-
 (user-operation :id op.repo.open-doc.open-quick-open :label "Open Quick Open" :kind shortcut :surface keyboard-shortcut :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.quick-open.open))
 (user-operation :id op.repo.open-doc.type-query :label "Type File Query" :kind text-input :surface overlay-input :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.quick-open.query))
 (user-operation :id op.repo.open-doc.choose-doc :label "Choose Document Result" :kind select :surface keyboard-or-pointer :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.quick-open.select-doc))
@@ -92,6 +93,8 @@
 (group :id grp.app.branch-switch :layer application :label "branch-switch" :members (app.repo.branch-switch.open app.repo.branch-switch.select app.repo.branch-switch.request app.repo.branch-switch.result))
 (group :id grp.app.repo-switch :layer application :label "repo-switch" :members (app.repo.switch.menu app.repo.switch.select app.repo.switch.request app.repo.switch.result))
 (group :id grp.app.sc-stage :layer application :label "stage / unstage" :members (app.sc.stage.request app.sc.stage.result app.sc.unstage.request app.sc.unstage.result))
+(group :id grp.app.sc-discard-file :layer application :label "discard file" :members (app.sc.discard-file.request app.sc.discard-file.result))
+(group :id grp.app.sc-discard :layer application :label "discard pending" :members (app.sc.discard.request app.sc.discard.result))
 (group :id grp.app.sc-commit :layer application :label "source-control commit" :members (app.sc.commit.draft app.sc.commit.gate app.sc.commit.submit app.sc.commit.result))
 (group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
 (group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
@@ -100,7 +103,6 @@
 (application :id app.auth.form.password-update :label "login::set_password" :kind form-state :chapter 09_auth :calls ())
 (application :id app.auth.login.submit :label "login::submit" :kind form-submit :chapter 09_auth :calls (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (application :id app.auth.login.result :label "login::result" :kind async-result :chapter 09_auth :calls (mod_sec_auth))
-
 (application :id app.auth.session.probe-gate :label "auth_probe::should_run" :kind runtime-gate :chapter 09_auth :calls ())
 (application :id app.auth.session.probe :label "auth_probe::request" :kind http-handler :chapter 09_auth :calls (mod_sec_auth mod_proto_auth))
 (application :id app.auth.session.protocol-error :label "auth::mark_unauthorized" :kind runtime-effect :chapter 09_auth :calls (mod_proto_ws mod_proto_auth))
@@ -110,12 +112,10 @@
 (application :id app.ui.command-palette.navigate :label "command_palette::navigate" :kind ui-shell :chapter 12_commands :calls ())
 (application :id app.ui.command-palette.execute :label "command_palette::execute" :kind ui-shell :chapter 12_commands :calls (app.sc.commit app.sc.push app.ai.chat app.repo.quick-open.open))
 (application :id app.ui.command-palette.close :label "command_palette::close" :kind ui-shell :chapter 12_commands :calls ())
-
 (application :id app.repo.branch-switch.open :label "branch_switch::open" :kind ui-shell :chapter 06_repository :calls ())
 (application :id app.repo.branch-switch.select :label "branch_switch::select" :kind ui-shell :chapter 06_repository :calls ())
 (application :id app.repo.branch-switch.request :label "branch_switch::request" :kind ws-handler :chapter 16_web_thin_client_ledger :calls (mod_proto_ws mod_tree_structure))
 (application :id app.repo.branch-switch.result :label "branch_switch::result" :kind async-result :chapter 06_repository :calls (mod_proto_ws mod_tree_structure))
-
 (application :id app.repo.switch.menu :label "repo_switcher::menu" :kind ui-shell :chapter 06_repository :calls ())
 (application :id app.repo.switch.select :label "repo_switcher::select" :kind ui-shell :chapter 06_repository :calls ())
 (application :id app.repo.switch.request :label "repo_switch::request" :kind ws-handler :chapter 06_repository :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
@@ -124,21 +124,22 @@
 (application :id app.sc.stage.result :label "sc::stage_result" :kind async-result :chapter 07_diff_logic :calls (mod_sc_staging mod_proto_ws))
 (application :id app.sc.unstage.request :label "sc::unstage" :kind ws-handler :chapter 07_diff_logic :calls (mod_sc_pending-fs mod_sc_staging mod_proto_ws))
 (application :id app.sc.unstage.result :label "sc::unstage_result" :kind async-result :chapter 07_diff_logic :calls (mod_sc_pending-fs mod_proto_ws))
+(application :id app.sc.discard-file.request :label "sc::discard_file" :kind ws-handler :chapter 07_diff_logic :calls (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(application :id app.sc.discard-file.result :label "sc::discard_ack" :kind async-result :chapter 07_diff_logic :calls (mod_sync_materialize mod_proto_ws))
+(application :id app.sc.discard.request :label "sync::discard_pending" :kind ws-handler :chapter 07_diff_logic :calls (mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(application :id app.sc.discard.result :label "sync::pending_discarded" :kind async-result :chapter 07_diff_logic :calls (mod_sync_materialize mod_proto_ws))
 (application :id app.sc.commit.draft :label "sc::commit_draft" :kind ui-shell :chapter 07_diff_logic :calls ())
 (application :id app.sc.commit.gate :label "sc::write_gate" :kind runtime-gate :chapter 07_diff_logic :calls ())
 (application :id app.sc.commit.submit :label "sc::commit" :kind ws-handler :chapter 07_diff_logic :calls (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
 (application :id app.sc.commit.result :label "sc::commit_result" :kind async-result :chapter 07_diff_logic :calls (mod_sc_commit mod_proto_ws))
-
 (application :id app.ai.chat.panel :label "ai::panel / draft" :kind ui-shell :chapter 10_ai_agent :calls ())
 (application :id app.ai.chat.send :label "ai::send_plugin_call" :kind ws-handler :chapter 10_ai_agent :calls (mod_plugin_chat mod_proto_ws))
 (application :id app.ai.chat.stream :label "ai::receive_stream" :kind async-result :chapter 10_ai_agent :calls (mod_plugin_chat mod_proto_ws))
-
 (application :id app.repo.quick-open.open :label "quick_open::open" :kind ui-shell :chapter 06_repository :calls (app.repo.list))
 (application :id app.repo.quick-open.query :label "quick_open::query" :kind ui-shell :chapter 06_repository :calls (app.repo.list))
 (application :id app.repo.quick-open.select-doc :label "quick_open::select_doc" :kind ui-shell :chapter 06_repository :calls (app.repo.doc.open))
 (application :id app.repo.doc.open :label "editor::open_doc" :kind ws-handler :chapter 16_web_thin_client_ledger :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "editor::receive_doc" :kind async-result :chapter 06_repository :calls (mod_proto_ws mod_ledger_manager))
-
 (application :id app.init       :label "cli::init"       :kind cli-handler  :chapter 02_positioning  :calls (core.ledger core.tree))
 (application :id app.scan       :label "cli::scan"       :kind cli-handler  :chapter 04_storage      :calls (core.sync core.tree))
 (application :id app.watch      :label "cli::watch"      :kind cli-handler  :chapter 04_storage      :calls (core.watcher core.sync))
@@ -147,7 +148,6 @@
 (application :id app.export     :label "cli::export"     :kind cli-handler  :chapter 04_storage#backup-export :calls (core.ledger))
 (application :id app.verify-p2p :label "cli::verify-p2p" :kind cli-handler  :chapter 05_network      :calls (core.protocol))
 (application :id app.seed       :label "cli::seed"       :kind cli-handler  :chapter 04_storage      :calls (core.ledger))
-
 (application :id app.ws-handler :label "server::ws"   :kind ws-handler   :chapter 16_web_thin_client_ledger :calls (core.protocol core.sync))
 (application :id app.sc.pending :label "/api/sc/pending"  :kind http-handler :chapter 07_diff_logic :calls (core.source_control))
 (application :id app.sc.status  :label "/api/sc/status"   :kind http-handler :chapter 07_diff_logic :calls (core.source_control))
@@ -156,22 +156,17 @@
 (application :id app.sc.commit  :label "/api/sc/commit"   :kind http-handler :chapter 07_diff_logic :calls (core.source_control core.ledger))
 (application :id app.sc.push    :label "/api/sc/push"     :kind http-handler :chapter 07_diff_logic :calls (core.source_control core.protocol))
 (application :id app.sc.sync    :label "/api/sc/sync"     :kind http-handler :chapter 05_network    :calls (core.sync core.protocol))
-
 (application :id app.repo.list      :label "/api/repo/docs"  :kind http-handler :chapter 06_repository :calls (core.tree core.ledger))
 (application :id app.repo.doc       :label "/api/repo/doc"   :kind http-handler :chapter 06_repository :calls (core.tree core.ledger))
-
 (application :id app.auth.login     :label "/api/auth/login"  :kind http-handler :chapter 09_auth#security-headers :calls (core.security))
 (application :id app.auth.logout    :label "/api/auth/logout" :kind http-handler :chapter 09_auth#security-headers :calls (core.security))
 (application :id app.auth.me        :label "/api/auth/me"     :kind http-handler :chapter 09_auth :calls (core.security))
-
 (application :id app.admin.dump       :label "/api/admin/dump"       :kind http-handler :chapter 04_storage :calls (core.ledger))
 (application :id app.admin.export     :label "/api/admin/export"     :kind http-handler :chapter 04_storage#backup-export :calls (core.ledger))
 (application :id app.admin.node-check :label "/api/admin/node-check" :kind http-handler :chapter 04_storage :calls (core.tree))
-
 (application :id app.p2p.switch    :label "p2p::switch"    :kind web-callback :chapter 05_network :calls (core.protocol core.sync))
 (application :id app.p2p.establish :label "p2p::establish" :kind web-callback :chapter 05_network :calls (core.protocol core.tree))
 (application :id app.p2p.merge     :label "p2p::merge"     :kind web-callback :chapter 05_network :calls (core.protocol core.source_control))
-
 (application :id app.ai.chat    :label "ai::chat"    :kind web-callback :chapter 10_ai_agent :calls (core.plugin))
 (application :id app.ai.retry   :label "ai::retry"   :kind web-callback :chapter 10_ai_agent :calls (core.plugin))
 (application :id app.ai.backend :label "ai::backend" :kind web-callback :chapter 10_ai_agent :calls (core.plugin))
@@ -189,6 +184,8 @@
 (group :id grp.mod.branch-switch :layer module :label "branch-switch" :members (mod_proto_ws mod_tree_structure))
 (group :id grp.mod.repo-switch :layer module :label "repo-switch" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (group :id grp.mod.sc-stage :layer module :label "stage / unstage" :members (mod_sc_pending-fs mod_sc_staging mod_proto_ws))
+(group :id grp.mod.sc-discard-file :layer module :label "discard file" :members (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.sc-discard :layer module :label "discard pending" :members (mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-commit :layer module :label "source-control commit" :members (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.ai-chat :layer module :label "native ai-chat" :members (mod_plugin_chat mod_proto_ws))
 (group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
@@ -204,16 +201,13 @@
 (module :id mod_sc_staging         :label "source_control::staging"    :chapter 07_diff_logic            :parent core.source_control :code-area "crates/core/src/source_control/staging.rs")
 (module :id mod_sc_commit          :label "source_control::commits"    :chapter 07_diff_logic            :parent core.source_control :code-area "crates/core/src/source_control/commits.rs")
 (module :id mod_sc_diff            :label "source_control::diff"       :chapter 07_diff_logic            :parent core.source_control :code-area "crates/core/src/source_control/diff.rs")
-
 (module :id mod_ledger_manager  :label "ledger::manager"    :chapter 04_storage                     :parent core.ledger :code-area "crates/core/src/ledger/manager/")
 (module :id mod_ledger_schema   :label "ledger::schema"     :chapter 04_storage                     :parent core.ledger :code-area "crates/core/src/ledger/schema.rs")
 (module :id mod_ledger_append   :label "ledger::append"     :chapter 04_storage                     :parent core.ledger :code-area "crates/core/src/ledger/append.rs")
-
 (module :id mod_tree_structure  :label "tree::structure"    :chapter 06_repository :parent core.tree :code-area "crates/core/src/tree/structure/")
 
 (module :id mod_proto_ws        :label "protocol::ws"       :chapter 05_network    :parent core.protocol :code-area "crates/core/src/protocol/")
 (module :id mod_proto_auth      :label "protocol::auth"     :chapter 09_auth       :parent core.protocol :code-area "crates/core/src/protocol/auth.rs")
-
 (module :id mod_sec_auth        :label "security::auth"     :chapter 09_auth#security-headers :parent core.security :code-area "crates/core/src/security/auth/")
 (module :id mod_sec_jwt         :label "security::jwt"      :chapter 09_auth :parent core.security :code-area "crates/core/src/security/auth/jwt.rs")
 
@@ -234,6 +228,8 @@
 (group :id grp.core.branch-switch :layer core :label "branch-switch" :members (core.tree core.protocol))
 (group :id grp.core.repo-switch :layer core :label "repo-switch" :members (core.tree core.ledger core.protocol))
 (group :id grp.core.sc-stage :layer core :label "stage / unstage" :members (core.source_control core.protocol))
+(group :id grp.core.sc-discard-file :layer core :label "discard file" :members (core.source_control core.sync core.ledger core.protocol))
+(group :id grp.core.sc-discard :layer core :label "discard pending" :members (core.sync core.ledger core.protocol))
 (group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))

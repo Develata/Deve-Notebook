@@ -6,7 +6,7 @@
 digraph DeveNoteArchitecture {
     rankdir=TB;
     compound=true;
-    splines=ortho;
+    splines=true;
     bgcolor="white";
     node [shape=box, style="rounded,filled", fontname="sans-serif", fontsize=10];
     edge [fontname="sans-serif", fontsize=9, color="#475569"];
@@ -148,6 +148,26 @@ digraph DeveNoteArchitecture {
                 op_sc_unstage_ack [label="Receive Unstage Ack", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_sc_discard {
+                label="discard pending [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_discard [label="Request Discard Pending", fillcolor="#fde68a"];
+                op_sc_discard_ack [label="Receive Discard Ack", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_sc_discard_file {
+                label="discard file [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_discard_file [label="Discard Change Entry", fillcolor="#fde68a"];
+                op_sc_discard_file_ack [label="Receive Discard File Ack", fillcolor="#fef9c3"];
+            }
+
         subgraph cluster_user_shared_all {
             label="shared(all)";
             style="rounded,dashed";
@@ -273,6 +293,26 @@ digraph DeveNoteArchitecture {
             app_sc_unstage_ack [label="sc::unstage_result", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_sc_discard {
+            label="discard pending [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_discard [label="sync::discard_pending", fillcolor="#bfdbfe"];
+            app_sc_discard_ack [label="sync::pending_discarded", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_sc_discard_file {
+            label="discard file [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_discard_file [label="sc::discard_file", fillcolor="#bfdbfe"];
+            app_sc_discard_file_ack [label="sc::discard_ack", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -381,6 +421,29 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_sc [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_sc_discard {
+            label="discard pending [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sync_discard [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_ledger_discard [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_discard [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_sc_discard_file {
+            label="discard file [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc_pending_discard_file [label="source_control::pending_fs", fillcolor="#f0fdf4"];
+            mod_sync_discard_file [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_ledger_discard_file [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_discard_file [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -482,6 +545,29 @@ digraph DeveNoteArchitecture {
             core_proto_sc [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
+        subgraph cluster_core_sc_discard {
+            label="discard pending [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sync_discard [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_ledger_discard [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_discard [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_sc_discard_file {
+            label="discard file [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sc_discard_file [label="source control\n(workflow)", fillcolor="#fdf2f8"];
+            core_sync_discard_file [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_ledger_discard_file [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_discard_file [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
         subgraph cluster_core_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -521,6 +607,10 @@ digraph DeveNoteArchitecture {
     op_sc_stage_ack -> app_sc_stage_ack;
     op_sc_unstage -> app_sc_unstage;
     op_sc_unstage_ack -> app_sc_unstage_ack;
+    op_sc_discard_file -> app_sc_discard_file;
+    op_sc_discard_file_ack -> app_sc_discard_file_ack;
+    op_sc_discard -> app_sc_discard;
+    op_sc_discard_ack -> app_sc_discard_ack;
 
     op_palette_open -> app_palette_shell;
     op_palette_query -> app_palette_shell;
@@ -577,6 +667,17 @@ digraph DeveNoteArchitecture {
     app_sc_unstage -> mod_proto_ws_sc;
     app_sc_unstage_ack -> mod_sc_pending;
     app_sc_unstage_ack -> mod_proto_ws_sc;
+    app_sc_discard_file -> mod_sc_pending_discard_file;
+    app_sc_discard_file -> mod_sync_discard_file;
+    app_sc_discard_file -> mod_ledger_discard_file;
+    app_sc_discard_file -> mod_proto_ws_discard_file;
+    app_sc_discard_file_ack -> mod_sync_discard_file;
+    app_sc_discard_file_ack -> mod_proto_ws_discard_file;
+    app_sc_discard -> mod_sync_discard;
+    app_sc_discard -> mod_ledger_discard;
+    app_sc_discard -> mod_proto_ws_discard;
+    app_sc_discard_ack -> mod_sync_discard;
+    app_sc_discard_ack -> mod_proto_ws_discard;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -615,6 +716,13 @@ digraph DeveNoteArchitecture {
     mod_sc_pending -> core_sc_stage;
     mod_sc_stage_table -> core_sc_stage;
     mod_proto_ws_sc -> core_proto_sc;
+    mod_sc_pending_discard_file -> core_sc_discard_file;
+    mod_sync_discard_file -> core_sync_discard_file;
+    mod_ledger_discard_file -> core_ledger_discard_file;
+    mod_proto_ws_discard_file -> core_proto_discard_file;
+    mod_sync_discard -> core_sync_discard;
+    mod_ledger_discard -> core_ledger_discard;
+    mod_proto_ws_discard -> core_proto_discard;
     mod_proto_ws -> core_proto;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
@@ -627,6 +735,8 @@ digraph DeveNoteArchitecture {
     core_tree_switch -> core_ledger [style=dashed, color="#831843", label="rebinds scope"];
     core_tree_repo -> core_ledger_repo [style=dashed, color="#831843", label="projects repo view"];
     core_sc_commit -> core_ledger_commit [style=dashed, color="#831843", label="anchors commit"];
+    core_sync_discard_file -> core_ledger_discard_file [style=dashed, color="#831843", label="restores target"];
+    core_sync_discard -> core_ledger_discard [style=dashed, color="#831843", label="restores projection"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
 
     // group-level spine
@@ -677,6 +787,22 @@ digraph DeveNoteArchitecture {
     user_sc_stage_spine -> app_sc_stage_spine [penwidth=2.2, color="#0f172a"];
     app_sc_stage_spine -> mod_sc_stage_spine [penwidth=2.2, color="#0f172a"];
     mod_sc_stage_spine -> core_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_discard_file_spine [label="discard file flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_discard_file_spine [label="", shape=point, width=0.01];
+    mod_sc_discard_file_spine [label="", shape=point, width=0.01];
+    core_sc_discard_file_spine [label="", shape=point, width=0.01];
+    user_sc_discard_file_spine -> app_sc_discard_file_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_discard_file_spine -> mod_sc_discard_file_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_discard_file_spine -> core_sc_discard_file_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_discard_spine [label="discard pending flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_discard_spine [label="", shape=point, width=0.01];
+    mod_sc_discard_spine [label="", shape=point, width=0.01];
+    core_sc_discard_spine [label="", shape=point, width=0.01];
+    user_sc_discard_spine -> app_sc_discard_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_discard_spine -> mod_sc_discard_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_discard_spine -> core_sc_discard_spine [penwidth=2.2, color="#0f172a"];
 
     user_palette_spine [label="command-palette flow", shape=plaintext, fontcolor="#92400e"];
     app_palette_spine [label="", shape=point, width=0.01];

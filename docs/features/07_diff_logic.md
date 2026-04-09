@@ -14,6 +14,10 @@
 - 该示例将 commit 拆为聚焦输入框、输入 message、提交 commit、接收结果四个 user operations。
 - Stage / Unstage 原子操作示例见 `docs/features/operations/sc_stage_unstage.md`。
 - 该示例将 stage / unstage 拆为发起操作与接收 ack 两段响应。
+- Discard File 原子操作示例见 `docs/features/operations/sc_discard_file.md`。
+- 该示例将单文件 discard 拆为发送 `DiscardFile` 与接收 `DiscardAck` 两段响应。
+- Discard Pending 原子操作示例见 `docs/features/operations/sc_discard_pending.md`。
+- 该示例将 repo 级 discard pending 拆为请求 reset-to-projection 与接收 ack 两段响应。
 
 ## 功能项
 

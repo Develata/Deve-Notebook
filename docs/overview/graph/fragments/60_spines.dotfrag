@@ -47,6 +47,22 @@
     app_sc_stage_spine -> mod_sc_stage_spine [penwidth=2.2, color="#0f172a"];
     mod_sc_stage_spine -> core_sc_stage_spine [penwidth=2.2, color="#0f172a"];
 
+    user_sc_discard_file_spine [label="discard file flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_discard_file_spine [label="", shape=point, width=0.01];
+    mod_sc_discard_file_spine [label="", shape=point, width=0.01];
+    core_sc_discard_file_spine [label="", shape=point, width=0.01];
+    user_sc_discard_file_spine -> app_sc_discard_file_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_discard_file_spine -> mod_sc_discard_file_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_discard_file_spine -> core_sc_discard_file_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_discard_spine [label="discard pending flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_discard_spine [label="", shape=point, width=0.01];
+    mod_sc_discard_spine [label="", shape=point, width=0.01];
+    core_sc_discard_spine [label="", shape=point, width=0.01];
+    user_sc_discard_spine -> app_sc_discard_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_discard_spine -> mod_sc_discard_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_discard_spine -> core_sc_discard_spine [penwidth=2.2, color="#0f172a"];
+
     user_palette_spine [label="command-palette flow", shape=plaintext, fontcolor="#92400e"];
     app_palette_spine [label="", shape=point, width=0.01];
     mod_palette_spine [label="", shape=point, width=0.01];
