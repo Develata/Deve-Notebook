@@ -11,6 +11,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `features/`: product behavior, user-visible workflows, Chrome MCP manual verification scenarios
 - `acceptance-cases/`: automation-oriented validation cases and script entry contracts
 - `coverage-matrix.md`: stable chapter mapping across the three layers
+- `overview/`: cross-layer architecture view (doc-derived + code-derived lisp + diff + SVG)
 - `report/`: time-stamped gap analyses, audits, and progress snapshots (non-authoritative)
 - `tasks/`: implementation blueprints for infra-first restructuring (18, 19)
 

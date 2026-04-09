@@ -1,0 +1,175 @@
+// architecture.dot
+// Four-layer linear cascade: user entry -> application -> module -> core
+// Render:  dot -Tsvg architecture.dot -o architecture.svg
+// Source: synthesized from architecture-doc.lisp + architecture-code.lisp
+// Nodes marked with * have doc/code divergence (see architecture-diff.md).
+
+digraph DeveNoteArchitecture {
+    rankdir=TB;
+    compound=true;
+    splines=ortho;
+    node [shape=box, style="rounded,filled", fontname="sans-serif", fontsize=10];
+    edge [fontname="sans-serif", fontsize=9];
+    bgcolor="white";
+
+    // ============================================================
+    // Layer 1 — User Entry
+    // ============================================================
+    subgraph cluster_user {
+        label="Layer 1 — User Entry";
+        style="filled,rounded";
+        fillcolor="#fef3c7";
+        color="#92400e";
+        labelfontcolor="#92400e";
+
+        cli_init      [label="deve init",       fillcolor="#fef9c3"];
+        cli_scan      [label="deve scan",       fillcolor="#fef9c3"];
+        cli_watch     [label="deve watch",      fillcolor="#fef9c3"];
+        cli_serve     [label="deve serve",      fillcolor="#fef9c3"];
+        cli_dump      [label="deve dump",       fillcolor="#fef9c3"];
+        cli_export    [label="deve export",     fillcolor="#fef9c3"];
+        cli_verify    [label="deve verify-p2p", fillcolor="#fef9c3"];
+        cli_seed      [label="deve seed",       fillcolor="#fef9c3"];
+        cli_nodecheck [label="deve node-check *", fillcolor="#fecaca"];
+        cli_recover   [label="deve recover *",    fillcolor="#fecaca"];
+        cli_repair    [label="deve repair *",     fillcolor="#fecaca"];
+        cli_liveproxy [label="deve live-proxy *", fillcolor="#fecaca"];
+
+        palette_git      [label="Palette: Git\n(Sync/Commit/Push)", fillcolor="#fef9c3"];
+        palette_p2p      [label="Palette: P2P\n(Switch/Establish/Merge)", fillcolor="#fef9c3"];
+        palette_ai       [label="Palette: AI\n(Chat/Mode/Backend)", fillcolor="#fef9c3"];
+        slash_cmds       [label="Chat Slash\n(/plan /build /agents)", fillcolor="#fef9c3"];
+    }
+
+    // ============================================================
+    // Layer 2 — Application
+    // ============================================================
+    subgraph cluster_app {
+        label="Layer 2 — Application (HTTP/WS Handlers + CLI Glue)";
+        style="filled,rounded";
+        fillcolor="#dbeafe";
+        color="#1e3a8a";
+        labelfontcolor="#1e3a8a";
+
+        app_cli_handlers [label="commands::*\n(init/scan/watch/serve/dump/\nexport/verify_p2p/seed)", fillcolor="#eff6ff"];
+        app_cli_extra    [label="commands::*\n(node_check/recover/\nrepair/live_proxy) *", fillcolor="#fecaca"];
+
+        app_ws           [label="/ws\nws::ws_handler", fillcolor="#eff6ff"];
+        app_sc           [label="/api/sc/*\nsource_control::http{,_commits,_mutations}", fillcolor="#eff6ff"];
+        app_repo         [label="/api/repo/*\nrepo::http", fillcolor="#eff6ff"];
+        app_auth         [label="/api/auth/*\nauth::handlers", fillcolor="#eff6ff"];
+        app_admin        [label="/api/admin/*\nadmin::{dump,export,node_check}", fillcolor="#eff6ff"];
+        app_node_role    [label="/api/node/role\nnode_role_http::role", fillcolor="#eff6ff"];
+    }
+
+    // ============================================================
+    // Layer 3 — Module
+    // ============================================================
+    subgraph cluster_mod {
+        label="Layer 3 — Module (Engineering Leaves)";
+        style="filled,rounded";
+        fillcolor="#dcfce7";
+        color="#14532d";
+        labelfontcolor="#14532d";
+
+        mod_watcher    [label="sync::watcher\n§04#watcher-contract", fillcolor="#f0fdf4"];
+        mod_drift      [label="sync::drift_detect\n§04#projection-contract", fillcolor="#f0fdf4"];
+        mod_material   [label="sync::materialize\n/rebuild/projection_plan\n/projection_io", fillcolor="#f0fdf4"];
+        mod_pending    [label="source_control::\npending_fs\n§04#watcher-contract", fillcolor="#f0fdf4"];
+        mod_staging    [label="source_control::\nstaging / diff", fillcolor="#f0fdf4"];
+        mod_ledger_sub [label="ledger::manager\n/schema/append", fillcolor="#f0fdf4"];
+        mod_tree_sub   [label="tree::structure", fillcolor="#f0fdf4"];
+        mod_proto_sub  [label="protocol::ws\n/handshake", fillcolor="#f0fdf4"];
+        mod_sec_sub    [label="security::auth\n/jwt\n§09#security-headers", fillcolor="#f0fdf4"];
+        mod_plugin_sub [label="plugin::chat_stream", fillcolor="#f0fdf4"];
+        mod_misc       [label="context / mcp / skill /\nutils / vfs / state /\nmodels / config / error *", fillcolor="#fecaca"];
+    }
+
+    // ============================================================
+    // Layer 4 — Core
+    // ============================================================
+    subgraph cluster_core {
+        label="Layer 4 — Core Subsystems";
+        style="filled,rounded";
+        fillcolor="#fce7f3";
+        color="#831843";
+        labelfontcolor="#831843";
+
+        core_ledger   [label="ledger\n(authority)",   fillcolor="#fdf2f8"];
+        core_sync     [label="sync\n(runtime)",       fillcolor="#fdf2f8"];
+        core_sc       [label="source_control\n(workflow)", fillcolor="#fdf2f8"];
+        core_tree     [label="tree\n(projection)",    fillcolor="#fdf2f8"];
+        core_proto    [label="protocol\n(runtime)",   fillcolor="#fdf2f8"];
+        core_sec      [label="security\n(runtime)",   fillcolor="#fdf2f8"];
+        core_plugin   [label="plugin\n(peripheral)",  fillcolor="#fdf2f8"];
+        core_search   [label="search\n(peripheral)",  fillcolor="#fdf2f8"];
+    }
+
+    // ============================================================
+    // Edges — L1 -> L2
+    // ============================================================
+    cli_init      -> app_cli_handlers;
+    cli_scan      -> app_cli_handlers;
+    cli_watch     -> app_cli_handlers;
+    cli_serve     -> app_cli_handlers;
+    cli_dump      -> app_cli_handlers;
+    cli_export    -> app_cli_handlers;
+    cli_verify    -> app_cli_handlers;
+    cli_seed      -> app_cli_handlers;
+    cli_nodecheck -> app_cli_extra;
+    cli_recover   -> app_cli_extra;
+    cli_repair    -> app_cli_extra;
+    cli_liveproxy -> app_cli_extra;
+
+    palette_git  -> app_sc;
+    palette_p2p  -> app_ws;
+    palette_ai   -> app_ws;
+    slash_cmds   -> app_ws;
+
+    // ============================================================
+    // Edges — L2 -> L3 / L4
+    // ============================================================
+    app_cli_handlers -> mod_watcher;
+    app_cli_handlers -> mod_ledger_sub;
+    app_cli_handlers -> mod_proto_sub;
+    app_cli_extra    -> mod_misc;
+
+    app_ws    -> mod_proto_sub;
+    app_ws    -> mod_material;
+    app_sc    -> mod_pending;
+    app_sc    -> mod_staging;
+    app_repo  -> mod_tree_sub;
+    app_auth  -> mod_sec_sub;
+    app_admin -> mod_ledger_sub;
+    app_node_role -> mod_proto_sub;
+
+    // ============================================================
+    // Edges — L3 -> L4
+    // ============================================================
+    mod_watcher    -> core_sync;
+    mod_drift      -> core_sync;
+    mod_material   -> core_sync;
+    mod_pending    -> core_sc;
+    mod_staging    -> core_sc;
+    mod_ledger_sub -> core_ledger;
+    mod_tree_sub   -> core_tree;
+    mod_proto_sub  -> core_proto;
+    mod_sec_sub    -> core_sec;
+    mod_plugin_sub -> core_plugin;
+
+    // Authority converging edges
+    core_sync   -> core_ledger [style=dashed, color="#831843", label="writes"];
+    core_sc     -> core_ledger [style=dashed, color="#831843", label="writes"];
+    core_tree   -> core_ledger [style=dashed, color="#831843", label="projects from"];
+
+    // Legend
+    subgraph cluster_legend {
+        label="Legend";
+        style="filled,rounded";
+        fillcolor="#f3f4f6";
+        fontsize=9;
+        legend_match  [label="matches doc+code", fillcolor="#f0fdf4", shape=box];
+        legend_diff   [label="* divergence vs doc", fillcolor="#fecaca", shape=box];
+        legend_match -> legend_diff [style=invis];
+    }
+}
