@@ -39,7 +39,9 @@ pub(super) async fn handle_switch_branch(
             return;
         }
     };
-    let target_branch = final_branch.as_ref().map(deve_core::models::PeerId::new);
+    let target_branch = final_branch
+        .as_ref()
+        .map(|branch| deve_core::models::PeerId::new(branch.as_str()));
     let target_branch_ref = target_branch.as_ref();
     let selector_input = build_branch_switch_selector_input(
         state,

@@ -10,6 +10,8 @@ use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
 mod local_registry;
 #[path = "core_mount.rs"]
 mod mount;
+#[path = "core_docs_fallback.rs"]
+mod docs_fallback;
 
 impl RepoManager {
     /// 初始化仓库管理器
