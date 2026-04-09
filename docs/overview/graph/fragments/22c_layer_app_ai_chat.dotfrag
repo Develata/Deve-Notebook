@@ -1,0 +1,10 @@
+        subgraph cluster_app_ai_chat {
+            label="native ai-chat [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_ai_panel [label="ai::panel / draft", fillcolor="#eff6ff"];
+            app_ai_send [label="ai::send_plugin_call", fillcolor="#bfdbfe"];
+            app_ai_stream [label="ai::receive_stream", fillcolor="#eff6ff"];
+        }

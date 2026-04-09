@@ -1,0 +1,10 @@
+        subgraph cluster_app_login {
+            label="login [09_auth]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_login_form [label="login::set_username / set_password", fillcolor="#eff6ff"];
+            app_login_submit [label="login::submit", fillcolor="#bfdbfe"];
+            app_login_result [label="login::result", fillcolor="#eff6ff"];
+        }

@@ -1,0 +1,10 @@
+        subgraph cluster_core_sc_commit {
+            label="source-control commit [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sc_commit [label="source control\n(workflow)", fillcolor="#fdf2f8"];
+            core_ledger_commit [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_commit [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

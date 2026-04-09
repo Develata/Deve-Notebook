@@ -1,0 +1,13 @@
+            subgraph cluster_user_palette {
+                label="command-palette [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_palette_open [label="Open Command Palette", fillcolor="#fef9c3"];
+                op_palette_query [label="Type Command Query", fillcolor="#fef9c3"];
+                op_palette_nav [label="Navigate Results", fillcolor="#fef9c3"];
+                op_palette_exec [label="Execute Selected Command", fillcolor="#fde68a"];
+                op_palette_close [label="Close Command Palette", fillcolor="#fef9c3"];
+            }
+        }

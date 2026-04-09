@@ -1,175 +1,725 @@
 // architecture.dot
-// Four-layer linear cascade: user entry -> application -> module -> core
-// Render:  dot -Tsvg architecture.dot -o architecture.svg
-// Source: synthesized from architecture-doc.lisp + architecture-code.lisp
-// Nodes marked with * have doc/code divergence (see architecture-diff.md).
+// Four-layer operation-first cascade:
+// user operation -> application response -> concrete module -> core subsystem
+// Generated from docs/overview/graph/fragments/*.dotfrag by scripts/generate-architecture-dot.sh
 
 digraph DeveNoteArchitecture {
     rankdir=TB;
     compound=true;
     splines=ortho;
-    node [shape=box, style="rounded,filled", fontname="sans-serif", fontsize=10];
-    edge [fontname="sans-serif", fontsize=9];
     bgcolor="white";
+    node [shape=box, style="rounded,filled", fontname="sans-serif", fontsize=10];
+    edge [fontname="sans-serif", fontsize=9, color="#475569"];
 
-    // ============================================================
-    // Layer 1 — User Entry
-    // ============================================================
     subgraph cluster_user {
-        label="Layer 1 — User Entry";
+        label="Layer 1 - User Operation";
         style="filled,rounded";
         fillcolor="#fef3c7";
         color="#92400e";
         labelfontcolor="#92400e";
 
-        cli_init      [label="deve init",       fillcolor="#fef9c3"];
-        cli_scan      [label="deve scan",       fillcolor="#fef9c3"];
-        cli_watch     [label="deve watch",      fillcolor="#fef9c3"];
-        cli_serve     [label="deve serve",      fillcolor="#fef9c3"];
-        cli_dump      [label="deve dump",       fillcolor="#fef9c3"];
-        cli_export    [label="deve export",     fillcolor="#fef9c3"];
-        cli_verify    [label="deve verify-p2p", fillcolor="#fef9c3"];
-        cli_seed      [label="deve seed",       fillcolor="#fef9c3"];
-        cli_nodecheck [label="deve node-check *", fillcolor="#fecaca"];
-        cli_recover   [label="deve recover *",    fillcolor="#fecaca"];
-        cli_repair    [label="deve repair *",     fillcolor="#fecaca"];
-        cli_liveproxy [label="deve live-proxy *", fillcolor="#fecaca"];
+        subgraph cluster_user_web {
+            label="web";
+            style="rounded,filled";
+            fillcolor="#fffbeb";
+            color="#b45309";
+            web_placeholder [label="no modeled web-only options", shape=plaintext, fontcolor="#92400e"];
+        }
 
-        palette_git      [label="Palette: Git\n(Sync/Commit/Push)", fillcolor="#fef9c3"];
-        palette_p2p      [label="Palette: P2P\n(Switch/Establish/Merge)", fillcolor="#fef9c3"];
-        palette_ai       [label="Palette: AI\n(Chat/Mode/Backend)", fillcolor="#fef9c3"];
-        slash_cmds       [label="Chat Slash\n(/plan /build /agents)", fillcolor="#fef9c3"];
+        subgraph cluster_user_desktop {
+            label="desktop";
+            style="rounded,filled";
+            fillcolor="#fffbeb";
+            color="#b45309";
+            desktop_placeholder [label="no modeled desktop-only options", shape=plaintext, fontcolor="#92400e"];
+        }
+
+        subgraph cluster_user_android {
+            label="android";
+            style="rounded,filled";
+            fillcolor="#fffbeb";
+            color="#b45309";
+            android_placeholder [label="no modeled android-only options", shape=plaintext, fontcolor="#92400e"];
+        }
+
+        subgraph cluster_user_shared_wd {
+            label="shared(web,desktop)";
+            style="rounded,filled";
+            fillcolor="#fef6e7";
+            color="#c2410c";
+
+            subgraph cluster_user_login {
+                label="login [09_auth]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_login_user [label="Type Username", fillcolor="#fef9c3"];
+                op_login_pass [label="Type Password", fillcolor="#fef9c3"];
+                op_login_submit [label="Submit Login Form", fillcolor="#fde68a"];
+                op_login_result [label="Receive Login Result", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_auth_session {
+                label="session-expired / unauthorized [09_auth]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_auth_resume [label="Resume Protected Workspace", fillcolor="#fef9c3"];
+                op_auth_request [label="Issue Protected Request", fillcolor="#fde68a"];
+                op_auth_unauth [label="Receive Unauthorized Result", fillcolor="#fde68a"];
+                op_auth_reauth [label="Enter Reauth Surface", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_palette {
+                label="command-palette [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_palette_open [label="Open Command Palette", fillcolor="#fef9c3"];
+                op_palette_query [label="Type Command Query", fillcolor="#fef9c3"];
+                op_palette_nav [label="Navigate Results", fillcolor="#fef9c3"];
+                op_palette_exec [label="Execute Selected Command", fillcolor="#fde68a"];
+                op_palette_close [label="Close Command Palette", fillcolor="#fef9c3"];
+            }
+        }
+
+            subgraph cluster_user_branch_switch {
+                label="branch-switch [06_repository + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_branch_open [label="Open Branch Switcher", fillcolor="#fef9c3"];
+                op_branch_choose [label="Choose Branch Target", fillcolor="#fde68a"];
+                op_branch_request [label="Request Branch Switch", fillcolor="#fde68a"];
+                op_branch_result [label="Receive Switch Result", fillcolor="#fef9c3"];
+                gate_switch [label="Switch Gates:\nswitch_nonce > scope_nonce\nrepo scope valid", fillcolor="#fde68a", shape=note];
+            }
+
+            subgraph cluster_user_sc_commit {
+                label="source-control commit [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_focus [label="Focus Commit Input", fillcolor="#fef9c3"];
+                op_sc_type [label="Type Commit Message", fillcolor="#fef9c3"];
+                op_sc_submit [label="Submit Commit", fillcolor="#fde68a"];
+                op_sc_result [label="Receive Commit Result", fillcolor="#fef9c3"];
+                gate_sc_write [label="Write Gates:\nsession / readonly / scope / handshake", fillcolor="#fde68a", shape=note];
+            }
+
+            subgraph cluster_user_ai_chat {
+                label="native ai-chat [10_ai_agent]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_ai_open [label="Open AI Chat Panel", fillcolor="#fef9c3"];
+                op_ai_type [label="Type AI Prompt", fillcolor="#fef9c3"];
+                op_ai_submit [label="Submit AI Prompt", fillcolor="#fde68a"];
+                op_ai_stream [label="Receive AI Stream", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_repo_switch {
+                label="repo-switch [06_repository]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_repo_open [label="Open Repo Switcher", fillcolor="#fef9c3"];
+                op_repo_choose [label="Choose Repo Target", fillcolor="#fde68a"];
+                op_repo_request [label="Request Repo Switch", fillcolor="#fde68a"];
+                op_repo_result [label="Receive Repo Scope Rebind", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_sc_stage {
+                label="stage / unstage [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_stage [label="Stage Change Entry", fillcolor="#fde68a"];
+                op_sc_stage_ack [label="Receive Stage Ack", fillcolor="#fef9c3"];
+                op_sc_unstage [label="Unstage Change Entry", fillcolor="#fde68a"];
+                op_sc_unstage_ack [label="Receive Unstage Ack", fillcolor="#fef9c3"];
+            }
+
+        subgraph cluster_user_shared_all {
+            label="shared(all)";
+            style="rounded,dashed";
+            fillcolor="#fffaf0";
+            color="#ea580c";
+
+            subgraph cluster_user_doc {
+                label="open-doc [06_repository + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_doc_open [label="Open Quick Open", fillcolor="#fef9c3"];
+                op_doc_query [label="Type File Query", fillcolor="#fef9c3"];
+                op_doc_choose [label="Choose Document Result", fillcolor="#fde68a"];
+                op_doc_request [label="Request OpenDoc", fillcolor="#fde68a"];
+                op_doc_receive [label="Receive Document Content", fillcolor="#fef9c3"];
+                gate_scope [label="Scope Gates:\nrepo bound\nscope_nonce valid\nWS connected", fillcolor="#fde68a", shape=note];
+            }
+
+            shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
+        }
+
     }
 
-    // ============================================================
-    // Layer 2 — Application
-    // ============================================================
     subgraph cluster_app {
-        label="Layer 2 — Application (HTTP/WS Handlers + CLI Glue)";
+        label="Layer 2 - Application Response";
         style="filled,rounded";
         fillcolor="#dbeafe";
         color="#1e3a8a";
         labelfontcolor="#1e3a8a";
 
-        app_cli_handlers [label="commands::*\n(init/scan/watch/serve/dump/\nexport/verify_p2p/seed)", fillcolor="#eff6ff"];
-        app_cli_extra    [label="commands::*\n(node_check/recover/\nrepair/live_proxy) *", fillcolor="#fecaca"];
+        subgraph cluster_app_login {
+            label="login [09_auth]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
 
-        app_ws           [label="/ws\nws::ws_handler", fillcolor="#eff6ff"];
-        app_sc           [label="/api/sc/*\nsource_control::http{,_commits,_mutations}", fillcolor="#eff6ff"];
-        app_repo         [label="/api/repo/*\nrepo::http", fillcolor="#eff6ff"];
-        app_auth         [label="/api/auth/*\nauth::handlers", fillcolor="#eff6ff"];
-        app_admin        [label="/api/admin/*\nadmin::{dump,export,node_check}", fillcolor="#eff6ff"];
-        app_node_role    [label="/api/node/role\nnode_role_http::role", fillcolor="#eff6ff"];
+            app_login_form [label="login::set_username / set_password", fillcolor="#eff6ff"];
+            app_login_submit [label="login::submit", fillcolor="#bfdbfe"];
+            app_login_result [label="login::result", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_auth_session {
+            label="session-expired / unauthorized [09_auth]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_auth_probe_gate [label="auth_probe::should_run", fillcolor="#eff6ff"];
+            app_auth_probe [label="auth_probe::request", fillcolor="#bfdbfe"];
+            app_auth_unauth [label="auth::mark_unauthorized", fillcolor="#bfdbfe"];
+            app_auth_surface [label="auth::enter_login_surface", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_palette {
+            label="command-palette [12_commands]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_palette_shell [label="command_palette::open / query /\nnavigate / close", fillcolor="#eff6ff"];
+            app_palette_exec [label="command_palette::execute", fillcolor="#bfdbfe"];
+            app_exec_branches [label="Representative targets:\nsc::commit / sc::push / ai::chat", fillcolor="#dbeafe"];
+        }
+
+        subgraph cluster_app_branch_switch {
+            label="branch-switch [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_branch_open [label="branch_switch::open", fillcolor="#eff6ff"];
+            app_branch_select [label="branch_switch::select", fillcolor="#eff6ff"];
+            app_branch_request [label="branch_switch::request", fillcolor="#bfdbfe"];
+            app_branch_result [label="branch_switch::result", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_sc_commit {
+            label="source-control commit [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_commit_draft [label="sc::commit_draft", fillcolor="#eff6ff"];
+            app_sc_commit_gate [label="sc::write_gate", fillcolor="#eff6ff"];
+            app_sc_commit_submit [label="sc::commit", fillcolor="#bfdbfe"];
+            app_sc_commit_result [label="sc::commit_result", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_ai_chat {
+            label="native ai-chat [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_ai_panel [label="ai::panel / draft", fillcolor="#eff6ff"];
+            app_ai_send [label="ai::send_plugin_call", fillcolor="#bfdbfe"];
+            app_ai_stream [label="ai::receive_stream", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_repo_switch {
+            label="repo-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_repo_menu [label="repo_switcher::menu", fillcolor="#eff6ff"];
+            app_repo_select [label="repo_switcher::select", fillcolor="#eff6ff"];
+            app_repo_request [label="repo_switch::request", fillcolor="#bfdbfe"];
+            app_repo_result [label="repo_switch::result", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_sc_stage {
+            label="stage / unstage [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_stage [label="sc::stage", fillcolor="#bfdbfe"];
+            app_sc_stage_ack [label="sc::stage_result", fillcolor="#eff6ff"];
+            app_sc_unstage [label="sc::unstage", fillcolor="#bfdbfe"];
+            app_sc_unstage_ack [label="sc::unstage_result", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_doc {
+            label="open-doc [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_quick_open [label="quick_open::open / query", fillcolor="#eff6ff"];
+            app_doc_select [label="quick_open::select_doc", fillcolor="#eff6ff"];
+            app_doc_open [label="editor::open_doc", fillcolor="#bfdbfe"];
+            app_doc_receive [label="editor::receive_doc", fillcolor="#eff6ff"];
+        }
+
     }
 
-    // ============================================================
-    // Layer 3 — Module
-    // ============================================================
     subgraph cluster_mod {
-        label="Layer 3 — Module (Engineering Leaves)";
+        label="Layer 3 - Concrete Module";
         style="filled,rounded";
         fillcolor="#dcfce7";
         color="#14532d";
         labelfontcolor="#14532d";
 
-        mod_watcher    [label="sync::watcher\n§04#watcher-contract", fillcolor="#f0fdf4"];
-        mod_drift      [label="sync::drift_detect\n§04#projection-contract", fillcolor="#f0fdf4"];
-        mod_material   [label="sync::materialize\n/rebuild/projection_plan\n/projection_io", fillcolor="#f0fdf4"];
-        mod_pending    [label="source_control::\npending_fs\n§04#watcher-contract", fillcolor="#f0fdf4"];
-        mod_staging    [label="source_control::\nstaging / diff", fillcolor="#f0fdf4"];
-        mod_ledger_sub [label="ledger::manager\n/schema/append", fillcolor="#f0fdf4"];
-        mod_tree_sub   [label="tree::structure", fillcolor="#f0fdf4"];
-        mod_proto_sub  [label="protocol::ws\n/handshake", fillcolor="#f0fdf4"];
-        mod_sec_sub    [label="security::auth\n/jwt\n§09#security-headers", fillcolor="#f0fdf4"];
-        mod_plugin_sub [label="plugin::chat_stream", fillcolor="#f0fdf4"];
-        mod_misc       [label="context / mcp / skill /\nutils / vfs / state /\nmodels / config / error *", fillcolor="#fecaca"];
+        subgraph cluster_mod_login {
+            label="login [09_auth]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sec_auth [label="security::auth", fillcolor="#f0fdf4"];
+            mod_sec_jwt [label="security::jwt", fillcolor="#f0fdf4"];
+            mod_proto_auth [label="protocol::auth", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_auth_session {
+            label="session-expired / unauthorized [09_auth]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws_auth [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_proto_auth_session [label="protocol::auth", fillcolor="#f0fdf4"];
+            mod_sec_auth_session [label="security::auth", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_doc {
+            label="open-doc [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_branch_switch {
+            label="branch-switch [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws_switch [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree_switch [label="tree::structure", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_sc_commit {
+            label="source-control commit [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc_staging [label="source_control::staging", fillcolor="#f0fdf4"];
+            mod_sc_commit [label="source_control::commits", fillcolor="#f0fdf4"];
+            mod_ledger_commit [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_commit [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_ai_chat {
+            label="native ai-chat [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_plugin_chat_stream [label="plugin::chat_stream", fillcolor="#f0fdf4"];
+            mod_proto_ws_ai [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_repo_switch {
+            label="repo-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_tree_repo [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_ledger_repo [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_repo [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_sc_stage {
+            label="stage / unstage [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc_pending [label="source_control::pending_fs", fillcolor="#f0fdf4"];
+            mod_sc_stage_table [label="source_control::staging", fillcolor="#f0fdf4"];
+            mod_proto_ws_sc [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_targets {
+            label="command-targets [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc [label="source_control::staging / diff", fillcolor="#f0fdf4"];
+            mod_plugin [label="plugin::chat_stream", fillcolor="#f0fdf4"];
+        }
+
     }
 
-    // ============================================================
-    // Layer 4 — Core
-    // ============================================================
     subgraph cluster_core {
-        label="Layer 4 — Core Subsystems";
+        label="Layer 4 - Core Subsystem";
         style="filled,rounded";
         fillcolor="#fce7f3";
         color="#831843";
         labelfontcolor="#831843";
 
-        core_ledger   [label="ledger\n(authority)",   fillcolor="#fdf2f8"];
-        core_sync     [label="sync\n(runtime)",       fillcolor="#fdf2f8"];
-        core_sc       [label="source_control\n(workflow)", fillcolor="#fdf2f8"];
-        core_tree     [label="tree\n(projection)",    fillcolor="#fdf2f8"];
-        core_proto    [label="protocol\n(runtime)",   fillcolor="#fdf2f8"];
-        core_sec      [label="security\n(runtime)",   fillcolor="#fdf2f8"];
-        core_plugin   [label="plugin\n(peripheral)",  fillcolor="#fdf2f8"];
-        core_search   [label="search\n(peripheral)",  fillcolor="#fdf2f8"];
+        subgraph cluster_core_login {
+            label="login [09_auth]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_sec [label="security\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_auth_session {
+            label="session-expired / unauthorized [09_auth]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto_auth_session [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_sec_auth_session [label="security\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_doc {
+            label="open-doc [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_tree [label="tree\n(projection)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_branch_switch {
+            label="branch-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto_switch [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_tree_switch [label="tree\n(projection)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_sc_commit {
+            label="source-control commit [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sc_commit [label="source control\n(workflow)", fillcolor="#fdf2f8"];
+            core_ledger_commit [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_commit [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_ai_chat {
+            label="native ai-chat [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_plugin_ai [label="plugin\n(peripheral)", fillcolor="#fdf2f8"];
+            core_proto_ai [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_repo_switch {
+            label="repo-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_tree_repo [label="tree\n(projection)", fillcolor="#fdf2f8"];
+            core_ledger_repo [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_repo [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_sc_stage {
+            label="stage / unstage [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sc_stage [label="source control\n(workflow)", fillcolor="#fdf2f8"];
+            core_proto_sc [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_targets {
+            label="command-targets [12_commands]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sc [label="source_control\n(workflow)", fillcolor="#fdf2f8"];
+            core_plugin [label="plugin\n(peripheral)", fillcolor="#fdf2f8"];
+        }
+
     }
 
-    // ============================================================
-    // Edges — L1 -> L2
-    // ============================================================
-    cli_init      -> app_cli_handlers;
-    cli_scan      -> app_cli_handlers;
-    cli_watch     -> app_cli_handlers;
-    cli_serve     -> app_cli_handlers;
-    cli_dump      -> app_cli_handlers;
-    cli_export    -> app_cli_handlers;
-    cli_verify    -> app_cli_handlers;
-    cli_seed      -> app_cli_handlers;
-    cli_nodecheck -> app_cli_extra;
-    cli_recover   -> app_cli_extra;
-    cli_repair    -> app_cli_extra;
-    cli_liveproxy -> app_cli_extra;
+    op_login_user -> app_login_form;
+    op_login_pass -> app_login_form;
+    op_login_submit -> app_login_submit;
+    op_login_result -> app_login_result;
+    op_auth_resume -> app_auth_probe_gate;
+    op_auth_request -> app_auth_probe;
+    op_auth_request -> app_auth_unauth;
+    op_auth_unauth -> app_auth_unauth;
+    op_auth_reauth -> app_auth_surface;
+    op_sc_focus -> app_sc_commit_draft;
+    op_sc_type -> app_sc_commit_draft;
+    op_sc_submit -> gate_sc_write;
+    gate_sc_write -> app_sc_commit_gate;
+    op_sc_submit -> app_sc_commit_submit;
+    op_sc_result -> app_sc_commit_result;
+    op_ai_open -> app_ai_panel;
+    op_ai_type -> app_ai_panel;
+    op_ai_submit -> app_ai_send;
+    op_ai_stream -> app_ai_stream;
+    op_repo_open -> app_repo_menu;
+    op_repo_choose -> app_repo_select;
+    op_repo_request -> app_repo_request;
+    op_repo_result -> app_repo_result;
+    op_sc_stage -> app_sc_stage;
+    op_sc_stage_ack -> app_sc_stage_ack;
+    op_sc_unstage -> app_sc_unstage;
+    op_sc_unstage_ack -> app_sc_unstage_ack;
 
-    palette_git  -> app_sc;
-    palette_p2p  -> app_ws;
-    palette_ai   -> app_ws;
-    slash_cmds   -> app_ws;
+    op_palette_open -> app_palette_shell;
+    op_palette_query -> app_palette_shell;
+    op_palette_nav -> app_palette_shell;
+    op_palette_close -> app_palette_shell;
+    op_palette_exec -> app_palette_exec;
 
-    // ============================================================
-    // Edges — L2 -> L3 / L4
-    // ============================================================
-    app_cli_handlers -> mod_watcher;
-    app_cli_handlers -> mod_ledger_sub;
-    app_cli_handlers -> mod_proto_sub;
-    app_cli_extra    -> mod_misc;
+    op_branch_open -> app_branch_open;
+    op_branch_choose -> app_branch_select;
+    op_branch_choose -> gate_switch;
+    gate_switch -> app_branch_request;
+    op_branch_request -> app_branch_request;
+    op_branch_result -> app_branch_result;
 
-    app_ws    -> mod_proto_sub;
-    app_ws    -> mod_material;
-    app_sc    -> mod_pending;
-    app_sc    -> mod_staging;
-    app_repo  -> mod_tree_sub;
-    app_auth  -> mod_sec_sub;
-    app_admin -> mod_ledger_sub;
-    app_node_role -> mod_proto_sub;
+    op_doc_open -> app_quick_open;
+    op_doc_query -> app_quick_open;
+    op_doc_choose -> app_doc_select;
+    op_doc_choose -> gate_scope;
+    gate_scope -> app_doc_open;
+    op_doc_request -> app_doc_open;
+    op_doc_receive -> app_doc_receive;
 
-    // ============================================================
-    // Edges — L3 -> L4
-    // ============================================================
-    mod_watcher    -> core_sync;
-    mod_drift      -> core_sync;
-    mod_material   -> core_sync;
-    mod_pending    -> core_sc;
-    mod_staging    -> core_sc;
-    mod_ledger_sub -> core_ledger;
-    mod_tree_sub   -> core_tree;
-    mod_proto_sub  -> core_proto;
-    mod_sec_sub    -> core_sec;
-    mod_plugin_sub -> core_plugin;
+    app_login_submit -> mod_sec_auth;
+    app_login_submit -> mod_sec_jwt;
+    app_login_submit -> mod_proto_auth;
+    app_login_result -> mod_sec_auth;
+    app_auth_probe -> mod_sec_auth_session;
+    app_auth_probe -> mod_proto_auth_session;
+    app_auth_unauth -> mod_proto_ws_auth;
+    app_auth_unauth -> mod_proto_auth_session;
+    app_sc_commit_submit -> mod_sc_staging;
+    app_sc_commit_submit -> mod_sc_commit;
+    app_sc_commit_submit -> mod_ledger_commit;
+    app_sc_commit_submit -> mod_proto_ws_commit;
+    app_sc_commit_result -> mod_sc_commit;
+    app_sc_commit_result -> mod_proto_ws_commit;
+    app_ai_send -> mod_plugin_chat_stream;
+    app_ai_send -> mod_proto_ws_ai;
+    app_ai_stream -> mod_plugin_chat_stream;
+    app_ai_stream -> mod_proto_ws_ai;
+    app_repo_request -> mod_proto_ws_repo;
+    app_repo_request -> mod_tree_repo;
+    app_repo_request -> mod_ledger_repo;
+    app_repo_result -> mod_proto_ws_repo;
+    app_repo_result -> mod_tree_repo;
+    app_repo_result -> mod_ledger_repo;
+    app_sc_stage -> mod_sc_pending;
+    app_sc_stage -> mod_sc_stage_table;
+    app_sc_stage -> mod_proto_ws_sc;
+    app_sc_stage_ack -> mod_sc_stage_table;
+    app_sc_stage_ack -> mod_proto_ws_sc;
+    app_sc_unstage -> mod_sc_pending;
+    app_sc_unstage -> mod_sc_stage_table;
+    app_sc_unstage -> mod_proto_ws_sc;
+    app_sc_unstage_ack -> mod_sc_pending;
+    app_sc_unstage_ack -> mod_proto_ws_sc;
 
-    // Authority converging edges
-    core_sync   -> core_ledger [style=dashed, color="#831843", label="writes"];
-    core_sc     -> core_ledger [style=dashed, color="#831843", label="writes"];
-    core_tree   -> core_ledger [style=dashed, color="#831843", label="projects from"];
+    app_palette_exec -> app_exec_branches;
+    app_exec_branches -> mod_sc;
+    app_exec_branches -> mod_proto_ws;
+    app_exec_branches -> mod_plugin;
 
-    // Legend
+    app_branch_request -> mod_proto_ws_switch;
+    app_branch_request -> mod_tree_switch;
+    app_branch_result -> mod_proto_ws_switch;
+    app_branch_result -> mod_tree_switch;
+
+    app_quick_open -> mod_tree;
+    app_quick_open -> mod_ledger;
+    app_doc_select -> app_doc_open;
+    app_doc_open -> mod_proto_ws;
+    app_doc_open -> mod_tree;
+    app_doc_open -> mod_ledger;
+    app_doc_receive -> mod_proto_ws;
+    app_doc_receive -> mod_ledger;
+
+    mod_sec_auth -> core_sec;
+    mod_sec_jwt -> core_sec;
+    mod_proto_auth -> core_proto;
+    mod_sec_auth_session -> core_sec_auth_session;
+    mod_proto_auth_session -> core_proto_auth_session;
+    mod_proto_ws_auth -> core_proto_auth_session;
+    mod_sc_staging -> core_sc_commit;
+    mod_sc_commit -> core_sc_commit;
+    mod_ledger_commit -> core_ledger_commit;
+    mod_proto_ws_commit -> core_proto_commit;
+    mod_plugin_chat_stream -> core_plugin_ai;
+    mod_proto_ws_ai -> core_proto_ai;
+    mod_proto_ws_repo -> core_proto_repo;
+    mod_tree_repo -> core_tree_repo;
+    mod_ledger_repo -> core_ledger_repo;
+    mod_sc_pending -> core_sc_stage;
+    mod_sc_stage_table -> core_sc_stage;
+    mod_proto_ws_sc -> core_proto_sc;
+    mod_proto_ws -> core_proto;
+    mod_proto_ws_switch -> core_proto_switch;
+    mod_tree_switch -> core_tree_switch;
+    mod_tree -> core_tree;
+    mod_ledger -> core_ledger;
+    mod_sc -> core_sc;
+    mod_plugin -> core_plugin;
+
+    core_tree -> core_ledger [style=dashed, color="#831843", label="projects from"];
+    core_tree_switch -> core_ledger [style=dashed, color="#831843", label="rebinds scope"];
+    core_tree_repo -> core_ledger_repo [style=dashed, color="#831843", label="projects repo view"];
+    core_sc_commit -> core_ledger_commit [style=dashed, color="#831843", label="anchors commit"];
+    core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
+
+    // group-level spine
+    user_login_spine [label="login flow", shape=plaintext, fontcolor="#92400e"];
+    app_login_spine [label="", shape=point, width=0.01];
+    mod_login_spine [label="", shape=point, width=0.01];
+    core_login_spine [label="", shape=point, width=0.01];
+    user_login_spine -> app_login_spine [penwidth=2.2, color="#0f172a"];
+    app_login_spine -> mod_login_spine [penwidth=2.2, color="#0f172a"];
+    mod_login_spine -> core_login_spine [penwidth=2.2, color="#0f172a"];
+
+    user_auth_session_spine [label="session-expired flow", shape=plaintext, fontcolor="#92400e"];
+    app_auth_session_spine [label="", shape=point, width=0.01];
+    mod_auth_session_spine [label="", shape=point, width=0.01];
+    core_auth_session_spine [label="", shape=point, width=0.01];
+    user_auth_session_spine -> app_auth_session_spine [penwidth=2.2, color="#0f172a"];
+    app_auth_session_spine -> mod_auth_session_spine [penwidth=2.2, color="#0f172a"];
+    mod_auth_session_spine -> core_auth_session_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_commit_spine [label="source-control commit flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_commit_spine [label="", shape=point, width=0.01];
+    mod_sc_commit_spine [label="", shape=point, width=0.01];
+    core_sc_commit_spine [label="", shape=point, width=0.01];
+    user_sc_commit_spine -> app_sc_commit_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_commit_spine -> mod_sc_commit_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_commit_spine -> core_sc_commit_spine [penwidth=2.2, color="#0f172a"];
+
+    user_ai_chat_spine [label="native ai-chat flow", shape=plaintext, fontcolor="#92400e"];
+    app_ai_chat_spine [label="", shape=point, width=0.01];
+    mod_ai_chat_spine [label="", shape=point, width=0.01];
+    core_ai_chat_spine [label="", shape=point, width=0.01];
+    user_ai_chat_spine -> app_ai_chat_spine [penwidth=2.2, color="#0f172a"];
+    app_ai_chat_spine -> mod_ai_chat_spine [penwidth=2.2, color="#0f172a"];
+    mod_ai_chat_spine -> core_ai_chat_spine [penwidth=2.2, color="#0f172a"];
+
+    user_repo_switch_spine [label="repo-switch flow", shape=plaintext, fontcolor="#92400e"];
+    app_repo_switch_spine [label="", shape=point, width=0.01];
+    mod_repo_switch_spine [label="", shape=point, width=0.01];
+    core_repo_switch_spine [label="", shape=point, width=0.01];
+    user_repo_switch_spine -> app_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+    app_repo_switch_spine -> mod_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+    mod_repo_switch_spine -> core_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_stage_spine [label="stage / unstage flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_stage_spine [label="", shape=point, width=0.01];
+    mod_sc_stage_spine [label="", shape=point, width=0.01];
+    core_sc_stage_spine [label="", shape=point, width=0.01];
+    user_sc_stage_spine -> app_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_stage_spine -> mod_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_stage_spine -> core_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+
+    user_palette_spine [label="command-palette flow", shape=plaintext, fontcolor="#92400e"];
+    app_palette_spine [label="", shape=point, width=0.01];
+    mod_palette_spine [label="", shape=point, width=0.01];
+    core_palette_spine [label="", shape=point, width=0.01];
+    user_palette_spine -> app_palette_spine [penwidth=2.2, color="#0f172a"];
+    app_palette_spine -> mod_palette_spine [penwidth=2.2, color="#0f172a"];
+    mod_palette_spine -> core_palette_spine [penwidth=2.2, color="#0f172a"];
+
+    user_branch_spine [label="branch-switch flow", shape=plaintext, fontcolor="#92400e"];
+    app_branch_spine [label="", shape=point, width=0.01];
+    mod_branch_spine [label="", shape=point, width=0.01];
+    core_branch_spine [label="", shape=point, width=0.01];
+    user_branch_spine -> app_branch_spine [penwidth=2.2, color="#0f172a"];
+    app_branch_spine -> mod_branch_spine [penwidth=2.2, color="#0f172a"];
+    mod_branch_spine -> core_branch_spine [penwidth=2.2, color="#0f172a"];
+
+    user_doc_spine [label="open-doc flow", shape=plaintext, fontcolor="#92400e"];
+    app_doc_spine [label="", shape=point, width=0.01];
+    mod_doc_spine [label="", shape=point, width=0.01];
+    core_doc_spine [label="", shape=point, width=0.01];
+    user_doc_spine -> app_doc_spine [penwidth=2.2, color="#0f172a"];
+    app_doc_spine -> mod_doc_spine [penwidth=2.2, color="#0f172a"];
+    mod_doc_spine -> core_doc_spine [penwidth=2.2, color="#0f172a"];
+
     subgraph cluster_legend {
         label="Legend";
         style="filled,rounded";
         fillcolor="#f3f4f6";
         fontsize=9;
-        legend_match  [label="matches doc+code", fillcolor="#f0fdf4", shape=box];
-        legend_diff   [label="* divergence vs doc", fillcolor="#fecaca", shape=box];
-        legend_match -> legend_diff [style=invis];
+
+        legend_op [label="user action", fillcolor="#fef9c3"];
+        legend_platform [label="platform wrapper", fillcolor="#fffbeb"];
+        legend_intersection [label="platform intersection", fillcolor="#fef6e7"];
+        legend_app [label="app response", fillcolor="#eff6ff"];
+        legend_mod [label="module", fillcolor="#f0fdf4"];
+        legend_core [label="core subsystem", fillcolor="#fdf2f8"];
+        legend_note [label="plan-side blueprint baseline", fillcolor="#e2e8f0"];
+        legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
+
+        legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];
+        legend_core -> legend_note -> legend_gate [style=invis];
     }
+
 }
+

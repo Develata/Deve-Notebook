@@ -1,0 +1,10 @@
+        subgraph cluster_mod_doc {
+            label="open-doc [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
+        }

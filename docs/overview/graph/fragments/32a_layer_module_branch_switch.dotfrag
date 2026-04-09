@@ -1,0 +1,9 @@
+        subgraph cluster_mod_branch_switch {
+            label="branch-switch [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws_switch [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree_switch [label="tree::structure", fillcolor="#f0fdf4"];
+        }

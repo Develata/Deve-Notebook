@@ -1,0 +1,9 @@
+        subgraph cluster_mod_targets {
+            label="command-targets [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc [label="source_control::staging / diff", fillcolor="#f0fdf4"];
+            mod_plugin [label="plugin::chat_stream", fillcolor="#f0fdf4"];
+        }

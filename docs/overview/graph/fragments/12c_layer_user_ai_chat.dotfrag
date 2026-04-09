@@ -1,0 +1,11 @@
+            subgraph cluster_user_ai_chat {
+                label="native ai-chat [10_ai_agent]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_ai_open [label="Open AI Chat Panel", fillcolor="#fef9c3"];
+                op_ai_type [label="Type AI Prompt", fillcolor="#fef9c3"];
+                op_ai_submit [label="Submit AI Prompt", fillcolor="#fde68a"];
+                op_ai_stream [label="Receive AI Stream", fillcolor="#fef9c3"];
+            }

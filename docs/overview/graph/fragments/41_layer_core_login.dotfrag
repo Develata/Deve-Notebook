@@ -1,0 +1,9 @@
+        subgraph cluster_core_login {
+            label="login [09_auth]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_sec [label="security\n(runtime)", fillcolor="#fdf2f8"];
+        }

@@ -1,0 +1,11 @@
+            subgraph cluster_user_sc_stage {
+                label="stage / unstage [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_stage [label="Stage Change Entry", fillcolor="#fde68a"];
+                op_sc_stage_ack [label="Receive Stage Ack", fillcolor="#fef9c3"];
+                op_sc_unstage [label="Unstage Change Entry", fillcolor="#fde68a"];
+                op_sc_unstage_ack [label="Receive Unstage Ack", fillcolor="#fef9c3"];
+            }

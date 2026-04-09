@@ -1,0 +1,30 @@
+    subgraph cluster_user {
+        label="Layer 1 - User Operation";
+        style="filled,rounded";
+        fillcolor="#fef3c7";
+        color="#92400e";
+        labelfontcolor="#92400e";
+
+        subgraph cluster_user_web {
+            label="web";
+            style="rounded,filled";
+            fillcolor="#fffbeb";
+            color="#b45309";
+            web_placeholder [label="no modeled web-only options", shape=plaintext, fontcolor="#92400e"];
+        }
+
+        subgraph cluster_user_desktop {
+            label="desktop";
+            style="rounded,filled";
+            fillcolor="#fffbeb";
+            color="#b45309";
+            desktop_placeholder [label="no modeled desktop-only options", shape=plaintext, fontcolor="#92400e"];
+        }
+
+        subgraph cluster_user_android {
+            label="android";
+            style="rounded,filled";
+            fillcolor="#fffbeb";
+            color="#b45309";
+            android_placeholder [label="no modeled android-only options", shape=plaintext, fontcolor="#92400e"];
+        }

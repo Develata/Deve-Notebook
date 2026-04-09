@@ -1,0 +1,10 @@
+        subgraph cluster_app_palette {
+            label="command-palette [12_commands]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_palette_shell [label="command_palette::open / query /\nnavigate / close", fillcolor="#eff6ff"];
+            app_palette_exec [label="command_palette::execute", fillcolor="#bfdbfe"];
+            app_exec_branches [label="Representative targets:\nsc::commit / sc::push / ai::chat", fillcolor="#dbeafe"];
+        }

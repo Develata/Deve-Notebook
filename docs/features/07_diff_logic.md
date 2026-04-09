@@ -8,6 +8,13 @@
 - 用户应能明确区分 unstaged、staged、committed。
 - 冲突与只读场景不能伪装成正常提交。
 
+## Operation 示例
+
+- Source Control commit 原子操作示例见 `docs/features/operations/sc_commit.md`。
+- 该示例将 commit 拆为聚焦输入框、输入 message、提交 commit、接收结果四个 user operations。
+- Stage / Unstage 原子操作示例见 `docs/features/operations/sc_stage_unstage.md`。
+- 该示例将 stage / unstage 拆为发起操作与接收 ack 两段响应。
+
 ## 功能项
 
 ### 1. Working Changes

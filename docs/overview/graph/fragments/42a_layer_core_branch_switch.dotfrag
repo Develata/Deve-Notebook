@@ -1,0 +1,9 @@
+        subgraph cluster_core_branch_switch {
+            label="branch-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto_switch [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_tree_switch [label="tree\n(projection)", fillcolor="#fdf2f8"];
+        }

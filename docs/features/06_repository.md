@@ -11,6 +11,13 @@
 - 何时是可写，何时是只读
 - 从远端返回本地时会回到哪个工作上下文
 
+## Operation 示例
+
+- 原子操作示例见 `docs/features/operations/repo_open_doc.md`。
+- 该示例将打开文档拆为打开 Quick Open、输入查询、选择文档、请求 OpenDoc、接收正文五个 user operations。
+- 仓库切换流示例见 `docs/features/operations/repo_switch.md`。
+- 分支切换流示例见 `docs/features/operations/repo_branch_switch.md`。
+
 ## 功能项
 
 ### 1. 仓库切换

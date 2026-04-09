@@ -1,0 +1,6 @@
+    subgraph cluster_core {
+        label="Layer 4 - Core Subsystem";
+        style="filled,rounded";
+        fillcolor="#fce7f3";
+        color="#831843";
+        labelfontcolor="#831843";

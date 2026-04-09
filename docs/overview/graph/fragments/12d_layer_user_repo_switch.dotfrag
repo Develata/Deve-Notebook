@@ -1,0 +1,11 @@
+            subgraph cluster_user_repo_switch {
+                label="repo-switch [06_repository]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_repo_open [label="Open Repo Switcher", fillcolor="#fef9c3"];
+                op_repo_choose [label="Choose Repo Target", fillcolor="#fde68a"];
+                op_repo_request [label="Request Repo Switch", fillcolor="#fde68a"];
+                op_repo_result [label="Receive Repo Scope Rebind", fillcolor="#fef9c3"];
+            }

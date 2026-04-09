@@ -1,0 +1,72 @@
+    // group-level spine
+    user_login_spine [label="login flow", shape=plaintext, fontcolor="#92400e"];
+    app_login_spine [label="", shape=point, width=0.01];
+    mod_login_spine [label="", shape=point, width=0.01];
+    core_login_spine [label="", shape=point, width=0.01];
+    user_login_spine -> app_login_spine [penwidth=2.2, color="#0f172a"];
+    app_login_spine -> mod_login_spine [penwidth=2.2, color="#0f172a"];
+    mod_login_spine -> core_login_spine [penwidth=2.2, color="#0f172a"];
+
+    user_auth_session_spine [label="session-expired flow", shape=plaintext, fontcolor="#92400e"];
+    app_auth_session_spine [label="", shape=point, width=0.01];
+    mod_auth_session_spine [label="", shape=point, width=0.01];
+    core_auth_session_spine [label="", shape=point, width=0.01];
+    user_auth_session_spine -> app_auth_session_spine [penwidth=2.2, color="#0f172a"];
+    app_auth_session_spine -> mod_auth_session_spine [penwidth=2.2, color="#0f172a"];
+    mod_auth_session_spine -> core_auth_session_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_commit_spine [label="source-control commit flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_commit_spine [label="", shape=point, width=0.01];
+    mod_sc_commit_spine [label="", shape=point, width=0.01];
+    core_sc_commit_spine [label="", shape=point, width=0.01];
+    user_sc_commit_spine -> app_sc_commit_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_commit_spine -> mod_sc_commit_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_commit_spine -> core_sc_commit_spine [penwidth=2.2, color="#0f172a"];
+
+    user_ai_chat_spine [label="native ai-chat flow", shape=plaintext, fontcolor="#92400e"];
+    app_ai_chat_spine [label="", shape=point, width=0.01];
+    mod_ai_chat_spine [label="", shape=point, width=0.01];
+    core_ai_chat_spine [label="", shape=point, width=0.01];
+    user_ai_chat_spine -> app_ai_chat_spine [penwidth=2.2, color="#0f172a"];
+    app_ai_chat_spine -> mod_ai_chat_spine [penwidth=2.2, color="#0f172a"];
+    mod_ai_chat_spine -> core_ai_chat_spine [penwidth=2.2, color="#0f172a"];
+
+    user_repo_switch_spine [label="repo-switch flow", shape=plaintext, fontcolor="#92400e"];
+    app_repo_switch_spine [label="", shape=point, width=0.01];
+    mod_repo_switch_spine [label="", shape=point, width=0.01];
+    core_repo_switch_spine [label="", shape=point, width=0.01];
+    user_repo_switch_spine -> app_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+    app_repo_switch_spine -> mod_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+    mod_repo_switch_spine -> core_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sc_stage_spine [label="stage / unstage flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_stage_spine [label="", shape=point, width=0.01];
+    mod_sc_stage_spine [label="", shape=point, width=0.01];
+    core_sc_stage_spine [label="", shape=point, width=0.01];
+    user_sc_stage_spine -> app_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_stage_spine -> mod_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_stage_spine -> core_sc_stage_spine [penwidth=2.2, color="#0f172a"];
+
+    user_palette_spine [label="command-palette flow", shape=plaintext, fontcolor="#92400e"];
+    app_palette_spine [label="", shape=point, width=0.01];
+    mod_palette_spine [label="", shape=point, width=0.01];
+    core_palette_spine [label="", shape=point, width=0.01];
+    user_palette_spine -> app_palette_spine [penwidth=2.2, color="#0f172a"];
+    app_palette_spine -> mod_palette_spine [penwidth=2.2, color="#0f172a"];
+    mod_palette_spine -> core_palette_spine [penwidth=2.2, color="#0f172a"];
+
+    user_branch_spine [label="branch-switch flow", shape=plaintext, fontcolor="#92400e"];
+    app_branch_spine [label="", shape=point, width=0.01];
+    mod_branch_spine [label="", shape=point, width=0.01];
+    core_branch_spine [label="", shape=point, width=0.01];
+    user_branch_spine -> app_branch_spine [penwidth=2.2, color="#0f172a"];
+    app_branch_spine -> mod_branch_spine [penwidth=2.2, color="#0f172a"];
+    mod_branch_spine -> core_branch_spine [penwidth=2.2, color="#0f172a"];
+
+    user_doc_spine [label="open-doc flow", shape=plaintext, fontcolor="#92400e"];
+    app_doc_spine [label="", shape=point, width=0.01];
+    mod_doc_spine [label="", shape=point, width=0.01];
+    core_doc_spine [label="", shape=point, width=0.01];
+    user_doc_spine -> app_doc_spine [penwidth=2.2, color="#0f172a"];
+    app_doc_spine -> mod_doc_spine [penwidth=2.2, color="#0f172a"];
+    mod_doc_spine -> core_doc_spine [penwidth=2.2, color="#0f172a"];

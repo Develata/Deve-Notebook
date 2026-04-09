@@ -1,0 +1,22 @@
+        subgraph cluster_user_shared_all {
+            label="shared(all)";
+            style="rounded,dashed";
+            fillcolor="#fffaf0";
+            color="#ea580c";
+
+            subgraph cluster_user_doc {
+                label="open-doc [06_repository + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_doc_open [label="Open Quick Open", fillcolor="#fef9c3"];
+                op_doc_query [label="Type File Query", fillcolor="#fef9c3"];
+                op_doc_choose [label="Choose Document Result", fillcolor="#fde68a"];
+                op_doc_request [label="Request OpenDoc", fillcolor="#fde68a"];
+                op_doc_receive [label="Receive Document Content", fillcolor="#fef9c3"];
+                gate_scope [label="Scope Gates:\nrepo bound\nscope_nonce valid\nWS connected", fillcolor="#fde68a", shape=note];
+            }
+
+            shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
+        }

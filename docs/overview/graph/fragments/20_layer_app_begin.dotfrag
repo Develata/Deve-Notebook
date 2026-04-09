@@ -1,0 +1,6 @@
+    subgraph cluster_app {
+        label="Layer 2 - Application Response";
+        style="filled,rounded";
+        fillcolor="#dbeafe";
+        color="#1e3a8a";
+        labelfontcolor="#1e3a8a";

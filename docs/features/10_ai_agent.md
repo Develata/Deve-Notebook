@@ -7,6 +7,11 @@
 - AI 入口不能破坏 Markdown、Repo、Source Control 等核心工作流。
 - 用户应明确知道哪些是当前可用能力，哪些只是外围或未来扩展。
 
+## Operation 示例
+
+- Native AI Chat 原子操作示例见 `docs/features/operations/ai_chat.md`。
+- 该示例将 AI chat 拆为打开面板、输入 prompt、发送消息、接收流式结果四个 user operations。
+
 ## 功能项
 
 ### 1. 当前 AI 入口

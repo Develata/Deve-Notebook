@@ -1,0 +1,9 @@
+        subgraph cluster_core_auth_session {
+            label="session-expired / unauthorized [09_auth]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto_auth_session [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_sec_auth_session [label="security\n(runtime)", fillcolor="#fdf2f8"];
+        }

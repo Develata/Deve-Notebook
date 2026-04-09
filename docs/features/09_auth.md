@@ -7,6 +7,13 @@
 - 用户应能区分登录成功、登录失败、会话失效与普通断网。
 - 未授权状态不能伪装成“只是暂时重连中”。
 
+## Operation 示例
+
+- 原子操作建模示例见 `docs/features/operations/auth_login.md`。
+- 该示例将“登录”拆为用户名输入、密码输入、提交、结果接收四个 user operations，用于支撑架构蓝图的第一层。
+- 会话失效 / 未授权闭环示例见 `docs/features/operations/auth_session_unauthorized.md`。
+- 该示例将“session expired / unauthorized”拆为恢复工作区、发起受保护请求、收到未授权、进入重新认证界面四个 user operations。
+
 ## 功能项
 
 ### 1. 登录与登出

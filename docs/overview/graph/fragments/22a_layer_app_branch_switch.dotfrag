@@ -1,0 +1,11 @@
+        subgraph cluster_app_branch_switch {
+            label="branch-switch [06_repository + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_branch_open [label="branch_switch::open", fillcolor="#eff6ff"];
+            app_branch_select [label="branch_switch::select", fillcolor="#eff6ff"];
+            app_branch_request [label="branch_switch::request", fillcolor="#bfdbfe"];
+            app_branch_result [label="branch_switch::result", fillcolor="#eff6ff"];
+        }

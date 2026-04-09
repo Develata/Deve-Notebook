@@ -1,0 +1,10 @@
+        subgraph cluster_mod_login {
+            label="login [09_auth]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sec_auth [label="security::auth", fillcolor="#f0fdf4"];
+            mod_sec_jwt [label="security::jwt", fillcolor="#f0fdf4"];
+            mod_proto_auth [label="protocol::auth", fillcolor="#f0fdf4"];
+        }

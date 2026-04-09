@@ -1,0 +1,17 @@
+        subgraph cluster_user_shared_wd {
+            label="shared(web,desktop)";
+            style="rounded,filled";
+            fillcolor="#fef6e7";
+            color="#c2410c";
+
+            subgraph cluster_user_login {
+                label="login [09_auth]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_login_user [label="Type Username", fillcolor="#fef9c3"];
+                op_login_pass [label="Type Password", fillcolor="#fef9c3"];
+                op_login_submit [label="Submit Login Form", fillcolor="#fde68a"];
+                op_login_result [label="Receive Login Result", fillcolor="#fef9c3"];
+            }

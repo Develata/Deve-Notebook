@@ -1,0 +1,10 @@
+        subgraph cluster_core_repo_switch {
+            label="repo-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_tree_repo [label="tree\n(projection)", fillcolor="#fdf2f8"];
+            core_ledger_repo [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_repo [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

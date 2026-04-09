@@ -1,0 +1,9 @@
+        subgraph cluster_core_doc {
+            label="open-doc [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_tree [label="tree\n(projection)", fillcolor="#fdf2f8"];
+        }

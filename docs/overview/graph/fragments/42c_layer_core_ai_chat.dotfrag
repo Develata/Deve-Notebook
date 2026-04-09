@@ -1,0 +1,9 @@
+        subgraph cluster_core_ai_chat {
+            label="native ai-chat [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_plugin_ai [label="plugin\n(peripheral)", fillcolor="#fdf2f8"];
+            core_proto_ai [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

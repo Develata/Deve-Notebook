@@ -1,0 +1,11 @@
+        subgraph cluster_app_sc_commit {
+            label="source-control commit [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_commit_draft [label="sc::commit_draft", fillcolor="#eff6ff"];
+            app_sc_commit_gate [label="sc::write_gate", fillcolor="#eff6ff"];
+            app_sc_commit_submit [label="sc::commit", fillcolor="#bfdbfe"];
+            app_sc_commit_result [label="sc::commit_result", fillcolor="#eff6ff"];
+        }

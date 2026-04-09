@@ -1,0 +1,12 @@
+            subgraph cluster_user_sc_commit {
+                label="source-control commit [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_focus [label="Focus Commit Input", fillcolor="#fef9c3"];
+                op_sc_type [label="Type Commit Message", fillcolor="#fef9c3"];
+                op_sc_submit [label="Submit Commit", fillcolor="#fde68a"];
+                op_sc_result [label="Receive Commit Result", fillcolor="#fef9c3"];
+                gate_sc_write [label="Write Gates:\nsession / readonly / scope / handshake", fillcolor="#fde68a", shape=note];
+            }

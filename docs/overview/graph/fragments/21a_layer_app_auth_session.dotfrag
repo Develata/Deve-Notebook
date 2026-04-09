@@ -1,0 +1,11 @@
+        subgraph cluster_app_auth_session {
+            label="session-expired / unauthorized [09_auth]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_auth_probe_gate [label="auth_probe::should_run", fillcolor="#eff6ff"];
+            app_auth_probe [label="auth_probe::request", fillcolor="#bfdbfe"];
+            app_auth_unauth [label="auth::mark_unauthorized", fillcolor="#bfdbfe"];
+            app_auth_surface [label="auth::enter_login_surface", fillcolor="#eff6ff"];
+        }

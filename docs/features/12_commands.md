@@ -7,6 +7,12 @@
 - 用户应能通过统一命令入口触达核心能力。
 - 控件与命令应保持同一语义，而不是各走一套逻辑。
 
+## Operation 示例
+
+- 原子操作示例见 `docs/features/operations/ui_command_palette.md`。
+- 该示例将 command palette 拆为打开、输入查询、结果导航、执行命令、关闭五个 user operations。
+- Quick Open 与打开文档流示例见 `docs/features/operations/repo_open_doc.md`。
+
 ## 功能项
 
 ### 1. Command Palette

@@ -1,0 +1,11 @@
+        subgraph cluster_app_repo_switch {
+            label="repo-switch [06_repository]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_repo_menu [label="repo_switcher::menu", fillcolor="#eff6ff"];
+            app_repo_select [label="repo_switcher::select", fillcolor="#eff6ff"];
+            app_repo_request [label="repo_switch::request", fillcolor="#bfdbfe"];
+            app_repo_result [label="repo_switch::result", fillcolor="#eff6ff"];
+        }
