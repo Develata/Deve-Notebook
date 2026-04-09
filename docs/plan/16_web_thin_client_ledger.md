@@ -1,6 +1,12 @@
 # 16_web_thin_client_ledger.md - Web Thin Client 写入确认工程蓝图
 
-**Status**: Approved target architecture
+## Metadata
+
+- `Layer`: `Runtime Protocols`
+- `Status`: `Approved Runtime Architecture`
+- `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
+- `Primary Code Areas`: `apps/web/src/hooks/use_core/pending*.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `crates/core/src/protocol/`
 
 ## 1. Scope
 

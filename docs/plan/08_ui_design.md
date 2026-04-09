@@ -1,5 +1,13 @@
 # 08_ui_design.md - UI Shell 与 Application Control 工程蓝图
 
+## Metadata
+
+- `Layer`: `Application / UI Shell`
+- `Status`: `Current UI Contract`
+- `Counterpart Feature`: `docs/features/08_ui_design.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
+- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
+
 > **Modules**: [Web](./08_ui_design_01_web.md) | [Desktop](./08_ui_design_02_desktop.md) | [Mobile](./08_ui_design_03_mobile.md)
 
 ## 1. Scope

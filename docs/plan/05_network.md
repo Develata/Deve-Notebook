@@ -1,5 +1,13 @@
 # 05_network.md - P2P、WebLightPeer 与 Sync Protocol 工程蓝图
 
+## Metadata
+
+- `Layer`: `Runtime Protocols`
+- `Status`: `Current MUST`
+- `Counterpart Feature`: `docs/features/05_network.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
+- `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
+
 ## 1. Scope
 
 本章定义：

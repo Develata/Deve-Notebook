@@ -4,6 +4,8 @@
 
 它们 **不是** Chrome MCP 手工验收脚本；Chrome MCP 场景应记录在 `docs/features/` 中。
 
+跨层章节映射见 [../coverage-matrix.md](../coverage-matrix.md)。
+
 自动化验收的优先原则：
 
 - 优先验证 application/control/CLI 层，而不是把显示层当作唯一操控入口

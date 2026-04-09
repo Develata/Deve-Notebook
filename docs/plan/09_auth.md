@@ -1,5 +1,13 @@
 # 09_auth.md - User Session 与入口鉴权工程蓝图
 
+## Metadata
+
+- `Layer`: `Runtime Protocols`
+- `Status`: `Current MUST`
+- `Counterpart Feature`: `docs/features/09_auth.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
+- `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app_auth_monitor.rs`
+
 ## 1. Scope
 
 本章定义：

@@ -10,6 +10,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `plan/`: engineering blueprint, infra boundaries, state machines, protocol contracts
 - `features/`: product behavior, user-visible workflows, Chrome MCP manual verification scenarios
 - `acceptance-cases/`: automation-oriented validation cases and script entry contracts
+- `coverage-matrix.md`: stable chapter mapping across the three layers
 
 ## Key Files
 

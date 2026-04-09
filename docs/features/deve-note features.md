@@ -11,6 +11,7 @@ Each chapter mirrors `docs/plan/`, but focuses on:
 
 `docs/plan/` remains the engineering blueprint.  
 `docs/acceptance-cases/` remains the automation-oriented validation set.
+Cross-layer mapping lives in [../coverage-matrix.md](../coverage-matrix.md).
 
 ## Chapters
 
@@ -22,6 +23,9 @@ Each chapter mirrors `docs/plan/`, but focuses on:
 6. [06_repository.md](./06_repository.md)
 7. [07_diff_logic.md](./07_diff_logic.md)
 8. [08_ui_design.md](./08_ui_design.md)
+   - [08_ui_design_01_web.md](./08_ui_design_01_web.md)
+   - [08_ui_design_02_desktop.md](./08_ui_design_02_desktop.md)
+   - [08_ui_design_03_mobile.md](./08_ui_design_03_mobile.md)
 9. [09_auth.md](./09_auth.md)
 10. [10_ai_agent.md](./10_ai_agent.md)
 11. [11_i18n.md](./11_i18n.md)

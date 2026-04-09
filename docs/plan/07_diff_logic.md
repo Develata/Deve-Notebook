@@ -1,5 +1,13 @@
 # 07_diff_logic.md - Diff 与 Source Control 工程蓝图
 
+## Metadata
+
+- `Layer`: `Authority Core`
+- `Status`: `Current MUST`
+- `Counterpart Feature`: `docs/features/07_diff_logic.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
+- `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
+
 ## 1. Scope
 
 本章定义类 Git 工作流在 Deve-Note 中的工程实现合同。

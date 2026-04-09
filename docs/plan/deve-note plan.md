@@ -1,39 +1,44 @@
-# 📑 Deve-Note Plan - Master Index
+# 📑 Deve-Note Plan - Engineering Blueprint Index
 
-**版本**: 0.0.1
-**核心理念**: Git-Flow P2P Architecture, Trinity Isolation, Remote Dashboard.
-**当前状态**: Phase 3-4 (Implementation In Progress). 本目录只保存工程蓝图与实现合同。
+**版本**: 0.0.1  
+**定位**: `docs/plan/` 只保存工程蓝图、状态机、协议合同、模块边界与 refactor target。  
+**配套文档**:
 
-本文档已模块化，请参阅以下子文档获取详细规划：
+- [Feature Spec Index](../features/deve-note%20features.md)
+- [Acceptance Case Index](../acceptance-cases/00_index.md)
+- [Coverage Matrix](../coverage-matrix.md)
 
-## 📚 目录 (Table of Contents)
+## 📚 Infra-First 目录
 
-### Phase 1: Context & Definitions
-1.  **[Terminology & Definitions](./01_terminology.md)**: 核心术语 (Ledger, Snapshot, Peer) 与规范性用语.
-2.  **[Project Positioning](./02_positioning.md)**: 项目定位、核心边界 (Core MUST).
+### A. Foundation
+1. **[01_terminology.md](./01_terminology.md)**: 核心术语、规范性用语、权威定义。
+2. **[02_positioning.md](./02_positioning.md)**: 产品边界、Core MUST / MUST NOT、项目定位。
 
-### Phase 2: Architecture & Storage
-3.  **[Rendering Engine](./03_rendering.md)**: 编辑器内核、LaTeX 公式与解析优先级.
-4.  **[Data Storage](./04_storage.md)**: 三库隔离 (Trinity Isolation)、数据恢复与灾备.
-5.  **[Network Architecture](./05_network.md)**: P2P 拓扑、Web 面板约束与同步协议.
+### B. Authority Core
+3. **[04_storage.md](./04_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
+4. **[06_repository.md](./06_repository.md)**: repo identity、branch scope、tree projection、repo health。
+5. **[07_diff_logic.md](./07_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
 
-### Phase 3: Version Control & Logic
-6.  **[Repository & Branching](./06_repository.md)**: 仓库管理、严格分支策略与 Spectator Mode.
-7.  **[Diff Logic](./07_diff_logic.md)**: 内部和解逻辑 (Reconciliation) 与合并流程.
+### C. Runtime Protocols
+6. **[05_network.md](./05_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
+7. **[09_auth.md](./09_auth.md)**: user session、入口鉴权、cookie/JWT、安全头与 TLS 合同。
+8. **[16_web_thin_client_ledger.md](./16_web_thin_client_ledger.md)**: Web 薄客户端 pending/ack/reject/write readiness。
 
-### Phase 4: User Interface
-8.  **[UI Design](./08_ui_design.md)**: **Cursor-Style** 5-Column Grid, Modal Search & Fixed Outline.
-9.  **[Authentication](./09_auth.md)**: 12-Factor Auth, Argon2 + JWT & WebSocket Security.
-10. **[AI Agent](./10_ai_agent.md)**: 原生 AI Chat 基线、Trusted CLI Agent 边界与统一前端交互。
-11. **[Internationalization](./11_i18n.md)**: 多语言策略 (`Locale + t::*`) 与错误码规范。
+### D. Application / UI Shell
+9. **[03_rendering.md](./03_rendering.md)**: editor runtime、parser、widget、outline、source-first 渲染蓝图。
+10. **[08_ui_design.md](./08_ui_design.md)**: shell/control/runtime 分层与多端共享控制接口。
+11. **[08_ui_design_01_web.md](./08_ui_design_01_web.md)**: Web shell adapter 与布局约束。
+12. **[08_ui_design_02_desktop.md](./08_ui_design_02_desktop.md)**: Desktop shell adapter 与原生边界。
+13. **[08_ui_design_03_mobile.md](./08_ui_design_03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
+14. **[11_i18n.md](./11_i18n.md)**: i18n facade、错误码映射、文案约束。
+15. **[12_commands.md](./12_commands.md)**: command surface、palette、快捷键与 control 映射。
+16. **[13_settings.md](./13_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
 
-### Phase 5: Operations & Delivery
-12. **[Commands Summary](./12_commands.md)**: CLI 与 Command Palette 指令汇总.
-13. **[Settings Summary](./13_settings.md)**: 环境变量与配置文件汇总.
-14. **[Technology Stack](./14_tech_stack.md)**: **Redb + CodeMirror 6**, Native/Mobile 差异化选型.
-15. **[Release Strategy](./15_release.md)**: License (MIT), Release Channels & CI/CD Pipelines.
-16. **[Web Thin Client & Ledger Confirmation](./16_web_thin_client_ledger.md)**: Web 薄客户端写入模型、Ack 确认链与 repo-scoped write readiness.
-17. **[Plugins & Runtime](./17_plugins.md)**: Trusted External Agent / Calculation Runtime 接口预留（当前不要求代码实现）。
+### E. Peripheral / Deferred
+17. **[10_ai_agent.md](./10_ai_agent.md)**: AI chat / trusted CLI / external runtime 的工程边界。
+18. **[14_tech_stack.md](./14_tech_stack.md)**: 技术栈与端侧 adapter 选型。
+19. **[15_release.md](./15_release.md)**: 构建、打包、发布、CI/CD。
+20. **[17_plugins.md](./17_plugins.md)**: plugin / external runtime 接口保留。
 
 ---
 
@@ -51,6 +56,7 @@
 *   `docs/plan/`：工程蓝图，回答 how it is engineered。
 *   `docs/features/`：功能说明，回答 what the product does。
 *   `docs/acceptance-cases/`：自动化验收，回答 automation proves it。
+*   `docs/coverage-matrix.md`：`plan / features / acceptance-cases` 的章节映射表。
 
 ### Infra-First 阅读顺序
 
@@ -58,9 +64,9 @@
 
 1. `01_terminology.md` → 确认术语与规范性用语。
 2. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
-3. `04_storage.md`、`05_network.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、scope、diff 的硬约束。
-4. `16_web_thin_client_ledger.md` → 确认 Web thin-client 写路径与 repo-scoped 状态机。
-5. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md` → 仅在不改写权威规则的前提下定义可见行为。
+3. `04_storage.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
+4. `05_network.md`、`09_auth.md`、`16_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
+5. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md`、`12_commands.md`、`13_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
 6. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
 7. `docs/acceptance-cases/` 中对应章节 → 查看自动化验证入口。
 
@@ -75,6 +81,12 @@
 *   `10_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
 *   `11_i18n.md`：错误码目录与前端文案映射，不负责传输层协议。
 *   `16_web_thin_client_ledger.md`：Web thin-client 写入确认链、pending overlay、repo-scoped write readiness，以及 WS/HTTP 结构化错误契约在 Web 路径上的收敛。
+
+### 平台子章规则
+
+*   `08_ui_design.md` 是共享 shell/control/runtime 总章。
+*   `08_ui_design_01/02/03` 只描述 Web / Desktop / Mobile 的 adapter 与 surface 差异。
+*   共享控制语义、authority 约束、runtime 归属不得在子章里重新定义或偏离总章。
 
 ### Route 2 Guardrail（Node/Path 一等事实护栏）
 

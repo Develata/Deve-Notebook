@@ -1,5 +1,13 @@
 # 03_rendering.md - Markdown Rendering 与 Editor Projection 工程蓝图
 
+## Metadata
+
+- `Layer`: `Application / UI Shell`
+- `Status`: `Current UI Contract`
+- `Counterpart Feature`: `docs/features/03_rendering.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
+- `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
+
 ## 1. Scope
 
 本章定义编辑器输入、解析、渲染、outline 与 widget projection 的工程实现合同。

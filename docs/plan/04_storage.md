@@ -1,5 +1,13 @@
 # 04_storage.md - Ledger、Projection 与 Workspace 存储工程蓝图
 
+## Metadata
+
+- `Layer`: `Authority Core`
+- `Status`: `Current MUST`
+- `Counterpart Feature`: `docs/features/04_storage.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
+- `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
+
 ## 1. Scope
 
 本章定义：
