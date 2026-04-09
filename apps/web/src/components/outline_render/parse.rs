@@ -1,6 +1,8 @@
 // apps/web/src/components/outline_render/parse.rs
 //! # Outline Inline Parser
 
+use super::scan::{find_math_close, find_next_char, find_style_close};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SegmentKind {
     Text,
@@ -9,7 +11,6 @@ pub enum SegmentKind {
     Strong,
     Em,
     Del,
-    Mark,
 }
 
 #[derive(Clone, Debug)]
@@ -65,15 +66,13 @@ pub fn split_inline_segments(text: &str) -> Vec<Segment> {
             continue;
         }
 
-        if ch == '*' || ch == '~' || ch == '_' || ch == '=' {
+        if ch == '*' || ch == '~' || ch == '_' {
             let (marker, kind) = if ch == '*' && text[i + len..].starts_with('*') {
                 ("**", SegmentKind::Strong)
             } else if ch == '_' && text[i + len..].starts_with('_') {
                 ("__", SegmentKind::Strong)
             } else if ch == '~' && text[i + len..].starts_with('~') {
                 ("~~", SegmentKind::Del)
-            } else if ch == '=' && text[i + len..].starts_with('=') {
-                ("==", SegmentKind::Mark)
             } else if ch == '*' {
                 ("*", SegmentKind::Em)
             } else if ch == '_' {
@@ -111,58 +110,4 @@ fn push_text(segments: &mut Vec<Segment>, text: &str, start: usize, end: usize) 
             text: text[start..end].to_string(),
         });
     }
-}
-
-fn find_next_char(text: &str, start: usize, target: char) -> Option<usize> {
-    let mut i = start;
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
-        if ch == target {
-            return Some(i);
-        }
-        i += ch.len_utf8();
-    }
-    None
-}
-
-fn find_math_close(text: &str, start: usize) -> Option<usize> {
-    let mut i = start;
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
-        let len = ch.len_utf8();
-        if ch == '\\' {
-            i += len;
-            if i < text.len() {
-                let next_len = text[i..].chars().next().unwrap().len_utf8();
-                i += next_len;
-            }
-            continue;
-        }
-        if ch == '$' {
-            return Some(i);
-        }
-        i += len;
-    }
-    None
-}
-
-fn find_style_close(text: &str, start: usize, marker: &str) -> Option<usize> {
-    let mut i = start;
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
-        let len = ch.len_utf8();
-        if ch == '\\' {
-            i += len;
-            if i < text.len() {
-                let next_len = text[i..].chars().next().unwrap().len_utf8();
-                i += next_len;
-            }
-            continue;
-        }
-        if text[i..].starts_with(marker) {
-            return Some(i);
-        }
-        i += len;
-    }
-    None
 }

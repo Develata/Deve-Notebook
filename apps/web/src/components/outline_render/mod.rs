@@ -7,6 +7,9 @@ use leptos::prelude::*;
 
 mod katex;
 mod parse;
+#[cfg(test)]
+mod parse_test;
+mod scan;
 
 pub fn render_outline_inline(text: &str) -> Vec<AnyView> {
     let segments = parse::split_inline_segments(text);
@@ -33,10 +36,6 @@ pub fn render_outline_inline(text: &str) -> Vec<AnyView> {
             .into_any(),
             parse::SegmentKind::Del => view! {
                 <del>{render_outline_inline(&seg.text)}</del>
-            }
-            .into_any(),
-            parse::SegmentKind::Mark => view! {
-                <mark>{render_outline_inline(&seg.text)}</mark>
             }
             .into_any(),
         })
