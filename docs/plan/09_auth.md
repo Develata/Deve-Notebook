@@ -210,7 +210,9 @@ WsConnecting
 - WebSocket messages
   - `200 msg/min/connection`
 
-### 6.5 Security Headers
+### 6.5 Security Headers {#security-headers}
+
+> **Code Refs**: `apps/cli/src/server/auth/headers.rs`
 
 所有 HTTP 响应必须包含：
 
@@ -385,7 +387,9 @@ WsConnecting
 
 - 无
 
-## 本章相关配置
+## 本章相关配置 {#auth-config}
+
+> **Code Refs**: `crates/core/src/security/auth/config.rs`
 
 - `AUTH_SECRET`
 - `AUTH_USER`

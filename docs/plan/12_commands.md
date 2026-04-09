@@ -10,7 +10,7 @@
 
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
-## CLI Commands (命令行)
+## 1. CLI Commands
 
 *   `deve init`: 初始化 Vault.
 *   `deve scan`: 扫描并建立索引.
@@ -21,7 +21,7 @@
 *   `deve verify-p2p`: P2P 逻辑验证.
 *   `deve seed`: 种子节点数据注入.
 
-## Command Palette Commands (命令面板)
+## 2. Command Palette
 
 *   **Global Shortcuts**:
     *   `Cmd+Shift+P` / `Ctrl+Shift+P`: 呼出 Command Palette (指令导航)。
@@ -49,7 +49,7 @@
     *   `AI: Switch to PLAN Mode`: 将原生 AI 切换到只读规划模式。
     *   `AI: Switch to BUILD Mode`: 将原生 AI 切换到执行模式。
 
-## Chat Slash Commands (聊天命令)
+## 3. Chat Slash Commands
 
 *   `/plan`: 切换到原生 `PLAN` 模式。
 *   `/build`: 切换到原生 `BUILD` 模式。
@@ -76,10 +76,10 @@
     - `AGENT_CLI_PATH` 已配置
 *   条件不满足时，系统 **MUST** 保持 `native` 后端，并对用户给出明确说明，而不是静默尝试拉起 CLI。
 
-## 本章相关命令
+## 4. Related Commands (本章相关命令)
 
 *   无 (本章即为命令汇总)。
 
-## 本章相关配置
+## 5. Related Configuration (本章相关配置)
 
 *   无。

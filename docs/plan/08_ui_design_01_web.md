@@ -8,18 +8,15 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
 
-> **Status**: Core Specification
-> **Target**: Server Dashboard & PWA
-
 本节定义了 Web 端作为 **Server Dashboard + WebLightPeer Thin Client** 的特有功能与部署架构。
 
 > **Scope Boundary**: Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，但不承担 Native 端完整离线能力。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §4.1 和 `08_ui_design_03_mobile.md` §7.1。
 
-## 规范性用语 (Normative Language)
+## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
 
-## 1. 部署架构：单二进制分发 (Single Binary Distribution)
+## 2. Single Binary Distribution (部署架构)
 
 为了实现“零依赖部署”，CLI 二进制文件 **MUST** 内嵌前端静态资源。
 
@@ -35,13 +32,13 @@
 $$ \forall path \notin API, Serve(path) \to index.html $$
 这确保了前端路由刷新时不会 404。
 
-## 1.3 视口适配策略 (Viewport Mapping)
+### 2.1 Viewport Mapping (视口适配策略)
 
 *   **Rule**: Web 端 **MUST** 根据视口宽度映射到 Mobile / Desktop 规范。
 *   **Mobile View**: $W_{view} \le 768px$ 时，Web UI **MUST** 与 Mobile UI 规范一致。
 *   **Desktop View**: $W_{view} > 768px$ 时，Web UI **MUST** 与 Desktop UI 规范一致。
 
-## 2. 服务器仪表盘 (Server Dashboard)
+## 3. Server Dashboard
 
 ### 2.1 仪表盘布局 (Dashboard Layout)
 当访问根路径 `/` 且无特定文档 ID 时，显示系统概览。
@@ -78,7 +75,7 @@ struct SystemMetrics {
 *   **Data Channel**: 通过现有 WebSocket 连接推送 `ServerMessage::SystemMetrics`。
 *   **Fallback**: 网络断连时，Metrics 冻结并显示 `Disconnected`；session 失效时，直接退出到登录页或认证失效界面。
 
-## 3. 外部协同流程 (External Edit Flow)
+## 4. External Edit Flow
 
 专门针对“用户在服务器端直接修改文件”的场景；其职责是暴露工作区差异，而不是直接改写已确认编辑状态。
 
@@ -87,12 +84,12 @@ struct SystemMetrics {
 3.  **Push**: 后端通过 `FsChangeDetected` 提示前端刷新当前 repo 的 Changes / Staging 视图。
 4.  **Feedback**: 若当前文档受影响，前端显示“磁盘上检测到未确认变更”的可感知提示，但 **MUST NOT** 直接用外部文件内容覆盖编辑器中的 confirmed + pending overlay。
 
-## 4. PWA 支持
+## 5. PWA Support
 Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
 *   `display`: `standalone` (隐藏浏览器 UI)。
 *   `theme_color`: `#1e1e1e` (匹配 Dark Mode)。
 
-## 5. 布局伸缩 (Resizable Layout)
+## 6. Resizable Layout
 
 *   **Scope**: 左侧 Sidebar 与主编辑区之间、主编辑区与右侧面板之间。
 *   **Constraints**:
@@ -101,7 +98,7 @@ Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
 *   **Persistence**: 伸缩宽度 **MUST** 通过 `localStorage` 持久化。
 *   **Outer Gutter**: 主区域左右边距 **MUST** 支持拖拽调整，并持久化。
 
-## 5.1 WebLightPeer 状态呈现 (Sync State Presentation)
+### 6.1 Sync State Presentation
 
 Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能力、降级状态与 repo-scoped peer 行为。
 
@@ -125,7 +122,7 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
     *   浏览器刷新后 **SHOULD** 恢复最近一次稳定的 `repo_name + repo_id + active_branch` 组合，但实际绑定 **MUST** 以 `repo_id` 为准，名称仅作展示或辅助恢复。
     *   `SwitchRepo / SwitchBranch` 发出的 `switch_nonce` **MUST** 严格大于当前 `scope_nonce`，避免旧 scope 的迟到消息污染新 scope。
 
-## 5.2 Web Shell Interaction Rules
+### 6.2 Web Shell Interaction Rules
 
 *   **Activity Bar More...**:
     *   菜单项整行点击 **MUST** 执行“切换视图”。
@@ -135,7 +132,7 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
 *   **Open in New Window**:
     *   新窗口链接 **MUST** 保留现有 query params，并在其上正确追加 `doc=...`，不得生成重复 `?` 或破坏现有 URL 状态。
 
-## 6. 实现策略边界 (Implementation Boundaries)
+## 7. Implementation Boundaries
 
 *   **Rule**: Web 端承载 Dashboard 与 thin-client 写入界面，但不承载移动/桌面端原生实现细节。
 *   **Offline**: Web 端离线能力仅限 PWA 缓存，**MUST NOT** 替代内嵌服务。

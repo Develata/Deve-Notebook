@@ -335,7 +335,9 @@ FsEvent
 - commit 生成 diff 时 base MUST 是当前 confirmed projection，而不是当前 vault 内容快照。
 - discard 的语义只能是“恢复 vault 到 projection + 清理 pending/staging”，不得触碰 ledger history。
 
-## 7. Projection and Persistence Contract
+## 7. Projection and Persistence Contract {#projection-contract}
+
+> **Code Refs**: `crates/core/src/sync/drift_detect/` (mod, enumerate, walk, explain), `crates/core/tests/drift_detect_test.rs`
 
 - 所有系统写盘都必须满足：
 
@@ -360,7 +362,9 @@ Intent -> Ledger Facts -> Projection -> Vault
   - 不同 repo 之间必须隔离
 - `PersistGuard` / `WriteSuppressor` 必须在 projection writeback 前后成对生效，防止 watcher storm
 
-## 8. Watcher Contract
+## 8. Watcher Contract {#watcher-contract}
+
+> **Code Refs**: `crates/core/src/watcher.rs`, `crates/core/src/sync/watcher/` (mod, filter, dispatch, registry, suppressor, backend/*), `crates/core/src/source_control/pending_fs.rs`, `crates/core/tests/watcher_*.rs`
 
 ### 8.1 Backend Abstraction
 
@@ -413,7 +417,9 @@ Intent -> Ledger Facts -> Projection -> Vault
 - 允许修复 local/remote repo catalog、runtime tables、source control side tables。
 - repair 不得伪造 authority history。
 
-### 9.4 Backup / Export
+### 9.4 Backup / Export {#backup-export}
+
+> **Code Refs**: `apps/cli/src/commands/export.rs`, `apps/cli/src/export_entries.rs`
 
 - repo MAY 定期生成只读 backup snapshot。
 - 系统 MUST 支持将 ledger 导出为 JSON Lines。

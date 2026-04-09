@@ -8,9 +8,6 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`
 
-> **Status**: Core Specification
-> **Platform**: Mobile (iOS / Android)
-
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
 > **Tauri-Based**: Mobile 端采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
@@ -18,11 +15,11 @@
 
 > **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
-## 规范性用语 (Normative Language)
+## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
 
-## 1. 响应式架构 (Responsive Architecture)
+## 2. Responsive Architecture
 
 ### 1.1 布局状态机 (Layout State Machine)
 系统布局 $L$ 根据视口宽度 $W_{view}$ 在两种状态间切换：
@@ -41,7 +38,7 @@
 *   `padding-top: env(safe-area-inset-top)`
 *   `padding-bottom: env(safe-area-inset-bottom)`
 
-## 2. 交互设计 (Interaction Design)
+## 3. Interaction Design
 
 ### 2.1 导航策略 (Navigation)
 移动端移除常驻侧边栏，改为 **Drawer (抽屉)** 模式。
@@ -77,7 +74,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   $Threshold_{swipe} = 50px$ (触发滑动的最小距离)。
 *   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。
 
-## 3. 视觉适配 (Visual Adaptations)
+## 4. Visual Adaptations
 
 ### 3.1 布局约束
 *   **Diff View**: 移动端 **MUST NOT** 使用左右并排 (Side-by-Side) 对比，而应强制回退到 **Unified View** (单列混合)。
@@ -86,7 +83,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 ### 3.2 只读模式指示器 (Spectator Indicator)
 在 Spectator Mode 下，顶部导航栏下方 **MUST** 插入一条醒目的橙色横幅 (`Height: 24px`)，提示 "Read-Only Mode"。
 
-## 4. UI 结构设计 (Mobile UI Layout)
+## 5. Mobile UI Layout
 
 ### 4.1 结构层级 (Hierarchy)
 *   **Top App Bar**: 固定顶部，包含导航与核心操作。
@@ -122,7 +119,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   **Search**: 打开 Quick Open / Command Palette（移动端应为底部抽屉）。
 *   **Sync**: 可在 More 菜单中触发。
 
-## 5. 交互流程 (Key Flows)
+## 6. Key Flows
 
 ### 5.1 打开文档
 1. 点击 Hamburger -> 打开 Sidebar Drawer。
@@ -137,24 +134,24 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 2. 选择结果 -> 自动关闭并跳转。
 3. 关闭手势以顶部拖拽上滑为主（避免与结果列表滚动冲突）。
 
-## 6. 性能与体积 (Performance & Size)
+## 7. Performance & Size
 *   **Target**: 首屏渲染 < 1s，输入延迟 < 16ms。
 *   **Memory**: 低端设备 **MUST** 平稳运行。
 *   **Dependency**: 移动端 **MUST** 避免重型 UI 框架。
 
-## 6.1 视觉参考 (Yuque-Inspired)
+### 7.1 Visual Reference (Yuque-Inspired)
 *   **Tone**: 轻盈、克制、阅读优先。
 *   **Layout**: 卡片化信息层级，内容区留白适中。
 *   **Typography**: 标题略微加重，正文中性字重，行高舒适。
 *   **Surface**: 浅色背景 + 轻阴影，强调内容层次而非装饰。
 *   **Interaction**: 抽屉与底部面板动效柔和，避免夸张动画。
 
-## 本章相关配置
+## 8. Related Configuration
 
 *   `ui.mobile.font_size`: 移动端专用字号 (Default: 16).
 *   `ui.mobile.toolbar_visible`: 是否显示辅助键盘栏 (Default: true).
 
-## 7. 实现策略 (Implementation Strategy)
+## 9. Implementation Strategy
 
 ### 4.1 移动端 UI 方案
 *   **Rule**: Mobile 采用 **Tauri v2 Mobile** 作为外壳（WKWebView / Android WebView），前端代码与 Web 端共享，配合原生层访问摄像头/文件系统/推送等系统 API。
@@ -211,7 +208,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   **Size**: 体积 **MUST** 可控，避免引入重型依赖。
 *   **Perf**: 输入延迟与滚动流畅性必须优先保障。
 
-## 8. Web Mobile 映射对齐清单 (2026-02)
+## 10. Web Mobile Alignment Checklist
 
 > 目标：在 `W_view <= 768px` 的 Web 视口中，持续对齐本章 Mobile 规范。
 
@@ -263,7 +260,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   细节识别优化：Bottom Bar 紧凑分支名采用前后保留压缩（如 `feature...23ab`），提升分支辨识度。
 *   手势物理感增强：Top Sheet 新增快甩关闭判定（速度阈值）与阻尼位移（越拉越难）。
 
-## 9. SHOULD 条目映射矩阵 (Web Mobile)
+## 11. SHOULD Mapping Matrix (Web Mobile)
 
 | 条目 | 规范原文 (SHOULD) | 代码路径 | 状态 | 备注 |
 | :--- | :--- | :--- | :--- | :--- |

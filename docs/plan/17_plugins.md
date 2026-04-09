@@ -12,7 +12,7 @@
 > AI Chat 已提升为第 10 章的原生产品能力，不再视为插件主线。
 > 本章当前只保留两类未来扩展：**Trusted External Agent Runtime** 与 **Calculation Runtime**。
 
-## 1. 章节状态
+## 1. Chapter Status (章节状态)
 
 *   **当前要求**：定义边界、配置位、错误契约与安全前提。
 *   **当前不要求**：
@@ -21,7 +21,7 @@
     - 完整运行时代码
     - Calculation Runtime 的实际执行器
 
-## 2. Trusted External Agent Runtime（未来扩展）
+## 2. Trusted External Agent Runtime
 
 此能力对应“外部 CLI Agent 接入”的未来接口位，而不是默认产品能力。
 
@@ -45,7 +45,7 @@
 *   默认只读上下文，不得直接获得 Ledger 管理对象写权限。
 *   无法满足这些条件时，当前 release **MAY** 完全不提供此能力。
 
-## 3. Calculation Runtime（计算引擎）
+## 3. Calculation Runtime
 
 Calculation Runtime 仍然是长期能力，但当前**不要求代码实现**。
 
@@ -65,7 +65,7 @@ Calculation Runtime 仍然是长期能力，但当前**不要求代码实现**�
 *   只预留接口与配置位。
 *   不要求实际执行器、调度器、镜像管理或 UI 面板落地。
 
-## 4. 通用边界（接口预留）
+## 4. Common Boundary (通用边界)
 
 若未来重新展开插件体系，仍遵循以下原则：
 
@@ -77,11 +77,11 @@ Calculation Runtime 仍然是长期能力，但当前**不要求代码实现**�
     这些对象不得通过原始文件写入直接修改。
 *   若未来需要写托管笔记，**MUST** 走 ledger-aware host functions，而不是裸 `fs_write`。
 
-## 本章相关命令
+## 5. Related Commands
 
 *   当前无必须实现的命令。
 
-## 本章相关配置
+## 6. Related Configuration
 
 *   `AGENT_CLI_PATH`: 未来 Trusted External Agent 的可执行路径。
 *   `plugin.podman.path`: 未来 Calculation Runtime 的 Podman 路径。

@@ -10,7 +10,7 @@
 
 为避免“想法正确但实现含糊”，本白皮书对关键术语给出**定义**，并使用以下规范性用语。
 
-## 规范性用语 (Normative Language)
+## 1. Normative Language (规范性用语)
 
 * **MUST / 必须**：不可违反；违反即视为设计不成立或实现错误。
 * **SHOULD / 应**：强烈建议；除非有明确理由与替代方案，否则不应偏离。
@@ -22,7 +22,7 @@
 * 任何影响一致性与安全性的事实 MUST 位于 Ledger，或 MUST 可由 Ledger 唯一推导；Vault/Markdown 仅承载可读投影。
 * 需要明确边界时，使用“**非目标**”直接排除。
 
-## 核心术语定义 (Core Definitions)
+## 2. Core Definitions (核心术语定义)
 
 *   **Ledger (账本)**：系统的唯一真值源（Source of Truth）。
     *   **Description (描述)**：这是一个只增不减的账本事实记录列表。系统不直接存储最终状态，而是存储“发生了什么”。
@@ -79,7 +79,7 @@
     *   **Definition**: $VC = \{ (PeerID_1, Seq_1), (PeerID_2, Seq_2), ... \}$。
     *   **Usage**: 用于检测数据差异（Diff Calculation）和并发冲突（Conflict Detection）。
 
-## 数据结构术语 (Data Structure Terms)
+## 3. Data Structure Terms (数据结构术语)
 
 * **Three Stores (三库隔离)**：
     * **Store A (Vault)**：用户工作区 $W_{user}$。
@@ -105,7 +105,7 @@
         *   **Physical Mapping**: `ledger/<branch_path>/<repo_name>.redb`.
         *   **Note**: 在同一 Branch 下，`repo_name` **MUST** 唯一 (Unique Constraint)。`InstanceUUID` 用于内部逻辑检索与去重。
 
-## 界面术语 (UI Terminology)
+## 4. UI Terminology (界面术语)
 
 *   **Workbench**: 交互界面容器集合 $C_{ui} = \{ \text{SideBar}, \text{Editor}, \text{Panel}, \text{ActivityBar} \}$。
 *   **View Container**: $V \in C_{ui}$，特定视图组件（Views）的承载者。
@@ -114,6 +114,6 @@
 
 
 
-## 本章相关配置
+## 5. Related Configuration (本章相关配置)
 
 *   无特定配置项，但涉及全局架构定义。

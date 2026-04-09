@@ -61,26 +61,26 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 
 ```rust
 //! plan_ref:
-//!   - 04_storage.md §8. Watcher Contract
+//!   - 04_storage#watcher-contract
 ```
 
 **规则**：
-- 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter_file> §<section heading>`。
-- `§` 后面的文字 **MUST** 与 plan 中的 `## ` / `### ` 标题完全一致（包含编号）。
+- 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter_basename>#<stable-anchor-id>`。
+- `#` 后面是 plan 章节里用 `{#id}` 声明的稳定 anchor，**MUST NOT** 依赖自然语言标题文字。
 - 纯工具/util 模块（如 `utils/path.rs`）可使用 `//! plan_ref: infra` 标记为基础设施，豁免章节追溯。
 - 同一模块 MAY 引用多个章节；跨域模块应优先拆分而非堆叠引用。
 - 删除代码前 MUST 核对其 `plan_ref` 对应条款是否已从 plan 中移除或重新分配。
-- Plan 章节重命名时 MUST 同步更新所有代码侧 `plan_ref` 引用。
+- 新增 plan_ref 时 MUST 在 plan 章节相应节加上 `{#anchor-id}`；若无 anchor，MUST 先补 anchor 再写代码引用。
 
-**当前有效的 §section 引用**（2026-04-09）：
+**当前已声明的 plan anchor**（2026-04-09）：
 
-| plan_ref | 对应 plan heading |
-|---|---|
-| `04_storage.md §7. Projection and Persistence Contract` | `## 7. Projection and Persistence Contract` |
-| `04_storage.md §8. Watcher Contract` | `## 8. Watcher Contract` |
-| `04_storage.md §9.4 Backup / Export` | `### 9.4 Backup / Export` |
-| `09_auth.md §安全策略` | inline reference in `09_auth.md` |
-| `09_auth.md §本章相关配置` | `## 本章相关配置` |
+| Anchor | Plan 位置 | 语义 |
+|---|---|---|
+| `04_storage#projection-contract` | `## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
+| `04_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
+| `04_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
+| `09_auth#security-headers` | `### 6.5 Security Headers` | HTTP 安全头合同 |
+| `09_auth#auth-config` | `## 本章相关配置` | 鉴权环境变量 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 

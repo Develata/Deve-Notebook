@@ -1,6 +1,6 @@
 // crates/core/src/source_control/pending_fs.rs
 //! plan_ref:
-//!   - 04_storage.md §8. Watcher Contract
+//!   - 04_storage#watcher-contract
 //!
 //! # 待确认文件变更管理 (Pending FS Ops)
 //!
@@ -14,7 +14,7 @@
 //! 重复信号触发同一 `(path, status, hash, ...)` 的 upsert **MUST** 产生
 //! 字节相同的 side table 行。`detected_at` 仅在语义字段变化时更新；
 //! 若所有语义字段与已存在条目相等，`upsert` **MUST** 跳过写入，
-//! 保持原行（含原 `detected_at`）不变。详见 plan §8. Watcher Contract。
+//! 保持原行（含原 `detected_at`）不变。详见 plan 04_storage#watcher-contract。
 //!
 //! **存储结构**:
 //! - Table: `pending_fs_ops` (path -> PendingFsEntry 序列化字节)
@@ -88,7 +88,7 @@ fn semantic_eq(a: &PendingFsEntry, b: &PendingFsEntry) -> bool {
 ///
 /// **Invariant**: 同一 path 只保留最新的 entry（幂等写入）。
 /// 若新 entry 与已有行的语义字段完全相等，**MUST** 跳过写入，
-/// 保持原行（含 `detected_at`）字节不变，以满足 plan §8. Watcher Contract
+/// 保持原行（含 `detected_at`）字节不变，以满足 plan 04_storage#watcher-contract
 /// 的重复信号幂等性要求。
 pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
     let write_txn = db.begin_write()?;

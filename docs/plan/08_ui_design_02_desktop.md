@@ -8,21 +8,18 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`
 
-> **Status**: Core Specification
-> **Platform**: Desktop (Windows / macOS / Linux)
-
-本节定义了 Desktop 端的“驾驶舱”布局规范与交互逻辑。
+本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
 
 > **Tauri-Based**: Desktop 端采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
 > **Offline-First**: Desktop 端 **MUST** 在无网络环境下保持完整可用。
 
 > **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
-## 规范性用语 (Normative Language)
+## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
 
-## 1. 布局哲学：驾驶舱 (The Cockpit Concept)
+## 2. The Cockpit Concept (布局哲学)
 
 桌面端设计遵循 **"Information Stratification" (信息分层)** 原则，将界面划分为不同关注度的区域。
 
@@ -31,7 +28,7 @@
 *   **L3 (Meta)**: 状态栏 (Status Bar)。提供系统元数据 (Git Branch, Sync Status)。
 *   **L4 (Floating)**: 悬浮层 (Overlays)。按需出现的命令入口。
 
-## 2. 动态网格系统 (Dynamic Grid System)
+## 3. Dynamic Grid System
 
 ### 2.1 布局定义 (Layout Definition)
 系统采用 5 列动态网格布局。形式化定义如下：
@@ -78,7 +75,7 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
         *   `File`: No Prefix (e.g., `src/main.rs`).
         *   `Branch`: Prefix `@` (e.g., `@feature/xyz`).
 
-## 3. 源代码管理界面 (Source Control UI)
+## 4. Source Control UI
 
 ### 3.1 视图结构 (View Structure)
 定义源代码管理视图 $V_{sc}$ 为三个集合的并集：
@@ -94,13 +91,13 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 *   **Added ($A$)**: Green (`var(--color-added)`).
 *   **Deleted ($D$)**: Red (`var(--color-deleted)`).
 
-## 本章相关命令
+## 5. Related Commands
 
 *   `view.layout.toggle_sidebar`: 切换侧边栏可见性。
 *   `view.layout.toggle_diff`: 切换 Diff/Editor 模式。
 *   `git.stage_all`: 暂存所有更改。
 
-## 4. 实现策略 (Implementation Strategy)
+## 6. Implementation Strategy
 
 ### 4.1 跨平台 UI 方案
 *   **Rule**: Desktop 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。

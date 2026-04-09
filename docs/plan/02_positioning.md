@@ -8,17 +8,17 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`
 
-## 版本与状态 (Meta)
+## 1. Meta (版本与状态)
 
 **版本**: 0.0.1
 **状态**: 后端逻辑闭环 + 前端交互定义完整 + 数据/安全强化落地。
 **核心理念**: 账本为真源 + **三位一体隔离 (Trinity Isolation)** + **Git-Flow 数据主权** + 工业级内核。
 
-## 项目定位 (Positioning)
+## 2. Positioning (项目定位)
 
 **项目定位**: 个人部署在服务器上，仅供自己使用的开源个人 Wiki Markdown 笔记项目（支持 LaTeX 数学公式）。
 
-## 核心边界（最高优先级）
+## 3. Core Boundaries (核心边界)
 
 以下边界用于防止核心膨胀；与任何其它章节冲突时，以本节为准。
 
@@ -70,10 +70,10 @@
 * 实现并按需启用重能力（AI、索引、可执行 fenced blocks、图像/表格/图形、批处理工具等），并通过 Capability、资源配额与队列上限进行隔离。
 * 扩展 UI（面板/命令/预览器/侧栏小组件）与数据能力（资产处理、外部集成），但不得破坏 Ledger 真源与导出约束。
 
-## 本章相关命令
+## 4. Related Commands (本章相关命令)
 
 * 无。
 
-## 本章相关配置
+## 5. Related Configuration (本章相关配置)
 
 *   `.deveignore`: 用于定义核心忽略的文件规则。

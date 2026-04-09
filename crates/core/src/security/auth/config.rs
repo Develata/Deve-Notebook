@@ -3,7 +3,7 @@
 //!
 //! 从环境变量加载认证参数，遵循 12-Factor 原则。
 //!
-//! ## 环境变量 (09_auth.md §本章相关配置)
+//! ## 环境变量 (09_auth#auth-config)
 //! - `AUTH_SECRET`: JWT 签名密钥 (MUST >= 32 字节)
 //! - `AUTH_USER`: 用户名 (默认 "admin")
 //! - `AUTH_PASS`: Argon2 哈希后的密码

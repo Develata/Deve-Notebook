@@ -8,7 +8,7 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`
 
-## 技术栈清单 (The Full Stack)
+## 1. Technology Stack
 
 | **Layer**    | **Technology**           | **Status**        | **Selection Reasoning**             |
 | :----------- | :----------------------- | :---------------- | :---------------------------------- |
@@ -35,7 +35,7 @@
 | **Build**    | **Tauri v2**             | Planned           | 跨平台外壳 (Mobile/Desktop)。       |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
-## Markdown 兼容性与回归清单 (Compatibility Checklist)
+## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。
 *   **语法基线**：CommonMark + GFM。
@@ -43,7 +43,7 @@
 *   **资产约定**：`asset://` <=> 导出图片引用。
 *   **回归用例**：CI 快照对比。
 
-## 性能预算与配置 (Performance & Profiles)
+## 3. Performance Budget & Profiles
 
 ### High/Low Profile
 *   **Low-Spec (≤768MB)**: CSR Only, No Search Index, Snapshot Pruning.
@@ -61,17 +61,17 @@
 | MEM_CACHE_MB default | 32 | 128 |
 | Trusted External Agent Runtime / Calculation Runtime | ❌ | ✅ (Future, interface-only) |
 
-## WASM 内存约束
+## 4. WASM Memory Constraints
 
 *   **Budget**: 前端 WASM 堆目标 < 64MB (Mobile), < 128MB (Desktop)。
 *   **Large Doc Strategy**: 超过 100KB 的文档使用分段加载，不将全文存入 WASM 堆。
 *   **Monitoring**: 通过 `wasm_bindgen::memory()` 跟踪实际用量并在 DevTools 输出。
 
-## 本章相关命令
+## 5. Related Commands
 
 * 无。
 
-## 本章相关配置
+## 6. Related Configuration
 
 *   `DEVE_PROFILE`: `standard` | `low-spec`.
 *   `MEM_CACHE_MB`: Memory cache limit.

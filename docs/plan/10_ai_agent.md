@@ -13,7 +13,7 @@
 > 当前主线是**最小原生 AI Chat**；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
 > 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用，且当前 release **MAY** 完全不提供该能力。
 
-## 1. 目标与范围
+## 1. Scope (目标与范围)
 
 *   **目标**：在 768 MB 约束下提供一个可用、可控、可解释的 AI 入口。
 *   **当前主线（Current Track）**：
@@ -26,7 +26,7 @@
     - 原生复杂 Agent 自治状态机（多代理协作、长链自主规划、无限工具循环）
     - 原生 Source Control 写入自动化
 
-## 2. Native AI Chat（默认能力）
+## 2. Native AI Chat
 
 Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建能力。
 
@@ -67,7 +67,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
     - **MUST NOT** 用作后端切换命令。
     - **MUST NOT** 隐式拉起 Trusted External Agent。
 
-## 3. Trusted External Agent Bridge（可选，高风险）
+## 3. Trusted External Agent Bridge
 
 外部 CLI Agent 不再作为默认能力，而是**显式 opt-in 的 Trusted 模式**。
 
@@ -92,7 +92,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   如果上述边界在目标部署形态下无法成立，则 Deve-Notebook **SHOULD** 不内建 CLI Agent。
 *   在这种情况下，用户可以自行在外部终端运行独立 CLI Agent；Deve-Notebook 不负责原生托管它。
 
-## 4. 统一前端交互
+## 4. Unified Frontend Interaction (统一前端交互)
 
 前端仍共享同一套 Chat UI，但产品语义要清楚区分：
 
@@ -107,14 +107,14 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   移动端 Chat Sheet、Markdown 渲染、错误重试逻辑共享。
 *   `Disconnected`、`Unauthorized`、`Session Expired` 与 AI 请求失败必须分开处理。
 
-## 5. 资源开销
+## 5. Resource Budget (资源开销)
 
 | 能力 | 常驻内存 | 按需内存 | 当前定位 |
 |------|---------|----------|----------|
 | Native AI Chat | 轻量级 | SSE / provider response buffer | 默认 shipped |
 | Trusted CLI Agent | 0 MB | 取决于外部 CLI | 可选，默认关闭 |
 
-## 本章相关配置
+## 6. Related Configuration (本章相关配置)
 
 *   `AI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: Native AI Chat 使用的服务密钥。
 *   `AI_BASE_URL`: Native AI Chat API 端点。
@@ -122,7 +122,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   `AI_MAX_TOKENS`: Native AI Chat 最大 token 数。
 *   `AGENT_CLI_PATH`: Trusted CLI Agent 可执行文件路径（仅在显式启用时读取）。
 
-## 相关章节
+## 7. Related Chapters (相关章节)
 
 *   外部 Agent / 计算运行时接口预留见 [17_plugins.md](./17_plugins.md)。
 *   统一命令入口见 [12_commands.md](./12_commands.md)。

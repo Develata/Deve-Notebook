@@ -1,7 +1,7 @@
 // apps/cli/src/server/auth/headers.rs
 //! # 安全响应头中间件
 //!
-//! 09_auth.md §安全策略: 所有 HTTP 响应 MUST 包含安全头。
+//! 09_auth#security-headers
 //!
 //! ## Headers
 //! - `X-Content-Type-Options: nosniff`

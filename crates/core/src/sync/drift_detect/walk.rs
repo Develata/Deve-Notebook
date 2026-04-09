@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage.md §7. Projection and Persistence Contract
+//!   - 04_storage#projection-contract
 
 use super::EntryKind;
 use crate::ledger::RepoManager;
