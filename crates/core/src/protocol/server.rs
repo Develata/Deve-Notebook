@@ -35,7 +35,7 @@ pub enum ServerMessage {
     BranchSwitched { peer_id: Option<String>, success: bool, #[serde(default)] switch_nonce: Option<u64> },
     RepoSwitched { #[serde(default)] branch: Option<String>, name: String, uuid: String, #[serde(default)] switch_nonce: Option<u64> },
     PeerDeleted { peer_id: String, #[serde(default)] scope_nonce: Option<u64> },
-    EditRejected { #[serde(default)] scope_nonce: Option<u64>, error: ServerError },
+    EditRejected { #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, client_op_id: u64, error: ServerError },
     ChangesList { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, staged: Vec<ChangeEntry>, unstaged: Vec<ChangeEntry> },
     StageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     UnstageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },

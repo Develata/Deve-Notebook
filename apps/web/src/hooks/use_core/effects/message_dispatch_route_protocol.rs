@@ -15,8 +15,21 @@ pub fn route_protocol_and_write_message(
     signals: CoreSignals,
 ) -> Result<(), ServerMessage> {
     match msg {
-        ServerMessage::EditRejected { scope_nonce, error } => {
-            handle_edit_rejected_message(scope_nonce, error, ws, locale, signals);
+        ServerMessage::EditRejected {
+            scope_nonce,
+            doc_id,
+            client_op_id,
+            error,
+        } => {
+            handle_edit_rejected_message(
+                scope_nonce,
+                doc_id,
+                client_op_id,
+                error,
+                ws,
+                locale,
+                signals,
+            );
             Ok(())
         }
         ServerMessage::ProtocolError {

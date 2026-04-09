@@ -19,5 +19,9 @@ pub struct PendingLocalEdit {
 pub type PendingLocalEdits = HashMap<DocId, Vec<PendingLocalEdit>>;
 pub use history::reconcile_with_history;
 pub use ops::{
-    ack_pending_edit, cloned_ops_for_doc, cloned_pending_edits_for_doc, push_pending_edit,
+    clear_pending_edit_and_check_current_doc_empty, cloned_ops_for_doc,
+    cloned_pending_edits_for_doc, push_pending_edit,
 };
+#[cfg(test)]
+#[path = "pending_ops_test.rs"]
+mod ops_tests;

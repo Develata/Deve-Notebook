@@ -2,6 +2,9 @@
 
 mod confirmed;
 mod edit;
+mod edit_apply;
+mod edit_checks;
+mod edit_support;
 pub(crate) mod errors;
 mod history;
 mod open;

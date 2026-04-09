@@ -1,5 +1,5 @@
-use super::super::state::CoreSignals;
 use super::super::scope_prefs::clear_scope_pref;
+use super::super::state::CoreSignals;
 use super::message_control_runtime_repo::{clear_repo_scoped_runtime, request_repo_list};
 use super::message_protocol::ProtocolControlSignals;
 use super::message_protocol::{
@@ -8,9 +8,11 @@ use super::message_protocol::{
 };
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
+use crate::hooks::use_core::pending;
 use crate::i18n::Locale;
+use deve_core::models::DocId;
 use deve_core::protocol::ServerError;
-use leptos::prelude::{GetUntracked, Set};
+use leptos::prelude::{GetUntracked, Set, Update};
 
 pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals {
     ProtocolControlSignals {
@@ -41,6 +43,8 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
 
 pub fn handle_edit_rejected_message(
     scope_nonce: Option<u64>,
+    doc_id: DocId,
+    client_op_id: u64,
     error: ServerError,
     ws: &WsService,
     locale: Locale,
@@ -48,6 +52,19 @@ pub fn handle_edit_rejected_message(
 ) {
     if !accepts_edit_rejected_message(scope_nonce, signals) {
         return;
+    }
+    let current_doc = signals.current_doc.get_untracked();
+    let mut clear_navigation = false;
+    signals.set_pending_local_edits.update(|pending_edits| {
+        clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
+            pending_edits,
+            current_doc,
+            doc_id,
+            client_op_id,
+        );
+    });
+    if clear_navigation {
+        signals.set_pending_navigation.set(None);
     }
     handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
 }

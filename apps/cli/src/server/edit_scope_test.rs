@@ -103,8 +103,15 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::EditRejected { scope_nonce, error }) => {
+        Some(ServerMessage::EditRejected {
+            scope_nonce,
+            doc_id: rejected_doc_id,
+            client_op_id,
+            error,
+        }) => {
             assert_eq!(scope_nonce, Some(19));
+            assert_eq!(rejected_doc_id, doc_id);
+            assert_eq!(client_op_id, 9);
             assert_eq!(error.code, ServerErrorCode::StorageNotFound);
         }
         other => panic!("expected EditRejected(StorageNotFound), got {:?}", other),
@@ -155,10 +162,15 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error, scope_nonce, ..
+        Some(ServerMessage::EditRejected {
+            scope_nonce,
+            doc_id: rejected_doc_id,
+            client_op_id,
+            error,
         }) => {
             assert_eq!(scope_nonce, Some(23));
+            assert_eq!(rejected_doc_id, doc_id);
+            assert_eq!(client_op_id, 9);
             assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert!(
                 error
@@ -170,7 +182,7 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
             );
         }
         other => panic!(
-            "expected ProtocolError(StoragePersistFailed), got {:?}",
+            "expected EditRejected(StoragePersistFailed), got {:?}",
             other
         ),
     }
@@ -219,14 +231,19 @@ async fn edit_clears_stale_remote_readonly_binding_before_local_scope_checks() -
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error, scope_nonce, ..
+        Some(ServerMessage::EditRejected {
+            scope_nonce,
+            doc_id: rejected_doc_id,
+            client_op_id,
+            error,
         }) => {
             assert_eq!(scope_nonce, Some(29));
+            assert_eq!(rejected_doc_id, doc_id);
+            assert_eq!(client_op_id, 9);
             assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
         }
         other => panic!(
-            "expected ProtocolError(SyncPeerUnauthenticated), got {:?}",
+            "expected EditRejected(SyncPeerUnauthenticated), got {:?}",
             other
         ),
     }

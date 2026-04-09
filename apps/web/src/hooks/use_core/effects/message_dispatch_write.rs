@@ -34,7 +34,17 @@ pub fn handle_ack_message(
     {
         return;
     }
+    let current_doc = signals.current_doc.get_untracked();
+    let mut clear_navigation = false;
     signals.set_pending_local_edits.update(|pending_edits| {
-        let _ = pending::ack_pending_edit(pending_edits, doc_id, client_op_id);
+        clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
+            pending_edits,
+            current_doc,
+            doc_id,
+            client_op_id,
+        );
     });
+    if clear_navigation {
+        signals.set_pending_navigation.set(None);
+    }
 }

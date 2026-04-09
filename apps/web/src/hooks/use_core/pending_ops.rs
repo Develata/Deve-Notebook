@@ -18,7 +18,7 @@ pub fn push_pending_edit(
     });
 }
 
-pub fn ack_pending_edit(pending: &mut PendingLocalEdits, doc_id: DocId, client_op_id: u64) -> bool {
+fn ack_pending_edit(pending: &mut PendingLocalEdits, doc_id: DocId, client_op_id: u64) -> bool {
     let (changed, empty) = {
         let Some(edits) = pending.get_mut(&doc_id) else {
             return false;
@@ -31,6 +31,17 @@ pub fn ack_pending_edit(pending: &mut PendingLocalEdits, doc_id: DocId, client_o
         pending.remove(&doc_id);
     }
     changed
+}
+
+pub fn clear_pending_edit_and_check_current_doc_empty(
+    pending: &mut PendingLocalEdits,
+    current_doc: Option<DocId>,
+    doc_id: DocId,
+    client_op_id: u64,
+) -> bool {
+    ack_pending_edit(pending, doc_id, client_op_id)
+        && current_doc == Some(doc_id)
+        && !pending.contains_key(&doc_id)
 }
 
 pub fn cloned_ops_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> Vec<Op> {

@@ -29,6 +29,8 @@ mod document_remote_scope_test;
 #[cfg(test)]
 mod document_scope_bootstrap_test;
 #[cfg(test)]
+mod edit_projection_ack_test;
+#[cfg(test)]
 mod edit_runtime_repair_test;
 #[cfg(test)]
 mod edit_scope_test;
