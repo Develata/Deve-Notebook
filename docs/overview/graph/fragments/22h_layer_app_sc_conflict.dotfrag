@@ -1,0 +1,10 @@
+        subgraph cluster_app_sc_conflict {
+            label="resolve conflict [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_keep_fs [label="sc::resolve_keep_fs", fillcolor="#bfdbfe"];
+            app_sc_keep_ledger [label="sc::resolve_keep_ledger", fillcolor="#bfdbfe"];
+            app_sc_conflict_resolved [label="sc::conflict_resolved", fillcolor="#eff6ff"];
+        }

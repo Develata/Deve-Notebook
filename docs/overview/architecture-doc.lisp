@@ -23,7 +23,7 @@
 (group :id grp.user.web :layer user-operation :kind platform :label "web" :members ())
 (group :id grp.user.desktop :layer user-operation :kind platform :label "desktop" :members ())
 (group :id grp.user.android :layer user-operation :kind platform :label "android" :members ())
-(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-commit grp.user.ai-chat grp.user.open-doc))
+(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-conflict grp.user.sc-commit grp.user.ai-chat grp.user.open-doc))
 (group :id grp.user.shared-all :layer user-operation :kind platform-intersection :label "shared(all)" :members ())
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
@@ -33,10 +33,10 @@
 (group :id grp.user.sc-stage :layer user-operation :label "stage / unstage" :members (op.sc.stage.entry op.sc.stage.receive-ack op.sc.unstage.entry op.sc.unstage.receive-ack))
 (group :id grp.user.sc-discard-file :layer user-operation :label "discard file" :members (op.sc.discard-file.entry op.sc.discard-file.receive-ack))
 (group :id grp.user.sc-discard :layer user-operation :label "discard pending" :members (op.sc.discard.request op.sc.discard.receive-ack))
+(group :id grp.user.sc-conflict :layer user-operation :label "resolve conflict" :members (op.sc.conflict.keep-fs op.sc.conflict.keep-ledger op.sc.conflict.receive-resolved))
 (group :id grp.user.sc-commit :layer user-operation :label "source-control commit" :members (op.sc.commit.focus-input op.sc.commit.type-message op.sc.commit.submit op.sc.commit.receive-result))
 (group :id grp.user.ai-chat :layer user-operation :label "native ai-chat" :members (op.ai.chat.open-panel op.ai.chat.type-message op.ai.chat.submit op.ai.chat.receive-stream))
 (group :id grp.user.open-doc :layer user-operation :label "open-doc" :members (op.repo.open-doc.open-quick-open op.repo.open-doc.type-query op.repo.open-doc.choose-doc op.repo.open-doc.request-open op.repo.open-doc.receive-content))
-
 (user-operation :id op.auth.login.type-username :label "Type Username" :kind text-input :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.form.username-update))
 (user-operation :id op.auth.login.type-password :label "Type Password" :kind text-input :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.form.password-update))
 (user-operation :id op.auth.login.submit :label "Submit Login Form" :kind submit :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.login.submit))
@@ -66,6 +66,9 @@
 (user-operation :id op.sc.discard-file.receive-ack :label "Receive Discard File Ack" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_file.md" :calls (app.sc.discard-file.result))
 (user-operation :id op.sc.discard.request :label "Request Discard Pending" :kind execute :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_pending.md" :calls (app.sc.discard.request))
 (user-operation :id op.sc.discard.receive-ack :label "Receive Discard Ack" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_discard_pending.md" :calls (app.sc.discard.result))
+(user-operation :id op.sc.conflict.keep-fs :label "Choose KeepFs" :kind execute :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_resolve_conflict.md" :calls (app.sc.conflict.keep-fs))
+(user-operation :id op.sc.conflict.keep-ledger :label "Choose KeepLedger" :kind execute :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_resolve_conflict.md" :calls (app.sc.conflict.keep-ledger))
+(user-operation :id op.sc.conflict.receive-resolved :label "Receive Conflict Resolved" :kind async-result :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_resolve_conflict.md" :calls (app.sc.conflict.resolved))
 (user-operation :id op.sc.commit.focus-input :label "Focus Commit Input" :kind focus :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.draft))
 (user-operation :id op.sc.commit.type-message :label "Type Commit Message" :kind text-input :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.draft))
 (user-operation :id op.sc.commit.submit :label "Submit Commit" :kind submit :surface source-control-panel :chapter 07_diff_logic :feature "docs/features/operations/sc_commit.md" :calls (app.sc.commit.gate app.sc.commit.submit))
@@ -83,10 +86,8 @@
 ;; Layer 2 — Application (HTTP / WS handlers, CLI command glue)
 ;; Source: plan chapters + operation flows
 ;; =============================================================================
-
 (layer :id application :order 2
        :description "Handlers, callbacks, form actions, request senders, and effect gates that receive user operations and dispatch into modules.")
-
 (group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result))
 (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
 (group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close))
@@ -95,6 +96,7 @@
 (group :id grp.app.sc-stage :layer application :label "stage / unstage" :members (app.sc.stage.request app.sc.stage.result app.sc.unstage.request app.sc.unstage.result))
 (group :id grp.app.sc-discard-file :layer application :label "discard file" :members (app.sc.discard-file.request app.sc.discard-file.result))
 (group :id grp.app.sc-discard :layer application :label "discard pending" :members (app.sc.discard.request app.sc.discard.result))
+(group :id grp.app.sc-conflict :layer application :label "resolve conflict" :members (app.sc.conflict.keep-fs app.sc.conflict.keep-ledger app.sc.conflict.resolved))
 (group :id grp.app.sc-commit :layer application :label "source-control commit" :members (app.sc.commit.draft app.sc.commit.gate app.sc.commit.submit app.sc.commit.result))
 (group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
 (group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
@@ -128,6 +130,9 @@
 (application :id app.sc.discard-file.result :label "sc::discard_ack" :kind async-result :chapter 07_diff_logic :calls (mod_sync_materialize mod_proto_ws))
 (application :id app.sc.discard.request :label "sync::discard_pending" :kind ws-handler :chapter 07_diff_logic :calls (mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (application :id app.sc.discard.result :label "sync::pending_discarded" :kind async-result :chapter 07_diff_logic :calls (mod_sync_materialize mod_proto_ws))
+(application :id app.sc.conflict.keep-fs :label "sc::resolve_keep_fs" :kind ws-handler :chapter 07_diff_logic :calls (mod_sc_staging mod_proto_ws))
+(application :id app.sc.conflict.keep-ledger :label "sc::resolve_keep_ledger" :kind ws-handler :chapter 07_diff_logic :calls (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(application :id app.sc.conflict.resolved :label "sc::conflict_resolved" :kind async-result :chapter 07_diff_logic :calls (mod_proto_ws))
 (application :id app.sc.commit.draft :label "sc::commit_draft" :kind ui-shell :chapter 07_diff_logic :calls ())
 (application :id app.sc.commit.gate :label "sc::write_gate" :kind runtime-gate :chapter 07_diff_logic :calls ())
 (application :id app.sc.commit.submit :label "sc::commit" :kind ws-handler :chapter 07_diff_logic :calls (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
@@ -175,10 +180,8 @@
 ;; Layer 3 — Module (leaf engineering modules)
 ;; Source: docs/plan/ Primary Code Areas fields
 ;; =============================================================================
-
 (layer :id module :order 3
        :description "Finest-grained engineering modules — each owns a state machine or contract.")
-
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
 (group :id grp.mod.branch-switch :layer module :label "branch-switch" :members (mod_proto_ws mod_tree_structure))
@@ -186,6 +189,7 @@
 (group :id grp.mod.sc-stage :layer module :label "stage / unstage" :members (mod_sc_pending-fs mod_sc_staging mod_proto_ws))
 (group :id grp.mod.sc-discard-file :layer module :label "discard file" :members (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-discard :layer module :label "discard pending" :members (mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.sc-conflict :layer module :label "resolve conflict" :members (mod_sc_pending-fs mod_sc_staging mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-commit :layer module :label "source-control commit" :members (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.ai-chat :layer module :label "native ai-chat" :members (mod_plugin_chat mod_proto_ws))
 (group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
@@ -212,7 +216,6 @@
 (module :id mod_sec_jwt         :label "security::jwt"      :chapter 09_auth :parent core.security :code-area "crates/core/src/security/auth/jwt.rs")
 
 (module :id mod_plugin_chat     :label "plugin::chat_stream" :chapter 10_ai_agent :parent core.plugin :code-area "crates/core/src/plugin/")
-
 (module :id mod_search_index    :label "search::index" :chapter 03_rendering :parent core.search :code-area "crates/core/src/search/")
 ;; =============================================================================
 ;; Layer 4 — Core (top-level subsystems)
@@ -230,6 +233,7 @@
 (group :id grp.core.sc-stage :layer core :label "stage / unstage" :members (core.source_control core.protocol))
 (group :id grp.core.sc-discard-file :layer core :label "discard file" :members (core.source_control core.sync core.ledger core.protocol))
 (group :id grp.core.sc-discard :layer core :label "discard pending" :members (core.sync core.ledger core.protocol))
+(group :id grp.core.sc-conflict :layer core :label "resolve conflict" :members (core.source_control core.sync core.ledger core.protocol))
 (group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))

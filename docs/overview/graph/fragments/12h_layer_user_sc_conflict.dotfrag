@@ -1,0 +1,10 @@
+            subgraph cluster_user_sc_conflict {
+                label="resolve conflict [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_keep_fs [label="Choose KeepFs", fillcolor="#fde68a"];
+                op_sc_keep_ledger [label="Choose KeepLedger", fillcolor="#fde68a"];
+                op_sc_conflict_resolved [label="Receive Conflict Resolved", fillcolor="#fef9c3"];
+            }

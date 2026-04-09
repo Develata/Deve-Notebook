@@ -29,6 +29,9 @@
     op_sc_discard_file_ack -> app_sc_discard_file_ack;
     op_sc_discard -> app_sc_discard;
     op_sc_discard_ack -> app_sc_discard_ack;
+    op_sc_keep_fs -> app_sc_keep_fs;
+    op_sc_keep_ledger -> app_sc_keep_ledger;
+    op_sc_conflict_resolved -> app_sc_conflict_resolved;
 
     op_palette_open -> app_palette_shell;
     op_palette_query -> app_palette_shell;
@@ -96,6 +99,13 @@
     app_sc_discard -> mod_proto_ws_discard;
     app_sc_discard_ack -> mod_sync_discard;
     app_sc_discard_ack -> mod_proto_ws_discard;
+    app_sc_keep_fs -> mod_sc_stage_conflict;
+    app_sc_keep_fs -> mod_proto_ws_conflict;
+    app_sc_keep_ledger -> mod_sc_pending_conflict;
+    app_sc_keep_ledger -> mod_sync_conflict;
+    app_sc_keep_ledger -> mod_ledger_conflict;
+    app_sc_keep_ledger -> mod_proto_ws_conflict;
+    app_sc_conflict_resolved -> mod_proto_ws_conflict;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -141,6 +151,11 @@
     mod_sync_discard -> core_sync_discard;
     mod_ledger_discard -> core_ledger_discard;
     mod_proto_ws_discard -> core_proto_discard;
+    mod_sc_stage_conflict -> core_sc_conflict;
+    mod_sc_pending_conflict -> core_sc_conflict;
+    mod_sync_conflict -> core_sync_conflict;
+    mod_ledger_conflict -> core_ledger_conflict;
+    mod_proto_ws_conflict -> core_proto_conflict;
     mod_proto_ws -> core_proto;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
@@ -155,4 +170,5 @@
     core_sc_commit -> core_ledger_commit [style=dashed, color="#831843", label="anchors commit"];
     core_sync_discard_file -> core_ledger_discard_file [style=dashed, color="#831843", label="restores target"];
     core_sync_discard -> core_ledger_discard [style=dashed, color="#831843", label="restores projection"];
+    core_sc_conflict -> core_ledger_conflict [style=dashed, color="#831843", label="resolves pending choice"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];

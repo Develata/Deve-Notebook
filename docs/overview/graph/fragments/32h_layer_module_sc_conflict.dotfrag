@@ -1,0 +1,12 @@
+        subgraph cluster_mod_sc_conflict {
+            label="resolve conflict [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc_stage_conflict [label="source_control::staging", fillcolor="#f0fdf4"];
+            mod_sc_pending_conflict [label="source_control::pending_fs", fillcolor="#f0fdf4"];
+            mod_sync_conflict [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_ledger_conflict [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_conflict [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
