@@ -1,10 +1,10 @@
-# 📑 Deve-Note Plan - Engineering Blueprint Index
+# 📑 Deve-Note Plan - Master Index
 
 **版本**: 0.0.1
 **核心理念**: Git-Flow P2P Architecture, Trinity Isolation, Remote Dashboard.
-**当前状态**: Phase 3-4 (Implementation In Progress). 本目录只描述工程蓝图与实现合同。
+**当前状态**: Phase 3-4 (Implementation In Progress). 本目录只保存工程蓝图与实现合同。
 
-本文档已模块化，请参阅以下子文档获取详细工程实现蓝图：
+本文档已模块化，请参阅以下子文档获取详细规划：
 
 ## 📚 目录 (Table of Contents)
 
@@ -21,10 +21,10 @@
 6.  **[Repository & Branching](./06_repository.md)**: 仓库管理、严格分支策略与 Spectator Mode.
 7.  **[Diff Logic](./07_diff_logic.md)**: 内部和解逻辑 (Reconciliation) 与合并流程.
 
-### Phase 4: Runtime, Interface Contracts & Security
-8.  **[UI Design](./08_ui_design.md)**: UI 壳层、布局系统与控件边界。
+### Phase 4: User Interface
+8.  **[UI Design](./08_ui_design.md)**: **Cursor-Style** 5-Column Grid, Modal Search & Fixed Outline.
 9.  **[Authentication](./09_auth.md)**: 12-Factor Auth, Argon2 + JWT & WebSocket Security.
-10. **[AI Agent](./10_ai_agent.md)**: 原生 AI Chat 与 Trusted CLI Agent 的工程边界。
+10. **[AI Agent](./10_ai_agent.md)**: 原生 AI Chat 基线、Trusted CLI Agent 边界与统一前端交互。
 11. **[Internationalization](./11_i18n.md)**: 多语言策略 (`Locale + t::*`) 与错误码规范。
 
 ### Phase 5: Operations & Delivery
@@ -42,15 +42,15 @@
 为避免“实现做到一半才发现文档分层混乱”，本目录按以下方式解释：
 
 *   **Current MUST（当前硬约束）**：`01`、`02`、`04`、`05`、`06`、`07`、`09`、`11`。这些章节定义当前实现必须满足的不变量、协议约束与错误契约。
-*   **Interface / Product Boundary Contracts（界面与产品边界合同）**：`03`、`08`、`10`、`12`、`13`、`14`、`15`、`17`。这些章节保留工程约束，但不替代 `docs/features/` 的功能说明。
+*   **Current UI Contract（当前界面契约）**：`03`、`08`。这些章节定义当前交互与可见行为的工程实现，但不得改写 Ledger / Auth / Network 的权威规则。
 *   **Approved Runtime Architecture（已批准运行时架构）**：`16`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
 *   **Planned / Optional（规划或扩展）**：`10`、`12`、`13`、`14`、`15`、`17`。这些章节可指导实现，但不得反向推翻 Current MUST。
 
 ### 文档分层
 
-* `docs/plan/`：how it is engineered
-* `docs/features/`：what the product does
-* `docs/acceptance-cases/`：automation proves it
+*   `docs/plan/`：工程蓝图，回答 how it is engineered。
+*   `docs/features/`：功能说明，回答 what the product does。
+*   `docs/acceptance-cases/`：自动化验收，回答 automation proves it。
 
 ### Infra-First 阅读顺序
 
@@ -60,7 +60,7 @@
 2. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
 3. `04_storage.md`、`05_network.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、scope、diff 的硬约束。
 4. `16_web_thin_client_ledger.md` → 确认 Web thin-client 写路径与 repo-scoped 状态机。
-5. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md` → 定义 UI / rendering / 文案的工程约束。
+5. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md` → 仅在不改写权威规则的前提下定义可见行为。
 6. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
 7. `docs/acceptance-cases/` 中对应章节 → 查看自动化验证入口。
 
@@ -72,7 +72,7 @@
 *   `06_repository.md`：`NodeId`、树结构、`Rename/Move/Create/Delete` 的结构事实写路径。
 *   `07_diff_logic.md`：外部文件系统变更在 Stage -> Commit 时如何拆成内容事实与结构事实。
 *   `09_auth.md`：user session、token 生命周期、鉴权失败处理。
-*   `10_ai_agent.md`：原生 AI Chat 的工程边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
+*   `10_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
 *   `11_i18n.md`：错误码目录与前端文案映射，不负责传输层协议。
 *   `16_web_thin_client_ledger.md`：Web thin-client 写入确认链、pending overlay、repo-scoped write readiness，以及 WS/HTTP 结构化错误契约在 Web 路径上的收敛。
 
@@ -84,9 +84,10 @@
 
 ### Infra-First Guardrail（基础设施优先护栏）
 
-*   显示层 **MUST NOT** 直接操控业务真相；它只能消费 application/runtime 暴露的状态，并发出 typed intents。
-*   核心控制应优先沉淀在 application/runtime 或 CLI/control surface，而不是散落在页面控件里。
+*   控件、页面与视图层 **MUST NOT** 直接持有业务真相；它们只能消费 runtime 暴露的状态，并发出 typed intents。
+*   feature runtime **MUST** 只拥有本功能的状态机，不得直接篡改其他 runtime 的内部状态。
 *   authority core（ledger / facts / append validation）与 projection / repair **MUST** 明确分层；projection 失败不得回写 authority，也不得伪装为成功写入。
+*   修复逻辑（repair / degraded / quarantine / stale scope recovery）**MUST** 视为第一类基础设施能力，而不是散落在 handler / effect / component 内的临时补丁。
 *   plugin / AI / external runtime **MUST** 视为外围系统；在核心功能未稳定前，不得要求它们反向主导 authority、scope 或 pending write 的主链设计。
 
 ### Global: Code Standards (代码规范)

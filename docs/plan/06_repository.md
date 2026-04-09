@@ -1,101 +1,401 @@
-# 06_repository.md - 仓库工程蓝图
+# 06_repository.md - 仓库与分支工程蓝图
 
-本章只定义 repo / branch / tree / repo health 的工程实现，不描述用户界面工作流。功能语义见 [../features/06_repository.md](../features/06_repository.md)，自动化验收见 [../acceptance-cases/07_storage_repo.md](../acceptance-cases/07_storage_repo.md)。
+## 1. Scope
 
-## 1. 目标
+本章定义 Repo、Branch、Tree Projection 与 Repo Health 的工程实现合同。
 
-- 所有 repo 操作都必须先解析到稳定身份，再执行底层算子。
-- tree 是 structure projection，不是权威写源。
-- remote / spectator 必须天然只读。
+本章回答的问题只有两个：
 
-## 2. 权威实体
+1. 系统如何唯一识别并切换到某个 repo / branch / doc scope。
+2. 结构树、仓库目录与 repo repair 如何在 authority 与 projection 之间分层。
 
-- `RepoId`
-  - 仓库唯一身份，底层执行主键。
-- `BranchScope`
-  - `Local` 或 `Remote(PeerId)`。
-- `NodeId / DocId`
-  - 结构与文档事实主键。
-- `Structure Facts`
-  - `Create / Rename / Move / Delete` 的唯一权威来源。
-- `RepoHealth`
-  - `Healthy / Degraded / Quarantined / Repairing`。
+用户可见行为、按钮文案与 Chrome MCP 手工路径属于 `docs/features/06_repository.md`，不属于本章。
 
-## 3. 分层
+## 2. Authoritative Entities
 
-### 3.1 Authority
+### 2.1 Repo Identity
 
-- repo、doc、node 的真值在 ledger facts 中。
-- 任何底层读写都必须先完成 `UUID-first` 解析。
+- `RepoId` 是仓库权威身份，UUID-first。
+- `RepoName`、`URL`、`Selector` 只允许作为输入别名或恢复线索。
+- 任何进入业务算子的 repo 输入，在执行前 MUST 解析为 `RepoId`。
 
-### 3.2 Projection
+### 2.2 Branch Identity
 
-- tree manager 是 structure projection 的内存视图。
-- `path_cache` 只是 projection cache，不得作为业务主键。
+- `Local Branch` = `ledger/local/*.redb` 中的本地 repo 事实集合。
+- `Remote Branch` = `ledger/remotes/<PeerId>/*.redb` 中的远端镜像事实集合。
+- Branch 是 writer identity 的作用域，不是任意命名的 git-style feature branch。
 
-### 3.3 Runtime
+### 2.3 Tree Identity
 
-- repo switch、branch switch、last-local-repo recovery 属于 scope runtime。
-- UI 只能请求切换，不能直接篡改 repo binding。
+- `NodeId` 是文件树节点的权威主键。
+- `DocId` 是文件内容实体的权威主键。
+- `Path`、`path_cache`、`TreeDelta`、`NodeMeta` 只能是 projection 或 projection cache。
 
-## 4. 状态机
+### 2.4 Repo Health
 
-### 4.1 Repo 健康状态
+每个 repo instance MUST 显式落入以下健康状态之一：
 
 - `Healthy`
-- `Degraded`
-- `Quarantined`
+- `DegradedProjection`
+- `DegradedCatalog`
 - `Repairing`
+- `Quarantined`
 
-### 4.2 激活状态
+其中：
 
-- `LocalActive`
-- `RemoteActive`
-- `RecoveringLocal`
-- `Unavailable`
+- `Healthy` 才允许正常 mounted write path。
+- `Degraded*` 允许受控只读或 fallback 行为，但必须显式暴露给 runtime。
+- `Quarantined` 表示该 repo 不再参与正常 scope 恢复、自动切换和默认列表绑定。
 
-### 4.3 转换规则
+### 2.5 Selector Inputs and Logical Identity
 
-- `SelectLocalRepo -> LocalActive`
-- `SelectRemoteBranch -> RemoteActive`
-- `LeaveRemote -> RecoveringLocal`
-- `RecoverLastStableLocal -> LocalActive`
-- `ProjectionBroken -> Degraded`
-- `RepairFailed -> Quarantined`
+- repo 的逻辑身份基于 `RepoId`；`URL` 或其他 characteristic parameter 仅作为辅助识别线索。
+- `RepoName` 相同但 `URL/RepoId` 不同的实例 MUST 视为完全不同的 repo。
+- 后端接口 MAY 接受：
+  - `RepoId`
+  - `RepoName`
+  - `URL`
+  - `CurrentScopeFallback`
+- 但进入任何底层 repo/document/source-control 算子前，必须解析成唯一 `RepoId`。
 
-## 5. 写入合同
+逻辑 repo 归类规则：
 
-- `CreateDoc / RenameDoc / MoveDoc / DeleteDoc`
-  - 最终必须以 `NodeId / DocId` 进入 ledger。
-- tree/path metadata 不得绕过 structure facts 直接写入。
-- spectator / remote branch 下所有结构写操作必须 fail-closed。
+- `URL / characteristic parameter` 匹配
+  - 视为同一逻辑 repo 协作。
+  - runtime 可以显示 shadow branches、remote mirrors、same-logical-repo peers。
+- `URL / characteristic parameter` 不匹配
+  - 视为不同逻辑 repo。
+  - 应进入 multi-root workspace，而不是混入同一 repo 的 branch/scope。
+- `Peer-only Repo`
+  - 若只存在于远端且不匹配当前本地逻辑 repo，必须强制只读。
+  - 仅允许 copy / inspect / diff / explicit import，禁止直接写入或错误绑定为 local writable repo。
 
-## 6. 恢复与修复合同
+## 3. Storage Layout
 
-- 启动期如果 projection 失效，可暂时降级，但不得把 projection 当 authority 覆盖回 ledger。
-- 历史坏 repo 必须走受控 repair 或 quarantine。
-- 从 remote 返回 local 时，应优先恢复最近稳定本地 repo；若不可恢复，必须显式走 fail-closed fallback。
+### 3.1 Physical Layout
 
-## 7. Remote / Spectator 边界
+- `ledger/local/<repo_name>.redb`
+- `ledger/remotes/<peer_name>/<repo_name>.redb`
+- `vault/<repo_name>/`
+- `vault/<repo_name>/.notegit/`
 
-- remote branch 是只读镜像视图，不是可写 branch。
-- 允许 read / diff / export / merge-into-local。
-- 禁止直接写回 remote ledger。
+### 3.2 Collision Rule
 
-## 8. 禁止事项
+- 同一 branch 下，如果 `RepoName` 相同但 `RepoId/URL` 不同，系统 MUST 自动分配新的物理文件名。
+- 物理文件名冲突的处理不得改变逻辑 repo identity。
 
-- 禁止 name/path-only 直接驱动底层 repo/file 算子。
-- 禁止把 tree projection 当作结构权威。
-- 禁止跨 peer 直接写入别人的 branch。
-- 禁止 repo 损坏时静默绑定到其它 repo。
+### 3.3 Catalog Rule
 
-## 9. 代码边界
+- local repo catalog 与 remote repo catalog 是 selector / listing / switcher 的输入层，不是业务真值层。
+- catalog 损坏时 MUST 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
 
-- `crates/core/src/ledger/`
-  - repo facts、structure facts、append validation。
+### 3.4 Tree State Storage Model
+
+- tree projection 的推荐内存结构为 flat map：
+
+```rust
+struct NodeInfo {
+    node_id: NodeId,
+    kind: NodeKind,
+    name: String,
+    parent_id: Option<NodeId>,
+    children_ids: Vec<NodeId>,
+    path_cache: String,
+    doc_id: Option<DocId>,
+}
+```
+
+- 规则：
+  - `NodeId` 是主键
+  - `path_cache` 是可重建缓存
+  - `children_ids` 与 `parent_id` 共同定义树
+  - 文件节点才允许持有 `doc_id`
+
+## 4. Runtime State Machines
+
+### 4.1 Repo Lifecycle
+
+```text
+Unresolved
+  -> ResolvingSelector
+  -> OpeningInstance
+  -> Healthy
+  -> DegradedProjection
+  -> Repairing
+  -> Healthy | Quarantined
+```
+
+约束：
+
+- `ResolvingSelector` 必须先完成 selector -> `RepoId` 解析。
+- `OpeningInstance` 必须验证 runtime tables、catalog、projection 依赖。
+- `Repairing` 期间禁止把该 repo 作为默认可写 scope 暴露给 UI。
+
+### 4.2 Scope Binding
+
+```text
+NoScope
+  -> RepoBound(repo_id, branch, scope_nonce)
+  -> DocBound(doc_id)
+  -> SwitchingRepo | SwitchingBranch
+  -> RepoBound(new_repo_id, new_branch, new_scope_nonce)
+```
+
+约束：
+
+- repo switch 与 branch switch 只允许在解析成功后提交到 session。
+- 旧 scope 的延迟消息不得继续驱动新 scope。
+- `last_local_repo` 只允许作为恢复线索，解析失败时必须 fail-closed。
+
+### 4.3 Health Recovery
+
+```text
+Healthy -> DegradedProjection -> Repairing -> Healthy
+Healthy -> DegradedCatalog    -> Repairing -> Healthy
+Degraded* -> Quarantined
+```
+
+约束：
+
+- `Repairing` 成功前，不得把 projection fallback 伪装成正常健康状态。
+- `Quarantined` repo 不得被 stale scope 自动恢复逻辑再次选中。
+
+### 4.4 Spectator / Readonly Branch State
+
+```text
+LocalWritable
+RemoteReadonly
+ReadonlyDegraded
+```
+
+规则：
+
+- remote branch 默认进入 `RemoteReadonly`
+- `RemoteReadonly` 允许 read/copy/diff/merge-into-local
+- `RemoteReadonly` 禁止 rename/delete/edit/stage/commit into remote mirror
+- 若 remote repo 自身 projection 损坏，则进入 `ReadonlyDegraded`，仍不得提升为可写
+
+## 5. Tree Projection Contract
+
+### 5.1 Authority Rule
+
+- 树的权威来源是 Structure Facts，不是 path 表。
+- `CreateDoc / RenameDoc / MoveDoc / DeleteDoc` 的最终业务事实必须先入 ledger，再由 projection 导出 tree。
+
+### 5.2 Projection Rule
+
+- `TreeManager` 是内存 projection，不是 authority。
+- `TreeDelta` 是 projection diff，不是业务写路径。
+- `path_cache` 只允许由 projection builder / repair 流程写入。
+
+### 5.3 Fallback Rule
+
+- docs-only fallback 只能作为受控降级手段。
+- fallback 生效时 repo health MUST 标记为 `DegradedProjection`。
+- fallback 不得被长期视为正常最终状态。
+
+### 5.4 TreeDelta Contract
+
+- `TreeDelta` 只能表达 projection 变化，不是 authority mutation。
+- 支持的 delta 类别：
+  - `add_node`
+  - `remove_node`
+  - `rename_node`
+  - `move_node`
+- delta 构造必须来源于 Structure Facts 应用结果，而不是 handler 直接篡改 path 表。
+
+### 5.5 Sorting Contract
+
+- 树视图构建时 MUST 遵循：
+  - Folder First
+  - Alphabetical
+  - Case-Insensitive
+
+## 6. Commands / Inputs / Outputs
+
+### 6.1 Input Types
+
+- `RepoSelector`
+  - `RepoId`
+  - `RepoName`
+  - `RemoteRepoSelector`
+  - `CurrentScopeFallback`
+- `BranchSelector`
+  - `Local`
+  - `Remote(PeerId)`
+
+### 6.2 Core Commands
+
+- `SwitchRepo`
+- `SwitchBranch`
+- `ListRepos`
+- `ListShadows`
+- `ResolveCurrentScope`
+- `RepairLocalRepoCatalog`
+- `RepairRemoteRepoCatalogs`
+- `RepairStructureProjection`
+
+### 6.3 Output Contracts
+
+- 成功切换必须返回新的 `repo_id / branch / scope_nonce`。
+- selector 失败必须返回结构化错误，不得静默回退到“某个看起来像默认值的 repo”。
+- repair 失败必须把 repo 标记为 degraded 或 quarantined。
+
+### 6.4 Switching Behavior Matrix
+
+- `Local -> Remote`
+  - 输入：`PeerId + RepoSelector`
+  - 输出：remote repo bound in readonly mode
+- `Remote -> Local`
+  - SHOULD 优先恢复最近稳定本地 repo
+  - 恢复失败时 MUST 回到 UUID-first 解析
+- `Broken Persisted Scope -> Startup`
+  - MUST 清理 stale last scope
+  - MUST 重新 bootstrap 健康 repo 列表
+
+## 7. Recovery / Repair Contract
+
+### 7.1 Selector Recovery
+
+- 如果用户提供 `RepoName`，系统 MAY 做别名解析。
+- 如果解析结果不唯一或不一致，系统 MUST fail-closed。
+- 从 `Remote -> Local` 返回时，系统 SHOULD 优先恢复最近一次稳定本地 repo。
+- 最近本地 repo 不可解析时，必须回到严格 UUID-first 路径，而不是绑定任意本地 repo。
+
+### 7.2 Catalog Repair
+
+- local / remote repo catalog repair 只能修复 catalog、name drift、blank selector、duplicate metadata。
+- repair 不得修改 ledger authority 本身。
+
+### 7.3 Projection Repair
+
+- structure projection 缺 parent、断链、脏 path cache 时，必须通过 rebuild / repair 处理。
+- repair 失败时 repo MUST 退出正常 mounted write path。
+
+### 7.4 Catalog Conflict Repair
+
+- 同名 repo 文件但不同 logical identity 时，只允许修复 catalog/name drift，不得合并 authority。
+- remote repo selector 若只能唯一解析到一个健康 remote repo，可做受控 fallback；一旦出现歧义，必须 fail-closed。
+
+### 7.5 Startup Scan Contract
+
+- startup materialize 遇到坏 repo 时，不得拖垮整个服务。
+- 坏 repo 必须显式标记 degraded/quarantined。
+- 被跳过的 repo 不得继续参与自动 scope 恢复。
+
+## 8. Forbidden Patterns
+
+- 直接用 `RepoName` 或 `Path` 驱动底层业务算子。
+- 在 switcher / listing handler 里静默选择“第一个可用 repo”。
+- 让 projection fallback 长期替代真正 repair。
+- 让 metadata/path table 成为 rename/move/delete 的主写路径。
+- 让 UI 直接根据名字推断 repo identity。
+- 把 remote readonly repo 误暴露为可写 source。
+
+## 9. Module Boundary
+
+### 9.1 Authority Layer
+
+- `crates/core/src/ledger`
+- `crates/core/src/ledger/append_validate.rs`
+- `crates/core/src/ledger/manager/ops_structure.rs`
+
+职责：
+
+- repo facts
+- structure facts
+- append validation
+
+### 9.2 Projection / Repair Layer
+
 - `crates/core/src/tree/`
-  - tree projection。
-- `apps/cli/src/server/handlers/switcher*`
-  - repo / branch selection runtime。
-- `apps/web/src/hooks/use_core/`
-  - current repo scope、last local repo hint、readonly boundary。
+- `crates/core/src/ledger/manager/structure_projection.rs`
+- `crates/core/src/ledger/manager/structure_projection_support.rs`
+- `crates/core/src/sync/materialize.rs`
+
+职责：
+
+- tree projection
+- docs fallback
+- structure repair
+- startup materialize
+
+### 9.3 Scope Runtime Layer
+
+- `apps/cli/src/server/repo_scope*.rs`
+- `apps/cli/src/server/session*.rs`
+- `apps/cli/src/server/handlers/switcher*.rs`
+- `apps/web/src/hooks/use_core/callbacks_switch_*.rs`
+- `apps/web/src/hooks/use_core/effects/message_repo_scope*.rs`
+
+职责：
+
+- scope binding
+- selector resolution
+- last-local recovery
+- stale scope cleanup
+
+### 9.4 View Layer
+
+- `apps/web/src/components/sidebar/repo_switcher.rs`
+- `apps/web/src/components/branch_switcher/`
+- `apps/web/src/components/sidebar/source_control/repositories.rs`
+
+职责：
+
+- 仅展示与发出切换意图
+- 不得自行推断 repo authority
+
+## 10. Code Mapping
+
+- repo selector / resolution:
+  - `apps/cli/src/server/handlers/switcher_selector.rs`
+  - `apps/cli/src/server/handlers/switcher_requested_repo.rs`
+  - `apps/cli/src/server/repo_scope_lookup.rs`
+- branch / repo switching:
+  - `apps/cli/src/server/handlers/switcher_branch.rs`
+  - `apps/cli/src/server/handlers/switcher_repo.rs`
+  - `apps/web/src/hooks/use_core/callbacks_switch_repo.rs`
+  - `apps/web/src/hooks/use_core/callbacks_switch_branch.rs`
+- session scope:
+  - `apps/cli/src/server/session.rs`
+  - `apps/cli/src/server/session_repo.rs`
+  - `apps/cli/src/server/session_scope.rs`
+- tree projection:
+  - `crates/core/src/tree/manager.rs`
+  - `crates/core/src/tree/delta.rs`
+  - `crates/core/src/tree/from_docs.rs`
+- repo repair:
+  - `crates/core/src/ledger/manager/local_repo_metadata_repair.rs`
+  - `crates/core/src/ledger/manager/local_repo_source_control_repair.rs`
+  - `crates/core/src/ledger/manager/core_docs_fallback.rs`
+  - `crates/core/src/sync/materialize.rs`
+
+额外映射：
+
+- tree state:
+  - `crates/core/src/tree/manager.rs`
+  - `crates/core/src/tree/delta.rs`
+  - `crates/core/src/tree/from_docs.rs`
+- scope recovery:
+  - `apps/web/src/hooks/use_core/effects/message_protocol_control.rs`
+  - `apps/web/src/hooks/use_core/effects/message_dispatch_protocol.rs`
+
+## 11. Refactor Target
+
+长期应将当前 repo 逻辑显式收敛成三个独立 runtime：
+
+- `repo_catalog_runtime`
+- `repo_scope_runtime`
+- `projection_repair_runtime`
+
+当前代码已经有模块雏形，但仍然分散在 `RepoManager`、CLI switcher handlers 和 `use_core` 多个 effects 中。未来重构 MUST 朝这三个 runtime 收敛。
+
+## 本章相关命令
+
+- `P2P: Switch to Peer`
+- `P2P: Establish Branch`
+
+## 本章相关配置
+
+- 无

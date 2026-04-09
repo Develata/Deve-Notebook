@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Engineering blueprint for Deve-Notebook. `docs/plan/` defines how the system is engineered: infra layers, authority rules, runtime state machines, protocol contracts, recovery semantics, and implementation guardrails. This is the primary reference for code architecture and module boundaries.
+Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how the system is engineered; product-visible behavior lives in `docs/features/`, and automation-oriented validation lives in `docs/acceptance-cases/`.
 
 ## Key Files
 
@@ -38,6 +38,7 @@ Engineering blueprint for Deve-Notebook. `docs/plan/` defines how the system is 
 
 | Directory | Purpose |
 |-----------|---------|
+| `acceptance-cases/` | Detailed acceptance test scenarios |
 | `plugins/` | Plugin system design documents |
 
 ## For AI Agents
@@ -47,8 +48,8 @@ Engineering blueprint for Deve-Notebook. `docs/plan/` defines how the system is 
 - **Read before implementing.** Every feature should trace back to a plan chapter.
 - Plans are written in Chinese and English. Key architectural concepts are defined in `01_terminology.md`.
 - Critical design patterns: Route 2 (node-first), UUID-first identity, fail-closed semantics, scope nonces.
-- `docs/plan/` must stay implementation-oriented. Product-visible scenarios belong in `docs/features/`.
-- When adding or editing plan chapters, prefer state machines, failure contracts, and module boundaries over user-story wording.
+- `docs/features/` contains Chrome MCP manual walkthroughs for user-visible behavior; do not move that content back into plan chapters.
+- `docs/acceptance-cases/` contains automation-oriented cases; keep those scripts and control-surface checks separate from plan prose.
 - Do not modify plan files unless asked — they are reference documents.
 
 ## Plan-Code Bijection Enforcement (双射执行机制)
