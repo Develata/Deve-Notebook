@@ -7,6 +7,8 @@ mod dir_refresh_guard;
 #[cfg(not(target_arch = "wasm32"))]
 mod discard_pending;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod drift_detect;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
