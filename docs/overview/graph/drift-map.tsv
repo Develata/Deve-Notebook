@@ -1,0 +1,21 @@
+login	login
+session-expired / unauthorized	auth_session
+repo-scoped sync handshake	sync_handshake
+repo-scoped key exchange	key_exchange
+repo-scoped sync transfer	sync_transfer
+command-palette	palette
+branch-switch	branch
+source-control commit	sc_commit
+history / commit diff	sc_history
+commit-and-push	sc_commit_publish
+native ai-chat	ai_chat
+trusted external agent boundary	ai_trusted
+plugin-host / plugin-call boundary	plugin_runtime
+repo-switch	repo_switch
+stage / unstage	sc_stage
+discard file	sc_discard_file
+discard pending	sc_discard
+resolve conflict	sc_conflict
+merge peer	sc_merge_peer
+merge runtime	sc_merge_runtime
+open-doc	doc

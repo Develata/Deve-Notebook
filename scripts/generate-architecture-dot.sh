@@ -3,12 +3,65 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FRAG_DIR="$ROOT_DIR/docs/overview/graph/fragments"
+DRIFT_MAP="$ROOT_DIR/docs/overview/graph/drift-map.tsv"
+DIFF_FILE="$ROOT_DIR/docs/overview/architecture-diff.md"
+DRIFT_OUT="$FRAG_DIR/65_drift_markers.dotfrag"
 OUT_DOT="$ROOT_DIR/docs/overview/architecture.dot"
 OUT_SVG="$ROOT_DIR/docs/overview/architecture.svg"
 
 if [[ ! -d "$FRAG_DIR" ]]; then
   echo "fragment directory not found: $FRAG_DIR" >&2
   exit 1
+fi
+
+if [[ ! -f "$DRIFT_MAP" ]]; then
+  echo "drift map not found: $DRIFT_MAP" >&2
+  exit 1
+fi
+
+if [[ ! -f "$DIFF_FILE" ]]; then
+  echo "diff file not found: $DIFF_FILE" >&2
+  exit 1
+fi
+
+mapfile -t drift_ids < <(
+  awk '
+    /<!-- drift-registry:start -->/ { in_block = 1; next }
+    /<!-- drift-registry:end -->/ { in_block = 0 }
+    in_block && match($0, /`([^`]+)`/, m) { print m[1] }
+  ' "$DIFF_FILE"
+)
+
+if [[ ${#drift_ids[@]} -eq 0 ]]; then
+  echo "no drift registry found in: $DIFF_FILE" >&2
+  exit 1
+fi
+
+if [[ ${#drift_ids[@]} -eq 1 && "${drift_ids[0]}" == "none" ]]; then
+  drift_ids=()
+fi
+
+{
+  echo "    // generated drift markers from architecture-diff.md"
+  if [[ ${#drift_ids[@]} -eq 0 ]]; then
+    echo "    // no active drift markers"
+  else
+    for drift_id in "${drift_ids[@]}"; do
+      spine_root="$(awk -F'\t' -v id="$drift_id" '$1 == id { print $2 }' "$DRIFT_MAP")"
+      if [[ -z "$spine_root" ]]; then
+        echo "unknown drift flow in registry: $drift_id" >&2
+        exit 1
+      fi
+      echo "    drift_${spine_root} [label=\"*\", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor=\"#dc2626\", fontcolor=\"white\", color=\"#991b1b\", fontsize=12, penwidth=1.3];"
+      echo "    user_${spine_root}_spine -> drift_${spine_root} [dir=none, style=dashed, color=\"#dc2626\", constraint=false, penwidth=1.2];"
+    done
+  fi
+} > "$DRIFT_OUT"
+
+if [[ ${#drift_ids[@]} -eq 0 ]]; then
+  legend_note='clean shared baseline;\nno active drift markers'
+else
+  legend_note="${#drift_ids[@]} active drift marker(s);\nsee architecture-diff.md"
 fi
 
 mapfile -t fragments < <(find "$FRAG_DIR" -maxdepth 1 -type f -name '*.dotfrag' | sort)
@@ -20,7 +73,11 @@ fi
 
 {
   for fragment in "${fragments[@]}"; do
-    cat "$fragment"
+    if [[ "$(basename "$fragment")" == "70_legend.dotfrag" ]]; then
+      awk -v note="$legend_note" '{ gsub(/__LEGEND_NOTE__/, note); print }' "$fragment"
+    else
+      cat "$fragment"
+    fi
     printf '\n'
   done
 } > "$OUT_DOT"

@@ -9,11 +9,11 @@ One-page architecture map with plan-first verification: the blueprint view is de
 | [`architecture.md`](./architecture.md) | This file — human entry point |
 | [`architecture-doc.lisp`](./architecture-doc.lisp) | Generated architecture view derived from `docs/plan/`, `docs/features/operations/`, and `docs/acceptance-cases/` |
 | [`architecture-code.lisp`](./architecture-code.lisp) | Generated architecture view derived from actual implementation flows in `apps/web/src/`, `apps/cli/src/server/`, and `crates/core/src/` |
-| [`architecture-diff.md`](./architecture-diff.md) | Comparison report for the current operation slice; future `*` markers should trace back here |
+| [`architecture-diff.md`](./architecture-diff.md) | Comparison report for the current operation slice; the drift registry here drives SVG `*` markers |
 | [`architecture.dot`](./architecture.dot) | Generated Graphviz source for the SVG diagram |
 | [`architecture.svg`](./architecture.svg) | Rendered SVG (run `dot -Tsvg architecture.dot -o architecture.svg`) |
 
-The `.dot` file is assembled from `docs/overview/graph/fragments/*.dotfrag` by `scripts/generate-architecture-dot.sh`.
+The `.dot` file is assembled from `docs/overview/graph/fragments/*.dotfrag` by `scripts/generate-architecture-dot.sh`, which also generates drift markers from the registry in `architecture-diff.md`.
 The `.lisp` files are now assembled from `docs/overview/lisp/{doc_fragments,code_fragments}/*.lispfrag` by `scripts/generate-architecture-lisp.sh`.
 
 ## Layered Architecture (4 layers, operation-first)
@@ -101,7 +101,7 @@ Both `.lisp` files use **keyword-style s-expression** (Common Lisp / Emacs Lisp 
 
 A node gains a `*` marker when **plan-side blueprint and code-side implementation don't agree**.
 
-At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has no unresolved structural mismatch; `*` markers are still not auto-emitted into the SVG, so use [`architecture-diff.md`](./architecture-diff.md) as the source of truth if future drift appears.
+At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has no unresolved structural mismatch, so the generated SVG shows no active `*` markers. If future drift appears, update the registry in [`architecture-diff.md`](./architecture-diff.md) and regenerate the graph.
 
 When divergence markers are enabled:
 

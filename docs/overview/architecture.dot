@@ -1534,6 +1534,9 @@ digraph DeveNoteArchitecture {
     app_doc_spine -> mod_doc_spine [penwidth=2.2, color="#0f172a"];
     mod_doc_spine -> core_doc_spine [penwidth=2.2, color="#0f172a"];
 
+    // generated drift markers from architecture-diff.md
+    // no active drift markers
+
     subgraph cluster_legend {
         label="Legend";
         style="filled,rounded";
@@ -1546,7 +1549,8 @@ digraph DeveNoteArchitecture {
         legend_app [label="app response", fillcolor="#eff6ff"];
         legend_mod [label="module", fillcolor="#f0fdf4"];
         legend_core [label="core subsystem", fillcolor="#fdf2f8"];
-        legend_note [label="clean shared baseline;\nsee diff if drift returns", fillcolor="#e2e8f0"];
+        legend_note [label="clean shared baseline;
+no active drift markers", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];

@@ -25,6 +25,15 @@ view.
 | Module/core ownership | aligned | current core ownership and tree leaf naming match |
 | Scope hygiene | aligned | legacy inventory has been removed from the doc-side slice |
 
+## Drift Registry
+
+The SVG `*` markers are generated from this registry. Use flow labels from
+the shared operation slice.
+
+<!-- drift-registry:start -->
+- `none`
+<!-- drift-registry:end -->
+
 ## 1. Flows Already Close To Bijection
 
 These flows are now structurally close across all four layers:
@@ -93,10 +102,10 @@ This means the slice is once again a practical clean bijective baseline.
 
 ## 4. What To Do Next
 
-1. Regenerate `*` markers into the SVG from this operation-level diff
-   instead of from the old inventory report if unresolved drift returns.
-2. Expand the shared slice with additional flows only if they can be
+1. Expand the shared slice with additional flows only if they can be
    added to both plan-side and code-side views together.
+2. Keep the drift registry in sync with this report whenever a flow
+   stops being bijective across the modeled slice.
 3. Keep `trusted external agent boundary` under this same contract if
    backend selection or agent spawn behavior changes again.
 
