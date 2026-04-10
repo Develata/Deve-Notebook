@@ -50,6 +50,8 @@
 - 该示例将 runtime 握手拆为恢复当前 repo runtime、发送 `SyncHello`、接收 `SyncHello Ack`、接收 `WriteReady` 四段。
 - Repo-scoped sync transfer 原子操作示例见 `docs/features/operations/net_sync_transfer.md`。
 - 该示例将传输链拆为请求缺失增量、接收 `SyncPush`、请求 snapshot fallback、接收 `SyncPushSnapshot` 四段。
+- Repo-scoped key exchange 原子操作示例见 `docs/features/operations/net_key_exchange.md`。
+- 该示例将 key 获取拆为发送 `RequestKey`、接收 `KeyProvide`、接收 `KeyDenied` 三段。
 
 ## 非目标
 

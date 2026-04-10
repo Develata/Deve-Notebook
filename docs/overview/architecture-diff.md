@@ -19,7 +19,7 @@ view.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 17 high-value flows exist on both sides |
+| Flow set | aligned | the same 18 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Application responses | aligned | current modeled response nodes match |
 | Module/core ownership | aligned | current core ownership and tree leaf naming match |
@@ -33,6 +33,7 @@ These flows are now structurally close across all four layers:
 - `session-expired / unauthorized`
 - `command-palette`
 - `repo-scoped sync handshake`
+- `repo-scoped key exchange`
 - `repo-scoped sync transfer`
 - `branch-switch`
 - `repo-switch`

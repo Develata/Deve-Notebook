@@ -23,6 +23,14 @@
     app_sync_handshake_spine -> mod_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
     mod_sync_handshake_spine -> core_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
 
+    user_key_exchange_spine [label="repo-scoped key exchange flow", shape=plaintext, fontcolor="#92400e"];
+    app_key_exchange_spine [label="", shape=point, width=0.01];
+    mod_key_exchange_spine [label="", shape=point, width=0.01];
+    core_key_exchange_spine [label="", shape=point, width=0.01];
+    user_key_exchange_spine -> app_key_exchange_spine [penwidth=2.2, color="#0f172a"];
+    app_key_exchange_spine -> mod_key_exchange_spine [penwidth=2.2, color="#0f172a"];
+    mod_key_exchange_spine -> core_key_exchange_spine [penwidth=2.2, color="#0f172a"];
+
     user_sync_transfer_spine [label="repo-scoped sync transfer flow", shape=plaintext, fontcolor="#92400e"];
     app_sync_transfer_spine [label="", shape=point, width=0.01];
     mod_sync_transfer_spine [label="", shape=point, width=0.01];

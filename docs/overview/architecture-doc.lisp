@@ -1,23 +1,17 @@
-;;; architecture-doc.lisp
-;;; Architecture view from docs/plan/*, docs/features/*, and acceptance docs.
-;;; Keyword-style s-expression. Plan-first; code must converge.
-
-(system :name deve-note
-        :version "0.0.1"
-        :layers (user-operation application module core))
-
-(layer :id user-operation :order 1
-       :description "Atomic user actions. Surface types such as CLI, shortcut, palette, and form are properties, not layer nodes.")
+;;; architecture-doc.lisp - Plan-first keyword-style architecture view.
+(system :name deve-note :version "0.0.1" :layers (user-operation application module core))
+(layer :id user-operation :order 1 :description "Atomic user actions. Surface types such as CLI, shortcut, palette, and form are properties, not layer nodes.")
 
 (group :id grp.user.web :layer user-operation :kind platform :label "web" :members ())
 (group :id grp.user.desktop :layer user-operation :kind platform :label "desktop" :members ())
 (group :id grp.user.android :layer user-operation :kind platform :label "android" :members ())
-(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.sync-handshake grp.user.sync-transfer grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-conflict grp.user.sc-commit grp.user.sc-commit-publish grp.user.sc-merge-peer grp.user.sc-merge-runtime grp.user.ai-chat grp.user.open-doc))
+(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.sync-handshake grp.user.key-exchange grp.user.sync-transfer grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-conflict grp.user.sc-commit grp.user.sc-commit-publish grp.user.sc-merge-peer grp.user.sc-merge-runtime grp.user.ai-chat grp.user.open-doc))
 (group :id grp.user.shared-all :layer user-operation :kind platform-intersection :label "shared(all)" :members ())
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
 (group :id grp.user.command-palette :layer user-operation :label "command-palette" :members (op.ui.command-palette.open op.ui.command-palette.type-query op.ui.command-palette.navigate op.ui.command-palette.execute op.ui.command-palette.close))
 (group :id grp.user.sync-handshake :layer user-operation :label "repo-scoped sync handshake" :members (op.net.sync.resume-runtime op.net.sync.send-hello op.net.sync.receive-hello op.net.sync.receive-write-ready))
+(group :id grp.user.key-exchange :layer user-operation :label "repo-scoped key exchange" :members (op.net.key.request op.net.key.receive-provide op.net.key.receive-denied))
 (group :id grp.user.sync-transfer :layer user-operation :label "repo-scoped sync transfer" :members (op.net.sync.request-missing op.net.sync.receive-push op.net.sync.request-snapshot op.net.sync.receive-snapshot))
 (group :id grp.user.branch-switch :layer user-operation :label "branch-switch" :members (op.repo.branch-switch.open-switcher op.repo.branch-switch.choose-branch op.repo.branch-switch.request-switch op.repo.branch-switch.receive-switch-result))
 (group :id grp.user.repo-switch :layer user-operation :label "repo-switch" :members (op.repo.switch.open-switcher op.repo.switch.choose-repo op.repo.switch.request-switch op.repo.switch.receive-scope))
@@ -48,6 +42,9 @@
 (user-operation :id op.net.sync.send-hello :label "Send SyncHello" :kind request :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_sync_handshake.md" :calls (app.net.sync.send-hello))
 (user-operation :id op.net.sync.receive-hello :label "Receive SyncHello Ack" :kind async-result :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_sync_handshake.md" :calls (app.net.sync.receive-hello))
 (user-operation :id op.net.sync.receive-write-ready :label "Receive WriteReady" :kind async-result :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_sync_handshake.md" :calls (app.net.sync.write-ready))
+(user-operation :id op.net.key.request :label "Request RepoKey" :kind request :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_key_exchange.md" :calls (app.net.key.request))
+(user-operation :id op.net.key.receive-provide :label "Receive KeyProvide" :kind async-result :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_key_exchange.md" :calls (app.net.key.provide))
+(user-operation :id op.net.key.receive-denied :label "Receive KeyDenied" :kind async-result :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_key_exchange.md" :calls (app.net.key.denied))
 (user-operation :id op.net.sync.request-missing :label "Request Missing Ops" :kind request :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_sync_transfer.md" :calls (app.net.sync.request-missing))
 (user-operation :id op.net.sync.receive-push :label "Receive SyncPush" :kind async-result :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_sync_transfer.md" :calls (app.net.sync.receive-push))
 (user-operation :id op.net.sync.request-snapshot :label "Request Snapshot Fallback" :kind request :surface workspace-runtime :chapter 05_network :feature "docs/features/operations/net_sync_transfer.md" :calls (app.net.sync.request-snapshot))
@@ -103,6 +100,7 @@
 (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
 (group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close))
 (group :id grp.app.sync-handshake :layer application :label "repo-scoped sync handshake" :members (app.net.sync.handshake-gate app.net.sync.send-hello app.net.sync.receive-hello app.net.sync.write-ready))
+(group :id grp.app.key-exchange :layer application :label "repo-scoped key exchange" :members (app.net.key.request app.net.key.provide app.net.key.denied))
 (group :id grp.app.sync-transfer :layer application :label "repo-scoped sync transfer" :members (app.net.sync.request-missing app.net.sync.receive-push app.net.sync.request-snapshot app.net.sync.receive-snapshot))
 (group :id grp.app.branch-switch :layer application :label "branch-switch" :members (app.repo.branch-switch.open app.repo.branch-switch.select app.repo.branch-switch.request app.repo.branch-switch.result))
 (group :id grp.app.repo-switch :layer application :label "repo-switch" :members (app.repo.switch.menu app.repo.switch.select app.repo.switch.request app.repo.switch.result))
@@ -134,6 +132,9 @@
 (application :id app.net.sync.send-hello :label "ClientMessage::SyncHello / RegisterWriter" :kind ws-handler :chapter 05_network :calls (mod_sync_handshake mod_proto_ws))
 (application :id app.net.sync.receive-hello :label "ServerMessage::SyncHello" :kind async-result :chapter 05_network :calls (mod_sync_handshake mod_proto_ws))
 (application :id app.net.sync.write-ready :label "ServerMessage::WriteReady" :kind async-result :chapter 05_network :calls (mod_sync_handshake mod_proto_ws))
+(application :id app.net.key.request :label "ClientMessage::RequestKey" :kind ws-handler :chapter 05_network :calls (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
+(application :id app.net.key.provide :label "ServerMessage::KeyProvide" :kind async-result :chapter 05_network :calls (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
+(application :id app.net.key.denied :label "ServerMessage::KeyDenied" :kind async-result :chapter 05_network :calls (mod_sync_repo-scoped mod_proto_ws))
 (application :id app.net.sync.request-missing :label "ClientMessage::SyncRequest" :kind ws-handler :chapter 05_network :calls (mod_sync_transfer mod_proto_ws))
 (application :id app.net.sync.receive-push :label "ServerMessage::SyncPush" :kind async-result :chapter 05_network :calls (mod_sync_transfer mod_proto_ws))
 (application :id app.net.sync.request-snapshot :label "ClientMessage::SyncSnapshotRequest" :kind ws-handler :chapter 05_network :calls (mod_sync_transfer mod_proto_ws))
@@ -182,12 +183,12 @@
 (application :id app.repo.quick-open.select-doc :label "quick_open::select_doc" :kind ui-shell :chapter 06_repository :calls (app.repo.doc.open))
 (application :id app.repo.doc.open :label "editor::open_doc" :kind ws-handler :chapter 16_web_thin_client_ledger :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "editor::receive_doc" :kind async-result :chapter 06_repository :calls (mod_proto_ws mod_ledger_manager))
-(layer :id module :order 3
-       :description "Finest-grained engineering modules — each owns a state machine or contract.")
+(layer :id module :order 3 :description "Finest-grained engineering modules — each owns a state machine or contract.")
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
 (group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws))
 (group :id grp.mod.sync-handshake :layer module :label "repo-scoped sync handshake" :members (mod_sync_handshake mod_proto_ws))
+(group :id grp.mod.key-exchange :layer module :label "repo-scoped key exchange" :members (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
 (group :id grp.mod.sync-transfer :layer module :label "repo-scoped sync transfer" :members (mod_sync_transfer mod_proto_ws))
 (group :id grp.mod.branch-switch :layer module :label "branch-switch" :members (mod_proto_ws mod_tree_structure))
 (group :id grp.mod.repo-switch :layer module :label "repo-switch" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
@@ -203,6 +204,7 @@
 (group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (module :id mod_sync_materialize     :label "sync::materialize"   :chapter 04_storage                     :parent core.sync           :code-area "crates/core/src/sync/materialize.rs")
 (module :id mod_sync_handshake       :label "sync::engine::handshake" :chapter 05_network                :parent core.sync           :code-area "crates/core/src/sync/engine/handshake.rs")
+(module :id mod_sync_repo-scoped     :label "sync::repo_scoped" :chapter 05_network                    :parent core.sync           :code-area "crates/core/src/sync/repo_scoped.rs")
 (module :id mod_sync_transfer        :label "sync::engine::transfer" :chapter 05_network                 :parent core.sync           :code-area "crates/core/src/sync/engine/transfer/")
 (module :id mod_sync_reconcile       :label "sync::reconcile"    :chapter 07_diff_logic                 :parent core.sync           :code-area "crates/core/src/sync/reconcile.rs")
 (module :id mod_sync_manual          :label "sync::engine::manual" :chapter 07_diff_logic               :parent core.sync           :code-area "crates/core/src/sync/engine/manual.rs")
@@ -215,17 +217,15 @@
 (module :id mod_proto_ws        :label "protocol::ws"       :chapter 05_network    :parent core.protocol :code-area "crates/core/src/protocol/")
 (module :id mod_proto_auth      :label "protocol::auth"     :chapter 09_auth       :parent core.protocol :code-area "crates/core/src/protocol/auth.rs")
 (module :id mod_sec_auth        :label "security::auth"     :chapter 09_auth#security-headers :parent core.security :code-area "crates/core/src/security/auth/")
+(module :id mod_sec_storage     :label "security::storage"  :chapter 09_auth       :parent core.security :code-area "crates/core/src/security/storage.rs")
 (module :id mod_sec_jwt         :label "security::jwt"      :chapter 09_auth :parent core.security :code-area "crates/core/src/security/auth/jwt.rs")
-
 (module :id mod_plugin_chat     :label "plugin::chat_stream" :chapter 10_ai_agent :parent core.plugin :code-area "crates/core/src/plugin/")
-(layer :id core
-       :order 4
-       :description "Top-level subsystems under crates/core/src/*. Each owns one authority domain.")
-
+(layer :id core :order 4 :description "Top-level subsystems under crates/core/src/*. Each owns one authority domain.")
 (group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
 (group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
 (group :id grp.core.command-palette :layer core :label "command-palette" :members (core.tree core.plugin core.protocol))
 (group :id grp.core.sync-handshake :layer core :label "repo-scoped sync handshake" :members (core.sync core.protocol))
+(group :id grp.core.key-exchange :layer core :label "repo-scoped key exchange" :members (core.sync core.security core.protocol))
 (group :id grp.core.sync-transfer :layer core :label "repo-scoped sync transfer" :members (core.sync core.protocol))
 (group :id grp.core.branch-switch :layer core :label "branch-switch" :members (core.tree core.protocol))
 (group :id grp.core.repo-switch :layer core :label "repo-switch" :members (core.tree core.ledger core.protocol))
@@ -239,7 +239,6 @@
 (group :id grp.core.sc-merge-runtime :layer core :label "merge runtime" :members (core.sync core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))
-
 (core :id core.ledger         :label "Ledger"         :chapter 04_storage             :kind authority :code-area "crates/core/src/ledger/")
 (core :id core.sync           :label "Sync"           :chapter 04_storage             :kind runtime   :code-area "crates/core/src/sync/")
 (core :id core.source_control :label "Source Control" :chapter 07_diff_logic          :kind workflow  :code-area "crates/core/src/source_control/")

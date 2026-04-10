@@ -1,0 +1,10 @@
+        subgraph cluster_app_key_exchange {
+            label="repo-scoped key exchange [05_network + 04_storage]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_key_request [label="ClientMessage::RequestKey", fillcolor="#bfdbfe"];
+            app_key_provide [label="ServerMessage::KeyProvide", fillcolor="#eff6ff"];
+            app_key_denied [label="ServerMessage::KeyDenied", fillcolor="#eff6ff"];
+        }

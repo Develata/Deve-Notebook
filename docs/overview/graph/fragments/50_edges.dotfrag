@@ -62,6 +62,10 @@
     op_sync_send -> app_sync_send;
     op_sync_hello -> app_sync_hello;
     op_sync_ready -> app_sync_ready;
+    op_key_request -> gate_key_scope;
+    gate_key_scope -> app_key_request;
+    op_key_provide -> app_key_provide;
+    op_key_denied -> app_key_denied;
     op_sync_request_missing -> gate_sync_transfer;
     gate_sync_transfer -> app_sync_request_missing;
     op_sync_receive_push -> app_sync_receive_push;
@@ -170,6 +174,14 @@
     app_sync_hello -> mod_proto_ws_sync;
     app_sync_ready -> mod_sync_handshake_runtime;
     app_sync_ready -> mod_proto_ws_sync;
+    app_key_request -> mod_sync_repo_key;
+    app_key_request -> mod_sec_storage_key;
+    app_key_request -> mod_proto_ws_key;
+    app_key_provide -> mod_sync_repo_key;
+    app_key_provide -> mod_sec_storage_key;
+    app_key_provide -> mod_proto_ws_key;
+    app_key_denied -> mod_sync_repo_key;
+    app_key_denied -> mod_proto_ws_key;
     app_sync_request_missing -> mod_sync_transfer_runtime;
     app_sync_request_missing -> mod_proto_ws_transfer;
     app_sync_receive_push -> mod_sync_transfer_runtime;
@@ -234,6 +246,9 @@
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
+    mod_sync_repo_key -> core_sync_key;
+    mod_sec_storage_key -> core_sec_key;
+    mod_proto_ws_key -> core_proto_key;
     mod_sync_transfer_runtime -> core_sync_transfer;
     mod_proto_ws_transfer -> core_proto_transfer;
     mod_proto_ws_switch -> core_proto_switch;
@@ -252,6 +267,7 @@
     core_sc_conflict -> core_ledger_conflict [style=dashed, color="#831843", label="resolves pending choice"];
     core_sc_publish -> core_ledger_publish [style=dashed, color="#831843", label="anchors publish commit"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
+    core_sec_key -> core_sync_key [style=dashed, color="#831843", label="provides repo key"];
     core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
     core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];

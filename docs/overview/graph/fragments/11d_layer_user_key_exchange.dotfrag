@@ -1,0 +1,11 @@
+            subgraph cluster_user_key_exchange {
+                label="repo-scoped key exchange [05_network + 04_storage]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_key_request [label="Request RepoKey", fillcolor="#fde68a"];
+                op_key_provide [label="Receive KeyProvide", fillcolor="#fef9c3"];
+                op_key_denied [label="Receive KeyDenied", fillcolor="#fef9c3"];
+                gate_key_scope [label="Key Gates:\nconnected\nhandshake ready\nlocal repo scope", fillcolor="#fde68a", shape=note];
+            }

@@ -1,21 +1,11 @@
-;;; architecture-code.lisp
-;;; Architecture view derived from actual source tree for currently modeled flows:
-;;;   - apps/web/src/components/* and apps/web/src/hooks/use_core/*
-;;;   - apps/web/src/editor/* and apps/web/src/api/*
-;;;   - apps/cli/src/server/auth/handlers/*, handlers/*, ws/route/*
-;;;   - crates/core/src/sync/*, source_control/*, ledger/*, tree/*, protocol/*, security/*, plugin/*
-;;; Format: keyword-style s-expression.
-;;; Generated: 2026-04-10 (manual operation-first baseline)
-;;; Source of truth: implementation layer. Plan still wins when code lags.
-;;; Note: current code-side slice models the same high-value flows as the plan baseline; extra CLI/admin inventory remains in architecture-diff.md.
-
+;;; architecture-code.lisp - Implementation-side keyword-style architecture view.
 (system :name deve-note :version "0.0.1" :layers (user-operation application module core))
-
 (layer :id user-operation :order 1 :description "Atomic UI/runtime actions inferred from concrete web callbacks, effects, and authenticated endpoints.")
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
 (group :id grp.user.command-palette :layer user-operation :label "command-palette" :members (op.ui.command-palette.open op.ui.command-palette.type-query op.ui.command-palette.navigate op.ui.command-palette.execute op.ui.command-palette.close))
 (group :id grp.user.sync-handshake :layer user-operation :label "repo-scoped sync handshake" :members (op.net.sync.resume-runtime op.net.sync.send-hello op.net.sync.receive-hello op.net.sync.receive-write-ready))
+(group :id grp.user.key-exchange :layer user-operation :label "repo-scoped key exchange" :members (op.net.key.request op.net.key.receive-provide op.net.key.receive-denied))
 (group :id grp.user.sync-transfer :layer user-operation :label "repo-scoped sync transfer" :members (op.net.sync.request-missing op.net.sync.receive-push op.net.sync.request-snapshot op.net.sync.receive-snapshot))
 (group :id grp.user.branch-switch :layer user-operation :label "branch-switch" :members (op.repo.branch-switch.open-switcher op.repo.branch-switch.choose-branch op.repo.branch-switch.request-switch op.repo.branch-switch.receive-switch-result))
 (group :id grp.user.repo-switch :layer user-operation :label "repo-switch" :members (op.repo.switch.open-switcher op.repo.switch.choose-repo op.repo.switch.request-switch op.repo.switch.receive-scope))
@@ -29,7 +19,6 @@
 (group :id grp.user.sc-merge-runtime :layer user-operation :label "merge runtime" :members (op.sc.merge-runtime.refresh op.sc.merge-runtime.change-mode op.sc.merge-runtime.request-pending op.sc.merge-runtime.confirm op.sc.merge-runtime.receive-status))
 (group :id grp.user.ai-chat :layer user-operation :label "native ai-chat" :members (op.ai.chat.open-panel op.ai.chat.type-message op.ai.chat.submit op.ai.chat.receive-stream))
 (group :id grp.user.open-doc :layer user-operation :label "open-doc" :members (op.repo.open-doc.open-quick-open op.repo.open-doc.type-query op.repo.open-doc.choose-doc op.repo.open-doc.request-open op.repo.open-doc.receive-content))
-
 (user-operation :id op.auth.login.type-username :label "Type Username" :kind text-input :surface web-form :code "apps/web/src/components/login/page.rs" :calls (app.auth.form.username-update))
 (user-operation :id op.auth.login.type-password :label "Type Password" :kind text-input :surface web-form :code "apps/web/src/components/login/page.rs" :calls (app.auth.form.password-update))
 (user-operation :id op.auth.login.submit :label "Submit Login Form" :kind submit :surface web-form :code "apps/web/src/components/login/{page.rs,api.rs}" :calls (app.auth.login.submit))
@@ -47,6 +36,9 @@
 (user-operation :id op.net.sync.send-hello :label "Send SyncHello" :kind request :surface workspace-runtime :code "apps/web/src/hooks/use_core/effects/{handshake_send.rs,handshake_send_delivery.rs}" :calls (app.net.sync.send-hello))
 (user-operation :id op.net.sync.receive-hello :label "Receive SyncHello Ack" :kind async-result :surface workspace-runtime :code "apps/web/src/hooks/use_core/effects/message_sync.rs" :calls (app.net.sync.receive-hello))
 (user-operation :id op.net.sync.receive-write-ready :label "Receive WriteReady" :kind async-result :surface workspace-runtime :code "apps/web/src/hooks/use_core/effects/message_dispatch_write.rs" :calls (app.net.sync.write-ready))
+(user-operation :id op.net.key.request :label "Request RepoKey" :kind request :surface workspace-runtime :code "apps/web/src/editor/request_key.rs | apps/cli/src/server/handlers/key_exchange.rs" :calls (app.net.key.request))
+(user-operation :id op.net.key.receive-provide :label "Receive KeyProvide" :kind async-result :surface workspace-runtime :code "apps/web/src/editor/sync/{route_payload.rs,dispatch_payload.rs,key.rs}" :calls (app.net.key.provide))
+(user-operation :id op.net.key.receive-denied :label "Receive KeyDenied" :kind async-result :surface workspace-runtime :code "apps/web/src/editor/sync/{route_payload.rs,dispatch_payload.rs} | apps/cli/src/server/handlers/key_exchange.rs" :calls (app.net.key.denied))
 (user-operation :id op.net.sync.request-missing :label "Request Missing Ops" :kind request :surface workspace-runtime :code "apps/cli/src/server/handlers/sync/transfer.rs" :calls (app.net.sync.request-missing))
 (user-operation :id op.net.sync.receive-push :label "Receive SyncPush" :kind async-result :surface workspace-runtime :code "apps/web/src/editor/sync/route_payload.rs | apps/cli/src/server/handlers/sync/transfer.rs" :calls (app.net.sync.receive-push))
 (user-operation :id op.net.sync.request-snapshot :label "Request Snapshot Fallback" :kind request :surface workspace-runtime :code "apps/cli/src/server/handlers/sync/snapshot.rs" :calls (app.net.sync.request-snapshot))
@@ -102,6 +94,7 @@
 (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
 (group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close))
 (group :id grp.app.sync-handshake :layer application :label "repo-scoped sync handshake" :members (app.net.sync.handshake-gate app.net.sync.send-hello app.net.sync.receive-hello app.net.sync.write-ready))
+(group :id grp.app.key-exchange :layer application :label "repo-scoped key exchange" :members (app.net.key.request app.net.key.provide app.net.key.denied))
 (group :id grp.app.sync-transfer :layer application :label "repo-scoped sync transfer" :members (app.net.sync.request-missing app.net.sync.receive-push app.net.sync.request-snapshot app.net.sync.receive-snapshot))
 (group :id grp.app.branch-switch :layer application :label "branch-switch" :members (app.repo.branch-switch.open app.repo.branch-switch.select app.repo.branch-switch.request app.repo.branch-switch.result))
 (group :id grp.app.repo-switch :layer application :label "repo-switch" :members (app.repo.switch.menu app.repo.switch.select app.repo.switch.request app.repo.switch.result))
@@ -115,7 +108,6 @@
 (group :id grp.app.sc-merge-runtime :layer application :label "merge runtime" :members (app.sc.merge-runtime.refresh app.sc.merge-runtime.set-mode app.sc.merge-runtime.get-pending app.sc.merge-runtime.confirm app.sc.merge-runtime.status))
 (group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
 (group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
-
 (application :id app.auth.form.username-update :label "LoginPage::set_username" :kind form-state :code "apps/web/src/components/login/page.rs" :calls ())
 (application :id app.auth.form.password-update :label "LoginPage::set_password" :kind form-state :code "apps/web/src/components/login/page.rs" :calls ())
 (application :id app.auth.login.submit :label "attempt_login -> auth::handlers::login" :kind http-handler :code "apps/web/src/components/login/{page.rs,api.rs} | apps/cli/src/server/auth/handlers/login.rs" :calls (mod_sec_auth mod_sec_jwt mod_proto_auth))
@@ -133,6 +125,9 @@
 (application :id app.net.sync.send-hello :label "ClientMessage::SyncHello / RegisterWriter" :kind ws-handler :code "apps/web/src/hooks/use_core/effects/{handshake_send.rs,handshake_send_delivery.rs} | apps/cli/src/server/handlers/sync/{hello.rs,writer.rs}" :calls (mod_sync_handshake mod_proto_ws))
 (application :id app.net.sync.receive-hello :label "ServerMessage::SyncHello" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_sync.rs | apps/cli/src/server/handlers/sync/{hello.rs,hello_scope.rs}" :calls (mod_sync_handshake mod_proto_ws))
 (application :id app.net.sync.write-ready :label "ServerMessage::WriteReady" :kind async-result :code "apps/web/src/hooks/use_core/effects/{message_dispatch_write.rs,message_repo_scope_accept.rs} | apps/cli/src/server/handlers/sync/writer.rs" :calls (mod_sync_handshake mod_proto_ws))
+(application :id app.net.key.request :label "ClientMessage::RequestKey" :kind ws-handler :code "apps/web/src/editor/request_key.rs | apps/cli/src/server/ws/route/core.rs | apps/cli/src/server/handlers/key_exchange.rs" :calls (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
+(application :id app.net.key.provide :label "ServerMessage::KeyProvide" :kind async-result :code "apps/web/src/editor/sync/{route_payload.rs,dispatch_payload.rs,key.rs} | apps/cli/src/server/handlers/key_exchange.rs" :calls (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
+(application :id app.net.key.denied :label "ServerMessage::KeyDenied" :kind async-result :code "apps/web/src/editor/sync/{route_payload.rs,dispatch_payload.rs} | apps/cli/src/server/handlers/key_exchange.rs" :calls (mod_sync_repo-scoped mod_proto_ws))
 (application :id app.net.sync.request-missing :label "ClientMessage::SyncRequest" :kind ws-handler :code "apps/cli/src/server/ws/route/core.rs | apps/cli/src/server/handlers/sync/transfer.rs" :calls (mod_sync_transfer mod_proto_ws))
 (application :id app.net.sync.receive-push :label "ServerMessage::SyncPush" :kind async-result :code "apps/web/src/editor/sync/route_payload.rs | apps/cli/src/server/handlers/sync/transfer.rs" :calls (mod_sync_transfer mod_proto_ws))
 (application :id app.net.sync.request-snapshot :label "ClientMessage::SyncSnapshotRequest" :kind ws-handler :code "apps/cli/src/server/ws/route/core.rs | apps/cli/src/server/handlers/sync/snapshot.rs" :calls (mod_sync_transfer mod_proto_ws))
@@ -181,12 +176,12 @@
 (application :id app.repo.quick-open.select-doc :label "on_doc_select" :kind ui-shell :code "apps/web/src/hooks/use_core/callbacks_doc_select.rs" :calls (app.repo.doc.open))
 (application :id app.repo.doc.open :label "ClientMessage::OpenDoc" :kind ws-handler :code "apps/web/src/editor/hook_open.rs | apps/cli/src/server/handlers/document/open.rs" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "Snapshot -> selection/apply" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_projection_doc_selection.rs" :calls (mod_proto_ws mod_ledger_manager))
-
 (layer :id module :order 3 :description "Leaf engineering modules normalized to the same grain as the plan-side blueprint.")
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
 (group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws))
 (group :id grp.mod.sync-handshake :layer module :label "repo-scoped sync handshake" :members (mod_sync_handshake mod_proto_ws))
+(group :id grp.mod.key-exchange :layer module :label "repo-scoped key exchange" :members (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
 (group :id grp.mod.sync-transfer :layer module :label "repo-scoped sync transfer" :members (mod_sync_transfer mod_proto_ws))
 (group :id grp.mod.branch-switch :layer module :label "branch-switch" :members (mod_proto_ws mod_tree_structure))
 (group :id grp.mod.repo-switch :layer module :label "repo-switch" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
@@ -203,6 +198,7 @@
 
 (module :id mod_sync_materialize :label "sync::materialize" :parent core.sync :code "crates/core/src/sync/materialize.rs")
 (module :id mod_sync_handshake :label "sync::engine::handshake" :parent core.sync :code "crates/core/src/sync/engine/handshake.rs")
+(module :id mod_sync_repo-scoped :label "sync::repo_scoped" :parent core.sync :code "crates/core/src/sync/repo_scoped.rs")
 (module :id mod_sync_transfer :label "sync::engine::transfer" :parent core.sync :code "crates/core/src/sync/engine/transfer/")
 (module :id mod_sync_reconcile :label "sync::reconcile" :parent core.sync :code "crates/core/src/sync/reconcile.rs")
 (module :id mod_sync_manual :label "sync::engine::manual" :parent core.sync :code "crates/core/src/sync/engine/manual.rs")
@@ -215,14 +211,15 @@
 (module :id mod_proto_ws :label "protocol::{client,server}" :parent core.protocol :code "crates/core/src/protocol/{client.rs,server.rs}")
 (module :id mod_proto_auth :label "protocol::auth" :parent core.protocol :code "crates/core/src/protocol/auth.rs")
 (module :id mod_sec_auth :label "security::auth" :parent core.security :code "crates/core/src/security/auth/mod.rs")
+(module :id mod_sec_storage :label "security::storage" :parent core.security :code "crates/core/src/security/storage.rs")
 (module :id mod_sec_jwt :label "security::jwt" :parent core.security :code "crates/core/src/security/auth/jwt.rs")
 (module :id mod_plugin_chat :label "plugin::chat_stream" :parent core.plugin :code "crates/core/src/plugin/runtime/{chat_stream.rs,host/chat.rs}")
-
 (layer :id core :order 4 :description "Top-level subsystems under crates/core/src/ used by the currently modeled implementation slice.")
 (group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
 (group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
 (group :id grp.core.command-palette :layer core :label "command-palette" :members (core.tree core.plugin core.protocol))
 (group :id grp.core.sync-handshake :layer core :label "repo-scoped sync handshake" :members (core.sync core.protocol))
+(group :id grp.core.key-exchange :layer core :label "repo-scoped key exchange" :members (core.sync core.security core.protocol))
 (group :id grp.core.sync-transfer :layer core :label "repo-scoped sync transfer" :members (core.sync core.protocol))
 (group :id grp.core.branch-switch :layer core :label "branch-switch" :members (core.tree core.protocol))
 (group :id grp.core.repo-switch :layer core :label "repo-switch" :members (core.tree core.ledger core.protocol))
@@ -236,7 +233,6 @@
 (group :id grp.core.sc-merge-runtime :layer core :label "merge runtime" :members (core.sync core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))
-
 (core :id core.ledger :label "Ledger" :kind authority :code "crates/core/src/ledger/")
 (core :id core.sync :label "Sync" :kind runtime :code "crates/core/src/sync/")
 (core :id core.source_control :label "Source Control" :kind workflow :code "crates/core/src/source_control/")
