@@ -42,7 +42,10 @@ pub(crate) enum Commands {
     /// Scan and index the vault
     Scan,
     /// Watch the vault for changes
-    Watch,
+    Watch {
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Dump ops for a file
     Dump {
         #[arg(short, long)]
@@ -56,6 +59,8 @@ pub(crate) enum Commands {
         port: u16,
         #[arg(long)]
         dev: bool,
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Export ledger to JSONL or Markdown
     Export {

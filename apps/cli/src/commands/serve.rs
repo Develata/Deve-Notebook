@@ -1,13 +1,18 @@
 // apps\cli\src\commands
 use crate::server;
-use deve_core::ledger::RepoManager;
-use deve_core::plugin::loader::PluginLoader;
 use deve_core::plugin::runtime::host;
 use reqwest::Client;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::{Duration, timeout};
+
+#[path = "serve_support.rs"]
+mod serve_support;
+#[cfg(test)]
+#[path = "serve_test.rs"]
+mod tests;
+use serve_support::{find_free_port, init_runtime, load_plugins};
 
 /// 启动后端服务器
 ///
@@ -22,6 +27,7 @@ pub async fn run(
     port: u16,
     snapshot_depth: usize,
     dev: bool,
+    dry_run: bool,
     profile: deve_core::config::AppProfile,
 ) -> anyhow::Result<()> {
     if dev {
@@ -33,6 +39,11 @@ pub async fn run(
         }
         tracing::warn!("Serve dev mode enabled via --dev");
     }
+    if dry_run {
+        let _ = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
+        tracing::info!("Serve dry-run OK: {:?}", vault_path);
+        return Ok(());
+    }
 
     let bind_addr = format!("0.0.0.0:{}", port);
     if let Err(err) = TcpListener::bind(&bind_addr) {
@@ -42,17 +53,8 @@ pub async fn run(
         return Err(err.into());
     }
 
-    // 1. 初始化 RepoManager
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root_checked(&vault_path)?;
-    let repo_arc = Arc::new(repo);
-
-    // 启动时通过 SyncManager 自动扫描
-    let sync_manager =
-        deve_core::sync::SyncManager::new_checked(repo_arc.clone(), vault_path.clone())?;
+    let (repo_arc, sync_manager) = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
     sync_manager.scan()?;
-
-    // 2. 加载插件 (Plugins)
     let plugins = load_plugins()?;
 
     server::start_server(repo_arc, vault_path, port, plugins, profile).await?;
@@ -89,15 +91,6 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
     server::start_plugin_host_only(plugins, plugin_port).await
 }
 
-/// 加载 `plugins/` 目录下的所有 Rhai 插件
-fn load_plugins() -> anyhow::Result<Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>> {
-    let plugin_dir = PathBuf::from("plugins");
-    let loader = PluginLoader::new(plugin_dir);
-    let plugins = loader.load_all_strict()?;
-    tracing::info!("Loaded {} plugins.", plugins.len());
-    Ok(plugins)
-}
-
 async fn detect_main_port(port: u16) -> Option<u16> {
     let mut ports = vec![port];
     for p in port.saturating_sub(2)..=port + 4 {
@@ -119,61 +112,4 @@ async fn detect_main_port(port: u16) -> Option<u16> {
         }
     }
     None
-}
-
-fn find_free_port(start: u16, span: u16) -> Option<u16> {
-    for p in start..=start.saturating_add(span) {
-        let addr = format!("0.0.0.0:{}", p);
-        if TcpListener::bind(&addr).is_ok() {
-            return Some(p);
-        }
-    }
-    None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::detect_main_port;
-    use axum::{Router, routing::get};
-    use std::net::{SocketAddr, TcpListener};
-
-    fn free_port() -> u16 {
-        TcpListener::bind("127.0.0.1:0")
-            .expect("bind ephemeral port")
-            .local_addr()
-            .expect("read local addr")
-            .port()
-    }
-
-    async fn spawn_status_server(status: axum::http::StatusCode) -> SocketAddr {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-            .await
-            .expect("bind test server");
-        let addr = listener.local_addr().expect("server addr");
-        let app = Router::new().route("/api/node/role", get(move || async move { status }));
-        tokio::spawn(async move {
-            axum::serve(listener, app).await.expect("serve test app");
-        });
-        addr
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn detect_main_port_returns_none_without_healthy_server() {
-        let port = free_port();
-        assert_eq!(detect_main_port(port).await, None);
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn detect_main_port_finds_deve_process_via_node_role() {
-        let addr = spawn_status_server(axum::http::StatusCode::OK).await;
-        assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn detect_main_port_accepts_non_success_status() {
-        // A running Deve process may return non-2xx (e.g. auth required).
-        // As long as it responds, the process is alive.
-        let addr = spawn_status_server(axum::http::StatusCode::UNAUTHORIZED).await;
-        assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
-    }
 }

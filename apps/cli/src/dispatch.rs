@@ -13,19 +13,20 @@ pub async fn run(
             commands::init::run(ledger_dir, vault_path, path, config.snapshot_depth)?
         }
         Some(Commands::Scan) => commands::scan::run(ledger_dir, vault_path, config.snapshot_depth)?,
-        Some(Commands::Watch) => {
-            commands::watch::run(ledger_dir, vault_path, config.snapshot_depth)?
+        Some(Commands::Watch { dry_run }) => {
+            commands::watch::run(ledger_dir, vault_path, config.snapshot_depth, dry_run)?
         }
         Some(Commands::Dump { path, repo }) => {
             commands::dump::run(ledger_dir, path, repo, config.snapshot_depth)?
         }
-        Some(Commands::Serve { port, dev }) => {
+        Some(Commands::Serve { port, dev, dry_run }) => {
             commands::serve::run(
                 ledger_dir,
                 vault_path.to_path_buf(),
                 port,
                 config.snapshot_depth,
                 dev,
+                dry_run,
                 config.profile,
             )
             .await?

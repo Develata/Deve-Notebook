@@ -20,7 +20,12 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 ///
 /// **阻塞行为**:
 /// 此函数会阻塞直到收到 Ctrl+C 信号。
-pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Result<()> {
+pub fn run(
+    ledger_dir: &Path,
+    vault_path: &Path,
+    snapshot_depth: usize,
+    dry_run: bool,
+) -> Result<()> {
     // 1. 初始化 RepoManager
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.set_vault_root_checked(vault_path)?;
@@ -31,6 +36,11 @@ pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Resul
         repo.clone(),
         vault_path.to_path_buf(),
     )?);
+    if dry_run {
+        repo.list_local_repo_names_for_execution()?;
+        println!("Watcher dry-run OK: {:?}", vault_path);
+        return Ok(());
+    }
     let repo_ids = repo
         .list_local_repo_names_for_execution()?
         .into_iter()
@@ -65,4 +75,20 @@ pub fn run(ledger_dir: &Path, vault_path: &Path, snapshot_depth: usize) -> Resul
     }
     println!("Watcher 已停止。");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run;
+    use tempfile::TempDir;
+
+    #[test]
+    fn watch_dry_run_returns_without_blocking() {
+        let dir = TempDir::new().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let vault_dir = dir.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).expect("create vault");
+
+        run(&ledger_dir, &vault_dir, 8, true).expect("watch dry-run");
+    }
 }
