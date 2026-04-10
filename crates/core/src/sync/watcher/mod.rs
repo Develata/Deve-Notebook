@@ -3,6 +3,8 @@
 
 pub(crate) mod backend;
 mod dispatch;
+#[cfg(test)]
+mod dispatch_test;
 mod filter;
 mod registry;
 pub(crate) mod suppressor;
@@ -27,8 +29,6 @@ pub enum WatcherError {
     RegistryPoisoned,
     #[error("Watcher debounce window must be non-zero")]
     ZeroDebounce,
-    #[error("Watcher path escaped repo root: {0:?}")]
-    PathEscaped(std::path::PathBuf),
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
 }

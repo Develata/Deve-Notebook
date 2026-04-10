@@ -26,7 +26,7 @@ pub(crate) fn dispatch_batch(
             continue;
         }
         for path in &event.paths {
-            let Some(repo_path) = repo_path(repo_root, path)? else {
+            let Some(repo_path) = repo_path(repo_root, path) else {
                 continue;
             };
             let root_relative = sync
@@ -53,10 +53,10 @@ fn dispatch_rename(
     paths: &[std::path::PathBuf],
     callback: Option<&WatcherCallback>,
 ) -> Result<(), WatcherError> {
-    let Some(old_path) = repo_path(repo_root, &paths[0])? else {
+    let Some(old_path) = repo_path(repo_root, &paths[0]) else {
         return Ok(());
     };
-    let Some(new_path) = repo_path(repo_root, &paths[1])? else {
+    let Some(new_path) = repo_path(repo_root, &paths[1]) else {
         return Ok(());
     };
     if !filter::allows_repo_path(&old_path) || !filter::allows_repo_path(&new_path) {
@@ -84,12 +84,10 @@ fn dispatch_rename(
     Ok(())
 }
 
-fn repo_path(repo_root: &Path, path: &Path) -> Result<Option<String>, WatcherError> {
-    let rel = path
-        .strip_prefix(repo_root)
-        .map_err(|_| WatcherError::PathEscaped(path.into()))?;
+fn repo_path(repo_root: &Path, path: &Path) -> Option<String> {
+    let rel = path.strip_prefix(repo_root).ok()?;
     let path = to_forward_slash(&rel.to_string_lossy());
-    Ok(filter::allows_repo_path(&path).then_some(path))
+    filter::allows_repo_path(&path).then_some(path)
 }
 
 fn rename_doc_id(

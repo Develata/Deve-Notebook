@@ -5,7 +5,7 @@ use super::EntryKind;
 use crate::ledger::RepoManager;
 use crate::source_control::pending_fs;
 use crate::utils::path::to_forward_slash;
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result};
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -61,22 +61,22 @@ fn walk_dir(
             walk_dir(root, &path, entries)?;
             continue;
         }
-        if file_type.is_file() {
-            let content = std::fs::read_to_string(entry.path())?;
-            entries.insert(
-                to_forward_slash(&path),
-                WorkspaceEntry {
-                    kind: EntryKind::File,
-                    content_hash: Some(pending_fs::content_hash(&content)),
-                },
-            );
-            continue;
-        }
-        return Err(anyhow!(
-            "unsupported workspace entry at {}",
-            entry.path().display()
-        ));
+        entries.insert(
+            to_forward_slash(&path),
+            WorkspaceEntry {
+                kind: EntryKind::File,
+                content_hash: file_hash(entry.path().as_path())?,
+            },
+        );
     }
 
     Ok(())
+}
+
+fn file_hash(path: &Path) -> Result<Option<String>> {
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("failed to read workspace entry {}", path.display()))?;
+    Ok(std::str::from_utf8(&bytes)
+        .ok()
+        .map(pending_fs::content_hash))
 }
