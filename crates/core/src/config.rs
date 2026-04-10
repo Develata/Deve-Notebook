@@ -18,6 +18,46 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentBridgeConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub trusted: bool,
+    #[serde(default = "default_agent_bridge_timeout_ms")]
+    pub timeout_ms: u64,
+}
+
+impl Default for AgentBridgeConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            trusted: false,
+            timeout_ms: default_agent_bridge_timeout_ms(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiConfig {
+    #[serde(default = "default_ai_mode")]
+    pub mode: String,
+    #[serde(default = "default_ai_native_enabled")]
+    pub native_enabled: bool,
+    #[serde(default)]
+    pub agent_bridge: AgentBridgeConfig,
+}
+
+impl Default for AiConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_ai_mode(),
+            native_enabled: default_ai_native_enabled(),
+            agent_bridge: AgentBridgeConfig::default(),
+        }
+    }
+}
+
 /// 同步模式
 /// 控制 P2P 同步的自动化程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -117,6 +157,9 @@ pub struct Config {
     /// 后台压缩并发度
     #[serde(default = "default_concurrency")]
     pub concurrency: usize,
+    /// AI backend settings.
+    #[serde(default)]
+    pub ai: AiConfig,
 }
 
 fn default_profile() -> AppProfile {
@@ -133,6 +176,15 @@ fn default_snapshot_depth() -> usize {
 }
 fn default_concurrency() -> usize {
     4
+}
+fn default_ai_mode() -> String {
+    "native".to_string()
+}
+fn default_ai_native_enabled() -> bool {
+    true
+}
+fn default_agent_bridge_timeout_ms() -> u64 {
+    30_000
 }
 
 impl Config {
@@ -169,6 +221,7 @@ impl Config {
                 merge_strategy: MergeStrategy::default(),
                 snapshot_depth: default_snapshot_depth(),
                 concurrency: default_concurrency(),
+                ai: AiConfig::default(),
             }
         })
     }

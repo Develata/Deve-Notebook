@@ -7,6 +7,10 @@ static CWD_LOCK: Mutex<()> = Mutex::new(());
 fn test_default_config() {
     let config = Config::load();
     assert!(!config.ledger_dir.is_empty());
+    assert_eq!(config.ai.mode, "native");
+    assert!(config.ai.native_enabled);
+    assert!(!config.ai.agent_bridge.enabled);
+    assert!(!config.ai.agent_bridge.trusted);
 }
 
 #[test]

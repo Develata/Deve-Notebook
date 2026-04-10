@@ -17,3 +17,12 @@ sync_mode = "auto"
 snapshot_depth = 100
 # Background compression concurrency
 concurrency = 4
+
+[ai]
+mode = "native"
+native_enabled = true
+
+[ai.agent_bridge]
+enabled = false
+trusted = false
+timeout_ms = 30000

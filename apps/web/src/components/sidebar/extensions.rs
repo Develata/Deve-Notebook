@@ -3,10 +3,12 @@
 //!
 //! 轻量展示当前第一方扩展能力，并为后续插件运行时预留接口位。
 
+#[path = "extensions_channels.rs"]
+mod channels;
 #[path = "extensions_copy.rs"]
 mod copy;
 
-use crate::components::icons::{Book, Puzzle, Terminal, Zap};
+use crate::components::icons::{Book, Puzzle};
 use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -33,50 +35,7 @@ pub fn ExtensionsView() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-                <div class="space-y-3">
-                    <button
-                        class=move || if chat.ai_mode.get() == "ai-chat" {
-                            "w-full rounded-xl border border-accent bg-accent/10 p-4 text-left"
-                        } else {
-                            "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
-                        }
-                        on:click=move |_| chat.set_ai_mode.set("ai-chat".to_string())
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex gap-3">
-                                <div class="rounded-lg bg-active p-2 text-primary"><Zap class="w-5 h-5" /></div>
-                                <div>
-                                    <div class="text-sm font-semibold text-primary">{move || t::chat::ai_chat(locale.get())}</div>
-                                    <p class="mt-1 text-xs text-muted">{move || copy::channel_desc(locale.get(), "ai-chat")}</p>
-                                </div>
-                            </div>
-                            <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                                {move || copy::status_label(locale.get(), chat.ai_mode.get() == "ai-chat")}
-                            </span>
-                        </div>
-                    </button>
-                    <button
-                        class=move || if chat.ai_mode.get() == "agent-bridge" {
-                            "w-full rounded-xl border border-accent bg-accent/10 p-4 text-left"
-                        } else {
-                            "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
-                        }
-                        on:click=move |_| chat.set_ai_mode.set("agent-bridge".to_string())
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex gap-3">
-                                <div class="rounded-lg bg-active p-2 text-primary"><Terminal class="w-5 h-5" /></div>
-                                <div>
-                                    <div class="text-sm font-semibold text-primary">{move || t::chat::agent_bridge(locale.get())}</div>
-                                    <p class="mt-1 text-xs text-muted">{move || copy::channel_desc(locale.get(), "agent-bridge")}</p>
-                                </div>
-                            </div>
-                            <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                                {move || copy::status_label(locale.get(), chat.ai_mode.get() == "agent-bridge")}
-                            </span>
-                        </div>
-                    </button>
-                </div>
+                <channels::AiChannelCards locale=locale chat=chat />
                 <div class="space-y-3">
                     <div class="text-[11px] font-semibold uppercase tracking-wider text-muted">
                         {move || copy::system_title(locale.get())}

@@ -36,6 +36,14 @@ pub fn status_label(locale: Locale, active: bool) -> &'static str {
     }
 }
 
+pub fn trusted_status_label(locale: Locale, active: bool, available: bool) -> &'static str {
+    match (locale, active, available) {
+        (Locale::En, _, false) => "Disabled",
+        (Locale::Zh, _, false) => "禁用",
+        _ => status_label(locale, active),
+    }
+}
+
 pub fn system_title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "System Extensions",

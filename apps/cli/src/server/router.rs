@@ -2,7 +2,6 @@
 //! # 路由构建模块
 //!
 //! 负责 Axum Router 的组装：认证路由、公开路由、中间件层叠。
-//! 从 `mod.rs` 拆分以保持单文件行数在 130 行目标以内。
 
 use anyhow::Result;
 use axum::{
@@ -13,14 +12,11 @@ use std::sync::Arc;
 
 use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
 use deve_core::security::AuthConfig;
-
 /// 构建完整的 Axum 应用路由
 ///
 /// ## 路由结构
 /// - **protected**: 需要 JWT Cookie 认证的路由 (`/ws`, `/api/sc/*`, `/api/repo/*`, `/api/auth/me`)
 /// - **public**: 无需认证的路由 (`/api/auth/login`, `/api/node/role`)
-/// - **static**: SPA 静态文件回退
-///
 /// ## 中间件层叠顺序（外 → 内）
 /// CORS → 速率限制 → 安全头 → Extension 注入
 pub fn build_app(
@@ -83,7 +79,12 @@ pub fn build_app(
             auth::middleware::login_rate_limit_middleware,
         ));
 
-    let public = Router::new().route("/api/node/role", get(node_role_http::role));
+    let public = Router::new()
+        .route("/api/node/role", get(node_role_http::role))
+        .route(
+            "/api/ai/backend-capabilities",
+            get(super::agent_bridge::http_backend_capabilities),
+        );
 
     Ok(Router::new()
         .merge(protected)
