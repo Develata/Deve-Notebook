@@ -385,7 +385,7 @@ digraph DeveNoteArchitecture {
             color="#16a34a";
 
             mod_proto_ws [label="protocol::ws", fillcolor="#f0fdf4"];
-            mod_tree [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_tree [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
             mod_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
         }
 
@@ -396,7 +396,7 @@ digraph DeveNoteArchitecture {
             color="#16a34a";
 
             mod_proto_ws_switch [label="protocol::ws", fillcolor="#f0fdf4"];
-            mod_tree_switch [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_tree_switch [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_sc_commit {
@@ -427,7 +427,7 @@ digraph DeveNoteArchitecture {
             fillcolor="#effef3";
             color="#16a34a";
 
-            mod_tree_repo [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_tree_repo [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
             mod_ledger_repo [label="ledger::manager", fillcolor="#f0fdf4"];
             mod_proto_ws_repo [label="protocol::ws", fillcolor="#f0fdf4"];
         }
@@ -911,7 +911,7 @@ digraph DeveNoteArchitecture {
         legend_app [label="app response", fillcolor="#eff6ff"];
         legend_mod [label="module", fillcolor="#f0fdf4"];
         legend_core [label="core subsystem", fillcolor="#fdf2f8"];
-        legend_note [label="plan-side blueprint baseline", fillcolor="#e2e8f0"];
+        legend_note [label="current operation slice: clean baseline", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];

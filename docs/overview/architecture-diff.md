@@ -1,105 +1,72 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-04-09 (manual baseline)
+Generated: 2026-04-10 (manual operation-first pass)
 
-This report compares [`architecture-doc.lisp`](./architecture-doc.lisp) (derived from `docs/plan/`, `docs/features/`, `docs/acceptance-cases/`) against [`architecture-code.lisp`](./architecture-code.lisp) (derived from the actual source tree). Nodes marked with `*` in the SVG diagram correspond to the divergences listed here.
+This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
+against [`architecture-code.lisp`](./architecture-code.lisp) using the
+shared four-layer model:
+
+- `user-operation`
+- `application`
+- `module`
+- `core`
+
+Plan remains the authority source. The current comparison is now limited
+to the modeled operation slice rather than the older route/CLI inventory
+view.
 
 ## Summary
 
-| Metric | Doc view | Code view | Divergence |
-|---|---|---|---|
-| CLI commands | 8 | 12 | **+4 in code** |
-| HTTP routes (sc/repo/auth/admin) | aggregated | 18 concrete routes | code is finer-grained |
-| Core subsystems | 9 (incl. watcher root) | 9 + `core-misc` catch-all | +1 in code |
-| Module-layer nodes | 18 | 26 | **+8 in code** (mostly core-misc) |
-
----
-
-## 1. CLI commands — **4 commands missing from docs** `*`
-
-**Code has but doc does not mention in `12_commands.md §1. CLI Commands`:**
-
-| Command | Code file | Suggested plan chapter |
+| Area | Status | Notes |
 |---|---|---|
-| `deve node-check` | `apps/cli/src/commands/node_check.rs` | `04_storage` (repair path) or `12_commands` |
-| `deve recover` | `apps/cli/src/commands/recover.rs` | `04_storage #9 Recovery / Repair` |
-| `deve repair` | `apps/cli/src/commands/repair.rs` | `04_storage #9 Recovery / Repair` |
-| `deve live-proxy` | `apps/cli/src/commands/live_proxy.rs` | new: `05_network` live-proxy mode |
+| Flow set | aligned | the same 12 high-value flows exist on both sides |
+| User operations | aligned | current IDs and flow grouping match |
+| Application responses | aligned | current modeled response nodes match |
+| Module/core ownership | aligned | current core ownership and tree leaf naming match |
+| Scope hygiene | aligned | legacy inventory has been removed from the doc-side slice |
 
-**Recommended fix**: Extend `docs/plan/12_commands.md §1. CLI Commands` with these 4 commands, or (if any are internal-only) add a `### 1.1 Internal Debug Commands` sub-section and document their purpose.
+## 1. Flows Already Close To Bijection
 
----
+These flows are now structurally close across all four layers:
 
-## 2. HTTP routes — code is more granular than docs describe
+- `session-expired / unauthorized`
+- `command-palette`
+- `branch-switch`
+- `repo-switch`
+- `stage / unstage`
+- `discard file`
+- `discard pending`
+- `resolve conflict`
+- `source-control commit`
+- `native ai-chat`
+- `open-doc`
 
-**Code has concrete routes** (from `apps/cli/src/server/router.rs`):
+For these flows, the user-operation IDs, application groups, and
+core-domain ownership are now effectively aligned between plan and code.
 
-```
-/ws
-/api/sc/{pending, status, diff, commits, commit-diff,
-         stage-pending, unstage, discard-pending, commit}
-/api/repo/{docs, doc}
-/api/auth/{login, logout, me}
-/api/admin/{dump, export, node-check}
-/api/node/role
-```
+## 2. Current State
 
-**Doc describes them abstractly** in `07_diff_logic.md`, `06_repository.md`, `09_auth.md` without listing endpoints.
+Within the currently modeled operation slice, the plan-side and code-side
+views are now structurally aligned across:
 
-**Divergence level**: Low — abstraction difference, not a structural conflict. Acceptable as long as the `Counterpart Feature` / `Counterpart Acceptance` fields in each plan Metadata point to the same behavior.
+- flow set
+- user-operation IDs
+- application grouping
+- module ownership
+- core ownership
 
-**Recommended fix**: Add a `## N. HTTP Endpoints` table to `05_network.md` or `09_auth.md` enumerating each route and its handler location. This becomes the doc-side anchor for `architecture-doc.lisp`.
+This does not mean the whole system is finished. It means the current
+operation-first slice no longer has an unresolved mismatch recorded in
+this report.
 
----
+## 3. What To Do Next
 
-## 3. Core subsystems — `core-misc` catch-all in code
+1. Regenerate `*` markers into the SVG from this operation-level diff
+   instead of from the old inventory report.
+2. Expand the shared slice with additional flows only if they can be
+   added to both plan-side and code-side views together.
+3. If a broader CLI/admin inventory view is still wanted, keep it as a
+   separate report rather than mixing it back into this operation slice.
 
-**Code has** (under `crates/core/src/`):
-
-```
-ledger/ sync/ source_control/ tree/ protocol/ security/
-plugin/ search/ mcp/ skill/ context/ utils/
-+ top-level files: watcher.rs vfs.rs state.rs models.rs config.rs error.rs
-```
-
-**Doc only covers** the first 8 + watcher as root. The following exist in code but have no dedicated plan chapter:
-
-| Module | Code path | Doc status |
-|---|---|---|
-| `core::context` | `crates/core/src/context/` | Not described — used by runtime state assembly |
-| `core::mcp` | `crates/core/src/mcp/` | Not described — MCP integration |
-| `core::skill` | `crates/core/src/skill/` | Not described — skill registry |
-| `core::utils` | `crates/core/src/utils/` | Not described — infra helpers |
-| `core::vfs` | `crates/core/src/vfs.rs` | Not described — virtual fs layer |
-| `core::state` | `crates/core/src/state.rs` | Not described — app state assembly |
-| `core::models` | `crates/core/src/models.rs` | Partially in `01_terminology` |
-| `core::config` | `crates/core/src/config.rs` | Partially in `13_settings` |
-| `core::error` | `crates/core/src/error.rs` | Not described |
-
-**Recommended fix**:
-- `context`, `mcp`, `skill` should be mentioned in `10_ai_agent.md §2. Native AI Chat` or `17_plugins.md` — they are the infrastructure for AI/plugin runtime.
-- `vfs`, `state`, `models`, `config`, `error`, `utils` are infrastructure glue — acceptable to document as "infra layer" in `01_terminology.md` or a new `AGENTS.md` section.
-
----
-
-## 4. Module layer — watcher/drift_detect are well-covered
-
-**Matching (no `*`)**:
-- `sync::watcher` ↔ `04_storage#watcher-contract` ✓
-- `sync::drift_detect` ↔ `04_storage#projection-contract` ✓
-- `source_control::pending_fs` ↔ `04_storage#watcher-contract` ✓
-- `apps/cli export commands` ↔ `04_storage#backup-export` ✓
-- `server/auth/headers.rs` ↔ `09_auth#security-headers` ✓
-
-These are the 5 anchors already enforced by `plan_ref` bijection. No drift.
-
----
-
-## 5. Next actions to reach zero divergence
-
-1. **Document the 4 missing CLI commands** in `docs/plan/12_commands.md §1` → updates `architecture-doc.lisp`.
-2. **Enumerate HTTP routes** in `docs/plan/05_network.md` or `09_auth.md` → doc view becomes as granular as code view.
-3. **Classify core-misc modules** in `docs/plan/` → assign each to an existing chapter or add an infra chapter.
-4. **Regenerate** `architecture-doc.lisp` and `architecture-code.lisp`, run diff again, verify zero `*` markers.
-
-Once all 4 are addressed, the `*` markers in `architecture.dot` can be removed and `architecture.svg` becomes a faithful blueprint.
+For the currently modeled slice, plan and code now read as a practical
+bijective baseline.

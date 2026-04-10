@@ -4,7 +4,7 @@
             fillcolor="#effef3";
             color="#16a34a";
 
-            mod_tree_repo [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_tree_repo [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
             mod_ledger_repo [label="ledger::manager", fillcolor="#f0fdf4"];
             mod_proto_ws_repo [label="protocol::ws", fillcolor="#f0fdf4"];
         }

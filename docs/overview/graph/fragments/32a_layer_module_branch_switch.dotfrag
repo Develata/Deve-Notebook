@@ -5,5 +5,5 @@
             color="#16a34a";
 
             mod_proto_ws_switch [label="protocol::ws", fillcolor="#f0fdf4"];
-            mod_tree_switch [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_tree_switch [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
         }

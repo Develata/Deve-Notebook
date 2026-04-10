@@ -1,161 +1,195 @@
 ;;; architecture-code.lisp
-;;; Architecture view derived from actual source tree:
-;;;   - apps/cli/src/commands/*.rs          (CLI entry points)
-;;;   - apps/cli/src/server/router.rs       (HTTP/WS routes)
-;;;   - apps/cli/src/server/handlers/*.rs   (Application-layer handlers)
-;;;   - crates/core/src/*/mod.rs            (Core modules)
+;;; Architecture view derived from actual source tree for currently modeled flows:
+;;;   - apps/web/src/components/* and apps/web/src/hooks/use_core/*
+;;;   - apps/web/src/editor/* and apps/web/src/api/*
+;;;   - apps/cli/src/server/auth/handlers/*, handlers/*, ws/route/*
+;;;   - crates/core/src/sync/*, source_control/*, ledger/*, tree/*, protocol/*, security/*, plugin/*
 ;;; Format: keyword-style s-expression.
-;;; Generated: 2026-04-09 (manual baseline)
-;;; Source of truth: code layer. Cross-check against architecture-doc.lisp.
+;;; Generated: 2026-04-10 (manual operation-first baseline)
+;;; Source of truth: implementation layer. Plan still wins when code lags.
+;;; Note: current code-side slice models the same high-value flows as the plan baseline; extra CLI/admin inventory remains in architecture-diff.md.
 
-(system :name deve-note
-        :version "0.0.1"
-        :layers (user-entry application module core))
-
-;; =============================================================================
-;; Layer 1 — User Entry
-;; Source: apps/cli/src/commands/mod.rs (pub mod lines)
-;; =============================================================================
-
-(layer :id user-entry
-       :order 1
-       :description "CLI subcommands that ship today. Web palette/slash commands live in web callbacks.")
-
-(user-entry :id cli.init       :label "deve init"       :kind cli-command :code "apps/cli/src/commands/init.rs"       :calls (app.init))
-(user-entry :id cli.scan       :label "deve scan"       :kind cli-command :code "apps/cli/src/commands/scan.rs"       :calls (app.scan))
-(user-entry :id cli.watch      :label "deve watch"      :kind cli-command :code "apps/cli/src/commands/watch.rs"      :calls (app.watch))
-(user-entry :id cli.serve      :label "deve serve"      :kind cli-command :code "apps/cli/src/commands/serve.rs"      :calls (app.serve))
-(user-entry :id cli.dump       :label "deve dump"       :kind cli-command :code "apps/cli/src/commands/dump.rs"       :calls (app.dump))
-(user-entry :id cli.export     :label "deve export"     :kind cli-command :code "apps/cli/src/commands/export.rs"     :calls (app.export))
-(user-entry :id cli.verify-p2p :label "deve verify-p2p" :kind cli-command :code "apps/cli/src/commands/verify_p2p.rs" :calls (app.verify-p2p))
-(user-entry :id cli.seed       :label "deve seed"       :kind cli-command :code "apps/cli/src/commands/seed.rs"       :calls (app.seed))
-(user-entry :id cli.node-check :label "deve node-check" :kind cli-command :code "apps/cli/src/commands/node_check.rs" :calls (app.admin.node-check))
-(user-entry :id cli.recover    :label "deve recover"    :kind cli-command :code "apps/cli/src/commands/recover.rs"    :calls (app.recover))
-(user-entry :id cli.repair     :label "deve repair"     :kind cli-command :code "apps/cli/src/commands/repair/"     :calls (app.repair))
-(user-entry :id cli.live-proxy :label "deve live-proxy" :kind cli-command :code "apps/cli/src/commands/live_proxy.rs" :calls (app.live-proxy))
+(system :name deve-note :version "0.0.1" :layers (user-operation application module core))
 
 ;; =============================================================================
-;; Layer 2 — Application
-;; Source: apps/cli/src/server/router.rs route() chain + apps/cli/src/commands/*
+;; Layer 1 - User Operation
 ;; =============================================================================
 
-(layer :id application
-       :order 2
-       :description "CLI subcommand implementations and Axum handlers registered in server/router.rs.")
+(layer :id user-operation :order 1 :description "Atomic UI/runtime actions inferred from concrete web callbacks, effects, and authenticated endpoints.")
+(group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
+(group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
+(group :id grp.user.command-palette :layer user-operation :label "command-palette" :members (op.ui.command-palette.open op.ui.command-palette.type-query op.ui.command-palette.navigate op.ui.command-palette.execute op.ui.command-palette.close))
+(group :id grp.user.branch-switch :layer user-operation :label "branch-switch" :members (op.repo.branch-switch.open-switcher op.repo.branch-switch.choose-branch op.repo.branch-switch.request-switch op.repo.branch-switch.receive-switch-result))
+(group :id grp.user.repo-switch :layer user-operation :label "repo-switch" :members (op.repo.switch.open-switcher op.repo.switch.choose-repo op.repo.switch.request-switch op.repo.switch.receive-scope))
+(group :id grp.user.sc-stage :layer user-operation :label "stage / unstage" :members (op.sc.stage.entry op.sc.stage.receive-ack op.sc.unstage.entry op.sc.unstage.receive-ack))
+(group :id grp.user.sc-discard-file :layer user-operation :label "discard file" :members (op.sc.discard-file.entry op.sc.discard-file.receive-ack))
+(group :id grp.user.sc-discard :layer user-operation :label "discard pending" :members (op.sc.discard.request op.sc.discard.receive-ack))
+(group :id grp.user.sc-conflict :layer user-operation :label "resolve conflict" :members (op.sc.conflict.keep-fs op.sc.conflict.keep-ledger op.sc.conflict.receive-resolved))
+(group :id grp.user.sc-commit :layer user-operation :label "source-control commit" :members (op.sc.commit.focus-input op.sc.commit.type-message op.sc.commit.submit op.sc.commit.receive-result))
+(group :id grp.user.ai-chat :layer user-operation :label "native ai-chat" :members (op.ai.chat.open-panel op.ai.chat.type-message op.ai.chat.submit op.ai.chat.receive-stream))
+(group :id grp.user.open-doc :layer user-operation :label "open-doc" :members (op.repo.open-doc.open-quick-open op.repo.open-doc.type-query op.repo.open-doc.choose-doc op.repo.open-doc.request-open op.repo.open-doc.receive-content))
 
-;; CLI handlers
-(application :id app.init        :label "commands::init::run"      :kind cli-handler :code "apps/cli/src/commands/init.rs"       :calls (core.ledger core.tree))
-(application :id app.scan        :label "commands::scan::run"      :kind cli-handler :code "apps/cli/src/commands/scan.rs"       :calls (core.sync core.tree))
-(application :id app.watch       :label "commands::watch::run"     :kind cli-handler :code "apps/cli/src/commands/watch.rs"      :calls (core.watcher core.sync))
-(application :id app.serve       :label "commands::serve::run"     :kind cli-handler :code "apps/cli/src/commands/serve.rs"      :calls (core.protocol core.security))
-(application :id app.dump        :label "commands::dump::run"      :kind cli-handler :code "apps/cli/src/commands/dump.rs"       :calls (core.ledger))
-(application :id app.export      :label "commands::export::run"    :kind cli-handler :code "apps/cli/src/commands/export.rs"     :calls (core.ledger))
-(application :id app.verify-p2p  :label "commands::verify_p2p"     :kind cli-handler :code "apps/cli/src/commands/verify_p2p.rs" :calls (core.protocol))
-(application :id app.seed        :label "commands::seed::run"      :kind cli-handler :code "apps/cli/src/commands/seed.rs"       :calls (core.ledger))
-(application :id app.recover     :label "commands::recover::run"   :kind cli-handler :code "apps/cli/src/commands/recover.rs"    :calls (core.ledger core.sync))
-(application :id app.repair      :label "commands::repair::run"    :kind cli-handler :code "apps/cli/src/commands/repair/"    :calls (core.sync core.tree))
-(application :id app.live-proxy  :label "commands::live_proxy"     :kind cli-handler :code "apps/cli/src/commands/live_proxy.rs" :calls (core.ledger))
-
-;; WS route
-(application :id app.ws-handler  :label "ws::ws_handler"  :kind ws-handler  :code "apps/cli/src/server/ws/" :route "/ws" :calls (core.protocol core.sync))
-
-;; Source Control HTTP routes (from router.rs lines 37-69)
-(application :id app.sc.pending        :label "source_control::http::pending"                 :kind http-handler :route "/api/sc/pending"        :calls (core.source_control))
-(application :id app.sc.status         :label "source_control::http::status"                  :kind http-handler :route "/api/sc/status"         :calls (core.source_control))
-(application :id app.sc.diff           :label "source_control::http::diff"                    :kind http-handler :route "/api/sc/diff"           :calls (core.source_control))
-(application :id app.sc.commits        :label "source_control::http_commits::commit_history"  :kind http-handler :route "/api/sc/commits"        :calls (core.source_control core.ledger))
-(application :id app.sc.commit-diff    :label "source_control::http_commits::commit_diff"     :kind http-handler :route "/api/sc/commit-diff"    :calls (core.source_control))
-(application :id app.sc.stage          :label "source_control::http_mutations::stage"         :kind http-handler :route "/api/sc/stage-pending" :calls (core.source_control))
-(application :id app.sc.unstage        :label "source_control::http_mutations::unstage"       :kind http-handler :route "/api/sc/unstage"        :calls (core.source_control))
-(application :id app.sc.discard        :label "source_control::http_mutations::discard_pending" :kind http-handler :route "/api/sc/discard-pending" :calls (core.source_control))
-(application :id app.sc.commit         :label "source_control::http_mutations::commit"        :kind http-handler :route "/api/sc/commit"         :calls (core.source_control core.ledger))
-
-;; Repo HTTP routes
-(application :id app.repo.list      :label "repo::http::list_docs"    :kind http-handler :route "/api/repo/docs" :calls (core.tree core.ledger))
-(application :id app.repo.doc       :label "repo::http::doc_content"  :kind http-handler :route "/api/repo/doc"  :calls (core.tree core.ledger))
-
-;; Auth HTTP routes
-(application :id app.auth.login     :label "auth::handlers::login"   :kind http-handler :route "/api/auth/login"  :calls (core.security))
-(application :id app.auth.logout    :label "auth::handlers::logout"  :kind http-handler :route "/api/auth/logout" :calls (core.security))
-(application :id app.auth.me        :label "auth::handlers::me"      :kind http-handler :route "/api/auth/me"     :calls (core.security))
-
-;; Admin HTTP routes
-(application :id app.admin.dump       :label "admin::dump"       :kind http-handler :route "/api/admin/dump"       :calls (core.ledger))
-(application :id app.admin.export     :label "admin::export"     :kind http-handler :route "/api/admin/export"     :calls (core.ledger))
-(application :id app.admin.node-check :label "admin::node_check" :kind http-handler :route "/api/admin/node-check" :calls (core.tree))
-
-;; Public
-(application :id app.node.role      :label "node_role_http::role" :kind http-handler :route "/api/node/role" :calls (core.protocol))
-
-;; =============================================================================
-;; Layer 3 — Module (leaf engineering modules, actually existing sub-modules)
-;; Source: crates/core/src/*/mod.rs + known sub-directories
-;; =============================================================================
-
-(layer :id module
-       :order 3
-       :description "Concrete leaf modules under crates/core/src/.")
-
-;; sync sub-modules
-(module :id core.watcher         :label "sync::watcher"       :parent core.sync           :code "crates/core/src/sync/watcher/")
-(module :id core.drift_detect    :label "sync::drift_detect"  :parent core.sync           :code "crates/core/src/sync/drift_detect/")
-(module :id core.materialize     :label "sync::materialize"   :parent core.sync           :code "crates/core/src/sync/materialize.rs")
-(module :id core.rebuild         :label "sync::rebuild"       :parent core.sync           :code "crates/core/src/sync/rebuild.rs")
-(module :id core.projection_plan :label "sync::projection_plan" :parent core.sync         :code "crates/core/src/sync/projection_plan.rs")
-(module :id core.projection_io   :label "sync::projection_io" :parent core.sync           :code "crates/core/src/sync/projection_io.rs")
-
-;; source_control sub-modules
-(module :id core.pending_fs      :label "source_control::pending_fs" :parent core.source_control :code "crates/core/src/source_control/pending_fs.rs")
-(module :id core.staging         :label "source_control::staging"    :parent core.source_control :code "crates/core/src/source_control/staging.rs")
-(module :id core.sc_diff         :label "source_control::diff"       :parent core.source_control :code "crates/core/src/source_control/diff.rs")
-
-;; ledger sub-modules
-(module :id core.ledger.manager  :label "ledger::manager"    :parent core.ledger :code "crates/core/src/ledger/manager/")
-(module :id core.ledger.schema   :label "ledger::schema"     :parent core.ledger :code "crates/core/src/ledger/schema.rs")
-(module :id core.ledger.append   :label "ledger::append"     :parent core.ledger :code "crates/core/src/ledger/append.rs")
-
-;; tree sub-modules
-(module :id core.tree.structure  :label "tree::structure"    :parent core.tree :code "crates/core/src/tree/")
-
-;; protocol sub-modules
-(module :id core.protocol.ws     :label "protocol::ws"       :parent core.protocol :code "crates/core/src/protocol/")
-
-;; security sub-modules
-(module :id core.security.auth   :label "security::auth"     :parent core.security :code "crates/core/src/security/auth/")
-
-;; plugin sub-modules
-(module :id core.plugin.chat     :label "plugin::chat_stream" :parent core.plugin :code "crates/core/src/plugin/")
-
-;; search sub-modules
-(module :id core.search.index    :label "search::index" :parent core.search :code "crates/core/src/search/")
-
-;; Extra modules present in code but less prominent in docs
-(module :id core.context         :label "context"     :parent core.core-misc :code "crates/core/src/context/")
-(module :id core.mcp             :label "mcp"         :parent core.core-misc :code "crates/core/src/mcp/")
-(module :id core.skill           :label "skill"       :parent core.core-misc :code "crates/core/src/skill/")
-(module :id core.utils           :label "utils"       :parent core.core-misc :code "crates/core/src/utils/")
-(module :id core.vfs             :label "vfs"         :parent core.core-misc :code "crates/core/src/vfs.rs")
-(module :id core.state           :label "state"       :parent core.core-misc :code "crates/core/src/state.rs")
-(module :id core.models          :label "models"      :parent core.core-misc :code "crates/core/src/models.rs")
-(module :id core.config          :label "config"      :parent core.core-misc :code "crates/core/src/config.rs")
-(module :id core.error           :label "error"       :parent core.core-misc :code "crates/core/src/error.rs")
+(user-operation :id op.auth.login.type-username :label "Type Username" :kind text-input :surface web-form :code "apps/web/src/components/login/page.rs" :calls (app.auth.form.username-update))
+(user-operation :id op.auth.login.type-password :label "Type Password" :kind text-input :surface web-form :code "apps/web/src/components/login/page.rs" :calls (app.auth.form.password-update))
+(user-operation :id op.auth.login.submit :label "Submit Login Form" :kind submit :surface web-form :code "apps/web/src/components/login/{page.rs,api.rs}" :calls (app.auth.login.submit))
+(user-operation :id op.auth.login.receive-result :label "Receive Login Result" :kind async-result :surface web-form :code "apps/web/src/components/login/{page.rs,api.rs}" :calls (app.auth.login.result))
+(user-operation :id op.auth.session.resume-workspace :label "Resume Protected Workspace" :kind resume :surface workspace-shell :code "apps/web/src/{app.rs,app_auth_monitor.rs}" :calls (app.auth.session.probe-gate))
+(user-operation :id op.auth.session.issue-protected-request :label "Issue Protected Request" :kind request :surface workspace-runtime :code "apps/web/src/api/{auth_probe.rs,connection.rs}" :calls (app.auth.session.probe app.auth.session.protocol-error))
+(user-operation :id op.auth.session.receive-unauthorized :label "Receive Unauthorized Result" :kind async-result :surface workspace-runtime :code "apps/web/src/api/{connection.rs,service.rs}" :calls (app.auth.session.protocol-error))
+(user-operation :id op.auth.session.enter-reauth-surface :label "Enter Reauth Surface" :kind redirect :surface login-surface :code "apps/web/src/{app.rs,components/main_layout.rs}" :calls (app.auth.session.reauth-surface))
+(user-operation :id op.ui.command-palette.open :label "Open Command Palette" :kind shortcut :surface keyboard-shortcut :code "apps/web/src/{shortcuts/global.rs,components/command_palette/mod.rs}" :calls (app.ui.command-palette.open))
+(user-operation :id op.ui.command-palette.type-query :label "Type Command Query" :kind text-input :surface overlay-input :code "apps/web/src/components/command_palette/{logic.rs,ui.rs}" :calls (app.ui.command-palette.query))
+(user-operation :id op.ui.command-palette.navigate :label "Navigate Command Results" :kind navigation :surface keyboard :code "apps/web/src/components/command_palette/{logic.rs,ui.rs}" :calls (app.ui.command-palette.navigate))
+(user-operation :id op.ui.command-palette.execute :label "Execute Selected Command" :kind execute :surface keyboard-or-pointer :code "apps/web/src/components/command_palette/{registry.rs,logic.rs}" :calls (app.ui.command-palette.execute))
+(user-operation :id op.ui.command-palette.close :label "Close Command Palette" :kind dismiss :surface keyboard-or-overlay :code "apps/web/src/components/command_palette/{logic.rs,ui.rs}" :calls (app.ui.command-palette.close))
+(user-operation :id op.repo.branch-switch.open-switcher :label "Open Branch Switcher" :kind open :surface search-box :code "apps/web/src/components/branch_switcher/" :calls (app.repo.branch-switch.open))
+(user-operation :id op.repo.branch-switch.choose-branch :label "Choose Branch Target" :kind select :surface search-box :code "apps/web/src/components/search_box/logic/execute.rs" :calls (app.repo.branch-switch.select))
+(user-operation :id op.repo.branch-switch.request-switch :label "Request Branch Switch" :kind request :surface ui-state :code "apps/web/src/hooks/use_core/callbacks_switch_branch.rs" :calls (app.repo.branch-switch.request))
+(user-operation :id op.repo.branch-switch.receive-switch-result :label "Receive Branch Switch Result" :kind async-result :surface ui-state :code "apps/web/src/hooks/use_core/{effects/message_control.rs,effects_switch.rs}" :calls (app.repo.branch-switch.result))
+(user-operation :id op.repo.switch.open-switcher :label "Open Repo Switcher" :kind open :surface sidebar :code "apps/web/src/components/sidebar/repo_switcher.rs" :calls (app.repo.switch.menu))
+(user-operation :id op.repo.switch.choose-repo :label "Choose Repo Target" :kind select :surface sidebar :code "apps/web/src/components/sidebar/repo_switcher.rs" :calls (app.repo.switch.select))
+(user-operation :id op.repo.switch.request-switch :label "Request Repo Switch" :kind request :surface ui-state :code "apps/web/src/hooks/use_core/callbacks_switch_repo.rs" :calls (app.repo.switch.request))
+(user-operation :id op.repo.switch.receive-scope :label "Receive Repo Scope Rebind" :kind async-result :surface ui-state :code "apps/web/src/hooks/use_core/{effects/message_control.rs,effects_switch.rs}" :calls (app.repo.switch.result))
+(user-operation :id op.sc.stage.entry :label "Stage Change Entry" :kind execute :surface source-control-panel :code "apps/web/src/{components/sidebar/source_control/change_item_workspace_actions.rs,hooks/use_core/callbacks_sc_write_targets.rs}" :calls (app.sc.stage.request))
+(user-operation :id op.sc.stage.receive-ack :label "Receive Stage Ack" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.stage.result))
+(user-operation :id op.sc.unstage.entry :label "Unstage Change Entry" :kind execute :surface source-control-panel :code "apps/web/src/{components/sidebar/source_control/staged_section_actions.rs,hooks/use_core/callbacks_sc_write_targets.rs}" :calls (app.sc.unstage.request))
+(user-operation :id op.sc.unstage.receive-ack :label "Receive Unstage Ack" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.unstage.result))
+(user-operation :id op.sc.discard-file.entry :label "Discard Change Entry" :kind execute :surface source-control-panel :code "apps/web/src/{components/sidebar/source_control/change_item_workspace_actions.rs,hooks/use_core/callbacks_sc_write_targets.rs}" :calls (app.sc.discard-file.request))
+(user-operation :id op.sc.discard-file.receive-ack :label "Receive Discard File Ack" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.discard-file.result))
+(user-operation :id op.sc.discard.request :label "Request Discard Pending" :kind execute :surface source-control-panel :code "apps/web/src/hooks/use_core/callbacks_sync_write.rs" :calls (app.sc.discard.request))
+(user-operation :id op.sc.discard.receive-ack :label "Receive Discard Ack" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects/message_dispatch_sync.rs" :calls (app.sc.discard.result))
+(user-operation :id op.sc.conflict.keep-fs :label "Choose KeepFs" :kind execute :surface source-control-panel :code "apps/web/src/{components/sidebar/source_control/change_item_conflict_actions.rs,hooks/use_core/callbacks_sc_write_commit.rs}" :calls (app.sc.conflict.keep-fs))
+(user-operation :id op.sc.conflict.keep-ledger :label "Choose KeepLedger" :kind execute :surface source-control-panel :code "apps/web/src/{components/sidebar/source_control/change_item_conflict_actions.rs,hooks/use_core/callbacks_sc_write_commit.rs}" :calls (app.sc.conflict.keep-ledger))
+(user-operation :id op.sc.conflict.receive-resolved :label "Receive Conflict Resolved" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.conflict.resolved))
+(user-operation :id op.sc.commit.focus-input :label "Focus Commit Input" :kind focus :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit.rs,commit_controller.rs}" :calls (app.sc.commit.draft))
+(user-operation :id op.sc.commit.type-message :label "Type Commit Message" :kind text-input :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit_message_box.rs,commit_controller.rs}" :calls (app.sc.commit.draft))
+(user-operation :id op.sc.commit.submit :label "Submit Commit" :kind submit :surface source-control-panel :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs" :calls (app.sc.commit.gate app.sc.commit.submit))
+(user-operation :id op.sc.commit.receive-result :label "Receive Commit Result" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.commit.result))
+(user-operation :id op.ai.chat.open-panel :label "Open AI Chat Panel" :kind open :surface workspace-shell :code "apps/web/src/{components/main_layout_setup.rs,components/command_palette/registry.rs}" :calls (app.ai.chat.panel))
+(user-operation :id op.ai.chat.type-message :label "Type AI Prompt" :kind text-input :surface chat-panel :code "apps/web/src/components/chat/panel.rs" :calls (app.ai.chat.panel))
+(user-operation :id op.ai.chat.submit :label "Submit AI Prompt" :kind submit :surface chat-panel :code "apps/web/src/components/chat/actions_send.rs" :calls (app.ai.chat.send))
+(user-operation :id op.ai.chat.receive-stream :label "Receive AI Stream" :kind async-result :surface chat-panel :code "apps/web/src/hooks/use_core/effects/message_dispatch_runtime.rs" :calls (app.ai.chat.stream))
+(user-operation :id op.repo.open-doc.open-quick-open :label "Open Quick Open" :kind open :surface search-box :code "apps/web/src/{components/search_box/mod.rs,components/quick_open/mod.rs}" :calls (app.repo.quick-open.open))
+(user-operation :id op.repo.open-doc.type-query :label "Type File Query" :kind text-input :surface search-box :code "apps/web/src/components/search_box/logic/providers.rs" :calls (app.repo.quick-open.query))
+(user-operation :id op.repo.open-doc.choose-doc :label "Choose Document Result" :kind select :surface search-box :code "apps/web/src/{components/search_box/logic/execute.rs,hooks/use_core/callbacks_doc_select.rs}" :calls (app.repo.quick-open.select-doc))
+(user-operation :id op.repo.open-doc.request-open :label "Request OpenDoc" :kind request :surface editor-state :code "apps/web/src/editor/hook_open.rs" :calls (app.repo.doc.open))
+(user-operation :id op.repo.open-doc.receive-content :label "Receive Document Content" :kind async-result :surface editor :code "apps/web/src/hooks/use_core/effects/message_projection_doc_selection.rs" :calls (app.repo.doc.receive))
 
 ;; =============================================================================
-;; Layer 4 — Core (top-level subsystems in crates/core/src/)
-;; Source: actual sub-directories of crates/core/src/
+;; Layer 2 - Application Response
 ;; =============================================================================
 
-(layer :id core
-       :order 4
-       :description "Top-level directories under crates/core/src/. Each owns one authority domain.")
+(layer :id application :order 2 :description "Concrete callbacks, effects, HTTP handlers, and WS handlers that receive user operations.")
+(group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result))
+(group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
+(group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close))
+(group :id grp.app.branch-switch :layer application :label "branch-switch" :members (app.repo.branch-switch.open app.repo.branch-switch.select app.repo.branch-switch.request app.repo.branch-switch.result))
+(group :id grp.app.repo-switch :layer application :label "repo-switch" :members (app.repo.switch.menu app.repo.switch.select app.repo.switch.request app.repo.switch.result))
+(group :id grp.app.sc-stage :layer application :label "stage / unstage" :members (app.sc.stage.request app.sc.stage.result app.sc.unstage.request app.sc.unstage.result))
+(group :id grp.app.sc-discard-file :layer application :label "discard file" :members (app.sc.discard-file.request app.sc.discard-file.result))
+(group :id grp.app.sc-discard :layer application :label "discard pending" :members (app.sc.discard.request app.sc.discard.result))
+(group :id grp.app.sc-conflict :layer application :label "resolve conflict" :members (app.sc.conflict.keep-fs app.sc.conflict.keep-ledger app.sc.conflict.resolved))
+(group :id grp.app.sc-commit :layer application :label "source-control commit" :members (app.sc.commit.draft app.sc.commit.gate app.sc.commit.submit app.sc.commit.result))
+(group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
+(group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
 
-(core :id core.ledger         :label "ledger"         :kind authority   :code "crates/core/src/ledger/")
-(core :id core.sync           :label "sync"           :kind runtime     :code "crates/core/src/sync/")
-(core :id core.source_control :label "source_control" :kind workflow    :code "crates/core/src/source_control/")
-(core :id core.tree           :label "tree"           :kind projection  :code "crates/core/src/tree/")
-(core :id core.protocol       :label "protocol"       :kind runtime     :code "crates/core/src/protocol/")
-(core :id core.security       :label "security"       :kind runtime     :code "crates/core/src/security/")
-(core :id core.plugin         :label "plugin"         :kind peripheral  :code "crates/core/src/plugin/")
-(core :id core.search         :label "search"         :kind peripheral  :code "crates/core/src/search/")
-(core :id core.watcher        :label "watcher (root)" :kind runtime     :code "crates/core/src/watcher.rs")
-(core :id core.core-misc      :label "core-misc"      :kind misc        :code "crates/core/src/ (context/mcp/skill/utils/vfs/state/models/config/error)")
+(application :id app.auth.form.username-update :label "LoginPage::set_username" :kind form-state :code "apps/web/src/components/login/page.rs" :calls ())
+(application :id app.auth.form.password-update :label "LoginPage::set_password" :kind form-state :code "apps/web/src/components/login/page.rs" :calls ())
+(application :id app.auth.login.submit :label "attempt_login -> auth::handlers::login" :kind http-handler :code "apps/web/src/components/login/{page.rs,api.rs} | apps/cli/src/server/auth/handlers/login.rs" :calls (mod_sec_auth mod_sec_jwt mod_proto_auth))
+(application :id app.auth.login.result :label "AuthState::Authenticated/Failed" :kind async-result :code "apps/web/src/components/login/page.rs" :calls (mod_sec_auth))
+(application :id app.auth.session.probe-gate :label "App/AuthMonitor probe gate" :kind runtime-gate :code "apps/web/src/{app.rs,app_auth_monitor.rs}" :calls ())
+(application :id app.auth.session.probe :label "probe_auth_status -> /api/auth/me" :kind http-handler :code "apps/web/src/api/{auth_probe.rs,connection.rs}" :calls (mod_sec_auth mod_proto_auth))
+(application :id app.auth.session.protocol-error :label "ConnectionStatus::Unauthorized" :kind runtime-effect :code "apps/web/src/api/{connection.rs,service.rs}" :calls (mod_proto_ws mod_proto_auth))
+(application :id app.auth.session.reauth-surface :label "switch back to LoginPage" :kind ui-shell :code "apps/web/src/{app.rs,components/main_layout.rs}" :calls ())
+(application :id app.ui.command-palette.open :label "CommandPalette::show" :kind ui-shell :code "apps/web/src/components/command_palette/mod.rs" :calls ())
+(application :id app.ui.command-palette.query :label "command_palette::query" :kind ui-shell :code "apps/web/src/components/command_palette/logic.rs" :calls ())
+(application :id app.ui.command-palette.navigate :label "command_palette::navigate" :kind ui-shell :code "apps/web/src/components/command_palette/logic.rs" :calls ())
+(application :id app.ui.command-palette.execute :label "command_palette::execute" :kind ui-shell :code "apps/web/src/components/command_palette/registry.rs" :calls (app.repo.quick-open.open app.ai.chat.panel app.repo.branch-switch.open))
+(application :id app.ui.command-palette.close :label "command_palette::close" :kind ui-shell :code "apps/web/src/components/command_palette/ui.rs" :calls ())
+(application :id app.repo.branch-switch.open :label "BranchProvider::open" :kind ui-shell :code "apps/web/src/components/branch_switcher/" :calls ())
+(application :id app.repo.branch-switch.select :label "SearchAction::SwitchBranch" :kind ui-shell :code "apps/web/src/components/search_box/logic/execute.rs" :calls ())
+(application :id app.repo.branch-switch.request :label "ClientMessage::SwitchBranch" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_switch_branch.rs | apps/cli/src/server/handlers/switcher_branch.rs" :calls (mod_proto_ws mod_tree_structure))
+(application :id app.repo.branch-switch.result :label "BranchSwitched -> refresh_after_branch_switch" :kind async-result :code "apps/web/src/hooks/use_core/{effects/message_control.rs,effects_switch.rs}" :calls (mod_proto_ws mod_tree_structure))
+(application :id app.repo.switch.menu :label "RepoSwitcher::open" :kind ui-shell :code "apps/web/src/components/sidebar/repo_switcher.rs" :calls ())
+(application :id app.repo.switch.select :label "RepoSwitcher::select" :kind ui-shell :code "apps/web/src/components/sidebar/repo_switcher.rs" :calls ())
+(application :id app.repo.switch.request :label "ClientMessage::SwitchRepo" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_switch_repo.rs | apps/cli/src/server/handlers/switcher_repo.rs" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
+(application :id app.repo.switch.result :label "RepoSwitched -> refresh_after_repo_switch" :kind async-result :code "apps/web/src/hooks/use_core/{effects/message_control.rs,effects_switch.rs}" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
+(application :id app.sc.stage.request :label "ClientMessage::StageFile" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_targets.rs | apps/cli/src/server/ws/route/source_control.rs" :calls (mod_sc_pending-fs mod_sc_staging mod_proto_ws))
+(application :id app.sc.stage.result :label "StageAck" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_sc_staging mod_proto_ws))
+(application :id app.sc.unstage.request :label "ClientMessage::UnstageFile" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_targets.rs | apps/cli/src/server/ws/route/source_control.rs" :calls (mod_sc_pending-fs mod_sc_staging mod_proto_ws))
+(application :id app.sc.unstage.result :label "UnstageAck" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_sc_pending-fs mod_proto_ws))
+(application :id app.sc.discard-file.request :label "ClientMessage::DiscardFile" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_targets.rs | apps/cli/src/server/handlers/source_control/discard.rs" :calls (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(application :id app.sc.discard-file.result :label "DiscardAck" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_sync_materialize mod_proto_ws))
+(application :id app.sc.discard.request :label "ClientMessage::DiscardPending" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sync_write.rs | apps/cli/src/server/handlers/merge/manual.rs" :calls (mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(application :id app.sc.discard.result :label "PendingDiscarded" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_dispatch_sync.rs" :calls (mod_sync_materialize mod_proto_ws))
+(application :id app.sc.conflict.keep-fs :label "ClientMessage::ResolveConflict(KeepFs)" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/handlers/source_control/conflict.rs" :calls (mod_sc_staging mod_proto_ws))
+(application :id app.sc.conflict.keep-ledger :label "ClientMessage::ResolveConflict(KeepLedger)" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/handlers/source_control/conflict.rs" :calls (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(application :id app.sc.conflict.resolved :label "ConflictResolved" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_proto_ws))
+(application :id app.sc.commit.draft :label "commit draft state" :kind ui-shell :code "apps/web/src/components/sidebar/source_control/{commit.rs,commit_controller.rs}" :calls ())
+(application :id app.sc.commit.gate :label "repo_write_block_untracked" :kind runtime-gate :code "apps/web/src/hooks/use_core/write_gate_logic.rs" :calls ())
+(application :id app.sc.commit.submit :label "ClientMessage::Commit" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/ws/route/source_control.rs" :calls (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
+(application :id app.sc.commit.result :label "CommitAck" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_sc_commit mod_proto_ws))
+(application :id app.ai.chat.panel :label "ChatControl / ChatPanel" :kind ui-shell :code "apps/web/src/{components/main_layout_setup.rs,components/chat/panel.rs}" :calls ())
+(application :id app.ai.chat.send :label "plugin::chat request" :kind ws-handler :code "apps/web/src/components/chat/actions_send.rs | apps/cli/src/server/handlers/plugin.rs" :calls (mod_plugin_chat mod_proto_ws))
+(application :id app.ai.chat.stream :label "ChatChunk / PluginResponse" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_dispatch_runtime.rs" :calls (mod_plugin_chat mod_proto_ws))
+(application :id app.repo.quick-open.open :label "SearchBox/QuickOpen::show" :kind ui-shell :code "apps/web/src/{components/search_box/mod.rs,components/quick_open/mod.rs}" :calls ())
+(application :id app.repo.quick-open.query :label "FileProvider::search" :kind ui-shell :code "apps/web/src/components/search_box/logic/providers.rs" :calls ())
+(application :id app.repo.quick-open.select-doc :label "on_doc_select" :kind ui-shell :code "apps/web/src/hooks/use_core/callbacks_doc_select.rs" :calls (app.repo.doc.open))
+(application :id app.repo.doc.open :label "ClientMessage::OpenDoc" :kind ws-handler :code "apps/web/src/editor/hook_open.rs | apps/cli/src/server/handlers/document/open.rs" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
+(application :id app.repo.doc.receive :label "Snapshot -> selection/apply" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_projection_doc_selection.rs" :calls (mod_proto_ws mod_ledger_manager))
+
+;; =============================================================================
+;; Layer 3 - Module
+;; =============================================================================
+
+(layer :id module :order 3 :description "Leaf engineering modules normalized to the same grain as the plan-side blueprint.")
+(group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
+(group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
+(group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws))
+(group :id grp.mod.branch-switch :layer module :label "branch-switch" :members (mod_proto_ws mod_tree_structure))
+(group :id grp.mod.repo-switch :layer module :label "repo-switch" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
+(group :id grp.mod.sc-stage :layer module :label "stage / unstage" :members (mod_sc_pending-fs mod_sc_staging mod_proto_ws))
+(group :id grp.mod.sc-discard-file :layer module :label "discard file" :members (mod_sc_pending-fs mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.sc-discard :layer module :label "discard pending" :members (mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.sc-conflict :layer module :label "resolve conflict" :members (mod_sc_pending-fs mod_sc_staging mod_sync_materialize mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.sc-commit :layer module :label "source-control commit" :members (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.ai-chat :layer module :label "native ai-chat" :members (mod_plugin_chat mod_proto_ws))
+(group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
+
+(module :id mod_sync_materialize :label "sync::materialize" :parent core.sync :code "crates/core/src/sync/materialize.rs")
+(module :id mod_sc_pending-fs :label "source_control::pending_fs" :parent core.source_control :code "crates/core/src/source_control/pending_fs.rs")
+(module :id mod_sc_staging :label "source_control::staging" :parent core.source_control :code "crates/core/src/source_control/staging.rs")
+(module :id mod_sc_commit :label "source_control::commits" :parent core.source_control :code "crates/core/src/source_control/commits.rs")
+(module :id mod_ledger_manager :label "ledger::manager" :parent core.ledger :code "crates/core/src/ledger/manager/")
+(module :id mod_tree_structure :label "tree::{manager,ops,node}" :parent core.tree :code "crates/core/src/tree/{manager.rs,ops.rs,node.rs}")
+(module :id mod_proto_ws :label "protocol::{client,server}" :parent core.protocol :code "crates/core/src/protocol/{client.rs,server.rs}")
+(module :id mod_proto_auth :label "protocol::auth" :parent core.protocol :code "crates/core/src/protocol/auth.rs")
+(module :id mod_sec_auth :label "security::auth" :parent core.security :code "crates/core/src/security/auth/mod.rs")
+(module :id mod_sec_jwt :label "security::jwt" :parent core.security :code "crates/core/src/security/auth/jwt.rs")
+(module :id mod_plugin_chat :label "plugin::chat_stream" :parent core.plugin :code "crates/core/src/plugin/runtime/{chat_stream.rs,host/chat.rs}")
+
+;; =============================================================================
+;; Layer 4 - Core
+;; =============================================================================
+
+(layer :id core :order 4 :description "Top-level subsystems under crates/core/src/ used by the currently modeled implementation slice.")
+(group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
+(group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
+(group :id grp.core.command-palette :layer core :label "command-palette" :members (core.tree core.plugin core.protocol))
+(group :id grp.core.branch-switch :layer core :label "branch-switch" :members (core.tree core.protocol))
+(group :id grp.core.repo-switch :layer core :label "repo-switch" :members (core.tree core.ledger core.protocol))
+(group :id grp.core.sc-stage :layer core :label "stage / unstage" :members (core.source_control core.protocol))
+(group :id grp.core.sc-discard-file :layer core :label "discard file" :members (core.source_control core.sync core.ledger core.protocol))
+(group :id grp.core.sc-discard :layer core :label "discard pending" :members (core.sync core.ledger core.protocol))
+(group :id grp.core.sc-conflict :layer core :label "resolve conflict" :members (core.source_control core.sync core.ledger core.protocol))
+(group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol))
+(group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
+(group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))
+
+(core :id core.ledger :label "Ledger" :kind authority :code "crates/core/src/ledger/")
+(core :id core.sync :label "Sync" :kind runtime :code "crates/core/src/sync/")
+(core :id core.source_control :label "Source Control" :kind workflow :code "crates/core/src/source_control/")
+(core :id core.tree :label "Tree" :kind projection :code "crates/core/src/tree/")
+(core :id core.protocol :label "Protocol" :kind runtime :code "crates/core/src/protocol/")
+(core :id core.security :label "Security" :kind runtime :code "crates/core/src/security/")
+(core :id core.plugin :label "Plugin" :kind peripheral :code "crates/core/src/plugin/")

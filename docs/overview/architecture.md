@@ -1,6 +1,6 @@
 # Deve-Note Architecture Overview
 
-One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. When they diverge, nodes are marked with `*` so the gap is visible at a glance.
+One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The currently modeled operation slice is aligned, so the SVG is presently shown as a clean baseline without `*` markers.
 
 **Files in this directory**:
 
@@ -8,8 +8,8 @@ One-page architecture map with plan-first verification: the blueprint view is de
 |---|---|
 | [`architecture.md`](./architecture.md) | This file — human entry point |
 | [`architecture-doc.lisp`](./architecture-doc.lisp) | Architecture view derived from `docs/plan/`, `docs/features/operations/`, and `docs/acceptance-cases/` |
-| [`architecture-code.lisp`](./architecture-code.lisp) | Architecture view derived from `apps/cli/src/commands/`, `apps/cli/src/server/router.rs`, `crates/core/src/*/` |
-| [`architecture-diff.md`](./architecture-diff.md) | Comparison report — every `*` in the diagram traces back to a row here |
+| [`architecture-code.lisp`](./architecture-code.lisp) | Architecture view derived from actual implementation flows in `apps/web/src/`, `apps/cli/src/server/`, and `crates/core/src/` |
+| [`architecture-diff.md`](./architecture-diff.md) | Comparison report for the current operation slice; future `*` markers should trace back here |
 | [`architecture.dot`](./architecture.dot) | Generated Graphviz source for the SVG diagram |
 | [`architecture.svg`](./architecture.svg) | Rendered SVG (run `dot -Tsvg architecture.dot -o architecture.svg`) |
 
@@ -33,7 +33,7 @@ The `.dot` file is now assembled from `docs/overview/graph/fragments/*.dotfrag` 
 ┌─────────────────────────────────────────────────────┐
 │  Layer 3 — Module (finest leaves)                    │
 │  sync::watcher · source_control::pending_fs ·        │
-│  ledger::manager · tree::structure · ...             │
+│  ledger::manager · tree::{manager,ops,node} · ...    │
 └────────────────────┬─────────────────────────────────┘
                      ↓
 ┌─────────────────────────────────────────────────────┐
@@ -57,9 +57,11 @@ The current graph also carries three extra architecture cues:
 ## Current Refactor Status
 
 - `architecture-doc.lisp` has been refactored to an operation-first baseline.
+- `architecture-code.lisp` has also been uplifted to the same operation-first layer model, but it is still a hand-curated implementation baseline rather than a generated truth source.
 - `architecture.dot` should now be read as the plan-side blueprint graph for that new layer model.
 - The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `native ai-chat`, and `open-doc`.
-- `architecture-code.lisp` and `architecture-diff.md` still reflect the older implementation-side model and need a later refactor.
+- `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently reports no unresolved structural mismatch inside the modeled slice.
+- The current SVG should be read as a clean baseline for the modeled slice, not as a starred divergence map.
 
 ## How To Read The Lisp Files
 
@@ -98,7 +100,7 @@ Both `.lisp` files use **keyword-style s-expression** (Common Lisp / Emacs Lisp 
 
 A node gains a `*` marker when **plan-side blueprint and code-side implementation don't agree**.
 
-At this moment, the operation-first graph is being rebuilt from the plan side first, so the SVG may temporarily omit `*` markers until the code-side model is upgraded to the same layer semantics.
+At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has no unresolved structural mismatch, so the SVG is intentionally rendered without `*` markers.
 
 When divergence markers are enabled:
 
@@ -106,15 +108,15 @@ When divergence markers are enabled:
 - **In plan, not in code** → plan promises behavior that has no corresponding implementation yet.
 - **Both exist but with different shape** → e.g. plan says one response flow, code has a different handler/module split.
 
-**Current divergences** (as of 2026-04-09 baseline): see [`architecture-diff.md`](./architecture-diff.md). Summary: 4 extra CLI commands in code (`node-check`, `recover`, `repair`, `live-proxy`), plus a `core-misc` catch-all that the plan does not classify.
+**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md). For the currently modeled operation slice, there is no remaining unresolved structure mismatch.
 
 ## Regenerating This View
 
 This baseline was built by hand. The intent is for future iterations to automate:
 
 1. `architecture-doc.lisp` — generated from `docs/plan/*.md` plus `docs/features/operations/*.md`, with plan as the authority source.
-2. `architecture-code.lisp` — generated by scanning `apps/cli/src/commands/mod.rs`, `apps/cli/src/server/router.rs` (via `.route(...)` calls), and `crates/core/src/*/mod.rs`.
-3. `architecture-diff.md` — generated by a diff tool that walks both trees and flags mismatches.
+2. `architecture-code.lisp` — generated by tracing implementation flows across `apps/web/src/` user actions and callbacks, `apps/cli/src/server/` handlers, and leaf modules in `crates/core/src/`.
+3. `architecture-diff.md` — generated by an operation-level diff tool that walks both trees and flags mismatches by flow, response split, or module/core mapping.
 4. `architecture.svg` — run `dot -Tsvg architecture.dot -o architecture.svg`.
 
 Until the generators exist, treat the `.lisp` files as **hand-curated views**. Update the plan-side view first when the blueprint changes, then update the code-side view only to reflect actual implementation progress against that blueprint.

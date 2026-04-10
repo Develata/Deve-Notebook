@@ -5,6 +5,6 @@
             color="#16a34a";
 
             mod_proto_ws [label="protocol::ws", fillcolor="#f0fdf4"];
-            mod_tree [label="tree::structure", fillcolor="#f0fdf4"];
+            mod_tree [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
             mod_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
         }
