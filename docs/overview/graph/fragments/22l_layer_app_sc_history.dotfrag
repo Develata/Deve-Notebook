@@ -1,0 +1,11 @@
+        subgraph cluster_app_sc_history {
+            label="history / commit diff [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_history_request [label="ClientMessage::GetCommitHistory", fillcolor="#bfdbfe"];
+            app_sc_history_receive [label="ServerMessage::CommitHistory", fillcolor="#eff6ff"];
+            app_sc_commit_diff_request [label="ClientMessage::GetCommitDiff", fillcolor="#bfdbfe"];
+            app_sc_commit_diff_receive [label="ServerMessage::CommitDiffResult", fillcolor="#eff6ff"];
+        }

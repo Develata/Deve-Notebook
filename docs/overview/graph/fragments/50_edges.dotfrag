@@ -32,6 +32,10 @@
     op_sc_keep_fs -> app_sc_keep_fs;
     op_sc_keep_ledger -> app_sc_keep_ledger;
     op_sc_conflict_resolved -> app_sc_conflict_resolved;
+    op_sc_history_request -> app_sc_history_request;
+    op_sc_history_receive -> app_sc_history_receive;
+    op_sc_commit_diff_request -> app_sc_commit_diff_request;
+    op_sc_commit_diff_receive -> app_sc_commit_diff_receive;
     op_sc_publish_focus -> app_sc_publish_draft;
     op_sc_publish_type -> app_sc_publish_draft;
     op_sc_publish_submit -> app_sc_publish_gate;
@@ -140,6 +144,14 @@
     app_sc_keep_ledger -> mod_ledger_conflict;
     app_sc_keep_ledger -> mod_proto_ws_conflict;
     app_sc_conflict_resolved -> mod_proto_ws_conflict;
+    app_sc_history_request -> mod_sc_history;
+    app_sc_history_request -> mod_proto_ws_history;
+    app_sc_history_receive -> mod_sc_history;
+    app_sc_history_receive -> mod_proto_ws_history;
+    app_sc_commit_diff_request -> mod_sc_history;
+    app_sc_commit_diff_request -> mod_proto_ws_history;
+    app_sc_commit_diff_receive -> mod_sc_history;
+    app_sc_commit_diff_receive -> mod_proto_ws_history;
     app_sc_publish_submit -> mod_sc_commit_publish;
     app_sc_publish_submit -> mod_ledger_publish;
     app_sc_publish_submit -> mod_proto_ws_publish;
@@ -235,6 +247,8 @@
     mod_sync_conflict -> core_sync_conflict;
     mod_ledger_conflict -> core_ledger_conflict;
     mod_proto_ws_conflict -> core_proto_conflict;
+    mod_sc_history -> core_sc_history;
+    mod_proto_ws_history -> core_proto_history;
     mod_sc_commit_publish -> core_sc_publish;
     mod_ledger_publish -> core_ledger_publish;
     mod_proto_ws_publish -> core_proto_publish;

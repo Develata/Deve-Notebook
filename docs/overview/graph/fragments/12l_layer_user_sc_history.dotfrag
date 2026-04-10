@@ -1,0 +1,11 @@
+            subgraph cluster_user_sc_history {
+                label="history / commit diff [07_diff_logic]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_history_request [label="Request Commit History", fillcolor="#fde68a"];
+                op_sc_history_receive [label="Receive Commit History", fillcolor="#fef9c3"];
+                op_sc_commit_diff_request [label="Request Commit Diff", fillcolor="#fde68a"];
+                op_sc_commit_diff_receive [label="Receive Commit Diff Result", fillcolor="#fef9c3"];
+            }

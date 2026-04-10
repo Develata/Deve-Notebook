@@ -26,6 +26,8 @@
 - 该示例将 runtime 控件拆为刷新 merge 状态、切换 sync mode、请求 pending ops、确认 merge、接收 runtime status 五段。
 - CommitAndPush 原子操作示例见 `docs/features/operations/sc_commit_and_push.md`。
 - 该示例将发布型提交拆为聚焦输入框、输入 message、发送 `CommitAndPush`、接收 `CommitAck` 四段。
+- Commit History / Commit Diff 原子操作示例见 `docs/features/operations/sc_history_commit_diff.md`。
+- 该示例将只读查询链拆为请求 history、接收 history、请求 commit diff、接收 diff result 四段。
 
 ## 功能项
 

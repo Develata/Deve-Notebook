@@ -1,0 +1,9 @@
+        subgraph cluster_mod_sc_history {
+            label="history / commit diff [07_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc_history [label="source_control::commits", fillcolor="#f0fdf4"];
+            mod_proto_ws_history [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
