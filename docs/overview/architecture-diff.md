@@ -21,7 +21,7 @@ view.
 |---|---|---|
 | Flow set | aligned | the same 21 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
-| Application responses | drift | `trusted external agent boundary` still differs between plan and code |
+| Application responses | aligned | current response taxonomy now matches across the modeled slice |
 | Module/core ownership | aligned | current core ownership and tree leaf naming match |
 | Scope hygiene | aligned | legacy inventory has been removed from the doc-side slice |
 
@@ -53,35 +53,31 @@ These flows are now structurally close across all four layers:
 For these flows, the user-operation IDs, application groups, and
 core-domain ownership are now effectively aligned between plan and code.
 
-## 2. Known Divergence: `trusted external agent boundary`
+## 2. Current Alignment Notes
 
-The newly modeled `trusted external agent boundary` flow is intentionally
-not yet bijective at the application layer.
+The previously tracked `trusted external agent boundary` mismatch is now
+closed at the application layer.
 
-Plan-side blueprint requires:
+Plan-side blueprint required:
 
-- `trusted-cli` to remain default-off
+- `trusted-cli` default-off
 - `ai.agent_bridge.enabled = true`
 - `ai.agent_bridge.trusted = true`
 - `AGENT_CLI_PATH` explicitly set
-- failure to satisfy any gate must fall back to `native` and show a
-  clear disabled reason
+- failure to satisfy any gate must fail closed and surface a clear
+  disabled reason
 
-Current code-side implementation does not yet match that shape:
+Current code-side implementation now matches that contract:
 
 - [settings_sections.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/settings_sections.rs)
-  exposes the `trusted-cli` switch directly
-- [extensions.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/sidebar/extensions.rs)
-  also exposes `agent-bridge` as a selectable channel without a trust gate
+  reads backend capabilities and disables the `trusted-cli` choice when
+  gates are not satisfied
+- [extensions_channels.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/sidebar/extensions_channels.rs)
+  renders the channel as unavailable with an explicit reason
 - [agent_bridge.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge.rs)
-  reads `AGENT_CLI_PATH` or falls back to `opencode`, then always attempts
-  to spawn the CLI
-
-So the mismatch is not in flow presence or core ownership. It is in
-application-layer contract:
-
-- plan says `guard -> enable or fallback`
-- code currently does `select -> spawn`
+  now fail-closes on policy checks instead of defaulting to `opencode`
+- [policy.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge/policy.rs)
+  centralizes the `enabled + trusted + AGENT_CLI_PATH` gate
 
 ## 3. Current State
 
@@ -89,21 +85,20 @@ Within the currently modeled operation slice:
 
 - flow set is aligned
 - user-operation IDs are aligned
+- application responses are aligned
 - module ownership is aligned
 - core ownership is aligned
-- one application-layer mismatch remains in `trusted external agent boundary`
 
-This means the slice is no longer a fully clean bijective baseline, but
-it is still narrow and explicit.
+This means the slice is once again a practical clean bijective baseline.
 
 ## 4. What To Do Next
 
-1. Implement the `trusted-cli` visibility and fallback gate so code
-   matches `enabled + trusted + AGENT_CLI_PATH`.
-2. Regenerate `*` markers into the SVG from this operation-level diff
-   instead of from the old inventory report.
-3. Expand the shared slice with additional flows only if they can be
+1. Regenerate `*` markers into the SVG from this operation-level diff
+   instead of from the old inventory report if unresolved drift returns.
+2. Expand the shared slice with additional flows only if they can be
    added to both plan-side and code-side views together.
+3. Keep `trusted external agent boundary` under this same contract if
+   backend selection or agent spawn behavior changes again.
 
-For the currently modeled slice, every flow except `trusted external
-agent boundary` reads as a practical bijective baseline.
+For the currently modeled slice, all 21 high-value flows now read as a
+practical bijective baseline.
