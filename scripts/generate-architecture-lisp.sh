@@ -31,7 +31,55 @@ concat_fragments() {
       cat "$fragment"
       printf '\n'
     done
-  } > "$output"
+  } | awk '
+    function flush_pair() {
+      if (pair != "") {
+        print pair
+        pair = ""
+        pair_kind = ""
+      }
+    }
+
+    function form_kind(line, kind) {
+      if (line ~ /^\(group / && line ~ /\)$/) return "group"
+      if (line ~ /^\(user-operation / && line ~ /\)$/) return "user-operation"
+      if (line ~ /^\(application / && line ~ /\)$/) return "application"
+      if (line ~ /^\(module / && line ~ /\)$/) return "module"
+      if (line ~ /^\(core / && line ~ /\)$/) return "core"
+      return ""
+    }
+
+    {
+      kind = form_kind($0)
+
+      if (kind == "") {
+        flush_pair()
+        if ($0 != "") print
+        next
+      }
+
+      if (pair == "") {
+        pair = $0
+        pair_kind = kind
+        next
+      }
+
+      if (pair_kind == kind) {
+        print pair " " $0
+        pair = ""
+        pair_kind = ""
+        next
+      }
+
+      flush_pair()
+      pair = $0
+      pair_kind = kind
+    }
+
+    END {
+      flush_pair()
+    }
+  ' > "$output"
 }
 
 concat_fragments "$DOC_FRAG_DIR" "$OUT_DOC" "doc"
