@@ -1,0 +1,11 @@
+            subgraph cluster_user_sc_commit_publish {
+                label="commit-and-push [07_diff_logic + 12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_publish_focus [label="Focus Publish Commit Input", fillcolor="#fef9c3"];
+                op_sc_publish_type [label="Type Publish Commit Message", fillcolor="#fef9c3"];
+                op_sc_publish_submit [label="Submit CommitAndPush", fillcolor="#fde68a"];
+                op_sc_publish_result [label="Receive Publish Commit Ack", fillcolor="#fef9c3"];
+            }

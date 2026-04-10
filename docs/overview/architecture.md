@@ -59,7 +59,7 @@ The current graph also carries three extra architecture cues:
 - `architecture-doc.lisp` has been refactored to an operation-first baseline.
 - `architecture-code.lisp` has also been uplifted to the same operation-first layer model, but it is still a hand-curated implementation baseline rather than a generated truth source.
 - `architecture.dot` should now be read as the plan-side blueprint graph for that new layer model.
-- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `repo-scoped sync handshake`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `merge peer`, `merge runtime`, `native ai-chat`, and `open-doc`.
+- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `repo-scoped sync handshake`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `commit-and-push`, `merge peer`, `merge runtime`, `native ai-chat`, and `open-doc`.
 - `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently reports no unresolved structural mismatch inside the modeled slice.
 - The current SVG should be read as a clean baseline for the modeled slice, not as a starred divergence map.
 

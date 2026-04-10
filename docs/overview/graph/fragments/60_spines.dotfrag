@@ -31,6 +31,14 @@
     app_sc_commit_spine -> mod_sc_commit_spine [penwidth=2.2, color="#0f172a"];
     mod_sc_commit_spine -> core_sc_commit_spine [penwidth=2.2, color="#0f172a"];
 
+    user_sc_commit_publish_spine [label="commit-and-push flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_commit_publish_spine [label="", shape=point, width=0.01];
+    mod_sc_commit_publish_spine [label="", shape=point, width=0.01];
+    core_sc_commit_publish_spine [label="", shape=point, width=0.01];
+    user_sc_commit_publish_spine -> app_sc_commit_publish_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_commit_publish_spine -> mod_sc_commit_publish_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_commit_publish_spine -> core_sc_commit_publish_spine [penwidth=2.2, color="#0f172a"];
+
     user_ai_chat_spine [label="native ai-chat flow", shape=plaintext, fontcolor="#92400e"];
     app_ai_chat_spine [label="", shape=point, width=0.01];
     mod_ai_chat_spine [label="", shape=point, width=0.01];

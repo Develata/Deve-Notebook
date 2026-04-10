@@ -1,0 +1,10 @@
+        subgraph cluster_mod_sc_commit_publish {
+            label="commit-and-push [07_diff_logic + 12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sc_commit_publish [label="source_control::commits", fillcolor="#f0fdf4"];
+            mod_ledger_publish [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_publish [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

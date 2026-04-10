@@ -1,0 +1,10 @@
+        subgraph cluster_core_sc_commit_publish {
+            label="commit-and-push [07_diff_logic + 12_commands]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sc_publish [label="source_control\n(workflow)", fillcolor="#fdf2f8"];
+            core_ledger_publish [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_publish [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

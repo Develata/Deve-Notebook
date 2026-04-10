@@ -24,6 +24,8 @@
 - 该示例将 peer merge 拆为选择 peer、发送 `MergePeer`、接收 `MergeComplete`、接收 merge conflict 四段响应。
 - Merge Runtime 原子操作示例见 `docs/features/operations/sc_merge_runtime.md`。
 - 该示例将 runtime 控件拆为刷新 merge 状态、切换 sync mode、请求 pending ops、确认 merge、接收 runtime status 五段。
+- CommitAndPush 原子操作示例见 `docs/features/operations/sc_commit_and_push.md`。
+- 该示例将发布型提交拆为聚焦输入框、输入 message、发送 `CommitAndPush`、接收 `CommitAck` 四段。
 
 ## 功能项
 

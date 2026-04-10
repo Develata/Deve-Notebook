@@ -11,10 +11,6 @@
 
 (system :name deve-note :version "0.0.1" :layers (user-operation application module core))
 
-;; =============================================================================
-;; Layer 1 - User Operation
-;; =============================================================================
-
 (layer :id user-operation :order 1 :description "Atomic UI/runtime actions inferred from concrete web callbacks, effects, and authenticated endpoints.")
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
@@ -27,6 +23,7 @@
 (group :id grp.user.sc-discard :layer user-operation :label "discard pending" :members (op.sc.discard.request op.sc.discard.receive-ack))
 (group :id grp.user.sc-conflict :layer user-operation :label "resolve conflict" :members (op.sc.conflict.keep-fs op.sc.conflict.keep-ledger op.sc.conflict.receive-resolved))
 (group :id grp.user.sc-commit :layer user-operation :label "source-control commit" :members (op.sc.commit.focus-input op.sc.commit.type-message op.sc.commit.submit op.sc.commit.receive-result))
+(group :id grp.user.sc-commit-publish :layer user-operation :label "commit-and-push" :members (op.sc.commit-publish.focus-input op.sc.commit-publish.type-message op.sc.commit-publish.submit op.sc.commit-publish.receive-result))
 (group :id grp.user.sc-merge-peer :layer user-operation :label "merge peer" :members (op.sc.merge-peer.choose-target op.sc.merge-peer.request op.sc.merge-peer.receive-complete op.sc.merge-peer.receive-conflict))
 (group :id grp.user.sc-merge-runtime :layer user-operation :label "merge runtime" :members (op.sc.merge-runtime.refresh op.sc.merge-runtime.change-mode op.sc.merge-runtime.request-pending op.sc.merge-runtime.confirm op.sc.merge-runtime.receive-status))
 (group :id grp.user.ai-chat :layer user-operation :label "native ai-chat" :members (op.ai.chat.open-panel op.ai.chat.type-message op.ai.chat.submit op.ai.chat.receive-stream))
@@ -72,6 +69,10 @@
 (user-operation :id op.sc.commit.type-message :label "Type Commit Message" :kind text-input :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit_message_box.rs,commit_controller.rs}" :calls (app.sc.commit.draft))
 (user-operation :id op.sc.commit.submit :label "Submit Commit" :kind submit :surface source-control-panel :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs" :calls (app.sc.commit.gate app.sc.commit.submit))
 (user-operation :id op.sc.commit.receive-result :label "Receive Commit Result" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.commit.result))
+(user-operation :id op.sc.commit-publish.focus-input :label "Focus Publish Commit Input" :kind focus :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit.rs,commit_controller.rs}" :calls (app.sc.commit-publish.draft))
+(user-operation :id op.sc.commit-publish.type-message :label "Type Publish Commit Message" :kind text-input :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit_message_box.rs,commit_controller.rs}" :calls (app.sc.commit-publish.draft))
+(user-operation :id op.sc.commit-publish.submit :label "Submit CommitAndPush" :kind submit :surface source-control-panel :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/ws/route/source_control.rs | apps/cli/src/server/handlers/source_control/commits.rs" :calls (app.sc.commit-publish.gate app.sc.commit-publish.submit))
+(user-operation :id op.sc.commit-publish.receive-result :label "Receive Publish Commit Ack" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (app.sc.commit-publish.result))
 (user-operation :id op.sc.merge-peer.choose-target :label "Choose Merge Peer Target" :kind select :surface command-palette :code "apps/web/src/components/command_palette/registry.rs" :calls (app.sc.merge-peer.select))
 (user-operation :id op.sc.merge-peer.request :label "Request MergePeer" :kind request :surface workspace-runtime :code "apps/web/src/hooks/use_core/callbacks_sync_write.rs | apps/cli/src/server/ws/route/merge.rs | apps/cli/src/server/handlers/merge/peer.rs" :calls (app.sc.merge-peer.request))
 (user-operation :id op.sc.merge-peer.receive-complete :label "Receive MergeComplete" :kind async-result :surface workspace-runtime :code "apps/web/src/hooks/use_core/effects/message_runtime_sync.rs" :calls (app.sc.merge-peer.complete))
@@ -91,10 +92,6 @@
 (user-operation :id op.repo.open-doc.request-open :label "Request OpenDoc" :kind request :surface editor-state :code "apps/web/src/editor/hook_open.rs" :calls (app.repo.doc.open))
 (user-operation :id op.repo.open-doc.receive-content :label "Receive Document Content" :kind async-result :surface editor :code "apps/web/src/hooks/use_core/effects/message_projection_doc_selection.rs" :calls (app.repo.doc.receive))
 
-;; =============================================================================
-;; Layer 2 - Application Response
-;; =============================================================================
-
 (layer :id application :order 2 :description "Concrete callbacks, effects, HTTP handlers, and WS handlers that receive user operations.")
 (group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result))
 (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
@@ -107,6 +104,7 @@
 (group :id grp.app.sc-discard :layer application :label "discard pending" :members (app.sc.discard.request app.sc.discard.result))
 (group :id grp.app.sc-conflict :layer application :label "resolve conflict" :members (app.sc.conflict.keep-fs app.sc.conflict.keep-ledger app.sc.conflict.resolved))
 (group :id grp.app.sc-commit :layer application :label "source-control commit" :members (app.sc.commit.draft app.sc.commit.gate app.sc.commit.submit app.sc.commit.result))
+(group :id grp.app.sc-commit-publish :layer application :label "commit-and-push" :members (app.sc.commit-publish.draft app.sc.commit-publish.gate app.sc.commit-publish.submit app.sc.commit-publish.result))
 (group :id grp.app.sc-merge-peer :layer application :label "merge peer" :members (app.sc.merge-peer.select app.sc.merge-peer.request app.sc.merge-peer.complete app.sc.merge-peer.conflict))
 (group :id grp.app.sc-merge-runtime :layer application :label "merge runtime" :members (app.sc.merge-runtime.refresh app.sc.merge-runtime.set-mode app.sc.merge-runtime.get-pending app.sc.merge-runtime.confirm app.sc.merge-runtime.status))
 (group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
@@ -152,6 +150,10 @@
 (application :id app.sc.commit.gate :label "repo_write_block_untracked" :kind runtime-gate :code "apps/web/src/hooks/use_core/write_gate_logic.rs" :calls ())
 (application :id app.sc.commit.submit :label "ClientMessage::Commit" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/ws/route/source_control.rs" :calls (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
 (application :id app.sc.commit.result :label "CommitAck" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_sc_commit mod_proto_ws))
+(application :id app.sc.commit-publish.draft :label "publish draft state" :kind ui-shell :code "apps/web/src/components/sidebar/source_control/{commit.rs,commit_controller.rs}" :calls ())
+(application :id app.sc.commit-publish.gate :label "repo_write_block_untracked" :kind runtime-gate :code "apps/web/src/hooks/use_core/write_gate_logic.rs" :calls ())
+(application :id app.sc.commit-publish.submit :label "ClientMessage::CommitAndPush" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/ws/route/source_control.rs | apps/cli/src/server/handlers/source_control/commits.rs" :calls (mod_sc_commit mod_ledger_manager mod_proto_ws))
+(application :id app.sc.commit-publish.result :label "CommitAck" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs" :calls (mod_sc_commit mod_proto_ws))
 (application :id app.sc.merge-peer.select :label "command_palette::merge_peer" :kind ui-shell :code "apps/web/src/components/command_palette/registry.rs" :calls (app.sc.merge-peer.request))
 (application :id app.sc.merge-peer.request :label "ClientMessage::MergePeer" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sync_write.rs | apps/cli/src/server/ws/route/merge.rs | apps/cli/src/server/handlers/merge/peer.rs" :calls (mod_sync_reconcile mod_ledger_merge mod_proto_ws))
 (application :id app.sc.merge-peer.complete :label "MergeComplete" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_runtime_sync.rs | apps/cli/src/server/handlers/merge/peer.rs" :calls (mod_sync_reconcile mod_proto_ws))
@@ -170,10 +172,6 @@
 (application :id app.repo.doc.open :label "ClientMessage::OpenDoc" :kind ws-handler :code "apps/web/src/editor/hook_open.rs | apps/cli/src/server/handlers/document/open.rs" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "Snapshot -> selection/apply" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_projection_doc_selection.rs" :calls (mod_proto_ws mod_ledger_manager))
 
-;; =============================================================================
-;; Layer 3 - Module
-;; =============================================================================
-
 (layer :id module :order 3 :description "Leaf engineering modules normalized to the same grain as the plan-side blueprint.")
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
@@ -186,6 +184,7 @@
 (group :id grp.mod.sc-discard :layer module :label "discard pending" :members (mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-conflict :layer module :label "resolve conflict" :members (mod_sc_pending-fs mod_sc_staging mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-commit :layer module :label "source-control commit" :members (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
+(group :id grp.mod.sc-commit-publish :layer module :label "commit-and-push" :members (mod_sc_commit mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-merge-peer :layer module :label "merge peer" :members (mod_sync_reconcile mod_ledger_merge mod_proto_ws))
 (group :id grp.mod.sc-merge-runtime :layer module :label "merge runtime" :members (mod_sync_manual mod_proto_ws))
 (group :id grp.mod.ai-chat :layer module :label "native ai-chat" :members (mod_plugin_chat mod_proto_ws))
@@ -207,10 +206,6 @@
 (module :id mod_sec_jwt :label "security::jwt" :parent core.security :code "crates/core/src/security/auth/jwt.rs")
 (module :id mod_plugin_chat :label "plugin::chat_stream" :parent core.plugin :code "crates/core/src/plugin/runtime/{chat_stream.rs,host/chat.rs}")
 
-;; =============================================================================
-;; Layer 4 - Core
-;; =============================================================================
-
 (layer :id core :order 4 :description "Top-level subsystems under crates/core/src/ used by the currently modeled implementation slice.")
 (group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
 (group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
@@ -223,6 +218,7 @@
 (group :id grp.core.sc-discard :layer core :label "discard pending" :members (core.sync core.ledger core.protocol))
 (group :id grp.core.sc-conflict :layer core :label "resolve conflict" :members (core.source_control core.sync core.ledger core.protocol))
 (group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol))
+(group :id grp.core.sc-commit-publish :layer core :label "commit-and-push" :members (core.source_control core.ledger core.protocol))
 (group :id grp.core.sc-merge-peer :layer core :label "merge peer" :members (core.sync core.ledger core.protocol))
 (group :id grp.core.sc-merge-runtime :layer core :label "merge runtime" :members (core.sync core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
