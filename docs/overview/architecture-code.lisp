@@ -1,5 +1,6 @@
 ;;; architecture-code.lisp - Implementation-side keyword-style architecture view.
 (system :name deve-note :version "0.0.1" :layers (user-operation application module core))
+
 (layer :id user-operation :order 1 :description "Atomic UI/runtime actions inferred from concrete web callbacks, effects, and authenticated endpoints.")
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
@@ -71,6 +72,7 @@
 (user-operation :id op.sc.history.receive :label "Receive Commit History" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs" :calls (app.sc.history.receive))
 (user-operation :id op.sc.commit-diff.request :label "Request Commit Diff" :kind request :surface source-control-panel :code "apps/web/src/hooks/use_core/callbacks_sc_read_diff.rs | apps/cli/src/server/ws/route/source_control.rs | apps/cli/src/server/handlers/source_control/commits.rs" :calls (app.sc.commit-diff.request))
 (user-operation :id op.sc.commit-diff.receive :label "Receive Commit Diff Result" :kind async-result :surface source-control-panel :code "apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs" :calls (app.sc.commit-diff.receive))
+
 (user-operation :id op.sc.commit-publish.focus-input :label "Focus Publish Commit Input" :kind focus :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit.rs,commit_controller.rs}" :calls (app.sc.commit-publish.draft))
 (user-operation :id op.sc.commit-publish.type-message :label "Type Publish Commit Message" :kind text-input :surface source-control-panel :code "apps/web/src/components/sidebar/source_control/{commit_message_box.rs,commit_controller.rs}" :calls (app.sc.commit-publish.draft))
 (user-operation :id op.sc.commit-publish.submit :label "Submit CommitAndPush" :kind submit :surface source-control-panel :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/ws/route/source_control.rs | apps/cli/src/server/handlers/source_control/commits.rs" :calls (app.sc.commit-publish.gate app.sc.commit-publish.submit))
@@ -165,6 +167,7 @@
 (application :id app.sc.history.receive :label "ServerMessage::CommitHistory" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs" :calls (mod_sc_commit mod_proto_ws))
 (application :id app.sc.commit-diff.request :label "ClientMessage::GetCommitDiff" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_read_diff.rs | apps/cli/src/server/ws/route/source_control.rs | apps/cli/src/server/handlers/source_control/commits.rs" :calls (mod_sc_commit mod_proto_ws))
 (application :id app.sc.commit-diff.receive :label "ServerMessage::CommitDiffResult" :kind async-result :code "apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs" :calls (mod_sc_commit mod_proto_ws))
+
 (application :id app.sc.commit-publish.draft :label "publish draft state" :kind ui-shell :code "apps/web/src/components/sidebar/source_control/{commit.rs,commit_controller.rs}" :calls ())
 (application :id app.sc.commit-publish.gate :label "repo_write_block_untracked" :kind runtime-gate :code "apps/web/src/hooks/use_core/write_gate_logic.rs" :calls ())
 (application :id app.sc.commit-publish.submit :label "ClientMessage::CommitAndPush" :kind ws-handler :code "apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs | apps/cli/src/server/ws/route/source_control.rs | apps/cli/src/server/handlers/source_control/commits.rs" :calls (mod_sc_commit mod_ledger_manager mod_proto_ws))
@@ -186,9 +189,12 @@
 (application :id app.repo.quick-open.select-doc :label "on_doc_select" :kind ui-shell :code "apps/web/src/hooks/use_core/callbacks_doc_select.rs" :calls (app.repo.doc.open))
 (application :id app.repo.doc.open :label "ClientMessage::OpenDoc" :kind ws-handler :code "apps/web/src/editor/hook_open.rs | apps/cli/src/server/handlers/document/open.rs" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "Snapshot -> selection/apply" :kind async-result :code "apps/web/src/hooks/use_core/effects/message_projection_doc_selection.rs" :calls (mod_proto_ws mod_ledger_manager))
+
 (layer :id module :order 3 :description "Leaf engineering modules normalized to the same grain as the plan-side blueprint.")
-(group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth)) (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
-(group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws)) (group :id grp.mod.sync-handshake :layer module :label "repo-scoped sync handshake" :members (mod_sync_handshake mod_proto_ws))
+(group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
+(group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
+(group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws))
+(group :id grp.mod.sync-handshake :layer module :label "repo-scoped sync handshake" :members (mod_sync_handshake mod_proto_ws))
 (group :id grp.mod.key-exchange :layer module :label "repo-scoped key exchange" :members (mod_sync_repo-scoped mod_sec_storage mod_proto_ws))
 (group :id grp.mod.sync-transfer :layer module :label "repo-scoped sync transfer" :members (mod_sync_transfer mod_proto_ws))
 (group :id grp.mod.branch-switch :layer module :label "branch-switch" :members (mod_proto_ws mod_tree_structure))
@@ -224,7 +230,8 @@
 (module :id mod_sec_jwt :label "security::jwt" :parent core.security :code "crates/core/src/security/auth/jwt.rs")
 (module :id mod_plugin_chat :label "plugin::chat_stream" :parent core.plugin :code "crates/core/src/plugin/runtime/{chat_stream.rs,host/chat.rs}")
 (layer :id core :order 4 :description "Top-level subsystems under crates/core/src/ used by the currently modeled implementation slice.")
-(group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol)) (group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
+(group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
+(group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
 (group :id grp.core.command-palette :layer core :label "command-palette" :members (core.tree core.plugin core.protocol))
 (group :id grp.core.sync-handshake :layer core :label "repo-scoped sync handshake" :members (core.sync core.protocol))
 (group :id grp.core.key-exchange :layer core :label "repo-scoped key exchange" :members (core.sync core.security core.protocol))
@@ -235,7 +242,9 @@
 (group :id grp.core.sc-discard-file :layer core :label "discard file" :members (core.source_control core.sync core.ledger core.protocol))
 (group :id grp.core.sc-discard :layer core :label "discard pending" :members (core.sync core.ledger core.protocol))
 (group :id grp.core.sc-conflict :layer core :label "resolve conflict" :members (core.source_control core.sync core.ledger core.protocol))
-(group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol)) (group :id grp.core.sc-history :layer core :label "history / commit diff" :members (core.source_control core.protocol)) (group :id grp.core.sc-commit-publish :layer core :label "commit-and-push" :members (core.source_control core.ledger core.protocol))
+(group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol))
+(group :id grp.core.sc-history :layer core :label "history / commit diff" :members (core.source_control core.protocol))
+(group :id grp.core.sc-commit-publish :layer core :label "commit-and-push" :members (core.source_control core.ledger core.protocol))
 (group :id grp.core.sc-merge-peer :layer core :label "merge peer" :members (core.sync core.ledger core.protocol))
 (group :id grp.core.sc-merge-runtime :layer core :label "merge runtime" :members (core.sync core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
@@ -247,3 +256,4 @@
 (core :id core.protocol :label "Protocol" :kind runtime :code "crates/core/src/protocol/")
 (core :id core.security :label "Security" :kind runtime :code "crates/core/src/security/")
 (core :id core.plugin :label "Plugin" :kind peripheral :code "crates/core/src/plugin/")
+

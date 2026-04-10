@@ -1,0 +1,2 @@
+;;; architecture-doc.lisp - Plan-first keyword-style architecture view.
+(system :name deve-note :version "0.0.1" :layers (user-operation application module core))
