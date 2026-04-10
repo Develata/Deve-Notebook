@@ -1,0 +1,11 @@
+        subgraph cluster_app_sync_transfer {
+            label="repo-scoped sync transfer [05_network]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sync_request_missing [label="ClientMessage::SyncRequest", fillcolor="#bfdbfe"];
+            app_sync_receive_push [label="ServerMessage::SyncPush", fillcolor="#eff6ff"];
+            app_sync_request_snapshot [label="ClientMessage::SyncSnapshotRequest", fillcolor="#bfdbfe"];
+            app_sync_receive_snapshot [label="ServerMessage::SyncPushSnapshot", fillcolor="#eff6ff"];
+        }

@@ -85,6 +85,19 @@ digraph DeveNoteArchitecture {
                 gate_sync_scope [label="Handshake Gates:\nrepo bound\nscope_nonce valid\nswitches idle", fillcolor="#fde68a", shape=note];
             }
 
+            subgraph cluster_user_sync_transfer {
+                label="repo-scoped sync transfer [05_network]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sync_request_missing [label="Request Missing Ops", fillcolor="#fde68a"];
+                op_sync_receive_push [label="Receive SyncPush", fillcolor="#fef9c3"];
+                op_sync_request_snapshot [label="Request Snapshot Fallback", fillcolor="#fde68a"];
+                op_sync_receive_snapshot [label="Receive SyncPushSnapshot", fillcolor="#fef9c3"];
+                gate_sync_transfer [label="Transfer Gates:\nhandshake ready\nrepo route valid\nvector compared", fillcolor="#fde68a", shape=note];
+            }
+
             subgraph cluster_user_palette {
                 label="command-palette [12_commands]";
                 style="rounded,filled";
@@ -298,6 +311,18 @@ digraph DeveNoteArchitecture {
             app_sync_ready [label="ServerMessage::WriteReady", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_sync_transfer {
+            label="repo-scoped sync transfer [05_network]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sync_request_missing [label="ClientMessage::SyncRequest", fillcolor="#bfdbfe"];
+            app_sync_receive_push [label="ServerMessage::SyncPush", fillcolor="#eff6ff"];
+            app_sync_request_snapshot [label="ClientMessage::SyncSnapshotRequest", fillcolor="#bfdbfe"];
+            app_sync_receive_snapshot [label="ServerMessage::SyncPushSnapshot", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_palette {
             label="command-palette [12_commands]";
             style="rounded,filled";
@@ -489,6 +514,16 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_sync [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_sync_transfer {
+            label="repo-scoped sync transfer [05_network]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sync_transfer_runtime [label="sync::engine::transfer", fillcolor="#f0fdf4"];
+            mod_proto_ws_transfer [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -669,6 +704,16 @@ digraph DeveNoteArchitecture {
 
             core_sync_handshake [label="sync\n(runtime)", fillcolor="#fdf2f8"];
             core_proto_handshake [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_sync_transfer {
+            label="repo-scoped sync transfer [05_network]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sync_transfer [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_proto_transfer [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
         subgraph cluster_core_doc {
@@ -876,6 +921,12 @@ digraph DeveNoteArchitecture {
     op_sync_send -> app_sync_send;
     op_sync_hello -> app_sync_hello;
     op_sync_ready -> app_sync_ready;
+    op_sync_request_missing -> gate_sync_transfer;
+    gate_sync_transfer -> app_sync_request_missing;
+    op_sync_receive_push -> app_sync_receive_push;
+    op_sync_request_snapshot -> gate_sync_transfer;
+    gate_sync_transfer -> app_sync_request_snapshot;
+    op_sync_receive_snapshot -> app_sync_receive_snapshot;
 
     op_branch_open -> app_branch_open;
     op_branch_choose -> app_branch_select;
@@ -978,6 +1029,14 @@ digraph DeveNoteArchitecture {
     app_sync_hello -> mod_proto_ws_sync;
     app_sync_ready -> mod_sync_handshake_runtime;
     app_sync_ready -> mod_proto_ws_sync;
+    app_sync_request_missing -> mod_sync_transfer_runtime;
+    app_sync_request_missing -> mod_proto_ws_transfer;
+    app_sync_receive_push -> mod_sync_transfer_runtime;
+    app_sync_receive_push -> mod_proto_ws_transfer;
+    app_sync_request_snapshot -> mod_sync_transfer_runtime;
+    app_sync_request_snapshot -> mod_proto_ws_transfer;
+    app_sync_receive_snapshot -> mod_sync_transfer_runtime;
+    app_sync_receive_snapshot -> mod_proto_ws_transfer;
 
     app_branch_request -> mod_proto_ws_switch;
     app_branch_request -> mod_tree_switch;
@@ -1034,6 +1093,8 @@ digraph DeveNoteArchitecture {
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
+    mod_sync_transfer_runtime -> core_sync_transfer;
+    mod_proto_ws_transfer -> core_proto_transfer;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
     mod_tree -> core_tree;
@@ -1051,6 +1112,7 @@ digraph DeveNoteArchitecture {
     core_sc_publish -> core_ledger_publish [style=dashed, color="#831843", label="anchors publish commit"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
     core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
+    core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
 
     // group-level spine
@@ -1077,6 +1139,14 @@ digraph DeveNoteArchitecture {
     user_sync_handshake_spine -> app_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
     app_sync_handshake_spine -> mod_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
     mod_sync_handshake_spine -> core_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sync_transfer_spine [label="repo-scoped sync transfer flow", shape=plaintext, fontcolor="#92400e"];
+    app_sync_transfer_spine [label="", shape=point, width=0.01];
+    mod_sync_transfer_spine [label="", shape=point, width=0.01];
+    core_sync_transfer_spine [label="", shape=point, width=0.01];
+    user_sync_transfer_spine -> app_sync_transfer_spine [penwidth=2.2, color="#0f172a"];
+    app_sync_transfer_spine -> mod_sync_transfer_spine [penwidth=2.2, color="#0f172a"];
+    mod_sync_transfer_spine -> core_sync_transfer_spine [penwidth=2.2, color="#0f172a"];
 
     user_sc_commit_spine [label="source-control commit flow", shape=plaintext, fontcolor="#92400e"];
     app_sc_commit_spine [label="", shape=point, width=0.01];

@@ -1,0 +1,12 @@
+            subgraph cluster_user_sync_transfer {
+                label="repo-scoped sync transfer [05_network]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sync_request_missing [label="Request Missing Ops", fillcolor="#fde68a"];
+                op_sync_receive_push [label="Receive SyncPush", fillcolor="#fef9c3"];
+                op_sync_request_snapshot [label="Request Snapshot Fallback", fillcolor="#fde68a"];
+                op_sync_receive_snapshot [label="Receive SyncPushSnapshot", fillcolor="#fef9c3"];
+                gate_sync_transfer [label="Transfer Gates:\nhandshake ready\nrepo route valid\nvector compared", fillcolor="#fde68a", shape=note];
+            }

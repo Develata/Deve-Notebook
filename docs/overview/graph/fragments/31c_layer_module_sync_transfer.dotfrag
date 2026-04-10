@@ -1,0 +1,9 @@
+        subgraph cluster_mod_sync_transfer {
+            label="repo-scoped sync transfer [05_network]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sync_transfer_runtime [label="sync::engine::transfer", fillcolor="#f0fdf4"];
+            mod_proto_ws_transfer [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

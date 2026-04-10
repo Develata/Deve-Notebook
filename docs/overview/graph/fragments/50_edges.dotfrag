@@ -62,6 +62,12 @@
     op_sync_send -> app_sync_send;
     op_sync_hello -> app_sync_hello;
     op_sync_ready -> app_sync_ready;
+    op_sync_request_missing -> gate_sync_transfer;
+    gate_sync_transfer -> app_sync_request_missing;
+    op_sync_receive_push -> app_sync_receive_push;
+    op_sync_request_snapshot -> gate_sync_transfer;
+    gate_sync_transfer -> app_sync_request_snapshot;
+    op_sync_receive_snapshot -> app_sync_receive_snapshot;
 
     op_branch_open -> app_branch_open;
     op_branch_choose -> app_branch_select;
@@ -164,6 +170,14 @@
     app_sync_hello -> mod_proto_ws_sync;
     app_sync_ready -> mod_sync_handshake_runtime;
     app_sync_ready -> mod_proto_ws_sync;
+    app_sync_request_missing -> mod_sync_transfer_runtime;
+    app_sync_request_missing -> mod_proto_ws_transfer;
+    app_sync_receive_push -> mod_sync_transfer_runtime;
+    app_sync_receive_push -> mod_proto_ws_transfer;
+    app_sync_request_snapshot -> mod_sync_transfer_runtime;
+    app_sync_request_snapshot -> mod_proto_ws_transfer;
+    app_sync_receive_snapshot -> mod_sync_transfer_runtime;
+    app_sync_receive_snapshot -> mod_proto_ws_transfer;
 
     app_branch_request -> mod_proto_ws_switch;
     app_branch_request -> mod_tree_switch;
@@ -220,6 +234,8 @@
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
+    mod_sync_transfer_runtime -> core_sync_transfer;
+    mod_proto_ws_transfer -> core_proto_transfer;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
     mod_tree -> core_tree;
@@ -237,4 +253,5 @@
     core_sc_publish -> core_ledger_publish [style=dashed, color="#831843", label="anchors publish commit"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
     core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
+    core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
