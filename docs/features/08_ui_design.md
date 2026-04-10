@@ -37,6 +37,7 @@
 - 主侧栏功能切换必须稳定。
 - `More(...)`、drawer、sheet、sidebar 切换必须语义清晰。
 - 只读、错误、加载、重连等状态必须有明确可见提示。
+- 原子操作示例：[`operations/search_query.md`](./operations/search_query.md)
 
 ### 5. 薄显示层原则
 

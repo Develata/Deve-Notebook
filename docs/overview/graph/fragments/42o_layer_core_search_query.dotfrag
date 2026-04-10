@@ -1,0 +1,10 @@
+        subgraph cluster_core_search_query {
+            label="search/query [14_tech_stack]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_search_query [label="search\n(optional)", fillcolor="#fdf2f8"];
+            core_proto_search [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+

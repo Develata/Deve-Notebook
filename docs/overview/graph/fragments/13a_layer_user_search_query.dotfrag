@@ -1,0 +1,13 @@
+            subgraph cluster_user_search_query {
+                label="search/query [08_ui_design + 14_tech_stack]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_search_open [label="Open Search Surface", fillcolor="#fef9c3"];
+                op_search_query [label="Type Search Query", fillcolor="#fef9c3"];
+                op_search_submit [label="Submit Search Query", fillcolor="#fde68a"];
+                op_search_results [label="Receive Search Results", fillcolor="#fef9c3"];
+                gate_search [label="Search Gates:\nworkspace ready\nscope_nonce valid\nfeature enabled", fillcolor="#fde68a", shape=note];
+            }
+

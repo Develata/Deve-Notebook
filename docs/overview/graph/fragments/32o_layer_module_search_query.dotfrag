@@ -1,0 +1,10 @@
+        subgraph cluster_mod_search_query {
+            label="search/query [14_tech_stack]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_search_service_query [label="search::service", fillcolor="#f0fdf4"];
+            mod_proto_ws_search [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+

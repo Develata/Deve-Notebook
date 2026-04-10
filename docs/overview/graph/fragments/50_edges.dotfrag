@@ -32,6 +32,12 @@
     op_plugin_submit -> app_plugin_dispatch;
     op_plugin_result -> app_plugin_result;
     op_plugin_error -> app_plugin_error;
+    op_search_open -> app_search_open;
+    op_search_query -> app_search_query;
+    op_search_submit -> gate_search;
+    gate_search -> app_search_gate;
+    op_search_submit -> app_search_submit;
+    op_search_results -> app_search_results;
     op_repo_open -> app_repo_menu;
     op_repo_choose -> app_repo_select;
     op_repo_request -> app_repo_request;
@@ -204,6 +210,10 @@
     app_plugin_result -> mod_proto_ws_plugin_boundary;
     app_plugin_error -> mod_plugin_host_boundary;
     app_plugin_error -> mod_proto_ws_plugin_boundary;
+    app_search_submit -> mod_search_service_query;
+    app_search_submit -> mod_proto_ws_search;
+    app_search_results -> mod_search_service_query;
+    app_search_results -> mod_proto_ws_search;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -292,6 +302,8 @@
     mod_plugin_host_boundary -> core_plugin_boundary;
     mod_plugin_rhai_boundary -> core_plugin_boundary;
     mod_proto_ws_plugin_boundary -> core_proto_plugin_boundary;
+    mod_search_service_query -> core_search_query;
+    mod_proto_ws_search -> core_proto_search;
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
@@ -320,3 +332,4 @@
     core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
     core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
+    core_search_query -> core_proto_search [style=dashed, color="#831843", label="returns scoped results"];

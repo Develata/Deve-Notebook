@@ -1,0 +1,62 @@
+# search_query.md - 全文搜索操作流
+
+## Metadata
+
+- `Flow ID`: `flow.search.query`
+- `Domain`: `search`
+- `Related Feature Chapters`: `docs/features/08_ui_design.md`, `docs/features/14_tech_stack.md`
+- `Related Acceptance Cases`: `UI-DESK-003`, `UI-MOB-007`
+
+## Operations
+
+### `op.search.open`
+
+- `Name`: `Open Search Surface`
+- `Surface`: `keyboard-shortcut-or-sidebar`
+- `Trigger`: Search 入口、移动端 Search tab、或全局搜索快捷键
+- `Preconditions`: 应用主界面已加载
+- `Immediate Result`: Unified Search 或 Search 面板显示
+- `Application Entry`: `apps/web/src/components/search_box/`, `apps/web/src/components/mobile_layout/drawers/`
+
+### `op.search.type-query`
+
+- `Name`: `Type Search Query`
+- `Surface`: `search-input`
+- `Trigger`: 在搜索输入框键入全文查询
+- `Preconditions`: Search surface 已打开
+- `Immediate Result`: 查询草稿更新
+- `Application Entry`: `apps/web/src/components/search_box/mod.rs`
+
+### `op.search.submit`
+
+- `Name`: `Submit Search Query`
+- `Surface`: `search-input`
+- `Trigger`: Enter 或搜索提交动作
+- `Preconditions`: workspace ready，repo scope 稳定，未处于 branch/repo switch
+- `Immediate Result`: 发送 `ClientMessage::Search`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_misc.rs`
+
+### `op.search.receive-results`
+
+- `Name`: `Receive Search Results`
+- `Surface`: `search-results`
+- `Trigger`: 服务端返回 `ServerMessage::SearchResults`
+- `Preconditions`: request id 与 `scope_nonce` 匹配当前 workspace
+- `Immediate Result`: 搜索结果列表更新
+- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_dispatch_runtime.rs`
+
+## Response Flow
+
+1. 用户打开搜索入口，应用显示统一搜索 UI。
+2. 用户输入查询，前端更新搜索草稿。
+3. 提交时，前端检查 loading、branch/repo switch 和 `scope_nonce`。
+4. 前端发送 `ClientMessage::Search { request_id, query, limit, scope_nonce }`。
+5. CLI server 校验 browser scope nonce，并进入 search handler。
+6. Standard profile 下调用 `SearchService::search`；LowSpec 或未启用时 fail closed。
+7. 前端只接受 request id 与当前 `scope_nonce` 匹配的 `SearchResults`。
+
+## Notes
+
+- `search/query` 是全文搜索链，不替代 Quick Open 的本地文件候选过滤。
+- `SearchService` 是可选能力；LowSpec profile 允许返回明确 disabled/error。
+- 搜索结果必须保持 repo scope 绑定，不能接受过期 request 或旧 scope 返回。

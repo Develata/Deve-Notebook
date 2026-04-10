@@ -19,6 +19,7 @@
 
 - 低配环境下，用户可能看不到某些重能力或高级扩展。
 - 核心功能必须优先保持稳定，而不是堆叠高消耗特性。
+- 原子操作示例：[`operations/search_query.md`](./operations/search_query.md)
 
 ### 3. 兼容边界
 

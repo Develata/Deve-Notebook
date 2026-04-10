@@ -1,0 +1,13 @@
+        subgraph cluster_app_search_query {
+            label="search/query [08_ui_design + 14_tech_stack]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_search_open [label="UnifiedSearch::open", fillcolor="#eff6ff"];
+            app_search_query [label="UnifiedSearch::query", fillcolor="#eff6ff"];
+            app_search_gate [label="search::scope_gate", fillcolor="#bfdbfe"];
+            app_search_submit [label="ClientMessage::Search", fillcolor="#bfdbfe"];
+            app_search_results [label="ServerMessage::SearchResults", fillcolor="#eff6ff"];
+        }
+

@@ -11,6 +11,7 @@ commit-and-push	sc_commit_publish
 native ai-chat	ai_chat
 trusted external agent boundary	ai_trusted
 plugin-host / plugin-call boundary	plugin_runtime
+search/query	search_query
 repo-switch	repo_switch
 stage / unstage	sc_stage
 discard file	sc_discard_file

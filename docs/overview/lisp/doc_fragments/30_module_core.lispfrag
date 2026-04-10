@@ -19,6 +19,7 @@
 (group :id grp.mod.ai-chat :layer module :label "native ai-chat" :members (mod_plugin_chat mod_proto_ws))
 (group :id grp.mod.ai-trusted-agent :layer module :label "trusted external agent boundary" :members (mod_plugin_host mod_proto_ws))
 (group :id grp.mod.plugin-runtime :layer module :label "plugin-host / plugin-call boundary" :members (mod_plugin_loader mod_plugin_host mod_plugin_rhai mod_proto_ws))
+(group :id grp.mod.search-query :layer module :label "search/query" :members (mod_search_service mod_proto_ws))
 (group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (module :id mod_sync_materialize     :label "sync::materialize"   :chapter 04_storage                     :parent core.sync           :code-area "crates/core/src/sync/materialize.rs")
 (module :id mod_sync_handshake       :label "sync::engine::handshake" :chapter 05_network                :parent core.sync           :code-area "crates/core/src/sync/engine/handshake.rs")
@@ -41,6 +42,7 @@
 (module :id mod_plugin_loader   :label "plugin::loader" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/loader.rs")
 (module :id mod_plugin_host     :label "plugin::runtime::host" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/runtime/host/")
 (module :id mod_plugin_rhai     :label "plugin::runtime::rhai_v1" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/runtime/rhai_v1.rs")
+(module :id mod_search_service  :label "search::service" :chapter 14_tech_stack :parent core.search :code-area "crates/core/src/search/mod.rs")
 
 (layer :id core :order 4 :description "Top-level subsystems under crates/core/src/*. Each owns one authority domain.")
 (group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
@@ -63,6 +65,7 @@
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
 (group :id grp.core.ai-trusted-agent :layer core :label "trusted external agent boundary" :members (core.plugin core.protocol))
 (group :id grp.core.plugin-runtime :layer core :label "plugin-host / plugin-call boundary" :members (core.plugin core.protocol))
+(group :id grp.core.search-query :layer core :label "search/query" :members (core.search core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))
 (core :id core.ledger         :label "Ledger"         :chapter 04_storage             :kind authority :code-area "crates/core/src/ledger/")
 (core :id core.sync           :label "Sync"           :chapter 04_storage             :kind runtime   :code-area "crates/core/src/sync/")
@@ -71,3 +74,4 @@
 (core :id core.protocol       :label "Protocol"       :chapter 05_network             :kind runtime   :code-area "crates/core/src/protocol/")
 (core :id core.security       :label "Security"      :chapter 09_auth                :kind runtime   :code-area "crates/core/src/security/")
 (core :id core.plugin         :label "Plugin"        :chapter 10_ai_agent            :kind peripheral :code-area "crates/core/src/plugin/")
+(core :id core.search         :label "Search"        :chapter 14_tech_stack          :kind optional  :code-area "crates/core/src/search/")
