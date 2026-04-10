@@ -21,6 +21,8 @@ mod commands;
 mod dispatch;
 mod dump_support;
 mod export_entries;
+#[cfg(test)]
+mod main_test;
 mod server;
 
 #[derive(Parser, Debug)]
@@ -57,10 +59,12 @@ pub(crate) enum Commands {
     },
     /// Export ledger to JSONL or Markdown
     Export {
-        #[arg(short, long)]
+        #[arg(short, long, visible_alias = "out")]
         output: Option<String>,
         #[arg(long)]
         repo: Option<String>,
+        #[arg(long)]
+        doc: Option<String>,
         #[arg(long, default_value = "json")]
         format: String,
     },

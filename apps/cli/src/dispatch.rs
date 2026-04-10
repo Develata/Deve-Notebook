@@ -33,8 +33,16 @@ pub async fn run(
         Some(Commands::Export {
             output,
             repo,
+            doc,
             format,
-        }) => commands::export::run(ledger_dir, output, repo, config.snapshot_depth, &format)?,
+        }) => commands::export::run(
+            ledger_dir,
+            output,
+            repo,
+            doc,
+            config.snapshot_depth,
+            &format,
+        )?,
         Some(Commands::Recover { repo }) => {
             commands::recover::run(ledger_dir, vault_path, repo, config.snapshot_depth)?
         }
