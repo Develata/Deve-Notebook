@@ -1,0 +1,9 @@
+        subgraph cluster_mod_sc_merge_runtime {
+            label="merge runtime [07_diff_logic + 05_network]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sync_manual_runtime [label="sync::engine::manual", fillcolor="#f0fdf4"];
+            mod_proto_ws_runtime [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

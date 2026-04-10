@@ -87,6 +87,14 @@
     app_sc_merge_peer_spine -> mod_sc_merge_peer_spine [penwidth=2.2, color="#0f172a"];
     mod_sc_merge_peer_spine -> core_sc_merge_peer_spine [penwidth=2.2, color="#0f172a"];
 
+    user_sc_merge_runtime_spine [label="merge runtime flow", shape=plaintext, fontcolor="#92400e"];
+    app_sc_merge_runtime_spine [label="", shape=point, width=0.01];
+    mod_sc_merge_runtime_spine [label="", shape=point, width=0.01];
+    core_sc_merge_runtime_spine [label="", shape=point, width=0.01];
+    user_sc_merge_runtime_spine -> app_sc_merge_runtime_spine [penwidth=2.2, color="#0f172a"];
+    app_sc_merge_runtime_spine -> mod_sc_merge_runtime_spine [penwidth=2.2, color="#0f172a"];
+    mod_sc_merge_runtime_spine -> core_sc_merge_runtime_spine [penwidth=2.2, color="#0f172a"];
+
     user_palette_spine [label="command-palette flow", shape=plaintext, fontcolor="#92400e"];
     app_palette_spine [label="", shape=point, width=0.01];
     mod_palette_spine [label="", shape=point, width=0.01];

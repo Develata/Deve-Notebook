@@ -9,13 +9,8 @@
         :version "0.0.1"
         :layers (user-operation application module core))
 
-;; Group definitions: each layer may contain multiple domain/flow groups.
-;; Nodes should be interpreted inside their owning group, not as a flat bag.
-
-;; =============================================================================
-;; Layer 1 — User Operation
-;; Source: docs/features/operations/*.md, with plan authority from docs/plan/*
-;; =============================================================================
+;; Groups are layer-internal flow bundles, not a flat bag of nodes.
+;; Layer 1 — User Operation. Source: docs/features/operations/*.md, plan-first.
 
 (layer :id user-operation :order 1
        :description "Atomic user actions. Surface types such as CLI, shortcut, palette, and form are properties, not layer nodes.")
@@ -23,7 +18,7 @@
 (group :id grp.user.web :layer user-operation :kind platform :label "web" :members ())
 (group :id grp.user.desktop :layer user-operation :kind platform :label "desktop" :members ())
 (group :id grp.user.android :layer user-operation :kind platform :label "android" :members ())
-(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.sync-handshake grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-conflict grp.user.sc-commit grp.user.sc-merge-peer grp.user.ai-chat grp.user.open-doc))
+(group :id grp.user.shared-web-desktop :layer user-operation :kind platform-intersection :label "shared(web,desktop)" :members (grp.user.auth-login grp.user.auth-session grp.user.command-palette grp.user.sync-handshake grp.user.branch-switch grp.user.repo-switch grp.user.sc-stage grp.user.sc-discard-file grp.user.sc-discard grp.user.sc-conflict grp.user.sc-commit grp.user.sc-merge-peer grp.user.sc-merge-runtime grp.user.ai-chat grp.user.open-doc))
 (group :id grp.user.shared-all :layer user-operation :kind platform-intersection :label "shared(all)" :members ())
 (group :id grp.user.auth-login :layer user-operation :label "login" :members (op.auth.login.type-username op.auth.login.type-password op.auth.login.submit op.auth.login.receive-result))
 (group :id grp.user.auth-session :layer user-operation :label "session-expired / unauthorized" :members (op.auth.session.resume-workspace op.auth.session.issue-protected-request op.auth.session.receive-unauthorized op.auth.session.enter-reauth-surface))
@@ -37,6 +32,7 @@
 (group :id grp.user.sc-conflict :layer user-operation :label "resolve conflict" :members (op.sc.conflict.keep-fs op.sc.conflict.keep-ledger op.sc.conflict.receive-resolved))
 (group :id grp.user.sc-commit :layer user-operation :label "source-control commit" :members (op.sc.commit.focus-input op.sc.commit.type-message op.sc.commit.submit op.sc.commit.receive-result))
 (group :id grp.user.sc-merge-peer :layer user-operation :label "merge peer" :members (op.sc.merge-peer.choose-target op.sc.merge-peer.request op.sc.merge-peer.receive-complete op.sc.merge-peer.receive-conflict))
+(group :id grp.user.sc-merge-runtime :layer user-operation :label "merge runtime" :members (op.sc.merge-runtime.refresh op.sc.merge-runtime.change-mode op.sc.merge-runtime.request-pending op.sc.merge-runtime.confirm op.sc.merge-runtime.receive-status))
 (group :id grp.user.ai-chat :layer user-operation :label "native ai-chat" :members (op.ai.chat.open-panel op.ai.chat.type-message op.ai.chat.submit op.ai.chat.receive-stream))
 (group :id grp.user.open-doc :layer user-operation :label "open-doc" :members (op.repo.open-doc.open-quick-open op.repo.open-doc.type-query op.repo.open-doc.choose-doc op.repo.open-doc.request-open op.repo.open-doc.receive-content))
 (user-operation :id op.auth.login.type-username :label "Type Username" :kind text-input :surface web-form :chapter 09_auth :feature "docs/features/operations/auth_login.md" :calls (app.auth.form.username-update))
@@ -83,6 +79,11 @@
 (user-operation :id op.sc.merge-peer.request :label "Request MergePeer" :kind request :surface workspace-runtime :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_peer.md" :calls (app.sc.merge-peer.request))
 (user-operation :id op.sc.merge-peer.receive-complete :label "Receive MergeComplete" :kind async-result :surface workspace-runtime :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_peer.md" :calls (app.sc.merge-peer.complete))
 (user-operation :id op.sc.merge-peer.receive-conflict :label "Receive Merge Conflict" :kind async-result :surface diff-view :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_peer.md" :calls (app.sc.merge-peer.conflict))
+(user-operation :id op.sc.merge-runtime.refresh :label "Refresh Merge Runtime" :kind refresh :surface workspace-runtime :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_runtime.md" :calls (app.sc.merge-runtime.refresh))
+(user-operation :id op.sc.merge-runtime.change-mode :label "Change Sync Mode" :kind toggle :surface sync-controls :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_runtime.md" :calls (app.sc.merge-runtime.set-mode))
+(user-operation :id op.sc.merge-runtime.request-pending :label "Request Pending Ops" :kind request :surface sync-controls :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_runtime.md" :calls (app.sc.merge-runtime.get-pending))
+(user-operation :id op.sc.merge-runtime.confirm :label "Confirm Merge" :kind confirm :surface sync-controls :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_runtime.md" :calls (app.sc.merge-runtime.confirm))
+(user-operation :id op.sc.merge-runtime.receive-status :label "Receive Merge Runtime Status" :kind async-result :surface sync-controls :chapter 07_diff_logic :feature "docs/features/operations/sc_merge_runtime.md" :calls (app.sc.merge-runtime.status))
 (user-operation :id op.ai.chat.open-panel :label "Open AI Chat Panel" :kind open :surface workspace-shell :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.panel))
 (user-operation :id op.ai.chat.type-message :label "Type AI Prompt" :kind text-input :surface chat-panel :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.panel))
 (user-operation :id op.ai.chat.submit :label "Submit AI Prompt" :kind submit :surface chat-panel :chapter 10_ai_agent :feature "docs/features/operations/ai_chat.md" :calls (app.ai.chat.send))
@@ -92,10 +93,7 @@
 (user-operation :id op.repo.open-doc.choose-doc :label "Choose Document Result" :kind select :surface keyboard-or-pointer :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.quick-open.select-doc))
 (user-operation :id op.repo.open-doc.request-open :label "Request OpenDoc" :kind request :surface editor-state :chapter 16_web_thin_client_ledger :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.doc.open))
 (user-operation :id op.repo.open-doc.receive-content :label "Receive Document Content" :kind async-result :surface editor :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.doc.receive))
-;; =============================================================================
-;; Layer 2 — Application (HTTP / WS handlers, CLI command glue)
-;; Source: plan chapters + operation flows
-;; =============================================================================
+;; Layer 2 — Application (HTTP / WS handlers, CLI command glue).
 (layer :id application :order 2
        :description "Handlers, callbacks, form actions, request senders, and effect gates that receive user operations and dispatch into modules.")
 (group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result))
@@ -110,6 +108,7 @@
 (group :id grp.app.sc-conflict :layer application :label "resolve conflict" :members (app.sc.conflict.keep-fs app.sc.conflict.keep-ledger app.sc.conflict.resolved))
 (group :id grp.app.sc-commit :layer application :label "source-control commit" :members (app.sc.commit.draft app.sc.commit.gate app.sc.commit.submit app.sc.commit.result))
 (group :id grp.app.sc-merge-peer :layer application :label "merge peer" :members (app.sc.merge-peer.select app.sc.merge-peer.request app.sc.merge-peer.complete app.sc.merge-peer.conflict))
+(group :id grp.app.sc-merge-runtime :layer application :label "merge runtime" :members (app.sc.merge-runtime.refresh app.sc.merge-runtime.set-mode app.sc.merge-runtime.get-pending app.sc.merge-runtime.confirm app.sc.merge-runtime.status))
 (group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
 (group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
 ;; operation-oriented app entries
@@ -157,6 +156,11 @@
 (application :id app.sc.merge-peer.request :label "ClientMessage::MergePeer" :kind ws-handler :chapter 07_diff_logic :calls (mod_sync_reconcile mod_ledger_merge mod_proto_ws))
 (application :id app.sc.merge-peer.complete :label "MergeComplete" :kind async-result :chapter 07_diff_logic :calls (mod_sync_reconcile mod_proto_ws))
 (application :id app.sc.merge-peer.conflict :label "DocDiff / conflict" :kind async-result :chapter 07_diff_logic :calls (mod_ledger_merge mod_proto_ws))
+(application :id app.sc.merge-runtime.refresh :label "GetSyncMode / GetPendingOps" :kind runtime-gate :chapter 07_diff_logic :calls (mod_sync_manual mod_proto_ws))
+(application :id app.sc.merge-runtime.set-mode :label "ClientMessage::SetSyncMode" :kind ws-handler :chapter 07_diff_logic :calls (mod_sync_manual mod_proto_ws))
+(application :id app.sc.merge-runtime.get-pending :label "ClientMessage::GetPendingOps" :kind ws-handler :chapter 07_diff_logic :calls (mod_sync_manual mod_proto_ws))
+(application :id app.sc.merge-runtime.confirm :label "ClientMessage::ConfirmMerge" :kind ws-handler :chapter 07_diff_logic :calls (mod_sync_manual mod_proto_ws))
+(application :id app.sc.merge-runtime.status :label "SyncModeStatus / PendingOpsInfo / MergeComplete" :kind async-result :chapter 07_diff_logic :calls (mod_sync_manual mod_proto_ws))
 (application :id app.ai.chat.panel :label "ai::panel / draft" :kind ui-shell :chapter 10_ai_agent :calls ())
 (application :id app.ai.chat.send :label "ai::send_plugin_call" :kind ws-handler :chapter 10_ai_agent :calls (mod_plugin_chat mod_proto_ws))
 (application :id app.ai.chat.stream :label "ai::receive_stream" :kind async-result :chapter 10_ai_agent :calls (mod_plugin_chat mod_proto_ws))
@@ -165,10 +169,7 @@
 (application :id app.repo.quick-open.select-doc :label "quick_open::select_doc" :kind ui-shell :chapter 06_repository :calls (app.repo.doc.open))
 (application :id app.repo.doc.open :label "editor::open_doc" :kind ws-handler :chapter 16_web_thin_client_ledger :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "editor::receive_doc" :kind async-result :chapter 06_repository :calls (mod_proto_ws mod_ledger_manager))
-;; =============================================================================
-;; Layer 3 — Module (leaf engineering modules)
-;; Source: docs/plan/ Primary Code Areas fields
-;; =============================================================================
+;; Layer 3 — Module (leaf engineering modules).
 (layer :id module :order 3
        :description "Finest-grained engineering modules — each owns a state machine or contract.")
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
@@ -183,11 +184,13 @@
 (group :id grp.mod.sc-conflict :layer module :label "resolve conflict" :members (mod_sc_pending-fs mod_sc_staging mod_sync_materialize mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-commit :layer module :label "source-control commit" :members (mod_sc_staging mod_sc_commit mod_ledger_manager mod_proto_ws))
 (group :id grp.mod.sc-merge-peer :layer module :label "merge peer" :members (mod_sync_reconcile mod_ledger_merge mod_proto_ws))
+(group :id grp.mod.sc-merge-runtime :layer module :label "merge runtime" :members (mod_sync_manual mod_proto_ws))
 (group :id grp.mod.ai-chat :layer module :label "native ai-chat" :members (mod_plugin_chat mod_proto_ws))
 (group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (module :id mod_sync_materialize     :label "sync::materialize"   :chapter 04_storage                     :parent core.sync           :code-area "crates/core/src/sync/materialize.rs")
 (module :id mod_sync_handshake       :label "sync::engine::handshake" :chapter 05_network                :parent core.sync           :code-area "crates/core/src/sync/engine/handshake.rs")
 (module :id mod_sync_reconcile       :label "sync::reconcile"    :chapter 07_diff_logic                 :parent core.sync           :code-area "crates/core/src/sync/reconcile.rs")
+(module :id mod_sync_manual          :label "sync::engine::manual" :chapter 07_diff_logic               :parent core.sync           :code-area "crates/core/src/sync/engine/manual.rs")
 
 (module :id mod_sc_pending-fs      :label "source_control::pending_fs" :chapter 04_storage#watcher-contract :parent core.source_control :code-area "crates/core/src/source_control/pending_fs.rs")
 (module :id mod_sc_staging         :label "source_control::staging"    :chapter 07_diff_logic            :parent core.source_control :code-area "crates/core/src/source_control/staging.rs")
@@ -202,11 +205,6 @@
 (module :id mod_sec_jwt         :label "security::jwt"      :chapter 09_auth :parent core.security :code-area "crates/core/src/security/auth/jwt.rs")
 
 (module :id mod_plugin_chat     :label "plugin::chat_stream" :chapter 10_ai_agent :parent core.plugin :code-area "crates/core/src/plugin/")
-;; =============================================================================
-;; Layer 4 — Core (top-level subsystems)
-;; Source: docs/plan/04_storage + 05_network + 06_repository + 07_diff_logic + 09_auth + 10_ai_agent
-;; =============================================================================
-
 (layer :id core
        :order 4
        :description "Top-level subsystems under crates/core/src/*. Each owns one authority domain.")
@@ -223,6 +221,7 @@
 (group :id grp.core.sc-conflict :layer core :label "resolve conflict" :members (core.source_control core.sync core.ledger core.protocol))
 (group :id grp.core.sc-commit :layer core :label "source-control commit" :members (core.source_control core.ledger core.protocol))
 (group :id grp.core.sc-merge-peer :layer core :label "merge peer" :members (core.sync core.ledger core.protocol))
+(group :id grp.core.sc-merge-runtime :layer core :label "merge runtime" :members (core.sync core.protocol))
 (group :id grp.core.ai-chat :layer core :label "native ai-chat" :members (core.plugin core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))
 

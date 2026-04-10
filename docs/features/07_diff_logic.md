@@ -22,6 +22,8 @@
 - 该示例将 conflict resolution 拆为 `KeepFs`、`KeepLedger`、接收 `ConflictResolved` 三段响应。
 - Merge Peer 原子操作示例见 `docs/features/operations/sc_merge_peer.md`。
 - 该示例将 peer merge 拆为选择 peer、发送 `MergePeer`、接收 `MergeComplete`、接收 merge conflict 四段响应。
+- Merge Runtime 原子操作示例见 `docs/features/operations/sc_merge_runtime.md`。
+- 该示例将 runtime 控件拆为刷新 merge 状态、切换 sync mode、请求 pending ops、确认 merge、接收 runtime status 五段。
 
 ## 功能项
 

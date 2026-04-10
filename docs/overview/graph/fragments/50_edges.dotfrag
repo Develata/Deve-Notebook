@@ -37,6 +37,15 @@
     gate_sc_merge -> app_sc_merge_request;
     op_sc_merge_complete -> app_sc_merge_complete;
     op_sc_merge_conflict -> app_sc_merge_conflict;
+    op_sc_runtime_refresh -> gate_sc_runtime;
+    gate_sc_runtime -> app_sc_runtime_refresh;
+    op_sc_runtime_mode -> gate_sc_runtime;
+    gate_sc_runtime -> app_sc_runtime_mode;
+    op_sc_runtime_pending -> gate_sc_runtime;
+    gate_sc_runtime -> app_sc_runtime_pending;
+    op_sc_runtime_confirm -> gate_sc_runtime;
+    gate_sc_runtime -> app_sc_runtime_confirm;
+    op_sc_runtime_status -> app_sc_runtime_status;
 
     op_palette_open -> app_palette_shell;
     op_palette_query -> app_palette_shell;
@@ -124,6 +133,16 @@
     app_sc_merge_complete -> mod_proto_ws_merge_peer;
     app_sc_merge_conflict -> mod_ledger_merge_peer;
     app_sc_merge_conflict -> mod_proto_ws_merge_peer;
+    app_sc_runtime_refresh -> mod_sync_manual_runtime;
+    app_sc_runtime_refresh -> mod_proto_ws_runtime;
+    app_sc_runtime_mode -> mod_sync_manual_runtime;
+    app_sc_runtime_mode -> mod_proto_ws_runtime;
+    app_sc_runtime_pending -> mod_sync_manual_runtime;
+    app_sc_runtime_pending -> mod_proto_ws_runtime;
+    app_sc_runtime_confirm -> mod_sync_manual_runtime;
+    app_sc_runtime_confirm -> mod_proto_ws_runtime;
+    app_sc_runtime_status -> mod_sync_manual_runtime;
+    app_sc_runtime_status -> mod_proto_ws_runtime;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -183,6 +202,8 @@
     mod_sync_reconcile_merge -> core_sync_merge_peer;
     mod_ledger_merge_peer -> core_ledger_merge_peer;
     mod_proto_ws_merge_peer -> core_proto_merge_peer;
+    mod_sync_manual_runtime -> core_sync_runtime;
+    mod_proto_ws_runtime -> core_proto_runtime;
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
@@ -202,3 +223,4 @@
     core_sc_conflict -> core_ledger_conflict [style=dashed, color="#831843", label="resolves pending choice"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
     core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
+    core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];

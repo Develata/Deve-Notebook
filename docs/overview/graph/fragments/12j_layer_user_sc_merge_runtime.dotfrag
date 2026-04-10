@@ -1,0 +1,13 @@
+            subgraph cluster_user_sc_merge_runtime {
+                label="merge runtime [07_diff_logic + 05_network]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sc_runtime_refresh [label="Refresh Merge Runtime", fillcolor="#fef9c3"];
+                op_sc_runtime_mode [label="Change Sync Mode", fillcolor="#fde68a"];
+                op_sc_runtime_pending [label="Request Pending Ops", fillcolor="#fde68a"];
+                op_sc_runtime_confirm [label="Confirm Merge", fillcolor="#fde68a"];
+                op_sc_runtime_status [label="Receive Merge Runtime Status", fillcolor="#fef9c3"];
+                gate_sc_runtime [label="Runtime Gates:\nlocal repo scope\nwrite gate ready\npending ops available", fillcolor="#fde68a", shape=note];
+            }

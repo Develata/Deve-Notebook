@@ -1,0 +1,12 @@
+        subgraph cluster_app_sc_merge_runtime {
+            label="merge runtime [07_diff_logic + 05_network]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sc_runtime_refresh [label="GetSyncMode / GetPendingOps", fillcolor="#eff6ff"];
+            app_sc_runtime_mode [label="ClientMessage::SetSyncMode", fillcolor="#bfdbfe"];
+            app_sc_runtime_pending [label="ClientMessage::GetPendingOps", fillcolor="#bfdbfe"];
+            app_sc_runtime_confirm [label="ClientMessage::ConfirmMerge", fillcolor="#bfdbfe"];
+            app_sc_runtime_status [label="SyncModeStatus /\nPendingOpsInfo /\nMergeComplete", fillcolor="#eff6ff"];
+        }
