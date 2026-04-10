@@ -15,6 +15,14 @@
     app_auth_session_spine -> mod_auth_session_spine [penwidth=2.2, color="#0f172a"];
     mod_auth_session_spine -> core_auth_session_spine [penwidth=2.2, color="#0f172a"];
 
+    user_sync_handshake_spine [label="repo-scoped sync handshake flow", shape=plaintext, fontcolor="#92400e"];
+    app_sync_handshake_spine [label="", shape=point, width=0.01];
+    mod_sync_handshake_spine [label="", shape=point, width=0.01];
+    core_sync_handshake_spine [label="", shape=point, width=0.01];
+    user_sync_handshake_spine -> app_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
+    app_sync_handshake_spine -> mod_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
+    mod_sync_handshake_spine -> core_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
+
     user_sc_commit_spine [label="source-control commit flow", shape=plaintext, fontcolor="#92400e"];
     app_sc_commit_spine [label="", shape=point, width=0.01];
     mod_sc_commit_spine [label="", shape=point, width=0.01];

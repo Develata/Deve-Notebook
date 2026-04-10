@@ -1,0 +1,9 @@
+        subgraph cluster_core_sync_handshake {
+            label="repo-scoped sync handshake [05_network]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sync_handshake [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_proto_handshake [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

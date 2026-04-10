@@ -1,0 +1,11 @@
+        subgraph cluster_app_sync_handshake {
+            label="repo-scoped sync handshake [05_network + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sync_gate [label="handshake_cycle::run", fillcolor="#eff6ff"];
+            app_sync_send [label="SyncHello / RegisterWriter", fillcolor="#bfdbfe"];
+            app_sync_hello [label="ServerMessage::SyncHello", fillcolor="#eff6ff"];
+            app_sync_ready [label="ServerMessage::WriteReady", fillcolor="#eff6ff"];
+        }

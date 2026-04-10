@@ -1,0 +1,12 @@
+            subgraph cluster_user_sync_handshake {
+                label="repo-scoped sync handshake [05_network + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sync_resume [label="Resume Repo Runtime", fillcolor="#fef9c3"];
+                op_sync_send [label="Send SyncHello", fillcolor="#fde68a"];
+                op_sync_hello [label="Receive SyncHello Ack", fillcolor="#fef9c3"];
+                op_sync_ready [label="Receive WriteReady", fillcolor="#fef9c3"];
+                gate_sync_scope [label="Handshake Gates:\nrepo bound\nscope_nonce valid\nswitches idle", fillcolor="#fde68a", shape=note];
+            }

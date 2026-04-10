@@ -1,0 +1,9 @@
+        subgraph cluster_mod_sync_handshake {
+            label="repo-scoped sync handshake [05_network + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sync_handshake_runtime [label="sync::engine::handshake", fillcolor="#f0fdf4"];
+            mod_proto_ws_sync [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

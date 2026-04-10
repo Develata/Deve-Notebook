@@ -41,8 +41,13 @@
 - 未授权不是“普通断网”。
 - 用户应能从提示上区分：
   - 网络断开
-  - 会话失效
-  - 权限不足
+- 会话失效
+- 权限不足
+
+## Operation 示例
+
+- Repo-scoped sync handshake 原子操作示例见 `docs/features/operations/net_sync_handshake.md`。
+- 该示例将 runtime 握手拆为恢复当前 repo runtime、发送 `SyncHello`、接收 `SyncHello Ack`、接收 `WriteReady` 四段。
 
 ## 非目标
 

@@ -72,6 +72,19 @@ digraph DeveNoteArchitecture {
                 op_auth_reauth [label="Enter Reauth Surface", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_sync_handshake {
+                label="repo-scoped sync handshake [05_network + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_sync_resume [label="Resume Repo Runtime", fillcolor="#fef9c3"];
+                op_sync_send [label="Send SyncHello", fillcolor="#fde68a"];
+                op_sync_hello [label="Receive SyncHello Ack", fillcolor="#fef9c3"];
+                op_sync_ready [label="Receive WriteReady", fillcolor="#fef9c3"];
+                gate_sync_scope [label="Handshake Gates:\nrepo bound\nscope_nonce valid\nswitches idle", fillcolor="#fde68a", shape=note];
+            }
+
             subgraph cluster_user_palette {
                 label="command-palette [12_commands]";
                 style="rounded,filled";
@@ -234,6 +247,18 @@ digraph DeveNoteArchitecture {
             app_auth_surface [label="auth::enter_login_surface", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_sync_handshake {
+            label="repo-scoped sync handshake [05_network + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_sync_gate [label="handshake_cycle::run", fillcolor="#eff6ff"];
+            app_sync_send [label="SyncHello / RegisterWriter", fillcolor="#bfdbfe"];
+            app_sync_hello [label="ServerMessage::SyncHello", fillcolor="#eff6ff"];
+            app_sync_ready [label="ServerMessage::WriteReady", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_palette {
             label="command-palette [12_commands]";
             style="rounded,filled";
@@ -378,6 +403,16 @@ digraph DeveNoteArchitecture {
             mod_sec_auth_session [label="security::auth", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_sync_handshake {
+            label="repo-scoped sync handshake [05_network + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_sync_handshake_runtime [label="sync::engine::handshake", fillcolor="#f0fdf4"];
+            mod_proto_ws_sync [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -516,6 +551,16 @@ digraph DeveNoteArchitecture {
 
             core_proto_auth_session [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
             core_sec_auth_session [label="security\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_sync_handshake {
+            label="repo-scoped sync handshake [05_network]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_sync_handshake [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_proto_handshake [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
         subgraph cluster_core_doc {
@@ -667,6 +712,11 @@ digraph DeveNoteArchitecture {
     op_palette_nav -> app_palette_shell;
     op_palette_close -> app_palette_shell;
     op_palette_exec -> app_palette_exec;
+    op_sync_resume -> gate_sync_scope;
+    gate_sync_scope -> app_sync_gate;
+    op_sync_send -> app_sync_send;
+    op_sync_hello -> app_sync_hello;
+    op_sync_ready -> app_sync_ready;
 
     op_branch_open -> app_branch_open;
     op_branch_choose -> app_branch_select;
@@ -740,6 +790,12 @@ digraph DeveNoteArchitecture {
     app_exec_branches -> mod_sc;
     app_exec_branches -> mod_proto_ws;
     app_exec_branches -> mod_plugin;
+    app_sync_send -> mod_sync_handshake_runtime;
+    app_sync_send -> mod_proto_ws_sync;
+    app_sync_hello -> mod_sync_handshake_runtime;
+    app_sync_hello -> mod_proto_ws_sync;
+    app_sync_ready -> mod_sync_handshake_runtime;
+    app_sync_ready -> mod_proto_ws_sync;
 
     app_branch_request -> mod_proto_ws_switch;
     app_branch_request -> mod_tree_switch;
@@ -786,6 +842,8 @@ digraph DeveNoteArchitecture {
     mod_ledger_conflict -> core_ledger_conflict;
     mod_proto_ws_conflict -> core_proto_conflict;
     mod_proto_ws -> core_proto;
+    mod_sync_handshake_runtime -> core_sync_handshake;
+    mod_proto_ws_sync -> core_proto_handshake;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
     mod_tree -> core_tree;
@@ -818,6 +876,14 @@ digraph DeveNoteArchitecture {
     user_auth_session_spine -> app_auth_session_spine [penwidth=2.2, color="#0f172a"];
     app_auth_session_spine -> mod_auth_session_spine [penwidth=2.2, color="#0f172a"];
     mod_auth_session_spine -> core_auth_session_spine [penwidth=2.2, color="#0f172a"];
+
+    user_sync_handshake_spine [label="repo-scoped sync handshake flow", shape=plaintext, fontcolor="#92400e"];
+    app_sync_handshake_spine [label="", shape=point, width=0.01];
+    mod_sync_handshake_spine [label="", shape=point, width=0.01];
+    core_sync_handshake_spine [label="", shape=point, width=0.01];
+    user_sync_handshake_spine -> app_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
+    app_sync_handshake_spine -> mod_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
+    mod_sync_handshake_spine -> core_sync_handshake_spine [penwidth=2.2, color="#0f172a"];
 
     user_sc_commit_spine [label="source-control commit flow", shape=plaintext, fontcolor="#92400e"];
     app_sc_commit_spine [label="", shape=point, width=0.01];

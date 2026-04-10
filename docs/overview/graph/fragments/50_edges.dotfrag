@@ -38,6 +38,11 @@
     op_palette_nav -> app_palette_shell;
     op_palette_close -> app_palette_shell;
     op_palette_exec -> app_palette_exec;
+    op_sync_resume -> gate_sync_scope;
+    gate_sync_scope -> app_sync_gate;
+    op_sync_send -> app_sync_send;
+    op_sync_hello -> app_sync_hello;
+    op_sync_ready -> app_sync_ready;
 
     op_branch_open -> app_branch_open;
     op_branch_choose -> app_branch_select;
@@ -111,6 +116,12 @@
     app_exec_branches -> mod_sc;
     app_exec_branches -> mod_proto_ws;
     app_exec_branches -> mod_plugin;
+    app_sync_send -> mod_sync_handshake_runtime;
+    app_sync_send -> mod_proto_ws_sync;
+    app_sync_hello -> mod_sync_handshake_runtime;
+    app_sync_hello -> mod_proto_ws_sync;
+    app_sync_ready -> mod_sync_handshake_runtime;
+    app_sync_ready -> mod_proto_ws_sync;
 
     app_branch_request -> mod_proto_ws_switch;
     app_branch_request -> mod_tree_switch;
@@ -157,6 +168,8 @@
     mod_ledger_conflict -> core_ledger_conflict;
     mod_proto_ws_conflict -> core_proto_conflict;
     mod_proto_ws -> core_proto;
+    mod_sync_handshake_runtime -> core_sync_handshake;
+    mod_proto_ws_sync -> core_proto_handshake;
     mod_proto_ws_switch -> core_proto_switch;
     mod_tree_switch -> core_tree_switch;
     mod_tree -> core_tree;
