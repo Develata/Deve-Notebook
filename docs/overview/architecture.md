@@ -1,6 +1,6 @@
 # Deve-Note Architecture Overview
 
-One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The currently modeled operation slice is aligned, so the SVG is presently shown as a clean baseline without `*` markers.
+One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The current modeled slice now includes one intentional plan/code mismatch in the `trusted external agent boundary` flow, so the SVG should be read as a plan baseline and the drift should be checked in `architecture-diff.md`.
 
 **Files in this directory**:
 
@@ -60,9 +60,9 @@ The current graph also carries three extra architecture cues:
 - `architecture-doc.lisp` has been refactored to an operation-first baseline and is now emitted from ordered doc fragments.
 - `architecture-code.lisp` has also been uplifted to the same operation-first layer model and is now emitted from ordered code fragments, though it is still a hand-curated implementation baseline rather than a generated truth source.
 - `architecture.dot` should now be read as the plan-side blueprint graph for that new layer model.
-- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `repo-scoped sync handshake`, `repo-scoped key exchange`, `repo-scoped sync transfer`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `history / commit diff`, `commit-and-push`, `merge peer`, `merge runtime`, `native ai-chat`, `plugin-host / plugin-call boundary`, and `open-doc`.
-- `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently reports no unresolved structural mismatch inside the modeled slice.
-- The current SVG should be read as a clean baseline for the modeled slice, not as a starred divergence map.
+- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `repo-scoped sync handshake`, `repo-scoped key exchange`, `repo-scoped sync transfer`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `history / commit diff`, `commit-and-push`, `merge peer`, `merge runtime`, `native ai-chat`, `trusted external agent boundary`, `plugin-host / plugin-call boundary`, and `open-doc`.
+- `architecture-diff.md` has been rebuilt into an operation-level comparison pass and now records one known mismatch inside the modeled slice: `trusted external agent boundary`.
+- The current SVG should still be read as the plan-side baseline for the modeled slice, not as a fully automated starred divergence map.
 
 ## How To Read The Lisp Files
 
@@ -101,7 +101,7 @@ Both `.lisp` files use **keyword-style s-expression** (Common Lisp / Emacs Lisp 
 
 A node gains a `*` marker when **plan-side blueprint and code-side implementation don't agree**.
 
-At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has no unresolved structural mismatch, so the SVG is intentionally rendered without `*` markers.
+At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice contains one known mismatch in `trusted external agent boundary`; `*` markers are still not auto-emitted into the SVG, so use [`architecture-diff.md`](./architecture-diff.md) as the source of truth for that drift.
 
 When divergence markers are enabled:
 
@@ -109,7 +109,7 @@ When divergence markers are enabled:
 - **In plan, not in code** → plan promises behavior that has no corresponding implementation yet.
 - **Both exist but with different shape** → e.g. plan says one response flow, code has a different handler/module split.
 
-**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md). For the currently modeled operation slice, there is no remaining unresolved structure mismatch.
+**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md). For the currently modeled operation slice, the remaining unresolved structure mismatch is `trusted external agent boundary`.
 
 ## Regenerating This View
 

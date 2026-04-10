@@ -1,0 +1,9 @@
+        subgraph cluster_core_trusted_agent {
+            label="trusted external agent boundary [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_plugin_trusted [label="plugin\n(peripheral)", fillcolor="#fdf2f8"];
+            core_proto_trusted [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

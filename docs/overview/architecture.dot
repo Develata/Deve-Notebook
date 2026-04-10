@@ -280,6 +280,20 @@ digraph DeveNoteArchitecture {
                 op_plugin_error [label="Receive Plugin Error", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_trusted_agent {
+                label="trusted external agent boundary [10_ai_agent]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_ai_trusted_settings [label="Open Trusted Agent\nSettings Surface", fillcolor="#fef9c3"];
+                op_ai_trusted_select [label="Select Trusted CLI\nBackend", fillcolor="#fde68a"];
+                gate_ai_trusted [label="Trusted Gates:\nenabled\ntrusted\nAGENT_CLI_PATH set", fillcolor="#fde68a", shape=note];
+                op_ai_trusted_submit [label="Submit Trusted\nAgent Prompt", fillcolor="#fde68a"];
+                op_ai_trusted_disabled [label="Receive Disabled /\nFallback State", fillcolor="#fef9c3"];
+                op_ai_trusted_stream [label="Receive Trusted\nAgent Stream", fillcolor="#fef9c3"];
+            }
+
         subgraph cluster_user_shared_all {
             label="shared(all)";
             style="rounded,dashed";
@@ -534,6 +548,20 @@ digraph DeveNoteArchitecture {
             app_plugin_error [label="PluginInvalid /\nUnsupported / Failed", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_trusted_agent {
+            label="trusted external agent boundary [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_ai_trusted_settings [label="show trusted backend\nsurface", fillcolor="#eff6ff"];
+            app_ai_trusted_guard [label="enabled + trusted +\nAGENT_CLI_PATH", fillcolor="#bfdbfe"];
+            app_ai_trusted_backend [label="set ai.mode =\ntrusted-cli", fillcolor="#eff6ff"];
+            app_ai_trusted_submit [label="trusted_cli::submit", fillcolor="#bfdbfe"];
+            app_ai_trusted_disabled [label="disabled / fallback\n(native)", fillcolor="#eff6ff"];
+            app_ai_trusted_stream [label="trusted_cli::stream", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -763,6 +791,16 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_plugin_boundary [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_trusted_agent {
+            label="trusted external agent boundary [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_plugin_host_trusted [label="plugin::runtime::host", fillcolor="#f0fdf4"];
+            mod_proto_ws_trusted [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -982,6 +1020,16 @@ digraph DeveNoteArchitecture {
             core_proto_plugin_boundary [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
+        subgraph cluster_core_trusted_agent {
+            label="trusted external agent boundary [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_plugin_trusted [label="plugin\n(peripheral)", fillcolor="#fdf2f8"];
+            core_proto_trusted [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
         subgraph cluster_core_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1013,6 +1061,15 @@ digraph DeveNoteArchitecture {
     op_ai_type -> app_ai_panel;
     op_ai_submit -> app_ai_send;
     op_ai_stream -> app_ai_stream;
+    op_ai_trusted_settings -> app_ai_trusted_settings;
+    op_ai_trusted_select -> gate_ai_trusted;
+    gate_ai_trusted -> app_ai_trusted_guard;
+    app_ai_trusted_guard -> app_ai_trusted_backend;
+    app_ai_trusted_guard -> app_ai_trusted_disabled;
+    op_ai_trusted_submit -> gate_ai_trusted;
+    op_ai_trusted_submit -> app_ai_trusted_submit;
+    op_ai_trusted_disabled -> app_ai_trusted_disabled;
+    op_ai_trusted_stream -> app_ai_trusted_stream;
     op_plugin_resume -> app_plugin_proxy;
     op_plugin_resume -> app_plugin_load;
     op_plugin_resume -> app_plugin_host;
@@ -1112,6 +1169,10 @@ digraph DeveNoteArchitecture {
     app_ai_send -> mod_proto_ws_ai;
     app_ai_stream -> mod_plugin_chat_stream;
     app_ai_stream -> mod_proto_ws_ai;
+    app_ai_trusted_submit -> mod_plugin_host_trusted;
+    app_ai_trusted_submit -> mod_proto_ws_trusted;
+    app_ai_trusted_stream -> mod_plugin_host_trusted;
+    app_ai_trusted_stream -> mod_proto_ws_trusted;
     app_repo_request -> mod_proto_ws_repo;
     app_repo_request -> mod_tree_repo;
     app_repo_request -> mod_ledger_repo;
@@ -1241,6 +1302,8 @@ digraph DeveNoteArchitecture {
     mod_proto_ws_commit -> core_proto_commit;
     mod_plugin_chat_stream -> core_plugin_ai;
     mod_proto_ws_ai -> core_proto_ai;
+    mod_plugin_host_trusted -> core_plugin_trusted;
+    mod_proto_ws_trusted -> core_proto_trusted;
     mod_proto_ws_repo -> core_proto_repo;
     mod_tree_repo -> core_tree_repo;
     mod_ledger_repo -> core_ledger_repo;
@@ -1375,6 +1438,14 @@ digraph DeveNoteArchitecture {
     app_ai_chat_spine -> mod_ai_chat_spine [penwidth=2.2, color="#0f172a"];
     mod_ai_chat_spine -> core_ai_chat_spine [penwidth=2.2, color="#0f172a"];
 
+    user_ai_trusted_spine [label="trusted external agent flow", shape=plaintext, fontcolor="#92400e"];
+    app_ai_trusted_spine [label="", shape=point, width=0.01];
+    mod_ai_trusted_spine [label="", shape=point, width=0.01];
+    core_ai_trusted_spine [label="", shape=point, width=0.01];
+    user_ai_trusted_spine -> app_ai_trusted_spine [penwidth=2.2, color="#0f172a"];
+    app_ai_trusted_spine -> mod_ai_trusted_spine [penwidth=2.2, color="#0f172a"];
+    mod_ai_trusted_spine -> core_ai_trusted_spine [penwidth=2.2, color="#0f172a"];
+
     user_plugin_runtime_spine [label="plugin-host / plugin-call flow", shape=plaintext, fontcolor="#92400e"];
     app_plugin_runtime_spine [label="", shape=point, width=0.01];
     mod_plugin_runtime_spine [label="", shape=point, width=0.01];
@@ -1475,7 +1546,7 @@ digraph DeveNoteArchitecture {
         legend_app [label="app response", fillcolor="#eff6ff"];
         legend_mod [label="module", fillcolor="#f0fdf4"];
         legend_core [label="core subsystem", fillcolor="#fdf2f8"];
-        legend_note [label="current operation slice: clean baseline", fillcolor="#e2e8f0"];
+        legend_note [label="plan baseline;\ntrusted-agent drift in diff", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];

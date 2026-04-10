@@ -1,0 +1,13 @@
+            subgraph cluster_user_trusted_agent {
+                label="trusted external agent boundary [10_ai_agent]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_ai_trusted_settings [label="Open Trusted Agent\nSettings Surface", fillcolor="#fef9c3"];
+                op_ai_trusted_select [label="Select Trusted CLI\nBackend", fillcolor="#fde68a"];
+                gate_ai_trusted [label="Trusted Gates:\nenabled\ntrusted\nAGENT_CLI_PATH set", fillcolor="#fde68a", shape=note];
+                op_ai_trusted_submit [label="Submit Trusted\nAgent Prompt", fillcolor="#fde68a"];
+                op_ai_trusted_disabled [label="Receive Disabled /\nFallback State", fillcolor="#fef9c3"];
+                op_ai_trusted_stream [label="Receive Trusted\nAgent Stream", fillcolor="#fef9c3"];
+            }

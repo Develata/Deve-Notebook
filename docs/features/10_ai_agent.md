@@ -11,6 +11,8 @@
 
 - Native AI Chat 原子操作示例见 `docs/features/operations/ai_chat.md`。
 - 该示例将 AI chat 拆为打开面板、输入 prompt、发送消息、接收流式结果四个 user operations。
+- Trusted External Agent 边界示例见 `docs/features/operations/trusted_external_agent_boundary.md`。
+- 该示例把 `trusted-cli` 拆成 settings 入口、后端切换、提交、disabled fallback、流式返回五个 user operations。
 
 ## 功能项
 

@@ -1,0 +1,13 @@
+        subgraph cluster_app_trusted_agent {
+            label="trusted external agent boundary [10_ai_agent]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_ai_trusted_settings [label="show trusted backend\nsurface", fillcolor="#eff6ff"];
+            app_ai_trusted_guard [label="enabled + trusted +\nAGENT_CLI_PATH", fillcolor="#bfdbfe"];
+            app_ai_trusted_backend [label="set ai.mode =\ntrusted-cli", fillcolor="#eff6ff"];
+            app_ai_trusted_submit [label="trusted_cli::submit", fillcolor="#bfdbfe"];
+            app_ai_trusted_disabled [label="disabled / fallback\n(native)", fillcolor="#eff6ff"];
+            app_ai_trusted_stream [label="trusted_cli::stream", fillcolor="#eff6ff"];
+        }

@@ -71,6 +71,14 @@
     app_ai_chat_spine -> mod_ai_chat_spine [penwidth=2.2, color="#0f172a"];
     mod_ai_chat_spine -> core_ai_chat_spine [penwidth=2.2, color="#0f172a"];
 
+    user_ai_trusted_spine [label="trusted external agent flow", shape=plaintext, fontcolor="#92400e"];
+    app_ai_trusted_spine [label="", shape=point, width=0.01];
+    mod_ai_trusted_spine [label="", shape=point, width=0.01];
+    core_ai_trusted_spine [label="", shape=point, width=0.01];
+    user_ai_trusted_spine -> app_ai_trusted_spine [penwidth=2.2, color="#0f172a"];
+    app_ai_trusted_spine -> mod_ai_trusted_spine [penwidth=2.2, color="#0f172a"];
+    mod_ai_trusted_spine -> core_ai_trusted_spine [penwidth=2.2, color="#0f172a"];
+
     user_plugin_runtime_spine [label="plugin-host / plugin-call flow", shape=plaintext, fontcolor="#92400e"];
     app_plugin_runtime_spine [label="", shape=point, width=0.01];
     mod_plugin_runtime_spine [label="", shape=point, width=0.01];

@@ -28,6 +28,9 @@
 - [`docs/features/operations/plugin_runtime_boundary.md`](./operations/plugin_runtime_boundary.md)
   - 建模当前已经存在的外围 `plugin-host / PluginCall` 边界
   - 不把安装器、市场或默认启用 runtime 误写成当前主线
+- [`docs/features/operations/trusted_external_agent_boundary.md`](./operations/trusted_external_agent_boundary.md)
+  - 建模 `trusted-cli` 的 interface-only / default-off 边界
+  - 不把 Trusted External Agent 误写成“插件系统已经默认可用”
 
 ## 非目标
 

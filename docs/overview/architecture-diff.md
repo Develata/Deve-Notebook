@@ -19,9 +19,9 @@ view.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 20 high-value flows exist on both sides |
+| Flow set | aligned | the same 21 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
-| Application responses | aligned | current modeled response nodes match |
+| Application responses | drift | `trusted external agent boundary` still differs between plan and code |
 | Module/core ownership | aligned | current core ownership and tree leaf naming match |
 | Scope hygiene | aligned | legacy inventory has been removed from the doc-side slice |
 
@@ -53,29 +53,57 @@ These flows are now structurally close across all four layers:
 For these flows, the user-operation IDs, application groups, and
 core-domain ownership are now effectively aligned between plan and code.
 
-## 2. Current State
+## 2. Known Divergence: `trusted external agent boundary`
 
-Within the currently modeled operation slice, the plan-side and code-side
-views are now structurally aligned across:
+The newly modeled `trusted external agent boundary` flow is intentionally
+not yet bijective at the application layer.
 
-- flow set
-- user-operation IDs
-- application grouping
-- module ownership
-- core ownership
+Plan-side blueprint requires:
 
-This does not mean the whole system is finished. It means the current
-operation-first slice no longer has an unresolved mismatch recorded in
-this report.
+- `trusted-cli` to remain default-off
+- `ai.agent_bridge.enabled = true`
+- `ai.agent_bridge.trusted = true`
+- `AGENT_CLI_PATH` explicitly set
+- failure to satisfy any gate must fall back to `native` and show a
+  clear disabled reason
 
-## 3. What To Do Next
+Current code-side implementation does not yet match that shape:
 
-1. Regenerate `*` markers into the SVG from this operation-level diff
+- [settings_sections.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/settings_sections.rs)
+  exposes the `trusted-cli` switch directly
+- [extensions.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/sidebar/extensions.rs)
+  also exposes `agent-bridge` as a selectable channel without a trust gate
+- [agent_bridge.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge.rs)
+  reads `AGENT_CLI_PATH` or falls back to `opencode`, then always attempts
+  to spawn the CLI
+
+So the mismatch is not in flow presence or core ownership. It is in
+application-layer contract:
+
+- plan says `guard -> enable or fallback`
+- code currently does `select -> spawn`
+
+## 3. Current State
+
+Within the currently modeled operation slice:
+
+- flow set is aligned
+- user-operation IDs are aligned
+- module ownership is aligned
+- core ownership is aligned
+- one application-layer mismatch remains in `trusted external agent boundary`
+
+This means the slice is no longer a fully clean bijective baseline, but
+it is still narrow and explicit.
+
+## 4. What To Do Next
+
+1. Implement the `trusted-cli` visibility and fallback gate so code
+   matches `enabled + trusted + AGENT_CLI_PATH`.
+2. Regenerate `*` markers into the SVG from this operation-level diff
    instead of from the old inventory report.
-2. Expand the shared slice with additional flows only if they can be
+3. Expand the shared slice with additional flows only if they can be
    added to both plan-side and code-side views together.
-3. If a broader CLI/admin inventory view is still wanted, keep it as a
-   separate report rather than mixing it back into this operation slice.
 
-For the currently modeled slice, plan and code now read as a practical
-bijective baseline.
+For the currently modeled slice, every flow except `trusted external
+agent boundary` reads as a practical bijective baseline.

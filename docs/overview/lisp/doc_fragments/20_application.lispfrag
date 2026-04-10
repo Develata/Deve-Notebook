@@ -18,6 +18,7 @@
 (group :id grp.app.sc-merge-peer :layer application :label "merge peer" :members (app.sc.merge-peer.select app.sc.merge-peer.request app.sc.merge-peer.complete app.sc.merge-peer.conflict))
 (group :id grp.app.sc-merge-runtime :layer application :label "merge runtime" :members (app.sc.merge-runtime.refresh app.sc.merge-runtime.set-mode app.sc.merge-runtime.get-pending app.sc.merge-runtime.confirm app.sc.merge-runtime.status))
 (group :id grp.app.ai-chat :layer application :label "native ai-chat" :members (app.ai.chat.panel app.ai.chat.send app.ai.chat.stream))
+(group :id grp.app.ai-trusted-agent :layer application :label "trusted external agent boundary" :members (app.ai.trusted-agent.settings app.ai.trusted-agent.guard app.ai.trusted-agent.backend app.ai.trusted-agent.submit app.ai.trusted-agent.disabled app.ai.trusted-agent.stream))
 (group :id grp.app.plugin-runtime :layer application :label "plugin-host / plugin-call boundary" :members (app.plugin.host.proxy-detect app.plugin.host.load-strict app.plugin.host.start-host app.plugin.call.dispatch app.plugin.call.result app.plugin.call.error))
 (group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
 ;; operation-oriented app entries

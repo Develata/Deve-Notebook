@@ -17,6 +17,15 @@
     op_ai_type -> app_ai_panel;
     op_ai_submit -> app_ai_send;
     op_ai_stream -> app_ai_stream;
+    op_ai_trusted_settings -> app_ai_trusted_settings;
+    op_ai_trusted_select -> gate_ai_trusted;
+    gate_ai_trusted -> app_ai_trusted_guard;
+    app_ai_trusted_guard -> app_ai_trusted_backend;
+    app_ai_trusted_guard -> app_ai_trusted_disabled;
+    op_ai_trusted_submit -> gate_ai_trusted;
+    op_ai_trusted_submit -> app_ai_trusted_submit;
+    op_ai_trusted_disabled -> app_ai_trusted_disabled;
+    op_ai_trusted_stream -> app_ai_trusted_stream;
     op_plugin_resume -> app_plugin_proxy;
     op_plugin_resume -> app_plugin_load;
     op_plugin_resume -> app_plugin_host;
@@ -116,6 +125,10 @@
     app_ai_send -> mod_proto_ws_ai;
     app_ai_stream -> mod_plugin_chat_stream;
     app_ai_stream -> mod_proto_ws_ai;
+    app_ai_trusted_submit -> mod_plugin_host_trusted;
+    app_ai_trusted_submit -> mod_proto_ws_trusted;
+    app_ai_trusted_stream -> mod_plugin_host_trusted;
+    app_ai_trusted_stream -> mod_proto_ws_trusted;
     app_repo_request -> mod_proto_ws_repo;
     app_repo_request -> mod_tree_repo;
     app_repo_request -> mod_ledger_repo;
@@ -245,6 +258,8 @@
     mod_proto_ws_commit -> core_proto_commit;
     mod_plugin_chat_stream -> core_plugin_ai;
     mod_proto_ws_ai -> core_proto_ai;
+    mod_plugin_host_trusted -> core_plugin_trusted;
+    mod_proto_ws_trusted -> core_proto_trusted;
     mod_proto_ws_repo -> core_proto_repo;
     mod_tree_repo -> core_tree_repo;
     mod_ledger_repo -> core_ledger_repo;
