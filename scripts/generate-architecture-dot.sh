@@ -24,12 +24,34 @@ if [[ ! -f "$DIFF_FILE" ]]; then
   exit 1
 fi
 
-mapfile -t drift_ids < <(
+extract_registry() {
+  local start="$1"
+  local end="$2"
   awk '
-    /<!-- drift-registry:start -->/ { in_block = 1; next }
-    /<!-- drift-registry:end -->/ { in_block = 0 }
+    $0 == start { in_block = 1; next }
+    $0 == end { in_block = 0 }
     in_block && match($0, /`([^`]+)`/, m) { print m[1] }
-  ' "$DIFF_FILE"
+  ' start="$start" end="$end" "$DIFF_FILE"
+}
+
+mapfile -t flow_ids < <(
+  extract_registry "<!-- flow-registry:start -->" "<!-- flow-registry:end -->"
+)
+
+if [[ ${#flow_ids[@]} -eq 0 ]]; then
+  echo "no flow registry found in: $DIFF_FILE" >&2
+  exit 1
+fi
+
+for flow_id in "${flow_ids[@]}"; do
+  if ! awk -F'\t' -v id="$flow_id" '$1 == id { found = 1 } END { exit !found }' "$DRIFT_MAP"; then
+    echo "flow missing from drift map: $flow_id" >&2
+    exit 1
+  fi
+done
+
+mapfile -t drift_ids < <(
+  extract_registry "<!-- drift-registry:start -->" "<!-- drift-registry:end -->"
 )
 
 if [[ ${#drift_ids[@]} -eq 0 ]]; then
@@ -40,6 +62,13 @@ fi
 if [[ ${#drift_ids[@]} -eq 1 && "${drift_ids[0]}" == "none" ]]; then
   drift_ids=()
 fi
+
+for drift_id in "${drift_ids[@]}"; do
+  if ! printf '%s\n' "${flow_ids[@]}" | grep -Fxq "$drift_id"; then
+    echo "drift flow missing from flow registry: $drift_id" >&2
+    exit 1
+  fi
+done
 
 {
   echo "    // generated drift markers from architecture-diff.md"
