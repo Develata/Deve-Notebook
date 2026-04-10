@@ -19,7 +19,7 @@ view.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 13 high-value flows exist on both sides |
+| Flow set | aligned | the same 14 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Application responses | aligned | current modeled response nodes match |
 | Module/core ownership | aligned | current core ownership and tree leaf naming match |
@@ -40,6 +40,7 @@ These flows are now structurally close across all four layers:
 - `discard pending`
 - `resolve conflict`
 - `source-control commit`
+- `merge peer`
 - `native ai-chat`
 - `open-doc`
 

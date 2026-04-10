@@ -20,6 +20,8 @@
 - 该示例将 repo 级 discard pending 拆为请求 reset-to-projection 与接收 ack 两段响应。
 - Resolve Conflict 原子操作示例见 `docs/features/operations/sc_resolve_conflict.md`。
 - 该示例将 conflict resolution 拆为 `KeepFs`、`KeepLedger`、接收 `ConflictResolved` 三段响应。
+- Merge Peer 原子操作示例见 `docs/features/operations/sc_merge_peer.md`。
+- 该示例将 peer merge 拆为选择 peer、发送 `MergePeer`、接收 `MergeComplete`、接收 merge conflict 四段响应。
 
 ## 功能项
 
