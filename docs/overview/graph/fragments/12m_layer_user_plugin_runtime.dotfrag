@@ -1,0 +1,11 @@
+            subgraph cluster_user_plugin_runtime {
+                label="plugin-host / plugin-call boundary [17_plugins]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_plugin_resume [label="Resume Plugin Host Boundary", fillcolor="#fef9c3"];
+                op_plugin_submit [label="Submit PluginCall", fillcolor="#fde68a"];
+                op_plugin_result [label="Receive PluginResponse", fillcolor="#fef9c3"];
+                op_plugin_error [label="Receive Plugin Error", fillcolor="#fef9c3"];
+            }

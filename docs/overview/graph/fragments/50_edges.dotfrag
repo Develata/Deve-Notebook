@@ -17,6 +17,12 @@
     op_ai_type -> app_ai_panel;
     op_ai_submit -> app_ai_send;
     op_ai_stream -> app_ai_stream;
+    op_plugin_resume -> app_plugin_proxy;
+    op_plugin_resume -> app_plugin_load;
+    op_plugin_resume -> app_plugin_host;
+    op_plugin_submit -> app_plugin_dispatch;
+    op_plugin_result -> app_plugin_result;
+    op_plugin_error -> app_plugin_error;
     op_repo_open -> app_repo_menu;
     op_repo_choose -> app_repo_select;
     op_repo_request -> app_repo_request;
@@ -175,6 +181,16 @@
     app_sc_runtime_confirm -> mod_proto_ws_runtime;
     app_sc_runtime_status -> mod_sync_manual_runtime;
     app_sc_runtime_status -> mod_proto_ws_runtime;
+    app_plugin_load -> mod_plugin_loader_boundary;
+    app_plugin_host -> mod_plugin_host_boundary;
+    app_plugin_host -> mod_proto_ws_plugin_boundary;
+    app_plugin_dispatch -> mod_plugin_rhai_boundary;
+    app_plugin_dispatch -> mod_plugin_host_boundary;
+    app_plugin_dispatch -> mod_proto_ws_plugin_boundary;
+    app_plugin_result -> mod_plugin_rhai_boundary;
+    app_plugin_result -> mod_proto_ws_plugin_boundary;
+    app_plugin_error -> mod_plugin_host_boundary;
+    app_plugin_error -> mod_proto_ws_plugin_boundary;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -257,6 +273,10 @@
     mod_proto_ws_merge_peer -> core_proto_merge_peer;
     mod_sync_manual_runtime -> core_sync_runtime;
     mod_proto_ws_runtime -> core_proto_runtime;
+    mod_plugin_loader_boundary -> core_plugin_boundary;
+    mod_plugin_host_boundary -> core_plugin_boundary;
+    mod_plugin_rhai_boundary -> core_plugin_boundary;
+    mod_proto_ws_plugin_boundary -> core_proto_plugin_boundary;
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;

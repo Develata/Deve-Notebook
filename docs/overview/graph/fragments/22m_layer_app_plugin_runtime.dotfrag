@@ -1,0 +1,13 @@
+        subgraph cluster_app_plugin_runtime {
+            label="plugin-host / plugin-call boundary [17_plugins]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_plugin_proxy [label="start_proxy_mode /\ndetect_main_port", fillcolor="#eff6ff"];
+            app_plugin_load [label="load_plugins", fillcolor="#bfdbfe"];
+            app_plugin_host [label="start_plugin_host_only", fillcolor="#bfdbfe"];
+            app_plugin_dispatch [label="handle_plugin_call", fillcolor="#bfdbfe"];
+            app_plugin_result [label="PluginResponse", fillcolor="#eff6ff"];
+            app_plugin_error [label="PluginInvalid /\nUnsupported / Failed", fillcolor="#eff6ff"];
+        }

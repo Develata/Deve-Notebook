@@ -1,0 +1,11 @@
+        subgraph cluster_mod_plugin_runtime {
+            label="plugin-host / plugin-call boundary [17_plugins]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_plugin_loader_boundary [label="plugin::loader", fillcolor="#f0fdf4"];
+            mod_plugin_host_boundary [label="plugin::runtime::host", fillcolor="#f0fdf4"];
+            mod_plugin_rhai_boundary [label="plugin::runtime::rhai_v1", fillcolor="#f0fdf4"];
+            mod_proto_ws_plugin_boundary [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

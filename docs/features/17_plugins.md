@@ -23,6 +23,12 @@
 
 - 产品可以保留外部扩展接口位，但应明确这是未来能力，不代表当前默认可用。
 
+## Operation 示例
+
+- [`docs/features/operations/plugin_runtime_boundary.md`](./operations/plugin_runtime_boundary.md)
+  - 建模当前已经存在的外围 `plugin-host / PluginCall` 边界
+  - 不把安装器、市场或默认启用 runtime 误写成当前主线
+
 ## 非目标
 
 - 当前阶段不把插件系统作为核心功能。

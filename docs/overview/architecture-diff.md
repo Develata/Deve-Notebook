@@ -19,7 +19,7 @@ view.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 19 high-value flows exist on both sides |
+| Flow set | aligned | the same 20 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Application responses | aligned | current modeled response nodes match |
 | Module/core ownership | aligned | current core ownership and tree leaf naming match |
@@ -47,6 +47,7 @@ These flows are now structurally close across all four layers:
 - `merge peer`
 - `merge runtime`
 - `native ai-chat`
+- `plugin-host / plugin-call boundary`
 - `open-doc`
 
 For these flows, the user-operation IDs, application groups, and

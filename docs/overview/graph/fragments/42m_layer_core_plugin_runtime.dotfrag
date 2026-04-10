@@ -1,0 +1,9 @@
+        subgraph cluster_core_plugin_runtime {
+            label="plugin-host / plugin-call boundary [17_plugins]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_plugin_boundary [label="plugin\n(peripheral)", fillcolor="#fdf2f8"];
+            core_proto_plugin_boundary [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
