@@ -17,6 +17,7 @@
 - 文档打开后默认进入源码编辑态。
 - 所有增强渲染都只是源码之上的视觉投影。
 - 用户在任何时刻都可以通过移动光标看到真实 Markdown 源码。
+- 原子操作示例：[`operations/doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md)
 
 ### 2. Cursor Reveal
 

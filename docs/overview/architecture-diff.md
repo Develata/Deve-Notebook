@@ -12,7 +12,7 @@ operation slice rather than the older route/CLI inventory view.
 Keep this block stable. The graph generator reads the drift registry below.
 
 <!-- modeled-slice:start -->
-- Flow count: `23`
+- Flow count: `24`
 - Status: `clean`
 - Active drift count: `0`
 <!-- modeled-slice:end -->
@@ -21,7 +21,7 @@ Keep this block stable. The graph generator reads the drift registry below.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 23 high-value flows exist on both sides |
+| Flow set | aligned | the same 24 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Application responses | aligned | response taxonomy matches across the modeled slice |
 | Module/core ownership | aligned | core ownership and tree leaf naming match |
@@ -63,6 +63,7 @@ Use this registry as the stable label set for the diff and SVG marker map.
 - `plugin-host / plugin-call boundary`
 - `search/query`
 - `repo file operations`
+- `document edit / confirmed op`
 - `open-doc`
 <!-- flow-registry:end -->
 

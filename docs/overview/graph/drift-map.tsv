@@ -13,6 +13,7 @@ trusted external agent boundary	ai_trusted
 plugin-host / plugin-call boundary	plugin_runtime
 search/query	search_query
 repo file operations	repo_file_ops
+document edit / confirmed op	doc_edit
 repo-switch	repo_switch
 stage / unstage	sc_stage
 discard file	sc_discard_file

@@ -21,6 +21,7 @@
 (group :id grp.user.plugin-runtime :layer user-operation :label "plugin-host / plugin-call boundary" :members (op.plugin.host.resume-runtime op.plugin.call.submit op.plugin.call.receive-result op.plugin.call.receive-error))
 (group :id grp.user.search-query :layer user-operation :label "search/query" :members (op.search.open op.search.type-query op.search.submit op.search.receive-results))
 (group :id grp.user.repo-file-ops :layer user-operation :label "repo file operations" :members (op.repo.file-ops.open-surface op.repo.file-ops.type-path op.repo.file-ops.submit-create op.repo.file-ops.submit-path-op op.repo.file-ops.receive-result))
+(group :id grp.user.doc-edit :layer user-operation :label "document edit / confirmed op" :members (op.doc.edit.type-content op.doc.edit.forward-delta op.doc.edit.receive-ack op.doc.edit.receive-new-op op.doc.edit.receive-reject))
 (group :id grp.user.open-doc :layer user-operation :label "open-doc" :members (op.repo.open-doc.open-quick-open op.repo.open-doc.type-query op.repo.open-doc.choose-doc op.repo.open-doc.request-open op.repo.open-doc.receive-content))
 (user-operation :id op.auth.login.type-username :label "Type Username" :kind text-input :surface web-form :code "apps/web/src/components/login/page.rs" :calls (app.auth.form.username-update))
 (user-operation :id op.auth.login.type-password :label "Type Password" :kind text-input :surface web-form :code "apps/web/src/components/login/page.rs" :calls (app.auth.form.password-update))

@@ -103,6 +103,14 @@
     app_repo_file_ops_spine -> mod_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
     mod_repo_file_ops_spine -> core_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
 
+    user_doc_edit_spine [label="document edit / confirmed op flow", shape=plaintext, fontcolor="#92400e"];
+    app_doc_edit_spine [label="", shape=point, width=0.01];
+    mod_doc_edit_spine [label="", shape=point, width=0.01];
+    core_doc_edit_spine [label="", shape=point, width=0.01];
+    user_doc_edit_spine -> app_doc_edit_spine [penwidth=2.2, color="#0f172a"];
+    app_doc_edit_spine -> mod_doc_edit_spine [penwidth=2.2, color="#0f172a"];
+    mod_doc_edit_spine -> core_doc_edit_spine [penwidth=2.2, color="#0f172a"];
+
     user_repo_switch_spine [label="repo-switch flow", shape=plaintext, fontcolor="#92400e"];
     app_repo_switch_spine [label="", shape=point, width=0.01];
     mod_repo_switch_spine [label="", shape=point, width=0.01];

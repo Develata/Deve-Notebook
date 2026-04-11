@@ -1,0 +1,22 @@
+    op_doc_edit_type -> app_doc_edit_delta;
+    op_doc_edit_forward -> gate_doc_edit;
+    gate_doc_edit -> app_doc_edit_gate;
+    op_doc_edit_forward -> app_doc_edit_send;
+    op_doc_edit_ack -> app_doc_edit_ack;
+    op_doc_edit_newop -> app_doc_edit_newop;
+    op_doc_edit_reject -> app_doc_edit_reject;
+
+    app_doc_edit_send -> app_doc_edit_append;
+    app_doc_edit_send -> mod_proto_ws_doc_edit;
+    app_doc_edit_append -> mod_ledger_ops_doc_edit;
+    app_doc_edit_append -> mod_sync_materialize_doc_edit;
+    app_doc_edit_append -> mod_proto_ws_doc_edit;
+    app_doc_edit_ack -> mod_proto_ws_doc_edit;
+    app_doc_edit_newop -> mod_ledger_ops_doc_edit;
+    app_doc_edit_newop -> mod_proto_ws_doc_edit;
+    app_doc_edit_reject -> mod_proto_ws_doc_edit;
+
+    mod_ledger_ops_doc_edit -> core_ledger_doc_edit;
+    mod_sync_materialize_doc_edit -> core_sync_doc_edit;
+    mod_proto_ws_doc_edit -> core_proto_doc_edit;
+    core_sync_doc_edit -> core_ledger_doc_edit [style=dashed, color="#831843", label="materializes confirmed op"];

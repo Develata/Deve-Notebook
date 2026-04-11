@@ -21,6 +21,7 @@
 (group :id grp.mod.plugin-runtime :layer module :label "plugin-host / plugin-call boundary" :members (mod_plugin_loader mod_plugin_host mod_plugin_rhai mod_proto_ws))
 (group :id grp.mod.search-query :layer module :label "search/query" :members (mod_search_service mod_proto_ws))
 (group :id grp.mod.repo-file-ops :layer module :label "repo file operations" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
+(group :id grp.mod.doc-edit :layer module :label "document edit / confirmed op" :members (mod_ledger_ops mod_sync_materialize mod_proto_ws))
 (group :id grp.mod.open-doc :layer module :label "open-doc" :members (mod_proto_ws mod_tree_structure mod_ledger_manager))
 
 (module :id mod_sync_materialize :label "sync::materialize" :parent core.sync :code "crates/core/src/sync/materialize.rs")
@@ -33,6 +34,7 @@
 (module :id mod_sc_staging :label "source_control::staging" :parent core.source_control :code "crates/core/src/source_control/staging.rs")
 (module :id mod_sc_commit :label "source_control::commits" :parent core.source_control :code "crates/core/src/source_control/commits.rs")
 (module :id mod_ledger_manager :label "ledger::manager" :parent core.ledger :code "crates/core/src/ledger/manager/")
+(module :id mod_ledger_ops :label "ledger::ops" :parent core.ledger :code "crates/core/src/ledger/{ops_write_generated.rs,append_validate.rs}")
 (module :id mod_ledger_merge :label "ledger::merge" :parent core.ledger :code "crates/core/src/ledger/merge/")
 (module :id mod_tree_structure :label "tree::{manager,ops,node}" :parent core.tree :code "crates/core/src/tree/{manager.rs,ops.rs,node.rs}")
 (module :id mod_proto_ws :label "protocol::{client,server}" :parent core.protocol :code "crates/core/src/protocol/{client.rs,server.rs}")
@@ -68,6 +70,7 @@
 (group :id grp.core.plugin-runtime :layer core :label "plugin-host / plugin-call boundary" :members (core.plugin core.protocol))
 (group :id grp.core.search-query :layer core :label "search/query" :members (core.search core.protocol))
 (group :id grp.core.repo-file-ops :layer core :label "repo file operations" :members (core.tree core.ledger core.protocol))
+(group :id grp.core.doc-edit :layer core :label "document edit / confirmed op" :members (core.ledger core.sync core.protocol))
 (group :id grp.core.open-doc :layer core :label "open-doc" :members (core.tree core.ledger core.protocol))
 (core :id core.ledger :label "Ledger" :kind authority :code "crates/core/src/ledger/")
 (core :id core.sync :label "Sync" :kind runtime :code "crates/core/src/sync/")

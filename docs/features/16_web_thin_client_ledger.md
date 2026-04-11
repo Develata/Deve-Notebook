@@ -14,6 +14,7 @@
 
 - 本地编辑后，页面可暂时显示未确认状态。
 - 这种状态必须可被确认或明确失败。
+- 原子操作示例：[`operations/doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md)
 
 ### 2. Ack / Reject
 

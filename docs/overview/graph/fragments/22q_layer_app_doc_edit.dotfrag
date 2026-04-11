@@ -1,0 +1,15 @@
+        subgraph cluster_app_doc_edit {
+            label="document edit / confirmed op [03_rendering + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_doc_edit_delta [label="build_on_delta / Delta::to_ops", fillcolor="#eff6ff"];
+            app_doc_edit_gate [label="can_send_delta", fillcolor="#bfdbfe"];
+            app_doc_edit_send [label="ClientMessage::Edit", fillcolor="#bfdbfe"];
+            app_doc_edit_append [label="handle_edit -> append_client_edit", fillcolor="#bfdbfe"];
+            app_doc_edit_ack [label="handle_ack_message", fillcolor="#eff6ff"];
+            app_doc_edit_newop [label="handle_new_op_message / apply_live_op", fillcolor="#eff6ff"];
+            app_doc_edit_reject [label="handle_edit_rejected_message", fillcolor="#fecaca"];
+        }
+

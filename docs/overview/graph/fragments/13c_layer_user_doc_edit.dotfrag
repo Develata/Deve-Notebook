@@ -1,0 +1,14 @@
+            subgraph cluster_user_doc_edit {
+                label="document edit / confirmed op [03_rendering + 04_storage + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_doc_edit_type [label="Type Editor Content", fillcolor="#fef9c3"];
+                op_doc_edit_forward [label="Forward Editor Delta", fillcolor="#fde68a"];
+                op_doc_edit_ack [label="Receive Edit Ack", fillcolor="#fef9c3"];
+                op_doc_edit_newop [label="Receive Confirmed NewOp", fillcolor="#fef9c3"];
+                op_doc_edit_reject [label="Receive Edit Rejected", fillcolor="#fecaca"];
+                gate_doc_edit [label="Write Gates:\nhandshake ready\nwriter ready\nscope_nonce valid", fillcolor="#fde68a", shape=note];
+            }
+

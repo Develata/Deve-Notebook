@@ -1,0 +1,11 @@
+        subgraph cluster_mod_doc_edit {
+            label="document edit / confirmed op [04_storage]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_ledger_ops_doc_edit [label="ledger::ops", fillcolor="#f0fdf4"];
+            mod_sync_materialize_doc_edit [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_proto_ws_doc_edit [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+

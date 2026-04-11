@@ -343,6 +343,21 @@ digraph DeveNoteArchitecture {
             }
 
 
+            subgraph cluster_user_doc_edit {
+                label="document edit / confirmed op [03_rendering + 04_storage + 16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_doc_edit_type [label="Type Editor Content", fillcolor="#fef9c3"];
+                op_doc_edit_forward [label="Forward Editor Delta", fillcolor="#fde68a"];
+                op_doc_edit_ack [label="Receive Edit Ack", fillcolor="#fef9c3"];
+                op_doc_edit_newop [label="Receive Confirmed NewOp", fillcolor="#fef9c3"];
+                op_doc_edit_reject [label="Receive Edit Rejected", fillcolor="#fecaca"];
+                gate_doc_edit [label="Write Gates:\nhandshake ready\nwriter ready\nscope_nonce valid", fillcolor="#fde68a", shape=note];
+            }
+
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -621,6 +636,22 @@ digraph DeveNoteArchitecture {
         }
 
 
+        subgraph cluster_app_doc_edit {
+            label="document edit / confirmed op [03_rendering + 16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_doc_edit_delta [label="build_on_delta / Delta::to_ops", fillcolor="#eff6ff"];
+            app_doc_edit_gate [label="can_send_delta", fillcolor="#bfdbfe"];
+            app_doc_edit_send [label="ClientMessage::Edit", fillcolor="#bfdbfe"];
+            app_doc_edit_append [label="handle_edit -> append_client_edit", fillcolor="#bfdbfe"];
+            app_doc_edit_ack [label="handle_ack_message", fillcolor="#eff6ff"];
+            app_doc_edit_newop [label="handle_new_op_message / apply_live_op", fillcolor="#eff6ff"];
+            app_doc_edit_reject [label="handle_edit_rejected_message", fillcolor="#fecaca"];
+        }
+
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -883,6 +914,18 @@ digraph DeveNoteArchitecture {
         }
 
 
+        subgraph cluster_mod_doc_edit {
+            label="document edit / confirmed op [04_storage]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_ledger_ops_doc_edit [label="ledger::ops", fillcolor="#f0fdf4"];
+            mod_sync_materialize_doc_edit [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_proto_ws_doc_edit [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1132,6 +1175,18 @@ digraph DeveNoteArchitecture {
             core_tree_fileops [label="tree\n(projection)", fillcolor="#fdf2f8"];
             core_ledger_fileops [label="ledger\n(authority)", fillcolor="#fdf2f8"];
             core_proto_fileops [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+
+        subgraph cluster_core_doc_edit {
+            label="document edit / confirmed op [04_storage + 05_network]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_ledger_doc_edit [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_sync_doc_edit [label="sync\n(projection)", fillcolor="#fdf2f8"];
+            core_proto_doc_edit [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
 
@@ -1504,6 +1559,29 @@ digraph DeveNoteArchitecture {
     core_search_query -> core_proto_search [style=dashed, color="#831843", label="returns scoped results"];
     core_tree_fileops -> core_ledger_fileops [style=dashed, color="#831843", label="mutates structure facts"];
 
+    op_doc_edit_type -> app_doc_edit_delta;
+    op_doc_edit_forward -> gate_doc_edit;
+    gate_doc_edit -> app_doc_edit_gate;
+    op_doc_edit_forward -> app_doc_edit_send;
+    op_doc_edit_ack -> app_doc_edit_ack;
+    op_doc_edit_newop -> app_doc_edit_newop;
+    op_doc_edit_reject -> app_doc_edit_reject;
+
+    app_doc_edit_send -> app_doc_edit_append;
+    app_doc_edit_send -> mod_proto_ws_doc_edit;
+    app_doc_edit_append -> mod_ledger_ops_doc_edit;
+    app_doc_edit_append -> mod_sync_materialize_doc_edit;
+    app_doc_edit_append -> mod_proto_ws_doc_edit;
+    app_doc_edit_ack -> mod_proto_ws_doc_edit;
+    app_doc_edit_newop -> mod_ledger_ops_doc_edit;
+    app_doc_edit_newop -> mod_proto_ws_doc_edit;
+    app_doc_edit_reject -> mod_proto_ws_doc_edit;
+
+    mod_ledger_ops_doc_edit -> core_ledger_doc_edit;
+    mod_sync_materialize_doc_edit -> core_sync_doc_edit;
+    mod_proto_ws_doc_edit -> core_proto_doc_edit;
+    core_sync_doc_edit -> core_ledger_doc_edit [style=dashed, color="#831843", label="materializes confirmed op"];
+
     // group-level spine
     user_login_spine [label="login flow", shape=plaintext, fontcolor="#92400e"];
     app_login_spine [label="", shape=point, width=0.01];
@@ -1608,6 +1686,14 @@ digraph DeveNoteArchitecture {
     user_repo_file_ops_spine -> app_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
     app_repo_file_ops_spine -> mod_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
     mod_repo_file_ops_spine -> core_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
+
+    user_doc_edit_spine [label="document edit / confirmed op flow", shape=plaintext, fontcolor="#92400e"];
+    app_doc_edit_spine [label="", shape=point, width=0.01];
+    mod_doc_edit_spine [label="", shape=point, width=0.01];
+    core_doc_edit_spine [label="", shape=point, width=0.01];
+    user_doc_edit_spine -> app_doc_edit_spine [penwidth=2.2, color="#0f172a"];
+    app_doc_edit_spine -> mod_doc_edit_spine [penwidth=2.2, color="#0f172a"];
+    mod_doc_edit_spine -> core_doc_edit_spine [penwidth=2.2, color="#0f172a"];
 
     user_repo_switch_spine [label="repo-switch flow", shape=plaintext, fontcolor="#92400e"];
     app_repo_switch_spine [label="", shape=point, width=0.01];

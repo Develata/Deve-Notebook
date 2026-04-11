@@ -1,0 +1,11 @@
+        subgraph cluster_core_doc_edit {
+            label="document edit / confirmed op [04_storage + 05_network]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_ledger_doc_edit [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_sync_doc_edit [label="sync\n(projection)", fillcolor="#fdf2f8"];
+            core_proto_doc_edit [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+

@@ -14,6 +14,7 @@
 
 - 文档写入只有在系统确认后才算真正保存成功。
 - 已确认写入在重新打开文档或刷新页面后仍应存在。
+- 原子操作示例：[`operations/doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md)
 
 ### 2. 工作区偏差
 
