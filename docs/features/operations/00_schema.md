@@ -15,22 +15,27 @@
 - 一个 operation 必须是用户可直接执行的单一步骤，不能再包含多个独立意图。
 - `login`、`open settings`、`edit doc` 这类词通常太粗；应拆成输入、点击、提交、确认、关闭、跳转等原子动作。
 
-## 2. 四层结构
+## 2. 四层主骨架
 
-每个 operation 都必须能映射到四层：
+每个 operation 都必须能映射到四层 canonical call architecture：
 
 1. `User Operation`
-2. `Application Response`
-3. `Concrete Module`
-4. `Core Subsystem`
+2. `Instruction Interface`
+3. `Flow Coordination`
+4. `Execution Domain`
 
 要求：
 
 - 第一层只写用户动作，不写 CLI / Palette / Slash 这类入口类别。
 - 入口类别属于 `surface` 或 `trigger` 属性，不属于层级节点名。
-- 第二层写 handler、callback、command runner、form action、request sender。
-- 第三层写可定位到文件或模块的细粒度实现单元。
-- 第四层写大的 authority / runtime / workflow 子系统。
+- 第二层写 handler、callback、command runner、form action、request sender；它负责把动作接成标准化内部指令。
+- 第三层写承接该 flow 的协调模块；它负责组织步骤、推进状态、协调错误与后续任务。
+- 第四层写最终收束到的 capability / authority / runtime domain。
+
+补充：
+
+- `Object Plane` 不是第五个主调用层，而是被多个 execution domain 共同读写的对象平面。
+- `Ownership Axis` 不是主层级；它只表达模块或执行域长期归属到哪个根域。
 
 ## 3. 何时算一个合格 operation
 
@@ -66,9 +71,9 @@
 ## Response Flows
 ### op.<id>
 1. User Operation:
-2. Application Response:
-3. Concrete Modules:
-4. Core Subsystems:
+2. Instruction Interface:
+3. Flow Coordination:
+4. Execution Domains:
 
 ## Notes
 - 仅记录用户可见行为与可追踪流向。
@@ -94,3 +99,9 @@
 - 每个 plan 中声明的用户可见操作，最终都必须能在 operation 文档中找到唯一对应流。
 - 不允许长期存在“plan 有、operation 没有”或“operation 有、plan 没有”的状态。
 - 若当前代码缺失某条 operation 的实现，文档应保留该 operation，并在 overview / diff 中显式标记未实现，而不是删除 blueprint。
+
+## 8. 对象与归属
+
+- 若一个 flow 会同时触达多个对象，应在 `Notes` 中明确主要对象，例如 `doc::content`、`pending_local_edit`、`confirmed_op`、`repo::scope`。
+- 若一个 flow 同时落到多个 execution domain，应保留全部主落点，不得为了图干净而省略真实执行域。
+- ownership 归属只用于表达长期责任边界，不得替代主调用层。

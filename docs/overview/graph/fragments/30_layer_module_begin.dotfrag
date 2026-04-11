@@ -1,5 +1,5 @@
     subgraph cluster_mod {
-        label="Layer 3 - Concrete Module";
+        label="Layer 3 - Flow Coordination";
         style="filled,rounded";
         fillcolor="#dcfce7";
         color="#14532d";

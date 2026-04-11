@@ -1,6 +1,7 @@
 // architecture.dot
-// Four-layer operation-first cascade:
-// user operation -> application response -> concrete module -> core subsystem
+// Four-layer canonical call architecture:
+// user operation -> instruction interface -> flow coordination -> execution domain
+// Sidecar concepts: object plane and ownership axis
 // Generated from docs/overview/graph/fragments/*.dotfrag by scripts/generate-architecture-dot.sh
 
 digraph DeveNoteArchitecture {
@@ -365,7 +366,7 @@ digraph DeveNoteArchitecture {
     }
 
     subgraph cluster_app {
-        label="Layer 2 - Application Response";
+        label="Layer 2 - Instruction Interface";
         style="filled,rounded";
         fillcolor="#dbeafe";
         color="#1e3a8a";
@@ -667,7 +668,7 @@ digraph DeveNoteArchitecture {
     }
 
     subgraph cluster_mod {
-        label="Layer 3 - Concrete Module";
+        label="Layer 3 - Flow Coordination";
         style="filled,rounded";
         fillcolor="#dcfce7";
         color="#14532d";
@@ -939,7 +940,7 @@ digraph DeveNoteArchitecture {
     }
 
     subgraph cluster_core {
-        label="Layer 4 - Core Subsystem";
+        label="Layer 4 - Execution Domain";
         style="filled,rounded";
         fillcolor="#fce7f3";
         color="#831843";
@@ -1787,15 +1788,17 @@ digraph DeveNoteArchitecture {
         legend_op [label="user action", fillcolor="#fef9c3"];
         legend_platform [label="platform wrapper", fillcolor="#fffbeb"];
         legend_intersection [label="platform intersection", fillcolor="#fef6e7"];
-        legend_app [label="app response", fillcolor="#eff6ff"];
-        legend_mod [label="module", fillcolor="#f0fdf4"];
-        legend_core [label="core subsystem", fillcolor="#fdf2f8"];
+        legend_app [label="instruction interface", fillcolor="#eff6ff"];
+        legend_mod [label="flow coordination", fillcolor="#f0fdf4"];
+        legend_core [label="execution domain", fillcolor="#fdf2f8"];
+        legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
+        legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
         legend_note [label="clean shared baseline;
 no active drift markers", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];
-        legend_core -> legend_note -> legend_gate [style=invis];
+        legend_core -> legend_object -> legend_owner -> legend_note -> legend_gate [style=invis];
     }
 
 }

@@ -1,6 +1,7 @@
 // architecture.dot
-// Four-layer operation-first cascade:
-// user operation -> application response -> concrete module -> core subsystem
+// Four-layer canonical call architecture:
+// user operation -> instruction interface -> flow coordination -> execution domain
+// Sidecar concepts: object plane and ownership axis
 // Generated from docs/overview/graph/fragments/*.dotfrag by scripts/generate-architecture-dot.sh
 
 digraph DeveNoteArchitecture {

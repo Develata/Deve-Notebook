@@ -1,4 +1,4 @@
-(layer :id application :order 2 :description "Concrete callbacks, effects, HTTP handlers, and WS handlers that receive user operations.")
+(layer :id application :order 2 :description "Instruction interface layer. Concrete callbacks, effects, HTTP handlers, and WS handlers receive user operations and translate them into internal flow requests.")
 (group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result))
 (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
 (group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close))

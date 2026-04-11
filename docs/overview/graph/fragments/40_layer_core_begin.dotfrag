@@ -1,5 +1,5 @@
     subgraph cluster_core {
-        label="Layer 4 - Core Subsystem";
+        label="Layer 4 - Execution Domain";
         style="filled,rounded";
         fillcolor="#fce7f3";
         color="#831843";

@@ -1,5 +1,5 @@
     subgraph cluster_app {
-        label="Layer 2 - Application Response";
+        label="Layer 2 - Instruction Interface";
         style="filled,rounded";
         fillcolor="#dbeafe";
         color="#1e3a8a";

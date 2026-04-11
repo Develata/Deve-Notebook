@@ -23,8 +23,8 @@ Keep this block stable. The graph generator reads the drift registry below.
 |---|---|---|
 | Flow set | aligned | the same 24 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
-| Application responses | aligned | response taxonomy matches across the modeled slice |
-| Module/core ownership | aligned | core ownership and tree leaf naming match |
+| Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
+| Coordination/execution mapping | aligned | execution-domain ownership and leaf naming match |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -91,9 +91,9 @@ Within the currently modeled operation slice:
 
 - flow set is aligned
 - user-operation IDs are aligned
-- application responses are aligned
-- module ownership is aligned
-- core ownership is aligned
+- instruction interfaces are aligned
+- coordination ownership is aligned
+- execution-domain ownership is aligned
 
 The slice is a practical clean bijective baseline.
 

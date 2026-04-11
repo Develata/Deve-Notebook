@@ -1,2 +1,4 @@
 ;;; architecture-code.lisp - Implementation-side keyword-style architecture view.
+;;; Canonical meaning: user-operation -> instruction interface -> flow coordination -> execution domain.
+;;; Sidecar semantics: object plane and ownership axis.
 (system :name deve-note :version "0.0.1" :layers (user-operation application module core))

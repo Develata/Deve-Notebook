@@ -1,4 +1,4 @@
-(layer :id module :order 3 :description "Finest-grained engineering modules — each owns a state machine or contract.")
+(layer :id module :order 3 :description "Flow coordination layer. Each module owns a stable flow contract, state machine, or orchestration boundary.")
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
 (group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws))
@@ -47,7 +47,7 @@
 (module :id mod_plugin_rhai     :label "plugin::runtime::rhai_v1" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/runtime/rhai_v1.rs")
 (module :id mod_search_service  :label "search::service" :chapter 14_tech_stack :parent core.search :code-area "crates/core/src/search/mod.rs")
 
-(layer :id core :order 4 :description "Top-level subsystems under crates/core/src/*. Each owns one authority domain.")
+(layer :id core :order 4 :description "Execution-domain layer. These are the major authority/runtime/workflow domains where flows ultimately converge.")
 (group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol))
 (group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
 (group :id grp.core.command-palette :layer core :label "command-palette" :members (core.tree core.plugin core.protocol))

@@ -1,5 +1,5 @@
 (layer :id application :order 2
-       :description "Handlers, callbacks, form actions, request senders, and effect gates that receive user operations and dispatch into modules.")
+       :description "Instruction interface layer. It receives user operations, validates/gates them, and translates them into internal flow requests.")
 (group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result))
 (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
 (group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close))

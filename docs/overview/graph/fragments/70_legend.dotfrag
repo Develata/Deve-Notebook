@@ -7,12 +7,14 @@
         legend_op [label="user action", fillcolor="#fef9c3"];
         legend_platform [label="platform wrapper", fillcolor="#fffbeb"];
         legend_intersection [label="platform intersection", fillcolor="#fef6e7"];
-        legend_app [label="app response", fillcolor="#eff6ff"];
-        legend_mod [label="module", fillcolor="#f0fdf4"];
-        legend_core [label="core subsystem", fillcolor="#fdf2f8"];
+        legend_app [label="instruction interface", fillcolor="#eff6ff"];
+        legend_mod [label="flow coordination", fillcolor="#f0fdf4"];
+        legend_core [label="execution domain", fillcolor="#fdf2f8"];
+        legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
+        legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
         legend_note [label="__LEGEND_NOTE__", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];
-        legend_core -> legend_note -> legend_gate [style=invis];
+        legend_core -> legend_object -> legend_owner -> legend_note -> legend_gate [style=invis];
     }

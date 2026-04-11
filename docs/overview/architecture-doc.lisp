@@ -1,4 +1,6 @@
 ;;; architecture-doc.lisp - Plan-first keyword-style architecture view.
+;;; Canonical meaning: user-operation -> instruction interface -> flow coordination -> execution domain.
+;;; Sidecar semantics: object plane and ownership axis.
 (system :name deve-note :version "0.0.1" :layers (user-operation application module core))
 (layer :id user-operation :order 1 :description "Atomic user actions. Surface types such as CLI, shortcut, palette, and form are properties, not layer nodes.")
 (group :id grp.user.web :layer user-operation :kind platform :label "web" :members ()) (group :id grp.user.desktop :layer user-operation :kind platform :label "desktop" :members ())
@@ -66,7 +68,7 @@
 (user-operation :id op.repo.open-doc.choose-doc :label "Choose Document Result" :kind select :surface keyboard-or-pointer :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.quick-open.select-doc)) (user-operation :id op.repo.open-doc.request-open :label "Request OpenDoc" :kind request :surface editor-state :chapter 16_web_thin_client_ledger :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.doc.open))
 (user-operation :id op.repo.open-doc.receive-content :label "Receive Document Content" :kind async-result :surface editor :chapter 06_repository :feature "docs/features/operations/repo_open_doc.md" :calls (app.repo.doc.receive))
 (layer :id application :order 2
-       :description "Handlers, callbacks, form actions, request senders, and effect gates that receive user operations and dispatch into modules.")
+       :description "Instruction interface layer. It receives user operations, validates/gates them, and translates them into internal flow requests.")
 (group :id grp.app.auth-login :layer application :label "login" :members (app.auth.form.username-update app.auth.form.password-update app.auth.login.submit app.auth.login.result)) (group :id grp.app.auth-session :layer application :label "session-expired / unauthorized" :members (app.auth.session.probe-gate app.auth.session.probe app.auth.session.protocol-error app.auth.session.reauth-surface))
 (group :id grp.app.command-palette :layer application :label "command-palette" :members (app.ui.command-palette.open app.ui.command-palette.query app.ui.command-palette.navigate app.ui.command-palette.execute app.ui.command-palette.close)) (group :id grp.app.sync-handshake :layer application :label "repo-scoped sync handshake" :members (app.net.sync.handshake-gate app.net.sync.send-hello app.net.sync.receive-hello app.net.sync.write-ready))
 (group :id grp.app.key-exchange :layer application :label "repo-scoped key exchange" :members (app.net.key.request app.net.key.provide app.net.key.denied)) (group :id grp.app.sync-transfer :layer application :label "repo-scoped sync transfer" :members (app.net.sync.request-missing app.net.sync.receive-push app.net.sync.request-snapshot app.net.sync.receive-snapshot))
@@ -132,7 +134,7 @@
 (application :id app.repo.quick-open.open :label "quick_open::open" :kind ui-shell :chapter 06_repository :calls ()) (application :id app.repo.quick-open.query :label "quick_open::query" :kind ui-shell :chapter 06_repository :calls ())
 (application :id app.repo.quick-open.select-doc :label "quick_open::select_doc" :kind ui-shell :chapter 06_repository :calls (app.repo.doc.open)) (application :id app.repo.doc.open :label "editor::open_doc" :kind ws-handler :chapter 16_web_thin_client_ledger :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
 (application :id app.repo.doc.receive :label "editor::receive_doc" :kind async-result :chapter 06_repository :calls (mod_proto_ws mod_ledger_manager))
-(layer :id module :order 3 :description "Finest-grained engineering modules — each owns a state machine or contract.")
+(layer :id module :order 3 :description "Flow coordination layer. Each module owns a stable flow contract, state machine, or orchestration boundary.")
 (group :id grp.mod.auth-login :layer module :label "login" :members (mod_sec_auth mod_sec_jwt mod_proto_auth)) (group :id grp.mod.auth-session :layer module :label "session-expired / unauthorized" :members (mod_proto_ws mod_proto_auth mod_sec_auth))
 (group :id grp.mod.command-palette :layer module :label "command-palette" :members (mod_tree_structure mod_plugin_chat mod_proto_ws)) (group :id grp.mod.sync-handshake :layer module :label "repo-scoped sync handshake" :members (mod_sync_handshake mod_proto_ws))
 (group :id grp.mod.key-exchange :layer module :label "repo-scoped key exchange" :members (mod_sync_repo-scoped mod_sec_storage mod_proto_ws)) (group :id grp.mod.sync-transfer :layer module :label "repo-scoped sync transfer" :members (mod_sync_transfer mod_proto_ws))
@@ -157,7 +159,7 @@
 (module :id mod_plugin_chat     :label "plugin::chat_stream" :chapter 10_ai_agent :parent core.plugin :code-area "crates/core/src/plugin/") (module :id mod_plugin_loader   :label "plugin::loader" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/loader.rs")
 (module :id mod_plugin_host     :label "plugin::runtime::host" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/runtime/host/") (module :id mod_plugin_rhai     :label "plugin::runtime::rhai_v1" :chapter 17_plugins :parent core.plugin :code-area "crates/core/src/plugin/runtime/rhai_v1.rs")
 (module :id mod_search_service  :label "search::service" :chapter 14_tech_stack :parent core.search :code-area "crates/core/src/search/mod.rs")
-(layer :id core :order 4 :description "Top-level subsystems under crates/core/src/*. Each owns one authority domain.")
+(layer :id core :order 4 :description "Execution-domain layer. These are the major authority/runtime/workflow domains where flows ultimately converge.")
 (group :id grp.core.auth-login :layer core :label "login" :members (core.security core.protocol)) (group :id grp.core.auth-session :layer core :label "session-expired / unauthorized" :members (core.security core.protocol))
 (group :id grp.core.command-palette :layer core :label "command-palette" :members (core.tree core.plugin core.protocol)) (group :id grp.core.sync-handshake :layer core :label "repo-scoped sync handshake" :members (core.sync core.protocol))
 (group :id grp.core.key-exchange :layer core :label "repo-scoped key exchange" :members (core.sync core.security core.protocol)) (group :id grp.core.sync-transfer :layer core :label "repo-scoped sync transfer" :members (core.sync core.protocol))
