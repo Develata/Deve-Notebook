@@ -1,0 +1,11 @@
+        subgraph cluster_core_repo_file_ops {
+            label="repo file operations [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_tree_fileops [label="tree\n(projection)", fillcolor="#fdf2f8"];
+            core_ledger_fileops [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_fileops [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+

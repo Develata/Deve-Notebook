@@ -20,6 +20,7 @@
 (group :id grp.app.ai-trusted-agent :layer application :label "trusted external agent boundary" :members (app.ai.trusted-agent.settings app.ai.trusted-agent.guard app.ai.trusted-agent.backend app.ai.trusted-agent.submit app.ai.trusted-agent.disabled app.ai.trusted-agent.stream))
 (group :id grp.app.plugin-runtime :layer application :label "plugin-host / plugin-call boundary" :members (app.plugin.host.proxy-detect app.plugin.host.load-strict app.plugin.host.start-host app.plugin.call.dispatch app.plugin.call.result app.plugin.call.error))
 (group :id grp.app.search-query :layer application :label "search/query" :members (app.search.open app.search.query app.search.gate app.search.submit app.search.results))
+(group :id grp.app.repo-file-ops :layer application :label "repo file operations" :members (app.repo.file-ops.surface app.repo.file-ops.path-draft app.repo.file-ops.write-gate app.repo.file-ops.create app.repo.file-ops.path-op app.repo.file-ops.result))
 (group :id grp.app.open-doc :layer application :label "open-doc" :members (app.repo.quick-open.open app.repo.quick-open.query app.repo.quick-open.select-doc app.repo.doc.open app.repo.doc.receive))
 (application :id app.auth.form.username-update :label "LoginPage::set_username" :kind form-state :code "apps/web/src/components/login/page.rs" :calls ())
 (application :id app.auth.form.password-update :label "LoginPage::set_password" :kind form-state :code "apps/web/src/components/login/page.rs" :calls ())

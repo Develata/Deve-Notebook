@@ -1,0 +1,14 @@
+        subgraph cluster_app_repo_file_ops {
+            label="repo file operations [06_repository]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_fileops_surface [label="SearchAction::CreateDoc / FileOp", fillcolor="#eff6ff"];
+            app_fileops_path [label="file_ops::path_draft", fillcolor="#eff6ff"];
+            app_fileops_gate [label="repo_write_allowed", fillcolor="#bfdbfe"];
+            app_fileops_create [label="ClientMessage::CreateDoc", fillcolor="#bfdbfe"];
+            app_fileops_pathop [label="RenameDoc / CopyDoc / MoveDoc / DeleteDoc", fillcolor="#bfdbfe"];
+            app_fileops_result [label="route_docs -> projection refresh", fillcolor="#eff6ff"];
+        }
+

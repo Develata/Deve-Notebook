@@ -314,9 +314,6 @@ digraph DeveNoteArchitecture {
                 gate_scope [label="Scope Gates:\nrepo bound\nscope_nonce valid\nWS connected", fillcolor="#fde68a", shape=note];
             }
 
-            shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
-        }
-
             subgraph cluster_user_search_query {
                 label="search/query [08_ui_design + 14_tech_stack]";
                 style="rounded,filled";
@@ -329,6 +326,25 @@ digraph DeveNoteArchitecture {
                 op_search_results [label="Receive Search Results", fillcolor="#fef9c3"];
                 gate_search [label="Search Gates:\nworkspace ready\nscope_nonce valid\nfeature enabled", fillcolor="#fde68a", shape=note];
             }
+
+
+            subgraph cluster_user_repo_file_ops {
+                label="repo file operations [06_repository + 08_ui_design]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_fileops_open [label="Open File Operation Surface", fillcolor="#fef9c3"];
+                op_fileops_path [label="Type File Operation Path", fillcolor="#fef9c3"];
+                op_fileops_create [label="Submit CreateDoc", fillcolor="#fde68a"];
+                op_fileops_pathop [label="Submit Rename / Copy / Move / Delete", fillcolor="#fde68a"];
+                op_fileops_result [label="Receive File Operation Result", fillcolor="#fef9c3"];
+                gate_fileops [label="Write Gates:\nlocal repo\nscope_nonce valid\nnot readonly", fillcolor="#fde68a", shape=note];
+            }
+
+
+            shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
+        }
 
 
     }
@@ -590,6 +606,21 @@ digraph DeveNoteArchitecture {
         }
 
 
+        subgraph cluster_app_repo_file_ops {
+            label="repo file operations [06_repository]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_fileops_surface [label="SearchAction::CreateDoc / FileOp", fillcolor="#eff6ff"];
+            app_fileops_path [label="file_ops::path_draft", fillcolor="#eff6ff"];
+            app_fileops_gate [label="repo_write_allowed", fillcolor="#bfdbfe"];
+            app_fileops_create [label="ClientMessage::CreateDoc", fillcolor="#bfdbfe"];
+            app_fileops_pathop [label="RenameDoc / CopyDoc / MoveDoc / DeleteDoc", fillcolor="#bfdbfe"];
+            app_fileops_result [label="route_docs -> projection refresh", fillcolor="#eff6ff"];
+        }
+
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -840,6 +871,18 @@ digraph DeveNoteArchitecture {
         }
 
 
+        subgraph cluster_mod_repo_file_ops {
+            label="repo file operations [06_repository]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws_fileops [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree_fileops [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
+            mod_ledger_fileops [label="ledger::manager", fillcolor="#f0fdf4"];
+        }
+
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1080,6 +1123,18 @@ digraph DeveNoteArchitecture {
         }
 
 
+        subgraph cluster_core_repo_file_ops {
+            label="repo file operations [06_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_tree_fileops [label="tree\n(projection)", fillcolor="#fdf2f8"];
+            core_ledger_fileops [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_fileops [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+
         subgraph cluster_core_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1132,6 +1187,14 @@ digraph DeveNoteArchitecture {
     gate_search -> app_search_gate;
     op_search_submit -> app_search_submit;
     op_search_results -> app_search_results;
+    op_fileops_open -> app_fileops_surface;
+    op_fileops_path -> app_fileops_path;
+    op_fileops_create -> gate_fileops;
+    gate_fileops -> app_fileops_gate;
+    op_fileops_create -> app_fileops_create;
+    op_fileops_pathop -> gate_fileops;
+    op_fileops_pathop -> app_fileops_pathop;
+    op_fileops_result -> app_fileops_result;
     op_repo_open -> app_repo_menu;
     op_repo_choose -> app_repo_select;
     op_repo_request -> app_repo_request;
@@ -1308,6 +1371,15 @@ digraph DeveNoteArchitecture {
     app_search_submit -> mod_proto_ws_search;
     app_search_results -> mod_search_service_query;
     app_search_results -> mod_proto_ws_search;
+    app_fileops_create -> mod_proto_ws_fileops;
+    app_fileops_create -> mod_tree_fileops;
+    app_fileops_create -> mod_ledger_fileops;
+    app_fileops_pathop -> mod_proto_ws_fileops;
+    app_fileops_pathop -> mod_tree_fileops;
+    app_fileops_pathop -> mod_ledger_fileops;
+    app_fileops_result -> mod_proto_ws_fileops;
+    app_fileops_result -> mod_tree_fileops;
+    app_fileops_result -> mod_ledger_fileops;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -1398,6 +1470,9 @@ digraph DeveNoteArchitecture {
     mod_proto_ws_plugin_boundary -> core_proto_plugin_boundary;
     mod_search_service_query -> core_search_query;
     mod_proto_ws_search -> core_proto_search;
+    mod_proto_ws_fileops -> core_proto_fileops;
+    mod_tree_fileops -> core_tree_fileops;
+    mod_ledger_fileops -> core_ledger_fileops;
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
@@ -1427,6 +1502,7 @@ digraph DeveNoteArchitecture {
     core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
     core_search_query -> core_proto_search [style=dashed, color="#831843", label="returns scoped results"];
+    core_tree_fileops -> core_ledger_fileops [style=dashed, color="#831843", label="mutates structure facts"];
 
     // group-level spine
     user_login_spine [label="login flow", shape=plaintext, fontcolor="#92400e"];
@@ -1524,6 +1600,14 @@ digraph DeveNoteArchitecture {
     user_search_query_spine -> app_search_query_spine [penwidth=2.2, color="#0f172a"];
     app_search_query_spine -> mod_search_query_spine [penwidth=2.2, color="#0f172a"];
     mod_search_query_spine -> core_search_query_spine [penwidth=2.2, color="#0f172a"];
+
+    user_repo_file_ops_spine [label="repo file operations flow", shape=plaintext, fontcolor="#92400e"];
+    app_repo_file_ops_spine [label="", shape=point, width=0.01];
+    mod_repo_file_ops_spine [label="", shape=point, width=0.01];
+    core_repo_file_ops_spine [label="", shape=point, width=0.01];
+    user_repo_file_ops_spine -> app_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
+    app_repo_file_ops_spine -> mod_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
+    mod_repo_file_ops_spine -> core_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
 
     user_repo_switch_spine [label="repo-switch flow", shape=plaintext, fontcolor="#92400e"];
     app_repo_switch_spine [label="", shape=point, width=0.01];

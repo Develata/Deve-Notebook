@@ -17,6 +17,3 @@
                 op_doc_receive [label="Receive Document Content", fillcolor="#fef9c3"];
                 gate_scope [label="Scope Gates:\nrepo bound\nscope_nonce valid\nWS connected", fillcolor="#fde68a", shape=note];
             }
-
-            shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
-        }

@@ -38,6 +38,14 @@
     gate_search -> app_search_gate;
     op_search_submit -> app_search_submit;
     op_search_results -> app_search_results;
+    op_fileops_open -> app_fileops_surface;
+    op_fileops_path -> app_fileops_path;
+    op_fileops_create -> gate_fileops;
+    gate_fileops -> app_fileops_gate;
+    op_fileops_create -> app_fileops_create;
+    op_fileops_pathop -> gate_fileops;
+    op_fileops_pathop -> app_fileops_pathop;
+    op_fileops_result -> app_fileops_result;
     op_repo_open -> app_repo_menu;
     op_repo_choose -> app_repo_select;
     op_repo_request -> app_repo_request;
@@ -214,6 +222,15 @@
     app_search_submit -> mod_proto_ws_search;
     app_search_results -> mod_search_service_query;
     app_search_results -> mod_proto_ws_search;
+    app_fileops_create -> mod_proto_ws_fileops;
+    app_fileops_create -> mod_tree_fileops;
+    app_fileops_create -> mod_ledger_fileops;
+    app_fileops_pathop -> mod_proto_ws_fileops;
+    app_fileops_pathop -> mod_tree_fileops;
+    app_fileops_pathop -> mod_ledger_fileops;
+    app_fileops_result -> mod_proto_ws_fileops;
+    app_fileops_result -> mod_tree_fileops;
+    app_fileops_result -> mod_ledger_fileops;
 
     app_palette_exec -> app_exec_branches;
     app_exec_branches -> mod_sc;
@@ -304,6 +321,9 @@
     mod_proto_ws_plugin_boundary -> core_proto_plugin_boundary;
     mod_search_service_query -> core_search_query;
     mod_proto_ws_search -> core_proto_search;
+    mod_proto_ws_fileops -> core_proto_fileops;
+    mod_tree_fileops -> core_tree_fileops;
+    mod_ledger_fileops -> core_ledger_fileops;
     mod_proto_ws -> core_proto;
     mod_sync_handshake_runtime -> core_sync_handshake;
     mod_proto_ws_sync -> core_proto_handshake;
@@ -333,3 +353,4 @@
     core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
     core_search_query -> core_proto_search [style=dashed, color="#831843", label="returns scoped results"];
+    core_tree_fileops -> core_ledger_fileops [style=dashed, color="#831843", label="mutates structure facts"];

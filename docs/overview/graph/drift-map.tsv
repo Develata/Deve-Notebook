@@ -12,6 +12,7 @@ native ai-chat	ai_chat
 trusted external agent boundary	ai_trusted
 plugin-host / plugin-call boundary	plugin_runtime
 search/query	search_query
+repo file operations	repo_file_ops
 repo-switch	repo_switch
 stage / unstage	sc_stage
 discard file	sc_discard_file

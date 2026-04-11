@@ -1,0 +1,11 @@
+        subgraph cluster_mod_repo_file_ops {
+            label="repo file operations [06_repository]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws_fileops [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree_fileops [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
+            mod_ledger_fileops [label="ledger::manager", fillcolor="#f0fdf4"];
+        }
+

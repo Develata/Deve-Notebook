@@ -95,6 +95,14 @@
     app_search_query_spine -> mod_search_query_spine [penwidth=2.2, color="#0f172a"];
     mod_search_query_spine -> core_search_query_spine [penwidth=2.2, color="#0f172a"];
 
+    user_repo_file_ops_spine [label="repo file operations flow", shape=plaintext, fontcolor="#92400e"];
+    app_repo_file_ops_spine [label="", shape=point, width=0.01];
+    mod_repo_file_ops_spine [label="", shape=point, width=0.01];
+    core_repo_file_ops_spine [label="", shape=point, width=0.01];
+    user_repo_file_ops_spine -> app_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
+    app_repo_file_ops_spine -> mod_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
+    mod_repo_file_ops_spine -> core_repo_file_ops_spine [penwidth=2.2, color="#0f172a"];
+
     user_repo_switch_spine [label="repo-switch flow", shape=plaintext, fontcolor="#92400e"];
     app_repo_switch_spine [label="", shape=point, width=0.01];
     mod_repo_switch_spine [label="", shape=point, width=0.01];
