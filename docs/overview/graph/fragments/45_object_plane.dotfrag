@@ -1,0 +1,55 @@
+    subgraph cluster_object_plane {
+        label="Object Plane - Sidecar State / Authority Objects";
+        style="filled,rounded,dashed";
+        fillcolor="#f8fafc";
+        color="#64748b";
+        labelfontcolor="#334155";
+
+        subgraph cluster_obj_doc {
+            label="document objects";
+            style="rounded,filled";
+            fillcolor="#f8fafc";
+            color="#94a3b8";
+
+            obj_doc_content [label="doc::content", fillcolor="#f8fafc"];
+            obj_confirmed_op [label="confirmed_op", fillcolor="#f8fafc"];
+            obj_pending_local_edit [label="pending_local_edit", fillcolor="#f8fafc"];
+        }
+
+        subgraph cluster_obj_repo {
+            label="repo / sync objects";
+            style="rounded,filled";
+            fillcolor="#f8fafc";
+            color="#94a3b8";
+
+            obj_repo_scope [label="repo::scope", fillcolor="#f8fafc"];
+            obj_repo_key [label="repo::key", fillcolor="#f8fafc"];
+            obj_tree_projection [label="tree::projection", fillcolor="#f8fafc"];
+            obj_workspace_projection [label="workspace::projection", fillcolor="#f8fafc"];
+        }
+
+        subgraph cluster_obj_workflow {
+            label="workflow objects";
+            style="rounded,filled";
+            fillcolor="#f8fafc";
+            color="#94a3b8";
+
+            obj_sc_staging [label="source_control::staging", fillcolor="#f8fafc"];
+            obj_sc_pending_fs [label="source_control::pending_fs", fillcolor="#f8fafc"];
+            obj_commit [label="commit", fillcolor="#f8fafc"];
+            obj_merge_conflict [label="merge_conflict", fillcolor="#f8fafc"];
+        }
+
+        subgraph cluster_obj_peripheral {
+            label="peripheral objects";
+            style="rounded,filled";
+            fillcolor="#f8fafc";
+            color="#94a3b8";
+
+            obj_auth_session [label="auth::session", fillcolor="#f8fafc"];
+            obj_search_index [label="search::index", fillcolor="#f8fafc"];
+            obj_plugin_request [label="plugin::request", fillcolor="#f8fafc"];
+            obj_agent_process [label="agent::process", fillcolor="#f8fafc"];
+        }
+    }
+

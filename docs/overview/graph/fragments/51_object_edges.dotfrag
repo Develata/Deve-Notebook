@@ -1,0 +1,44 @@
+    edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
+    core_sec -> obj_auth_session;
+    core_sec_auth_session -> obj_auth_session;
+    core_proto_auth_session -> obj_auth_session;
+
+    core_sync_handshake -> obj_repo_scope;
+    core_proto_handshake -> obj_repo_scope;
+    core_sync_key -> obj_repo_key;
+    core_sec_key -> obj_repo_key;
+    core_proto_key -> obj_repo_key;
+    core_sync_transfer -> obj_confirmed_op;
+    core_proto_transfer -> obj_confirmed_op;
+
+    core_tree -> obj_tree_projection;
+    core_ledger -> obj_doc_content;
+    core_tree_switch -> obj_repo_scope;
+    core_tree_repo -> obj_tree_projection;
+    core_ledger_repo -> obj_repo_scope;
+    core_tree_fileops -> obj_tree_projection;
+    core_ledger_fileops -> obj_doc_content;
+
+    core_ledger_doc_edit -> obj_confirmed_op;
+    core_ledger_doc_edit -> obj_doc_content;
+    core_sync_doc_edit -> obj_workspace_projection;
+    core_proto_doc_edit -> obj_pending_local_edit;
+
+    core_sc_stage -> obj_sc_staging;
+    core_sc_commit -> obj_commit;
+    core_ledger_commit -> obj_commit;
+    core_sc_history -> obj_commit;
+    core_sc_publish -> obj_commit;
+    core_sc_discard_file -> obj_sc_pending_fs;
+    core_sync_discard_file -> obj_workspace_projection;
+    core_sc_conflict -> obj_merge_conflict;
+    core_ledger_conflict -> obj_merge_conflict;
+    core_sync_merge_peer -> obj_merge_conflict;
+    core_ledger_merge_peer -> obj_merge_conflict;
+    core_sync_runtime -> obj_confirmed_op;
+
+    core_search_query -> obj_search_index;
+    core_plugin_ai -> obj_plugin_request;
+    core_plugin_boundary -> obj_plugin_request;
+    core_plugin_trusted -> obj_agent_process;
+    edge [style=solid, color="#475569", constraint=true, arrowhead=normal];

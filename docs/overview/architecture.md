@@ -2,19 +2,8 @@
 
 One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The current modeled slice is again aligned across plan and code, so the SVG can be read as the clean baseline for that shared slice.
 
-**Files in this directory**:
-
-| File | Purpose |
-|---|---|
-| [`architecture.md`](./architecture.md) | This file — human entry point |
-| [`architecture-doc.lisp`](./architecture-doc.lisp) | Generated architecture view derived from `docs/plan/`, `docs/features/operations/`, and `docs/acceptance-cases/` |
-| [`architecture-code.lisp`](./architecture-code.lisp) | Generated architecture view derived from actual implementation flows in `apps/web/src/`, `apps/cli/src/server/`, and `crates/core/src/` |
-| [`architecture-diff.md`](./architecture-diff.md) | Comparison report for the current operation slice; the drift registry here drives SVG `*` markers |
-| [`architecture.dot`](./architecture.dot) | Generated Graphviz source for the SVG diagram |
-| [`architecture.svg`](./architecture.svg) | Rendered SVG (run `dot -Tsvg architecture.dot -o architecture.svg`) |
-
-The `.dot` file is assembled from `docs/overview/graph/fragments/*.dotfrag` by `scripts/generate-architecture-dot.sh`, which also generates drift markers from the registry in `architecture-diff.md`.
-The `.lisp` files are now assembled from `docs/overview/lisp/{doc_fragments,code_fragments}/*.lispfrag` by `scripts/generate-architecture-lisp.sh`.
+Primary files: [`architecture-doc.lisp`](./architecture-doc.lisp), [`architecture-code.lisp`](./architecture-code.lisp), [`architecture-diff.md`](./architecture-diff.md), [`architecture.dot`](./architecture.dot), and [`architecture.svg`](./architecture.svg).
+The `.dot` and `.lisp` files are assembled from fragments by `scripts/generate-architecture-dot.sh` and `scripts/generate-architecture-lisp.sh`.
 
 ## Layered Architecture (4-layer canonical call architecture)
 
@@ -51,16 +40,14 @@ This architecture also carries two sidecar dimensions that are not part of the f
 - `Object Plane`: the concrete objects ultimately touched by flows, such as `doc::content`, `pending_local_edit`, `confirmed_op`, `tree::projection`, or `repo::scope`
 - `Ownership Axis`: the long-lived root domains that own modules and execution responsibilities over time
 
-Each layer may also contain multiple grouped domains or flows. For example, the login-related user operations should appear together as a `login` group inside Layer 1 rather than being flattened across the whole layer.
-For Layer 1 specifically, each option now has three ownership levels: the enclosing layer, the platform bucket (`web`, `desktop`, `cli`, `android`, etc.), and then the flow/module group such as `login`, `session-expired / unauthorized`, or `open-doc`.
-When one option flow is reused across multiple platforms, the graph places it in an explicit intersection bucket such as `shared(web,desktop)` instead of forcing it into only one platform frame.
+Each layer may contain grouped flows. For Layer 1, every option has three ownership levels: enclosing layer, platform bucket (`web`, `desktop`, `cli`, `android`, etc.), and flow group such as `login`, `session-expired / unauthorized`, or `open-doc`. Reused flows go into explicit intersection buckets such as `shared(web,desktop)`.
 
 The current graph also carries three extra architecture cues:
 - group labels include their governing plan chapters
 - critical gates such as scope / connection validity may appear as explicit note nodes
 - each major flow can be read through a group-level spine in addition to fine-grained node edges
 
-When reading the current generated SVG, treat the visible fourth layer as the current rendering of `execution domains`, not as a competing fifth call layer. The object plane remains a sidecar concept until it is rendered more explicitly.
+When reading the current generated SVG, treat the visible fourth layer as the current rendering of `execution domains`, not as a competing fifth call layer. The object plane is rendered as a sidecar cluster with dotted edges from execution domains; it is not part of the main downward call cascade.
 
 ## Current Refactor Status
 
@@ -71,14 +58,12 @@ When reading the current generated SVG, treat the visible fourth layer as the cu
 - `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently records no unresolved structural mismatch inside the modeled slice.
 - The current SVG should be read as the clean shared baseline for the modeled slice, not yet as a fully automated starred divergence map.
 
-## How To Read The Lisp Files
+## Lisp Conventions
 
-Both `.lisp` files use **keyword-style s-expression** (Common Lisp / Emacs Lisp style):
+Both `.lisp` files use keyword-style s-expressions:
 
 ```lisp
 (system :name deve-note :version "0.0.1" :layers (user-operation application module core))
-
-(layer :id user-operation :order 1 :description "...")
 
 (user-operation :id op.auth.login.submit :label "Submit Login Form" :kind submit :calls (app.auth.login.submit))
 (application :id app.auth.login.submit :label "login::submit" :kind form-submit :calls (mod_sec_auth mod_sec_jwt mod_proto_auth))
@@ -92,16 +77,13 @@ The current generated artifacts keep the stable internal IDs `application`, `mod
 - `module` = flow coordination
 - `core` = execution domain
 
-**Key conventions**:
 - Fields use `:keyword` prefix — AI parsers and humans can both read them without positional guessing.
 - `:calls (x y z)` lists downstream targets — always pointing toward a lower layer in the canonical call cascade.
 - Layer 1 node IDs should use `op.<domain>.<flow>.<verb>` naming.
 - `group` records define layer-internal bundles such as `login`, `session-expired / unauthorized`, `command-palette`, `branch-switch`, `repo-switch`, `stage / unstage`, `source-control commit`, `native ai-chat`, or `open-doc`.
-- `:chapter 04_storage#watcher-contract` references a stable anchor declared in a plan chapter via `{#watcher-contract}`.
-- `:code "path/to/file.rs"` references the authoritative code location.
-- IDs are dotted, e.g. `core.sync.watcher`, to preserve hierarchy without repeating the parent.
+- `:chapter 04_storage#watcher-contract` references a stable plan anchor; `:code "path/to/file.rs"` references authoritative code.
 
-`Object Plane` and `Ownership Axis` are currently modeled as sidecar semantics rather than first-class layer forms in the generated Lisp.
+`Object Plane` is modeled with sidecar `object-plane` / `object` forms in the generated Lisp. `Ownership Axis` remains sidecar semantics expressed through module/core ownership metadata rather than a canonical call layer.
 
 ## Authority Rule
 
