@@ -1,0 +1,11 @@
+        subgraph cluster_mod_pending_navigation {
+            label="leave document / pending edit guard [16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_nav_guard [label="navigation::guard", fillcolor="#f0fdf4"];
+            mod_pending_navigation [label="pending_navigation::modal", fillcolor="#f0fdf4"];
+            mod_proto_ws_nav [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree_nav [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
+        }

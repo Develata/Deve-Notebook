@@ -23,6 +23,10 @@
     core_ledger_doc_edit -> obj_doc_content;
     core_sync_doc_edit -> obj_workspace_projection;
     core_proto_doc_edit -> obj_pending_local_edit;
+    core_proto_nav -> obj_pending_local_edit;
+    core_proto_nav -> obj_pending_navigation;
+    core_tree_nav -> obj_tree_projection;
+    core_tree_nav -> obj_repo_scope;
 
     core_sc_stage -> obj_sc_staging;
     core_sc_commit -> obj_commit;

@@ -2,6 +2,7 @@
 (object :id obj.doc.content :label "doc::content" :kind document-state :authority core.ledger)
 (object :id obj.confirmed-op :label "confirmed_op" :kind ledger-fact :authority core.ledger)
 (object :id obj.pending-local-edit :label "pending_local_edit" :kind client-overlay :authority core.protocol)
+(object :id obj.pending-navigation :label "pending_navigation" :kind client-overlay :authority core.protocol)
 (object :id obj.repo.scope :label "repo::scope" :kind scope-state :authority core.protocol)
 (object :id obj.repo.key :label "repo::key" :kind security-state :authority core.security)
 (object :id obj.tree.projection :label "tree::projection" :kind projection :authority core.tree)
@@ -14,4 +15,3 @@
 (object :id obj.search.index :label "search::index" :kind derived-index :authority core.search)
 (object :id obj.plugin.request :label "plugin::request" :kind peripheral-request :authority core.plugin)
 (object :id obj.agent.process :label "agent::process" :kind external-process :authority core.plugin)
-

@@ -1,0 +1,13 @@
+        subgraph cluster_app_pending_navigation {
+            label="leave document / pending edit guard [16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_nav_guard [label="guard_navigation", fillcolor="#bfdbfe"];
+            app_nav_doc_action [label="set_current_doc / set_explicit_home", fillcolor="#eff6ff"];
+            app_nav_scope_action [label="SwitchRepo / SwitchBranch / Home", fillcolor="#eff6ff"];
+            app_nav_stay [label="PendingNavigation::cancel", fillcolor="#eff6ff"];
+            app_nav_continue [label="PendingNavigation::continue", fillcolor="#bfdbfe"];
+            app_nav_clear [label="Ack/EditRejected clears guard", fillcolor="#eff6ff"];
+        }

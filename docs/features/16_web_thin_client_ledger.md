@@ -30,6 +30,7 @@
 
 - 如果当前文档仍有未确认本地写入，离开前必须明确提示。
 - 但被明确 reject 的写入不应继续卡成“等待确认”。
+- 原子操作示例：[`operations/doc_pending_navigation_guard.md`](./operations/doc_pending_navigation_guard.md)
 
 ## 非目标
 

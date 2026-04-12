@@ -1,0 +1,13 @@
+            subgraph cluster_user_pending_navigation {
+                label="leave document / pending edit guard [16_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_nav_doc_change [label="Request Document Change", fillcolor="#fde68a"];
+                op_nav_scope_change [label="Request Scope Change", fillcolor="#fde68a"];
+                op_nav_stay [label="Choose Stay", fillcolor="#fef9c3"];
+                op_nav_continue [label="Confirm Leave", fillcolor="#fde68a"];
+                op_nav_clear [label="Clear Guard On Confirmed Edit", fillcolor="#fef9c3"];
+                gate_nav_pending [label="Navigation Guard:\ncurrent doc pending set\nnot global pending", fillcolor="#fde68a", shape=note];
+            }

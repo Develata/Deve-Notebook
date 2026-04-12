@@ -14,6 +14,7 @@ plugin-host / plugin-call boundary	plugin_runtime
 search/query	search_query
 repo file operations	repo_file_ops
 document edit / confirmed op	doc_edit
+leave document / pending edit guard	pending_navigation
 repo-switch	repo_switch
 stage / unstage	sc_stage
 discard file	sc_discard_file

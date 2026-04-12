@@ -1,0 +1,9 @@
+        subgraph cluster_core_pending_navigation {
+            label="leave document / pending edit guard [16_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_proto_nav [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_tree_nav [label="tree\n(projection)", fillcolor="#fdf2f8"];
+        }

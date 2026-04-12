@@ -14,6 +14,7 @@
             obj_doc_content [label="doc::content", fillcolor="#f8fafc"];
             obj_confirmed_op [label="confirmed_op", fillcolor="#f8fafc"];
             obj_pending_local_edit [label="pending_local_edit", fillcolor="#f8fafc"];
+            obj_pending_navigation [label="pending_navigation", fillcolor="#f8fafc"];
         }
 
         subgraph cluster_obj_repo {
@@ -52,4 +53,3 @@
             obj_agent_process [label="agent::process", fillcolor="#f8fafc"];
         }
     }
-

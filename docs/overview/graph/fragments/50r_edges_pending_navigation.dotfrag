@@ -1,0 +1,26 @@
+    op_nav_doc_change -> gate_nav_pending;
+    op_nav_scope_change -> gate_nav_pending;
+    gate_nav_pending -> app_nav_guard;
+    op_nav_doc_change -> app_nav_doc_action;
+    op_nav_scope_change -> app_nav_scope_action;
+    op_nav_stay -> app_nav_stay;
+    op_nav_continue -> app_nav_continue;
+    op_nav_clear -> app_nav_clear;
+
+    app_nav_guard -> mod_nav_guard;
+    app_nav_guard -> mod_pending_navigation;
+    app_nav_doc_action -> mod_nav_guard;
+    app_nav_doc_action -> mod_tree_nav;
+    app_nav_scope_action -> mod_nav_guard;
+    app_nav_scope_action -> mod_proto_ws_nav;
+    app_nav_scope_action -> mod_tree_nav;
+    app_nav_stay -> mod_pending_navigation;
+    app_nav_continue -> mod_pending_navigation;
+    app_nav_continue -> mod_nav_guard;
+    app_nav_clear -> mod_pending_navigation;
+    app_nav_clear -> mod_proto_ws_nav;
+
+    mod_nav_guard -> core_proto_nav;
+    mod_pending_navigation -> core_proto_nav;
+    mod_proto_ws_nav -> core_proto_nav;
+    mod_tree_nav -> core_tree_nav;
