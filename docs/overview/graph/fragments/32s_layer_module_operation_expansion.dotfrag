@@ -1,0 +1,26 @@
+        subgraph cluster_mod_operation_expansion {
+            label="documentation-completion flows [03/11/12/13/14/15]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_ci_release [label="ci::release", fillcolor="#f0fdf4"];
+            mod_ci_workflow [label="ci::workflow-index", fillcolor="#f0fdf4"];
+            mod_release_container [label="release::container", fillcolor="#f0fdf4"];
+            mod_spec_sync [label="spec::sync-check", fillcolor="#fecaca"];
+            mod_tech_budget [label="tech::quality-gates", fillcolor="#f0fdf4"];
+            mod_cli_dispatch [label="cli::dispatch", fillcolor="#f0fdf4"];
+            mod_cli_commands [label="cli::commands", fillcolor="#f0fdf4"];
+            mod_settings_ui [label="settings::ui", fillcolor="#f0fdf4"];
+            mod_config_runtime [label="config::runtime", fillcolor="#f0fdf4"];
+            mod_render_inline [label="render::inline", fillcolor="#f0fdf4"];
+            mod_render_math [label="render::math", fillcolor="#f0fdf4"];
+            mod_render_mermaid [label="render::mermaid", fillcolor="#f0fdf4"];
+            mod_editor_runtime [label="editor::runtime", fillcolor="#f0fdf4"];
+            mod_i18n_catalog [label="i18n::catalog", fillcolor="#f0fdf4"];
+            mod_i18n_error [label="i18n::server_error", fillcolor="#f0fdf4"];
+            mod_time_format [label="i18n::formatting", fillcolor="#f0fdf4"];
+            mod_tech_deps [label="tech::dependencies", fillcolor="#f0fdf4"];
+            mod_runtime_budget [label="runtime::budget", fillcolor="#f0fdf4"];
+            mod_platform_matrix [label="platform::maturity", fillcolor="#f0fdf4"];
+        }

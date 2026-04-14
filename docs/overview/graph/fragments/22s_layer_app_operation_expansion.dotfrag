@@ -1,0 +1,69 @@
+        subgraph cluster_app_release_ci {
+            label="release / CI [15_release]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_release_dispatch [label="release.yml::dispatch", fillcolor="#bfdbfe"];
+            app_release_quality [label="release.yml::test job", fillcolor="#eff6ff"];
+            app_release_publish [label="release.yml::docker job", fillcolor="#bfdbfe"];
+            app_release_coverage [label="workflow coverage inspection", fillcolor="#bfdbfe"];
+        }
+
+        subgraph cluster_app_cli_control {
+            label="CLI control commands [12_commands]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_cli_parse [label="clap::Commands parse", fillcolor="#bfdbfe"];
+            app_cli_dispatch [label="dispatch::run", fillcolor="#bfdbfe"];
+            app_cli_help [label="clap help surface", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_settings_update {
+            label="settings update [13_settings]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_settings_open [label="settings::open", fillcolor="#eff6ff"];
+            app_settings_change [label="settings::change_value", fillcolor="#bfdbfe"];
+            app_settings_feedback [label="settings::feedback", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_rendering_expansion {
+            label="rendering source-first flows [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_cursor_selection [label="editor::selection_update", fillcolor="#bfdbfe"];
+            app_render_cursor_delta [label="editor::delta_input", fillcolor="#bfdbfe"];
+            app_render_cursor_restore [label="render_projection::restore", fillcolor="#eff6ff"];
+            app_render_math_source [label="math source projection", fillcolor="#bfdbfe"];
+            app_render_mermaid_source [label="mermaid source projection", fillcolor="#bfdbfe"];
+            app_render_projection_refresh [label="projection refresh from source", fillcolor="#bfdbfe"];
+        }
+
+        subgraph cluster_app_i18n_locale_error {
+            label="i18n locale / error [11_i18n]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_i18n_locale [label="locale::resolve", fillcolor="#bfdbfe"];
+            app_i18n_error [label="server_error::map_code", fillcolor="#bfdbfe"];
+            app_i18n_format [label="time/number format resolve", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_tech_runtime_budget {
+            label="tech-stack runtime budget [14_tech_stack]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_tech_inspect [label="dependency manifest inspection", fillcolor="#eff6ff"];
+            app_tech_budget [label="runtime budget check", fillcolor="#bfdbfe"];
+            app_tech_platform [label="platform maturity inspection", fillcolor="#eff6ff"];
+        }

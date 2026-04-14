@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-04-11 (manual operation-first pass)
+Generated: 2026-04-14 (manual operation-first pass)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -12,28 +12,26 @@ operation slice rather than the older route/CLI inventory view.
 Keep this block stable. The graph generator reads the drift registry below.
 
 <!-- modeled-slice:start -->
-- Flow count: `25`
-- Status: `clean`
-- Active drift count: `0`
+- Flow count: `32`
+- Status: `drifted`
+- Active drift count: `1`
 <!-- modeled-slice:end -->
 
 ## Summary
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 25 high-value flows exist on both sides |
+| Flow set | aligned | the same 32 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | aligned | execution-domain ownership and leaf naming match |
+| Coordination/execution mapping | drift | release / CI expects nightly and speckit sync workflows that are absent in the current worktree |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
 
 Use one entry per divergent flow. Labels must match the flow registry.
-`none` means the current modeled slice has no active `*` marker.
-
 <!-- drift-registry:start -->
-- `none`
+- `release / CI`
 <!-- drift-registry:end -->
 
 ## Flow Registry
@@ -66,12 +64,19 @@ Use this registry as the stable label set for the diff and SVG marker map.
 - `document edit / confirmed op`
 - `leave document / pending edit guard`
 - `open-doc`
+- `release / CI`
+- `CLI control commands`
+- `settings update`
+- `rendering cursor reveal`
+- `rendering math / mermaid`
+- `i18n locale / error`
+- `tech-stack runtime budget`
 <!-- flow-registry:end -->
 
 ## Current Alignment Notes
 
 The previously tracked `trusted external agent boundary` mismatch is now
-closed at the application layer. Code now matches the plan contract:
+closed at the application layer. Code matches the plan contract:
 
 - `trusted-cli` stays default-off
 - `ai.agent_bridge.enabled = true`
@@ -86,6 +91,12 @@ The closing implementation is represented by:
 - [agent_bridge.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge.rs)
 - [policy.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge/policy.rs)
 
+The active `release / CI` drift is narrower: `.github/workflows/release.yml`
+exists, but `.github/workflows/nightly.yml` and
+`.github/workflows/speckit-sync-check.yml` are absent from the current
+worktree while plan and repository metadata still describe them as expected
+release/spec-sync surfaces.
+
 ## Current State
 
 Within the currently modeled operation slice:
@@ -93,10 +104,10 @@ Within the currently modeled operation slice:
 - flow set is aligned
 - user-operation IDs are aligned
 - instruction interfaces are aligned
-- coordination ownership is aligned
+- one coordination ownership gap remains in `release / CI`
 - execution-domain ownership is aligned
 
-The slice is a practical clean bijective baseline.
+The slice is a practical bijective baseline with one explicit drift marker.
 
 ## Maintenance Rules
 

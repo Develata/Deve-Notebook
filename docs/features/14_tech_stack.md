@@ -2,6 +2,8 @@
 
 本章从产品视角描述当前支持的平台、运行边界与性能预算对用户的实际影响。
 
+原子操作示例：[`operations/tech_stack_runtime_budget.md`](./operations/tech_stack_runtime_budget.md)
+
 ## 功能目标
 
 - 用户或部署者应明确知道当前主要支持哪些端。

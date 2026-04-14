@@ -2,6 +2,8 @@
 
 本章描述用户或部署者如何获得、运行、更新和理解当前交付形态。
 
+原子操作示例：[`operations/release_ci.md`](./operations/release_ci.md)
+
 ## 功能目标
 
 - 部署者应知道有哪些主要分发形态。

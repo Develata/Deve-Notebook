@@ -37,6 +37,7 @@ The following documents exist under `docs/` but do not participate in the three-
 
 | Document | Type | Notes |
 | --- | --- | --- |
+| `docs/plan/00_engineering_constitution.md` | Governing Rule | Cross-chapter skeleton governance; not a feature chapter |
 | `docs/tasks/18_infra_runtime.md` | Implementation Blueprint | Infra-first module boundaries; guided by but does not override A/B/C layer chapters |
 | `docs/tasks/19_repo_refactor_blueprint.md` | Implementation Blueprint | Repo restructuring migration order |
 | `docs/overview/architecture.md` | Architecture Overview | Cross-layer 4-layer cascade map, human entry point |

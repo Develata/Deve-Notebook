@@ -45,4 +45,16 @@
     core_plugin_ai -> obj_plugin_request;
     core_plugin_boundary -> obj_plugin_request;
     core_plugin_trusted -> obj_agent_process;
+    core_release -> obj_ci_workflow;
+    core_release -> obj_release_artifact;
+    core_commands -> obj_cli_command;
+    core_settings -> obj_config_runtime;
+    core_settings -> obj_ui_preference;
+    core_rendering -> obj_render_projection;
+    core_rendering -> obj_editor_selection;
+    core_i18n -> obj_i18n_catalog;
+    core_i18n -> obj_protocol_error_code;
+    core_tech_stack -> obj_tech_dependency;
+    core_tech_stack -> obj_runtime_budget;
+    core_tech_stack -> obj_platform_maturity;
     edge [style=solid, color="#475569", constraint=true, arrowhead=normal];

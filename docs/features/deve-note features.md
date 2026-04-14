@@ -12,6 +12,7 @@ Each chapter mirrors `docs/plan/`, but focuses on:
 `docs/plan/` remains the engineering blueprint.  
 `docs/acceptance-cases/` remains the automation-oriented validation set.
 Cross-layer mapping lives in [../coverage-matrix.md](../coverage-matrix.md).
+Operation-level coverage lives in [operation-coverage.md](./operation-coverage.md).
 
 ## Chapters
 

@@ -1,6 +1,6 @@
 # Deve-Note Architecture Overview
 
-One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The current modeled slice is again aligned across plan and code, so the SVG can be read as the clean baseline for that shared slice.
+One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The current modeled slice is mostly aligned across plan and code, with one explicit `release / CI` drift marker.
 
 Primary files: [`architecture-doc.lisp`](./architecture-doc.lisp), [`architecture-code.lisp`](./architecture-code.lisp), [`architecture-diff.md`](./architecture-diff.md), [`architecture.dot`](./architecture.dot), and [`architecture.svg`](./architecture.svg).
 The `.dot` and `.lisp` files are assembled from fragments by `scripts/generate-architecture-dot.sh` and `scripts/generate-architecture-lisp.sh`.
@@ -35,7 +35,7 @@ The `.dot` and `.lisp` files are assembled from fragments by `scripts/generate-a
 
 Each arrow is a "receives / dispatches to" relation. Layer 1 is no longer a list of entry surfaces such as CLI, Palette, or Slash; it is a list of atomic user actions. Surface type belongs to node metadata, not to the layer shape. No layer ever skips downward and no layer ever calls upward.
 
-This architecture also carries two sidecar dimensions that are not part of the four-layer call cascade:
+This architecture follows the governing rule in [`00_engineering_constitution.md`](../plan/00_engineering_constitution.md). It also carries two sidecar dimensions that are not part of the four-layer call cascade:
 
 - `Object Plane`: the concrete objects ultimately touched by flows, such as `doc::content`, `pending_local_edit`, `confirmed_op`, `tree::projection`, or `repo::scope`
 - `Ownership Axis`: the long-lived root domains that own modules and execution responsibilities over time
@@ -54,9 +54,9 @@ When reading the current generated SVG, treat the visible fourth layer as the cu
 - `architecture-doc.lisp` has been refactored to an operation-first baseline and is now emitted from ordered doc fragments.
 - `architecture-code.lisp` has also been uplifted to the same operation-first layer model and is now emitted from ordered code fragments, though it is still a hand-curated implementation baseline rather than a generated truth source.
 - `architecture.dot` should now be read as the plan-side blueprint graph for the four-layer canonical call architecture.
-- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `repo-scoped sync handshake`, `repo-scoped key exchange`, `repo-scoped sync transfer`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `history / commit diff`, `commit-and-push`, `merge peer`, `merge runtime`, `native ai-chat`, `trusted external agent boundary`, `plugin-host / plugin-call boundary`, `search/query`, `repo file operations`, `document edit / confirmed op`, `leave document / pending edit guard`, and `open-doc`.
-- `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently records no unresolved structural mismatch inside the modeled slice.
-- The current SVG should be read as the clean shared baseline for the modeled slice, not yet as a fully automated starred divergence map.
+- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `repo-scoped sync handshake`, `repo-scoped key exchange`, `repo-scoped sync transfer`, `branch-switch`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `history / commit diff`, `commit-and-push`, `merge peer`, `merge runtime`, `native ai-chat`, `trusted external agent boundary`, `plugin-host / plugin-call boundary`, `search/query`, `repo file operations`, `document edit / confirmed op`, `leave document / pending edit guard`, `open-doc`, `release / CI`, `CLI control commands`, `settings update`, `rendering cursor reveal`, `rendering math / mermaid`, `i18n locale / error`, and `tech-stack runtime budget`.
+- `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently records one unresolved `release / CI` structural mismatch inside the modeled slice.
+- The current SVG should be read as the shared baseline plus explicit drift markers, not yet as a fully automated starred divergence map.
 
 ## Lisp Conventions
 
@@ -98,7 +98,7 @@ The current generated artifacts keep the stable internal IDs `application`, `mod
 
 A node gains a `*` marker when **plan-side blueprint and code-side implementation don't agree**.
 
-At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has no unresolved structural mismatch, so the generated SVG shows no active `*` markers. If future drift appears, update the registry in [`architecture-diff.md`](./architecture-diff.md) and regenerate the graph.
+At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has one active `release / CI` mismatch because `release.yml` exists but `nightly.yml` and `speckit-sync-check.yml` are absent from the current worktree. If future drift appears, update the registry in [`architecture-diff.md`](./architecture-diff.md) and regenerate the graph.
 
 When divergence markers are enabled:
 
@@ -106,7 +106,7 @@ When divergence markers are enabled:
 - **In plan, not in code** → plan promises behavior that has no corresponding implementation yet.
 - **Both exist but with different shape** → e.g. plan says one response flow, code has a different handler/module split.
 
-**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md). For the currently modeled operation slice, there is currently no unresolved structure mismatch.
+**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md). For the currently modeled operation slice, `release / CI` is the only active mismatch.
 
 ## Regenerating This View
 
@@ -116,11 +116,13 @@ This baseline was built by hand. The intent is for future iterations to automate
 2. `architecture-code.lisp` — generated by tracing implementation flows across `apps/web/src/` user actions and callbacks, `apps/cli/src/server/` handlers, and leaf modules in `crates/core/src/`.
 3. `architecture-diff.md` — generated by an operation-level diff tool that walks both trees and flags mismatches by flow, response split, or module/core mapping.
 4. `architecture.svg` — run `dot -Tsvg architecture.dot -o architecture.svg`.
+5. `scripts/check-architecture-registry.sh` — verify flow count, drift-map, operation files, Lisp IDs, and spine coverage stay in sync.
 
 Until the generators become semantic extractors, treat the fragment sources as **hand-curated views**. Update the plan-side fragments first when the blueprint changes, then update the code-side fragments only to reflect actual implementation progress against that blueprint.
 
 ## Related Documents
 
 - [`docs/coverage-matrix.md`](../coverage-matrix.md) — three-layer chapter mapping (plan ↔ features ↔ acceptance-cases)
+- [`docs/features/operation-coverage.md`](../features/operation-coverage.md) — operation-to-acceptance coverage registry
 - [`docs/plan/deve-note plan.md`](../plan/deve-note%20plan.md) — engineering blueprint index
 - [`docs/plan/AGENTS.md`](../plan/AGENTS.md) — plan-code bijection enforcement rules

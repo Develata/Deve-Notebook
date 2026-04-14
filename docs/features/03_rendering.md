@@ -23,18 +23,21 @@
 
 - 当光标进入公式、Frontmatter、强调、引用、列表标记等渲染区域时，对应渲染必须立即让位给源码。
 - 用户不应被只读装饰遮挡，导致无法精确编辑。
+- 原子操作示例：[`operations/rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md)
 
 ### 3. 数学公式
 
 - 支持行内公式与块级公式。
 - 用户输入 LaTeX 时可以看到正确渲染结果。
 - 公式块在编辑与阅读之间切换时，不应破坏源码。
+- 原子操作示例：[`operations/rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md)
 
 ### 4. Mermaid 图表
 
 - ` ```mermaid ` 代码块应渲染成图表。
 - 图表大小与源码块高度保持可预测关系。
 - 用户进入源码区域时，必须能继续编辑原 Mermaid 文本。
+- 原子操作示例：[`operations/rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md)
 
 ### 5. 任务列表与 Frontmatter
 

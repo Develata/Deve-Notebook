@@ -1,0 +1,78 @@
+            subgraph cluster_user_release_ci {
+                label="release / CI [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_tag [label="Push Release Tag", fillcolor="#fde68a"];
+                op_release_quality [label="Run Release Quality Gates", fillcolor="#fef9c3"];
+                op_release_publish [label="Publish Release Container", fillcolor="#fde68a"];
+                op_release_coverage [label="Inspect Channel Coverage", fillcolor="#fde68a"];
+                gate_release_missing [label="Current Drift:\nrelease.yml exists\nnightly/speckit absent", fillcolor="#fecaca", shape=note];
+            }
+
+            subgraph cluster_user_cli_control {
+                label="CLI control commands [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_invoke [label="Invoke CLI Command", fillcolor="#fde68a"];
+                op_cli_execute [label="Execute CLI Runtime Command", fillcolor="#fde68a"];
+                op_cli_help [label="Inspect CLI Help", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_update {
+                label="settings update [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_open [label="Open Settings Surface", fillcolor="#fef9c3"];
+                op_settings_change [label="Change Setting Value", fillcolor="#fde68a"];
+                op_settings_feedback [label="Observe Setting Feedback", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_cursor {
+                label="rendering cursor reveal [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_cursor_enter [label="Enter Rendered Token", fillcolor="#fde68a"];
+                op_render_cursor_edit [label="Edit Revealed Source", fillcolor="#fde68a"];
+                op_render_cursor_leave [label="Leave Rendered Token", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_math_mermaid {
+                label="rendering math / mermaid [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_math_type [label="Type Math Source", fillcolor="#fde68a"];
+                op_render_mermaid_type [label="Type Mermaid Source", fillcolor="#fde68a"];
+                op_render_projection_edit [label="Edit Render Projection Source", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_i18n_locale_error {
+                label="i18n locale / error [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_locale [label="Select Locale", fillcolor="#fde68a"];
+                op_i18n_error [label="Receive Error Code", fillcolor="#fef9c3"];
+                op_i18n_format [label="Observe Localized Format", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_tech_runtime_budget {
+                label="tech-stack runtime budget [14_tech_stack]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_tech_deps [label="Inspect Dependency Set", fillcolor="#fef9c3"];
+                op_tech_budget [label="Run Runtime Budget Check", fillcolor="#fde68a"];
+                op_tech_platform [label="Inspect Platform Maturity", fillcolor="#fef9c3"];
+            }

@@ -12,6 +12,7 @@
 ## 📚 Infra-First 目录
 
 ### A. Foundation
+- **[00_engineering_constitution.md](./00_engineering_constitution.md)**: 工程宪法、骨架治理、四层调用图与对象平面的关系。
 - **[01_terminology.md](./01_terminology.md)**: 核心术语、规范性用语、权威定义。
 - **[02_positioning.md](./02_positioning.md)**: 产品边界、Core MUST / MUST NOT、项目定位。
 
@@ -58,7 +59,7 @@
 
 ### 文档分层
 
-*   `docs/plan/`：工程蓝图，回答 how it is engineered。
+*   `docs/plan/`：工程蓝图，回答 how it is engineered。`00_engineering_constitution.md` 是跨章节骨架治理规则；普通章节不得与其冲突。
 *   `docs/features/`：功能说明，回答 what the product does。
 *   `docs/acceptance-cases/`：自动化验收，回答 automation proves it。
 *   `docs/coverage-matrix.md`：`plan / features / acceptance-cases` 的章节映射表。
@@ -68,12 +69,13 @@
 当任务属于核心功能（Markdown / P2P / Source Control / Repo Scope / Pending Writes / Recovery）时，推荐按以下顺序阅读：
 
 1. `01_terminology.md` → 确认术语与规范性用语。
-2. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
-3. `04_storage.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
-4. `05_network.md`、`09_auth.md`、`16_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
-5. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md`、`12_commands.md`、`13_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
-6. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
-7. `docs/acceptance-cases/` 中对应章节 → 查看自动化验证入口。
+2. `00_engineering_constitution.md` → 确认骨架治理、层级模型与变更审批规则。
+3. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
+4. `04_storage.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
+5. `05_network.md`、`09_auth.md`、`16_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
+6. `03_rendering.md`、`08_ui_design*.md`、`11_i18n.md`、`12_commands.md`、`13_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
+7. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
+8. `docs/acceptance-cases/` 中对应章节 → 查看自动化验证入口。
 
 ### 章节归属规则
 

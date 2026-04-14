@@ -42,7 +42,7 @@
 基于 GitHub Actions 实现全自动构建。
 
 > [!NOTE]
-> **Status (状态)**: 计划中 (Planned). (CI 工作流尚未在 `.github/workflows` 中实现)。
+> **Status (状态)**: 部分实现。当前工作树已包含 `.github/workflows/release.yml`，但尚未包含 `nightly.yml` 与 `speckit-sync-check.yml`。在补齐这些 workflow 或修订本章前，`release / CI` 在总蓝图中保留为 active drift。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).

@@ -1,0 +1,55 @@
+    user_release_ci_spine [label="release / CI flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_ci_spine [label="", shape=point, width=0.01];
+    mod_release_ci_spine [label="", shape=point, width=0.01];
+    core_release_ci_spine [label="", shape=point, width=0.01];
+    user_release_ci_spine -> app_release_ci_spine [penwidth=2.2, color="#0f172a"];
+    app_release_ci_spine -> mod_release_ci_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_ci_spine -> core_release_ci_spine [penwidth=2.2, color="#0f172a"];
+
+    user_cli_control_spine [label="CLI control commands flow", shape=plaintext, fontcolor="#92400e"];
+    app_cli_control_spine [label="", shape=point, width=0.01];
+    mod_cli_control_spine [label="", shape=point, width=0.01];
+    core_cli_control_spine [label="", shape=point, width=0.01];
+    user_cli_control_spine -> app_cli_control_spine [penwidth=2.2, color="#0f172a"];
+    app_cli_control_spine -> mod_cli_control_spine [penwidth=2.2, color="#0f172a"];
+    mod_cli_control_spine -> core_cli_control_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_update_spine [label="settings update flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_update_spine [label="", shape=point, width=0.01];
+    mod_settings_update_spine [label="", shape=point, width=0.01];
+    core_settings_update_spine [label="", shape=point, width=0.01];
+    user_settings_update_spine -> app_settings_update_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_update_spine -> mod_settings_update_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_update_spine -> core_settings_update_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_cursor_spine [label="rendering cursor reveal flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_cursor_spine [label="", shape=point, width=0.01];
+    mod_render_cursor_spine [label="", shape=point, width=0.01];
+    core_render_cursor_spine [label="", shape=point, width=0.01];
+    user_render_cursor_spine -> app_render_cursor_spine [penwidth=2.2, color="#0f172a"];
+    app_render_cursor_spine -> mod_render_cursor_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_cursor_spine -> core_render_cursor_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_math_mermaid_spine [label="rendering math / mermaid flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_math_mermaid_spine [label="", shape=point, width=0.01];
+    mod_render_math_mermaid_spine [label="", shape=point, width=0.01];
+    core_render_math_mermaid_spine [label="", shape=point, width=0.01];
+    user_render_math_mermaid_spine -> app_render_math_mermaid_spine [penwidth=2.2, color="#0f172a"];
+    app_render_math_mermaid_spine -> mod_render_math_mermaid_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_math_mermaid_spine -> core_render_math_mermaid_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_locale_error_spine [label="i18n locale / error flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_locale_error_spine [label="", shape=point, width=0.01];
+    mod_i18n_locale_error_spine [label="", shape=point, width=0.01];
+    core_i18n_locale_error_spine [label="", shape=point, width=0.01];
+    user_i18n_locale_error_spine -> app_i18n_locale_error_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_locale_error_spine -> mod_i18n_locale_error_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_locale_error_spine -> core_i18n_locale_error_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_runtime_budget_spine [label="tech-stack runtime budget flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_runtime_budget_spine [label="", shape=point, width=0.01];
+    mod_tech_runtime_budget_spine [label="", shape=point, width=0.01];
+    core_tech_runtime_budget_spine [label="", shape=point, width=0.01];
+    user_tech_runtime_budget_spine -> app_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_runtime_budget_spine -> mod_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_runtime_budget_spine -> core_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];

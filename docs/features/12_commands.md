@@ -12,6 +12,7 @@
 - 原子操作示例见 `docs/features/operations/ui_command_palette.md`。
 - 该示例将 command palette 拆为打开、输入查询、结果导航、执行命令、关闭五个 user operations。
 - Quick Open 与打开文档流示例见 `docs/features/operations/repo_open_doc.md`。
+- CLI 控制面流示例见 [`operations/cli_control_commands.md`](./operations/cli_control_commands.md)。
 
 ## 功能项
 

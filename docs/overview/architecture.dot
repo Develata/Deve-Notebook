@@ -373,6 +373,85 @@ digraph DeveNoteArchitecture {
                 gate_nav_pending [label="Navigation Guard:\ncurrent doc pending set\nnot global pending", fillcolor="#fde68a", shape=note];
             }
 
+            subgraph cluster_user_release_ci {
+                label="release / CI [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_tag [label="Push Release Tag", fillcolor="#fde68a"];
+                op_release_quality [label="Run Release Quality Gates", fillcolor="#fef9c3"];
+                op_release_publish [label="Publish Release Container", fillcolor="#fde68a"];
+                op_release_coverage [label="Inspect Channel Coverage", fillcolor="#fde68a"];
+                gate_release_missing [label="Current Drift:\nrelease.yml exists\nnightly/speckit absent", fillcolor="#fecaca", shape=note];
+            }
+
+            subgraph cluster_user_cli_control {
+                label="CLI control commands [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_invoke [label="Invoke CLI Command", fillcolor="#fde68a"];
+                op_cli_execute [label="Execute CLI Runtime Command", fillcolor="#fde68a"];
+                op_cli_help [label="Inspect CLI Help", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_update {
+                label="settings update [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_open [label="Open Settings Surface", fillcolor="#fef9c3"];
+                op_settings_change [label="Change Setting Value", fillcolor="#fde68a"];
+                op_settings_feedback [label="Observe Setting Feedback", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_cursor {
+                label="rendering cursor reveal [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_cursor_enter [label="Enter Rendered Token", fillcolor="#fde68a"];
+                op_render_cursor_edit [label="Edit Revealed Source", fillcolor="#fde68a"];
+                op_render_cursor_leave [label="Leave Rendered Token", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_math_mermaid {
+                label="rendering math / mermaid [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_math_type [label="Type Math Source", fillcolor="#fde68a"];
+                op_render_mermaid_type [label="Type Mermaid Source", fillcolor="#fde68a"];
+                op_render_projection_edit [label="Edit Render Projection Source", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_i18n_locale_error {
+                label="i18n locale / error [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_locale [label="Select Locale", fillcolor="#fde68a"];
+                op_i18n_error [label="Receive Error Code", fillcolor="#fef9c3"];
+                op_i18n_format [label="Observe Localized Format", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_tech_runtime_budget {
+                label="tech-stack runtime budget [14_tech_stack]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_tech_deps [label="Inspect Dependency Set", fillcolor="#fef9c3"];
+                op_tech_budget [label="Run Runtime Budget Check", fillcolor="#fde68a"];
+                op_tech_platform [label="Inspect Platform Maturity", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -681,6 +760,76 @@ digraph DeveNoteArchitecture {
             app_nav_clear [label="Ack/EditRejected clears guard", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_release_ci {
+            label="release / CI [15_release]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_release_dispatch [label="release.yml::dispatch", fillcolor="#bfdbfe"];
+            app_release_quality [label="release.yml::test job", fillcolor="#eff6ff"];
+            app_release_publish [label="release.yml::docker job", fillcolor="#bfdbfe"];
+            app_release_coverage [label="workflow coverage inspection", fillcolor="#bfdbfe"];
+        }
+
+        subgraph cluster_app_cli_control {
+            label="CLI control commands [12_commands]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_cli_parse [label="clap::Commands parse", fillcolor="#bfdbfe"];
+            app_cli_dispatch [label="dispatch::run", fillcolor="#bfdbfe"];
+            app_cli_help [label="clap help surface", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_settings_update {
+            label="settings update [13_settings]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_settings_open [label="settings::open", fillcolor="#eff6ff"];
+            app_settings_change [label="settings::change_value", fillcolor="#bfdbfe"];
+            app_settings_feedback [label="settings::feedback", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_rendering_expansion {
+            label="rendering source-first flows [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_cursor_selection [label="editor::selection_update", fillcolor="#bfdbfe"];
+            app_render_cursor_delta [label="editor::delta_input", fillcolor="#bfdbfe"];
+            app_render_cursor_restore [label="render_projection::restore", fillcolor="#eff6ff"];
+            app_render_math_source [label="math source projection", fillcolor="#bfdbfe"];
+            app_render_mermaid_source [label="mermaid source projection", fillcolor="#bfdbfe"];
+            app_render_projection_refresh [label="projection refresh from source", fillcolor="#bfdbfe"];
+        }
+
+        subgraph cluster_app_i18n_locale_error {
+            label="i18n locale / error [11_i18n]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_i18n_locale [label="locale::resolve", fillcolor="#bfdbfe"];
+            app_i18n_error [label="server_error::map_code", fillcolor="#bfdbfe"];
+            app_i18n_format [label="time/number format resolve", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_tech_runtime_budget {
+            label="tech-stack runtime budget [14_tech_stack]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_tech_inspect [label="dependency manifest inspection", fillcolor="#eff6ff"];
+            app_tech_budget [label="runtime budget check", fillcolor="#bfdbfe"];
+            app_tech_platform [label="platform maturity inspection", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -967,6 +1116,33 @@ digraph DeveNoteArchitecture {
             mod_tree_nav [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_operation_expansion {
+            label="documentation-completion flows [03/11/12/13/14/15]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_ci_release [label="ci::release", fillcolor="#f0fdf4"];
+            mod_ci_workflow [label="ci::workflow-index", fillcolor="#f0fdf4"];
+            mod_release_container [label="release::container", fillcolor="#f0fdf4"];
+            mod_spec_sync [label="spec::sync-check", fillcolor="#fecaca"];
+            mod_tech_budget [label="tech::quality-gates", fillcolor="#f0fdf4"];
+            mod_cli_dispatch [label="cli::dispatch", fillcolor="#f0fdf4"];
+            mod_cli_commands [label="cli::commands", fillcolor="#f0fdf4"];
+            mod_settings_ui [label="settings::ui", fillcolor="#f0fdf4"];
+            mod_config_runtime [label="config::runtime", fillcolor="#f0fdf4"];
+            mod_render_inline [label="render::inline", fillcolor="#f0fdf4"];
+            mod_render_math [label="render::math", fillcolor="#f0fdf4"];
+            mod_render_mermaid [label="render::mermaid", fillcolor="#f0fdf4"];
+            mod_editor_runtime [label="editor::runtime", fillcolor="#f0fdf4"];
+            mod_i18n_catalog [label="i18n::catalog", fillcolor="#f0fdf4"];
+            mod_i18n_error [label="i18n::server_error", fillcolor="#f0fdf4"];
+            mod_time_format [label="i18n::formatting", fillcolor="#f0fdf4"];
+            mod_tech_deps [label="tech::dependencies", fillcolor="#f0fdf4"];
+            mod_runtime_budget [label="runtime::budget", fillcolor="#f0fdf4"];
+            mod_platform_matrix [label="platform::maturity", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1241,6 +1417,20 @@ digraph DeveNoteArchitecture {
             core_tree_nav [label="tree\n(projection)", fillcolor="#fdf2f8"];
         }
 
+        subgraph cluster_core_operation_expansion {
+            label="documentation-completion domains [03/11/12/13/14/15]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_release [label="release\n(delivery)", fillcolor="#fdf2f8"];
+            core_commands [label="commands\n(control)", fillcolor="#fdf2f8"];
+            core_settings [label="settings\n(runtime)", fillcolor="#fdf2f8"];
+            core_rendering [label="rendering\n(projection)", fillcolor="#fdf2f8"];
+            core_i18n [label="i18n\n(presentation)", fillcolor="#fdf2f8"];
+            core_tech_stack [label="tech stack\n(constraint)", fillcolor="#fdf2f8"];
+        }
+
         subgraph cluster_core_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1306,6 +1496,26 @@ digraph DeveNoteArchitecture {
             obj_search_index [label="search::index", fillcolor="#f8fafc"];
             obj_plugin_request [label="plugin::request", fillcolor="#f8fafc"];
             obj_agent_process [label="agent::process", fillcolor="#f8fafc"];
+        }
+
+        subgraph cluster_obj_ops_completion {
+            label="docs completion objects";
+            style="rounded,filled";
+            fillcolor="#f8fafc";
+            color="#94a3b8";
+
+            obj_ci_workflow [label="ci::workflow", fillcolor="#f8fafc"];
+            obj_release_artifact [label="release::artifact", fillcolor="#f8fafc"];
+            obj_cli_command [label="cli::command", fillcolor="#f8fafc"];
+            obj_config_runtime [label="config::runtime", fillcolor="#f8fafc"];
+            obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
+            obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
+            obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];
+            obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
+            obj_protocol_error_code [label="protocol::error-code", fillcolor="#f8fafc"];
+            obj_tech_dependency [label="tech::dependency", fillcolor="#f8fafc"];
+            obj_runtime_budget [label="runtime::budget", fillcolor="#f8fafc"];
+            obj_platform_maturity [label="platform::maturity", fillcolor="#f8fafc"];
         }
     }
 
@@ -1716,6 +1926,98 @@ digraph DeveNoteArchitecture {
     mod_proto_ws_nav -> core_proto_nav;
     mod_tree_nav -> core_tree_nav;
 
+    op_release_tag -> app_release_dispatch;
+    op_release_quality -> app_release_quality;
+    op_release_publish -> app_release_publish;
+    op_release_coverage -> gate_release_missing;
+    gate_release_missing -> app_release_coverage;
+    op_cli_invoke -> app_cli_parse;
+    op_cli_execute -> app_cli_dispatch;
+    op_cli_help -> app_cli_help;
+    op_settings_open -> app_settings_open;
+    op_settings_change -> app_settings_change;
+    op_settings_feedback -> app_settings_feedback;
+    op_render_cursor_enter -> app_render_cursor_selection;
+    op_render_cursor_edit -> app_render_cursor_delta;
+    op_render_cursor_leave -> app_render_cursor_restore;
+    op_render_math_type -> app_render_math_source;
+    op_render_mermaid_type -> app_render_mermaid_source;
+    op_render_projection_edit -> app_render_projection_refresh;
+    op_i18n_locale -> app_i18n_locale;
+    op_i18n_error -> app_i18n_error;
+    op_i18n_format -> app_i18n_format;
+    op_tech_deps -> app_tech_inspect;
+    op_tech_budget -> app_tech_budget;
+    op_tech_platform -> app_tech_platform;
+
+    app_release_dispatch -> mod_ci_release;
+    app_release_dispatch -> mod_ci_workflow;
+    app_release_quality -> mod_ci_release;
+    app_release_quality -> mod_tech_budget;
+    app_release_publish -> mod_ci_release;
+    app_release_publish -> mod_release_container;
+    app_release_coverage -> mod_ci_workflow;
+    app_release_coverage -> mod_spec_sync;
+    app_cli_parse -> mod_cli_dispatch;
+    app_cli_dispatch -> mod_cli_dispatch;
+    app_cli_dispatch -> mod_cli_commands;
+    app_cli_help -> mod_cli_dispatch;
+    app_settings_open -> mod_settings_ui;
+    app_settings_change -> mod_settings_ui;
+    app_settings_change -> mod_config_runtime;
+    app_settings_feedback -> mod_settings_ui;
+    app_settings_feedback -> mod_config_runtime;
+    app_settings_feedback -> mod_i18n_catalog;
+    app_render_cursor_selection -> mod_render_inline;
+    app_render_cursor_selection -> mod_editor_runtime;
+    app_render_cursor_delta -> mod_editor_runtime;
+    app_render_cursor_delta -> mod_render_inline;
+    app_render_cursor_restore -> mod_render_inline;
+    app_render_math_source -> mod_render_math;
+    app_render_math_source -> mod_editor_runtime;
+    app_render_mermaid_source -> mod_render_mermaid;
+    app_render_mermaid_source -> mod_editor_runtime;
+    app_render_projection_refresh -> mod_render_inline;
+    app_render_projection_refresh -> mod_render_math;
+    app_render_projection_refresh -> mod_render_mermaid;
+    app_render_projection_refresh -> mod_editor_runtime;
+    app_i18n_locale -> mod_i18n_catalog;
+    app_i18n_locale -> mod_settings_ui;
+    app_i18n_error -> mod_i18n_error;
+    app_i18n_error -> mod_proto_ws;
+    app_i18n_format -> mod_time_format;
+    app_i18n_format -> mod_i18n_catalog;
+    app_tech_inspect -> mod_tech_deps;
+    app_tech_budget -> mod_runtime_budget;
+    app_tech_budget -> mod_ci_release;
+    app_tech_platform -> mod_platform_matrix;
+    app_tech_platform -> mod_release_container;
+
+    mod_ci_release -> core_release;
+    mod_ci_workflow -> core_release;
+    mod_release_container -> core_release;
+    mod_spec_sync -> core_release;
+    mod_tech_budget -> core_tech_stack;
+    mod_cli_dispatch -> core_commands;
+    mod_cli_commands -> core_commands;
+    mod_config_runtime -> core_settings;
+    mod_settings_ui -> core_settings;
+    mod_render_inline -> core_rendering;
+    mod_render_math -> core_rendering;
+    mod_render_mermaid -> core_rendering;
+    mod_editor_runtime -> core_rendering;
+    mod_i18n_catalog -> core_i18n;
+    mod_i18n_error -> core_i18n;
+    mod_time_format -> core_i18n;
+    mod_tech_deps -> core_tech_stack;
+    mod_runtime_budget -> core_tech_stack;
+    mod_platform_matrix -> core_tech_stack;
+
+    core_release -> core_tech_stack [style=dashed, color="#831843", label="uses build policy"];
+    core_settings -> core_i18n [style=dashed, color="#831843", label="selects locale"];
+    core_rendering -> core_ledger [style=dashed, color="#831843", label="projects doc source"];
+    core_i18n -> core_proto [style=dashed, color="#831843", label="maps error codes"];
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -1763,6 +2065,18 @@ digraph DeveNoteArchitecture {
     core_plugin_ai -> obj_plugin_request;
     core_plugin_boundary -> obj_plugin_request;
     core_plugin_trusted -> obj_agent_process;
+    core_release -> obj_ci_workflow;
+    core_release -> obj_release_artifact;
+    core_commands -> obj_cli_command;
+    core_settings -> obj_config_runtime;
+    core_settings -> obj_ui_preference;
+    core_rendering -> obj_render_projection;
+    core_rendering -> obj_editor_selection;
+    core_i18n -> obj_i18n_catalog;
+    core_i18n -> obj_protocol_error_code;
+    core_tech_stack -> obj_tech_dependency;
+    core_tech_stack -> obj_runtime_budget;
+    core_tech_stack -> obj_platform_maturity;
     edge [style=solid, color="#475569", constraint=true, arrowhead=normal];
 
     // group-level spine
@@ -1966,8 +2280,65 @@ digraph DeveNoteArchitecture {
     app_doc_spine -> mod_doc_spine [penwidth=2.2, color="#0f172a"];
     mod_doc_spine -> core_doc_spine [penwidth=2.2, color="#0f172a"];
 
+    user_release_ci_spine [label="release / CI flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_ci_spine [label="", shape=point, width=0.01];
+    mod_release_ci_spine [label="", shape=point, width=0.01];
+    core_release_ci_spine [label="", shape=point, width=0.01];
+    user_release_ci_spine -> app_release_ci_spine [penwidth=2.2, color="#0f172a"];
+    app_release_ci_spine -> mod_release_ci_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_ci_spine -> core_release_ci_spine [penwidth=2.2, color="#0f172a"];
+
+    user_cli_control_spine [label="CLI control commands flow", shape=plaintext, fontcolor="#92400e"];
+    app_cli_control_spine [label="", shape=point, width=0.01];
+    mod_cli_control_spine [label="", shape=point, width=0.01];
+    core_cli_control_spine [label="", shape=point, width=0.01];
+    user_cli_control_spine -> app_cli_control_spine [penwidth=2.2, color="#0f172a"];
+    app_cli_control_spine -> mod_cli_control_spine [penwidth=2.2, color="#0f172a"];
+    mod_cli_control_spine -> core_cli_control_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_update_spine [label="settings update flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_update_spine [label="", shape=point, width=0.01];
+    mod_settings_update_spine [label="", shape=point, width=0.01];
+    core_settings_update_spine [label="", shape=point, width=0.01];
+    user_settings_update_spine -> app_settings_update_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_update_spine -> mod_settings_update_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_update_spine -> core_settings_update_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_cursor_spine [label="rendering cursor reveal flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_cursor_spine [label="", shape=point, width=0.01];
+    mod_render_cursor_spine [label="", shape=point, width=0.01];
+    core_render_cursor_spine [label="", shape=point, width=0.01];
+    user_render_cursor_spine -> app_render_cursor_spine [penwidth=2.2, color="#0f172a"];
+    app_render_cursor_spine -> mod_render_cursor_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_cursor_spine -> core_render_cursor_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_math_mermaid_spine [label="rendering math / mermaid flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_math_mermaid_spine [label="", shape=point, width=0.01];
+    mod_render_math_mermaid_spine [label="", shape=point, width=0.01];
+    core_render_math_mermaid_spine [label="", shape=point, width=0.01];
+    user_render_math_mermaid_spine -> app_render_math_mermaid_spine [penwidth=2.2, color="#0f172a"];
+    app_render_math_mermaid_spine -> mod_render_math_mermaid_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_math_mermaid_spine -> core_render_math_mermaid_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_locale_error_spine [label="i18n locale / error flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_locale_error_spine [label="", shape=point, width=0.01];
+    mod_i18n_locale_error_spine [label="", shape=point, width=0.01];
+    core_i18n_locale_error_spine [label="", shape=point, width=0.01];
+    user_i18n_locale_error_spine -> app_i18n_locale_error_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_locale_error_spine -> mod_i18n_locale_error_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_locale_error_spine -> core_i18n_locale_error_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_runtime_budget_spine [label="tech-stack runtime budget flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_runtime_budget_spine [label="", shape=point, width=0.01];
+    mod_tech_runtime_budget_spine [label="", shape=point, width=0.01];
+    core_tech_runtime_budget_spine [label="", shape=point, width=0.01];
+    user_tech_runtime_budget_spine -> app_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_runtime_budget_spine -> mod_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_runtime_budget_spine -> core_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
+
     // generated drift markers from architecture-diff.md
-    // no active drift markers
+    drift_release_ci [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_release_ci_spine -> drift_release_ci [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
 
     subgraph cluster_legend {
         label="Legend";
@@ -1983,8 +2354,8 @@ digraph DeveNoteArchitecture {
         legend_core [label="execution domain", fillcolor="#fdf2f8"];
         legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
         legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
-        legend_note [label="clean shared baseline;
-no active drift markers", fillcolor="#e2e8f0"];
+        legend_note [label="1 active drift marker(s);
+see architecture-diff.md", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];

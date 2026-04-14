@@ -23,3 +23,10 @@ resolve conflict	sc_conflict
 merge peer	sc_merge_peer
 merge runtime	sc_merge_runtime
 open-doc	doc
+release / CI	release_ci
+CLI control commands	cli_control
+settings update	settings_update
+rendering cursor reveal	render_cursor
+rendering math / mermaid	render_math_mermaid
+i18n locale / error	i18n_locale_error
+tech-stack runtime budget	tech_runtime_budget

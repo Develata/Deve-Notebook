@@ -1,0 +1,13 @@
+        subgraph cluster_core_operation_expansion {
+            label="documentation-completion domains [03/11/12/13/14/15]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_release [label="release\n(delivery)", fillcolor="#fdf2f8"];
+            core_commands [label="commands\n(control)", fillcolor="#fdf2f8"];
+            core_settings [label="settings\n(runtime)", fillcolor="#fdf2f8"];
+            core_rendering [label="rendering\n(projection)", fillcolor="#fdf2f8"];
+            core_i18n [label="i18n\n(presentation)", fillcolor="#fdf2f8"];
+            core_tech_stack [label="tech stack\n(constraint)", fillcolor="#fdf2f8"];
+        }

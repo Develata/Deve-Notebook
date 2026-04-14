@@ -14,6 +14,7 @@
 
 - 设置项应按主题分组展示，如界面、语言、编辑体验、运行模式等。
 - 用户不应在设置中迷失于无结构的长列表。
+- 原子操作示例：[`operations/settings_update.md`](./operations/settings_update.md)
 
 ### 2. 即时反馈
 
