@@ -11,6 +11,10 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.auth.login` | [`auth_login.md`](./operations/auth_login.md) | `AUTH-001`, `AUTH-006`, `AUTH-011` |
 | `flow.auth.session-unauthorized` | [`auth_session_unauthorized.md`](./operations/auth_session_unauthorized.md) | `AUTH-002`, `AUTH-003`, `AUTH-011` |
 | `flow.cli.control-commands` | [`cli_control_commands.md`](./operations/cli_control_commands.md) | `CMD-001`, `CMD-002`, `CMD-003`, `CMD-004` |
+| `flow.cli.export-inspect` | [`cli_export_inspect.md`](./operations/cli_export_inspect.md) | `CMD-001`, `CMD-008`, `TECH-002` |
+| `flow.cli.repair-admin` | [`cli_repair_admin.md`](./operations/cli_repair_admin.md) | `CMD-001`, `CMD-009`, `REPO-FEAT-03` |
+| `flow.cli.server-runtime` | [`cli_server_runtime.md`](./operations/cli_server_runtime.md) | `CMD-001`, `CMD-007`, `REL-002` |
+| `flow.cli.vault-indexing` | [`cli_vault_indexing.md`](./operations/cli_vault_indexing.md) | `CMD-001`, `CMD-006` |
 | `flow.doc.edit-confirmed-op` | [`doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md) | `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02` |
 | `flow.doc.pending-navigation-guard` | [`doc_pending_navigation_guard.md`](./operations/doc_pending_navigation_guard.md) | `WEBWRITE-FEAT-01`, `WEBWRITE-FEAT-02`, `WEBWRITE-FEAT-03` |
 | `flow.i18n.locale-error` | [`i18n_locale_error.md`](./operations/i18n_locale_error.md) | `I18N-001`, `I18N-002`, `I18N-003`, `I18N-004`, `I18N-005`, `I18N-006` |

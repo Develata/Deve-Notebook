@@ -48,6 +48,10 @@
     core_release -> obj_ci_workflow;
     core_release -> obj_release_artifact;
     core_commands -> obj_cli_command;
+    core_commands -> obj_cli_option;
+    core_commands -> obj_vault_path;
+    core_commands -> obj_export_artifact;
+    core_sc -> obj_repair_plan;
     core_settings -> obj_config_runtime;
     core_settings -> obj_ui_preference;
     core_rendering -> obj_render_projection;

@@ -60,6 +60,50 @@
   assertions:
     - ui_assert: ai_mode_eq "plan"
 
+- case_id: CMD-006
+  goal: CLI vault lifecycle commands expose safe parse surfaces.
+  preconditions:
+    - CLI 可用
+  steps:
+    - run: deve init --help
+    - run: deve scan --help
+    - run: deve watch --dry-run
+  assertions:
+    - exit_code_all_eq: 0
+
+- case_id: CMD-007
+  goal: CLI server runtime options are explicit.
+  preconditions:
+    - CLI 可用
+  steps:
+    - run: deve serve --help
+    - run: deve serve --dry-run --port 3001
+  assertions:
+    - exit_code_all_eq: 0
+
+- case_id: CMD-008
+  goal: CLI export and dump inspection options are discoverable.
+  preconditions:
+    - CLI 可用
+  steps:
+    - run: deve dump --help
+    - run: deve export --help
+  assertions:
+    - exit_code_all_eq: 0
+
+- case_id: CMD-009
+  goal: CLI repair and admin commands are discoverable.
+  preconditions:
+    - CLI 可用
+  steps:
+    - run: deve verify-p2p --help
+    - run: deve seed --help
+    - run: deve node-check --help
+    - run: deve recover --help
+    - run: deve repair --help
+  assertions:
+    - exit_code_all_eq: 0
+
 - case_id: SET-001
   goal: 环境变量默认值。
   preconditions:

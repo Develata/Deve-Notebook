@@ -25,6 +25,10 @@ merge runtime	sc_merge_runtime
 open-doc	doc
 release / CI	release_ci
 CLI control commands	cli_control
+CLI vault indexing	cli_vault
+CLI server runtime	cli_server
+CLI export / inspect	cli_export
+CLI repair / admin	cli_repair
 settings update	settings_update
 rendering cursor reveal	render_cursor
 rendering math / mermaid	render_math_mermaid

@@ -20,6 +20,9 @@
 *   `deve export`: 导出 Ledger 为 JSONL.
 *   `deve verify-p2p`: P2P 逻辑验证.
 *   `deve seed`: 种子节点数据注入.
+*   `deve node-check`: 节点一致性检查，可选修复。
+*   `deve recover`: 从 ledger 数据恢复 vault 文件。
+*   `deve repair`: 修复已知本地损坏并可重建投影。
 
 ## 2. Command Palette
 

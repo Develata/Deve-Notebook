@@ -1,0 +1,24 @@
+    user_cli_vault_spine [label="CLI vault indexing flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_server_spine [label="CLI server runtime flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_export_spine [label="CLI export / inspect flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_repair_spine [label="CLI repair / admin flow", shape=plaintext, fontcolor="#92400e"];
+
+    user_cli_vault_spine -> op_cli_vault_init_path [style=dashed, color="#d97706", constraint=false];
+    op_cli_vault_init_path -> op_cli_vault_scan [style=dashed, color="#d97706", constraint=false];
+    op_cli_vault_scan -> op_cli_vault_watch_dry [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_server_spine -> op_cli_server_port [style=dashed, color="#d97706", constraint=false];
+    op_cli_server_port -> op_cli_server_dev [style=dashed, color="#d97706", constraint=false];
+    op_cli_server_dev -> op_cli_server_dry [style=dashed, color="#d97706", constraint=false];
+    op_cli_server_dry -> op_cli_server_start [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_export_spine -> op_cli_dump_path [style=dashed, color="#d97706", constraint=false];
+    op_cli_dump_path -> op_cli_export_format [style=dashed, color="#d97706", constraint=false];
+    op_cli_export_format -> op_cli_export_doc [style=dashed, color="#d97706", constraint=false];
+    op_cli_export_doc -> op_cli_export_output [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_repair_spine -> op_cli_verify_p2p [style=dashed, color="#d97706", constraint=false];
+    op_cli_verify_p2p -> op_cli_seed_peer [style=dashed, color="#d97706", constraint=false];
+    op_cli_seed_peer -> op_cli_node_check [style=dashed, color="#d97706", constraint=false];
+    op_cli_node_check -> op_cli_recover_repo [style=dashed, color="#d97706", constraint=false];
+    op_cli_recover_repo -> op_cli_repair_paths [style=dashed, color="#d97706", constraint=false];

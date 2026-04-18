@@ -1,0 +1,32 @@
+        subgraph cluster_mod_cli_families {
+            label="CLI command family coordination [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_cli_init [label="cli::init", fillcolor="#f0fdf4"];
+            mod_cli_scan [label="cli::scan", fillcolor="#f0fdf4"];
+            mod_cli_watch [label="cli::watch", fillcolor="#f0fdf4"];
+            mod_fs_watcher [label="sync::watcher", fillcolor="#f0fdf4"];
+            mod_ledger_scan [label="ledger::scan-index", fillcolor="#f0fdf4"];
+            mod_tree_projection [label="tree::projection", fillcolor="#f0fdf4"];
+            mod_cli_serve [label="cli::serve", fillcolor="#f0fdf4"];
+            mod_server_runtime [label="server::runtime", fillcolor="#f0fdf4"];
+            mod_sync_runtime [label="sync::runtime", fillcolor="#f0fdf4"];
+            mod_cli_dump [label="cli::dump", fillcolor="#f0fdf4"];
+            mod_cli_export [label="cli::export", fillcolor="#f0fdf4"];
+            mod_repo_arg [label="cli::repo_arg", fillcolor="#f0fdf4"];
+            mod_ledger_query [label="ledger::query", fillcolor="#f0fdf4"];
+            mod_export_renderer [label="export::renderer", fillcolor="#f0fdf4"];
+            mod_verify_p2p [label="cli::verify_p2p", fillcolor="#f0fdf4"];
+            mod_sync_sim [label="sync::simulation", fillcolor="#f0fdf4"];
+            mod_cli_seed [label="cli::seed", fillcolor="#f0fdf4"];
+            mod_sync_shadow [label="sync::shadow-repo", fillcolor="#f0fdf4"];
+            mod_node_check [label="cli::node_check", fillcolor="#f0fdf4"];
+            mod_recover [label="cli::recover", fillcolor="#f0fdf4"];
+            mod_repair_runtime [label="cli::repair", fillcolor="#f0fdf4"];
+            mod_tree_rebuild [label="tree::rebuild-projection", fillcolor="#f0fdf4"];
+            mod_fs_repair [label="filesystem::repair", fillcolor="#f0fdf4"];
+            mod_ledger_recover [label="ledger::recover", fillcolor="#f0fdf4"];
+            mod_fs_recover [label="filesystem::recover", fillcolor="#f0fdf4"];
+        }

@@ -451,6 +451,54 @@ digraph DeveNoteArchitecture {
                 op_tech_platform [label="Inspect Platform Maturity", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_cli_vault {
+                label="CLI vault indexing [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_vault_init_path [label="Choose Init Path", fillcolor="#fde68a"];
+                op_cli_vault_scan [label="Run Vault Scan", fillcolor="#fde68a"];
+                op_cli_vault_watch_dry [label="Watch Vault Dry Run", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_cli_server {
+                label="CLI server runtime [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_server_port [label="Choose Server Port", fillcolor="#fde68a"];
+                op_cli_server_dev [label="Enable Dev Mode", fillcolor="#fde68a"];
+                op_cli_server_dry [label="Dry Run Server Startup", fillcolor="#fde68a"];
+                op_cli_server_start [label="Start Local Hub", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_cli_export {
+                label="CLI export / inspect [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_dump_path [label="Dump File Ops", fillcolor="#fde68a"];
+                op_cli_export_format [label="Choose Export Format", fillcolor="#fde68a"];
+                op_cli_export_doc [label="Select Export Document", fillcolor="#fde68a"];
+                op_cli_export_output [label="Choose Export Output", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_cli_repair {
+                label="CLI repair / admin [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_verify_p2p [label="Verify P2P Logic", fillcolor="#fef9c3"];
+                op_cli_seed_peer [label="Seed Peer Data", fillcolor="#fde68a"];
+                op_cli_node_check [label="Check Node Consistency", fillcolor="#fde68a"];
+                op_cli_recover_repo [label="Recover Repo Files", fillcolor="#fde68a"];
+                op_cli_repair_paths [label="Repair Known Local Corruption", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -829,6 +877,30 @@ digraph DeveNoteArchitecture {
             app_tech_platform [label="platform maturity inspection", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_cli_families {
+            label="CLI command family interfaces [12_commands]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_cli_vault_init [label="Commands::Init", fillcolor="#bfdbfe"];
+            app_cli_vault_scan [label="Commands::Scan", fillcolor="#bfdbfe"];
+            app_cli_vault_watch [label="Commands::Watch", fillcolor="#bfdbfe"];
+            app_cli_server_bind [label="Serve::port", fillcolor="#bfdbfe"];
+            app_cli_server_dev [label="Serve::dev", fillcolor="#bfdbfe"];
+            app_cli_server_dry [label="Serve::dry_run", fillcolor="#bfdbfe"];
+            app_cli_server_start [label="Commands::Serve", fillcolor="#bfdbfe"];
+            app_cli_dump [label="Commands::Dump", fillcolor="#bfdbfe"];
+            app_cli_export_format [label="Export::format", fillcolor="#bfdbfe"];
+            app_cli_export_doc [label="Export::doc", fillcolor="#bfdbfe"];
+            app_cli_export_output [label="Export::output", fillcolor="#bfdbfe"];
+            app_cli_verify_p2p [label="Commands::VerifyP2P", fillcolor="#eff6ff"];
+            app_cli_seed [label="Commands::Seed", fillcolor="#bfdbfe"];
+            app_cli_node_check [label="Commands::NodeCheck", fillcolor="#bfdbfe"];
+            app_cli_recover [label="Commands::Recover", fillcolor="#bfdbfe"];
+            app_cli_repair [label="Commands::Repair", fillcolor="#bfdbfe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1139,6 +1211,39 @@ digraph DeveNoteArchitecture {
             mod_tech_deps [label="tech::dependencies", fillcolor="#f0fdf4"];
             mod_runtime_budget [label="runtime::budget", fillcolor="#f0fdf4"];
             mod_platform_matrix [label="platform::maturity", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_cli_families {
+            label="CLI command family coordination [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_cli_init [label="cli::init", fillcolor="#f0fdf4"];
+            mod_cli_scan [label="cli::scan", fillcolor="#f0fdf4"];
+            mod_cli_watch [label="cli::watch", fillcolor="#f0fdf4"];
+            mod_fs_watcher [label="sync::watcher", fillcolor="#f0fdf4"];
+            mod_ledger_scan [label="ledger::scan-index", fillcolor="#f0fdf4"];
+            mod_tree_projection [label="tree::projection", fillcolor="#f0fdf4"];
+            mod_cli_serve [label="cli::serve", fillcolor="#f0fdf4"];
+            mod_server_runtime [label="server::runtime", fillcolor="#f0fdf4"];
+            mod_sync_runtime [label="sync::runtime", fillcolor="#f0fdf4"];
+            mod_cli_dump [label="cli::dump", fillcolor="#f0fdf4"];
+            mod_cli_export [label="cli::export", fillcolor="#f0fdf4"];
+            mod_repo_arg [label="cli::repo_arg", fillcolor="#f0fdf4"];
+            mod_ledger_query [label="ledger::query", fillcolor="#f0fdf4"];
+            mod_export_renderer [label="export::renderer", fillcolor="#f0fdf4"];
+            mod_verify_p2p [label="cli::verify_p2p", fillcolor="#f0fdf4"];
+            mod_sync_sim [label="sync::simulation", fillcolor="#f0fdf4"];
+            mod_cli_seed [label="cli::seed", fillcolor="#f0fdf4"];
+            mod_sync_shadow [label="sync::shadow-repo", fillcolor="#f0fdf4"];
+            mod_node_check [label="cli::node_check", fillcolor="#f0fdf4"];
+            mod_recover [label="cli::recover", fillcolor="#f0fdf4"];
+            mod_repair_runtime [label="cli::repair", fillcolor="#f0fdf4"];
+            mod_tree_rebuild [label="tree::rebuild-projection", fillcolor="#f0fdf4"];
+            mod_fs_repair [label="filesystem::repair", fillcolor="#f0fdf4"];
+            mod_ledger_recover [label="ledger::recover", fillcolor="#f0fdf4"];
+            mod_fs_recover [label="filesystem::recover", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_targets {
@@ -1505,6 +1610,10 @@ digraph DeveNoteArchitecture {
             obj_ci_workflow [label="ci::workflow", fillcolor="#f8fafc"];
             obj_release_artifact [label="release::artifact", fillcolor="#f8fafc"];
             obj_cli_command [label="cli::command", fillcolor="#f8fafc"];
+            obj_cli_option [label="cli::option", fillcolor="#f8fafc"];
+            obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
+            obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
+            obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
             obj_config_runtime [label="config::runtime", fillcolor="#f8fafc"];
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
@@ -2013,6 +2122,97 @@ digraph DeveNoteArchitecture {
     core_rendering -> core_ledger [style=dashed, color="#831843", label="projects doc source"];
     core_i18n -> core_proto [style=dashed, color="#831843", label="maps error codes"];
 
+    op_cli_vault_init_path -> app_cli_vault_init;
+    op_cli_vault_scan -> app_cli_vault_scan;
+    op_cli_vault_watch_dry -> app_cli_vault_watch;
+    op_cli_server_port -> app_cli_server_bind;
+    op_cli_server_dev -> app_cli_server_dev;
+    op_cli_server_dry -> app_cli_server_dry;
+    op_cli_server_start -> app_cli_server_start;
+    op_cli_dump_path -> app_cli_dump;
+    op_cli_export_format -> app_cli_export_format;
+    op_cli_export_doc -> app_cli_export_doc;
+    op_cli_export_output -> app_cli_export_output;
+    op_cli_verify_p2p -> app_cli_verify_p2p;
+    op_cli_seed_peer -> app_cli_seed;
+    op_cli_node_check -> app_cli_node_check;
+    op_cli_recover_repo -> app_cli_recover;
+    op_cli_repair_paths -> app_cli_repair;
+
+    app_cli_vault_init -> mod_cli_init;
+    app_cli_vault_init -> mod_config_runtime;
+    app_cli_vault_scan -> mod_cli_scan;
+    app_cli_vault_scan -> mod_ledger_scan;
+    app_cli_vault_scan -> mod_tree_projection;
+    app_cli_vault_watch -> mod_cli_watch;
+    app_cli_vault_watch -> mod_fs_watcher;
+    app_cli_vault_watch -> mod_tree_projection;
+    app_cli_server_bind -> mod_cli_serve;
+    app_cli_server_bind -> mod_config_runtime;
+    app_cli_server_dev -> mod_cli_serve;
+    app_cli_server_dev -> mod_server_runtime;
+    app_cli_server_dev -> mod_config_runtime;
+    app_cli_server_dry -> mod_cli_serve;
+    app_cli_server_dry -> mod_server_runtime;
+    app_cli_server_start -> mod_cli_serve;
+    app_cli_server_start -> mod_server_runtime;
+    app_cli_server_start -> mod_proto_ws;
+    app_cli_server_start -> mod_sync_runtime;
+    app_cli_dump -> mod_cli_dump;
+    app_cli_dump -> mod_ledger_query;
+    app_cli_dump -> mod_repo_arg;
+    app_cli_export_format -> mod_cli_export;
+    app_cli_export_format -> mod_export_renderer;
+    app_cli_export_doc -> mod_cli_export;
+    app_cli_export_doc -> mod_repo_arg;
+    app_cli_export_doc -> mod_ledger_query;
+    app_cli_export_output -> mod_cli_export;
+    app_cli_export_output -> mod_export_renderer;
+    app_cli_verify_p2p -> mod_verify_p2p;
+    app_cli_verify_p2p -> mod_sync_sim;
+    app_cli_seed -> mod_cli_seed;
+    app_cli_seed -> mod_repo_arg;
+    app_cli_seed -> mod_sync_shadow;
+    app_cli_node_check -> mod_node_check;
+    app_cli_node_check -> mod_repair_runtime;
+    app_cli_node_check -> mod_repo_arg;
+    app_cli_recover -> mod_recover;
+    app_cli_recover -> mod_ledger_recover;
+    app_cli_recover -> mod_fs_recover;
+    app_cli_repair -> mod_repair_runtime;
+    app_cli_repair -> mod_tree_rebuild;
+    app_cli_repair -> mod_fs_repair;
+
+    mod_cli_init -> core_commands;
+    mod_cli_scan -> core_commands;
+    mod_cli_watch -> core_commands;
+    mod_fs_watcher -> core_sync;
+    mod_ledger_scan -> core_ledger;
+    mod_tree_projection -> core_tree;
+    mod_cli_serve -> core_commands;
+    mod_server_runtime -> core_proto;
+    mod_sync_runtime -> core_sync;
+    mod_cli_dump -> core_commands;
+    mod_cli_export -> core_commands;
+    mod_repo_arg -> core_commands;
+    mod_ledger_query -> core_ledger;
+    mod_export_renderer -> core_ledger;
+    mod_verify_p2p -> core_commands;
+    mod_sync_sim -> core_sync;
+    mod_cli_seed -> core_commands;
+    mod_sync_shadow -> core_sync;
+    mod_node_check -> core_commands;
+    mod_recover -> core_commands;
+    mod_repair_runtime -> core_sc;
+    mod_tree_rebuild -> core_tree;
+    mod_fs_repair -> core_sc;
+    mod_ledger_recover -> core_ledger;
+    mod_fs_recover -> core_sc;
+
+    core_commands -> core_ledger [style=dashed, color="#831843", label="scopes CLI data"];
+    core_commands -> core_proto [style=dashed, color="#831843", label="starts local hub"];
+    core_sc -> core_tree [style=dashed, color="#831843", label="repairs projection"];
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -2063,6 +2263,10 @@ digraph DeveNoteArchitecture {
     core_release -> obj_ci_workflow;
     core_release -> obj_release_artifact;
     core_commands -> obj_cli_command;
+    core_commands -> obj_cli_option;
+    core_commands -> obj_vault_path;
+    core_commands -> obj_export_artifact;
+    core_sc -> obj_repair_plan;
     core_settings -> obj_config_runtime;
     core_settings -> obj_ui_preference;
     core_rendering -> obj_render_projection;
@@ -2330,6 +2534,31 @@ digraph DeveNoteArchitecture {
     user_tech_runtime_budget_spine -> app_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
     app_tech_runtime_budget_spine -> mod_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
     mod_tech_runtime_budget_spine -> core_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
+
+    user_cli_vault_spine [label="CLI vault indexing flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_server_spine [label="CLI server runtime flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_export_spine [label="CLI export / inspect flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_repair_spine [label="CLI repair / admin flow", shape=plaintext, fontcolor="#92400e"];
+
+    user_cli_vault_spine -> op_cli_vault_init_path [style=dashed, color="#d97706", constraint=false];
+    op_cli_vault_init_path -> op_cli_vault_scan [style=dashed, color="#d97706", constraint=false];
+    op_cli_vault_scan -> op_cli_vault_watch_dry [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_server_spine -> op_cli_server_port [style=dashed, color="#d97706", constraint=false];
+    op_cli_server_port -> op_cli_server_dev [style=dashed, color="#d97706", constraint=false];
+    op_cli_server_dev -> op_cli_server_dry [style=dashed, color="#d97706", constraint=false];
+    op_cli_server_dry -> op_cli_server_start [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_export_spine -> op_cli_dump_path [style=dashed, color="#d97706", constraint=false];
+    op_cli_dump_path -> op_cli_export_format [style=dashed, color="#d97706", constraint=false];
+    op_cli_export_format -> op_cli_export_doc [style=dashed, color="#d97706", constraint=false];
+    op_cli_export_doc -> op_cli_export_output [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_repair_spine -> op_cli_verify_p2p [style=dashed, color="#d97706", constraint=false];
+    op_cli_verify_p2p -> op_cli_seed_peer [style=dashed, color="#d97706", constraint=false];
+    op_cli_seed_peer -> op_cli_node_check [style=dashed, color="#d97706", constraint=false];
+    op_cli_node_check -> op_cli_recover_repo [style=dashed, color="#d97706", constraint=false];
+    op_cli_recover_repo -> op_cli_repair_paths [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

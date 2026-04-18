@@ -1,0 +1,47 @@
+            subgraph cluster_user_cli_vault {
+                label="CLI vault indexing [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_vault_init_path [label="Choose Init Path", fillcolor="#fde68a"];
+                op_cli_vault_scan [label="Run Vault Scan", fillcolor="#fde68a"];
+                op_cli_vault_watch_dry [label="Watch Vault Dry Run", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_cli_server {
+                label="CLI server runtime [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_server_port [label="Choose Server Port", fillcolor="#fde68a"];
+                op_cli_server_dev [label="Enable Dev Mode", fillcolor="#fde68a"];
+                op_cli_server_dry [label="Dry Run Server Startup", fillcolor="#fde68a"];
+                op_cli_server_start [label="Start Local Hub", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_cli_export {
+                label="CLI export / inspect [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_dump_path [label="Dump File Ops", fillcolor="#fde68a"];
+                op_cli_export_format [label="Choose Export Format", fillcolor="#fde68a"];
+                op_cli_export_doc [label="Select Export Document", fillcolor="#fde68a"];
+                op_cli_export_output [label="Choose Export Output", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_cli_repair {
+                label="CLI repair / admin [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_verify_p2p [label="Verify P2P Logic", fillcolor="#fef9c3"];
+                op_cli_seed_peer [label="Seed Peer Data", fillcolor="#fde68a"];
+                op_cli_node_check [label="Check Node Consistency", fillcolor="#fde68a"];
+                op_cli_recover_repo [label="Recover Repo Files", fillcolor="#fde68a"];
+                op_cli_repair_paths [label="Repair Known Local Corruption", fillcolor="#fde68a"];
+            }

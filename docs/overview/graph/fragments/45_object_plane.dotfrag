@@ -62,6 +62,10 @@
             obj_ci_workflow [label="ci::workflow", fillcolor="#f8fafc"];
             obj_release_artifact [label="release::artifact", fillcolor="#f8fafc"];
             obj_cli_command [label="cli::command", fillcolor="#f8fafc"];
+            obj_cli_option [label="cli::option", fillcolor="#f8fafc"];
+            obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
+            obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
+            obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
             obj_config_runtime [label="config::runtime", fillcolor="#f8fafc"];
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];

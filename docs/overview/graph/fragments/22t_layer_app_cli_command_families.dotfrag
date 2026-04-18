@@ -1,0 +1,23 @@
+        subgraph cluster_app_cli_families {
+            label="CLI command family interfaces [12_commands]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_cli_vault_init [label="Commands::Init", fillcolor="#bfdbfe"];
+            app_cli_vault_scan [label="Commands::Scan", fillcolor="#bfdbfe"];
+            app_cli_vault_watch [label="Commands::Watch", fillcolor="#bfdbfe"];
+            app_cli_server_bind [label="Serve::port", fillcolor="#bfdbfe"];
+            app_cli_server_dev [label="Serve::dev", fillcolor="#bfdbfe"];
+            app_cli_server_dry [label="Serve::dry_run", fillcolor="#bfdbfe"];
+            app_cli_server_start [label="Commands::Serve", fillcolor="#bfdbfe"];
+            app_cli_dump [label="Commands::Dump", fillcolor="#bfdbfe"];
+            app_cli_export_format [label="Export::format", fillcolor="#bfdbfe"];
+            app_cli_export_doc [label="Export::doc", fillcolor="#bfdbfe"];
+            app_cli_export_output [label="Export::output", fillcolor="#bfdbfe"];
+            app_cli_verify_p2p [label="Commands::VerifyP2P", fillcolor="#eff6ff"];
+            app_cli_seed [label="Commands::Seed", fillcolor="#bfdbfe"];
+            app_cli_node_check [label="Commands::NodeCheck", fillcolor="#bfdbfe"];
+            app_cli_recover [label="Commands::Recover", fillcolor="#bfdbfe"];
+            app_cli_repair [label="Commands::Repair", fillcolor="#bfdbfe"];
+        }

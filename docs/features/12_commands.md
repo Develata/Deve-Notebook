@@ -13,6 +13,7 @@
 - 该示例将 command palette 拆为打开、输入查询、结果导航、执行命令、关闭五个 user operations。
 - Quick Open 与打开文档流示例见 `docs/features/operations/repo_open_doc.md`。
 - CLI 控制面流示例见 [`operations/cli_control_commands.md`](./operations/cli_control_commands.md)。
+- CLI 细粒度命令族见 [`operations/cli_vault_indexing.md`](./operations/cli_vault_indexing.md)、[`operations/cli_server_runtime.md`](./operations/cli_server_runtime.md)、[`operations/cli_export_inspect.md`](./operations/cli_export_inspect.md)、[`operations/cli_repair_admin.md`](./operations/cli_repair_admin.md)。
 
 ## 功能项
 
