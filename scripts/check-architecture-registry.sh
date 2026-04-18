@@ -9,6 +9,7 @@ DOC_LISP="$ROOT_DIR/docs/overview/architecture-doc.lisp"
 CODE_LISP="$ROOT_DIR/docs/overview/architecture-code.lisp"
 OPS_DIR="$ROOT_DIR/docs/features/operations"
 OP_COVERAGE="$ROOT_DIR/docs/features/operation-coverage.md"
+ACCEPTANCE_DIR="$ROOT_DIR/docs/acceptance-cases"
 
 fail() {
   echo "architecture-registry-check: $*" >&2
@@ -32,6 +33,19 @@ extract_registry() {
 [[ -f "$CODE_LISP" ]] || fail "missing $CODE_LISP"
 [[ -d "$OPS_DIR" ]] || fail "missing $OPS_DIR"
 [[ -f "$OP_COVERAGE" ]] || fail "missing $OP_COVERAGE"
+[[ -d "$ACCEPTANCE_DIR" ]] || fail "missing $ACCEPTANCE_DIR"
+
+extract_case_refs() {
+  grep -Eo '[A-Z][A-Z0-9-]*-[0-9]+' || true
+}
+
+declare -A case_set
+while IFS= read -r case_id; do
+  [[ -n "$case_id" ]] || continue
+  [[ -n "${case_set[$case_id]:-}" ]] && fail "duplicate acceptance case id: $case_id"
+  case_set["$case_id"]=1
+done < <(rg --no-filename 'case_id:' "$ACCEPTANCE_DIR"/*.md | awk '{ print $3 }')
+[[ ${#case_set[@]} -gt 0 ]] || fail "no acceptance case ids found"
 
 mapfile -t flows < <(extract_registry "<!-- flow-registry:start -->" "<!-- flow-registry:end -->")
 [[ ${#flows[@]} -gt 0 ]] || fail "flow registry is empty"
@@ -90,6 +104,18 @@ while IFS= read -r op_file; do
   [[ -n "$flow_id" ]] || fail "operation file missing Flow ID: $base"
   rg -Fq "| \`$flow_id\` |" "$OP_COVERAGE" || fail "coverage registry missing flow: $flow_id"
   rg -Fq "operations/$base" "$OP_COVERAGE" || fail "coverage registry missing file: $base"
+  acceptance_line="$(awk -F': ' '/`Related Acceptance Cases`:/ { print $2; exit }' "$op_file")"
+  mapfile -t op_cases < <(printf '%s\n' "$acceptance_line" | extract_case_refs | sort -u)
+  [[ ${#op_cases[@]} -gt 0 ]] || fail "operation file has no acceptance case IDs: $base"
+  coverage_row="$(awk -F'|' -v id="$flow_id" '$2 ~ "`" id "`" { print; exit }' "$OP_COVERAGE")"
+  mapfile -t coverage_cases < <(printf '%s\n' "$coverage_row" | extract_case_refs | sort -u)
+  [[ ${#coverage_cases[@]} -gt 0 ]] || fail "coverage row has no acceptance case IDs: $flow_id"
+  op_case_list="$(printf '%s\n' "${op_cases[@]}")"
+  coverage_case_list="$(printf '%s\n' "${coverage_cases[@]}")"
+  [[ "$op_case_list" == "$coverage_case_list" ]] || fail "coverage refs differ for: $base"
+  for case_id in "${op_cases[@]}"; do
+    [[ -n "${case_set[$case_id]:-}" ]] || fail "acceptance case missing: $case_id in $base"
+  done
   mapfile -t op_ids < <(awk 'match($0, /^### `([^`]+)`/, m) { print m[1] }' "$op_file")
   [[ ${#op_ids[@]} -gt 0 ]] || fail "operation file has no operation IDs: $base"
   for op_id in "${op_ids[@]}"; do
