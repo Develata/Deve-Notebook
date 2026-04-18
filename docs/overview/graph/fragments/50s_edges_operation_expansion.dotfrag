@@ -1,8 +1,7 @@
     op_release_tag -> app_release_dispatch;
     op_release_quality -> app_release_quality;
     op_release_publish -> app_release_publish;
-    op_release_coverage -> gate_release_missing;
-    gate_release_missing -> app_release_coverage;
+    op_release_coverage -> app_release_coverage;
     op_cli_invoke -> app_cli_parse;
     op_cli_execute -> app_cli_dispatch;
     op_cli_help -> app_cli_help;
@@ -29,7 +28,6 @@
     app_release_publish -> mod_ci_release;
     app_release_publish -> mod_release_container;
     app_release_coverage -> mod_ci_workflow;
-    app_release_coverage -> mod_spec_sync;
     app_cli_parse -> mod_cli_dispatch;
     app_cli_dispatch -> mod_cli_dispatch;
     app_cli_dispatch -> mod_cli_commands;
@@ -68,7 +66,6 @@
     mod_ci_release -> core_release;
     mod_ci_workflow -> core_release;
     mod_release_container -> core_release;
-    mod_spec_sync -> core_release;
     mod_tech_budget -> core_tech_stack;
     mod_cli_dispatch -> core_commands;
     mod_cli_commands -> core_commands;

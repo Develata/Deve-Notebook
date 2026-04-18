@@ -8,7 +8,7 @@
 (user-operation :id op.release.ci.push-tag :label "Push Release Tag" :kind git-event :surface git :code ".github/workflows/release.yml" :calls (app.release.ci.dispatch))
 (user-operation :id op.release.ci.run-quality-gates :label "Run Release Quality Gates" :kind ci-job :surface github-actions :code ".github/workflows/release.yml" :calls (app.release.ci.quality))
 (user-operation :id op.release.ci.publish-container :label "Publish Release Container" :kind ci-job :surface github-actions :code ".github/workflows/release.yml" :calls (app.release.ci.publish))
-(user-operation :id op.release.ci.inspect-channel-coverage :label "Inspect Channel Coverage" :kind inspection :surface repo-files :code ".github/workflows/ (release.yml exists; nightly.yml and speckit-sync-check.yml absent)" :calls (app.release.ci.coverage))
+(user-operation :id op.release.ci.inspect-channel-coverage :label "Inspect Channel Coverage" :kind inspection :surface repo-files :code ".github/workflows/ (release.yml is the only required release workflow)" :calls (app.release.ci.coverage))
 (user-operation :id op.cli.control.invoke-command :label "Invoke CLI Command" :kind cli-invoke :surface cli :code "apps/cli/src/main.rs | apps/cli/src/dispatch.rs" :calls (app.cli.control.parse))
 (user-operation :id op.cli.control.execute-runtime :label "Execute CLI Runtime Command" :kind execute :surface cli :code "apps/cli/src/dispatch.rs | apps/cli/src/commands/" :calls (app.cli.control.dispatch))
 (user-operation :id op.cli.control.inspect-help :label "Inspect CLI Help" :kind help :surface cli :code "apps/cli/src/main.rs" :calls (app.cli.control.help))

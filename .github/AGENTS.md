@@ -5,7 +5,9 @@
 
 ## Purpose
 
-GitHub CI/CD configuration. Contains workflow definitions for nightly builds, releases, and specification sync checks.
+GitHub CI/CD configuration. The current baseline contains the tag-driven
+release workflow only; nightly and speckit sync workflows are not required
+repo metadata.
 
 ## Subdirectories
 
@@ -17,9 +19,7 @@ GitHub CI/CD configuration. Contains workflow definitions for nightly builds, re
 
 | File | Description |
 |------|-------------|
-| `workflows/nightly.yml` | Nightly build and test workflow |
 | `workflows/release.yml` | Release packaging and publishing |
-| `workflows/speckit-sync-check.yml` | Specification document sync validation |
 
 ## For AI Agents
 
@@ -27,5 +27,7 @@ GitHub CI/CD configuration. Contains workflow definitions for nightly builds, re
 
 - Workflow files use GitHub Actions YAML syntax.
 - Keep workflows lean — the target environment is resource-constrained.
+- Do not recreate `nightly.yml` or `speckit-sync-check.yml` unless the plan
+  explicitly reintroduces them as required release surfaces.
 
 <!-- MANUAL: -->

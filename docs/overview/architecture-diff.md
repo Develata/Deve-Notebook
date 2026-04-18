@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-04-14 (manual operation-first pass)
+Generated: 2026-04-18 (manual operation-first pass)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -13,8 +13,8 @@ Keep this block stable. The graph generator reads the drift registry below.
 
 <!-- modeled-slice:start -->
 - Flow count: `32`
-- Status: `drifted`
-- Active drift count: `1`
+- Status: `aligned`
+- Active drift count: `0`
 <!-- modeled-slice:end -->
 
 ## Summary
@@ -24,14 +24,14 @@ Keep this block stable. The graph generator reads the drift registry below.
 | Flow set | aligned | the same 32 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drift | release / CI expects nightly and speckit sync workflows that are absent in the current worktree |
+| Coordination/execution mapping | aligned | release / CI now treats `release.yml` as the only required workflow surface |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
 
 Use one entry per divergent flow. Labels must match the flow registry.
 <!-- drift-registry:start -->
-- `release / CI`
+- `none`
 <!-- drift-registry:end -->
 
 ## Flow Registry
@@ -91,11 +91,10 @@ The closing implementation is represented by:
 - [agent_bridge.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge.rs)
 - [policy.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge/policy.rs)
 
-The active `release / CI` drift is narrower: `.github/workflows/release.yml`
-exists, but `.github/workflows/nightly.yml` and
-`.github/workflows/speckit-sync-check.yml` are absent from the current
-worktree while plan and repository metadata still describe them as expected
-release/spec-sync surfaces.
+The previous `release / CI` drift is closed. The plan and `.github`
+metadata now treat `.github/workflows/release.yml` as the only required
+release workflow surface. `nightly.yml` and `speckit-sync-check.yml` are
+intentionally outside the current baseline.
 
 ## Current State
 
@@ -104,10 +103,10 @@ Within the currently modeled operation slice:
 - flow set is aligned
 - user-operation IDs are aligned
 - instruction interfaces are aligned
-- one coordination ownership gap remains in `release / CI`
+- no active coordination ownership gaps remain
 - execution-domain ownership is aligned
 
-The slice is a practical bijective baseline with one explicit drift marker.
+The slice is a practical bijective baseline with no active drift markers.
 
 ## Maintenance Rules
 

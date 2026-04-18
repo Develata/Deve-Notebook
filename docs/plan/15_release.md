@@ -26,23 +26,15 @@
 | **Web**     | PWA (Static)                | Universal            | HTTPS                    |
 
 ### 1.2 Release Channels (发布通道)
-1.  **Stable (稳定版)**:
-    *   Tag: `v1.0.0`
-    *   频率: 仅当 Milestone 完成且通过所有测试后发布。
-    *   Artifacts: Binaries, Docker Image (`latest`, `v1.0.0`).
-    *   适用: 生产环境。
-2.  **Nightly (每日构建)**:
-    *   Tag: `nightly` (Rolling), `nightly-yyyyMMdd`
-    *   频率: 每日 `main` 分支构建。
-    *   Artifacts: Docker Image (`nightly`), Binaries (Optional).
-    *   适用: 尝鲜用户，QA 测试。
+1.  **Stable (稳定版)**: tag `v1.0.0`，仅在 Milestone 完成且测试通过后发布；产物包括二进制与 Docker Image (`latest`, `v1.0.0`)；适用于生产环境。
+2.  **Pre-release / Experimental (预发布 / 实验构建)**: tag `vX.Y.Z-rc.N` 或人工测试构建标识；按里程碑需要手动触发或本地构建；当前基线不要求独立 `nightly.yml` 工作流。
 
 ## 2. CI/CD Pipelines (自动化流程)
 
 基于 GitHub Actions 实现全自动构建。
 
 > [!NOTE]
-> **Status (状态)**: 部分实现。当前工作树已包含 `.github/workflows/release.yml`，但尚未包含 `nightly.yml` 与 `speckit-sync-check.yml`。在补齐这些 workflow 或修订本章前，`release / CI` 在总蓝图中保留为 active drift。
+> **Status (状态)**: 当前权威基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 已从当前 release / CI 要求中移除，不再构成总蓝图 drift。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
@@ -58,12 +50,12 @@
         *   **Platforms**: `linux/amd64`, `linux/arm64`.
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
-### 2.2 Workflow: `nightly.yml`
-*   **Trigger**: Schedule (Daily 00:00 UTC) or Push to `main`.
-*   **Steps**:
-    1.  **Build & Test**: 确保代码库健康。
-    2.  **Docker Push**: 构建并推送 Nightly 镜像。
-        *   **Tags**: `nightly` (Updated daily).
+### 2.2 Deferred Workflows (非当前基线)
+
+以下 workflow 当前不属于权威 release / CI 基线：
+
+- `nightly.yml`: 不再要求每日构建；如未来重新需要，应先更新本章再新增 workflow。
+- `speckit-sync-check.yml`: 不再作为 release / CI 的必需校验面；规格同步检查应由后续独立治理流程重新定义。
 
 ### 2.3 Security & Signing (安全签名)
 *   **macOS**: 必须配置 `APPLE_SIGNING_IDENTITY` 和 `APPLE_PROVIDER_SHORT_NAME` 以通过 Gatekeeper。

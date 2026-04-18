@@ -42,7 +42,7 @@
 - `Surface`: `repo-files`
 - `Trigger`: maintainer verifies expected release workflows
 - `Preconditions`: `.github/workflows/` is readable
-- `Immediate Result`: current repo shows `release.yml`; `nightly.yml` and `speckit-sync-check.yml` are absent
+- `Immediate Result`: current repo shows `release.yml` as the only required release workflow
 - `Application Entry`: `.github/workflows/`
 
 ## Response Flow
@@ -55,5 +55,5 @@
 ## Notes
 
 - Current code side implements tag-driven release via `release.yml`.
-- Current code side does not contain `nightly.yml` or `speckit-sync-check.yml`; the architecture diff should mark this flow as drift until those workflows are added or plan text is revised.
-- Main objects: `release::tag`, `ci::workflow`, `container::image`, `spec::sync-state`.
+- `nightly.yml` and `speckit-sync-check.yml` are intentionally outside the current release / CI baseline.
+- Main objects: `release::tag`, `ci::workflow`, `container::image`.

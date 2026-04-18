@@ -8,7 +8,7 @@
 (application :id app.release.ci.dispatch :label "release.yml::on.push.tags(v*)" :kind ci-dispatch :chapter 15_release :calls (mod_ci_release mod_ci_workflow))
 (application :id app.release.ci.quality :label "release.yml::test job" :kind ci-job :chapter 15_release :calls (mod_ci_release mod_tech_budget))
 (application :id app.release.ci.publish :label "release.yml::docker job" :kind ci-job :chapter 15_release :calls (mod_ci_release mod_release_container))
-(application :id app.release.ci.coverage :label "workflow coverage inspection" :kind repo-inspection :chapter 15_release :calls (mod_ci_workflow mod_spec_sync))
+(application :id app.release.ci.coverage :label "workflow coverage inspection" :kind repo-inspection :chapter 15_release :calls (mod_ci_workflow))
 (application :id app.cli.control.parse :label "clap::Commands parse" :kind cli-parser :chapter 12_commands :calls (mod_cli_dispatch))
 (application :id app.cli.control.dispatch :label "dispatch::run" :kind cli-dispatch :chapter 12_commands :calls (mod_cli_dispatch mod_cli_commands))
 (application :id app.cli.control.help :label "clap help surface" :kind cli-help :chapter 12_commands :calls (mod_cli_dispatch))

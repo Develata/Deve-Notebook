@@ -1,4 +1,4 @@
-(group :id grp.mod.release-ci :layer module :label "release / CI" :members (mod_ci_release mod_ci_workflow mod_release_container mod_spec_sync mod_tech_budget))
+(group :id grp.mod.release-ci :layer module :label "release / CI" :members (mod_ci_release mod_ci_workflow mod_release_container mod_tech_budget))
 (group :id grp.mod.cli-control :layer module :label "CLI control commands" :members (mod_cli_dispatch mod_cli_commands mod_config_runtime))
 (group :id grp.mod.settings-update :layer module :label "settings update" :members (mod_settings_ui mod_config_runtime mod_i18n_catalog))
 (group :id grp.mod.render-cursor :layer module :label "rendering cursor reveal" :members (mod_render_inline mod_editor_runtime))
@@ -8,7 +8,6 @@
 (module :id mod_ci_release :label "ci::release" :chapter 15_release :parent core.release :code-area ".github/workflows/release.yml")
 (module :id mod_ci_workflow :label "ci::workflow-index" :chapter 15_release :parent core.release :code-area ".github/workflows/")
 (module :id mod_release_container :label "release::container" :chapter 15_release :parent core.release :code-area "Dockerfile | .github/workflows/release.yml")
-(module :id mod_spec_sync :label "spec::sync-check" :chapter 15_release :parent core.release :code-area ".github/workflows/speckit-sync-check.yml")
 (module :id mod_tech_budget :label "tech::quality-gates" :chapter 14_tech_stack :parent core.tech_stack :code-area "scripts/plan-coverage.sh")
 (module :id mod_cli_dispatch :label "cli::dispatch" :chapter 12_commands :parent core.commands :code-area "apps/cli/src/dispatch.rs")
 (module :id mod_cli_commands :label "cli::commands" :chapter 12_commands :parent core.commands :code-area "apps/cli/src/commands/")

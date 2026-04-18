@@ -34,11 +34,11 @@
 - case_id: REL-001
   goal: Release Channels 命名规范。
   preconditions:
-    - 构建 stable 与 nightly
+    - 构建 stable release
   steps:
     - run: ls dist
   assertions:
-    - stdout_contains_any: ["v1.0.0", "nightly"]
+    - stdout_contains: "v1.0.0"
 
 - case_id: REL-002
   goal: Docker 部署可用。

@@ -8,7 +8,6 @@
                 op_release_quality [label="Run Release Quality Gates", fillcolor="#fef9c3"];
                 op_release_publish [label="Publish Release Container", fillcolor="#fde68a"];
                 op_release_coverage [label="Inspect Channel Coverage", fillcolor="#fde68a"];
-                gate_release_missing [label="Current Drift:\nrelease.yml exists\nnightly/speckit absent", fillcolor="#fecaca", shape=note];
             }
 
             subgraph cluster_user_cli_control {

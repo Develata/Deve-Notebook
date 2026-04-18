@@ -7,7 +7,6 @@
             mod_ci_release [label="ci::release", fillcolor="#f0fdf4"];
             mod_ci_workflow [label="ci::workflow-index", fillcolor="#f0fdf4"];
             mod_release_container [label="release::container", fillcolor="#f0fdf4"];
-            mod_spec_sync [label="spec::sync-check", fillcolor="#fecaca"];
             mod_tech_budget [label="tech::quality-gates", fillcolor="#f0fdf4"];
             mod_cli_dispatch [label="cli::dispatch", fillcolor="#f0fdf4"];
             mod_cli_commands [label="cli::commands", fillcolor="#f0fdf4"];
