@@ -37,4 +37,8 @@ settings runtime feedback	settings_feedback
 rendering cursor reveal	render_cursor
 rendering math / mermaid	render_math_mermaid
 i18n locale / error	i18n_locale_error
+i18n locale selection	i18n_locale
+i18n error mapping	i18n_error
+i18n localized formatting	i18n_format
+i18n hardcoded audit	i18n_audit
 tech-stack runtime budget	tech_runtime_budget

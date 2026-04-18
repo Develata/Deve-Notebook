@@ -1,0 +1,44 @@
+    user_i18n_locale_spine [label="i18n locale selection flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_locale_spine [label="", shape=point, width=0.01];
+    mod_i18n_locale_spine [label="", shape=point, width=0.01];
+    core_i18n_locale_spine [label="", shape=point, width=0.01];
+    user_i18n_locale_spine -> app_i18n_locale_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_locale_spine -> mod_i18n_locale_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_locale_spine -> core_i18n_locale_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_error_spine [label="i18n error mapping flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_error_spine [label="", shape=point, width=0.01];
+    mod_i18n_error_spine [label="", shape=point, width=0.01];
+    core_i18n_error_spine [label="", shape=point, width=0.01];
+    user_i18n_error_spine -> app_i18n_error_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_error_spine -> mod_i18n_error_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_error_spine -> core_i18n_error_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_format_spine [label="i18n localized formatting flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_format_spine [label="", shape=point, width=0.01];
+    mod_i18n_format_spine [label="", shape=point, width=0.01];
+    core_i18n_format_spine [label="", shape=point, width=0.01];
+    user_i18n_format_spine -> app_i18n_format_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_format_spine -> mod_i18n_format_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_format_spine -> core_i18n_format_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_audit_spine [label="i18n hardcoded audit flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_audit_spine [label="", shape=point, width=0.01];
+    mod_i18n_audit_spine [label="", shape=point, width=0.01];
+    core_i18n_audit_spine [label="", shape=point, width=0.01];
+    user_i18n_audit_spine -> app_i18n_audit_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_audit_spine -> mod_i18n_audit_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_audit_spine -> core_i18n_audit_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_locale_spine -> op_i18n_locale_browser [style=dashed, color="#d97706", constraint=false];
+    op_i18n_locale_browser -> op_i18n_locale_select [style=dashed, color="#d97706", constraint=false];
+    op_i18n_locale_select -> op_i18n_locale_fallback [style=dashed, color="#d97706", constraint=false];
+    user_i18n_error_spine -> op_i18n_error_auth [style=dashed, color="#d97706", constraint=false];
+    op_i18n_error_auth -> op_i18n_error_sc [style=dashed, color="#d97706", constraint=false];
+    op_i18n_error_sc -> op_i18n_error_render [style=dashed, color="#d97706", constraint=false];
+    user_i18n_format_spine -> op_i18n_format_switch [style=dashed, color="#d97706", constraint=false];
+    op_i18n_format_switch -> op_i18n_format_relative [style=dashed, color="#d97706", constraint=false];
+    op_i18n_format_relative -> op_i18n_format_audit [style=dashed, color="#d97706", constraint=false];
+    user_i18n_audit_spine -> op_i18n_audit_scan [style=dashed, color="#d97706", constraint=false];
+    op_i18n_audit_scan -> op_i18n_audit_key [style=dashed, color="#d97706", constraint=false];
+    op_i18n_audit_key -> op_i18n_audit_facade [style=dashed, color="#d97706", constraint=false];

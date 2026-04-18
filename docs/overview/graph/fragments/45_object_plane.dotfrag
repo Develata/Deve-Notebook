@@ -76,6 +76,10 @@
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
             obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];
             obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
+            obj_locale_selection [label="locale::selection", fillcolor="#f8fafc"];
+            obj_localized_format [label="format::localized", fillcolor="#f8fafc"];
+            obj_i18n_key_audit [label="i18n::key-audit", fillcolor="#f8fafc"];
+            obj_ui_text [label="ui::text", fillcolor="#f8fafc"];
             obj_protocol_error_code [label="protocol::error-code", fillcolor="#f8fafc"];
             obj_tech_dependency [label="tech::dependency", fillcolor="#f8fafc"];
             obj_runtime_budget [label="runtime::budget", fillcolor="#f8fafc"];

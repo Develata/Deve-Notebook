@@ -62,6 +62,10 @@
     core_rendering -> obj_render_projection;
     core_rendering -> obj_editor_selection;
     core_i18n -> obj_i18n_catalog;
+    core_i18n -> obj_locale_selection;
+    core_i18n -> obj_localized_format;
+    core_i18n -> obj_i18n_key_audit;
+    core_i18n -> obj_ui_text;
     core_i18n -> obj_protocol_error_code;
     core_tech_stack -> obj_tech_dependency;
     core_tech_stack -> obj_runtime_budget;

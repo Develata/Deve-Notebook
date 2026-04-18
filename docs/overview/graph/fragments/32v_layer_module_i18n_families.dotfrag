@@ -1,0 +1,13 @@
+        subgraph cluster_mod_i18n_families {
+            label="i18n specific coordination [11_i18n]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_i18n_locale_context [label="i18n::locale_context", fillcolor="#f0fdf4"];
+            mod_i18n_fallback [label="i18n::fallback", fillcolor="#f0fdf4"];
+            mod_protocol_error_catalog [label="protocol::error_catalog", fillcolor="#f0fdf4"];
+            mod_i18n_format_audit [label="i18n::format_audit", fillcolor="#f0fdf4"];
+            mod_i18n_hardcoded_audit [label="i18n::hardcoded_audit", fillcolor="#f0fdf4"];
+            mod_i18n_facade [label="i18n::facade", fillcolor="#f0fdf4"];
+        }

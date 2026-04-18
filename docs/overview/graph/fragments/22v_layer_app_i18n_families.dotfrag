@@ -1,0 +1,19 @@
+        subgraph cluster_app_i18n_families {
+            label="i18n specific interfaces [11_i18n]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_i18n_locale_detect [label="locale::detect_browser", fillcolor="#eff6ff"];
+            app_i18n_locale_select [label="locale::select_explicit", fillcolor="#bfdbfe"];
+            app_i18n_locale_fallback [label="locale::fallback_missing", fillcolor="#eff6ff"];
+            app_i18n_error_auth [label="auth_error::code", fillcolor="#eff6ff"];
+            app_i18n_error_sc [label="sc_error::code", fillcolor="#eff6ff"];
+            app_i18n_error_render [label="server_error::localized_message", fillcolor="#eff6ff"];
+            app_i18n_format_locale [label="format::locale_context", fillcolor="#bfdbfe"];
+            app_i18n_format_relative [label="format::relative_time", fillcolor="#eff6ff"];
+            app_i18n_format_audit [label="format::manual_audit", fillcolor="#eff6ff"];
+            app_i18n_audit_scan [label="i18n::scan_hardcoded", fillcolor="#eff6ff"];
+            app_i18n_audit_key [label="i18n::add_key", fillcolor="#bfdbfe"];
+            app_i18n_audit_facade [label="i18n::verify_facade", fillcolor="#eff6ff"];
+        }

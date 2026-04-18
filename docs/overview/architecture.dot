@@ -543,6 +543,50 @@ digraph DeveNoteArchitecture {
                 op_settings_feedback_runtime [label="Inspect Runtime Setting Feedback", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_i18n_locale {
+                label="i18n locale selection [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_locale_browser [label="Use Browser Locale", fillcolor="#fef9c3"];
+                op_i18n_locale_select [label="Select Explicit Locale", fillcolor="#fde68a"];
+                op_i18n_locale_fallback [label="Fallback Missing Locale", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_i18n_error {
+                label="i18n error mapping [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_error_auth [label="Receive Auth Error Code", fillcolor="#fef9c3"];
+                op_i18n_error_sc [label="Receive Source Control Error Code", fillcolor="#fef9c3"];
+                op_i18n_error_render [label="Render Localized Error Message", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_i18n_format {
+                label="i18n localized formatting [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_format_switch [label="Switch Formatting Locale", fillcolor="#fde68a"];
+                op_i18n_format_relative [label="Observe Relative Time Format", fillcolor="#fef9c3"];
+                op_i18n_format_audit [label="Audit Manual Date Formatting", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_i18n_audit {
+                label="i18n hardcoded audit [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_audit_scan [label="Scan Hardcoded Visible Text", fillcolor="#fef9c3"];
+                op_i18n_audit_key [label="Add I18n Key", fillcolor="#fde68a"];
+                op_i18n_audit_facade [label="Verify I18n Facade Usage", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -965,6 +1009,26 @@ digraph DeveNoteArchitecture {
             app_settings_feedback_runtime [label="settings::runtime_feedback", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_i18n_families {
+            label="i18n specific interfaces [11_i18n]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_i18n_locale_detect [label="locale::detect_browser", fillcolor="#eff6ff"];
+            app_i18n_locale_select [label="locale::select_explicit", fillcolor="#bfdbfe"];
+            app_i18n_locale_fallback [label="locale::fallback_missing", fillcolor="#eff6ff"];
+            app_i18n_error_auth [label="auth_error::code", fillcolor="#eff6ff"];
+            app_i18n_error_sc [label="sc_error::code", fillcolor="#eff6ff"];
+            app_i18n_error_render [label="server_error::localized_message", fillcolor="#eff6ff"];
+            app_i18n_format_locale [label="format::locale_context", fillcolor="#bfdbfe"];
+            app_i18n_format_relative [label="format::relative_time", fillcolor="#eff6ff"];
+            app_i18n_format_audit [label="format::manual_audit", fillcolor="#eff6ff"];
+            app_i18n_audit_scan [label="i18n::scan_hardcoded", fillcolor="#eff6ff"];
+            app_i18n_audit_key [label="i18n::add_key", fillcolor="#bfdbfe"];
+            app_i18n_audit_facade [label="i18n::verify_facade", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1323,6 +1387,20 @@ digraph DeveNoteArchitecture {
             mod_sync_mode_control [label="settings::sync_mode", fillcolor="#f0fdf4"];
             mod_ai_backend_capability [label="settings::ai_backend_capability", fillcolor="#f0fdf4"];
             mod_settings_feedback [label="settings::feedback", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_i18n_families {
+            label="i18n specific coordination [11_i18n]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_i18n_locale_context [label="i18n::locale_context", fillcolor="#f0fdf4"];
+            mod_i18n_fallback [label="i18n::fallback", fillcolor="#f0fdf4"];
+            mod_protocol_error_catalog [label="protocol::error_catalog", fillcolor="#f0fdf4"];
+            mod_i18n_format_audit [label="i18n::format_audit", fillcolor="#f0fdf4"];
+            mod_i18n_hardcoded_audit [label="i18n::hardcoded_audit", fillcolor="#f0fdf4"];
+            mod_i18n_facade [label="i18n::facade", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_targets {
@@ -1703,6 +1781,10 @@ digraph DeveNoteArchitecture {
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
             obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];
             obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
+            obj_locale_selection [label="locale::selection", fillcolor="#f8fafc"];
+            obj_localized_format [label="format::localized", fillcolor="#f8fafc"];
+            obj_i18n_key_audit [label="i18n::key-audit", fillcolor="#f8fafc"];
+            obj_ui_text [label="ui::text", fillcolor="#f8fafc"];
             obj_protocol_error_code [label="protocol::error-code", fillcolor="#f8fafc"];
             obj_tech_dependency [label="tech::dependency", fillcolor="#f8fafc"];
             obj_runtime_budget [label="runtime::budget", fillcolor="#f8fafc"];
@@ -2350,6 +2432,53 @@ digraph DeveNoteArchitecture {
     core_settings -> core_plugin [style=dashed, color="#831843", label="gates agent backend"];
     core_settings -> core_tech_stack [style=dashed, color="#831843", label="profiles runtime"];
 
+    op_i18n_locale_browser -> app_i18n_locale_detect;
+    op_i18n_locale_select -> app_i18n_locale_select;
+    op_i18n_locale_fallback -> app_i18n_locale_fallback;
+    op_i18n_error_auth -> app_i18n_error_auth;
+    op_i18n_error_sc -> app_i18n_error_sc;
+    op_i18n_error_render -> app_i18n_error_render;
+    op_i18n_format_switch -> app_i18n_format_locale;
+    op_i18n_format_relative -> app_i18n_format_relative;
+    op_i18n_format_audit -> app_i18n_format_audit;
+    op_i18n_audit_scan -> app_i18n_audit_scan;
+    op_i18n_audit_key -> app_i18n_audit_key;
+    op_i18n_audit_facade -> app_i18n_audit_facade;
+
+    app_i18n_locale_detect -> mod_i18n_locale_context;
+    app_i18n_locale_detect -> mod_i18n_catalog;
+    app_i18n_locale_select -> mod_settings_ui;
+    app_i18n_locale_select -> mod_i18n_locale_context;
+    app_i18n_locale_select -> mod_i18n_catalog;
+    app_i18n_locale_fallback -> mod_i18n_fallback;
+    app_i18n_locale_fallback -> mod_i18n_catalog;
+    app_i18n_error_auth -> mod_i18n_error;
+    app_i18n_error_auth -> mod_protocol_error_catalog;
+    app_i18n_error_sc -> mod_i18n_error;
+    app_i18n_error_sc -> mod_protocol_error_catalog;
+    app_i18n_error_sc -> mod_proto_ws;
+    app_i18n_error_render -> mod_i18n_error;
+    app_i18n_error_render -> mod_i18n_catalog;
+    app_i18n_format_locale -> mod_time_format;
+    app_i18n_format_locale -> mod_i18n_locale_context;
+    app_i18n_format_relative -> mod_time_format;
+    app_i18n_format_relative -> mod_i18n_catalog;
+    app_i18n_format_audit -> mod_i18n_format_audit;
+    app_i18n_format_audit -> mod_time_format;
+    app_i18n_audit_scan -> mod_i18n_hardcoded_audit;
+    app_i18n_audit_scan -> mod_i18n_facade;
+    app_i18n_audit_key -> mod_i18n_catalog;
+    app_i18n_audit_key -> mod_i18n_facade;
+    app_i18n_audit_facade -> mod_i18n_facade;
+    app_i18n_audit_facade -> mod_i18n_hardcoded_audit;
+
+    mod_i18n_locale_context -> core_i18n;
+    mod_i18n_fallback -> core_i18n;
+    mod_protocol_error_catalog -> core_proto;
+    mod_i18n_format_audit -> core_i18n;
+    mod_i18n_hardcoded_audit -> core_i18n;
+    mod_i18n_facade -> core_i18n;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -2414,6 +2543,10 @@ digraph DeveNoteArchitecture {
     core_rendering -> obj_render_projection;
     core_rendering -> obj_editor_selection;
     core_i18n -> obj_i18n_catalog;
+    core_i18n -> obj_locale_selection;
+    core_i18n -> obj_localized_format;
+    core_i18n -> obj_i18n_key_audit;
+    core_i18n -> obj_ui_text;
     core_i18n -> obj_protocol_error_code;
     core_tech_stack -> obj_tech_dependency;
     core_tech_stack -> obj_runtime_budget;
@@ -2722,6 +2855,51 @@ digraph DeveNoteArchitecture {
     user_settings_feedback_spine -> op_settings_feedback_visual [style=dashed, color="#d97706", constraint=false];
     op_settings_feedback_visual -> op_settings_feedback_disabled [style=dashed, color="#d97706", constraint=false];
     op_settings_feedback_disabled -> op_settings_feedback_runtime [style=dashed, color="#d97706", constraint=false];
+
+    user_i18n_locale_spine [label="i18n locale selection flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_locale_spine [label="", shape=point, width=0.01];
+    mod_i18n_locale_spine [label="", shape=point, width=0.01];
+    core_i18n_locale_spine [label="", shape=point, width=0.01];
+    user_i18n_locale_spine -> app_i18n_locale_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_locale_spine -> mod_i18n_locale_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_locale_spine -> core_i18n_locale_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_error_spine [label="i18n error mapping flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_error_spine [label="", shape=point, width=0.01];
+    mod_i18n_error_spine [label="", shape=point, width=0.01];
+    core_i18n_error_spine [label="", shape=point, width=0.01];
+    user_i18n_error_spine -> app_i18n_error_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_error_spine -> mod_i18n_error_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_error_spine -> core_i18n_error_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_format_spine [label="i18n localized formatting flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_format_spine [label="", shape=point, width=0.01];
+    mod_i18n_format_spine [label="", shape=point, width=0.01];
+    core_i18n_format_spine [label="", shape=point, width=0.01];
+    user_i18n_format_spine -> app_i18n_format_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_format_spine -> mod_i18n_format_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_format_spine -> core_i18n_format_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_audit_spine [label="i18n hardcoded audit flow", shape=plaintext, fontcolor="#92400e"];
+    app_i18n_audit_spine [label="", shape=point, width=0.01];
+    mod_i18n_audit_spine [label="", shape=point, width=0.01];
+    core_i18n_audit_spine [label="", shape=point, width=0.01];
+    user_i18n_audit_spine -> app_i18n_audit_spine [penwidth=2.2, color="#0f172a"];
+    app_i18n_audit_spine -> mod_i18n_audit_spine [penwidth=2.2, color="#0f172a"];
+    mod_i18n_audit_spine -> core_i18n_audit_spine [penwidth=2.2, color="#0f172a"];
+
+    user_i18n_locale_spine -> op_i18n_locale_browser [style=dashed, color="#d97706", constraint=false];
+    op_i18n_locale_browser -> op_i18n_locale_select [style=dashed, color="#d97706", constraint=false];
+    op_i18n_locale_select -> op_i18n_locale_fallback [style=dashed, color="#d97706", constraint=false];
+    user_i18n_error_spine -> op_i18n_error_auth [style=dashed, color="#d97706", constraint=false];
+    op_i18n_error_auth -> op_i18n_error_sc [style=dashed, color="#d97706", constraint=false];
+    op_i18n_error_sc -> op_i18n_error_render [style=dashed, color="#d97706", constraint=false];
+    user_i18n_format_spine -> op_i18n_format_switch [style=dashed, color="#d97706", constraint=false];
+    op_i18n_format_switch -> op_i18n_format_relative [style=dashed, color="#d97706", constraint=false];
+    op_i18n_format_relative -> op_i18n_format_audit [style=dashed, color="#d97706", constraint=false];
+    user_i18n_audit_spine -> op_i18n_audit_scan [style=dashed, color="#d97706", constraint=false];
+    op_i18n_audit_scan -> op_i18n_audit_key [style=dashed, color="#d97706", constraint=false];
+    op_i18n_audit_key -> op_i18n_audit_facade [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

@@ -17,7 +17,11 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.cli.vault-indexing` | [`cli_vault_indexing.md`](./operations/cli_vault_indexing.md) | `CMD-001`, `CMD-006` |
 | `flow.doc.edit-confirmed-op` | [`doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md) | `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02` |
 | `flow.doc.pending-navigation-guard` | [`doc_pending_navigation_guard.md`](./operations/doc_pending_navigation_guard.md) | `WEBWRITE-FEAT-01`, `WEBWRITE-FEAT-02`, `WEBWRITE-FEAT-03` |
+| `flow.i18n.error-mapping` | [`i18n_error_mapping.md`](./operations/i18n_error_mapping.md) | `I18N-004`, `I18N-006`, `AUTH-002` |
+| `flow.i18n.hardcoded-audit` | [`i18n_hardcoded_audit.md`](./operations/i18n_hardcoded_audit.md) | `I18N-001`, `I18N-003` |
 | `flow.i18n.locale-error` | [`i18n_locale_error.md`](./operations/i18n_locale_error.md) | `I18N-001`, `I18N-002`, `I18N-003`, `I18N-004`, `I18N-005`, `I18N-006` |
+| `flow.i18n.locale-selection` | [`i18n_locale_selection.md`](./operations/i18n_locale_selection.md) | `I18N-002`, `I18N-003`, `SET-005` |
+| `flow.i18n.localized-formatting` | [`i18n_localized_formatting.md`](./operations/i18n_localized_formatting.md) | `I18N-005`, `TECH-001` |
 | `flow.net.key-exchange` | [`net_key_exchange.md`](./operations/net_key_exchange.md) | `NET-FEAT-01`, `NET-FEAT-03` |
 | `flow.net.sync-handshake` | [`net_sync_handshake.md`](./operations/net_sync_handshake.md) | `NET-FEAT-01`, `NET-FEAT-02`, `NET-FEAT-03` |
 | `flow.net.sync-transfer` | [`net_sync_transfer.md`](./operations/net_sync_transfer.md) | `NET-FEAT-02`, `NET-FEAT-03` |

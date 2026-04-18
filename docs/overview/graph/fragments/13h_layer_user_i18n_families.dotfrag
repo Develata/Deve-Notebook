@@ -1,0 +1,43 @@
+            subgraph cluster_user_i18n_locale {
+                label="i18n locale selection [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_locale_browser [label="Use Browser Locale", fillcolor="#fef9c3"];
+                op_i18n_locale_select [label="Select Explicit Locale", fillcolor="#fde68a"];
+                op_i18n_locale_fallback [label="Fallback Missing Locale", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_i18n_error {
+                label="i18n error mapping [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_error_auth [label="Receive Auth Error Code", fillcolor="#fef9c3"];
+                op_i18n_error_sc [label="Receive Source Control Error Code", fillcolor="#fef9c3"];
+                op_i18n_error_render [label="Render Localized Error Message", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_i18n_format {
+                label="i18n localized formatting [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_format_switch [label="Switch Formatting Locale", fillcolor="#fde68a"];
+                op_i18n_format_relative [label="Observe Relative Time Format", fillcolor="#fef9c3"];
+                op_i18n_format_audit [label="Audit Manual Date Formatting", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_i18n_audit {
+                label="i18n hardcoded audit [11_i18n]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_i18n_audit_scan [label="Scan Hardcoded Visible Text", fillcolor="#fef9c3"];
+                op_i18n_audit_key [label="Add I18n Key", fillcolor="#fde68a"];
+                op_i18n_audit_facade [label="Verify I18n Facade Usage", fillcolor="#fef9c3"];
+            }
