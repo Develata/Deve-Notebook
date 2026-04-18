@@ -1,0 +1,14 @@
+        subgraph cluster_mod_settings_families {
+            label="settings source coordination [13_settings]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_config_defaults [label="config::defaults", fillcolor="#f0fdf4"];
+            mod_config_env [label="config::env", fillcolor="#f0fdf4"];
+            mod_config_file [label="config::file", fillcolor="#f0fdf4"];
+            mod_runtime_profile [label="runtime::profile", fillcolor="#f0fdf4"];
+            mod_sync_mode_control [label="settings::sync_mode", fillcolor="#f0fdf4"];
+            mod_ai_backend_capability [label="settings::ai_backend_capability", fillcolor="#f0fdf4"];
+            mod_settings_feedback [label="settings::feedback", fillcolor="#f0fdf4"];
+        }

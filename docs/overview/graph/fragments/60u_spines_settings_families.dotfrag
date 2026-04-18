@@ -1,0 +1,20 @@
+    user_settings_env_spine [label="settings env defaults flow", shape=plaintext, fontcolor="#92400e"];
+    user_settings_file_spine [label="settings file config flow", shape=plaintext, fontcolor="#92400e"];
+    user_settings_ui_spine [label="settings UI preferences flow", shape=plaintext, fontcolor="#92400e"];
+    user_settings_feedback_spine [label="settings runtime feedback flow", shape=plaintext, fontcolor="#92400e"];
+
+    user_settings_env_spine -> op_settings_env_unset [style=dashed, color="#d97706", constraint=false];
+    op_settings_env_unset -> op_settings_env_override [style=dashed, color="#d97706", constraint=false];
+    op_settings_env_override -> op_settings_env_inspect [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_file_spine -> op_settings_file_create [style=dashed, color="#d97706", constraint=false];
+    op_settings_file_create -> op_settings_file_edit [style=dashed, color="#d97706", constraint=false];
+    op_settings_file_edit -> op_settings_file_apply [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_ui_spine -> op_settings_ui_language [style=dashed, color="#d97706", constraint=false];
+    op_settings_ui_language -> op_settings_ui_sync [style=dashed, color="#d97706", constraint=false];
+    op_settings_ui_sync -> op_settings_ui_ai [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_feedback_spine -> op_settings_feedback_visual [style=dashed, color="#d97706", constraint=false];
+    op_settings_feedback_visual -> op_settings_feedback_disabled [style=dashed, color="#d97706", constraint=false];
+    op_settings_feedback_disabled -> op_settings_feedback_runtime [style=dashed, color="#d97706", constraint=false];

@@ -53,6 +53,11 @@
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;
     core_settings -> obj_config_runtime;
+    core_settings -> obj_env_override;
+    core_settings -> obj_settings_file;
+    core_settings -> obj_runtime_profile;
+    core_settings -> obj_settings_feedback;
+    core_plugin -> obj_ai_backend_capability;
     core_settings -> obj_ui_preference;
     core_rendering -> obj_render_projection;
     core_rendering -> obj_editor_selection;

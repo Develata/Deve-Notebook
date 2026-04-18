@@ -1,0 +1,43 @@
+            subgraph cluster_user_settings_env {
+                label="settings env defaults [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_env_unset [label="Leave Environment Unset", fillcolor="#fef9c3"];
+                op_settings_env_override [label="Set Environment Override", fillcolor="#fde68a"];
+                op_settings_env_inspect [label="Inspect Effective Environment Config", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_file {
+                label="settings file config [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_file_create [label="Create Default Config File", fillcolor="#fde68a"];
+                op_settings_file_edit [label="Edit Config File Value", fillcolor="#fde68a"];
+                op_settings_file_apply [label="Restart To Apply File Config", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_settings_ui {
+                label="settings UI preferences [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_ui_language [label="Select UI Language", fillcolor="#fde68a"];
+                op_settings_ui_sync [label="Select Sync Mode", fillcolor="#fde68a"];
+                op_settings_ui_ai [label="Select AI Backend", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_settings_feedback {
+                label="settings runtime feedback [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_feedback_visual [label="Observe Visual Setting Feedback", fillcolor="#fef9c3"];
+                op_settings_feedback_disabled [label="Observe Disabled Reserved Setting", fillcolor="#fef9c3"];
+                op_settings_feedback_runtime [label="Inspect Runtime Setting Feedback", fillcolor="#fef9c3"];
+            }

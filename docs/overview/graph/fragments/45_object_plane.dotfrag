@@ -67,6 +67,11 @@
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
             obj_config_runtime [label="config::runtime", fillcolor="#f8fafc"];
+            obj_env_override [label="env::override", fillcolor="#f8fafc"];
+            obj_settings_file [label="settings::file", fillcolor="#f8fafc"];
+            obj_runtime_profile [label="runtime::profile", fillcolor="#f8fafc"];
+            obj_settings_feedback [label="settings::feedback", fillcolor="#f8fafc"];
+            obj_ai_backend_capability [label="ai::backend-capability", fillcolor="#f8fafc"];
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
             obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];

@@ -39,6 +39,10 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.sc.resolve-conflict` | [`sc_resolve_conflict.md`](./operations/sc_resolve_conflict.md) | `DIFF-FEAT-03` |
 | `flow.sc.stage-unstage` | [`sc_stage_unstage.md`](./operations/sc_stage_unstage.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |
 | `flow.search.query` | [`search_query.md`](./operations/search_query.md) | `UI-DESK-003`, `UI-MOB-007` |
+| `flow.settings.env-defaults` | [`settings_env_defaults.md`](./operations/settings_env_defaults.md) | `SET-001`, `SET-003` |
+| `flow.settings.file-config` | [`settings_file_config.md`](./operations/settings_file_config.md) | `SET-002`, `SET-004` |
+| `flow.settings.runtime-feedback` | [`settings_runtime_feedback.md`](./operations/settings_runtime_feedback.md) | `SET-006`, `CMD-002`, `AI-006` |
+| `flow.settings.ui-preferences` | [`settings_ui_preferences.md`](./operations/settings_ui_preferences.md) | `SET-005`, `I18N-001`, `I18N-002` |
 | `flow.settings.update` | [`settings_update.md`](./operations/settings_update.md) | `SET-001`, `SET-002`, `CMD-001` |
 | `flow.tech-stack.runtime-budget` | [`tech_stack_runtime_budget.md`](./operations/tech_stack_runtime_budget.md) | `TECH-001`, `PERF-001`, `REL-003` |
 | `flow.ui.command-palette` | [`ui_command_palette.md`](./operations/ui_command_palette.md) | `UI-GEN-002`, `UI-GEN-003`, `CMD-002` |

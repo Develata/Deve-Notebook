@@ -499,6 +499,50 @@ digraph DeveNoteArchitecture {
                 op_cli_repair_paths [label="Repair Known Local Corruption", fillcolor="#fde68a"];
             }
 
+            subgraph cluster_user_settings_env {
+                label="settings env defaults [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_env_unset [label="Leave Environment Unset", fillcolor="#fef9c3"];
+                op_settings_env_override [label="Set Environment Override", fillcolor="#fde68a"];
+                op_settings_env_inspect [label="Inspect Effective Environment Config", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_file {
+                label="settings file config [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_file_create [label="Create Default Config File", fillcolor="#fde68a"];
+                op_settings_file_edit [label="Edit Config File Value", fillcolor="#fde68a"];
+                op_settings_file_apply [label="Restart To Apply File Config", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_settings_ui {
+                label="settings UI preferences [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_ui_language [label="Select UI Language", fillcolor="#fde68a"];
+                op_settings_ui_sync [label="Select Sync Mode", fillcolor="#fde68a"];
+                op_settings_ui_ai [label="Select AI Backend", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_settings_feedback {
+                label="settings runtime feedback [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_feedback_visual [label="Observe Visual Setting Feedback", fillcolor="#fef9c3"];
+                op_settings_feedback_disabled [label="Observe Disabled Reserved Setting", fillcolor="#fef9c3"];
+                op_settings_feedback_runtime [label="Inspect Runtime Setting Feedback", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -901,6 +945,26 @@ digraph DeveNoteArchitecture {
             app_cli_repair [label="Commands::Repair", fillcolor="#bfdbfe"];
         }
 
+        subgraph cluster_app_settings_families {
+            label="settings source interfaces [13_settings]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_settings_env_defaults [label="config::defaults", fillcolor="#eff6ff"];
+            app_settings_env_override [label="config::env_override", fillcolor="#bfdbfe"];
+            app_settings_env_inspect [label="runtime::profile_feedback", fillcolor="#eff6ff"];
+            app_settings_file_create [label="init::write_config", fillcolor="#bfdbfe"];
+            app_settings_file_edit [label="config::file_value", fillcolor="#bfdbfe"];
+            app_settings_file_apply [label="config::load_checked", fillcolor="#bfdbfe"];
+            app_settings_ui_locale [label="settings::locale_select", fillcolor="#bfdbfe"];
+            app_settings_ui_sync [label="settings::sync_mode_select", fillcolor="#bfdbfe"];
+            app_settings_ui_ai [label="settings::ai_backend_select", fillcolor="#bfdbfe"];
+            app_settings_feedback_visual [label="settings::visual_feedback", fillcolor="#eff6ff"];
+            app_settings_feedback_disabled [label="settings::disabled_reason", fillcolor="#eff6ff"];
+            app_settings_feedback_runtime [label="settings::runtime_feedback", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1244,6 +1308,21 @@ digraph DeveNoteArchitecture {
             mod_fs_repair [label="filesystem::repair", fillcolor="#f0fdf4"];
             mod_ledger_recover [label="ledger::recover", fillcolor="#f0fdf4"];
             mod_fs_recover [label="filesystem::recover", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_settings_families {
+            label="settings source coordination [13_settings]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_config_defaults [label="config::defaults", fillcolor="#f0fdf4"];
+            mod_config_env [label="config::env", fillcolor="#f0fdf4"];
+            mod_config_file [label="config::file", fillcolor="#f0fdf4"];
+            mod_runtime_profile [label="runtime::profile", fillcolor="#f0fdf4"];
+            mod_sync_mode_control [label="settings::sync_mode", fillcolor="#f0fdf4"];
+            mod_ai_backend_capability [label="settings::ai_backend_capability", fillcolor="#f0fdf4"];
+            mod_settings_feedback [label="settings::feedback", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_targets {
@@ -1615,6 +1694,11 @@ digraph DeveNoteArchitecture {
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
             obj_config_runtime [label="config::runtime", fillcolor="#f8fafc"];
+            obj_env_override [label="env::override", fillcolor="#f8fafc"];
+            obj_settings_file [label="settings::file", fillcolor="#f8fafc"];
+            obj_runtime_profile [label="runtime::profile", fillcolor="#f8fafc"];
+            obj_settings_feedback [label="settings::feedback", fillcolor="#f8fafc"];
+            obj_ai_backend_capability [label="ai::backend-capability", fillcolor="#f8fafc"];
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
             obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];
@@ -2213,6 +2297,59 @@ digraph DeveNoteArchitecture {
     core_commands -> core_proto [style=dashed, color="#831843", label="starts local hub"];
     core_sc -> core_tree [style=dashed, color="#831843", label="repairs projection"];
 
+    op_settings_env_unset -> app_settings_env_defaults;
+    op_settings_env_override -> app_settings_env_override;
+    op_settings_env_inspect -> app_settings_env_inspect;
+    op_settings_file_create -> app_settings_file_create;
+    op_settings_file_edit -> app_settings_file_edit;
+    op_settings_file_apply -> app_settings_file_apply;
+    op_settings_ui_language -> app_settings_ui_locale;
+    op_settings_ui_sync -> app_settings_ui_sync;
+    op_settings_ui_ai -> app_settings_ui_ai;
+    op_settings_feedback_visual -> app_settings_feedback_visual;
+    op_settings_feedback_disabled -> app_settings_feedback_disabled;
+    op_settings_feedback_runtime -> app_settings_feedback_runtime;
+
+    app_settings_env_defaults -> mod_config_defaults;
+    app_settings_env_defaults -> mod_config_runtime;
+    app_settings_env_override -> mod_config_env;
+    app_settings_env_override -> mod_config_runtime;
+    app_settings_env_inspect -> mod_config_runtime;
+    app_settings_env_inspect -> mod_runtime_profile;
+    app_settings_file_create -> mod_config_file;
+    app_settings_file_create -> mod_cli_init;
+    app_settings_file_edit -> mod_config_file;
+    app_settings_file_edit -> mod_config_runtime;
+    app_settings_file_apply -> mod_config_file;
+    app_settings_file_apply -> mod_config_runtime;
+    app_settings_file_apply -> mod_runtime_profile;
+    app_settings_ui_locale -> mod_settings_ui;
+    app_settings_ui_locale -> mod_i18n_catalog;
+    app_settings_ui_sync -> mod_settings_ui;
+    app_settings_ui_sync -> mod_sync_mode_control;
+    app_settings_ui_ai -> mod_settings_ui;
+    app_settings_ui_ai -> mod_ai_backend_capability;
+    app_settings_feedback_visual -> mod_settings_feedback;
+    app_settings_feedback_visual -> mod_settings_ui;
+    app_settings_feedback_visual -> mod_i18n_catalog;
+    app_settings_feedback_disabled -> mod_settings_feedback;
+    app_settings_feedback_disabled -> mod_ai_backend_capability;
+    app_settings_feedback_runtime -> mod_runtime_profile;
+    app_settings_feedback_runtime -> mod_config_runtime;
+
+    mod_config_defaults -> core_settings;
+    mod_config_env -> core_settings;
+    mod_config_file -> core_settings;
+    mod_runtime_profile -> core_settings;
+    mod_sync_mode_control -> core_sync;
+    mod_ai_backend_capability -> core_plugin;
+    mod_settings_feedback -> core_settings;
+
+    core_settings -> core_commands [style=dashed, color="#831843", label="loads before command"];
+    core_settings -> core_sync [style=dashed, color="#831843", label="selects sync mode"];
+    core_settings -> core_plugin [style=dashed, color="#831843", label="gates agent backend"];
+    core_settings -> core_tech_stack [style=dashed, color="#831843", label="profiles runtime"];
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -2268,6 +2405,11 @@ digraph DeveNoteArchitecture {
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;
     core_settings -> obj_config_runtime;
+    core_settings -> obj_env_override;
+    core_settings -> obj_settings_file;
+    core_settings -> obj_runtime_profile;
+    core_settings -> obj_settings_feedback;
+    core_plugin -> obj_ai_backend_capability;
     core_settings -> obj_ui_preference;
     core_rendering -> obj_render_projection;
     core_rendering -> obj_editor_selection;
@@ -2559,6 +2701,27 @@ digraph DeveNoteArchitecture {
     op_cli_seed_peer -> op_cli_node_check [style=dashed, color="#d97706", constraint=false];
     op_cli_node_check -> op_cli_recover_repo [style=dashed, color="#d97706", constraint=false];
     op_cli_recover_repo -> op_cli_repair_paths [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_env_spine [label="settings env defaults flow", shape=plaintext, fontcolor="#92400e"];
+    user_settings_file_spine [label="settings file config flow", shape=plaintext, fontcolor="#92400e"];
+    user_settings_ui_spine [label="settings UI preferences flow", shape=plaintext, fontcolor="#92400e"];
+    user_settings_feedback_spine [label="settings runtime feedback flow", shape=plaintext, fontcolor="#92400e"];
+
+    user_settings_env_spine -> op_settings_env_unset [style=dashed, color="#d97706", constraint=false];
+    op_settings_env_unset -> op_settings_env_override [style=dashed, color="#d97706", constraint=false];
+    op_settings_env_override -> op_settings_env_inspect [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_file_spine -> op_settings_file_create [style=dashed, color="#d97706", constraint=false];
+    op_settings_file_create -> op_settings_file_edit [style=dashed, color="#d97706", constraint=false];
+    op_settings_file_edit -> op_settings_file_apply [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_ui_spine -> op_settings_ui_language [style=dashed, color="#d97706", constraint=false];
+    op_settings_ui_language -> op_settings_ui_sync [style=dashed, color="#d97706", constraint=false];
+    op_settings_ui_sync -> op_settings_ui_ai [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_feedback_spine -> op_settings_feedback_visual [style=dashed, color="#d97706", constraint=false];
+    op_settings_feedback_visual -> op_settings_feedback_disabled [style=dashed, color="#d97706", constraint=false];
+    op_settings_feedback_disabled -> op_settings_feedback_runtime [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

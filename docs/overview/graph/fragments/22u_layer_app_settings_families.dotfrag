@@ -1,0 +1,19 @@
+        subgraph cluster_app_settings_families {
+            label="settings source interfaces [13_settings]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_settings_env_defaults [label="config::defaults", fillcolor="#eff6ff"];
+            app_settings_env_override [label="config::env_override", fillcolor="#bfdbfe"];
+            app_settings_env_inspect [label="runtime::profile_feedback", fillcolor="#eff6ff"];
+            app_settings_file_create [label="init::write_config", fillcolor="#bfdbfe"];
+            app_settings_file_edit [label="config::file_value", fillcolor="#bfdbfe"];
+            app_settings_file_apply [label="config::load_checked", fillcolor="#bfdbfe"];
+            app_settings_ui_locale [label="settings::locale_select", fillcolor="#bfdbfe"];
+            app_settings_ui_sync [label="settings::sync_mode_select", fillcolor="#bfdbfe"];
+            app_settings_ui_ai [label="settings::ai_backend_select", fillcolor="#bfdbfe"];
+            app_settings_feedback_visual [label="settings::visual_feedback", fillcolor="#eff6ff"];
+            app_settings_feedback_disabled [label="settings::disabled_reason", fillcolor="#eff6ff"];
+            app_settings_feedback_runtime [label="settings::runtime_feedback", fillcolor="#eff6ff"];
+        }
