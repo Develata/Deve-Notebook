@@ -21,5 +21,8 @@
 (object :id obj.ui.text :label "ui::text" :kind presentation-text :authority core.i18n)
 (object :id obj.protocol.error-code :label "protocol::error-code" :kind protocol-state :authority core.protocol)
 (object :id obj.tech.dependency :label "tech::dependency" :kind dependency-policy :authority core.tech_stack)
+(object :id obj.dependency.policy :label "dependency::policy" :kind review-policy :authority core.tech_stack)
 (object :id obj.runtime.budget :label "runtime::budget" :kind constraint-state :authority core.tech_stack)
+(object :id obj.budget.gate :label "budget::gate" :kind release-gate :authority core.tech_stack)
 (object :id obj.platform.maturity :label "platform::maturity" :kind release-policy :authority core.tech_stack)
+(object :id obj.release.channel :label "release::channel" :kind delivery-channel :authority core.release)

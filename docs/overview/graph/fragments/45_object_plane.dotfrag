@@ -82,7 +82,10 @@
             obj_ui_text [label="ui::text", fillcolor="#f8fafc"];
             obj_protocol_error_code [label="protocol::error-code", fillcolor="#f8fafc"];
             obj_tech_dependency [label="tech::dependency", fillcolor="#f8fafc"];
+            obj_dependency_policy [label="dependency::policy", fillcolor="#f8fafc"];
             obj_runtime_budget [label="runtime::budget", fillcolor="#f8fafc"];
+            obj_budget_gate [label="budget::gate", fillcolor="#f8fafc"];
             obj_platform_maturity [label="platform::maturity", fillcolor="#f8fafc"];
+            obj_release_channel [label="release::channel", fillcolor="#f8fafc"];
         }
     }

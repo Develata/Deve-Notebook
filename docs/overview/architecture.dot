@@ -587,6 +587,39 @@ digraph DeveNoteArchitecture {
                 op_i18n_audit_facade [label="Verify I18n Facade Usage", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_tech_dependency {
+                label="tech-stack dependency policy [14_tech_stack]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_tech_dep_manifest [label="Inspect Dependency Manifest", fillcolor="#fef9c3"];
+                op_tech_dep_lockfile [label="Inspect Dependency Lockfile", fillcolor="#fef9c3"];
+                op_tech_dep_evaluate [label="Evaluate New Dependency", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_tech_budget {
+                label="tech-stack runtime budget check [14_tech_stack]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_tech_budget_profile [label="Select Low-Spec Profile", fillcolor="#fef9c3"];
+                op_tech_budget_check [label="Run Runtime Budget Check", fillcolor="#fde68a"];
+                op_tech_budget_gate [label="Review Heavy Feature Gate", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_tech_platform {
+                label="tech-stack platform / release channel [14_tech_stack + 15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_tech_platform_matrix [label="Inspect Platform Matrix", fillcolor="#fef9c3"];
+                op_tech_platform_channel [label="Verify Release Channel", fillcolor="#fde68a"];
+                op_tech_platform_container [label="Verify Container Delivery", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1029,6 +1062,23 @@ digraph DeveNoteArchitecture {
             app_i18n_audit_facade [label="i18n::verify_facade", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_tech_stack_families {
+            label="tech-stack specific interfaces [14_tech_stack + 15_release]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_tech_dep_manifest [label="deps::manifest_inspection", fillcolor="#eff6ff"];
+            app_tech_dep_lockfile [label="deps::lockfile_inspection", fillcolor="#eff6ff"];
+            app_tech_dep_evaluate [label="deps::policy_review", fillcolor="#bfdbfe"];
+            app_tech_budget_profile [label="budget::select_profile", fillcolor="#eff6ff"];
+            app_tech_budget_check [label="budget::runtime_check", fillcolor="#bfdbfe"];
+            app_tech_budget_gate [label="budget::heavy_feature_gate", fillcolor="#eff6ff"];
+            app_tech_platform_matrix [label="platform::support_matrix", fillcolor="#eff6ff"];
+            app_tech_platform_channel [label="release::channel_verify", fillcolor="#bfdbfe"];
+            app_tech_platform_container [label="release::container_verify", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1401,6 +1451,21 @@ digraph DeveNoteArchitecture {
             mod_i18n_format_audit [label="i18n::format_audit", fillcolor="#f0fdf4"];
             mod_i18n_hardcoded_audit [label="i18n::hardcoded_audit", fillcolor="#f0fdf4"];
             mod_i18n_facade [label="i18n::facade", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_tech_stack_families {
+            label="tech-stack specific coordination [14_tech_stack + 15_release]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_tech_manifest [label="tech::manifest", fillcolor="#f0fdf4"];
+            mod_tech_lockfile [label="tech::lockfile", fillcolor="#f0fdf4"];
+            mod_tech_policy_review [label="tech::policy_review", fillcolor="#f0fdf4"];
+            mod_runtime_profile_gate [label="runtime::profile_gate", fillcolor="#f0fdf4"];
+            mod_heavy_feature_gate [label="runtime::heavy_feature_gate", fillcolor="#f0fdf4"];
+            mod_release_channel [label="release::channel", fillcolor="#f0fdf4"];
+            mod_container_delivery [label="release::container_delivery", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_targets {
@@ -1787,8 +1852,11 @@ digraph DeveNoteArchitecture {
             obj_ui_text [label="ui::text", fillcolor="#f8fafc"];
             obj_protocol_error_code [label="protocol::error-code", fillcolor="#f8fafc"];
             obj_tech_dependency [label="tech::dependency", fillcolor="#f8fafc"];
+            obj_dependency_policy [label="dependency::policy", fillcolor="#f8fafc"];
             obj_runtime_budget [label="runtime::budget", fillcolor="#f8fafc"];
+            obj_budget_gate [label="budget::gate", fillcolor="#f8fafc"];
             obj_platform_maturity [label="platform::maturity", fillcolor="#f8fafc"];
+            obj_release_channel [label="release::channel", fillcolor="#f8fafc"];
         }
     }
 
@@ -2479,6 +2547,44 @@ digraph DeveNoteArchitecture {
     mod_i18n_hardcoded_audit -> core_i18n;
     mod_i18n_facade -> core_i18n;
 
+    op_tech_dep_manifest -> app_tech_dep_manifest;
+    op_tech_dep_lockfile -> app_tech_dep_lockfile;
+    op_tech_dep_evaluate -> app_tech_dep_evaluate;
+    op_tech_budget_profile -> app_tech_budget_profile;
+    op_tech_budget_check -> app_tech_budget_check;
+    op_tech_budget_gate -> app_tech_budget_gate;
+    op_tech_platform_matrix -> app_tech_platform_matrix;
+    op_tech_platform_channel -> app_tech_platform_channel;
+    op_tech_platform_container -> app_tech_platform_container;
+
+    app_tech_dep_manifest -> mod_tech_manifest;
+    app_tech_dep_manifest -> mod_tech_deps;
+    app_tech_dep_lockfile -> mod_tech_lockfile;
+    app_tech_dep_lockfile -> mod_tech_deps;
+    app_tech_dep_evaluate -> mod_tech_policy_review;
+    app_tech_dep_evaluate -> mod_tech_deps;
+    app_tech_dep_evaluate -> mod_runtime_budget;
+    app_tech_budget_profile -> mod_runtime_profile_gate;
+    app_tech_budget_profile -> mod_config_runtime;
+    app_tech_budget_check -> mod_runtime_budget;
+    app_tech_budget_check -> mod_ci_release;
+    app_tech_budget_gate -> mod_heavy_feature_gate;
+    app_tech_budget_gate -> mod_runtime_budget;
+    app_tech_platform_matrix -> mod_platform_matrix;
+    app_tech_platform_matrix -> mod_release_channel;
+    app_tech_platform_channel -> mod_release_channel;
+    app_tech_platform_channel -> mod_ci_release;
+    app_tech_platform_container -> mod_container_delivery;
+    app_tech_platform_container -> mod_release_container;
+
+    mod_tech_manifest -> core_tech_stack;
+    mod_tech_lockfile -> core_tech_stack;
+    mod_tech_policy_review -> core_tech_stack;
+    mod_runtime_profile_gate -> core_tech_stack;
+    mod_heavy_feature_gate -> core_tech_stack;
+    mod_release_channel -> core_release;
+    mod_container_delivery -> core_release;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -2549,8 +2655,11 @@ digraph DeveNoteArchitecture {
     core_i18n -> obj_ui_text;
     core_i18n -> obj_protocol_error_code;
     core_tech_stack -> obj_tech_dependency;
+    core_tech_stack -> obj_dependency_policy;
     core_tech_stack -> obj_runtime_budget;
+    core_tech_stack -> obj_budget_gate;
     core_tech_stack -> obj_platform_maturity;
+    core_release -> obj_release_channel;
     edge [style=solid, color="#475569", constraint=true, arrowhead=normal];
 
     // group-level spine
@@ -2900,6 +3009,40 @@ digraph DeveNoteArchitecture {
     user_i18n_audit_spine -> op_i18n_audit_scan [style=dashed, color="#d97706", constraint=false];
     op_i18n_audit_scan -> op_i18n_audit_key [style=dashed, color="#d97706", constraint=false];
     op_i18n_audit_key -> op_i18n_audit_facade [style=dashed, color="#d97706", constraint=false];
+
+    user_tech_dependency_spine [label="tech-stack dependency policy flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_dependency_spine [label="", shape=point, width=0.01];
+    mod_tech_dependency_spine [label="", shape=point, width=0.01];
+    core_tech_dependency_spine [label="", shape=point, width=0.01];
+    user_tech_dependency_spine -> app_tech_dependency_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_dependency_spine -> mod_tech_dependency_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_dependency_spine -> core_tech_dependency_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_budget_spine [label="tech-stack runtime budget check flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_budget_spine [label="", shape=point, width=0.01];
+    mod_tech_budget_spine [label="", shape=point, width=0.01];
+    core_tech_budget_spine [label="", shape=point, width=0.01];
+    user_tech_budget_spine -> app_tech_budget_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_budget_spine -> mod_tech_budget_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_budget_spine -> core_tech_budget_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_platform_spine [label="tech-stack platform / release channel flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_platform_spine [label="", shape=point, width=0.01];
+    mod_tech_platform_spine [label="", shape=point, width=0.01];
+    core_tech_platform_spine [label="", shape=point, width=0.01];
+    user_tech_platform_spine -> app_tech_platform_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_platform_spine -> mod_tech_platform_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_platform_spine -> core_tech_platform_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_dependency_spine -> op_tech_dep_manifest [style=dashed, color="#d97706", constraint=false];
+    op_tech_dep_manifest -> op_tech_dep_lockfile [style=dashed, color="#d97706", constraint=false];
+    op_tech_dep_lockfile -> op_tech_dep_evaluate [style=dashed, color="#d97706", constraint=false];
+    user_tech_budget_spine -> op_tech_budget_profile [style=dashed, color="#d97706", constraint=false];
+    op_tech_budget_profile -> op_tech_budget_check [style=dashed, color="#d97706", constraint=false];
+    op_tech_budget_check -> op_tech_budget_gate [style=dashed, color="#d97706", constraint=false];
+    user_tech_platform_spine -> op_tech_platform_matrix [style=dashed, color="#d97706", constraint=false];
+    op_tech_platform_matrix -> op_tech_platform_channel [style=dashed, color="#d97706", constraint=false];
+    op_tech_platform_channel -> op_tech_platform_container [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

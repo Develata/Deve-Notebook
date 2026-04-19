@@ -4,6 +4,11 @@
 
 原子操作示例：[`operations/tech_stack_runtime_budget.md`](./operations/tech_stack_runtime_budget.md)
 
+细粒度操作链：
+[`tech_stack_dependency_policy.md`](./operations/tech_stack_dependency_policy.md),
+[`tech_stack_runtime_budget_check.md`](./operations/tech_stack_runtime_budget_check.md),
+[`tech_stack_platform_release_channel.md`](./operations/tech_stack_platform_release_channel.md)
+
 ## 功能目标
 
 - 用户或部署者应明确知道当前主要支持哪些端。

@@ -4,6 +4,9 @@
 
 原子操作示例：[`operations/release_ci.md`](./operations/release_ci.md)
 
+相关技术栈操作链：
+[`tech_stack_platform_release_channel.md`](./operations/tech_stack_platform_release_channel.md)
+
 ## 功能目标
 
 - 部署者应知道有哪些主要分发形态。

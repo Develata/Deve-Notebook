@@ -42,3 +42,6 @@ i18n error mapping	i18n_error
 i18n localized formatting	i18n_format
 i18n hardcoded audit	i18n_audit
 tech-stack runtime budget	tech_runtime_budget
+tech-stack dependency policy	tech_dependency
+tech-stack runtime budget check	tech_budget
+tech-stack platform / release channel	tech_platform

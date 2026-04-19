@@ -68,6 +68,9 @@
     core_i18n -> obj_ui_text;
     core_i18n -> obj_protocol_error_code;
     core_tech_stack -> obj_tech_dependency;
+    core_tech_stack -> obj_dependency_policy;
     core_tech_stack -> obj_runtime_budget;
+    core_tech_stack -> obj_budget_gate;
     core_tech_stack -> obj_platform_maturity;
+    core_release -> obj_release_channel;
     edge [style=solid, color="#475569", constraint=true, arrowhead=normal];

@@ -21,5 +21,8 @@
 (object :id obj.ui.text :label "ui::text" :kind presentation-text :code "apps/web/src/i18n/")
 (object :id obj.protocol.error-code :label "protocol::error-code" :kind protocol-state :code "crates/core/src/protocol/")
 (object :id obj.tech.dependency :label "tech::dependency" :kind dependency-policy :code "Cargo.toml | apps/web/package.json")
+(object :id obj.dependency.policy :label "dependency::policy" :kind review-policy :code "docs/features/14_tech_stack.md | PR review")
 (object :id obj.runtime.budget :label "runtime::budget" :kind constraint-state :code "scripts/plan-coverage.sh")
+(object :id obj.budget.gate :label "budget::gate" :kind release-gate :code "docs/features/14_tech_stack.md | .github/workflows/release.yml")
 (object :id obj.platform.maturity :label "platform::maturity" :kind release-policy :code "docs/features/14_tech_stack.md | docs/features/15_release.md")
+(object :id obj.release.channel :label "release::channel" :kind delivery-channel :code ".github/workflows/release.yml | dist/")

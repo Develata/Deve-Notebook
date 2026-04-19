@@ -1,0 +1,33 @@
+    user_tech_dependency_spine [label="tech-stack dependency policy flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_dependency_spine [label="", shape=point, width=0.01];
+    mod_tech_dependency_spine [label="", shape=point, width=0.01];
+    core_tech_dependency_spine [label="", shape=point, width=0.01];
+    user_tech_dependency_spine -> app_tech_dependency_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_dependency_spine -> mod_tech_dependency_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_dependency_spine -> core_tech_dependency_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_budget_spine [label="tech-stack runtime budget check flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_budget_spine [label="", shape=point, width=0.01];
+    mod_tech_budget_spine [label="", shape=point, width=0.01];
+    core_tech_budget_spine [label="", shape=point, width=0.01];
+    user_tech_budget_spine -> app_tech_budget_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_budget_spine -> mod_tech_budget_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_budget_spine -> core_tech_budget_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_platform_spine [label="tech-stack platform / release channel flow", shape=plaintext, fontcolor="#92400e"];
+    app_tech_platform_spine [label="", shape=point, width=0.01];
+    mod_tech_platform_spine [label="", shape=point, width=0.01];
+    core_tech_platform_spine [label="", shape=point, width=0.01];
+    user_tech_platform_spine -> app_tech_platform_spine [penwidth=2.2, color="#0f172a"];
+    app_tech_platform_spine -> mod_tech_platform_spine [penwidth=2.2, color="#0f172a"];
+    mod_tech_platform_spine -> core_tech_platform_spine [penwidth=2.2, color="#0f172a"];
+
+    user_tech_dependency_spine -> op_tech_dep_manifest [style=dashed, color="#d97706", constraint=false];
+    op_tech_dep_manifest -> op_tech_dep_lockfile [style=dashed, color="#d97706", constraint=false];
+    op_tech_dep_lockfile -> op_tech_dep_evaluate [style=dashed, color="#d97706", constraint=false];
+    user_tech_budget_spine -> op_tech_budget_profile [style=dashed, color="#d97706", constraint=false];
+    op_tech_budget_profile -> op_tech_budget_check [style=dashed, color="#d97706", constraint=false];
+    op_tech_budget_check -> op_tech_budget_gate [style=dashed, color="#d97706", constraint=false];
+    user_tech_platform_spine -> op_tech_platform_matrix [style=dashed, color="#d97706", constraint=false];
+    op_tech_platform_matrix -> op_tech_platform_channel [style=dashed, color="#d97706", constraint=false];
+    op_tech_platform_channel -> op_tech_platform_container [style=dashed, color="#d97706", constraint=false];

@@ -48,7 +48,10 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.settings.runtime-feedback` | [`settings_runtime_feedback.md`](./operations/settings_runtime_feedback.md) | `SET-006`, `CMD-002`, `AI-006` |
 | `flow.settings.ui-preferences` | [`settings_ui_preferences.md`](./operations/settings_ui_preferences.md) | `SET-005`, `I18N-001`, `I18N-002` |
 | `flow.settings.update` | [`settings_update.md`](./operations/settings_update.md) | `SET-001`, `SET-002`, `CMD-001` |
+| `flow.tech-stack.dependency-policy` | [`tech_stack_dependency_policy.md`](./operations/tech_stack_dependency_policy.md) | `TECH-001`, `PERF-001` |
+| `flow.tech-stack.platform-release-channel` | [`tech_stack_platform_release_channel.md`](./operations/tech_stack_platform_release_channel.md) | `REL-001`, `REL-002`, `REL-003`, `TECH-001` |
 | `flow.tech-stack.runtime-budget` | [`tech_stack_runtime_budget.md`](./operations/tech_stack_runtime_budget.md) | `TECH-001`, `PERF-001`, `REL-003` |
+| `flow.tech-stack.runtime-budget-check` | [`tech_stack_runtime_budget_check.md`](./operations/tech_stack_runtime_budget_check.md) | `PERF-001`, `REL-003`, `TECH-001` |
 | `flow.ui.command-palette` | [`ui_command_palette.md`](./operations/ui_command_palette.md) | `UI-GEN-002`, `UI-GEN-003`, `CMD-002` |
 
 ## Maintenance Rules

@@ -1,0 +1,16 @@
+        subgraph cluster_app_tech_stack_families {
+            label="tech-stack specific interfaces [14_tech_stack + 15_release]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_tech_dep_manifest [label="deps::manifest_inspection", fillcolor="#eff6ff"];
+            app_tech_dep_lockfile [label="deps::lockfile_inspection", fillcolor="#eff6ff"];
+            app_tech_dep_evaluate [label="deps::policy_review", fillcolor="#bfdbfe"];
+            app_tech_budget_profile [label="budget::select_profile", fillcolor="#eff6ff"];
+            app_tech_budget_check [label="budget::runtime_check", fillcolor="#bfdbfe"];
+            app_tech_budget_gate [label="budget::heavy_feature_gate", fillcolor="#eff6ff"];
+            app_tech_platform_matrix [label="platform::support_matrix", fillcolor="#eff6ff"];
+            app_tech_platform_channel [label="release::channel_verify", fillcolor="#bfdbfe"];
+            app_tech_platform_container [label="release::container_verify", fillcolor="#eff6ff"];
+        }

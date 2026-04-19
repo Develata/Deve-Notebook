@@ -1,0 +1,14 @@
+        subgraph cluster_mod_tech_stack_families {
+            label="tech-stack specific coordination [14_tech_stack + 15_release]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_tech_manifest [label="tech::manifest", fillcolor="#f0fdf4"];
+            mod_tech_lockfile [label="tech::lockfile", fillcolor="#f0fdf4"];
+            mod_tech_policy_review [label="tech::policy_review", fillcolor="#f0fdf4"];
+            mod_runtime_profile_gate [label="runtime::profile_gate", fillcolor="#f0fdf4"];
+            mod_heavy_feature_gate [label="runtime::heavy_feature_gate", fillcolor="#f0fdf4"];
+            mod_release_channel [label="release::channel", fillcolor="#f0fdf4"];
+            mod_container_delivery [label="release::container_delivery", fillcolor="#f0fdf4"];
+        }
