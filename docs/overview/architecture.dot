@@ -620,6 +620,50 @@ digraph DeveNoteArchitecture {
                 op_tech_platform_container [label="Verify Container Delivery", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_release_tag {
+                label="release tag dispatch [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_tag_push [label="Push Semver Release Tag", fillcolor="#fde68a"];
+                op_release_tag_match [label="Match Release Trigger Rule", fillcolor="#fef9c3"];
+                op_release_tag_dispatch [label="Observe Workflow Dispatch", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_release_quality {
+                label="release quality gates [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_quality_job [label="Start Release Test Job", fillcolor="#fef9c3"];
+                op_release_quality_clippy [label="Run Clippy Gate", fillcolor="#fde68a"];
+                op_release_quality_tests [label="Run Test Gate", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_release_publish {
+                label="release artifact publish [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_publish_login [label="Login GHCR", fillcolor="#fef9c3"];
+                op_release_publish_tags [label="Compute Release Image Tags", fillcolor="#fef9c3"];
+                op_release_publish_push [label="Build And Push Release Image", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_release_verify {
+                label="release delivery verification [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_verify_workflow [label="Inspect Workflow Surface", fillcolor="#fef9c3"];
+                op_release_verify_channel [label="Inspect Release Channel Surface", fillcolor="#fef9c3"];
+                op_release_verify_container [label="Verify Container Delivery", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1079,6 +1123,26 @@ digraph DeveNoteArchitecture {
             app_tech_platform_container [label="release::container_verify", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_release_families {
+            label="release specific interfaces [15_release]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_release_tag_push [label="git::push_tag", fillcolor="#bfdbfe"];
+            app_release_tag_filter [label="release.yml::tag_filter", fillcolor="#eff6ff"];
+            app_release_tag_dispatch [label="release.yml::workflow_dispatch", fillcolor="#eff6ff"];
+            app_release_quality_job [label="release.yml::test_job", fillcolor="#eff6ff"];
+            app_release_quality_clippy [label="release.yml::clippy_gate", fillcolor="#bfdbfe"];
+            app_release_quality_tests [label="release.yml::test_gate", fillcolor="#bfdbfe"];
+            app_release_publish_login [label="release.yml::registry_login", fillcolor="#eff6ff"];
+            app_release_publish_metadata [label="release.yml::docker_metadata", fillcolor="#eff6ff"];
+            app_release_publish_push [label="release.yml::image_push", fillcolor="#bfdbfe"];
+            app_release_verify_workflow [label="workflow::surface_inspection", fillcolor="#eff6ff"];
+            app_release_verify_channel [label="release::channel_surface", fillcolor="#eff6ff"];
+            app_release_verify_container [label="release::container_smoke", fillcolor="#bfdbfe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1468,6 +1532,22 @@ digraph DeveNoteArchitecture {
             mod_container_delivery [label="release::container_delivery", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_release_families {
+            label="release specific coordination [15_release]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_release_tag_rule [label="release::tag_rule", fillcolor="#f0fdf4"];
+            mod_ci_trigger [label="ci::trigger", fillcolor="#f0fdf4"];
+            mod_quality_test_job [label="ci::test_job", fillcolor="#f0fdf4"];
+            mod_quality_clippy [label="quality::clippy", fillcolor="#f0fdf4"];
+            mod_quality_tests [label="quality::tests", fillcolor="#f0fdf4"];
+            mod_release_registry_auth [label="release::registry_auth", fillcolor="#f0fdf4"];
+            mod_release_metadata [label="release::metadata", fillcolor="#f0fdf4"];
+            mod_release_image_push [label="release::image_push", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1831,6 +1911,10 @@ digraph DeveNoteArchitecture {
 
             obj_ci_workflow [label="ci::workflow", fillcolor="#f8fafc"];
             obj_release_artifact [label="release::artifact", fillcolor="#f8fafc"];
+            obj_release_tag [label="release::tag", fillcolor="#f8fafc"];
+            obj_quality_gate [label="quality::gate", fillcolor="#f8fafc"];
+            obj_container_image [label="container::image", fillcolor="#f8fafc"];
+            obj_delivery_verification [label="delivery::verification", fillcolor="#f8fafc"];
             obj_cli_command [label="cli::command", fillcolor="#f8fafc"];
             obj_cli_option [label="cli::option", fillcolor="#f8fafc"];
             obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
@@ -2585,6 +2669,52 @@ digraph DeveNoteArchitecture {
     mod_release_channel -> core_release;
     mod_container_delivery -> core_release;
 
+    op_release_tag_push -> app_release_tag_push;
+    op_release_tag_match -> app_release_tag_filter;
+    op_release_tag_dispatch -> app_release_tag_dispatch;
+    op_release_quality_job -> app_release_quality_job;
+    op_release_quality_clippy -> app_release_quality_clippy;
+    op_release_quality_tests -> app_release_quality_tests;
+    op_release_publish_login -> app_release_publish_login;
+    op_release_publish_tags -> app_release_publish_metadata;
+    op_release_publish_push -> app_release_publish_push;
+    op_release_verify_workflow -> app_release_verify_workflow;
+    op_release_verify_channel -> app_release_verify_channel;
+    op_release_verify_container -> app_release_verify_container;
+
+    app_release_tag_push -> mod_release_tag_rule;
+    app_release_tag_push -> mod_ci_workflow;
+    app_release_tag_filter -> mod_release_tag_rule;
+    app_release_tag_filter -> mod_ci_trigger;
+    app_release_tag_dispatch -> mod_ci_trigger;
+    app_release_tag_dispatch -> mod_ci_workflow;
+    app_release_quality_job -> mod_ci_release;
+    app_release_quality_job -> mod_quality_test_job;
+    app_release_quality_clippy -> mod_quality_clippy;
+    app_release_quality_clippy -> mod_tech_budget;
+    app_release_quality_tests -> mod_quality_tests;
+    app_release_quality_tests -> mod_tech_budget;
+    app_release_publish_login -> mod_release_registry_auth;
+    app_release_publish_login -> mod_ci_release;
+    app_release_publish_metadata -> mod_release_metadata;
+    app_release_publish_metadata -> mod_release_tag_rule;
+    app_release_publish_push -> mod_release_image_push;
+    app_release_publish_push -> mod_release_container;
+    app_release_verify_workflow -> mod_ci_workflow;
+    app_release_verify_channel -> mod_release_channel;
+    app_release_verify_channel -> mod_release_metadata;
+    app_release_verify_container -> mod_container_delivery;
+    app_release_verify_container -> mod_release_container;
+
+    mod_release_tag_rule -> core_release;
+    mod_ci_trigger -> core_release;
+    mod_quality_test_job -> core_release;
+    mod_quality_clippy -> core_release;
+    mod_quality_tests -> core_release;
+    mod_release_registry_auth -> core_release;
+    mod_release_metadata -> core_release;
+    mod_release_image_push -> core_release;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -2634,6 +2764,10 @@ digraph DeveNoteArchitecture {
     core_plugin_trusted -> obj_agent_process;
     core_release -> obj_ci_workflow;
     core_release -> obj_release_artifact;
+    core_release -> obj_release_tag;
+    core_release -> obj_quality_gate;
+    core_release -> obj_container_image;
+    core_release -> obj_delivery_verification;
     core_commands -> obj_cli_command;
     core_commands -> obj_cli_option;
     core_commands -> obj_vault_path;
@@ -3043,6 +3177,51 @@ digraph DeveNoteArchitecture {
     user_tech_platform_spine -> op_tech_platform_matrix [style=dashed, color="#d97706", constraint=false];
     op_tech_platform_matrix -> op_tech_platform_channel [style=dashed, color="#d97706", constraint=false];
     op_tech_platform_channel -> op_tech_platform_container [style=dashed, color="#d97706", constraint=false];
+
+    user_release_tag_spine [label="release tag dispatch flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_tag_spine [label="", shape=point, width=0.01];
+    mod_release_tag_spine [label="", shape=point, width=0.01];
+    core_release_tag_spine [label="", shape=point, width=0.01];
+    user_release_tag_spine -> app_release_tag_spine [penwidth=2.2, color="#0f172a"];
+    app_release_tag_spine -> mod_release_tag_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_tag_spine -> core_release_tag_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_quality_spine [label="release quality gates flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_quality_spine [label="", shape=point, width=0.01];
+    mod_release_quality_spine [label="", shape=point, width=0.01];
+    core_release_quality_spine [label="", shape=point, width=0.01];
+    user_release_quality_spine -> app_release_quality_spine [penwidth=2.2, color="#0f172a"];
+    app_release_quality_spine -> mod_release_quality_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_quality_spine -> core_release_quality_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_publish_spine [label="release artifact publish flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_publish_spine [label="", shape=point, width=0.01];
+    mod_release_publish_spine [label="", shape=point, width=0.01];
+    core_release_publish_spine [label="", shape=point, width=0.01];
+    user_release_publish_spine -> app_release_publish_spine [penwidth=2.2, color="#0f172a"];
+    app_release_publish_spine -> mod_release_publish_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_publish_spine -> core_release_publish_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_verify_spine [label="release delivery verification flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_verify_spine [label="", shape=point, width=0.01];
+    mod_release_verify_spine [label="", shape=point, width=0.01];
+    core_release_verify_spine [label="", shape=point, width=0.01];
+    user_release_verify_spine -> app_release_verify_spine [penwidth=2.2, color="#0f172a"];
+    app_release_verify_spine -> mod_release_verify_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_verify_spine -> core_release_verify_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_tag_spine -> op_release_tag_push [style=dashed, color="#d97706", constraint=false];
+    op_release_tag_push -> op_release_tag_match [style=dashed, color="#d97706", constraint=false];
+    op_release_tag_match -> op_release_tag_dispatch [style=dashed, color="#d97706", constraint=false];
+    user_release_quality_spine -> op_release_quality_job [style=dashed, color="#d97706", constraint=false];
+    op_release_quality_job -> op_release_quality_clippy [style=dashed, color="#d97706", constraint=false];
+    op_release_quality_clippy -> op_release_quality_tests [style=dashed, color="#d97706", constraint=false];
+    user_release_publish_spine -> op_release_publish_login [style=dashed, color="#d97706", constraint=false];
+    op_release_publish_login -> op_release_publish_tags [style=dashed, color="#d97706", constraint=false];
+    op_release_publish_tags -> op_release_publish_push [style=dashed, color="#d97706", constraint=false];
+    user_release_verify_spine -> op_release_verify_workflow [style=dashed, color="#d97706", constraint=false];
+    op_release_verify_workflow -> op_release_verify_channel [style=dashed, color="#d97706", constraint=false];
+    op_release_verify_channel -> op_release_verify_container [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

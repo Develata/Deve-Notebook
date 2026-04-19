@@ -1,0 +1,43 @@
+            subgraph cluster_user_release_tag {
+                label="release tag dispatch [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_tag_push [label="Push Semver Release Tag", fillcolor="#fde68a"];
+                op_release_tag_match [label="Match Release Trigger Rule", fillcolor="#fef9c3"];
+                op_release_tag_dispatch [label="Observe Workflow Dispatch", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_release_quality {
+                label="release quality gates [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_quality_job [label="Start Release Test Job", fillcolor="#fef9c3"];
+                op_release_quality_clippy [label="Run Clippy Gate", fillcolor="#fde68a"];
+                op_release_quality_tests [label="Run Test Gate", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_release_publish {
+                label="release artifact publish [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_publish_login [label="Login GHCR", fillcolor="#fef9c3"];
+                op_release_publish_tags [label="Compute Release Image Tags", fillcolor="#fef9c3"];
+                op_release_publish_push [label="Build And Push Release Image", fillcolor="#fde68a"];
+            }
+
+            subgraph cluster_user_release_verify {
+                label="release delivery verification [15_release]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_release_verify_workflow [label="Inspect Workflow Surface", fillcolor="#fef9c3"];
+                op_release_verify_channel [label="Inspect Release Channel Surface", fillcolor="#fef9c3"];
+                op_release_verify_container [label="Verify Container Delivery", fillcolor="#fde68a"];
+            }

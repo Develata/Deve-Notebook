@@ -24,6 +24,10 @@ merge peer	sc_merge_peer
 merge runtime	sc_merge_runtime
 open-doc	doc
 release / CI	release_ci
+release tag dispatch	release_tag
+release quality gates	release_quality
+release artifact publish	release_publish
+release delivery verification	release_verify
 CLI control commands	cli_control
 CLI vault indexing	cli_vault
 CLI server runtime	cli_server

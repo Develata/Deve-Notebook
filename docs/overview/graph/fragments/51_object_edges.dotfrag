@@ -47,6 +47,10 @@
     core_plugin_trusted -> obj_agent_process;
     core_release -> obj_ci_workflow;
     core_release -> obj_release_artifact;
+    core_release -> obj_release_tag;
+    core_release -> obj_quality_gate;
+    core_release -> obj_container_image;
+    core_release -> obj_delivery_verification;
     core_commands -> obj_cli_command;
     core_commands -> obj_cli_option;
     core_commands -> obj_vault_path;

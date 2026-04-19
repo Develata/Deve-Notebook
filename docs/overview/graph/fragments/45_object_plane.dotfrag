@@ -61,6 +61,10 @@
 
             obj_ci_workflow [label="ci::workflow", fillcolor="#f8fafc"];
             obj_release_artifact [label="release::artifact", fillcolor="#f8fafc"];
+            obj_release_tag [label="release::tag", fillcolor="#f8fafc"];
+            obj_quality_gate [label="quality::gate", fillcolor="#f8fafc"];
+            obj_container_image [label="container::image", fillcolor="#f8fafc"];
+            obj_delivery_verification [label="delivery::verification", fillcolor="#f8fafc"];
             obj_cli_command [label="cli::command", fillcolor="#f8fafc"];
             obj_cli_option [label="cli::option", fillcolor="#f8fafc"];
             obj_vault_path [label="vault::path", fillcolor="#f8fafc"];

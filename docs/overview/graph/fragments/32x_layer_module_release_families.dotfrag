@@ -1,0 +1,15 @@
+        subgraph cluster_mod_release_families {
+            label="release specific coordination [15_release]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_release_tag_rule [label="release::tag_rule", fillcolor="#f0fdf4"];
+            mod_ci_trigger [label="ci::trigger", fillcolor="#f0fdf4"];
+            mod_quality_test_job [label="ci::test_job", fillcolor="#f0fdf4"];
+            mod_quality_clippy [label="quality::clippy", fillcolor="#f0fdf4"];
+            mod_quality_tests [label="quality::tests", fillcolor="#f0fdf4"];
+            mod_release_registry_auth [label="release::registry_auth", fillcolor="#f0fdf4"];
+            mod_release_metadata [label="release::metadata", fillcolor="#f0fdf4"];
+            mod_release_image_push [label="release::image_push", fillcolor="#f0fdf4"];
+        }

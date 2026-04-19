@@ -12,7 +12,7 @@ operation slice rather than the older route/CLI inventory view.
 Keep this block stable. The graph generator reads the drift registry below.
 
 <!-- modeled-slice:start -->
-- Flow count: `47`
+- Flow count: `51`
 - Status: `aligned`
 - Active drift count: `0`
 <!-- modeled-slice:end -->
@@ -21,7 +21,7 @@ Keep this block stable. The graph generator reads the drift registry below.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 47 high-value flows exist on both sides |
+| Flow set | aligned | the same 51 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
 | Coordination/execution mapping | aligned | release / CI now treats `release.yml` as the only required workflow surface |
@@ -65,6 +65,10 @@ Use this registry as the stable label set for the diff and SVG marker map.
 - `leave document / pending edit guard`
 - `open-doc`
 - `release / CI`
+- `release tag dispatch`
+- `release quality gates`
+- `release artifact publish`
+- `release delivery verification`
 - `CLI control commands`
 - `CLI vault indexing`
 - `CLI server runtime`

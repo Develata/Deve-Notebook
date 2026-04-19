@@ -1,0 +1,44 @@
+    user_release_tag_spine [label="release tag dispatch flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_tag_spine [label="", shape=point, width=0.01];
+    mod_release_tag_spine [label="", shape=point, width=0.01];
+    core_release_tag_spine [label="", shape=point, width=0.01];
+    user_release_tag_spine -> app_release_tag_spine [penwidth=2.2, color="#0f172a"];
+    app_release_tag_spine -> mod_release_tag_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_tag_spine -> core_release_tag_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_quality_spine [label="release quality gates flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_quality_spine [label="", shape=point, width=0.01];
+    mod_release_quality_spine [label="", shape=point, width=0.01];
+    core_release_quality_spine [label="", shape=point, width=0.01];
+    user_release_quality_spine -> app_release_quality_spine [penwidth=2.2, color="#0f172a"];
+    app_release_quality_spine -> mod_release_quality_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_quality_spine -> core_release_quality_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_publish_spine [label="release artifact publish flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_publish_spine [label="", shape=point, width=0.01];
+    mod_release_publish_spine [label="", shape=point, width=0.01];
+    core_release_publish_spine [label="", shape=point, width=0.01];
+    user_release_publish_spine -> app_release_publish_spine [penwidth=2.2, color="#0f172a"];
+    app_release_publish_spine -> mod_release_publish_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_publish_spine -> core_release_publish_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_verify_spine [label="release delivery verification flow", shape=plaintext, fontcolor="#92400e"];
+    app_release_verify_spine [label="", shape=point, width=0.01];
+    mod_release_verify_spine [label="", shape=point, width=0.01];
+    core_release_verify_spine [label="", shape=point, width=0.01];
+    user_release_verify_spine -> app_release_verify_spine [penwidth=2.2, color="#0f172a"];
+    app_release_verify_spine -> mod_release_verify_spine [penwidth=2.2, color="#0f172a"];
+    mod_release_verify_spine -> core_release_verify_spine [penwidth=2.2, color="#0f172a"];
+
+    user_release_tag_spine -> op_release_tag_push [style=dashed, color="#d97706", constraint=false];
+    op_release_tag_push -> op_release_tag_match [style=dashed, color="#d97706", constraint=false];
+    op_release_tag_match -> op_release_tag_dispatch [style=dashed, color="#d97706", constraint=false];
+    user_release_quality_spine -> op_release_quality_job [style=dashed, color="#d97706", constraint=false];
+    op_release_quality_job -> op_release_quality_clippy [style=dashed, color="#d97706", constraint=false];
+    op_release_quality_clippy -> op_release_quality_tests [style=dashed, color="#d97706", constraint=false];
+    user_release_publish_spine -> op_release_publish_login [style=dashed, color="#d97706", constraint=false];
+    op_release_publish_login -> op_release_publish_tags [style=dashed, color="#d97706", constraint=false];
+    op_release_publish_tags -> op_release_publish_push [style=dashed, color="#d97706", constraint=false];
+    user_release_verify_spine -> op_release_verify_workflow [style=dashed, color="#d97706", constraint=false];
+    op_release_verify_workflow -> op_release_verify_channel [style=dashed, color="#d97706", constraint=false];
+    op_release_verify_channel -> op_release_verify_container [style=dashed, color="#d97706", constraint=false];

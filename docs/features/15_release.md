@@ -4,6 +4,12 @@
 
 原子操作示例：[`operations/release_ci.md`](./operations/release_ci.md)
 
+细粒度操作链：
+[`release_tag_dispatch.md`](./operations/release_tag_dispatch.md),
+[`release_quality_gates.md`](./operations/release_quality_gates.md),
+[`release_artifact_publish.md`](./operations/release_artifact_publish.md),
+[`release_delivery_verification.md`](./operations/release_delivery_verification.md)
+
 相关技术栈操作链：
 [`tech_stack_platform_release_channel.md`](./operations/tech_stack_platform_release_channel.md)
 

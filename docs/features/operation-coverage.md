@@ -27,6 +27,10 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.net.sync-transfer` | [`net_sync_transfer.md`](./operations/net_sync_transfer.md) | `NET-FEAT-02`, `NET-FEAT-03` |
 | `flow.plugin.runtime-boundary` | [`plugin_runtime_boundary.md`](./operations/plugin_runtime_boundary.md) | `PLUG-001`, `AI-005`, `AI-006` |
 | `flow.release.ci` | [`release_ci.md`](./operations/release_ci.md) | `REL-001`, `REL-002`, `REL-003`, `TECH-001`, `PERF-001` |
+| `flow.release.tag-dispatch` | [`release_tag_dispatch.md`](./operations/release_tag_dispatch.md) | `REL-001`, `REL-003` |
+| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `TECH-001`, `PERF-001` |
+| `flow.release.artifact-publish` | [`release_artifact_publish.md`](./operations/release_artifact_publish.md) | `REL-001`, `REL-002`, `REL-003` |
+| `flow.release.delivery-verification` | [`release_delivery_verification.md`](./operations/release_delivery_verification.md) | `REL-001`, `REL-002`, `REL-003` |
 | `flow.rendering.cursor-reveal` | [`rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |
 | `flow.rendering.math-mermaid` | [`rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md) | `RENDER-MATH-001`, `RENDER-MERMAID-001`, `RENDER-BLOCK-001` |
 | `flow.repo.branch-switch` | [`repo_branch_switch.md`](./operations/repo_branch_switch.md) | `CMD-004`, `REPO-FEAT-02`, `REPO-FEAT-03` |
