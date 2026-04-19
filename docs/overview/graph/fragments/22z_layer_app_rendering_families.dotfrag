@@ -1,0 +1,19 @@
+        subgraph cluster_app_rendering_families {
+            label="rendering source-first detail [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_inline_selection [label="editor::selection_update", fillcolor="#bfdbfe"];
+            app_render_inline_frontmatter [label="frontmatter::selection_update", fillcolor="#eff6ff"];
+            app_render_inline_resume [label="render_inline::resume_markup", fillcolor="#eff6ff"];
+            app_render_refresh_delta [label="editor::delta_input", fillcolor="#bfdbfe"];
+            app_render_refresh_recompute [label="render_projection::recompute", fillcolor="#bfdbfe"];
+            app_render_refresh_observe [label="render_projection::observe", fillcolor="#eff6ff"];
+            app_render_math_selection [label="math::selection_update", fillcolor="#bfdbfe"];
+            app_render_math_delta [label="math::source_delta", fillcolor="#bfdbfe"];
+            app_render_math_restore [label="math::restore_projection", fillcolor="#eff6ff"];
+            app_render_mermaid_selection [label="mermaid::selection_update", fillcolor="#bfdbfe"];
+            app_render_mermaid_delta [label="mermaid::source_delta", fillcolor="#bfdbfe"];
+            app_render_mermaid_restore [label="mermaid::restore_projection", fillcolor="#eff6ff"];
+        }

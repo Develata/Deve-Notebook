@@ -1,0 +1,12 @@
+        subgraph cluster_mod_rendering_families {
+            label="rendering detailed coordination [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_render_hybrid [label="render::hybrid", fillcolor="#f0fdf4"];
+            mod_render_inline [label="render::inline", fillcolor="#f0fdf4"];
+            mod_render_math [label="render::math", fillcolor="#f0fdf4"];
+            mod_render_mermaid [label="render::mermaid", fillcolor="#f0fdf4"];
+            mod_editor_runtime [label="editor::runtime", fillcolor="#f0fdf4"];
+        }

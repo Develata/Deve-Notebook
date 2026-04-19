@@ -32,7 +32,11 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.release.artifact-publish` | [`release_artifact_publish.md`](./operations/release_artifact_publish.md) | `REL-001`, `REL-002`, `REL-003` |
 | `flow.release.delivery-verification` | [`release_delivery_verification.md`](./operations/release_delivery_verification.md) | `REL-001`, `REL-002`, `REL-003` |
 | `flow.rendering.cursor-reveal` | [`rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |
+| `flow.rendering.inline-source-reveal` | [`rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |
 | `flow.rendering.math-mermaid` | [`rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md) | `RENDER-MATH-001`, `RENDER-MERMAID-001`, `RENDER-BLOCK-001` |
+| `flow.rendering.math-source-projection` | [`rendering_math_source_projection.md`](./operations/rendering_math_source_projection.md) | `RENDER-MATH-001`, `RENDER-BLOCK-001` |
+| `flow.rendering.mermaid-source-projection` | [`rendering_mermaid_source_projection.md`](./operations/rendering_mermaid_source_projection.md) | `RENDER-MERMAID-001`, `RENDER-BLOCK-001` |
+| `flow.rendering.projection-refresh` | [`rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md) | `RENDER-BLOCK-001`, `RENDER-INLINE-001`, `RENDER-CURSOR-001` |
 | `flow.repo.branch-switch` | [`repo_branch_switch.md`](./operations/repo_branch_switch.md) | `CMD-004`, `REPO-FEAT-02`, `REPO-FEAT-03` |
 | `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003` |
 | `flow.repo.open-doc` | [`repo_open_doc.md`](./operations/repo_open_doc.md) | `CMD-003`, `REPO-FEAT-01`, `STORE-009` |

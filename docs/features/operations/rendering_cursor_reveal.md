@@ -16,7 +16,7 @@
 - `Trigger`: move cursor into math, emphasis, Frontmatter, quote, or list marker
 - `Preconditions`: source-first editor is open
 - `Immediate Result`: rendered decoration yields to source text for the active token
-- `Application Entry`: `apps/web/js/extensions/inline_renderer.js`, `apps/web/src/editor/`
+- `Application Entry`: `apps/web/js/extensions/hybrid.js`, `apps/web/js/extensions/math.js`, `apps/web/src/editor/`
 
 ### `op.render.cursor.edit-source`
 
@@ -34,7 +34,7 @@
 - `Trigger`: move cursor outside the active token range
 - `Preconditions`: source text remains syntactically renderable
 - `Immediate Result`: visual projection may reappear without changing authority text
-- `Application Entry`: `apps/web/js/extensions/inline_renderer.js`
+- `Application Entry`: `apps/web/js/extensions/hybrid.js`, `apps/web/js/extensions/math.js`
 
 ## Response Flow
 

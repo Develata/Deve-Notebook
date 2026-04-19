@@ -24,6 +24,7 @@
 - 当光标进入公式、Frontmatter、强调、引用、列表标记等渲染区域时，对应渲染必须立即让位给源码。
 - 用户不应被只读装饰遮挡，导致无法精确编辑。
 - 原子操作示例：[`operations/rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md)
+- 细粒度操作示例：[`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
 
 ### 3. 数学公式
 
@@ -31,6 +32,7 @@
 - 用户输入 LaTeX 时可以看到正确渲染结果。
 - 公式块在编辑与阅读之间切换时，不应破坏源码。
 - 原子操作示例：[`operations/rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md)
+- 细粒度操作示例：[`operations/rendering_math_source_projection.md`](./operations/rendering_math_source_projection.md), [`operations/rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md)
 
 ### 4. Mermaid 图表
 
@@ -38,6 +40,7 @@
 - 图表大小与源码块高度保持可预测关系。
 - 用户进入源码区域时，必须能继续编辑原 Mermaid 文本。
 - 原子操作示例：[`operations/rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md)
+- 细粒度操作示例：[`operations/rendering_mermaid_source_projection.md`](./operations/rendering_mermaid_source_projection.md), [`operations/rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md)
 
 ### 5. 任务列表与 Frontmatter
 
@@ -60,6 +63,13 @@
 - 打开长文档时，用户应先看到首屏内容。
 - 剩余内容可以渐进加载，但编辑区不应卡死。
 - 在预加载完成前，全文搜索等重操作可以被限制或延后。
+
+## 细粒度操作链
+
+- 行内源码揭示：[`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
+- 投影刷新：[`operations/rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md)
+- 数学源码投影：[`operations/rendering_math_source_projection.md`](./operations/rendering_math_source_projection.md)
+- Mermaid 源码投影：[`operations/rendering_mermaid_source_projection.md`](./operations/rendering_mermaid_source_projection.md)
 
 ## 非目标
 

@@ -44,6 +44,10 @@ settings UI preferences	settings_ui
 settings runtime feedback	settings_feedback
 rendering cursor reveal	render_cursor
 rendering math / mermaid	render_math_mermaid
+rendering inline source reveal	render_inline_source
+rendering projection refresh	render_projection_refresh
+rendering math source projection	render_math_source
+rendering mermaid source projection	render_mermaid_source
 i18n locale / error	i18n_locale_error
 i18n locale selection	i18n_locale
 i18n error mapping	i18n_error

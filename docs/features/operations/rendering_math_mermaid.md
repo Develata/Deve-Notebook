@@ -16,7 +16,7 @@
 - `Trigger`: type inline or block LaTeX syntax
 - `Preconditions`: editor is writable
 - `Immediate Result`: source text remains editable and can render as math projection
-- `Application Entry`: `apps/web/js/extensions/inline_renderer.js`, `apps/web/src/components/outline_render/katex.rs`
+- `Application Entry`: `apps/web/js/extensions/math.js`, `apps/web/src/components/outline_render/katex.rs`
 
 ### `op.render.mermaid.type-source`
 
@@ -25,7 +25,7 @@
 - `Trigger`: type a fenced `mermaid` code block
 - `Preconditions`: editor is writable and Mermaid runtime is available
 - `Immediate Result`: diagram projection renders from the fenced source
-- `Application Entry`: `apps/web/js/extensions/inline_renderer.js`, `apps/web/package.json`
+- `Application Entry`: `apps/web/js/extensions/mermaid.js`, `apps/web/package.json`
 
 ### `op.render.projection.edit-source`
 
@@ -34,7 +34,7 @@
 - `Trigger`: enter math or Mermaid source and edit text
 - `Preconditions`: source-first reveal path is available
 - `Immediate Result`: projection refreshes from source without replacing the source as authority
-- `Application Entry`: `apps/web/src/editor/delta_input.rs`, `apps/web/js/extensions/inline_renderer.js`
+- `Application Entry`: `apps/web/src/editor/delta_input.rs`, `apps/web/js/extensions/math.js`, `apps/web/js/extensions/mermaid.js`, `apps/web/js/extensions/inline_renderer.js`
 
 ## Response Flow
 

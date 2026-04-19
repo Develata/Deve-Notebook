@@ -1,0 +1,44 @@
+    user_render_inline_source_spine [label="rendering inline source reveal flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_inline_source_spine [label="", shape=point, width=0.01];
+    mod_render_inline_source_spine [label="", shape=point, width=0.01];
+    core_render_inline_source_spine [label="", shape=point, width=0.01];
+    user_render_inline_source_spine -> app_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
+    app_render_inline_source_spine -> mod_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_inline_source_spine -> core_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_projection_refresh_spine [label="rendering projection refresh flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_projection_refresh_spine [label="", shape=point, width=0.01];
+    mod_render_projection_refresh_spine [label="", shape=point, width=0.01];
+    core_render_projection_refresh_spine [label="", shape=point, width=0.01];
+    user_render_projection_refresh_spine -> app_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
+    app_render_projection_refresh_spine -> mod_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_projection_refresh_spine -> core_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_math_source_spine [label="rendering math source projection flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_math_source_spine [label="", shape=point, width=0.01];
+    mod_render_math_source_spine [label="", shape=point, width=0.01];
+    core_render_math_source_spine [label="", shape=point, width=0.01];
+    user_render_math_source_spine -> app_render_math_source_spine [penwidth=2.2, color="#0f172a"];
+    app_render_math_source_spine -> mod_render_math_source_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_math_source_spine -> core_render_math_source_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_mermaid_source_spine [label="rendering mermaid source projection flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_mermaid_source_spine [label="", shape=point, width=0.01];
+    mod_render_mermaid_source_spine [label="", shape=point, width=0.01];
+    core_render_mermaid_source_spine [label="", shape=point, width=0.01];
+    user_render_mermaid_source_spine -> app_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
+    app_render_mermaid_source_spine -> mod_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_mermaid_source_spine -> core_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_inline_source_spine -> op_render_inline_enter [style=dashed, color="#d97706", constraint=false];
+    op_render_inline_enter -> op_render_inline_frontmatter [style=dashed, color="#d97706", constraint=false];
+    op_render_inline_frontmatter -> op_render_inline_leave [style=dashed, color="#d97706", constraint=false];
+    user_render_projection_refresh_spine -> op_render_refresh_edit [style=dashed, color="#d97706", constraint=false];
+    op_render_refresh_edit -> op_render_refresh_leave [style=dashed, color="#d97706", constraint=false];
+    op_render_refresh_leave -> op_render_refresh_observe [style=dashed, color="#d97706", constraint=false];
+    user_render_math_source_spine -> op_render_math_enter [style=dashed, color="#d97706", constraint=false];
+    op_render_math_enter -> op_render_math_delta [style=dashed, color="#d97706", constraint=false];
+    op_render_math_delta -> op_render_math_leave [style=dashed, color="#d97706", constraint=false];
+    user_render_mermaid_source_spine -> op_render_mermaid_enter [style=dashed, color="#d97706", constraint=false];
+    op_render_mermaid_enter -> op_render_mermaid_delta [style=dashed, color="#d97706", constraint=false];
+    op_render_mermaid_delta -> op_render_mermaid_leave [style=dashed, color="#d97706", constraint=false];
