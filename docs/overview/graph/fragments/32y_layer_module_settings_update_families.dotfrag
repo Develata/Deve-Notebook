@@ -1,0 +1,11 @@
+        subgraph cluster_mod_settings_update_families {
+            label="settings update specific coordination [13_settings]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_settings_surface_router [label="settings::surface_router", fillcolor="#f0fdf4"];
+            mod_settings_mutation [label="settings::mutation", fillcolor="#f0fdf4"];
+            mod_settings_apply [label="settings::apply", fillcolor="#f0fdf4"];
+            mod_settings_state_projection [label="settings::state_projection", fillcolor="#f0fdf4"];
+        }

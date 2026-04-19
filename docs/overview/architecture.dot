@@ -664,6 +664,50 @@ digraph DeveNoteArchitecture {
                 op_release_verify_container [label="Verify Container Delivery", fillcolor="#fde68a"];
             }
 
+            subgraph cluster_user_settings_surface {
+                label="settings surface open [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_surface_ui [label="Open Settings From UI", fillcolor="#fef9c3"];
+                op_settings_surface_command [label="Open Settings From Command Surface", fillcolor="#fde68a"];
+                op_settings_surface_groups [label="View Settings Groups", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_mutation {
+                label="settings value mutation [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_mutation_ui [label="Change UI Setting Value", fillcolor="#fde68a"];
+                op_settings_mutation_runtime [label="Change Runtime Mode Value", fillcolor="#fde68a"];
+                op_settings_mutation_cli [label="Change CLI Config Value", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_persist {
+                label="settings persistence / apply [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_persist_write [label="Write Settings File Value", fillcolor="#fde68a"];
+                op_settings_persist_apply [label="Apply Persisted Config To Runtime", fillcolor="#fde68a"];
+                op_settings_persist_inspect [label="Inspect Effective Setting State", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_feedback_render {
+                label="settings feedback / render [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_render_visual [label="Render Visual Setting Feedback", fillcolor="#fef9c3"];
+                op_settings_render_disabled [label="Render Disabled Setting Reason", fillcolor="#fef9c3"];
+                op_settings_render_runtime [label="Render Runtime Setting Feedback", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1143,6 +1187,26 @@ digraph DeveNoteArchitecture {
             app_release_verify_container [label="release::container_smoke", fillcolor="#bfdbfe"];
         }
 
+        subgraph cluster_app_settings_update_families {
+            label="settings update specific interfaces [13_settings]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_settings_surface_ui [label="settings::open_ui", fillcolor="#eff6ff"];
+            app_settings_surface_command [label="settings::open_command", fillcolor="#bfdbfe"];
+            app_settings_surface_groups [label="settings::render_groups", fillcolor="#eff6ff"];
+            app_settings_mutation_ui [label="settings::mutate_ui", fillcolor="#bfdbfe"];
+            app_settings_mutation_runtime [label="settings::mutate_runtime", fillcolor="#bfdbfe"];
+            app_settings_mutation_cli [label="settings::mutate_cli", fillcolor="#eff6ff"];
+            app_settings_persist_write [label="settings::write_config", fillcolor="#bfdbfe"];
+            app_settings_persist_apply [label="settings::apply_config", fillcolor="#bfdbfe"];
+            app_settings_persist_inspect [label="settings::inspect_effective", fillcolor="#eff6ff"];
+            app_settings_render_visual [label="settings::render_visual", fillcolor="#eff6ff"];
+            app_settings_render_disabled [label="settings::render_disabled", fillcolor="#eff6ff"];
+            app_settings_render_runtime [label="settings::render_runtime", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1548,6 +1612,18 @@ digraph DeveNoteArchitecture {
             mod_release_image_push [label="release::image_push", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_settings_update_families {
+            label="settings update specific coordination [13_settings]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_settings_surface_router [label="settings::surface_router", fillcolor="#f0fdf4"];
+            mod_settings_mutation [label="settings::mutation", fillcolor="#f0fdf4"];
+            mod_settings_apply [label="settings::apply", fillcolor="#f0fdf4"];
+            mod_settings_state_projection [label="settings::state_projection", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -1924,6 +2000,9 @@ digraph DeveNoteArchitecture {
             obj_env_override [label="env::override", fillcolor="#f8fafc"];
             obj_settings_file [label="settings::file", fillcolor="#f8fafc"];
             obj_runtime_profile [label="runtime::profile", fillcolor="#f8fafc"];
+            obj_settings_surface [label="settings::surface", fillcolor="#f8fafc"];
+            obj_settings_draft [label="settings::draft", fillcolor="#f8fafc"];
+            obj_config_apply [label="config::apply", fillcolor="#f8fafc"];
             obj_settings_feedback [label="settings::feedback", fillcolor="#f8fafc"];
             obj_ai_backend_capability [label="ai::backend-capability", fillcolor="#f8fafc"];
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
@@ -2715,6 +2794,59 @@ digraph DeveNoteArchitecture {
     mod_release_metadata -> core_release;
     mod_release_image_push -> core_release;
 
+    op_settings_surface_ui -> app_settings_surface_ui;
+    op_settings_surface_command -> app_settings_surface_command;
+    op_settings_surface_groups -> app_settings_surface_groups;
+    op_settings_mutation_ui -> app_settings_mutation_ui;
+    op_settings_mutation_runtime -> app_settings_mutation_runtime;
+    op_settings_mutation_cli -> app_settings_mutation_cli;
+    op_settings_persist_write -> app_settings_persist_write;
+    op_settings_persist_apply -> app_settings_persist_apply;
+    op_settings_persist_inspect -> app_settings_persist_inspect;
+    op_settings_render_visual -> app_settings_render_visual;
+    op_settings_render_disabled -> app_settings_render_disabled;
+    op_settings_render_runtime -> app_settings_render_runtime;
+
+    app_settings_surface_ui -> mod_settings_surface_router;
+    app_settings_surface_ui -> mod_settings_ui;
+    app_settings_surface_command -> mod_settings_surface_router;
+    app_settings_surface_command -> mod_cli_commands;
+    app_settings_surface_command -> mod_settings_ui;
+    app_settings_surface_groups -> mod_settings_surface_router;
+    app_settings_surface_groups -> mod_settings_ui;
+    app_settings_mutation_ui -> mod_settings_mutation;
+    app_settings_mutation_ui -> mod_settings_ui;
+    app_settings_mutation_ui -> mod_i18n_catalog;
+    app_settings_mutation_runtime -> mod_settings_mutation;
+    app_settings_mutation_runtime -> mod_sync_mode_control;
+    app_settings_mutation_runtime -> mod_ai_backend_capability;
+    app_settings_mutation_cli -> mod_settings_mutation;
+    app_settings_mutation_cli -> mod_config_runtime;
+    app_settings_mutation_cli -> mod_cli_commands;
+    app_settings_persist_write -> mod_settings_apply;
+    app_settings_persist_write -> mod_config_file;
+    app_settings_persist_write -> mod_config_runtime;
+    app_settings_persist_apply -> mod_settings_apply;
+    app_settings_persist_apply -> mod_config_runtime;
+    app_settings_persist_apply -> mod_runtime_profile;
+    app_settings_persist_inspect -> mod_settings_apply;
+    app_settings_persist_inspect -> mod_runtime_profile;
+    app_settings_persist_inspect -> mod_config_runtime;
+    app_settings_render_visual -> mod_settings_state_projection;
+    app_settings_render_visual -> mod_settings_feedback;
+    app_settings_render_visual -> mod_i18n_catalog;
+    app_settings_render_disabled -> mod_settings_state_projection;
+    app_settings_render_disabled -> mod_settings_feedback;
+    app_settings_render_disabled -> mod_ai_backend_capability;
+    app_settings_render_runtime -> mod_settings_state_projection;
+    app_settings_render_runtime -> mod_runtime_profile;
+    app_settings_render_runtime -> mod_config_runtime;
+
+    mod_settings_surface_router -> core_settings;
+    mod_settings_mutation -> core_settings;
+    mod_settings_apply -> core_settings;
+    mod_settings_state_projection -> core_settings;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -2777,6 +2909,9 @@ digraph DeveNoteArchitecture {
     core_settings -> obj_env_override;
     core_settings -> obj_settings_file;
     core_settings -> obj_runtime_profile;
+    core_settings -> obj_settings_surface;
+    core_settings -> obj_settings_draft;
+    core_settings -> obj_config_apply;
     core_settings -> obj_settings_feedback;
     core_plugin -> obj_ai_backend_capability;
     core_settings -> obj_ui_preference;
@@ -3222,6 +3357,51 @@ digraph DeveNoteArchitecture {
     user_release_verify_spine -> op_release_verify_workflow [style=dashed, color="#d97706", constraint=false];
     op_release_verify_workflow -> op_release_verify_channel [style=dashed, color="#d97706", constraint=false];
     op_release_verify_channel -> op_release_verify_container [style=dashed, color="#d97706", constraint=false];
+
+    user_settings_surface_spine [label="settings surface open flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_surface_spine [label="", shape=point, width=0.01];
+    mod_settings_surface_spine [label="", shape=point, width=0.01];
+    core_settings_surface_spine [label="", shape=point, width=0.01];
+    user_settings_surface_spine -> app_settings_surface_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_surface_spine -> mod_settings_surface_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_surface_spine -> core_settings_surface_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_mutation_spine [label="settings value mutation flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_mutation_spine [label="", shape=point, width=0.01];
+    mod_settings_mutation_spine [label="", shape=point, width=0.01];
+    core_settings_mutation_spine [label="", shape=point, width=0.01];
+    user_settings_mutation_spine -> app_settings_mutation_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_mutation_spine -> mod_settings_mutation_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_mutation_spine -> core_settings_mutation_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_persist_spine [label="settings persistence / apply flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_persist_spine [label="", shape=point, width=0.01];
+    mod_settings_persist_spine [label="", shape=point, width=0.01];
+    core_settings_persist_spine [label="", shape=point, width=0.01];
+    user_settings_persist_spine -> app_settings_persist_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_persist_spine -> mod_settings_persist_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_persist_spine -> core_settings_persist_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_feedback_render_spine [label="settings feedback / render flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_feedback_render_spine [label="", shape=point, width=0.01];
+    mod_settings_feedback_render_spine [label="", shape=point, width=0.01];
+    core_settings_feedback_render_spine [label="", shape=point, width=0.01];
+    user_settings_feedback_render_spine -> app_settings_feedback_render_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_feedback_render_spine -> mod_settings_feedback_render_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_feedback_render_spine -> core_settings_feedback_render_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_surface_spine -> op_settings_surface_ui [style=dashed, color="#d97706", constraint=false];
+    op_settings_surface_ui -> op_settings_surface_command [style=dashed, color="#d97706", constraint=false];
+    op_settings_surface_command -> op_settings_surface_groups [style=dashed, color="#d97706", constraint=false];
+    user_settings_mutation_spine -> op_settings_mutation_ui [style=dashed, color="#d97706", constraint=false];
+    op_settings_mutation_ui -> op_settings_mutation_runtime [style=dashed, color="#d97706", constraint=false];
+    op_settings_mutation_runtime -> op_settings_mutation_cli [style=dashed, color="#d97706", constraint=false];
+    user_settings_persist_spine -> op_settings_persist_write [style=dashed, color="#d97706", constraint=false];
+    op_settings_persist_write -> op_settings_persist_apply [style=dashed, color="#d97706", constraint=false];
+    op_settings_persist_apply -> op_settings_persist_inspect [style=dashed, color="#d97706", constraint=false];
+    user_settings_feedback_render_spine -> op_settings_render_visual [style=dashed, color="#d97706", constraint=false];
+    op_settings_render_visual -> op_settings_render_disabled [style=dashed, color="#d97706", constraint=false];
+    op_settings_render_disabled -> op_settings_render_runtime [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

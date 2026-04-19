@@ -1,0 +1,44 @@
+    user_settings_surface_spine [label="settings surface open flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_surface_spine [label="", shape=point, width=0.01];
+    mod_settings_surface_spine [label="", shape=point, width=0.01];
+    core_settings_surface_spine [label="", shape=point, width=0.01];
+    user_settings_surface_spine -> app_settings_surface_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_surface_spine -> mod_settings_surface_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_surface_spine -> core_settings_surface_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_mutation_spine [label="settings value mutation flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_mutation_spine [label="", shape=point, width=0.01];
+    mod_settings_mutation_spine [label="", shape=point, width=0.01];
+    core_settings_mutation_spine [label="", shape=point, width=0.01];
+    user_settings_mutation_spine -> app_settings_mutation_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_mutation_spine -> mod_settings_mutation_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_mutation_spine -> core_settings_mutation_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_persist_spine [label="settings persistence / apply flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_persist_spine [label="", shape=point, width=0.01];
+    mod_settings_persist_spine [label="", shape=point, width=0.01];
+    core_settings_persist_spine [label="", shape=point, width=0.01];
+    user_settings_persist_spine -> app_settings_persist_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_persist_spine -> mod_settings_persist_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_persist_spine -> core_settings_persist_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_feedback_render_spine [label="settings feedback / render flow", shape=plaintext, fontcolor="#92400e"];
+    app_settings_feedback_render_spine [label="", shape=point, width=0.01];
+    mod_settings_feedback_render_spine [label="", shape=point, width=0.01];
+    core_settings_feedback_render_spine [label="", shape=point, width=0.01];
+    user_settings_feedback_render_spine -> app_settings_feedback_render_spine [penwidth=2.2, color="#0f172a"];
+    app_settings_feedback_render_spine -> mod_settings_feedback_render_spine [penwidth=2.2, color="#0f172a"];
+    mod_settings_feedback_render_spine -> core_settings_feedback_render_spine [penwidth=2.2, color="#0f172a"];
+
+    user_settings_surface_spine -> op_settings_surface_ui [style=dashed, color="#d97706", constraint=false];
+    op_settings_surface_ui -> op_settings_surface_command [style=dashed, color="#d97706", constraint=false];
+    op_settings_surface_command -> op_settings_surface_groups [style=dashed, color="#d97706", constraint=false];
+    user_settings_mutation_spine -> op_settings_mutation_ui [style=dashed, color="#d97706", constraint=false];
+    op_settings_mutation_ui -> op_settings_mutation_runtime [style=dashed, color="#d97706", constraint=false];
+    op_settings_mutation_runtime -> op_settings_mutation_cli [style=dashed, color="#d97706", constraint=false];
+    user_settings_persist_spine -> op_settings_persist_write [style=dashed, color="#d97706", constraint=false];
+    op_settings_persist_write -> op_settings_persist_apply [style=dashed, color="#d97706", constraint=false];
+    op_settings_persist_apply -> op_settings_persist_inspect [style=dashed, color="#d97706", constraint=false];
+    user_settings_feedback_render_spine -> op_settings_render_visual [style=dashed, color="#d97706", constraint=false];
+    op_settings_render_visual -> op_settings_render_disabled [style=dashed, color="#d97706", constraint=false];
+    op_settings_render_disabled -> op_settings_render_runtime [style=dashed, color="#d97706", constraint=false];

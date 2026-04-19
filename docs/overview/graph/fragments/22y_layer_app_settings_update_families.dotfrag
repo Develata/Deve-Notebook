@@ -1,0 +1,19 @@
+        subgraph cluster_app_settings_update_families {
+            label="settings update specific interfaces [13_settings]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_settings_surface_ui [label="settings::open_ui", fillcolor="#eff6ff"];
+            app_settings_surface_command [label="settings::open_command", fillcolor="#bfdbfe"];
+            app_settings_surface_groups [label="settings::render_groups", fillcolor="#eff6ff"];
+            app_settings_mutation_ui [label="settings::mutate_ui", fillcolor="#bfdbfe"];
+            app_settings_mutation_runtime [label="settings::mutate_runtime", fillcolor="#bfdbfe"];
+            app_settings_mutation_cli [label="settings::mutate_cli", fillcolor="#eff6ff"];
+            app_settings_persist_write [label="settings::write_config", fillcolor="#bfdbfe"];
+            app_settings_persist_apply [label="settings::apply_config", fillcolor="#bfdbfe"];
+            app_settings_persist_inspect [label="settings::inspect_effective", fillcolor="#eff6ff"];
+            app_settings_render_visual [label="settings::render_visual", fillcolor="#eff6ff"];
+            app_settings_render_disabled [label="settings::render_disabled", fillcolor="#eff6ff"];
+            app_settings_render_runtime [label="settings::render_runtime", fillcolor="#eff6ff"];
+        }

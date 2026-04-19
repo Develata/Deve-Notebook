@@ -34,8 +34,12 @@ CLI server runtime	cli_server
 CLI export / inspect	cli_export
 CLI repair / admin	cli_repair
 settings update	settings_update
+settings surface open	settings_surface
 settings env defaults	settings_env
 settings file config	settings_file
+settings persistence / apply	settings_persist
+settings value mutation	settings_mutation
+settings feedback / render	settings_feedback_render
 settings UI preferences	settings_ui
 settings runtime feedback	settings_feedback
 rendering cursor reveal	render_cursor

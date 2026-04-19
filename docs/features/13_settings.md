@@ -2,6 +2,14 @@
 
 本章描述设置界面的分组、即时反馈和当前有效配置的用户体验。
 
+原子操作示例：[`operations/settings_update.md`](./operations/settings_update.md)
+
+细粒度操作链：
+[`settings_surface_open.md`](./operations/settings_surface_open.md),
+[`settings_value_mutation.md`](./operations/settings_value_mutation.md),
+[`settings_persistence_apply.md`](./operations/settings_persistence_apply.md),
+[`settings_feedback_render.md`](./operations/settings_feedback_render.md)
+
 ## 功能目标
 
 - 用户应能找到主要设置入口。
@@ -14,7 +22,6 @@
 
 - 设置项应按主题分组展示，如界面、语言、编辑体验、运行模式等。
 - 用户不应在设置中迷失于无结构的长列表。
-- 原子操作示例：[`operations/settings_update.md`](./operations/settings_update.md)
 - 细粒度来源链：[`settings_env_defaults.md`](./operations/settings_env_defaults.md)、[`settings_file_config.md`](./operations/settings_file_config.md)、[`settings_ui_preferences.md`](./operations/settings_ui_preferences.md)、[`settings_runtime_feedback.md`](./operations/settings_runtime_feedback.md)
 
 ### 2. 即时反馈

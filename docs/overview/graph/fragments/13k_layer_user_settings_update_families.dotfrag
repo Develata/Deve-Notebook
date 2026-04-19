@@ -1,0 +1,43 @@
+            subgraph cluster_user_settings_surface {
+                label="settings surface open [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_surface_ui [label="Open Settings From UI", fillcolor="#fef9c3"];
+                op_settings_surface_command [label="Open Settings From Command Surface", fillcolor="#fde68a"];
+                op_settings_surface_groups [label="View Settings Groups", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_mutation {
+                label="settings value mutation [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_mutation_ui [label="Change UI Setting Value", fillcolor="#fde68a"];
+                op_settings_mutation_runtime [label="Change Runtime Mode Value", fillcolor="#fde68a"];
+                op_settings_mutation_cli [label="Change CLI Config Value", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_persist {
+                label="settings persistence / apply [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_persist_write [label="Write Settings File Value", fillcolor="#fde68a"];
+                op_settings_persist_apply [label="Apply Persisted Config To Runtime", fillcolor="#fde68a"];
+                op_settings_persist_inspect [label="Inspect Effective Setting State", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_settings_feedback_render {
+                label="settings feedback / render [13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_settings_render_visual [label="Render Visual Setting Feedback", fillcolor="#fef9c3"];
+                op_settings_render_disabled [label="Render Disabled Setting Reason", fillcolor="#fef9c3"];
+                op_settings_render_runtime [label="Render Runtime Setting Feedback", fillcolor="#fef9c3"];
+            }
