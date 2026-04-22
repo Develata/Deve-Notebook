@@ -1,0 +1,33 @@
+    user_render_checkbox_spine [label="rendering checkbox writeback flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_checkbox_spine [label="", shape=point, width=0.01];
+    mod_render_checkbox_spine [label="", shape=point, width=0.01];
+    core_render_checkbox_spine [label="", shape=point, width=0.01];
+    user_render_checkbox_spine -> app_render_checkbox_spine [penwidth=2.2, color="#0f172a"];
+    app_render_checkbox_spine -> mod_render_checkbox_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_checkbox_spine -> core_render_checkbox_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_link_activation_spine [label="rendering link activation gate flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_link_activation_spine [label="", shape=point, width=0.01];
+    mod_render_link_activation_spine [label="", shape=point, width=0.01];
+    core_render_link_activation_spine [label="", shape=point, width=0.01];
+    user_render_link_activation_spine -> app_render_link_activation_spine [penwidth=2.2, color="#0f172a"];
+    app_render_link_activation_spine -> mod_render_link_activation_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_link_activation_spine -> core_render_link_activation_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_outline_spine [label="rendering outline navigation flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_outline_spine [label="", shape=point, width=0.01];
+    mod_render_outline_spine [label="", shape=point, width=0.01];
+    core_render_outline_spine [label="", shape=point, width=0.01];
+    user_render_outline_spine -> app_render_outline_spine [penwidth=2.2, color="#0f172a"];
+    app_render_outline_spine -> mod_render_outline_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_outline_spine -> core_render_outline_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_checkbox_spine -> op_render_checkbox_click [style=dashed, color="#d97706", constraint=false];
+    op_render_checkbox_click -> op_render_checkbox_widget [style=dashed, color="#d97706", constraint=false];
+    op_render_checkbox_widget -> op_render_checkbox_source [style=dashed, color="#d97706", constraint=false];
+    user_render_link_activation_spine -> op_render_link_press [style=dashed, color="#d97706", constraint=false];
+    op_render_link_press -> op_render_link_click [style=dashed, color="#d97706", constraint=false];
+    op_render_link_click -> op_render_link_release [style=dashed, color="#d97706", constraint=false];
+    user_render_outline_spine -> op_render_outline_toggle [style=dashed, color="#d97706", constraint=false];
+    op_render_outline_toggle -> op_render_outline_select [style=dashed, color="#d97706", constraint=false];
+    op_render_outline_select -> op_render_outline_observe [style=dashed, color="#d97706", constraint=false];

@@ -752,6 +752,39 @@ digraph DeveNoteArchitecture {
                 op_render_mermaid_leave [label="Move Cursor Outside Mermaid Source", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_render_checkbox {
+                label="rendering checkbox writeback [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_checkbox_click [label="Click Task Checkbox", fillcolor="#fde68a"];
+                op_render_checkbox_widget [label="Observe Checkbox Widget State", fillcolor="#fef9c3"];
+                op_render_checkbox_source [label="Observe Task Source Writeback", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_link_activation {
+                label="rendering link activation gate [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_link_press [label="Press Ctrl/Cmd Modifier", fillcolor="#fde68a"];
+                op_render_link_click [label="Click Armed Link", fillcolor="#fde68a"];
+                op_render_link_release [label="Release Ctrl/Cmd Modifier", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_outline_navigation {
+                label="rendering outline navigation [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_outline_toggle [label="Toggle Outline Panel", fillcolor="#fef9c3"];
+                op_render_outline_select [label="Select Outline Heading", fillcolor="#fde68a"];
+                op_render_outline_observe [label="Observe Editor At Heading Target", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1271,6 +1304,23 @@ digraph DeveNoteArchitecture {
             app_render_mermaid_restore [label="mermaid::restore_projection", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_rendering_interaction_families {
+            label="rendering interaction detail [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_checkbox_dispatch [label="checkbox::dispatch_toggle", fillcolor="#bfdbfe"];
+            app_render_checkbox_reflect [label="checkbox::reflect_widget", fillcolor="#eff6ff"];
+            app_render_checkbox_writeback [label="checkbox::writeback_source", fillcolor="#bfdbfe"];
+            app_render_link_modifier [label="link::modifier_state", fillcolor="#eff6ff"];
+            app_render_link_open [label="link::guarded_open", fillcolor="#bfdbfe"];
+            app_render_link_reset [label="link::reset_modifier", fillcolor="#eff6ff"];
+            app_render_outline_toggle [label="outline::toggle", fillcolor="#eff6ff"];
+            app_render_outline_scroll [label="outline::scroll_to_heading", fillcolor="#bfdbfe"];
+            app_render_outline_render [label="outline::render_projection", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1701,6 +1751,17 @@ digraph DeveNoteArchitecture {
             mod_editor_runtime [label="editor::runtime", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_rendering_interaction_families {
+            label="rendering interaction coordination [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_render_checkbox [label="render::checkbox", fillcolor="#f0fdf4"];
+            mod_link_activation [label="link::activation", fillcolor="#f0fdf4"];
+            mod_outline_projection [label="outline::projection", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -2085,6 +2146,9 @@ digraph DeveNoteArchitecture {
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
             obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];
+            obj_task_checkbox [label="task::checkbox", fillcolor="#f8fafc"];
+            obj_outline_projection [label="outline::projection", fillcolor="#f8fafc"];
+            obj_link_activation [label="link::activation", fillcolor="#f8fafc"];
             obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
             obj_locale_selection [label="locale::selection", fillcolor="#f8fafc"];
             obj_localized_format [label="format::localized", fillcolor="#f8fafc"];
@@ -2968,6 +3032,35 @@ digraph DeveNoteArchitecture {
 
     mod_render_hybrid -> core_rendering;
 
+    op_render_checkbox_click -> app_render_checkbox_dispatch;
+    op_render_checkbox_widget -> app_render_checkbox_reflect;
+    op_render_checkbox_source -> app_render_checkbox_writeback;
+    op_render_link_press -> app_render_link_modifier;
+    op_render_link_click -> app_render_link_open;
+    op_render_link_release -> app_render_link_reset;
+    op_render_outline_toggle -> app_render_outline_toggle;
+    op_render_outline_select -> app_render_outline_scroll;
+    op_render_outline_observe -> app_render_outline_render;
+
+    app_render_checkbox_dispatch -> mod_render_checkbox;
+    app_render_checkbox_dispatch -> mod_editor_runtime;
+    app_render_checkbox_reflect -> mod_render_checkbox;
+    app_render_checkbox_writeback -> mod_editor_runtime;
+    app_render_checkbox_writeback -> mod_render_checkbox;
+    app_render_link_modifier -> mod_link_activation;
+    app_render_link_open -> mod_link_activation;
+    app_render_link_open -> mod_editor_runtime;
+    app_render_link_reset -> mod_link_activation;
+    app_render_outline_toggle -> mod_outline_projection;
+    app_render_outline_scroll -> mod_outline_projection;
+    app_render_outline_scroll -> mod_editor_runtime;
+    app_render_outline_render -> mod_outline_projection;
+    app_render_outline_render -> mod_editor_runtime;
+
+    mod_render_checkbox -> core_rendering;
+    mod_link_activation -> core_rendering;
+    mod_outline_projection -> core_rendering;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -3038,6 +3131,9 @@ digraph DeveNoteArchitecture {
     core_settings -> obj_ui_preference;
     core_rendering -> obj_render_projection;
     core_rendering -> obj_editor_selection;
+    core_rendering -> obj_task_checkbox;
+    core_rendering -> obj_outline_projection;
+    core_rendering -> obj_link_activation;
     core_i18n -> obj_i18n_catalog;
     core_i18n -> obj_locale_selection;
     core_i18n -> obj_localized_format;
@@ -3568,6 +3664,40 @@ digraph DeveNoteArchitecture {
     user_render_mermaid_source_spine -> op_render_mermaid_enter [style=dashed, color="#d97706", constraint=false];
     op_render_mermaid_enter -> op_render_mermaid_delta [style=dashed, color="#d97706", constraint=false];
     op_render_mermaid_delta -> op_render_mermaid_leave [style=dashed, color="#d97706", constraint=false];
+
+    user_render_checkbox_spine [label="rendering checkbox writeback flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_checkbox_spine [label="", shape=point, width=0.01];
+    mod_render_checkbox_spine [label="", shape=point, width=0.01];
+    core_render_checkbox_spine [label="", shape=point, width=0.01];
+    user_render_checkbox_spine -> app_render_checkbox_spine [penwidth=2.2, color="#0f172a"];
+    app_render_checkbox_spine -> mod_render_checkbox_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_checkbox_spine -> core_render_checkbox_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_link_activation_spine [label="rendering link activation gate flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_link_activation_spine [label="", shape=point, width=0.01];
+    mod_render_link_activation_spine [label="", shape=point, width=0.01];
+    core_render_link_activation_spine [label="", shape=point, width=0.01];
+    user_render_link_activation_spine -> app_render_link_activation_spine [penwidth=2.2, color="#0f172a"];
+    app_render_link_activation_spine -> mod_render_link_activation_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_link_activation_spine -> core_render_link_activation_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_outline_spine [label="rendering outline navigation flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_outline_spine [label="", shape=point, width=0.01];
+    mod_render_outline_spine [label="", shape=point, width=0.01];
+    core_render_outline_spine [label="", shape=point, width=0.01];
+    user_render_outline_spine -> app_render_outline_spine [penwidth=2.2, color="#0f172a"];
+    app_render_outline_spine -> mod_render_outline_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_outline_spine -> core_render_outline_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_checkbox_spine -> op_render_checkbox_click [style=dashed, color="#d97706", constraint=false];
+    op_render_checkbox_click -> op_render_checkbox_widget [style=dashed, color="#d97706", constraint=false];
+    op_render_checkbox_widget -> op_render_checkbox_source [style=dashed, color="#d97706", constraint=false];
+    user_render_link_activation_spine -> op_render_link_press [style=dashed, color="#d97706", constraint=false];
+    op_render_link_press -> op_render_link_click [style=dashed, color="#d97706", constraint=false];
+    op_render_link_click -> op_render_link_release [style=dashed, color="#d97706", constraint=false];
+    user_render_outline_spine -> op_render_outline_toggle [style=dashed, color="#d97706", constraint=false];
+    op_render_outline_toggle -> op_render_outline_select [style=dashed, color="#d97706", constraint=false];
+    op_render_outline_select -> op_render_outline_observe [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

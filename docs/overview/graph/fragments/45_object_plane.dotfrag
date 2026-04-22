@@ -82,6 +82,9 @@
             obj_ui_preference [label="ui::preference", fillcolor="#f8fafc"];
             obj_render_projection [label="render::projection", fillcolor="#f8fafc"];
             obj_editor_selection [label="editor::selection", fillcolor="#f8fafc"];
+            obj_task_checkbox [label="task::checkbox", fillcolor="#f8fafc"];
+            obj_outline_projection [label="outline::projection", fillcolor="#f8fafc"];
+            obj_link_activation [label="link::activation", fillcolor="#f8fafc"];
             obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
             obj_locale_selection [label="locale::selection", fillcolor="#f8fafc"];
             obj_localized_format [label="format::localized", fillcolor="#f8fafc"];

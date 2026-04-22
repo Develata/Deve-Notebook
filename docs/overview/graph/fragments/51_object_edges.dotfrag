@@ -68,6 +68,9 @@
     core_settings -> obj_ui_preference;
     core_rendering -> obj_render_projection;
     core_rendering -> obj_editor_selection;
+    core_rendering -> obj_task_checkbox;
+    core_rendering -> obj_outline_projection;
+    core_rendering -> obj_link_activation;
     core_i18n -> obj_i18n_catalog;
     core_i18n -> obj_locale_selection;
     core_i18n -> obj_localized_format;

@@ -1,0 +1,16 @@
+        subgraph cluster_app_rendering_interaction_families {
+            label="rendering interaction detail [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_checkbox_dispatch [label="checkbox::dispatch_toggle", fillcolor="#bfdbfe"];
+            app_render_checkbox_reflect [label="checkbox::reflect_widget", fillcolor="#eff6ff"];
+            app_render_checkbox_writeback [label="checkbox::writeback_source", fillcolor="#bfdbfe"];
+            app_render_link_modifier [label="link::modifier_state", fillcolor="#eff6ff"];
+            app_render_link_open [label="link::guarded_open", fillcolor="#bfdbfe"];
+            app_render_link_reset [label="link::reset_modifier", fillcolor="#eff6ff"];
+            app_render_outline_toggle [label="outline::toggle", fillcolor="#eff6ff"];
+            app_render_outline_scroll [label="outline::scroll_to_heading", fillcolor="#bfdbfe"];
+            app_render_outline_render [label="outline::render_projection", fillcolor="#eff6ff"];
+        }

@@ -46,17 +46,20 @@
 
 - 任务列表复选框可点击，点击结果会回写到源码。
 - Frontmatter 具有明显的视觉边界，但光标进入后应还原为标准 YAML 源码。
+- 细粒度操作示例：[`operations/rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md), [`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
 
 ### 6. Outline
 
 - Outline 反映标题层级。
 - Outline 不应错误解释非支持语法。
 - 点击 Outline 项后，编辑区应跳转到对应标题位置。
+- 细粒度操作示例：[`operations/rendering_outline_navigation.md`](./operations/rendering_outline_navigation.md)
 
 ### 7. 链接激活
 
 - 默认状态下链接不应误触跳转。
 - 仅在按住 `Ctrl/Cmd` 时，链接才转为可点击状态。
+- 细粒度操作示例：[`operations/rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md)
 
 ### 8. 长文档体验
 
@@ -70,6 +73,9 @@
 - 投影刷新：[`operations/rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md)
 - 数学源码投影：[`operations/rendering_math_source_projection.md`](./operations/rendering_math_source_projection.md)
 - Mermaid 源码投影：[`operations/rendering_mermaid_source_projection.md`](./operations/rendering_mermaid_source_projection.md)
+- 任务列表源码回写：[`operations/rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md)
+- Outline 跳转：[`operations/rendering_outline_navigation.md`](./operations/rendering_outline_navigation.md)
+- 链接激活闸门：[`operations/rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md)
 
 ## 非目标
 

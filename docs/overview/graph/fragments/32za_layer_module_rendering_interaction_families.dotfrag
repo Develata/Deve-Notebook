@@ -1,0 +1,10 @@
+        subgraph cluster_mod_rendering_interaction_families {
+            label="rendering interaction coordination [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_render_checkbox [label="render::checkbox", fillcolor="#f0fdf4"];
+            mod_link_activation [label="link::activation", fillcolor="#f0fdf4"];
+            mod_outline_projection [label="outline::projection", fillcolor="#f0fdf4"];
+        }
