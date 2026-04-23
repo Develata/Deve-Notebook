@@ -1,0 +1,11 @@
+        subgraph cluster_mod_cli_control_detail {
+            label="CLI control detail coordination [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_cli_entry [label="cli::entry", fillcolor="#f0fdf4"];
+            mod_cli_help_surface [label="cli::help-surface", fillcolor="#f0fdf4"];
+            mod_cli_no_command [label="cli::no-command", fillcolor="#f0fdf4"];
+            mod_cli_runtime_gateway [label="cli::runtime-gateway", fillcolor="#f0fdf4"];
+        }

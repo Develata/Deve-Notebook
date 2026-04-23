@@ -1,0 +1,18 @@
+        subgraph cluster_app_cli_control_detail {
+            label="CLI control detail interfaces [12_commands]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#3b82f6";
+
+            app_cli_parse_argv [label="Args::parse argv", fillcolor="#bfdbfe"];
+            app_cli_parse_subcommand [label="Option<Commands> select", fillcolor="#bfdbfe"];
+            app_cli_parse_envelope [label="typed command envelope", fillcolor="#dbeafe"];
+            app_cli_help_root [label="--help root surface", fillcolor="#dbeafe"];
+            app_cli_help_command [label="<command> --help surface", fillcolor="#dbeafe"];
+            app_cli_help_render [label="clap usage render", fillcolor="#eff6ff"];
+            app_cli_guidance_none [label="dispatch::run(None)", fillcolor="#bfdbfe"];
+            app_cli_guidance_hint [label="missing command hint", fillcolor="#eff6ff"];
+            app_cli_runtime_config [label="Config::load_checked", fillcolor="#dbeafe"];
+            app_cli_runtime_dispatch [label="dispatch::run(Some(...))", fillcolor="#bfdbfe"];
+            app_cli_runtime_module [label="commands::<family>::run", fillcolor="#bfdbfe"];
+        }

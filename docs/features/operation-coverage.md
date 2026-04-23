@@ -11,8 +11,12 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.auth.login` | [`auth_login.md`](./operations/auth_login.md) | `AUTH-001`, `AUTH-006`, `AUTH-011` |
 | `flow.auth.session-unauthorized` | [`auth_session_unauthorized.md`](./operations/auth_session_unauthorized.md) | `AUTH-002`, `AUTH-003`, `AUTH-011` |
 | `flow.cli.control-commands` | [`cli_control_commands.md`](./operations/cli_control_commands.md) | `CMD-001`, `CMD-002`, `CMD-003`, `CMD-004` |
+| `flow.cli.empty-command-guidance` | [`cli_empty_command_guidance.md`](./operations/cli_empty_command_guidance.md) | `CMD-001` |
 | `flow.cli.export-inspect` | [`cli_export_inspect.md`](./operations/cli_export_inspect.md) | `CMD-001`, `CMD-008`, `TECH-002` |
+| `flow.cli.help-surface` | [`cli_help_surface.md`](./operations/cli_help_surface.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
+| `flow.cli.parse-command` | [`cli_parse_command.md`](./operations/cli_parse_command.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
 | `flow.cli.repair-admin` | [`cli_repair_admin.md`](./operations/cli_repair_admin.md) | `CMD-001`, `CMD-009`, `REPO-FEAT-03` |
+| `flow.cli.runtime-handoff` | [`cli_runtime_handoff.md`](./operations/cli_runtime_handoff.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
 | `flow.cli.server-runtime` | [`cli_server_runtime.md`](./operations/cli_server_runtime.md) | `CMD-001`, `CMD-007`, `REL-002` |
 | `flow.cli.vault-indexing` | [`cli_vault_indexing.md`](./operations/cli_vault_indexing.md) | `CMD-001`, `CMD-006` |
 | `flow.doc.edit-confirmed-op` | [`doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md) | `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02` |

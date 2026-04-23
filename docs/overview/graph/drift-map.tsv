@@ -29,6 +29,10 @@ release quality gates	release_quality
 release artifact publish	release_publish
 release delivery verification	release_verify
 CLI control commands	cli_control
+CLI parse command	cli_parse
+CLI help surface	cli_help_surface
+CLI empty-command guidance	cli_no_command
+CLI runtime handoff	cli_runtime_handoff
 CLI vault indexing	cli_vault
 CLI server runtime	cli_server
 CLI export / inspect	cli_export

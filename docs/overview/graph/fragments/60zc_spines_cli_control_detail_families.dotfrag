@@ -1,0 +1,18 @@
+    user_cli_parse_spine [label="CLI parse command flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_parse_spine -> op_cli_parse_argv [style=dashed, color="#f59e0b"];
+    op_cli_parse_argv -> op_cli_parse_subcommand [style=dashed, color="#f59e0b"];
+    op_cli_parse_subcommand -> op_cli_parse_envelope [style=dashed, color="#f59e0b"];
+
+    user_cli_help_surface_spine [label="CLI help surface flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_help_surface_spine -> op_cli_help_root [style=dashed, color="#f59e0b"];
+    op_cli_help_root -> op_cli_help_command [style=dashed, color="#f59e0b"];
+    op_cli_help_command -> op_cli_help_scan [style=dashed, color="#f59e0b"];
+
+    user_cli_no_command_spine [label="CLI empty-command guidance flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_no_command_spine -> op_cli_guidance_none [style=dashed, color="#f59e0b"];
+    op_cli_guidance_none -> op_cli_guidance_hint [style=dashed, color="#f59e0b"];
+
+    user_cli_runtime_handoff_spine [label="CLI runtime handoff flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_runtime_handoff_spine -> op_cli_runtime_config [style=dashed, color="#f59e0b"];
+    op_cli_runtime_config -> op_cli_runtime_dispatch [style=dashed, color="#f59e0b"];
+    op_cli_runtime_dispatch -> op_cli_runtime_module [style=dashed, color="#f59e0b"];

@@ -1,0 +1,42 @@
+            subgraph cluster_user_cli_parse_detail {
+                label="CLI parse command [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_parse_argv [label="Read CLI Argv", fillcolor="#fde68a"];
+                op_cli_parse_subcommand [label="Select Typed Subcommand", fillcolor="#fde68a"];
+                op_cli_parse_envelope [label="Observe Typed Command Envelope", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_cli_help_detail {
+                label="CLI help surface [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_help_root [label="Request Root Help", fillcolor="#fde68a"];
+                op_cli_help_command [label="Request Command Help", fillcolor="#fde68a"];
+                op_cli_help_scan [label="Scan Help Surface", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_cli_guidance_detail {
+                label="CLI empty-command guidance [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_guidance_none [label="Run CLI Without Subcommand", fillcolor="#fde68a"];
+                op_cli_guidance_hint [label="Observe Help Hint", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_cli_runtime_detail {
+                label="CLI runtime handoff [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_runtime_config [label="Load Runtime Config", fillcolor="#fef9c3"];
+                op_cli_runtime_dispatch [label="Handoff To Dispatcher", fillcolor="#fde68a"];
+                op_cli_runtime_module [label="Enter Command Module", fillcolor="#fde68a"];
+            }

@@ -46,5 +46,6 @@
 ## Notes
 
 - This flow models the CLI as a first-class control surface, not a debug-only entry.
+- Parse, help, empty-command guidance, and runtime handoff are now modeled separately in `cli_parse_command.md`, `cli_help_surface.md`, `cli_empty_command_guidance.md`, and `cli_runtime_handoff.md`.
 - Specific command families are modeled in `cli_vault_indexing.md`, `cli_server_runtime.md`, `cli_export_inspect.md`, and `cli_repair_admin.md`.
 - Main objects: `cli::command`, `repo::scope`, `config::runtime`.

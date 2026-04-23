@@ -807,6 +807,49 @@ digraph DeveNoteArchitecture {
                 op_render_large_search_release [label="Submit Search After Load Ready", fillcolor="#fde68a"];
             }
 
+            subgraph cluster_user_cli_parse_detail {
+                label="CLI parse command [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_parse_argv [label="Read CLI Argv", fillcolor="#fde68a"];
+                op_cli_parse_subcommand [label="Select Typed Subcommand", fillcolor="#fde68a"];
+                op_cli_parse_envelope [label="Observe Typed Command Envelope", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_cli_help_detail {
+                label="CLI help surface [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_help_root [label="Request Root Help", fillcolor="#fde68a"];
+                op_cli_help_command [label="Request Command Help", fillcolor="#fde68a"];
+                op_cli_help_scan [label="Scan Help Surface", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_cli_guidance_detail {
+                label="CLI empty-command guidance [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_guidance_none [label="Run CLI Without Subcommand", fillcolor="#fde68a"];
+                op_cli_guidance_hint [label="Observe Help Hint", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_cli_runtime_detail {
+                label="CLI runtime handoff [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_cli_runtime_config [label="Load Runtime Config", fillcolor="#fef9c3"];
+                op_cli_runtime_dispatch [label="Handoff To Dispatcher", fillcolor="#fde68a"];
+                op_cli_runtime_module [label="Enter Command Module", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1357,6 +1400,25 @@ digraph DeveNoteArchitecture {
             app_render_large_search_release [label="search::release_after_ready", fillcolor="#bfdbfe"];
         }
 
+        subgraph cluster_app_cli_control_detail {
+            label="CLI control detail interfaces [12_commands]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#3b82f6";
+
+            app_cli_parse_argv [label="Args::parse argv", fillcolor="#bfdbfe"];
+            app_cli_parse_subcommand [label="Option<Commands> select", fillcolor="#bfdbfe"];
+            app_cli_parse_envelope [label="typed command envelope", fillcolor="#dbeafe"];
+            app_cli_help_root [label="--help root surface", fillcolor="#dbeafe"];
+            app_cli_help_command [label="<command> --help surface", fillcolor="#dbeafe"];
+            app_cli_help_render [label="clap usage render", fillcolor="#eff6ff"];
+            app_cli_guidance_none [label="dispatch::run(None)", fillcolor="#bfdbfe"];
+            app_cli_guidance_hint [label="missing command hint", fillcolor="#eff6ff"];
+            app_cli_runtime_config [label="Config::load_checked", fillcolor="#dbeafe"];
+            app_cli_runtime_dispatch [label="dispatch::run(Some(...))", fillcolor="#bfdbfe"];
+            app_cli_runtime_module [label="commands::<family>::run", fillcolor="#bfdbfe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1812,6 +1874,18 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_search_gate [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_cli_control_detail {
+            label="CLI control detail coordination [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_cli_entry [label="cli::entry", fillcolor="#f0fdf4"];
+            mod_cli_help_surface [label="cli::help-surface", fillcolor="#f0fdf4"];
+            mod_cli_no_command [label="cli::no-command", fillcolor="#f0fdf4"];
+            mod_cli_runtime_gateway [label="cli::runtime-gateway", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -2181,6 +2255,10 @@ digraph DeveNoteArchitecture {
             obj_delivery_verification [label="delivery::verification", fillcolor="#f8fafc"];
             obj_cli_command [label="cli::command", fillcolor="#f8fafc"];
             obj_cli_option [label="cli::option", fillcolor="#f8fafc"];
+            obj_cli_argv [label="cli::argv", fillcolor="#f8fafc"];
+            obj_help_surface [label="help::surface", fillcolor="#f8fafc"];
+            obj_command_selection [label="command::selection", fillcolor="#f8fafc"];
+            obj_command_handoff [label="command::handoff", fillcolor="#f8fafc"];
             obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
@@ -3143,6 +3221,37 @@ digraph DeveNoteArchitecture {
     mod_search_service_gate -> core_search_query;
     mod_proto_ws_search_gate -> core_proto_search;
 
+    op_cli_parse_argv -> app_cli_parse_argv;
+    op_cli_parse_subcommand -> app_cli_parse_subcommand;
+    op_cli_parse_envelope -> app_cli_parse_envelope;
+    op_cli_help_root -> app_cli_help_root;
+    op_cli_help_command -> app_cli_help_command;
+    op_cli_help_scan -> app_cli_help_render;
+    op_cli_guidance_none -> app_cli_guidance_none;
+    op_cli_guidance_hint -> app_cli_guidance_hint;
+    op_cli_runtime_config -> app_cli_runtime_config;
+    op_cli_runtime_dispatch -> app_cli_runtime_dispatch;
+    op_cli_runtime_module -> app_cli_runtime_module;
+
+    app_cli_parse_argv -> mod_cli_entry;
+    app_cli_parse_subcommand -> mod_cli_entry;
+    app_cli_parse_envelope -> mod_cli_entry;
+    app_cli_parse_envelope -> mod_cli_runtime_gateway;
+    app_cli_help_root -> mod_cli_help_surface;
+    app_cli_help_command -> mod_cli_help_surface;
+    app_cli_help_render -> mod_cli_help_surface;
+    app_cli_guidance_none -> mod_cli_no_command;
+    app_cli_guidance_hint -> mod_cli_no_command;
+    app_cli_runtime_config -> mod_config_runtime;
+    app_cli_runtime_dispatch -> mod_cli_runtime_gateway;
+    app_cli_runtime_module -> mod_cli_runtime_gateway;
+    app_cli_runtime_module -> mod_cli_commands;
+
+    mod_cli_entry -> core_commands;
+    mod_cli_help_surface -> core_commands;
+    mod_cli_no_command -> core_commands;
+    mod_cli_runtime_gateway -> core_commands;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -3198,6 +3307,10 @@ digraph DeveNoteArchitecture {
     core_release -> obj_delivery_verification;
     core_commands -> obj_cli_command;
     core_commands -> obj_cli_option;
+    core_commands -> obj_cli_argv;
+    core_commands -> obj_help_surface;
+    core_commands -> obj_command_selection;
+    core_commands -> obj_command_handoff;
     core_commands -> obj_vault_path;
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;
@@ -3805,6 +3918,25 @@ digraph DeveNoteArchitecture {
     user_render_large_doc_search_gate_spine -> op_render_large_search_open [style=dashed, color="#d97706", constraint=false];
     op_render_large_search_open -> op_render_large_search_block [style=dashed, color="#d97706", constraint=false];
     op_render_large_search_block -> op_render_large_search_release [style=dashed, color="#d97706", constraint=false];
+
+    user_cli_parse_spine [label="CLI parse command flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_parse_spine -> op_cli_parse_argv [style=dashed, color="#f59e0b"];
+    op_cli_parse_argv -> op_cli_parse_subcommand [style=dashed, color="#f59e0b"];
+    op_cli_parse_subcommand -> op_cli_parse_envelope [style=dashed, color="#f59e0b"];
+
+    user_cli_help_surface_spine [label="CLI help surface flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_help_surface_spine -> op_cli_help_root [style=dashed, color="#f59e0b"];
+    op_cli_help_root -> op_cli_help_command [style=dashed, color="#f59e0b"];
+    op_cli_help_command -> op_cli_help_scan [style=dashed, color="#f59e0b"];
+
+    user_cli_no_command_spine [label="CLI empty-command guidance flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_no_command_spine -> op_cli_guidance_none [style=dashed, color="#f59e0b"];
+    op_cli_guidance_none -> op_cli_guidance_hint [style=dashed, color="#f59e0b"];
+
+    user_cli_runtime_handoff_spine [label="CLI runtime handoff flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_runtime_handoff_spine -> op_cli_runtime_config [style=dashed, color="#f59e0b"];
+    op_cli_runtime_config -> op_cli_runtime_dispatch [style=dashed, color="#f59e0b"];
+    op_cli_runtime_dispatch -> op_cli_runtime_module [style=dashed, color="#f59e0b"];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers
