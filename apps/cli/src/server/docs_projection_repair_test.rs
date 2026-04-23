@@ -1,10 +1,13 @@
-use super::handlers::docs::{handle_copy_doc, handle_create_doc, handle_rename_doc};
+use super::handlers::docs::{
+    handle_copy_doc, handle_create_doc, handle_move_doc, handle_rename_doc,
+};
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -132,5 +135,37 @@ async fn create_rejects_existing_tracked_path_without_projection() -> anyhow::Re
     let original = state.repo.get_docid("notes/a.md")?;
     handle_create_doc(&state, &ch, &mut session, "notes/a.md".into()).await;
     assert_eq!(state.repo.get_docid("notes/a.md")?, original);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn move_rejects_same_source_and_destination() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    seed_file(&state, "notes/a.md", "hello")?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(32);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    activate_local_repo(&mut session, state.repo.as_ref(), repo_id);
+
+    handle_move_doc(
+        &state,
+        &ch,
+        &mut session,
+        "notes/a.md".into(),
+        "notes/a.md".into(),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(
+                error.detail.as_deref(),
+                Some("Destination must differ from source")
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(state.repo.get_docid("notes/a.md")?.is_some());
     Ok(())
 }

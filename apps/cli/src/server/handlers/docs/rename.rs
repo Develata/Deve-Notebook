@@ -65,7 +65,7 @@ pub async fn handle_rename_doc(
     }
 
     if src.repo_path == dst_name {
-        tracing::info!("重命名忽略: 路径未变化: {}", src.repo_path);
+        errors::request_failed_scoped(ch, "Destination must differ from source", scope_nonce);
         return;
     }
 
