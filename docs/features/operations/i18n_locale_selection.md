@@ -46,4 +46,5 @@
 ## Notes
 
 - Locale choice is presentation state; it must not mutate ledger authority.
+- 来自 settings 与 command palette 的共享触发层已单独建模在 `locale_surface_switch.md`。
 - Main objects: `locale::selection`, `i18n::catalog`, `ui::preference`.

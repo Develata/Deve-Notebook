@@ -8,7 +8,8 @@
 [`settings_surface_open.md`](./operations/settings_surface_open.md),
 [`settings_value_mutation.md`](./operations/settings_value_mutation.md),
 [`settings_persistence_apply.md`](./operations/settings_persistence_apply.md),
-[`settings_feedback_render.md`](./operations/settings_feedback_render.md)
+[`settings_feedback_render.md`](./operations/settings_feedback_render.md),
+[`locale_surface_switch.md`](./operations/locale_surface_switch.md)
 
 ## 功能目标
 

@@ -1,0 +1,5 @@
+    user_locale_surface_switch_spine [label="locale surface switch flow", shape=plaintext, fontcolor="#92400e"];
+    user_locale_surface_switch_spine -> op_locale_command_toggle [style=dashed, color="#f59e0b"];
+    op_locale_command_toggle -> op_locale_settings_select [style=dashed, color="#f59e0b"];
+    op_locale_settings_select -> op_locale_apply [style=dashed, color="#f59e0b"];
+    op_locale_apply -> op_locale_rerender [style=dashed, color="#f59e0b"];

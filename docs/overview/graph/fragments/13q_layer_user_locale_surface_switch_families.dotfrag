@@ -1,0 +1,11 @@
+            subgraph cluster_user_locale_surface_switch {
+                label="locale surface switch [11_i18n + 12_commands + 13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_locale_command_toggle [label="Invoke Locale Toggle From Command Surface", fillcolor="#fde68a"];
+                op_locale_settings_select [label="Select Locale From Settings", fillcolor="#fde68a"];
+                op_locale_apply [label="Apply Locale Context", fillcolor="#fde68a"];
+                op_locale_rerender [label="Observe Localized Rerender", fillcolor="#fef9c3"];
+            }

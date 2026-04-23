@@ -1,0 +1,11 @@
+        subgraph cluster_app_locale_surface_switch {
+            label="locale surface switch interfaces [11_i18n + 12_commands + 13_settings]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_locale_command_toggle [label="command_palette::toggle_language", fillcolor="#bfdbfe"];
+            app_locale_settings_select [label="settings::locale_select", fillcolor="#bfdbfe"];
+            app_locale_apply [label="locale::set_context", fillcolor="#bfdbfe"];
+            app_locale_render [label="i18n::rerender_text", fillcolor="#eff6ff"];
+        }

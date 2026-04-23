@@ -26,6 +26,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.i18n.error-mapping` | [`i18n_error_mapping.md`](./operations/i18n_error_mapping.md) | `I18N-004`, `I18N-006`, `AUTH-002` |
 | `flow.i18n.hardcoded-audit` | [`i18n_hardcoded_audit.md`](./operations/i18n_hardcoded_audit.md) | `I18N-001`, `I18N-003` |
 | `flow.i18n.locale-error` | [`i18n_locale_error.md`](./operations/i18n_locale_error.md) | `I18N-001`, `I18N-002`, `I18N-003`, `I18N-004`, `I18N-005`, `I18N-006` |
+| `flow.i18n.locale-surface-switch` | [`locale_surface_switch.md`](./operations/locale_surface_switch.md) | `I18N-002`, `SET-005`, `CMD-002` |
 | `flow.i18n.locale-selection` | [`i18n_locale_selection.md`](./operations/i18n_locale_selection.md) | `I18N-002`, `I18N-003`, `SET-005` |
 | `flow.i18n.localized-formatting` | [`i18n_localized_formatting.md`](./operations/i18n_localized_formatting.md) | `I18N-005`, `TECH-001` |
 | `flow.net.key-exchange` | [`net_key_exchange.md`](./operations/net_key_exchange.md) | `NET-FEAT-01`, `NET-FEAT-03` |

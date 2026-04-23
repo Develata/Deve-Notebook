@@ -116,4 +116,5 @@
 - `Command Palette` 是一个 UI 容器，不是 user operation。
 - `execute` 是分叉点；真正进入核心模块的不是 palette，而是被选中的具体命令。
 - 共享的 provider 选择与 `SearchAction` 路由已单独建模在 `command_surface_mode_routing.md` 与 `command_surface_action_routing.md`。
+- `lang` 命令到 locale context 的共享切换骨架已单独建模在 `locale_surface_switch.md`。
 - 当前代码与文档对打开快捷键存在差异，这应由 overview diff 单独标记，不应影响 operation 粒度定义。

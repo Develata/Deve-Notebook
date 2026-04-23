@@ -1,0 +1,5 @@
+(group :id grp.app.locale-surface-switch :layer application :label "locale surface switch" :members (app.locale.switch.command-toggle app.locale.switch.settings-select app.locale.switch.apply-context app.locale.switch.render-text))
+(application :id app.locale.switch.command-toggle :label "command_palette::toggle_language" :kind ui-callback :code "apps/web/src/components/command_palette/registry.rs" :calls (mod_command_registry mod_i18n_locale_context))
+(application :id app.locale.switch.settings-select :label "settings::locale_select" :kind ui-callback :code "apps/web/src/components/settings.rs" :calls (mod_settings_ui mod_i18n_locale_context))
+(application :id app.locale.switch.apply-context :label "locale::set_context" :kind locale-effect :code "apps/web/src/i18n/mod.rs | apps/web/src/components/settings.rs | apps/web/src/components/command_palette/registry.rs" :calls (mod_i18n_locale_context mod_i18n_catalog))
+(application :id app.locale.switch.render-text :label "i18n::rerender_text" :kind ui-render :code "apps/web/src/i18n/ | apps/web/src/components/" :calls (mod_i18n_catalog mod_settings_feedback))

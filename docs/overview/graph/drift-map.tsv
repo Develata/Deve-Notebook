@@ -60,6 +60,7 @@ rendering math source projection	render_math_source
 rendering mermaid source projection	render_mermaid_source
 rendering outline navigation	render_outline
 i18n locale / error	i18n_locale_error
+locale surface switch	locale_surface_switch
 i18n locale selection	i18n_locale
 i18n error mapping	i18n_error
 i18n localized formatting	i18n_format

@@ -1,0 +1,6 @@
+        subgraph cluster_mod_locale_surface_switch {
+            label="locale surface switch coordination [11_i18n + 12_commands + 13_settings]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+        }

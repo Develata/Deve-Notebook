@@ -1,0 +1,2 @@
+(group :id grp.mod.locale-surface-switch :layer module :label "locale surface switch" :members (mod_command_registry mod_settings_ui mod_i18n_locale_context mod_i18n_catalog mod_settings_feedback))
+(group :id grp.core.locale-surface-switch :layer core :label "locale surface switch" :members (core.commands core.settings core.i18n))

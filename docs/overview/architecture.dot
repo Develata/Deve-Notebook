@@ -872,6 +872,18 @@ digraph DeveNoteArchitecture {
                 op_command_surface_handoff [label="Enter Routed Target Flow", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_locale_surface_switch {
+                label="locale surface switch [11_i18n + 12_commands + 13_settings]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_locale_command_toggle [label="Invoke Locale Toggle From Command Surface", fillcolor="#fde68a"];
+                op_locale_settings_select [label="Select Locale From Settings", fillcolor="#fde68a"];
+                op_locale_apply [label="Apply Locale Context", fillcolor="#fde68a"];
+                op_locale_rerender [label="Observe Localized Rerender", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1455,6 +1467,18 @@ digraph DeveNoteArchitecture {
             app_command_surface_handoff [label="SearchAction -> downstream flow", fillcolor="#dbeafe"];
         }
 
+        subgraph cluster_app_locale_surface_switch {
+            label="locale surface switch interfaces [11_i18n + 12_commands + 13_settings]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_locale_command_toggle [label="command_palette::toggle_language", fillcolor="#bfdbfe"];
+            app_locale_settings_select [label="settings::locale_select", fillcolor="#bfdbfe"];
+            app_locale_apply [label="locale::set_context", fillcolor="#bfdbfe"];
+            app_locale_render [label="i18n::rerender_text", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1931,6 +1955,13 @@ digraph DeveNoteArchitecture {
             mod_command_registry [label="command::registry", fillcolor="#f0fdf4"];
             mod_search_mode_router [label="search::mode_router", fillcolor="#f0fdf4"];
             mod_search_action_router [label="search::action_router", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_locale_surface_switch {
+            label="locale surface switch coordination [11_i18n + 12_commands + 13_settings]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
         }
 
         subgraph cluster_mod_targets {
@@ -3328,6 +3359,26 @@ digraph DeveNoteArchitecture {
     mod_search_mode_router -> core_commands;
     mod_search_action_router -> core_commands;
 
+    op_locale_command_toggle -> app_locale_command_toggle;
+    op_locale_settings_select -> app_locale_settings_select;
+    op_locale_apply -> app_locale_apply;
+    op_locale_rerender -> app_locale_render;
+
+    app_locale_command_toggle -> mod_command_registry;
+    app_locale_command_toggle -> mod_i18n_locale_context;
+    app_locale_settings_select -> mod_settings_ui;
+    app_locale_settings_select -> mod_i18n_locale_context;
+    app_locale_apply -> mod_i18n_locale_context;
+    app_locale_apply -> mod_i18n_catalog;
+    app_locale_render -> mod_i18n_catalog;
+    app_locale_render -> mod_settings_feedback;
+
+    mod_command_registry -> core_commands;
+    mod_settings_ui -> core_settings;
+    mod_i18n_locale_context -> core_i18n;
+    mod_i18n_catalog -> core_i18n;
+    mod_settings_feedback -> core_settings;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -4026,6 +4077,12 @@ digraph DeveNoteArchitecture {
     user_command_surface_action_spine -> op_command_surface_select [style=dashed, color="#f59e0b"];
     op_command_surface_select -> op_command_surface_dispatch [style=dashed, color="#f59e0b"];
     op_command_surface_dispatch -> op_command_surface_handoff [style=dashed, color="#f59e0b"];
+
+    user_locale_surface_switch_spine [label="locale surface switch flow", shape=plaintext, fontcolor="#92400e"];
+    user_locale_surface_switch_spine -> op_locale_command_toggle [style=dashed, color="#f59e0b"];
+    op_locale_command_toggle -> op_locale_settings_select [style=dashed, color="#f59e0b"];
+    op_locale_settings_select -> op_locale_apply [style=dashed, color="#f59e0b"];
+    op_locale_apply -> op_locale_rerender [style=dashed, color="#f59e0b"];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

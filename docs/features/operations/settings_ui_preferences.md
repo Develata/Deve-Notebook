@@ -46,4 +46,5 @@
 ## Notes
 
 - UI preferences must not directly mutate ledger authority state.
+- Settings 中的语言切换与 command palette 中的 `lang` 命令共用一条跨表面 locale 切换链，见 `locale_surface_switch.md`。
 - Main objects: `ui::preference`, `locale::selection`, `ai::backend-capability`.
