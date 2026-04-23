@@ -63,5 +63,5 @@ pub(super) fn build_misc_callbacks(ws: &WsService, signals: &CoreSignals) -> Mis
 }
 
 pub(super) fn build_switch_callbacks(ws: &WsService, signals: &CoreSignals) -> SwitchCallbacks {
-    create_switch_callbacks(ws, scope::switch_scope(signals))
+    create_switch_callbacks(ws, scope::switch_scope(signals), signals.set_sync_banner)
 }

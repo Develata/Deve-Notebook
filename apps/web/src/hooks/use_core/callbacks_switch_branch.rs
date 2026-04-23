@@ -6,15 +6,16 @@ use leptos::prelude::*;
 use super::super::navigation::{NavigationTarget, guard_navigation};
 use super::super::switch_nonce::next_switch_nonce_after;
 use super::super::types::{PendingBranchTarget, SwitchScopeSignals};
-use super::{can_start_scope_switch, prepare_scope_switch};
+use super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
 
 pub(super) fn build_switch_branch_callback(
     ws: WsService,
     signals: SwitchScopeSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<Option<String>> {
     Callback::new(move |peer_id: Option<String>| {
         if !can_start_scope_switch(signals) {
-            leptos::logging::warn!("忽略分支切换: 仍有 scope switch 挂起");
+            show_switch_block(set_sync_banner, "switch branch", "scope switching");
             return;
         }
         let same_branch = signals

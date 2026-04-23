@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::write_gate_banner::cannot_action;
 use leptos::prelude::*;
 
 #[path = "callbacks_switch_branch.rs"]
@@ -16,9 +17,24 @@ pub struct SwitchCallbacks {
     pub on_switch_repo: Callback<String>,
 }
 
-pub fn create_switch_callbacks(ws: &WsService, signals: SwitchScopeSignals) -> SwitchCallbacks {
-    let on_switch_branch = branch::build_switch_branch_callback(ws.clone(), signals);
-    let on_switch_repo = repo::build_switch_repo_callback(ws.clone(), signals);
+pub(super) fn show_switch_block(
+    set_sync_banner: WriteSignal<Option<String>>,
+    action: &str,
+    reason: &str,
+) {
+    let message = cannot_action(action, reason);
+    leptos::logging::warn!("{}", message);
+    set_sync_banner.set(Some(message));
+}
+
+pub fn create_switch_callbacks(
+    ws: &WsService,
+    signals: SwitchScopeSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
+) -> SwitchCallbacks {
+    let on_switch_branch =
+        branch::build_switch_branch_callback(ws.clone(), signals, set_sync_banner);
+    let on_switch_repo = repo::build_switch_repo_callback(ws.clone(), signals, set_sync_banner);
 
     SwitchCallbacks {
         on_switch_branch,

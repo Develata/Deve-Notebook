@@ -5,15 +5,16 @@ use leptos::prelude::*;
 use super::super::navigation::{NavigationTarget, guard_navigation};
 use super::super::switch_nonce::next_switch_nonce_after;
 use super::super::types::SwitchScopeSignals;
-use super::{can_start_scope_switch, prepare_scope_switch};
+use super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
 
 pub(super) fn build_switch_repo_callback(
     ws: WsService,
     signals: SwitchScopeSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<String> {
     Callback::new(move |name: String| {
         if !can_start_scope_switch(signals) {
-            leptos::logging::warn!("忽略仓库切换: 仍有 scope switch 挂起");
+            show_switch_block(set_sync_banner, "switch repo", "scope switching");
             return;
         }
         if signals.current_repo.get_untracked().as_deref() == Some(name.as_str()) {
