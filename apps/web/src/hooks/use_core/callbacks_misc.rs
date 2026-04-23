@@ -1,5 +1,6 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::write_gate_banner::cannot_action;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
@@ -26,6 +27,7 @@ pub fn create_misc_callbacks(
     load_state: ReadSignal<String>,
     search_scope: SearchScopeSignals,
     request_signals: MiscRequestSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> MiscCallbacks {
     let on_stats = Callback::new(move |s: crate::editor::EditorStats| set_stats.set(s));
     let ws_plugin = ws.clone();
@@ -52,13 +54,13 @@ pub fn create_misc_callbacks(
     let ws_search = ws.clone();
     let on_search = Callback::new(move |query: String| {
         if load_state.get_untracked() != "ready" {
-            leptos::logging::warn!("Search disabled while loading");
+            show_search_block(set_sync_banner, "snapshot loading");
             return;
         }
         if search_scope.pending_branch_switch.get_untracked().is_some()
             || search_scope.pending_repo_switch.get_untracked().is_some()
         {
-            leptos::logging::warn!("Search disabled while scope switch is pending");
+            show_search_block(set_sync_banner, "scope switching");
             return;
         }
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -77,4 +79,10 @@ pub fn create_misc_callbacks(
         on_plugin_call,
         on_search,
     }
+}
+
+fn show_search_block(set_sync_banner: WriteSignal<Option<String>>, reason: &str) {
+    let message = cannot_action("search", reason);
+    leptos::logging::warn!("{}", message);
+    set_sync_banner.set(Some(message));
 }

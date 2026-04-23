@@ -58,6 +58,7 @@ pub(super) fn build_misc_callbacks(ws: &WsService, signals: &CoreSignals) -> Mis
         signals.load_state,
         scope::search_scope(signals),
         scope::misc_requests(signals),
+        signals.set_sync_banner,
     )
 }
 
