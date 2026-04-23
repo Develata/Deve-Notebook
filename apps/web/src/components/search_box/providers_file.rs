@@ -1,6 +1,10 @@
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;
 
+#[cfg(test)]
+#[path = "providers_file/tests.rs"]
+mod tests;
+
 pub struct FileProvider {
     docs: Vec<(DocId, String)>,
 }
@@ -58,13 +62,14 @@ impl SearchProvider for FileProvider {
         results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
         results.truncate(20);
 
-        if !query.is_empty() && !results.iter().any(|r| r.title == query) {
+        let create_query = query.trim();
+        if !create_query.is_empty() && !results.iter().any(|r| r.title == create_query) {
             results.push(SearchResult {
                 id: "create-doc".to_string(),
-                title: format!("Create/Open '{}'", query),
+                title: format!("Create/Open '{}'", create_query),
                 detail: Some("New File".to_string()),
                 score: 0.1,
-                action: SearchAction::CreateDoc(query.to_string()),
+                action: SearchAction::CreateDoc(create_query.to_string()),
             });
         }
 

@@ -32,6 +32,10 @@ pub(crate) fn execute_action(
             if !repo_write_allowed_for_core(core) {
                 return;
             }
+            let path = path.trim();
+            if path.is_empty() {
+                return;
+            }
             core.on_doc_create.run(file_ops::normalize_doc_path(path));
             set_show.set(false);
         }
