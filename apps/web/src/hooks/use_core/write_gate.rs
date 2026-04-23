@@ -87,25 +87,6 @@ pub(crate) fn repo_source_control_read_block_tracked(
     )
 }
 
-pub(crate) fn repo_write_allowed_untracked(ws: &WsService, signals: RepoWriteSignals) -> bool {
-    repo_write_block_untracked(ws, signals).is_none()
-}
-
-pub(crate) fn repo_write_allowed_for_core(core: &CoreState) -> bool {
-    repo_write_allowed_untracked(
-        &core.ws,
-        RepoWriteSignals {
-            load_state: core.load_state,
-            is_spectator: core.is_spectator,
-            handshake_ready: core.handshake_ready,
-            current_repo_id: core.current_repo_id,
-            active_branch: core.active_branch,
-            pending_branch_switch: core.pending_branch_switch,
-            pending_repo_switch: core.pending_repo_switch,
-        },
-    )
-}
-
 pub(crate) fn repo_write_allowed_for_core_tracked(core: &CoreState) -> bool {
     repo_write_block_tracked(
         &core.ws,

@@ -9,6 +9,7 @@ use super::super::types::ChatMessage;
 pub(super) struct RuntimeStateSection {
     pub status_text: Signal<String>,
     pub sync_banner: Signal<Option<String>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
     pub stats: ReadSignal<EditorStats>,
     pub on_stats: Callback<EditorStats>,
     pub plugin_last_response: ReadSignal<PluginResponse>,
@@ -38,6 +39,7 @@ pub(super) fn build_runtime_section(
     RuntimeStateSection {
         status_text,
         sync_banner: signals.sync_banner.into(),
+        set_sync_banner: signals.set_sync_banner,
         stats: signals.stats,
         on_stats: misc.on_stats,
         plugin_last_response: signals.plugin_response,

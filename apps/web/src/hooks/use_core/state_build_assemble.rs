@@ -22,6 +22,7 @@ pub(super) fn assemble_core_state(
         set_current_doc: doc.set_current_doc,
         status_text: runtime.status_text,
         sync_banner: runtime.sync_banner,
+        set_sync_banner: runtime.set_sync_banner,
         stats: runtime.stats,
         peers: sync.peers,
         handshake_ready: sync.handshake_ready,

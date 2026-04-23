@@ -2,6 +2,7 @@ mod actions;
 mod execute;
 mod providers;
 mod selection;
+mod write_gate_feedback;
 
 pub use actions::build_keydown_handler;
 pub(crate) use execute::execute_action;

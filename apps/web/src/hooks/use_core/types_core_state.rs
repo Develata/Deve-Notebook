@@ -21,6 +21,7 @@ pub struct CoreState {
     pub set_current_doc: WriteSignal<Option<DocId>>,
     pub status_text: Signal<String>,
     pub sync_banner: Signal<Option<String>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
     pub stats: ReadSignal<EditorStats>,
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     pub handshake_ready: ReadSignal<bool>,
