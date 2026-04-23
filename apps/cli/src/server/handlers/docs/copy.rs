@@ -18,6 +18,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
+use deve_core::protocol::doc_file_op_errors as path_err;
 use prepare::prepare_copy_paths;
 use register::CopyRegisterCtx;
 use std::sync::Arc;
@@ -37,7 +38,7 @@ pub async fn handle_copy_doc(
     let src_path = src_path.trim();
     let dest_path = dest_path.trim();
     if src_path.is_empty() || dest_path.is_empty() {
-        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
     }
     if !validate_file_path(src_path, ch, scope_nonce) {

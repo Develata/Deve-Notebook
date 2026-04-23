@@ -10,6 +10,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
+use deve_core::protocol::doc_file_op_errors as path_err;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -29,7 +30,7 @@ pub async fn handle_delete_doc(
 
     let path = path.trim();
     if path.is_empty() {
-        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
     }
     if !validate_file_path(path, ch, scope_nonce) {

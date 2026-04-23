@@ -9,6 +9,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
+use deve_core::protocol::doc_file_op_errors as path_err;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -35,7 +36,7 @@ pub async fn handle_create_doc(
     };
 
     let Some(filename) = normalize_name(name) else {
-        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
     };
 

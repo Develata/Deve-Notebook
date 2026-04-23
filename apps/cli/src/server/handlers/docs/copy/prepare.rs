@@ -5,8 +5,8 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path};
 use deve_core::models::{DocId, NodeKind};
-use std::path::PathBuf;
-use std::sync::Arc;
+use deve_core::protocol::doc_file_op_errors as path_err;
+use std::{path::PathBuf, sync::Arc};
 pub(super) struct CopyPaths {
     pub src: PathBuf,
     pub dst: PathBuf,
@@ -40,7 +40,7 @@ pub(super) fn prepare_copy_paths(
     };
     let dst_repo_path = normalize_copy_dest_path(src.kind, dest_path);
     if src.repo_path == dst_repo_path {
-        errors::request_failed_scoped(ch, "Destination must differ from source", scope_nonce);
+        errors::request_failed_scoped(ch, path_err::DESTINATION_MUST_DIFFER, scope_nonce);
         return None;
     }
     let dst = match local_repo_path(state, scope, &dst_repo_path) {

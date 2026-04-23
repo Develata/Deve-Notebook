@@ -11,6 +11,7 @@ use crate::server::channel::DualChannel;
 use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
+use deve_core::protocol::doc_file_op_errors as path_err;
 use std::sync::Arc;
 
 pub async fn handle_rename_doc(
@@ -28,7 +29,7 @@ pub async fn handle_rename_doc(
     let old_path = old_path.trim();
     let new_path = new_path.trim();
     if old_path.is_empty() || new_path.is_empty() {
-        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
     }
     if !validate_file_path(old_path, ch, scope_nonce) {
@@ -68,7 +69,7 @@ pub async fn handle_rename_doc(
     }
 
     if src.repo_path == dst_name {
-        errors::request_failed_scoped(ch, "Destination must differ from source", scope_nonce);
+        errors::request_failed_scoped(ch, path_err::DESTINATION_MUST_DIFFER, scope_nonce);
         return;
     }
 

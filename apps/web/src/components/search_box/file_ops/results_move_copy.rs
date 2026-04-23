@@ -1,8 +1,9 @@
 use crate::components::search_box::types::{FileOpKind, SearchAction, SearchResult};
 use deve_core::models::DocId;
+use deve_core::protocol::doc_file_op_errors as path_err;
 use std::collections::HashSet;
 
-use super::super::parser::{is_ready_for_dst, ParsedArgs};
+use super::super::parser::{ParsedArgs, is_ready_for_dst};
 use super::super::path_utils::{collect_dirs, filter_dirs, validate_doc_shell_path};
 use super::results_common::{build_execute_result, build_insert_query, group_header};
 
@@ -16,23 +17,14 @@ pub(super) fn build_move_copy_results(
     docs: &[(DocId, String)],
     recent_dirs: &[String],
 ) -> Vec<SearchResult> {
-    if parsed.args.is_empty() {
-        return vec![super::error_result("Source path required".to_string())];
+    if parsed.args.first().map_or(true, |s| s.trim().is_empty()) {
+        return vec![source_required_error()];
     }
     if parsed.args.len() > 2 {
         return vec![super::error_result(
             "Paths with spaces must be quoted".to_string(),
         )];
     }
-    if parsed
-        .args
-        .first()
-        .map(|s| s.trim().is_empty())
-        .unwrap_or(false)
-    {
-        return vec![super::error_result("Source path required".to_string())];
-    }
-
     if let Some(err) = validate_doc_shell_path(&parsed.args[0]) {
         return vec![super::error_result(err.to_string())];
     }
@@ -51,17 +43,19 @@ pub(super) fn build_move_copy_results(
     let src = parsed.args.first().cloned().unwrap_or_default();
     let dst_prefix = parsed.args.get(1).cloned().unwrap_or_default();
     let dirs = collect_dirs(docs);
-    let recent_dirs = if kind == FileOpKind::Move {
-        recent_dirs
-    } else {
-        &[]
-    };
+    let recent_dirs = (kind == FileOpKind::Move)
+        .then_some(recent_dirs)
+        .unwrap_or(&[]);
     build_dir_group_results(&kind, &src, &dst_prefix, recent_dirs, &dirs)
+}
+
+fn source_required_error() -> SearchResult {
+    super::error_result(path_err::SOURCE_PATH_REQUIRED.to_string())
 }
 
 fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str) -> SearchResult {
     let Some(result) = build_execute_result(kind, src, dst) else {
-        return super::error_result("Destination path required".to_string());
+        return super::error_result(path_err::DESTINATION_PATH_REQUIRED.to_string());
     };
     if let SearchAction::FileOp(action) = &result.action {
         if let Some(err) = validate_doc_shell_path(&action.src)
@@ -70,7 +64,7 @@ fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str) -> SearchResu
             return super::error_result(err.to_string());
         }
         if action.dst.as_ref() == Some(&action.src) {
-            return super::error_result("Destination must differ from source".to_string());
+            return super::error_result(path_err::DESTINATION_MUST_DIFFER.to_string());
         }
     }
     result
@@ -120,8 +114,8 @@ fn build_dir_results(kind: &FileOpKind, src: &str, dirs: Vec<(String, f32)>) -> 
 }
 
 fn is_same_target(kind: &FileOpKind, src: &str, dst: &str) -> bool {
-    match build_execute_result(kind.clone(), src, dst).map(|result| result.action) {
-        Some(SearchAction::FileOp(action)) => action.dst.as_ref() == Some(&action.src),
-        _ => false,
-    }
+    matches!(
+        build_execute_result(kind.clone(), src, dst).map(|result| result.action),
+        Some(SearchAction::FileOp(action)) if action.dst.as_ref() == Some(&action.src)
+    )
 }

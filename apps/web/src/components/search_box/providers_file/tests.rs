@@ -10,9 +10,11 @@ fn provider() -> FileProvider {
 fn file_provider_does_not_offer_create_for_blank_query() {
     let results = provider().search("   ");
 
-    assert!(results
-        .iter()
-        .all(|result| !matches!(result.action, SearchAction::CreateDoc(_))));
+    assert!(
+        results
+            .iter()
+            .all(|result| !matches!(result.action, SearchAction::CreateDoc(_)))
+    );
 }
 
 #[test]
@@ -34,16 +36,20 @@ fn file_provider_trims_create_candidate_query() {
 fn file_provider_does_not_offer_create_for_trimmed_existing_doc() {
     let results = provider().search("  notes/existing.md  ");
 
-    assert!(results
-        .iter()
-        .all(|result| !matches!(result.action, SearchAction::CreateDoc(_))));
+    assert!(
+        results
+            .iter()
+            .all(|result| !matches!(result.action, SearchAction::CreateDoc(_)))
+    );
 }
 
 #[test]
 fn file_provider_does_not_offer_create_for_reserved_path() {
     let results = provider().search(".notegit/config");
 
-    assert!(results
-        .iter()
-        .all(|result| !matches!(result.action, SearchAction::CreateDoc(_))));
+    assert!(
+        results
+            .iter()
+            .all(|result| !matches!(result.action, SearchAction::CreateDoc(_)))
+    );
 }

@@ -93,10 +93,14 @@ fn move_directory_suggestions_skip_noop_target() {
             _ => None,
         })
         .collect();
-    assert!(queries
-        .iter()
-        .all(|query| query != ">mv notes/today.md notes/"));
-    assert!(queries
-        .iter()
-        .any(|query| query == ">mv notes/today.md archive/"));
+    assert!(
+        queries
+            .iter()
+            .all(|query| query != ">mv notes/today.md notes/")
+    );
+    assert!(
+        queries
+            .iter()
+            .any(|query| query == ">mv notes/today.md archive/")
+    );
 }

@@ -1,4 +1,5 @@
 use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction, SearchResult};
+use deve_core::protocol::doc_file_op_errors as path_err;
 
 use super::super::path_utils::{normalize_doc_path, validate_doc_shell_path};
 
@@ -16,7 +17,7 @@ pub(super) fn build_remove_results(args: &[String]) -> Vec<SearchResult> {
         )];
     }
     if args[0].trim().is_empty() {
-        return vec![super::error_result("Path required".to_string())];
+        return vec![super::error_result(path_err::PATH_REQUIRED.to_string())];
     }
 
     let path = normalize_doc_path(&args[0]);

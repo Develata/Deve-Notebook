@@ -18,6 +18,7 @@
 pub mod auth;
 pub mod client;
 pub mod confirmed_op;
+pub mod doc_file_op_errors;
 pub mod error;
 pub mod sc_path_target;
 pub mod server;

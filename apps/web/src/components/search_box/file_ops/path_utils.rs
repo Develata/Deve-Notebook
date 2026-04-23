@@ -2,6 +2,7 @@
 //! 路径规范化、目录收集与模糊过滤
 
 use deve_core::models::DocId;
+use deve_core::protocol::doc_file_op_errors as path_err;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -22,10 +23,10 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
     let normalized = raw.replace('\\', "/");
     let path = normalized.trim();
     if path.is_empty() {
-        return Some("Invalid empty path");
+        return Some(path_err::INVALID_EMPTY_PATH);
     }
     if path.contains("..") || path.starts_with('/') {
-        return Some("Invalid path");
+        return Some(path_err::INVALID_PATH);
     }
     let trimmed = path.trim_end_matches('/');
     let segments: Vec<_> = trimmed
@@ -33,19 +34,19 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
         .filter(|segment| !segment.is_empty())
         .collect();
     if segments.is_empty() {
-        return Some("Invalid empty path");
+        return Some(path_err::INVALID_EMPTY_PATH);
     }
     if segments.len() > MAX_DEPTH {
-        return Some("Directory depth limit exceeded");
+        return Some(path_err::DEPTH_LIMIT_EXCEEDED);
     }
     let leaf_is_dir = path.ends_with('/');
     for (index, segment) in segments.iter().enumerate() {
         if *segment == ".notegit" {
-            return Some("Reserved internal path");
+            return Some(path_err::RESERVED_INTERNAL_PATH);
         }
         let is_leaf = index + 1 == segments.len();
         if segment.ends_with(".md") && (!is_leaf || leaf_is_dir) {
-            return Some("Markdown directory is forbidden");
+            return Some(path_err::MARKDOWN_DIRECTORY_FORBIDDEN);
         }
     }
     None
