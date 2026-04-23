@@ -1,0 +1,19 @@
+    op_repo_fileop_enter -> app_repo_fileop_enter;
+    op_repo_fileop_parse -> app_repo_fileop_parse;
+    op_repo_fileop_prefill -> app_repo_fileop_prefill;
+    op_repo_fileop_action -> app_repo_fileop_action;
+
+    app_repo_fileop_enter -> mod_fileop_shell;
+    app_repo_fileop_enter -> mod_fileop_parser;
+    app_repo_fileop_parse -> mod_fileop_parser;
+    app_repo_fileop_parse -> mod_fileop_path_utils;
+    app_repo_fileop_prefill -> mod_fileop_results;
+    app_repo_fileop_prefill -> mod_fileop_path_utils;
+    app_repo_fileop_action -> mod_fileop_results;
+    app_repo_fileop_action -> mod_fileop_path_utils;
+    app_repo_fileop_action -> mod_search_action_router;
+
+    mod_fileop_shell -> core_commands;
+    mod_fileop_parser -> core_commands;
+    mod_fileop_path_utils -> core_commands;
+    mod_fileop_results -> core_commands;

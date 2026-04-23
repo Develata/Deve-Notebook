@@ -17,6 +17,7 @@
 - 该示例将打开文档拆为打开 Quick Open、输入查询、选择文档、请求 OpenDoc、接收正文五个 user operations。
 - 仓库切换流示例见 `docs/features/operations/repo_switch.md`。
 - 分支切换流示例见 `docs/features/operations/repo_branch_switch.md`。
+- SearchBox 文件操作共享壳层见 `docs/features/operations/repo_file_op_shell_routing.md`。
 - 文档结构写操作流示例见 `docs/features/operations/repo_file_operations.md`。
 
 ## 功能项

@@ -13,6 +13,7 @@
 (object :id obj.command.registry :label "command::registry" :kind routing-catalog :code "apps/web/src/components/command_palette/registry.rs")
 (object :id obj.search.mode :label "search::mode" :kind routing-state :code "apps/web/src/components/search_box/logic/providers.rs")
 (object :id obj.search.action :label "search::action" :kind routing-action :code "apps/web/src/components/search_box/types.rs | apps/web/src/components/search_box/logic/execute.rs")
+(object :id obj.fileop.intent :label "fileop::intent" :kind routing-intent :code "apps/web/src/components/search_box/types.rs::{FileOpAction,InsertQuery} | apps/web/src/components/search_box/file_ops/")
 (object :id obj.vault.path :label "vault::path" :kind filesystem-scope :code "deve_core::config::Config")
 (object :id obj.export.artifact :label "export::artifact" :kind file-artifact :code "apps/cli/src/commands/export.rs")
 (object :id obj.repair.plan :label "repair::plan" :kind recovery-plan :code "apps/cli/src/commands/repair/")

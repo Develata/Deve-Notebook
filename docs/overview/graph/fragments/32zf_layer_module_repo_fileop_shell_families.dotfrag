@@ -1,0 +1,11 @@
+        subgraph cluster_mod_repo_fileop_shell {
+            label="repo file-op shell coordination [06_repository + 12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_fileop_shell [label="file_ops::shell", fillcolor="#f0fdf4"];
+            mod_fileop_parser [label="file_ops::parser", fillcolor="#f0fdf4"];
+            mod_fileop_path_utils [label="file_ops::path_utils", fillcolor="#f0fdf4"];
+            mod_fileop_results [label="file_ops::results", fillcolor="#f0fdf4"];
+        }

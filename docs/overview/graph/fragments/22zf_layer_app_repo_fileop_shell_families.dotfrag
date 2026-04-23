@@ -1,0 +1,11 @@
+        subgraph cluster_app_repo_fileop_shell {
+            label="repo file-op shell interfaces [06_repository + 08_ui_design + 12_commands]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_repo_fileop_enter [label="file_ops::detect_file_op", fillcolor="#eff6ff"];
+            app_repo_fileop_parse [label="file_ops::parse_args", fillcolor="#bfdbfe"];
+            app_repo_fileop_prefill [label="SearchAction::InsertQuery", fillcolor="#dbeafe"];
+            app_repo_fileop_action [label="SearchAction::FileOp", fillcolor="#bfdbfe"];
+        }

@@ -6,6 +6,7 @@
 - `Domain`: `release`
 - `Related Feature Chapters`: `docs/features/15_release.md`, `docs/features/14_tech_stack.md`
 - `Related Acceptance Cases`: `REL-001`, `REL-002`, `REL-003`, `TECH-001`, `PERF-001`
+- `Summary-Only`: `yes`
 
 ## Operations
 
@@ -54,6 +55,7 @@
 
 ## Notes
 
+- This file is a summary flow. Use the split release flows as the authoritative implementation read path.
 - Current code side implements tag-driven release via `release.yml`.
 - `nightly.yml` and `speckit-sync-check.yml` are intentionally outside the current release / CI baseline.
 - Main objects: `release::tag`, `ci::workflow`, `container::image`.

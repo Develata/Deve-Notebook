@@ -6,6 +6,7 @@
 - `Domain`: `rendering`
 - `Related Feature Chapters`: `docs/features/03_rendering.md`, `docs/features/14_tech_stack.md`
 - `Related Acceptance Cases`: `RENDER-MATH-001`, `RENDER-MERMAID-001`, `RENDER-BLOCK-001`
+- `Summary-Only`: `yes`
 
 ## Operations
 
@@ -45,5 +46,6 @@
 
 ## Notes
 
+- This file is a summary flow. Use the split math / mermaid projection flows as the authoritative implementation read path.
 - Mermaid and KaTeX are visual projections over Markdown source.
 - Main objects: `doc::content`, `render::projection`, `tech::dependency`.

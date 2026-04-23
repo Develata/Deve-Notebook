@@ -884,6 +884,18 @@ digraph DeveNoteArchitecture {
                 op_locale_rerender [label="Observe Localized Rerender", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_repo_fileop_shell {
+                label="repo file-op shell routing [06_repository + 08_ui_design + 12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_repo_fileop_enter [label="Enter File Operation Command", fillcolor="#fde68a"];
+                op_repo_fileop_parse [label="Parse File Operation Query", fillcolor="#fde68a"];
+                op_repo_fileop_prefill [label="Prefill File Operation Destination", fillcolor="#fef9c3"];
+                op_repo_fileop_action [label="Build File Operation Action", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1479,6 +1491,18 @@ digraph DeveNoteArchitecture {
             app_locale_render [label="i18n::rerender_text", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_repo_fileop_shell {
+            label="repo file-op shell interfaces [06_repository + 08_ui_design + 12_commands]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_repo_fileop_enter [label="file_ops::detect_file_op", fillcolor="#eff6ff"];
+            app_repo_fileop_parse [label="file_ops::parse_args", fillcolor="#bfdbfe"];
+            app_repo_fileop_prefill [label="SearchAction::InsertQuery", fillcolor="#dbeafe"];
+            app_repo_fileop_action [label="SearchAction::FileOp", fillcolor="#bfdbfe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1964,6 +1988,18 @@ digraph DeveNoteArchitecture {
             color="#16a34a";
         }
 
+        subgraph cluster_mod_repo_fileop_shell {
+            label="repo file-op shell coordination [06_repository + 12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_fileop_shell [label="file_ops::shell", fillcolor="#f0fdf4"];
+            mod_fileop_parser [label="file_ops::parser", fillcolor="#f0fdf4"];
+            mod_fileop_path_utils [label="file_ops::path_utils", fillcolor="#f0fdf4"];
+            mod_fileop_results [label="file_ops::results", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -2340,6 +2376,7 @@ digraph DeveNoteArchitecture {
             obj_command_registry [label="command::registry", fillcolor="#f8fafc"];
             obj_search_mode [label="search::mode", fillcolor="#f8fafc"];
             obj_search_action [label="search::action", fillcolor="#f8fafc"];
+            obj_fileop_intent [label="fileop::intent", fillcolor="#f8fafc"];
             obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
@@ -3379,6 +3416,26 @@ digraph DeveNoteArchitecture {
     mod_i18n_catalog -> core_i18n;
     mod_settings_feedback -> core_settings;
 
+    op_repo_fileop_enter -> app_repo_fileop_enter;
+    op_repo_fileop_parse -> app_repo_fileop_parse;
+    op_repo_fileop_prefill -> app_repo_fileop_prefill;
+    op_repo_fileop_action -> app_repo_fileop_action;
+
+    app_repo_fileop_enter -> mod_fileop_shell;
+    app_repo_fileop_enter -> mod_fileop_parser;
+    app_repo_fileop_parse -> mod_fileop_parser;
+    app_repo_fileop_parse -> mod_fileop_path_utils;
+    app_repo_fileop_prefill -> mod_fileop_results;
+    app_repo_fileop_prefill -> mod_fileop_path_utils;
+    app_repo_fileop_action -> mod_fileop_results;
+    app_repo_fileop_action -> mod_fileop_path_utils;
+    app_repo_fileop_action -> mod_search_action_router;
+
+    mod_fileop_shell -> core_commands;
+    mod_fileop_parser -> core_commands;
+    mod_fileop_path_utils -> core_commands;
+    mod_fileop_results -> core_commands;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -3441,6 +3498,7 @@ digraph DeveNoteArchitecture {
     core_commands -> obj_command_registry;
     core_commands -> obj_search_mode;
     core_commands -> obj_search_action;
+    core_commands -> obj_fileop_intent;
     core_commands -> obj_vault_path;
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;
@@ -4083,6 +4141,12 @@ digraph DeveNoteArchitecture {
     op_locale_command_toggle -> op_locale_settings_select [style=dashed, color="#f59e0b"];
     op_locale_settings_select -> op_locale_apply [style=dashed, color="#f59e0b"];
     op_locale_apply -> op_locale_rerender [style=dashed, color="#f59e0b"];
+
+    user_repo_fileop_shell_spine [label="repo file-op shell routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_repo_fileop_shell_spine -> op_repo_fileop_enter [style=dashed, color="#f59e0b"];
+    op_repo_fileop_enter -> op_repo_fileop_parse [style=dashed, color="#f59e0b"];
+    op_repo_fileop_parse -> op_repo_fileop_prefill [style=dashed, color="#f59e0b"];
+    op_repo_fileop_prefill -> op_repo_fileop_action [style=dashed, color="#f59e0b"];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

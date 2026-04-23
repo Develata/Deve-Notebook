@@ -6,6 +6,7 @@
 - `Domain`: `i18n`
 - `Related Feature Chapters`: `docs/features/11_i18n.md`, `docs/features/09_auth.md`
 - `Related Acceptance Cases`: `I18N-001`, `I18N-002`, `I18N-003`, `I18N-004`, `I18N-005`, `I18N-006`
+- `Summary-Only`: `yes`
 
 ## Operations
 
@@ -45,5 +46,6 @@
 
 ## Notes
 
+- This file is a summary flow. Use the split locale / error flows as the authoritative implementation read path.
 - Missing-key behavior is currently a plan/code question: compile-time coverage may replace runtime fallback, but the plan must say so explicitly.
 - Main objects: `locale::selection`, `i18n::catalog`, `protocol::error-code`.

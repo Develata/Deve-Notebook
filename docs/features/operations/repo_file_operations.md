@@ -66,5 +66,6 @@
 ## Notes
 
 - Rename is represented as the `MoveDoc` path operation in SearchBox prefill.
+- Shared command-shell parsing, destination prefill, and action construction are modeled separately in `repo_file_op_shell_routing.md`.
 - These operations mutate document structure, not document text content.
 - Spectator / remote views must fail closed before sending structure writes.

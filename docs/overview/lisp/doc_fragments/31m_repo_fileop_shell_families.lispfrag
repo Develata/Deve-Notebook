@@ -1,0 +1,6 @@
+(group :id grp.mod.repo-fileop-shell :layer module :label "repo file-op shell routing" :members (mod_fileop_shell mod_fileop_parser mod_fileop_path_utils mod_fileop_results mod_search_action_router))
+(module :id mod_fileop_shell :label "file_ops::shell" :chapter 12_commands :parent core.commands :code-area "apps/web/src/components/search_box/file_ops/mod.rs")
+(module :id mod_fileop_parser :label "file_ops::parser" :chapter 12_commands :parent core.commands :code-area "apps/web/src/components/search_box/file_ops/parser.rs")
+(module :id mod_fileop_path_utils :label "file_ops::path_utils" :chapter 06_repository :parent core.commands :code-area "apps/web/src/components/search_box/file_ops/path_utils.rs")
+(module :id mod_fileop_results :label "file_ops::results" :chapter 06_repository :parent core.commands :code-area "apps/web/src/components/search_box/file_ops/results*.rs")
+(group :id grp.core.repo-fileop-shell :layer core :label "repo file-op shell routing" :members (core.commands core.tree))

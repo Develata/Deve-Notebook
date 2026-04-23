@@ -1,0 +1,11 @@
+            subgraph cluster_user_repo_fileop_shell {
+                label="repo file-op shell routing [06_repository + 08_ui_design + 12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_repo_fileop_enter [label="Enter File Operation Command", fillcolor="#fde68a"];
+                op_repo_fileop_parse [label="Parse File Operation Query", fillcolor="#fde68a"];
+                op_repo_fileop_prefill [label="Prefill File Operation Destination", fillcolor="#fef9c3"];
+                op_repo_fileop_action [label="Build File Operation Action", fillcolor="#fde68a"];
+            }

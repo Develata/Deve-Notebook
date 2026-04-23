@@ -6,6 +6,7 @@
 - `Domain`: `tech-stack`
 - `Related Feature Chapters`: `docs/features/14_tech_stack.md`, `docs/features/15_release.md`
 - `Related Acceptance Cases`: `TECH-001`, `PERF-001`, `REL-003`
+- `Summary-Only`: `yes`
 
 ## Operations
 
@@ -45,5 +46,6 @@
 
 ## Notes
 
+- This file is a summary flow. Use the split tech-stack flows as the authoritative implementation read path.
 - This flow protects the 768 MB VPS target from accidental dependency creep.
 - Main objects: `tech::dependency`, `runtime::budget`, `platform::maturity`.

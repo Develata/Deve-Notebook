@@ -1,0 +1,5 @@
+    user_repo_fileop_shell_spine [label="repo file-op shell routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_repo_fileop_shell_spine -> op_repo_fileop_enter [style=dashed, color="#f59e0b"];
+    op_repo_fileop_enter -> op_repo_fileop_parse [style=dashed, color="#f59e0b"];
+    op_repo_fileop_parse -> op_repo_fileop_prefill [style=dashed, color="#f59e0b"];
+    op_repo_fileop_prefill -> op_repo_fileop_action [style=dashed, color="#f59e0b"];

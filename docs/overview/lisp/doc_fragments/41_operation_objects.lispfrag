@@ -13,6 +13,7 @@
 (object :id obj.command.registry :label "command::registry" :kind routing-catalog :authority core.commands)
 (object :id obj.search.mode :label "search::mode" :kind routing-state :authority core.commands)
 (object :id obj.search.action :label "search::action" :kind routing-action :authority core.commands)
+(object :id obj.fileop.intent :label "fileop::intent" :kind routing-intent :authority core.commands)
 (object :id obj.vault.path :label "vault::path" :kind filesystem-scope :authority core.commands)
 (object :id obj.export.artifact :label "export::artifact" :kind file-artifact :authority core.commands)
 (object :id obj.repair.plan :label "repair::plan" :kind recovery-plan :authority core.source_control)

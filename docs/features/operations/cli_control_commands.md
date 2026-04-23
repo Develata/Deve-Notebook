@@ -6,6 +6,7 @@
 - `Domain`: `commands`
 - `Related Feature Chapters`: `docs/features/12_commands.md`
 - `Related Acceptance Cases`: `CMD-001`, `CMD-002`, `CMD-003`, `CMD-004`
+- `Summary-Only`: `yes`
 
 ## Operations
 
@@ -45,6 +46,7 @@
 
 ## Notes
 
+- This file is a summary flow. Use the split flows as the authoritative read path for implementation work.
 - This flow models the CLI as a first-class control surface, not a debug-only entry.
 - Parse, help, empty-command guidance, and runtime handoff are now modeled separately in `cli_parse_command.md`, `cli_help_surface.md`, `cli_empty_command_guidance.md`, and `cli_runtime_handoff.md`.
 - Specific command families are modeled in `cli_vault_indexing.md`, `cli_server_runtime.md`, `cli_export_inspect.md`, and `cli_repair_admin.md`.

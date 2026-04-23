@@ -6,6 +6,7 @@
 - `Domain`: `settings`
 - `Related Feature Chapters`: `docs/features/13_settings.md`, `docs/features/12_commands.md`
 - `Related Acceptance Cases`: `SET-001`, `SET-002`, `CMD-001`
+- `Summary-Only`: `yes`
 
 ## Operations
 
@@ -45,5 +46,6 @@
 
 ## Notes
 
+- This file is a summary flow. Use the split settings flows as the authoritative implementation read path.
 - Settings must not bypass authority state or mutate ledger truth directly.
 - Main objects: `config::runtime`, `ui::preference`, `locale::selection`.
