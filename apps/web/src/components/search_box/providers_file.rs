@@ -1,3 +1,4 @@
+use crate::components::search_box::file_ops::validate_doc_shell_path;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;
 
@@ -63,7 +64,9 @@ impl SearchProvider for FileProvider {
         results.truncate(20);
 
         let create_query = query.trim();
-        if !create_query.is_empty() && !results.iter().any(|r| r.title == create_query) {
+        if validate_doc_shell_path(create_query).is_none()
+            && !results.iter().any(|r| r.title == create_query)
+        {
             results.push(SearchResult {
                 id: "create-doc".to_string(),
                 title: format!("Create/Open '{}'", create_query),

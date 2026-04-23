@@ -1,6 +1,6 @@
 use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction, SearchResult};
 
-use super::super::path_utils::normalize_doc_path;
+use super::super::path_utils::{normalize_doc_path, validate_doc_shell_path};
 
 #[cfg(test)]
 #[path = "results_remove_test.rs"]
@@ -20,6 +20,9 @@ pub(super) fn build_remove_results(args: &[String]) -> Vec<SearchResult> {
     }
 
     let path = normalize_doc_path(&args[0]);
+    if let Some(err) = validate_doc_shell_path(&path) {
+        return vec![super::error_result(err.to_string())];
+    }
     vec![SearchResult {
         id: format!("rm-{}", path),
         title: format!("Remove: {}", path),

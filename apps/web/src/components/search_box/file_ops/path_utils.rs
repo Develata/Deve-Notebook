@@ -5,6 +5,8 @@ use deve_core::models::DocId;
 use std::collections::HashSet;
 use std::path::Path;
 
+const MAX_DEPTH: usize = 10;
+
 pub fn normalize_doc_path(raw: &str) -> String {
     let normalized = raw.replace('\\', "/");
     if normalized.ends_with('/') {
@@ -14,6 +16,39 @@ pub fn normalize_doc_path(raw: &str) -> String {
         return normalized;
     }
     format!("{}.md", normalized)
+}
+
+pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
+    let normalized = raw.replace('\\', "/");
+    let path = normalized.trim();
+    if path.is_empty() {
+        return Some("Invalid empty path");
+    }
+    if path.contains("..") || path.starts_with('/') {
+        return Some("Invalid path");
+    }
+    let trimmed = path.trim_end_matches('/');
+    let segments: Vec<_> = trimmed
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    if segments.is_empty() {
+        return Some("Invalid empty path");
+    }
+    if segments.len() > MAX_DEPTH {
+        return Some("Directory depth limit exceeded");
+    }
+    let leaf_is_dir = path.ends_with('/');
+    for (index, segment) in segments.iter().enumerate() {
+        if *segment == ".notegit" {
+            return Some("Reserved internal path");
+        }
+        let is_leaf = index + 1 == segments.len();
+        if segment.ends_with(".md") && (!is_leaf || leaf_is_dir) {
+            return Some("Markdown directory is forbidden");
+        }
+    }
+    None
 }
 
 pub(super) fn finalize_dst(src: &str, dst_raw: &str) -> String {

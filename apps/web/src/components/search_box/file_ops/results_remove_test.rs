@@ -24,6 +24,15 @@ fn remove_empty_path_returns_path_required_error() {
 }
 
 #[test]
+fn remove_rejects_absolute_path() {
+    let results = build_remove_results(&args(&["/notes/today.md"]));
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Invalid path");
+}
+
+#[test]
 fn remove_normalizes_file_target_before_action() {
     let results = build_remove_results(&args(&["notes/today"]));
 

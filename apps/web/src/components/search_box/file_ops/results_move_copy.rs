@@ -3,7 +3,7 @@ use deve_core::models::DocId;
 use std::collections::HashSet;
 
 use super::super::parser::{is_ready_for_dst, ParsedArgs};
-use super::super::path_utils::{collect_dirs, filter_dirs};
+use super::super::path_utils::{collect_dirs, filter_dirs, validate_doc_shell_path};
 use super::results_common::{build_execute_result, build_insert_query, group_header};
 
 #[cfg(test)]
@@ -33,7 +33,9 @@ pub(super) fn build_move_copy_results(
         return vec![super::error_result("Source path required".to_string())];
     }
 
-    let mut results = Vec::new();
+    if let Some(err) = validate_doc_shell_path(&parsed.args[0]) {
+        return vec![super::error_result(err.to_string())];
+    }
     if parsed.args.len() == 2 && !parsed.args[1].is_empty() {
         return vec![execute_result_or_error(
             kind,
@@ -43,37 +45,35 @@ pub(super) fn build_move_copy_results(
     }
 
     if !is_ready_for_dst(parsed) {
-        return results;
+        return Vec::new();
     }
 
     let src = parsed.args.first().cloned().unwrap_or_default();
     let dst_prefix = parsed.args.get(1).cloned().unwrap_or_default();
     let dirs = collect_dirs(docs);
-    let recent = if kind == FileOpKind::Move {
+    let recent_dirs = if kind == FileOpKind::Move {
         recent_dirs
     } else {
         &[]
     };
-    results.extend(build_dir_group_results(
-        &kind,
-        &src,
-        &dst_prefix,
-        recent,
-        &dirs,
-    ));
-    results
+    build_dir_group_results(&kind, &src, &dst_prefix, recent_dirs, &dirs)
 }
 
 fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str) -> SearchResult {
     let Some(result) = build_execute_result(kind, src, dst) else {
         return super::error_result("Destination path required".to_string());
     };
-    match &result.action {
-        SearchAction::FileOp(action) if action.dst.as_ref() == Some(&action.src) => {
-            super::error_result("Destination must differ from source".to_string())
+    if let SearchAction::FileOp(action) = &result.action {
+        if let Some(err) = validate_doc_shell_path(&action.src)
+            .or_else(|| action.dst.as_deref().and_then(validate_doc_shell_path))
+        {
+            return super::error_result(err.to_string());
         }
-        _ => result,
+        if action.dst.as_ref() == Some(&action.src) {
+            return super::error_result("Destination must differ from source".to_string());
+        }
     }
+    result
 }
 
 fn build_dir_group_results(

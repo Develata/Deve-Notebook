@@ -36,6 +36,9 @@ pub(crate) fn execute_action(
             if path.is_empty() {
                 return;
             }
+            if file_ops::validate_doc_shell_path(path).is_some() {
+                return;
+            }
             core.on_doc_create.run(file_ops::normalize_doc_path(path));
             set_show.set(false);
         }

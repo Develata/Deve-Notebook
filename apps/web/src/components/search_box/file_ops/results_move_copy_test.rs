@@ -58,6 +58,26 @@ fn move_without_source_returns_error() {
 }
 
 #[test]
+fn move_rejects_traversal_source_path() {
+    let parsed = parsed_args(&["../secret.md", "notes/ok.md"], false);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Invalid path");
+}
+
+#[test]
+fn copy_rejects_reserved_destination_path() {
+    let parsed = parsed_args(&["notes/today.md", ".notegit/copy.md"], false);
+    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[]);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Reserved internal path");
+}
+
+#[test]
 fn move_directory_suggestions_skip_noop_target() {
     let parsed = parsed_args(&["notes/today.md"], true);
     let docs = [

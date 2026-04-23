@@ -38,3 +38,12 @@ fn file_provider_does_not_offer_create_for_trimmed_existing_doc() {
         .iter()
         .all(|result| !matches!(result.action, SearchAction::CreateDoc(_))));
 }
+
+#[test]
+fn file_provider_does_not_offer_create_for_reserved_path() {
+    let results = provider().search(".notegit/config");
+
+    assert!(results
+        .iter()
+        .all(|result| !matches!(result.action, SearchAction::CreateDoc(_))));
+}
