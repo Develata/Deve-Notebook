@@ -1,14 +1,11 @@
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 use super::super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
-
-#[cfg(test)]
-#[path = "callbacks_sync_write_test.rs"]
-mod tests;
 
 pub(super) struct SyncWriteCallbacks {
     pub(super) on_set_sync_mode: Callback<String>,
@@ -105,20 +102,16 @@ fn sync_write_scope_nonce(
     action: &'static str,
 ) -> Option<u64> {
     if let Some(block) = repo_write_block_untracked(ws, write_gate) {
-        let message = sync_write_block_banner(action, block.label());
+        let message = cannot_send(action, block.label());
         leptos::logging::warn!("{}", message);
         set_sync_banner.set(Some(message));
         return None;
     }
     let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-        let message = sync_write_block_banner(action, "local repo scope is not stable");
+        let message = cannot_send(action, "local repo scope is not stable");
         leptos::logging::warn!("{}", message);
         set_sync_banner.set(Some(message));
         return None;
     };
     Some(scope_nonce)
-}
-
-fn sync_write_block_banner(action: &str, reason: &str) -> String {
-    format!("Cannot send {}: {}", action, reason)
 }

@@ -8,12 +8,9 @@ use crate::hooks::use_core::doc_name::next_untitled_doc_name;
 use crate::hooks::use_core::write_gate::{
     RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
 };
+use crate::hooks::use_core::write_gate_banner::cannot_create_document;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-
-#[cfg(test)]
-#[path = "actions_card_test.rs"]
-mod tests;
 
 #[component]
 pub fn ActionsCard() -> impl IntoView {
@@ -24,7 +21,7 @@ pub fn ActionsCard() -> impl IntoView {
 
     let on_new_doc = move |_| {
         if let Some(reason) = create_block_reason(&core_for_create) {
-            let message = create_block_banner(reason);
+            let message = cannot_create_document(reason);
             leptos::logging::warn!("{}", message);
             core_for_create.set_sync_banner.set(Some(message));
             return;
@@ -81,8 +78,4 @@ fn create_block_reason(core: &CoreState) -> Option<&'static str> {
         },
     )
     .map(|block| block.label())
-}
-
-fn create_block_banner(reason: &str) -> String {
-    format!("Cannot create document: {}", reason)
 }

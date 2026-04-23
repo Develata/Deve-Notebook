@@ -1,10 +1,7 @@
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::write_gate_banner::cannot_action;
 use leptos::prelude::Set;
-
-#[cfg(test)]
-#[path = "write_gate_feedback_test.rs"]
-mod tests;
 
 pub(super) fn allow_repo_write(core: &CoreState, action: &'static str) -> bool {
     let block = repo_write_block_untracked(
@@ -22,12 +19,8 @@ pub(super) fn allow_repo_write(core: &CoreState, action: &'static str) -> bool {
     let Some(block) = block else {
         return true;
     };
-    let message = write_block_message(action, block.label());
+    let message = cannot_action(action, block.label());
     leptos::logging::warn!("{}", message);
     core.set_sync_banner.set(Some(message));
     false
-}
-
-fn write_block_message(action: &str, reason: &str) -> String {
-    format!("Cannot {}: {}", action, reason)
 }

@@ -37,6 +37,7 @@ mod storage_runtime;
 mod switch_nonce;
 pub mod types;
 pub(crate) mod write_gate;
+pub(crate) mod write_gate_banner;
 
 pub(crate) use callbacks_sc_target::can_request_doc_diff;
 pub use contexts::*;
