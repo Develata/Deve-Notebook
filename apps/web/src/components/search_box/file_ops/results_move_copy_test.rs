@@ -1,0 +1,48 @@
+use super::*;
+use crate::components::search_box::file_ops::parser::ParsedArgs;
+use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction};
+
+fn parsed_args(args: &[&str], ends_with_space: bool) -> ParsedArgs {
+    ParsedArgs {
+        args: args.iter().map(|s| (*s).to_string()).collect(),
+        in_quote: false,
+        ends_with_space,
+        error: None,
+    }
+}
+
+#[test]
+fn move_same_source_and_destination_returns_error() {
+    let parsed = parsed_args(&["notes/today.md", "notes/today.md"], false);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Destination must differ from source");
+}
+
+#[test]
+fn move_same_directory_target_returns_error_after_finalization() {
+    let parsed = parsed_args(&["notes/today.md", "notes/"], false);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Destination must differ from source");
+}
+
+#[test]
+fn copy_different_destination_builds_file_op_action() {
+    let parsed = parsed_args(&["notes/today.md", "archive/"], false);
+    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[]);
+
+    assert_eq!(results.len(), 1);
+    match &results[0].action {
+        SearchAction::FileOp(FileOpAction { kind, src, dst }) => {
+            assert_eq!(*kind, FileOpKind::Copy);
+            assert_eq!(src, "notes/today.md");
+            assert_eq!(dst.as_deref(), Some("archive/today.md"));
+        }
+        other => panic!("expected FileOp result, got {:?}", other),
+    }
+}

@@ -2,9 +2,13 @@ use crate::components::search_box::types::{FileOpKind, SearchAction, SearchResul
 use deve_core::models::DocId;
 use std::collections::HashSet;
 
-use super::super::parser::{ParsedArgs, is_ready_for_dst};
+use super::super::parser::{is_ready_for_dst, ParsedArgs};
 use super::super::path_utils::{collect_dirs, filter_dirs};
 use super::results_common::{build_execute_result, build_insert_query, group_header};
+
+#[cfg(test)]
+#[path = "results_move_copy_test.rs"]
+mod tests;
 
 pub(super) fn build_move_copy_results(
     kind: FileOpKind,
@@ -28,10 +32,11 @@ pub(super) fn build_move_copy_results(
 
     let mut results = Vec::new();
     if parsed.args.len() == 2 && !parsed.args[1].is_empty() {
-        if let Some(action_result) = build_execute_result(kind, &parsed.args[0], &parsed.args[1]) {
-            results.push(action_result);
-        }
-        return results;
+        return vec![execute_result_or_error(
+            kind,
+            &parsed.args[0],
+            &parsed.args[1],
+        )];
     }
 
     if !is_ready_for_dst(parsed) {
@@ -54,6 +59,18 @@ pub(super) fn build_move_copy_results(
         &dirs,
     ));
     results
+}
+
+fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str) -> SearchResult {
+    let Some(result) = build_execute_result(kind, src, dst) else {
+        return super::error_result("Destination path required".to_string());
+    };
+    match &result.action {
+        SearchAction::FileOp(action) if action.dst.as_ref() == Some(&action.src) => {
+            super::error_result("Destination must differ from source".to_string())
+        }
+        _ => result,
+    }
 }
 
 fn build_dir_group_results(
