@@ -193,3 +193,30 @@ async fn move_trims_source_and_destination_paths() -> anyhow::Result<()> {
     assert!(dir.path().join("vault/default/notes/b.md").exists());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn move_rejects_traversal_source_before_resolving_target() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(32);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    activate_local_repo(&mut session, state.repo.as_ref(), repo_id);
+
+    handle_move_doc(
+        &state,
+        &ch,
+        &mut session,
+        "../secret.md".into(),
+        "notes/b.md".into(),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.detail.as_deref(), Some("Invalid path: ../secret.md"));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}

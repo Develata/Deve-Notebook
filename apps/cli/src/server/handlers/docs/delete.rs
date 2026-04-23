@@ -5,7 +5,7 @@ use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::node_target::resolve_node_target;
 use super::notify_fs_refresh;
-use super::resolve_local_write_scope;
+use super::{resolve_local_write_scope, validate_file_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
@@ -16,13 +16,6 @@ use std::sync::Arc;
 #[path = "delete_test.rs"]
 mod tests;
 
-/// 处理删除文档请求
-///
-/// **流程**:
-/// 1. 判断目标是文件还是目录
-/// 2. 执行文件系统删除
-/// 3. 从 Ledger 中移除记录
-/// 4. 更新 TreeManager 并广播 TreeDelta
 pub async fn handle_delete_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -37,6 +30,9 @@ pub async fn handle_delete_doc(
     let path = path.trim();
     if path.is_empty() {
         errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    }
+    if !validate_file_path(path, ch, scope_nonce) {
         return;
     }
 

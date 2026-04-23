@@ -104,3 +104,23 @@ async fn delete_trims_path_before_resolving_target() -> anyhow::Result<()> {
     assert!(state.repo.get_docid("notes/a.md")?.is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn delete_rejects_traversal_path_before_resolving_target() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+
+    handle_delete_doc(&state, &ch, &mut session, "../secret.md".into()).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.detail.as_deref(), Some("Invalid path: ../secret.md"));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    Ok(())
+}

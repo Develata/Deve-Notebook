@@ -13,13 +13,6 @@ use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use std::sync::Arc;
 
-/// 处理重命名文档请求
-///
-/// **流程**:
-/// 1. 校验目标路径
-/// 2. 执行文件系统重命名
-/// 3. 更新 Ledger 中的路径映射
-/// 4. 更新 TreeManager 并广播 TreeDelta
 pub async fn handle_rename_doc(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -36,6 +29,9 @@ pub async fn handle_rename_doc(
     let new_path = new_path.trim();
     if old_path.is_empty() || new_path.is_empty() {
         errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    }
+    if !validate_file_path(old_path, ch, scope_nonce) {
         return;
     }
 

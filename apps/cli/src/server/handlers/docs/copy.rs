@@ -5,11 +5,15 @@ mod file_copy;
 mod prepare;
 mod register;
 
+#[cfg(test)]
+#[path = "copy_path_validation_test.rs"]
+mod path_validation_tests;
+
 use super::copy_utils::copy_dir_assets_only;
 use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
-use super::resolve_local_write_scope;
+use super::{resolve_local_write_scope, validate_file_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
@@ -34,6 +38,9 @@ pub async fn handle_copy_doc(
     let dest_path = dest_path.trim();
     if src_path.is_empty() || dest_path.is_empty() {
         errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    }
+    if !validate_file_path(src_path, ch, scope_nonce) {
         return;
     }
 
