@@ -1,6 +1,7 @@
 use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
+use crate::hooks::use_core::write_gate_banner::cannot_action;
 use crate::hooks::use_core::{CoreState, pending};
 use crate::i18n::{Locale, t};
 use deve_core::models::Op;
@@ -11,7 +12,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     Callback::new(move |code: String| {
         let Some(doc_id) = core.current_doc.get_untracked() else {
-            leptos::logging::warn!("No active doc to apply code.");
+            show_apply_block(&core, "no active document");
             return;
         };
         if !core
@@ -29,7 +30,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
         let pos = match u32::try_from(utf16_len) {
             Ok(v) => v,
             Err(_) => {
-                leptos::logging::warn!("Apply code aborted: UTF-16 length overflow.");
+                show_apply_block(&core, "document is too large");
                 return;
             }
         };
@@ -41,7 +42,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             .ws
             .writer_client_id_for(core.current_repo_id.get_untracked().as_deref())
         else {
-            leptos::logging::warn!("Apply code aborted: writer client id unavailable.");
+            show_apply_block(&core, "writer client id unavailable");
             return;
         };
         let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
@@ -51,7 +52,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             pending_branch_switch: core.pending_branch_switch,
             pending_repo_switch: core.pending_repo_switch,
         }) else {
-            leptos::logging::warn!("Apply code aborted: local scope nonce unavailable.");
+            show_apply_block(&core, "local repo scope is not stable");
             return;
         };
         let client_op_id = next_client_op_id();
@@ -73,4 +74,10 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             scope_nonce: Some(scope_nonce),
         });
     })
+}
+
+fn show_apply_block(core: &CoreState, reason: &str) {
+    let message = cannot_action("apply code", reason);
+    leptos::logging::warn!("{}", message);
+    core.set_sync_banner.set(Some(message));
 }
