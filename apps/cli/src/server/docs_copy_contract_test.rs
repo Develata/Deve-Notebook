@@ -102,3 +102,26 @@ async fn copy_rejects_same_source_and_destination_even_without_md_suffix() -> an
     assert!(state.repo.get_docid("notes/a")?.is_none());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn copy_trims_source_and_destination_paths() -> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    seed_file(&state, "notes/a.md")?;
+    let (uni_tx, _uni_rx) = mpsc::channel(32);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+
+    handle_copy_doc(
+        &state,
+        &ch,
+        &mut session,
+        "  notes/a.md  ".into(),
+        "  notes/b  ".into(),
+    )
+    .await;
+
+    assert!(state.repo.get_docid("notes/b.md")?.is_some());
+    assert!(dir.path().join("vault/default/notes/b.md").exists());
+    Ok(())
+}

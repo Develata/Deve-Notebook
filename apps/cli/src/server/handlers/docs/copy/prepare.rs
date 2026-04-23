@@ -7,10 +7,10 @@ use crate::server::repo_scope::{ResolvedRepo, local_repo_path};
 use deve_core::models::{DocId, NodeKind};
 use std::path::PathBuf;
 use std::sync::Arc;
-
 pub(super) struct CopyPaths {
     pub src: PathBuf,
     pub dst: PathBuf,
+    pub dst_repo_path: String,
     pub kind: NodeKind,
     pub src_doc_id: Option<DocId>,
 }
@@ -122,6 +122,7 @@ pub(super) fn prepare_copy_paths(
     Some(CopyPaths {
         src: src.abs_path,
         dst,
+        dst_repo_path,
         kind: src.kind,
         src_doc_id: src.doc_id,
     })

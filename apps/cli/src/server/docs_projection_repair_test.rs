@@ -169,3 +169,27 @@ async fn move_rejects_same_source_and_destination() -> anyhow::Result<()> {
     assert!(state.repo.get_docid("notes/a.md")?.is_some());
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn move_trims_source_and_destination_paths() -> anyhow::Result<()> {
+    let (dir, state, repo_id) = build_state()?;
+    seed_file(&state, "notes/a.md", "hello")?;
+    let (uni_tx, _uni_rx) = mpsc::channel(32);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    activate_local_repo(&mut session, state.repo.as_ref(), repo_id);
+
+    handle_move_doc(
+        &state,
+        &ch,
+        &mut session,
+        "  notes/a.md  ".into(),
+        "  notes/b  ".into(),
+    )
+    .await;
+
+    assert_eq!(state.repo.get_docid("notes/a.md")?, None);
+    assert!(state.repo.get_docid("notes/b.md")?.is_some());
+    assert!(dir.path().join("vault/default/notes/b.md").exists());
+    Ok(())
+}

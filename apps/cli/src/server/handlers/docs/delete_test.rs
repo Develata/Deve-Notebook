@@ -4,7 +4,7 @@ use crate::server::{AppState, security};
 use crate::server::{channel::DualChannel, session::WsSession};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::PeerId;
+use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -41,6 +41,35 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     ))
 }
 
+fn seed_file(state: &Arc<AppState>, path: &str) -> anyhow::Result<()> {
+    let (doc_id, _ops) = state.repo.apply_file_structure_in_local_repo(
+        state.repo.local_repo_name(),
+        path,
+        None,
+        "test",
+    )?;
+    state.repo.append_generated_op_in_local_repo(
+        state.repo.local_repo_name(),
+        doc_id,
+        PeerId::new("test-peer"),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "hello".into(),
+                },
+                1,
+                PeerId::new("test-peer"),
+                seq,
+                None,
+                None,
+            )
+        },
+    )?;
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delete_rejects_empty_path_fail_closed() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
@@ -58,5 +87,20 @@ async fn delete_rejects_empty_path_fail_closed() -> anyhow::Result<()> {
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn delete_trims_path_before_resolving_target() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    seed_file(&state, "notes/a.md")?;
+    let (uni_tx, _uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+
+    handle_delete_doc(&state, &ch, &mut session, "  notes/a.md  ".into()).await;
+
+    assert!(state.repo.get_docid("notes/a.md")?.is_none());
     Ok(())
 }

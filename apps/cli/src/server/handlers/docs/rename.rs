@@ -32,7 +32,14 @@ pub async fn handle_rename_doc(
         return;
     };
 
-    let src = match resolve_node_target(state, &scope, &old_path) {
+    let old_path = old_path.trim();
+    let new_path = new_path.trim();
+    if old_path.is_empty() || new_path.is_empty() {
+        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    }
+
+    let src = match resolve_node_target(state, &scope, old_path) {
         Ok(Some(target)) => target,
         Ok(None) => {
             errors::storage_not_found_scoped(
@@ -49,7 +56,7 @@ pub async fn handle_rename_doc(
     };
 
     // 1. 确保目标路径以 .md 结尾 (如果源是 .md)
-    let mut dst_name = new_path.clone();
+    let mut dst_name = new_path.to_string();
     if src.kind == NodeKind::File && !dst_name.ends_with(".md") {
         dst_name.push_str(".md");
     }

@@ -34,13 +34,14 @@ pub async fn handle_delete_doc(
         return;
     };
 
-    if path.trim().is_empty() {
+    let path = path.trim();
+    if path.is_empty() {
         errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
         return;
     }
 
     tracing::info!("handle_delete_doc: path={}", path);
-    let target = match resolve_node_target(state, &scope, &path) {
+    let target = match resolve_node_target(state, &scope, path) {
         Ok(Some(target)) => target,
         Ok(None) => {
             errors::storage_not_found_scoped(

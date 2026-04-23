@@ -29,10 +29,19 @@ pub async fn handle_copy_doc(
     let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
     };
-    let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path, scope_nonce) {
+
+    let src_path = src_path.trim();
+    let dest_path = dest_path.trim();
+    if src_path.is_empty() || dest_path.is_empty() {
+        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    }
+
+    let paths = match prepare_copy_paths(state, ch, &scope, src_path, dest_path, scope_nonce) {
         Some(paths) => paths,
         None => return,
     };
+    let dst_repo_path = paths.dst_repo_path.as_str();
 
     let copied = if paths.kind == deve_core::models::NodeKind::Dir {
         dir_copy::copy_dir(
@@ -44,8 +53,8 @@ pub async fn handle_copy_doc(
             },
             &paths.src,
             &paths.dst,
-            &src_path,
-            &dest_path,
+            src_path,
+            dst_repo_path,
         )
     } else {
         file_copy::copy_file(
@@ -56,8 +65,8 @@ pub async fn handle_copy_doc(
                 scope_nonce,
             },
             &paths,
-            &src_path,
-            &dest_path,
+            src_path,
+            dst_repo_path,
         )
     };
     if !copied {
@@ -73,7 +82,7 @@ pub async fn handle_copy_doc(
         );
         return;
     }
-    notify_fs_refresh(ch, scope.repo_id, &dest_path, "copied");
+    notify_fs_refresh(ch, scope.repo_id, dst_repo_path, "copied");
 }
 
 fn copy_dir_on_disk(
