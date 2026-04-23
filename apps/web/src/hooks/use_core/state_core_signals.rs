@@ -14,9 +14,6 @@ use super::super::source_control_notice::SourceControlNotice;
 use super::super::types::{ChatMessage, PeerSession, PendingBranchTarget};
 use super::state_types::PluginResponse;
 
-/// 核心状态信号集合
-///
-/// 包含所有 `use_core` 需要的响应式信号。
 #[derive(Clone, Copy)]
 pub struct CoreSignals {
     pub docs: ReadSignal<Vec<(DocId, String)>>,
