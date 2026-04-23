@@ -1,9 +1,18 @@
 use crate::api::WsService;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::storage::DegradedSyncMode;
+use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
+
+#[cfg(test)]
+#[path = "effects_sc_apply_test.rs"]
+mod tests;
 
 pub(super) struct FsRefreshSignals {
     pub current_scope_nonce: u64,
+    pub degraded_sync_mode: ReadSignal<Option<DegradedSyncMode>>,
+    pub sync_banner: ReadSignal<Option<String>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
     pub set_tree_request_id: WriteSignal<Option<String>>,
 }
@@ -39,6 +48,7 @@ pub(super) fn refresh_after_fs_change(
     if has_conflict || change_type != "dir_changed" {
         leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
     }
+    show_file_op_feedback(path, change_type, has_conflict, &signals);
     schedule_refresh();
     let request_id = uuid::Uuid::new_v4().to_string();
     signals
@@ -49,6 +59,41 @@ pub(super) fn refresh_after_fs_change(
         request_id,
         scope_nonce: Some(signals.current_scope_nonce),
     });
+}
+
+fn show_file_op_feedback(
+    path: &str,
+    change_type: &str,
+    has_conflict: bool,
+    signals: &FsRefreshSignals,
+) {
+    if has_conflict || signals.degraded_sync_mode.get_untracked().is_some() {
+        return;
+    }
+    let Some(message) = file_op_feedback_message(path, change_type) else {
+        return;
+    };
+    let sync_banner = signals.sync_banner;
+    let set_sync_banner = signals.set_sync_banner;
+    set_sync_banner.set(Some(message.clone()));
+    Timeout::new(1800, move || {
+        if sync_banner.get_untracked().as_deref() == Some(message.as_str()) {
+            set_sync_banner.set(None);
+        }
+    })
+    .forget();
+}
+
+fn file_op_feedback_message(path: &str, change_type: &str) -> Option<String> {
+    let action = match change_type {
+        "added" => "Created",
+        "dir-added" => "Created folder",
+        "renamed" => "Renamed",
+        "deleted" => "Deleted",
+        "copied" => "Copied",
+        _ => return None,
+    };
+    Some(format!("{}: {}", action, path))
 }
 
 pub(super) fn refresh_after_commit(

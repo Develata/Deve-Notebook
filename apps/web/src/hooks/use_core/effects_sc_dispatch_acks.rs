@@ -91,6 +91,9 @@ pub(crate) fn handle_sc_ack_message(
                 *has_conflict,
                 FsRefreshSignals {
                     current_scope_nonce: active_scope_nonce,
+                    degraded_sync_mode: ctx.degraded_sync_mode,
+                    sync_banner: ctx.sync_banner,
+                    set_sync_banner: ctx.set_sync_banner,
                     set_doc_list_request_id: ctx.set_doc_list_request_id,
                     set_tree_request_id: ctx.set_tree_request_id,
                 },
