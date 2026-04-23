@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::models::DocId;
@@ -103,14 +104,12 @@ fn sync_write_scope_nonce(
 ) -> Option<u64> {
     if let Some(block) = repo_write_block_untracked(ws, write_gate) {
         let message = cannot_send(action, block.label());
-        leptos::logging::warn!("{}", message);
-        set_sync_banner.set(Some(message));
+        warn_sync_banner(set_sync_banner, message);
         return None;
     }
     let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
         let message = cannot_send(action, "local repo scope is not stable");
-        leptos::logging::warn!("{}", message);
-        set_sync_banner.set(Some(message));
+        warn_sync_banner(set_sync_banner, message);
         return None;
     };
     Some(scope_nonce)

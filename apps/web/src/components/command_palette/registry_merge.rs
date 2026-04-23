@@ -1,4 +1,5 @@
 use crate::components::command_palette::types::Command;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_send;
 use crate::hooks::use_core::{BranchContext, CoreState, SyncMergeContext};
 use crate::i18n::{Locale, t};
@@ -16,8 +17,7 @@ pub(super) fn merge_peer_command(locale: Locale, set_show: WriteSignal<bool>) ->
             } else {
                 let core = use_context::<CoreState>().expect("core ctx");
                 let message = cannot_send("MergePeer", "no active peer selected");
-                leptos::logging::warn!("{}", message);
-                core.set_sync_banner.set(Some(message));
+                warn_sync_banner(core.set_sync_banner, message);
             }
             set_show.set(false);
         }),

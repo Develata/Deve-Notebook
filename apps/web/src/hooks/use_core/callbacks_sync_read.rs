@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -70,6 +71,5 @@ pub(super) fn create_sync_read_callbacks(
 
 fn show_sync_read_block(set_sync_banner: WriteSignal<Option<String>>, action: &str) {
     let message = cannot_send(action, "local repo scope is not stable");
-    leptos::logging::warn!("{}", message);
-    set_sync_banner.set(Some(message));
+    warn_sync_banner(set_sync_banner, message);
 }

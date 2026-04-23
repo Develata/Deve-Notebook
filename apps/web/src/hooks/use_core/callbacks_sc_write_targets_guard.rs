@@ -1,10 +1,11 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::ChangeEntry;
-use leptos::prelude::{Callback, Set, WriteSignal};
+use leptos::prelude::{Callback, WriteSignal};
 
 use super::SourceControlScopeSignals;
 
@@ -35,8 +36,7 @@ pub(super) fn guarded_entry_callback(
     Callback::new(move |entry: ChangeEntry| {
         if let Some(label) = write_block_label(&ws, gate) {
             let message = cannot_send(action, label);
-            leptos::logging::warn!("{}", message);
-            set_sync_banner.set(Some(message));
+            warn_sync_banner(set_sync_banner, message);
             return;
         }
         let build = build.clone();
@@ -56,8 +56,7 @@ pub(super) fn guarded_entries_callback(
     Callback::new(move |entries: Vec<ChangeEntry>| {
         if let Some(label) = write_block_label(&ws, gate) {
             let message = cannot_send(action, label);
-            leptos::logging::warn!("{}", message);
-            set_sync_banner.set(Some(message));
+            warn_sync_banner(set_sync_banner, message);
             return;
         }
         let build = build.clone();

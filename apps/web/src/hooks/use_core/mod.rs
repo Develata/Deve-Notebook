@@ -36,6 +36,7 @@ pub(crate) mod status_summary;
 mod status_text;
 mod storage_runtime;
 mod switch_nonce;
+pub(crate) mod sync_banner_notice;
 pub mod types;
 pub(crate) mod write_gate;
 pub(crate) mod write_gate_banner;

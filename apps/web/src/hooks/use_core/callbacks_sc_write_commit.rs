@@ -1,11 +1,12 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::to_target;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
-use leptos::prelude::{Callback, Set, WriteSignal};
+use leptos::prelude::{Callback, WriteSignal};
 
 use super::SourceControlScopeSignals;
 
@@ -30,8 +31,7 @@ fn show_write_block(
     label: &str,
 ) {
     let message = cannot_send(action, label);
-    leptos::logging::warn!("{}", message);
-    set_sync_banner.set(Some(message));
+    warn_sync_banner(set_sync_banner, message);
 }
 
 pub(super) fn create_commit_write_callbacks(

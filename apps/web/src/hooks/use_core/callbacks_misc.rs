@@ -1,5 +1,6 @@
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -83,6 +84,5 @@ pub fn create_misc_callbacks(
 
 fn show_search_block(set_sync_banner: WriteSignal<Option<String>>, reason: &str) {
     let message = cannot_action("search", reason);
-    leptos::logging::warn!("{}", message);
-    set_sync_banner.set(Some(message));
+    warn_sync_banner(set_sync_banner, message);
 }

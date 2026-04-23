@@ -5,6 +5,7 @@
 
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::doc_name::next_untitled_doc_name;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{
     RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
 };
@@ -22,8 +23,7 @@ pub fn ActionsCard() -> impl IntoView {
     let on_new_doc = move |_| {
         if let Some(reason) = create_block_reason(&core_for_create) {
             let message = cannot_create_document(reason);
-            leptos::logging::warn!("{}", message);
-            core_for_create.set_sync_banner.set(Some(message));
+            warn_sync_banner(core_for_create.set_sync_banner, message);
             return;
         }
         let name = next_untitled_doc_name(

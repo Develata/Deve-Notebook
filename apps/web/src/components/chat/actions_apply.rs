@@ -1,6 +1,7 @@
 use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use crate::hooks::use_core::{CoreState, pending};
 use crate::i18n::{Locale, t};
@@ -78,6 +79,5 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
 
 fn show_apply_block(core: &CoreState, reason: &str) {
     let message = cannot_action("apply code", reason);
-    leptos::logging::warn!("{}", message);
-    core.set_sync_banner.set(Some(message));
+    warn_sync_banner(core.set_sync_banner, message);
 }

@@ -1,6 +1,7 @@
 use crate::storage::DegradedSyncMode;
-use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
+
+use super::sync_banner_notice::show_temporary_sync_banner;
 
 #[cfg(test)]
 #[path = "effects_sc_feedback_test.rs"]
@@ -38,13 +39,7 @@ fn show_temporary_banner(
     set_sync_banner: WriteSignal<Option<String>>,
     message: String,
 ) {
-    set_sync_banner.set(Some(message.clone()));
-    Timeout::new(1800, move || {
-        if sync_banner.get_untracked().as_deref() == Some(message.as_str()) {
-            set_sync_banner.set(None);
-        }
-    })
-    .forget();
+    show_temporary_sync_banner(sync_banner, set_sync_banner, message);
 }
 
 fn file_op_feedback_message(path: &str, change_type: &str) -> Option<String> {

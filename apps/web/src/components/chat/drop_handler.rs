@@ -1,4 +1,5 @@
 // apps/web/src/components/chat/drop_handler.rs
+use crate::hooks::use_core::sync_banner_notice::show_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use leptos::prelude::*;
 use std::cell::RefCell;
@@ -40,7 +41,7 @@ pub fn on_drop(
                     if file.size() > 1024.0 * 1024.0 {
                         let message = cannot_action("attach file", "file is larger than 1 MiB");
                         leptos::logging::warn!("{}: {}", message, name);
-                        set_sync_banner.set(Some(message));
+                        show_sync_banner(set_sync_banner, message);
                         continue;
                     }
 

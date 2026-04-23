@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use leptos::prelude::*;
 
@@ -23,8 +24,7 @@ pub(super) fn show_switch_block(
     reason: &str,
 ) {
     let message = cannot_action(action, reason);
-    leptos::logging::warn!("{}", message);
-    set_sync_banner.set(Some(message));
+    warn_sync_banner(set_sync_banner, message);
 }
 
 pub fn create_switch_callbacks(
