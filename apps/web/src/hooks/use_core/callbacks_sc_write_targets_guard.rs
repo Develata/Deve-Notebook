@@ -1,9 +1,10 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::ChangeEntry;
-use leptos::prelude::Callback;
+use leptos::prelude::{Callback, Set, WriteSignal};
 
 use super::SourceControlScopeSignals;
 
@@ -26,13 +27,16 @@ pub(super) fn guarded_entry_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
     action: &'static str,
     build: impl Fn(ChangeEntry, u64) -> ClientMessage + Clone + Send + Sync + 'static,
 ) -> Callback<ChangeEntry> {
     let ws = ws.clone();
     Callback::new(move |entry: ChangeEntry| {
         if let Some(label) = write_block_label(&ws, gate) {
-            leptos::logging::warn!("忽略 {}: {}", action, label);
+            let message = cannot_send(action, label);
+            leptos::logging::warn!("{}", message);
+            set_sync_banner.set(Some(message));
             return;
         }
         let build = build.clone();
@@ -44,13 +48,16 @@ pub(super) fn guarded_entries_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
     action: &'static str,
     build: impl Fn(Vec<ChangeEntry>, u64) -> ClientMessage + Clone + Send + Sync + 'static,
 ) -> Callback<Vec<ChangeEntry>> {
     let ws = ws.clone();
     Callback::new(move |entries: Vec<ChangeEntry>| {
         if let Some(label) = write_block_label(&ws, gate) {
-            leptos::logging::warn!("忽略 {}: {}", action, label);
+            let message = cannot_send(action, label);
+            leptos::logging::warn!("{}", message);
+            set_sync_banner.set(Some(message));
             return;
         }
         let build = build.clone();

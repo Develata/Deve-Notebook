@@ -47,6 +47,7 @@ pub(super) fn build_source_control_callbacks(
         scope::source_control_requests(signals),
         signals.set_source_control_notice,
         signals.set_diff_content,
+        signals.set_sync_banner,
     )
 }
 

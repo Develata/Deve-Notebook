@@ -53,6 +53,7 @@ pub fn create_source_control_callbacks(
     request: SourceControlRequestSignals,
     set_notice: WriteSignal<Option<SourceControlNotice>>,
     set_diff_content: WriteSignal<Option<DiffSessionWire>>,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> SourceControlCallbacks {
     let (on_get_changes, on_get_history, on_get_doc_diff, on_get_commit_diff) =
         create_read_callbacks(ws, scope, write_gate, request, set_notice, set_diff_content);
@@ -65,7 +66,7 @@ pub fn create_source_control_callbacks(
         on_commit,
         on_resolve_conflict,
         on_commit_and_push,
-    ) = create_write_callbacks(ws, scope, write_gate);
+    ) = create_write_callbacks(ws, scope, write_gate, set_sync_banner);
 
     SourceControlCallbacks {
         on_get_changes,

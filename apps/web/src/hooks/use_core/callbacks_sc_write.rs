@@ -1,7 +1,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
-use leptos::prelude::Callback;
+use leptos::prelude::{Callback, WriteSignal};
 
 use super::SourceControlScopeSignals;
 
@@ -30,11 +30,12 @@ pub(super) fn create_write_callbacks(
     ws: &WsService,
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> SourceControlWriteCallbacks {
     let (on_stage_file, on_stage_files, on_unstage_file, on_unstage_files, on_discard_file) =
-        create_target_write_callbacks(ws, scope, gate);
+        create_target_write_callbacks(ws, scope, gate, set_sync_banner);
     let (on_commit, on_resolve_conflict, on_commit_and_push) =
-        create_commit_write_callbacks(ws, scope, gate);
+        create_commit_write_callbacks(ws, scope, gate, set_sync_banner);
     (
         on_stage_file,
         on_stage_files,
