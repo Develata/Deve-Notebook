@@ -1,4 +1,5 @@
 // apps/web/src/components/chat/drop_handler.rs
+use crate::hooks::use_core::write_gate_banner::cannot_action;
 use leptos::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -24,6 +25,7 @@ pub fn on_drag_leave(set_is_drag_over: WriteSignal<bool>) -> impl Fn(web_sys::Dr
 pub fn on_drop(
     set_input: WriteSignal<String>,
     set_is_drag_over: WriteSignal<bool>,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> impl Fn(web_sys::DragEvent) {
     move |ev: web_sys::DragEvent| {
         ev.prevent_default();
@@ -36,7 +38,9 @@ pub fn on_drop(
                 if let Some(file) = files.item(i) {
                     let name = file.name();
                     if file.size() > 1024.0 * 1024.0 {
-                        leptos::logging::warn!("File too large: {}", name);
+                        let message = cannot_action("attach file", "file is larger than 1 MiB");
+                        leptos::logging::warn!("{}: {}", message, name);
+                        set_sync_banner.set(Some(message));
                         continue;
                     }
 

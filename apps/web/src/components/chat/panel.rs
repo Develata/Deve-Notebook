@@ -76,7 +76,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             }
             on:dragover=on_drag_over(set_is_drag_over)
             on:dragleave=on_drag_leave(set_is_drag_over)
-            on:drop=on_drop(set_input, set_is_drag_over)
+            on:drop=on_drop(set_input, set_is_drag_over, core.set_sync_banner)
         >
             <DragOverlay is_drag_over=is_drag_over />
             <ChatHeader mobile=mobile on_close=on_close />
