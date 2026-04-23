@@ -6,6 +6,10 @@ use leptos::prelude::*;
 
 use super::super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 
+#[cfg(test)]
+#[path = "callbacks_sync_write_test.rs"]
+mod tests;
+
 pub(super) struct SyncWriteCallbacks {
     pub(super) on_set_sync_mode: Callback<String>,
     pub(super) on_confirm_merge: Callback<()>,
@@ -18,15 +22,17 @@ pub(super) fn create_sync_write_callbacks(
     current_doc: ReadSignal<Option<DocId>>,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> SyncWriteCallbacks {
     let ws1 = ws.clone();
     let on_set_sync_mode = Callback::new(move |mode: String| {
-        if let Some(block) = repo_write_block_untracked(&ws1, write_gate) {
-            leptos::logging::warn!("忽略 SetSyncMode: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 SetSyncMode: local repo scope 尚未稳定");
+        let Some(scope_nonce) = sync_write_scope_nonce(
+            &ws1,
+            local_scope,
+            write_gate,
+            set_sync_banner,
+            "SetSyncMode",
+        ) else {
             return;
         };
         ws1.send(ClientMessage::SetSyncMode {
@@ -37,12 +43,13 @@ pub(super) fn create_sync_write_callbacks(
 
     let ws2 = ws.clone();
     let on_confirm_merge = Callback::new(move |_: ()| {
-        if let Some(block) = repo_write_block_untracked(&ws2, write_gate) {
-            leptos::logging::warn!("忽略 ConfirmMerge: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 ConfirmMerge: local repo scope 尚未稳定");
+        let Some(scope_nonce) = sync_write_scope_nonce(
+            &ws2,
+            local_scope,
+            write_gate,
+            set_sync_banner,
+            "ConfirmMerge",
+        ) else {
             return;
         };
         ws2.send(ClientMessage::ConfirmMerge {
@@ -52,12 +59,13 @@ pub(super) fn create_sync_write_callbacks(
 
     let ws3 = ws.clone();
     let on_discard_pending = Callback::new(move |_: ()| {
-        if let Some(block) = repo_write_block_untracked(&ws3, write_gate) {
-            leptos::logging::warn!("忽略 DiscardPending: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 DiscardPending: local repo scope 尚未稳定");
+        let Some(scope_nonce) = sync_write_scope_nonce(
+            &ws3,
+            local_scope,
+            write_gate,
+            set_sync_banner,
+            "DiscardPending",
+        ) else {
             return;
         };
         ws3.send(ClientMessage::DiscardPending {
@@ -67,12 +75,9 @@ pub(super) fn create_sync_write_callbacks(
 
     let ws4 = ws.clone();
     let on_merge_peer = Callback::new(move |peer_id: String| {
-        if let Some(block) = repo_write_block_untracked(&ws4, write_gate) {
-            leptos::logging::warn!("忽略 MergePeer: {}", block.label());
-            return;
-        }
-        let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 MergePeer: local repo scope 尚未稳定");
+        let Some(scope_nonce) =
+            sync_write_scope_nonce(&ws4, local_scope, write_gate, set_sync_banner, "MergePeer")
+        else {
             return;
         };
         if let Some(doc_id) = current_doc.get_untracked() {
@@ -90,4 +95,30 @@ pub(super) fn create_sync_write_callbacks(
         on_discard_pending,
         on_merge_peer,
     }
+}
+
+fn sync_write_scope_nonce(
+    ws: &WsService,
+    local_scope: LocalScopeSignals,
+    write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
+    action: &'static str,
+) -> Option<u64> {
+    if let Some(block) = repo_write_block_untracked(ws, write_gate) {
+        let message = sync_write_block_banner(action, block.label());
+        leptos::logging::warn!("{}", message);
+        set_sync_banner.set(Some(message));
+        return None;
+    }
+    let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
+        let message = sync_write_block_banner(action, "local repo scope is not stable");
+        leptos::logging::warn!("{}", message);
+        set_sync_banner.set(Some(message));
+        return None;
+    };
+    Some(scope_nonce)
+}
+
+fn sync_write_block_banner(action: &str, reason: &str) -> String {
+    format!("Cannot send {}: {}", action, reason)
 }

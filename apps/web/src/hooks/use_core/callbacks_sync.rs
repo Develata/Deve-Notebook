@@ -25,6 +25,7 @@ pub fn create_sync_callbacks(
     current_doc: ReadSignal<Option<DocId>>,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
     set_shadow_list_request_id: WriteSignal<Option<String>>,
     set_sync_mode_request_id: WriteSignal<Option<String>>,
     set_pending_ops_request_id: WriteSignal<Option<String>>,
@@ -36,7 +37,13 @@ pub fn create_sync_callbacks(
         set_sync_mode_request_id,
         set_pending_ops_request_id,
     );
-    let write = write::create_sync_write_callbacks(ws, current_doc, local_scope, write_gate);
+    let write = write::create_sync_write_callbacks(
+        ws,
+        current_doc,
+        local_scope,
+        write_gate,
+        set_sync_banner,
+    );
 
     SyncCallbacks {
         on_get_sync_mode: read.on_get_sync_mode,

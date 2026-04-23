@@ -29,6 +29,7 @@ pub(super) fn build_sync_callbacks(ws: &WsService, signals: &CoreSignals) -> Syn
         signals.current_doc,
         scope::local_scope(signals),
         scope::repo_write(signals),
+        signals.set_sync_banner,
         signals.set_shadow_list_request_id,
         signals.set_sync_mode_request_id,
         signals.set_pending_ops_request_id,
