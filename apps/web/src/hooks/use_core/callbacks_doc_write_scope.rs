@@ -13,14 +13,35 @@ pub(super) fn local_write_scope_nonce(
     action: &'static str,
 ) -> Option<u64> {
     if let Some(block) = repo_write_block_untracked(ws, write_gate) {
-        let message = cannot_send(action, block.label());
-        warn_sync_banner(set_sync_banner, message);
+        show_doc_write_block(set_sync_banner, action, block.label());
         return None;
     }
     let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-        let message = cannot_send(action, "local repo scope is not stable");
-        warn_sync_banner(set_sync_banner, message);
+        show_doc_write_block(set_sync_banner, action, "local repo scope is not stable");
         return None;
     };
     Some(scope_nonce)
+}
+
+fn show_doc_write_block(set_sync_banner: WriteSignal<Option<String>>, action: &str, reason: &str) {
+    let message = cannot_send(action, reason);
+    warn_sync_banner(set_sync_banner, message);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::show_doc_write_block;
+    use leptos::prelude::{GetUntracked, signal};
+
+    #[test]
+    fn doc_write_block_banner_includes_action_and_reason() {
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+
+        show_doc_write_block(set_sync_banner, "MoveDoc", "local repo scope is not stable");
+
+        assert_eq!(
+            sync_banner.get_untracked().as_deref(),
+            Some("Cannot send MoveDoc: local repo scope is not stable")
+        );
+    }
 }
