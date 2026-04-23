@@ -13,6 +13,7 @@ use super::resolve_local_write_scope;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
+use deve_core::models::NodeKind;
 use prepare::prepare_copy_paths;
 use register::CopyRegisterCtx;
 use std::sync::Arc;
@@ -92,4 +93,12 @@ fn copy_dir_on_disk(
         return false;
     }
     true
+}
+
+pub(super) fn normalize_copy_dest_path(kind: NodeKind, dest_path: &str) -> String {
+    if kind == NodeKind::File && !dest_path.ends_with(".md") {
+        format!("{}.md", dest_path)
+    } else {
+        dest_path.to_string()
+    }
 }

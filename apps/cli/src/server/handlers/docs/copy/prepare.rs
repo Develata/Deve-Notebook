@@ -1,3 +1,4 @@
+use super::super::copy::normalize_copy_dest_path;
 use super::super::node_target::resolve_node_target;
 use super::super::{checked_exists, errors, validate_file_path, validate_folder_path};
 use crate::server::AppState;
@@ -37,7 +38,12 @@ pub(super) fn prepare_copy_paths(
             return None;
         }
     };
-    let dst = match local_repo_path(state, scope, dest_path) {
+    let dst_repo_path = normalize_copy_dest_path(src.kind, dest_path);
+    if src.repo_path == dst_repo_path {
+        errors::request_failed_scoped(ch, "Destination must differ from source", scope_nonce);
+        return None;
+    }
+    let dst = match local_repo_path(state, scope, &dst_repo_path) {
         Ok(path) => path,
         Err(err) => {
             errors::classified_failure_scoped(ch, err.to_string(), scope_nonce);
@@ -58,17 +64,16 @@ pub(super) fn prepare_copy_paths(
     if dst_exists {
         errors::storage_conflict_scoped(
             ch,
-            format!("Destination exists: {}", dest_path),
+            format!("Destination exists: {}", dst_repo_path),
             scope_nonce,
         );
         return None;
     }
-    let valid = if src.kind == NodeKind::Dir {
-        validate_folder_path(dest_path, ch, scope_nonce)
+    if !(if src.kind == NodeKind::Dir {
+        validate_folder_path(&dst_repo_path, ch, scope_nonce)
     } else {
-        validate_file_path(dest_path, ch, scope_nonce)
-    };
-    if !valid {
+        validate_file_path(&dst_repo_path, ch, scope_nonce)
+    }) {
         return None;
     }
     let mut src_exists = match checked_exists(&src.abs_path, "copy source projection") {

@@ -19,6 +19,8 @@ pub mod ai_chat;
 pub mod auth;
 pub mod channel;
 #[cfg(test)]
+mod docs_copy_contract_test;
+#[cfg(test)]
 mod docs_create_test;
 #[cfg(test)]
 mod docs_dir_copy_test;
