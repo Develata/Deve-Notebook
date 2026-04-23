@@ -57,6 +57,9 @@
     core_commands -> obj_help_surface;
     core_commands -> obj_command_selection;
     core_commands -> obj_command_handoff;
+    core_commands -> obj_command_registry;
+    core_commands -> obj_search_mode;
+    core_commands -> obj_search_action;
     core_commands -> obj_vault_path;
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;

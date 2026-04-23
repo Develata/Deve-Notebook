@@ -14,6 +14,7 @@
 - Quick Open 与打开文档流示例见 `docs/features/operations/repo_open_doc.md`。
 - CLI 控制面流示例见 [`operations/cli_control_commands.md`](./operations/cli_control_commands.md)。
 - CLI 控制壳层细流见 [`operations/cli_parse_command.md`](./operations/cli_parse_command.md)、[`operations/cli_help_surface.md`](./operations/cli_help_surface.md)、[`operations/cli_empty_command_guidance.md`](./operations/cli_empty_command_guidance.md)、[`operations/cli_runtime_handoff.md`](./operations/cli_runtime_handoff.md)。
+- 共享命令入口路由层见 [`operations/command_surface_mode_routing.md`](./operations/command_surface_mode_routing.md) 与 [`operations/command_surface_action_routing.md`](./operations/command_surface_action_routing.md)。
 - CLI 细粒度命令族见 [`operations/cli_vault_indexing.md`](./operations/cli_vault_indexing.md)、[`operations/cli_server_runtime.md`](./operations/cli_server_runtime.md)、[`operations/cli_export_inspect.md`](./operations/cli_export_inspect.md)、[`operations/cli_repair_admin.md`](./operations/cli_repair_admin.md)。
 
 ## 功能项

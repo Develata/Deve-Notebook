@@ -1,0 +1,21 @@
+            subgraph cluster_user_command_surface_mode {
+                label="command surface mode routing [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_command_surface_open [label="Open Unified Command Surface", fillcolor="#fef9c3"];
+                op_command_surface_mode [label="Type Command Mode Prefix", fillcolor="#fde68a"];
+                op_command_surface_results [label="Observe Routed Provider Results", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_command_surface_action {
+                label="command surface action routing [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_command_surface_select [label="Choose Routed Result", fillcolor="#fde68a"];
+                op_command_surface_dispatch [label="Dispatch SearchAction", fillcolor="#fde68a"];
+                op_command_surface_handoff [label="Enter Routed Target Flow", fillcolor="#fef9c3"];
+            }

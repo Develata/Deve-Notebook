@@ -71,6 +71,9 @@
             obj_help_surface [label="help::surface", fillcolor="#f8fafc"];
             obj_command_selection [label="command::selection", fillcolor="#f8fafc"];
             obj_command_handoff [label="command::handoff", fillcolor="#f8fafc"];
+            obj_command_registry [label="command::registry", fillcolor="#f8fafc"];
+            obj_search_mode [label="search::mode", fillcolor="#f8fafc"];
+            obj_search_action [label="search::action", fillcolor="#f8fafc"];
             obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];

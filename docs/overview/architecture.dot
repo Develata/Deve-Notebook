@@ -850,6 +850,28 @@ digraph DeveNoteArchitecture {
                 op_cli_runtime_module [label="Enter Command Module", fillcolor="#fde68a"];
             }
 
+            subgraph cluster_user_command_surface_mode {
+                label="command surface mode routing [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_command_surface_open [label="Open Unified Command Surface", fillcolor="#fef9c3"];
+                op_command_surface_mode [label="Type Command Mode Prefix", fillcolor="#fde68a"];
+                op_command_surface_results [label="Observe Routed Provider Results", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_command_surface_action {
+                label="command surface action routing [12_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_command_surface_select [label="Choose Routed Result", fillcolor="#fde68a"];
+                op_command_surface_dispatch [label="Dispatch SearchAction", fillcolor="#fde68a"];
+                op_command_surface_handoff [label="Enter Routed Target Flow", fillcolor="#fef9c3"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1419,6 +1441,20 @@ digraph DeveNoteArchitecture {
             app_cli_runtime_module [label="commands::<family>::run", fillcolor="#bfdbfe"];
         }
 
+        subgraph cluster_app_command_surface {
+            label="command surface shared interfaces [12_commands]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_command_surface_open [label="search_surface::open", fillcolor="#eff6ff"];
+            app_command_surface_mode [label="create_results_memo mode router", fillcolor="#bfdbfe"];
+            app_command_surface_results [label="SearchProvider::search", fillcolor="#eff6ff"];
+            app_command_surface_select [label="search_result::select", fillcolor="#eff6ff"];
+            app_command_surface_dispatch [label="execute_action(SearchAction)", fillcolor="#bfdbfe"];
+            app_command_surface_handoff [label="SearchAction -> downstream flow", fillcolor="#dbeafe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1886,6 +1922,17 @@ digraph DeveNoteArchitecture {
             mod_cli_runtime_gateway [label="cli::runtime-gateway", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_command_surface {
+            label="command surface shared coordination [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_command_registry [label="command::registry", fillcolor="#f0fdf4"];
+            mod_search_mode_router [label="search::mode_router", fillcolor="#f0fdf4"];
+            mod_search_action_router [label="search::action_router", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -2259,6 +2306,9 @@ digraph DeveNoteArchitecture {
             obj_help_surface [label="help::surface", fillcolor="#f8fafc"];
             obj_command_selection [label="command::selection", fillcolor="#f8fafc"];
             obj_command_handoff [label="command::handoff", fillcolor="#f8fafc"];
+            obj_command_registry [label="command::registry", fillcolor="#f8fafc"];
+            obj_search_mode [label="search::mode", fillcolor="#f8fafc"];
+            obj_search_action [label="search::action", fillcolor="#f8fafc"];
             obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
@@ -3252,6 +3302,32 @@ digraph DeveNoteArchitecture {
     mod_cli_no_command -> core_commands;
     mod_cli_runtime_gateway -> core_commands;
 
+    op_command_surface_open -> app_command_surface_open;
+    op_command_surface_mode -> app_command_surface_mode;
+    op_command_surface_results -> app_command_surface_results;
+    op_command_surface_select -> app_command_surface_select;
+    op_command_surface_dispatch -> app_command_surface_dispatch;
+    op_command_surface_handoff -> app_command_surface_handoff;
+
+    app_command_surface_mode -> mod_search_mode_router;
+    app_command_surface_mode -> mod_command_registry;
+    app_command_surface_mode -> mod_tree_structure;
+    app_command_surface_results -> mod_search_mode_router;
+    app_command_surface_results -> mod_command_registry;
+    app_command_surface_results -> mod_tree_structure;
+    app_command_surface_dispatch -> mod_search_action_router;
+    app_command_surface_dispatch -> mod_command_registry;
+    app_command_surface_dispatch -> mod_tree_structure;
+    app_command_surface_dispatch -> mod_proto_ws;
+    app_command_surface_handoff -> mod_search_action_router;
+    app_command_surface_handoff -> mod_command_registry;
+    app_command_surface_handoff -> mod_tree_structure;
+    app_command_surface_handoff -> mod_proto_ws;
+
+    mod_command_registry -> core_commands;
+    mod_search_mode_router -> core_commands;
+    mod_search_action_router -> core_commands;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -3311,6 +3387,9 @@ digraph DeveNoteArchitecture {
     core_commands -> obj_help_surface;
     core_commands -> obj_command_selection;
     core_commands -> obj_command_handoff;
+    core_commands -> obj_command_registry;
+    core_commands -> obj_search_mode;
+    core_commands -> obj_search_action;
     core_commands -> obj_vault_path;
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;
@@ -3937,6 +4016,16 @@ digraph DeveNoteArchitecture {
     user_cli_runtime_handoff_spine -> op_cli_runtime_config [style=dashed, color="#f59e0b"];
     op_cli_runtime_config -> op_cli_runtime_dispatch [style=dashed, color="#f59e0b"];
     op_cli_runtime_dispatch -> op_cli_runtime_module [style=dashed, color="#f59e0b"];
+
+    user_command_surface_mode_spine [label="command surface mode routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_command_surface_mode_spine -> op_command_surface_open [style=dashed, color="#f59e0b"];
+    op_command_surface_open -> op_command_surface_mode [style=dashed, color="#f59e0b"];
+    op_command_surface_mode -> op_command_surface_results [style=dashed, color="#f59e0b"];
+
+    user_command_surface_action_spine [label="command surface action routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_command_surface_action_spine -> op_command_surface_select [style=dashed, color="#f59e0b"];
+    op_command_surface_select -> op_command_surface_dispatch [style=dashed, color="#f59e0b"];
+    op_command_surface_dispatch -> op_command_surface_handoff [style=dashed, color="#f59e0b"];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

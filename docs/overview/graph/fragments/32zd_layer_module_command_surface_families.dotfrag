@@ -1,0 +1,10 @@
+        subgraph cluster_mod_command_surface {
+            label="command surface shared coordination [12_commands]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_command_registry [label="command::registry", fillcolor="#f0fdf4"];
+            mod_search_mode_router [label="search::mode_router", fillcolor="#f0fdf4"];
+            mod_search_action_router [label="search::action_router", fillcolor="#f0fdf4"];
+        }

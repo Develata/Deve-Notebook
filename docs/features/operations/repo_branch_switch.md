@@ -49,3 +49,4 @@
 
 - 本 flow 的核心不是打开切换器，而是 `switch_nonce` 与 `scope_nonce` 的严格门控。
 - branch switch 会重绑 repo-scoped session，因此属于仓库架构核心流，而不是单纯 UI 导航。
+- 共享搜索入口如何把 `@` 模式与 `SearchAction::SwitchBranch` 路由到这里，已单独建模在 `command_surface_mode_routing.md` 与 `command_surface_action_routing.md`。

@@ -1,0 +1,9 @@
+    user_command_surface_mode_spine [label="command surface mode routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_command_surface_mode_spine -> op_command_surface_open [style=dashed, color="#f59e0b"];
+    op_command_surface_open -> op_command_surface_mode [style=dashed, color="#f59e0b"];
+    op_command_surface_mode -> op_command_surface_results [style=dashed, color="#f59e0b"];
+
+    user_command_surface_action_spine [label="command surface action routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_command_surface_action_spine -> op_command_surface_select [style=dashed, color="#f59e0b"];
+    op_command_surface_select -> op_command_surface_dispatch [style=dashed, color="#f59e0b"];
+    op_command_surface_dispatch -> op_command_surface_handoff [style=dashed, color="#f59e0b"];

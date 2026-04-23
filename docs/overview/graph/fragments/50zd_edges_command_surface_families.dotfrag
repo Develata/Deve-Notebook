@@ -1,0 +1,25 @@
+    op_command_surface_open -> app_command_surface_open;
+    op_command_surface_mode -> app_command_surface_mode;
+    op_command_surface_results -> app_command_surface_results;
+    op_command_surface_select -> app_command_surface_select;
+    op_command_surface_dispatch -> app_command_surface_dispatch;
+    op_command_surface_handoff -> app_command_surface_handoff;
+
+    app_command_surface_mode -> mod_search_mode_router;
+    app_command_surface_mode -> mod_command_registry;
+    app_command_surface_mode -> mod_tree_structure;
+    app_command_surface_results -> mod_search_mode_router;
+    app_command_surface_results -> mod_command_registry;
+    app_command_surface_results -> mod_tree_structure;
+    app_command_surface_dispatch -> mod_search_action_router;
+    app_command_surface_dispatch -> mod_command_registry;
+    app_command_surface_dispatch -> mod_tree_structure;
+    app_command_surface_dispatch -> mod_proto_ws;
+    app_command_surface_handoff -> mod_search_action_router;
+    app_command_surface_handoff -> mod_command_registry;
+    app_command_surface_handoff -> mod_tree_structure;
+    app_command_surface_handoff -> mod_proto_ws;
+
+    mod_command_registry -> core_commands;
+    mod_search_mode_router -> core_commands;
+    mod_search_action_router -> core_commands;
