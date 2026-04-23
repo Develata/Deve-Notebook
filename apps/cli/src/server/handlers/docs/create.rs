@@ -11,6 +11,10 @@ use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
+#[cfg(test)]
+#[path = "create_test.rs"]
+mod tests;
+
 /// 处理创建文档请求
 ///
 /// **流程**:
@@ -30,7 +34,10 @@ pub async fn handle_create_doc(
         return;
     };
 
-    let filename = normalize_name(name);
+    let Some(filename) = normalize_name(name) else {
+        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    };
 
     let valid = if filename.ends_with('/') {
         validate_folder_path(&filename, ch, scope_nonce)
@@ -56,9 +63,13 @@ pub async fn handle_create_doc(
     }
 }
 
-fn normalize_name(mut name: String) -> String {
+fn normalize_name(name: String) -> Option<String> {
+    let mut name = name.trim().to_string();
+    if name.is_empty() {
+        return None;
+    }
     if !name.ends_with('/') && !name.ends_with(".md") {
         name.push_str(".md");
     }
-    name
+    Some(name)
 }
