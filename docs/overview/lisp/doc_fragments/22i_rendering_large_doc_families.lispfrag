@@ -1,0 +1,8 @@
+(group :id grp.app.render-large-doc-prefetch :layer application :label "rendering large-doc prefetch" :members (app.render.large-doc.open-loading app.render.large-doc.partial-render app.render.large-doc.ready))
+(group :id grp.app.render-large-doc-search-gate :layer application :label "rendering large-doc search gate" :members (app.render.large-search.open app.render.large-search.gate app.render.large-search.release))
+(application :id app.render.large-doc.open-loading :label "editor::open_loading" :kind ui-shell :chapter 03_rendering :calls (mod_render_snapshot_load mod_editor_runtime))
+(application :id app.render.large-doc.partial-render :label "render::partial_snapshot" :kind ui-render :chapter 03_rendering :calls (mod_render_snapshot_load mod_render_prefetch mod_render_load_status mod_editor_runtime))
+(application :id app.render.large-doc.ready :label "render::load_ready" :kind async-result :chapter 03_rendering :calls (mod_render_snapshot_load mod_render_load_status mod_editor_runtime))
+(application :id app.render.large-search.open :label "search::open_during_load" :kind ui-shell :chapter 03_rendering :calls (mod_render_search_gate))
+(application :id app.render.large-search.gate :label "search::block_while_loading" :kind runtime-gate :chapter 03_rendering :calls (mod_render_search_gate mod_render_load_status))
+(application :id app.render.large-search.release :label "search::release_after_ready" :kind runtime-gate :chapter 03_rendering :calls (mod_render_search_gate mod_search_service mod_proto_ws))

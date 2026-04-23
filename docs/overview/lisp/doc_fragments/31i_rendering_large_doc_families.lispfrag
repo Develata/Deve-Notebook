@@ -1,0 +1,8 @@
+(group :id grp.mod.render-large-doc-prefetch :layer module :label "rendering large-doc prefetch" :members (mod_render_snapshot_load mod_render_prefetch mod_render_load_status mod_editor_runtime))
+(group :id grp.mod.render-large-doc-search-gate :layer module :label "rendering large-doc search gate" :members (mod_render_search_gate mod_render_load_status mod_search_service mod_proto_ws))
+(module :id mod_render_snapshot_load :label "render::snapshot_load" :chapter 03_rendering :parent core.rendering :code-area "apps/web/src/editor/sync/{snapshot.rs,history.rs,snapshot_finish.rs}")
+(module :id mod_render_prefetch :label "render::prefetch" :chapter 03_rendering :parent core.rendering :code-area "apps/web/src/editor/{prefetch.rs,sync/snapshot_apply.rs}")
+(module :id mod_render_load_status :label "render::load_status" :chapter 03_rendering :parent core.rendering :code-area "apps/web/src/components/{bottom_bar/stats.rs,mobile_layout/footer_status.rs}")
+(module :id mod_render_search_gate :label "render::search_gate" :chapter 03_rendering :parent core.rendering :code-area "apps/web/src/hooks/use_core/callbacks_misc.rs")
+(group :id grp.core.render-large-doc-prefetch :layer core :label "rendering large-doc prefetch" :members (core.rendering core.ledger))
+(group :id grp.core.render-large-doc-search-gate :layer core :label "rendering large-doc search gate" :members (core.rendering core.search core.protocol))

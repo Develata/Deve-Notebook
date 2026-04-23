@@ -1,0 +1,13 @@
+        subgraph cluster_mod_rendering_large_doc_families {
+            label="rendering large-doc coordination [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_render_snapshot_load [label="render::snapshot_load", fillcolor="#f0fdf4"];
+            mod_render_prefetch [label="render::prefetch", fillcolor="#f0fdf4"];
+            mod_render_load_status [label="render::load_status", fillcolor="#f0fdf4"];
+            mod_render_search_gate [label="render::search_gate", fillcolor="#f0fdf4"];
+            mod_search_service_gate [label="search::service", fillcolor="#f0fdf4"];
+            mod_proto_ws_search_gate [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

@@ -1,0 +1,49 @@
+# rendering_large_doc_prefetch.md - 大文档渐进预加载链
+
+## Metadata
+
+- `Flow ID`: `flow.rendering.large-doc-prefetch`
+- `Domain`: `rendering`
+- `Related Feature Chapters`: `docs/features/03_rendering.md`, `docs/features/16_web_thin_client_ledger.md`
+- `Related Acceptance Cases`: `RENDER-LARGE-001`
+
+## Operations
+
+### `op.render.large-doc.open`
+
+- `Name`: `Open Large Document`
+- `Surface`: `quick-open-or-explorer`
+- `Trigger`: choose a large document from the current repo
+- `Preconditions`: repo scope is stable and open-doc request can be issued
+- `Immediate Result`: editor enters loading flow instead of waiting for full replay before showing content
+- `Application Entry`: `apps/web/src/editor/hook_open.rs`, `apps/web/src/editor/sync/snapshot.rs`
+
+### `op.render.large-doc.observe-first-screen`
+
+- `Name`: `Observe First Screen During Partial Load`
+- `Surface`: `editor`
+- `Trigger`: snapshot content arrives before all delta ops are replayed
+- `Preconditions`: load state is `partial` and snapshot content is available
+- `Immediate Result`: first screen content is visible while remaining ops replay in batches
+- `Application Entry`: `apps/web/src/editor/sync/snapshot.rs`, `apps/web/src/editor/sync/snapshot_apply.rs`, `apps/web/src/components/bottom_bar/stats.rs`
+
+### `op.render.large-doc.observe-ready`
+
+- `Name`: `Observe Large Document Ready State`
+- `Surface`: `editor`
+- `Trigger`: history replay and pending overlay reconciliation complete
+- `Preconditions`: snapshot and delta replay path finished successfully
+- `Immediate Result`: load state becomes `ready` and incremental progress indicators clear
+- `Application Entry`: `apps/web/src/editor/sync/history.rs`, `apps/web/src/editor/sync/snapshot_finish.rs`
+
+## Response Flow
+
+1. User opens a large document.
+2. Instruction interface starts open-doc loading and accepts the initial snapshot.
+3. Flow coordination shows snapshot content first, then replays remaining ops in adaptive batches.
+4. Execution domains are rendering projection and ledger-backed document content.
+
+## Notes
+
+- This flow is about snapshot-first visibility plus progressive replay, not a second authority buffer.
+- Main objects: `doc::content`, `load::progress`, `render::projection`.

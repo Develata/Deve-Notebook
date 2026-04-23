@@ -47,6 +47,8 @@ rendering checkbox writeback	render_checkbox
 rendering math / mermaid	render_math_mermaid
 rendering inline source reveal	render_inline_source
 rendering link activation gate	render_link_activation
+rendering large-doc prefetch	render_large_doc_prefetch
+rendering large-doc search gate	render_large_doc_search_gate
 rendering projection refresh	render_projection_refresh
 rendering math source projection	render_math_source
 rendering mermaid source projection	render_mermaid_source

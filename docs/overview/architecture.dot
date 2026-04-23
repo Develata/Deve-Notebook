@@ -785,6 +785,28 @@ digraph DeveNoteArchitecture {
                 op_render_outline_observe [label="Observe Editor At Heading Target", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_render_large_doc_prefetch {
+                label="rendering large-doc prefetch [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_large_doc_open [label="Open Large Document", fillcolor="#fde68a"];
+                op_render_large_doc_first [label="Observe First Screen During Partial Load", fillcolor="#fef9c3"];
+                op_render_large_doc_ready [label="Observe Large Document Ready State", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_large_doc_search_gate {
+                label="rendering large-doc search gate [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_large_search_open [label="Open Search While Large Document Loads", fillcolor="#fef9c3"];
+                op_render_large_search_block [label="Submit Search During Partial Load", fillcolor="#fde68a"];
+                op_render_large_search_release [label="Submit Search After Load Ready", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1321,6 +1343,20 @@ digraph DeveNoteArchitecture {
             app_render_outline_render [label="outline::render_projection", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_rendering_large_doc_families {
+            label="rendering large-doc detail [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_large_doc_open [label="editor::open_loading", fillcolor="#bfdbfe"];
+            app_render_large_doc_partial [label="render::partial_snapshot", fillcolor="#eff6ff"];
+            app_render_large_doc_ready [label="render::load_ready", fillcolor="#eff6ff"];
+            app_render_large_search_open [label="search::open_during_load", fillcolor="#eff6ff"];
+            app_render_large_search_gate [label="search::block_while_loading", fillcolor="#bfdbfe"];
+            app_render_large_search_release [label="search::release_after_ready", fillcolor="#bfdbfe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [06_repository + 16_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1762,6 +1798,20 @@ digraph DeveNoteArchitecture {
             mod_outline_projection [label="outline::projection", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_rendering_large_doc_families {
+            label="rendering large-doc coordination [03_rendering]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_render_snapshot_load [label="render::snapshot_load", fillcolor="#f0fdf4"];
+            mod_render_prefetch [label="render::prefetch", fillcolor="#f0fdf4"];
+            mod_render_load_status [label="render::load_status", fillcolor="#f0fdf4"];
+            mod_render_search_gate [label="render::search_gate", fillcolor="#f0fdf4"];
+            mod_search_service_gate [label="search::service", fillcolor="#f0fdf4"];
+            mod_proto_ws_search_gate [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [12_commands]";
             style="rounded,filled";
@@ -2149,6 +2199,8 @@ digraph DeveNoteArchitecture {
             obj_task_checkbox [label="task::checkbox", fillcolor="#f8fafc"];
             obj_outline_projection [label="outline::projection", fillcolor="#f8fafc"];
             obj_link_activation [label="link::activation", fillcolor="#f8fafc"];
+            obj_load_progress [label="load::progress", fillcolor="#f8fafc"];
+            obj_search_gate [label="search::gate", fillcolor="#f8fafc"];
             obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
             obj_locale_selection [label="locale::selection", fillcolor="#f8fafc"];
             obj_localized_format [label="format::localized", fillcolor="#f8fafc"];
@@ -3061,6 +3113,36 @@ digraph DeveNoteArchitecture {
     mod_link_activation -> core_rendering;
     mod_outline_projection -> core_rendering;
 
+    op_render_large_doc_open -> app_render_large_doc_open;
+    op_render_large_doc_first -> app_render_large_doc_partial;
+    op_render_large_doc_ready -> app_render_large_doc_ready;
+    op_render_large_search_open -> app_render_large_search_open;
+    op_render_large_search_block -> app_render_large_search_gate;
+    op_render_large_search_release -> app_render_large_search_release;
+
+    app_render_large_doc_open -> mod_render_snapshot_load;
+    app_render_large_doc_open -> mod_editor_runtime;
+    app_render_large_doc_partial -> mod_render_snapshot_load;
+    app_render_large_doc_partial -> mod_render_prefetch;
+    app_render_large_doc_partial -> mod_render_load_status;
+    app_render_large_doc_partial -> mod_editor_runtime;
+    app_render_large_doc_ready -> mod_render_snapshot_load;
+    app_render_large_doc_ready -> mod_render_load_status;
+    app_render_large_doc_ready -> mod_editor_runtime;
+    app_render_large_search_open -> mod_render_search_gate;
+    app_render_large_search_gate -> mod_render_search_gate;
+    app_render_large_search_gate -> mod_render_load_status;
+    app_render_large_search_release -> mod_render_search_gate;
+    app_render_large_search_release -> mod_search_service_gate;
+    app_render_large_search_release -> mod_proto_ws_search_gate;
+
+    mod_render_snapshot_load -> core_rendering;
+    mod_render_prefetch -> core_rendering;
+    mod_render_load_status -> core_rendering;
+    mod_render_search_gate -> core_rendering;
+    mod_search_service_gate -> core_search_query;
+    mod_proto_ws_search_gate -> core_proto_search;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -3134,6 +3216,8 @@ digraph DeveNoteArchitecture {
     core_rendering -> obj_task_checkbox;
     core_rendering -> obj_outline_projection;
     core_rendering -> obj_link_activation;
+    core_rendering -> obj_load_progress;
+    core_rendering -> obj_search_gate;
     core_i18n -> obj_i18n_catalog;
     core_i18n -> obj_locale_selection;
     core_i18n -> obj_localized_format;
@@ -3698,6 +3782,29 @@ digraph DeveNoteArchitecture {
     user_render_outline_spine -> op_render_outline_toggle [style=dashed, color="#d97706", constraint=false];
     op_render_outline_toggle -> op_render_outline_select [style=dashed, color="#d97706", constraint=false];
     op_render_outline_select -> op_render_outline_observe [style=dashed, color="#d97706", constraint=false];
+
+    user_render_large_doc_prefetch_spine [label="rendering large-doc prefetch flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_large_doc_prefetch_spine [label="", shape=point, width=0.01];
+    mod_render_large_doc_prefetch_spine [label="", shape=point, width=0.01];
+    core_render_large_doc_prefetch_spine [label="", shape=point, width=0.01];
+    user_render_large_doc_prefetch_spine -> app_render_large_doc_prefetch_spine [penwidth=2.2, color="#0f172a"];
+    app_render_large_doc_prefetch_spine -> mod_render_large_doc_prefetch_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_large_doc_prefetch_spine -> core_render_large_doc_prefetch_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_large_doc_search_gate_spine [label="rendering large-doc search gate flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_large_doc_search_gate_spine [label="", shape=point, width=0.01];
+    mod_render_large_doc_search_gate_spine [label="", shape=point, width=0.01];
+    core_render_large_doc_search_gate_spine [label="", shape=point, width=0.01];
+    user_render_large_doc_search_gate_spine -> app_render_large_doc_search_gate_spine [penwidth=2.2, color="#0f172a"];
+    app_render_large_doc_search_gate_spine -> mod_render_large_doc_search_gate_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_large_doc_search_gate_spine -> core_render_large_doc_search_gate_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_large_doc_prefetch_spine -> op_render_large_doc_open [style=dashed, color="#d97706", constraint=false];
+    op_render_large_doc_open -> op_render_large_doc_first [style=dashed, color="#d97706", constraint=false];
+    op_render_large_doc_first -> op_render_large_doc_ready [style=dashed, color="#d97706", constraint=false];
+    user_render_large_doc_search_gate_spine -> op_render_large_search_open [style=dashed, color="#d97706", constraint=false];
+    op_render_large_search_open -> op_render_large_search_block [style=dashed, color="#d97706", constraint=false];
+    op_render_large_search_block -> op_render_large_search_release [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

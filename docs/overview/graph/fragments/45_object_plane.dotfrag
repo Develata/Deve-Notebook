@@ -85,6 +85,8 @@
             obj_task_checkbox [label="task::checkbox", fillcolor="#f8fafc"];
             obj_outline_projection [label="outline::projection", fillcolor="#f8fafc"];
             obj_link_activation [label="link::activation", fillcolor="#f8fafc"];
+            obj_load_progress [label="load::progress", fillcolor="#f8fafc"];
+            obj_search_gate [label="search::gate", fillcolor="#f8fafc"];
             obj_i18n_catalog [label="i18n::catalog", fillcolor="#f8fafc"];
             obj_locale_selection [label="locale::selection", fillcolor="#f8fafc"];
             obj_localized_format [label="format::localized", fillcolor="#f8fafc"];

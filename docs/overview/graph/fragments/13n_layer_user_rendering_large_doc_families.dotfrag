@@ -1,0 +1,21 @@
+            subgraph cluster_user_render_large_doc_prefetch {
+                label="rendering large-doc prefetch [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_large_doc_open [label="Open Large Document", fillcolor="#fde68a"];
+                op_render_large_doc_first [label="Observe First Screen During Partial Load", fillcolor="#fef9c3"];
+                op_render_large_doc_ready [label="Observe Large Document Ready State", fillcolor="#fef9c3"];
+            }
+
+            subgraph cluster_user_render_large_doc_search_gate {
+                label="rendering large-doc search gate [03_rendering]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_render_large_search_open [label="Open Search While Large Document Loads", fillcolor="#fef9c3"];
+                op_render_large_search_block [label="Submit Search During Partial Load", fillcolor="#fde68a"];
+                op_render_large_search_release [label="Submit Search After Load Ready", fillcolor="#fde68a"];
+            }

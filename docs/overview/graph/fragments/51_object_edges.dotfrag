@@ -71,6 +71,8 @@
     core_rendering -> obj_task_checkbox;
     core_rendering -> obj_outline_projection;
     core_rendering -> obj_link_activation;
+    core_rendering -> obj_load_progress;
+    core_rendering -> obj_search_gate;
     core_i18n -> obj_i18n_catalog;
     core_i18n -> obj_locale_selection;
     core_i18n -> obj_localized_format;

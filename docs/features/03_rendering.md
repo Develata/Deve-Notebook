@@ -66,6 +66,7 @@
 - 打开长文档时，用户应先看到首屏内容。
 - 剩余内容可以渐进加载，但编辑区不应卡死。
 - 在预加载完成前，全文搜索等重操作可以被限制或延后。
+- 细粒度操作示例：[`operations/rendering_large_doc_prefetch.md`](./operations/rendering_large_doc_prefetch.md), [`operations/rendering_large_doc_search_gate.md`](./operations/rendering_large_doc_search_gate.md)
 
 ## 细粒度操作链
 
@@ -76,6 +77,8 @@
 - 任务列表源码回写：[`operations/rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md)
 - Outline 跳转：[`operations/rendering_outline_navigation.md`](./operations/rendering_outline_navigation.md)
 - 链接激活闸门：[`operations/rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md)
+- 大文档渐进预加载：[`operations/rendering_large_doc_prefetch.md`](./operations/rendering_large_doc_prefetch.md)
+- 大文档搜索闸门：[`operations/rendering_large_doc_search_gate.md`](./operations/rendering_large_doc_search_gate.md)
 
 ## 非目标
 
