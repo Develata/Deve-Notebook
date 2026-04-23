@@ -2,6 +2,10 @@ use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchActio
 
 use super::super::path_utils::normalize_doc_path;
 
+#[cfg(test)]
+#[path = "results_remove_test.rs"]
+mod tests;
+
 pub(super) fn build_remove_results(args: &[String]) -> Vec<SearchResult> {
     if args.is_empty() {
         return vec![super::error_result("Usage: >rm <path>".to_string())];

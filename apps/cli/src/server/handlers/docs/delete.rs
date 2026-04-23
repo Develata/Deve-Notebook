@@ -12,6 +12,10 @@ use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use std::sync::Arc;
 
+#[cfg(test)]
+#[path = "delete_test.rs"]
+mod tests;
+
 /// 处理删除文档请求
 ///
 /// **流程**:
@@ -29,6 +33,11 @@ pub async fn handle_delete_doc(
     let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
     };
+
+    if path.trim().is_empty() {
+        errors::request_failed_scoped(ch, "Invalid empty path", scope_nonce);
+        return;
+    }
 
     tracing::info!("handle_delete_doc: path={}", path);
     let target = match resolve_node_target(state, &scope, &path) {
