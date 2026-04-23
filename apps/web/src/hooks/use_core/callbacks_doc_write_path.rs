@@ -10,10 +10,12 @@ pub(super) fn create_doc_rename_callback(
     ws: &WsService,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<(String, String)> {
     let ws = ws.clone();
     Callback::new(move |(old_path, new_path)| {
-        let Some(scope_nonce) = local_write_scope_nonce(&ws, local_scope, write_gate, "RenameDoc")
+        let Some(scope_nonce) =
+            local_write_scope_nonce(&ws, local_scope, write_gate, set_sync_banner, "RenameDoc")
         else {
             return;
         };
@@ -30,10 +32,12 @@ pub(super) fn create_doc_delete_callback(
     ws: &WsService,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<String> {
     let ws = ws.clone();
     Callback::new(move |path: String| {
-        let Some(scope_nonce) = local_write_scope_nonce(&ws, local_scope, write_gate, "DeleteDoc")
+        let Some(scope_nonce) =
+            local_write_scope_nonce(&ws, local_scope, write_gate, set_sync_banner, "DeleteDoc")
         else {
             return;
         };
@@ -49,10 +53,12 @@ pub(super) fn create_doc_copy_callback(
     ws: &WsService,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<(String, String)> {
     let ws = ws.clone();
     Callback::new(move |(src_path, dest_path)| {
-        let Some(scope_nonce) = local_write_scope_nonce(&ws, local_scope, write_gate, "CopyDoc")
+        let Some(scope_nonce) =
+            local_write_scope_nonce(&ws, local_scope, write_gate, set_sync_banner, "CopyDoc")
         else {
             return;
         };
@@ -69,10 +75,12 @@ pub(super) fn create_doc_move_callback(
     ws: &WsService,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<(String, String)> {
     let ws = ws.clone();
     Callback::new(move |(src_path, dest_path)| {
-        let Some(scope_nonce) = local_write_scope_nonce(&ws, local_scope, write_gate, "MoveDoc")
+        let Some(scope_nonce) =
+            local_write_scope_nonce(&ws, local_scope, write_gate, set_sync_banner, "MoveDoc")
         else {
             return;
         };

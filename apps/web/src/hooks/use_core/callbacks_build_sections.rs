@@ -17,6 +17,7 @@ pub(super) fn build_doc_callbacks(ws: &WsService, signals: &CoreSignals) -> DocC
         signals.pending_local_edits,
         signals.set_pending_navigation,
         signals.set_current_doc,
+        signals.set_sync_banner,
         signals.set_pending_created_doc_path,
         signals.set_explicit_home,
     )

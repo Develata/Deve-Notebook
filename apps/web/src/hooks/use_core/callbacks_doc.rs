@@ -31,6 +31,7 @@ pub fn create_doc_callbacks(
     pending_local_edits: ReadSignal<PendingLocalEdits>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     set_current_doc: WriteSignal<Option<DocId>>,
+    set_sync_banner: WriteSignal<Option<String>>,
     set_pending_created_doc_path: WriteSignal<Option<String>>,
     set_explicit_home: WriteSignal<bool>,
 ) -> DocCallbacks {
@@ -47,6 +48,7 @@ pub fn create_doc_callbacks(
             current_doc,
             local_scope,
             write_gate,
+            set_sync_banner,
             set_pending_created_doc_path,
             set_explicit_home,
         );

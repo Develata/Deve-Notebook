@@ -11,12 +11,14 @@ pub(super) fn create_doc_create_callback(
     current_doc: ReadSignal<Option<deve_core::models::DocId>>,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
     set_pending_created_doc_path: WriteSignal<Option<String>>,
     set_explicit_home: WriteSignal<bool>,
 ) -> Callback<String> {
     let ws = ws.clone();
     Callback::new(move |name: String| {
-        let Some(scope_nonce) = local_write_scope_nonce(&ws, local_scope, write_gate, "CreateDoc")
+        let Some(scope_nonce) =
+            local_write_scope_nonce(&ws, local_scope, write_gate, set_sync_banner, "CreateDoc")
         else {
             return;
         };

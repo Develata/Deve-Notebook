@@ -21,6 +21,7 @@ pub(super) fn create_doc_write_callbacks(
     current_doc: ReadSignal<Option<deve_core::models::DocId>>,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
     set_pending_created_doc_path: WriteSignal<Option<String>>,
     set_explicit_home: WriteSignal<bool>,
 ) -> (
@@ -35,13 +36,14 @@ pub(super) fn create_doc_write_callbacks(
         current_doc,
         local_scope,
         write_gate,
+        set_sync_banner,
         set_pending_created_doc_path,
         set_explicit_home,
     );
-    let on_doc_rename = create_doc_rename_callback(ws, local_scope, write_gate);
-    let on_doc_delete = create_doc_delete_callback(ws, local_scope, write_gate);
-    let on_doc_copy = create_doc_copy_callback(ws, local_scope, write_gate);
-    let on_doc_move = create_doc_move_callback(ws, local_scope, write_gate);
+    let on_doc_rename = create_doc_rename_callback(ws, local_scope, write_gate, set_sync_banner);
+    let on_doc_delete = create_doc_delete_callback(ws, local_scope, write_gate, set_sync_banner);
+    let on_doc_copy = create_doc_copy_callback(ws, local_scope, write_gate, set_sync_banner);
+    let on_doc_move = create_doc_move_callback(ws, local_scope, write_gate, set_sync_banner);
     (
         on_doc_create,
         on_doc_rename,
