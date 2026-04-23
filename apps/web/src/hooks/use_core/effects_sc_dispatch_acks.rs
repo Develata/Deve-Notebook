@@ -1,10 +1,9 @@
 use deve_core::protocol::ServerMessage;
-use leptos::prelude::Set;
 
-use super::super::effects_sc_apply::{
-    FsRefreshSignals, refresh_after_commit, refresh_after_fs_change,
-};
 use super::ScMessageContext;
+use super::dispatch_ack_helpers::{
+    handle_commit_ack, handle_conflict_resolved_ack, handle_fs_change_ack, handle_simple_ack,
+};
 
 pub(crate) fn handle_sc_ack_message(
     msg: &ServerMessage,
@@ -21,9 +20,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
-            leptos::logging::log!("已暂存: {}", path);
-            ctx.schedule_refresh();
+            handle_simple_ack(ctx, "已暂存", "Staged", path);
             true
         }
         ServerMessage::UnstageAck {
@@ -35,9 +32,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
-            leptos::logging::log!("已取消暂存: {}", path);
-            ctx.schedule_refresh();
+            handle_simple_ack(ctx, "已取消暂存", "Unstaged", path);
             true
         }
         ServerMessage::DiscardAck {
@@ -49,9 +44,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
-            leptos::logging::log!("已放弃变更: {}", path);
-            ctx.schedule_refresh();
+            handle_simple_ack(ctx, "已放弃变更", "Discarded", path);
             true
         }
         ServerMessage::CommitAck {
@@ -64,14 +57,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
-            refresh_after_commit(
-                commit_id,
-                active_scope_nonce,
-                ctx.set_changes_request_id,
-                ctx.set_commit_history_request_id,
-                ctx.ws,
-            );
+            handle_commit_ack(ctx, commit_id, active_scope_nonce);
             true
         }
         ServerMessage::FsChangeDetected {
@@ -85,21 +71,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            refresh_after_fs_change(
-                path,
-                change_type,
-                *has_conflict,
-                FsRefreshSignals {
-                    current_scope_nonce: active_scope_nonce,
-                    degraded_sync_mode: ctx.degraded_sync_mode,
-                    sync_banner: ctx.sync_banner,
-                    set_sync_banner: ctx.set_sync_banner,
-                    set_doc_list_request_id: ctx.set_doc_list_request_id,
-                    set_tree_request_id: ctx.set_tree_request_id,
-                },
-                ctx.schedule_refresh,
-                ctx.ws,
-            );
+            handle_fs_change_ack(ctx, active_scope_nonce, path, change_type, *has_conflict);
             true
         }
         ServerMessage::ConflictResolved {
@@ -112,9 +84,7 @@ pub(crate) fn handle_sc_ack_message(
             if !ctx.in_ack_scope(repo_id, branch, *scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
-            leptos::logging::log!("冲突已解决: {} ({})", path, resolution);
-            ctx.schedule_refresh();
+            handle_conflict_resolved_ack(ctx, path, resolution);
             true
         }
         _ => false,
