@@ -73,3 +73,21 @@ fn show_sync_read_block(set_sync_banner: WriteSignal<Option<String>>, action: &s
     let message = cannot_send(action, "local repo scope is not stable");
     warn_sync_banner(set_sync_banner, message);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::show_sync_read_block;
+    use leptos::prelude::{GetUntracked, signal};
+
+    #[test]
+    fn sync_read_block_banner_includes_action_and_scope_reason() {
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+
+        show_sync_read_block(set_sync_banner, "ListShadows");
+
+        assert_eq!(
+            sync_banner.get_untracked().as_deref(),
+            Some("Cannot send ListShadows: local repo scope is not stable")
+        );
+    }
+}
