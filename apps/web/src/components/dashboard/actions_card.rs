@@ -5,9 +5,15 @@
 
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::doc_name::next_untitled_doc_name;
-use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
+use crate::hooks::use_core::write_gate::{
+    RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
+};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
+
+#[cfg(test)]
+#[path = "actions_card_test.rs"]
+mod tests;
 
 #[component]
 pub fn ActionsCard() -> impl IntoView {
@@ -17,7 +23,10 @@ pub fn ActionsCard() -> impl IntoView {
     let core_for_disabled = core.clone();
 
     let on_new_doc = move |_| {
-        if !repo_write_allowed_for_core_tracked(&core_for_create) {
+        if let Some(reason) = create_block_reason(&core_for_create) {
+            let message = create_block_banner(reason);
+            leptos::logging::warn!("{}", message);
+            core_for_create.set_sync_banner.set(Some(message));
             return;
         }
         let name = next_untitled_doc_name(
@@ -56,4 +65,24 @@ pub fn ActionsCard() -> impl IntoView {
             </div>
         </div>
     }
+}
+
+fn create_block_reason(core: &CoreState) -> Option<&'static str> {
+    repo_write_block_tracked(
+        &core.ws,
+        RepoWriteSignals {
+            load_state: core.load_state,
+            is_spectator: core.is_spectator,
+            handshake_ready: core.handshake_ready,
+            current_repo_id: core.current_repo_id,
+            active_branch: core.active_branch,
+            pending_branch_switch: core.pending_branch_switch,
+            pending_repo_switch: core.pending_repo_switch,
+        },
+    )
+    .map(|block| block.label())
+}
+
+fn create_block_banner(reason: &str) -> String {
+    format!("Cannot create document: {}", reason)
 }
