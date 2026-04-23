@@ -36,6 +36,7 @@ pub fn create_sync_callbacks(
         set_shadow_list_request_id,
         set_sync_mode_request_id,
         set_pending_ops_request_id,
+        set_sync_banner,
     );
     let write = write::create_sync_write_callbacks(
         ws,

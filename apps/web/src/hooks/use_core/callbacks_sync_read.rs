@@ -1,4 +1,5 @@
 use crate::api::WsService;
+use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
@@ -16,11 +17,12 @@ pub(super) fn create_sync_read_callbacks(
     set_shadow_list_request_id: WriteSignal<Option<String>>,
     set_sync_mode_request_id: WriteSignal<Option<String>>,
     set_pending_ops_request_id: WriteSignal<Option<String>>,
+    set_sync_banner: WriteSignal<Option<String>>,
 ) -> SyncReadCallbacks {
     let ws1 = ws.clone();
     let on_get_sync_mode = Callback::new(move |_: ()| {
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 GetSyncMode: local repo scope 尚未稳定");
+            show_sync_read_block(set_sync_banner, "GetSyncMode");
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -34,7 +36,7 @@ pub(super) fn create_sync_read_callbacks(
     let ws2 = ws.clone();
     let on_get_pending_ops = Callback::new(move |_: ()| {
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 GetPendingOps: local repo scope 尚未稳定");
+            show_sync_read_block(set_sync_banner, "GetPendingOps");
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -48,7 +50,7 @@ pub(super) fn create_sync_read_callbacks(
     let ws3 = ws.clone();
     let on_list_shadows = Callback::new(move |_: ()| {
         let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-            leptos::logging::warn!("忽略 ListShadows: local repo scope 尚未稳定");
+            show_sync_read_block(set_sync_banner, "ListShadows");
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -64,4 +66,10 @@ pub(super) fn create_sync_read_callbacks(
         on_get_pending_ops,
         on_list_shadows,
     }
+}
+
+fn show_sync_read_block(set_sync_banner: WriteSignal<Option<String>>, action: &str) {
+    let message = cannot_send(action, "local repo scope is not stable");
+    leptos::logging::warn!("{}", message);
+    set_sync_banner.set(Some(message));
 }
