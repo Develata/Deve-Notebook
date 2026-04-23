@@ -16,6 +16,9 @@ pub(super) fn build_move_copy_results(
     docs: &[(DocId, String)],
     recent_dirs: &[String],
 ) -> Vec<SearchResult> {
+    if parsed.args.is_empty() {
+        return vec![super::error_result("Source path required".to_string())];
+    }
     if parsed.args.len() > 2 {
         return vec![super::error_result(
             "Paths with spaces must be quoted".to_string(),
@@ -105,6 +108,7 @@ fn build_dir_group_results(
 
 fn build_dir_results(kind: &FileOpKind, src: &str, dirs: Vec<(String, f32)>) -> Vec<SearchResult> {
     dirs.into_iter()
+        .filter(|(dir, _)| !is_same_target(kind, src, dir))
         .map(|(dir, score)| SearchResult {
             id: format!("dir-{}", dir),
             title: dir.clone(),
@@ -113,4 +117,11 @@ fn build_dir_results(kind: &FileOpKind, src: &str, dirs: Vec<(String, f32)>) -> 
             action: SearchAction::InsertQuery(build_insert_query(kind, src, &dir)),
         })
         .collect()
+}
+
+fn is_same_target(kind: &FileOpKind, src: &str, dst: &str) -> bool {
+    match build_execute_result(kind.clone(), src, dst).map(|result| result.action) {
+        Some(SearchAction::FileOp(action)) => action.dst.as_ref() == Some(&action.src),
+        _ => false,
+    }
 }

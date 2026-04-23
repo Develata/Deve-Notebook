@@ -46,3 +46,37 @@ fn copy_different_destination_builds_file_op_action() {
         other => panic!("expected FileOp result, got {:?}", other),
     }
 }
+
+#[test]
+fn move_without_source_returns_error() {
+    let parsed = parsed_args(&[], false);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Source path required");
+}
+
+#[test]
+fn move_directory_suggestions_skip_noop_target() {
+    let parsed = parsed_args(&["notes/today.md"], true);
+    let docs = [
+        (DocId::from_u128(1), "notes/today.md".to_string()),
+        (DocId::from_u128(2), "archive/other.md".to_string()),
+    ];
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[]);
+
+    let queries: Vec<String> = results
+        .iter()
+        .filter_map(|result| match &result.action {
+            SearchAction::InsertQuery(insert) => Some(insert.query.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(queries
+        .iter()
+        .all(|query| query != ">mv notes/today.md notes/"));
+    assert!(queries
+        .iter()
+        .any(|query| query == ">mv notes/today.md archive/"));
+}
