@@ -11,8 +11,12 @@ Op-aware error mapping for source control operations. Maps internal errors to cl
 
 | File | Description |
 |------|-------------|
-| `map.rs` | Error mapping logic — maps core errors to SC-specific errors per operation |
-| `map_test.rs` | Tests for error mapping correctness |
+| `map.rs` | Error mapping entry points — maps core errors to SC-specific errors per operation |
+| `map_common.rs` | Common repo-scope/storage error classification |
+| `map_op.rs` | Source-control operation context enum |
+| `map_op_specific.rs` | Operation-specific error classification |
+| `map_op_test.rs` | Operation-specific mapping regression tests |
+| `map_scope_test.rs` | Repo-scope mapping regression tests |
 
 ## For AI Agents
 
