@@ -12,6 +12,8 @@
 # Output:
 #   stdout — human-readable report
 #   scripts/plan-coverage.txt (when --write-report) — CI artifact
+#   --list-missing-plan-ref — include non-exempt missing plan_ref paths
+#   --summary-missing-plan-ref — include grouped missing plan_ref counts
 
 set -euo pipefail
 
@@ -47,17 +49,65 @@ is_plan_ref_missing_exempt() {
 }
 REPORT=""
 WRITE_REPORT=0
+LIST_MISSING_PLAN_REF=0
+SUMMARY_MISSING_PLAN_REF=0
+MISSING_PLAN_REF_SUMMARY_TOP=20
+
+usage() {
+  echo "usage: plan-coverage.sh [--write-report] [--list-missing-plan-ref] [--summary-missing-plan-ref]"
+}
 
 for arg in "$@"; do
   case "$arg" in
     --write-report) WRITE_REPORT=1 ;;
+    --list-missing-plan-ref) LIST_MISSING_PLAN_REF=1 ;;
+    --summary-missing-plan-ref) SUMMARY_MISSING_PLAN_REF=1 ;;
     -h|--help)
-      echo "usage: plan-coverage.sh [--write-report]"; exit 0 ;;
+      usage; exit 0 ;;
+    *)
+      echo "ERROR: unknown argument: $arg" >&2
+      usage >&2
+      exit 2 ;;
   esac
 done
 
 log() { echo "$@"; REPORT+="$*"$'\n'; }
 err() { echo "ERROR: $*" >&2; REPORT+="ERROR: $*"$'\n'; }
+
+log_missing_plan_ref_groups() {
+  local title="$1"
+  local depth="$2"
+  local limit="$3"
+
+  log "$title"
+  if [ "${#missing_ref_files[@]}" -eq 0 ]; then
+    log "    (none)"
+    return
+  fi
+
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    log "    $line"
+  done < <(
+    printf '%s\n' "${missing_ref_files[@]}" |
+      awk -F/ -v depth="$depth" '
+        NF {
+          key = $1
+          for (i = 2; i <= depth && i <= NF; i++) {
+            key = key "/" $i
+          }
+          counts[key]++
+        }
+        END {
+          for (key in counts) {
+            print counts[key] " " key
+          }
+        }
+      ' |
+      sort -rn -k1,1 |
+      head -n "$limit"
+  )
+}
 
 blocking=0
 soft_warnings=0
@@ -81,7 +131,7 @@ while IFS= read -r f; do
     log "soft($lines): $f"
     soft_warnings=$((soft_warnings + 1))
   fi
-done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null)
+done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null | sort)
 log "fuse violations: $blocking, soft warnings: $soft_warnings"
 log ""
 
@@ -93,6 +143,7 @@ missing_refs=0
 missing_refs_exempt=0
 dangling_refs=0
 annotated_refs=0
+missing_ref_files=()
 declare -A plan_coverage_map=()
 
 while IFS= read -r f; do
@@ -107,6 +158,7 @@ while IFS= read -r f; do
       continue
     fi
     missing_refs=$((missing_refs + 1))
+    missing_ref_files+=("$rel")
     continue
   fi
   annotated_refs=$((annotated_refs + 1))
@@ -140,12 +192,28 @@ while IFS= read -r f; do
       plan_coverage_map["$key"]+="$f "
     fi
   done < <(awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f")
-done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null)
+done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null | sort)
 
 log "modules with plan_ref: $annotated_refs"
 log "modules without plan_ref (soft): $missing_refs"
 log "modules without plan_ref (exempt): $missing_refs_exempt"
 log "dangling plan_ref (blocking): $dangling_refs"
+if [ "$LIST_MISSING_PLAN_REF" = "1" ]; then
+  log "missing plan_ref files (soft):"
+  if [ "${#missing_ref_files[@]}" -eq 0 ]; then
+    log "    (none)"
+  else
+    for rel in "${missing_ref_files[@]}"; do
+      log "    $rel"
+    done
+  fi
+fi
+if [ "$SUMMARY_MISSING_PLAN_REF" = "1" ]; then
+  log "missing plan_ref summary (soft):"
+  log "total: $missing_refs"
+  log_missing_plan_ref_groups "by workspace member:" 2 "$MISSING_PLAN_REF_SUMMARY_TOP"
+  log_missing_plan_ref_groups "by directory depth 4 (top $MISSING_PLAN_REF_SUMMARY_TOP):" 4 "$MISSING_PLAN_REF_SUMMARY_TOP"
+fi
 log ""
 
 # ---------------------------------------------------------------------------

@@ -97,6 +97,8 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 2. 引用了已不存在的章节或章节名的模块清单（error，阻塞）
 3. plan 章节的反向覆盖矩阵：每个 `§section` 被哪些代码文件引用
 
+默认输出保持 CI 友好的计数与反向覆盖矩阵；需要处理 `plan_ref` 债务时，可运行 `scripts/plan-coverage.sh --summary-missing-plan-ref` 输出聚合分布，或运行 `scripts/plan-coverage.sh --list-missing-plan-ref` 输出非豁免 missing 模块路径清单。
+
 测试文件、test support、bench、generated/vendor/dist/public glue 不计入缺失注解 warning；但这些文件一旦声明 `plan_ref`，仍会参与 dangling 校验和反向覆盖矩阵。普通 `src/bin` 和 runtime support 文件不默认豁免。
 
 CI 流水线 MUST 运行此脚本；产出的 `plan-coverage.txt` 作为 PR artifact 留存。
