@@ -1,26 +1,16 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::handlers::switcher::handle_switch_branch;
-use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
-};
-use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
+use super::switcher_test_support::{app_state, browser_session, unicast_channel};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::tempdir;
-use tokio::sync::{broadcast, mpsc};
+use tempfile::{TempDir, tempdir};
+use super::AppState;
 
-fn browser_session(scope_nonce: u64) -> WsSession {
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(scope_nonce));
-    session
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale()
--> anyhow::Result<()> {
+fn state_with_remote(url: Option<&str>) -> anyhow::Result<(TempDir, Arc<AppState>, PeerId)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -28,33 +18,21 @@ async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(
         &peer_id,
-        &deve_core::ledger::RepoInfo {
+        &RepoInfo {
             uuid: uuid::Uuid::new_v4(),
             name: "wiki".into(),
-            url: Some("urn:wiki-a".into()),
+            url: url.map(str::to_owned),
         },
     )?;
+    let state = app_state(repo, vault, dir.path().join("host"))?;
+    Ok((dir, state, peer_id))
+}
 
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    let state = Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            identity_key.peer_id(),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key,
-    });
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale()
+-> anyhow::Result<()> {
+    let (_dir, state, peer_id) = state_with_remote(Some("urn:wiki-a"))?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(72);
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("stale-wiki".into(), None);
@@ -88,40 +66,8 @@ async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_remote_scope_has_no_url() -> anyhow::Result<()> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
-    let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_info(
-        &peer_id,
-        &deve_core::ledger::RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
-            name: "wiki".into(),
-            url: None,
-        },
-    )?;
-
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    let state = Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            identity_key.peer_id(),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key,
-    });
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (_dir, state, peer_id) = state_with_remote(None)?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(73);
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("wiki".into(), None);

@@ -1,23 +1,14 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::handlers::switcher::handle_switch_branch;
-use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
-};
-use deve_core::config::SyncMode;
+use super::switcher_test_support::{app_state, browser_session, unicast_channel};
+use super::{AppState, session::WsSession};
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::TempDir;
-use tempfile::tempdir;
-use tokio::sync::{broadcast, mpsc};
-
-fn browser_session(scope_nonce: u64) -> WsSession {
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(scope_nonce));
-    session
-}
+use tempfile::{TempDir, tempdir};
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)> {
     let dir = tempdir()?;
@@ -27,26 +18,10 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)>
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let state = app_state(repo, vault, dir.path().join("host"))?;
     Ok((
         dir,
-        Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                identity_key.peer_id(),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key,
-        }),
+        state,
         local_info.uuid,
         peer_id,
     ))
@@ -67,8 +42,7 @@ fn seed_stale_runtime_binding(session: &mut WsSession, state: &Arc<AppState>, re
 async fn switch_branch_rejects_unbound_local_scope_with_stale_runtime_binding() -> anyhow::Result<()>
 {
     let (_dir, state, repo_id, peer_id) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(80);
     seed_stale_runtime_binding(&mut session, &state, repo_id);
 
@@ -104,8 +78,7 @@ async fn switch_branch_rejects_unbound_local_scope_with_stale_runtime_binding() 
 async fn switch_branch_rejects_unbound_remote_scope_with_stale_runtime_binding()
 -> anyhow::Result<()> {
     let (_dir, state, repo_id, peer_id) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(81);
     session.switch_branch(Some(peer_id.to_string()));
     seed_stale_runtime_binding(&mut session, &state, repo_id);

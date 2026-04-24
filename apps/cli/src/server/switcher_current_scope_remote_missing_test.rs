@@ -1,56 +1,15 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::handlers::switcher::{handle_switch_branch, handle_switch_repo};
-use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
-};
-use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
+use super::switcher_test_support::{browser_session, build_state, unicast_channel};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
-use tokio::sync::{broadcast, mpsc};
-
-fn browser_session(scope_nonce: u64) -> WsSession {
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(scope_nonce));
-    session
-}
-
-fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    Ok((
-        dir,
-        Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                identity_key.peer_id(),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key,
-        }),
-    ))
-}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_from_missing_shadow_without_repo_hint_does_not_silently_self_heal()
 -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(90);
     session.switch_branch(Some("missing-shadow".into()));
 
@@ -83,8 +42,7 @@ async fn switch_branch_from_missing_shadow_without_repo_hint_does_not_silently_s
 async fn switch_repo_on_missing_shadow_branch_reports_scope_invalid_and_clears_remote_binding()
 -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(91);
     session.switch_branch(Some("missing-shadow".into()));
     session.switch_repo("ghost".into(), None);
@@ -125,8 +83,7 @@ async fn switch_branch_from_missing_shadow_with_stale_runtime_binding_clears_all
     let local_handle = state
         .repo
         .open_database(None, state.repo.local_repo_name())?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(98);
     session.switch_branch(Some("missing-shadow".into()));
     session.switch_repo("ghost".into(), Some(default_id));
