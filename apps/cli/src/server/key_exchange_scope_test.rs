@@ -1,113 +1,48 @@
-use super::handlers::key_exchange::handle_request_key;
-use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
-};
-use deve_core::config::SyncMode;
-use deve_core::ledger::database::DatabaseHandle;
-use deve_core::ledger::{RepoInfo, RepoManager};
-use deve_core::models::PeerId;
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
-use tokio::sync::{broadcast, mpsc};
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
 
-fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let host_dir = dir.path().join("host");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_vault_root(&vault);
-    let repo = Arc::new(repo);
-    Ok((
-        dir,
-        Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx: broadcast::channel(8).0,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                PeerId::new("test-peer"),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key: security::load_or_generate_identity_key(&host_dir)?,
-        }),
-    ))
-}
+use super::handlers::key_exchange::handle_request_key;
+use super::key_exchange_test_support::{
+    assert_key_provide, browser_session, build_state, ensure_shadow_notes, recv_key_denied,
+    remote_browser_session, unicast_channel,
+};
+use deve_core::ledger::database::DatabaseHandle;
+use deve_core::models::PeerId;
+use deve_core::protocol::ServerErrorCode;
+use std::sync::Arc;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_key_denies_remote_scope_when_only_url_matches_local_repo() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
+    let (_dir, state, _) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let shadow_id = uuid::Uuid::new_v4();
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: shadow_id,
-            name: "shadow-notes".into(),
-            url: Some("urn:test:notes".into()),
-        },
-    )?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(51));
-    session.switch_branch(Some(peer_id.to_string()));
-    session.switch_repo("shadow-notes".into(), Some(shadow_id));
-    session.bind_repo(shadow_id);
+    ensure_shadow_notes(&state, &peer_id, shadow_id, "urn:test:notes")?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = remote_browser_session(&peer_id, shadow_id, 51);
 
     handle_request_key(&state, &ch, &mut session).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::KeyDenied {
-            repo_id,
-            scope_nonce,
-            branch,
-            error,
-        }) => {
-            assert_eq!(repo_id, Some(shadow_id));
-            assert_eq!(scope_nonce, 51);
-            assert_eq!(branch, Some(peer_id));
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(error.detail.as_deref().is_some_and(|detail| {
-                detail.contains("No local writable repo available for current scope")
-            }));
-        }
-        other => panic!("expected KeyDenied, got {:?}", other),
-    }
+    let denied = recv_key_denied(&mut uni_rx).await;
+    assert_eq!(denied.repo_id, Some(shadow_id));
+    assert_eq!(denied.scope_nonce, 51);
+    assert_eq!(denied.branch, Some(peer_id));
+    assert_eq!(denied.error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert!(denied.error.detail.as_deref().is_some_and(|detail| {
+        detail.contains("No local writable repo available for current scope")
+    }));
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_key_without_repo_selection_bootstraps_single_repo() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(61));
+    let (_dir, state, repo_id) = build_state()?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(61);
 
     handle_request_key(&state, &ch, &mut session).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::KeyProvide {
-            repo_id: seen,
-            scope_nonce,
-            branch,
-            ..
-        }) => {
-            assert_eq!(seen, repo_id);
-            assert_eq!(scope_nonce, 61);
-            assert_eq!(branch, None);
-        }
-        other => panic!("expected KeyProvide, got {:?}", other),
-    }
+    assert_key_provide(&mut uni_rx, repo_id, 61, None).await;
     assert_eq!(session.active_repo.as_deref(), Some("notes"));
     assert_eq!(session.active_repo_id, Some(repo_id));
     Ok(())
@@ -115,14 +50,10 @@ async fn request_key_without_repo_selection_bootstraps_single_repo() -> anyhow::
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_key_with_stale_local_binding_bootstraps_single_repo() -> anyhow::Result<()> {
-    let (dir, state) = build_state()?;
-    let repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
+    let (dir, state, repo_id) = build_state()?;
     let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(71));
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(71);
     session.set_active_db(DatabaseHandle {
         db: stale_db,
         readonly: false,
@@ -136,19 +67,7 @@ async fn request_key_with_stale_local_binding_bootstraps_single_repo() -> anyhow
 
     handle_request_key(&state, &ch, &mut session).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::KeyProvide {
-            repo_id: seen,
-            scope_nonce,
-            branch,
-            ..
-        }) => {
-            assert_eq!(seen, repo_id);
-            assert_eq!(scope_nonce, 71);
-            assert_eq!(branch, None);
-        }
-        other => panic!("expected KeyProvide, got {:?}", other),
-    }
+    assert_key_provide(&mut uni_rx, repo_id, 71, None).await;
     assert_eq!(session.active_repo.as_deref(), Some("notes"));
     assert_eq!(session.active_repo_id, Some(repo_id));
     assert!(session.get_active_db().is_none());
