@@ -1,4 +1,6 @@
-// apps/cli/src/server/auth/brute_force.rs
+//! plan_ref:
+//!   - 09_auth#auth-rate-limiting
+//!
 //! # 暴力破解防护 (Brute Force Protection)
 //!
 //! 09_auth.md: "连续 5 次登录失败后 IP 封禁 15 分钟"
@@ -82,56 +84,5 @@ impl BruteForceGuard {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_not_blocked_initially() {
-        let guard = BruteForceGuard::new();
-        let ip: IpAddr = "10.0.0.1".parse().unwrap();
-        assert!(!guard.is_blocked(&ip));
-    }
-
-    #[test]
-    fn test_blocked_after_max_failures() {
-        let guard = BruteForceGuard::new();
-        let ip: IpAddr = "10.0.0.2".parse().unwrap();
-        for _ in 0..MAX_FAILURES {
-            guard.record_failure(&ip);
-        }
-        assert!(guard.is_blocked(&ip));
-    }
-
-    #[test]
-    fn test_cleared_on_success() {
-        let guard = BruteForceGuard::new();
-        let ip: IpAddr = "10.0.0.3".parse().unwrap();
-        for _ in 0..MAX_FAILURES {
-            guard.record_failure(&ip);
-        }
-        assert!(guard.is_blocked(&ip));
-        guard.record_success(&ip);
-        assert!(!guard.is_blocked(&ip));
-    }
-
-    #[test]
-    fn test_four_failures_not_blocked() {
-        let guard = BruteForceGuard::new();
-        let ip: IpAddr = "10.0.0.4".parse().unwrap();
-        for _ in 0..MAX_FAILURES - 1 {
-            guard.record_failure(&ip);
-        }
-        assert!(!guard.is_blocked(&ip));
-    }
-
-    #[test]
-    fn poisoned_lock_blocks_ip_fail_closed() {
-        let guard = BruteForceGuard::new();
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _guard = guard.records.lock().expect("lock");
-            panic!("poison brute force guard");
-        }));
-        let ip: IpAddr = "10.0.0.5".parse().unwrap();
-        assert!(guard.is_blocked(&ip));
-    }
-}
+#[path = "brute_force_test.rs"]
+mod tests;

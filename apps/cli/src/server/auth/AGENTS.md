@@ -16,6 +16,7 @@ Authentication middleware and handlers. Implements cookie-based auth, brute forc
 | `cookie.rs` | Cookie-based session management |
 | `headers.rs` | Auth header extraction and validation |
 | `brute_force.rs` | Brute force attack protection |
+| `brute_force_test.rs` | Brute force attack protection tests |
 
 ## Subdirectories
 

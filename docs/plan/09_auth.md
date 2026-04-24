@@ -195,7 +195,7 @@ WsConnecting
 - 主防线：`SameSite=Strict`
 - 辅助：可校验 `Origin` / `Referer`
 
-### 6.4 Rate Limiting
+### 6.4 Rate Limiting {#auth-rate-limiting}
 
 - login endpoint：单独限流
 - authenticated API：单独限流
