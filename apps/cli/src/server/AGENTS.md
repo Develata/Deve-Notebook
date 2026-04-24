@@ -25,6 +25,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `repo_scope_workspace.rs` | Workspace-level repo scope |
 | `shadow_scope.rs` | Shadow branch scope management and stale branch cleanup |
 | `error_classify.rs` | Error string classification into semantic error codes |
+| `error_classify_test.rs` | Shared error classification tests |
 | `tree_state.rs` | Repo-scoped file tree state registry (`RepoTreeRegistry`) |
 | `security.rs` | Identity key loading/generation |
 | `rate_limit.rs` | Per-IP sliding window rate limiter with lazy GC; fails closed on poisoned lock |
