@@ -38,6 +38,7 @@ mod source_control_remote_selector_test;
 mod source_control_scope_binding_test;
 mod source_control_scope_test;
 mod source_control_test_support;
+mod switcher_branch_scope_test_support;
 mod switcher_branch_scope_test;
 mod switcher_branch_scope_test_extra;
 mod switcher_branch_scope_test_fail_closed;

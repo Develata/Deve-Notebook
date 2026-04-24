@@ -1,22 +1,11 @@
 use super::handlers::switcher::handle_switch_branch;
-use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+use super::switcher_branch_scope_test_support::{
+    app_state, browser_session, unicast_channel,
 };
-use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use std::sync::Arc;
 use tempfile::tempdir;
-use tokio::sync::{broadcast, mpsc};
-
-fn browser_session(scope_nonce: u64) -> WsSession {
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(scope_nonce));
-    session
-}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> anyhow::Result<()> {
@@ -34,26 +23,8 @@ async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> 
             url: Some("urn:notes".into()),
         },
     )?;
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    let state = Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            identity_key.peer_id(),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key,
-    });
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(42);
     session.switch_repo("stale-notes".into(), None);
 
@@ -108,26 +79,8 @@ async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -
     let selector = repo
         .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
         .expect("collision-safe selector");
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    let state = Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            identity_key.peer_id(),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key,
-    });
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(16);
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo(selector, Some(first.uuid));
