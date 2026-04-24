@@ -1,7 +1,9 @@
 mod docs_copy_contract_test;
+mod docs_create_bootstrap_test;
 mod docs_create_test;
 mod docs_dir_copy_test;
 mod docs_projection_repair_test;
+mod docs_test_support;
 mod document_remote_scope_test;
 mod document_scope_bootstrap_test;
 mod edit_projection_ack_test;

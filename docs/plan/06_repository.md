@@ -183,7 +183,7 @@ ReadonlyDegraded
 - `RemoteReadonly` 禁止 rename/delete/edit/stage/commit into remote mirror
 - 若 remote repo 自身 projection 损坏，则进入 `ReadonlyDegraded`，仍不得提升为可写
 
-## 5. Tree Projection Contract
+## 5. Tree Projection Contract {#tree-projection-contract}
 
 ### 5.1 Authority Rule
 
