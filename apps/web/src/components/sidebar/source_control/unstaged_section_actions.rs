@@ -10,7 +10,6 @@ pub fn UnstagedSectionActions(
     bulk_busy: ReadSignal<bool>,
     set_bulk_busy: WriteSignal<bool>,
     entries_for_stage: StoredValue<Vec<ChangeEntry>>,
-    entries_for_discard: StoredValue<Vec<ChangeEntry>>,
 ) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
@@ -30,9 +29,7 @@ pub fn UnstagedSectionActions(
                         on:click=move |_| {
                             set_bulk_busy.set(true);
                             core.clear_notice.run(());
-                            for entry in entries_for_discard.get_value() {
-                                core.on_discard_file.run(entry);
-                            }
+                            core.on_discard_pending.run(());
                         }
                     >
                         <RotateCcw class="w-3.5 h-3.5" />

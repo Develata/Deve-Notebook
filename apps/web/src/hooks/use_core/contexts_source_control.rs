@@ -31,6 +31,7 @@ pub struct SourceControlContext {
     pub on_unstage_file: Callback<ChangeEntry>,
     pub on_unstage_files: Callback<Vec<ChangeEntry>>,
     pub on_discard_file: Callback<ChangeEntry>,
+    pub on_discard_pending: Callback<()>,
     pub on_commit: Callback<String>,
     pub on_get_history: Callback<u32>,
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,

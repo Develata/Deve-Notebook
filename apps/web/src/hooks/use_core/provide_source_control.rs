@@ -66,6 +66,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
         on_unstage_file: state.on_unstage_file,
         on_unstage_files: state.on_unstage_files,
         on_discard_file: state.on_discard_file,
+        on_discard_pending: state.on_discard_pending,
         on_commit: state.on_commit,
         on_get_history: state.on_get_history,
         diff_content: state.diff_content,

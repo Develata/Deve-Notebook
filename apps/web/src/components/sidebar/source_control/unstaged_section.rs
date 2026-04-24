@@ -22,7 +22,6 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     let unstaged_count = unstaged.len();
     let unstaged_list = StoredValue::new(unstaged.clone());
     let unstaged_list_for_stage = StoredValue::new(unstaged.clone());
-    let unstaged_list_for_discard = StoredValue::new(unstaged);
 
     Effect::new(move |_| {
         let _ = core.unstaged_changes.get();
@@ -53,7 +52,6 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                     bulk_busy=bulk_busy
                     set_bulk_busy=set_bulk_busy
                     entries_for_stage=unstaged_list_for_stage
-                    entries_for_discard=unstaged_list_for_discard
                 />
             </div>
 

@@ -54,9 +54,7 @@ pub fn ChangesPanel(expanded: RwSignal<bool>, visible: RwSignal<bool>) -> impl I
                                         return;
                                     }
                                     core.clear_notice.run(());
-                                    for entry in core.unstaged_changes.get_untracked() {
-                                        core.on_discard_file.run(entry);
-                                    }
+                                    core.on_discard_pending.run(());
                                 }
                             >
                                 <RefreshCw class="w-3.5 h-3.5" />
