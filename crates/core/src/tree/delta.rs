@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 // crates/core/src/tree/delta.rs
 //! # 树增量更新类型 (Tree Delta Types)
 //!

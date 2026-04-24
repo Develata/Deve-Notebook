@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 use crate::ledger::RepoManager;
 use crate::models::{DocId, NodeId, PeerId, StructureOp};
 use anyhow::Result;

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 use crate::ledger::{metadata, node_meta, ops};
 use crate::models::NodeId;
 use crate::source_control::{pending_fs, staging};

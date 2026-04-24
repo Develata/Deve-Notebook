@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 use crate::ledger::RepoManager;
 use crate::ledger::ops;
 use crate::models::{LedgerEntry, NodeId, RepoType};

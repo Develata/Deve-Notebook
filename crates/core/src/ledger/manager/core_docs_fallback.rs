@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 use anyhow::Result;
 use sha2::{Digest, Sha256};
 

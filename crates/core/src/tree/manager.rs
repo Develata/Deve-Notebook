@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 // crates/core/src/tree/manager.rs
 //! # 树状态管理器 (Tree State Manager)
 //!

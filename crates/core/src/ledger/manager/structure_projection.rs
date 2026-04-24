@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 use crate::ledger::{metadata, node_meta};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta, StructureOp};
 use anyhow::{Result, anyhow};
