@@ -1,97 +1,43 @@
-use super::handlers::sync::{SyncHelloInput, handle_sync_hello};
-use super::{AppState, channel::DualChannel, security, tree_state::RepoTreeRegistry};
-use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
-use deve_core::protocol::ServerMessage;
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
+use super::handlers::sync::handle_sync_hello;
+use super::sync_hello_test_support::{
+    build_state, collect_unicast_messages, empty_session, signed_hello_for_repo,
+    signed_hello_for_scope, unicast_channel,
+};
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use deve_core::sync::vector::VersionVector;
-use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
-use tokio::sync::{broadcast, mpsc};
 
-fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_vault_root(&vault);
-    let repo = Arc::new(repo);
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-    let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    Ok((
-        dir,
-        Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                identity_key.peer_id(),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key,
-        }),
-        repo_id,
-    ))
+fn browser_session(repo_id: uuid::Uuid) -> super::session::WsSession {
+    let mut session = empty_session();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(1));
+    session
 }
 
-fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> SyncHelloInput {
-    let peer_id = remote.peer_id();
-    let sorted_map: std::collections::BTreeMap<_, _> = vector.iter().collect();
-    let vec_bytes = serde_json::to_vec(&sorted_map).expect("serialize vector");
-    let mut msg = Vec::new();
-    msg.extend_from_slice(b"deve-handshake");
-    msg.extend_from_slice(peer_id.as_str().as_bytes());
-    msg.extend_from_slice(&vec_bytes);
-    SyncHelloInput {
-        peer_id,
-        pub_key: remote.public_key_bytes().to_vec(),
-        signature: remote.sign(&msg),
-        remote_vector: vector.clone(),
-        repo_id: uuid::Uuid::nil(),
-        scope_nonce: 1,
-    }
-}
-
-async fn collect_unicast_messages(
-    rx: &mut mpsc::Receiver<ServerMessage>,
-) -> anyhow::Result<Vec<ServerMessage>> {
-    let first = rx.recv().await.expect("at least one message");
-    let mut messages = vec![first];
-    while let Ok(msg) = rx.try_recv() {
-        messages.push(msg);
-    }
-    Ok(messages)
+fn assert_first_sync_hello(messages: &[ServerMessage]) {
+    assert!(matches!(
+        messages.first(),
+        Some(ServerMessage::SyncHello { .. })
+    ));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
-    let mut hello = signed_hello(&remote, &VersionVector::new());
-    hello.repo_id = repo_id;
-    let (uni_tx, mut uni_rx) = mpsc::channel(16);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = super::session::WsSession::new();
-    session.mark_browser_session();
-    session.switch_repo("notes".into(), Some(repo_id));
-    session.set_scope_nonce(Some(1));
+    let hello = signed_hello_for_repo(&remote, repo_id);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session(repo_id);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
-    let _ = uni_rx.recv().await;
+    let _ = rx.recv().await;
 
-    assert!(
-        !state
-            .repo
-            .remotes_dir()
-            .join(remote.peer_id().to_filename())
-            .try_exists()?
-    );
+    let shadow_dir = state.repo.remotes_dir().join(remote.peer_id().to_filename());
+    assert!(!shadow_dir.try_exists()?);
     Ok(())
 }
 
@@ -99,32 +45,15 @@ async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> 
 async fn browser_sync_hello_skips_sync_payload_messages() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
-    let mut hello = signed_hello(&remote, &VersionVector::new());
-    hello.repo_id = repo_id;
-    let (uni_tx, mut uni_rx) = mpsc::channel(16);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = super::session::WsSession::new();
-    session.mark_browser_session();
-    session.switch_repo("notes".into(), Some(repo_id));
-    session.set_scope_nonce(Some(1));
+    let hello = signed_hello_for_repo(&remote, repo_id);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session(repo_id);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
-    let messages = collect_unicast_messages(&mut uni_rx).await?;
+    let messages = collect_unicast_messages(&mut rx).await?;
 
-    assert!(
-        matches!(messages.first(), Some(ServerMessage::SyncHello { .. })),
-        "unexpected first message: {:?}",
-        messages.first()
-    );
-    assert!(!messages.iter().any(|msg| {
-        matches!(
-            msg,
-            ServerMessage::SyncRequest { .. }
-                | ServerMessage::SyncSnapshotRequest { .. }
-                | ServerMessage::SyncPush { .. }
-                | ServerMessage::SyncPushSnapshot { .. }
-        )
-    }));
+    assert_first_sync_hello(&messages);
+    assert!(!messages.iter().any(is_sync_payload_message));
     Ok(())
 }
 
@@ -135,23 +64,14 @@ async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow:
     state
         .repo
         .ensure_shadow_repo_binding(&remote.peer_id(), repo_id)?;
-    let mut hello = signed_hello(&remote, &VersionVector::new());
-    hello.repo_id = repo_id;
-    let (uni_tx, mut uni_rx) = mpsc::channel(16);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = super::session::WsSession::new();
-    session.mark_browser_session();
-    session.switch_repo("notes".into(), Some(repo_id));
-    session.set_scope_nonce(Some(1));
+    let hello = signed_hello_for_repo(&remote, repo_id);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session(repo_id);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
-    let messages = collect_unicast_messages(&mut uni_rx).await?;
+    let messages = collect_unicast_messages(&mut rx).await?;
 
-    assert!(
-        matches!(messages.first(), Some(ServerMessage::SyncHello { .. })),
-        "unexpected first message: {:?}",
-        messages.first()
-    );
+    assert_first_sync_hello(&messages);
     let shadow_list = messages
         .into_iter()
         .find_map(|msg| match msg {
@@ -159,11 +79,7 @@ async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow:
             _ => None,
         })
         .expect("browser sync hello should refresh shadow list");
-    assert!(
-        !shadow_list.contains(&remote.peer_id().to_string()),
-        "shadow list should not contain self peer: {:?}",
-        shadow_list
-    );
+    assert!(!shadow_list.contains(&remote.peer_id().to_string()));
     Ok(())
 }
 
@@ -171,31 +87,22 @@ async fn browser_sync_hello_refreshes_shadow_list_without_self_peer() -> anyhow:
 async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
-    let mut hello = signed_hello(&remote, &VersionVector::new());
-    hello.repo_id = repo_id;
-    hello.scope_nonce = 7;
-    let (uni_tx, mut uni_rx) = mpsc::channel(16);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = super::session::WsSession::new();
-    session.mark_browser_session();
-    session.switch_repo("notes".into(), Some(repo_id));
+    let hello = signed_hello_for_scope(&remote, repo_id, 7);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session(repo_id);
     session.set_scope_nonce(Some(9));
-    let local_handle = state.repo.open_database(None, "notes")?;
-    session.set_active_db(local_handle);
+    session.set_active_db(state.repo.open_database(None, "notes")?);
     session.set_authenticated(remote.peer_id());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(5);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
-    match uni_rx.recv().await {
+    match rx.recv().await {
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
         }) => {
-            assert_eq!(
-                error.code,
-                deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
-            );
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
@@ -205,4 +112,14 @@ async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
     assert!(session.authenticated_peer_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
     Ok(())
+}
+
+fn is_sync_payload_message(msg: &ServerMessage) -> bool {
+    matches!(
+        msg,
+        ServerMessage::SyncRequest { .. }
+            | ServerMessage::SyncSnapshotRequest { .. }
+            | ServerMessage::SyncPush { .. }
+            | ServerMessage::SyncPushSnapshot { .. }
+    )
 }
