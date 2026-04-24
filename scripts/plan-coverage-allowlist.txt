@@ -5,6 +5,6 @@
 #   - Blank lines and `#` comments ignored.
 #   - Every entry here is TECHNICAL DEBT scheduled for refactor.
 #   - New violations NOT in this list MUST fail CI.
-#   - Removing an entry requires the file to be under 250 lines.
+#   - Removing an entry requires the file to be under 500 lines.
 #
 # No active entries.

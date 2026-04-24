@@ -40,7 +40,10 @@ Rust workspace for a high-performance collaborative notebook application targeti
 
 ### Working In This Directory
 
-- **Iron rule**: single file < 130 lines, fuse at 250 — refactor immediately if exceeded.
+- Prefer cohesive files. Split by responsibility, API boundary, or repeated infrastructure; do not split solely to satisfy a line count.
+- Files over ~250 lines are soft architecture warnings and should be reviewed for cohesion, duplication, and hidden coupling.
+- Hand-written source files over ~500 lines are hard fuse violations unless explicitly justified.
+- Tests and test support may exceed the soft threshold when keeping scenario context together improves readability.
 - Always consult `docs/plan/` before implementing features.
 - Target environment is 768 MB RAM VPS — evaluate every new dependency for memory footprint.
 - Path handling must use `deve_core::utils::path::to_forward_slash` for Windows compatibility.

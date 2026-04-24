@@ -107,7 +107,7 @@ fn acc_xxx_<slug>() { ... }
 ### Minimum Automated Checks (最小强制检查)
 
 CI MUST 同时运行：
-- 单文件行数检查：`crates/` 与 `apps/` 下 `.rs` 文件超过 250 行即阻塞（熔断阈值）
+- 单文件行数检查：`crates/` 与 `apps/` 下 `.rs` 文件超过 250 行为软架构警告，超过 500 行才阻塞（熔断阈值）
 - i18n facade 检查：`apps/web/src/components/` 下硬编码中/英文用户可见字符串即阻塞
 
 以上检查统一封装于 `scripts/plan-coverage.sh`，单入口执行全部验证。

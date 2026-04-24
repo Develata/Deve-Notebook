@@ -18,8 +18,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLAN_DIR="$ROOT/docs/plan"
 CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
-FUSE_LINES=250
-SOFT_LINES=130
+FUSE_LINES=500
+SOFT_LINES=250
 ALLOWLIST="$ROOT/scripts/plan-coverage-allowlist.txt"
 I18N_ALLOWLIST="$ROOT/scripts/i18n-coverage-allowlist.txt"
 
@@ -52,7 +52,7 @@ blocking=0
 soft_warnings=0
 
 # ---------------------------------------------------------------------------
-# Check 1 — Single-file size fuse (< 250 hard, < 130 soft)
+# Check 1 — Single-file size fuse (> 500 hard, > 250 soft)
 # ---------------------------------------------------------------------------
 log "== Check 1: single-file size fuse =="
 while IFS= read -r f; do
