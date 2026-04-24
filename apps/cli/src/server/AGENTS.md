@@ -23,6 +23,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `repo_scope_remote.rs` | Remote repo scope resolution |
 | `repo_scope_selector.rs` | Repo scope selector logic |
 | `repo_scope_workspace.rs` | Workspace-level repo scope |
+| `repo_scope*_test.rs` | Repo scope runtime selector, cleanup, and recovery tests |
 | `shadow_scope.rs` | Shadow branch scope management and stale branch cleanup |
 | `error_classify.rs` | Error string classification into semantic error codes |
 | `error_classify_test.rs` | Shared error classification tests |
