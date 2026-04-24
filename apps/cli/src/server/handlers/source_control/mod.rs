@@ -4,6 +4,8 @@
 
 pub mod changes;
 pub mod commits;
+mod commits_query;
+mod commits_write;
 pub mod conflict;
 pub mod diff;
 pub mod discard;

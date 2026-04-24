@@ -19,6 +19,8 @@ Git-like source control handlers: changes detection, staging/unstaging, commit, 
 | `changes.rs` | Detect uncommitted changes |
 | `staging.rs` | Stage/unstage operations |
 | `commits.rs` | Commit history listing |
+| `commits_query.rs` | Commit history and diff query helpers |
+| `commits_write.rs` | Commit write acknowledgement helper |
 | `diff.rs` | Local diff computation |
 | `diff_remote.rs` | Remote diff via proxy |
 | `diff_remote_content.rs` | Remote diff content resolution helpers |
