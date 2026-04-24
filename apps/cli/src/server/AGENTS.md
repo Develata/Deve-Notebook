@@ -56,6 +56,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `source_control_scope*_test.rs` | Source control scope binding and selector runtime tests |
 | `switcher_branch*_test.rs` | Branch switcher success, reject, and scope message tests |
 | `switcher_branch_scope*_test.rs` | Branch switcher repo-scope fail-closed and selector binding tests |
+| `switcher_current_scope*_test.rs` | Current local/remote scope validation tests for branch switching |
 | `switcher_test_support.rs` | Shared switcher test harness for AppState/session/unicast setup |
 | `plugin_host.rs` | Plugin host server mode for satellite processes |
 | `plugin_host_routes.rs` | Plugin host HTTP routes |
