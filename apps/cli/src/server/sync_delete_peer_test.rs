@@ -1,163 +1,64 @@
-use crate::server::{
-    AppState, channel::DualChannel, handlers::sync, security, session::WsSession,
-    tree_state::RepoTreeRegistry,
-};
-use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoInfo, RepoManager};
-use deve_core::models::PeerId;
-use deve_core::protocol::ServerMessage;
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
-use tokio::sync::{broadcast, mpsc};
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
 
-fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(8);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    Ok((
-        dir,
-        Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                PeerId::new("test-peer"),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key,
-        }),
-    ))
-}
+use crate::server::{
+    handlers::sync,
+    sync_delete_peer_test_support::{
+        active_peer_session, assert_remote_scope_cleared, assert_shadow_list, browser_session,
+        ensure_shadow_repo,
+    },
+    sync_scope_cleanup_test_support::{build_state, unicast_channel},
+};
+use deve_core::models::PeerId;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_delete_peer_returns_scoped_shadow_list() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
+    let (_dir, state, _) = build_state()?;
     let peer_id = PeerId::new("peer-a");
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
-            name: "wiki".into(),
-            url: Some("urn:test:wiki".into()),
-        },
-    )?;
+    ensure_shadow_repo(&state, &peer_id, uuid::Uuid::new_v4())?;
 
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(11));
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(11);
 
     sync::handle_delete_peer(&state, &ch, &mut session, peer_id.to_string()).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::ShadowList {
-            request_id,
-            scope_nonce,
-            shadows,
-        }) => {
-            assert_eq!(request_id, None);
-            assert_eq!(scope_nonce, Some(11));
-            assert!(shadows.is_empty());
-        }
-        other => panic!("expected scoped ShadowList, got {:?}", other),
-    }
+    assert_shadow_list(&mut uni_rx, 11, true).await;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn deleting_active_peer_clears_stale_remote_bindings() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
+    let (_dir, state, _) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let repo_id = uuid::Uuid::new_v4();
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: repo_id,
-            name: "wiki".into(),
-            url: Some("urn:test:wiki".into()),
-        },
-    )?;
+    ensure_shadow_repo(&state, &peer_id, repo_id)?;
 
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(15));
-    session.switch_branch(Some(peer_id.to_string()));
-    session.switch_repo("wiki".into(), Some(repo_id));
-    session.set_active_db(state.repo.open_database(Some(&peer_id), "wiki")?);
-    session.set_authenticated(peer_id.clone());
-    session.bind_repo(repo_id);
-    session.set_sync_scope_nonce(15);
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = active_peer_session(&state, &peer_id, repo_id, 15, peer_id.clone())?;
 
     sync::handle_delete_peer(&state, &ch, &mut session, peer_id.to_string()).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::ShadowList { scope_nonce, .. }) => {
-            assert_eq!(scope_nonce, Some(15));
-        }
-        other => panic!("expected scoped ShadowList, got {:?}", other),
-    }
-    assert_eq!(session.active_branch, None);
-    assert!(session.active_repo.is_none());
-    assert!(session.get_active_db().is_none());
-    assert!(session.authenticated_peer_id.is_none());
-    assert!(session.bound_repo_id.is_none());
-    assert!(session.sync_scope_nonce().is_none());
+    assert_shadow_list(&mut uni_rx, 15, false).await;
+    assert_remote_scope_cleared(&session);
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn deleting_active_peer_clears_browser_sync_binding_even_when_auth_peer_differs()
 -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
+    let (_dir, state, _) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let repo_id = uuid::Uuid::new_v4();
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: repo_id,
-            name: "wiki".into(),
-            url: Some("urn:test:wiki".into()),
-        },
-    )?;
+    ensure_shadow_repo(&state, &peer_id, repo_id)?;
 
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(21));
-    session.switch_branch(Some(peer_id.to_string()));
-    session.switch_repo("wiki".into(), Some(repo_id));
-    session.set_active_db(state.repo.open_database(Some(&peer_id), "wiki")?);
-    session.set_authenticated(PeerId::new("browser-writer"));
-    session.bind_repo(repo_id);
-    session.set_sync_scope_nonce(21);
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session =
+        active_peer_session(&state, &peer_id, repo_id, 21, PeerId::new("browser-writer"))?;
 
     sync::handle_delete_peer(&state, &ch, &mut session, peer_id.to_string()).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::ShadowList { scope_nonce, .. }) => {
-            assert_eq!(scope_nonce, Some(21));
-        }
-        other => panic!("expected scoped ShadowList, got {:?}", other),
-    }
-    assert_eq!(session.active_branch, None);
-    assert!(session.active_repo.is_none());
-    assert!(session.get_active_db().is_none());
-    assert!(session.authenticated_peer_id.is_none());
-    assert!(session.bound_repo_id.is_none());
-    assert!(session.sync_scope_nonce().is_none());
+    assert_shadow_list(&mut uni_rx, 21, false).await;
+    assert_remote_scope_cleared(&session);
     Ok(())
 }

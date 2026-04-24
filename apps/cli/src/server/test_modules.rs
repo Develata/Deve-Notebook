@@ -52,6 +52,7 @@ mod switcher_current_scope_test;
 mod switcher_exact_selector_fail_closed_test;
 mod switcher_exact_selector_test;
 mod switcher_scope_rebind_test;
+mod sync_delete_peer_test_support;
 mod sync_hello_browser_scope_test;
 mod sync_hello_browser_test;
 mod sync_hello_rebind_test;
