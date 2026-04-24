@@ -1,11 +1,19 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Sync hello handshake boundary.
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
+#[path = "hello_outbound.rs"]
+mod hello_outbound;
+#[path = "hello_response.rs"]
+mod hello_response;
 #[path = "hello_scope.rs"]
 mod hello_scope;
 
@@ -94,76 +102,18 @@ pub(super) async fn handle(
     session.set_sync_scope_nonce(scope_nonce);
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
-    let vec_bytes = match serde_json::to_vec(&local_vector) {
-        Ok(bytes) => bytes,
+    match hello_response::send(state, ch, repo_id, scope_nonce, local_peer_id, local_vector) {
+        Ok(()) => {}
         Err(err) => {
             clear_sync_hello_scope_failure(session, false);
             errors::request_failed(ch, format!("Failed to encode local vector: {}", err), scope);
             return;
         }
     };
-    let mut msg = Vec::new();
-    msg.extend_from_slice(b"deve-handshake");
-    msg.extend_from_slice(local_peer_id.as_str().as_bytes());
-    msg.extend_from_slice(&vec_bytes);
-
-    let my_sig = state.identity_key.sign(&msg);
-    ch.unicast(ServerMessage::SyncHello {
-        peer_id: local_peer_id,
-        repo_id,
-        scope_nonce,
-        pub_key: state.identity_key.public_key_bytes().to_vec(),
-        signature: my_sig,
-        vector: local_vector,
-    });
-
     if session.is_browser_session() {
         listing::handle_list_shadows(state, ch, Some(session), None).await;
         return;
     }
 
-    if !result.to_request.is_empty() {
-        let requests = result
-            .to_request
-            .into_iter()
-            .map(|req| (req.peer_id, req.range))
-            .collect();
-        ch.unicast(ServerMessage::SyncRequest {
-            repo_id,
-            branch: session.active_branch.clone(),
-            requests,
-        });
-    }
-
-    for req in result.snapshot_requests {
-        ch.unicast(ServerMessage::SyncSnapshotRequest {
-            peer_id: req.peer_id,
-            repo_id: req.repo_id,
-        });
-    }
-
-    let mut ops_to_push = Vec::new();
-    for req in result.to_send {
-        match engine.get_ops_for_sync(&req) {
-            Ok(response) => ops_to_push.extend(response.ops),
-            Err(err) => {
-                clear_sync_hello_scope_failure(session, false);
-                errors::classified_failure(
-                    ch,
-                    format!("Failed to build sync payload for repo {}: {}", repo_id, err),
-                    scope,
-                );
-                return;
-            }
-        }
-    }
-
-    if !ops_to_push.is_empty() {
-        ch.unicast(ServerMessage::SyncPush {
-            repo_id,
-            scope_nonce,
-            branch: session.active_branch.clone(),
-            ops: ops_to_push,
-        });
-    }
+    hello_outbound::send(ch, session, &engine, result, repo_id, scope, scope_nonce);
 }
