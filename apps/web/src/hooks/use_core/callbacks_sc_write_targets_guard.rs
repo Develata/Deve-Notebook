@@ -35,8 +35,7 @@ pub(super) fn guarded_entry_callback(
     let ws = ws.clone();
     Callback::new(move |entry: ChangeEntry| {
         if let Some(label) = write_block_label(&ws, gate) {
-            let message = cannot_send(action, label);
-            warn_sync_banner(set_sync_banner, message);
+            show_source_control_write_block(set_sync_banner, action, label);
             return;
         }
         let build = build.clone();
@@ -55,11 +54,37 @@ pub(super) fn guarded_entries_callback(
     let ws = ws.clone();
     Callback::new(move |entries: Vec<ChangeEntry>| {
         if let Some(label) = write_block_label(&ws, gate) {
-            let message = cannot_send(action, label);
-            warn_sync_banner(set_sync_banner, message);
+            show_source_control_write_block(set_sync_banner, action, label);
             return;
         }
         let build = build.clone();
         send_scoped(scope, &ws, move |scope_nonce| build(entries, scope_nonce));
     })
+}
+
+fn show_source_control_write_block(
+    set_sync_banner: WriteSignal<Option<String>>,
+    action: &str,
+    reason: &str,
+) {
+    let message = cannot_send(action, reason);
+    warn_sync_banner(set_sync_banner, message);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::show_source_control_write_block;
+    use leptos::prelude::{GetUntracked, signal};
+
+    #[test]
+    fn source_control_write_block_banner_includes_action_and_reason() {
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+
+        show_source_control_write_block(set_sync_banner, "Stage", "read-only");
+
+        assert_eq!(
+            sync_banner.get_untracked().as_deref(),
+            Some("Cannot send Stage: read-only")
+        );
+    }
 }
