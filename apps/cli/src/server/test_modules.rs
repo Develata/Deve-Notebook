@@ -30,7 +30,6 @@ mod open_doc_invalid_delta_test;
 mod open_doc_invalid_delta_test_support;
 mod open_doc_scope_test;
 mod open_doc_snapshot_test;
-mod repo_scope_local_alias_test;
 mod repo_scope_recovery_support;
 mod repo_scope_recovery_test;
 mod repo_scope_recovery_test_extra;

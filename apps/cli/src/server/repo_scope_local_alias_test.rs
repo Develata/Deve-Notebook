@@ -1,145 +1,96 @@
-use super::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
-use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
-use crate::server::security;
-use deve_core::config::SyncMode;
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
+use super::support::build_state;
+use crate::server::{
+    repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync},
+    session::WsSession,
+};
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
-use deve_core::models::PeerId;
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use std::sync::Arc;
-use tempfile::tempdir;
-use tokio::sync::broadcast;
+use deve_core::protocol::ServerErrorCode;
+
+fn rewrite_local_metadata(
+    repo: &RepoManager,
+    repo_name: &str,
+    info: RepoInfo,
+) -> anyhow::Result<()> {
+    let db = repo.open_database(None, repo_name)?.db;
+    let txn = db.begin_write()?;
+    txn.open_table(REPO_METADATA)?
+        .insert(&0, bincode::serialize(&info)?.as_slice())?;
+    txn.commit()?;
+    Ok(())
+}
 
 #[test]
 fn resolve_session_repo_fails_closed_on_stale_local_alias_drift() -> anyhow::Result<()> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
-    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
-    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
-    let wiki_db = repo.open_database(None, "wiki")?.db;
-    let txn = wiki_db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "legacy-wiki".into(),
-            url: wiki_info.url.clone(),
-        })?
-        .as_slice(),
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    rewrite_local_metadata(
+        state.repo.as_ref(),
+        "test",
+        RepoInfo {
+            uuid: test_id,
+            name: "legacy-test".into(),
+            url: Some("urn:test".into()),
+        },
     )?;
-    txn.commit()?;
-
-    let repo = Arc::new(repo);
-    let state = Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx: broadcast::channel(16).0,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            PeerId::new("test-peer"),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
-    });
 
     let mut session = WsSession::new();
-    session.switch_repo("legacy-wiki".into(), Some(wiki_info.uuid));
+    session.switch_repo("legacy-test".into(), Some(test_id));
     let err = resolve_session_repo_and_sync(&state, &mut session).expect_err("must fail closed");
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
-    assert_eq!(
-        mapped.code,
-        deve_core::protocol::ServerErrorCode::StoragePersistFailed
-    );
-    assert_eq!(session.active_repo.as_deref(), Some("legacy-wiki"));
-    assert_eq!(session.active_repo_id, Some(wiki_info.uuid));
+    assert_eq!(mapped.code, ServerErrorCode::StoragePersistFailed);
+    assert_eq!(session.active_repo.as_deref(), Some("legacy-test"));
+    assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }
 
 #[test]
 fn open_database_rejects_stale_local_alias_after_metadata_drift() -> anyhow::Result<()> {
-    let dir = tempdir()?;
-    let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
-    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
-    let wiki_db = repo.open_database(None, "wiki")?.db;
-    let txn = wiki_db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "legacy-wiki".into(),
-            url: wiki_info.url.clone(),
-        })?
-        .as_slice(),
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    rewrite_local_metadata(
+        state.repo.as_ref(),
+        "test",
+        RepoInfo {
+            uuid: test_id,
+            name: "legacy-test".into(),
+            url: Some("urn:test".into()),
+        },
     )?;
-    txn.commit()?;
 
-    let err = match repo.open_database(None, "legacy-wiki") {
+    let err = match state.repo.open_database(None, "legacy-test") {
         Ok(_) => anyhow::bail!("stale local alias must fail closed"),
         Err(err) => err,
     };
-    assert!(err.to_string().contains("legacy-wiki"));
+    assert!(err.to_string().contains("legacy-test"));
     Ok(())
 }
 
 #[test]
 fn resolve_session_repo_preserves_local_catalog_corruption_for_exact_selector() -> anyhow::Result<()>
 {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
-    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
-    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
-    let wiki_db = repo.open_database(None, "wiki")?.db;
-    let txn = wiki_db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "wiki".into(),
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    rewrite_local_metadata(
+        state.repo.as_ref(),
+        "test",
+        RepoInfo {
+            uuid: test_id,
+            name: "test".into(),
             url: None,
-        })?
-        .as_slice(),
+        },
     )?;
-    txn.commit()?;
-
-    let repo = Arc::new(repo);
-    let state = Arc::new(AppState {
-        repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-        tx: broadcast::channel(16).0,
-        plugins: vec![],
-        sync_engine: Arc::new(RepoScopedSyncEngine::new(
-            PeerId::new("test-peer"),
-            repo,
-            SyncMode::Auto,
-        )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
-        #[cfg(feature = "search")]
-        search_service: None,
-        identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
-    });
 
     let mut session = WsSession::new();
-    session.switch_repo("wiki".into(), Some(wiki_info.uuid));
+    session.switch_repo("test".into(), Some(test_id));
     let err =
         resolve_session_repo_and_sync(&state, &mut session).expect_err("corrupted repo must fail");
     assert!(
         err.to_string()
-            .contains("Broken local repo wiki while validating catalog: repository URL missing")
+            .contains("Broken local repo test while validating catalog: repository URL missing")
     );
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
-    assert_eq!(
-        mapped.code,
-        deve_core::protocol::ServerErrorCode::StoragePersistFailed
-    );
-    assert_eq!(session.active_repo.as_deref(), Some("wiki"));
-    assert_eq!(session.active_repo_id, Some(wiki_info.uuid));
+    assert_eq!(mapped.code, ServerErrorCode::StoragePersistFailed);
+    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }

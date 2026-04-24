@@ -7,5 +7,7 @@ mod catalog;
 mod error_map;
 #[path = "repo_scope_local_test.rs"]
 mod local;
+#[path = "repo_scope_local_alias_test.rs"]
+mod local_alias;
 #[path = "repo_scope_test_support.rs"]
 mod support;
