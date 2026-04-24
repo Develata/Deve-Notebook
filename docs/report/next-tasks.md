@@ -40,7 +40,7 @@
 - `layout_context.rs`
 
 **执行规则**:
-- 重构后每个文件 < 130 行
+- 重构后每个文件应保持职责内聚；超过 250 行需复查，超过 500 行需拆分或说明例外
 - `mod.rs` 仅做 pub re-export
 - 每步完成后 `cargo check --package deve_web` 验证
 
@@ -307,7 +307,7 @@ main ─┬─ Branch E (docs)        ← 最先合并 (无冲突)
 ### Agent 通用指令
 
 每个分支的 Agent 必须遵守:
-1. **文件行数铁律**: 目标 < 130 行, 硬限 250 行
+1. **文件内聚规则**: 按职责/API/复用边界拆分；超过 250 行需复查，超过 500 行需拆分或说明例外
 2. **编译验证**: 每步完成后 `cargo check --package <pkg>` = 0 errors, 0 warnings
 3. **测试**: 新增功能必须附带单元测试, 覆盖率 ≥ 80%
 4. **路径处理**: 统一使用 `deve_core::utils::path::to_forward_slash` 正斜杠转换

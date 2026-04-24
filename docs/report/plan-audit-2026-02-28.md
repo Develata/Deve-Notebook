@@ -23,11 +23,11 @@
 
 | 来源 | 修改前 | 修改后 |
 |:---|:---|:---|
-| `deve-note plan.md` L42 | ~100 行 / 200 行 | **< 130 行 / 250 行** |
-| `AGENTS.md` §2 | < 130 行 / 250 行 | *(基准，未变)* |
-| `08_ui_design_03_mobile.md` §8.3 | < 130 行 / 250 行 | *(已一致)* |
+| `deve-note plan.md` L42 | 早期行数硬规则 | **250 行 soft / 500 行 hard** |
+| `AGENTS.md` §2 | 早期行数硬规则 | **250 行 soft / 500 行 hard** |
+| `08_ui_design_03_mobile.md` §8.3 | 早期行数硬规则 | **250 行 soft / 500 行 hard** |
 
-**已执行修改**: `deve-note plan.md` 行数限制统一为 AGENTS.md 的 `< 130 行 / 250 行` 标准，并新增 JS Bridge 豁免条款（`< 200 行 / 400 行`）。
+**后续修订**: 2026-04-24 已统一为按职责内聚拆分；250 行仅作为 soft review 信号，500 行才作为 hard fuse。
 
 ---
 
@@ -193,10 +193,7 @@
 
 ### 3.3 ✅ JS Bundle 文件行数限制豁免
 
-**已执行修改**: `deve-note plan.md` 新增 JS Bridge 豁免条款：
-- Target: `< 200 行`
-- Hard limit: `400 行`
-- 超限时应优先提取独立模块 (`extensions/*.js`)
+**后续修订**: `deve-note plan.md` 已改为统一的 250 行 soft review / 500 行 hard fuse；JS Bridge 不再使用独立阈值，只保留“上下文更清晰时可超过 soft review”的例外说明。
 
 ---
 
@@ -240,7 +237,7 @@
 
 | 文件 | 行数 | 超限 |
 |:---|:---|:---|
-| `08_ui_design_03_mobile.md` | 274 行 | 是 (>250) |
+| `08_ui_design_03_mobile.md` | 274 行 | 否，仅触发 soft review |
 | `05_network.md` | ~170 行 | 否 |
 
 **状态**: ⚠️ 未执行。Plan 文档为 Markdown 设计文档而非代码文件，行数限制严格来说不适用。如需保持一致性，可将 `08_ui_design_03_mobile.md` 的 §8 "落地记录" 拆分为独立文件。此项为低优先级，暂不处理。
@@ -252,7 +249,7 @@
 ### `deve-note plan.md`
 | # | 位置 | 修改 | 状态 |
 |:---|:---|:---|:---|
-| 1 | L42 行数限制 | `~100行/200行` → `< 130行/250行` + JS Bridge 豁免 | ✅ |
+| 1 | L42 行数限制 | 统一为 250 行 soft / 500 行 hard，并保留测试与 JS Bridge 上下文例外 | ✅ |
 | 2 | 末尾 | 添加 Acceptance Cases 索引 | ✅ |
 
 ### `03_rendering.md`

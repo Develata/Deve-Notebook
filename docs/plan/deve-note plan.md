@@ -111,8 +111,8 @@
 
 ### Global: Code Standards (代码规范)
 
-*   **单文件行数限制**: 目标 < 130 行，MUST NOT 超过 250 行 (熔断阈值)。详见 `AGENTS.md` §2。
-    *   **例外 — JS Bridge**: `apps/web/js/` 下的 JavaScript Bridge 文件因 FFI 性质，行数限制放宽至 target < 200 行, hard limit 400 行。
+*   **单文件内聚检查**: 拆分依据是职责边界、API 边界与重复基础设施，不以行数机械拆分；超过 250 行为软架构警告，超过 500 行才是熔断阈值。详见 `AGENTS.md`。
+    *   **例外 — 测试 / JS Bridge**: 测试、test support 与 `apps/web/js/` 下的 JavaScript Bridge 文件可在保持上下文更清晰时超过软阈值，但仍需避免无边界聚合。
     *   **豁免 — 构建产物**: `*.bundle.js`、`dist/`、`target/` 等构建产物不受行数限制约束。此规则仅针对 **源文件 (Source Files)**。
 *   **中文注释**: 每个模块/组件 SHOULD 包含中文文档注释。
 *   **I18n 支持**: 所有用户可见文本 MUST 通过 `crate::i18n::t::xxx::yyy()` facade 获取，禁止直接把自然语言写进组件协议层。
