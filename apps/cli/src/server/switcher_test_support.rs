@@ -25,6 +25,15 @@ pub(crate) fn app_state(
     vault: PathBuf,
     host_dir: PathBuf,
 ) -> anyhow::Result<Arc<AppState>> {
+    app_state_with_tree(repo, vault, host_dir, Arc::new(RepoTreeRegistry::new()))
+}
+
+pub(crate) fn app_state_with_tree(
+    repo: RepoManager,
+    vault: PathBuf,
+    host_dir: PathBuf,
+    tree_manager: Arc<RepoTreeRegistry>,
+) -> anyhow::Result<Arc<AppState>> {
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&host_dir)?;
@@ -38,7 +47,7 @@ pub(crate) fn app_state(
             repo,
             SyncMode::Auto,
         )),
-        tree_manager: Arc::new(RepoTreeRegistry::new()),
+        tree_manager,
         #[cfg(feature = "search")]
         search_service: None,
         identity_key,
