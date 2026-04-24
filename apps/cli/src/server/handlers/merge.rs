@@ -1,9 +1,14 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 //! 手动合并消息处理器入口。
 
 mod errors;
 mod manual;
+mod manual_pending;
 mod manual_support;
 mod peer;
+mod peer_apply;
 mod peer_support;
 mod scope;
 
@@ -35,7 +40,7 @@ pub async fn handle_get_pending_ops(
     session: &mut WsSession,
     request_id: String,
 ) {
-    manual::handle_get_pending_ops(state, ch, session, request_id).await;
+    manual_pending::handle_get_pending_ops(state, ch, session, request_id).await;
 }
 
 pub async fn handle_confirm_merge(
@@ -43,7 +48,7 @@ pub async fn handle_confirm_merge(
     ch: &DualChannel,
     session: &mut WsSession,
 ) {
-    manual::handle_confirm_merge(state, ch, session).await;
+    manual_pending::handle_confirm_merge(state, ch, session).await;
 }
 
 pub async fn handle_discard_pending(
@@ -51,7 +56,7 @@ pub async fn handle_discard_pending(
     ch: &DualChannel,
     session: &mut WsSession,
 ) {
-    manual::handle_discard_pending(state, ch, session).await;
+    manual_pending::handle_discard_pending(state, ch, session).await;
 }
 
 pub async fn handle_merge_peer(

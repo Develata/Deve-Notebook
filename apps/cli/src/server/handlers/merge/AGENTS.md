@@ -13,10 +13,16 @@ Merge conflict resolution handlers. Supports both manual merge (user-driven conf
 |------|-------------|
 | `scope.rs` | Merge scope bootstrap for single-repo sessions |
 | `manual.rs` | Manual merge handler — user resolves conflicts interactively |
+| `manual_pending.rs` | Manual merge pending-operation handlers |
 | `manual_support.rs` | Manual merge helper utilities |
 | `peer.rs` | Peer merge handler — automatic during sync |
+| `peer_apply.rs` | Peer merge apply and conflict emission helpers |
 | `peer_support.rs` | Peer merge helper utilities |
+| `peer_support_test.rs` | Peer merge helper tests |
+| `scope_stale_test.rs` | Merge scope stale binding tests |
 | `errors.rs` | Merge-specific error types |
+| `errors_classify_test.rs` | Merge error classification tests |
+| `scope_test_support.rs` | Merge scope test fixtures |
 
 ## For AI Agents
 

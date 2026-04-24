@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Manual merge shared helpers.
+
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::config::SyncMode;
 use deve_core::models::RepoId;
