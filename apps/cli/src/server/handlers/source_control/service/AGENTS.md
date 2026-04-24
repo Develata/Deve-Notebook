@@ -15,6 +15,7 @@ Source control service layer that abstracts read/write/target operations. Provid
 | `read_test.rs` | Read service tests |
 | `write.rs` | Write operations (stage, unstage, discard, commit) |
 | `target.rs` | Target resolution — resolves doc_id for source control operations |
+| `target_*_test.rs` | Target resolution guard tests |
 
 ## For AI Agents
 
