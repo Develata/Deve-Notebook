@@ -1,6 +1,10 @@
 // apps/cli/src/server/source_control_proxy.rs
 //! # Source Control Remote Proxy
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
 
+#[path = "source_control_proxy_client.rs"]
+mod client;
 #[path = "source_control_proxy_commits.rs"]
 mod commits;
 #[path = "source_control_proxy_http.rs"]
@@ -24,10 +28,8 @@ pub struct RemoteSourceControlApi {
 
 impl RemoteSourceControlApi {
     pub fn new(base_url: String) -> Self {
-        Self {
-            base_url,
-            client: reqwest::Client::new(),
-        }
+        let client = client::build_client(&base_url);
+        Self { base_url, client }
     }
 
     fn with_repo_query(

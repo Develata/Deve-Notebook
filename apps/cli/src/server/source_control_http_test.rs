@@ -182,7 +182,8 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
         },
     );
 
-    let response = reqwest::Client::new()
+    let response = harness
+        .client
         .post(format!("{}/api/sc/stage-pending", base_url))
         .json(&serde_json::json!({
             "path": "notes/a.md",
@@ -203,7 +204,11 @@ async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist
     let harness = ProxyHarness::spawn().await?;
     RepoManager::init(harness.dir.path(), 10, Some("test"), Some("urn:test"))?;
 
-    let response = reqwest::get(format!("{}/api/sc/status", harness.base_url)).await?;
+    let response = harness
+        .client
+        .get(format!("{}/api/sc/status", harness.base_url))
+        .send()
+        .await?;
     let status = response.status();
     let body: deve_core::protocol::ServerError = response.json().await?;
 
