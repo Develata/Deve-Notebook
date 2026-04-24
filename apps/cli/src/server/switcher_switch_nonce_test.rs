@@ -1,174 +1,92 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::{handle_switch_branch, handle_switch_repo};
 use crate::server::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    session::WsSession,
+    switcher_test_support::{browser_session, build_state, unicast_channel},
 };
-use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 
-fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
-    let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
-    let repo = Arc::new(repo);
-    let (tx, _rx) = broadcast::channel(8);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
-    Ok((
-        dir,
-        Arc::new(AppState {
-            repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
-            tx,
-            plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                identity_key.peer_id(),
-                repo,
-                SyncMode::Auto,
-            )),
-            tree_manager: Arc::new(RepoTreeRegistry::new()),
-            #[cfg(feature = "search")]
-            search_service: None,
-            identity_key,
-        }),
-    ))
+async fn assert_context_error(
+    rx: &mut mpsc::Receiver<ServerMessage>,
+    expected_scope_nonce: Option<u64>,
+    expected_switch_nonce: Option<u64>,
+    detail_contains: Option<&str>,
+) -> anyhow::Result<()> {
+    match rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            scope_nonce,
+            switch_nonce,
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, expected_scope_nonce);
+            assert_eq!(switch_nonce, expected_switch_nonce);
+            if let Some(detail) = detail_contains {
+                assert!(
+                    error
+                        .detail
+                        .as_deref()
+                        .is_some_and(|actual| actual.contains(detail))
+                );
+            }
+            Ok(())
+        }
+        other => anyhow::bail!("expected ProtocolError, got {:?}", other),
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_requires_switch_nonce_for_browser_sessions() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(7));
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(7);
 
     handle_switch_branch(&state, &ch, &mut session, None, None).await;
-
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error, scope_nonce, ..
-        }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, Some(7));
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    Ok(())
+    assert_context_error(&mut uni_rx, Some(7), None, None).await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_repo_requires_switch_nonce_for_browser_sessions() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(11));
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(11);
 
     handle_switch_repo(&state, &ch, &mut session, "default".into(), None, None).await;
-
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error, scope_nonce, ..
-        }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, Some(11));
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    Ok(())
+    assert_context_error(&mut uni_rx, Some(11), None, None).await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_rejects_stale_switch_nonce_for_browser_sessions() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(7));
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(7);
 
     handle_switch_branch(&state, &ch, &mut session, None, Some(7)).await;
-
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error,
-            scope_nonce,
-            switch_nonce,
-        }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, Some(7));
-            assert_eq!(switch_nonce, Some(7));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("stale"))
-            );
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    Ok(())
+    assert_context_error(&mut uni_rx, Some(7), Some(7), Some("stale")).await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_repo_rejects_stale_switch_nonce_for_browser_sessions() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(11));
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(11);
 
     handle_switch_repo(&state, &ch, &mut session, "default".into(), None, Some(10)).await;
-
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error,
-            scope_nonce,
-            switch_nonce,
-        }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert_eq!(scope_nonce, Some(11));
-            assert_eq!(switch_nonce, Some(10));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("stale"))
-            );
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
-    Ok(())
+    assert_context_error(&mut uni_rx, Some(11), Some(10), Some("stale")).await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_rejects_non_browser_sessions() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = WsSession::new();
 
     handle_switch_branch(&state, &ch, &mut session, Some("peer-a".into()), None).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("browser sessions"))
-            );
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
+    assert_context_error(&mut uni_rx, None, None, Some("browser sessions")).await?;
     assert!(session.active_branch.is_none());
     assert!(session.active_repo.is_none());
     Ok(())
@@ -177,24 +95,12 @@ async fn switch_branch_rejects_non_browser_sessions() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_repo_rejects_non_browser_sessions() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = WsSession::new();
 
     handle_switch_repo(&state, &ch, &mut session, "default".into(), None, None).await;
 
-    match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("browser sessions"))
-            );
-        }
-        other => panic!("expected ProtocolError, got {:?}", other),
-    }
+    assert_context_error(&mut uni_rx, None, None, Some("browser sessions")).await?;
     assert!(session.active_branch.is_none());
     assert!(session.active_repo.is_none());
     Ok(())
