@@ -45,6 +45,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `source_control_proxy_queries.rs` | Query proxy (changes/diff/pending) |
 | `source_control_http_*_test.rs` | Source control HTTP roundtrip tests and helpers |
 | `source_control_proxy_http_*_test.rs` | Source control proxy HTTP error decoding tests |
+| `source_control_{local,remote}_scope*_test.rs` | Source control scope/identity runtime tests |
 | `plugin_host.rs` | Plugin host server mode for satellite processes |
 | `plugin_host_routes.rs` | Plugin host HTTP routes |
 | `plugin_host_ws.rs` | Plugin host WebSocket handler |
