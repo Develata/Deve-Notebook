@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Authenticated WebSocket upgrade and session runtime entrypoint.
+
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use futures::StreamExt;
@@ -6,8 +11,9 @@ use std::sync::Arc;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::security::auth::{config::AuthConfig, jwt};
+use deve_core::security::auth::config::AuthConfig;
 
+mod auth;
 mod filter;
 mod receive;
 mod route;
@@ -22,26 +28,7 @@ pub async fn ws_handler(
     axum::Extension(config): axum::Extension<Arc<AuthConfig>>,
     req: axum::http::request::Parts,
 ) -> impl IntoResponse {
-    // 提取 Cookie 中的 JWT
-    let token = req
-        .headers
-        .get("cookie")
-        .and_then(|v| v.to_str().ok())
-        .and_then(crate::server::auth::cookie::extract_token_from_cookie_header);
-    let authed = match token {
-        Some(ref t) => jwt::validate_token(&config.secret, t, config.token_version).is_ok(),
-        None => false,
-    };
-
-    // localhost 免密策略
-    let is_local = req
-        .extensions
-        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
-        .map(|ci| ci.0.ip().is_loopback())
-        .unwrap_or(false);
-    let browser_session =
-        is_browser_session_connection(authed, config.allow_anonymous_localhost, is_local);
-
+    let browser_session = auth::is_browser_session_request(&config, &req);
     if !browser_session {
         return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
@@ -109,17 +96,9 @@ pub async fn handle_socket(
     }
 }
 
-fn is_browser_session_connection(
-    authed: bool,
-    allow_anonymous_localhost: bool,
-    is_local: bool,
-) -> bool {
-    authed || (allow_anonymous_localhost && is_local)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::is_browser_session_connection;
+    use super::auth::is_browser_session_connection;
 
     #[test]
     fn localhost_anonymous_ws_still_counts_as_browser_session() {

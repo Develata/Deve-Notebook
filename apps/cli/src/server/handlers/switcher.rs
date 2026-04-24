@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Repository switcher WebSocket handler facade.
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;

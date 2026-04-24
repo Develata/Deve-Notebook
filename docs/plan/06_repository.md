@@ -328,7 +328,7 @@ ReadonlyDegraded
 - structure repair
 - startup materialize
 
-### 9.3 Scope Runtime Layer
+### 9.3 Scope Runtime Layer {#repo-scope-runtime}
 
 - `apps/cli/src/server/repo_scope*.rs`
 - `apps/cli/src/server/session*.rs`

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Local/remote counterpart lookup for repo-scoped sessions.
+
 use super::ResolvedRepo;
 use super::lookup::resolve_repo_by_name;
 use crate::server::AppState;

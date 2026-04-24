@@ -1,14 +1,14 @@
 // apps/cli/src/server/session.rs
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # WebSocket 会话状态 (Session State)
 //!
 //! 管理单个 WebSocket 连接的 repo-scoped 会话状态。
 
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{PeerId, RepoId};
-use std::time::{Duration, Instant};
-
-const WS_MESSAGE_WINDOW: Duration = Duration::from_secs(60);
-const WS_MAX_MESSAGES_PER_WINDOW: u16 = 200;
+use std::time::Instant;
 
 #[path = "session_writer.rs"]
 mod writer;
@@ -82,6 +82,8 @@ pub struct WsSession {
     pub message_count_in_window: u16,
 }
 
+#[path = "session_rate_limit.rs"]
+mod session_rate_limit;
 #[path = "session_repo.rs"]
 mod session_repo;
 #[path = "session_scope.rs"]
@@ -112,20 +114,6 @@ impl WsSession {
     /// 创建新会话
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn record_incoming_message(&mut self, now: Instant) -> bool {
-        if now.duration_since(self.message_window_started_at) >= WS_MESSAGE_WINDOW {
-            self.message_window_started_at = now;
-            self.message_count_in_window = 0;
-        }
-
-        if self.message_count_in_window >= WS_MAX_MESSAGES_PER_WINDOW {
-            return false;
-        }
-
-        self.message_count_in_window += 1;
-        true
     }
 }
 

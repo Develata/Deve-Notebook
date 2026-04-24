@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Additional broadcast scope-stamping regression coverage.
+
 use super::super::BroadcastFilter;
 use crate::server::session::WsSession;
 use deve_core::models::{DocId, Op};

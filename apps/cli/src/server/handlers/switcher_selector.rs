@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Switcher selector resolution.
+
 use crate::server::AppState;
 use anyhow::{Result, anyhow};
 use deve_core::ledger::listing::RepoListing;

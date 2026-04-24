@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Local repo bootstrap fallback for scoped sessions.
+
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use anyhow::Result;

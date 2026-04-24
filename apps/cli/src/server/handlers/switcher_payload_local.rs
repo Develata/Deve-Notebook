@@ -1,16 +1,20 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Local repo switch view loading.
+
 use crate::server::AppState;
-use deve_core::models::{NodeId, NodeMeta};
+use deve_core::models::{DocId, NodeId, NodeMeta};
 use std::sync::Arc;
 
 use super::PreparedRepoSwitch;
 
+type LocalRepoView = (Vec<(DocId, String)>, Vec<(NodeId, NodeMeta)>);
+
 pub(super) fn load_local_repo_view(
     state: &Arc<AppState>,
     prepared: &PreparedRepoSwitch,
-) -> anyhow::Result<(
-    Vec<(deve_core::models::DocId, String)>,
-    Vec<(NodeId, NodeMeta)>,
-)> {
+) -> anyhow::Result<LocalRepoView> {
     if prepared.degraded_docs_only {
         let docs = state
             .repo

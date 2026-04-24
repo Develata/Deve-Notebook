@@ -21,9 +21,7 @@ impl AgentBridgePolicy {
                 .unwrap_or(config.ai.agent_bridge.enabled),
             trusted: env_bool("DEVE_AI_AGENT_BRIDGE_TRUSTED")
                 .unwrap_or(config.ai.agent_bridge.trusted),
-            cli_path: std::env::var("AGENT_CLI_PATH")
-                .ok()
-                .and_then(|value| non_empty(value)),
+            cli_path: std::env::var("AGENT_CLI_PATH").ok().and_then(non_empty),
         }
     }
 

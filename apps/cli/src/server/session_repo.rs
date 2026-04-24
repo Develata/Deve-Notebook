@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Session repo binding helpers.
+
 use super::WsSession;
 use deve_core::models::RepoId;
 

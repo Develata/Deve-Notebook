@@ -1,8 +1,23 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Structured document runtime error mapping.
+
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;
 use anyhow::anyhow;
 use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
+
+pub(crate) struct OpenDocErrorContext<'a> {
+    pub(crate) context: &'a str,
+    pub(crate) scope_nonce: Option<u64>,
+    pub(crate) repo_scope: &'a str,
+    pub(crate) doc_id: DocId,
+    pub(crate) request_id: u64,
+    pub(crate) repo_id: RepoId,
+    pub(crate) branch: Option<&'a PeerId>,
+}
 
 fn error_code(err: &anyhow::Error) -> ServerErrorCode {
     let detail = err.to_string();
@@ -35,30 +50,24 @@ pub(crate) fn send_doc_error_with_scope_nonce(
 
 pub(crate) fn send_open_doc_error_with_scope_nonce(
     ch: &DualChannel,
-    context: &str,
     err: anyhow::Error,
-    scope_nonce: Option<u64>,
-    repo_scope: &str,
-    doc_id: DocId,
-    request_id: u64,
-    repo_id: RepoId,
-    branch: Option<&PeerId>,
+    open_context: OpenDocErrorContext<'_>,
 ) {
     let code = error_code(&err);
     tracing::warn!(
-        repo_scope,
-        doc_id = %doc_id,
-        request_id,
-        repo_id = %repo_id,
-        branch = ?branch,
+        repo_scope = open_context.repo_scope,
+        doc_id = %open_context.doc_id,
+        request_id = open_context.request_id,
+        repo_id = %open_context.repo_id,
+        branch = ?open_context.branch,
         error_code = ?code,
         error = %err,
-        context,
+        context = open_context.context,
         "OpenDoc request failed"
     );
     ch.send_protocol_error_with_scope_and_switch_nonce(
-        ServerError::with_detail(code, format!("{}: {}", context, err)),
-        scope_nonce,
+        ServerError::with_detail(code, format!("{}: {}", open_context.context, err)),
+        open_context.scope_nonce,
         None,
     );
 }

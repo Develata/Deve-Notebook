@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Branch switch current-repo hint construction.
+
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
@@ -48,9 +53,7 @@ fn resolve_last_local_selector(
     state: &Arc<AppState>,
     session: &WsSession,
 ) -> Option<LastLocalSelector> {
-    if session.active_branch.is_none() {
-        return None;
-    }
+    session.active_branch.as_ref()?;
 
     let repo_name = state
         .repo

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Switcher protocol error mapping.
+
 use crate::server::repo_scope::map_repo_scope_error;
 use anyhow::anyhow;
 use deve_core::models::PeerId;

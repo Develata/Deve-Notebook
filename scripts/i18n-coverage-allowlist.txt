@@ -1,0 +1,54 @@
+# i18n-coverage-allowlist.txt — bootstrap debt for existing CJK literals.
+#
+# Rules:
+#   - Exact grep hit relative to repo root: path:line:text.
+#   - New hardcoded CJK strings under apps/web/src/components are blocking.
+#   - Remove entries by moving copy into apps/web/src/i18n facade modules.
+
+apps/web/src/components/settings.rs:66:                                    "中文"
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:10:            Locale::Zh => "无法显示差异".to_string(),
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:27:                    format!("删除变更 {path} 没有文档身份，因此当前无法生成可显示的差异。")
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:41:                    "提交 {commit} 包含缺少结构投影的旧内容，Deve-Note 无法安全重建带路径语义的差异。"
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:47:                    "该旧提交包含缺少结构投影的内容，Deve-Note 无法安全重建带路径语义的差异。".to_string()
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:54:            Locale::Zh => "请先暂存文件，再执行提交。",
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:61:            Locale::Zh => "请刷新更改列表后再试。",
+apps/web/src/components/sidebar/source_control/error_notice_copy.rs:67:            Locale::Zh => "当前选中的源代码管理条目已不存在。",
+apps/web/src/components/sidebar/source_control/history_commit_details.rs:24:                            Locale::Zh => "正在加载提交差异...",
+apps/web/src/components/sidebar/source_control/change_item_counterpart.rs:30:        (CounterpartKind::Staged, Locale::Zh) => "暂存区",
+apps/web/src/components/sidebar/source_control/change_item_counterpart.rs:32:        (CounterpartKind::WorkingTree, Locale::Zh) => "工作区",
+apps/web/src/components/sidebar/source_control/change_item_counterpart.rs:39:        (CounterpartKind::Staged, Locale::Zh) => "对应改动也存在于暂存区",
+apps/web/src/components/sidebar/source_control/change_item_counterpart.rs:41:        (CounterpartKind::WorkingTree, Locale::Zh) => "对应改动也存在于工作区",
+apps/web/src/components/sidebar/source_control/history_compare_banner_copy.rs:6:        Locale::Zh => format!("正在比较 {base_label} -> {target_label}。"),
+apps/web/src/components/sidebar/source_control/history_compare_banner_copy.rs:13:        Locale::Zh => format!("已选择基准提交 {base_label}。点击另一条提交即可比较。"),
+apps/web/src/components/sidebar/source_control/history_compare_banner_copy.rs:20:        Locale::Zh => format!("已选择提交 {target_label}。要把它设为比较基准吗？"),
+apps/web/src/components/sidebar/source_control/history_compare_banner_copy.rs:27:        Locale::Zh => "清除",
+apps/web/src/components/sidebar/source_control/history_compare_banner_copy.rs:34:        Locale::Zh => "设为基准",
+apps/web/src/components/sidebar/source_control/history_body.rs:35:                                Locale::Zh => "正在加载历史记录...",
+apps/web/src/components/sidebar/source_control/history_body.rs:45:                                Locale::Zh => "这个分支上还没有提交历史。",
+apps/web/src/components/sidebar/source_control/history_empty_state.rs:14:            Locale::Zh => format!("提交 {base} 与 {target} 之间没有可展示的文件级差异。"),
+apps/web/src/components/sidebar/source_control/history_empty_state.rs:20:        Locale::Zh => "这个提交没有可展示的文件级差异。".to_string(),
+apps/web/src/components/sidebar/source_control/status_notice.rs:15:            Locale::Zh => "切换作用域中...".to_string(),
+apps/web/src/components/sidebar/source_control/status_notice.rs:19:            Locale::Zh => "尚未选择仓库".to_string(),
+apps/web/src/components/sidebar/source_control/status_notice.rs:28:            Locale::Zh => "请重新登录后再暂存、放弃或提交更改。",
+apps/web/src/components/sidebar/source_control/status_notice.rs:34:            Locale::Zh => "请等待连接恢复后再修改源代码管理状态。",
+apps/web/src/components/sidebar/source_control/status_notice.rs:40:            Locale::Zh => "客户端正在重连，源代码管理操作会在恢复后自动可用。",
+apps/web/src/components/sidebar/source_control/status_notice.rs:44:            Locale::Zh => "请等待当前仓库快照加载完成。",
+apps/web/src/components/sidebar/source_control/status_notice.rs:49:            Locale::Zh => "请等待仓库或分支切换完成后再修改更改列表。",
+apps/web/src/components/sidebar/source_control/status_notice.rs:53:            Locale::Zh => "请先选择激活仓库，再使用源代码管理操作。",
+apps/web/src/components/sidebar/source_control/status_notice.rs:57:            Locale::Zh => "当前仓库仍在协商写入权限，请稍后再试。",
+apps/web/src/components/sidebar/extensions_copy.rs:8:        (Locale::Zh, "agent-bridge") => "受信任的外部 CLI 桥接。属于高级模式，默认不启用。",
+apps/web/src/components/sidebar/extensions_copy.rs:10:        (Locale::Zh, _) => "内置原生聊天，优先服务轻量、Markdown 优先的工作流。",
+apps/web/src/components/sidebar/extensions_copy.rs:17:        Locale::Zh => "插件运行时",
+apps/web/src/components/sidebar/extensions_copy.rs:26:        Locale::Zh => "优先交付笔记本核心工作流；可安装插件与运行时扩展保持为可选项。",
+apps/web/src/components/sidebar/extensions_copy.rs:33:        (Locale::Zh, true) => "当前使用",
+apps/web/src/components/sidebar/extensions_copy.rs:35:        (Locale::Zh, false) => "切换",
+apps/web/src/components/sidebar/extensions_copy.rs:42:        (Locale::Zh, _, false) => "禁用",
+apps/web/src/components/sidebar/extensions_copy.rs:50:        Locale::Zh => "系统扩展",
+apps/web/src/components/sidebar/extensions_copy.rs:57:        Locale::Zh => "内置",
+apps/web/src/components/sidebar/extensions_copy.rs:64:        Locale::Zh => "计划中",
+apps/web/src/components/sidebar/extensions_copy.rs:71:        Locale::Zh => "KaTeX 已随 Web 壳内置，用于高性能行内与块级数学渲染。",
+apps/web/src/components/sidebar/extensions_copy.rs:80:        Locale::Zh => "化学公式扩展计划通过 config.tex_extensions = [\"mhchem\"] 按需启用。",
+apps/web/src/components/login/unavailable.rs:7:        Locale::Zh => "当前无法连接认证服务，系统会自动重试。",
+apps/web/src/components/login/api.rs:19:        .map_err(|e| LoginAttemptError::Transport(format!("请求构建失败: {}", e)))?
+apps/web/src/components/login/api.rs:22:        .map_err(|e| LoginAttemptError::Transport(format!("网络错误: {}", e)))?;
+apps/web/src/components/login/api.rs:46:        .map_err(|e| format!("网络错误: {}", e))?;

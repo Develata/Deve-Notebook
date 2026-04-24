@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Snapshot plus bounded delta payload construction.
+
 use super::{
     confirmed,
     snapshot_delta_guard::{find_delta_chain_issue, issue_summary},

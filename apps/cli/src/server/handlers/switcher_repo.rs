@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Repo switch handler and session scope commit.
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;

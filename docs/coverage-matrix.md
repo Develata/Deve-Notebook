@@ -53,6 +53,9 @@ The following documents exist under `docs/` but do not participate in the three-
 - Every `docs/plan/` chapter (01-17 + 08_ui sub-chapters) must have a corresponding row in the Chapter Mapping table.
 - Every `docs/features/` chapter must define at least one Chrome MCP walkthrough, **except** `01_terminology` and `02_positioning` which use `Verification: glossary-only / boundary-only`.
 - Every `docs/acceptance-cases/` file must map to at least one stable automation surface.
+- Non-automated acceptance cases must be listed in `docs/acceptance-bindings.tsv`
+  with a binding type and evidence document; `scripts/plan-coverage.sh` validates
+  the case id, binding type, and evidence path.
 - A single acceptance file may cover multiple blueprint chapters, but the mapping must be explicit here.
 - `08_ui_design.md` remains the shared cross-surface feature chapter.
 - `08_ui_design_01/02/03` define Web / Desktop / Mobile shell behavior at the feature level and mirror the adapter split in `docs/plan/`.

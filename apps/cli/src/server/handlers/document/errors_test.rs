@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Document error mapping regression coverage.
+
 use super::error_code;
 use deve_core::protocol::ServerErrorCode;
 

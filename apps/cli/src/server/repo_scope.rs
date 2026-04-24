@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 //! 会话级 repo 解析辅助。
 //!
 //! Invariants:
@@ -20,6 +23,10 @@ mod repo_scope_remote;
 mod repo_scope_resolve;
 #[path = "repo_scope_selector.rs"]
 mod repo_scope_selector;
+#[path = "repo_scope_sync.rs"]
+mod repo_scope_sync;
+#[path = "repo_scope_sync_bootstrap.rs"]
+mod repo_scope_sync_bootstrap;
 #[path = "repo_scope_workspace.rs"]
 mod repo_scope_workspace;
 
@@ -30,9 +37,10 @@ use std::sync::Arc;
 pub(crate) use self::repo_scope_cleanup::should_clear_stale_remote_scope;
 pub use self::repo_scope_error::{map_repo_scope_error, stale_remote_scope_detail};
 pub use self::repo_scope_resolve::{
-    ResolvedRepo, bootstrap_local_repo, resolve_session_repo, resolve_session_repo_and_sync,
-    resolve_session_repo_or_bootstrap_local, stale_unbound_remote_scope_detail,
+    ResolvedRepo, bootstrap_local_repo, resolve_session_repo, stale_unbound_remote_scope_detail,
 };
+pub use self::repo_scope_sync::resolve_session_repo_and_sync;
+pub use self::repo_scope_sync_bootstrap::resolve_session_repo_or_bootstrap_local;
 pub use self::repo_scope_workspace::{
     local_repo_path, local_repo_root, run_on_resolved_local_repo,
 };

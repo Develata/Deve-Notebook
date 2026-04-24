@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Confirmed ledger operation projection for document runtime responses.
+
 use deve_core::models::{DocId, LedgerEntry};
 use deve_core::protocol::{ClientOrigin, ConfirmedOp};
 

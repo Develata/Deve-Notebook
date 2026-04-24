@@ -1,4 +1,9 @@
-use super::errors::send_open_doc_error_with_scope_nonce;
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Snapshot-first OpenDoc handler.
+
+use super::errors::{OpenDocErrorContext, send_open_doc_error_with_scope_nonce};
 use super::snapshot::{SnapshotPayload, build_snapshot_payload};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::ops::{local_repo_scope, shadow_repo_scope};
@@ -44,14 +49,16 @@ pub(super) async fn handle_open_doc(
             Err(e) => {
                 send_open_doc_error_with_scope_nonce(
                     ch,
-                    "Failed to load document snapshot",
                     e,
-                    scope_nonce,
-                    &repo_scope,
-                    doc_id,
-                    request_id,
-                    scope.repo_id,
-                    scope.branch.as_ref(),
+                    OpenDocErrorContext {
+                        context: "Failed to load document snapshot",
+                        scope_nonce,
+                        repo_scope: &repo_scope,
+                        doc_id,
+                        request_id,
+                        repo_id: scope.repo_id,
+                        branch: scope.branch.as_ref(),
+                    },
                 );
                 return;
             }

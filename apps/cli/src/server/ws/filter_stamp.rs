@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Scope nonce stamping for runtime broadcasts.
+
 use deve_core::protocol::{ServerError, ServerMessage};
 
 pub(super) fn stamp_scope_nonce(msg: ServerMessage, scope_nonce: u64) -> ServerMessage {

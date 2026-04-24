@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Workspace paths derived from resolved repo scope.
+
 use super::{AppState, ResolvedRepo};
 use anyhow::{Result, anyhow};
 use redb::Database;

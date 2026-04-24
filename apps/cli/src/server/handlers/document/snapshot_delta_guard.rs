@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Guards snapshot delta chains before they are sent to browser runtimes.
+
 use deve_core::models::Op;
 use deve_core::protocol::ConfirmedOp;
 

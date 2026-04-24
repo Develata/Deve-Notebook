@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Merge control WebSocket route.
+
 use crate::server::handlers::merge;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::protocol::ClientMessage;

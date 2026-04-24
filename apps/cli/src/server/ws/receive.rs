@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! WebSocket inbound message decode and dispatch loop.
+
 use axum::extract::ws::Message;
 use bincode::Options;
 use std::sync::Arc;
@@ -6,13 +11,11 @@ use std::time::Instant;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::protocol::ClientMessage;
-use deve_core::protocol::{ServerError, ServerErrorCode};
+use deve_core::protocol::{ClientMessage, ServerError, ServerErrorCode};
 
 use super::route;
 use super::send::BroadcastFilter;
 
-/// Bincode 消息大小限制 (防止 DoS 攻击)。
 const MAX_BINCODE_SIZE: u64 = 16 * 1024 * 1024;
 
 pub(super) enum SocketFlow {

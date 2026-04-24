@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Source-control WebSocket route.
+
 use crate::server::handlers::source_control;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::protocol::ClientMessage;

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Stale repo scope cleanup helpers.
+
 use super::repo_scope_error::STALE_REMOTE_SCOPE_PREFIX;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 

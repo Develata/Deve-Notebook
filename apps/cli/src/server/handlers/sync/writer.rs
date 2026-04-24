@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Sync writer readiness registration.
+
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
@@ -93,136 +98,5 @@ fn browser_active_db_mismatch(session: &WsSession, repo_id: RepoId) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use deve_core::ledger::database::DatabaseHandle;
-    use std::sync::Arc;
-
-    #[test]
-    fn rejects_unbound_repo() {
-        let mut session = WsSession::new();
-        let error =
-            validate(&mut session, uuid::Uuid::nil(), &PeerId::new("browser"), 1).unwrap_err();
-        assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
-    }
-
-    #[test]
-    fn rejects_readonly_writer_registration() {
-        let mut session = WsSession::new();
-        let repo_id = uuid::Uuid::new_v4();
-        let peer_id = PeerId::new("browser");
-        let dir = tempfile::tempdir().expect("tempdir");
-        let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
-        session.set_active_db(DatabaseHandle {
-            db,
-            readonly: true,
-            branch: Some(PeerId::new("remote")),
-            repo_id: None,
-            repo_name: "repo".into(),
-        });
-        session.set_authenticated(peer_id.clone());
-        let error = validate(&mut session, repo_id, &peer_id, 1).unwrap_err();
-        assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
-    }
-
-    #[test]
-    fn rejects_mismatched_peer() {
-        let mut session = WsSession::new();
-        let repo_id = uuid::Uuid::new_v4();
-        session.set_authenticated(PeerId::new("browser-a"));
-        session.bind_repo(repo_id);
-        let error = validate(&mut session, repo_id, &PeerId::new("browser-b"), 1).unwrap_err();
-        assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
-        assert!(session.get_active_db().is_none());
-        assert!(session.bound_repo_id.is_none());
-        assert!(session.authenticated_peer_id.is_none());
-        assert_eq!(session.sync_scope_nonce(), None);
-        assert!(session.writer_identity.is_none());
-    }
-
-    #[test]
-    fn accepts_bound_matching_peer() {
-        let mut session = WsSession::new();
-        let repo_id = uuid::Uuid::new_v4();
-        let peer_id = PeerId::new("browser-a");
-        session.set_authenticated(peer_id.clone());
-        session.bind_repo(repo_id);
-        assert!(validate(&mut session, repo_id, &peer_id, 1).is_ok());
-    }
-
-    #[test]
-    fn rejects_browser_writer_with_stale_scope_nonce() {
-        let mut session = WsSession::new();
-        let repo_id = uuid::Uuid::new_v4();
-        let peer_id = PeerId::new("browser-a");
-        session.mark_browser_session();
-        session.switch_repo("notes".into(), Some(repo_id));
-        session.set_scope_nonce(Some(9));
-        session.set_sync_scope_nonce(9);
-        session.set_authenticated(peer_id.clone());
-        session.bind_repo(repo_id);
-        let error = validate(&mut session, repo_id, &peer_id, 8).unwrap_err();
-        assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-        assert!(session.get_active_db().is_none());
-        assert!(session.bound_repo_id.is_none());
-        assert!(session.authenticated_peer_id.is_none());
-        assert_eq!(session.sync_scope_nonce(), None);
-    }
-
-    #[test]
-    fn rejects_browser_writer_for_non_active_repo() {
-        let mut session = WsSession::new();
-        let repo_id = uuid::Uuid::new_v4();
-        let peer_id = PeerId::new("browser-a");
-        session.mark_browser_session();
-        session.switch_repo("notes".into(), Some(uuid::Uuid::new_v4()));
-        session.set_scope_nonce(Some(9));
-        session.set_sync_scope_nonce(9);
-        let dir = tempfile::tempdir().expect("tempdir");
-        let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
-        session.set_active_db(DatabaseHandle {
-            db,
-            readonly: false,
-            branch: None,
-            repo_id: Some(repo_id),
-            repo_name: "notes".into(),
-        });
-        session.set_authenticated(peer_id.clone());
-        session.bind_repo(repo_id);
-        let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
-        assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-        assert!(session.get_active_db().is_none());
-        assert!(session.bound_repo_id.is_none());
-        assert!(session.authenticated_peer_id.is_none());
-        assert_eq!(session.sync_scope_nonce(), None);
-    }
-
-    #[test]
-    fn rejects_browser_writer_with_stale_remote_readonly_binding() {
-        let mut session = WsSession::new();
-        let repo_id = uuid::Uuid::new_v4();
-        let peer_id = PeerId::new("browser-a");
-        session.mark_browser_session();
-        session.switch_repo("notes".into(), Some(repo_id));
-        session.set_scope_nonce(Some(9));
-        session.set_sync_scope_nonce(9);
-        session.set_authenticated(peer_id.clone());
-        session.bind_repo(repo_id);
-        let dir = tempfile::tempdir().expect("tempdir");
-        let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
-        session.set_active_db(DatabaseHandle {
-            db,
-            readonly: true,
-            branch: Some(PeerId::new("remote")),
-            repo_id: Some(uuid::Uuid::new_v4()),
-            repo_name: "shadow".into(),
-        });
-
-        let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
-        assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-        assert!(session.get_active_db().is_none());
-        assert!(session.bound_repo_id.is_none());
-        assert!(session.authenticated_peer_id.is_none());
-        assert_eq!(session.sync_scope_nonce(), None);
-    }
-}
+#[path = "writer_test.rs"]
+mod tests;

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! WebSocket inbound message validation regression coverage.
+
 use super::{SocketFlow, browser_scope_nonce, handle_incoming_message, invalid_client_message};
 use crate::server::channel::DualChannel;
 use crate::server::security;

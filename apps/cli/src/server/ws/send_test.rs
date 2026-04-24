@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! WebSocket outbound delivery regression coverage.
+
 use super::{
     BroadcastFilter, new_unicast_channel, spawn_broadcast_forwarder,
     spawn_unicast_sender_task_with_encoder,

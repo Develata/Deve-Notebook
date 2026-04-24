@@ -31,6 +31,12 @@ jobs:
       
       - name: Run clippy
         run: cargo clippy --all-targets -- -D warnings
+
+      - name: Check plan coverage
+        run: scripts/plan-coverage.sh --write-report
+
+      - name: Check architecture registry
+        run: scripts/check-architecture-registry.sh
       
       - name: Run tests
         run: cargo test

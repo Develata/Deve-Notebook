@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Session-derived broadcast scope matching.
+
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 

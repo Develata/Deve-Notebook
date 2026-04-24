@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Requested repo selector extraction.
+
 use crate::server::AppState;
 use crate::server::shadow_scope;
 use anyhow::{Result, anyhow};

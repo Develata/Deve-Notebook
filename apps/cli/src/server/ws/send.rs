@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! WebSocket outbound broadcast and unicast delivery runtime.
+
 pub(crate) use super::filter::BroadcastFilter;
 use crate::server::channel::try_send_with_delivery_class;
 use axum::extract::ws::{Message, WebSocket};

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Fail-closed validation before document edits reach ledger authority.
+
 use crate::server::{AppState, channel::DualChannel, repo_scope::ResolvedRepo, session::WsSession};
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};

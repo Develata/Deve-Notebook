@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Broadcast filter poison-lock fail-closed regression coverage.
+
 use super::BroadcastFilter;
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};

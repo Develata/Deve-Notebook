@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Browser scope nonce guard for repo-scoped WebSocket routes.
+
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 

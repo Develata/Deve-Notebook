@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Branch switch preparation.
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;

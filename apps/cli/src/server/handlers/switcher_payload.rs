@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Repo switch payload preloading.
+
 use super::switcher_prepare::PreparedRepoSwitch;
 use crate::server::AppState;
 use deve_core::ledger::listing::RepoListing;

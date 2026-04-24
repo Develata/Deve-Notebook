@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Shared edit-scope resolution and document edit response helpers.
+
 use crate::server::repo_scope::{
     ResolvedRepo, map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
 };
@@ -5,6 +10,15 @@ use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerMessage};
 use std::sync::Arc;
+
+pub(super) struct CommittedEdit {
+    pub(super) scope_nonce: Option<u64>,
+    pub(super) doc_id: DocId,
+    pub(super) local_seq: u64,
+    pub(super) op: Op,
+    pub(super) client_id: u64,
+    pub(super) client_op_id: u64,
+}
 
 pub(super) fn resolve_edit_scope(
     state: &Arc<AppState>,
@@ -55,33 +69,28 @@ pub(super) fn reject_edit(
 pub(super) fn broadcast_and_ack_committed_edit(
     ch: &DualChannel,
     scope: &ResolvedRepo,
-    scope_nonce: Option<u64>,
-    doc_id: DocId,
-    local_seq: u64,
-    op: Op,
-    client_id: u64,
-    client_op_id: u64,
+    edit: CommittedEdit,
 ) {
     ch.broadcast(ServerMessage::NewOp {
         repo_id: scope.repo_id,
         branch: scope.branch.clone(),
-        scope_nonce,
-        doc_id,
+        scope_nonce: edit.scope_nonce,
+        doc_id: edit.doc_id,
         entry: ConfirmedOp::new(
-            local_seq,
-            op,
+            edit.local_seq,
+            edit.op,
             Some(ClientOrigin {
-                client_id,
-                client_op_id,
+                client_id: edit.client_id,
+                client_op_id: edit.client_op_id,
             }),
         ),
     });
     ch.unicast(ServerMessage::Ack {
         repo_id: scope.repo_id,
         branch: scope.branch.clone(),
-        scope_nonce,
-        doc_id,
-        seq: local_seq,
-        client_op_id,
+        scope_nonce: edit.scope_nonce,
+        doc_id: edit.doc_id,
+        seq: edit.local_seq,
+        client_op_id: edit.client_op_id,
     });
 }

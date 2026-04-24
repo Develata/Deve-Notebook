@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Repo switch payload emission.
+
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use std::sync::Arc;
 

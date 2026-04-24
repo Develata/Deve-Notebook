@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Snapshot delta guard regression coverage.
+
 use super::snapshot_delta_guard::{
     DeltaChainIssueKind, delta_ops_fit, find_delta_chain_issue, issue_summary,
 };

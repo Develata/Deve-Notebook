@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Document history projection handler.
+
 use super::confirmed;
 use super::errors::send_doc_error_with_scope_nonce;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};

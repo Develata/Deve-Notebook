@@ -1,9 +1,14 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Persists accepted document edits and emits ack/broadcast messages.
+
 use crate::server::{AppState, channel::DualChannel, repo_scope::ResolvedRepo};
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
-use super::edit_support::{broadcast_and_ack_committed_edit, reject_edit};
+use super::edit_support::{CommittedEdit, broadcast_and_ack_committed_edit, reject_edit};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn append_client_edit(
@@ -52,12 +57,14 @@ pub(super) fn append_client_edit(
             broadcast_and_ack_committed_edit(
                 ch,
                 scope,
-                scope_nonce,
-                doc_id,
-                local_seq,
-                op,
-                client_id,
-                client_op_id,
+                CommittedEdit {
+                    scope_nonce,
+                    doc_id,
+                    local_seq,
+                    op,
+                    client_id,
+                    client_op_id,
+                },
             );
         }
         Err(err) => {

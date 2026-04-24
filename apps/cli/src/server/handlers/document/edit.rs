@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
+//! Applies browser edit requests through the document authority bridge.
+
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ServerError, ServerErrorCode};

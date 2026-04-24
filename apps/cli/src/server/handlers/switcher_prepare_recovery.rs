@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Last-local switch recovery helpers.
+
 pub(super) fn should_degrade_local_projection(err: &anyhow::Error) -> bool {
     let lower = err.to_string().to_ascii_lowercase();
     lower.contains("structure projection references missing parent")

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Repo switch preparation and database handle resolution.
+
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use deve_core::ledger::database::DatabaseHandle;

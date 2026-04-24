@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 //! 会话级 repo selector 解析。
 //!
 //! Invariants:

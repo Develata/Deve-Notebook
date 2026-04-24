@@ -1,16 +1,27 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Switcher scope mutation and cleanup.
+
 use crate::server::AppState;
 use crate::server::repo_scope::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo, should_clear_stale_remote_scope,
-    stale_unbound_remote_scope_detail,
+    ResolvedRepo, map_repo_scope_error, resolve_session_repo, stale_unbound_remote_scope_detail,
 };
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
+#[path = "switcher_scope_cleanup.rs"]
+mod cleanup;
+
 pub(super) struct CurrentBranchSwitchContext {
     pub(super) scope: Option<ResolvedRepo>,
     pub(super) repo_url: Option<String>,
+}
+
+pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) {
+    cleanup::clear_failed_current_scope(session, error);
 }
 
 pub(super) fn resolve_current_branch_switch_context(
@@ -60,23 +71,10 @@ pub(super) fn resolve_current_branch_switch_context(
     Ok(CurrentBranchSwitchContext { scope, repo_url })
 }
 
-pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) {
-    if !should_clear_failed_current_scope(session, error) {
-        return;
-    }
-    if session.active_branch.is_some() && shadow_scope::should_clear_missing_remote_branch(error) {
-        shadow_scope::clear_stale_remote_branch(session);
-        return;
-    }
-    session.clear_active_repo();
-    session.clear_active_db();
-    session.clear_sync_binding();
-}
-
 fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) -> bool {
     if session.active_repo.is_some()
         || session.active_repo_id.is_some()
-        || has_runtime_scope_binding(session)
+        || session.has_runtime_scope_binding()
     {
         return false;
     }
@@ -93,7 +91,7 @@ fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerErr
     if session.active_branch.is_some()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
-        && has_runtime_scope_binding(session)
+        && session.has_runtime_scope_binding()
     {
         let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
         if mapped.code == ServerErrorCode::SyncRepoUnbound {
@@ -124,27 +122,4 @@ fn recover_local_repo_url_from_hint(
         "recover_local_repo_url_from_hint reached with active_repo set"
     );
     Ok(None)
-}
-
-fn should_clear_failed_current_scope(session: &WsSession, error: &ServerError) -> bool {
-    if session.active_branch.is_some() {
-        return match error.code {
-            ServerErrorCode::SyncRepoUnbound | ServerErrorCode::ScRepoContextInvalid => {
-                should_clear_stale_remote_scope(error)
-            }
-            _ => false,
-        };
-    }
-    matches!(
-        error.code,
-        ServerErrorCode::ScRepoContextInvalid | ServerErrorCode::StorageNotFound
-    ) || (error.code == ServerErrorCode::SyncRepoUnbound && has_runtime_scope_binding(session))
-}
-
-fn has_runtime_scope_binding(session: &WsSession) -> bool {
-    session.get_active_db().is_some()
-        || session.authenticated_peer_id.is_some()
-        || session.bound_repo_id.is_some()
-        || session.sync_scope_nonce().is_some()
-        || session.writer_identity.is_some()
 }

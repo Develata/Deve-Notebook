@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Switcher selector query helpers.
+
 use crate::server::AppState;
 use anyhow::{Result, anyhow};
 use deve_core::ledger::listing::RepoListing;
@@ -50,6 +55,16 @@ pub(super) fn select_target_repo_by_url(
     if matches.len() == 1 {
         return Ok(Some(matches.remove(0)));
     }
+    if target_branch.is_some()
+        && current_repo_name.is_some_and(|name| repos.iter().any(|repo| repo == name))
+    {
+        return Err(unresolved_target_repo_error(
+            target_branch,
+            current_repo_name,
+            current_repo_id,
+            Some(url),
+        ));
+    }
     if let Some(selector) = fallback_single_remote_repo(target_branch, &repos) {
         return Ok(Some(selector));
     }
@@ -63,6 +78,7 @@ pub(super) fn select_target_repo_by_url(
     }
     Ok((repos.len() == 1).then(|| repos[0].clone()))
 }
+
 pub(super) fn select_repo_selector_by_id(
     state: &Arc<AppState>,
     branch: Option<&PeerId>,

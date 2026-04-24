@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Session branch and runtime database scope helpers.
+
 use super::{WriterIdentity, WsSession};
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{PeerId, RepoId};

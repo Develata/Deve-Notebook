@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Switch target validation result types.
+
 use deve_core::models::{PeerId, RepoId};
 
 pub(super) fn fallback_single_remote_repo(

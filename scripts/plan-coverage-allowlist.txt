@@ -7,5 +7,4 @@
 #   - New violations NOT in this list MUST fail CI.
 #   - Removing an entry requires the file to be under 250 lines.
 #
-# Tracked in gap-core-2026-04-08.md (P1-2).
-apps/cli/src/server/mod.rs
+# No active entries.

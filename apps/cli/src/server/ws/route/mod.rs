@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Layered WebSocket message router.
+
 use crate::server::handlers::sync;
 use crate::server::metrics;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
@@ -5,6 +10,7 @@ use deve_core::protocol::ClientMessage;
 use std::sync::Arc;
 
 mod core;
+mod core_scoped;
 mod docs;
 mod merge;
 mod scope_guard;

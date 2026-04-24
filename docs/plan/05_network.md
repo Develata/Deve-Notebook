@@ -368,7 +368,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `crates/core/src/sync/engine/handshake.rs`
 - `crates/core/src/sync/materialize.rs`
 
-### 12.3 Server WS Runtime
+### 12.3 Server WS Runtime {#server-ws-runtime}
 
 - `apps/cli/src/server/ws/`
 - `apps/cli/src/server/handlers/sync/`

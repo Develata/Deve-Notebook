@@ -377,7 +377,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - supported syntax projection
 - plain-text fallback
 
-### 12.4 Authority Bridge
+### 12.4 Authority Bridge {#document-authority-bridge}
 
 - `apps/cli/src/server/handlers/document/open.rs`
 - `apps/cli/src/server/handlers/document/snapshot.rs`

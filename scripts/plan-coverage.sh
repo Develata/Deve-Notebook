@@ -21,11 +21,18 @@ CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
 FUSE_LINES=250
 SOFT_LINES=130
 ALLOWLIST="$ROOT/scripts/plan-coverage-allowlist.txt"
+I18N_ALLOWLIST="$ROOT/scripts/i18n-coverage-allowlist.txt"
 
 is_allowlisted() {
   local rel="$1"
   [ -f "$ALLOWLIST" ] || return 1
   grep -Fxq "$rel" <(grep -v '^\s*#' "$ALLOWLIST" | grep -v '^\s*$')
+}
+
+is_i18n_allowlisted() {
+  local rel_hit="$1"
+  [ -f "$I18N_ALLOWLIST" ] || return 1
+  grep -Fxq "$rel_hit" <(grep -v '^\s*#' "$I18N_ALLOWLIST" | grep -v '^\s*$')
 }
 REPORT=""
 WRITE_REPORT=0
@@ -75,9 +82,6 @@ missing_refs=0
 dangling_refs=0
 declare -A plan_coverage_map=()
 
-# Build set of valid plan chapter files
-valid_chapters=$(find "$PLAN_DIR" -maxdepth 1 -type f -name '*.md' -exec basename {} \;)
-
 while IFS= read -r f; do
   # Only check files declared as modules (mod.rs or lib.rs or named files > 20 lines)
   lines=$(wc -l < "$f")
@@ -92,21 +96,35 @@ while IFS= read -r f; do
     continue
   fi
 
-  # Extract referenced chapters and verify they exist
+  # Extract `<chapter_basename>#<stable-anchor-id>` refs and verify both parts.
   while IFS= read -r ref_line; do
-    # Expected shape: "//!   - 04_storage.md §Section Name"
-    chapter=$(echo "$ref_line" | sed -n 's|.*- \([0-9][0-9]_[^ ]*\.md\).*|\1|p')
-    [ -z "$chapter" ] && continue
-    if ! echo "$valid_chapters" | grep -qx "$chapter"; then
-      err "dangling plan_ref in $f: $chapter not found in plan"
+    ref=$(echo "$ref_line" | sed -n 's|^//! *- *\([^[:space:]]\+\).*$|\1|p')
+    [ -z "$ref" ] && continue
+    [ "$ref" = "infra" ] && continue
+
+    if ! [[ "$ref" =~ ^[0-9][0-9]_[A-Za-z0-9_]+#[A-Za-z0-9_-]+$ ]]; then
+      err "invalid plan_ref in ${f#$ROOT/}: $ref"
+      dangling_refs=$((dangling_refs + 1))
+      blocking=$((blocking + 1))
+      continue
+    fi
+
+    chapter="${ref%%#*}"
+    anchor="${ref#*#}"
+    chapter_file="$PLAN_DIR/$chapter.md"
+    if [ ! -f "$chapter_file" ]; then
+      err "dangling plan_ref in ${f#$ROOT/}: $chapter.md not found in plan"
+      dangling_refs=$((dangling_refs + 1))
+      blocking=$((blocking + 1))
+    elif ! grep -Fq "{#$anchor}" "$chapter_file"; then
+      err "dangling plan_ref in ${f#$ROOT/}: anchor $ref not found"
       dangling_refs=$((dangling_refs + 1))
       blocking=$((blocking + 1))
     else
-      section=$(echo "$ref_line" | sed -n 's|.*§\(.*\)$|\1|p')
-      key="$chapter§$section"
+      key="$ref"
       plan_coverage_map["$key"]+="$f "
     fi
-  done < <(awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/!/{print; next} {flag=0}' "$f")
+  done < <(awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f")
 done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null)
 
 log "modules without plan_ref (soft): $missing_refs"
@@ -118,16 +136,24 @@ log ""
 # ---------------------------------------------------------------------------
 log "== Check 3: i18n facade leak =="
 i18n_leaks=0
+i18n_allowlisted=0
 if [ -d "$ROOT/apps/web/src/components" ]; then
   # Heuristic: string literals containing CJK chars outside t::/tr!/L10n macros
   while IFS= read -r hit; do
     echo "$hit" | grep -qE '(//|t::|tr!|L10n|plan_ref|include_str!|r#")' && continue
-    log "i18n-leak: $hit"
-    i18n_leaks=$((i18n_leaks + 1))
+    rel_hit="${hit#$ROOT/}"
+    if is_i18n_allowlisted "$rel_hit"; then
+      log "i18n-allowlisted: $rel_hit"
+      i18n_allowlisted=$((i18n_allowlisted + 1))
+    else
+      err "i18n-leak: $rel_hit"
+      i18n_leaks=$((i18n_leaks + 1))
+      blocking=$((blocking + 1))
+    fi
   done < <(grep -rnP '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' "$ROOT/apps/web/src/components" --include='*.rs' 2>/dev/null || true)
 fi
-# i18n leaks are soft warnings during bootstrap; flip to blocking after cleanup
-log "i18n leaks (soft): $i18n_leaks"
+log "i18n leaks (blocking): $i18n_leaks"
+log "i18n allowlisted debt: $i18n_allowlisted"
 log ""
 
 # ---------------------------------------------------------------------------
@@ -135,23 +161,27 @@ log ""
 # ---------------------------------------------------------------------------
 log "== Check 4: acceptance case bindings =="
 unbound_cases=0
-if [ -d "$PLAN_DIR/acceptance-cases" ]; then
-  while IFS= read -r case_file; do
-    case_id=$(basename "$case_file" .md | tr '[:upper:]' '[:lower:]')
-    # Match rust test fn named acc_<id>_* anywhere under code dirs
-    if ! grep -rqE "fn ${case_id}(_[a-z0-9_]+)?\s*\(" "${CODE_DIRS[@]}" 2>/dev/null; then
-      log "unbound case: $case_id"
-      unbound_cases=$((unbound_cases + 1))
-    fi
-  done < <(find "$PLAN_DIR/acceptance-cases" -maxdepth 1 -type f -name '*.md' 2>/dev/null)
+binding_status=0
+binding_report="$(bash "$ROOT/scripts/check-acceptance-bindings.sh" 2>&1)" || binding_status=$?
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  if [[ "$line" == ERROR:* ]]; then
+    err "${line#ERROR: }"
+  else
+    log "$line"
+  fi
+done <<< "$binding_report"
+unbound_cases="$(printf '%s\n' "$binding_report" | awk -F': ' '/^unbound acceptance cases/ { print $2; exit }')"
+unbound_cases="${unbound_cases:-0}"
+if [ "$binding_status" -ne 0 ]; then
+  blocking=$((blocking + 1))
 fi
-log "unbound acceptance cases (soft): $unbound_cases"
 log ""
 
 # ---------------------------------------------------------------------------
 # Reverse coverage matrix
 # ---------------------------------------------------------------------------
-log "== Reverse coverage matrix (plan §section → files) =="
+log "== Reverse coverage matrix (plan anchor → files) =="
 for key in "${!plan_coverage_map[@]}"; do
   log "$key"
   for f in ${plan_coverage_map[$key]}; do

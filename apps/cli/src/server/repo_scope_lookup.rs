@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 //! `repo_name` / `repo_id` 收敛到单一 `ResolvedRepo`。
 //!
 //! Invariants:

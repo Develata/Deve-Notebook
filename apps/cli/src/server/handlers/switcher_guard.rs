@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Switcher scope guard helpers.
+
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode};

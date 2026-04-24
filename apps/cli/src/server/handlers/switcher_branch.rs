@@ -1,9 +1,13 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Branch switch handler and scope transition orchestration.
+
 use super::switcher_branch_hint::build_branch_switch_selector_input;
-use super::switcher_error::prepare_switch_error;
 use super::switcher_payload::{
-    emit_repo_view, preload_branch_switch, prepare_repo_view_messages, switch_scope_nonce,
+    preload_branch_switch, prepare_repo_view_messages, switch_scope_nonce,
 };
-use super::switcher_prepare::{commit_session_switch, prepare_repo_switch, validate_branch_target};
+use super::switcher_prepare::{commit_session_switch, validate_branch_target};
 use super::switcher_scope;
 use super::switcher_selector::select_target_repo;
 use crate::server::AppState;
@@ -11,6 +15,12 @@ use crate::server::channel::DualChannel;
 use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
 use std::sync::Arc;
+
+#[path = "switcher_branch_emit.rs"]
+mod emit;
+#[path = "switcher_branch_prepare.rs"]
+mod prepare;
+
 pub(super) async fn handle_switch_branch(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -70,21 +80,13 @@ pub(super) async fn handle_switch_branch(
             return;
         }
     };
-    let prepared = match target_repo {
-        Some(repo_name) => {
-            tracing::info!("Auto-switching to repo: {}", repo_name);
-            match prepare_repo_switch(state, target_branch_ref, repo_name.clone()) {
-                Ok(prepared) => Some(prepared),
-                Err(err) => {
-                    ch.send_protocol_error_with_switch_nonce(
-                        prepare_switch_error(target_branch_ref, err),
-                        switch_nonce,
-                    );
-                    return;
-                }
-            }
+    let prepared = match prepare::prepare_target_repo_switch(state, target_branch_ref, target_repo)
+    {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            ch.send_protocol_error_with_switch_nonce(error, switch_nonce);
+            return;
         }
-        None => None,
     };
     let payload = match preload_branch_switch(state, target_branch_ref, prepared.as_ref()) {
         Ok(payload) => payload,
@@ -115,16 +117,12 @@ pub(super) async fn handle_switch_branch(
         }
     };
     commit_session_switch(session, final_branch.clone(), prepared, switch_nonce);
-    ch.unicast(deve_core::protocol::ServerMessage::BranchSwitched {
-        peer_id: final_branch.clone(),
-        success: true,
-        switch_nonce,
-    });
-    ch.unicast(deve_core::protocol::ServerMessage::RepoList {
-        request_id: None,
-        branch: final_branch.clone(),
+    emit::emit_branch_switch_messages(
+        ch,
+        final_branch,
         scope_nonce,
-        repos: payload.repo_list,
-    });
-    emit_repo_view(ch, repo_view);
+        switch_nonce,
+        payload.repo_list,
+        repo_view,
+    );
 }
