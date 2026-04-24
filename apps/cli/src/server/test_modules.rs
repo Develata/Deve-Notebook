@@ -62,3 +62,4 @@ mod sync_scope_cleanup_browser_test;
 mod sync_scope_cleanup_test;
 mod sync_scope_cleanup_test_support;
 mod sync_transfer_scope_test;
+mod sync_transfer_scope_test_support;
