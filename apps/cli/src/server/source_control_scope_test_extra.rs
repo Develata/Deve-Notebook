@@ -1,22 +1,32 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Source-control remote scope tests.
+
 use super::support::recv_changes;
 use super::*;
-use deve_core::ledger::RepoInfo;
-use deve_core::models::PeerId;
+use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::commits::{self, COMMITS_ORDER_TABLE};
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
-    let (_dir, state, _default_id, test_id) = build_state()?;
+fn ensure_shadow_repo(repo: &RepoManager, repo_id: RepoId) -> anyhow::Result<PeerId> {
     let peer_id = PeerId::new("peer-a");
-    state.repo.ensure_shadow_repo_info(
+    repo.ensure_shadow_repo_info(
         &peer_id,
         &RepoInfo {
-            uuid: test_id,
+            uuid: repo_id,
             name: "shadow-notes".into(),
             url: Some("urn:test".into()),
         },
     )?;
+    Ok(peer_id)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -34,15 +44,7 @@ async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn readonly_remote_history_repairs_legacy_missing_order_table() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
-    let peer_id = PeerId::new("peer-a");
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: test_id,
-            name: "shadow-notes".into(),
-            url: Some("urn:test".into()),
-        },
-    )?;
+    let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
     state
         .repo
         .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
@@ -70,15 +72,7 @@ async fn readonly_remote_history_repairs_legacy_missing_order_table() -> anyhow:
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn readonly_remote_changes_are_allowed_without_locked_db() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
-    let peer_id = PeerId::new("peer-a");
-    state.repo.ensure_shadow_repo_info(
-        &peer_id,
-        &RepoInfo {
-            uuid: test_id,
-            name: "shadow-notes".into(),
-            url: Some("urn:test".into()),
-        },
-    )?;
+    let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
