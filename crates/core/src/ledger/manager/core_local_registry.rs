@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-selector-resolution-contract
+
 use anyhow::{Result, anyhow};
 use redb::Database;
 use std::collections::HashMap;

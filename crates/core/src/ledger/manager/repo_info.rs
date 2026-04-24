@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+
 use crate::ledger::RepoManager;
 use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoInfo;

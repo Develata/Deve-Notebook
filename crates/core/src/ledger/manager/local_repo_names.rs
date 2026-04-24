@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use anyhow::{Result, anyhow};

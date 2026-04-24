@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-catalog-repair-contract
+
 #[path = "remote_repo_scan_helpers.rs"]
 mod helpers;
 #[path = "remote_repo_select.rs"]

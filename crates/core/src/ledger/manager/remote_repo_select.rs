@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-selector-resolution-contract
+
 use super::helpers::{duplicate_entry_ids, reject_duplicate_remote_matches, single_remote_entry};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::types::RepoManager;

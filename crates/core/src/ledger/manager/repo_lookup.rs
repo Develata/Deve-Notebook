@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-selector-resolution-contract
+
 use anyhow::Result;
 
 use crate::ledger::manager::types::{RepoInfo, RepoManager};

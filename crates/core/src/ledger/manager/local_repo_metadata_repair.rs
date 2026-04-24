@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-catalog-repair-contract
+
 use crate::ledger::database::cached_or_create_database;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};

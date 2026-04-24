@@ -55,7 +55,7 @@
 - `Degraded*` 允许受控只读或 fallback 行为，但必须显式暴露给 runtime。
 - `Quarantined` 表示该 repo 不再参与正常 scope 恢复、自动切换和默认列表绑定。
 
-### 2.5 Selector Inputs and Logical Identity
+### 2.5 Selector Inputs and Logical Identity {#repo-selector-resolution-contract}
 
 - repo 的逻辑身份基于 `RepoId`；`URL` 或其他 characteristic parameter 仅作为辅助识别线索。
 - `RepoName` 相同但 `URL/RepoId` 不同的实例 MUST 视为完全不同的 repo。
@@ -65,6 +65,8 @@
   - `URL`
   - `CurrentScopeFallback`
 - 但进入任何底层 repo/document/source-control 算子前，必须解析成唯一 `RepoId`。
+- selector 解析必须 UUID-first；`RepoName` 与 `URL` 只能辅助定位，不得覆盖已解析的 `RepoId`。
+- selector 解析出现缺失、重复、metadata drift、URL 歧义时 MUST fail-closed。
 
 逻辑 repo 归类规则：
 
@@ -92,10 +94,12 @@
 - 同一 branch 下，如果 `RepoName` 相同但 `RepoId/URL` 不同，系统 MUST 自动分配新的物理文件名。
 - 物理文件名冲突的处理不得改变逻辑 repo identity。
 
-### 3.3 Catalog Rule
+### 3.3 Catalog Rule {#repo-catalog-contract}
 
 - local repo catalog 与 remote repo catalog 是 selector / listing / switcher 的输入层，不是业务真值层。
 - catalog 损坏时 MUST 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
+- catalog entry 必须是可读 repo DB 文件，且 repo metadata 的 `RepoId / RepoName / URL` 不得相互漂移或重复。
+- remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
 
 ### 3.4 Tree State Storage Model
 
@@ -270,10 +274,12 @@ ReadonlyDegraded
 - 从 `Remote -> Local` 返回时，系统 SHOULD 优先恢复最近一次稳定本地 repo。
 - 最近本地 repo 不可解析时，必须回到严格 UUID-first 路径，而不是绑定任意本地 repo。
 
-### 7.2 Catalog Repair
+### 7.2 Catalog Repair {#repo-catalog-repair-contract}
 
 - local / remote repo catalog repair 只能修复 catalog、name drift、blank selector、duplicate metadata。
 - repair 不得修改 ledger authority 本身。
+- repair 可以补全缺失 URL、重写漂移的显示名、分配安全物理文件名；但如果会合并两个 logical repo，必须 fail-closed。
+- repair 后仍无法形成唯一 `RepoId / URL / filename` 映射时，repo 必须保持 degraded 或 quarantined。
 
 ### 7.3 Projection Repair
 
@@ -360,6 +366,14 @@ ReadonlyDegraded
   - `apps/cli/src/server/handlers/switcher_selector.rs`
   - `apps/cli/src/server/handlers/switcher_requested_repo.rs`
   - `apps/cli/src/server/repo_scope_lookup.rs`
+  - `crates/core/src/ledger/manager/locator.rs`
+  - `crates/core/src/ledger/manager/repo_lookup.rs`
+  - `crates/core/src/ledger/manager/remote_repo_select.rs`
+- repo catalog / repair:
+  - `crates/core/src/ledger/manager/repo_catalog_entries.rs`
+  - `crates/core/src/ledger/manager/local_repo_metadata_repair.rs`
+  - `crates/core/src/ledger/manager/remote_repo_scan.rs`
+  - `crates/core/src/ledger/manager/remote_repo_scan_helpers.rs`
 - branch / repo switching:
   - `apps/cli/src/server/handlers/switcher_branch.rs`
   - `apps/cli/src/server/handlers/switcher_repo.rs`

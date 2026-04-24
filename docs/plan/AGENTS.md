@@ -72,7 +72,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 - 删除代码前 MUST 核对其 `plan_ref` 对应条款是否已从 plan 中移除或重新分配。
 - 新增 plan_ref 时 MUST 在 plan 章节相应节加上 `{#anchor-id}`；若无 anchor，MUST 先补 anchor 再写代码引用。
 
-**当前已声明的稳定 plan anchor registry**（2026-04-24）：
+**当前已声明的稳定 plan anchor registry**（2026-04-25）：
 
 本表记录 `docs/plan/` 中可被代码 `plan_ref` 引用的稳定锚点。锚点出现在本表不代表当前必须已有代码引用；是否已被实现覆盖以 `scripts/plan-coverage.sh` 的反向覆盖矩阵为准。
 
@@ -83,6 +83,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `04_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
 | `05_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
+| `06_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
+| `06_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
+| `06_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
 | `06_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
 | `06_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
 | `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |

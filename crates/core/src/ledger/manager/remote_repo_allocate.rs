@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-repair-contract
+
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::{Context, Result};

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+
 use crate::ledger::manager::types::RepoManager;
 use anyhow::{Context, Result, anyhow};
 use std::path::{Path, PathBuf};

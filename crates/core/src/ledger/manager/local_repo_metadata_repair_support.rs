@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-catalog-repair-contract
+
 use crate::ledger::manager::types::RepoInfo;
 use anyhow::{Context, Result, anyhow};
 use std::collections::HashMap;
