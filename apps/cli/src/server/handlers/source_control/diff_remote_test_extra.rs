@@ -1,4 +1,11 @@
-use super::remote::{local_counterpart_content, resolve_remote_content, resolve_tracked_doc_id};
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
+//! Additional remote source-control diff tests.
+
+use super::remote_content::{
+    local_counterpart_content, resolve_remote_content, resolve_tracked_doc_id,
+};
 use super::remote_test_support::{build_state, new_repo, seed_pending_entry, write_workspace_file};
 use deve_core::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use deve_core::ledger::traits::{RepoSelector, Repository};

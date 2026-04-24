@@ -12,6 +12,7 @@ Source control service layer that abstracts read/write/target operations. Provid
 | File | Description |
 |------|-------------|
 | `read.rs` | Read operations (changes, diff, history queries) |
+| `read_test.rs` | Read service tests |
 | `write.rs` | Write operations (stage, unstage, discard, commit) |
 | `target.rs` | Target resolution — resolves doc_id for source control operations |
 

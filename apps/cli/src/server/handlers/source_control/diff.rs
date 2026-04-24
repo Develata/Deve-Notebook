@@ -1,5 +1,12 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
+//! Source-control document diff dispatch.
+
 #[path = "diff_remote.rs"]
 mod remote;
+#[path = "diff_remote_content.rs"]
+mod remote_content;
 #[cfg(test)]
 #[path = "diff_remote_test.rs"]
 mod remote_test;

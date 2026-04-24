@@ -1,7 +1,16 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
+//! Remote diff test fixtures.
+
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::models::DocId;
 use deve_core::models::PeerId;
+use deve_core::protocol::ScPathTarget;
 use deve_core::protocol::ServerMessage;
+use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::{config::SyncMode, sync::SyncManager};
@@ -48,4 +57,40 @@ pub(super) fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
 pub(super) fn seed_pending_entry(repo: &RepoManager, entry: PendingFsEntry) {
     repo.run_on_local_repo(repo.local_repo_name(), |db| pending_fs::upsert(db, &entry))
         .expect("seed pending entry");
+}
+
+pub(super) fn pending_entry(
+    path: &str,
+    doc_id: Option<DocId>,
+    status: ChangeStatus,
+    content: &str,
+    detected_at: i64,
+) -> PendingFsEntry {
+    PendingFsEntry {
+        path: path.into(),
+        renamed_from: None,
+        doc_id,
+        change_type: status,
+        content_hash: pending_fs::content_hash(content),
+        detected_at,
+        has_conflict: false,
+    }
+}
+
+pub(super) fn commit_added_file(
+    dir: &TempDir,
+    repo: &RepoManager,
+    path: &str,
+    content: &str,
+    message: &str,
+) -> anyhow::Result<DocId> {
+    write_workspace_file(dir, path, content);
+    seed_pending_entry(
+        repo,
+        pending_entry(path, None, ChangeStatus::Added, content, 1),
+    );
+    let selector = RepoSelector::default();
+    repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path(path))?;
+    repo.commit_staged_in_repo(&selector, message)?;
+    Ok(repo.get_docid(path)?.expect("existing doc id"))
 }

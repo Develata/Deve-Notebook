@@ -349,7 +349,7 @@ MergeRequested
 - target lookup
 - workdir reconciliation
 
-### 9.3 Server Runtime
+### 9.3 Server Runtime {#source-control-runtime}
 
 - `apps/cli/src/server/ws/route/source_control.rs`
 - `apps/cli/src/server/source_control_proxy*.rs`

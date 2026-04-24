@@ -79,6 +79,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_storage#projection-contract` | `## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
 | `04_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `04_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
+| `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `09_auth#auth-rate-limiting` | `### 6.4 Rate Limiting` | 登录与连接限流合同 |
 | `09_auth#security-headers` | `### 6.5 Security Headers` | HTTP 安全头合同 |
 | `09_auth#auth-config` | `## 本章相关配置` | 鉴权环境变量 |
