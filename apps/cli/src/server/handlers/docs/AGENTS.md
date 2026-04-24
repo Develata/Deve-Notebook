@@ -18,8 +18,11 @@ Document CRUD operations: create files/folders, rename files/directories, delete
 | `rename_dir.rs` | Directory rename with recursive structure fact updates |
 | `delete.rs` | Document/folder deletion from ledger and workspace |
 | `copy.rs` | Copy orchestration entry point |
-| `copy_utils.rs` | Copy helper: `copy_dir_assets_only` for non-markdown assets |
+| `copy_utils.rs` | Copy helpers for asset-only copying and tree walks |
+| `copy_utils_test.rs` | Copy helper traversal and fail-closed regression tests |
 | `errors.rs` | Docs-specific error response helpers |
+| `errors_classify.rs` | Docs-specific error classification |
+| `errors_classify_test.rs` | Docs error classification regression tests |
 | `file_register.rs` | File registration in ledger (apply_file_structure) |
 | `node_helpers.rs` | Node tree manipulation and projection refresh helpers |
 | `node_target.rs` | Target node resolution for operations |

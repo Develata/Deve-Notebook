@@ -13,7 +13,10 @@ Implements document and directory deep-copy operations. Handles recursive direct
 | `dir_copy_test.rs` | Tests for directory copy |
 | `file_copy.rs` | Single file copy: duplicates content ops and registers new node |
 | `prepare.rs` | Copy path preparation and validation (source exists, dest does not) |
-| `register.rs` | `CopyRegisterCtx` context for node registration during copy |
+| `register.rs` | Copied docs registration entry point and `CopyRegisterCtx` |
+| `register_dirs.rs` | Directory structure fact registration for copied trees |
+| `register_files.rs` | Markdown content duplication and ledger registration for copied files |
+| `register_path.rs` | Source-to-destination relative path mapping |
 
 ## For AI Agents
 
