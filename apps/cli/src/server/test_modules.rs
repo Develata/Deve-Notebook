@@ -3,6 +3,7 @@ mod docs_create_bootstrap_test;
 mod docs_create_test;
 mod docs_dir_copy_test;
 mod docs_projection_repair_test;
+mod docs_seed_test_support;
 mod docs_test_support;
 mod document_bootstrap_test_support;
 mod document_remote_scope_test;
