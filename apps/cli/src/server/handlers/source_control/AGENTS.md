@@ -31,6 +31,9 @@ Git-like source control handlers: changes detection, staging/unstaging, commit, 
 | `local_discard.rs` | Local-only discard path |
 | `conflict.rs` | Merge conflict handling |
 | `present.rs` | Source control presence/status |
+| `present_paths.rs` | Rename presentation and related path expansion |
+| `present_resolve.rs` | Source control target path resolution |
+| `present_*_test.rs` | Presentation and target-resolution tests |
 | `repo_scope.rs` | Source control scope bootstrap |
 
 ## Subdirectories
