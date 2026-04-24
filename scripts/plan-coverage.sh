@@ -34,6 +34,17 @@ is_i18n_allowlisted() {
   [ -f "$I18N_ALLOWLIST" ] || return 1
   grep -Fxq "$rel_hit" <(grep -v '^\s*#' "$I18N_ALLOWLIST" | grep -v '^\s*$')
 }
+
+is_plan_ref_missing_exempt() {
+  local rel="$1"
+  case "$rel" in
+    */target/*|*/tests/*|*/benches/*) return 0 ;;
+    *_test.rs|*_test_*.rs|*_test_support.rs|*/tests.rs|*/test_modules.rs) return 0 ;;
+    */channel_test/*|*/switcher_prepare_test/*) return 0 ;;
+    */generated/*|*_generated.rs|*/vendor/*|*/public/*|*/dist/*) return 0 ;;
+  esac
+  return 1
+}
 REPORT=""
 WRITE_REPORT=0
 
@@ -79,22 +90,26 @@ log ""
 # ---------------------------------------------------------------------------
 log "== Check 2: plan_ref annotations =="
 missing_refs=0
+missing_refs_exempt=0
 dangling_refs=0
+annotated_refs=0
 declare -A plan_coverage_map=()
 
 while IFS= read -r f; do
-  # Only check files declared as modules (mod.rs or lib.rs or named files > 20 lines)
-  lines=$(wc -l < "$f")
-  [ "$lines" -lt 20 ] && continue
-  case "$f" in
-    */tests/*|*/target/*) continue ;;
-  esac
+  rel="${f#$ROOT/}"
 
   if ! grep -q '^//! plan_ref:' "$f" 2>/dev/null; then
-    # Soft warning — not blocking yet (bootstrap phase)
+    # Missing annotations are actionable only for non-test source modules.
+    lines=$(wc -l < "$f")
+    [ "$lines" -lt 20 ] && continue
+    if is_plan_ref_missing_exempt "$rel"; then
+      missing_refs_exempt=$((missing_refs_exempt + 1))
+      continue
+    fi
     missing_refs=$((missing_refs + 1))
     continue
   fi
+  annotated_refs=$((annotated_refs + 1))
 
   # Extract `<chapter_basename>#<stable-anchor-id>` refs and verify both parts.
   while IFS= read -r ref_line; do
@@ -103,7 +118,7 @@ while IFS= read -r f; do
     [ "$ref" = "infra" ] && continue
 
     if ! [[ "$ref" =~ ^[0-9][0-9]_[A-Za-z0-9_]+#[A-Za-z0-9_-]+$ ]]; then
-      err "invalid plan_ref in ${f#$ROOT/}: $ref"
+      err "invalid plan_ref in $rel: $ref"
       dangling_refs=$((dangling_refs + 1))
       blocking=$((blocking + 1))
       continue
@@ -113,11 +128,11 @@ while IFS= read -r f; do
     anchor="${ref#*#}"
     chapter_file="$PLAN_DIR/$chapter.md"
     if [ ! -f "$chapter_file" ]; then
-      err "dangling plan_ref in ${f#$ROOT/}: $chapter.md not found in plan"
+      err "dangling plan_ref in $rel: $chapter.md not found in plan"
       dangling_refs=$((dangling_refs + 1))
       blocking=$((blocking + 1))
     elif ! grep -Fq "{#$anchor}" "$chapter_file"; then
-      err "dangling plan_ref in ${f#$ROOT/}: anchor $ref not found"
+      err "dangling plan_ref in $rel: anchor $ref not found"
       dangling_refs=$((dangling_refs + 1))
       blocking=$((blocking + 1))
     else
@@ -127,7 +142,9 @@ while IFS= read -r f; do
   done < <(awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f")
 done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null)
 
+log "modules with plan_ref: $annotated_refs"
 log "modules without plan_ref (soft): $missing_refs"
+log "modules without plan_ref (exempt): $missing_refs_exempt"
 log "dangling plan_ref (blocking): $dangling_refs"
 log ""
 
@@ -196,7 +213,7 @@ log ""
 # ---------------------------------------------------------------------------
 log "== Summary =="
 log "blocking violations: $blocking"
-log "soft warnings: $((soft_warnings + missing_refs + i18n_leaks + unbound_cases))"
+log "soft warnings: $((soft_warnings + missing_refs + unbound_cases))"
 
 if [ "$WRITE_REPORT" = "1" ]; then
   printf '%s' "$REPORT" > "$ROOT/scripts/plan-coverage.txt"

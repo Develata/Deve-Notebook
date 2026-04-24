@@ -87,9 +87,11 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 
 `scripts/plan-coverage.sh` 扫描 `crates/` 与 `apps/` 下所有 `.rs` 文件，输出：
-1. 无 `plan_ref` 注解的模块清单（warning，非阻塞）
+1. 无 `plan_ref` 注解的非测试源码模块计数（warning，非阻塞）
 2. 引用了已不存在的章节或章节名的模块清单（error，阻塞）
 3. plan 章节的反向覆盖矩阵：每个 `§section` 被哪些代码文件引用
+
+测试文件、test support、bench、generated/vendor/dist/public glue 不计入缺失注解 warning；但这些文件一旦声明 `plan_ref`，仍会参与 dangling 校验和反向覆盖矩阵。普通 `src/bin` 和 runtime support 文件不默认豁免。
 
 CI 流水线 MUST 运行此脚本；产出的 `plan-coverage.txt` 作为 PR artifact 留存。
 
