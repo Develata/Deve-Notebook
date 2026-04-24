@@ -1,8 +1,14 @@
-use super::super::handlers::sync::SyncHelloInput;
-use super::super::{AppState, security, tree_state::RepoTreeRegistry};
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
+use super::{
+    AppState, channel::DualChannel, handlers::sync::SyncHelloInput, security, session::WsSession,
+    tree_state::RepoTreeRegistry,
+};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerError, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::sync::vector::VersionVector;
@@ -58,6 +64,36 @@ pub(super) fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> 
     }
 }
 
+pub(super) fn signed_hello_for_repo(remote: &IdentityKeyPair, repo_id: uuid::Uuid) -> SyncHelloInput {
+    let mut hello = signed_hello(remote, &VersionVector::new());
+    hello.repo_id = repo_id;
+    hello
+}
+
+pub(super) fn signed_hello_for_scope(
+    remote: &IdentityKeyPair,
+    repo_id: uuid::Uuid,
+    scope_nonce: u64,
+) -> SyncHelloInput {
+    let mut hello = signed_hello_for_repo(remote, repo_id);
+    hello.scope_nonce = scope_nonce;
+    hello
+}
+
+pub(super) fn unicast_channel(state: &Arc<AppState>) -> (DualChannel, mpsc::Receiver<ServerMessage>) {
+    let (uni_tx, uni_rx) = mpsc::channel(16);
+    (DualChannel::new(state.tx.clone(), uni_tx), uni_rx)
+}
+
+pub(super) fn empty_session() -> WsSession { WsSession::new() }
+
+pub(super) fn block_shadow_peer_dir(state: &Arc<AppState>, remote: &IdentityKeyPair) -> anyhow::Result<()> {
+    std::fs::create_dir_all(state.repo.remotes_dir())?;
+    let path = state.repo.remotes_dir().join(remote.peer_id().to_filename());
+    std::fs::write(path, b"blocked")?;
+    Ok(())
+}
+
 pub(super) async fn collect_unicast_messages(
     rx: &mut mpsc::Receiver<ServerMessage>,
 ) -> anyhow::Result<Vec<ServerMessage>> {
@@ -67,4 +103,20 @@ pub(super) async fn collect_unicast_messages(
         messages.push(msg);
     }
     Ok(messages)
+}
+
+pub(super) async fn recv_protocol_error(rx: &mut mpsc::Receiver<ServerMessage>) -> ServerError {
+    match rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => error,
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+}
+
+pub(super) fn assert_runtime_binding_cleared(session: &WsSession) {
+    assert!(session.bound_repo_id.is_none());
+    assert!(session.active_repo_id.is_none());
+    assert!(session.active_repo.is_none());
+    assert!(session.get_active_db().is_none());
+    assert!(session.authenticated_peer_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
 }
