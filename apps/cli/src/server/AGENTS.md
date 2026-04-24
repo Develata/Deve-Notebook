@@ -38,6 +38,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `source_control_proxy.rs` | Source control proxy: `RemoteSourceControlApi` implementing `Repository` trait |
 | `source_control_proxy_client.rs` | Source control proxy HTTP client construction |
 | `source_control_proxy_http.rs` | HTTP proxy for remote source control operations |
+| `source_control_proxy_http_plain.rs` | Plain-text proxy error classification |
 | `source_control_proxy_http_target.rs` | Remote SC target-specific error mapping |
 | `source_control_proxy_commits.rs` | Commit history proxy operations |
 | `source_control_proxy_mutations.rs` | Mutation proxy (stage/unstage/discard/commit) |
