@@ -35,6 +35,8 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `node_role.rs` | Node role state (main/proxy) |
 | `node_role_http.rs` | Node role HTTP endpoint |
 | `notegit.rs` | Host directory preparation (.notegit, host keys) |
+| `list_docs_scope*_test.rs` | Repo-scoped document listing binding tests |
+| `listing_shadow_scope*_test.rs` | Shadow branch listing scope tests |
 | `source_control_proxy.rs` | Source control proxy: `RemoteSourceControlApi` implementing `Repository` trait |
 | `source_control_proxy_client.rs` | Source control proxy HTTP client construction |
 | `source_control_proxy_http.rs` | HTTP proxy for remote source control operations |
