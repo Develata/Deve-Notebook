@@ -1,7 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use crate::server::handlers::switcher::handle_switch_branch;
-use crate::server::switcher_branch_scope_test_support::{
-    app_state, browser_session, unicast_channel,
-};
+use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};

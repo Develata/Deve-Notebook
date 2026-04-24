@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
@@ -7,6 +10,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(crate) fn browser_session(scope_nonce: u64) -> WsSession {
@@ -39,6 +43,15 @@ pub(crate) fn app_state(
         search_service: None,
         identity_key,
     }))
+}
+
+pub(crate) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
+    let dir = tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    repo.set_vault_root(&vault);
+    let state = app_state(repo, vault, dir.path().join("host"))?;
+    Ok((dir, state))
 }
 
 pub(crate) fn unicast_channel(

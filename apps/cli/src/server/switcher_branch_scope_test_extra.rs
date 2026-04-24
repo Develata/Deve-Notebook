@@ -1,7 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::handlers::switcher::handle_switch_branch;
-use super::switcher_branch_scope_test_support::{
-    app_state, browser_session, unicast_channel,
-};
+use super::switcher_test_support::{app_state, browser_session, unicast_channel};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
