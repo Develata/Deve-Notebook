@@ -86,3 +86,33 @@ pub(super) fn create_commit_write_callbacks(
     });
     (on_commit, on_resolve_conflict, on_commit_and_push)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::show_write_block;
+    use leptos::prelude::{GetUntracked, signal};
+
+    #[test]
+    fn commit_write_block_banner_includes_action_and_reason() {
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+
+        show_write_block(set_sync_banner, "Commit", "repo handshaking");
+
+        assert_eq!(
+            sync_banner.get_untracked().as_deref(),
+            Some("Cannot send Commit: repo handshaking")
+        );
+    }
+
+    #[test]
+    fn resolve_conflict_block_banner_includes_action_and_reason() {
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+
+        show_write_block(set_sync_banner, "ResolveConflict", "scope switching");
+
+        assert_eq!(
+            sync_banner.get_untracked().as_deref(),
+            Some("Cannot send ResolveConflict: scope switching")
+        );
+    }
+}
