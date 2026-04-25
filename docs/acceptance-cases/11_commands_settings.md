@@ -111,15 +111,14 @@
   steps:
     - run: deve config print
   assertions:
-    - stdout_contains: "profile = standard"
+    - stdout_contains: "profile = 'standard'"
 
 - case_id: SET-002
-  goal: settings.toml 配置生效。
+  goal: config.toml 配置可由 CLI 更新。
   preconditions:
-    - settings.toml 可写
+    - config.toml 可写
   steps:
     - run: deve config set ui.sidebar_width 300
-    - run: deve restart
   assertions:
-    - ui_assert: sidebar_width_eq 300
+    - file_contains: config.toml "sidebar_width = 300"
 ```

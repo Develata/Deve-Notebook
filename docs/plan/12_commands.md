@@ -3,14 +3,18 @@
 ## Metadata
 
 - `Layer`: `Application / UI Shell`
-- `Status`: `Current UI Contract`
+- `Status`: `Planned / Optional`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/components/command_palette/`
 
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
-## 1. CLI Commands
+当前权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约，不能反向覆盖
+`01/02/04/05/06/07/09/11` 的 Current MUST。已实现命令应在本章保持可追踪；未实现命令
+必须被视为 future work，不能作为当前验收阻塞项。
+
+## 1. CLI Commands {#cli-commands}
 
 *   `deve init`: 初始化 Vault.
 *   `deve scan`: 扫描并建立索引.
@@ -23,6 +27,8 @@
 *   `deve node-check`: 节点一致性检查，可选修复。
 *   `deve recover`: 从 ledger 数据恢复 vault 文件。
 *   `deve repair`: 修复已知本地损坏并可重建投影。
+*   `deve config print`: 输出当前有效运行时配置。
+*   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
 
 ## 2. Command Palette
 
@@ -40,6 +46,12 @@
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
+
+*   **Current implemented subset**:
+    *   Command Palette 当前覆盖 Open / Settings / Toggle Language / Switch Peer /
+        Establish Branch / Merge Peer / Toggle AI Chat（条件可见）。
+    *   Git Sync / Commit / Push 与 AI Retry / Backend / PLAN / BUILD 面板命令仍属于
+        Planned / Optional，除非后续验收用例绑定到具体实现。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

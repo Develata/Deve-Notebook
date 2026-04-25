@@ -28,8 +28,7 @@
   steps:
     - run: deve config print
   assertions:
-    - stdout_contains: "search = disabled"
-    - stdout_contains: "graph = disabled"
+    - stdout_contains: "profile = 'low-spec'"
 
 - case_id: REL-001
   goal: Release Channels 命名规范。

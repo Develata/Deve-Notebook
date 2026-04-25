@@ -105,6 +105,19 @@ pub(crate) enum Commands {
         #[arg(long)]
         rebuild_projection: bool,
     },
+    /// Print or update config.toml
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum ConfigAction {
+    /// Print effective runtime configuration as TOML
+    Print,
+    /// Set a whitelisted key in config.toml
+    Set { key: String, value: String },
 }
 
 #[tokio::main]

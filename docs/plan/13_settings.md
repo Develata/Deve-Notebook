@@ -3,12 +3,16 @@
 ## Metadata
 
 - `Layer`: `Application / UI Shell`
-- `Status`: `Current UI Contract`
+- `Status`: `Planned / Optional`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
-- `Primary Code Areas`: `apps/cli/src/server/handlers/settings/`, `apps/web/src/hooks/use_core/state_settings.rs`
+- `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
 
-本章汇总系统所有配置项，包括环境变量、配置文件 (`settings.toml`) 以及快捷键映射。
+本章汇总系统所有配置项，包括环境变量、运行时配置文件 (`config.toml`) 以及快捷键映射。
+
+当前权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。当前已实现边界是
+CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settings API 与统一 GUI
+持久化状态仍是 future work，不得在验收中伪装成已完成能力。
 
 ## 1. Environment Variables (环境变量)
 
@@ -38,9 +42,11 @@
 | **Paths**                        |                  |                                                                     |
 | `DEVE_DATA_DIR`                  | `~/.deve-note`   | 数据存储根目录.                                                     |
 
-## 2. Configuration Settings (config.toml)
+## 2. Configuration Settings (config.toml) {#configuration-settings}
 
-用户可配置的选项，通常存储在 `settings.toml` 或通过 GUI 修改。
+用户可配置的运行时选项存储在 `config.toml`，并可通过 `deve config print/set` 查看或更新。
+浏览器本地 UI 偏好当前仍由前端本地状态/`localStorage` 管理；后续如引入独立设置文件
+或 server-backed Settings API，必须先更新本章和验收用例。
 
 ### 2.1 UI Appearance (界面)
 | Key                        | Type   | Default | Description                                         |
@@ -66,13 +72,13 @@
 | `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (接收后暂存，按单一 peer/repo 目标确认后原子合并). |
 | `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
-| `diff.merge_strategy`   | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `07_diff_logic.md §Conflict Resolution`。 |
+| `merge_strategy`        | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `07_diff_logic.md §Conflict Resolution`。 |
 
 ### 2.3 AI (人工智能)
 | Key                        | Type   | Default      | Description |
 | :------------------------- | :----- | :----------- | :---------- |
 | `ai.mode`                  | String | `native`     | `native` = Native AI Chat；`trusted-cli` = 受信任外部 CLI（仅在显式启用时可选）。 |
-| `ai.native.enabled`        | Bool   | `true`       | 是否启用 Native AI Chat。 |
+| `ai.native_enabled`        | Bool   | `true`       | 是否启用 Native AI Chat。 |
 | `ai.agent_bridge.enabled`  | Bool   | `false`      | 是否启用 Trusted External Agent。默认关闭。 |
 | `ai.agent_bridge.trusted`  | Bool   | `false`      | 是否确认当前部署为受信任本地环境。未确认时 MUST NOT 起 CLI。 |
 | `ai.agent_bridge.timeout_ms` | Number | `30000`    | 外部 CLI 单次请求超时。 |

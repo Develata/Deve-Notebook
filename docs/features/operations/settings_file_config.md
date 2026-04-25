@@ -22,10 +22,10 @@
 
 - `Name`: `Edit Config File Value`
 - `Surface`: `editor-or-script`
-- `Trigger`: edit `config.toml` or planned `settings.toml`
+- `Trigger`: edit `config.toml` or run `deve config set <key> <value>`
 - `Preconditions`: setting key is supported by the config schema
 - `Immediate Result`: file-backed value is ready for next load
-- `Application Entry`: `crates/core/src/config.rs`
+- `Application Entry`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`
 
 ### `op.settings.file.restart-apply`
 
@@ -45,5 +45,5 @@
 
 ## Notes
 
-- Current implementation reads `config.toml`; `settings.toml` remains the user-facing naming target if later introduced.
+- Current implementation reads and writes `config.toml`; no separate settings file is a current runtime contract.
 - Main objects: `settings::file`, `config::runtime`, `runtime::profile`.

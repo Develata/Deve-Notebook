@@ -1,5 +1,5 @@
-use crate::Commands;
 use crate::commands;
+use crate::{Commands, ConfigAction};
 use std::path::{Path, PathBuf};
 
 pub async fn run(
@@ -71,6 +71,10 @@ pub async fn run(
             &paths,
             rebuild_projection,
         )?,
+        Some(Commands::Config { action }) => match action {
+            ConfigAction::Print => commands::config::print(config)?,
+            ConfigAction::Set { key, value } => commands::config::set(&key, &value)?,
+        },
         None => tracing::info!("请提供子命令，使用 --help 查看帮助。"),
     }
     Ok(())
