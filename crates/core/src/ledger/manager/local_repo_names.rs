@@ -43,17 +43,8 @@ impl RepoManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+    use crate::ledger::{RepoInfo, RepoManager};
     use tempfile::TempDir;
-
-    fn write_info(db: &redb::Database, info: &RepoInfo) {
-        let txn = db.begin_write().expect("write txn");
-        txn.open_table(REPO_METADATA)
-            .expect("repo metadata")
-            .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-            .expect("write metadata");
-        txn.commit().expect("commit");
-    }
 
     #[test]
     fn execution_repo_names_fail_closed_on_duplicate_main_metadata_drift() {
@@ -64,14 +55,15 @@ mod tests {
         crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
         let main_info = main.get_repo_info().expect("main info").expect("present");
         let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
-        write_info(
+        crate::test_support::write_repo_metadata(
             wiki_db.as_ref(),
             &RepoInfo {
                 uuid: main_info.uuid,
                 name: "main".into(),
                 url: Some(format!("urn:uuid:{}", main_info.uuid)),
             },
-        );
+        )
+        .expect("write metadata");
 
         let err = main
             .list_local_repo_names_for_execution()
@@ -86,10 +78,7 @@ mod tests {
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
         let main_db = main.open_database(None, "main").expect("main db").db;
-        let txn = main_db.begin_write().expect("write txn");
-        txn.delete_table(REPO_METADATA)
-            .expect("delete repo metadata");
-        txn.commit().expect("commit");
+        crate::test_support::delete_repo_metadata(main_db.as_ref()).expect("delete metadata");
 
         let err = main
             .list_local_repo_names_for_execution()

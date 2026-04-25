@@ -126,7 +126,7 @@ mod tests {
         let peer = PeerId::new("peer-a");
         let peer_dir = repo.remotes_dir().join(peer.to_filename());
         std::fs::create_dir_all(&peer_dir).expect("peer dir");
-        redb::Database::create(peer_dir.join("notes.redb")).expect("create broken shadow db");
+        crate::test_support::create_repo_db_missing_metadata(peer_dir.join("notes.redb"));
 
         let err = repo
             .allocate_remote_repo_path(

@@ -1,17 +1,8 @@
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use tempfile::TempDir;
 
 mod common;
-
-fn write_info(db: &redb::Database, info: &RepoInfo) {
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-        .expect("write metadata");
-    txn.commit().expect("commit");
-}
 
 #[test]
 fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
@@ -27,7 +18,7 @@ fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
         name: "main".into(),
         url: Some(format!("urn:uuid:{}", main_info.uuid)),
     };
-    write_info(wiki_db.as_ref(), &bad);
+    common::write_repo_metadata(wiki_db.as_ref(), &bad);
     main.repair_local_repo_catalog().expect("repair catalog");
 
     let repaired_main = main
@@ -61,7 +52,7 @@ fn local_repo_listing_fails_closed_on_duplicate_name_drift_until_repair() {
     let second_info =
         common::create_initialized_local_repo(&ledger_dir, "wiki-1", "urn:test:wiki-b");
     let second_db = main.open_database(None, "wiki-1").expect("wiki-1 db").db;
-    write_info(
+    common::write_repo_metadata(
         second_db.as_ref(),
         &RepoInfo {
             uuid: second_info.uuid,
@@ -106,7 +97,7 @@ fn repair_rewrites_duplicate_local_repo_url_to_repo_urn() {
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let notes_info = common::create_initialized_local_repo(&ledger_dir, "notes", "urn:notes");
     let other_db = main.open_database(None, "notes").expect("notes db").db;
-    write_info(
+    common::write_repo_metadata(
         other_db.as_ref(),
         &RepoInfo {
             uuid: notes_info.uuid,
@@ -155,13 +146,7 @@ fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
 fn init_fails_closed_on_existing_local_repo_without_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let local_dir = ledger_dir.join("local");
-    std::fs::create_dir_all(&local_dir).expect("create local dir");
-    let db_path = local_dir.join("legacy.redb");
-    let db = redb::Database::create(&db_path).expect("create legacy db");
-    let txn = db.begin_write().expect("write txn");
-    txn.commit().expect("commit empty db");
-    drop(db);
+    common::seed_metadata_less_local_repo(&ledger_dir, "legacy");
 
     let err = match RepoManager::init(&ledger_dir, 8, Some("legacy"), None) {
         Ok(_) => panic!("missing repo metadata must fail closed"),
@@ -178,9 +163,7 @@ fn local_execution_resolution_ignores_broken_remote_catalogs() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let remote_dir = ledger_dir.join("remotes").join("peer-a");
-    std::fs::create_dir_all(&remote_dir).expect("remote dir");
-    std::fs::write(remote_dir.join("broken.redb"), b"not-a-redb").expect("broken shadow file");
+    common::seed_broken_remote_shadow_repo(&ledger_dir, "peer-a", "broken");
 
     assert_eq!(
         repo.resolve_local_repo_name_for_execution(None, Some("main"))

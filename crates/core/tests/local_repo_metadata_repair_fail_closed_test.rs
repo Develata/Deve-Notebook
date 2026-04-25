@@ -1,27 +1,17 @@
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{RepoInfo, RepoManager};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 
 mod common;
 
-fn write_info(db: &redb::Database, info: &RepoInfo) {
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-        .expect("write metadata");
-    txn.commit().expect("commit");
-}
-
 #[test]
 fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let local_dir = ledger_dir.join("local");
-    std::fs::write(local_dir.join("broken.redb"), b"not-a-redb").expect("broken local repo");
+    common::seed_broken_local_repo_file(&ledger_dir, "broken");
 
     let list_err = repo
         .list_repos(None)
@@ -47,8 +37,7 @@ fn init_fails_closed_on_broken_secondary_repo() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let _repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let local_dir = ledger_dir.join("local");
-    std::fs::write(local_dir.join("broken.redb"), b"not-a-redb").expect("broken local repo");
+    common::seed_broken_local_repo_file(&ledger_dir, "broken");
 
     let err = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))
         .err()
@@ -93,8 +82,7 @@ fn set_vault_root_checked_fails_closed_on_broken_secondary_repo() {
     std::fs::create_dir_all(&first_vault).expect("first vault dir");
     repo.set_vault_root_checked(&first_vault)
         .expect("initial vault mount");
-    let local_dir = ledger_dir.join("local");
-    std::fs::write(local_dir.join("broken.redb"), b"not-a-redb").expect("broken local repo");
+    common::seed_broken_local_repo_file(&ledger_dir, "broken");
     let vault_dir = dir.path().join("vault");
     std::fs::create_dir_all(&vault_dir).expect("vault dir");
 
@@ -115,20 +103,7 @@ fn local_repo_listing_fails_closed_on_invalid_repo_stem() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let local_dir = ledger_dir.join("local");
-    let invalid_path = {
-        use std::ffi::OsString;
-        use std::os::unix::ffi::OsStringExt;
-
-        local_dir.join(OsString::from_vec(vec![0xff, b'.', b'r', b'e', b'd', b'b']))
-    };
-    let invalid = redb::Database::create(&invalid_path).expect("invalid stem db");
-    invalid
-        .begin_write()
-        .expect("write txn")
-        .commit()
-        .expect("commit");
-    drop(invalid);
+    common::seed_invalid_stem_local_repo(&ledger_dir);
 
     let list_err = repo
         .list_repos(None)
@@ -154,7 +129,7 @@ fn runtime_listing_fails_closed_on_duplicate_secondary_uuid_until_explicit_repai
     common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let main_info = main.get_repo_info().expect("main info").expect("present");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db");
-    write_info(
+    common::write_repo_metadata(
         wiki_db.db.as_ref(),
         &RepoInfo {
             uuid: main_info.uuid,
@@ -181,13 +156,7 @@ fn runtime_listing_fails_closed_on_missing_secondary_metadata_until_explicit_rep
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let local_dir = ledger_dir.join("local");
-    let db = redb::Database::create(local_dir.join("legacy.redb")).expect("create legacy db");
-    db.begin_write()
-        .expect("write txn")
-        .commit()
-        .expect("commit");
-    drop(db);
+    common::seed_metadata_less_local_repo(&ledger_dir, "legacy");
 
     let err = repo
         .list_repos(None)
@@ -214,7 +183,7 @@ fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
     main.set_vault_root_checked(&vault_root)
         .expect("mount vault");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
-    write_info(
+    common::write_repo_metadata(
         wiki_db.as_ref(),
         &RepoInfo {
             uuid: wiki_info.uuid,

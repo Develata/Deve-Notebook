@@ -29,9 +29,7 @@ fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow
     crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = main.open_database(None, "wiki")?.db;
 
-    let txn = wiki_db.begin_write()?;
-    txn.delete_table(crate::ledger::REPO_METADATA)?;
-    txn.commit()?;
+    crate::test_support::delete_repo_metadata(wiki_db.as_ref())?;
 
     let err = main
         .resolve_local_repo_stem("wiki")
@@ -54,17 +52,14 @@ fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyho
     };
     let wiki_db = main.open_database(None, "wiki")?.db;
 
-    let txn = wiki_db.begin_write()?;
-    txn.open_table(crate::ledger::REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&crate::ledger::RepoInfo {
+    crate::test_support::write_repo_metadata(
+        wiki_db.as_ref(),
+        &crate::ledger::RepoInfo {
             uuid: wiki_info.uuid,
             name: "legacy-wiki".into(),
             url: wiki_info.url.clone(),
-        })?
-        .as_slice(),
+        },
     )?;
-    txn.commit()?;
 
     let err = main
         .resolve_local_repo_stem("legacy-wiki")
@@ -85,17 +80,14 @@ fn resolve_local_selector_fails_closed_on_stale_main_alias_drift() -> anyhow::Re
     let info = main.get_repo_info()?.expect("main info");
     let main_db = main.open_database(None, "main")?.db;
 
-    let txn = main_db.begin_write()?;
-    txn.open_table(crate::ledger::REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&crate::ledger::RepoInfo {
+    crate::test_support::write_repo_metadata(
+        main_db.as_ref(),
+        &crate::ledger::RepoInfo {
             uuid: info.uuid,
             name: "legacy-main".into(),
             url: info.url.clone(),
-        })?
-        .as_slice(),
+        },
     )?;
-    txn.commit()?;
 
     let err = main
         .resolve_local_repo_stem("legacy-main")

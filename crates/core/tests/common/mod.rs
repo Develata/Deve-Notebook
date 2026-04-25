@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
+use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ, REPO_METADATA};
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::LedgerEntry;
 use redb::ReadableTable;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn create_initialized_local_repo(ledger_dir: &Path, name: &str, url: &str) -> RepoInfo {
     create_initialized_local_repo_with_depth(ledger_dir, 8, name, url)
@@ -29,6 +29,59 @@ pub fn try_create_initialized_local_repo_with_depth(
     let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(name), Some(url))?;
     repo.get_repo_info()?
         .ok_or_else(|| anyhow::anyhow!("local repo metadata missing for {name}"))
+}
+
+pub fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) {
+    let txn = db.begin_write().expect("write txn");
+    txn.open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
+        .expect("write metadata");
+    txn.commit().expect("commit metadata");
+}
+
+pub fn local_repo_file(ledger_dir: &Path, stem: &str) -> PathBuf {
+    ledger_dir.join("local").join(format!("{stem}.redb"))
+}
+
+pub fn seed_broken_local_repo_file(ledger_dir: &Path, stem: &str) {
+    std::fs::write(local_repo_file(ledger_dir, stem), b"not-a-redb")
+        .expect("broken local repo file");
+}
+
+pub fn seed_metadata_less_local_repo(ledger_dir: &Path, stem: &str) {
+    std::fs::create_dir_all(ledger_dir.join("local")).expect("create local dir");
+    let db =
+        redb::Database::create(local_repo_file(ledger_dir, stem)).expect("metadata-less repo db");
+    db.begin_write()
+        .expect("write txn")
+        .commit()
+        .expect("commit metadata-less db");
+    drop(db);
+}
+
+#[cfg(unix)]
+pub fn seed_invalid_stem_local_repo(ledger_dir: &Path) {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let invalid_path = ledger_dir
+        .join("local")
+        .join(OsString::from_vec(vec![0xff, b'.', b'r', b'e', b'd', b'b']));
+    let invalid = redb::Database::create(&invalid_path).expect("invalid stem db");
+    invalid
+        .begin_write()
+        .expect("write txn")
+        .commit()
+        .expect("commit invalid stem db");
+    drop(invalid);
+}
+
+pub fn seed_broken_remote_shadow_repo(ledger_dir: &Path, peer: &str, stem: &str) {
+    let remote_dir = ledger_dir.join("remotes").join(peer);
+    std::fs::create_dir_all(&remote_dir).expect("remote dir");
+    std::fs::write(remote_dir.join(format!("{stem}.redb")), b"not-a-redb")
+        .expect("broken shadow repo file");
 }
 
 pub fn append_unvalidated_local_op(

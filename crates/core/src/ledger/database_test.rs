@@ -1,5 +1,4 @@
 use super::{RepoManager, cached_database};
-use crate::ledger::schema::REPO_METADATA;
 use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -66,9 +65,7 @@ fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
     crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = repo.open_database(None, "wiki").expect("wiki db");
-    let txn = wiki_db.db.begin_write().expect("write txn");
-    txn.delete_table(REPO_METADATA).expect("delete metadata");
-    txn.commit().expect("commit");
+    crate::test_support::delete_repo_metadata(wiki_db.db.as_ref()).expect("delete metadata");
 
     let err = match repo.open_database(None, "wiki") {
         Ok(_) => panic!("missing local metadata must fail closed"),
@@ -102,9 +99,7 @@ fn open_remote_database_fails_closed_when_selector_metadata_is_missing() {
     let remote = repo
         .open_database(Some(&peer_id), "wiki")
         .expect("remote db");
-    let txn = remote.db.begin_write().expect("write txn");
-    txn.delete_table(REPO_METADATA).expect("delete metadata");
-    txn.commit().expect("commit");
+    crate::test_support::delete_repo_metadata(remote.db.as_ref()).expect("delete metadata");
 
     let err = match repo.open_database(Some(&peer_id), "wiki") {
         Ok(_) => panic!("missing remote metadata must fail closed"),
