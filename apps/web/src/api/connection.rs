@@ -1,4 +1,8 @@
 // apps\web\src\api
+//! plan_ref:
+//!   - 09_auth#unauthorized-handling
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
 //! # WebSocket 连接管理器
 //!
 //! ## 职责

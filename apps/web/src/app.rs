@@ -1,4 +1,8 @@
 // apps/web/src/app.rs
+//! plan_ref:
+//!   - 09_auth#session-probe-policy
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
 //! # App Component (App 组件)
 //!
 //! 本模块包含根 `App` 组件。

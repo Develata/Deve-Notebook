@@ -1,12 +1,9 @@
-use crate::i18n::{Locale, common};
-use leptos::prelude::*;
+//! plan_ref:
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
 
-fn hint(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Unable to reach the auth service. We'll retry automatically.",
-        Locale::Zh => "当前无法连接认证服务，系统会自动重试。",
-    }
-}
+use crate::i18n::{Locale, common, login as login_i18n};
+use leptos::prelude::*;
 
 #[component]
 pub fn AuthUnavailablePage() -> impl IntoView {
@@ -22,7 +19,9 @@ pub fn AuthUnavailablePage() -> impl IntoView {
                 <p class="text-sm text-muted mb-2">
                     {move || common::reconnecting(locale.get())}
                 </p>
-                <p class="text-xs text-muted">{move || hint(locale.get())}</p>
+                <p class="text-xs text-muted">
+                    {move || login_i18n::auth_unavailable_hint(locale.get())}
+                </p>
             </div>
         </div>
     }

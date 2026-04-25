@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 09_auth#auth-http-endpoints
+//!   - 09_auth#auth-rate-limiting
+//!
+
 use deve_core::protocol::auth::{AuthErrorCode, LoginRequest, LoginResponse};
 use gloo_net::http::Request;
 
@@ -5,7 +10,13 @@ use gloo_net::http::Request;
 pub(super) enum LoginAttemptError {
     Rejected(AuthErrorCode),
     InvalidResponse,
-    Transport(String),
+    Transport(LoginTransportError),
+}
+
+#[derive(Debug)]
+pub(super) enum LoginTransportError {
+    RequestBuild(String),
+    Network(String),
 }
 
 pub(super) async fn attempt_login(
@@ -16,10 +27,12 @@ pub(super) async fn attempt_login(
     let response = Request::post("/api/auth/login")
         .header("Content-Type", "application/json")
         .json(&request)
-        .map_err(|e| LoginAttemptError::Transport(format!("请求构建失败: {}", e)))?
+        .map_err(|e| {
+            LoginAttemptError::Transport(LoginTransportError::RequestBuild(e.to_string()))
+        })?
         .send()
         .await
-        .map_err(|e| LoginAttemptError::Transport(format!("网络错误: {}", e)))?;
+        .map_err(|e| LoginAttemptError::Transport(LoginTransportError::Network(e.to_string())))?;
     let status = response.status();
     let payload = response.json::<LoginResponse>().await.ok();
     if let Some(result) = payload {
@@ -43,7 +56,7 @@ pub async fn logout() -> Result<(), String> {
     let response = Request::post("/api/auth/logout")
         .send()
         .await
-        .map_err(|e| format!("网络错误: {}", e))?;
+        .map_err(|e| e.to_string())?;
     if response.ok() {
         Ok(())
     } else {

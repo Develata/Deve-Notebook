@@ -1,4 +1,7 @@
 // apps/web/src/api/output.rs
+//! plan_ref:
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
 //! # WebSocket 输出管理器
 //!
 //! ## 职责

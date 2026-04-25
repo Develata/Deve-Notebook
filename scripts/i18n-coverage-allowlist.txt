@@ -48,7 +48,3 @@ apps/web/src/components/sidebar/extensions_copy.rs:57:        Locale::Zh => "内
 apps/web/src/components/sidebar/extensions_copy.rs:64:        Locale::Zh => "计划中",
 apps/web/src/components/sidebar/extensions_copy.rs:71:        Locale::Zh => "KaTeX 已随 Web 壳内置，用于高性能行内与块级数学渲染。",
 apps/web/src/components/sidebar/extensions_copy.rs:80:        Locale::Zh => "化学公式扩展计划通过 config.tex_extensions = [\"mhchem\"] 按需启用。",
-apps/web/src/components/login/unavailable.rs:7:        Locale::Zh => "当前无法连接认证服务，系统会自动重试。",
-apps/web/src/components/login/api.rs:19:        .map_err(|e| LoginAttemptError::Transport(format!("请求构建失败: {}", e)))?
-apps/web/src/components/login/api.rs:22:        .map_err(|e| LoginAttemptError::Transport(format!("网络错误: {}", e)))?;
-apps/web/src/components/login/api.rs:46:        .map_err(|e| format!("网络错误: {}", e))?;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
+
 use crate::api::ConnectionStatus;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

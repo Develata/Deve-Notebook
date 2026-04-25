@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
+
 use super::main_layout_contexts::{provide_chat_control, provide_search_control};
 use crate::api::ConnectionStatus;
 use crate::components::activity_bar::SidebarView;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_auth#unauthorized-handling
+//!
+
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;

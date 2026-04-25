@@ -80,6 +80,27 @@ pub fn transport_error(locale: Locale) -> &'static str {
     }
 }
 
+pub fn request_build_error(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Request build failed",
+        Locale::Zh => "请求构建失败",
+    }
+}
+
+pub fn network_error(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Network error",
+        Locale::Zh => "网络错误",
+    }
+}
+
+pub fn auth_unavailable_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unable to reach the auth service. We'll retry automatically.",
+        Locale::Zh => "当前无法连接认证服务，系统会自动重试。",
+    }
+}
+
 pub fn auth_error(locale: Locale, code: AuthErrorCode) -> &'static str {
     match (locale, code) {
         (Locale::En, AuthErrorCode::InvalidPassword) => "Invalid username or password",

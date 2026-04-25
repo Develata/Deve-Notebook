@@ -260,7 +260,7 @@ WsConnecting
   - 生产环境下通过明文 `ws://` 暴露跨公网 session traffic。
   - 让浏览器在 HTTPS 页面中降级连接明文 ws。
 
-## 7. Session Probe Policy
+## 7. Session Probe Policy {#session-probe-policy}
 
 - `/api/auth/me` 周期探测只应在前台活动页面进行
 - 页面后台应暂停探测
@@ -290,7 +290,7 @@ WsConnecting
 
 ## 9. Recovery / Safety
 
-### 9.1 Unauthorized Handling
+### 9.1 Unauthorized Handling {#unauthorized-handling}
 
 - `401/403/AUTH_*` 必须进入 `Unauthorized`
 - 客户端必须退出写态
@@ -307,7 +307,7 @@ WsConnecting
 - 达到阈值后封禁窗口生效
 - 封禁窗口结束后允许重新尝试
 
-### 9.4 Unauthorized vs Disconnected UI Contract
+### 9.4 Unauthorized vs Disconnected UI Contract {#unauthorized-disconnected-ui}
 
 - `Unauthorized`
   - 立即退出写态

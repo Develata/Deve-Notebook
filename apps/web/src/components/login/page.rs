@@ -1,9 +1,14 @@
+//! plan_ref:
+//!   - 09_auth#auth-http-endpoints
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
+
 use crate::i18n::Locale;
 use crate::i18n::login as login_i18n;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
-use super::api::{LoginAttemptError, attempt_login};
+use super::api::{LoginAttemptError, LoginTransportError, attempt_login};
 use super::state::AuthState;
 
 #[component]
@@ -123,8 +128,11 @@ fn error_message_for(locale: Locale, err: LoginAttemptError) -> String {
             login_i18n::transport_error(locale),
             login_i18n::invalid_response(locale)
         ),
-        LoginAttemptError::Transport(message) => {
-            format!("{}: {}", login_i18n::transport_error(locale), message)
+        LoginAttemptError::Transport(LoginTransportError::RequestBuild(message)) => {
+            format!("{}: {}", login_i18n::request_build_error(locale), message)
+        }
+        LoginAttemptError::Transport(LoginTransportError::Network(message)) => {
+            format!("{}: {}", login_i18n::network_error(locale), message)
         }
     }
 }

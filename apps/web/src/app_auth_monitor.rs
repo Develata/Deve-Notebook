@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_auth#session-probe-policy
+//!
+
 use crate::components::login::AuthState;
 use leptos::prelude::{RwSignal, Set};
 

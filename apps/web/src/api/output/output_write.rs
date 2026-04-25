@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 09_auth#unauthorized-handling
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
+
 use deve_core::protocol::ClientMessage;
 use std::collections::VecDeque;
 

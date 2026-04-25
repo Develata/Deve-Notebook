@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConnectionStatus {
     Disconnected,

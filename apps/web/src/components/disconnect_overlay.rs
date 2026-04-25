@@ -1,4 +1,7 @@
 // apps/web/src/components/disconnect_overlay.rs
+//! plan_ref:
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
 use crate::api::ConnectionStatus;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
