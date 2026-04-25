@@ -25,6 +25,8 @@ mod pending_rename;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod persist_guard;
 #[cfg(not(target_arch = "wasm32"))]
+mod projection_diagnostic;
+#[cfg(not(target_arch = "wasm32"))]
 mod projection_health;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_io;
@@ -63,6 +65,10 @@ use anyhow::{Context, Result};
 use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
 use persist_guard::PersistGuard;
+#[cfg(not(target_arch = "wasm32"))]
+pub use projection_diagnostic::{
+    ProjectionDiagnostic, ProjectionDiagnosticIssue, ProjectionDiagnosticStatus,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use projection_health::ProjectionHealth;
 #[cfg(not(target_arch = "wasm32"))]
@@ -274,6 +280,10 @@ impl SyncManager {
         rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)?;
         self.clear_projection_degraded(repo_name);
         Ok(())
+    }
+
+    pub fn diagnose_projection_local_repo(&self, repo_name: &str) -> Result<ProjectionDiagnostic> {
+        projection_diagnostic::diagnose(&self.repo, repo_name)
     }
 
     pub fn is_projection_degraded(&self, repo_name: &str) -> bool {

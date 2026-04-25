@@ -85,4 +85,8 @@ pub(super) fn is_broken_structure_projection_error(err: &anyhow::Error) -> bool 
         || lower.contains("structure projection move references missing node")
         || lower.contains("structure projection contains cycle")
         || lower.contains("structure projection lost doc identity")
+        || lower.contains("structure projection file node/doc mismatch")
+        || lower.contains("structure projection parent is not a directory")
+        || lower.contains("structure projection duplicate create")
+        || lower.contains("structure projection path collision")
 }

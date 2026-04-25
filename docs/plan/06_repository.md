@@ -285,6 +285,8 @@ ReadonlyDegraded
 ### 7.3 Projection Repair
 
 - structure projection 缺 parent、断链、脏 path cache 时，必须通过 rebuild / repair 处理。
+- rebuild / repair 只允许重建 projection tables 与 workspace projection，不得修改 Structure Facts authority。
+- 若 Structure Facts authority 本身引用缺失 parent / missing node / cycle / doc identity mismatch，repair MUST 输出结构化诊断并 fail-closed；该 repo 必须保持 `DegradedProjection` 或进入 quarantine，直到用户通过导出、重建 repo 或明确的 authority-level 迁移处理。
 - repair 失败时 repo MUST 退出正常 mounted write path。
 
 ### 7.4 Catalog Conflict Repair

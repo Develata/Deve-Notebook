@@ -166,13 +166,14 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_parent() {
     let (dir, repo) = new_repo();
+    let doc_id = deve_core::models::DocId::new();
     common::append_unvalidated_local_op(
         repo.as_ref(),
         repo.local_repo_name(),
         &LedgerEntry::new_structure(
             StructureOp::CreateFile {
-                node_id: NodeId::new(),
-                doc_id: deve_core::models::DocId::new(),
+                node_id: NodeId::from_doc_id(doc_id),
+                doc_id,
                 parent_id: Some(NodeId::new()),
                 name: "orphan.md".into(),
             },

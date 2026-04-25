@@ -26,7 +26,7 @@
 *   `deve seed`: 种子节点数据注入.
 *   `deve node-check`: 节点一致性检查，可选修复。
 *   `deve recover`: 从 ledger 数据恢复 vault 文件。
-*   `deve repair`: 修复已知本地损坏并可重建投影。
+*   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
 *   `deve config print`: 输出当前有效运行时配置。
 *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
 

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+
 use crate::ledger::RepoManager;
 use crate::ledger::schema::LEDGER_OPS;
 use crate::models::{DocId, LedgerEvent, NodeId, NodeKind, deserialize_ledger_entry};
@@ -18,11 +21,13 @@ pub(super) fn build(repo: &RepoManager, repo_name: &str) -> Result<ProjectionPla
     let mut cache = HashMap::new();
     let mut visiting = HashSet::new();
 
+    let mut occupied_paths = HashMap::new();
     for (&node_id, meta) in &nodes {
         let path = build_path(node_id, &nodes, &mut cache, &mut visiting)?;
         if crate::utils::notegit::is_internal_repo_path(&path) {
             continue;
         }
+        ensure_unique_path(&mut occupied_paths, node_id, &path)?;
         if meta.kind == NodeKind::Dir {
             if !path.is_empty() {
                 dirs.insert(path.clone());
@@ -69,7 +74,14 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
                 parent_id,
                 name,
             } => {
-                nodes.insert(
+                if node_id != NodeId::from_doc_id(doc_id) {
+                    return Err(anyhow!(
+                        "Structure projection file node/doc mismatch for {}",
+                        doc_id
+                    ));
+                }
+                insert_node(
+                    &mut nodes,
                     node_id,
                     ProjectionNode {
                         kind: NodeKind::File,
@@ -77,14 +89,15 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
                         name,
                         doc_id: Some(doc_id),
                     },
-                );
+                )?;
             }
             crate::models::StructureOp::CreateDir {
                 node_id,
                 parent_id,
                 name,
             } => {
-                nodes.insert(
+                insert_node(
+                    &mut nodes,
                     node_id,
                     ProjectionNode {
                         kind: NodeKind::Dir,
@@ -92,7 +105,7 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
                         name,
                         doc_id: None,
                     },
-                );
+                )?;
             }
             crate::models::StructureOp::RenameNode {
                 node_id, new_name, ..
@@ -127,6 +140,17 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
     Ok(nodes)
 }
 
+fn insert_node(
+    nodes: &mut HashMap<NodeId, ProjectionNode>,
+    node_id: NodeId,
+    node: ProjectionNode,
+) -> Result<()> {
+    if nodes.insert(node_id, node).is_some() {
+        anyhow::bail!("Structure projection duplicate create for node {}", node_id);
+    }
+    Ok(())
+}
+
 fn remove_subtree(nodes: &mut HashMap<NodeId, ProjectionNode>, root: NodeId) {
     let mut stack = vec![root];
     while let Some(node_id) = stack.pop() {
@@ -154,9 +178,16 @@ fn build_path(
     let path = match nodes.get(&node_id) {
         Some(node) => match node.parent_id {
             Some(parent_id) => {
-                if !nodes.contains_key(&parent_id) {
+                let Some(parent_node) = nodes.get(&parent_id) else {
                     anyhow::bail!(
                         "Structure projection references missing parent {} for node {}",
+                        parent_id,
+                        node_id
+                    );
+                };
+                if parent_node.kind != NodeKind::Dir {
+                    anyhow::bail!(
+                        "Structure projection parent is not a directory {} for node {}",
                         parent_id,
                         node_id
                     );
@@ -175,6 +206,25 @@ fn build_path(
     visiting.remove(&node_id);
     cache.insert(node_id, path.clone());
     Ok(path)
+}
+
+fn ensure_unique_path(
+    occupied_paths: &mut HashMap<String, NodeId>,
+    node_id: NodeId,
+    path: &str,
+) -> Result<()> {
+    if path.is_empty() {
+        return Ok(());
+    }
+    if let Some(existing) = occupied_paths.insert(path.to_string(), node_id) {
+        anyhow::bail!(
+            "Structure projection path collision for {} between {} and {}",
+            path,
+            existing,
+            node_id
+        );
+    }
+    Ok(())
 }
 
 fn insert_parents(dirs: &mut HashSet<String>, path: &str) {
