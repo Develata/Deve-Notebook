@@ -46,4 +46,5 @@
 ## Notes
 
 - Environment defaults are runtime input, not UI preference state.
+- Flat runtime keys keep single underscores, for example `DEVE_LEDGER_DIR`; nested keys use double underscores.
 - Main objects: `env::override`, `config::runtime`, `runtime::profile`.

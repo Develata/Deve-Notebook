@@ -39,7 +39,7 @@
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
-    1.  **Quality Gates**: `cargo clippy --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, `cargo test`.
+    1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, `cargo test --locked`.
     2.  **Docker Build**: Dockerfile frontend stage runs `npm run build` for editor assets and `trunk build --release` for Leptos/WASM output.
     3.  **Embed Frontend**: Dockerfile backend stage copies `apps/web/dist` before `cargo build --release --package deve_cli`, so the CLI build script embeds frontend assets into the binary.
     4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
@@ -88,6 +88,7 @@ docker run -d \
   --name deve-server \
   -p 3001:3001 \
   -v $(pwd)/data:/data \
+  -e DEVE_LEDGER_DIR=/data/ledger \
   -e DEVE_VAULT_PATH=/data/vault \
   -e AUTH_SECRET=<32-plus-byte-random-secret> \
   -e AUTH_USER=admin \
@@ -109,6 +110,7 @@ services:
       - ./data:/data
     environment:
       - DEVE_BIND_ADDR=0.0.0.0:3001
+      - DEVE_LEDGER_DIR=/data/ledger
       - DEVE_VAULT_PATH=/data/vault
       - AUTH_SECRET=${AUTH_SECRET:?set AUTH_SECRET}
       - AUTH_USER=${AUTH_USER:-admin}
@@ -117,7 +119,7 @@ services:
 
 ### 5.3 Build Strategy
 *   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).
-*   **Builder**: `rust:1.85-bookworm` (Multi-stage build), with Node.js, Trunk, and `wasm32-unknown-unknown`.
+*   **Builder**: `rust:1.92-bookworm` (Multi-stage build), with Node.js, pinned Cargo-installed tools (`cargo-chef`, `trunk`), and `wasm32-unknown-unknown`.
 *   **Optimization**: 使用 `cargo-chef` 缓存依赖构建层。
 *   **Frontend Delivery**: runtime image ships a single `deve_cli` binary with embedded frontend static assets; runtime no longer requires `/app/static` or `DEVE_STATIC_DIR` for normal Docker deployment.
 

@@ -13,10 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Rust 1.85
+      - name: Install Rust 1.92
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.85
+          toolchain: 1.92
       
       - name: Cache cargo registry and build
         uses: actions/cache@v4
@@ -30,7 +30,7 @@ jobs:
             ${{ runner.os }}-cargo-
       
       - name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Check plan coverage
         run: scripts/plan-coverage.sh --write-report
@@ -39,7 +39,7 @@ jobs:
         run: scripts/check-architecture-registry.sh
       
       - name: Run tests
-        run: cargo test
+        run: cargo test --locked
 
   docker:
     runs-on: ubuntu-latest

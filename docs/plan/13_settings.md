@@ -22,6 +22,9 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | :------------------------------- | :--------------- | :------------------------------------------------------------------ |
 | **System Core**                  |                  |                                                                     |
 | `DEVE_PROFILE`                   | `standard`       | 运行模式预设: `standard` (默认), `low-spec` (低配), `debug` (调试). |
+| `DEVE_LEDGER_DIR`                | `ledger`         | 账本存储目录；Docker/runtime 推荐设为 `/data/ledger`。              |
+| `DEVE_VAULT_PATH`                | `vault`          | 投影库根目录；Docker/runtime 推荐设为 `/data/vault`。               |
+| `DEVE_SYNC_MODE`                 | `auto`           | 同步模式: `auto` 或 `manual`。                                      |
 | `LOG_LEVEL`                      | `info`           | 日志级别: `trace`, `debug`, `info`, `warn`, `error`.                |
 | `MEM_CACHE_MB`                   | `128`            | 内存缓存上限 (MB).                                                  |
 | **Network & Security**           |                  |                                                                     |
@@ -41,6 +44,8 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
 | **Paths**                        |                  |                                                                     |
 | `DEVE_DATA_DIR`                  | `~/.deve-note`   | 数据存储根目录.                                                     |
+
+`DEVE_*` 扁平字段保留下划线命名；嵌套配置如后续需要通过环境变量覆盖，使用双下划线分隔层级。
 
 ## 2. Configuration Settings (config.toml) {#configuration-settings}
 

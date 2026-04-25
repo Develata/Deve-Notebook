@@ -12,7 +12,7 @@
 
 | **Layer**    | **Technology**           | **Status**        | **Selection Reasoning**             |
 | :----------- | :----------------------- | :---------------- | :---------------------------------- |
-| **Language** | Rust (2024)              | Verified          | 全栈统一。                          |
+| **Language** | Rust 1.92 / Edition 2024 | Verified          | 与当前 `Cargo.lock` MSRV 对齐，全栈统一。 |
 | **Frontend** | **Leptos v0.7**          | Verified          | 信号驱动 (Signals)，性能极致。      |
 | **UI**       | **Tailwind CSS**         | Verified          | 原子化 CSS。                        |
 | **Router**   | **leptos_router**        | Verified          | 前端路由管理。                      |

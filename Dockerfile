@@ -3,9 +3,9 @@
 # 包含后端 API（Axum）和前端 SPA（Leptos）
 
 # 阶段 1: chef — 构建依赖解析环境
-FROM rust:1.85-bookworm AS chef
-RUN cargo install cargo-chef && \
-    cargo install trunk && \
+FROM rust:1.92-bookworm AS chef
+RUN cargo install cargo-chef --locked --version 0.1.72 && \
+    cargo install trunk --locked --version 0.21.14 && \
     rustup target add wasm32-unknown-unknown && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
@@ -19,7 +19,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 # 阶段 3: deps — 编译后端依赖（缓存层）
 FROM chef AS deps
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json --package deve_cli --package deve_core
+RUN cargo chef cook --release --locked --recipe-path recipe.json --package deve_cli --package deve_core
 
 # 阶段 4: frontend — 编译前端资源
 FROM chef AS frontend
@@ -35,7 +35,7 @@ FROM deps AS backend
 COPY . .
 # 将前端 dist 放入 CLI build script 的默认扫描路径，编译进单二进制。
 COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/
-RUN cargo build --release --package deve_cli && \
+RUN cargo build --release --locked --package deve_cli && \
     strip target/release/deve_cli
 
 # 阶段 6: runtime — 精简运行时镜像
@@ -55,6 +55,7 @@ COPY --from=backend /app/target/release/deve_cli /usr/local/bin/deve_cli
 RUN chmod +x /usr/local/bin/deve_cli
 
 # 环境变量配置
+ENV DEVE_LEDGER_DIR=/data/ledger
 ENV DEVE_VAULT_PATH=/data/vault
 ENV DEVE_BIND_ADDR=0.0.0.0:3001
 

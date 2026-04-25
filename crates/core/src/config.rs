@@ -200,7 +200,11 @@ impl Config {
 
         let settings = config::Config::builder()
             .add_source(config::File::with_name("config").required(false))
-            .add_source(config::Environment::with_prefix("DEVE").separator("_"))
+            .add_source(
+                config::Environment::with_prefix("DEVE")
+                    .prefix_separator("_")
+                    .separator("__"),
+            )
             .build()
             .context("Failed to build configuration")?;
 

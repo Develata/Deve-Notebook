@@ -19,6 +19,8 @@ services:
     
     # 环境变量配置
     environment:
+      # Ledger 数据存储路径（容器内）
+      DEVE_LEDGER_DIR: /data/ledger
       # Vault 数据存储路径（容器内）
       DEVE_VAULT_PATH: /data/vault
       # 服务器绑定地址和端口

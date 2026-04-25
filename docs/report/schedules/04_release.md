@@ -5,7 +5,7 @@
 
 ## 1. 构建 (Build)
 - [ ] **Multi-Platform**: Windows, macOS, Linux 构建配置. *(延期: 需签名证书 + Tauri)*
-- [x] **Docker**: `Dockerfile` 编写 (Multi-stage, rust:1.85 + trunk + esbuild → debian:bookworm-slim).
+- [x] **Docker**: `Dockerfile` 编写 (Multi-stage, rust:1.92 + pinned trunk + esbuild → debian:bookworm-slim).
 - [x] **Docker Compose**: 单服务配置 (512m 内存限制, /data 卷持久化).
 - [ ] **Signing**: 代码签名配置. *(延期: 需 Apple/Windows 证书)*
 
