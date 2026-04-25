@@ -63,8 +63,8 @@ impl BrowserSocket {
         ))
     }
 
-    pub fn send_text(&self, text: &str) -> Result<(), JsValue> {
-        self.ws.send_with_str(text)
+    pub fn send_binary(&self, bytes: &[u8]) -> Result<(), JsValue> {
+        self.ws.send_with_u8_array(bytes)
     }
 
     pub fn ready_state(&self) -> u16 {

@@ -6,6 +6,7 @@
 pub(crate) use super::filter::BroadcastFilter;
 use crate::server::channel::try_send_with_delivery_class;
 use axum::extract::ws::{Message, WebSocket};
+use deve_core::protocol::frame::encode_server_binary;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use futures::{Sink, SinkExt};
 use tokio::sync::broadcast::error::RecvError;
@@ -61,7 +62,7 @@ fn spawn_unicast_sender_task_with_encoder<S, E>(
 }
 
 fn encode_server_message(msg: &ServerMessage) -> Result<Vec<u8>, String> {
-    bincode::serialize(msg).map_err(|err| err.to_string())
+    encode_server_binary(msg).map_err(|err| err.to_string())
 }
 
 /// 启动广播转发任务：将广播消息尝试写入单播队列。

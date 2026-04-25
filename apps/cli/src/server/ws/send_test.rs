@@ -4,16 +4,26 @@
 //! WebSocket outbound delivery regression coverage.
 
 use super::{
-    BroadcastFilter, new_unicast_channel, spawn_broadcast_forwarder,
+    BroadcastFilter, encode_server_message, new_unicast_channel, spawn_broadcast_forwarder,
     spawn_unicast_sender_task_with_encoder,
 };
 use crate::server::session::WsSession;
 use axum::extract::ws::Message;
 use deve_core::models::{DocId, Op};
+use deve_core::protocol::frame::decode_server_binary;
 use deve_core::protocol::{ConfirmedOp, ServerErrorCode, ServerMessage};
 use futures::StreamExt;
 use tokio::sync::broadcast;
 use tokio::time::{Duration, timeout};
+
+#[test]
+fn outbound_encoder_writes_versioned_server_frame() {
+    let bytes = encode_server_message(&ServerMessage::Pong).expect("encode frame");
+    assert!(matches!(
+        decode_server_binary(&bytes),
+        Ok(ServerMessage::Pong)
+    ));
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_full() {

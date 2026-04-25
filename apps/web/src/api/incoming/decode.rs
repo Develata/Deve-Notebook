@@ -1,13 +1,14 @@
 use deve_core::protocol::ServerMessage;
+use deve_core::protocol::frame::{decode_server_binary, decode_server_json};
 
 const FRAME_PREVIEW_BYTES: usize = 16;
 
 pub(super) fn decode_binary_message(bytes: &[u8]) -> Option<ServerMessage> {
-    match bincode::deserialize::<ServerMessage>(bytes) {
+    match decode_server_binary(bytes) {
         Ok(server_msg) => Some(server_msg),
-        Err(bincode_error) => {
+        Err(frame_error) => {
             if let Ok(text) = std::str::from_utf8(bytes)
-                && let Ok(server_msg) = serde_json::from_str::<ServerMessage>(text)
+                && let Ok(server_msg) = decode_server_json(text)
             {
                 leptos::logging::warn!(
                     "WS binary frame fell back to JSON decode: len={}",
@@ -19,8 +20,18 @@ pub(super) fn decode_binary_message(bytes: &[u8]) -> Option<ServerMessage> {
                 "Ignoring undecodable WS binary frame: len={}, head={}, err={:?}",
                 bytes.len(),
                 preview_bytes(bytes),
-                bincode_error
+                frame_error
             );
+            None
+        }
+    }
+}
+
+pub(super) fn decode_text_message(text: &str) -> Option<ServerMessage> {
+    match decode_server_json(text) {
+        Ok(server_msg) => Some(server_msg),
+        Err(error) => {
+            leptos::logging::error!("JSON Parse Error: {:?}", error);
             None
         }
     }

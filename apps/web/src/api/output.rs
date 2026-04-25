@@ -14,6 +14,7 @@
 //! 这防止了网络断开时因持续操作导致的内存耗尽。
 
 use deve_core::protocol::ClientMessage;
+use deve_core::protocol::frame::encode_client_binary;
 use leptos::prelude::*;
 use std::collections::VecDeque;
 
@@ -40,15 +41,15 @@ pub(crate) fn send_or_requeue(
     queue: &mut VecDeque<ClientMessage>,
     set_status: WriteSignal<ConnectionStatus>,
 ) -> bool {
-    let text = match serde_json::to_string(&msg) {
-        Ok(t) => t,
+    let bytes = match encode_client_binary(&msg) {
+        Ok(bytes) => bytes,
         Err(e) => {
             leptos::logging::error!("消息序列化失败: {:?}, 消息: {:?}", e, msg);
             return true;
         }
     };
 
-    if let Err(e) = socket.send_text(&text) {
+    if let Err(e) = socket.send_binary(&bytes) {
         leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
         enqueue_with_limit(queue, msg);
         set_status.set(ConnectionStatus::Disconnected);

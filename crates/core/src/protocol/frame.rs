@@ -1,0 +1,231 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!
+//! Versioned WebSocket frame helpers.
+
+use super::{ClientMessage, ServerMessage};
+use bincode::Options;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use std::fmt;
+
+pub const WS_PROTOCOL_VERSION: u16 = 2;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
+pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
+const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF2";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientFrame {
+    pub protocol_version: u16,
+    pub message: ClientMessage,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerFrame {
+    pub protocol_version: u16,
+    pub message: ServerMessage,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProtocolFrameError {
+    Decode(String),
+    UnsupportedVersion {
+        received: u16,
+        min: u16,
+        current: u16,
+    },
+}
+
+impl ClientFrame {
+    pub fn current(message: ClientMessage) -> Self {
+        Self {
+            protocol_version: WS_PROTOCOL_VERSION,
+            message,
+        }
+    }
+}
+
+impl ServerFrame {
+    pub fn current(message: ServerMessage) -> Self {
+        Self {
+            protocol_version: WS_PROTOCOL_VERSION,
+            message,
+        }
+    }
+}
+
+pub fn encode_client_binary(message: &ClientMessage) -> Result<Vec<u8>, ProtocolFrameError> {
+    encode_client_binary_with_version(message, WS_PROTOCOL_VERSION)
+}
+
+pub fn encode_client_binary_with_version(
+    message: &ClientMessage,
+    protocol_version: u16,
+) -> Result<Vec<u8>, ProtocolFrameError> {
+    encode_binary_frame(&ClientFrame {
+        protocol_version,
+        message: message.clone(),
+    })
+}
+
+pub fn encode_server_binary(message: &ServerMessage) -> Result<Vec<u8>, ProtocolFrameError> {
+    encode_binary_frame(&ServerFrame::current(message.clone()))
+}
+
+pub fn decode_client_binary(bytes: &[u8]) -> Result<ClientMessage, ProtocolFrameError> {
+    if let Some(payload) = framed_payload(bytes) {
+        let frame: ClientFrame = decode_bincode(payload)?;
+        ensure_supported(frame.protocol_version)?;
+        return Ok(frame.message);
+    }
+    decode_bincode(bytes)
+}
+
+pub fn decode_server_binary(bytes: &[u8]) -> Result<ServerMessage, ProtocolFrameError> {
+    if let Some(payload) = framed_payload(bytes) {
+        let frame: ServerFrame = decode_bincode(payload)?;
+        ensure_supported(frame.protocol_version)?;
+        return Ok(frame.message);
+    }
+    decode_bincode(bytes)
+}
+
+pub fn decode_client_json(text: &str) -> Result<ClientMessage, ProtocolFrameError> {
+    if let Ok(frame) = serde_json::from_str::<ClientFrame>(text) {
+        ensure_supported(frame.protocol_version)?;
+        return Ok(frame.message);
+    }
+    serde_json::from_str::<ClientMessage>(text).map_err(json_decode_error)
+}
+
+pub fn decode_server_json(text: &str) -> Result<ServerMessage, ProtocolFrameError> {
+    if let Ok(frame) = serde_json::from_str::<ServerFrame>(text) {
+        ensure_supported(frame.protocol_version)?;
+        return Ok(frame.message);
+    }
+    serde_json::from_str::<ServerMessage>(text).map_err(json_decode_error)
+}
+
+fn encode_binary_frame<T: Serialize>(frame: &T) -> Result<Vec<u8>, ProtocolFrameError> {
+    let body = bincode_options()
+        .serialize(frame)
+        .map_err(bincode_decode_error)?;
+    let mut bytes = Vec::with_capacity(WS_FRAME_MAGIC.len() + body.len());
+    bytes.extend_from_slice(WS_FRAME_MAGIC);
+    bytes.extend(body);
+    Ok(bytes)
+}
+
+fn framed_payload(bytes: &[u8]) -> Option<&[u8]> {
+    bytes
+        .starts_with(WS_FRAME_MAGIC)
+        .then(|| &bytes[WS_FRAME_MAGIC.len()..])
+}
+
+fn decode_bincode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolFrameError> {
+    bincode_options()
+        .deserialize(bytes)
+        .map_err(bincode_decode_error)
+}
+
+fn bincode_options() -> impl Options {
+    bincode::DefaultOptions::new()
+        .with_limit(MAX_WS_FRAME_BYTES)
+        .with_fixint_encoding()
+}
+
+fn ensure_supported(version: u16) -> Result<(), ProtocolFrameError> {
+    if (MIN_SUPPORTED_WS_PROTOCOL_VERSION..=WS_PROTOCOL_VERSION).contains(&version) {
+        return Ok(());
+    }
+    Err(ProtocolFrameError::UnsupportedVersion {
+        received: version,
+        min: MIN_SUPPORTED_WS_PROTOCOL_VERSION,
+        current: WS_PROTOCOL_VERSION,
+    })
+}
+
+fn bincode_decode_error(error: impl std::error::Error) -> ProtocolFrameError {
+    ProtocolFrameError::Decode(error.to_string())
+}
+
+fn json_decode_error(error: serde_json::Error) -> ProtocolFrameError {
+    ProtocolFrameError::Decode(error.to_string())
+}
+
+impl fmt::Display for ProtocolFrameError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Decode(detail) => write!(f, "{detail}"),
+            Self::UnsupportedVersion {
+                received,
+                min,
+                current,
+            } => write!(
+                f,
+                "unsupported WS protocol version {received}; supported range {min}..={current}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ProtocolFrameError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn client_binary_frame_roundtrips() {
+        let bytes = encode_client_binary(&ClientMessage::Ping).unwrap();
+        assert!(bytes.starts_with(WS_FRAME_MAGIC));
+        assert!(matches!(
+            decode_client_binary(&bytes),
+            Ok(ClientMessage::Ping)
+        ));
+    }
+
+    #[test]
+    fn server_binary_frame_roundtrips() {
+        let bytes = encode_server_binary(&ServerMessage::Pong).unwrap();
+        assert!(matches!(
+            decode_server_binary(&bytes),
+            Ok(ServerMessage::Pong)
+        ));
+    }
+
+    #[test]
+    fn legacy_binary_still_decodes() {
+        let bytes = bincode::serialize(&ClientMessage::Ping).unwrap();
+        assert!(matches!(
+            decode_client_binary(&bytes),
+            Ok(ClientMessage::Ping)
+        ));
+    }
+
+    #[test]
+    fn json_frame_and_legacy_json_decode() {
+        let frame = serde_json::to_string(&ClientFrame::current(ClientMessage::Ping)).unwrap();
+        assert!(matches!(
+            decode_client_json(&frame),
+            Ok(ClientMessage::Ping)
+        ));
+        assert!(matches!(
+            decode_client_json(r#""Ping""#),
+            Ok(ClientMessage::Ping)
+        ));
+    }
+
+    #[test]
+    fn unsupported_version_is_rejected() {
+        let frame = ServerFrame {
+            protocol_version: WS_PROTOCOL_VERSION - 1,
+            message: ServerMessage::Pong,
+        };
+        let bytes = encode_binary_frame(&frame).unwrap();
+        assert!(matches!(
+            decode_server_binary(&bytes),
+            Err(ProtocolFrameError::UnsupportedVersion { .. })
+        ));
+    }
+}

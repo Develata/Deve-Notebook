@@ -4,19 +4,17 @@
 //! WebSocket inbound message decode and dispatch loop.
 
 use axum::extract::ws::Message;
-use bincode::Options;
 use std::sync::Arc;
 use std::time::Instant;
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::protocol::{ClientMessage, ServerError, ServerErrorCode};
+use deve_core::protocol::frame::{ProtocolFrameError, decode_client_binary, decode_client_json};
+use deve_core::protocol::{ServerError, ServerErrorCode};
 
 use super::route;
 use super::send::BroadcastFilter;
-
-const MAX_BINCODE_SIZE: u64 = 16 * 1024 * 1024;
 
 pub(super) enum SocketFlow {
     Continue,
@@ -57,8 +55,7 @@ async fn handle_binary(
     if !record_message(session, ch, peer_id) {
         return SocketFlow::Break;
     }
-    let bincode_config = bincode::options().with_limit(MAX_BINCODE_SIZE);
-    match bincode_config.deserialize::<ClientMessage>(bin) {
+    match decode_client_binary(bin) {
         Ok(client_msg) => {
             route::route_message(state, ch, session, client_msg).await;
             broadcast_filter.sync_from_session(session);
@@ -66,7 +63,7 @@ async fn handle_binary(
         Err(e) => {
             tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len());
             ch.send_protocol_error_with_scope_nonce(
-                invalid_client_message("Invalid bincode client message"),
+                invalid_client_message(error_detail(&e, "Invalid bincode client message")),
                 browser_scope_nonce(session),
             );
         }
@@ -85,15 +82,15 @@ async fn handle_text(
     if !record_message(session, ch, peer_id) {
         return SocketFlow::Break;
     }
-    match serde_json::from_str::<ClientMessage>(text) {
+    match decode_client_json(text) {
         Ok(client_msg) => {
             route::route_message(state, ch, session, client_msg).await;
             broadcast_filter.sync_from_session(session);
         }
-        Err(_) => {
+        Err(e) => {
             tracing::warn!("Failed to parse client message: {}", text);
             ch.send_protocol_error_with_scope_nonce(
-                invalid_client_message("Invalid JSON client message"),
+                invalid_client_message(error_detail(&e, "Invalid JSON client message")),
                 browser_scope_nonce(session),
             );
         }
@@ -120,8 +117,15 @@ fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
     session.is_browser_session().then(|| session.scope_nonce())
 }
 
-fn invalid_client_message(detail: &'static str) -> ServerError {
+fn invalid_client_message(detail: impl Into<String>) -> ServerError {
     ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
+}
+
+fn error_detail(error: &ProtocolFrameError, fallback: &'static str) -> String {
+    match error {
+        ProtocolFrameError::UnsupportedVersion { .. } => error.to_string(),
+        ProtocolFrameError::Decode(_) => fallback.to_string(),
+    }
 }
 
 #[cfg(test)]

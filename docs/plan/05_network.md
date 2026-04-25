@@ -107,8 +107,11 @@
 
 ### 4.2 Serialization
 
-- server-to-server 与 server-to-client 默认 bincode
-- browser client-to-server 优先 bincode，保留 JSON 调试兼容入口
+- WebSocket 二进制帧必须使用 `DEVEWSF2` magic header + `protocol_version` + bincode payload。
+- 当前 `protocol_version = 2`；任何 breaking schema change 必须 bump 该版本，并同步更新收发端兼容窗口。
+- server-to-server 与 server-to-client 默认 versioned bincode frame。
+- browser client-to-server 优先 versioned bincode frame，保留 versioned JSON / legacy JSON 调试兼容入口。
+- runtime 必须能拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
 ### 4.3 Core Message Families
 

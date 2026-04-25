@@ -5,6 +5,7 @@ use deve_core::protocol::ConfirmedOp;
 use deve_core::protocol::ServerError;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::protocol::ServerMessage;
+use deve_core::protocol::frame::encode_server_binary;
 use std::collections::VecDeque;
 
 #[test]
@@ -31,6 +32,15 @@ fn binary_json_fallback_still_decodes_server_message() {
 #[test]
 fn binary_bincode_still_decodes_server_message() {
     let bytes = bincode::serialize(&ServerMessage::Pong).unwrap();
+    assert!(matches!(
+        decode_binary_message(&bytes),
+        Some(ServerMessage::Pong)
+    ));
+}
+
+#[test]
+fn binary_versioned_frame_decodes_server_message() {
+    let bytes = encode_server_binary(&ServerMessage::Pong).unwrap();
     assert!(matches!(
         decode_binary_message(&bytes),
         Some(ServerMessage::Pong)

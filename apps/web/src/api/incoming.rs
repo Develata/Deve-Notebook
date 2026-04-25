@@ -1,4 +1,4 @@
-use self::decode::decode_binary_message;
+use self::decode::{decode_binary_message, decode_text_message};
 use super::ConnectionStatus;
 use super::socket::{SocketEvent, SocketMessage};
 use deve_core::protocol::ServerMessage;
@@ -42,12 +42,9 @@ pub fn handle_socket_event(
             }
         }
         SocketEvent::Message(SocketMessage::Text(txt)) => {
-            match serde_json::from_str::<ServerMessage>(&txt) {
-                Ok(server_msg) => {
-                    confirm_connection(confirmed_connected, set_status, "text");
-                    enqueue_server_message(set_msg_seq, set_msg_queue, server_msg);
-                }
-                Err(e) => leptos::logging::error!("JSON Parse Error: {:?}", e),
+            if let Some(server_msg) = decode_text_message(&txt) {
+                confirm_connection(confirmed_connected, set_status, "text");
+                enqueue_server_message(set_msg_seq, set_msg_queue, server_msg);
             }
         }
         SocketEvent::Error => {

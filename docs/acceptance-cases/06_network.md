@@ -39,8 +39,10 @@
   steps:
     - net_capture: true
   assertions:
-    - packet_format_eq: ["server", "bincode"]
-    - packet_format_any_of: ["client", "bincode", "json"]
+    - packet_format_eq: ["server", "versioned-bincode"]
+    - packet_format_any_of: ["client", "versioned-bincode", "versioned-json-debug"]
+    - packet_magic_eq: "DEVEWSF2"
+    - packet_protocol_version_eq: 2
 
 - case_id: NET-005
   goal: WebLightPeer repo-scoped 握手。
