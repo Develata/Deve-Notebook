@@ -36,52 +36,57 @@ mod tests {
         let plugin = load_ai_chat();
         let caps = &plugin.manifest().capabilities;
         assert!(caps.allow_net.contains(&"api.openai.com".to_string()));
-        assert!(!caps.allow_source_control);
         assert!(caps.allow_env.contains(&"AI_API_KEY".to_string()));
+        assert!(caps.allow_fs_read.is_empty());
+        assert!(caps.allow_fs_write.is_empty());
+        assert!(!caps.allow_source_control);
+        assert!(!caps.allow_search);
+        assert!(!caps.allow_project_tree);
+        assert!(!caps.allow_skill);
+        assert!(!caps.allow_mcp);
     }
 
     #[test]
-    fn test_execute_tool_read_file() {
-        let plugin = load_ai_chat();
-        // run_tool 是 main.rhai 顶层 wrapper，委托 tools::execute_tool
-        let manifest_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("plugins/ai-chat/manifest.json");
-        let path_str = manifest_path.to_str().unwrap().replace('\\', "/");
-        let args_json = format!(r#"{{"path":"{}"}}"#, path_str);
-
-        let result = plugin
-            .call("run_tool", vec!["read_file".into(), args_json.into()])
-            .expect("run_tool should work");
-
-        let content = result.into_string().unwrap();
-        assert!(content.contains("ai-chat"), "Should contain plugin id");
-    }
-
-    #[test]
-    fn test_execute_tool_unknown() {
+    fn test_run_tool_read_file_is_disabled_by_default() {
         let plugin = load_ai_chat();
         let result = plugin
-            .call("run_tool", vec!["nonexistent_tool".into(), "{}".into()])
-            .expect("run_tool should return error string, not panic");
+            .call(
+                "run_tool",
+                vec!["read_file".into(), r#"{"path":"manifest.json"}"#.into()],
+            )
+            .expect("run_tool should return disabled error");
 
         let content = result.into_string().unwrap();
         assert!(
-            content.contains("unknown tool"),
-            "Should report unknown tool"
+            content.contains("disabled by default"),
+            "Should deny default file tool, got: {content}"
         );
     }
 
     #[test]
-    fn test_build_config_defaults() {
+    fn test_run_tool_source_control_write_is_disabled_by_default() {
+        let plugin = load_ai_chat();
+        let result = plugin
+            .call(
+                "run_tool",
+                vec!["git_commit".into(), r#"{"message":"test"}"#.into()],
+            )
+            .expect("run_tool should return disabled error");
+
+        let content = result.into_string().unwrap();
+        assert!(
+            content.contains("disabled by default"),
+            "Should deny default source-control tool, got: {content}"
+        );
+    }
+
+    #[test]
+    fn test_internal_config_defaults() {
         // 清除可能存在的环境变量 (不影响其他测试——读取时不会修改)
         let plugin = load_ai_chat();
         let result = plugin
-            .call("build_config", vec![])
-            .expect("build_config should work");
+            .call("_build_config", vec![])
+            .expect("_build_config should work internally");
 
         // Result is a Rhai Map
         let config: rhai::Map = rhai::serde::from_dynamic(&result).unwrap();

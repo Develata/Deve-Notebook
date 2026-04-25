@@ -91,6 +91,9 @@ impl Capability {
     }
 
     fn has_allowed_prefix(path: &str, prefix: &str) -> bool {
+        if prefix.is_empty() {
+            return false;
+        }
         path == prefix
             || path
                 .strip_prefix(prefix)
@@ -200,6 +203,18 @@ mod tests {
 
         assert!(!cap.check_read(Path::new("/data/vaults/notes.md")));
         assert!(!cap.check_read(Path::new("C:\\Notes2\\file.txt")));
+    }
+
+    #[test]
+    fn test_capability_empty_prefix_does_not_match_absolute_paths() {
+        let cap = Capability {
+            allow_fs_read: vec![PathBuf::from("."), PathBuf::from("")],
+            allow_fs_write: vec![PathBuf::from("."), PathBuf::from("")],
+            ..Default::default()
+        };
+
+        assert!(!cap.check_read(Path::new("/etc/passwd")));
+        assert!(!cap.check_write(Path::new("/tmp/output.md")));
     }
 
     #[test]

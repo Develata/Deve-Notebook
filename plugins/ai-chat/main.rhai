@@ -1,17 +1,15 @@
 // plugins/ai-chat/main.rhai
-// Native AI Chat Plugin — 默认只走流式原生聊天，不启用工具循环
-
-import "tools" as tools;
+// Native AI Chat Plugin — 默认只走流式原生聊天，不启用工具循环。
 
 fn run_tool(name, arguments) {
-    tools::execute_tool(name, arguments)
+    "Error: native AI tools are disabled by default"
 }
 
 const SYSTEM_PROMPT = "You are a helpful AI assistant for Deve-Notebook. \
 Focus on the current markdown note and the explicitly provided context. \
 Do not assume access to external tools unless the host explicitly adds them.";
 
-fn build_config() {
+fn _build_config() {
     let base_url = env("AI_BASE_URL");
     if base_url == () || base_url == "" {
         base_url = "https://api.openai.com/v1";
@@ -69,7 +67,7 @@ fn build_system_prompt(context) {
 }
 
 fn chat(req_id, user_msg, context) {
-    let config = build_config();
+    let config = _build_config();
 
     if config.api_key == () || config.api_key == "" {
         return #{

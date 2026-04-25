@@ -57,6 +57,8 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   Web chat UI belongs to `apps/web/src/components/chat/`; backend capability probing belongs to `apps/web/src/api/ai_backend.rs`.
 *   `crates/core/src/plugin/runtime/chat_stream.rs` and `provider.rs` may provide a transport-agnostic bridge while the existing Rhai host remains in the repo, but this bridge does **not** make Native AI Chat part of the generic plugin mainline.
 *   Native AI Chat must keep the read-first boundary from this section: provider calls may stream responses, but must not silently gain arbitrary source-control or workspace write authority.
+*   The bundled `plugins/ai-chat` compatibility plugin must not grant broad filesystem reads or expose default tool execution. Current Markdown / explicit selection context is passed through the chat request, not recovered by unrestricted plugin file reads.
+*   Its public PluginCall surface must be limited to `chat`; helper/config/tool functions are internal implementation details and must fail closed when called externally.
 
 ### 原生模式定义
 

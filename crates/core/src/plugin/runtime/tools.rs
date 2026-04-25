@@ -2,10 +2,10 @@
 //! plan_ref:
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
-//! # Tool Definitions for AI Function Calling
+//! # Reserved Tool Definitions for AI Function Calling
 //!
-//! Defines the schema for tools that AI can invoke during conversation.
-//! Compatible with OpenAI's Function Calling / Tools API.
+//! Native AI Chat ships read-first. Tool schemas stay available for future
+//! explicit opt-in runtimes, but no default tool is exposed.
 
 use serde::{Deserialize, Serialize};
 
@@ -68,126 +68,20 @@ impl ToolResult {
     }
 }
 
-/// Built-in tools available to AI
+/// Built-in tools available to Native AI.
+///
+/// Current contract: no default tools. Native AI must not silently gain file,
+/// source-control, MCP, or skill authority through this list.
 pub fn builtin_tools() -> Vec<ToolDefinition> {
-    vec![
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "read_file".to_string(),
-                description: "Read the contents of a file at the given path".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "The file path to read"
-                        }
-                    },
-                    "required": ["path"]
-                })),
-            },
-        },
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "git_status".to_string(),
-                description: "List unstaged changes in Redb source control".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                })),
-            },
-        },
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "git_diff".to_string(),
-                description: "Show unified diff for a document path".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "The document path to diff"
-                        }
-                    },
-                    "required": ["path"]
-                })),
-            },
-        },
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "git_add".to_string(),
-                description: "Stage a document path in Redb source control".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "The document path to stage"
-                        }
-                    },
-                    "required": ["path"]
-                })),
-            },
-        },
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "git_commit".to_string(),
-                description: "Commit staged documents with a message".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "message": {
-                            "type": "string",
-                            "description": "Commit message"
-                        }
-                    },
-                    "required": ["message"]
-                })),
-            },
-        },
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "search_files".to_string(),
-                description: "Search for files matching a glob pattern".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "pattern": {
-                            "type": "string",
-                            "description": "Glob pattern (e.g., '**/*.rs')"
-                        }
-                    },
-                    "required": ["pattern"]
-                })),
-            },
-        },
-        ToolDefinition {
-            tool_type: "function".to_string(),
-            function: FunctionDefinition {
-                name: "grep".to_string(),
-                description: "Search for a regex pattern in files".to_string(),
-                parameters: Some(serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        "pattern": {
-                            "type": "string",
-                            "description": "Regex pattern to search for"
-                        },
-                        "path": {
-                            "type": "string",
-                            "description": "Directory to search in (default: current directory)"
-                        }
-                    },
-                    "required": ["pattern"]
-                })),
-            },
-        },
-    ]
+    Vec::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::builtin_tools;
+
+    #[test]
+    fn native_ai_exposes_no_default_tools() {
+        assert!(builtin_tools().is_empty());
+    }
 }

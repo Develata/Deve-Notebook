@@ -6,7 +6,7 @@
     "entry": "main.rhai",
     "capabilities": {
         "allow_net": ["api.openai.com", "api.anthropic.com", "localhost", "127.0.0.1"],
-        "allow_fs_read": ["."],
+        "allow_fs_read": [],
         "allow_fs_write": [],
         "allow_env": [
             "AI_BASE_URL",

@@ -11,7 +11,7 @@ Built-in Rhai script plugins for Deve-Notebook. Plugins extend notebook function
 
 | Directory | Purpose |
 |-----------|---------|
-| `ai-chat/` | AI chat integration plugin — streaming chat with tool support |
+| `ai-chat/` | Native AI chat compatibility plugin — streaming chat without default tools |
 
 ## For AI Agents
 
@@ -31,6 +31,7 @@ cargo test --package deve_core --test plugin_test -- --nocapture
 ### Common Patterns
 
 - `manifest.json` declares plugin metadata, entry scripts, and tool definitions.
-- `main.rhai` is the entry point; `tools.rhai` defines callable tool functions.
+- `main.rhai` is the entry point; default Native AI must stay read-first unless future plans explicitly opt in tools.
+- Public Native AI RPC must expose `chat` only; do not add callable helper/config/tool functions to the external surface.
 
 <!-- MANUAL: -->

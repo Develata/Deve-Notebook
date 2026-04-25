@@ -51,7 +51,7 @@ Native AI Chat 可暂由内置 Rhai 插件 (`plugins/ai-chat/`) 承载实现，�
     - 不默认启用 MCP / Skills / source-control 写入
     - 不做历史持久化、不做复杂 Agent 状态机
     - 不做 Token 滑动窗口优化
-*   **资源开销**：Rhai Engine ~2-4 MB，脚本 ~290 行，零额外 crate 依赖
+*   **资源开销**：Rhai Engine ~2-4 MB，脚本轻量，零额外 crate 依赖
 *   **配置**：环境变量 `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`
 
 ## 5. 交互与 UI
@@ -68,6 +68,6 @@ UI 层统一，两条通道共享同一套前端组件：
 |------|--------|---------|----------|
 | agent_bridge.rs | 167 行 Rust | 0 MB | pipe buffer ~64 KB |
 | plugin handler | 85 行 Rust | 0 MB | — |
-| ai-chat Rhai 脚本 | 290 行 Rhai | 0 MB (未加载时) | Rhai Engine ~2-4 MB |
+| ai-chat Rhai 脚本 | 轻量 Rhai | 0 MB (未加载时) | Rhai Engine ~2-4 MB |
 | opencode (外部) | — | 0 MB | ~50-100 MB/次 |
 | zeroclaw (外部) | — | 0 MB | ~15-30 MB/次 |

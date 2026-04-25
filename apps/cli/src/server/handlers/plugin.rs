@@ -37,6 +37,15 @@ pub async fn handle_plugin_call_with_plugins(
     fn_name: String,
     args: Vec<serde_json::Value>,
 ) {
+    if !is_plugin_rpc_allowed(&plugin_id, &fn_name) {
+        send_plugin_unsupported_message(
+            ch,
+            &req_id,
+            format!("Plugin function is not public: {plugin_id}::{fn_name}"),
+        );
+        return;
+    }
+
     // Agent Bridge 拦截: 绕过 Rhai 插件，直接调用外部 CLI
     if plugin_id == "agent-bridge" {
         crate::server::agent_bridge::handle_agent_chat(ch, req_id, args).await;
@@ -75,6 +84,13 @@ pub async fn handle_plugin_call_with_plugins(
     }
 }
 
+fn is_plugin_rpc_allowed(plugin_id: &str, fn_name: &str) -> bool {
+    match plugin_id {
+        "ai-chat" | "agent-bridge" => fn_name == "chat",
+        _ => true,
+    }
+}
+
 fn json_args_to_dynamic(args: Vec<serde_json::Value>) -> Result<Vec<rhai::Dynamic>, String> {
     args.into_iter()
         .enumerate()
@@ -91,13 +107,5 @@ fn dynamic_result_to_json(result: rhai::Dynamic) -> Result<serde_json::Value, St
 }
 
 #[cfg(test)]
-mod tests {
-    use super::dynamic_result_to_json;
-
-    #[test]
-    fn plugin_result_fails_closed_when_dynamic_is_not_json_serializable() {
-        let result = rhai::FnPtr::new("hidden").expect("fn ptr").into();
-        let err = dynamic_result_to_json(result).unwrap_err();
-        assert!(err.contains("non-JSON-serializable"));
-    }
-}
+#[path = "plugin_test.rs"]
+mod tests;

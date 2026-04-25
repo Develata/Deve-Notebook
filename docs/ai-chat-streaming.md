@@ -42,6 +42,7 @@ plugin runtime with the server-side OpenAI-compatible SSE implementation.
 
 ## Security
 - Network requests are domain-validated against plugin capabilities.
+- External PluginCall access for bundled Native AI is `ai-chat::chat` only.
 - The handler never exposes raw HTTP response data to plugins.
 
 ## Low-Resource Notes
