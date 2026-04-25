@@ -37,8 +37,8 @@ impl RhaiRuntime {
     ///
     /// **参数**:
     /// - `manifest`: 插件清单
-    /// - `base_dir`: 插件根目录路径，用于解析 import 语句
-    pub fn new(manifest: PluginManifest, base_dir: PathBuf) -> Self {
+    /// - `_base_dir`: 插件根目录路径，用于解析非 WASM 目标的 import 语句
+    pub fn new(manifest: PluginManifest, _base_dir: PathBuf) -> Self {
         let mut engine = Engine::new();
         engine.set_max_expr_depths(128, 128);
         engine.set_max_operations(MAX_RHAI_OPERATIONS);
@@ -46,7 +46,7 @@ impl RhaiRuntime {
         // 配置模块解析器 (仅非 WASM 环境支持文件系统)
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let resolver = FileModuleResolver::new_with_path(&base_dir);
+            let resolver = FileModuleResolver::new_with_path(&_base_dir);
             engine.set_module_resolver(resolver);
         }
 
