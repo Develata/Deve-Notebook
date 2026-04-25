@@ -37,6 +37,10 @@ impl IgnoreRules {
             .matched_path_or_any_parents(rel_path, false)
             .is_ignore()
     }
+
+    pub fn is_ignored_workspace_path(&self, root_relative: &str, repo_path: &str) -> bool {
+        self.is_ignored(root_relative) || self.is_ignored(repo_path)
+    }
 }
 
 #[cfg(test)]

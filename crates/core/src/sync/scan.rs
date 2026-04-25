@@ -3,6 +3,7 @@ use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::path_to_forward_slash;
 use crate::vfs::Vfs;
+use crate::watcher_ignore::IgnoreRules;
 use anyhow::{Result, anyhow};
 use std::collections::HashSet;
 use std::path::Path;
@@ -23,6 +24,7 @@ pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Resu
 pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
+    let ignore_rules = repo_root.parent().map(IgnoreRules::load);
     let mut on_disk = HashSet::new();
     let mut seen_docs = HashSet::<DocId>::new();
 
@@ -35,6 +37,9 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
         }
         let repo_path = repo_relative_path(repo_name, &repo_root, path)?;
         if crate::utils::notegit::is_internal_repo_path(&repo_path) {
+            continue;
+        }
+        if ignored_by_rules(repo, repo_name, &repo_path, ignore_rules.as_ref()) {
             continue;
         }
         if !entry.file_type().is_file() {
@@ -67,6 +72,9 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
             warn!("SyncScan: Repo {} 跳过内部路径: {}", repo_name, repo_path);
             continue;
         }
+        if ignored_by_rules(repo, repo_name, &repo_path, ignore_rules.as_ref()) {
+            continue;
+        }
         if seen_docs.contains(&doc_id) || on_disk.contains(&repo_path) {
             continue;
         }
@@ -87,6 +95,18 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
         }
     }
     Ok(())
+}
+
+fn ignored_by_rules(
+    repo: &RepoManager,
+    repo_name: &str,
+    repo_path: &str,
+    rules: Option<&IgnoreRules>,
+) -> bool {
+    rules.is_some_and(|rules| {
+        let root_relative = repo.local_repo_workspace_relative(repo_name, repo_path);
+        rules.is_ignored_workspace_path(&root_relative, repo_path)
+    })
 }
 
 fn clear_scan_pending(repo: &Arc<RepoManager>, repo_name: &str, repo_path: &str) -> Result<()> {

@@ -5,6 +5,7 @@ use super::{WatcherCallback, WatcherError, filter};
 use crate::models::RepoId;
 use crate::sync::{SyncManager, pending, pending_rename};
 use crate::utils::path::to_forward_slash;
+use crate::watcher_ignore::IgnoreRules;
 use notify_debouncer_full::{
     DebouncedEvent,
     notify::event::{ModifyKind, RenameMode},
@@ -20,6 +21,7 @@ pub(crate) fn dispatch_batch(
     events: Vec<DebouncedEvent>,
     callback: Option<&WatcherCallback>,
 ) -> Result<(), WatcherError> {
+    let ignore_rules = repo_root.parent().map(IgnoreRules::load);
     for event in events {
         if is_rename(&event) && event.paths.len() >= 2 {
             dispatch_rename(sync, repo_name, repo_id, repo_root, &event.paths, callback)?;
@@ -32,6 +34,13 @@ pub(crate) fn dispatch_batch(
             let root_relative = sync
                 .repo
                 .local_repo_workspace_relative(repo_name, &repo_path);
+            if ignored_by_rules(ignore_rules.as_ref(), &root_relative, &repo_path) {
+                continue;
+            }
+            if !filter::allows_repo_path(&repo_path) {
+                dispatch_dir_change(sync, &root_relative, &repo_path, path)?;
+                continue;
+            }
             if sync.should_ignore_fs_event(&root_relative) {
                 continue;
             }
@@ -43,6 +52,10 @@ pub(crate) fn dispatch_batch(
         }
     }
     Ok(())
+}
+
+fn ignored_by_rules(rules: Option<&IgnoreRules>, root_relative: &str, repo_path: &str) -> bool {
+    rules.is_some_and(|rules| rules.is_ignored_workspace_path(root_relative, repo_path))
 }
 
 fn dispatch_rename(
@@ -59,7 +72,15 @@ fn dispatch_rename(
     let Some(new_path) = repo_path(repo_root, &paths[1]) else {
         return Ok(());
     };
+    let ignore_rules = repo_root.parent().map(IgnoreRules::load);
+    let new_root_relative = sync
+        .repo
+        .local_repo_workspace_relative(repo_name, &new_path);
+    if ignored_by_rules(ignore_rules.as_ref(), &new_root_relative, &new_path) {
+        return Ok(());
+    }
     if !filter::allows_repo_path(&old_path) || !filter::allows_repo_path(&new_path) {
+        dispatch_dir_change(sync, &new_root_relative, &new_path, &paths[1])?;
         return Ok(());
     }
     let doc_id = rename_doc_id(sync, repo_name, &new_path)?.or_else(|| {
@@ -87,7 +108,35 @@ fn dispatch_rename(
 fn repo_path(repo_root: &Path, path: &Path) -> Option<String> {
     let rel = path.strip_prefix(repo_root).ok()?;
     let path = to_forward_slash(&rel.to_string_lossy());
-    filter::allows_repo_path(&path).then_some(path)
+    Some(path)
+}
+
+fn dispatch_dir_change(
+    sync: &Arc<SyncManager>,
+    root_relative: &str,
+    repo_path: &str,
+    path: &Path,
+) -> Result<(), WatcherError> {
+    if !filter::allows_repo_dir_path(repo_path) || !is_directory_event(path, root_relative)? {
+        return Ok(());
+    }
+    sync.handle_dir_change(root_relative).map_err(|err| {
+        WatcherError::from(anyhow::anyhow!(
+            "Failed to handle dir change for {root_relative}: {err}"
+        ))
+    })?;
+    Ok(())
+}
+
+fn is_directory_event(path: &Path, root_relative: &str) -> Result<bool, WatcherError> {
+    match std::fs::metadata(path) {
+        Ok(metadata) => Ok(metadata.is_dir()),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(anyhow::anyhow!(
+            "Failed to classify watcher event for {root_relative}: {err}"
+        )
+        .into()),
+    }
 }
 
 fn rename_doc_id(
