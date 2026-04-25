@@ -1,4 +1,7 @@
 // apps/cli/src/server/auth/headers.rs
+//! plan_ref:
+//!   - 09_auth#security-headers
+//!
 //! # 安全响应头中间件
 //!
 //! 09_auth#security-headers

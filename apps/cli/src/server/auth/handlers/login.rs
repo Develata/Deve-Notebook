@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 09_auth#auth-http-endpoints
+//!   - 09_auth#auth-rate-limiting
+//!   - 09_auth#jwt-cookie-contract
+//!   - 09_auth#password-hashing
+
 use axum::{Extension, Json, extract::ConnectInfo, http::StatusCode, response::IntoResponse};
 use std::net::SocketAddr;
 use std::sync::Arc;

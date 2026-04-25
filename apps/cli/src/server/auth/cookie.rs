@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 09_auth#jwt-cookie-contract
+//!
 //! # Cookie 解析工具
 //!
 //! 提供精确 Cookie 名称匹配的提取函数，供 HTTP 中间件和 WebSocket 鉴权共用。

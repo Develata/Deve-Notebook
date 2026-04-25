@@ -84,7 +84,7 @@ WsConnecting
 
 ## 4. Commands / Endpoints / Outputs
 
-### 4.1 HTTP Endpoints
+### 4.1 HTTP Endpoints {#auth-http-endpoints}
 
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
@@ -130,7 +130,7 @@ WsConnecting
   - 不得自动进入匿名生产模式
   - 不得临时生成弱默认凭证继续启动
 
-## 5. JWT and Cookie Contract
+## 5. JWT and Cookie Contract {#jwt-cookie-contract}
 
 ### 5.1 JWT
 
@@ -176,6 +176,14 @@ WsConnecting
   - `SameSite=Strict`
   - `Path=/`
   - `Secure`（生产默认开启）
+
+### 5.5 Password Hashing {#password-hashing}
+
+> **Code Refs**: `crates/core/src/security/auth/password.rs`
+
+- `AUTH_PASS` MUST be stored as an Argon2 PHC string.
+- Login verification MUST compare user input against the configured Argon2 hash.
+- Raw passwords MUST NOT be stored in config, ledger, cookie, JWT, or logs.
 
 ## 6. Access Control and Security Policies
 

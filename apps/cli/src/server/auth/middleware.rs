@@ -1,4 +1,8 @@
 // apps/cli/src/server/auth/middleware.rs
+//! plan_ref:
+//!   - 09_auth#jwt-cookie-contract
+//!   - 09_auth#auth-rate-limiting
+//!
 //! # JWT Cookie 认证中间件
 //!
 //! 从 HttpOnly Cookie 中提取 JWT，验证后将 Claims 注入请求 Extension。

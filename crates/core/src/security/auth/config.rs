@@ -1,4 +1,7 @@
 // crates/core/src/security/auth/config.rs
+//! plan_ref:
+//!   - 09_auth#auth-config
+//!
 //! # 认证配置 (Auth Config)
 //!
 //! 从环境变量加载认证参数，遵循 12-Factor 原则。

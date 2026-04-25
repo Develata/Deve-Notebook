@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_auth#auth-http-endpoints
+//!   - 09_auth#jwt-cookie-contract
+
 use axum::{Extension, Json, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 

@@ -1,4 +1,7 @@
 // crates/core/src/security/auth/jwt.rs
+//! plan_ref:
+//!   - 09_auth#jwt-cookie-contract
+//!
 //! # JWT Token 管理
 //!
 //! 实现 HS256 JWT 的签发与验证。
