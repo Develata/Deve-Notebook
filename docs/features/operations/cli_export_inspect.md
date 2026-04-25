@@ -24,7 +24,7 @@
 - `Surface`: `cli`
 - `Trigger`: run `deve export --format <json|markdown>`
 - `Preconditions`: format value is supported
-- `Immediate Result`: export renderer selects JSONL or Markdown output path
+- `Immediate Result`: export renderer selects JSONL or Markdown output path; degraded projection Markdown export requires explicit `--allow-degraded-projection`
 - `Application Entry`: `apps/cli/src/commands/export.rs`
 
 ### `op.cli.export.select-doc`

@@ -313,6 +313,14 @@ impl SyncManager {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+pub fn diagnose_projection_local_repo(
+    repo: &RepoManager,
+    repo_name: &str,
+) -> Result<ProjectionDiagnostic> {
+    projection_diagnostic::diagnose(repo, repo_name)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn checked_exists(path: &std::path::Path, context: &str) -> Result<bool> {
     path.try_exists()
         .with_context(|| format!("Failed to stat {}: {:?}", context, path))

@@ -88,6 +88,7 @@
   steps:
     - run: deve dump --help
     - run: deve export --help
+    - run: deve export --format markdown --allow-degraded-projection --help
   assertions:
     - exit_code_all_eq: 0
 

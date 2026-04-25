@@ -72,6 +72,8 @@ pub(crate) enum Commands {
         doc: Option<String>,
         #[arg(long, default_value = "json")]
         format: String,
+        #[arg(long)]
+        allow_degraded_projection: bool,
     },
     /// Verify P2P Sync Logic (Simulation)
     VerifyP2P,

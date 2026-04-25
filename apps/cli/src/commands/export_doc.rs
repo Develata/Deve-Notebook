@@ -50,14 +50,36 @@ pub(super) fn export_markdown_doc(
     repo_name: &str,
     doc_id: DocId,
     output: PathBuf,
+    allow_degraded_projection: bool,
 ) -> Result<()> {
-    let path = repo
-        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
-        .map(|meta| meta.path)
-        .ok_or_else(|| anyhow!("Document not found in repo {}: {}", repo_name, doc_id))?;
+    let path = resolve_export_doc_path(repo, repo_name, doc_id, allow_degraded_projection)?;
     let result = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)
         .with_context(|| format!("Failed to rebuild {}", path))?;
     write_markdown_file(&output, &result.content)?;
     println!("Exported markdown {} to {:?}", path, output);
     Ok(())
+}
+
+fn resolve_export_doc_path(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: DocId,
+    allow_degraded_projection: bool,
+) -> Result<String> {
+    if let Some(meta) = repo.get_file_meta_for_doc_in_local_repo(repo_name, doc_id)? {
+        return Ok(meta.path);
+    }
+    if allow_degraded_projection
+        && let Some((_, path)) = repo
+            .run_on_local_repo(repo_name, metadata::list_docs)?
+            .into_iter()
+            .find(|(candidate, _)| *candidate == doc_id)
+    {
+        return Ok(path);
+    }
+    Err(anyhow!(
+        "Document not found in repo {}: {}",
+        repo_name,
+        doc_id
+    ))
 }

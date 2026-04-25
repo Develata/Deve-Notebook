@@ -39,6 +39,7 @@ pub async fn run(
             repo,
             doc,
             format,
+            allow_degraded_projection,
         }) => commands::export::run(
             ledger_dir,
             output,
@@ -46,6 +47,7 @@ pub async fn run(
             doc,
             config.snapshot_depth,
             &format,
+            allow_degraded_projection,
         )?,
         Some(Commands::Recover { repo }) => {
             commands::recover::run(ledger_dir, vault_path, repo, config.snapshot_depth)?

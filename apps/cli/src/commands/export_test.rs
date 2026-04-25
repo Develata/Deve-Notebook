@@ -1,6 +1,8 @@
 use super::run;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
+use deve_core::models::{DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp};
+use redb::ReadableTable;
 use tempfile::TempDir;
 
 fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
@@ -30,6 +32,31 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
     doc_id
 }
 
+fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let write = db.begin_write()?;
+        {
+            let mut ops = write.open_table(LEDGER_OPS)?;
+            let mut doc_ops = write.open_multimap_table(DOC_OPS)?;
+            let mut node_ops = write.open_multimap_table(NODE_OPS)?;
+            let mut peer_seqs = write.open_table(PEER_DOC_SEQ)?;
+            let next_seq = ops.last()?.map(|(key, _)| key.value() + 1).unwrap_or(1);
+            let bytes = bincode::serialize(entry)?;
+            ops.insert(next_seq, bytes.as_slice())?;
+            if let Some(doc_id) = entry.doc_id {
+                doc_ops.insert(doc_id.as_u128(), next_seq)?;
+                peer_seqs.insert((doc_id.as_u128(), entry.peer_id.as_str()), entry.seq)?;
+            }
+            if let Some(node_id) = entry.structure_node_id() {
+                node_ops.insert(node_id.as_u128(), next_seq)?;
+            }
+        }
+        write.commit()?;
+        Ok(())
+    })
+    .expect("append unvalidated")
+}
+
 #[test]
 fn markdown_export_supports_single_doc_output() {
     let dir = TempDir::new().expect("tempdir");
@@ -45,6 +72,7 @@ fn markdown_export_supports_single_doc_output() {
         Some(doc_id.to_string()),
         8,
         "markdown",
+        false,
     )
     .expect("export markdown doc");
 
@@ -65,6 +93,7 @@ fn json_export_rejects_single_doc_selector() {
         Some(uuid::Uuid::new_v4().to_string()),
         8,
         "json",
+        false,
     )
     .expect_err("json export should reject --doc");
 
@@ -72,5 +101,59 @@ fn json_export_rejects_single_doc_selector() {
         err.to_string()
             .contains("JSON export does not support --doc"),
         "unexpected error: {err:#}"
+    );
+}
+
+#[test]
+fn markdown_export_requires_explicit_degraded_projection_flag() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    seed_doc(&repo, "notes/a.md", "safe content");
+    let orphan_doc = DocId::new();
+    append_unvalidated(
+        &repo,
+        &LedgerEntry::new_structure(
+            StructureOp::CreateFile {
+                node_id: NodeId::from_doc_id(orphan_doc),
+                doc_id: orphan_doc,
+                parent_id: Some(NodeId::new()),
+                name: "orphan.md".into(),
+            },
+            1,
+            PeerId::new("test"),
+            1,
+        ),
+    );
+
+    let output = dir.path().join("export");
+    let err = run(
+        &ledger_dir,
+        Some(output.display().to_string()),
+        None,
+        None,
+        8,
+        "markdown",
+        false,
+    )
+    .expect_err("degraded projection export must require explicit flag");
+
+    assert!(
+        err.to_string().contains("--allow-degraded-projection"),
+        "unexpected error: {err:#}"
+    );
+    run(
+        &ledger_dir,
+        Some(output.display().to_string()),
+        None,
+        None,
+        8,
+        "markdown",
+        true,
+    )
+    .expect("explicit degraded export");
+    assert_eq!(
+        std::fs::read_to_string(output.join("notes/a.md")).expect("read exported doc"),
+        "safe content"
     );
 }
