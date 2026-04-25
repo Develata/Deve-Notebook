@@ -101,12 +101,11 @@ pub(super) fn load_search_service(host_dir: &std::path::Path) -> Result<SearchSe
 
 /// 启动每个本地 repo 的 watcher。
 pub(super) fn start_file_watchers(
-    repo: &deve_core::ledger::RepoManager,
     sync_manager: Arc<deve_core::sync::SyncManager>,
     tx: broadcast::Sender<ServerMessage>,
 ) -> Result<Vec<deve_core::models::RepoId>> {
     let mut ids = Vec::new();
-    for repo_name in repo.list_local_repo_names_for_execution()? {
+    for repo_name in sync_manager.healthy_local_repo_names_for_execution()? {
         let tx_clone = tx.clone();
         let callback = Arc::new(move |msg: ServerMessage| {
             if let ServerMessage::FsChangeDetected { .. } = &msg {

@@ -1,4 +1,6 @@
-// crates\core\src\sync
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!
 pub mod buffer;
 #[cfg(not(target_arch = "wasm32"))]
 mod dir_change;
@@ -22,6 +24,8 @@ mod pending_content;
 mod pending_rename;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod persist_guard;
+#[cfg(not(target_arch = "wasm32"))]
+mod projection_health;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_io;
 #[cfg(not(target_arch = "wasm32"))]
@@ -60,8 +64,9 @@ use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
 use persist_guard::PersistGuard;
 #[cfg(not(target_arch = "wasm32"))]
-use snapshot_policy::SnapshotPolicy;
+use projection_health::ProjectionHealth;
 #[cfg(not(target_arch = "wasm32"))]
+use snapshot_policy::SnapshotPolicy;
 use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
@@ -74,6 +79,7 @@ pub struct SyncManager {
     vfs: Vfs,
     dir_refresh_guard: DirRefreshGuard,
     persist_guard: Arc<PersistGuard>,
+    projection_health: ProjectionHealth,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -86,6 +92,7 @@ impl SyncManager {
             repo,
             vault_root,
             vfs,
+            projection_health: ProjectionHealth::new(),
         }
     }
 
@@ -97,12 +104,19 @@ impl SyncManager {
             repo,
             vault_root,
             vfs,
+            projection_health: ProjectionHealth::new(),
         })
     }
 
     pub fn scan(&self) -> Result<()> {
-        materialize::prepare_local_workspaces(&self.repo, &self.vault_root, &self.persist_guard)?;
-        scan::scan_vault(&self.repo, &self.vfs, &self.vault_root)
+        let degraded = materialize::prepare_local_workspaces(
+            &self.repo,
+            &self.vault_root,
+            &self.persist_guard,
+        )?;
+        let degraded_set = degraded.iter().cloned().collect();
+        self.replace_projection_degraded(&degraded);
+        scan::scan_vault_excluding(&self.repo, &self.vfs, &self.vault_root, &degraded_set)
     }
 
     pub fn reconcile_doc(&self, doc_id: DocId) -> Result<bool> {
@@ -220,6 +234,13 @@ impl SyncManager {
         else {
             return Ok(vec![]);
         };
+        if self.is_projection_degraded(&repo_name) {
+            tracing::warn!(
+                repo_name = %repo_name,
+                "Ignoring filesystem event for degraded local repo"
+            );
+            return Ok(vec![]);
+        }
         if repo_path.is_empty() {
             return Ok(vec![]);
         }
@@ -234,12 +255,50 @@ impl SyncManager {
 
     /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
     pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
-        materialize::materialize_local_repo(&self.repo, &self.persist_guard, repo_name)
+        match materialize::materialize_local_repo(&self.repo, &self.persist_guard, repo_name) {
+            Ok(()) => {
+                self.clear_projection_degraded(repo_name);
+                Ok(())
+            }
+            Err(err) => {
+                if materialize::is_broken_structure_projection_error(&err) {
+                    self.mark_projection_degraded(repo_name);
+                }
+                Err(err)
+            }
+        }
     }
 
     /// 显式强制重建指定 repo 的 Vault projection。
     pub fn rebuild_projection_local_repo(&self, repo_name: &str) -> Result<()> {
-        rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)
+        rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)?;
+        self.clear_projection_degraded(repo_name);
+        Ok(())
+    }
+
+    pub fn is_projection_degraded(&self, repo_name: &str) -> bool {
+        self.projection_health.is_degraded(repo_name)
+    }
+
+    pub fn healthy_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
+        Ok(self
+            .repo
+            .list_local_repo_names_for_execution()?
+            .into_iter()
+            .filter(|repo_name| !self.is_projection_degraded(repo_name))
+            .collect())
+    }
+
+    fn replace_projection_degraded(&self, repo_names: &[String]) {
+        self.projection_health.replace_degraded(repo_names);
+    }
+
+    fn mark_projection_degraded(&self, repo_name: &str) {
+        self.projection_health.mark_degraded(repo_name);
+    }
+
+    fn clear_projection_degraded(&self, repo_name: &str) {
+        self.projection_health.clear_degraded(repo_name);
     }
 }
 

@@ -45,6 +45,7 @@ pub async fn start_server(
         repo.clone(),
         vault_path.clone(),
     )?);
+    sync_manager.scan()?;
     host::set_sync_manager(sync_manager.clone())?;
 
     prewarm::spawn_prewarm(repo.clone());
@@ -63,7 +64,7 @@ pub async fn start_server(
 
     let sync_engine = build_sync_engine(peer_id.clone(), repo.clone(), sync_mode);
     let tree_manager = Arc::new(RepoTreeRegistry::new());
-    let watcher_ids = setup::start_file_watchers(repo.as_ref(), sync_manager.clone(), tx.clone())?;
+    let watcher_ids = setup::start_file_watchers(sync_manager.clone(), tx.clone())?;
 
     let app_state = Arc::new(AppState {
         repo: repo.clone(),

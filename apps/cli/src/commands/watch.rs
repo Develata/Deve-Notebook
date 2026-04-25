@@ -41,8 +41,9 @@ pub fn run(
         println!("Watcher dry-run OK: {:?}", vault_path);
         return Ok(());
     }
-    let repo_ids = repo
-        .list_local_repo_names_for_execution()?
+    sync_manager.scan()?;
+    let repo_ids = sync_manager
+        .healthy_local_repo_names_for_execution()?
         .into_iter()
         .map(|repo_name| {
             deve_core::sync::watcher::start_repo_watcher(

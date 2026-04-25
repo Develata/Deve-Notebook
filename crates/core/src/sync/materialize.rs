@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!
+
 use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;
@@ -11,21 +15,23 @@ pub(super) fn prepare_local_workspaces(
     repo: &RepoManager,
     _vault_root: &Path,
     guard: &PersistGuard,
-) -> Result<()> {
+) -> Result<Vec<String>> {
+    let mut skipped = Vec::new();
     for repo_name in repo.list_local_repo_names_for_execution()? {
         if let Err(err) = materialize_local_repo(repo, guard, &repo_name) {
-            if is_skippable_startup_projection_error(&err) {
+            if is_broken_structure_projection_error(&err) {
                 warn!(
                     repo_name = %repo_name,
                     error = %err,
                     "Sync startup skipped local repo with broken structure projection"
                 );
+                skipped.push(repo_name);
                 continue;
             }
             return Err(err);
         }
     }
-    Ok(())
+    Ok(skipped)
 }
 
 /// 将指定本地 repo 的文档视图投影到 `vault/<repo_name>/`。
@@ -72,7 +78,7 @@ pub(super) fn materialize_local_repo(
     Ok(())
 }
 
-fn is_skippable_startup_projection_error(err: &anyhow::Error) -> bool {
+pub(super) fn is_broken_structure_projection_error(err: &anyhow::Error) -> bool {
     let lower = err.to_string().to_ascii_lowercase();
     lower.contains("structure projection references missing parent")
         || lower.contains("structure projection rename references missing node")

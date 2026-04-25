@@ -60,8 +60,11 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
     let (dir, repo) = setup_repos();
     seed_main_file(repo.as_ref());
     inject_broken_structure(repo.as_ref());
+    let wiki_root = dir.path().join("vault/wiki");
+    std::fs::create_dir_all(&wiki_root).expect("wiki root");
+    std::fs::write(wiki_root.join("untracked.md"), "must stay unscanned").expect("wiki file");
 
-    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
     sync.scan().expect("startup scan should skip broken repo");
 
     assert_eq!(
@@ -69,4 +72,26 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
         "ok"
     );
     assert!(!dir.path().join("vault/wiki/orphan.md").exists());
+    assert!(sync.is_projection_degraded("wiki"));
+    assert!(!sync.is_projection_degraded("main"));
+    assert_eq!(
+        sync.healthy_local_repo_names_for_execution()
+            .expect("healthy repos"),
+        vec![String::from("main")]
+    );
+    assert!(
+        repo.list_pending_fs_in_local_repo("wiki")
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        sync.handle_fs_event("wiki/untracked.md")
+            .expect("ignored event")
+            .is_empty()
+    );
+    assert!(
+        repo.list_pending_fs_in_local_repo("wiki")
+            .unwrap()
+            .is_empty()
+    );
 }

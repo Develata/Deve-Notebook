@@ -67,8 +67,7 @@ pub async fn run(
         return Err(err.into());
     }
 
-    let (repo_arc, sync_manager) = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
-    sync_manager.scan()?;
+    let repo_arc = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
     let plugins = load_plugins()?;
 
     server::start_server(repo_arc, vault_path, port, plugins, profile, sync_mode).await?;

@@ -11,13 +11,10 @@ pub(super) fn init_runtime(
     ledger_dir: &PathBuf,
     vault_path: &PathBuf,
     snapshot_depth: usize,
-) -> anyhow::Result<(Arc<RepoManager>, deve_core::sync::SyncManager)> {
+) -> anyhow::Result<Arc<RepoManager>> {
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.set_vault_root_checked(vault_path)?;
-    let repo_arc = Arc::new(repo);
-    let sync_manager =
-        deve_core::sync::SyncManager::new_checked(repo_arc.clone(), vault_path.clone())?;
-    Ok((repo_arc, sync_manager))
+    Ok(Arc::new(repo))
 }
 
 pub(super) fn load_plugins()

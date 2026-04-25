@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 04_storage#watcher-contract
+//!   - 06_repository#tree-projection-contract
 
 use crate::ledger::RepoManager;
 use crate::models::DocId;
@@ -16,8 +17,24 @@ use walkdir::WalkDir;
 
 /// 全量扫描所有本地 repo 工作区：`vault/<repo_name>/...`
 pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Result<()> {
+    scan_vault_excluding(repo, vfs, vault_root, &HashSet::new())
+}
+
+pub(crate) fn scan_vault_excluding(
+    repo: &Arc<RepoManager>,
+    vfs: &Vfs,
+    vault_root: &Path,
+    excluded_repos: &HashSet<String>,
+) -> Result<()> {
     info!("SyncScan: Starting full scan of {:?}", vault_root);
     for repo_name in repo.list_local_repo_names_for_execution()? {
+        if excluded_repos.contains(&repo_name) {
+            warn!(
+                repo_name = %repo_name,
+                "SyncScan: Skipping degraded local repo"
+            );
+            continue;
+        }
         scan_local_repo(repo, vfs, &repo_name)?;
     }
     info!("SyncScan: Scan complete.");
