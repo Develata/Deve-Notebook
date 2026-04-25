@@ -1,5 +1,6 @@
 // apps\cli\src\commands
 use crate::server;
+use deve_core::config::{AppProfile, SyncMode};
 use deve_core::plugin::runtime::host;
 use reqwest::Client;
 use std::net::TcpListener;
@@ -14,6 +15,15 @@ mod serve_support;
 mod tests;
 use serve_support::{find_free_port, init_runtime, load_plugins};
 
+pub struct ServeOptions {
+    pub port: u16,
+    pub snapshot_depth: usize,
+    pub dev: bool,
+    pub dry_run: bool,
+    pub profile: AppProfile,
+    pub sync_mode: SyncMode,
+}
+
 /// 启动后端服务器
 ///
 /// **功能**:
@@ -24,12 +34,16 @@ use serve_support::{find_free_port, init_runtime, load_plugins};
 pub async fn run(
     ledger_dir: &PathBuf,
     vault_path: PathBuf,
-    port: u16,
-    snapshot_depth: usize,
-    dev: bool,
-    dry_run: bool,
-    profile: deve_core::config::AppProfile,
+    options: ServeOptions,
 ) -> anyhow::Result<()> {
+    let ServeOptions {
+        port,
+        snapshot_depth,
+        dev,
+        dry_run,
+        profile,
+        sync_mode,
+    } = options;
     if dev {
         if std::env::var("DEVE_ENV").is_err() {
             // 仅对当前 serve 进程显式开启开发模式；不恢复全局隐式 debug 授权。
@@ -57,7 +71,7 @@ pub async fn run(
     sync_manager.scan()?;
     let plugins = load_plugins()?;
 
-    server::start_server(repo_arc, vault_path, port, plugins, profile).await?;
+    server::start_server(repo_arc, vault_path, port, plugins, profile, sync_mode).await?;
     Ok(())
 }
 

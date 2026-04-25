@@ -24,9 +24,6 @@ pub(super) async fn handle_request(
         return;
     };
 
-    let Some(engine) = engine::load_strict(state, ch, repo_id, scope) else {
-        return;
-    };
     tracing::info!("Handling SnapshotRequest from {}", source_peer);
 
     let request = deve_core::sync::protocol::SyncSnapshotRequest {
@@ -34,8 +31,16 @@ pub(super) async fn handle_request(
         repo_id,
     };
 
-    match engine.get_snapshot_for_sync(&request) {
-        Ok(response) => {
+    let Some(snapshot) = engine::with_strict(state, ch, repo_id, scope, |engine| {
+        engine
+            .get_snapshot_for_sync(&request)
+            .map(|response| (engine.local_peer_id.clone(), response))
+    }) else {
+        return;
+    };
+
+    match snapshot {
+        Ok((local_peer_id, response)) => {
             let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope)
             else {
                 return;
@@ -46,7 +51,7 @@ pub(super) async fn handle_request(
                 source_peer
             );
             ch.unicast(ServerMessage::SyncPushSnapshot {
-                peer_id: engine.local_peer_id.clone(),
+                peer_id: local_peer_id,
                 repo_id: response.repo_id,
                 scope_nonce: delivery_scope_nonce,
                 branch: session.active_branch.clone(),
@@ -75,9 +80,6 @@ pub(super) async fn handle_push(
         return;
     };
 
-    let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
-        return;
-    };
     tracing::info!(
         "Handling PushSnapshot from {} ({} ops)",
         source_peer,
@@ -90,12 +92,14 @@ pub(super) async fn handle_push(
         ops,
     };
 
-    match engine.apply_remote_snapshot(response) {
-        Ok(seq) => tracing::info!(
-            "Applied snapshot from {}. Updated VV to seq {}",
-            source_peer,
-            seq
-        ),
+    let Some(applied) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
+        engine.receive_remote_snapshot(response)
+    }) else {
+        return;
+    };
+
+    match applied {
+        Ok(count) => tracing::info!("Handled snapshot from {} with {} ops", source_peer, count),
         Err(e) => {
             tracing::error!("Failed to apply snapshot from {}: {:?}", source_peer, e);
             errors::sync_apply_failed(ch, format!("Failed to apply snapshot: {}", e), scope);

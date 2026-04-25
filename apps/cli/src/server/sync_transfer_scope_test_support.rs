@@ -15,6 +15,12 @@ use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
+    build_state_with_mode(SyncMode::Auto)
+}
+
+pub(super) fn build_state_with_mode(
+    sync_mode: SyncMode,
+) -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
@@ -33,7 +39,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
             sync_engine: Arc::new(RepoScopedSyncEngine::new(
                 PeerId::new("test-peer"),
                 repo,
-                SyncMode::Auto,
+                sync_mode,
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]

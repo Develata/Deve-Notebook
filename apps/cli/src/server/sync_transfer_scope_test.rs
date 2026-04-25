@@ -2,14 +2,17 @@
 //!   - 05_network#server-ws-runtime
 //!   - 06_repository#repo-scope-runtime
 
-use super::handlers::sync::{handle_sync_request, handle_sync_snapshot_request};
+use super::handlers::sync::{handle_sync_push, handle_sync_request, handle_sync_snapshot_request};
 use super::sync_transfer_scope_test_support::{
     append_local_doc, assert_sync_binding_cleared, bound_session, build_state,
+    build_state_with_mode,
     recv_protocol_error, recv_sync_push_nonce, recv_sync_snapshot_nonce, sync_range,
     unicast_channel,
 };
+use deve_core::config::SyncMode;
 use deve_core::models::PeerId;
 use deve_core::protocol::ServerErrorCode;
+use deve_core::security::EncryptedOp;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn non_browser_sync_request_uses_bound_sync_scope_nonce_for_push() -> anyhow::Result<()> {
@@ -66,5 +69,34 @@ async fn non_browser_sync_request_rejects_missing_authenticated_peer_even_when_r
     let error = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
     assert_sync_binding_cleared(&session);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn manual_sync_push_buffers_without_applying_remote_ops() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state_with_mode(SyncMode::Manual)?;
+    let peer = PeerId::new("peer-a");
+    let (ch, _rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(peer.clone()), Some(31));
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        repo_id,
+        vec![EncryptedOp {
+            doc_id: None,
+            seq: 1,
+            ciphertext: vec![1, 2, 3],
+            nonce: vec![0; 12],
+        }],
+    )
+    .await;
+
+    let pending = state
+        .sync_engine
+        .with_strict_engine(repo_id, |engine| engine.pending_ops_count())?;
+    assert_eq!(pending, 1);
+    assert_eq!(state.repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
     Ok(())
 }

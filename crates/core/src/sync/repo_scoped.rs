@@ -46,34 +46,73 @@ impl RepoScopedSyncEngine {
         }
     }
 
+    pub fn sync_mode(&self) -> crate::config::SyncMode {
+        self.sync_mode
+    }
+
     /// 严格获取指定仓库的 SyncEngine。
     ///
     /// Invariants:
     /// - repo-scoped sync engine 进入传输链前必须已加载有效 `RepoKey`。
     /// - 严格路径不得缓存 `repo_key = None` 的 engine。
     pub fn get_or_create_strict(&self, repo_id: RepoId) -> Result<SyncEngine> {
-        let engines = self
-            .engines
-            .read()
-            .map_err(|_| anyhow!("RepoScopedSyncEngine read lock poisoned"))?;
+        self.ensure_strict_engine_loaded(repo_id)?;
+        let engines = self.read_engines_result()?;
+        let engine = engines
+            .get(&repo_id)
+            .ok_or_else(|| anyhow!("RepoScopedSyncEngine missing loaded repo {}", repo_id))?;
+        if engine.repo_key.is_none() {
+            return Err(anyhow!("RepoScopedSyncEngine missing repo key {}", repo_id));
+        }
+        Ok(engine.clone())
+    }
+
+    pub fn with_strict_engine<F, R>(&self, repo_id: RepoId, f: F) -> Result<R>
+    where
+        F: FnOnce(&SyncEngine) -> R,
+    {
+        self.ensure_strict_engine_loaded(repo_id)?;
+        let engines = self.read_engines_result()?;
+        let engine = engines
+            .get(&repo_id)
+            .ok_or_else(|| anyhow!("RepoScopedSyncEngine missing loaded repo {}", repo_id))?;
+        if engine.repo_key.is_none() {
+            return Err(anyhow!("RepoScopedSyncEngine missing repo key {}", repo_id));
+        }
+        Ok(f(engine))
+    }
+
+    pub fn with_strict_engine_mut<F, R>(&self, repo_id: RepoId, f: F) -> Result<R>
+    where
+        F: FnOnce(&mut SyncEngine) -> R,
+    {
+        self.ensure_strict_engine_loaded(repo_id)?;
+        let mut engines = self.write_engines_result()?;
+        let engine = engines
+            .get_mut(&repo_id)
+            .ok_or_else(|| anyhow!("RepoScopedSyncEngine missing loaded repo {}", repo_id))?;
+        if engine.repo_key.is_none() {
+            return Err(anyhow!("RepoScopedSyncEngine missing repo key {}", repo_id));
+        }
+        Ok(f(engine))
+    }
+
+    fn ensure_strict_engine_loaded(&self, repo_id: RepoId) -> Result<()> {
+        let engines = self.read_engines_result()?;
         if let Some(engine) = engines.get(&repo_id)
             && engine.repo_key.is_some()
         {
-            return Ok(engine.clone());
+            return Ok(());
         }
         drop(engines);
-
         let repo_key = self.load_repo_key_strict(repo_id)?;
-        let mut engines = self
-            .engines
-            .write()
-            .map_err(|_| anyhow!("RepoScopedSyncEngine write lock poisoned"))?;
+        let mut engines = self.write_engines_result()?;
 
         if let Some(engine) = engines.get_mut(&repo_id) {
             if engine.repo_key.is_none() {
-                engine.repo_key = Some(repo_key.clone());
+                engine.repo_key = Some(repo_key);
             }
-            return Ok(engine.clone());
+            return Ok(());
         }
 
         let engine = SyncEngine::new(
@@ -82,8 +121,8 @@ impl RepoScopedSyncEngine {
             self.sync_mode,
             Some(repo_key),
         );
-        engines.insert(repo_id, engine.clone());
-        Ok(engine)
+        engines.insert(repo_id, engine);
+        Ok(())
     }
 
     pub fn get(&self, repo_id: RepoId) -> Option<SyncEngine> {

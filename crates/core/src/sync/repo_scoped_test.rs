@@ -6,6 +6,37 @@ use std::fs;
 use std::sync::Arc;
 
 #[test]
+fn constructor_preserves_configured_sync_mode() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_vault_root(&vault);
+
+    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Manual);
+
+    assert_eq!(engine.sync_mode(), SyncMode::Manual);
+    Ok(())
+}
+
+#[test]
+fn strict_engine_mutation_persists_in_registry() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_vault_root(&vault);
+    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+
+    engine.with_strict_engine_mut(repo_id, |engine| {
+        engine.set_sync_mode(SyncMode::Manual);
+    })?;
+
+    let loaded = engine.get_or_create_strict(repo_id)?;
+    assert_eq!(loaded.sync_mode(), SyncMode::Manual);
+    Ok(())
+}
+
+#[test]
 fn strict_engine_load_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let vault = dir.path().join("vault");

@@ -4,7 +4,7 @@
 //! Manual merge pending-operation handlers.
 
 use super::errors;
-use super::manual_support::load_engine;
+use super::manual_support::{with_engine, with_engine_mut};
 use super::scope::{resolve_read_repo_id, resolve_write_repo_id};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::protocol::ServerMessage;
@@ -20,10 +20,11 @@ pub(super) async fn handle_get_pending_ops(
     let Some(repo_id) = resolve_read_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(engine) = load_engine(state, ch, repo_id, scope_nonce) else {
+    let Some(pending_count) = with_engine(state, ch, repo_id, scope_nonce, |engine| {
+        engine.pending_ops_count()
+    }) else {
         return;
     };
-    let pending_count = engine.pending_ops_count();
     let previews = if pending_count > 0 {
         vec![(
             "(pending operations)".to_string(),
@@ -52,10 +53,12 @@ pub(super) async fn handle_confirm_merge(
     let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(mut engine) = load_engine(state, ch, repo_id, scope_nonce) else {
+    let Some(merged) = with_engine_mut(state, ch, repo_id, scope_nonce, |engine| {
+        engine.merge_pending()
+    }) else {
         return;
     };
-    match engine.merge_pending() {
+    match merged {
         Ok(count) => {
             tracing::info!("Merged {} pending operations", count);
             ch.broadcast(ServerMessage::MergeComplete {
@@ -81,10 +84,13 @@ pub(super) async fn handle_discard_pending(
     let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(mut engine) = load_engine(state, ch, repo_id, scope_nonce) else {
+    if with_engine_mut(state, ch, repo_id, scope_nonce, |engine| {
+        engine.clear_pending();
+    })
+    .is_none()
+    {
         return;
     };
-    engine.clear_pending();
     tracing::info!("Discarded all pending operations");
     ch.unicast(ServerMessage::PendingDiscarded {
         repo_id: Some(repo_id),

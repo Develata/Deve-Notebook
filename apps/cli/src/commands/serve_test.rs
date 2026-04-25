@@ -1,6 +1,6 @@
-use super::{detect_main_port, run};
+use super::{ServeOptions, detect_main_port, run};
 use axum::{Router, routing::get};
-use deve_core::config::AppProfile;
+use deve_core::config::{AppProfile, SyncMode};
 use std::net::{SocketAddr, TcpListener};
 use tempfile::TempDir;
 
@@ -52,11 +52,14 @@ async fn serve_dry_run_validates_runtime_without_binding() {
     run(
         &ledger_dir,
         vault_dir,
-        free_port(),
-        8,
-        false,
-        true,
-        AppProfile::Standard,
+        ServeOptions {
+            port: free_port(),
+            snapshot_depth: 8,
+            dev: false,
+            dry_run: true,
+            profile: AppProfile::Standard,
+            sync_mode: SyncMode::Auto,
+        },
     )
     .await
     .expect("serve dry-run");

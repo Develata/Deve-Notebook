@@ -23,11 +23,14 @@ pub async fn run(
             commands::serve::run(
                 ledger_dir,
                 vault_path.to_path_buf(),
-                port,
-                config.snapshot_depth,
-                dev,
-                dry_run,
-                config.profile,
+                commands::serve::ServeOptions {
+                    port,
+                    snapshot_depth: config.snapshot_depth,
+                    dev,
+                    dry_run,
+                    profile: config.profile,
+                    sync_mode: config.sync_mode,
+                },
             )
             .await?
         }

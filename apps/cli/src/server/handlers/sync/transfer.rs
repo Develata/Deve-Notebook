@@ -25,32 +25,37 @@ pub(super) async fn handle_request(
         return;
     }
 
-    let Some(engine) = engine::load_strict(state, ch, repo_id, scope) else {
-        return;
-    };
-    let mut ops_to_push = Vec::new();
-
-    for (peer_id, range) in requests {
-        let sync_req = sync_proto::SyncRequest {
-            peer_id,
-            repo_id,
-            range,
-        };
-        match engine.get_ops_for_sync(&sync_req) {
-            Ok(response) => ops_to_push.extend(response.ops),
-            Err(err) => {
-                errors::classified_failure(
-                    ch,
-                    format!(
-                        "Failed to build sync response for repo {}: {}",
-                        repo_id, err
-                    ),
-                    scope,
-                );
-                return;
+    let Some(responses) = engine::with_strict(state, ch, repo_id, scope, |engine| {
+        let mut ops_to_push = Vec::new();
+        for (peer_id, range) in requests {
+            let sync_req = sync_proto::SyncRequest {
+                peer_id,
+                repo_id,
+                range,
+            };
+            match engine.get_ops_for_sync(&sync_req) {
+                Ok(response) => ops_to_push.extend(response.ops),
+                Err(err) => return Err(err),
             }
         }
-    }
+        Ok(ops_to_push)
+    }) else {
+        return;
+    };
+    let ops_to_push = match responses {
+        Ok(ops) => ops,
+        Err(err) => {
+            errors::classified_failure(
+                ch,
+                format!(
+                    "Failed to build sync response for repo {}: {}",
+                    repo_id, err
+                ),
+                scope,
+            );
+            return;
+        }
+    };
 
     if !ops_to_push.is_empty() {
         let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope) else {
@@ -79,18 +84,20 @@ pub(super) async fn handle_push(
         return;
     };
 
-    let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
-        return;
-    };
-
     let response = sync_proto::SyncResponse {
         peer_id: source_peer,
         repo_id,
         ops,
     };
 
-    match engine.apply_remote_ops(response) {
-        Ok(count) => tracing::info!("Applied {} ops for repo {}", count, repo_id),
+    let Some(applied) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
+        engine.receive_remote_ops(response)
+    }) else {
+        return;
+    };
+
+    match applied {
+        Ok(count) => tracing::info!("Handled {} remote ops for repo {}", count, repo_id),
         Err(e) => {
             tracing::error!("Failed to apply ops for repo {}: {:?}", repo_id, e);
             errors::sync_apply_failed(

@@ -66,7 +66,7 @@ pub enum SyncMode {
     /// 自动模式：后台自动拉取与合并（无冲突时）
     #[default]
     Auto,
-    /// 手动模式：仅交换 Vector，Fetch/Merge 必须显式触发
+    /// 手动模式：接收 payload 后暂存，Merge 必须显式确认
     Manual,
 }
 

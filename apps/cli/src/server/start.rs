@@ -7,9 +7,11 @@ use super::{
     AppState, ai_chat, metrics, node_role, notegit, plugin_host, prewarm, router, security, setup,
     static_files, tree_state::RepoTreeRegistry,
 };
+use deve_core::config::{AppProfile, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::{PluginRuntime, host};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+use deve_core::{models::PeerId, sync::repo_scoped};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -19,8 +21,8 @@ pub async fn start_server(
     vault_path: std::path::PathBuf,
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
-    #[cfg_attr(not(feature = "search"), allow(unused_variables))]
-    profile: deve_core::config::AppProfile,
+    #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
+    sync_mode: SyncMode,
 ) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
@@ -59,11 +61,7 @@ pub async fn start_server(
     let peer_id = key_pair.peer_id();
     tracing::info!("Server PeerID: {}", peer_id);
 
-    let sync_engine = Arc::new(RepoScopedSyncEngine::new(
-        peer_id.clone(),
-        repo.clone(),
-        deve_core::config::SyncMode::Auto,
-    ));
+    let sync_engine = build_sync_engine(peer_id.clone(), repo.clone(), sync_mode);
     let tree_manager = Arc::new(RepoTreeRegistry::new());
     let watcher_ids = setup::start_file_watchers(repo.as_ref(), sync_manager.clone(), tx.clone())?;
 
@@ -99,9 +97,21 @@ pub async fn start_server(
     Ok(())
 }
 
+pub(super) fn build_sync_engine(
+    peer_id: PeerId,
+    repo: Arc<RepoManager>,
+    sync_mode: SyncMode,
+) -> Arc<repo_scoped::RepoScopedSyncEngine> {
+    Arc::new(RepoScopedSyncEngine::new(peer_id, repo, sync_mode))
+}
+
 pub async fn start_plugin_host_only(
     plugins: Vec<Box<dyn PluginRuntime>>,
     port: u16,
 ) -> anyhow::Result<()> {
     plugin_host::start_plugin_host_only(plugins, port).await
 }
+
+#[cfg(test)]
+#[path = "start_test.rs"]
+mod tests;

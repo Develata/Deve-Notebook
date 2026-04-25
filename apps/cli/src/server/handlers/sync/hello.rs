@@ -54,20 +54,24 @@ pub(super) async fn handle(
         return;
     }
 
-    let Some(mut engine) = engine::load_strict(state, ch, repo_id, scope) else {
+    let Some(handshake) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
+        let local_peer_id = engine.local_peer_id.clone();
+        let local_vector = engine.version_vector().clone();
+        engine
+            .handshake(
+                repo_id,
+                peer_id.clone(),
+                &pub_key,
+                &signature,
+                remote_vector,
+            )
+            .map(|result| (local_peer_id, local_vector, engine.clone(), result))
+    }) else {
         clear_sync_hello_scope_failure(session, false);
         return;
     };
-    let local_peer_id = engine.local_peer_id.clone();
-    let local_vector = engine.version_vector().clone();
-    let result = match engine.handshake(
-        repo_id,
-        peer_id.clone(),
-        &pub_key,
-        &signature,
-        remote_vector,
-    ) {
-        Ok(res) => res,
+    let (local_peer_id, local_vector, outbound_engine, result) = match handshake {
+        Ok(result) => result,
         Err(e) => {
             clear_sync_hello_scope_failure(session, false);
             tracing::error!("Handshake failed with {}: {}", peer_id, e);
@@ -115,5 +119,13 @@ pub(super) async fn handle(
         return;
     }
 
-    hello_outbound::send(ch, session, &engine, result, repo_id, scope, scope_nonce);
+    hello_outbound::send(
+        ch,
+        session,
+        &outbound_engine,
+        result,
+        repo_id,
+        scope,
+        scope_nonce,
+    );
 }

@@ -20,14 +20,41 @@ pub(super) fn sync_mode_label(mode: SyncMode) -> String {
     .to_string()
 }
 
-pub(super) fn load_engine(
+pub(super) fn with_engine<F, R>(
     state: &Arc<AppState>,
     ch: &DualChannel,
     repo_id: RepoId,
     scope_nonce: Option<u64>,
-) -> Option<SyncEngine> {
-    match state.sync_engine.get_or_create_strict(repo_id) {
-        Ok(engine) => Some(engine),
+    f: F,
+) -> Option<R>
+where
+    F: FnOnce(&SyncEngine) -> R,
+{
+    match state.sync_engine.with_strict_engine(repo_id, f) {
+        Ok(result) => Some(result),
+        Err(err) => {
+            errors::classified_failure(
+                ch,
+                format!("Failed to get sync engine for repo {}: {}", repo_id, err),
+                scope_nonce,
+            );
+            None
+        }
+    }
+}
+
+pub(super) fn with_engine_mut<F, R>(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    repo_id: RepoId,
+    scope_nonce: Option<u64>,
+    f: F,
+) -> Option<R>
+where
+    F: FnOnce(&mut SyncEngine) -> R,
+{
+    match state.sync_engine.with_strict_engine_mut(repo_id, f) {
+        Ok(result) => Some(result),
         Err(err) => {
             errors::classified_failure(
                 ch,
