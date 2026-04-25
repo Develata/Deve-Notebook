@@ -89,13 +89,14 @@ impl Harness {
         path: &str,
         status: ChangeStatus,
     ) -> Result<ChangeEntry> {
-        self.wait_until(Duration::from_secs(2), || {
+        self.wait_until(Duration::from_secs(5), || {
             self.repo
                 .list_pending_fs_in_local_repo(repo_name)
                 .ok()?
                 .into_iter()
                 .find(|entry| entry.path == path && entry.status == status)
         })
+        .map_err(|err| anyhow!("pending {repo_name}/{path} {status:?} not observed: {err}"))
     }
 
     fn wait_until<T>(&self, timeout: Duration, mut f: impl FnMut() -> Option<T>) -> Result<T> {

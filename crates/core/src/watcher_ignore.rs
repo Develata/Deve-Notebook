@@ -1,4 +1,7 @@
 // crates/core/src/watcher_ignore.rs
+//! plan_ref:
+//!   - 04_storage#watcher-contract
+//!
 //! # 用户自定义忽略规则
 //!
 //! 解析 vault 根下的 `.deveignore` 文件，格式兼容 `.gitignore`。

@@ -69,16 +69,24 @@
     - file_contains: "---"
 
 - case_id: STORE-007
-  goal: Watcher 事件映射。
+  goal: Watcher 事件映射与目录 scan 过滤。
   preconditions:
-    - watch 运行中
+    - watch 运行中并监听 local repo: main
+    - 已跟踪文件存在: ${DEVE_DATA_DIR}/vault/main/notes/live.md
+    - 已跟踪文件存在: ${DEVE_DATA_DIR}/vault/main/notes/delete.md
+    - ${DEVE_DATA_DIR}/vault/.deveignore 包含: ignored/*.md
   steps:
-    - run: powershell -Command "'a' | Set-Content ${DEVE_DATA_DIR}/vault/a.md"
-    - run: powershell -Command "Remove-Item ${DEVE_DATA_DIR}/vault/a.md"
+    - run: powershell -Command "'new' | Set-Content ${DEVE_DATA_DIR}/vault/main/notes/new.md"
+    - run: powershell -Command "'dirty' | Set-Content ${DEVE_DATA_DIR}/vault/main/notes/live.md"
+    - run: powershell -Command "Remove-Item ${DEVE_DATA_DIR}/vault/main/notes/delete.md"
+    - run: powershell -Command "New-Item -ItemType Directory -Force ${DEVE_DATA_DIR}/vault/main/ignored"
+    - run: powershell -Command "'ignored' | Set-Content ${DEVE_DATA_DIR}/vault/main/ignored/scratch.md"
   assertions:
-    - pending_fs_ops_contains: "create"
-    - pending_fs_ops_contains: "delete"
-    - ledger_op_not_appended: "a.md"
+    - pending_fs_ops_contains: "notes/new.md:Added"
+    - pending_fs_ops_contains: "notes/live.md:Modified"
+    - pending_fs_ops_contains: "notes/delete.md:Deleted"
+    - pending_fs_ops_not_contains: "ignored/scratch.md"
+    - ledger_op_not_appended: "notes/new.md"
 
 - case_id: STORE-008
   goal: 数据恢复策略。

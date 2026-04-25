@@ -48,16 +48,22 @@
     - stdout_eq: "doc_id_before == doc_id_after"
 
 - case_id: POS-005
-  goal: `.deveignore` 生效。
+  goal: `.deveignore` 对 watcher 与 startup scan 均生效。
   preconditions:
-    - 文件存在: ${DEVE_DATA_DIR}/vault/.deveignore
+    - 已初始化 local repo: main
   steps:
-    - run: powershell -Command "'*.tmp' | Set-Content -Path ${DEVE_DATA_DIR}/vault/.deveignore"
-    - run: powershell -Command "'x' | Set-Content -Path ${DEVE_DATA_DIR}/vault/ignored.tmp"
+    - run: powershell -Command "'ignored/*.md' | Set-Content -Path ${DEVE_DATA_DIR}/vault/.deveignore"
+    - run: powershell -Command "New-Item -ItemType Directory -Force ${DEVE_DATA_DIR}/vault/main/ignored"
+    - run: powershell -Command "'x' | Set-Content -Path ${DEVE_DATA_DIR}/vault/main/ignored/scratch.md"
+    - run: start-background deve watch
+    - run: powershell -Command "'y' | Set-Content -Path ${DEVE_DATA_DIR}/vault/main/ignored/later.md"
     - run: powershell -Command "Start-Sleep -Milliseconds 500"
   assertions:
-    - ledger_op_not_appended: "ignored.tmp"
-    - tree_not_contains: "ignored.tmp"
+    - pending_fs_ops_not_contains: "ignored/scratch.md"
+    - pending_fs_ops_not_contains: "ignored/later.md"
+    - ledger_op_not_appended: "ignored/scratch.md"
+    - ledger_op_not_appended: "ignored/later.md"
+    - tree_not_contains: "ignored/scratch.md"
 
 - case_id: POS-006
   goal: 核心禁止项不默认启用。

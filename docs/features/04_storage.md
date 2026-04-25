@@ -20,6 +20,7 @@
 
 - 外部编辑器或文件系统导致的偏差，应以工作区变更形式出现。
 - 用户应能区分“工作区有变化”和“已经提交到权威状态”。
+- `.deveignore` 命中的外部路径不应由 watcher/scan 加入工作区变更列表，即使它们在 watcher 启动前已存在或由目录事件触发了扫描。
 
 ### 3. 异常恢复
 
@@ -88,3 +89,21 @@
 
 - 健康 repo 正常可用。
 - 损坏 repo 不会把整个应用拖入不可用状态。
+
+### STORAGE-FEAT-04: 忽略文件不经 watcher 进入工作区变更
+
+前置条件：
+
+- Vault 根目录包含 `.deveignore`，规则匹配某个 repo 下的 Markdown 路径。
+
+步骤：
+
+1. 在 watcher 启动前创建一个被忽略的 Markdown 文件。
+2. 启动应用或 watcher。
+3. 再创建另一个同样被忽略的 Markdown 文件。
+4. 打开 Source Control / 工作区变更列表。
+
+期望结果：
+
+- 两个 ignored 文件都不出现在 pending / staged / committed 变化中。
+- 文件树不把 ignored 文件当作可同步笔记。

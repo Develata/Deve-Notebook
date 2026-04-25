@@ -93,6 +93,7 @@ Staged -> Unstaged
 补充：
 
 - watcher MUST 忽略 `.notegit/`
+- watcher、startup scan、directory rescan MUST 统一应用 `.deveignore`；ignored path 不得生成 pending / staged / ledger diff。
 - `pending_fs_ops` MUST 表示 Working Directory Domain
 - `staging` MUST 表示用户确认后的过渡域，而非已提交历史
 

@@ -113,6 +113,28 @@ fn dispatch_batch_respects_deveignore_for_matching_markdown() -> anyhow::Result<
 }
 
 #[test]
+fn dispatch_batch_respects_deveignore_during_dir_rescan() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    let vault_root = repo_root.parent().expect("vault root");
+    std::fs::write(vault_root.join(".deveignore"), "ignored/*.md\n")?;
+    let ignored_dir = repo_root.join("ignored");
+    std::fs::create_dir_all(&ignored_dir)?;
+    std::fs::write(ignored_dir.join("scratch.md"), "ignored")?;
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![event_for(ignored_dir)],
+        None,
+    )?;
+
+    assert!(repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
+    Ok(())
+}
+
+#[test]
 fn dispatch_batch_allows_deveignore_non_matching_markdown() -> anyhow::Result<()> {
     let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
     let vault_root = repo_root.parent().expect("vault root");

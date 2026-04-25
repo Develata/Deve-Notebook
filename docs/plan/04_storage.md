@@ -311,13 +311,15 @@ FsEvent
 ### 6.2 Path B: Watcher / External Edit Ingestion
 
 1. watcher 捕获文件系统事件。
-2. 经 debounce、路径归一化、inode 解析后写入 `pending_fs_ops`。
-3. 仅暴露 working directory 偏差，不改变 authority。
+2. 经 debounce、路径归一化、`.deveignore` / internal path 过滤、inode 解析后写入 `pending_fs_ops`。
+3. 非文档目录事件只允许触发 repo-scoped scan；scan 必须复用同一套忽略规则。
+4. 仅暴露 working directory 偏差，不改变 authority。
 
 规则：
 
 - watcher 事件 MUST NOT 直接写 ledger。
 - delete / rename / move 必须先成为候选，再经 Stage / Commit 进入结构事实。
+- ignored path MUST NOT 通过 watcher/scan 反向摄入到 `pending_fs_ops`、tree projection 或 ledger。
 
 ### 6.3 Path C: Stage -> Commit
 
@@ -364,7 +366,7 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 ## 8. Watcher Contract {#watcher-contract}
 
-> **Code Refs**: `crates/core/src/watcher.rs`, `crates/core/src/sync/watcher/` (mod, filter, dispatch, registry, suppressor, backend/*), `crates/core/src/source_control/pending_fs.rs`, `crates/core/tests/watcher_*.rs`
+> **Code Refs**: `crates/core/src/watcher.rs`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/sync/scan.rs`, `crates/core/src/sync/watcher/` (mod, filter, dispatch, registry, suppressor, backend/*), `crates/core/src/source_control/pending_fs.rs`, `crates/core/tests/watcher_*.rs`
 
 ### 8.1 Backend Abstraction
 
@@ -375,25 +377,33 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - watcher_start 是 repo open 的最后一步。
 - 启动前必须执行一次全量 scan。
+- startup scan MUST load vault-root `.deveignore` and skip ignored markdown before creating pending candidates.
 - scan 与 watcher 首批事件之间的去重必须由 side table 幂等性保证。
 
-### 8.3 Self-Write Suppression
+### 8.3 Ignore and Path Filtering
+
+- `.deveignore` lives at vault root and MUST be evaluated consistently for direct watcher events, directory-change rescans, and startup scans.
+- Ignore matching MUST accept both vault-relative path (`<repo>/<path>`) and repo-relative path (`<path>`) so repo-local and vault-wide patterns behave predictably.
+- `.notegit/` and other internal repo path segments MUST be ignored by segment semantics; sibling names such as `.notegit-backup` MUST NOT be rejected by prefix accident.
+- Ignored markdown MUST NOT create `Added`, `Modified`, `Deleted`, or rename pending entries through watcher/scan, and MUST NOT be treated as a missing tracked doc during scan.
+
+### 8.4 Self-Write Suppression
 
 - projection/persist_doc/commit apply 写盘前必须向 repo-local `WriteSuppressor` 注册写回指纹。
 - watcher 在匹配窗口内必须丢弃自写事件。
 - suppressor 状态必须 repo-local，禁止全局共享。
 
-### 8.4 Overflow Recovery
+### 8.5 Overflow Recovery
 
 - queue overflow / dropped events 时，watcher MUST 触发全量 reconcile。
 - reconcile 完成前 MUST 暂停继续消费增量事件。
 
-### 8.5 Lifecycle
+### 8.6 Lifecycle
 
 - repo close / switch MUST 停止对应 watcher 并 drain 事件。
 - 同一 repo MUST NOT 同时存在多个 watcher。
 
-### 8.6 Debounce and Atomic Write Semantics
+### 8.7 Debounce and Atomic Write Semantics
 
 - debounce window SHOULD 为 `50ms-200ms`
 - debounce window MUST NOT 为 `0`
