@@ -1,8 +1,6 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
 //!
-//! Shared end-to-end WebSocket protocol acceptance harness.
-
 use super::{router, sync_hello_test_support::build_state};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ClientMessage, ServerMessage};
@@ -26,27 +24,29 @@ pub(super) struct WsHarness {
     _dir: TempDir,
     pub(super) repo_id: uuid::Uuid,
     pub(super) local_peer_id: PeerId,
-    ws_url: String,
+    pub(super) ws_url: String,
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
 }
 
 impl WsHarness {
     pub(super) async fn spawn() -> anyhow::Result<Self> {
+        Self::spawn_with_anonymous_localhost(true).await
+    }
+
+    pub(super) async fn spawn_with_anonymous_localhost(allow_anonymous_localhost: bool) -> anyhow::Result<Self> {
         let (dir, state, repo_id) = build_state()?;
         let local_peer_id = state.identity_key.peer_id();
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         let addr = listener.local_addr()?;
         let mut auth_config = AuthConfig::dev_default()?;
-        auth_config.allow_anonymous_localhost = true;
+        auth_config.allow_anonymous_localhost = allow_anonymous_localhost;
         let app = router::build_app(state, addr.port(), Arc::new(auth_config))?
             .into_make_service_with_connect_info::<SocketAddr>();
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let task = tokio::spawn(async move {
             axum::serve(listener, app)
-                .with_graceful_shutdown(async {
-                    let _ = shutdown_rx.await;
-                })
+                .with_graceful_shutdown(async { let _ = shutdown_rx.await; })
                 .await
                 .expect("serve ws protocol harness");
         });

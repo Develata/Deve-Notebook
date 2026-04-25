@@ -6,6 +6,7 @@
 use super::ws_protocol_acceptance_support::{
     WsHarness, connect_harness, recv_server_message, send_client_message,
 };
+use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse};
 use deve_core::protocol::frame::{WS_PROTOCOL_VERSION, encode_client_binary_with_version};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use futures::SinkExt;
@@ -21,6 +22,22 @@ async fn ws_endpoint_roundtrips_versioned_binary_ping() -> anyhow::Result<()> {
         recv_server_message(&mut ws).await?,
         ServerMessage::Pong
     ));
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ws_endpoint_unauthorized_response_is_structured_json() -> anyhow::Result<()> {
+    let harness = WsHarness::spawn_with_anonymous_localhost(false).await?;
+    let client = reqwest::Client::builder().no_proxy().build()?;
+    let response = client
+        .get(harness.ws_url.replacen("ws://", "http://", 1))
+        .send()
+        .await?;
+
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+    let payload = response.json::<AuthErrorResponse>().await?;
+    assert_eq!(payload.code, AuthErrorCode::TokenMissing);
     harness.shutdown().await;
     Ok(())
 }

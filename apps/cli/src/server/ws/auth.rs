@@ -4,17 +4,27 @@
 //! WebSocket browser-session admission policy.
 
 use axum::http::request::Parts;
+use deve_core::protocol::auth::AuthErrorCode;
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
-pub(super) fn is_browser_session_request(config: &AuthConfig, req: &Parts) -> bool {
-    let authed = cookie_token(req).as_deref().is_some_and(|token| {
+pub(super) fn browser_session_admission(
+    config: &AuthConfig,
+    req: &Parts,
+) -> Result<(), AuthErrorCode> {
+    let token = cookie_token(req);
+    let authed = token.as_deref().is_some_and(|token| {
         jwt::validate_token(&config.secret, token, config.token_version).is_ok()
     });
-    is_browser_session_connection(
+    if is_browser_session_connection(
         authed,
         config.allow_anonymous_localhost,
         is_local_request(req),
-    )
+    ) {
+        return Ok(());
+    }
+    Err(token
+        .map(|_| AuthErrorCode::TokenExpired)
+        .unwrap_or(AuthErrorCode::TokenMissing))
 }
 
 pub(super) fn is_browser_session_connection(

@@ -1,8 +1,10 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
+//!   - 09_auth#unauthorized-handling
 //!
 //! Authenticated WebSocket upgrade and session runtime entrypoint.
 
+use axum::Json;
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use futures::StreamExt;
@@ -11,6 +13,7 @@ use std::sync::Arc;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
+use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse};
 use deve_core::security::auth::config::AuthConfig;
 
 mod auth;
@@ -28,13 +31,20 @@ pub async fn ws_handler(
     axum::Extension(config): axum::Extension<Arc<AuthConfig>>,
     req: axum::http::request::Parts,
 ) -> impl IntoResponse {
-    let browser_session = auth::is_browser_session_request(&config, &req);
-    if !browser_session {
-        return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    if let Err(code) = auth::browser_session_admission(&config, &req) {
+        return unauthorized_ws_response(code);
     }
 
     let peer_id = uuid::Uuid::new_v4().to_string();
-    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, browser_session))
+    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, true))
+        .into_response()
+}
+
+fn unauthorized_ws_response(code: AuthErrorCode) -> axum::response::Response {
+    (
+        axum::http::StatusCode::UNAUTHORIZED,
+        Json(AuthErrorResponse::new(code)),
+    )
         .into_response()
 }
 
@@ -99,6 +109,10 @@ pub async fn handle_socket(
 #[cfg(test)]
 mod tests {
     use super::auth::is_browser_session_connection;
+    use super::unauthorized_ws_response;
+    use axum::body;
+    use axum::http::StatusCode;
+    use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse};
 
     #[test]
     fn localhost_anonymous_ws_still_counts_as_browser_session() {
@@ -113,5 +127,15 @@ mod tests {
     #[test]
     fn authenticated_ws_is_always_browser_session() {
         assert!(is_browser_session_connection(true, false, false));
+    }
+
+    #[tokio::test]
+    async fn unauthorized_ws_response_is_structured_json() {
+        let response = unauthorized_ws_response(AuthErrorCode::TokenMissing);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let body = body::to_bytes(response.into_body(), 1024).await.unwrap();
+        let payload: AuthErrorResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload.code, AuthErrorCode::TokenMissing);
     }
 }

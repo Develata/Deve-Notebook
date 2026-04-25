@@ -98,6 +98,8 @@
     - ws_connect: "ws://127.0.0.1:3000/ws"
   assertions:
     - ws_connection_denied true
+    - http_status_eq: 401
+    - json_field_eq: ["code", "AUTH_TOKEN_MISSING"]
 
 - case_id: AUTH-011
   goal: session expired 与 disconnected 必须分离。

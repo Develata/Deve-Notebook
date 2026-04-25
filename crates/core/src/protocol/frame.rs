@@ -73,21 +73,15 @@ pub fn encode_server_binary(message: &ServerMessage) -> Result<Vec<u8>, Protocol
 }
 
 pub fn decode_client_binary(bytes: &[u8]) -> Result<ClientMessage, ProtocolFrameError> {
-    if let Some(payload) = framed_payload(bytes) {
-        let frame: ClientFrame = decode_bincode(payload)?;
-        ensure_supported(frame.protocol_version)?;
-        return Ok(frame.message);
-    }
-    decode_bincode(bytes)
+    let frame: ClientFrame = decode_required_binary_frame(bytes)?;
+    ensure_supported(frame.protocol_version)?;
+    Ok(frame.message)
 }
 
 pub fn decode_server_binary(bytes: &[u8]) -> Result<ServerMessage, ProtocolFrameError> {
-    if let Some(payload) = framed_payload(bytes) {
-        let frame: ServerFrame = decode_bincode(payload)?;
-        ensure_supported(frame.protocol_version)?;
-        return Ok(frame.message);
-    }
-    decode_bincode(bytes)
+    let frame: ServerFrame = decode_required_binary_frame(bytes)?;
+    ensure_supported(frame.protocol_version)?;
+    Ok(frame.message)
 }
 
 pub fn decode_client_binary_frame(bytes: &[u8]) -> Result<ClientFrame, ProtocolFrameError> {
@@ -215,11 +209,11 @@ mod tests {
     }
 
     #[test]
-    fn legacy_binary_still_decodes() {
+    fn legacy_binary_without_magic_is_rejected() {
         let bytes = bincode::serialize(&ClientMessage::Ping).unwrap();
         assert!(matches!(
             decode_client_binary(&bytes),
-            Ok(ClientMessage::Ping)
+            Err(ProtocolFrameError::Decode(_))
         ));
     }
 
