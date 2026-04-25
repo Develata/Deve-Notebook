@@ -226,7 +226,8 @@ WsConnecting
 
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
-- `Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`
+- `Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`
+  - `script-src 'unsafe-inline'` is a current compatibility allowance for Trunk/WASM bootstrapping and local boot glue only; remote script origins remain forbidden.
 
 ### 6.6 Audit
 

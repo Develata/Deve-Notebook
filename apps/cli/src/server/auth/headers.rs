@@ -9,9 +9,20 @@
 //! ## Headers
 //! - `X-Content-Type-Options: nosniff`
 //! - `X-Frame-Options: DENY`
-//! - `Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'`
+//! - `Content-Security-Policy`: see `CSP_POLICY`
 
 use axum::{body::Body, http::Request, middleware::Next, response::Response};
+
+const CSP_POLICY: &str = concat!(
+    "default-src 'self'; ",
+    "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; ",
+    "connect-src 'self' ws: wss:; ",
+    "img-src 'self' data: blob:; ",
+    "style-src 'self' 'unsafe-inline'; ",
+    "object-src 'none'; ",
+    "frame-ancestors 'none'; ",
+    "base-uri 'self'"
+);
 
 /// 安全响应头中间件
 pub async fn security_headers(req: Request<Body>, next: Next) -> Response {
@@ -20,12 +31,22 @@ pub async fn security_headers(req: Request<Body>, next: Next) -> Response {
 
     headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
     headers.insert("X-Frame-Options", "DENY".parse().unwrap());
-    headers.insert(
-        "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'"
-            .parse()
-            .unwrap(),
-    );
+    headers.insert("Content-Security-Policy", CSP_POLICY.parse().unwrap());
 
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CSP_POLICY;
+
+    #[test]
+    fn csp_allows_current_wasm_bootstrap_without_external_origins() {
+        assert!(CSP_POLICY.contains("script-src 'self'"));
+        assert!(CSP_POLICY.contains("'wasm-unsafe-eval'"));
+        assert!(CSP_POLICY.contains("'unsafe-inline'"));
+        assert!(CSP_POLICY.contains("connect-src 'self' ws: wss:"));
+        assert!(CSP_POLICY.contains("style-src 'self' 'unsafe-inline'"));
+        assert!(!CSP_POLICY.contains("https://cdnjs.cloudflare.com"));
+    }
 }
