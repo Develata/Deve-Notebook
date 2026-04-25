@@ -66,3 +66,26 @@ fn mixed_slash_path_normalized_consistently() {
         .expect("doc present");
     assert_eq!(stored_path, "a/b/c/d.md");
 }
+
+#[test]
+fn backslash_delete_path_removes_forward_slash_projection() {
+    let (_dir, repo) = new_repo();
+    let name = repo.local_repo_name().to_string();
+    let (doc_id, _ops) = repo
+        .apply_file_structure_in_local_repo(&name, "folder/sub/delete.md", None, "test")
+        .expect("create file with forward slash path");
+
+    repo.apply_file_delete_structure_in_local_repo(&name, "folder\\sub\\delete.md", None, "test")
+        .expect("delete file with backslash path")
+        .expect("delete op emitted");
+
+    let docs = repo
+        .list_docs(&RepoType::Local(
+            repo.get_repo_info().unwrap().unwrap().uuid,
+        ))
+        .expect("list docs");
+    assert!(
+        docs.iter().all(|(id, _)| *id != doc_id),
+        "delete should resolve the normalized tracked path"
+    );
+}

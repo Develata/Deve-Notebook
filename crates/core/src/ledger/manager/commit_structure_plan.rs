@@ -4,6 +4,7 @@
 use crate::ledger::RepoManager;
 use crate::ledger::node_meta;
 use crate::models::{DocId, NodeId, NodeKind, StructureOp};
+use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
 
 pub(super) struct StructuredCommitTarget {
@@ -17,8 +18,9 @@ pub(super) fn plan_file_upsert(
     path: &str,
     doc_id_hint: Option<DocId>,
 ) -> Result<StructuredCommitTarget> {
-    let doc_id = resolve_doc_id(repo, repo_name, path, doc_id_hint)?;
-    let (mut ops, parent_id, name) = plan_parent_chain(repo, repo_name, path)?;
+    let path = to_forward_slash(path);
+    let doc_id = resolve_doc_id(repo, repo_name, &path, doc_id_hint)?;
+    let (mut ops, parent_id, name) = plan_parent_chain(repo, repo_name, &path)?;
     let Some(meta) = current_meta(repo, repo_name, doc_id)? else {
         ops.push(StructureOp::CreateFile {
             node_id: NodeId::from_doc_id(doc_id),
@@ -51,9 +53,10 @@ pub(super) fn plan_delete(
     path: &str,
     doc_id_hint: Option<DocId>,
 ) -> Result<Option<StructuredCommitTarget>> {
+    let path = to_forward_slash(path);
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
-        None => repo.get_tracked_docid_in_local_repo(repo_name, path)?,
+        None => repo.get_tracked_docid_in_local_repo(repo_name, &path)?,
     };
     Ok(doc_id.map(|doc_id| StructuredCommitTarget {
         doc_id,
@@ -92,9 +95,10 @@ fn plan_parent_chain(
     repo_name: &str,
     path: &str,
 ) -> Result<(Vec<StructureOp>, Option<NodeId>, String)> {
+    let path = to_forward_slash(path);
     let (parent_path, name) = path
         .rfind('/')
-        .map_or(("", path), |idx| (&path[..idx], &path[idx + 1..]));
+        .map_or(("", path.as_str()), |idx| (&path[..idx], &path[idx + 1..]));
     let mut ops = Vec::new();
     let mut parent_id = None;
     let mut current = String::new();
