@@ -39,16 +39,15 @@
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
-    1.  **Test**: `cargo test`, `npm run test`.
-    2.  **Build Frontend**: `npm run build` (Leptos -> WASM/JS).
-    3.  **Build Core**: `cargo build --release` (Native Libs).
-    4.  **Bundle (Tauri)**: `npm run tauri build`.
-    5.  **Sign**: 调用 macOS Notary / Windows SignTool。
-    6.  **Upload**: 上传 Artifacts 至 GitHub Releases。
-    7.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
+    1.  **Quality Gates**: `cargo clippy --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, `cargo test`.
+    2.  **Docker Build**: Dockerfile frontend stage runs `npm run build` for editor assets and `trunk build --release` for Leptos/WASM output.
+    3.  **Embed Frontend**: Dockerfile backend stage copies `apps/web/dist` before `cargo build --release --package deve_cli`, so the CLI build script embeds frontend assets into the binary.
+    4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
         *   **Registry**: GHCR (`ghcr.io`).
-        *   **Platforms**: `linux/amd64`, `linux/arm64`.
+        *   **Platforms**: 当前 baseline 为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
+
+Native Tauri bundling, OS signing, and GitHub Release binary uploads are deferred delivery work. They must not be treated as current `release.yml` baseline until the workflow is added.
 
 ### 2.2 Deferred Workflows (非当前基线)
 
@@ -90,7 +89,10 @@ docker run -d \
   -p 3001:3001 \
   -v $(pwd)/data:/data \
   -e DEVE_VAULT_PATH=/data/vault \
-  ghcr.io/develata/deve-server:latest
+  -e AUTH_SECRET=<32-plus-byte-random-secret> \
+  -e AUTH_USER=admin \
+  -e AUTH_PASS='<argon2-phc-password-hash>' \
+  ghcr.io/develata/deve-notebook:latest
 ```
 
 ### 5.2 Run with Docker Compose
@@ -98,7 +100,7 @@ docker run -d \
 version: '3.8'
 services:
   deve-server:
-    image: ghcr.io/develata/deve-note:latest
+    image: ghcr.io/develata/deve-notebook:latest
     container_name: deve-server
     restart: always
     ports:
@@ -108,12 +110,16 @@ services:
     environment:
       - DEVE_BIND_ADDR=0.0.0.0:3001
       - DEVE_VAULT_PATH=/data/vault
+      - AUTH_SECRET=${AUTH_SECRET:?set AUTH_SECRET}
+      - AUTH_USER=${AUTH_USER:-admin}
+      - AUTH_PASS=${AUTH_PASS:?set AUTH_PASS}
 ```
 
 ### 5.3 Build Strategy
 *   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).
-*   **Builder**: `rust:1.80-bookworm` (Multi-stage build).
+*   **Builder**: `rust:1.85-bookworm` (Multi-stage build), with Node.js, Trunk, and `wasm32-unknown-unknown`.
 *   **Optimization**: 使用 `cargo-chef` 缓存依赖构建层。
+*   **Frontend Delivery**: runtime image ships a single `deve_cli` binary with embedded frontend static assets; runtime no longer requires `/app/static` or `DEVE_STATIC_DIR` for normal Docker deployment.
 
 ## 6. Checklist for Release (发布清单)
 

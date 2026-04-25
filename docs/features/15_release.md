@@ -23,6 +23,7 @@
 ### 1. 分发形态
 
 - Web / Server / Docker 是当前主要交付面。
+- Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
 - 其它客户端交付形态可以存在，但成熟度应明确。
 
 ### 2. 版本与升级预期
@@ -34,6 +35,7 @@
 
 - 部署者应能分辨当前是本地开发、服务器部署还是容器化运行。
 - 不同运行环境的差异不应混淆成产品功能差异。
+- 生产服务器/容器运行必须显式提供 `AUTH_SECRET` 和 `AUTH_PASS`；本地开发应使用 `deve serve --dev` 或 `DEVE_ENV=development`。
 
 ## 非目标
 

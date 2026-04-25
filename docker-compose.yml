@@ -23,6 +23,10 @@ services:
       DEVE_VAULT_PATH: /data/vault
       # 服务器绑定地址和端口
       DEVE_BIND_ADDR: 0.0.0.0:3001
+      # 生产模式必须显式提供认证材料；本 compose 在配置阶段即 fail closed。
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET to at least 32 random bytes}
+      AUTH_USER: ${AUTH_USER:-admin}
+      AUTH_PASS: ${AUTH_PASS:?set AUTH_PASS to an Argon2 PHC password hash}
     
     # 数据卷：deve-data 命名卷挂载到容器 /data 目录
     volumes:

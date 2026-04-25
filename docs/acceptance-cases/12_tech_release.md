@@ -43,9 +43,11 @@
   goal: Docker 部署可用。
   preconditions:
     - Docker 可用
+    - AUTH_SECRET 已设置为 32 字节以上随机字符串
+    - AUTH_PASS 已设置为 Argon2 PHC 密码哈希
   steps:
-    - run: docker run -d --name deve-server -p 3000:3000 -v %cd%/data:/data ghcr.io/develata/deve-server:latest
-    - run: curl -I http://127.0.0.1:3000
+    - run: docker run -d --name deve-server -p 3001:3001 -v $(pwd)/data:/data -e AUTH_SECRET -e AUTH_PASS ghcr.io/develata/deve-notebook:latest
+    - run: curl -I http://127.0.0.1:3001/api/node/role
   assertions:
     - http_status_eq: 200
 
