@@ -3,11 +3,6 @@ use crate::ledger::schema::REPO_METADATA;
 use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
-
-fn create_secondary_repo(ledger_dir: &Path, name: &str, url: &str) {
-    let _repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
-}
 
 #[cfg(unix)]
 #[test]
@@ -38,7 +33,7 @@ fn open_local_database_fails_closed_when_path_is_unstatable() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
-    create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+    crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let local_dir = dir.path().join("ledger/local");
     let original = std::fs::metadata(&local_dir)
         .expect("metadata")
@@ -69,7 +64,7 @@ fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
-    create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+    crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = repo.open_database(None, "wiki").expect("wiki db");
     let txn = wiki_db.db.begin_write().expect("write txn");
     txn.delete_table(REPO_METADATA).expect("delete metadata");

@@ -1,14 +1,6 @@
 use super::RepoManager;
 use crate::ledger::RepoInfo;
 
-fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) -> uuid::Uuid {
-    let repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
-    repo.get_repo_info()
-        .expect("secondary info")
-        .expect("secondary metadata")
-        .uuid
-}
-
 #[test]
 fn set_vault_root_restores_previous_root_when_catalog_refresh_fails() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
@@ -34,7 +26,7 @@ fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
-    create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+    crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = main.open_database(None, "wiki")?.db;
 
     let txn = wiki_db.begin_write()?;
@@ -55,7 +47,8 @@ fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyho
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
     let wiki_info = RepoInfo {
-        uuid: create_secondary_repo(&ledger_dir, "wiki", "urn:wiki"),
+        uuid: crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki")
+            .uuid,
         name: "wiki".into(),
         url: Some("urn:wiki".into()),
     };

@@ -2,6 +2,8 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use tempfile::TempDir;
 
+mod common;
+
 fn write_info(db: &redb::Database, info: &RepoInfo) {
     let txn = db.begin_write().expect("write txn");
     txn.open_table(REPO_METADATA)
@@ -11,19 +13,12 @@ fn write_info(db: &redb::Database, info: &RepoInfo) {
     txn.commit().expect("commit");
 }
 
-fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) -> RepoInfo {
-    let repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
-    repo.get_repo_info()
-        .expect("secondary info")
-        .expect("secondary metadata")
-}
-
 #[test]
 fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let main_info = main.get_repo_info().expect("main info").expect("present");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
 
@@ -63,7 +58,8 @@ fn local_repo_listing_fails_closed_on_duplicate_name_drift_until_repair() {
     let ledger_dir = dir.path().join("ledger");
     let main =
         RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:test:wiki-a")).expect("main");
-    let second_info = create_secondary_repo(&ledger_dir, "wiki-1", "urn:test:wiki-b");
+    let second_info =
+        common::create_initialized_local_repo(&ledger_dir, "wiki-1", "urn:test:wiki-b");
     let second_db = main.open_database(None, "wiki-1").expect("wiki-1 db").db;
     write_info(
         second_db.as_ref(),
@@ -94,7 +90,7 @@ fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
 
     let err = main
         .resolve_local_repo_name_for_execution(None, None)
@@ -108,7 +104,7 @@ fn repair_rewrites_duplicate_local_repo_url_to_repo_urn() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let notes_info = create_secondary_repo(&ledger_dir, "notes", "urn:notes");
+    let notes_info = common::create_initialized_local_repo(&ledger_dir, "notes", "urn:notes");
     let other_db = main.open_database(None, "notes").expect("notes db").db;
     write_info(
         other_db.as_ref(),

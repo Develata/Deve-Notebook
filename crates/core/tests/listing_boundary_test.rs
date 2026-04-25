@@ -5,6 +5,8 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{LedgerEntry, Op, PeerId, RepoType};
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
@@ -79,9 +81,10 @@ fn multi_repo_listing_isolation() {
     let ledger = dir.path().join("ledger");
     let alpha =
         RepoManager::init(&ledger, 10, Some("alpha"), Some("urn:alpha")).expect("init alpha");
-    let beta = RepoManager::init(&ledger, 10, Some("beta"), Some("urn:beta")).expect("init beta");
+    let beta_info =
+        common::create_initialized_local_repo_with_depth(&ledger, 10, "beta", "urn:beta");
     let alpha_id = alpha.get_repo_info().unwrap().unwrap().uuid;
-    let beta_id = beta.get_repo_info().unwrap().unwrap().uuid;
+    let beta_id = beta_info.uuid;
 
     let (doc_a, _) = alpha
         .apply_file_structure_in_local_repo("alpha", "readme.md", None, "test")

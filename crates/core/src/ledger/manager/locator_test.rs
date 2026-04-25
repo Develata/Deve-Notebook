@@ -11,20 +11,14 @@ fn write_info(db: &redb::Database, info: &RepoInfo) {
     txn.commit().expect("commit");
 }
 
-fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) -> RepoInfo {
-    let repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
-    repo.get_repo_info()
-        .expect("secondary info")
-        .expect("secondary metadata")
-}
-
 #[test]
 fn local_repo_id_lookup_without_repair_uses_current_on_disk_metadata() {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let wiki_info = create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+    let wiki_info =
+        crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db");
     write_info(
         wiki_db.db.as_ref(),
@@ -48,7 +42,8 @@ fn local_repo_id_lookup_without_repair_fails_closed_on_missing_secondary_metadat
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let wiki_info = create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+    let wiki_info =
+        crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
 
     let txn = wiki_db.begin_write().expect("write txn");

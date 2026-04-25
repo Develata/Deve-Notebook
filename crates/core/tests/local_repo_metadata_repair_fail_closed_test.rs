@@ -4,6 +4,8 @@ use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 
+mod common;
+
 fn write_info(db: &redb::Database, info: &RepoInfo) {
     let txn = db.begin_write().expect("write txn");
     txn.open_table(REPO_METADATA)
@@ -149,9 +151,9 @@ fn runtime_listing_fails_closed_on_duplicate_secondary_uuid_until_explicit_repai
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let main_info = main.get_repo_info().expect("main info").expect("present");
-    let wiki_db = wiki.open_database(None, "wiki").expect("wiki db");
+    let wiki_db = main.open_database(None, "wiki").expect("wiki db");
     write_info(
         wiki_db.db.as_ref(),
         &RepoInfo {
@@ -206,19 +208,18 @@ fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let vault_root = dir.path().join("vault");
     std::fs::create_dir_all(vault_root.join("notes")).expect("workspace root");
     main.set_vault_root_checked(&vault_root)
         .expect("mount vault");
-    let wiki_db = wiki.open_database(None, "wiki").expect("wiki db").db;
-    let info = wiki.get_repo_info().expect("wiki info").expect("present");
+    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
     write_info(
         wiki_db.as_ref(),
         &RepoInfo {
-            uuid: info.uuid,
+            uuid: wiki_info.uuid,
             name: "notes".into(),
-            url: info.url.clone(),
+            url: wiki_info.url.clone(),
         },
     );
 

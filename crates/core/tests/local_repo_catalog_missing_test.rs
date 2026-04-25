@@ -4,17 +4,14 @@ use deve_core::ledger::listing::RepoListing;
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 
+mod common;
+
 #[test]
 fn local_repo_listing_fails_closed_when_local_catalog_dir_is_missing() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let wiki = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:wiki")).expect("wiki");
-    let wiki_id = wiki
-        .get_repo_info()
-        .expect("wiki info")
-        .expect("present")
-        .uuid;
+    let wiki_id = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki").uuid;
 
     std::fs::remove_dir_all(ledger_dir.join("local")).expect("remove local catalog dir");
 

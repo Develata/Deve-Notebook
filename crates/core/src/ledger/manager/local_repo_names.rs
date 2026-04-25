@@ -46,11 +46,6 @@ mod tests {
     use crate::ledger::{REPO_METADATA, RepoInfo, RepoManager};
     use tempfile::TempDir;
 
-    fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) {
-        let _repo =
-            RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
-    }
-
     fn write_info(db: &redb::Database, info: &RepoInfo) {
         let txn = db.begin_write().expect("write txn");
         txn.open_table(REPO_METADATA)
@@ -66,7 +61,7 @@ mod tests {
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-        create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+        crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
         let main_info = main.get_repo_info().expect("main info").expect("present");
         let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
         write_info(

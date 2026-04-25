@@ -5,6 +5,8 @@ use deve_core::models::PeerId;
 use redb::Database;
 use tempfile::TempDir;
 
+mod common;
+
 fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
     let read = db.begin_read().expect("read txn");
     let table = read.open_table(REPO_METADATA).expect("repo metadata");
@@ -29,17 +31,12 @@ fn create_legacy_shadow_without_metadata(
 fn remote_catalog_keeps_legacy_uuid_shadow_non_switchable_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    let local = RepoManager::init(
-        dir.path().join("ledger"),
+    let info = common::create_initialized_local_repo_with_depth(
+        &dir.path().join("ledger"),
         10,
-        Some("wiki"),
-        Some("urn:test:wiki"),
-    )
-    .expect("init local companion");
-    let info = local
-        .get_repo_info()
-        .expect("local repo info")
-        .expect("local repo exists");
+        "wiki",
+        "urn:test:wiki",
+    );
     let peer_id = PeerId::new("peer-remote");
 
     create_legacy_shadow_without_metadata(&repo, &peer_id, info.uuid);
@@ -74,12 +71,8 @@ fn init_keeps_uuid_shadow_non_switchable_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
-    let local = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:test:wiki"))
-        .expect("init local companion");
-    let info = local
-        .get_repo_info()
-        .expect("local repo info")
-        .expect("local repo exists");
+    let info =
+        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:test:wiki");
     let peer_id = PeerId::new("peer-remote");
 
     create_legacy_shadow_without_metadata(&repo, &peer_id, info.uuid);
@@ -129,9 +122,9 @@ fn local_catalog_repair_does_not_make_legacy_shadow_runtime_readable() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
-    let wiki = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let wiki_info =
+        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
     let peer_id = PeerId::new("peer-remote");
-    let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
 
     create_legacy_shadow_without_metadata(&main, &peer_id, wiki_info.uuid);
 
@@ -173,9 +166,9 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
-    let wiki = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    let wiki_info =
+        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
     let peer_id = PeerId::new("peer-remote");
-    let wiki_info = wiki.get_repo_info().expect("wiki info").expect("present");
 
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
     let poisoned = deve_core::ledger::RepoInfo {
@@ -218,12 +211,8 @@ fn remote_catalog_repair_fails_closed_on_broken_peer() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
-    let local = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:test:wiki"))
-        .expect("init local companion");
-    let info = local
-        .get_repo_info()
-        .expect("local repo info")
-        .expect("local repo exists");
+    let info =
+        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:test:wiki");
     let good_peer = PeerId::new("peer-good");
     let bad_peer = PeerId::new("peer-bad");
 

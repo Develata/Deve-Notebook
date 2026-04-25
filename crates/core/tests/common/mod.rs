@@ -1,7 +1,27 @@
-use deve_core::ledger::RepoManager;
+#![allow(dead_code)]
+
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::LedgerEntry;
 use redb::ReadableTable;
+use std::path::Path;
+
+pub fn create_initialized_local_repo(ledger_dir: &Path, name: &str, url: &str) -> RepoInfo {
+    create_initialized_local_repo_with_depth(ledger_dir, 8, name, url)
+}
+
+pub fn create_initialized_local_repo_with_depth(
+    ledger_dir: &Path,
+    snapshot_depth: usize,
+    name: &str,
+    url: &str,
+) -> RepoInfo {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(name), Some(url))
+        .expect("initialized local repo");
+    repo.get_repo_info()
+        .expect("local repo info")
+        .expect("local repo metadata")
+}
 
 pub fn append_unvalidated_local_op(
     repo: &RepoManager,

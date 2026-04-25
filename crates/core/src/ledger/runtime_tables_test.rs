@@ -9,7 +9,12 @@ fn repairs_missing_client_op_index_for_secondary_local_repo_on_runtime_open() ->
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
-    let _wiki = RepoManager::init(&ledger_dir, 2, Some("wiki"), Some("urn:wiki"))?;
+    crate::test_support::create_initialized_local_repo_with_depth(
+        &ledger_dir,
+        2,
+        "wiki",
+        "urn:wiki",
+    );
     let doc_id = DocId::new();
     let peer_id = PeerId::new("browser-peer");
 

@@ -10,7 +10,7 @@ fn setup_repos() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("tempdir");
     let ledger = dir.path().join("ledger");
     let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main")).expect("main");
-    RepoManager::init(&ledger, 10, Some("wiki"), Some("urn:wiki")).expect("wiki");
+    common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
     repo.set_vault_root(dir.path().join("vault"));
     (dir, Arc::new(repo))
 }

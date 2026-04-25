@@ -112,19 +112,13 @@ mod tests {
         txn.commit().expect("commit");
     }
 
-    fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) -> RepoInfo {
-        let repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
-        repo.get_repo_info()
-            .expect("secondary info")
-            .expect("secondary metadata")
-    }
-
     #[test]
     fn local_repo_info_lookup_without_repair_preserves_unrepaired_metadata() {
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-        let wiki_info = create_secondary_repo(&ledger_dir, "wiki", "urn:wiki");
+        let wiki_info =
+            crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
         let wiki_db = main.open_database(None, "wiki").expect("wiki db");
         write_info(
             wiki_db.db.as_ref(),
@@ -189,8 +183,9 @@ mod tests {
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-        create_secondary_repo(&ledger_dir, "wiki", "urn:test");
-        let mirror_info = create_secondary_repo(&ledger_dir, "mirror", "urn:mirror");
+        crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:test");
+        let mirror_info =
+            crate::test_support::create_initialized_local_repo(&ledger_dir, "mirror", "urn:mirror");
         let mirror_db = main.open_database(None, "mirror").expect("mirror db").db;
         write_info(
             mirror_db.as_ref(),

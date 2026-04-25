@@ -6,15 +6,17 @@ use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, RepoType, StructureO
 use tempfile::TempDir;
 use uuid::Uuid;
 
+mod common;
+
 fn two_local_repos() -> (TempDir, RepoManager, Uuid, Uuid) {
     let dir = TempDir::new().expect("create tempdir");
     let ledger = dir.path().join("ledger");
     let main =
         RepoManager::init(&ledger, 10, Some("main"), Some("urn:main")).expect("init main repo");
-    let wiki =
-        RepoManager::init(&ledger, 10, Some("wiki"), Some("urn:wiki")).expect("init wiki repo");
+    let wiki_info =
+        common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
     let main_id = main.get_repo_info().unwrap().unwrap().uuid;
-    let wiki_id = wiki.get_repo_info().unwrap().unwrap().uuid;
+    let wiki_id = wiki_info.uuid;
     (dir, main, main_id, wiki_id)
 }
 

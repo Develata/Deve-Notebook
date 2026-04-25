@@ -8,17 +8,15 @@ use deve_core::sync::protocol::SyncSnapshotRequest;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_local_repos() -> (TempDir, RepoManager, RepoId, String) {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main =
         RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("init main repo");
-    let extra = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:wiki"))
-        .expect("init extra repo");
-    let extra_info = extra
-        .get_repo_info()
-        .expect("read extra repo info")
-        .expect("extra repo info present");
+    let extra_info =
+        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
     (dir, main, extra_info.uuid, extra_info.name)
 }
 
