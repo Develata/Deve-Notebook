@@ -10,6 +10,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 
+#[path = "common/mod.rs"]
+mod common;
+
 pub struct Harness {
     pub dir: TempDir,
     pub repo: Arc<RepoManager>,
@@ -24,7 +27,7 @@ impl Harness {
         std::fs::create_dir_all(dir.path().join("vault"))?;
         let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main"))?;
         if let Some((name, url)) = extra_repo {
-            let _ = RepoManager::init(&ledger, 10, Some(name), Some(url))?;
+            let _ = common::try_create_initialized_local_repo_with_depth(&ledger, 10, name, url)?;
         }
         repo.set_vault_root_checked(dir.path().join("vault"))?;
         let repo = Arc::new(repo);

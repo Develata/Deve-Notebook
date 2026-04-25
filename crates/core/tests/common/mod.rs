@@ -16,11 +16,19 @@ pub fn create_initialized_local_repo_with_depth(
     name: &str,
     url: &str,
 ) -> RepoInfo {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(name), Some(url))
-        .expect("initialized local repo");
-    repo.get_repo_info()
-        .expect("local repo info")
-        .expect("local repo metadata")
+    try_create_initialized_local_repo_with_depth(ledger_dir, snapshot_depth, name, url)
+        .expect("initialized local repo")
+}
+
+pub fn try_create_initialized_local_repo_with_depth(
+    ledger_dir: &Path,
+    snapshot_depth: usize,
+    name: &str,
+    url: &str,
+) -> anyhow::Result<RepoInfo> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(name), Some(url))?;
+    repo.get_repo_info()?
+        .ok_or_else(|| anyhow::anyhow!("local repo metadata missing for {name}"))
 }
 
 pub fn append_unvalidated_local_op(
