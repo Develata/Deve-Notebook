@@ -152,6 +152,12 @@ impl RepoManager {
             .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
 
         let write_txn = db.begin_write()?;
+        Self::reset_shadow_repo_txn(&write_txn)?;
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    pub(crate) fn reset_shadow_repo_txn(write_txn: &redb::WriteTransaction) -> Result<()> {
         let _ = write_txn.delete_table(LEDGER_OPS)?;
         let _ = write_txn.delete_multimap_table(DOC_OPS)?;
         let _ = write_txn.delete_multimap_table(NODE_OPS)?;
@@ -181,7 +187,6 @@ impl RepoManager {
         let _ = write_txn.open_table(NODEID_TO_META)?;
         let _ = write_txn.open_table(PATH_TO_NODEID)?;
         let _ = write_txn.open_table(INODE_TO_NODEID)?;
-        write_txn.commit()?;
         Ok(())
     }
 

@@ -2,11 +2,21 @@ use super::validate;
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use crate::models::LedgerEntry;
 use anyhow::Result;
-use redb::{Database, ReadableTable};
+use redb::{Database, ReadableTable, WriteTransaction};
 
 pub fn append_op_to_db(db: &Database, entry: &LedgerEntry, repo_scope: &str) -> Result<u64> {
     let write_txn = db.begin_write()?;
-    validate::validate_ledger_append(&write_txn, entry, repo_scope)?;
+    let seq = append_op_to_txn(&write_txn, entry, repo_scope)?;
+    write_txn.commit()?;
+    Ok(seq)
+}
+
+pub(crate) fn append_op_to_txn(
+    write_txn: &WriteTransaction,
+    entry: &LedgerEntry,
+    repo_scope: &str,
+) -> Result<u64> {
+    validate::validate_ledger_append(write_txn, entry, repo_scope)?;
     let seq = {
         let mut ops = write_txn.open_table(LEDGER_OPS)?;
         let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
@@ -31,6 +41,5 @@ pub fn append_op_to_db(db: &Database, entry: &LedgerEntry, repo_scope: &str) -> 
         }
         new_seq
     };
-    write_txn.commit()?;
     Ok(seq)
 }

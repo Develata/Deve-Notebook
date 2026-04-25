@@ -342,7 +342,14 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 远端恶意数据只能污染对应 remote mirror，不得自动污染 local ledger
 - merge 到 local 必须是显式用户动作
 
-### 10.4 Indirect Sync and Attribution
+### 10.4 Remote Shadow Apply Atomicity
+
+- `SyncPush` / `SyncPushSnapshot` 必须先完成 payload 解密，再进入 storage 写入。
+- 增量 payload 的 ledger append 与 tree projection 必须在同一个 shadow repo 写事务内完成；中途校验或 projection 失败时不得留下前序 op。
+- Snapshot fallback 的 shadow reset 与 replay 必须在同一个 shadow repo 写事务内完成；replay 失败时旧 shadow 内容必须保留。
+- Manual 模式确认合并时，同一次确认只允许一个 `peer_id + repo_id` 目标以保持原子性；混合目标必须 fail-closed 并保留 pending payload。
+
+### 10.5 Indirect Sync and Attribution
 
 - A 经 C 中继传给 B 时，B 的落盘归属必须由 A 的签名来源决定，而不是由 C 的传输通道决定。
 - 若 B 未与 A 建立信任或缺少 repo key，则 B 必须丢弃 A 的 payload。

@@ -57,7 +57,8 @@ pub mod traits;
 // ========== 公开导出 ==========
 
 pub use self::schema::*;
-pub use manager::types::*; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager
+pub use manager::types::*;
+pub(crate) use shadow_transfer::ShadowPayload; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager
 // We don't need to export manager::core because impl blocks are attached to the struct.
 // But we might want to export the module for some reason? No, usually not.
 

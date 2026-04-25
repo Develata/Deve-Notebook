@@ -20,6 +20,7 @@ pub use query::{
     get_structure_ops_for_node_from_db, max_seq_from_db,
 };
 pub use write_direct::append_op_to_db;
+pub(crate) use write_direct::append_op_to_txn;
 pub use write_generated::{append_generated_client_op, append_generated_op};
 
 pub fn local_repo_scope(repo_name: &str) -> String {

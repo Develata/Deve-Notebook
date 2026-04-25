@@ -13,14 +13,16 @@ use notify_debouncer_full::{
 use std::sync::Arc;
 use std::time::Instant;
 
-fn new_sync() -> anyhow::Result<(
+type SyncFixture = (
     tempfile::TempDir,
     Arc<RepoManager>,
     Arc<SyncManager>,
     String,
     crate::models::RepoId,
     std::path::PathBuf,
-)> {
+);
+
+fn new_sync() -> anyhow::Result<SyncFixture> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let vault = dir.path().join("vault");

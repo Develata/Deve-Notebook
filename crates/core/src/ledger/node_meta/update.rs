@@ -6,11 +6,17 @@ use crate::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use crate::models::{NodeId, NodeMeta};
 use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
-use redb::{Database, ReadableTable};
+use redb::{Database, ReadableTable, WriteTransaction};
 
 pub fn remove_node_by_path(db: &Database, path: &str) -> Result<()> {
-    let normalized = to_forward_slash(path);
     let write_txn = db.begin_write()?;
+    remove_node_by_path_in_txn(&write_txn, path)?;
+    write_txn.commit()?;
+    Ok(())
+}
+
+pub(crate) fn remove_node_by_path_in_txn(write_txn: &WriteTransaction, path: &str) -> Result<()> {
+    let normalized = to_forward_slash(path);
     {
         let mut n2m = write_txn.open_table(NODEID_TO_META)?;
         let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;
@@ -22,11 +28,21 @@ pub fn remove_node_by_path(db: &Database, path: &str) -> Result<()> {
             n2m.remove(id)?;
         }
     }
-    write_txn.commit()?;
     Ok(())
 }
 
 pub fn rename_path_prefix(db: &Database, old_prefix: &str, new_prefix: &str) -> Result<()> {
+    let write_txn = db.begin_write()?;
+    rename_path_prefix_in_txn(&write_txn, old_prefix, new_prefix)?;
+    write_txn.commit()?;
+    Ok(())
+}
+
+pub(crate) fn rename_path_prefix_in_txn(
+    write_txn: &WriteTransaction,
+    old_prefix: &str,
+    new_prefix: &str,
+) -> Result<()> {
     let old_prefix = to_forward_slash(old_prefix)
         .trim_end_matches('/')
         .to_string();
@@ -39,30 +55,40 @@ pub fn rename_path_prefix(db: &Database, old_prefix: &str, new_prefix: &str) -> 
     if old_prefix == new_prefix {
         return Ok(());
     }
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(PATH_TO_NODEID)?;
-    let mut updates = Vec::new();
-
-    for item in table.iter()? {
-        let (path_guard, id_guard) = item?;
-        let path = path_guard.value();
-        if path == old_prefix || path.starts_with(&format!("{}/", old_prefix)) {
-            let suffix = &path[old_prefix.len()..];
-            let new_path = format!("{}{}", new_prefix, suffix);
-            updates.push((path.to_string(), new_path, id_guard.value()));
-        }
+    if is_under(&new_prefix, &old_prefix) {
+        return Err(anyhow!(
+            "Cannot move path prefix into itself: {}",
+            new_prefix
+        ));
     }
+    let updates = {
+        let table = write_txn.open_table(PATH_TO_NODEID)?;
+        let mut updates = Vec::new();
 
-    drop(table);
-    drop(read_txn);
+        for item in table.iter()? {
+            let (path_guard, id_guard) = item?;
+            let path = path_guard.value();
+            if path == old_prefix || path.starts_with(&format!("{}/", old_prefix)) {
+                let suffix = &path[old_prefix.len()..];
+                let new_path = format!("{}{}", new_prefix, suffix);
+                updates.push((path.to_string(), new_path, id_guard.value()));
+            }
+        }
+        updates
+    };
 
-    let write_txn = db.begin_write()?;
     {
         let mut n2m = write_txn.open_table(NODEID_TO_META)?;
         let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;
         let mut touched = Vec::new();
 
         for (old_path, new_path, node_id) in updates {
+            if let Some(existing) = p2n.get(&*new_path)?.map(|v| v.value())
+                && existing != node_id
+                && !is_under(&new_path, &old_prefix)
+            {
+                return Err(anyhow!("Path already bound to another node: {}", new_path));
+            }
             p2n.remove(&*old_path)?;
             p2n.insert(&*new_path, node_id)?;
             if let Some(meta_bytes) = {
@@ -97,29 +123,40 @@ pub fn rename_path_prefix(db: &Database, old_prefix: &str, new_prefix: &str) -> 
             }
         }
     }
-    write_txn.commit()?;
     Ok(())
 }
 
+fn is_under(path: &str, prefix: &str) -> bool {
+    path == prefix || path.starts_with(&format!("{}/", prefix))
+}
+
 pub fn delete_path_prefix(db: &Database, prefix: &str) -> Result<usize> {
+    let write_txn = db.begin_write()?;
+    let count = delete_path_prefix_in_txn(&write_txn, prefix)?;
+    write_txn.commit()?;
+    Ok(count)
+}
+
+pub(crate) fn delete_path_prefix_in_txn(
+    write_txn: &WriteTransaction,
+    prefix: &str,
+) -> Result<usize> {
     let prefix = to_forward_slash(prefix);
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(PATH_TO_NODEID)?;
-    let mut to_delete = Vec::new();
+    let to_delete = {
+        let table = write_txn.open_table(PATH_TO_NODEID)?;
+        let mut to_delete = Vec::new();
 
-    for item in table.iter()? {
-        let (path_guard, id_guard) = item?;
-        let path = path_guard.value();
-        if path == prefix || path.starts_with(&format!("{}/", prefix)) {
-            to_delete.push((path.to_string(), id_guard.value()));
+        for item in table.iter()? {
+            let (path_guard, id_guard) = item?;
+            let path = path_guard.value();
+            if path == prefix || path.starts_with(&format!("{}/", prefix)) {
+                to_delete.push((path.to_string(), id_guard.value()));
+            }
         }
-    }
-
-    drop(table);
-    drop(read_txn);
+        to_delete
+    };
 
     let count = to_delete.len();
-    let write_txn = db.begin_write()?;
     {
         let mut n2m = write_txn.open_table(NODEID_TO_META)?;
         let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;
@@ -128,6 +165,5 @@ pub fn delete_path_prefix(db: &Database, prefix: &str) -> Result<usize> {
             n2m.remove(node_id)?;
         }
     }
-    write_txn.commit()?;
     Ok(count)
 }

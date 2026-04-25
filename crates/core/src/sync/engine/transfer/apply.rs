@@ -20,21 +20,12 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
 
-        let mut max_seq = 0u64;
-        let mut decrypted = Vec::with_capacity(response.ops.len());
-        for enc_op in &response.ops {
-            let entry = repo_key.decrypt(enc_op)?;
-            decrypted.push((enc_op.seq, entry));
-            max_seq = max_seq.max(enc_op.seq);
-        }
+        let decrypted = decrypt_remote_ops(repo_key, &response.ops)?;
+        let max_seq = max_decrypted_seq(&decrypted);
+        let entries = decrypted_entries(decrypted);
 
         self.repo
-            .reset_shadow_repo(&response.peer_id, &response.repo_id)?;
-
-        for (_seq, entry) in decrypted {
-            self.repo
-                .append_remote_op(&response.peer_id, &response.repo_id, &entry)?;
-        }
+            .replace_shadow_repo_ops(&response.peer_id, &response.repo_id, &entries)?;
 
         self.version_vector.set_exact(response.peer_id, max_seq);
 
@@ -63,10 +54,9 @@ impl SyncEngine {
             .map(|(seq, _entry)| *seq)
             .max()
             .unwrap_or(0);
-        for (_seq, entry) in decrypted {
-            self.repo
-                .append_remote_op(&response.peer_id, &response.repo_id, &entry)?;
-        }
+        let entries = decrypted_entries(decrypted);
+        self.repo
+            .append_remote_ops(&response.peer_id, &response.repo_id, &entries)?;
 
         if max_seq > 0 {
             self.version_vector.update(response.peer_id, max_seq);
@@ -85,4 +75,16 @@ fn decrypt_remote_ops(
         decrypted.push((enc_op.seq, repo_key.decrypt(enc_op)?));
     }
     Ok(decrypted)
+}
+
+pub(crate) fn max_decrypted_seq(decrypted: &[(u64, LedgerEntry)]) -> u64 {
+    decrypted
+        .iter()
+        .map(|(seq, _entry)| *seq)
+        .max()
+        .unwrap_or(0)
+}
+
+fn decrypted_entries(decrypted: Vec<(u64, LedgerEntry)>) -> Vec<LedgerEntry> {
+    decrypted.into_iter().map(|(_seq, entry)| entry).collect()
 }

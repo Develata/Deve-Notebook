@@ -2,11 +2,11 @@
 //! # Node 元数据核心操作
 
 use super::split_path;
-use crate::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
+use crate::ledger::schema::{NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta};
 use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
-use redb::Database;
+use redb::{Database, ReadableTable, WriteTransaction};
 
 pub fn get_node_id(db: &Database, path: &str) -> Result<Option<NodeId>> {
     let normalized = to_forward_slash(path);
@@ -17,6 +17,17 @@ pub fn get_node_id(db: &Database, path: &str) -> Result<Option<NodeId>> {
     } else {
         Ok(None)
     }
+}
+
+pub(crate) fn get_node_id_in_txn(
+    write_txn: &WriteTransaction,
+    path: &str,
+) -> Result<Option<NodeId>> {
+    let normalized = to_forward_slash(path);
+    let table = write_txn.open_table(PATH_TO_NODEID)?;
+    Ok(table
+        .get(&*normalized)?
+        .map(|v| NodeId::from_u128(v.value())))
 }
 
 pub fn get_node_meta(db: &Database, node_id: NodeId) -> Result<Option<NodeMeta>> {
@@ -30,8 +41,49 @@ pub fn get_node_meta(db: &Database, node_id: NodeId) -> Result<Option<NodeMeta>>
     }
 }
 
+pub(crate) fn get_node_meta_in_txn(
+    write_txn: &WriteTransaction,
+    node_id: NodeId,
+) -> Result<Option<NodeMeta>> {
+    let table = write_txn.open_table(NODEID_TO_META)?;
+    table
+        .get(node_id.as_u128())?
+        .map(|v| bincode::deserialize(v.value()).map_err(Into::into))
+        .transpose()
+}
+
 pub fn upsert_node(db: &Database, node_id: NodeId, meta: &NodeMeta) -> Result<()> {
     let write_txn = db.begin_write()?;
+    upsert_node_in_txn(&write_txn, node_id, meta)?;
+    write_txn.commit()?;
+    Ok(())
+}
+
+pub(crate) fn upsert_node_in_txn(
+    write_txn: &WriteTransaction,
+    node_id: NodeId,
+    meta: &NodeMeta,
+) -> Result<()> {
+    if let Some(existing_node) = get_node_id_in_txn(write_txn, &meta.path)?
+        && existing_node != node_id
+    {
+        return Err(anyhow!("Path already bound to another node: {}", meta.path));
+    }
+    if let Some(doc_id) = path_doc_in_txn(write_txn, &meta.path)?
+        && Some(doc_id) != meta.doc_id
+    {
+        return Err(anyhow!(
+            "Path already bound to another document: {}",
+            meta.path
+        ));
+    }
+    if let Some(existing_meta) = get_node_meta_in_txn(write_txn, node_id)?
+        && existing_meta.path != meta.path
+    {
+        write_txn
+            .open_table(PATH_TO_NODEID)?
+            .remove(&*existing_meta.path)?;
+    }
     {
         let mut n2m = write_txn.open_table(NODEID_TO_META)?;
         let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;
@@ -39,11 +91,20 @@ pub fn upsert_node(db: &Database, node_id: NodeId, meta: &NodeMeta) -> Result<()
         n2m.insert(node_id.as_u128(), bytes.as_slice())?;
         p2n.insert(&*meta.path, node_id.as_u128())?;
     }
-    write_txn.commit()?;
     Ok(())
 }
 
 pub fn ensure_dir_chain(db: &Database, path: &str) -> Result<Option<NodeId>> {
+    let write_txn = db.begin_write()?;
+    let node_id = ensure_dir_chain_in_txn(&write_txn, path)?;
+    write_txn.commit()?;
+    Ok(node_id)
+}
+
+pub(crate) fn ensure_dir_chain_in_txn(
+    write_txn: &WriteTransaction,
+    path: &str,
+) -> Result<Option<NodeId>> {
     let normalized = to_forward_slash(path).trim_end_matches('/').to_string();
     if normalized.is_empty() {
         return Ok(None);
@@ -63,8 +124,8 @@ pub fn ensure_dir_chain(db: &Database, path: &str) -> Result<Option<NodeId>> {
         }
         current.push_str(part);
 
-        if let Some(existing) = get_node_id(db, &current)? {
-            let meta = get_node_meta(db, existing)?
+        if let Some(existing) = get_node_id_in_txn(write_txn, &current)? {
+            let meta = get_node_meta_in_txn(write_txn, existing)?
                 .ok_or_else(|| anyhow!("Node meta missing: {}", current))?;
             if meta.kind != NodeKind::Dir {
                 return Err(anyhow!("Path is not a directory: {}", current));
@@ -82,7 +143,7 @@ pub fn ensure_dir_chain(db: &Database, path: &str) -> Result<Option<NodeId>> {
             path: current.clone(),
             doc_id: None,
         };
-        upsert_node(db, node_id, &meta)?;
+        upsert_node_in_txn(write_txn, node_id, &meta)?;
         last_id = Some(node_id);
         parent_id = Some(node_id);
     }
@@ -91,12 +152,23 @@ pub fn ensure_dir_chain(db: &Database, path: &str) -> Result<Option<NodeId>> {
 }
 
 pub fn ensure_file_node(db: &Database, path: &str, doc_id: DocId) -> Result<NodeId> {
+    let write_txn = db.begin_write()?;
+    let node_id = ensure_file_node_in_txn(&write_txn, path, doc_id)?;
+    write_txn.commit()?;
+    Ok(node_id)
+}
+
+pub(crate) fn ensure_file_node_in_txn(
+    write_txn: &WriteTransaction,
+    path: &str,
+    doc_id: DocId,
+) -> Result<NodeId> {
     let normalized = to_forward_slash(path);
     if normalized.ends_with('/') {
         return Err(anyhow!("File path must not end with '/': {}", normalized));
     }
-    if let Some(existing) = get_node_id(db, &normalized)? {
-        let meta = get_node_meta(db, existing)?
+    if let Some(existing) = get_node_id_in_txn(write_txn, &normalized)? {
+        let meta = get_node_meta_in_txn(write_txn, existing)?
             .ok_or_else(|| anyhow!("Node meta missing: {}", normalized))?;
         if meta.kind == NodeKind::Dir {
             return Err(anyhow!("Path is a directory: {}", normalized));
@@ -107,8 +179,16 @@ pub fn ensure_file_node(db: &Database, path: &str, doc_id: DocId) -> Result<Node
         }
         return Ok(existing);
     }
+    if let Some(existing_doc) = path_doc_in_txn(write_txn, &normalized)?
+        && existing_doc != doc_id
+    {
+        return Err(anyhow!(
+            "Path already bound to another document: {}",
+            normalized
+        ));
+    }
     let (parent_path, name) = split_path(&normalized);
-    let parent_id = ensure_dir_chain(db, parent_path)?;
+    let parent_id = ensure_dir_chain_in_txn(write_txn, parent_path)?;
     let node_id = NodeId::from_doc_id(doc_id);
 
     let meta = NodeMeta {
@@ -118,7 +198,7 @@ pub fn ensure_file_node(db: &Database, path: &str, doc_id: DocId) -> Result<Node
         path: normalized,
         doc_id: Some(doc_id),
     };
-    upsert_node(db, node_id, &meta)?;
+    upsert_node_in_txn(write_txn, node_id, &meta)?;
     Ok(node_id)
 }
 
@@ -149,4 +229,9 @@ pub fn create_dir_node(db: &Database, path: &str) -> Result<NodeId> {
     };
     upsert_node(db, node_id, &meta)?;
     Ok(node_id)
+}
+
+fn path_doc_in_txn(write_txn: &WriteTransaction, path: &str) -> Result<Option<DocId>> {
+    let table = write_txn.open_table(PATH_TO_DOCID)?;
+    Ok(table.get(path)?.map(|v| DocId::from_u128(v.value())))
 }

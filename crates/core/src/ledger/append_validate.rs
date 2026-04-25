@@ -7,7 +7,7 @@ use anyhow::{Result, anyhow};
 use redb::{ReadableMultimapTable, ReadableTable, WriteTransaction};
 use std::collections::HashSet;
 
-use super::schema::{DOC_OPS, LEDGER_OPS, NODEID_TO_META};
+use super::schema::{DOC_OPS, LEDGER_OPS, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 
 pub(crate) fn validate_ledger_append(
     write_txn: &WriteTransaction,
@@ -64,13 +64,19 @@ fn validate_structure_state(write_txn: &WriteTransaction, op: &StructureOp) -> R
             if *node_id != NodeId::from_doc_id(*doc_id) {
                 anyhow::bail!("CreateFile node/doc mismatch for {}", doc_id);
             }
-            ensure_parent_dir(write_txn, *parent_id)
+            ensure_node_absent(write_txn, *node_id)?;
+            ensure_parent_dir(write_txn, *parent_id)?;
+            ensure_path_free(write_txn, &child_path(write_txn, *parent_id, name)?)
         }
         StructureOp::CreateDir {
-            parent_id, name, ..
+            node_id,
+            parent_id,
+            name,
         } => {
             ensure_name_segment(name)?;
-            ensure_parent_dir(write_txn, *parent_id)
+            ensure_node_absent(write_txn, *node_id)?;
+            ensure_parent_dir(write_txn, *parent_id)?;
+            ensure_path_free(write_txn, &child_path(write_txn, *parent_id, name)?)
         }
         StructureOp::RenameNode {
             node_id,
@@ -79,7 +85,9 @@ fn validate_structure_state(write_txn: &WriteTransaction, op: &StructureOp) -> R
         } => {
             ensure_name_segment(new_name)?;
             let meta = load_meta_required(write_txn, *node_id)?;
-            ensure_doc_match(*node_id, meta.doc_id, *doc_id)
+            ensure_doc_match(*node_id, meta.doc_id, *doc_id)?;
+            let new_path = child_path(write_txn, meta.parent_id, new_name)?;
+            ensure_rename_target_free(write_txn, &meta, new_path)
         }
         StructureOp::MoveNode {
             node_id,
@@ -89,7 +97,9 @@ fn validate_structure_state(write_txn: &WriteTransaction, op: &StructureOp) -> R
             let meta = load_meta_required(write_txn, *node_id)?;
             ensure_doc_match(*node_id, meta.doc_id, *doc_id)?;
             ensure_parent_dir(write_txn, *new_parent_id)?;
-            ensure_not_descendant(write_txn, *node_id, *new_parent_id)
+            ensure_not_descendant(write_txn, *node_id, *new_parent_id)?;
+            let new_path = child_path(write_txn, *new_parent_id, &meta.name)?;
+            ensure_rename_target_free(write_txn, &meta, new_path)
         }
         StructureOp::DeleteNode { node_id, doc_id } => {
             if let Some(meta) = load_meta(write_txn, *node_id)? {
@@ -119,6 +129,18 @@ fn load_doc_entries(write_txn: &WriteTransaction, doc_id: DocId) -> Result<Vec<L
     Ok(entries.into_iter().map(|(_, entry)| entry).collect())
 }
 
+fn child_path(
+    write_txn: &WriteTransaction,
+    parent_id: Option<NodeId>,
+    name: &str,
+) -> Result<String> {
+    if let Some(parent_id) = parent_id {
+        let parent = load_meta_required(write_txn, parent_id)?;
+        return Ok(format!("{}/{}", parent.path, name));
+    }
+    Ok(name.to_string())
+}
+
 fn load_meta(write_txn: &WriteTransaction, node_id: NodeId) -> Result<Option<NodeMeta>> {
     let table = write_txn.open_table(NODEID_TO_META)?;
     table
@@ -141,6 +163,109 @@ fn ensure_parent_dir(write_txn: &WriteTransaction, parent_id: Option<NodeId>) ->
         anyhow::bail!("structure parent is not a directory: {}", parent_id);
     }
     Ok(())
+}
+
+fn ensure_node_absent(write_txn: &WriteTransaction, node_id: NodeId) -> Result<()> {
+    if load_meta(write_txn, node_id)?.is_some() {
+        anyhow::bail!("structure node already exists: {}", node_id);
+    }
+    Ok(())
+}
+
+fn ensure_path_free(write_txn: &WriteTransaction, path: &str) -> Result<()> {
+    if path_node(write_txn, path)?.is_some() {
+        anyhow::bail!("structure path already bound to a node: {}", path);
+    }
+    if path_doc(write_txn, path)?.is_some() {
+        anyhow::bail!("structure path already bound to a document: {}", path);
+    }
+    Ok(())
+}
+
+fn ensure_rename_target_free(
+    write_txn: &WriteTransaction,
+    meta: &NodeMeta,
+    new_path: String,
+) -> Result<()> {
+    if meta.path == new_path {
+        return Ok(());
+    }
+    if meta.kind == NodeKind::File {
+        ensure_exact_target_free(write_txn, meta, &new_path)
+    } else {
+        ensure_prefix_target_free(write_txn, &meta.path, &new_path)
+    }
+}
+
+fn ensure_exact_target_free(
+    write_txn: &WriteTransaction,
+    meta: &NodeMeta,
+    new_path: &str,
+) -> Result<()> {
+    if let Some(node_id) = path_node(write_txn, new_path)? {
+        anyhow::bail!("structure target path already bound to node {}", node_id);
+    }
+    if let Some(doc_id) = path_doc(write_txn, new_path)?
+        && Some(doc_id) != meta.doc_id
+    {
+        anyhow::bail!("structure target path already bound to document {}", doc_id);
+    }
+    Ok(())
+}
+
+fn ensure_prefix_target_free(
+    write_txn: &WriteTransaction,
+    old_prefix: &str,
+    new_prefix: &str,
+) -> Result<()> {
+    ensure_node_prefix_target_free(write_txn, old_prefix, new_prefix)?;
+    ensure_doc_prefix_target_free(write_txn, old_prefix, new_prefix)
+}
+
+fn ensure_node_prefix_target_free(
+    write_txn: &WriteTransaction,
+    old_prefix: &str,
+    new_prefix: &str,
+) -> Result<()> {
+    let table = write_txn.open_table(PATH_TO_NODEID)?;
+    for item in table.iter()? {
+        let (path_guard, _) = item?;
+        let path = path_guard.value();
+        if is_under(path, new_prefix) && !is_under(path, old_prefix) {
+            anyhow::bail!("structure target path already bound to node: {}", path);
+        }
+    }
+    Ok(())
+}
+
+fn ensure_doc_prefix_target_free(
+    write_txn: &WriteTransaction,
+    old_prefix: &str,
+    new_prefix: &str,
+) -> Result<()> {
+    let table = write_txn.open_table(PATH_TO_DOCID)?;
+    for item in table.iter()? {
+        let (path_guard, _) = item?;
+        let path = path_guard.value();
+        if is_under(path, new_prefix) && !is_under(path, old_prefix) {
+            anyhow::bail!("structure target path already bound to document: {}", path);
+        }
+    }
+    Ok(())
+}
+
+fn path_node(write_txn: &WriteTransaction, path: &str) -> Result<Option<NodeId>> {
+    let table = write_txn.open_table(PATH_TO_NODEID)?;
+    Ok(table.get(path)?.map(|v| NodeId::from_u128(v.value())))
+}
+
+fn path_doc(write_txn: &WriteTransaction, path: &str) -> Result<Option<DocId>> {
+    let table = write_txn.open_table(PATH_TO_DOCID)?;
+    Ok(table.get(path)?.map(|v| DocId::from_u128(v.value())))
+}
+
+fn is_under(path: &str, prefix: &str) -> bool {
+    path == prefix || path.starts_with(&format!("{}/", prefix))
 }
 
 fn ensure_not_descendant(

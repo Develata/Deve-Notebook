@@ -60,6 +60,28 @@ fn encrypted_response_with_seq(
     })
 }
 
+fn encrypted_invalid_delete_response(
+    peer: &PeerId,
+    repo_id: RepoId,
+    key: &RepoKey,
+    seq: u64,
+) -> anyhow::Result<SyncResponse> {
+    let entry = LedgerEntry::new_content(
+        DocId::new(),
+        Op::Delete { pos: 99, len: 1 },
+        1,
+        peer.clone(),
+        seq,
+        None,
+        None,
+    );
+    Ok(SyncResponse {
+        peer_id: peer.clone(),
+        repo_id,
+        ops: vec![key.encrypt(&entry, seq)?],
+    })
+}
+
 fn tampered_response(peer: &PeerId, repo_id: RepoId) -> SyncResponse {
     SyncResponse {
         peer_id: peer.clone(),
@@ -145,6 +167,58 @@ fn failed_manual_merge_does_not_partially_apply_ops() -> anyhow::Result<()> {
 }
 
 #[test]
+fn failed_manual_merge_validation_rolls_back_prior_payload() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?);
+    engine.buffer_remote_ops(encrypted_invalid_delete_response(&peer, repo_id, &key, 2)?);
+
+    let err = engine
+        .merge_pending()
+        .expect_err("second payload must fail ledger validation");
+    assert!(err.to_string().contains("Refusing to append content op"));
+    assert_eq!(engine.pending_ops_count(), 2);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[test]
+fn manual_merge_rejects_mixed_peer_targets() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer_a = PeerId::new("remote-a");
+    let peer_b = PeerId::new("remote-b");
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_a, repo_id, &key, 1)?);
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_b, repo_id, &key, 1)?);
+
+    let err = engine
+        .merge_pending()
+        .expect_err("mixed peer targets must fail closed");
+    assert!(err.to_string().contains("one peer/repo target"));
+    assert_eq!(engine.pending_ops_count(), 2);
+    assert_eq!(repo.get_shadow_max_seq(&peer_a, &repo_id)?, 0);
+    assert_eq!(repo.get_shadow_max_seq(&peer_b, &repo_id)?, 0);
+    Ok(())
+}
+
+#[test]
+fn manual_merge_rejects_mixed_repo_targets() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let other_repo_id = uuid::Uuid::new_v4();
+    let peer = PeerId::new("remote");
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?);
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, other_repo_id, &key, 1)?);
+
+    let err = engine
+        .merge_pending()
+        .expect_err("mixed repo targets must fail closed");
+    assert!(err.to_string().contains("one peer/repo target"));
+    assert_eq!(engine.pending_ops_count(), 2);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &other_repo_id)?, 0);
+    Ok(())
+}
+
+#[test]
 fn failed_manual_snapshot_merge_does_not_reset_shadow_repo() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
@@ -155,6 +229,24 @@ fn failed_manual_snapshot_merge_does_not_reset_shadow_repo() -> anyhow::Result<(
 
     let err = engine.merge_pending().expect_err("bad snapshot must fail");
     assert!(err.to_string().contains("Decryption failed"));
+    assert_eq!(engine.pending_ops_count(), 1);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    Ok(())
+}
+
+#[test]
+fn failed_manual_snapshot_validation_does_not_reset_shadow_repo() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    engine.apply_remote_ops(encrypted_response(&peer, repo_id, &key)?)?;
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+
+    engine.buffer_remote_snapshot(encrypted_invalid_delete_response(&peer, repo_id, &key, 2)?);
+
+    let err = engine
+        .merge_pending()
+        .expect_err("bad snapshot must fail ledger validation");
+    assert!(err.to_string().contains("Refusing to append content op"));
     assert_eq!(engine.pending_ops_count(), 1);
     assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
     Ok(())
