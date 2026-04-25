@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::loader::PluginLoader;
 use std::net::TcpListener;
@@ -27,7 +30,7 @@ pub(super) fn load_plugins()
 
 pub(super) fn find_free_port(start: u16, span: u16) -> Option<u16> {
     for p in start..=start.saturating_add(span) {
-        let addr = format!("0.0.0.0:{p}");
+        let addr = format!("127.0.0.1:{p}");
         if TcpListener::bind(&addr).is_ok() {
             return Some(p);
         }

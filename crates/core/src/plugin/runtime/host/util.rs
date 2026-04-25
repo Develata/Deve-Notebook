@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/util.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # 辅助宿主函数
 //!
 //! **功能**: 提供 JSON 解析、环境变量读取和日志输出能力。

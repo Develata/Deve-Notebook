@@ -1,17 +1,28 @@
+//! plan_ref:
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 use deve_core::config::Config;
 use serde::Serialize;
+use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub struct AgentBridgePolicy {
     enabled: bool,
     trusted: bool,
     cli_path: Option<String>,
+    timeout_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct AgentBridgeCapabilities {
     pub trusted_cli_available: bool,
     pub trusted_cli_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentBridgeRunConfig {
+    pub cli_path: String,
+    pub timeout_ms: u64,
 }
 
 impl AgentBridgePolicy {
@@ -22,6 +33,7 @@ impl AgentBridgePolicy {
             trusted: env_bool("DEVE_AI_AGENT_BRIDGE_TRUSTED")
                 .unwrap_or(config.ai.agent_bridge.trusted),
             cli_path: std::env::var("AGENT_CLI_PATH").ok().and_then(non_empty),
+            timeout_ms: config.ai.agent_bridge.timeout_ms,
         }
     }
 
@@ -39,9 +51,21 @@ impl AgentBridgePolicy {
         if !self.trusted {
             return Err("trusted mode required".to_string());
         }
-        self.cli_path
+        let path = self
+            .cli_path
             .clone()
-            .ok_or_else(|| "AGENT_CLI_PATH required".to_string())
+            .ok_or_else(|| "AGENT_CLI_PATH required".to_string())?;
+        if !Path::new(&path).is_absolute() {
+            return Err("AGENT_CLI_PATH must be absolute".to_string());
+        }
+        Ok(path)
+    }
+
+    pub fn run_config(&self) -> Result<AgentBridgeRunConfig, String> {
+        Ok(AgentBridgeRunConfig {
+            cli_path: self.spawn_path()?,
+            timeout_ms: self.timeout_ms.max(1),
+        })
     }
 }
 
@@ -60,45 +84,5 @@ fn non_empty(value: String) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::AgentBridgePolicy;
-
-    #[test]
-    fn disabled_policy_fails_closed() {
-        let policy = AgentBridgePolicy {
-            enabled: false,
-            trusted: false,
-            cli_path: Some("agent".to_string()),
-        };
-        assert_eq!(
-            policy.spawn_path().expect_err("must fail"),
-            "external agent disabled"
-        );
-    }
-
-    #[test]
-    fn untrusted_policy_requires_trusted_mode() {
-        let policy = AgentBridgePolicy {
-            enabled: true,
-            trusted: false,
-            cli_path: Some("agent".to_string()),
-        };
-        assert_eq!(
-            policy.spawn_path().expect_err("must fail"),
-            "trusted mode required"
-        );
-    }
-
-    #[test]
-    fn trusted_policy_requires_explicit_cli_path() {
-        let policy = AgentBridgePolicy {
-            enabled: true,
-            trusted: true,
-            cli_path: None,
-        };
-        assert_eq!(
-            policy.spawn_path().expect_err("must fail"),
-            "AGENT_CLI_PATH required"
-        );
-    }
-}
+#[path = "policy_test.rs"]
+mod tests;

@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/tools.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 //! # Tool Definitions for AI Function Calling
 //!
 //! Defines the schema for tools that AI can invoke during conversation.

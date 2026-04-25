@@ -23,6 +23,7 @@ pub mod common;
 pub mod context_menu;
 pub mod dashboard;
 pub mod diff;
+pub mod extensions;
 pub mod header;
 pub mod login;
 pub mod merge;
@@ -69,6 +70,7 @@ pub mod t {
     pub use super::context_menu;
     pub use super::dashboard;
     pub use super::diff;
+    pub use super::extensions;
     pub use super::header;
     pub use super::merge;
     pub use super::playback;

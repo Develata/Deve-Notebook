@@ -1,4 +1,7 @@
 // apps/cli/src/server/ai_chat/types.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 //! # SSE 响应数据结构
 //!
 //! **功能**: OpenAI 兼容的 SSE 流式响应强类型定义。

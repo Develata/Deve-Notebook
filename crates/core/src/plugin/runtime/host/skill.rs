@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/skill.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # Skill 宿主函数
 //!
 //! **功能**: 暴露 SkillManager 给 Rhai 脚本使用。

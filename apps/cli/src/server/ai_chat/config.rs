@@ -1,4 +1,7 @@
 // apps/cli/src/server/ai_chat/config.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 //! # AI Chat 配置
 //!
 //! **功能**: 强类型的 AI 聊天配置结构。

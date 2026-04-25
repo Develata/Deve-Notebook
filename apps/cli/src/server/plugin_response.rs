@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 use crate::server::channel::DualChannel;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 

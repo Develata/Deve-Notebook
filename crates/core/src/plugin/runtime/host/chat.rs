@@ -1,4 +1,8 @@
 // crates/core/src/plugin/runtime/host/chat.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # AI 聊天宿主函数
 //!
 //! **功能**: 提供 AI 聊天流式处理能力。

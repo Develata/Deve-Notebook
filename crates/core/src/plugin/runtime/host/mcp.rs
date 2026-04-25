@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/mcp.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # MCP 宿主函数 (Stub)
 //!
 //! **功能**: 向 Rhai 暴露 MCP 工具列表与调用接口。

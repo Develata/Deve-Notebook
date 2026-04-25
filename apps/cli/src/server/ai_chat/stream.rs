@@ -1,4 +1,7 @@
 // apps/cli/src/server/ai_chat/stream.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 //! # SSE 流式请求执行器
 //!
 //! **功能**: 执行 OpenAI 兼容的 SSE 流式 HTTP 请求。

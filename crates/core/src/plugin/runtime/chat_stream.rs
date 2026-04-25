@@ -1,4 +1,8 @@
 // crates/core/src/plugin/runtime/chat_stream.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # AI Chat Streaming Bridge
 //!
 //! Provides a lightweight bridge between Rhai host functions and

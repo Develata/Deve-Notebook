@@ -1,4 +1,8 @@
 // apps/web/src/components/settings_sections.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 //! # Settings Modal — Section Components
 //!
 //! Extracted sub-sections: Sync Mode, AI Backend.
@@ -69,7 +73,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             trusted_cap
                 .get()
                 .trusted_cli_reason
-                .unwrap_or_else(|| "Trusted CLI unavailable".to_string())
+                .unwrap_or_else(|| t::extensions::trusted_cli_unavailable(locale.get()).to_string())
         };
         view! {
             <div class="bg-sidebar p-4 rounded-lg border border-default flex justify-between items-center">

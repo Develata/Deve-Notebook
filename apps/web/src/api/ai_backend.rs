@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 use gloo_net::http::Request;
 use serde::Deserialize;
 

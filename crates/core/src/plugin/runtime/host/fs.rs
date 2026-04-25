@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/fs.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # 文件系统宿主函数
 //!
 //! **功能**: 提供文件读写和项目树获取能力。

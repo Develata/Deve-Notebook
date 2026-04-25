@@ -1,4 +1,8 @@
 // crates/core/src/plugin/runtime/provider.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # AiProvider 接口层
 //!
 //! **功能**: 定义标准化 AI 提供者接口，是 D.5 规范的实现。

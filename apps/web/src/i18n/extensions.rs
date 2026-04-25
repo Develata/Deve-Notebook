@@ -1,4 +1,7 @@
-use crate::i18n::Locale;
+// apps\web\src\i18n
+//! # Extensions I18n
+
+use super::Locale;
 
 pub fn channel_desc(locale: Locale, mode: &str) -> &'static str {
     match (locale, mode) {
@@ -41,6 +44,13 @@ pub fn trusted_status_label(locale: Locale, active: bool, available: bool) -> &'
         (Locale::En, _, false) => "Disabled",
         (Locale::Zh, _, false) => "禁用",
         _ => status_label(locale, active),
+    }
+}
+
+pub fn trusted_cli_unavailable(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Trusted CLI unavailable",
+        Locale::Zh => "受信任 CLI 不可用",
     }
 }
 

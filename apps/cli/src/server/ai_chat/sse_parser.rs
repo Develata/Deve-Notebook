@@ -1,4 +1,7 @@
 // apps/cli/src/server/ai_chat/sse_parser.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 //! # SSE 消息解析器
 //!
 //! **功能**: 解析 OpenAI 兼容的 SSE 流式响应。

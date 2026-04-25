@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 //! Agent bridge: 将聊天请求桥接到外部 CLI。
 
 mod policy;
@@ -9,6 +12,9 @@ use crate::server::plugin_response::{send_plugin_invalid_message, send_plugin_re
 use axum::Json;
 use deve_core::protocol::ServerMessage;
 use std::sync::{LazyLock, RwLock};
+use tokio::sync::Semaphore;
+
+static IN_FLIGHT: Semaphore = Semaphore::const_new(1);
 
 static POLICY: LazyLock<RwLock<policy::AgentBridgePolicy>> = LazyLock::new(|| {
     RwLock::new(policy::AgentBridgePolicy::from_config(
@@ -37,8 +43,8 @@ pub async fn handle_agent_chat(ch: &DualChannel, req_id: String, args: Vec<serde
         return;
     }
 
-    let cli_path = match cli_path() {
-        Ok(path) => path,
+    let run_config = match run_config() {
+        Ok(config) => config,
         Err(detail) => {
             tracing::warn!("Agent bridge blocked: {}", detail);
             send_plugin_request_failed(ch, &req_id, detail);
@@ -46,13 +52,26 @@ pub async fn handle_agent_chat(ch: &DualChannel, req_id: String, args: Vec<serde
             return;
         }
     };
+    let Ok(_permit) = IN_FLIGHT.try_acquire() else {
+        send_plugin_request_failed(ch, &req_id, "external agent busy");
+        finish_chat(ch, &req_id);
+        return;
+    };
     tracing::info!(
         "Agent bridge: spawning `{}` with query len={}",
-        cli_path,
+        run_config.cli_path,
         user_message.len()
     );
 
-    match stream::spawn_and_stream(&cli_path, &user_message, ch, &req_id).await {
+    match stream::spawn_and_stream(
+        &run_config.cli_path,
+        &user_message,
+        run_config.timeout_ms,
+        ch,
+        &req_id,
+    )
+    .await
+    {
         Ok(()) => tracing::info!("Agent bridge: session completed for req_id={}", req_id),
         Err(err) => {
             tracing::error!("Agent bridge error: {:?}", err);
@@ -80,9 +99,9 @@ fn capabilities() -> policy::AgentBridgeCapabilities {
         })
 }
 
-fn cli_path() -> Result<String, String> {
+fn run_config() -> Result<policy::AgentBridgeRunConfig, String> {
     POLICY
         .read()
         .map_err(|_| "external agent disabled".to_string())?
-        .spawn_path()
+        .run_config()
 }

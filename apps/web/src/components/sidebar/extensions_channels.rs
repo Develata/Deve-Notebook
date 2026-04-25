@@ -1,4 +1,7 @@
-use super::copy;
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 use crate::api::{AiBackendCapabilities, fetch_ai_backend_capabilities};
 use crate::components::icons::{Terminal, Zap};
 use crate::hooks::use_core::ChatContext;
@@ -21,7 +24,7 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
         trusted_cap
             .get()
             .trusted_cli_reason
-            .unwrap_or_else(|| "Trusted CLI unavailable".to_string())
+            .unwrap_or_else(|| t::extensions::trusted_cli_unavailable(locale.get()).to_string())
     };
 
     view! {
@@ -39,11 +42,11 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
                         <div class="rounded-lg bg-active p-2 text-primary"><Zap class="w-5 h-5" /></div>
                         <div>
                             <div class="text-sm font-semibold text-primary">{move || t::chat::ai_chat(locale.get())}</div>
-                            <p class="mt-1 text-xs text-muted">{move || copy::channel_desc(locale.get(), "ai-chat")}</p>
+                            <p class="mt-1 text-xs text-muted">{move || t::extensions::channel_desc(locale.get(), "ai-chat")}</p>
                         </div>
                     </div>
                     <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                        {move || copy::status_label(locale.get(), chat.ai_mode.get() == "ai-chat")}
+                        {move || t::extensions::status_label(locale.get(), chat.ai_mode.get() == "ai-chat")}
                     </span>
                 </div>
             </button>
@@ -68,11 +71,11 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
                         <div class="rounded-lg bg-active p-2 text-primary"><Terminal class="w-5 h-5" /></div>
                         <div>
                             <div class="text-sm font-semibold text-primary">{move || t::chat::agent_bridge(locale.get())}</div>
-                            <p class="mt-1 text-xs text-muted">{move || copy::channel_desc(locale.get(), "agent-bridge")}</p>
+                            <p class="mt-1 text-xs text-muted">{move || t::extensions::channel_desc(locale.get(), "agent-bridge")}</p>
                         </div>
                     </div>
                     <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                        {move || copy::trusted_status_label(locale.get(), chat.ai_mode.get() == "agent-bridge", trusted_available.get())}
+                        {move || t::extensions::trusted_status_label(locale.get(), chat.ai_mode.get() == "agent-bridge", trusted_available.get())}
                     </span>
                 </div>
             </button>

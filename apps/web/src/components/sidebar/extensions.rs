@@ -1,12 +1,15 @@
 // apps\web\src\components\sidebar
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # ExtensionsView 组件 (ExtensionsView Component)
 //!
 //! 轻量展示当前第一方扩展能力，并为后续插件运行时预留接口位。
 
 #[path = "extensions_channels.rs"]
 mod channels;
-#[path = "extensions_copy.rs"]
-mod copy;
 
 use crate::components::icons::{Book, Puzzle};
 use crate::hooks::use_core::ChatContext;
@@ -38,7 +41,7 @@ pub fn ExtensionsView() -> impl IntoView {
                 <channels::AiChannelCards locale=locale chat=chat />
                 <div class="space-y-3">
                     <div class="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                        {move || copy::system_title(locale.get())}
+                        {move || t::extensions::system_title(locale.get())}
                     </div>
                     <div class="rounded-xl border border-default bg-panel p-4">
                         <div class="flex items-start justify-between gap-3">
@@ -46,11 +49,11 @@ pub fn ExtensionsView() -> impl IntoView {
                                 <div class="rounded-lg bg-active p-2 text-primary"><Book class="w-5 h-5" /></div>
                                 <div>
                                     <div class="text-sm font-semibold text-primary">"KaTeX"</div>
-                                    <p class="mt-1 text-xs text-muted">{move || copy::katex_desc(locale.get())}</p>
+                                    <p class="mt-1 text-xs text-muted">{move || t::extensions::katex_desc(locale.get())}</p>
                                 </div>
                             </div>
                             <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                                {move || copy::bundled_label(locale.get())}
+                                {move || t::extensions::bundled_label(locale.get())}
                             </span>
                         </div>
                     </div>
@@ -60,11 +63,11 @@ pub fn ExtensionsView() -> impl IntoView {
                                 <div class="rounded-lg bg-active p-2 text-primary"><Puzzle class="w-5 h-5" /></div>
                                 <div>
                                     <div class="text-sm font-semibold text-primary">"mhchem"</div>
-                                    <p class="mt-1 text-xs text-muted">{move || copy::mhchem_desc(locale.get())}</p>
+                                    <p class="mt-1 text-xs text-muted">{move || t::extensions::mhchem_desc(locale.get())}</p>
                                 </div>
                             </div>
                             <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
-                                {move || copy::planned_label(locale.get())}
+                                {move || t::extensions::planned_label(locale.get())}
                             </span>
                         </div>
                     </div>
@@ -75,8 +78,8 @@ pub fn ExtensionsView() -> impl IntoView {
                             <Puzzle class="w-5 h-5" />
                         </div>
                         <div>
-                            <div class="text-sm font-semibold text-primary">{move || copy::runtime_title(locale.get())}</div>
-                            <p class="mt-1 text-xs text-muted">{move || copy::runtime_desc(locale.get())}</p>
+                            <div class="text-sm font-semibold text-primary">{move || t::extensions::runtime_title(locale.get())}</div>
+                            <p class="mt-1 text-xs text-muted">{move || t::extensions::runtime_desc(locale.get())}</p>
                         </div>
                     </div>
                 </div>

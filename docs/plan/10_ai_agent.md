@@ -6,7 +6,7 @@
 - `Status`: `Deferred`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
-- `Primary Code Areas`: `crates/core/src/plugin/`, `apps/cli/src/server/ai_chat.rs`, `apps/web/src/components/ai_chat/`
+- `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 - `Related Design Notes`: [`docs/ai-chat-streaming.md`](../ai-chat-streaming.md) (streaming bridge design), [`docs/plan/plugins/agent_bridge/01_agent_bridge.md`](./plugins/agent_bridge/01_agent_bridge.md) (dual-channel architecture)
 
 > AI 能力是 Deve-Notebook 的**第一方原生产品层**，不再归入插件章节。
@@ -26,7 +26,7 @@
     - 原生复杂 Agent 自治状态机（多代理协作、长链自主规划、无限工具循环）
     - 原生 Source Control 写入自动化
 
-## 2. Native AI Chat
+## 2. Native AI Chat {#native-ai-chat-runtime}
 
 Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建能力。
 
@@ -51,6 +51,13 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   **Read-first**：当前阶段优先保证“读 markdown + chat”稳定，不追求工具丰富度。
 *   **Low-memory**：常驻成本应保持在轻量级，适合低配环境。
 
+### Runtime Implementation Contract
+
+*   Server runtime belongs to `apps/cli/src/server/ai_chat/`.
+*   Web chat UI belongs to `apps/web/src/components/chat/`; backend capability probing belongs to `apps/web/src/api/ai_backend.rs`.
+*   `crates/core/src/plugin/runtime/chat_stream.rs` and `provider.rs` may provide a transport-agnostic bridge while the existing Rhai host remains in the repo, but this bridge does **not** make Native AI Chat part of the generic plugin mainline.
+*   Native AI Chat must keep the read-first boundary from this section: provider calls may stream responses, but must not silently gain arbitrary source-control or workspace write authority.
+
 ### 原生模式定义
 
 *   **PLAN 模式**：
@@ -67,7 +74,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
     - **MUST NOT** 用作后端切换命令。
     - **MUST NOT** 隐式拉起 Trusted External Agent。
 
-## 3. Trusted External Agent Bridge
+## 3. Trusted External Agent Bridge {#trusted-agent-bridge}
 
 外部 CLI Agent 不再作为默认能力，而是**显式 opt-in 的 Trusted 模式**。
 
@@ -91,6 +98,8 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 
 *   如果上述边界在目标部署形态下无法成立，则 Deve-Notebook **SHOULD** 不内建 CLI Agent。
 *   在这种情况下，用户可以自行在外部终端运行独立 CLI Agent；Deve-Notebook 不负责原生托管它。
+*   当前代码若保留 `agent-bridge`，它只能是 default-off、policy-gated 的 Trusted CLI path；它不得被描述成通用插件市场能力，也不得绕过 `AGENT_CLI_PATH` / trusted-mode gating。
+*   `AGENT_CLI_PATH` 必须解析为显式绝对路径；子进程必须清空默认环境、设置超时、输出上限和并发上限，避免退化成开放式 shell/agent runner。
 
 ## 4. Unified Frontend Interaction (统一前端交互)
 

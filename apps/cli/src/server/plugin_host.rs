@@ -1,4 +1,7 @@
 // apps/cli/src/server/plugin_host.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # Plugin Host Only Server
 
 #[path = "plugin_host_routes.rs"]
@@ -32,7 +35,7 @@ pub async fn start_plugin_host_only(
     });
 
     let app = routes::build_router(state);
-    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
     tracing::info!("Plugin host running on ws://{}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;

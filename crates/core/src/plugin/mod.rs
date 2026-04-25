@@ -1,4 +1,7 @@
 // crates\core\src\plugin
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # Plugin System (插件系统)
 //!
 //! **架构作用**:

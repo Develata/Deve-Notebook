@@ -1,4 +1,7 @@
 ﻿// crates\core\src\plugin
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # Plugin Manifest & Capabilities (插件清单与能力)
 //!
 //! **架构作用**:

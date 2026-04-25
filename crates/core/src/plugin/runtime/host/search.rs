@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/search.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # 文件搜索宿主函数
 //!
 //! **功能**: 提供 glob 搜索和正则 grep 能力给 Rhai 插件。

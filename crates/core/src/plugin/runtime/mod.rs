@@ -1,4 +1,7 @@
 // crates\core\src\plugin\runtime\mod.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # Plugin Runtime (插件运行时)
 //!
 //! **功能**:

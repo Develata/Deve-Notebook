@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 use super::PluginHostState;
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;

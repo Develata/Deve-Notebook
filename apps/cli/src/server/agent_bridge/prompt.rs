@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 pub(super) fn extract_user_message(args: &[serde_json::Value]) -> String {
     let msg = if args.len() >= 2
         && let Some(s) = args[1].as_str()

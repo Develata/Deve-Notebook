@@ -105,8 +105,8 @@ pub fn try_these(locale: Locale) -> &'static str {
 
 pub fn tip(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "AI can stage and commit after review",
-        Locale::Zh => "AI 可在审阅后辅助暂存与提交",
+        Locale::En => "AI can help draft commit messages after review",
+        Locale::Zh => "AI 可在审阅后辅助草拟提交信息",
     }
 }
 

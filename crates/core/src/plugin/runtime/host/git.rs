@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/git.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # 版本控制宿主函数
 //!
 //! **功能**: 提供 Git-like 源代码控制能力。

@@ -1,4 +1,7 @@
 // crates/core/src/plugin/runtime/host/mod.rs
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!
 //! # Host Functions (宿主函数模块)
 //!
 //! **功能**:
