@@ -12,7 +12,7 @@ pub fn route_control_message(
     msg: ServerMessage,
     ws: &WsService,
     signals: CoreSignals,
-) -> Result<(), ServerMessage> {
+) -> Option<ServerMessage> {
     match msg {
         ServerMessage::ShadowList {
             request_id,
@@ -20,7 +20,7 @@ pub fn route_control_message(
             shadows,
         } => {
             handle_shadow_list_message(request_id, scope_nonce, shadows, ws, signals);
-            Ok(())
+            None
         }
         ServerMessage::RepoList {
             request_id,
@@ -29,7 +29,7 @@ pub fn route_control_message(
             repos,
         } => {
             handle_repo_list_message(request_id, branch, scope_nonce, repos, ws, signals);
-            Ok(())
+            None
         }
         ServerMessage::BranchSwitched {
             peer_id,
@@ -37,7 +37,7 @@ pub fn route_control_message(
             switch_nonce,
         } => {
             handle_branch_switched_message(peer_id, success, switch_nonce, ws, signals);
-            Ok(())
+            None
         }
         ServerMessage::RepoSwitched {
             branch,
@@ -46,15 +46,15 @@ pub fn route_control_message(
             switch_nonce,
         } => {
             handle_repo_switched_message(branch, name, uuid, switch_nonce, ws, signals);
-            Ok(())
+            None
         }
         ServerMessage::PeerDeleted {
             peer_id,
             scope_nonce,
         } => {
             handle_peer_deleted_message(peer_id, scope_nonce, ws, signals);
-            Ok(())
+            None
         }
-        other => Err(other),
+        other => Some(other),
     }
 }

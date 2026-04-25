@@ -2,7 +2,8 @@
 //! Layout Hook for resizable sidebar, chat panel, and outer gutter widths.
 
 use self::use_layout_resize::{
-    ResizeTarget, do_resize_callback, start_resize_callback, stop_resize_callback,
+    ResizeBounds, ResizeOutputSignals, ResizeStateSignals, ResizeTarget, do_resize_callback,
+    start_resize_callback, stop_resize_callback,
 };
 use self::use_layout_storage::{clamp, read_width, write_width};
 use leptos::prelude::*;
@@ -99,17 +100,23 @@ pub fn use_layout() -> LayoutHookReturn {
     );
     let stop_resize = stop_resize_callback(set_is_resizing, set_active_resize, set_active_pointer);
     let do_resize = do_resize_callback(
-        is_resizing,
-        active_pointer,
-        start_x,
-        start_width,
-        active_resize,
-        set_sidebar_width,
-        set_right_width,
-        set_outer_gutter,
-        (SIDEBAR_MIN, SIDEBAR_MAX),
-        (RIGHT_MIN, RIGHT_MAX),
-        (OUTER_MIN, OUTER_MAX),
+        ResizeStateSignals {
+            is_resizing,
+            active_pointer,
+            start_x,
+            start_width,
+            active_resize,
+        },
+        ResizeOutputSignals {
+            set_sidebar_width,
+            set_right_width,
+            set_outer_gutter,
+        },
+        ResizeBounds {
+            sidebar: (SIDEBAR_MIN, SIDEBAR_MAX),
+            right: (RIGHT_MIN, RIGHT_MAX),
+            outer: (OUTER_MIN, OUTER_MAX),
+        },
     );
 
     (

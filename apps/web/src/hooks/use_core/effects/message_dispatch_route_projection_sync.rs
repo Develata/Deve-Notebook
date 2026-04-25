@@ -9,7 +9,7 @@ use super::super::message_dispatch_sync::{
 pub fn route_projection_sync_message(
     msg: ServerMessage,
     signals: CoreSignals,
-) -> Result<(), ServerMessage> {
+) -> Option<ServerMessage> {
     match msg {
         ServerMessage::SyncHello {
             peer_id,
@@ -19,7 +19,7 @@ pub fn route_projection_sync_message(
             ..
         } => {
             handle_sync_hello_message(peer_id, repo_id, scope_nonce, vector, signals);
-            Ok(())
+            None
         }
         ServerMessage::SyncModeStatus {
             request_id,
@@ -36,7 +36,7 @@ pub fn route_projection_sync_message(
                 mode,
                 signals,
             );
-            Ok(())
+            None
         }
         ServerMessage::PendingOpsInfo {
             request_id,
@@ -55,7 +55,7 @@ pub fn route_projection_sync_message(
                 previews,
                 signals,
             );
-            Ok(())
+            None
         }
         ServerMessage::MergeComplete {
             repo_id,
@@ -64,7 +64,7 @@ pub fn route_projection_sync_message(
             merged_count,
         } => {
             handle_merge_complete_message(repo_id, branch, scope_nonce, merged_count, signals);
-            Ok(())
+            None
         }
         ServerMessage::PendingDiscarded {
             repo_id,
@@ -72,8 +72,8 @@ pub fn route_projection_sync_message(
             scope_nonce,
         } => {
             handle_pending_discarded_message(repo_id, branch, scope_nonce, signals);
-            Ok(())
+            None
         }
-        other => Err(other),
+        other => Some(other),
     }
 }

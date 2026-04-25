@@ -68,9 +68,9 @@ pub(super) fn spawn_handshake_attempt(ctx: HandshakeAttemptCtx) {
             }
         };
 
-        match sign_sync_hello(&identity, &msg).await {
+        match sign_sync_hello(identity, &msg).await {
             Ok(signature) => {
-                delivery::deliver_signed_handshake(&ctx, next_attempt, &identity, signature).await;
+                delivery::deliver_signed_handshake(&ctx, next_attempt, identity, signature).await;
             }
             Err(err) => {
                 leptos::logging::error!("WebCrypto 握手签名失败: {}", err);

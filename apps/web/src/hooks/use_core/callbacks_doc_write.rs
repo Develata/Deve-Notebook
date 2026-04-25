@@ -16,6 +16,14 @@ use path::{
     create_doc_rename_callback,
 };
 
+pub(super) struct DocWriteCallbacks {
+    pub on_doc_create: Callback<String>,
+    pub on_doc_rename: Callback<(String, String)>,
+    pub on_doc_delete: Callback<String>,
+    pub on_doc_copy: Callback<(String, String)>,
+    pub on_doc_move: Callback<(String, String)>,
+}
+
 pub(super) fn create_doc_write_callbacks(
     ws: &WsService,
     current_doc: ReadSignal<Option<deve_core::models::DocId>>,
@@ -24,13 +32,7 @@ pub(super) fn create_doc_write_callbacks(
     set_sync_banner: WriteSignal<Option<String>>,
     set_pending_created_doc_path: WriteSignal<Option<String>>,
     set_explicit_home: WriteSignal<bool>,
-) -> (
-    Callback<String>,
-    Callback<(String, String)>,
-    Callback<String>,
-    Callback<(String, String)>,
-    Callback<(String, String)>,
-) {
+) -> DocWriteCallbacks {
     let on_doc_create = create_doc_create_callback(
         ws,
         current_doc,
@@ -44,11 +46,11 @@ pub(super) fn create_doc_write_callbacks(
     let on_doc_delete = create_doc_delete_callback(ws, local_scope, write_gate, set_sync_banner);
     let on_doc_copy = create_doc_copy_callback(ws, local_scope, write_gate, set_sync_banner);
     let on_doc_move = create_doc_move_callback(ws, local_scope, write_gate, set_sync_banner);
-    (
+    DocWriteCallbacks {
         on_doc_create,
         on_doc_rename,
         on_doc_delete,
         on_doc_copy,
         on_doc_move,
-    )
+    }
 }

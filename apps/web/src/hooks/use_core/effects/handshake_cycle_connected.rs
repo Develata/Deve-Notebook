@@ -7,7 +7,7 @@ use super::super::super::super::types::HandshakeSignals;
 use super::super::super::handshake_bootstrap::restore_session_scope;
 #[path = "handshake_cycle_connected_attempt.rs"]
 mod attempt;
-use super::super::handshake_reset::suspend_current_handshake;
+use super::super::handshake_reset::{RestoreScopeTarget, suspend_current_handshake};
 use super::super::handshake_state::{
     handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
     should_suspend_handshake,
@@ -45,10 +45,12 @@ pub(super) fn run_connected_handshake_cycle(
             ws,
             signals,
             &endpoint,
-            should_restore,
-            repo_name.clone(),
-            active_repo_id.clone(),
-            branch.clone(),
+            RestoreScopeTarget {
+                should_restore,
+                repo_name: repo_name.clone(),
+                active_repo_id: active_repo_id.clone(),
+                branch: branch.clone(),
+            },
         );
         return;
     }

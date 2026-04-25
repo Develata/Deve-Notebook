@@ -17,7 +17,7 @@ pub(super) fn build_move_copy_results(
     docs: &[(DocId, String)],
     recent_dirs: &[String],
 ) -> Vec<SearchResult> {
-    if parsed.args.first().map_or(true, |s| s.trim().is_empty()) {
+    if parsed.args.first().is_none_or(|s| s.trim().is_empty()) {
         return vec![source_required_error()];
     }
     if parsed.args.len() > 2 {
@@ -43,9 +43,11 @@ pub(super) fn build_move_copy_results(
     let src = parsed.args.first().cloned().unwrap_or_default();
     let dst_prefix = parsed.args.get(1).cloned().unwrap_or_default();
     let dirs = collect_dirs(docs);
-    let recent_dirs = (kind == FileOpKind::Move)
-        .then_some(recent_dirs)
-        .unwrap_or(&[]);
+    let recent_dirs = if kind == FileOpKind::Move {
+        recent_dirs
+    } else {
+        &[]
+    };
     build_dir_group_results(&kind, &src, &dst_prefix, recent_dirs, &dirs)
 }
 

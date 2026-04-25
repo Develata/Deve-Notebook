@@ -17,21 +17,17 @@ pub fn handle_message<F>(
 ) where
     F: Fn(),
 {
-    let msg = match route_projection_and_sync_message(msg, signals) {
-        Ok(()) => return,
-        Err(msg) => msg,
+    let Some(msg) = route_projection_and_sync_message(msg, signals) else {
+        return;
     };
-    let msg = match route_runtime_message(msg, ws, signals) {
-        Ok(()) => return,
-        Err(msg) => msg,
+    let Some(msg) = route_runtime_message(msg, ws, signals) else {
+        return;
     };
-    let msg = match route_control_message(msg, ws, signals) {
-        Ok(()) => return,
-        Err(msg) => msg,
+    let Some(msg) = route_control_message(msg, ws, signals) else {
+        return;
     };
-    let msg = match route_protocol_and_write_message(msg, ws, locale, signals) {
-        Ok(()) => return,
-        Err(msg) => msg,
+    let Some(msg) = route_protocol_and_write_message(msg, ws, locale, signals) else {
+        return;
     };
     handle_sc_or_remaining(msg, ws, signals, schedule_refresh);
 }

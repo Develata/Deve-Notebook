@@ -13,6 +13,6 @@ pub use super::callbacks_sc::{SourceControlCallbacks, create_source_control_call
 #[allow(unused_imports)]
 pub use super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
 #[allow(unused_imports)]
-pub use super::callbacks_sync::{SyncCallbacks, create_sync_callbacks};
-pub use doc::{DocCallbacks, create_doc_callbacks};
+pub use super::callbacks_sync::{SyncCallbackSignals, SyncCallbacks, create_sync_callbacks};
+pub use doc::{DocCallbackSignals, DocCallbacks, create_doc_callbacks};
 pub use misc::{MiscCallbacks, MiscRequestSignals, SearchScopeSignals, create_misc_callbacks};

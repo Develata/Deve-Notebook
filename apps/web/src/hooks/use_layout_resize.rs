@@ -10,6 +10,29 @@ pub(crate) enum ResizeTarget {
     OuterRight,
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct ResizeStateSignals {
+    pub is_resizing: ReadSignal<bool>,
+    pub active_pointer: ReadSignal<Option<i32>>,
+    pub start_x: ReadSignal<i32>,
+    pub start_width: ReadSignal<i32>,
+    pub active_resize: ReadSignal<Option<ResizeTarget>>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct ResizeOutputSignals {
+    pub set_sidebar_width: WriteSignal<i32>,
+    pub set_right_width: WriteSignal<i32>,
+    pub set_outer_gutter: WriteSignal<i32>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct ResizeBounds {
+    pub sidebar: (i32, i32),
+    pub right: (i32, i32),
+    pub outer: (i32, i32),
+}
+
 pub(crate) fn start_resize_callback(
     set_is_resizing: WriteSignal<bool>,
     set_active_resize: WriteSignal<Option<ResizeTarget>>,
@@ -42,44 +65,44 @@ pub(crate) fn stop_resize_callback(
 }
 
 pub(crate) fn do_resize_callback(
-    is_resizing: ReadSignal<bool>,
-    active_pointer: ReadSignal<Option<i32>>,
-    start_x: ReadSignal<i32>,
-    start_width: ReadSignal<i32>,
-    active_resize: ReadSignal<Option<ResizeTarget>>,
-    set_sidebar_width: WriteSignal<i32>,
-    set_right_width: WriteSignal<i32>,
-    set_outer_gutter: WriteSignal<i32>,
-    sidebar_bounds: (i32, i32),
-    right_bounds: (i32, i32),
-    outer_bounds: (i32, i32),
+    state: ResizeStateSignals,
+    outputs: ResizeOutputSignals,
+    bounds: ResizeBounds,
 ) -> Callback<PointerEvent> {
     Callback::new(move |ev: PointerEvent| {
-        if !is_resizing.get_untracked() {
+        if !state.is_resizing.get_untracked() {
             return;
         }
-        if let Some(active) = active_pointer.get_untracked()
+        if let Some(active) = state.active_pointer.get_untracked()
             && ev.pointer_id() != active
         {
             return;
         }
-        let delta = ev.client_x() - start_x.get_untracked();
-        match active_resize.get_untracked() {
+        let delta = ev.client_x() - state.start_x.get_untracked();
+        match state.active_resize.get_untracked() {
             Some(ResizeTarget::Left) => {
-                let width = start_width.get_untracked() + delta;
-                set_sidebar_width.set(clamp(width, sidebar_bounds.0, sidebar_bounds.1));
+                let width = state.start_width.get_untracked() + delta;
+                outputs
+                    .set_sidebar_width
+                    .set(clamp(width, bounds.sidebar.0, bounds.sidebar.1));
             }
             Some(ResizeTarget::Right) => {
-                let width = start_width.get_untracked() - delta;
-                set_right_width.set(clamp(width, right_bounds.0, right_bounds.1));
+                let width = state.start_width.get_untracked() - delta;
+                outputs
+                    .set_right_width
+                    .set(clamp(width, bounds.right.0, bounds.right.1));
             }
             Some(ResizeTarget::OuterLeft) => {
-                let width = start_width.get_untracked() + delta;
-                set_outer_gutter.set(clamp(width, outer_bounds.0, outer_bounds.1));
+                let width = state.start_width.get_untracked() + delta;
+                outputs
+                    .set_outer_gutter
+                    .set(clamp(width, bounds.outer.0, bounds.outer.1));
             }
             Some(ResizeTarget::OuterRight) => {
-                let width = start_width.get_untracked() - delta;
-                set_outer_gutter.set(clamp(width, outer_bounds.0, outer_bounds.1));
+                let width = state.start_width.get_untracked() - delta;
+                outputs
+                    .set_outer_gutter
+                    .set(clamp(width, bounds.outer.0, bounds.outer.1));
             }
             None => {}
         }

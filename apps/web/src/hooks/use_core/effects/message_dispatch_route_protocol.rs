@@ -13,7 +13,7 @@ pub fn route_protocol_and_write_message(
     ws: &WsService,
     locale: Locale,
     signals: CoreSignals,
-) -> Result<(), ServerMessage> {
+) -> Option<ServerMessage> {
     match msg {
         ServerMessage::EditRejected {
             scope_nonce,
@@ -30,7 +30,7 @@ pub fn route_protocol_and_write_message(
                 locale,
                 signals,
             );
-            Ok(())
+            None
         }
         ServerMessage::ProtocolError {
             error,
@@ -38,7 +38,7 @@ pub fn route_protocol_and_write_message(
             scope_nonce,
         } => {
             handle_protocol_error_message(error, switch_nonce, scope_nonce, ws, locale, signals);
-            Ok(())
+            None
         }
         ServerMessage::WriteReady {
             peer_id,
@@ -47,7 +47,7 @@ pub fn route_protocol_and_write_message(
             branch,
         } => {
             handle_write_ready_message(peer_id, repo_id, scope_nonce, branch, ws, signals);
-            Ok(())
+            None
         }
         ServerMessage::Ack {
             repo_id,
@@ -58,8 +58,8 @@ pub fn route_protocol_and_write_message(
             ..
         } => {
             handle_ack_message(repo_id, branch, scope_nonce, doc_id, client_op_id, signals);
-            Ok(())
+            None
         }
-        other => Err(other),
+        other => Some(other),
     }
 }

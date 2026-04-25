@@ -46,11 +46,9 @@ pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
             writer_ready,
         );
 
-        if can_forward && !deltas.is_empty() {
-            if !forward_deltas(&ctx, deltas) {
-                sync_local_state(ctx.on_stats, ctx.set_content);
-                return;
-            }
+        if can_forward && !deltas.is_empty() && !forward_deltas(&ctx, deltas) {
+            sync_local_state(ctx.on_stats, ctx.set_content);
+            return;
         }
         sync_local_state(ctx.on_stats, ctx.set_content);
     }) as Box<dyn FnMut(String)>)

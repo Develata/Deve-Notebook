@@ -9,9 +9,7 @@ mod sync;
 pub fn route_projection_and_sync_message(
     msg: ServerMessage,
     signals: CoreSignals,
-) -> Result<(), ServerMessage> {
-    match doc::route_projection_doc_message(msg, signals) {
-        Ok(()) => Ok(()),
-        Err(msg) => sync::route_projection_sync_message(msg, signals),
-    }
+) -> Option<ServerMessage> {
+    doc::route_projection_doc_message(msg, signals)
+        .and_then(|msg| sync::route_projection_sync_message(msg, signals))
 }

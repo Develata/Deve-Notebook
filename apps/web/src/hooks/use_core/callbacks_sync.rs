@@ -20,30 +20,32 @@ pub struct SyncCallbacks {
     pub on_merge_peer: Callback<String>,
 }
 
-pub fn create_sync_callbacks(
-    ws: &WsService,
-    current_doc: ReadSignal<Option<DocId>>,
-    local_scope: LocalScopeSignals,
-    write_gate: RepoWriteSignals,
-    set_sync_banner: WriteSignal<Option<String>>,
-    set_shadow_list_request_id: WriteSignal<Option<String>>,
-    set_sync_mode_request_id: WriteSignal<Option<String>>,
-    set_pending_ops_request_id: WriteSignal<Option<String>>,
-) -> SyncCallbacks {
+#[derive(Clone, Copy)]
+pub struct SyncCallbackSignals {
+    pub current_doc: ReadSignal<Option<DocId>>,
+    pub local_scope: LocalScopeSignals,
+    pub write_gate: RepoWriteSignals,
+    pub set_sync_banner: WriteSignal<Option<String>>,
+    pub set_shadow_list_request_id: WriteSignal<Option<String>>,
+    pub set_sync_mode_request_id: WriteSignal<Option<String>>,
+    pub set_pending_ops_request_id: WriteSignal<Option<String>>,
+}
+
+pub fn create_sync_callbacks(ws: &WsService, signals: SyncCallbackSignals) -> SyncCallbacks {
     let read = read::create_sync_read_callbacks(
         ws,
-        local_scope,
-        set_shadow_list_request_id,
-        set_sync_mode_request_id,
-        set_pending_ops_request_id,
-        set_sync_banner,
+        signals.local_scope,
+        signals.set_shadow_list_request_id,
+        signals.set_sync_mode_request_id,
+        signals.set_pending_ops_request_id,
+        signals.set_sync_banner,
     );
     let write = write::create_sync_write_callbacks(
         ws,
-        current_doc,
-        local_scope,
-        write_gate,
-        set_sync_banner,
+        signals.current_doc,
+        signals.local_scope,
+        signals.write_gate,
+        signals.set_sync_banner,
     );
 
     SyncCallbacks {

@@ -22,6 +22,22 @@ pub(super) struct SnapshotRequestGate {
 }
 
 #[derive(Clone)]
+pub(super) struct SnapshotRequestGateInput {
+    pub open_request_id: ReadSignal<u64>,
+    pub current_repo_id: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub active_branch: ReadSignal<Option<PeerId>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub current_scope_nonce: ReadSignal<u64>,
+    pub session_generation: Arc<AtomicU64>,
+    pub expected_generation: u64,
+    pub repo_id: RepoId,
+    pub branch: Option<PeerId>,
+    pub request_id: u64,
+    pub scope_nonce: u64,
+}
+
+#[derive(Clone)]
 pub(super) struct SnapshotRequestMatch {
     pub open_request_id: u64,
     pub request_id: u64,
@@ -38,33 +54,20 @@ pub(super) struct SnapshotRequestMatch {
 }
 
 impl SnapshotRequestGate {
-    pub(super) fn new(
-        open_request_id: ReadSignal<u64>,
-        current_repo_id: ReadSignal<Option<String>>,
-        pending_repo_switch: ReadSignal<Option<String>>,
-        active_branch: ReadSignal<Option<PeerId>>,
-        pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-        current_scope_nonce: ReadSignal<u64>,
-        session_generation: Arc<AtomicU64>,
-        expected_generation: u64,
-        repo_id: RepoId,
-        branch: Option<PeerId>,
-        request_id: u64,
-        scope_nonce: u64,
-    ) -> Self {
+    pub(super) fn new(input: SnapshotRequestGateInput) -> Self {
         Self {
-            open_request_id,
-            current_repo_id,
-            pending_repo_switch,
-            active_branch,
-            pending_branch_switch,
-            current_scope_nonce,
-            session_generation,
-            expected_generation,
-            repo_id,
-            branch,
-            request_id,
-            scope_nonce,
+            open_request_id: input.open_request_id,
+            current_repo_id: input.current_repo_id,
+            pending_repo_switch: input.pending_repo_switch,
+            active_branch: input.active_branch,
+            pending_branch_switch: input.pending_branch_switch,
+            current_scope_nonce: input.current_scope_nonce,
+            session_generation: input.session_generation,
+            expected_generation: input.expected_generation,
+            repo_id: input.repo_id,
+            branch: input.branch,
+            request_id: input.request_id,
+            scope_nonce: input.scope_nonce,
         }
     }
 

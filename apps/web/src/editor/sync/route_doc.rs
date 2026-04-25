@@ -17,15 +17,17 @@ pub(super) fn route_doc_message(msg: ServerMessage, ctx: &SyncContext) -> Option
         } => {
             dispatch_doc::handle_snapshot_message(
                 ctx,
-                repo_id,
-                branch,
-                scope_nonce,
-                msg_doc_id,
-                request_id,
-                content,
-                base_seq,
-                version,
-                delta_ops,
+                dispatch_doc::SnapshotDispatchMessage {
+                    repo_id,
+                    branch,
+                    scope_nonce,
+                    doc_id: msg_doc_id,
+                    request_id,
+                    content,
+                    base_seq,
+                    version,
+                    delta_ops,
+                },
             );
             None
         }

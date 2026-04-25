@@ -4,7 +4,7 @@
 use super::context::SyncContext;
 use super::snapshot_apply::{SnapshotApplySignals, build_apply_batch, build_progress_handler};
 use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
-use super::snapshot_gate::SnapshotRequestGate;
+use super::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
 use crate::editor::ffi::applyRemoteContent;
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
 use deve_core::models::{PeerId, RepoId};
@@ -39,20 +39,20 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
         return;
     }
     let load_start = now_ms();
-    let gate = SnapshotRequestGate::new(
-        ctx.open_request_id,
-        ctx.current_repo_id,
-        ctx.pending_repo_switch,
-        ctx.active_branch,
-        ctx.pending_branch_switch,
-        ctx.current_scope_nonce,
-        ctx.session_generation.clone(),
-        message.expected_generation,
-        message.repo_id,
-        message.branch.clone(),
-        message.request_id,
-        ctx.current_scope_nonce.get_untracked(),
-    );
+    let gate = SnapshotRequestGate::new(SnapshotRequestGateInput {
+        open_request_id: ctx.open_request_id,
+        current_repo_id: ctx.current_repo_id,
+        pending_repo_switch: ctx.pending_repo_switch,
+        active_branch: ctx.active_branch,
+        pending_branch_switch: ctx.pending_branch_switch,
+        current_scope_nonce: ctx.current_scope_nonce,
+        session_generation: ctx.session_generation.clone(),
+        expected_generation: message.expected_generation,
+        repo_id: message.repo_id,
+        branch: message.branch.clone(),
+        request_id: message.request_id,
+        scope_nonce: ctx.current_scope_nonce.get_untracked(),
+    });
 
     leptos::logging::log!(
         "Received Snapshot: {} chars, Base: {}, Ver: {}, Pending: {}",

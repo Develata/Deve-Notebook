@@ -10,6 +10,14 @@ use super::handshake_state::{
     reset_handshake_attempt, set_handshake_scope_nonce_if_changed, suspended_handshake_mode_key,
 };
 
+#[derive(Clone)]
+pub(super) struct RestoreScopeTarget {
+    pub should_restore: bool,
+    pub repo_name: Option<String>,
+    pub active_repo_id: Option<String>,
+    pub branch: Option<PeerId>,
+}
+
 pub(super) fn restore_scope_if_needed(
     ws: &WsService,
     signals: HandshakeSignals,
@@ -39,19 +47,16 @@ pub(super) fn suspend_current_handshake(
     ws: &WsService,
     signals: HandshakeSignals,
     endpoint: &str,
-    should_restore: bool,
-    repo_name: Option<String>,
-    active_repo_id: Option<String>,
-    branch: Option<PeerId>,
+    target: RestoreScopeTarget,
 ) {
     *last_mode.borrow_mut() = Some(suspended_handshake_mode_key(endpoint));
     restore_scope_if_needed(
         ws,
         signals,
-        should_restore,
-        repo_name,
-        active_repo_id,
-        branch,
+        target.should_restore,
+        target.repo_name,
+        target.active_repo_id,
+        target.branch,
     );
     ws.clear_writer_ready();
     signals.set_handshake_ready.set(false);

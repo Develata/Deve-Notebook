@@ -23,41 +23,42 @@ pub struct DocCallbacks {
     pub on_doc_move: Callback<(String, String)>,
 }
 
-pub fn create_doc_callbacks(
-    ws: &WsService,
-    current_doc: ReadSignal<Option<DocId>>,
-    local_scope: LocalScopeSignals,
-    write_gate: RepoWriteSignals,
-    pending_local_edits: ReadSignal<PendingLocalEdits>,
-    set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
-    set_current_doc: WriteSignal<Option<DocId>>,
-    set_sync_banner: WriteSignal<Option<String>>,
-    set_pending_created_doc_path: WriteSignal<Option<String>>,
-    set_explicit_home: WriteSignal<bool>,
-) -> DocCallbacks {
+#[derive(Clone, Copy)]
+pub struct DocCallbackSignals {
+    pub current_doc: ReadSignal<Option<DocId>>,
+    pub local_scope: LocalScopeSignals,
+    pub write_gate: RepoWriteSignals,
+    pub pending_local_edits: ReadSignal<PendingLocalEdits>,
+    pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
+    pub set_current_doc: WriteSignal<Option<DocId>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
+    pub set_pending_created_doc_path: WriteSignal<Option<String>>,
+    pub set_explicit_home: WriteSignal<bool>,
+}
+
+pub fn create_doc_callbacks(ws: &WsService, signals: DocCallbackSignals) -> DocCallbacks {
     let on_doc_select = create_doc_select_callback(
-        current_doc,
-        pending_local_edits,
-        set_pending_navigation,
-        set_current_doc,
-        set_explicit_home,
+        signals.current_doc,
+        signals.pending_local_edits,
+        signals.set_pending_navigation,
+        signals.set_current_doc,
+        signals.set_explicit_home,
     );
-    let (on_doc_create, on_doc_rename, on_doc_delete, on_doc_copy, on_doc_move) =
-        create_doc_write_callbacks(
-            ws,
-            current_doc,
-            local_scope,
-            write_gate,
-            set_sync_banner,
-            set_pending_created_doc_path,
-            set_explicit_home,
-        );
+    let write = create_doc_write_callbacks(
+        ws,
+        signals.current_doc,
+        signals.local_scope,
+        signals.write_gate,
+        signals.set_sync_banner,
+        signals.set_pending_created_doc_path,
+        signals.set_explicit_home,
+    );
     DocCallbacks {
         on_doc_select,
-        on_doc_create,
-        on_doc_rename,
-        on_doc_delete,
-        on_doc_copy,
-        on_doc_move,
+        on_doc_create: write.on_doc_create,
+        on_doc_rename: write.on_doc_rename,
+        on_doc_delete: write.on_doc_delete,
+        on_doc_copy: write.on_doc_copy,
+        on_doc_move: write.on_doc_move,
     }
 }

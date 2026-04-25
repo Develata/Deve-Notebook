@@ -14,31 +14,31 @@ pub(crate) fn drop_queued_writes(queue: &mut VecDeque<ClientMessage>) {
 ///
 /// WebLightPeer 约束：断连时禁止写入，只允许查询类消息。
 pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
-    match msg {
+    matches!(
+        msg,
         ClientMessage::Edit { .. }
-        | ClientMessage::CreateDoc { .. }
-        | ClientMessage::RenameDoc { .. }
-        | ClientMessage::DeleteDoc { .. }
-        | ClientMessage::CopyDoc { .. }
-        | ClientMessage::MoveDoc { .. }
-        | ClientMessage::SyncPush { .. }
-        | ClientMessage::SyncPushSnapshot { .. }
-        | ClientMessage::Commit { .. }
-        | ClientMessage::CommitAndPush { .. }
-        | ClientMessage::StageFile { .. }
-        | ClientMessage::StageFiles { .. }
-        | ClientMessage::UnstageFile { .. }
-        | ClientMessage::UnstageFiles { .. }
-        | ClientMessage::DiscardFile { .. }
-        | ClientMessage::ResolveConflict { .. }
-        | ClientMessage::DeletePeer { .. }
-        | ClientMessage::SwitchBranch { .. }
-        | ClientMessage::SwitchRepo { .. }
-        | ClientMessage::SwitchRepoExact { .. }
-        | ClientMessage::ConfirmMerge { .. }
-        | ClientMessage::DiscardPending { .. }
-        | ClientMessage::SetSyncMode { .. }
-        | ClientMessage::PluginCall { .. } => true,
-        _ => false,
-    }
+            | ClientMessage::CreateDoc { .. }
+            | ClientMessage::RenameDoc { .. }
+            | ClientMessage::DeleteDoc { .. }
+            | ClientMessage::CopyDoc { .. }
+            | ClientMessage::MoveDoc { .. }
+            | ClientMessage::SyncPush { .. }
+            | ClientMessage::SyncPushSnapshot { .. }
+            | ClientMessage::Commit { .. }
+            | ClientMessage::CommitAndPush { .. }
+            | ClientMessage::StageFile { .. }
+            | ClientMessage::StageFiles { .. }
+            | ClientMessage::UnstageFile { .. }
+            | ClientMessage::UnstageFiles { .. }
+            | ClientMessage::DiscardFile { .. }
+            | ClientMessage::ResolveConflict { .. }
+            | ClientMessage::DeletePeer { .. }
+            | ClientMessage::SwitchBranch { .. }
+            | ClientMessage::SwitchRepo { .. }
+            | ClientMessage::SwitchRepoExact { .. }
+            | ClientMessage::ConfirmMerge { .. }
+            | ClientMessage::DiscardPending { .. }
+            | ClientMessage::SetSyncMode { .. }
+            | ClientMessage::PluginCall { .. }
+    )
 }

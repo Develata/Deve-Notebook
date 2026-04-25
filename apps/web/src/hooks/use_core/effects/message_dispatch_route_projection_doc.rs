@@ -8,7 +8,7 @@ use super::super::message_dispatch_projection::{
 pub fn route_projection_doc_message(
     msg: ServerMessage,
     signals: CoreSignals,
-) -> Result<(), ServerMessage> {
+) -> Option<ServerMessage> {
     match msg {
         ServerMessage::DocList {
             request_id,
@@ -18,7 +18,7 @@ pub fn route_projection_doc_message(
             docs,
         } => {
             handle_doc_list_message(request_id, repo_id, branch, scope_nonce, docs, signals);
-            Ok(())
+            None
         }
         ServerMessage::TreeUpdate {
             request_id,
@@ -28,8 +28,8 @@ pub fn route_projection_doc_message(
             delta,
         } => {
             handle_tree_update_message(request_id, repo_id, branch, scope_nonce, delta, signals);
-            Ok(())
+            None
         }
-        other => Err(other),
+        other => Some(other),
     }
 }

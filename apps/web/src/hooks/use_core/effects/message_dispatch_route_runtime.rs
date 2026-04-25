@@ -10,7 +10,7 @@ pub fn route_runtime_message(
     msg: ServerMessage,
     _ws: &WsService,
     signals: CoreSignals,
-) -> Result<(), ServerMessage> {
+) -> Option<ServerMessage> {
     match msg {
         ServerMessage::PluginResponse {
             req_id,
@@ -18,7 +18,7 @@ pub fn route_runtime_message(
             error,
         } => {
             handle_plugin_response_message(req_id, result, error, signals);
-            Ok(())
+            None
         }
         ServerMessage::ChatChunk {
             req_id,
@@ -26,7 +26,7 @@ pub fn route_runtime_message(
             finish_reason,
         } => {
             handle_chat_chunk_message(req_id, delta, finish_reason, signals);
-            Ok(())
+            None
         }
         ServerMessage::SearchResults {
             request_id,
@@ -34,8 +34,8 @@ pub fn route_runtime_message(
             results,
         } => {
             handle_search_results_message(request_id, scope_nonce, results, signals);
-            Ok(())
+            None
         }
-        other => Err(other),
+        other => Some(other),
     }
 }
