@@ -248,6 +248,12 @@ VectorCompared
 4. 镜像端仅把收到的远端事实写入 remote branch。
 5. 成功后更新该 repo 的 vector。
 
+Vector authority:
+
+- `SyncHello.vector` 必须由当前 `repo_id` 的 ledger heads 重建或刷新，不得只信任进程内缓存。
+- local branch 水位来自本地 repo ledger head；remote branch 水位来自对应 `ledger/remotes/<peer>/<repo>` shadow ledger head。
+- 服务重启、engine lazy-load、或已有 engine 之后发生本地写入时，下次 strict sync 访问必须先刷新 vector，再计算 diff 或签名回包。
+
 ### 7.2 Envelope Pattern
 
 - plaintext header：

@@ -2,6 +2,8 @@
 //! # Repo-Scoped 同步引擎管理器
 //!
 //! 管理多个仓库的 SyncEngine 实例，每个仓库拥有独立的同步状态。
+#[path = "repo_scoped_hydration.rs"]
+mod hydration;
 #[path = "repo_scoped_lock.rs"]
 mod lock;
 
@@ -57,6 +59,7 @@ impl RepoScopedSyncEngine {
     /// - 严格路径不得缓存 `repo_key = None` 的 engine。
     pub fn get_or_create_strict(&self, repo_id: RepoId) -> Result<SyncEngine> {
         self.ensure_strict_engine_loaded(repo_id)?;
+        self.refresh_loaded_engine_vector(repo_id)?;
         let engines = self.read_engines_result()?;
         let engine = engines
             .get(&repo_id)
@@ -72,6 +75,7 @@ impl RepoScopedSyncEngine {
         F: FnOnce(&SyncEngine) -> R,
     {
         self.ensure_strict_engine_loaded(repo_id)?;
+        self.refresh_loaded_engine_vector(repo_id)?;
         let engines = self.read_engines_result()?;
         let engine = engines
             .get(&repo_id)
@@ -87,6 +91,7 @@ impl RepoScopedSyncEngine {
         F: FnOnce(&mut SyncEngine) -> R,
     {
         self.ensure_strict_engine_loaded(repo_id)?;
+        self.refresh_loaded_engine_vector(repo_id)?;
         let mut engines = self.write_engines_result()?;
         let engine = engines
             .get_mut(&repo_id)
@@ -122,6 +127,25 @@ impl RepoScopedSyncEngine {
             Some(repo_key),
         );
         engines.insert(repo_id, engine);
+        Ok(())
+    }
+
+    fn refresh_loaded_engine_vector(&self, repo_id: RepoId) -> Result<()> {
+        let mut engines = self.write_engines_result()?;
+        {
+            let engine = engines
+                .get(&repo_id)
+                .ok_or_else(|| anyhow!("RepoScopedSyncEngine missing loaded repo {}", repo_id))?;
+            if engine.repo_key.is_none() {
+                return Err(anyhow!("RepoScopedSyncEngine missing repo key {}", repo_id));
+            }
+        }
+        let vector =
+            hydration::build_version_vector(self.repo.as_ref(), &self.local_peer_id, repo_id)?;
+        let engine = engines
+            .get_mut(&repo_id)
+            .ok_or_else(|| anyhow!("RepoScopedSyncEngine missing loaded repo {}", repo_id))?;
+        engine.version_vector = vector;
         Ok(())
     }
 
