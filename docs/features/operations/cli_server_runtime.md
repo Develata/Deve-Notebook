@@ -55,6 +55,6 @@
 ## Notes
 
 - `--dry-run` is modeled as a distinct operation because it changes side effects.
-- Local UI verification is a two-process flow: run backend `deve serve --dev --port 3001`, then run `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from `apps/web`.
-- Backend-only `deve serve --dev` may return 404 on `/` when no static bundle is configured; use Trunk during development or set `DEVE_STATIC_DIR` for bundled/static hosting checks.
+- Local UI verification can use the embedded/bundled frontend when the CLI was built after `trunk build --release`; otherwise use the two-process flow: backend `deve serve --dev --port 3001`, then `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from `apps/web`.
+- Backend-only `deve serve --dev` may return 404 on `/` only when neither embedded assets nor a valid `DEVE_STATIC_DIR` are available.
 - Main objects: `server::bind`, `config::runtime`, `repo::scope`, `cli::option`.

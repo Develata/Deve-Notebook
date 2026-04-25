@@ -23,8 +23,6 @@ services:
       DEVE_VAULT_PATH: /data/vault
       # 服务器绑定地址和端口
       DEVE_BIND_ADDR: 0.0.0.0:3001
-      # 静态文件目录
-      DEVE_STATIC_DIR: /app/static
     
     # 数据卷：deve-data 命名卷挂载到容器 /data 目录
     volumes:

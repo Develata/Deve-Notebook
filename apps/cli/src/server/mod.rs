@@ -31,6 +31,7 @@ pub mod source_control_proxy;
 mod start;
 mod state;
 pub mod static_files;
+mod static_files_embed;
 mod tree_state;
 pub mod ws;
 

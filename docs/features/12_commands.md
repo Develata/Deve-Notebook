@@ -47,9 +47,8 @@
 
 前置条件：
 
-- 后端已通过 `deve serve --dev --port 3001` 启动。
-- 前端已通过 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` 从 `apps/web` 启动。
-- 打开 `http://127.0.0.1:8080/` 应用主界面。
+- 首选路径：先运行 `NO_COLOR=true trunk build --release`，再构建并启动 `deve serve --dev --port 3001`，打开 `http://127.0.0.1:3001/`。
+- 开发 fallback：后端 `deve serve --dev --port 3001`，前端从 `apps/web` 运行 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080`，打开 `http://127.0.0.1:8080/`。
 
 步骤：
 

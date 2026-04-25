@@ -4,8 +4,8 @@
 //! # 静态文件服务模块
 //!
 //! 为生产部署提供 SPA 静态文件托管。
-//! `trunk build --release` 的产物（WASM + JS + CSS）由此模块通过
-//! `tower_http::services::ServeDir` 提供服务。
+//! `trunk build --release` 的产物（WASM + JS + CSS）可通过显式
+//! `DEVE_STATIC_DIR` 目录提供，也可由 CLI build script 编译进二进制。
 //!
 //! ## 环境变量
 //!
@@ -79,36 +79,22 @@ fn validate_static_root(dir: &std::path::Path) -> Result<()> {
 pub fn static_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
     let dir = resolve_static_dir();
 
-    match dir.try_exists() {
-        Ok(true) => {}
-        Ok(false) => {
-            tracing::warn!(
-                "Static dir {:?} not found — SPA fallback disabled. Local UI dev: run \
-                 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from apps/web; \
-                 production: build frontend and set DEVE_STATIC_DIR.",
-                dir
-            );
-            return Router::new();
+    if let Err(err) = validate_static_root(&dir) {
+        if let Some(router) = super::static_files_embed::fallback() {
+            return router;
         }
-        Err(err) => {
-            tracing::warn!("Failed to stat static dir {:?}: {}", dir, err);
-            return Router::new();
-        }
+        tracing::warn!(
+            "Static dir {:?} unavailable ({}) and no embedded frontend assets found — SPA fallback \
+             disabled. Local UI dev: run `NO_COLOR=true trunk serve --address 127.0.0.1 --port \
+             8080` from apps/web; production: run `trunk build --release` before building deve_cli \
+             or set DEVE_STATIC_DIR.",
+            dir,
+            err
+        );
+        return Router::new();
     }
 
     let index = dir.join("index.html");
-    match index.try_exists() {
-        Ok(true) => {}
-        Ok(false) => {
-            tracing::warn!("index.html not found in {:?} — SPA fallback disabled", dir);
-            return Router::new();
-        }
-        Err(err) => {
-            tracing::warn!("Failed to stat index.html {:?}: {}", index, err);
-            return Router::new();
-        }
-    }
-
     tracing::info!("Serving static files from {:?}", dir);
 
     // ServeDir + fallback 到 index.html 实现 SPA 路由

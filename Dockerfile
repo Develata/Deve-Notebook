@@ -33,6 +33,8 @@ RUN trunk build --release
 # 阶段 5: backend — 编译后端二进制
 FROM deps AS backend
 COPY . .
+# 将前端 dist 放入 CLI build script 的默认扫描路径，编译进单二进制。
+COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/
 RUN cargo build --release --package deve_cli && \
     strip target/release/deve_cli
 
@@ -52,11 +54,7 @@ RUN useradd -m -u 1000 -s /bin/bash appuser && \
 COPY --from=backend /app/target/release/deve_cli /usr/local/bin/deve_cli
 RUN chmod +x /usr/local/bin/deve_cli
 
-# 复制前端静态资源
-COPY --from=frontend /app/apps/web/dist/ /app/static/
-
 # 环境变量配置
-ENV DEVE_STATIC_DIR=/app/static
 ENV DEVE_VAULT_PATH=/data/vault
 ENV DEVE_BIND_ADDR=0.0.0.0:3001
 

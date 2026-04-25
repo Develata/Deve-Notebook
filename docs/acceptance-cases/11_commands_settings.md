@@ -82,7 +82,19 @@
     - exit_code_all_eq: 0
 
 - case_id: CMD-007A
-  goal: Local browser dev runtime is explicit.
+  goal: Embedded browser runtime is available from the CLI server.
+  preconditions:
+    - 已运行 `NO_COLOR=true trunk build --release`
+    - 已重新构建 CLI，使 `apps/web/dist` 被编译进二进制
+    - 后端通过 `deve serve --dev --port 3001` 运行，且未设置 `DEVE_STATIC_DIR`
+  steps:
+    - browser_open: "http://127.0.0.1:3001/"
+  assertions:
+    - ui_contains_any: ["Ready", "Login"]
+    - network_contains: "/api/node/role"
+
+- case_id: CMD-007B
+  goal: Trunk browser dev runtime fallback is explicit.
   preconditions:
     - 后端通过 `deve serve --dev --port 3001` 运行
     - 前端通过 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` 从 `apps/web` 运行

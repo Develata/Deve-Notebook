@@ -24,7 +24,7 @@
 定义构建依赖链 $Build_{full} = Build_{web} \to Embed \to Build_{cli}$：
 
 1.  **Web Build**: `trunk build --release` 生成 `apps/web/dist`。
-2.  **Embed**: CLI 通过 `rust-embed` 宏读取 `dist` 目录。
+2.  **Embed**: CLI 构建阶段读取 `dist` 目录并将静态资源编译进二进制；实现可使用 build script 生成 `include_bytes!` 索引，不要求新增 `rust-embed` 依赖。
 3.  **CLI Build**: `cargo build --release` 生成最终可执行文件。
 
 ### 1.2 路由回退 (SPA Routing)
