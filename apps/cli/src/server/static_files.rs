@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 08_ui_design_01_web#single-binary-distribution
+//!
 //! # 静态文件服务模块
 //!
 //! 为生产部署提供 SPA 静态文件托管。
@@ -79,7 +82,12 @@ pub fn static_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
     match dir.try_exists() {
         Ok(true) => {}
         Ok(false) => {
-            tracing::warn!("Static dir {:?} not found — SPA fallback disabled", dir);
+            tracing::warn!(
+                "Static dir {:?} not found — SPA fallback disabled. Local UI dev: run \
+                 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from apps/web; \
+                 production: build frontend and set DEVE_STATIC_DIR.",
+                dir
+            );
             return Router::new();
         }
         Err(err) => {

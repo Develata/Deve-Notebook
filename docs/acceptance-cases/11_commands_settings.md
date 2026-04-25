@@ -77,9 +77,20 @@
     - CLI 可用
   steps:
     - run: deve serve --help
-    - run: deve serve --dry-run --port 3001
+    - run: deve serve --dev --dry-run --port 3001
   assertions:
     - exit_code_all_eq: 0
+
+- case_id: CMD-007A
+  goal: Local browser dev runtime is explicit.
+  preconditions:
+    - 后端通过 `deve serve --dev --port 3001` 运行
+    - 前端通过 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` 从 `apps/web` 运行
+  steps:
+    - browser_open: "http://127.0.0.1:8080/"
+  assertions:
+    - ui_contains_any: ["Ready", "Login"]
+    - network_contains: "/api/node/role"
 
 - case_id: CMD-008
   goal: CLI export and dump inspection options are discoverable.

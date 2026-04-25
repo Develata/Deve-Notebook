@@ -24,7 +24,7 @@
 - `Surface`: `cli`
 - `Trigger`: run `deve serve --dev`
 - `Preconditions`: development mode is intentionally requested
-- `Immediate Result`: server startup uses development-mode runtime flags
+- `Immediate Result`: server startup uses development-mode runtime flags; missing `AUTH_SECRET` / `AUTH_PASS` falls back to explicit dev defaults only for this mode
 - `Application Entry`: `apps/cli/src/commands/serve.rs`
 
 ### `op.cli.server.dry-run`
@@ -55,4 +55,6 @@
 ## Notes
 
 - `--dry-run` is modeled as a distinct operation because it changes side effects.
+- Local UI verification is a two-process flow: run backend `deve serve --dev --port 3001`, then run `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from `apps/web`.
+- Backend-only `deve serve --dev` may return 404 on `/` when no static bundle is configured; use Trunk during development or set `DEVE_STATIC_DIR` for bundled/static hosting checks.
 - Main objects: `server::bind`, `config::runtime`, `repo::scope`, `cli::option`.

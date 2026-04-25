@@ -47,7 +47,9 @@
 
 前置条件：
 
-- 打开应用主界面。
+- 后端已通过 `deve serve --dev --port 3001` 启动。
+- 前端已通过 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` 从 `apps/web` 启动。
+- 打开 `http://127.0.0.1:8080/` 应用主界面。
 
 步骤：
 

@@ -16,7 +16,7 @@
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
 
-## 2. Single Binary Distribution (部署架构)
+## 2. Single Binary Distribution (部署架构) {#single-binary-distribution}
 
 为了实现“零依赖部署”，CLI 二进制文件 **MUST** 内嵌前端静态资源。
 

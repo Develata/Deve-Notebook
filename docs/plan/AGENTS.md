@@ -89,6 +89,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
 | `06_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
 | `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
+| `08_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
 | `09_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/me HTTP endpoint 合同 |
 | `09_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
 | `09_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |

@@ -73,6 +73,7 @@ pub use projection_diagnostic::{
 use projection_health::ProjectionHealth;
 #[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
