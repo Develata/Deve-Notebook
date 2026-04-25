@@ -65,7 +65,7 @@ mod tests {
     fn delete_guard_fails_closed_when_target_is_unstatable() {
         let guard = PersistGuard::new();
         let dir = tempdir().expect("tempdir");
-        let notes = dir.path().join("notes");
+        let notes = dir.path().join("default").join("notes");
         std::fs::create_dir_all(&notes).expect("mkdir");
         std::fs::write(notes.join("a.md"), "content").expect("write");
         let original = std::fs::metadata(&notes).expect("metadata").permissions();
