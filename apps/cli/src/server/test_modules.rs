@@ -72,3 +72,4 @@ mod sync_scope_cleanup_test;
 mod sync_scope_cleanup_test_support;
 mod sync_transfer_scope_test;
 mod sync_transfer_scope_test_support;
+mod ws_protocol_acceptance_test;

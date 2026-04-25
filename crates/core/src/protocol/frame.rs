@@ -12,7 +12,7 @@ use std::fmt;
 pub const WS_PROTOCOL_VERSION: u16 = 2;
 pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
-const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF2";
+pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF2";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClientFrame {
@@ -90,6 +90,18 @@ pub fn decode_server_binary(bytes: &[u8]) -> Result<ServerMessage, ProtocolFrame
     decode_bincode(bytes)
 }
 
+pub fn decode_client_binary_frame(bytes: &[u8]) -> Result<ClientFrame, ProtocolFrameError> {
+    let frame: ClientFrame = decode_required_binary_frame(bytes)?;
+    ensure_supported(frame.protocol_version)?;
+    Ok(frame)
+}
+
+pub fn decode_server_binary_frame(bytes: &[u8]) -> Result<ServerFrame, ProtocolFrameError> {
+    let frame: ServerFrame = decode_required_binary_frame(bytes)?;
+    ensure_supported(frame.protocol_version)?;
+    Ok(frame)
+}
+
 pub fn decode_client_json(text: &str) -> Result<ClientMessage, ProtocolFrameError> {
     if let Ok(frame) = serde_json::from_str::<ClientFrame>(text) {
         ensure_supported(frame.protocol_version)?;
@@ -120,6 +132,14 @@ fn framed_payload(bytes: &[u8]) -> Option<&[u8]> {
     bytes
         .starts_with(WS_FRAME_MAGIC)
         .then(|| &bytes[WS_FRAME_MAGIC.len()..])
+}
+
+fn decode_required_binary_frame<T: DeserializeOwned>(
+    bytes: &[u8],
+) -> Result<T, ProtocolFrameError> {
+    let payload = framed_payload(bytes)
+        .ok_or_else(|| ProtocolFrameError::Decode("missing WS frame magic".to_string()))?;
+    decode_bincode(payload)
 }
 
 fn decode_bincode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolFrameError> {
