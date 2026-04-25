@@ -1,5 +1,6 @@
 use super::RepoManager;
-use crate::models::{DocId, LedgerEntry, Op, PeerId};
+use crate::ledger::{node_meta, range};
+use crate::models::{DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp};
 use anyhow::Result;
 use tempfile::TempDir;
 
@@ -88,6 +89,47 @@ fn append_generated_client_op_rejects_out_of_bounds_content_range() -> Result<()
     assert!(
         repo.find_client_op_in_local_repo(repo.local_repo_name(), doc_id, 7, 3)?
             .is_none()
+    );
+    Ok(())
+}
+
+#[test]
+fn append_generated_op_rejects_structure_entries() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let repo = init_repo(tmp_dir.path())?;
+    let doc_id = DocId::new();
+    let node_id = NodeId::from_doc_id(doc_id);
+    let err = repo
+        .append_generated_op_in_local_repo(
+            repo.local_repo_name(),
+            doc_id,
+            PeerId::new("test"),
+            |seq| {
+                LedgerEntry::new_structure(
+                    StructureOp::CreateFile {
+                        node_id,
+                        doc_id,
+                        parent_id: None,
+                        name: "bad.md".into(),
+                    },
+                    1000,
+                    PeerId::new("test"),
+                    seq,
+                )
+            },
+        )
+        .expect_err("generated content API must reject structure entries");
+
+    assert!(err.to_string().contains("cannot accept structure events"));
+    assert_eq!(
+        repo.run_on_local_repo(repo.local_repo_name(), range::get_max_seq)?,
+        0
+    );
+    assert!(
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            node_meta::get_node_id(db, "bad.md")
+        })?
+        .is_none()
     );
     Ok(())
 }

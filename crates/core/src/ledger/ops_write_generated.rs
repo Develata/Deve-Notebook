@@ -1,7 +1,7 @@
 use super::validate;
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
-use crate::models::{DocId, LedgerEntry, PeerId, deserialize_ledger_entry};
-use anyhow::Result;
+use crate::models::{DocId, LedgerEntry, LedgerEvent, PeerId, deserialize_ledger_entry};
+use anyhow::{Result, anyhow};
 use redb::{Database, ReadableMultimapTable, ReadableTable};
 
 /// Returns: `(GlobalSeq, LocalSeq)`
@@ -53,8 +53,9 @@ fn append_generated_op_inner(
 
     let entry = op_entry_builder(next_local_seq);
     if entry.seq != next_local_seq {
-        return Err(anyhow::anyhow!("Entry sequence mismatch"));
+        return Err(anyhow!("Entry sequence mismatch"));
     }
+    ensure_content_entry(&entry, doc_id)?;
     validate::validate_ledger_append(&write_txn, &entry, repo_scope)?;
 
     let mut ops = write_txn.open_table(LEDGER_OPS)?;
@@ -75,7 +76,7 @@ fn append_generated_op_inner(
     if let Some((client_id, client_op_id)) = client_ref {
         let doc_id = entry
             .doc_id
-            .ok_or_else(|| anyhow::anyhow!("client op missing doc id"))?;
+            .ok_or_else(|| anyhow!("client op missing doc id"))?;
         client_ops.insert((doc_id.as_u128(), client_id, client_op_id), new_global_seq)?;
     }
     peer_seqs.insert(key, next_local_seq)?;
@@ -86,6 +87,18 @@ fn append_generated_op_inner(
     drop(client_ops);
     write_txn.commit()?;
     Ok((new_global_seq, next_local_seq))
+}
+
+fn ensure_content_entry(entry: &LedgerEntry, expected_doc_id: DocId) -> Result<()> {
+    if !matches!(entry.event, LedgerEvent::Content(_)) {
+        return Err(anyhow!(
+            "Generated content append cannot accept structure events"
+        ));
+    }
+    if entry.doc_id != Some(expected_doc_id) {
+        return Err(anyhow!("Generated content entry doc_id mismatch"));
+    }
+    Ok(())
 }
 
 fn scan_existing_peer_seq(

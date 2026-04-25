@@ -193,6 +193,7 @@ ReadonlyDegraded
 
 - 树的权威来源是 Structure Facts，不是 path 表。
 - `CreateDoc / RenameDoc / MoveDoc / DeleteDoc` 的最终业务事实必须先入 ledger，再由 projection 导出 tree。
+- 本地结构批量写入中，ledger append 与 projection apply 必须处于同一个写事务；任一结构事实校验或 projection 失败时，不得留下前序 op 或 path/node projection 残留。
 
 ### 5.2 Projection Rule
 

@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 06_repository#tree-projection-contract
 
-use crate::ledger::RepoManager;
+use crate::ledger::{RepoManager, node_ops, ops as ledger_ops};
 use crate::models::{DocId, NodeId, PeerId, StructureOp};
 use anyhow::Result;
 
@@ -86,16 +86,26 @@ impl RepoManager {
         ops: &[StructureOp],
     ) -> Result<()> {
         let peer_id = PeerId::new(peer_label);
-        for op in ops {
-            let timestamp = chrono::Utc::now().timestamp_millis();
-            self.append_generated_structure_event_in_local_repo(
-                repo_name,
-                peer_id.clone(),
-                op.clone(),
-                timestamp,
-            )?;
-            self.run_on_local_repo(repo_name, |db| structure_projection::apply(db, op))?;
-        }
-        Ok(())
+        let repo_scope = ledger_ops::local_repo_scope(repo_name);
+        self.run_on_local_repo(repo_name, |db| {
+            let write_txn = db.begin_write()?;
+            for op in ops {
+                let timestamp = chrono::Utc::now().timestamp_millis();
+                node_ops::append_generated_structure_op_to_txn(
+                    &write_txn,
+                    peer_id.clone(),
+                    op.clone(),
+                    timestamp,
+                    &repo_scope,
+                )?;
+                structure_projection::apply_in_txn(&write_txn, op)?;
+            }
+            write_txn.commit()?;
+            Ok(())
+        })
     }
 }
+
+#[cfg(test)]
+#[path = "structure_ops_test.rs"]
+mod tests;
