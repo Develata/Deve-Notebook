@@ -74,5 +74,6 @@ mod sync_transfer_scope_test;
 mod sync_transfer_scope_test_support;
 mod ws_protocol_acceptance_support;
 mod ws_protocol_acceptance_test;
+mod ws_register_writer_acceptance_test;
 mod ws_sync_hello_acceptance_test;
 mod ws_sync_hello_reject_acceptance_test;
