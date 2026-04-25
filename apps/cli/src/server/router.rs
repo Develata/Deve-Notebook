@@ -70,6 +70,10 @@ pub fn build_app(
         .route("/api/admin/dump", get(handlers::admin::dump))
         .route("/api/admin/export", get(handlers::admin::export))
         .route("/api/admin/node-check", get(handlers::admin::node_check))
+        .route(
+            "/api/admin/projection-check",
+            get(handlers::admin::projection_check),
+        )
         .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
 
     let login_route = Router::new()

@@ -1,4 +1,4 @@
-use crate::admin_api::{DumpResponse, ExportEntry, NodeCheckResponse};
+use crate::admin_api::{DumpResponse, ExportEntry, NodeCheckResponse, ProjectionCheckResponse};
 use anyhow::{Context, Result, anyhow};
 use reqwest::Client;
 use serde::Deserialize;
@@ -57,6 +57,22 @@ pub fn node_check(
         let response = client
             .get(format!("{base}/api/admin/node-check"))
             .query(&[("repair", repair)])
+            .query(&repo_query(repo_name))
+            .send()
+            .await?;
+        parse_json(response).await
+    })
+}
+
+pub fn projection_check(
+    ledger_dir: &Path,
+    repo_name: Option<&str>,
+) -> Result<Vec<ProjectionCheckResponse>> {
+    let base = main_base_url(ledger_dir)?;
+    let client = Client::new();
+    block_on_safe(async move {
+        let response = client
+            .get(format!("{base}/api/admin/projection-check"))
             .query(&repo_query(repo_name))
             .send()
             .await?;

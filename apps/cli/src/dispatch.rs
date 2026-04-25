@@ -54,9 +54,18 @@ pub async fn run(
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(ledger_dir, peer, repo, config.snapshot_depth)?
         }
-        Some(Commands::NodeCheck { repair, repo }) => {
-            commands::node_check::run(ledger_dir, config.snapshot_depth, repair, repo)?
-        }
+        Some(Commands::NodeCheck {
+            repair,
+            projection,
+            repo,
+        }) => commands::node_check::run(
+            ledger_dir,
+            vault_path,
+            config.snapshot_depth,
+            repair,
+            projection,
+            repo,
+        )?,
         Some(Commands::Repair {
             backup,
             repo,

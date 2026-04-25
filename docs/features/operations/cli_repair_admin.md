@@ -31,9 +31,9 @@
 
 - `Name`: `Check Node Consistency`
 - `Surface`: `cli`
-- `Trigger`: run `deve node-check [--repair] [--repo <repo>]`
+- `Trigger`: run `deve node-check [--repair | --projection] [--repo <repo>]`
 - `Preconditions`: ledger path is readable
-- `Immediate Result`: consistency check runs and optionally enters repair mode
+- `Immediate Result`: consistency check runs, optionally enters repair mode, or performs read-only projection authority diagnostics
 - `Application Entry`: `apps/cli/src/commands/node_check.rs`
 
 ### `op.cli.admin.recover-repo`

@@ -86,6 +86,8 @@ pub(crate) enum Commands {
     NodeCheck {
         #[arg(long)]
         repair: bool,
+        #[arg(long, conflicts_with = "repair")]
+        projection: bool,
         #[arg(long)]
         repo: Option<String>,
     },

@@ -1,4 +1,5 @@
 use deve_core::models::{DocId, LedgerEntry, NodeId, NodeMeta};
+use deve_core::sync::{ProjectionDiagnostic, ProjectionDiagnosticStatus};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,4 +24,36 @@ pub struct NodeCheckResponse {
     pub repo_name: String,
     pub missing_nodes: Vec<(DocId, String)>,
     pub orphan_nodes: Vec<(NodeId, String)>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectionCheckResponse {
+    pub repo_name: String,
+    pub status: String,
+    pub issue_code: Option<String>,
+    pub issue_detail: Option<String>,
+    pub rebuild_supported: bool,
+}
+
+impl ProjectionCheckResponse {
+    pub fn from_diagnostic(diagnostic: ProjectionDiagnostic) -> Self {
+        let (issue_code, issue_detail) = diagnostic
+            .issue
+            .map(|issue| (Some(issue.code), Some(issue.detail)))
+            .unwrap_or((None, None));
+        Self {
+            repo_name: diagnostic.repo_name,
+            status: projection_status_text(diagnostic.status).to_string(),
+            issue_code,
+            issue_detail,
+            rebuild_supported: diagnostic.rebuild_supported,
+        }
+    }
+}
+
+fn projection_status_text(status: ProjectionDiagnosticStatus) -> &'static str {
+    match status {
+        ProjectionDiagnosticStatus::Healthy => "healthy",
+        ProjectionDiagnosticStatus::AuthorityCorrupt => "authority_corrupt",
+    }
 }

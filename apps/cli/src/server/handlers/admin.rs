@@ -1,4 +1,4 @@
-use crate::admin_api::NodeCheckResponse;
+use crate::admin_api::{NodeCheckResponse, ProjectionCheckResponse};
 use crate::export_entries;
 use crate::server::AppState;
 use crate::server::error_classify::{
@@ -79,6 +79,28 @@ pub async fn node_check(
             missing_nodes: report.missing_nodes,
             orphan_nodes: report.orphan_nodes,
         });
+    }
+    Json(reports).into_response()
+}
+
+pub async fn projection_check(
+    State(state): State<Arc<AppState>>,
+    Query(repo): Query<RepoSelector>,
+) -> impl IntoResponse {
+    let repo_names = match resolve_target_repos(state.as_ref(), &repo, false) {
+        Ok(names) => names,
+        Err(err) => return admin_error_response(err, StatusCode::BAD_REQUEST),
+    };
+    let mut reports = Vec::with_capacity(repo_names.len());
+    for repo_name in repo_names {
+        let diagnostic = match state
+            .sync_manager
+            .diagnose_projection_local_repo(&repo_name)
+        {
+            Ok(diagnostic) => diagnostic,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        reports.push(ProjectionCheckResponse::from_diagnostic(diagnostic));
     }
     Json(reports).into_response()
 }

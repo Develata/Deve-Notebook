@@ -99,6 +99,7 @@
     - run: deve verify-p2p --help
     - run: deve seed --help
     - run: deve node-check --help
+    - run: deve node-check --projection --help
     - run: deve recover --help
     - run: deve repair --help
   assertions:

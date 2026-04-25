@@ -1,28 +1,41 @@
-// apps/cli/src/commands/node_check.rs
-//! # Node 一致性检查命令
+//! plan_ref:
+//!   - 12_commands#cli-commands
+//!   - 06_repository#tree-projection-contract
 
-use crate::admin_api::NodeCheckResponse;
+use crate::admin_api::{NodeCheckResponse, ProjectionCheckResponse};
 use crate::commands::live_proxy;
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::node_check::{check_node_consistency, repair_missing_nodes};
-use std::path::PathBuf;
+use deve_core::sync::SyncManager;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 pub fn run(
     ledger_dir: &PathBuf,
+    vault_path: &Path,
     snapshot_depth: usize,
     repair: bool,
+    projection: bool,
     repo_name: Option<String>,
 ) -> Result<()> {
     let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
         Ok(repo) => repo,
         Err(err) if live_proxy::is_db_lock_error(&err) => {
+            if projection {
+                let reports = live_proxy::projection_check(ledger_dir, repo_name.as_deref())?;
+                return print_projection_reports(&reports);
+            }
             let reports = live_proxy::node_check(ledger_dir, repo_name.as_deref(), repair)?;
             return print_reports(&reports);
         }
         Err(err) => return Err(err),
     };
+    if projection {
+        let reports = collect_projection_reports(Arc::new(repo), vault_path, repo_name.as_deref())?;
+        return print_projection_reports(&reports);
+    }
     let reports = collect_reports(&repo, repo_name.as_deref(), repair)?;
     print_reports(&reports)
 }
@@ -51,6 +64,21 @@ fn collect_reports(
     Ok(reports)
 }
 
+fn collect_projection_reports(
+    repo: Arc<RepoManager>,
+    vault_path: &Path,
+    target_repo: Option<&str>,
+) -> Result<Vec<ProjectionCheckResponse>> {
+    let repo_names = resolve_local_repo_args(&repo, target_repo)?;
+    let sync_manager = SyncManager::new(repo, vault_path.to_path_buf());
+    let mut reports = Vec::with_capacity(repo_names.len());
+    for repo_name in repo_names {
+        let diagnostic = sync_manager.diagnose_projection_local_repo(&repo_name)?;
+        reports.push(ProjectionCheckResponse::from_diagnostic(diagnostic));
+    }
+    Ok(reports)
+}
+
 fn print_reports(reports: &[NodeCheckResponse]) -> Result<()> {
     for report in reports {
         println!(
@@ -74,3 +102,23 @@ fn print_reports(reports: &[NodeCheckResponse]) -> Result<()> {
     }
     Ok(())
 }
+
+fn print_projection_reports(reports: &[ProjectionCheckResponse]) -> Result<()> {
+    for report in reports {
+        println!(
+            "projection_check[{}]: status={} rebuild_supported={}",
+            report.repo_name, report.status, report.rebuild_supported
+        );
+        if let Some(code) = &report.issue_code {
+            println!("issue_code: {}", code);
+        }
+        if let Some(detail) = &report.issue_detail {
+            println!("issue_detail: {}", detail);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "node_check_test.rs"]
+mod tests;
