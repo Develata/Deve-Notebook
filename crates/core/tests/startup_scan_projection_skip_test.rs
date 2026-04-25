@@ -4,6 +4,8 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn setup_repos() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("tempdir");
     let ledger = dir.path().join("ledger");
@@ -36,7 +38,8 @@ fn seed_main_file(repo: &RepoManager) {
 
 fn inject_broken_structure(repo: &RepoManager) {
     let doc_id = DocId::new();
-    repo.append_local_op_in_local_repo(
+    common::append_unvalidated_local_op(
+        repo,
         "wiki",
         &LedgerEntry::new_structure(
             StructureOp::CreateFile {
@@ -49,8 +52,7 @@ fn inject_broken_structure(repo: &RepoManager) {
             PeerId::new("test"),
             1,
         ),
-    )
-    .expect("append broken structure op");
+    );
 }
 
 #[test]

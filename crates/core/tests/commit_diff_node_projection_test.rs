@@ -5,6 +5,8 @@ use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
@@ -188,17 +190,20 @@ fn commit_diff_fails_closed_for_content_only_docs_without_structure_projection()
 #[test]
 fn commit_diff_fails_closed_on_missing_structure_targets() {
     let (_dir, repo) = new_repo();
-    repo.append_local_op(&LedgerEntry::new_structure(
-        StructureOp::MoveNode {
-            node_id: NodeId::new(),
-            doc_id: None,
-            new_parent_id: None,
-        },
-        1,
-        PeerId::new("test"),
-        1,
-    ))
-    .expect("append malformed structure op");
+    common::append_unvalidated_local_op(
+        &repo,
+        repo.local_repo_name(),
+        &LedgerEntry::new_structure(
+            StructureOp::MoveNode {
+                node_id: NodeId::new(),
+                doc_id: None,
+                new_parent_id: None,
+            },
+            1,
+            PeerId::new("test"),
+            1,
+        ),
+    );
     let commit = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
             let ledger_seq = deve_core::ledger::range::get_max_seq(db)?;

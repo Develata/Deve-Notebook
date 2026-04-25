@@ -11,6 +11,13 @@ fn write_info(db: &redb::Database, info: &RepoInfo) {
     txn.commit().expect("commit");
 }
 
+fn create_secondary_repo(ledger_dir: &std::path::Path, name: &str, url: &str) -> RepoInfo {
+    let repo = RepoManager::init(ledger_dir, 8, Some(name), Some(url)).expect("secondary repo");
+    repo.get_repo_info()
+        .expect("secondary info")
+        .expect("secondary metadata")
+}
+
 #[test]
 fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
     let dir = TempDir::new().expect("tempdir");
@@ -56,16 +63,12 @@ fn local_repo_listing_fails_closed_on_duplicate_name_drift_until_repair() {
     let ledger_dir = dir.path().join("ledger");
     let main =
         RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:test:wiki-a")).expect("main");
-    let local_dir = ledger_dir.join("local");
-    let second_path = local_dir.join("wiki-1.redb");
-    let second_db = redb::Database::create(&second_path).expect("create second db");
-    let txn = second_db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA).expect("repo metadata");
-    txn.commit().expect("commit metadata table");
+    let second_info = create_secondary_repo(&ledger_dir, "wiki-1", "urn:test:wiki-b");
+    let second_db = main.open_database(None, "wiki-1").expect("wiki-1 db").db;
     write_info(
-        &second_db,
+        second_db.as_ref(),
         &RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
+            uuid: second_info.uuid,
             name: "wiki".into(),
             url: Some("urn:test:wiki-b".into()),
         },
@@ -105,15 +108,12 @@ fn repair_rewrites_duplicate_local_repo_url_to_repo_urn() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let other_path = ledger_dir.join("local").join("notes.redb");
-    let other_db = redb::Database::create(&other_path).expect("create notes db");
-    let txn = other_db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA).expect("repo metadata");
-    txn.commit().expect("commit metadata table");
+    let notes_info = create_secondary_repo(&ledger_dir, "notes", "urn:notes");
+    let other_db = main.open_database(None, "notes").expect("notes db").db;
     write_info(
-        &other_db,
+        other_db.as_ref(),
         &RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
+            uuid: notes_info.uuid,
             name: "notes".into(),
             url: Some("urn:main".into()),
         },

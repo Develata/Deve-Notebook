@@ -5,6 +5,8 @@ use deve_core::sync::SyncManager;
 use redb::ReadableTable;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
@@ -139,17 +141,20 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_targets() {
     let (dir, repo) = new_repo();
-    repo.append_local_op(&LedgerEntry::new_structure(
-        StructureOp::RenameNode {
-            node_id: NodeId::new(),
-            doc_id: None,
-            new_name: "broken".into(),
-        },
-        1,
-        PeerId::new("test"),
-        1,
-    ))
-    .expect("append malformed structure op");
+    common::append_unvalidated_local_op(
+        repo.as_ref(),
+        repo.local_repo_name(),
+        &LedgerEntry::new_structure(
+            StructureOp::RenameNode {
+                node_id: NodeId::new(),
+                doc_id: None,
+                new_name: "broken".into(),
+            },
+            1,
+            PeerId::new("test"),
+            1,
+        ),
+    );
 
     let sync = SyncManager::new(repo, dir.path().join("vault"));
     let err = sync
@@ -161,18 +166,21 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_parent() {
     let (dir, repo) = new_repo();
-    repo.append_local_op(&LedgerEntry::new_structure(
-        StructureOp::CreateFile {
-            node_id: NodeId::new(),
-            doc_id: deve_core::models::DocId::new(),
-            parent_id: Some(NodeId::new()),
-            name: "orphan.md".into(),
-        },
-        1,
-        PeerId::new("test"),
-        1,
-    ))
-    .expect("append malformed structure op");
+    common::append_unvalidated_local_op(
+        repo.as_ref(),
+        repo.local_repo_name(),
+        &LedgerEntry::new_structure(
+            StructureOp::CreateFile {
+                node_id: NodeId::new(),
+                doc_id: deve_core::models::DocId::new(),
+                parent_id: Some(NodeId::new()),
+                name: "orphan.md".into(),
+            },
+            1,
+            PeerId::new("test"),
+            1,
+        ),
+    );
 
     let sync = SyncManager::new(repo, dir.path().join("vault"));
     let err = sync
