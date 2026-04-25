@@ -1,27 +1,8 @@
-use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
-use redb::Database;
 use tempfile::TempDir;
 
-fn seed_shadow_file(repo: &RepoManager, peer_id: &PeerId, stem: &str, info: &RepoInfo) {
-    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    std::fs::create_dir_all(&peer_dir).expect("peer dir");
-    let path = peer_dir.join(format!("{stem}.redb"));
-    let db = Database::create(&path).expect("shadow db");
-    let write = db.begin_write().expect("write txn");
-    write
-        .open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(
-            &0,
-            bincode::serialize(info)
-                .expect("serialize repo info")
-                .as_slice(),
-        )
-        .expect("write repo info");
-    write.commit().expect("commit repo info");
-}
+mod common;
 
 #[test]
 fn remote_catalog_repair_fails_closed_on_duplicate_shadow_uuid() {
@@ -34,8 +15,8 @@ fn remote_catalog_repair_fails_closed_on_duplicate_shadow_uuid() {
         url: Some("urn:test:wiki".into()),
     };
 
-    seed_shadow_file(&repo, &peer_id, "wiki", &info);
-    seed_shadow_file(&repo, &peer_id, "wiki-1", &info);
+    common::seed_shadow_repo_info(&repo, &peer_id, "wiki", &info);
+    common::seed_shadow_repo_info(&repo, &peer_id, "wiki-1", &info);
 
     let err = repo
         .repair_remote_repo_catalogs()
@@ -57,8 +38,8 @@ fn init_fails_closed_on_duplicate_shadow_uuid_catalogs() {
         url: Some("urn:test:wiki".into()),
     };
 
-    seed_shadow_file(&repo, &peer_id, "wiki", &info);
-    seed_shadow_file(&repo, &peer_id, "wiki-1", &info);
+    common::seed_shadow_repo_info(&repo, &peer_id, "wiki", &info);
+    common::seed_shadow_repo_info(&repo, &peer_id, "wiki-1", &info);
 
     let err = RepoManager::init(&ledger_dir, 10, None, None)
         .err()

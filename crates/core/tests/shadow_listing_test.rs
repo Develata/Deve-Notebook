@@ -3,6 +3,8 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::models::PeerId;
 use tempfile::TempDir;
 
+mod common;
+
 #[test]
 fn list_shadows_ignores_empty_peer_dirs() {
     let dir = TempDir::new().expect("create tempdir");
@@ -20,7 +22,8 @@ fn list_shadows_ignores_empty_peer_dirs() {
 #[test]
 fn list_shadows_fail_closed_on_broken_peer_dirs() {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
     let good_peer = PeerId::new("peer-good");
     let bad_peer = PeerId::new("peer-bad");
     let info = deve_core::ledger::RepoInfo {
@@ -31,9 +34,7 @@ fn list_shadows_fail_closed_on_broken_peer_dirs() {
 
     repo.ensure_shadow_repo_info(&good_peer, &info)
         .expect("seed good shadow");
-    let bad_dir = repo.remotes_dir().join(bad_peer.to_filename());
-    std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
-    std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
+    common::seed_broken_remote_shadow_repo(&ledger_dir, &bad_peer, "broken");
 
     let err = repo
         .list_shadows_on_disk()
@@ -44,7 +45,8 @@ fn list_shadows_fail_closed_on_broken_peer_dirs() {
 #[test]
 fn broken_shadow_repos_fail_closed_in_repo_listing_and_stay_hidden_from_selector_recovery() {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
     let peer_id = PeerId::new("peer-mixed");
     let info = deve_core::ledger::RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -54,13 +56,7 @@ fn broken_shadow_repos_fail_closed_in_repo_listing_and_stay_hidden_from_selector
 
     repo.ensure_shadow_repo_info(&peer_id, &info)
         .expect("seed good shadow");
-    std::fs::write(
-        repo.remotes_dir()
-            .join(peer_id.to_filename())
-            .join("broken.redb"),
-        b"not-a-redb",
-    )
-    .expect("seed broken shadow");
+    common::seed_broken_remote_shadow_repo(&ledger_dir, &peer_id, "broken");
 
     let err = repo
         .list_repos(Some(&peer_id))
@@ -82,7 +78,8 @@ fn broken_shadow_repos_fail_closed_in_repo_listing_and_stay_hidden_from_selector
 #[test]
 fn switchable_shadow_list_fails_closed_on_broken_repos() {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
     let good_peer = PeerId::new("peer-good");
     let bad_peer = PeerId::new("peer-bad");
     let info = deve_core::ledger::RepoInfo {
@@ -93,9 +90,7 @@ fn switchable_shadow_list_fails_closed_on_broken_repos() {
 
     repo.ensure_shadow_repo_info(&good_peer, &info)
         .expect("seed good shadow");
-    let bad_dir = repo.remotes_dir().join(bad_peer.to_filename());
-    std::fs::create_dir_all(&bad_dir).expect("create bad peer dir");
-    std::fs::write(bad_dir.join("broken.redb"), b"not-a-redb").expect("seed broken shadow");
+    common::seed_broken_remote_shadow_repo(&ledger_dir, &bad_peer, "broken");
 
     let err = repo
         .list_switchable_shadows_on_disk()
@@ -147,22 +142,8 @@ fn duplicate_shadow_uuid_peers_fail_closed_in_listing_and_switchable_views() {
         name: "notes".into(),
         url: Some("urn:test:notes".into()),
     };
-    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    std::fs::create_dir_all(&peer_dir).expect("peer dir");
     for stem in ["notes", "notes-1"] {
-        let db = redb::Database::create(peer_dir.join(format!("{stem}.redb"))).expect("shadow db");
-        let write = db.begin_write().expect("write txn");
-        write
-            .open_table(deve_core::ledger::schema::REPO_METADATA)
-            .expect("repo metadata")
-            .insert(
-                &0,
-                bincode::serialize(&info)
-                    .expect("serialize info")
-                    .as_slice(),
-            )
-            .expect("write info");
-        write.commit().expect("commit");
+        common::seed_shadow_repo_info(&repo, &peer_id, stem, &info);
     }
 
     let repos_err = repo
@@ -186,7 +167,8 @@ fn duplicate_shadow_uuid_peers_fail_closed_in_listing_and_switchable_views() {
 #[test]
 fn pure_shadow_scan_fails_closed_and_does_not_resurrect_loaded_corrupted_shadow_files() {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
     let peer_id = PeerId::new("peer-corrupt");
     let info = deve_core::ledger::RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -196,13 +178,7 @@ fn pure_shadow_scan_fails_closed_and_does_not_resurrect_loaded_corrupted_shadow_
 
     repo.ensure_shadow_repo_info(&peer_id, &info)
         .expect("seed shadow");
-    std::fs::write(
-        repo.remotes_dir()
-            .join(peer_id.to_filename())
-            .join("notes.redb"),
-        b"not-a-redb",
-    )
-    .expect("poison on-disk shadow");
+    common::seed_broken_remote_shadow_repo(&ledger_dir, &peer_id, "notes");
 
     let err = repo
         .list_repos(Some(&peer_id))

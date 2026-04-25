@@ -1,29 +1,20 @@
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::Op;
 use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, RepoType, StructureOp};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::protocol::SyncSnapshotRequest;
-use redb::Database;
 use tempfile::TempDir;
 use uuid::Uuid;
+
+mod common;
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     (dir, repo)
-}
-
-fn create_legacy_shadow_without_metadata(repo: &RepoManager, peer_id: &PeerId, repo_id: Uuid) {
-    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    std::fs::create_dir_all(&peer_dir).expect("peer dir");
-    let db = Database::create(peer_dir.join(format!("{repo_id}.redb"))).expect("legacy shadow");
-    let txn = db.begin_write().expect("write txn");
-    let _ = txn.open_table(REPO_METADATA).expect("repo metadata");
-    txn.commit().expect("commit legacy shadow");
 }
 
 #[test]
@@ -120,7 +111,7 @@ fn remote_repo_info_fails_closed_when_metadata_missing() {
     let peer_id = PeerId::new("peer-remote");
     let repo_id = Uuid::new_v4();
 
-    create_legacy_shadow_without_metadata(&repo, &peer_id, repo_id);
+    common::seed_shadow_without_metadata_row(&repo, &peer_id, repo_id);
 
     let err = repo
         .get_repo_info_for(Some(&peer_id), Some(&repo_id.to_string()))

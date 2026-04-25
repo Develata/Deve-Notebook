@@ -1,21 +1,13 @@
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::DocId;
 use deve_core::source_control::staging;
 use tempfile::TempDir;
 
+mod common;
+
 fn seed_legacy_local_repo(path: &std::path::Path, info: &RepoInfo) {
-    let db = redb::Database::create(path).expect("create legacy db");
-    let write = db.begin_write().expect("write txn");
-    write
-        .open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(
-            &0,
-            bincode::serialize(info).expect("serialize info").as_slice(),
-        )
-        .expect("write metadata");
-    write.commit().expect("commit");
+    common::seed_local_repo_missing_source_control_tables(path, info);
 }
 
 #[test]
@@ -40,7 +32,11 @@ fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_r
     let pending_err = repo
         .list_pending_fs_in_local_repo("legacy")
         .expect_err("missing source control tables must fail local pending listing");
-    assert!(pending_err.to_string().contains("source control tables"));
+    let pending_detail = pending_err.to_string();
+    assert!(
+        pending_detail.contains("source control tables"),
+        "unexpected pending error: {pending_detail}"
+    );
 
     repo.repair_local_repo_catalog()
         .expect("repair local repo catalog");

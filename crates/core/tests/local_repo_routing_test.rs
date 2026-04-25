@@ -1,6 +1,6 @@
 use deve_core::config::SyncMode;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::{LedgerEntry, LedgerEvent, NodeId, Op, PeerId, RepoId, RepoType};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
@@ -18,15 +18,6 @@ fn new_local_repos() -> (TempDir, RepoManager, RepoId, String) {
     let extra_info =
         common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
     (dir, main, extra_info.uuid, extra_info.name)
-}
-
-fn write_repo_info(db: &redb::Database, info: &RepoInfo) {
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-        .expect("write metadata");
-    txn.commit().expect("commit");
 }
 
 fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::DocId {
@@ -122,7 +113,7 @@ fn sync_snapshot_uses_requested_local_repo_id() {
 fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    write_repo_info(
+    common::write_repo_metadata(
         extra_db.db.as_ref(),
         &RepoInfo {
             uuid: extra_id,
@@ -152,7 +143,7 @@ fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
 fn workspace_resolution_keeps_execution_repo_stem_after_metadata_drift() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    write_repo_info(
+    common::write_repo_metadata(
         extra_db.db.as_ref(),
         &RepoInfo {
             uuid: extra_id,
@@ -196,12 +187,7 @@ fn execution_resolution_rejects_uuid_string_in_repo_name_slot() {
 fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    let txn = extra_db.db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, [0_u8, 1, 2, 3].as_slice())
-        .expect("write broken metadata");
-    txn.commit().expect("commit broken metadata");
+    common::poison_repo_metadata_invalid_bincode(extra_db.db.as_ref());
 
     let err = repo
         .find_local_repo_name_by_id(extra_id)
@@ -217,11 +203,7 @@ fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
 fn workspace_resolution_fails_closed_when_secondary_repo_info_is_missing() {
     let (_dir, repo, _extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    let txn = extra_db.db.begin_write().expect("write txn");
-    let _ = txn
-        .delete_table(REPO_METADATA)
-        .expect("delete repo metadata");
-    txn.commit().expect("commit missing metadata");
+    common::delete_repo_metadata(extra_db.db.as_ref());
 
     let err = repo
         .resolve_local_workspace_path("wiki/notes/extra.md")

@@ -163,7 +163,8 @@ fn local_execution_resolution_ignores_broken_remote_catalogs() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    common::seed_broken_remote_shadow_repo(&ledger_dir, "peer-a", "broken");
+    let peer_id = deve_core::models::PeerId::new("peer-a");
+    common::seed_broken_remote_shadow_repo(&ledger_dir, &peer_id, "broken");
 
     assert_eq!(
         repo.resolve_local_repo_name_for_execution(None, Some("main"))

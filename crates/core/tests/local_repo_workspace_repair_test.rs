@@ -1,15 +1,8 @@
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use tempfile::TempDir;
 
-fn write_info(db: &redb::Database, info: &RepoInfo) {
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-        .expect("write metadata");
-    txn.commit().expect("commit");
-}
+mod common;
 
 #[test]
 fn repair_realigns_workspace_root_to_repaired_repo_name() {
@@ -21,7 +14,7 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
 
     std::fs::create_dir_all(vault_dir.join("legacy/.notegit")).expect("legacy workspace");
     std::fs::write(vault_dir.join("legacy/note.md"), "hello").expect("write note");
-    write_info(
+    common::write_repo_metadata(
         main_db.as_ref(),
         &RepoInfo {
             uuid: repo
@@ -52,7 +45,7 @@ fn runtime_catalog_refresh_does_not_realign_workspace_root() {
     repo.set_vault_root(&vault_dir);
     let main_db = repo.open_database(None, "main").expect("main db").db;
 
-    write_info(
+    common::write_repo_metadata(
         main_db.as_ref(),
         &RepoInfo {
             uuid: repo

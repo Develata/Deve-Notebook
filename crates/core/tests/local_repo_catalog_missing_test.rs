@@ -86,8 +86,7 @@ fn local_repo_catalog_fails_closed_on_non_file_redb_entry() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    std::fs::create_dir_all(ledger_dir.join("local").join("broken.redb"))
-        .expect("create fake repo dir");
+    common::seed_non_file_local_repo_entry(&ledger_dir, "broken");
 
     let list_err = repo
         .list_repos(None)

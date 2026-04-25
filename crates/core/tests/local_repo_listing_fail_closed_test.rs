@@ -1,6 +1,8 @@
+use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoManager};
 use tempfile::TempDir;
+
+mod common;
 
 #[test]
 fn local_repo_listing_fails_closed_on_missing_main_metadata() {
@@ -9,9 +11,7 @@ fn local_repo_listing_fails_closed_on_missing_main_metadata() {
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let main_db = repo.open_database(None, "main").expect("main db");
 
-    let txn = main_db.db.begin_write().expect("write txn");
-    txn.delete_table(REPO_METADATA).expect("delete metadata");
-    txn.commit().expect("commit");
+    common::delete_repo_metadata(main_db.db.as_ref());
 
     let err = repo
         .list_repos(None)

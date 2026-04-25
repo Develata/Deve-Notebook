@@ -2,6 +2,8 @@ use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
 use tempfile::TempDir;
 
+mod common;
+
 #[cfg(unix)]
 #[test]
 fn invalid_shadow_peer_dir_name_fails_closed_for_listing_and_repair() {
@@ -70,8 +72,7 @@ fn non_file_shadow_repo_entry_fails_closed_for_listing_and_repair() {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     let peer = deve_core::models::PeerId::new("peer-dir");
-    let peer_dir = repo.remotes_dir().join(peer.to_filename());
-    std::fs::create_dir_all(peer_dir.join("notes.redb")).expect("create fake shadow dir");
+    common::seed_non_file_shadow_repo_entry(&repo, &peer, "notes");
 
     let list_err = repo
         .list_repos(Some(&peer))

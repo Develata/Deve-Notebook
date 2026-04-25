@@ -1,35 +1,16 @@
 use deve_core::ledger::RepoInfo;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::schema::REPO_METADATA;
 use deve_core::models::PeerId;
-use redb::Database;
 use tempfile::TempDir;
 use uuid::Uuid;
+
+mod common;
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
     let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     (dir, repo)
-}
-
-fn seed_shadow_file(repo: &RepoManager, peer_id: &PeerId, stem: &str, info: &RepoInfo) {
-    let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    std::fs::create_dir_all(&peer_dir).expect("peer dir");
-    let path = peer_dir.join(format!("{}.redb", stem));
-    let db = Database::create(&path).expect("shadow db");
-    let write = db.begin_write().expect("write txn");
-    write
-        .open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(
-            &0,
-            bincode::serialize(info)
-                .expect("serialize repo info")
-                .as_slice(),
-        )
-        .expect("write repo info");
-    write.commit().expect("commit repo info");
 }
 
 #[test]
@@ -42,8 +23,8 @@ fn duplicate_shadow_uuid_fails_closed_in_listing_and_selector_recovery() {
         name: "wiki".into(),
         url: Some("urn:test:wiki".into()),
     };
-    seed_shadow_file(&repo, &peer_id, "wiki", &info);
-    seed_shadow_file(&repo, &peer_id, "wiki-1", &info);
+    common::seed_shadow_repo_info(&repo, &peer_id, "wiki", &info);
+    common::seed_shadow_repo_info(&repo, &peer_id, "wiki-1", &info);
 
     let list_err = repo
         .list_repos(Some(&peer_id))

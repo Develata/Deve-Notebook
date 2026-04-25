@@ -1,17 +1,8 @@
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{RepoInfo, RepoManager};
 use tempfile::TempDir;
 
 mod common;
-
-fn write_info(db: &redb::Database, info: &RepoInfo) {
-    let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-        .expect("write metadata");
-    txn.commit().expect("commit");
-}
 
 #[test]
 fn local_repo_listing_fails_closed_on_hidden_non_redb_entry() {
@@ -45,7 +36,7 @@ fn repair_local_repo_catalog_fails_closed_on_workspace_root_conflict() {
         .expect("mount vault");
 
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
-    write_info(
+    common::write_repo_metadata(
         wiki_db.as_ref(),
         &RepoInfo {
             uuid: wiki_info.uuid,
