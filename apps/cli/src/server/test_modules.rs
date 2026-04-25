@@ -77,3 +77,4 @@ mod ws_protocol_acceptance_test;
 mod ws_register_writer_acceptance_test;
 mod ws_sync_hello_acceptance_test;
 mod ws_sync_hello_reject_acceptance_test;
+mod ws_sync_transfer_reject_acceptance_test;
