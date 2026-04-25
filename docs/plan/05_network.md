@@ -154,6 +154,7 @@
 - `SyncPush`
   - required:
     - `repo_id`
+    - `source_peer_id`
     - `header`
     - `encrypted_payload`
 - `SyncSnapshotRequest`
@@ -164,6 +165,7 @@
 - `SyncPushSnapshot`
   - required:
     - `repo_id`
+    - `source_peer_id`
     - `server_vector`
     - `payload`
     - `snapshot_kind`
@@ -358,6 +360,12 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 ### 10.5 Indirect Sync and Attribution
 
 - A 经 C 中继传给 B 时，B 的落盘归属必须由 A 的签名来源决定，而不是由 C 的传输通道决定。
+- `SyncPush` 与 `SyncPushSnapshot` 必须携带 source peer / branch id；该字段决定 shadow 写入目标。
+- `LedgerEntry.peer_id` 表示 op author，不等于 source branch id，不能替代 payload source peer。
+- authenticated transport peer 只用于会话、repo、scope 校验，不得替代 payload source peer。
+- 同一个 push payload 只能包含一个 source peer 的 ledger facts；不同 source peer 必须拆成多个 push。
+- Snapshot request 若请求 shadow source，响应必须导出对应 shadow，而不能回退到本地 ledger。
+- 入站 push / snapshot push 的 source 必须来自本端在当前 SyncHello diff 中请求过的 peer；入站 request / snapshot request 的 source 必须来自本端在当前 SyncHello diff 中声明可发送的 peer。
 - 若 B 未与 A 建立信任或缺少 repo key，则 B 必须丢弃 A 的 payload。
 - relay 可以转发 offer，但不得越权强制接收。
 

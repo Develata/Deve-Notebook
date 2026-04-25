@@ -104,6 +104,19 @@ pub(super) async fn handle(
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(scope_nonce);
+    session.set_requested_sync_sources(
+        result
+            .to_request
+            .iter()
+            .map(|req| req.peer_id.clone())
+            .chain(
+                result
+                    .snapshot_requests
+                    .iter()
+                    .map(|req| req.peer_id.clone()),
+            ),
+    );
+    session.set_offered_sync_sources(result.to_send.iter().map(|req| req.peer_id.clone()));
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
     match hello_response::send(state, ch, repo_id, scope_nonce, local_peer_id, local_vector) {

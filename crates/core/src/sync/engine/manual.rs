@@ -142,7 +142,15 @@ impl SyncEngine {
             let mut entries = Vec::with_capacity(response.ops.len());
             let mut max_seq = 0;
             for enc_op in &response.ops {
-                entries.push(repo_key.decrypt(enc_op)?);
+                let entry = repo_key.decrypt(enc_op)?;
+                if matches!(kind, DecryptedPendingKind::Ops) && entry.seq != enc_op.seq {
+                    bail!(
+                        "Encrypted op seq mismatch: envelope {}, payload {}",
+                        enc_op.seq,
+                        entry.seq
+                    );
+                }
+                entries.push(entry);
                 max_seq = max_seq.max(enc_op.seq);
             }
             decrypted.push(DecryptedPendingPayload {

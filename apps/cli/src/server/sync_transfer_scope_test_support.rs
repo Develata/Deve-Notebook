@@ -7,8 +7,9 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerMessage};
+use deve_core::security::EncryptedOp;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -70,6 +71,37 @@ pub(super) fn append_local_doc(state: &Arc<AppState>) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub(super) fn remote_insert_entry(peer: &PeerId, seq: u64) -> LedgerEntry {
+    let doc_id = DocId::new();
+    LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos: 0,
+            content: "remote".into(),
+        },
+        1,
+        peer.clone(),
+        seq,
+        None,
+        None,
+    )
+}
+
+pub(super) fn encrypted_insert_for_author(
+    state: &Arc<AppState>,
+    repo_id: RepoId,
+    author: &PeerId,
+    seq: u64,
+) -> anyhow::Result<EncryptedOp> {
+    let key = state
+        .sync_engine
+        .get_or_create_strict(repo_id)?
+        .repo_key
+        .ok_or_else(|| anyhow::anyhow!("repo key missing"))?;
+    let entry = remote_insert_entry(author, seq);
+    key.encrypt(&entry, seq)
+}
+
 pub(super) fn unicast_channel(
     state: &Arc<AppState>,
 ) -> (DualChannel, mpsc::Receiver<ServerMessage>) {
@@ -109,6 +141,19 @@ pub(super) async fn recv_protocol_error(
 pub(super) async fn recv_sync_push_nonce(rx: &mut mpsc::Receiver<ServerMessage>) -> u64 {
     match rx.recv().await {
         Some(ServerMessage::SyncPush { scope_nonce, .. }) => scope_nonce,
+        other => panic!("expected SyncPush, got {:?}", other),
+    }
+}
+
+pub(super) async fn recv_sync_push_peer_nonce(
+    rx: &mut mpsc::Receiver<ServerMessage>,
+) -> (PeerId, u64) {
+    match rx.recv().await {
+        Some(ServerMessage::SyncPush {
+            peer_id,
+            scope_nonce,
+            ..
+        }) => (peer_id, scope_nonce),
         other => panic!("expected SyncPush, got {:?}", other),
     }
 }

@@ -43,6 +43,12 @@ pub struct WsSession {
     /// 已认证的对端 Peer ID，用于后续 SyncPush 验证。
     pub authenticated_peer_id: Option<PeerId>,
 
+    /// 当前 SyncHello 中本端明确请求过的 source peer。
+    pub requested_sync_sources: Vec<PeerId>,
+
+    /// 当前 SyncHello 中本端可向对端发送的 source peer。
+    pub offered_sync_sources: Vec<PeerId>,
+
     /// 当前绑定的仓库 ID，用于后续同步消息的 repo 一致性校验。
     pub bound_repo_id: Option<RepoId>,
 
@@ -95,6 +101,8 @@ impl Default for WsSession {
             current_scope_nonce: 0,
             current_sync_scope_nonce: None,
             authenticated_peer_id: None,
+            requested_sync_sources: Vec::new(),
+            offered_sync_sources: Vec::new(),
             bound_repo_id: None,
             writer_identity: None,
             browser_session: false,

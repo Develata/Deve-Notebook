@@ -9,7 +9,7 @@ impl SyncEngine {
             .repo_key
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
-        decrypt_remote_ops(repo_key, &response.ops)?;
+        decrypt_remote_ops(repo_key, &response.ops, false)?;
         Ok(())
     }
 
@@ -20,7 +20,7 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
 
-        let decrypted = decrypt_remote_ops(repo_key, &response.ops)?;
+        let decrypted = decrypt_remote_ops(repo_key, &response.ops, false)?;
         let max_seq = max_decrypted_seq(&decrypted);
         let entries = decrypted_entries(decrypted);
 
@@ -37,7 +37,7 @@ impl SyncEngine {
             .repo_key
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured, cannot decrypt ops"))?;
-        decrypt_remote_ops(repo_key, &response.ops)?;
+        decrypt_remote_ops(repo_key, &response.ops, true)?;
         Ok(())
     }
 
@@ -48,7 +48,7 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured, cannot decrypt ops"))?;
 
-        let decrypted = decrypt_remote_ops(repo_key, &response.ops)?;
+        let decrypted = decrypt_remote_ops(repo_key, &response.ops, true)?;
         let max_seq = decrypted
             .iter()
             .map(|(seq, _entry)| *seq)
@@ -69,10 +69,19 @@ impl SyncEngine {
 fn decrypt_remote_ops(
     repo_key: &crate::security::RepoKey,
     ops: &[crate::security::EncryptedOp],
+    validate_entry_seq: bool,
 ) -> Result<Vec<(u64, LedgerEntry)>> {
     let mut decrypted = Vec::with_capacity(ops.len());
     for enc_op in ops {
-        decrypted.push((enc_op.seq, repo_key.decrypt(enc_op)?));
+        let entry = repo_key.decrypt(enc_op)?;
+        if validate_entry_seq && entry.seq != enc_op.seq {
+            anyhow::bail!(
+                "Encrypted op seq mismatch: envelope {}, payload {}",
+                enc_op.seq,
+                entry.seq
+            );
+        }
+        decrypted.push((enc_op.seq, entry));
     }
     Ok(decrypted)
 }

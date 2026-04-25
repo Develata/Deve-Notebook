@@ -22,6 +22,7 @@ pub(super) fn route_payload_message(
             scope_nonce,
             branch,
             ops,
+            ..
         } => {
             dispatch_payload::handle_sync_push_message(ctx, repo_id, branch, scope_nonce, &ops);
             None

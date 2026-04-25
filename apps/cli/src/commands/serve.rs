@@ -6,7 +6,7 @@ use reqwest::Client;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::time::{Duration, timeout};
+use tokio::time::{Duration, sleep, timeout};
 
 #[path = "serve_support.rs"]
 mod serve_support;
@@ -113,17 +113,28 @@ async fn detect_main_port(port: u16) -> Option<u16> {
         }
     }
 
-    let client = Client::new();
+    let client = Client::builder().no_proxy().build().ok()?;
     for p in ports {
-        let url = format!("http://127.0.0.1:{}/api/node/role", p);
-        let req = client.get(&url);
-        let is_alive = matches!(
-            timeout(Duration::from_millis(300), req.send()).await,
-            Ok(Ok(_))
-        );
-        if is_alive {
+        if probe_node_role(&client, p).await {
             return Some(p);
         }
     }
     None
+}
+
+async fn probe_node_role(client: &Client, port: u16) -> bool {
+    let url = format!("http://127.0.0.1:{}/api/node/role", port);
+    for attempt in 0..3 {
+        let req = client.get(&url);
+        if matches!(
+            timeout(Duration::from_millis(300), req.send()).await,
+            Ok(Ok(_))
+        ) {
+            return true;
+        }
+        if attempt < 2 {
+            sleep(Duration::from_millis(25)).await;
+        }
+    }
+    false
 }

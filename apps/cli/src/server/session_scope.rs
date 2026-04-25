@@ -11,6 +11,8 @@ impl WsSession {
     pub fn set_authenticated(&mut self, peer_id: PeerId) {
         if self.authenticated_peer_id.as_ref() != Some(&peer_id) {
             self.writer_identity = None;
+            self.requested_sync_sources.clear();
+            self.offered_sync_sources.clear();
         }
         self.authenticated_peer_id = Some(peer_id);
     }
@@ -26,6 +28,8 @@ impl WsSession {
     pub fn bind_repo(&mut self, repo_id: RepoId) {
         if self.bound_repo_id != Some(repo_id) {
             self.writer_identity = None;
+            self.requested_sync_sources.clear();
+            self.offered_sync_sources.clear();
         }
         self.bound_repo_id = Some(repo_id);
     }
@@ -46,6 +50,8 @@ impl WsSession {
         self.bound_repo_id = None;
         self.writer_identity = None;
         self.current_sync_scope_nonce = None;
+        self.requested_sync_sources.clear();
+        self.offered_sync_sources.clear();
     }
 
     pub fn is_repo_bound(&self, repo_id: &RepoId) -> bool {
@@ -72,6 +78,38 @@ impl WsSession {
 
     pub fn sync_scope_nonce(&self) -> Option<u64> {
         self.current_sync_scope_nonce
+    }
+
+    pub fn set_requested_sync_sources<I>(&mut self, sources: I)
+    where
+        I: IntoIterator<Item = PeerId>,
+    {
+        self.requested_sync_sources.clear();
+        for source in sources {
+            if !self.requested_sync_sources.contains(&source) {
+                self.requested_sync_sources.push(source);
+            }
+        }
+    }
+
+    pub fn set_offered_sync_sources<I>(&mut self, sources: I)
+    where
+        I: IntoIterator<Item = PeerId>,
+    {
+        self.offered_sync_sources.clear();
+        for source in sources {
+            if !self.offered_sync_sources.contains(&source) {
+                self.offered_sync_sources.push(source);
+            }
+        }
+    }
+
+    pub fn allows_sync_source(&self, source: &PeerId) -> bool {
+        self.requested_sync_sources.contains(source)
+    }
+
+    pub fn allows_sync_export_source(&self, source: &PeerId) -> bool {
+        self.offered_sync_sources.contains(source)
     }
 
     pub fn set_active_db(&mut self, handle: DatabaseHandle) {

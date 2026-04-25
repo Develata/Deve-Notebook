@@ -75,10 +75,20 @@ fn send_pushes(
     scope_nonce: u64,
     requests: Vec<deve_core::sync::protocol::SyncRequest>,
 ) {
-    let mut ops_to_push = Vec::new();
     for req in requests {
         match engine.get_ops_for_sync(&req) {
-            Ok(response) => ops_to_push.extend(response.ops),
+            Ok(response) => {
+                if response.ops.is_empty() {
+                    continue;
+                }
+                ch.unicast(ServerMessage::SyncPush {
+                    peer_id: response.peer_id,
+                    repo_id: response.repo_id,
+                    scope_nonce,
+                    branch: session.active_branch.clone(),
+                    ops: response.ops,
+                });
+            }
             Err(err) => {
                 clear_sync_hello_scope_failure(session, false);
                 errors::classified_failure(
@@ -89,14 +99,5 @@ fn send_pushes(
                 return;
             }
         }
-    }
-
-    if !ops_to_push.is_empty() {
-        ch.unicast(ServerMessage::SyncPush {
-            repo_id,
-            scope_nonce,
-            branch: session.active_branch.clone(),
-            ops: ops_to_push,
-        });
     }
 }

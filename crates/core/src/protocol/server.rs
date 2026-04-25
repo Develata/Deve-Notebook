@@ -17,7 +17,7 @@ pub enum ServerMessage {
     WriteReady { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId> },
     SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, requests: Vec<(PeerId, (u64, u64))> },
     SyncSnapshotRequest { peer_id: PeerId, repo_id: RepoId },
-    SyncPush { repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
+    SyncPush { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
     SyncPushSnapshot { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, ops: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },

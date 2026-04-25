@@ -51,10 +51,11 @@ pub async fn handle_sync_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    peer_id: PeerId,
     repo_id: RepoId,
     ops: Vec<EncryptedOp>,
 ) {
-    transfer::handle_push(state, ch, session, repo_id, ops).await;
+    transfer::handle_push(state, ch, session, peer_id, repo_id, ops).await;
 }
 
 pub async fn handle_sync_snapshot_request(

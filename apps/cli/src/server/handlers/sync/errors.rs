@@ -66,3 +66,16 @@ pub(super) fn sync_apply_failed(
         scope_nonce,
     );
 }
+
+pub(super) fn sync_peer_unauthenticated(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(
+        ch,
+        ServerErrorCode::SyncPeerUnauthenticated,
+        detail,
+        scope_nonce,
+    );
+}

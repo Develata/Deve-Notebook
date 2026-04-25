@@ -59,6 +59,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         repo_id: uuid::Uuid::nil(),
     });
     ch.unicast(ServerMessage::SyncPush {
+        peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
         scope_nonce: 7,
         branch: Some(peer.clone()),

@@ -65,8 +65,12 @@ async fn route_unscoped_core(
         ClientMessage::SyncRequest { repo_id, requests } => {
             sync::handle_sync_request(state, ch, session, repo_id, requests).await;
         }
-        ClientMessage::SyncPush { repo_id, ops } => {
-            sync::handle_sync_push(state, ch, session, repo_id, ops).await;
+        ClientMessage::SyncPush {
+            peer_id,
+            repo_id,
+            ops,
+        } => {
+            sync::handle_sync_push(state, ch, session, peer_id, repo_id, ops).await;
         }
         ClientMessage::RegisterWriter {
             peer_id,

@@ -95,6 +95,16 @@ fn tampered_response(peer: &PeerId, repo_id: RepoId) -> SyncResponse {
     }
 }
 
+fn seq_mismatch_response(
+    peer: &PeerId,
+    repo_id: RepoId,
+    key: &RepoKey,
+) -> anyhow::Result<SyncResponse> {
+    let mut response = encrypted_response_with_seq(peer, repo_id, key, 1)?;
+    response.ops[0].seq = 2;
+    Ok(response)
+}
+
 #[test]
 fn manual_receive_buffers_remote_ops_until_confirmed() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
@@ -108,6 +118,33 @@ fn manual_receive_buffers_remote_ops_until_confirmed() -> anyhow::Result<()> {
     assert_eq!(engine.merge_pending()?, 1);
     assert_eq!(engine.pending_ops_count(), 0);
     assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    Ok(())
+}
+
+#[test]
+fn manual_merge_rejects_incremental_seq_mismatch() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    engine.buffer_remote_ops(seq_mismatch_response(&peer, repo_id, &key)?);
+
+    let err = engine
+        .merge_pending()
+        .expect_err("incremental seq mismatch must fail");
+    assert!(err.to_string().contains("seq mismatch"));
+    assert_eq!(engine.pending_ops_count(), 1);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[test]
+fn manual_snapshot_allows_envelope_seq_replay() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    engine.buffer_remote_snapshot(seq_mismatch_response(&peer, repo_id, &key)?);
+
+    assert_eq!(engine.merge_pending()?, 1);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    assert_eq!(engine.version_vector().get(&peer), 2);
     Ok(())
 }
 

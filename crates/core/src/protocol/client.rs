@@ -31,6 +31,7 @@ pub enum ClientMessage {
         repo_id: crate::models::RepoId,
     },
     SyncPush {
+        peer_id: PeerId,
         repo_id: crate::models::RepoId,
         ops: Vec<EncryptedOp>,
     },

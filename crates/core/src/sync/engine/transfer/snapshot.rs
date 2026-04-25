@@ -15,28 +15,58 @@ impl SyncEngine {
             .repo_key
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
-        let repo_name = self
-            .repo
-            .find_local_repo_name_by_id(request.repo_id)?
-            .ok_or_else(|| anyhow::anyhow!("Local repo not found for UUID {}", request.repo_id))?;
-        let max_seq = self
-            .repo
-            .run_on_local_repo(&repo_name, range::get_max_seq)?;
-        let raw_ops = if max_seq == 0 {
-            Vec::new()
+        let raw_ops = if request.peer_id == self.local_peer_id {
+            local_snapshot_ops(self, request)?
         } else {
-            self.repo
-                .get_local_ops_in_range(&request.repo_id, 1, max_seq.saturating_add(1))?
+            shadow_snapshot_ops(self, request)?
         };
+
         let mut ops = Vec::with_capacity(raw_ops.len());
         for (seq, entry) in raw_ops {
             ops.push(repo_key.encrypt(&entry, seq)?);
         }
 
         Ok(SyncResponse {
-            peer_id: self.local_peer_id.clone(),
+            peer_id: request.peer_id.clone(),
             repo_id: request.repo_id,
             ops,
         })
     }
+}
+
+fn local_snapshot_ops(
+    engine: &SyncEngine,
+    request: &SyncSnapshotRequest,
+) -> Result<Vec<(u64, crate::models::LedgerEntry)>> {
+    let repo_name = engine
+        .repo
+        .find_local_repo_name_by_id(request.repo_id)?
+        .ok_or_else(|| anyhow::anyhow!("Local repo not found for UUID {}", request.repo_id))?;
+    let max_seq = engine
+        .repo
+        .run_on_local_repo(&repo_name, range::get_max_seq)?;
+    if max_seq == 0 {
+        return Ok(Vec::new());
+    }
+    engine
+        .repo
+        .get_local_ops_in_range(&request.repo_id, 1, max_seq.saturating_add(1))
+}
+
+fn shadow_snapshot_ops(
+    engine: &SyncEngine,
+    request: &SyncSnapshotRequest,
+) -> Result<Vec<(u64, crate::models::LedgerEntry)>> {
+    let max_seq = engine
+        .repo
+        .get_shadow_max_seq(&request.peer_id, &request.repo_id)?;
+    if max_seq == 0 {
+        return Ok(Vec::new());
+    }
+    engine.repo.get_shadow_ops_in_range(
+        &request.peer_id,
+        &request.repo_id,
+        1,
+        max_seq.saturating_add(1),
+    )
 }
