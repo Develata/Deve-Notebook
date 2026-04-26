@@ -81,10 +81,12 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
 
 #[cfg(test)]
 mod tests {
-    use super::requested_scope_nonce;
-    use deve_core::models::DocId;
-    use deve_core::protocol::ClientMessage;
-    use deve_core::protocol::MergeConflictAction;
+    use super::{requested_scope_nonce, route_merge};
+    use crate::server::session::PendingMergeConflict;
+    use crate::server::sync_hello_test_support::{build_state, unicast_channel};
+    use deve_core::models::{DocId, PeerId};
+    use deve_core::protocol::{ClientMessage, MergeConflictAction, ServerMessage};
+    use tokio::time::{Duration, timeout};
 
     #[test]
     fn extracts_scope_nonce_from_merge_messages() {
@@ -111,5 +113,56 @@ mod tests {
             Some(Some(9))
         );
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn resolve_merge_conflict_routes_accept_current_to_merge_complete() -> anyhow::Result<()>
+    {
+        let (_dir, state, repo_id) = build_state()?;
+        let (ch, _uni_rx) = unicast_channel(&state);
+        let mut broadcast_rx = state.tx.subscribe();
+        let doc_id = DocId::new();
+        let mut session = crate::server::session::WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(17));
+        session.pending_merge_conflict = Some(PendingMergeConflict {
+            repo_id,
+            repo_name: "notes".into(),
+            branch: Some(PeerId::new("remote-a")),
+            doc_id,
+            scope_nonce: Some(17),
+            local_content: "local".into(),
+            incoming_content: "incoming".into(),
+        });
+
+        route_merge(
+            &state,
+            &ch,
+            &mut session,
+            ClientMessage::ResolveMergeConflict {
+                doc_id,
+                action: MergeConflictAction::AcceptCurrent,
+                result_content: None,
+                scope_nonce: Some(17),
+            },
+        )
+        .await;
+
+        match timeout(Duration::from_secs(2), broadcast_rx.recv()).await?? {
+            ServerMessage::MergeComplete {
+                repo_id: actual_repo,
+                branch,
+                scope_nonce,
+                merged_count,
+            } => {
+                assert_eq!(actual_repo, Some(repo_id));
+                assert_eq!(branch, Some(PeerId::new("remote-a")));
+                assert_eq!(scope_nonce, Some(17));
+                assert_eq!(merged_count, 0);
+            }
+            other => panic!("expected MergeComplete, got {other:?}"),
+        }
+        assert!(session.pending_merge_conflict.is_none());
+        Ok(())
     }
 }
