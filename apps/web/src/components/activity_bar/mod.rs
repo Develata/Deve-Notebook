@@ -37,7 +37,7 @@ pub fn ActivityBar(
 
     let select_view = Callback::new(move |view: SidebarView| {
         if view == SidebarView::Search {
-            search_control.set_mode.set(String::new());
+            search_control.set_mode.set("?".to_string());
             search_control.set_show.set(true);
         } else {
             set_active_view.set(view);

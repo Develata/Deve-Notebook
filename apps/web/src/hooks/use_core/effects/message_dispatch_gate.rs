@@ -1,6 +1,7 @@
 use leptos::prelude::GetUntracked;
 
 use super::super::state::CoreSignals;
+use deve_core::models::{PeerId, RepoId};
 #[path = "message_dispatch_gate_logic.rs"]
 mod logic;
 
@@ -24,11 +25,15 @@ pub fn accepts_chat_chunk(req_id: &str, signals: CoreSignals) -> bool {
 
 pub fn accepts_search_results(
     request_id: &str,
+    repo_id: Option<RepoId>,
+    branch: Option<PeerId>,
     scope_nonce: Option<u64>,
     signals: CoreSignals,
 ) -> bool {
     accepts_unscoped_update(signals)
         && scope_nonce == Some(signals.current_scope_nonce.get_untracked())
+        && repo_id.map(|id| id.to_string()) == signals.current_repo_id.get_untracked()
+        && branch == signals.active_branch.get_untracked()
         && signals.search_request_id.get_untracked().as_deref() == Some(request_id)
 }
 

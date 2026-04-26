@@ -54,7 +54,7 @@ pub(super) async fn route_scoped_core(
             query,
             limit,
             scope_nonce,
-        } => search::handle_search(state, ch, request_id, query, limit, scope_nonce).await,
+        } => search::handle_search(state, ch, session, request_id, query, limit, scope_nonce).await,
         ClientMessage::DeletePeer { peer_id, .. } => {
             sync::handle_delete_peer(state, ch, session, peer_id).await
         }

@@ -5,6 +5,7 @@ use crate::api::ConnectionStatus;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::state::init_signals;
 use crate::hooks::use_core::types::ChatMessage;
+use deve_core::models::PeerId;
 use leptos::prelude::*;
 
 #[test]
@@ -35,12 +36,53 @@ fn rejects_search_results_when_request_id_is_stale() {
     runtime.set();
     let (connection_status, _) = signal(ConnectionStatus::Connected);
     let signals = init_signals(connection_status);
+    let repo_id = uuid::Uuid::new_v4();
     signals.set_search_request_id.set(Some("fresh".into()));
     signals.set_current_scope_nonce.set(11);
-    assert!(!accepts_search_results("stale", Some(11), signals));
-    assert!(!accepts_search_results("fresh", None, signals));
-    assert!(!accepts_search_results("fresh", Some(7), signals));
-    assert!(accepts_search_results("fresh", Some(11), signals));
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+    assert!(!accepts_search_results(
+        "stale",
+        Some(repo_id),
+        None,
+        Some(11),
+        signals
+    ));
+    assert!(!accepts_search_results(
+        "fresh",
+        Some(repo_id),
+        None,
+        None,
+        signals
+    ));
+    assert!(!accepts_search_results(
+        "fresh",
+        Some(repo_id),
+        None,
+        Some(7),
+        signals
+    ));
+    assert!(!accepts_search_results(
+        "fresh",
+        Some(uuid::Uuid::new_v4()),
+        None,
+        Some(11),
+        signals
+    ));
+    signals.set_active_branch.set(Some(PeerId::new("remote")));
+    assert!(!accepts_search_results(
+        "fresh",
+        Some(repo_id),
+        None,
+        Some(11),
+        signals
+    ));
+    assert!(accepts_search_results(
+        "fresh",
+        Some(repo_id),
+        Some(PeerId::new("remote")),
+        Some(11),
+        signals
+    ));
 }
 
 #[test]

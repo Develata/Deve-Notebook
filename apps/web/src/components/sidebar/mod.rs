@@ -43,7 +43,7 @@ pub fn Sidebar(
 
     Effect::new(move |_| {
         if active_view.get() == SidebarView::Search {
-            search_control.set_mode.set(String::new());
+            search_control.set_mode.set("?".to_string());
             search_control.set_show.set(true);
         }
     });

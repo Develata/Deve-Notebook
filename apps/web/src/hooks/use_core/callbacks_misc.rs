@@ -20,6 +20,7 @@ pub struct SearchScopeSignals {
 pub struct MiscRequestSignals {
     pub set_plugin_request_ids: WriteSignal<Vec<String>>,
     pub set_search_request_id: WriteSignal<Option<String>>,
+    pub set_search_results: WriteSignal<Vec<(String, String, f32)>>,
 }
 
 pub fn create_misc_callbacks(
@@ -65,6 +66,7 @@ pub fn create_misc_callbacks(
             return;
         }
         let request_id = uuid::Uuid::new_v4().to_string();
+        request_signals.set_search_results.set(Vec::new());
         request_signals
             .set_search_request_id
             .set(Some(request_id.clone()));

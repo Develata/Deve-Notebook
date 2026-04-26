@@ -50,7 +50,7 @@ pub fn LeftDrawer(
                     set_pinned_views
                     open
                     on_search=Callback::new(move |_| {
-                        search_control.set_mode.set(String::new());
+                        search_control.set_mode.set("?".to_string());
                         search_control.set_show.set(true);
                         on_close.run(());
                     })

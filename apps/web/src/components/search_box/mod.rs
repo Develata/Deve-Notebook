@@ -71,6 +71,32 @@ pub fn UnifiedSearch(
         });
     }
 
+    {
+        let core_search = core.clone();
+        let last_full_text_query: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+        Effect::new(move |_| {
+            if !show.get() {
+                *last_full_text_query.borrow_mut() = None;
+                return;
+            }
+            let q = debounced_query.get();
+            let Some(stripped) = q.strip_prefix('?') else {
+                *last_full_text_query.borrow_mut() = None;
+                return;
+            };
+            let search_query = stripped.trim().to_string();
+            if search_query.is_empty() {
+                *last_full_text_query.borrow_mut() = None;
+                return;
+            }
+            if last_full_text_query.borrow().as_deref() == Some(search_query.as_str()) {
+                return;
+            }
+            *last_full_text_query.borrow_mut() = Some(search_query.clone());
+            core_search.on_search.run(search_query);
+        });
+    }
+
     // 按查询类型动态选择 Provider 并生成结果列表。
     let providers_results = logic::create_results_memo(
         show,

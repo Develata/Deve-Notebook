@@ -52,11 +52,13 @@
 3. 提交时，前端检查 loading、branch/repo switch 和 `scope_nonce`。
 4. 前端发送 `ClientMessage::Search { request_id, query, limit, scope_nonce }`。
 5. CLI server 校验 browser scope nonce，并进入 search handler。
-6. Standard profile 下调用 `SearchService::search`；LowSpec 或未启用时 fail closed。
-7. 前端只接受 request id 与当前 `scope_nonce` 匹配的 `SearchResults`。
+6. Standard profile + `search` feature 下进入 repo-scoped baseline search；当前实现按当前
+   `repo_id/branch/scope_nonce` 扫描已登记文档内容，完整 Tantivy 增量索引仍是后续优化路径。
+7. LowSpec、未启用 `search` feature、或当前 repo scope 无效时必须 fail closed 并返回结构化错误。
+8. 前端只接受 request id、`repo_id`、`branch` 与当前 `scope_nonce` 同时匹配的 `SearchResults`。
 
 ## Notes
 
 - `search/query` 是全文搜索链，不替代 Quick Open 的本地文件候选过滤。
-- `SearchService` 是可选能力；LowSpec profile 允许返回明确 disabled/error。
-- 搜索结果必须保持 repo scope 绑定，不能接受过期 request 或旧 scope 返回。
+- `SearchService` 是可选能力 gate；当前可验收能力不依赖完整 Tantivy 索引已完成。
+- 搜索结果必须保持 repo scope 绑定，不能接受过期 request、旧 repo、旧 branch 或旧 scope 返回。

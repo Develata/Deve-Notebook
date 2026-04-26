@@ -46,4 +46,4 @@
 ## Notes
 
 - The gate protects responsiveness; it is not just a UI hint.
-- Main objects: `load::progress`, `search::gate`, `search::index`.
+- Main objects: `load::progress`, `search::gate`, `search::baseline-scan`.

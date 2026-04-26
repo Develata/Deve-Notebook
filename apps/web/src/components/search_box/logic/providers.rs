@@ -3,9 +3,10 @@ use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::{
     self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
 };
-use crate::components::search_box::types::{SearchProvider, SearchResult};
+use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
+use deve_core::models::DocId;
 use leptos::prelude::*;
 
 #[allow(clippy::too_many_arguments)]
@@ -46,6 +47,9 @@ pub fn create_results_memo(
                 .or(Some(LOCAL_BRANCH_LABEL.to_string()));
             return providers::BranchProvider::new(core.shadow_repos.get(), current).search(&q);
         }
+        if let Some(stripped) = q.strip_prefix('?') {
+            return full_text_results(stripped, core.search_results.get());
+        }
         if let Some(stripped) = q.strip_prefix('+') {
             let path = stripped.trim();
             return if path.is_empty() {
@@ -78,10 +82,55 @@ pub fn create_placeholder_memo(query: Signal<String>, locale: RwSignal<Locale>) 
             t::search::placeholder_command(now_locale).to_string()
         } else if q.starts_with('@') {
             t::search::placeholder_branch(now_locale).to_string()
+        } else if q.starts_with('?') {
+            t::search::placeholder_full_text(now_locale).to_string()
         } else if q.starts_with('+') {
             t::common::new_file(now_locale).to_string()
         } else {
             t::search::placeholder_file(now_locale).to_string()
         }
     })
+}
+
+fn full_text_results(query: &str, raw_results: Vec<(String, String, f32)>) -> Vec<SearchResult> {
+    if query.trim().is_empty() {
+        return Vec::new();
+    }
+    raw_results
+        .into_iter()
+        .filter_map(|(doc_id, path, score)| {
+            let uuid = uuid::Uuid::parse_str(&doc_id).ok()?;
+            Some(SearchResult {
+                id: format!("full-text-{doc_id}"),
+                title: path,
+                detail: Some("Full-text match".to_string()),
+                score,
+                action: SearchAction::OpenDoc(DocId(uuid)),
+            })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::full_text_results;
+
+    #[test]
+    fn full_text_results_parse_doc_ids() {
+        let doc_id = uuid::Uuid::new_v4();
+        let results = full_text_results(
+            "rust",
+            vec![
+                (doc_id.to_string(), "notes/rust.md".into(), 1.0),
+                ("broken".into(), "notes/broken.md".into(), 1.0),
+            ],
+        );
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "notes/rust.md");
+    }
+
+    #[test]
+    fn full_text_results_hide_until_query_is_present() {
+        assert!(full_text_results("  ", vec![]).is_empty());
+    }
 }

@@ -58,6 +58,7 @@ pub(super) fn misc_requests(signals: &CoreSignals) -> MiscRequestSignals {
     MiscRequestSignals {
         set_plugin_request_ids: signals.set_plugin_request_ids,
         set_search_request_id: signals.set_search_request_id,
+        set_search_results: signals.set_search_results,
     }
 }
 

@@ -30,10 +30,19 @@ pub fn route_runtime_message(
         }
         ServerMessage::SearchResults {
             request_id,
+            repo_id,
+            branch,
             scope_nonce,
             results,
         } => {
-            handle_search_results_message(request_id, scope_nonce, results, signals);
+            handle_search_results_message(
+                request_id,
+                repo_id,
+                branch,
+                scope_nonce,
+                results,
+                signals,
+            );
             None
         }
         other => Some(other),

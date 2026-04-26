@@ -23,3 +23,10 @@ pub fn placeholder_file(locale: Locale) -> &'static str {
         Locale::Zh => "文件夹/.../文件(.md)",
     }
 }
+
+pub fn placeholder_full_text(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Search note contents...",
+        Locale::Zh => "搜索笔记正文...",
+    }
+}
