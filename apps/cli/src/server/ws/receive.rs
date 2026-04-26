@@ -10,7 +10,9 @@ use std::time::Instant;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::protocol::frame::{ProtocolFrameError, decode_client_binary, decode_client_json};
+use deve_core::protocol::frame::{
+    ProtocolFrameError, WsFrameFormat, decode_client_binary, decode_client_json_with_format,
+};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 use super::route;
@@ -82,9 +84,12 @@ async fn handle_text(
     if !record_message(session, ch, peer_id) {
         return SocketFlow::Break;
     }
-    match decode_client_json(text) {
-        Ok(client_msg) => {
-            route::route_message(state, ch, session, client_msg).await;
+    match decode_client_json_with_format(text) {
+        Ok(decoded) => {
+            if decoded.format == WsFrameFormat::LegacyJsonText {
+                tracing::debug!("Accepted legacy JSON WS text debug frame");
+            }
+            route::route_message(state, ch, session, decoded.message).await;
             broadcast_filter.sync_from_session(session);
         }
         Err(e) => {
