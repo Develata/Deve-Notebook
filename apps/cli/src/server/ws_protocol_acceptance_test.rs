@@ -128,17 +128,23 @@ async fn ws_endpoint_accepts_versioned_json_text_debug_frame() -> anyhow::Result
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn ws_endpoint_accepts_legacy_json_text_debug_frame() -> anyhow::Result<()> {
+async fn ws_endpoint_rejects_legacy_json_text_by_default() -> anyhow::Result<()> {
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
     let text = serde_json::to_string(&ClientMessage::Ping)?;
 
     ws.send(Message::Text(text)).await?;
 
-    assert!(matches!(
-        recv_server_message(&mut ws).await?,
-        ServerMessage::Pong
-    ));
+    match recv_server_message(&mut ws).await? {
+        ServerMessage::ProtocolError { error, .. } => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(
+                error.detail.as_deref(),
+                Some("Legacy JSON WS text frames are disabled outside development debug mode")
+            );
+        }
+        other => panic!("expected legacy JSON ProtocolError, got {other:?}"),
+    }
     harness.shutdown().await;
     Ok(())
 }

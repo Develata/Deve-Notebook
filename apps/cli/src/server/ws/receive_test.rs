@@ -3,7 +3,10 @@
 //!
 //! WebSocket inbound message validation regression coverage.
 
-use super::{SocketFlow, browser_scope_nonce, handle_incoming_message, invalid_client_message};
+use super::{
+    LEGACY_JSON_TEXT_DISABLED_ERROR, SocketFlow, browser_scope_nonce, handle_incoming_message,
+    invalid_client_message,
+};
 use crate::server::channel::DualChannel;
 use crate::server::security;
 use crate::server::tree_state::RepoTreeRegistry;
@@ -161,6 +164,44 @@ async fn versioned_binary_ping_routes_to_pong() -> anyhow::Result<()> {
 
     assert!(matches!(flow, SocketFlow::Continue));
     assert!(matches!(uni_rx.recv().await, Some(ServerMessage::Pong)));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn legacy_json_text_is_rejected_by_default_with_structured_error() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let filter = BroadcastFilter::allow_all();
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(41));
+    let text = serde_json::to_string(&ClientMessage::Ping)?;
+
+    let flow = handle_incoming_message(
+        &state,
+        &ch,
+        &mut session,
+        Message::Text(text),
+        &filter,
+        "peer-1",
+    )
+    .await;
+
+    assert!(matches!(flow, SocketFlow::Continue));
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(
+                error.detail.as_deref(),
+                Some(LEGACY_JSON_TEXT_DISABLED_ERROR)
+            );
+            assert_eq!(scope_nonce, Some(41));
+        }
+        other => panic!("expected legacy text ProtocolError, got {:?}", other),
+    }
     Ok(())
 }
 

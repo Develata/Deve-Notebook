@@ -18,6 +18,9 @@ use deve_core::protocol::{ServerError, ServerErrorCode};
 use super::route;
 use super::send::BroadcastFilter;
 
+const LEGACY_JSON_TEXT_DISABLED_ERROR: &str =
+    "Legacy JSON WS text frames are disabled outside development debug mode";
+
 pub(super) enum SocketFlow {
     Continue,
     Break,
@@ -87,6 +90,13 @@ async fn handle_text(
     match decode_client_json_with_format(text) {
         Ok(decoded) => {
             if decoded.format == WsFrameFormat::LegacyJsonText {
+                if !allow_legacy_json_text_debug() {
+                    ch.send_protocol_error_with_scope_nonce(
+                        invalid_client_message(LEGACY_JSON_TEXT_DISABLED_ERROR),
+                        browser_scope_nonce(session),
+                    );
+                    return SocketFlow::Continue;
+                }
                 tracing::debug!("Accepted legacy JSON WS text debug frame");
             }
             route::route_message(state, ch, session, decoded.message).await;
@@ -101,6 +111,11 @@ async fn handle_text(
         }
     }
     SocketFlow::Continue
+}
+
+fn allow_legacy_json_text_debug() -> bool {
+    matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
+        || matches!(std::env::var("DEVE_ALLOW_LEGACY_WS_JSON"), Ok(value) if value == "1" || value.eq_ignore_ascii_case("true"))
 }
 
 fn record_message(session: &mut WsSession, ch: &DualChannel, peer_id: &str) -> bool {
