@@ -43,6 +43,42 @@ async fn reject_missing_browser_scope(
     Ok(())
 }
 
+async fn reject_stale_browser_scope(
+    msg: ClientMessage,
+    expected_detail: &str,
+) -> anyhow::Result<()> {
+    let (_dir, state) = support::build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(17));
+
+    route_core(&state, &ch, &mut session, msg).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, Some(16));
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .expect("detail")
+                    .contains(expected_detail)
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(
+        uni_rx.try_recv().is_err(),
+        "must not continue scoped core handling"
+    );
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_edit_requires_current_scope_nonce() -> anyhow::Result<()> {
     reject_missing_browser_scope(
@@ -57,6 +93,24 @@ async fn browser_edit_requires_current_scope_nonce() -> anyhow::Result<()> {
             scope_nonce: None,
         },
         true,
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_edit_rejects_stale_scope_before_handler() -> anyhow::Result<()> {
+    reject_stale_browser_scope(
+        ClientMessage::Edit {
+            doc_id: DocId(uuid::Uuid::new_v4()),
+            op: deve_core::models::Op::Insert {
+                pos: 0,
+                content: "x".into(),
+            },
+            client_id: 1,
+            client_op_id: 2,
+            scope_nonce: Some(16),
+        },
+        "edit scope nonce is stale",
     )
     .await
 }
