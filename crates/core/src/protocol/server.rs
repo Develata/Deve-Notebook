@@ -3,6 +3,7 @@
 
 use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
+use crate::merge::ConflictHunk;
 use crate::models::{DocId, PeerId, RepoId, VersionVector};
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
@@ -49,7 +50,7 @@ pub enum ServerMessage {
     CommitAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, commit_id: String, timestamp: i64 },
     CommitHistory { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, commits: Vec<CommitInfo> },
     DocDiff { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String, old_content: String, new_content: String },
-    MergeConflict { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, path: String, current_content: String, incoming_content: String, result_content: String, actions: Vec<MergeConflictAction>, conflicts: Vec<crate::ledger::merge::ConflictHunk> },
+    MergeConflict { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, path: String, current_content: String, incoming_content: String, result_content: String, actions: Vec<MergeConflictAction>, conflicts: Vec<ConflictHunk> },
     CommitDiffResult { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, diffs: Vec<CommitFileDiff> },
     DiscardAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     TreeUpdate { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, delta: crate::tree::TreeDelta },

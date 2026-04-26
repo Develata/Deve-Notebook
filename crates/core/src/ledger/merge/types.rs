@@ -7,6 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
+pub use crate::merge::ConflictHunk;
+
 /// 合并操作结果
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MergeResult {
@@ -19,13 +21,4 @@ pub enum MergeResult {
         remote: String,
         conflicts: Vec<ConflictHunk>,
     },
-}
-
-/// 冲突片段（基于行范围）
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ConflictHunk {
-    pub start_line: usize,
-    pub length: usize,
-    pub local_lines: Vec<String>,
-    pub remote_lines: Vec<String>,
 }
