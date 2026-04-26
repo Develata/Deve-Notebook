@@ -2,15 +2,30 @@ use crate::editor::ffi::try_get_editor_selection;
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 
+use crate::components::chat::slash_commands::{
+    ChatSessionMode, apply_slash_command, parse_slash_command,
+};
+
 pub fn make_send_text(
     core: CoreState,
     is_streaming: ReadSignal<bool>,
+    session_mode: ReadSignal<ChatSessionMode>,
+    set_session_mode: WriteSignal<ChatSessionMode>,
     on_req_id: Option<Callback<String>>,
     on_user_text: Option<Callback<String>>,
+    on_mode_change: Option<Callback<ChatSessionMode>>,
 ) -> Callback<String> {
     Callback::new(move |msg: String| {
         let msg = msg.trim().to_string();
         if msg.is_empty() || is_streaming.get() {
+            return;
+        }
+        if let Some(command) = parse_slash_command(&msg) {
+            let next_mode = apply_slash_command(session_mode.get_untracked(), command);
+            set_session_mode.set(next_mode);
+            if let Some(cb) = on_mode_change.as_ref() {
+                cb.run(next_mode);
+            }
             return;
         }
         let req_id = uuid::Uuid::new_v4().to_string();
@@ -39,6 +54,7 @@ pub fn make_send_text(
         let context = serde_json::json!({
             "current_file": current_doc_path,
             "selection": selection,
+            "chat_mode": session_mode.get_untracked().as_str(),
         });
         let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
         let plugin_id = core.ai_mode.get_untracked();

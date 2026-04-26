@@ -15,7 +15,7 @@
     - ui_assert: chat_response_mentions_current_doc true
 
 - case_id: AI-002
-  goal: `/plan` 进入原生 PLAN 模式，且不会调用任何工具。
+  goal: `/plan` 进入原生 PLAN 模式，且 slash command 本身不会调用任何工具。
   preconditions:
     - 聊天面板可用
     - 当前文档已打开
@@ -26,23 +26,23 @@
     - ui_submit: true
   assertions:
     - ui_assert: ai_mode_eq "plan"
+    - ui_assert: plugin_call_not_sent_for_slash_command true
     - log_not_contains_any: ["tool call", "mcp", "skill", "spawn subprocess"]
     - ui_assert: markdown_unchanged true
 
 - case_id: AI-003
-  goal: `/build` 进入原生 BUILD 模式，并可修改当前 Markdown。
+  goal: `/build` 进入原生 BUILD 模式，并保持 Markdown 写入受控。
   preconditions:
     - 聊天面板可用
     - 当前 Markdown 文档可写
   steps:
     - ui_type: "/build"
     - ui_submit: true
-    - ui_type: "Append a short summary section at the end of this markdown."
-    - ui_submit: true
   assertions:
     - ui_assert: ai_mode_eq "build"
-    - ui_assert: current_markdown_changed true
-    - log_not_contains_any: ["mcp", "skill"]
+    - ui_assert: plugin_call_not_sent_for_slash_command true
+    - ui_assert: current_markdown_unchanged_until_controlled_apply true
+    - log_not_contains_any: ["mcp", "skill", "spawn subprocess"]
 
 - case_id: AI-004
   goal: `/agents` 在原生 `PLAN ↔ BUILD` 间顺序切换。
@@ -60,6 +60,8 @@
         - ai_mode_eq "plan"
         - ai_mode_eq "build"
         - ai_mode_eq "plan"
+    - ui_assert: backend_mode_unchanged true
+    - ui_assert: plugin_call_not_sent_for_slash_command true
 
 - case_id: AI-005
   goal: Trusted External Agent 默认关闭。

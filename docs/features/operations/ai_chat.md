@@ -36,6 +36,15 @@
 - `Immediate Result`: 前端附加 user/assistant placeholder，发起 plugin call
 - `Application Entry`: `apps/web/src/components/chat/actions_send.rs`, `apps/cli/src/server/handlers/plugin.rs`
 
+### `op.ai.chat.switch-native-mode`
+
+- `Name`: `Switch Native Chat Mode`
+- `Surface`: `chat-panel`
+- `Trigger`: 输入 `/plan`、`/build` 或 `/agents`
+- `Preconditions`: panel 已打开，当前未在 streaming
+- `Immediate Result`: 只切换本地 Native `PLAN` / `BUILD` 会话模式，不切换 backend，不发起 plugin call
+- `Application Entry`: `apps/web/src/components/chat/slash_commands.rs`, `apps/web/src/components/chat/actions_send.rs`
+
 ### `op.ai.chat.receive-stream`
 
 - `Name`: `Receive AI Stream`
@@ -49,3 +58,6 @@
 
 - 当前图只建模 `Native AI Chat` 主线，不把 `trusted-cli` 当成默认 flow。
 - AI chat 是外围辅助流，不能反向主导 repo、source control 或 authority 主链。
+- `ai_mode` / backend 仍表示 `Native AI` 或 `Trusted CLI`；`PLAN` / `BUILD` 是独立的
+  Native 会话模式，当前随后续 prompt 作为 `chat_mode` context 传入。
+- `/build` 本身不直接改写 Markdown；任何 Markdown 写入必须走后续受控 apply / edit 路径。

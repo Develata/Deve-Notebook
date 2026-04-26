@@ -10,7 +10,6 @@ pub fn panel_title(locale: Locale) -> &'static str {
     }
 }
 
-#[allow(dead_code)]
 pub fn mode_plan(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "PLAN",
@@ -18,11 +17,24 @@ pub fn mode_plan(locale: Locale) -> &'static str {
     }
 }
 
-#[allow(dead_code)]
 pub fn mode_build(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "BUILD",
         Locale::Zh => "执行",
+    }
+}
+
+pub fn switched_to_plan(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switched to PLAN mode. I will stay read-only and avoid tools.",
+        Locale::Zh => "已切换到计划模式。我会保持只读并避免工具调用。",
+    }
+}
+
+pub fn switched_to_build(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switched to BUILD mode. Markdown changes still require controlled apply.",
+        Locale::Zh => "已切换到执行模式。Markdown 修改仍需走受控应用路径。",
     }
 }
 

@@ -7,6 +7,7 @@ use crate::components::chat::drop_handler::{on_drag_leave, on_drag_over, on_drop
 use crate::components::chat::header::ChatHeader;
 use crate::components::chat::input_area::InputArea;
 use crate::components::chat::message_list::MessageList;
+use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::Locale;
 use deve_core::protocol::ServerErrorCode;
@@ -29,6 +30,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     let (last_prompt, set_last_prompt) = signal(String::new());
     let (error_code, set_error_code) = signal(None::<ServerErrorCode>);
     let (pending_reqs, set_pending_reqs) = signal(Vec::<String>::new());
+    let (session_mode, set_session_mode) = signal(ChatSessionMode::Plan);
 
     let messages = core.chat_messages;
     let is_streaming = core.is_chat_streaming;
@@ -40,12 +42,25 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     let on_user_text = Callback::new(move |msg: String| {
         set_last_prompt.set(msg);
     });
+    let mode_core = core.clone();
+    let on_mode_change = Callback::new(move |mode: ChatSessionMode| {
+        let content = match mode {
+            ChatSessionMode::Plan => crate::i18n::t::chat::switched_to_plan(locale.get_untracked()),
+            ChatSessionMode::Build => {
+                crate::i18n::t::chat::switched_to_build(locale.get_untracked())
+            }
+        };
+        mode_core.append_chat_message("assistant", content, None);
+    });
 
     let send_text = make_send_text(
         core.clone(),
         is_streaming,
+        session_mode,
+        set_session_mode,
         Some(on_req_id),
         Some(on_user_text),
+        Some(on_mode_change),
     );
     let send_message = make_send_message(input, set_input, is_streaming, send_text.clone());
     let send_example = make_send_example(send_text.clone(), set_input);
@@ -79,7 +94,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             on:drop=on_drop(set_input, set_is_drag_over, core.set_sync_banner)
         >
             <DragOverlay is_drag_over=is_drag_over />
-            <ChatHeader mobile=mobile on_close=on_close />
+            <ChatHeader mobile=mobile on_close=on_close session_mode=session_mode />
             <MessageList
                 messages=messages
                 is_streaming=is_streaming

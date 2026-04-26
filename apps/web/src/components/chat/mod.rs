@@ -7,5 +7,6 @@ pub mod input_area;
 pub mod message_item;
 pub mod message_list;
 pub mod panel;
+pub mod slash_commands;
 
 pub use panel::ChatPanel;
