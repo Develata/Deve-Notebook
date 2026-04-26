@@ -4,13 +4,16 @@
 
 ```markdown
 - case_id: SET-003
-  goal: 环境变量未设置时使用默认 profile。
+  goal: `ai.mode=trusted-cli` 条件不满足时 effective config 回退到 `native`。
   preconditions:
-    - 未设置 DEVE_PROFILE
+    - config.toml 中设置 `ai.mode = "trusted-cli"`
+    - `ai.agent_bridge.enabled = true`
+    - `ai.agent_bridge.trusted = false` 或未设置绝对路径 `AGENT_CLI_PATH`
   steps:
-    - run: deve serve --dry-run
+    - run: deve config print
   assertions:
-    - log_contains: "Standard"
+    - stdout_contains: "mode = 'native'"
+    - stdout_not_contains: "mode = 'trusted-cli'"
 
 - case_id: SET-004
   goal: config.toml 文件配置在重启后生效。

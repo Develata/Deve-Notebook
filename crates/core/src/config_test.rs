@@ -51,6 +51,66 @@ fn env_overrides_flat_underscore_keys() {
     assert_eq!(config.sync_mode, SyncMode::Manual);
 }
 
+#[test]
+fn trusted_cli_mode_falls_back_when_policy_conditions_are_missing() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("AGENT_CLI_PATH", None),
+        ("DEVE_AI__AGENT_BRIDGE__ENABLED", None),
+        ("DEVE_AI__AGENT_BRIDGE__TRUSTED", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let old_cwd = std::env::current_dir().expect("cwd");
+    std::env::set_current_dir(dir.path()).expect("set cwd");
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[ai]
+mode = "trusted-cli"
+
+[ai.agent_bridge]
+enabled = true
+trusted = false
+"#,
+    )
+    .expect("write config");
+
+    let config = Config::load_checked().expect("load config");
+
+    std::env::set_current_dir(old_cwd).expect("restore cwd");
+    assert_eq!(config.ai.mode, "native");
+}
+
+#[test]
+fn trusted_cli_mode_is_kept_when_policy_conditions_are_satisfied() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("AGENT_CLI_PATH", Some("/usr/bin/agent")),
+        ("DEVE_AI__AGENT_BRIDGE__ENABLED", None),
+        ("DEVE_AI__AGENT_BRIDGE__TRUSTED", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let old_cwd = std::env::current_dir().expect("cwd");
+    std::env::set_current_dir(dir.path()).expect("set cwd");
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[ai]
+mode = "trusted-cli"
+
+[ai.agent_bridge]
+enabled = true
+trusted = true
+"#,
+    )
+    .expect("write config");
+
+    let config = Config::load_checked().expect("load config");
+
+    std::env::set_current_dir(old_cwd).expect("restore cwd");
+    assert_eq!(config.ai.mode, "trusted-cli");
+}
+
 struct EnvGuard {
     previous: Vec<(&'static str, Option<OsString>)>,
 }
@@ -63,6 +123,23 @@ impl EnvGuard {
                 let old = std::env::var_os(key);
                 unsafe {
                     std::env::set_var(key, value);
+                }
+                (*key, old)
+            })
+            .collect();
+        Self { previous }
+    }
+
+    fn set_optional(entries: &[(&'static str, Option<&'static str>)]) -> Self {
+        let previous = entries
+            .iter()
+            .map(|(key, value)| {
+                let old = std::env::var_os(key);
+                unsafe {
+                    match value {
+                        Some(value) => std::env::set_var(key, value),
+                        None => std::env::remove_var(key),
+                    }
                 }
                 (*key, old)
             })

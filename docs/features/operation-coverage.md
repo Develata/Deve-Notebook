@@ -64,12 +64,12 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.sc.resolve-conflict` | [`sc_resolve_conflict.md`](./operations/sc_resolve_conflict.md) | `DIFF-FEAT-03` |
 | `flow.sc.stage-unstage` | [`sc_stage_unstage.md`](./operations/sc_stage_unstage.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |
 | `flow.search.query` | [`search_query.md`](./operations/search_query.md) | `SEARCH-001`, `SEARCH-002`, `SEARCH-003`, `UI-DESK-003`, `UI-MOB-007` |
-| `flow.settings.env-defaults` | [`settings_env_defaults.md`](./operations/settings_env_defaults.md) | `SET-001`, `SET-003` |
+| `flow.settings.env-defaults` | [`settings_env_defaults.md`](./operations/settings_env_defaults.md) | `SET-001` |
 | `flow.settings.feedback-render` | [`settings_feedback_render.md`](./operations/settings_feedback_render.md) | `SET-005`, `SET-006` |
 | `flow.settings.file-config` | [`settings_file_config.md`](./operations/settings_file_config.md) | `SET-002`, `SET-004` |
-| `flow.settings.persistence-apply` | [`settings_persistence_apply.md`](./operations/settings_persistence_apply.md) | `SET-001`, `SET-002`, `SET-004` |
+| `flow.settings.persistence-apply` | [`settings_persistence_apply.md`](./operations/settings_persistence_apply.md) | `SET-001`, `SET-002`, `SET-003`, `SET-004` |
 | `flow.settings.surface-open` | [`settings_surface_open.md`](./operations/settings_surface_open.md) | `SET-005`, `CMD-002` |
-| `flow.settings.runtime-feedback` | [`settings_runtime_feedback.md`](./operations/settings_runtime_feedback.md) | `SET-006`, `CMD-002`, `AI-006` |
+| `flow.settings.runtime-feedback` | [`settings_runtime_feedback.md`](./operations/settings_runtime_feedback.md) | `SET-003`, `SET-006`, `CMD-002`, `AI-006` |
 | `flow.settings.ui-preferences` | [`settings_ui_preferences.md`](./operations/settings_ui_preferences.md) | `SET-005`, `I18N-001`, `I18N-002` |
 | `flow.settings.update` | [`settings_update.md`](./operations/settings_update.md) | `SET-001`, `SET-002`, `CMD-001` |
 | `flow.settings.value-mutation` | [`settings_value_mutation.md`](./operations/settings_value_mutation.md) | `SET-005`, `SET-002`, `CMD-001` |

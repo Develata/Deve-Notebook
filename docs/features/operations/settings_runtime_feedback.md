@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.settings.runtime-feedback`
 - `Domain`: `settings`
 - `Related Feature Chapters`: `docs/features/13_settings.md`, `docs/features/12_commands.md`
-- `Related Acceptance Cases`: `SET-006`, `CMD-002`, `AI-006`
+- `Related Acceptance Cases`: `SET-003`, `SET-006`, `CMD-002`, `AI-006`
 
 ## Operations
 

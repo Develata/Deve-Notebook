@@ -1,4 +1,4 @@
-﻿// crates\core\src
+// crates\core\src
 //! # 核心配置模块 (Core Configuration)
 //!
 //! **架构作用**:
@@ -16,6 +16,7 @@
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,9 +209,11 @@ impl Config {
             .build()
             .context("Failed to build configuration")?;
 
-        settings
+        let mut config = settings
             .try_deserialize::<Self>()
-            .context("Failed to parse configuration")
+            .context("Failed to parse configuration")?;
+        config.apply_ai_mode_fallback();
+        Ok(config)
     }
 
     /// 加载配置 (Env > .env > config.toml > Default)
@@ -228,6 +231,28 @@ impl Config {
                 ai: AiConfig::default(),
             }
         })
+    }
+
+    fn apply_ai_mode_fallback(&mut self) {
+        if self.ai.mode != "trusted-cli" {
+            return;
+        }
+        if !self.ai.agent_bridge.enabled || !self.ai.agent_bridge.trusted {
+            tracing::warn!("ai.mode=trusted-cli unavailable; falling back to native");
+            self.ai.mode = default_ai_mode();
+            return;
+        }
+        let Ok(path) = std::env::var("AGENT_CLI_PATH") else {
+            tracing::warn!("ai.mode=trusted-cli requires AGENT_CLI_PATH; falling back to native");
+            self.ai.mode = default_ai_mode();
+            return;
+        };
+        if path.trim().is_empty() || !Path::new(path.trim()).is_absolute() {
+            tracing::warn!(
+                "ai.mode=trusted-cli requires absolute AGENT_CLI_PATH; falling back to native"
+            );
+            self.ai.mode = default_ai_mode();
+        }
     }
 }
 

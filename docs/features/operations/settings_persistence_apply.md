@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.settings.persistence-apply`
 - `Domain`: `settings`
 - `Related Feature Chapters`: `docs/features/13_settings.md`
-- `Related Acceptance Cases`: `SET-001`, `SET-002`, `SET-004`
+- `Related Acceptance Cases`: `SET-001`, `SET-002`, `SET-003`, `SET-004`
 
 ## Operations
 
@@ -24,7 +24,7 @@
 - `Surface`: `restart-or-boot`
 - `Trigger`: CLI/server restarts or reload path reads config
 - `Preconditions`: config parses successfully
-- `Immediate Result`: effective runtime profile reflects persisted config
+- `Immediate Result`: effective runtime profile reflects persisted config after safety fallback rules
 - `Application Entry`: `Config::load_checked`, `apps/cli/src/main.rs`
 
 ### `op.settings.persist.inspect-effective`
@@ -46,5 +46,7 @@
 ## Notes
 
 - Persistence/apply is the boundary where settings become authoritative runtime input.
+- `ai.mode = "trusted-cli"` is persisted as a requested value, but the effective runtime mode falls
+  back to `native` unless trusted-cli policy conditions are satisfied.
 - Current runtime persistence is `config.toml` only; any separate settings-backed file or server-backed Settings API is future work.
 - Main objects: `settings::file`, `config::apply`, `runtime::profile`.

@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.settings.env-defaults`
 - `Domain`: `settings`
 - `Related Feature Chapters`: `docs/features/13_settings.md`, `docs/features/14_tech_stack.md`
-- `Related Acceptance Cases`: `SET-001`, `SET-003`
+- `Related Acceptance Cases`: `SET-001`
 
 ## Operations
 
