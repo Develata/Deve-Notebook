@@ -17,6 +17,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.92
+          targets: wasm32-unknown-unknown
       
       - name: Cache cargo registry and build
         uses: actions/cache@v4
@@ -31,6 +32,9 @@ jobs:
       
       - name: Run clippy
         run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Check web WASM target
+        run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
 
       - name: Check plan coverage
         run: scripts/plan-coverage.sh --write-report

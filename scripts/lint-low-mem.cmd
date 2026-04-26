@@ -4,6 +4,9 @@ setlocal
 echo [lint-low-mem] clippy deve_web...
 cargo clippy -p deve_web --bin deve_web -- -D warnings || exit /b 1
 
+echo [lint-low-mem] check deve_web wasm...
+cargo check -p deve_web --target wasm32-unknown-unknown || exit /b 1
+
 echo [lint-low-mem] clippy deve_cli...
 cargo clippy -p deve_cli --bin deve_cli -- -D warnings || exit /b 1
 

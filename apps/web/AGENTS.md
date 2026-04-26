@@ -26,6 +26,7 @@ Leptos/WASM frontend for Deve-Notebook. A repo-scoped thin client that connects 
 - This is a WASM target — `#[cfg(target_arch = "wasm32")]` applies.
 - Uses Leptos reactive signals (`RwSignal`, `Signal`, `Effect`).
 - Communicates with server exclusively via WebSocket.
-- Run checks: `cargo check -p deve_web`
+- Run native checks: `cargo check -p deve_web`
+- Run browser/WASM protocol checks: `cargo check -p deve_web --target wasm32-unknown-unknown`
 
 <!-- MANUAL: -->

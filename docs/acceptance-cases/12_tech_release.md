@@ -56,6 +56,8 @@
   preconditions:
     - CI 环境
   steps:
+    - run: rustup target add wasm32-unknown-unknown
+    - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
     - run: cargo test --locked
     - run: cargo audit
   assertions:

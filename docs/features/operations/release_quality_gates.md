@@ -27,6 +27,15 @@
 - `Immediate Result`: warning-level regressions block publish
 - `Application Entry`: `.github/workflows/release.yml`
 
+### `op.release.quality.check-web-wasm`
+
+- `Name`: `Check Web WASM Target`
+- `Surface`: `github-actions`
+- `Trigger`: release test job reaches browser build compatibility stage
+- `Preconditions`: `wasm32-unknown-unknown` target is installed
+- `Immediate Result`: protocol or shared-core references to backend-only modules fail before publish
+- `Application Entry`: `.github/workflows/release.yml`, `apps/web/`
+
 ### `op.release.quality.run-tests`
 
 - `Name`: `Run Test Gate`
@@ -40,10 +49,10 @@
 
 1. Release dispatch enters the `test` job.
 2. Instruction interface is the CI job surface and its ordered verification steps.
-3. Flow coordination enforces lint and test gates before publish.
+3. Flow coordination enforces lint, web WASM compatibility, and test gates before publish.
 4. Execution domains are CI release logic, quality gates, and runtime budget policy.
 
 ## Notes
 
-- Current workflow explicitly models `clippy` and `cargo test`; wider release checklists still remain plan-visible review policy.
+- Current workflow explicitly models `clippy`, `deve_web` WASM check, and `cargo test`; wider release checklists still remain plan-visible review policy.
 - Main objects: `quality::gate`, `ci::workflow`, `runtime::budget`.
