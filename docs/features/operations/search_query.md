@@ -64,6 +64,10 @@
 - 搜索结果必须保持 repo scope 绑定，不能接受过期 request、旧 repo、旧 branch 或旧 scope 返回。
 - 搜索读取 ledger 重建内容，而不是直接读取当前磁盘文件文本；当 workspace 文件与 ledger
   存在漂移时，搜索结果以当前 repo ledger projection 为准。
+- 当前 `SearchResults` wire payload 只承诺返回 `(doc_id, path, score)`；UI baseline 显示
+  文档路径与本地化匹配状态，不承诺正文 snippet 或 query highlight。
+- 正文 snippet、命中词高亮和 richer ranking 属于后续协议/UI 扩展，不能作为当前
+  `SEARCH-001` 阻塞验收项。
 
 ## Chrome MCP Smoke
 

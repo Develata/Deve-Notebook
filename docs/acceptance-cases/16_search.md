@@ -10,6 +10,7 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - 当前 profile 不是 `low-spec`
     - 当前 browser scope 已稳定绑定 `repo_id` 与 `scope_nonce`
     - 当前 repo 中存在正文包含 `needle` 的 Markdown 文档
+    - 记录该文档的路径为 `expected.md`
     - Chrome MCP 手工 smoke 可按 `docs/features/operations/search_query.md` 使用 `?note`
       验证默认开发数据路径
   steps:
@@ -21,7 +22,11 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - ws_assert: SearchResults.repo_id_eq_current true
     - ws_assert: SearchResults.branch_eq_current true
     - ws_assert: SearchResults.scope_nonce_eq_current true
-    - ui_assert: search_results_contain "needle"
+    - ws_assert: SearchResults.results_contain_doc_path "expected.md"
+    - ui_assert: search_results_contain_doc_path "expected.md"
+    - ui_assert: search_result_detail_contains "Full-text match"
+  notes:
+    - 当前 baseline payload 为 `(doc_id, path, score)`，UI 不承诺显示正文 snippet 或 query highlight。
 
 - case_id: SEARCH-002
   goal: LowSpec 或未启用 `search` feature 时全文搜索 fail-closed 并显示用户可见反馈。
