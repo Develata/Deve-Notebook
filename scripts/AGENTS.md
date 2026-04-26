@@ -16,6 +16,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `lint-low-mem.ps1` | PowerShell script — runs clippy with reduced memory |
 | `check-architecture-registry.sh` | Verifies operation registry, acceptance refs, drift map, Lisp IDs, and graph spines stay aligned |
 | `check-ws-structured-errors.sh` | Verifies WS protocol errors remain structured as `ServerError`/`ServerErrorCode` |
+| `check-auth-unauthorized-state.sh` | Verifies auth failures map to Unauthorized instead of reconnect/disconnected UI |
 
 ## For AI Agents
 

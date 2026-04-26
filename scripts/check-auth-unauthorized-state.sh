@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+check_contains() {
+  local file="$1"
+  local pattern="$2"
+  if ! rg -q --fixed-strings "$pattern" "$file"; then
+    echo "auth-unauthorized-check: missing '$pattern' in $file" >&2
+    exit 1
+  fi
+}
+
+check_absent() {
+  local file="$1"
+  local pattern="$2"
+  if rg -q --fixed-strings "$pattern" "$file"; then
+    echo "auth-unauthorized-check: forbidden '$pattern' in $file" >&2
+    exit 1
+  fi
+}
+
+check_contains apps/web/src/api/auth_probe.rs "matches!(status, 401 | 403) || has_auth_error_code"
+check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Unauthorized);"
+check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Disconnected);"
+check_contains apps/web/src/components/main_layout_setup.rs "ws_status.get() == ConnectionStatus::Unauthorized"
+check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Connected | ConnectionStatus::Unauthorized"
+check_absent apps/web/src/api/output.rs "set_status.set(ConnectionStatus::Disconnected);"
+
+echo "auth-unauthorized-check: ok"

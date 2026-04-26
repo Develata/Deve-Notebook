@@ -169,7 +169,13 @@
   steps:
     - run: curl -s -X POST http://127.0.0.1:3000/api/auth/logout
     - browser_wait_ws_event: true
+    - run: scripts/check-auth-unauthorized-state.sh
+    - run: cargo test -p deve_web auth_probe -- --nocapture
+    - run: cargo test -p deve_web status_summary -- --nocapture
   assertions:
     - ui_assert: login_screen_visible true
     - ui_assert: overlay_text_not_eq "Reconnecting..."
+    - auth_probe_401_403_or_auth_error_eq_invalid: true
+    - websocket_send_failure_does_not_force_disconnected_before_auth_probe: true
+    - unauthorized_status_triggers_session_expired: true
 ```

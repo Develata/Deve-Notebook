@@ -2,6 +2,25 @@ use super::{SyncStatusKind, derive_sync_status};
 use crate::api::ConnectionStatus;
 
 #[test]
+fn reports_session_expired_for_unauthorized_status() {
+    let summary = derive_sync_status(
+        ConnectionStatus::Unauthorized,
+        "ready",
+        false,
+        false,
+        true,
+        true,
+        Some("repo-id"),
+        Some("default"),
+        None,
+        false,
+        0,
+    );
+    assert_eq!(summary.kind, SyncStatusKind::SessionExpired);
+    assert_eq!(summary.header_text(), "Session Expired");
+}
+
+#[test]
 fn prefers_loading_state_while_snapshot_is_inflight() {
     let summary = derive_sync_status(
         ConnectionStatus::Connected,

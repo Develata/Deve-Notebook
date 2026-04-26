@@ -15,12 +15,10 @@
 
 use deve_core::protocol::ClientMessage;
 use deve_core::protocol::frame::encode_client_binary;
-use leptos::prelude::*;
 use std::collections::VecDeque;
 
 use self::output_write::drop_queued_writes;
 pub(crate) use self::output_write::is_write_message;
-use super::ConnectionStatus;
 use super::socket::BrowserSocket;
 mod output_write;
 #[cfg(test)]
@@ -39,7 +37,6 @@ pub(crate) fn send_or_requeue(
     socket: &BrowserSocket,
     msg: ClientMessage,
     queue: &mut VecDeque<ClientMessage>,
-    set_status: WriteSignal<ConnectionStatus>,
 ) -> bool {
     let bytes = match encode_client_binary(&msg) {
         Ok(bytes) => bytes,
@@ -52,7 +49,6 @@ pub(crate) fn send_or_requeue(
     if let Err(e) = socket.send_binary(&bytes) {
         leptos::logging::warn!("WS 发送错误: {:?}. 入队中...", e);
         enqueue_with_limit(queue, msg);
-        set_status.set(ConnectionStatus::Disconnected);
         return false;
     }
     true

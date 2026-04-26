@@ -37,7 +37,7 @@ pub(super) async fn run_connected_session(
 
         if socket.is_open()
             && let Some(msg) = queue.pop_front()
-            && !send_or_requeue(&socket, msg, queue, set_status)
+            && !send_or_requeue(&socket, msg, queue)
         {
             return;
         }
