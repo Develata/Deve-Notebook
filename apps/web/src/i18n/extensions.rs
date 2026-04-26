@@ -54,6 +54,15 @@ pub fn trusted_cli_unavailable(locale: Locale) -> &'static str {
     }
 }
 
+pub fn trusted_cli_fallback(locale: Locale, reason: &str) -> String {
+    match locale {
+        Locale::En => {
+            format!("Trusted CLI is unavailable; switched back to Native AI. Reason: {reason}")
+        }
+        Locale::Zh => format!("受信任 CLI 不可用，已回退到原生 AI。原因：{reason}"),
+    }
+}
+
 pub fn system_title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "System Extensions",

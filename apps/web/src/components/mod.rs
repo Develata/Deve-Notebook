@@ -17,6 +17,7 @@ pub mod sidebar;
 pub mod sidebar_menu;
 
 pub mod activity_bar;
+pub mod ai_backend_guard;
 pub mod branch_label;
 pub mod branch_switcher;
 pub mod chat; // [NEW] AI Chat

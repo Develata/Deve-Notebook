@@ -43,7 +43,7 @@
 - `Trigger`: trusted 条件不满足，或系统主动执行 fallback
 - `Preconditions`: 用户尝试选择 / 使用 `trusted-cli`
 - `Immediate Result`: 前端保持或回退到 `native`，并显示明确原因
-- `Application Entry`: `apps/web/src/components/settings_sections.rs`, `apps/web/src/components/sidebar/extensions.rs`, `apps/cli/src/server/agent_bridge.rs`
+- `Application Entry`: `apps/web/src/components/ai_backend_guard.rs`, `apps/web/src/components/settings_sections.rs`, `apps/web/src/components/sidebar/extensions.rs`, `apps/cli/src/server/agent_bridge.rs`
 
 ### `op.ai.trusted-agent.receive-stream`
 
@@ -59,3 +59,5 @@
 - 这条 flow 建模的是 `trusted-cli` 的安全边界，而不是通用 plugin runtime。
 - `trusted-cli` 必须保持 default-off；它是高级部署位，不是默认 shipped backend。
 - 若 `enabled / trusted / AGENT_CLI_PATH` 任一条件不满足，系统必须 fail-closed 并回退到 `native`。
+- 前端 Settings 与 Extensions 共享同一 fallback guard；如果当前已处于 `agent-bridge`
+  但 capability probe 返回不可用，必须回退 `native` 并向 chat 写入可见原因。

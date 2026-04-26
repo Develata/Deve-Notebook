@@ -8,6 +8,7 @@
 //! Extracted sub-sections: Sync Mode, AI Backend.
 
 use crate::api::{AiBackendCapabilities, fetch_ai_backend_capabilities};
+use crate::components::ai_backend_guard::attach_trusted_cli_fallback;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -69,6 +70,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
         });
         let is_native = Signal::derive(move || chat.ai_mode.get() == "ai-chat");
         let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
+        attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
         let trusted_reason = move || {
             trusted_cap
                 .get()

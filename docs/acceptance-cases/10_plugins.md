@@ -91,6 +91,8 @@
     - ui_submit: true
   assertions:
     - ui_assert: chat_error_visible true
+    - ui_assert: ai_backend_eq "native"
+    - ui_assert: chat_message_contains_trusted_cli_fallback_reason true
     - stdout_contains_any: ["trusted mode required", "external agent disabled"]
     - log_not_contains: "spawn subprocess"
 
