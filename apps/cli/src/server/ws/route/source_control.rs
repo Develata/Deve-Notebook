@@ -100,8 +100,11 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
 
 #[cfg(test)]
 mod tests {
-    use super::requested_scope_nonce;
-    use deve_core::protocol::{ClientMessage, ScPathTarget};
+    use super::{requested_scope_nonce, route_source_control};
+    use crate::server::sync_hello_test_support::{build_state, unicast_channel};
+    use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
+    use deve_core::source_control::ConflictResolution;
+    use tokio::time::{Duration, timeout};
 
     #[test]
     fn extracts_scope_nonce_from_source_control_messages() {
@@ -120,5 +123,47 @@ mod tests {
             Some(Some(9))
         );
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn resolve_conflict_rejects_stale_scope_before_handler() -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = crate::server::session::WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(17));
+
+        route_source_control(
+            &state,
+            &ch,
+            &mut session,
+            ClientMessage::ResolveConflict {
+                target: ScPathTarget::from_path("notes/a.md"),
+                resolution: ConflictResolution::KeepLedger,
+                scope_nonce: Some(16),
+            },
+        )
+        .await;
+
+        match timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("protocol error")
+        {
+            ServerMessage::ProtocolError {
+                error, scope_nonce, ..
+            } => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(scope_nonce, Some(16));
+                assert!(
+                    error
+                        .detail
+                        .as_deref()
+                        .expect("detail")
+                        .contains("source control scope nonce is stale")
+                );
+            }
+            other => panic!("expected ProtocolError, got {other:?}"),
+        }
+        Ok(())
     }
 }
