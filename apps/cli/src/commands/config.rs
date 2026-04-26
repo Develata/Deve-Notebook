@@ -208,4 +208,31 @@ mod tests {
 
         assert!(err.to_string().contains("Unsupported config key"));
     }
+
+    #[test]
+    fn set_rejects_invalid_value_without_rewriting_config() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("config.toml");
+        let original = "profile = \"standard\"\n";
+        std::fs::write(&path, original).expect("seed config");
+
+        let invalid_choice = set_in_file(&path, "profile", "invalid").expect_err("reject choice");
+        assert!(invalid_choice.to_string().contains("Invalid value"));
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("read config"),
+            original
+        );
+
+        let invalid_integer =
+            set_in_file(&path, "ui.sidebar_width", "-1").expect_err("reject integer");
+        assert!(
+            invalid_integer
+                .to_string()
+                .contains("Integer config values must be non-negative")
+        );
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("read config"),
+            original
+        );
+    }
 }
