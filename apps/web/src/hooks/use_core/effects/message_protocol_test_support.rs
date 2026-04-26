@@ -14,11 +14,14 @@ pub struct ProtocolSignalHarness {
     tree_request_id: ReadSignal<Option<String>>,
     sync_mode_request_id: ReadSignal<Option<String>>,
     pending_ops_request_id: ReadSignal<Option<String>>,
+    pub search_request_id: ReadSignal<Option<String>>,
+    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
     changes_request_id: ReadSignal<Option<String>>,
     commit_history_request_id: ReadSignal<Option<String>>,
     doc_diff_request_id: ReadSignal<Option<String>>,
     commit_diff_request_id: ReadSignal<Option<String>>,
     pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
+    pub sync_banner: ReadSignal<Option<String>>,
     control: ProtocolControlSignals,
 }
 
@@ -42,6 +45,9 @@ pub fn protocol_signal_harness(
     let (sync_mode_request_id, set_sync_mode_request_id) = signal(Some("sync-1".to_string()));
     let (pending_ops_request_id, set_pending_ops_request_id) =
         signal(Some("pending-1".to_string()));
+    let (search_request_id, set_search_request_id) = signal(Some("search-1".to_string()));
+    let (search_results, set_search_results) =
+        signal(vec![("doc-1".to_string(), "notes/a.md".to_string(), 1.0)]);
     let (changes_request_id, set_changes_request_id) = signal(Some("changes-1".to_string()));
     let (commit_history_request_id, set_commit_history_request_id) =
         signal(Some("history-1".to_string()));
@@ -49,6 +55,7 @@ pub fn protocol_signal_harness(
     let (commit_diff_request_id, set_commit_diff_request_id) =
         signal(Some("commit-diff-1".to_string()));
     let (source_control_notice, set_source_control_notice) = signal(None::<SourceControlNotice>);
+    let (sync_banner, set_sync_banner) = signal(None::<String>);
 
     ProtocolSignalHarness {
         _runtime: runtime,
@@ -61,11 +68,14 @@ pub fn protocol_signal_harness(
         tree_request_id,
         sync_mode_request_id,
         pending_ops_request_id,
+        search_request_id,
+        search_results,
         changes_request_id,
         commit_history_request_id,
         doc_diff_request_id,
         commit_diff_request_id,
         source_control_notice,
+        sync_banner,
         control: ProtocolControlSignals {
             pending_branch_switch,
             pending_branch_switch_nonce,
@@ -80,6 +90,9 @@ pub fn protocol_signal_harness(
             set_tree_request_id,
             set_sync_mode_request_id,
             set_pending_ops_request_id,
+            search_request_id,
+            set_search_request_id,
+            set_search_results,
             changes_request_id,
             set_changes_request_id,
             commit_history_request_id,
@@ -89,6 +102,7 @@ pub fn protocol_signal_harness(
             commit_diff_request_id,
             set_commit_diff_request_id,
             set_source_control_notice,
+            set_sync_banner,
         },
     }
 }
@@ -105,6 +119,7 @@ impl ProtocolSignalHarness {
         assert_eq!(self.tree_request_id.get_untracked(), None);
         assert_eq!(self.sync_mode_request_id.get_untracked(), None);
         assert_eq!(self.pending_ops_request_id.get_untracked(), None);
+        assert_eq!(self.search_request_id.get_untracked(), None);
         assert_eq!(self.changes_request_id.get_untracked(), None);
         assert_eq!(self.commit_history_request_id.get_untracked(), None);
         assert_eq!(self.doc_diff_request_id.get_untracked(), None);
@@ -116,5 +131,10 @@ impl ProtocolSignalHarness {
         assert_eq!(self.commit_history_request_id.get_untracked(), None);
         assert_eq!(self.doc_diff_request_id.get_untracked(), None);
         assert_eq!(self.commit_diff_request_id.get_untracked(), None);
+    }
+
+    pub fn assert_search_request_cleared(&self) {
+        assert_eq!(self.search_request_id.get_untracked(), None);
+        assert!(self.search_results.get_untracked().is_empty());
     }
 }

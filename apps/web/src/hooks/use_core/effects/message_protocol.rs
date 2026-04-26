@@ -29,6 +29,9 @@ pub struct ProtocolControlSignals {
     pub set_tree_request_id: WriteSignal<Option<String>>,
     pub set_sync_mode_request_id: WriteSignal<Option<String>>,
     pub set_pending_ops_request_id: WriteSignal<Option<String>>,
+    pub search_request_id: ReadSignal<Option<String>>,
+    pub set_search_request_id: WriteSignal<Option<String>>,
+    pub set_search_results: WriteSignal<Vec<(String, String, f32)>>,
     pub changes_request_id: ReadSignal<Option<String>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub commit_history_request_id: ReadSignal<Option<String>>,
@@ -38,6 +41,23 @@ pub struct ProtocolControlSignals {
     pub commit_diff_request_id: ReadSignal<Option<String>>,
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
+}
+
+fn record_search_notice(error: &ServerError, signals: ProtocolControlSignals) -> bool {
+    if signals.search_request_id.get_untracked().is_none() {
+        return false;
+    }
+    signals.set_search_request_id.set(None);
+    signals.set_search_results.set(Vec::new());
+    let detail = error
+        .detail
+        .clone()
+        .unwrap_or_else(|| "Search failed".to_string());
+    signals
+        .set_sync_banner
+        .set(Some(format!("Search unavailable: {detail}")));
+    true
 }
 
 fn record_source_control_notice(error: &ServerError, signals: ProtocolControlSignals) -> bool {
@@ -85,16 +105,26 @@ pub fn handle_protocol_error(
         ws.mark_unauthorized();
     }
     let message = t::server_error::message(locale, error.code);
+    let handled_in_search = record_search_notice(error, signals);
     let handled_in_source_control = record_source_control_notice(error, signals);
-    match (handled_in_source_control, error.detail.as_deref()) {
-        (true, Some(detail)) => {
+    match (
+        handled_in_search,
+        handled_in_source_control,
+        error.detail.as_deref(),
+    ) {
+        (true, _, Some(detail)) => leptos::logging::log!("Search notice {}: {}", message, detail),
+        (true, _, None) => leptos::logging::log!("Search notice {}", message),
+        (_, true, Some(detail)) => {
             leptos::logging::log!("Source Control notice {}: {}", message, detail)
         }
-        (true, None) => leptos::logging::log!("Source Control notice {}", message),
-        (false, Some(detail)) => leptos::logging::warn!("协议错误 {}: {}", message, detail),
-        (false, None) => leptos::logging::warn!("协议错误 {}", message),
+        (_, true, None) => leptos::logging::log!("Source Control notice {}", message),
+        (false, false, Some(detail)) => leptos::logging::warn!("协议错误 {}: {}", message, detail),
+        (false, false, None) => leptos::logging::warn!("协议错误 {}", message),
     }
-    if !handled_in_source_control && let Some(window) = web_sys::window() {
+    if !handled_in_search
+        && !handled_in_source_control
+        && let Some(window) = web_sys::window()
+    {
         let _ = window.alert_with_message(message);
     }
 }

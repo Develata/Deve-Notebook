@@ -29,6 +29,9 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
         set_tree_request_id: signals.set_tree_request_id,
         set_sync_mode_request_id: signals.set_sync_mode_request_id,
         set_pending_ops_request_id: signals.set_pending_ops_request_id,
+        search_request_id: signals.search_request_id,
+        set_search_request_id: signals.set_search_request_id,
+        set_search_results: signals.set_search_results,
         changes_request_id: signals.changes_request_id,
         set_changes_request_id: signals.set_changes_request_id,
         commit_history_request_id: signals.commit_history_request_id,
@@ -38,6 +41,7 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
         commit_diff_request_id: signals.commit_diff_request_id,
         set_commit_diff_request_id: signals.set_commit_diff_request_id,
         set_source_control_notice: signals.set_source_control_notice,
+        set_sync_banner: signals.set_sync_banner,
     }
 }
 

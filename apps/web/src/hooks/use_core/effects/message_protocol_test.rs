@@ -2,6 +2,7 @@
 mod support;
 
 use super::clear_failed_scope_switch;
+use super::record_search_notice;
 use super::record_source_control_notice;
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -90,6 +91,7 @@ fn matching_switch_nonce_always_clears_pending_scope_switches() {
 #[test]
 fn source_control_errors_are_recorded_as_panel_notice() {
     let harness = protocol_signal_harness(None, None, None, None);
+    harness.control().set_search_request_id.set(None);
     let stored = record_source_control_notice(
         &ServerError::with_detail(ServerErrorCode::ScNothingToCommit, "no staged changes"),
         harness.control(),
@@ -104,6 +106,7 @@ fn source_control_errors_are_recorded_as_panel_notice() {
 #[test]
 fn non_source_control_errors_do_not_record_panel_notice() {
     let harness = protocol_signal_harness(None, None, None, None);
+    harness.control().set_search_request_id.set(None);
     let stored = record_source_control_notice(
         &ServerError::new(ServerErrorCode::RequestFailed),
         harness.control(),
@@ -127,4 +130,32 @@ fn request_failed_without_sc_request_does_not_record_panel_notice() {
     );
     assert!(!stored);
     assert_eq!(harness.source_control_notice.get_untracked(), None);
+}
+
+#[test]
+fn search_errors_clear_search_request_and_show_banner() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    let stored = record_search_notice(
+        &ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature disabled"),
+        harness.control(),
+    );
+    assert!(stored);
+    harness.assert_search_request_cleared();
+    assert_eq!(
+        harness.sync_banner.get_untracked().as_deref(),
+        Some("Search unavailable: Search feature disabled")
+    );
+}
+
+#[test]
+fn non_search_errors_do_not_clear_search_state_without_pending_search() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    harness.control().set_search_request_id.set(None);
+    let stored = record_search_notice(
+        &ServerError::with_detail(ServerErrorCode::RequestFailed, "other failure"),
+        harness.control(),
+    );
+    assert!(!stored);
+    assert!(!harness.search_results.get_untracked().is_empty());
+    assert_eq!(harness.sync_banner.get_untracked(), None);
 }

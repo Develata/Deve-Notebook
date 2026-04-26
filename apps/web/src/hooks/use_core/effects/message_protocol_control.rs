@@ -28,6 +28,8 @@ pub(super) fn clear_failed_scope_switch(
     signals.set_tree_request_id.set(None);
     signals.set_sync_mode_request_id.set(None);
     signals.set_pending_ops_request_id.set(None);
+    signals.set_search_request_id.set(None);
+    signals.set_search_results.set(Vec::new());
     signals.set_changes_request_id.set(None);
     signals.set_commit_history_request_id.set(None);
     signals.set_doc_diff_request_id.set(None);
