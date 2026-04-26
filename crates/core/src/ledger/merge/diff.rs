@@ -136,7 +136,7 @@ fn push_edit(edits: &mut Vec<Edit>, edit: Edit) {
     edits.push(edit);
 }
 
-fn slice_by_char(s: &str, start: usize, end: usize) -> &str {
+pub(crate) fn slice_by_char(s: &str, start: usize, end: usize) -> &str {
     let byte_start = char_to_byte_index(s, start);
     let byte_end = char_to_byte_index(s, end);
     if byte_start >= s.len() || byte_start >= byte_end {
