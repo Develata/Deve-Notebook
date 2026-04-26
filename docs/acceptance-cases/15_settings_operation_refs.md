@@ -20,7 +20,7 @@
     - run: deve init --path /tmp/deve-settings
     - edit_file: /tmp/deve-settings/config.toml
       set: "profile = \"low-spec\""
-    - run: deve serve --dry-run
+    - run: cd /tmp/deve-settings && deve serve --dry-run
   assertions:
     - log_contains_any: ["LowSpec", "low-spec"]
 

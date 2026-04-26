@@ -13,10 +13,10 @@
 
 - `Name`: `Write Settings File Value`
 - `Surface`: `editor-or-cli`
-- `Trigger`: create or edit `config.toml` / settings-backed file value
+- `Trigger`: create or edit `config.toml`, or run `deve config set <key> <value>`
 - `Preconditions`: target key is valid in the config schema
 - `Immediate Result`: file-backed config value is ready for load
-- `Application Entry`: `crates/core/src/config.rs`, `apps/cli/src/commands/init.rs`
+- `Application Entry`: `crates/core/src/config.rs`, `apps/cli/src/commands/init.rs`, `apps/cli/src/commands/config.rs`
 
 ### `op.settings.persist.apply-runtime`
 
@@ -46,4 +46,5 @@
 ## Notes
 
 - Persistence/apply is the boundary where settings become authoritative runtime input.
+- Current runtime persistence is `config.toml` only; any separate settings-backed file or server-backed Settings API is future work.
 - Main objects: `settings::file`, `config::apply`, `runtime::profile`.
