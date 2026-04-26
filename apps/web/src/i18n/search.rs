@@ -30,3 +30,24 @@ pub fn placeholder_full_text(locale: Locale) -> &'static str {
         Locale::Zh => "搜索笔记正文...",
     }
 }
+
+pub fn full_text_match(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Full-text match",
+        Locale::Zh => "全文匹配",
+    }
+}
+
+pub fn failed(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Search failed",
+        Locale::Zh => "搜索失败",
+    }
+}
+
+pub fn unavailable(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Search unavailable",
+        Locale::Zh => "搜索不可用",
+    }
+}

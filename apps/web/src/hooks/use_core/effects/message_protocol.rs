@@ -44,7 +44,11 @@ pub struct ProtocolControlSignals {
     pub set_sync_banner: WriteSignal<Option<String>>,
 }
 
-fn record_search_notice(error: &ServerError, signals: ProtocolControlSignals) -> bool {
+fn record_search_notice(
+    locale: Locale,
+    error: &ServerError,
+    signals: ProtocolControlSignals,
+) -> bool {
     if signals.search_request_id.get_untracked().is_none() {
         return false;
     }
@@ -53,10 +57,11 @@ fn record_search_notice(error: &ServerError, signals: ProtocolControlSignals) ->
     let detail = error
         .detail
         .clone()
-        .unwrap_or_else(|| "Search failed".to_string());
-    signals
-        .set_sync_banner
-        .set(Some(format!("Search unavailable: {detail}")));
+        .unwrap_or_else(|| t::search::failed(locale).to_string());
+    signals.set_sync_banner.set(Some(format!(
+        "{}: {detail}",
+        t::search::unavailable(locale)
+    )));
     true
 }
 
@@ -105,7 +110,7 @@ pub fn handle_protocol_error(
         ws.mark_unauthorized();
     }
     let message = t::server_error::message(locale, error.code);
-    let handled_in_search = record_search_notice(error, signals);
+    let handled_in_search = record_search_notice(locale, error, signals);
     let handled_in_source_control = record_source_control_notice(error, signals);
     match (
         handled_in_search,

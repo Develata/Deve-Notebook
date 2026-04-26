@@ -48,7 +48,7 @@ pub fn create_results_memo(
             return providers::BranchProvider::new(core.shadow_repos.get(), current).search(&q);
         }
         if let Some(stripped) = q.strip_prefix('?') {
-            return full_text_results(stripped, core.search_results.get());
+            return full_text_results(stripped, core.search_results.get(), now_locale);
         }
         if let Some(stripped) = q.strip_prefix('+') {
             let path = stripped.trim();
@@ -92,10 +92,15 @@ pub fn create_placeholder_memo(query: Signal<String>, locale: RwSignal<Locale>) 
     })
 }
 
-fn full_text_results(query: &str, raw_results: Vec<(String, String, f32)>) -> Vec<SearchResult> {
+fn full_text_results(
+    query: &str,
+    raw_results: Vec<(String, String, f32)>,
+    locale: Locale,
+) -> Vec<SearchResult> {
     if query.trim().is_empty() {
         return Vec::new();
     }
+    let detail = t::search::full_text_match(locale);
     raw_results
         .into_iter()
         .filter_map(|(doc_id, path, score)| {
@@ -103,7 +108,7 @@ fn full_text_results(query: &str, raw_results: Vec<(String, String, f32)>) -> Ve
             Some(SearchResult {
                 id: format!("full-text-{doc_id}"),
                 title: path,
-                detail: Some("Full-text match".to_string()),
+                detail: Some(detail.to_string()),
                 score,
                 action: SearchAction::OpenDoc(DocId(uuid)),
             })
@@ -114,6 +119,7 @@ fn full_text_results(query: &str, raw_results: Vec<(String, String, f32)>) -> Ve
 #[cfg(test)]
 mod tests {
     use super::full_text_results;
+    use crate::i18n::Locale;
 
     #[test]
     fn full_text_results_parse_doc_ids() {
@@ -124,13 +130,26 @@ mod tests {
                 (doc_id.to_string(), "notes/rust.md".into(), 1.0),
                 ("broken".into(), "notes/broken.md".into(), 1.0),
             ],
+            Locale::En,
         );
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "notes/rust.md");
+        assert_eq!(results[0].detail.as_deref(), Some("Full-text match"));
     }
 
     #[test]
     fn full_text_results_hide_until_query_is_present() {
-        assert!(full_text_results("  ", vec![]).is_empty());
+        assert!(full_text_results("  ", vec![], Locale::En).is_empty());
+    }
+
+    #[test]
+    fn full_text_results_localize_detail() {
+        let doc_id = uuid::Uuid::new_v4();
+        let results = full_text_results(
+            "rust",
+            vec![(doc_id.to_string(), "notes/rust.md".into(), 1.0)],
+            Locale::Zh,
+        );
+        assert_eq!(results[0].detail.as_deref(), Some("全文匹配"));
     }
 }

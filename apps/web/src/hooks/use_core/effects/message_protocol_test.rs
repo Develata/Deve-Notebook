@@ -5,6 +5,7 @@ use super::clear_failed_scope_switch;
 use super::record_search_notice;
 use super::record_source_control_notice;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::i18n::Locale;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use leptos::prelude::{GetUntracked, Set};
 use support::protocol_signal_harness;
@@ -136,6 +137,7 @@ fn request_failed_without_sc_request_does_not_record_panel_notice() {
 fn search_errors_clear_search_request_and_show_banner() {
     let harness = protocol_signal_harness(None, None, None, None);
     let stored = record_search_notice(
+        Locale::En,
         &ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature disabled"),
         harness.control(),
     );
@@ -148,10 +150,27 @@ fn search_errors_clear_search_request_and_show_banner() {
 }
 
 #[test]
+fn search_errors_use_localized_fallback_banner() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    let stored = record_search_notice(
+        Locale::Zh,
+        &ServerError::new(ServerErrorCode::RequestFailed),
+        harness.control(),
+    );
+    assert!(stored);
+    harness.assert_search_request_cleared();
+    assert_eq!(
+        harness.sync_banner.get_untracked().as_deref(),
+        Some("搜索不可用: 搜索失败")
+    );
+}
+
+#[test]
 fn non_search_errors_do_not_clear_search_state_without_pending_search() {
     let harness = protocol_signal_harness(None, None, None, None);
     harness.control().set_search_request_id.set(None);
     let stored = record_search_notice(
+        Locale::En,
         &ServerError::with_detail(ServerErrorCode::RequestFailed, "other failure"),
         harness.control(),
     );
