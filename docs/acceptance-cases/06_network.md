@@ -50,53 +50,77 @@
 - case_id: NET-005
   goal: WebLightPeer repo-scoped 握手。
   preconditions:
-    - 用户打开 Repo A
+    - 用户打开 Repo A，服务端已返回当前 repo 的 switch_nonce/scope_nonce
   steps:
     - ws_connect: "relative /ws"
-    - ws_send: { type: "SyncHello", repo_id: "11111111-1111-1111-1111-111111111111", peer_pubkey: "pub_a", vector: { seq: 7 } }
+    - ws_send: { type: "SwitchRepoExact", name: "notes", repo_id: "11111111-1111-1111-1111-111111111111", switch_nonce: 1 }
+    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", pub_key: "signed_pubkey_bytes", signature: "signature_bytes", vector: { peer: "web-light-peer", seq: 7 }, repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_send: { type: "RegisterWriter", peer_id: "web-light-peer", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - run: cargo test -p deve_cli ws_endpoint_sync_hello_uses_switched_repo_scope -- --nocapture
+    - run: cargo test -p deve_cli ws_endpoint_register_writer_after_sync_hello_returns_write_ready -- --nocapture
   assertions:
-    - ws_receive_contains: "SyncHello"
-    - ws_receive_contains: "11111111-1111-1111-1111-111111111111"
+    - ws_receive_contains: { type: "SyncHello", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_receive_contains: { type: "WriteReady", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_receive_contains: { type: "ShadowList", scope_nonce: 1 }
 
 - case_id: NET-006
   goal: OpenDoc Snapshot-First。
   preconditions:
-    - 文档有快照与增量 Content Facts
+    - 文档有快照与增量 Content Facts，浏览器处于当前 repo scope
   steps:
-    - ws_send: { type: "OpenDoc", id: "doc_id" }
+    - ws_send: { type: "OpenDoc", doc_id: "doc_uuid", request_id: 42, scope_nonce: 1 }
+    - run: cargo test -p deve_cli ws_open_doc_and_history_read_back_registered_edit -- --nocapture
+    - run: cargo test -p deve_cli open_doc_scope -- --nocapture
   assertions:
-    - ws_receive_order: ["Snapshot", "NewOp"]
+    - ws_receive_order: ["Snapshot", "History"]
+    - ws_receive_contains: { type: "Snapshot", repo_id: "active_repo_id", doc_id: "doc_uuid", request_id: 42, scope_nonce: 1 }
+    - wrong_or_deleted_doc_returns_protocol_error: true
+    - no_empty_snapshot_for_wrong_doc: true
 
 - case_id: NET-007
   goal: Vector Gossip 缺失 Ledger Facts 必须 repo-scoped。
   preconditions:
-    - Repo A 中 A 的 VC 大于 B
+    - Repo A 中本地 VC 大于远端，SyncHello 已绑定当前 sync scope
   steps:
-    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { seq: 3 } }
+    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", requests: [["peer-a", [4, 7]]] }
+    - run: cargo test -p deve_cli non_browser_sync_request_uses_bound_sync_scope_nonce_for_push -- --nocapture
+    - run: cargo test -p deve_cli sync_request_preserves_requested_source_peer_in_push -- --nocapture
+    - run: cargo test -p deve_cli ws_sync_request -- --nocapture
   assertions:
-    - ws_payload_contains_only_missing_facts true
-    - ws_payload_contains: "11111111-1111-1111-1111-111111111111"
+    - ws_receive_contains: { type: "SyncPush", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - sync_push_peer_id_eq_requested_source: true
+    - wrong_or_unbound_repo_returns_structured_protocol_error: true
 
 - case_id: NET-008
   goal: Snapshot fallback 必须保留 repo_id。
   preconditions:
-    - LedgerSeq 差异超过阈值
+    - 增量同步不可继续，当前 peer/source 已由握手或 offer 流程授权
   steps:
-    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { seq: 0 } }
+    - ws_send: { type: "SyncSnapshotRequest", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111" }
+    - run: cargo test -p deve_cli non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push -- --nocapture
+    - run: cargo test -p deve_cli snapshot_request_exports_requested_shadow_source -- --nocapture
+    - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
-    - ws_receive_contains: "Snapshot"
-    - ws_receive_contains: "11111111-1111-1111-1111-111111111111"
+    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "peer-a", scope_nonce: 1 }
+    - sync_push_snapshot_peer_id_eq_requested_source: true
+    - unoffered_source_returns_structured_protocol_error: true
 
 - case_id: NET-009
   goal: 多仓库切换必须重新握手并隔离状态。
   preconditions:
     - 浏览器已先后打开 Repo A 与 Repo B
   steps:
-    - ws_send: { type: "SyncHello", repo_id: "11111111-1111-1111-1111-111111111111", peer_pubkey: "pub_a", vector: { seq: 7 } }
-    - ws_send: { type: "SyncHello", repo_id: "22222222-2222-2222-2222-222222222222", peer_pubkey: "pub_b", vector: { seq: 1 } }
+    - ws_send: { type: "SwitchRepoExact", name: "repo-a", repo_id: "11111111-1111-1111-1111-111111111111", switch_nonce: 1 }
+    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", pub_key: "signed_pubkey_bytes", signature: "signature_bytes", vector: { peer: "web-light-peer", seq: 7 }, repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_send: { type: "SwitchRepoExact", name: "repo-b", repo_id: "22222222-2222-2222-2222-222222222222", switch_nonce: 2 }
+    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", pub_key: "signed_pubkey_bytes", signature: "signature_bytes", vector: { peer: "web-light-peer", seq: 1 }, repo_id: "22222222-2222-2222-2222-222222222222", scope_nonce: 2 }
+    - run: cargo test -p deve_cli browser_sync_hello_rejects_stale_scope_nonce -- --nocapture
+    - run: cargo test -p deve_cli browser_sync_hello_rejects_stale_active_db_binding -- --nocapture
+    - run: cargo test -p deve_cli browser_sync_hello_rejects_stale_bound_repo_and_writer_identity -- --nocapture
   assertions:
-    - ws_receive_contains: "22222222-2222-2222-2222-222222222222"
-    - ws_receive_not_contains: "reuse_repo_a_vector"
+    - ws_receive_contains: { type: "SyncHello", repo_id: "22222222-2222-2222-2222-222222222222", scope_nonce: 2 }
+    - stale_repo_a_scope_returns_structured_protocol_error: true
+    - stale_runtime_binding_cleared: true
 
 - case_id: NET-010
   goal: 恶意数据隔离。
