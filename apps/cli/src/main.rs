@@ -131,6 +131,10 @@ async fn main() -> anyhow::Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
+    if run_pre_config_command(&args.command)? {
+        return Ok(());
+    }
+
     // Initialize configuration from Env
     let config = deve_core::config::Config::load_checked()?;
     server::agent_bridge::init_from_config(&config);
@@ -143,4 +147,15 @@ async fn main() -> anyhow::Result<()> {
 
     dispatch::run(args.command, &config, &ledger_dir, &vault_path).await?;
     Ok(())
+}
+
+fn run_pre_config_command(command: &Option<Commands>) -> anyhow::Result<bool> {
+    if let Some(Commands::Config {
+        action: ConfigAction::Set { key, value },
+    }) = command
+    {
+        commands::config::set(key, value)?;
+        return Ok(true);
+    }
+    Ok(false)
 }
