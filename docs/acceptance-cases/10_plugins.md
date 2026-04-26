@@ -28,6 +28,7 @@
     - ui_assert: ai_mode_eq "plan"
     - ui_assert: plugin_call_not_sent_for_slash_command true
     - ui_assert: chat_apply_buttons_hidden true
+    - server_assert: native_ai_rejects_tools_payload true
     - log_not_contains_any: ["tool call", "mcp", "skill", "spawn subprocess"]
     - ui_assert: markdown_unchanged true
 
@@ -48,7 +49,21 @@
     - ws_assert: ClientMessage.Edit_sent true
     - ws_assert: edit_scope_nonce_eq_current true
     - ui_assert: current_markdown_changed_by_controlled_apply true
+    - server_assert: native_ai_rejects_tools_payload true
     - log_not_contains_any: ["mcp", "skill", "spawn subprocess"]
+
+- case_id: AI-008
+  goal: Native BUILD 程序执行边界默认 fail-closed，不等价于通用 tools/shell。
+  preconditions:
+    - Native AI Chat 后端可用
+    - 请求或 provider 响应尝试携带 tool calls
+  steps:
+    - server_call: native_ai_chat_stream_with_tools
+    - server_receive: provider_tool_call_delta
+  assertions:
+    - server_assert: request_tools_rejected_before_provider_call true
+    - server_assert: provider_tool_calls_rejected true
+    - log_not_contains_any: ["mcp", "skill", "spawn subprocess", "shell"]
 
 - case_id: AI-004
   goal: `/agents` 在原生 `PLAN ↔ BUILD` 间顺序切换。

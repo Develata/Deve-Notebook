@@ -15,6 +15,9 @@ use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+const NATIVE_AI_TOOL_CALLS_DISABLED_ERROR: &str =
+    "Native AI Chat provider tool calls are disabled by default";
+
 /// 全局 HTTP 客户端单例
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
@@ -89,10 +92,48 @@ pub async fn execute_stream(
         sink.send_chunk(req_id, None, Some(reason));
     }
 
-    let tool_calls = tool_builder.build();
+    finalize_stream_response(output, tool_builder.build())
+}
+
+fn finalize_stream_response(
+    output: String,
+    tool_calls: Vec<deve_core::plugin::runtime::chat_stream::ToolCallInfo>,
+) -> Result<ChatStreamResponse> {
     if !tool_calls.is_empty() {
-        Ok(ChatStreamResponse::ToolCalls { calls: tool_calls })
-    } else {
-        Ok(ChatStreamResponse::Text { content: output })
+        return Err(anyhow!(NATIVE_AI_TOOL_CALLS_DISABLED_ERROR));
+    }
+
+    Ok(ChatStreamResponse::Text { content: output })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use deve_core::plugin::runtime::chat_stream::ToolCallInfo;
+
+    #[test]
+    fn finalize_stream_response_rejects_provider_tool_calls() {
+        let err = finalize_stream_response(
+            "partial".to_string(),
+            vec![ToolCallInfo {
+                id: "call_1".to_string(),
+                name: "write_file".to_string(),
+                arguments: "{}".to_string(),
+            }],
+        )
+        .expect_err("native AI must fail closed on provider tool calls");
+
+        assert_eq!(err.to_string(), NATIVE_AI_TOOL_CALLS_DISABLED_ERROR);
+    }
+
+    #[test]
+    fn finalize_stream_response_accepts_plain_text() {
+        let response = finalize_stream_response("hello".to_string(), vec![])
+            .expect("plain text response should be accepted");
+
+        match response {
+            ChatStreamResponse::Text { content } => assert_eq!(content, "hello"),
+            ChatStreamResponse::ToolCalls { .. } => panic!("unexpected tool response"),
+        }
     }
 }

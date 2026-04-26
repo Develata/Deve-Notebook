@@ -25,6 +25,7 @@
 
 - 当前阶段允许的 AI 能力应保持最小化与可理解。
 - AI 不应假装拥有未完成的自动化写入、越权读取或复杂自治能力。
+- Native AI 后端默认拒绝 tools payload 与 provider tool calls；当前 BUILD 只允许后续受控 Markdown Apply 路径。
 
 ### 3. 与核心功能的隔离
 

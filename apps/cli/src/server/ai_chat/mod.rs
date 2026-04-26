@@ -27,9 +27,11 @@ use deve_core::plugin::runtime::chat_stream::{
     ChatStreamHandler, ChatStreamRequest, ChatStreamResponse, ChatStreamSink,
 };
 use deve_core::plugin::runtime::provider::register_provider;
-use serde_json::json;
+use serde_json::{Value, json};
 use std::sync::Arc;
 use stream::execute_stream;
+
+const NATIVE_AI_TOOLS_DISABLED_ERROR: &str = "Native AI Chat tools are disabled by default";
 
 pub fn init_chat_stream_handler() -> Result<()> {
     let handler = Arc::new(AiChatStreamHandler);
@@ -38,12 +40,21 @@ pub fn init_chat_stream_handler() -> Result<()> {
 
 struct AiChatStreamHandler;
 
+fn reject_native_tools(tools: &Option<Value>) -> Result<()> {
+    if tools.is_some() {
+        return Err(anyhow!(NATIVE_AI_TOOLS_DISABLED_ERROR));
+    }
+    Ok(())
+}
+
 impl ChatStreamHandler for AiChatStreamHandler {
     fn stream(
         &self,
         request: ChatStreamRequest,
         sink: ChatStreamSink,
     ) -> Result<ChatStreamResponse> {
+        reject_native_tools(&request.tools)?;
+
         let config: ChatConfig = serde_json::from_value(request.config)
             .map_err(|e| anyhow!("Invalid AI config: {}", e))?;
         config.validate().map_err(|e| anyhow!("{}", e))?;
@@ -54,18 +65,12 @@ impl ChatStreamHandler for AiChatStreamHandler {
             .ok_or_else(|| anyhow!("Chat history must be an array"))?
             .clone();
 
-        let mut body = json!({
+        let body = json!({
             "model": config.model,
             "messages": history,
             "stream": true,
             "max_tokens": config.max_tokens,
         });
-
-        if let Some(tools) = &request.tools
-            && let Some(obj) = body.as_object_mut()
-        {
-            obj.insert("tools".to_string(), tools.clone());
-        }
 
         let req_id = request.req_id.clone();
         let endpoint = config.endpoint();
@@ -75,5 +80,29 @@ impl ChatStreamHandler for AiChatStreamHandler {
         tokio::runtime::Handle::current().block_on(async move {
             execute_stream(&req_id, &endpoint, &api_key, &headers, body, &sink).await
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn native_ai_rejects_request_tools_before_provider_call() {
+        let handler = AiChatStreamHandler;
+        let sink = ChatStreamSink::new(|_| {});
+        let request = ChatStreamRequest {
+            req_id: "req-tools".to_string(),
+            config: json!(null),
+            history: json!(null),
+            tools: Some(json!([])),
+        };
+
+        let err = handler
+            .stream(request, sink)
+            .expect_err("native AI must fail closed when tools are supplied");
+
+        assert_eq!(err.to_string(), NATIVE_AI_TOOLS_DISABLED_ERROR);
     }
 }

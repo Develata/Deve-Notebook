@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.ai.chat`
 - `Domain`: `ai`
 - `Related Feature Chapters`: `docs/features/10_ai_agent.md`
-- `Related Acceptance Cases`: `AI-FEAT-01`
+- `Related Acceptance Cases`: `AI-FEAT-01`, `AI-002`, `AI-003`, `AI-008`
 
 ## Operations
 
@@ -63,6 +63,15 @@
 - `Immediate Result`: assistant 消息增量更新，或显示明确失败
 - `Application Entry`: `apps/web/src/components/chat/panel_effects.rs`, `apps/cli/src/server/ai_chat/mod.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 
+### `op.ai.chat.reject-native-tools`
+
+- `Name`: `Reject Native AI Tool Payloads`
+- `Surface`: `server-runtime`
+- `Trigger`: Native AI request includes tools, or provider stream returns tool calls
+- `Preconditions`: Native AI Chat backend path is selected
+- `Immediate Result`: request/response fails closed before any tool loop, shell, MCP, Skills, or source-control write path can run
+- `Application Entry`: `apps/cli/src/server/ai_chat/mod.rs`, `apps/cli/src/server/ai_chat/stream.rs`
+
 ## Notes
 
 - 当前图只建模 `Native AI Chat` 主线，不把 `trusted-cli` 当成默认 flow。
@@ -71,3 +80,4 @@
   Native 会话模式，当前随后续 prompt 作为 `chat_mode` context 传入。
 - `/build` 本身不直接改写 Markdown；任何 Markdown 写入必须走后续受控 apply / edit 路径。
 - `Apply` 只在 BUILD 模式下为 assistant code block 显示；PLAN 模式不得暴露可写入口。
+- Native AI 默认拒绝请求侧 `tools` payload 和响应侧 `tool_calls`，避免 BUILD 模式退化成通用工具循环。
