@@ -27,3 +27,4 @@
 - `acceptance-cases/13_ui_mobile_chat_regression.md`: 移动端 AI Chat 最小回归脚本。
 - `acceptance-cases/14_operation_flow_refs.md`: operation registry 中 feature-level refs 的自动化反链用例。
 - `acceptance-cases/15_settings_operation_refs.md`: settings operation flows 的细粒度反链用例。
+- `acceptance-cases/16_search.md`: 全文搜索 baseline scan、fail-closed 与 stale scope 用例。

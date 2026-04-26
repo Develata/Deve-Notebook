@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.search.query`
 - `Domain`: `search`
 - `Related Feature Chapters`: `docs/features/08_ui_design.md`, `docs/features/14_tech_stack.md`
-- `Related Acceptance Cases`: `UI-DESK-003`, `UI-MOB-007`
+- `Related Acceptance Cases`: `SEARCH-001`, `SEARCH-002`, `SEARCH-003`, `UI-DESK-003`, `UI-MOB-007`
 
 ## Operations
 

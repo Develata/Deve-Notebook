@@ -63,7 +63,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.sc.merge-runtime` | [`sc_merge_runtime.md`](./operations/sc_merge_runtime.md) | `DIFF-005`, `NET-FEAT-03` |
 | `flow.sc.resolve-conflict` | [`sc_resolve_conflict.md`](./operations/sc_resolve_conflict.md) | `DIFF-FEAT-03` |
 | `flow.sc.stage-unstage` | [`sc_stage_unstage.md`](./operations/sc_stage_unstage.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |
-| `flow.search.query` | [`search_query.md`](./operations/search_query.md) | `UI-DESK-003`, `UI-MOB-007` |
+| `flow.search.query` | [`search_query.md`](./operations/search_query.md) | `SEARCH-001`, `SEARCH-002`, `SEARCH-003`, `UI-DESK-003`, `UI-MOB-007` |
 | `flow.settings.env-defaults` | [`settings_env_defaults.md`](./operations/settings_env_defaults.md) | `SET-001`, `SET-003` |
 | `flow.settings.feedback-render` | [`settings_feedback_render.md`](./operations/settings_feedback_render.md) | `SET-005`, `SET-006` |
 | `flow.settings.file-config` | [`settings_file_config.md`](./operations/settings_file_config.md) | `SET-002`, `SET-004` |
