@@ -12,6 +12,7 @@ use super::sync_transfer_scope_test_support::{
     remote_insert_entry, sync_range, unicast_channel,
 };
 use deve_core::config::SyncMode;
+use deve_core::ledger::range;
 use deve_core::models::PeerId;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::security::EncryptedOp;
@@ -146,6 +147,41 @@ async fn sync_push_uses_message_source_peer_for_shadow_write() -> anyhow::Result
 
     assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 1);
     assert_eq!(state.repo.get_shadow_max_seq(&relay_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_does_not_pollute_transport_or_local_ledger() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    append_local_doc(&state)?;
+    let local_before = state
+        .repo
+        .run_on_local_repo(state.repo.local_repo_name(), range::get_max_seq)?;
+    let relay_peer = PeerId::new("relay-peer");
+    let malicious_source = PeerId::new("malicious-source");
+    let op = encrypted_insert_for_author(&state, repo_id, &malicious_source, 1)?;
+    let (ch, _rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(relay_peer.clone()), Some(41));
+    session.set_requested_sync_sources([malicious_source.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        malicious_source.clone(),
+        repo_id,
+        vec![op],
+    )
+    .await;
+
+    assert_eq!(state.repo.get_shadow_max_seq(&malicious_source, &repo_id)?, 1);
+    assert_eq!(state.repo.get_shadow_max_seq(&relay_peer, &repo_id)?, 0);
+    assert_eq!(
+        state
+            .repo
+            .run_on_local_repo(state.repo.local_repo_name(), range::get_max_seq)?,
+        local_before
+    );
     Ok(())
 }
 

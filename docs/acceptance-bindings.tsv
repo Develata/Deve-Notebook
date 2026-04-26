@@ -24,6 +24,7 @@ NET-006|manual-network|docs/features/05_network.md|snapshot-first ordering
 NET-007|manual-network|docs/features/05_network.md|repo-scoped missing fact transfer
 NET-008|manual-network|docs/features/05_network.md|snapshot fallback scope
 NET-009|manual-network|docs/features/05_network.md|multi-repo isolation
+NET-010|manual-network|docs/features/05_network.md|malicious remote data isolation
 NET-011|manual-network|docs/features/05_network.md|indirect sync trust boundary
 NET-012|manual-network|docs/features/05_network.md|structured protocol error review
 NET-013|manual-security|docs/features/05_network.md|unauthorized vs reconnect workflow

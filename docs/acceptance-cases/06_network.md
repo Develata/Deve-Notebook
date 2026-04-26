@@ -125,20 +125,32 @@
 - case_id: NET-010
   goal: 恶意数据隔离。
   preconditions:
-    - Remote 分支有破坏性 Ledger Facts
+    - 入站 SyncPush 已通过当前 sync scope 授权，但 payload source 是远端分支
   steps:
-    - ws_send: { type: "SyncPush", peer: "malicious", repo_id: "11111111-1111-1111-1111-111111111111" }
+    - ws_send: { type: "SyncPush", peer_id: "malicious-source", repo_id: "11111111-1111-1111-1111-111111111111", ops: ["encrypted_ledger_facts"] }
+    - run: cargo test -p deve_cli sync_push_does_not_pollute_transport_or_local_ledger -- --nocapture
+    - run: cargo test -p deve_cli manual_sync_push_buffers_without_applying_remote_ops -- --nocapture
   assertions:
-    - fs_changes_only_under: "ledger/remotes/malicious"
+    - shadow_written_under_source_peer: "ledger/remotes/malicious-source"
+    - transport_peer_shadow_not_written: true
+    - local_ledger_not_modified_by_inbound_push: true
+    - merge_to_local_requires_explicit_user_action: true
 
 - case_id: NET-011
   goal: 间接同步信任边界。
   preconditions:
-    - B 未与 A 握手
+    - relay transport 已认证，但 source peer 未被当前 SyncHello diff 请求或授权
   steps:
-    - ws_send: { type: "GossipOffer", from: "C", about: "A", repo_id: "11111111-1111-1111-1111-111111111111" }
+    - ws_send: { type: "SyncPush", peer_id: "unrequested-source", repo_id: "11111111-1111-1111-1111-111111111111", ops: [] }
+    - ws_send: { type: "SyncSnapshotRequest", peer_id: "unoffered-source", repo_id: "11111111-1111-1111-1111-111111111111" }
+    - run: cargo test -p deve_cli ws_sync_push_rejects_unrequested_source -- --nocapture
+    - run: cargo test -p deve_cli sync_push_rejects_unrequested_relay_source -- --nocapture
+    - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
-    - ws_receive_not_contains: "FetchRequest"
+    - ws_receive_contains: { type: "ProtocolError", code: "SyncPeerUnauthenticated", scope_nonce: 1 }
+    - unrequested_source_not_written: true
+    - relay_cannot_force_receive: true
+    - note: "GossipOffer/FetchRequest relay offer protocol is not implemented in the current protocol surface; this case validates the current fail-closed source authorization boundary."
 
 - case_id: NET-012
   goal: WebSocket 错误必须走结构化 ProtocolError。
