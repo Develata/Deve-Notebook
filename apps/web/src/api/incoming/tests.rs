@@ -1,4 +1,4 @@
-use super::decode::decode_binary_message;
+use super::decode::{decode_binary_message, decode_text_message};
 use super::push_server_message;
 use deve_core::models::Op;
 use deve_core::protocol::ConfirmedOp;
@@ -21,21 +21,15 @@ fn incoming_queue_keeps_latest_messages_in_order() {
 }
 
 #[test]
-fn binary_json_fallback_still_decodes_server_message() {
+fn binary_json_legacy_payload_is_rejected() {
     let bytes = br#""Pong""#;
-    assert!(matches!(
-        decode_binary_message(bytes),
-        Some(ServerMessage::Pong)
-    ));
+    assert!(decode_binary_message(bytes).is_none());
 }
 
 #[test]
-fn binary_bincode_still_decodes_server_message() {
+fn binary_bincode_legacy_payload_is_rejected() {
     let bytes = bincode::serialize(&ServerMessage::Pong).unwrap();
-    assert!(matches!(
-        decode_binary_message(&bytes),
-        Some(ServerMessage::Pong)
-    ));
+    assert!(decode_binary_message(&bytes).is_none());
 }
 
 #[test]
@@ -48,7 +42,15 @@ fn binary_versioned_frame_decodes_server_message() {
 }
 
 #[test]
-fn binary_bincode_decodes_history_with_none_origin() {
+fn text_legacy_json_still_decodes_server_message() {
+    assert!(matches!(
+        decode_text_message(r#""Pong""#),
+        Some(ServerMessage::Pong)
+    ));
+}
+
+#[test]
+fn binary_bincode_history_legacy_payload_is_rejected() {
     let bytes = bincode::serialize(&ServerMessage::History {
         repo_id: uuid::Uuid::nil(),
         branch: None,
@@ -65,25 +67,16 @@ fn binary_bincode_decodes_history_with_none_origin() {
         )],
     })
     .unwrap();
-    assert!(matches!(
-        decode_binary_message(&bytes),
-        Some(ServerMessage::History { .. })
-    ));
+    assert!(decode_binary_message(&bytes).is_none());
 }
 
 #[test]
-fn binary_bincode_decodes_protocol_error_with_none_detail() {
+fn binary_bincode_protocol_error_legacy_payload_is_rejected() {
     let bytes = bincode::serialize(&ServerMessage::ProtocolError {
         error: ServerError::new(ServerErrorCode::ScCommitDiffUnprojectable),
         switch_nonce: None,
         scope_nonce: Some(7),
     })
     .unwrap();
-    assert!(matches!(
-        decode_binary_message(&bytes),
-        Some(ServerMessage::ProtocolError { error, scope_nonce, .. })
-            if error.code == ServerErrorCode::ScCommitDiffUnprojectable
-                && error.detail.is_none()
-                && scope_nonce == Some(7)
-    ));
+    assert!(decode_binary_message(&bytes).is_none());
 }

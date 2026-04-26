@@ -40,9 +40,11 @@
     - net_capture: true
   assertions:
     - packet_format_eq: ["server", "versioned-bincode"]
-    - packet_format_any_of: ["client", "versioned-bincode", "versioned-json-debug"]
-    - packet_magic_eq: "DEVEWSF2"
-    - packet_protocol_version_eq: 2
+    - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug", "text-legacy-json-debug"]
+    - binary_packet_magic_eq: "DEVEWSF2"
+    - versioned_packet_protocol_version_eq: 2
+    - text_legacy_json_has_no_protocol_version: true
+    - reject_binary_without_magic: true
 
 - case_id: NET-005
   goal: WebLightPeer repo-scoped 握手。

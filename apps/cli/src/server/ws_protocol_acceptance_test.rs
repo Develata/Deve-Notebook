@@ -7,7 +7,9 @@ use super::ws_protocol_acceptance_support::{
     WsHarness, connect_harness, recv_server_message, send_client_message,
 };
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, AuthStatusResponse};
-use deve_core::protocol::frame::{WS_PROTOCOL_VERSION, encode_client_binary_with_version};
+use deve_core::protocol::frame::{
+    ClientFrame, WS_PROTOCOL_VERSION, encode_client_binary_with_version,
+};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use futures::SinkExt;
 use tokio_tungstenite::tungstenite::Message;
@@ -83,6 +85,60 @@ async fn ws_endpoint_rejects_unsupported_protocol_version() -> anyhow::Result<()
         }
         other => panic!("expected ProtocolError, got {other:?}"),
     }
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ws_endpoint_rejects_legacy_binary_without_magic() -> anyhow::Result<()> {
+    let harness = WsHarness::spawn().await?;
+    let mut ws = connect_harness(&harness).await?;
+    let legacy_bytes = bincode::serialize(&ClientMessage::Ping)?;
+
+    ws.send(Message::Binary(legacy_bytes)).await?;
+
+    match recv_server_message(&mut ws).await? {
+        ServerMessage::ProtocolError { error, .. } => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(
+                error.detail.as_deref(),
+                Some("Invalid bincode client message")
+            );
+        }
+        other => panic!("expected legacy binary ProtocolError, got {other:?}"),
+    }
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ws_endpoint_accepts_versioned_json_text_debug_frame() -> anyhow::Result<()> {
+    let harness = WsHarness::spawn().await?;
+    let mut ws = connect_harness(&harness).await?;
+    let text = serde_json::to_string(&ClientFrame::current(ClientMessage::Ping))?;
+
+    ws.send(Message::Text(text)).await?;
+
+    assert!(matches!(
+        recv_server_message(&mut ws).await?,
+        ServerMessage::Pong
+    ));
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ws_endpoint_accepts_legacy_json_text_debug_frame() -> anyhow::Result<()> {
+    let harness = WsHarness::spawn().await?;
+    let mut ws = connect_harness(&harness).await?;
+    let text = serde_json::to_string(&ClientMessage::Ping)?;
+
+    ws.send(Message::Text(text)).await?;
+
+    assert!(matches!(
+        recv_server_message(&mut ws).await?,
+        ServerMessage::Pong
+    ));
     harness.shutdown().await;
     Ok(())
 }
