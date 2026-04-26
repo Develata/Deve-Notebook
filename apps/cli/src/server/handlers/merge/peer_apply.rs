@@ -7,10 +7,19 @@ use super::errors;
 use super::peer_support::resolve_doc_path;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel};
+use deve_core::ledger::merge::ConflictHunk;
 use deve_core::models::DocId;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{MergeConflictAction, ServerMessage};
 use deve_core::sync::reconcile;
 use std::sync::Arc;
+
+pub(super) struct MergeConflictPayload {
+    pub(super) doc_id: DocId,
+    pub(super) base: String,
+    pub(super) local: String,
+    pub(super) remote: String,
+    pub(super) conflicts: Vec<ConflictHunk>,
+}
 
 pub(super) fn write_merged_content(
     state: &Arc<AppState>,
@@ -84,23 +93,48 @@ pub(super) fn send_merge_conflict(
     state: &Arc<AppState>,
     ch: &DualChannel,
     scope: &ResolvedRepo,
-    doc_id: DocId,
-    local: String,
-    remote: String,
+    payload: MergeConflictPayload,
     scope_nonce: Option<u64>,
 ) {
-    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, doc_id, scope_nonce) else {
+    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, payload.doc_id, scope_nonce)
+    else {
         return;
     };
-    tracing::warn!("Merge Conflict detected for doc {}", doc_id);
+    emit_merge_conflict(ch, scope, path, payload, scope_nonce);
+}
+
+fn emit_merge_conflict(
+    ch: &DualChannel,
+    scope: &ResolvedRepo,
+    path: String,
+    payload: MergeConflictPayload,
+    scope_nonce: Option<u64>,
+) {
+    tracing::warn!("Merge Conflict detected for doc {}", payload.doc_id);
+    ch.unicast(ServerMessage::MergeConflict {
+        repo_id: Some(scope.repo_id),
+        branch: scope.branch.clone(),
+        scope_nonce,
+        doc_id: payload.doc_id,
+        path: path.clone(),
+        current_content: payload.local.clone(),
+        incoming_content: payload.remote.clone(),
+        result_content: payload.base,
+        actions: vec![
+            MergeConflictAction::AcceptCurrent,
+            MergeConflictAction::AcceptIncoming,
+            MergeConflictAction::AcceptBoth,
+        ],
+        conflicts: payload.conflicts,
+    });
     ch.unicast(ServerMessage::DocDiff {
         request_id: None,
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         scope_nonce,
         path,
-        old_content: local,
-        new_content: remote,
+        old_content: payload.local,
+        new_content: payload.remote,
     });
     errors::storage_conflict(
         ch,

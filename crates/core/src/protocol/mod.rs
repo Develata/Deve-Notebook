@@ -29,4 +29,4 @@ pub use confirmed_op::{ClientOrigin, ConfirmedOp};
 pub use error::{ServerError, ServerErrorCode};
 pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};
 pub use sc_path_target::ScPathTarget;
-pub use server::ServerMessage;
+pub use server::{MergeConflictAction, ServerMessage};

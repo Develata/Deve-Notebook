@@ -28,6 +28,8 @@
   steps:
     - run: deve merge --peer <peer_id>
   assertions:
+    - ws_message: "MergeConflict"
+    - ws_field_contains: "actions AcceptCurrent AcceptIncoming AcceptBoth"
     - ui_assert: conflict_view_open true
 
 - case_id: DIFF-004

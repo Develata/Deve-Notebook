@@ -87,6 +87,24 @@ pub(crate) fn handle_sc_list_message(
             apply_doc_diff(path, old_content, new_content, ctx.set_diff);
             true
         }
+        ServerMessage::MergeConflict {
+            repo_id,
+            branch,
+            scope_nonce,
+            path,
+            current_content,
+            incoming_content,
+            actions,
+            ..
+        } => {
+            if !ctx.in_scope(repo_id, branch) || *scope_nonce != Some(active_scope_nonce) {
+                return true;
+            }
+            ctx.set_notice.set(None);
+            leptos::logging::log!("收到合并冲突: {} ({} actions)", path, actions.len());
+            apply_doc_diff(path, current_content, incoming_content, ctx.set_diff);
+            true
+        }
         ServerMessage::CommitDiffResult {
             request_id,
             repo_id,

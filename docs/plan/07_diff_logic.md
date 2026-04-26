@@ -169,6 +169,7 @@ MergeRequested
 - `CommitHistory`
 - `CommitDiffResult`
 - `DocDiff`
+- `MergeConflict`
 - `MergeComplete`
 - `ProtocolError`
 
@@ -194,6 +195,17 @@ MergeRequested
   - `doc_id`
   - base/target identifiers
   - diff hunks in UTF-16 compatible space
+- `MergeConflict`
+  - `repo_id`
+  - `branch`
+  - `scope_nonce`
+  - `doc_id`
+  - `path`
+  - `current_content`
+  - `incoming_content`
+  - `result_content`
+  - available resolution actions
+  - structured conflict hunks
 
 ### 4.5 Diff View Output Contract
 
@@ -291,6 +303,8 @@ MergeRequested
 - 这些是 resolution runtime 的 typed outputs，不是 view 文案常量。
 - 默认冲突展示 SHOULD 支持 side-by-side 视图。
 - inline resolution 仅作为同一 conflict model 的另一种展示，不得形成第二套 conflict authority。
+- Runtime protocol uses `ServerMessage::MergeConflict` as the typed conflict model.
+- `DocDiff` MAY still be emitted as a compatibility fallback, but it MUST NOT be the conflict authority.
 
 ## 7. Recovery / Repair
 

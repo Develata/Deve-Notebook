@@ -9,7 +9,7 @@ use deve_core::models::{DocId, PeerId};
 use std::sync::Arc;
 
 use super::errors;
-use super::peer_apply::{send_merge_conflict, write_merged_content};
+use super::peer_apply::{MergeConflictPayload, send_merge_conflict, write_merged_content};
 use super::peer_support::resolve_local_merge_scope;
 use super::scope::resolve_merge_scope;
 
@@ -40,9 +40,24 @@ pub(super) async fn handle_merge_peer(
         Ok(MergeResult::Success(content)) => {
             write_merged_content(state, ch, &local_scope, doc_id, &content, scope_nonce)
         }
-        Ok(MergeResult::Conflict { local, remote, .. }) => {
-            send_merge_conflict(state, ch, &local_scope, doc_id, local, remote, scope_nonce);
-        }
+        Ok(MergeResult::Conflict {
+            base,
+            local,
+            remote,
+            conflicts,
+        }) => send_merge_conflict(
+            state,
+            ch,
+            &local_scope,
+            MergeConflictPayload {
+                doc_id,
+                base,
+                local,
+                remote,
+                conflicts,
+            },
+            scope_nonce,
+        ),
         Err(e) => errors::classified_failure(ch, format!("Merge failed: {}", e), scope_nonce),
     }
 }

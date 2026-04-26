@@ -1,6 +1,6 @@
 use super::DualChannel;
 use deve_core::models::{DocId, PeerId};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{MergeConflictAction, ServerMessage};
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -151,5 +151,53 @@ async fn conflict_resolved_is_not_dropped_when_unicast_queue_is_full() {
             assert_eq!(resolution, "KeepLedger");
         }
         other => panic!("expected queued ConflictResolved, got {:?}", other),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn merge_conflict_is_not_dropped_when_unicast_queue_is_full() {
+    let (broadcast_tx, _) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = mpsc::channel(1);
+    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+    let doc_id = DocId::new();
+
+    ch.unicast(ServerMessage::Pong);
+    ch.unicast(ServerMessage::MergeConflict {
+        repo_id: Some(uuid::Uuid::nil()),
+        branch: Some(PeerId::new("peer-a")),
+        scope_nonce: Some(5),
+        doc_id,
+        path: "notes/a.md".into(),
+        current_content: "local".into(),
+        incoming_content: "remote".into(),
+        result_content: "base".into(),
+        actions: vec![
+            MergeConflictAction::AcceptCurrent,
+            MergeConflictAction::AcceptIncoming,
+            MergeConflictAction::AcceptBoth,
+        ],
+        conflicts: Vec::new(),
+    });
+
+    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    tokio::task::yield_now().await;
+    match unicast_rx.recv().await {
+        Some(ServerMessage::MergeConflict {
+            repo_id,
+            branch,
+            scope_nonce,
+            doc_id: received_doc_id,
+            path,
+            actions,
+            ..
+        }) => {
+            assert_eq!(repo_id, Some(uuid::Uuid::nil()));
+            assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
+            assert_eq!(scope_nonce, Some(5));
+            assert_eq!(received_doc_id, doc_id);
+            assert_eq!(path, "notes/a.md");
+            assert_eq!(actions.len(), 3);
+        }
+        other => panic!("expected queued MergeConflict, got {:?}", other),
     }
 }
