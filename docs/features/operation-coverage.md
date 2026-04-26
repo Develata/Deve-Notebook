@@ -59,7 +59,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.sc.discard-file` | [`sc_discard_file.md`](./operations/sc_discard_file.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |
 | `flow.sc.discard-pending` | [`sc_discard_pending.md`](./operations/sc_discard_pending.md) | `DIFF-FEAT-03` |
 | `flow.sc.history-commit-diff` | [`sc_history_commit_diff.md`](./operations/sc_history_commit_diff.md) | `DIFF-FEAT-02` |
-| `flow.sc.merge-peer` | [`sc_merge_peer.md`](./operations/sc_merge_peer.md) | `DIFF-002`, `DIFF-003`, `DIFF-005` |
+| `flow.sc.merge-peer` | [`sc_merge_peer.md`](./operations/sc_merge_peer.md) | `DIFF-002`, `DIFF-003`, `DIFF-004`, `DIFF-005` |
 | `flow.sc.merge-runtime` | [`sc_merge_runtime.md`](./operations/sc_merge_runtime.md) | `DIFF-005`, `NET-FEAT-03` |
 | `flow.sc.resolve-conflict` | [`sc_resolve_conflict.md`](./operations/sc_resolve_conflict.md) | `DIFF-FEAT-03` |
 | `flow.sc.stage-unstage` | [`sc_stage_unstage.md`](./operations/sc_stage_unstage.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |

@@ -29,17 +29,29 @@ pub fn MergeConflictActions(
                 {move || t::diff::merge_conflict(locale.get())}
             </span>
             <Show when=move || has_current>
-                <button class=button_class(mobile) on:click=move |_| on_resolve.run((MergeConflictAction::AcceptCurrent, None))>
+                <button
+                    class=button_class(mobile)
+                    data-deve-merge-action="accept-current"
+                    on:click=move |_| on_resolve.run((MergeConflictAction::AcceptCurrent, None))
+                >
                     {move || t::diff::accept_current(locale.get())}
                 </button>
             </Show>
             <Show when=move || has_incoming>
-                <button class=button_class(mobile) on:click=move |_| on_resolve.run((MergeConflictAction::AcceptIncoming, None))>
+                <button
+                    class=button_class(mobile)
+                    data-deve-merge-action="accept-incoming"
+                    on:click=move |_| on_resolve.run((MergeConflictAction::AcceptIncoming, None))
+                >
                     {move || t::diff::accept_incoming(locale.get())}
                 </button>
             </Show>
             <Show when=move || has_both>
-                <button class=button_class(mobile) on:click=move |_| on_resolve.run((MergeConflictAction::AcceptBoth, Some(resolved_content.get_untracked())))>
+                <button
+                    class=button_class(mobile)
+                    data-deve-merge-action="accept-both"
+                    on:click=move |_| on_resolve.run((MergeConflictAction::AcceptBoth, Some(resolved_content.get_untracked())))
+                >
                     {move || t::diff::accept_result(locale.get())}
                 </button>
             </Show>

@@ -37,11 +37,12 @@
   preconditions:
     - 已进入冲突界面
   steps:
-    - ui_click: "Accept Current"
-    - ui_click: "Accept Incoming"
-    - ui_click: "Accept Both"
+    - ui_click: "[data-deve-merge-action='accept-current']"
+    - ui_click: "[data-deve-merge-action='accept-incoming']"
+    - ui_click: "[data-deve-merge-action='accept-both']"
   assertions:
     - ws_message: "ResolveMergeConflict"
+    - ws_field_contains: "doc_id action result_content scope_nonce"
     - ui_assert: result_matches_strategy true
 
 - case_id: DIFF-005

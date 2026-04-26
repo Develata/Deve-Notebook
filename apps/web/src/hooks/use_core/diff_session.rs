@@ -7,7 +7,7 @@
 //! - `opened_at_ms` 单调表示最近一次打开 Diff 的时间戳。
 
 use deve_core::models::DocId;
-use deve_core::protocol::MergeConflictAction;
+use deve_core::protocol::{ClientMessage, MergeConflictAction};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DiffSessionWire {
@@ -24,6 +24,22 @@ pub struct MergeConflictSession {
     pub doc_id: DocId,
     pub result_content: String,
     pub actions: Vec<MergeConflictAction>,
+}
+
+impl MergeConflictSession {
+    pub fn resolve_message(
+        &self,
+        action: MergeConflictAction,
+        result_content: Option<String>,
+        scope_nonce: u64,
+    ) -> ClientMessage {
+        ClientMessage::ResolveMergeConflict {
+            doc_id: self.doc_id,
+            action,
+            result_content,
+            scope_nonce: Some(scope_nonce),
+        }
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -66,8 +82,9 @@ impl DiffSessionWire {
 
 #[cfg(test)]
 mod tests {
-    use super::DiffSessionWire;
+    use super::{DiffSessionWire, MergeConflictSession};
     use deve_core::models::DocId;
+    use deve_core::protocol::{ClientMessage, MergeConflictAction};
 
     #[test]
     fn defaults_display_path_to_canonical_path() {
@@ -92,15 +109,40 @@ mod tests {
     fn can_attach_merge_conflict_metadata() {
         let doc_id = DocId::new();
         let session = DiffSessionWire::new("notes/a.md".into(), "old".into(), "new".into())
-            .with_merge_conflict(super::MergeConflictSession {
+            .with_merge_conflict(MergeConflictSession {
                 doc_id,
                 result_content: "base".into(),
-                actions: vec![deve_core::protocol::MergeConflictAction::AcceptCurrent],
+                actions: vec![MergeConflictAction::AcceptCurrent],
             });
 
         let merge = session.merge_conflict.unwrap();
         assert_eq!(merge.doc_id, doc_id);
         assert_eq!(merge.result_content, "base");
         assert_eq!(merge.actions.len(), 1);
+    }
+
+    #[test]
+    fn merge_conflict_session_builds_scoped_resolve_message() {
+        let doc_id = DocId::new();
+        let session = MergeConflictSession {
+            doc_id,
+            result_content: "base".into(),
+            actions: vec![MergeConflictAction::AcceptBoth],
+        };
+
+        match session.resolve_message(MergeConflictAction::AcceptBoth, Some("merged".into()), 9) {
+            ClientMessage::ResolveMergeConflict {
+                doc_id: actual_doc,
+                action,
+                result_content,
+                scope_nonce,
+            } => {
+                assert_eq!(actual_doc, doc_id);
+                assert_eq!(action, MergeConflictAction::AcceptBoth);
+                assert_eq!(result_content.as_deref(), Some("merged"));
+                assert_eq!(scope_nonce, Some(9));
+            }
+            other => panic!("expected ResolveMergeConflict, got {other:?}"),
+        }
     }
 }

@@ -2,7 +2,6 @@ use crate::components::dashboard::Dashboard;
 use crate::components::diff_view::DiffView;
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
-use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 #[component]
@@ -42,12 +41,11 @@ pub fn DesktopLayoutContent(core: CoreState) -> impl IntoView {
                             let on_resolve = merge_conflict.clone().map(|conflict| {
                                 let resolve_ws = resolve_ws.clone();
                                 Callback::new(move |(action, result_content)| {
-                                    resolve_ws.send(ClientMessage::ResolveMergeConflict {
-                                        doc_id: conflict.doc_id,
+                                    resolve_ws.send(conflict.resolve_message(
                                         action,
                                         result_content,
-                                        scope_nonce: Some(current_scope_nonce.get_untracked()),
-                                    });
+                                        current_scope_nonce.get_untracked(),
+                                    ));
                                     set_diff_content.set(None);
                                 })
                             });
