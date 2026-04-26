@@ -27,6 +27,12 @@
 2.  **Embed**: CLI 构建阶段读取 `dist` 目录并将静态资源编译进二进制；实现可使用 build script 生成 `include_bytes!` 索引，不要求新增 `rust-embed` 依赖。
 3.  **CLI Build**: `cargo build --release` 生成最终可执行文件。
 
+本地 embedded smoke 与 release 构建必须遵守同一顺序：任何 `apps/web/src`
+变更后，必须先重建 `apps/web/dist`，再重新构建或运行 CLI；否则 `deve serve`
+会继续提供旧的已嵌入前端资产。认证相关 smoke 必须使用
+`http://127.0.0.1:<port>/` 作为浏览器入口，不使用 `0.0.0.0` 作为登录
+origin。
+
 ### 1.2 路由回退 (SPA Routing)
 后端服务器 **MUST** 实现 SPA 路由回退逻辑：
 $$ \forall path \notin API, Serve(path) \to index.html $$

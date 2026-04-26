@@ -91,6 +91,8 @@
     - browser_open: "http://127.0.0.1:3001/"
   assertions:
     - ui_contains_any: ["Ready", "Login"]
+    - network_contains: "/api/auth/status"
+    - network_not_contains_status: ["/api/auth/me", 401]
     - network_contains: "/api/node/role"
 
 - case_id: CMD-007B
