@@ -41,6 +41,7 @@
     - ui_click: "Accept Incoming"
     - ui_click: "Accept Both"
   assertions:
+    - ws_message: "ResolveMergeConflict"
     - ui_assert: result_matches_strategy true
 
 - case_id: DIFF-005

@@ -28,7 +28,7 @@ pub(super) fn write_merged_content(
     doc_id: DocId,
     content: &str,
     scope_nonce: Option<u64>,
-) {
+) -> bool {
     let entries = match state
         .repo
         .get_local_ops_in_local_repo(&scope.repo_name, doc_id)
@@ -38,21 +38,23 @@ pub(super) fn write_merged_content(
             .map(|(_, entry)| entry)
             .collect::<Vec<_>>(),
         Err(err) => {
-            return errors::classified_failure(
+            errors::classified_failure(
                 ch,
                 format!("Failed to load local merge state: {}", err),
                 scope_nonce,
             );
+            return false;
         }
     };
     let patch = match reconcile::compute_reconcile_patch(&entries, content) {
         Ok(patch) => patch,
         Err(err) => {
-            return errors::request_failed(
+            errors::request_failed(
                 ch,
                 format!("Failed to diff merged content: {}", err),
                 scope_nonce,
             );
+            return false;
         }
     };
     if let Err(err) = reconcile::append_patch_in_local_repo(
@@ -67,7 +69,7 @@ pub(super) fn write_merged_content(
             format!("Failed to append merged content: {}", err),
             scope_nonce,
         );
-        return;
+        return false;
     }
     if let Err(err) = state
         .sync_manager
@@ -78,14 +80,24 @@ pub(super) fn write_merged_content(
             format!("Failed to persist merged content: {}", err),
             scope_nonce,
         );
-        return;
+        return false;
     }
     tracing::info!("Merge Success for doc {}", doc_id);
+    broadcast_merge_complete(ch, scope, 1, scope_nonce);
+    true
+}
+
+pub(super) fn broadcast_merge_complete(
+    ch: &DualChannel,
+    scope: &ResolvedRepo,
+    merged_count: u32,
+    scope_nonce: Option<u64>,
+) {
     ch.broadcast(ServerMessage::MergeComplete {
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         scope_nonce,
-        merged_count: 1,
+        merged_count,
     });
 }
 
@@ -95,12 +107,13 @@ pub(super) fn send_merge_conflict(
     scope: &ResolvedRepo,
     payload: MergeConflictPayload,
     scope_nonce: Option<u64>,
-) {
+) -> bool {
     let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, payload.doc_id, scope_nonce)
     else {
-        return;
+        return false;
     };
     emit_merge_conflict(ch, scope, path, payload, scope_nonce);
+    true
 }
 
 fn emit_merge_conflict(

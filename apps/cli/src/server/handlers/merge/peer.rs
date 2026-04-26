@@ -3,6 +3,7 @@
 //!
 //! Peer merge flow orchestration.
 
+use crate::server::session::PendingMergeConflict;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::MergeResult;
 use deve_core::models::{DocId, PeerId};
@@ -38,26 +39,41 @@ pub(super) async fn handle_merge_peer(
         doc_id,
     ) {
         Ok(MergeResult::Success(content)) => {
-            write_merged_content(state, ch, &local_scope, doc_id, &content, scope_nonce)
+            session.pending_merge_conflict = None;
+            write_merged_content(state, ch, &local_scope, doc_id, &content, scope_nonce);
         }
         Ok(MergeResult::Conflict {
             base,
             local,
             remote,
             conflicts,
-        }) => send_merge_conflict(
-            state,
-            ch,
-            &local_scope,
-            MergeConflictPayload {
+        }) => {
+            let pending = PendingMergeConflict {
+                repo_id: local_scope.repo_id,
+                repo_name: local_scope.repo_name.clone(),
+                branch: local_scope.branch.clone(),
                 doc_id,
-                base,
-                local,
-                remote,
-                conflicts,
-            },
-            scope_nonce,
-        ),
+                scope_nonce,
+                local_content: local.clone(),
+                incoming_content: remote.clone(),
+            };
+            let emitted = send_merge_conflict(
+                state,
+                ch,
+                &local_scope,
+                MergeConflictPayload {
+                    doc_id,
+                    base,
+                    local,
+                    remote,
+                    conflicts,
+                },
+                scope_nonce,
+            );
+            if emitted {
+                session.pending_merge_conflict = Some(pending);
+            }
+        }
         Err(e) => errors::classified_failure(ch, format!("Merge failed: {}", e), scope_nonce),
     }
 }

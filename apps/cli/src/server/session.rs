@@ -7,13 +7,24 @@
 //! 管理单个 WebSocket 连接的 repo-scoped 会话状态。
 
 use deve_core::ledger::database::DatabaseHandle;
-use deve_core::models::{PeerId, RepoId};
+use deve_core::models::{DocId, PeerId, RepoId};
 use std::time::Instant;
 
 #[path = "session_writer.rs"]
 mod writer;
 
 pub use writer::WriterIdentity;
+
+#[derive(Clone, Debug)]
+pub struct PendingMergeConflict {
+    pub repo_id: RepoId,
+    pub repo_name: String,
+    pub branch: Option<PeerId>,
+    pub doc_id: DocId,
+    pub scope_nonce: Option<u64>,
+    pub local_content: String,
+    pub incoming_content: String,
+}
 
 /// WebSocket 会话状态
 ///
@@ -79,6 +90,9 @@ pub struct WsSession {
     /// 当前锁定的数据库句柄。
     pub active_db: Option<DatabaseHandle>,
 
+    /// 当前等待用户确认的 peer merge 文本冲突。
+    pub pending_merge_conflict: Option<PendingMergeConflict>,
+
     /// WebSocket 固定时间窗限流状态。
     ///
     /// Invariant:
@@ -112,6 +126,7 @@ impl Default for WsSession {
             last_local_repo: None,
             last_local_repo_id: None,
             active_db: None,
+            pending_merge_conflict: None,
             message_window_started_at: Instant::now(),
             message_count_in_window: 0,
         }

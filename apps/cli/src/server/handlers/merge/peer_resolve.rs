@@ -1,0 +1,135 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
+//! Peer merge conflict resolution handlers.
+
+use super::errors;
+use super::peer_apply::{broadcast_merge_complete, write_merged_content};
+use crate::server::repo_scope::ResolvedRepo;
+use crate::server::{AppState, channel::DualChannel, session::PendingMergeConflict};
+use deve_core::models::DocId;
+use deve_core::protocol::MergeConflictAction;
+use std::sync::Arc;
+
+pub(super) async fn handle_resolve_merge_conflict(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut crate::server::session::WsSession,
+    doc_id: DocId,
+    action: MergeConflictAction,
+    result_content: Option<String>,
+) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let Some(pending) = session.pending_merge_conflict.take() else {
+        errors::storage_not_found(ch, "No pending merge conflict", scope_nonce);
+        return;
+    };
+
+    if !matches_pending_conflict(&pending, doc_id, scope_nonce) {
+        session.pending_merge_conflict = Some(pending);
+        errors::storage_conflict(ch, "Pending merge conflict target mismatch", scope_nonce);
+        return;
+    }
+
+    let scope = ResolvedRepo {
+        repo_id: pending.repo_id,
+        repo_name: pending.repo_name.clone(),
+        branch: pending.branch.clone(),
+    };
+    let content = resolved_content(&pending, action, result_content);
+    if content == pending.local_content {
+        broadcast_merge_complete(ch, &scope, 0, scope_nonce);
+        return;
+    }
+    if !write_merged_content(state, ch, &scope, pending.doc_id, &content, scope_nonce) {
+        session.pending_merge_conflict = Some(pending);
+    }
+}
+
+fn matches_pending_conflict(
+    pending: &PendingMergeConflict,
+    doc_id: DocId,
+    scope_nonce: Option<u64>,
+) -> bool {
+    pending.doc_id == doc_id && pending.scope_nonce == scope_nonce
+}
+
+fn resolved_content(
+    pending: &PendingMergeConflict,
+    action: MergeConflictAction,
+    result_content: Option<String>,
+) -> String {
+    match action {
+        MergeConflictAction::AcceptCurrent => pending.local_content.clone(),
+        MergeConflictAction::AcceptIncoming => pending.incoming_content.clone(),
+        MergeConflictAction::AcceptBoth => result_content
+            .unwrap_or_else(|| accept_both(&pending.local_content, &pending.incoming_content)),
+    }
+}
+
+fn accept_both(current: &str, incoming: &str) -> String {
+    if current.is_empty() || incoming.is_empty() || current.ends_with('\n') {
+        format!("{current}{incoming}")
+    } else {
+        format!("{current}\n{incoming}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use deve_core::models::PeerId;
+
+    #[test]
+    fn resolved_content_uses_selected_side_or_custom_result() {
+        let pending = pending_conflict("local", "incoming");
+
+        assert_eq!(
+            resolved_content(&pending, MergeConflictAction::AcceptCurrent, None),
+            "local"
+        );
+        assert_eq!(
+            resolved_content(&pending, MergeConflictAction::AcceptIncoming, None),
+            "incoming"
+        );
+        assert_eq!(
+            resolved_content(
+                &pending,
+                MergeConflictAction::AcceptBoth,
+                Some("manual result".into())
+            ),
+            "manual result"
+        );
+    }
+
+    #[test]
+    fn accept_both_preserves_line_boundary_without_extra_blank_line() {
+        assert_eq!(accept_both("local", "incoming"), "local\nincoming");
+        assert_eq!(accept_both("local\n", "incoming"), "local\nincoming");
+        assert_eq!(accept_both("", "incoming"), "incoming");
+    }
+
+    #[test]
+    fn pending_conflict_match_requires_doc_and_scope() {
+        let pending = pending_conflict("local", "incoming");
+        assert!(matches_pending_conflict(&pending, pending.doc_id, Some(11)));
+        assert!(!matches_pending_conflict(&pending, DocId::new(), Some(11)));
+        assert!(!matches_pending_conflict(
+            &pending,
+            pending.doc_id,
+            Some(12)
+        ));
+    }
+
+    fn pending_conflict(local_content: &str, incoming_content: &str) -> PendingMergeConflict {
+        PendingMergeConflict {
+            repo_id: uuid::Uuid::new_v4(),
+            repo_name: "notes".into(),
+            branch: Some(PeerId::new("remote-a")),
+            doc_id: DocId::new(),
+            scope_nonce: Some(11),
+            local_content: local_content.into(),
+            incoming_content: incoming_content.into(),
+        }
+    }
+}

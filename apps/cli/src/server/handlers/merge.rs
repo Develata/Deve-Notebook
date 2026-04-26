@@ -9,6 +9,7 @@ mod manual_pending;
 mod manual_support;
 mod peer;
 mod peer_apply;
+mod peer_resolve;
 mod peer_support;
 mod scope;
 
@@ -67,4 +68,16 @@ pub async fn handle_merge_peer(
     doc_id: DocId,
 ) {
     peer::handle_merge_peer(state, ch, session, peer_id, doc_id).await;
+}
+
+pub async fn handle_resolve_merge_conflict(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    doc_id: DocId,
+    action: deve_core::protocol::MergeConflictAction,
+    result_content: Option<String>,
+) {
+    peer_resolve::handle_resolve_merge_conflict(state, ch, session, doc_id, action, result_content)
+        .await;
 }

@@ -158,6 +158,7 @@ MergeRequested
 - `RequestCommitDiff`
 - `RequestDocDiff`
 - `MergePeer`
+- `ResolveMergeConflict`
 
 ### 4.2 Output Contracts
 
@@ -304,6 +305,7 @@ MergeRequested
 - 默认冲突展示 SHOULD 支持 side-by-side 视图。
 - inline resolution 仅作为同一 conflict model 的另一种展示，不得形成第二套 conflict authority。
 - Runtime protocol uses `ServerMessage::MergeConflict` as the typed conflict model.
+- Runtime confirmation uses `ClientMessage::ResolveMergeConflict`; it is distinct from source-control `ResolveConflict`.
 - `DocDiff` MAY still be emitted as a compatibility fallback, but it MUST NOT be the conflict authority.
 
 ## 7. Recovery / Repair

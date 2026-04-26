@@ -125,6 +125,14 @@ pub enum ClientMessage {
         #[serde(default)]
         scope_nonce: Option<u64>,
     },
+    ResolveMergeConflict {
+        doc_id: DocId,
+        action: super::server::MergeConflictAction,
+        #[serde(default)]
+        result_content: Option<String>,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
     DiscardPending {
         #[serde(default)]
         scope_nonce: Option<u64>,

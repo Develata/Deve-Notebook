@@ -38,6 +38,22 @@ pub(super) async fn route_merge(
         ClientMessage::ConfirmMerge { .. } => {
             merge::handle_confirm_merge(state, ch, session).await;
         }
+        ClientMessage::ResolveMergeConflict {
+            doc_id,
+            action,
+            result_content,
+            ..
+        } => {
+            merge::handle_resolve_merge_conflict(
+                state,
+                ch,
+                session,
+                doc_id,
+                action,
+                result_content,
+            )
+            .await;
+        }
         ClientMessage::DiscardPending { .. } => {
             merge::handle_discard_pending(state, ch, session).await;
         }
@@ -56,6 +72,7 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
         | ClientMessage::SetSyncMode { scope_nonce, .. }
         | ClientMessage::GetPendingOps { scope_nonce, .. }
         | ClientMessage::ConfirmMerge { scope_nonce }
+        | ClientMessage::ResolveMergeConflict { scope_nonce, .. }
         | ClientMessage::DiscardPending { scope_nonce }
         | ClientMessage::MergePeer { scope_nonce, .. } => Some(*scope_nonce),
         _ => None,
@@ -65,7 +82,9 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
 #[cfg(test)]
 mod tests {
     use super::requested_scope_nonce;
+    use deve_core::models::DocId;
     use deve_core::protocol::ClientMessage;
+    use deve_core::protocol::MergeConflictAction;
 
     #[test]
     fn extracts_scope_nonce_from_merge_messages() {
@@ -81,6 +100,15 @@ mod tests {
                 scope_nonce: Some(7),
             }),
             Some(Some(7))
+        );
+        assert_eq!(
+            requested_scope_nonce(&ClientMessage::ResolveMergeConflict {
+                doc_id: DocId::new(),
+                action: MergeConflictAction::AcceptIncoming,
+                result_content: None,
+                scope_nonce: Some(9),
+            }),
+            Some(Some(9))
         );
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
     }
