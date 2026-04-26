@@ -130,6 +130,7 @@ mod tests {
             display_path: "note.md".into(),
             old_content: "before".into(),
             new_content: "after".into(),
+            merge_conflict: None,
             opened_at_ms: 1,
         }));
 

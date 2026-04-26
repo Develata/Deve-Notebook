@@ -1,6 +1,7 @@
 mod anchor;
 mod body;
 mod cache;
+mod conflict_actions;
 mod fold;
 mod fold_controls;
 pub mod header;
@@ -18,6 +19,7 @@ mod unified_pane;
 mod viewport;
 
 use self::body::{DiffBody, DiffBodyDeps};
+use self::conflict_actions::MergeConflictActions;
 use self::header::DiffHeader;
 use self::lifecycle::{setup_anchor_effects, setup_shortcuts};
 use self::model::hunk_fold::build_folded_rows;
@@ -27,6 +29,7 @@ use self::state::create_compute_state;
 use self::title::diff_title;
 use self::viewport::create_unified_viewport;
 use crate::i18n::Locale;
+use deve_core::protocol::MergeConflictAction;
 use fold::create_fold_state;
 use leptos::html;
 use leptos::prelude::*;
@@ -41,6 +44,8 @@ pub fn DiffView(
     #[prop(default = false)] is_readonly: bool,
     #[prop(default = false)] force_unified: bool,
     #[prop(default = false)] mobile: bool,
+    merge_conflict: Option<crate::hooks::use_core::diff_session::MergeConflictSession>,
+    on_resolve_merge_conflict: Option<Callback<(MergeConflictAction, Option<String>)>>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
@@ -103,10 +108,22 @@ pub fn DiffView(
         left_ref,
     );
     setup_shortcuts(on_close, nav.on_prev_hunk, nav.on_next_hunk);
+    let content_signal = compute.content;
+    let resolved_content = Signal::derive(move || content_signal.get());
 
     view! {
         <div class=move || if mobile { "diff-view-mobile h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]" } else { "h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]" }>
             <DiffHeader mobile=mobile filename=filename is_readonly=is_readonly is_editing=compute.is_editing hunk_index_text=nav.hunk_index_text has_hunks=nav.has_hunks added_count=nav.added_count deleted_count=nav.deleted_count cache_hit=cache_hit cache_hit_ratio=cache_hit_ratio compute_ms=compute_ms algorithm=algorithm on_prev_hunk=nav.on_prev_hunk on_next_hunk=nav.on_next_hunk toggle_edit=Callback::new(move |_| compute.set_is_editing.update(|v| *v = !*v)) on_close=on_close />
+            {merge_conflict.and_then(|conflict| {
+                on_resolve_merge_conflict.map(|on_resolve| view! {
+                    <MergeConflictActions
+                        mobile=mobile
+                        conflict=conflict
+                        resolved_content=resolved_content
+                        on_resolve=on_resolve
+                    />
+                })
+            })}
             <DiffBody deps=DiffBodyDeps {
                 force_unified,
                 locale,

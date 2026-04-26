@@ -163,3 +163,31 @@ pub fn cache_ratio(locale: Locale, ratio: u32) -> String {
         Locale::Zh => format!("命中率: {}%", ratio),
     }
 }
+
+pub fn merge_conflict(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Merge conflict",
+        Locale::Zh => "合并冲突",
+    }
+}
+
+pub fn accept_current(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Accept Current",
+        Locale::Zh => "接受当前",
+    }
+}
+
+pub fn accept_incoming(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Accept Incoming",
+        Locale::Zh => "接受传入",
+    }
+}
+
+pub fn accept_result(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Accept Result",
+        Locale::Zh => "接受结果",
+    }
+}

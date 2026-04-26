@@ -1,3 +1,4 @@
+use crate::hooks::use_core::diff_session::{DiffSessionWire, MergeConflictSession};
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::{GetUntracked, Set};
 
@@ -91,9 +92,11 @@ pub(crate) fn handle_sc_list_message(
             repo_id,
             branch,
             scope_nonce,
+            doc_id,
             path,
             current_content,
             incoming_content,
+            result_content,
             actions,
             ..
         } => {
@@ -102,7 +105,18 @@ pub(crate) fn handle_sc_list_message(
             }
             ctx.set_notice.set(None);
             leptos::logging::log!("收到合并冲突: {} ({} actions)", path, actions.len());
-            apply_doc_diff(path, current_content, incoming_content, ctx.set_diff);
+            ctx.set_diff.set(Some(
+                DiffSessionWire::new(
+                    path.clone(),
+                    current_content.clone(),
+                    incoming_content.clone(),
+                )
+                .with_merge_conflict(MergeConflictSession {
+                    doc_id: *doc_id,
+                    result_content: result_content.clone(),
+                    actions: actions.clone(),
+                }),
+            ));
             true
         }
         ServerMessage::CommitDiffResult {
