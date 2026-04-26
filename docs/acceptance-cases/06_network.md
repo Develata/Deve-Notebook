@@ -122,9 +122,9 @@
     - 连接已建立
     - 触发 source control 错误（如暂存不存在的 pending）
   steps:
-    - run: rg -n "Error\\(String\\)" "crates/core/src/protocol/server.rs" "apps/web/src/hooks/use_core/effects/message.rs"
+    - run: scripts/check-ws-structured-errors.sh
   assertions:
-    - stdout_not_contains: "Error(String)"
+    - stdout_contains: "ws-structured-errors-check: ok"
 
 - case_id: NET-013
   goal: 认证失效必须进入 Unauthorized，而不是普通重连。
