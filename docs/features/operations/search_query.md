@@ -62,3 +62,34 @@
 - `search/query` 是全文搜索链，不替代 Quick Open 的本地文件候选过滤。
 - `SearchService` 是可选能力 gate；当前可验收能力不依赖完整 Tantivy 索引已完成。
 - 搜索结果必须保持 repo scope 绑定，不能接受过期 request、旧 repo、旧 branch 或旧 scope 返回。
+- 搜索读取 ledger 重建内容，而不是直接读取当前磁盘文件文本；当 workspace 文件与 ledger
+  存在漂移时，搜索结果以当前 repo ledger projection 为准。
+
+## Chrome MCP Smoke
+
+本 smoke 用于手工验证 `SEARCH-001` 的浏览器路径，不替代单元测试中的 stale
+scope / disabled feature 覆盖。
+
+前置条件：
+
+- 本地已安装 `trunk` 与 `wasm32-unknown-unknown` target。
+- 默认开发账号为 `admin` / `admin`，仅限 `--dev` 或 `DEVE_ENV=development`。
+- 当前 repo 中存在一个可命中的 ledger 文档；默认开发数据可用 `?note` 命中文件名。
+
+步骤：
+
+1. 启动后端：
+   `cargo run -p deve_cli --features search --bin deve_cli -- serve --dev --port 3001`
+2. 启动前端：
+   `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080`（工作目录为 `apps/web`）
+3. 用 Chrome MCP 打开 `http://127.0.0.1:8080/`。
+4. 登录 `admin` / `admin`，等待页面显示 `Ready`，并确认 console 出现 WebSocket connected 日志。
+5. 点击 Search 入口，输入 `?note`。
+6. 等待搜索结果显示 `note.md Full-text match`。
+7. 点击结果或按 Enter，确认 Search surface 关闭并打开对应文档。
+
+期望结果：
+
+- 页面经 Trunk 代理连到 `ws://127.0.0.1:8080/ws`。
+- 搜索请求返回 repo-scoped `SearchResults`，UI 显示 `Full-text match`。
+- 选择结果后打开文档，底部状态仍为 `Ready`。

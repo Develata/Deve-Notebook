@@ -10,6 +10,8 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - 当前 profile 不是 `low-spec`
     - 当前 browser scope 已稳定绑定 `repo_id` 与 `scope_nonce`
     - 当前 repo 中存在正文包含 `needle` 的 Markdown 文档
+    - Chrome MCP 手工 smoke 可按 `docs/features/operations/search_query.md` 使用 `?note`
+      验证默认开发数据路径
   steps:
     - ui_open_search: true
     - ui_type: "?needle"
@@ -50,4 +52,3 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
   assertions:
     - ui_assert: search_results_unchanged true
     - ui_assert: current_doc_unchanged true
-
