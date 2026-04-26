@@ -66,3 +66,22 @@ impl LoginResponse {
 pub struct MeResponse {
     pub username: String,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthStatusResponse {
+    pub authenticated: bool,
+}
+
+impl AuthStatusResponse {
+    pub const fn authenticated() -> Self {
+        Self {
+            authenticated: true,
+        }
+    }
+
+    pub const fn unauthenticated() -> Self {
+        Self {
+            authenticated: false,
+        }
+    }
+}

@@ -4,6 +4,7 @@
 //!   - 09_auth#session-probe-policy
 //!
 
+use deve_core::protocol::auth::AuthStatusResponse;
 use gloo_net::http::Request;
 use serde_json::Value;
 
@@ -15,8 +16,12 @@ pub enum AuthProbe {
 }
 
 pub async fn probe_auth_status() -> AuthProbe {
-    match Request::get("/api/auth/me").send().await {
-        Ok(response) if response.ok() => AuthProbe::Valid,
+    match Request::get("/api/auth/status").send().await {
+        Ok(response) if response.ok() => match response.json::<AuthStatusResponse>().await {
+            Ok(status) if status.authenticated => AuthProbe::Valid,
+            Ok(_) => AuthProbe::Invalid,
+            Err(_) => AuthProbe::Unknown,
+        },
         Ok(response) => {
             let status = response.status();
             let has_auth_error_code = response

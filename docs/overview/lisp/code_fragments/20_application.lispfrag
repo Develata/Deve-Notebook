@@ -29,7 +29,7 @@
 (application :id app.auth.login.submit :label "attempt_login -> auth::handlers::login" :kind http-handler :code "apps/web/src/components/login/{page.rs,api.rs} | apps/cli/src/server/auth/handlers/login.rs" :calls (mod_sec_auth mod_sec_jwt mod_proto_auth))
 (application :id app.auth.login.result :label "AuthState::Authenticated/Failed" :kind async-result :code "apps/web/src/components/login/page.rs" :calls (mod_sec_auth))
 (application :id app.auth.session.probe-gate :label "App/AuthMonitor probe gate" :kind runtime-gate :code "apps/web/src/{app.rs,app_auth_monitor.rs}" :calls ())
-(application :id app.auth.session.probe :label "probe_auth_status -> /api/auth/me" :kind http-handler :code "apps/web/src/api/{auth_probe.rs,connection.rs}" :calls (mod_sec_auth mod_proto_auth))
+(application :id app.auth.session.probe :label "probe_auth_status -> /api/auth/status" :kind http-handler :code "apps/web/src/api/{auth_probe.rs,connection.rs}" :calls (mod_sec_auth mod_proto_auth))
 (application :id app.auth.session.protocol-error :label "ConnectionStatus::Unauthorized" :kind runtime-effect :code "apps/web/src/api/{connection.rs,service.rs}" :calls (mod_proto_ws mod_proto_auth))
 (application :id app.auth.session.reauth-surface :label "switch back to LoginPage" :kind ui-shell :code "apps/web/src/{app.rs,components/main_layout.rs}" :calls ())
 (application :id app.ui.command-palette.open :label "CommandPalette::show" :kind ui-shell :code "apps/web/src/components/command_palette/mod.rs" :calls ())

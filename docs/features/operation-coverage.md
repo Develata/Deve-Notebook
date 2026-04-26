@@ -9,7 +9,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.ai.chat` | [`ai_chat.md`](./operations/ai_chat.md) | `AI-FEAT-01` |
 | `flow.ai.trusted-external-agent-boundary` | [`trusted_external_agent_boundary.md`](./operations/trusted_external_agent_boundary.md) | `AI-005`, `AI-006`, `PLUG-001` |
 | `flow.auth.login` | [`auth_login.md`](./operations/auth_login.md) | `AUTH-001`, `AUTH-006`, `AUTH-011` |
-| `flow.auth.session-unauthorized` | [`auth_session_unauthorized.md`](./operations/auth_session_unauthorized.md) | `AUTH-002`, `AUTH-003`, `AUTH-011` |
+| `flow.auth.session-unauthorized` | [`auth_session_unauthorized.md`](./operations/auth_session_unauthorized.md) | `AUTH-002`, `AUTH-003`, `AUTH-011`, `AUTH-012` |
 | `flow.commands.surface-action-routing` | [`command_surface_action_routing.md`](./operations/command_surface_action_routing.md) | `CMD-002`, `CMD-003`, `CMD-004`, `REPO-FEAT-01`, `REPO-FEAT-02` |
 | `flow.commands.surface-mode-routing` | [`command_surface_mode_routing.md`](./operations/command_surface_mode_routing.md) | `CMD-002`, `CMD-003`, `CMD-004`, `UI-DESK-003` |
 | `flow.cli.control-commands` | [`cli_control_commands.md`](./operations/cli_control_commands.md) | `CMD-001`, `CMD-002`, `CMD-003`, `CMD-004` |

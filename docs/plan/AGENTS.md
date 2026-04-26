@@ -90,12 +90,12 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
 | `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `08_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
-| `09_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/me HTTP endpoint 合同 |
+| `09_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
 | `09_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
 | `09_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |
 | `09_auth#auth-rate-limiting` | `### 6.4 Rate Limiting` | 登录与连接限流合同 |
 | `09_auth#security-headers` | `### 6.5 Security Headers` | HTTP 安全头合同 |
-| `09_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/me` 前台 session probe 与后台暂停合同 |
+| `09_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/status` 前台 session probe 与后台暂停合同 |
 | `09_auth#unauthorized-handling` | `### 9.1 Unauthorized Handling` | `401/403/AUTH_*` 进入 Unauthorized 并退出写态 |
 | `09_auth#unauthorized-disconnected-ui` | `### 9.4 Unauthorized vs Disconnected UI Contract` | Unauthorized 与 Disconnected 的 UI/重连分流合同 |
 | `09_auth#auth-config` | `## 本章相关配置` | 鉴权环境变量 |

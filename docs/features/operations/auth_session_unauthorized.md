@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.auth.session-unauthorized`
 - `Domain`: `auth`
 - `Related Feature Chapters`: `docs/features/09_auth.md`
-- `Related Acceptance Cases`: `AUTH-002`, `AUTH-003`, `AUTH-011`
+- `Related Acceptance Cases`: `AUTH-002`, `AUTH-003`, `AUTH-011`, `AUTH-012`
 
 ## Operations
 
@@ -24,7 +24,7 @@
 - `Surface`: `workspace-runtime`
 - `Trigger`: 用户继续执行受保护操作，或运行中的 WS / HTTP 路径继续发送请求
 - `Preconditions`: 当前 UI 仍认为 session 可用
-- `Immediate Result`: 请求进入 `/api/auth/me` probe 或 repo-scoped protocol path
+- `Immediate Result`: 请求进入 `/api/auth/status` probe 或 repo-scoped protocol path
 - `Application Entry`: `apps/web/src/api/auth_probe.rs`, `apps/web/src/api/connection.rs`, `apps/web/src/hooks/use_core/effects/message_protocol.rs`
 
 ### `op.auth.session.receive-unauthorized`
@@ -59,7 +59,7 @@
 ### `op.auth.session.issue-protected-request`
 
 1. `User Operation`: 用户继续停留在工作区并触发受保护请求。
-2. `Application Response`: 前端发起 `/api/auth/me`，或继续沿 WS / protocol 路径处理 server error。
+2. `Application Response`: 前端发起 `/api/auth/status`，或继续沿 WS / protocol 路径处理 server error。
 3. `Concrete Modules`:
    - `apps/web/src/api/auth_probe.rs`
    - `apps/web/src/api/connection.rs`

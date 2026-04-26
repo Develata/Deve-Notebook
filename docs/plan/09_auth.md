@@ -70,7 +70,8 @@ Unknown
 约束：
 
 - `Unauthorized` 不得退化成普通断网态。
-- `/api/auth/me` 只是 session probe，不得承担 peer identity 探测职责。
+- `/api/auth/status` 是安静 session probe，不得承担 peer identity 探测职责。
+- `/api/auth/me` 只返回当前 user/session payload，不用于首屏未登录探测。
 
 ### 3.3 WS Entry Auth
 
@@ -88,6 +89,7 @@ WsConnecting
 
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
+- `GET /api/auth/status`
 - `GET /api/auth/me`
 - `GET /api/node/role`
 
@@ -98,6 +100,8 @@ WsConnecting
   - 失败：结构化错误 + 失败审计日志
 - `logout`
   - 清除 cookie
+- `status`
+  - 公开 session probe；无有效 session 时返回 `200 { authenticated: false }`，避免首屏未登录探测制造浏览器 401 噪音。
 - `me`
   - 返回当前 session user
 
@@ -112,6 +116,7 @@ WsConnecting
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/login` | No | set auth cookie or structured auth error |
 | `POST` | `/api/auth/logout` | Yes | clear auth cookie |
+| `GET` | `/api/auth/status` | No | `{ authenticated: bool }` |
 | `GET` | `/api/auth/me` | Yes | current user/session payload |
 | `GET` | `/api/node/role` | No | main/proxy diagnostic payload |
 
@@ -263,9 +268,10 @@ WsConnecting
 
 ## 7. Session Probe Policy {#session-probe-policy}
 
-- `/api/auth/me` 周期探测只应在前台活动页面进行
+- `/api/auth/status` 周期探测只应在前台活动页面进行
 - 页面后台应暂停探测
 - 页面回前台应立即补一次探测
+- 无有效 session 时，探测必须返回 `200 { authenticated: false }`，不得制造浏览器 401 噪音。
 
 ## 8. Failure Modes
 
@@ -347,7 +353,7 @@ WsConnecting
 职责：
 
 - middleware
-- login/logout/me handlers
+- login/logout/status/me handlers
 - cookies
 - brute force
 - headers

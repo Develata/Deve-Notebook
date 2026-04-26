@@ -111,4 +111,14 @@
   assertions:
     - ui_assert: login_screen_visible true
     - ui_assert: overlay_text_not_eq "Reconnecting..."
+
+- case_id: AUTH-012
+  goal: 公开 session status 不产生未登录 401 噪音。
+  preconditions:
+    - 无有效 Token
+  steps:
+    - run: curl -i http://127.0.0.1:3000/api/auth/status
+  assertions:
+    - http_status_eq: 200
+    - json_field_eq: ["authenticated", false]
 ```

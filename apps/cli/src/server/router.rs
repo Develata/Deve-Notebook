@@ -16,7 +16,7 @@ use deve_core::security::AuthConfig;
 ///
 /// ## 路由结构
 /// - **protected**: 需要 JWT Cookie 认证的路由 (`/ws`, `/api/sc/*`, `/api/repo/*`, `/api/auth/me`)
-/// - **public**: 无需认证的路由 (`/api/auth/login`, `/api/node/role`)
+/// - **public**: 无需认证的路由 (`/api/auth/login`, `/api/auth/status`, `/api/node/role`)
 /// ## 中间件层叠顺序（外 → 内）
 /// CORS → 速率限制 → 安全头 → Extension 注入
 pub fn build_app(
@@ -85,6 +85,7 @@ pub fn build_app(
 
     let public = Router::new()
         .route("/api/node/role", get(node_role_http::role))
+        .route("/api/auth/status", get(auth::handlers::status))
         .route(
             "/api/ai/backend-capabilities",
             get(super::agent_bridge::http_backend_capabilities),
