@@ -75,21 +75,34 @@ mod tests {
 
     #[test]
     fn extracts_scope_nonce_from_doc_messages() {
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::CreateDoc {
+        let cases = [
+            ClientMessage::CreateDoc {
                 name: "notes".into(),
                 scope_nonce: Some(3),
-            }),
-            Some(Some(3))
-        );
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::MoveDoc {
+            },
+            ClientMessage::RenameDoc {
+                old_path: "a.md".into(),
+                new_path: "b.md".into(),
+                scope_nonce: Some(3),
+            },
+            ClientMessage::DeleteDoc {
+                path: "a.md".into(),
+                scope_nonce: Some(3),
+            },
+            ClientMessage::CopyDoc {
                 src_path: "a.md".into(),
                 dest_path: "b.md".into(),
-                scope_nonce: Some(5),
-            }),
-            Some(Some(5))
-        );
+                scope_nonce: Some(3),
+            },
+            ClientMessage::MoveDoc {
+                src_path: "a.md".into(),
+                dest_path: "b.md".into(),
+                scope_nonce: Some(3),
+            },
+        ];
+        for msg in cases {
+            assert_eq!(requested_scope_nonce(&msg), Some(Some(3)));
+        }
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
     }
 

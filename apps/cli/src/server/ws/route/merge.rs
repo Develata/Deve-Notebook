@@ -90,28 +90,41 @@ mod tests {
 
     #[test]
     fn extracts_scope_nonce_from_merge_messages() {
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::GetSyncMode {
+        let doc_id = DocId::new();
+        let cases = [
+            ClientMessage::GetSyncMode {
                 request_id: "req-1".into(),
                 scope_nonce: Some(5),
-            }),
-            Some(Some(5))
-        );
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::ConfirmMerge {
-                scope_nonce: Some(7),
-            }),
-            Some(Some(7))
-        );
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::ResolveMergeConflict {
-                doc_id: DocId::new(),
+            },
+            ClientMessage::SetSyncMode {
+                mode: "manual".into(),
+                scope_nonce: Some(5),
+            },
+            ClientMessage::GetPendingOps {
+                request_id: "req-2".into(),
+                scope_nonce: Some(5),
+            },
+            ClientMessage::ConfirmMerge {
+                scope_nonce: Some(5),
+            },
+            ClientMessage::ResolveMergeConflict {
+                doc_id,
                 action: MergeConflictAction::AcceptIncoming,
                 result_content: None,
-                scope_nonce: Some(9),
-            }),
-            Some(Some(9))
-        );
+                scope_nonce: Some(5),
+            },
+            ClientMessage::DiscardPending {
+                scope_nonce: Some(5),
+            },
+            ClientMessage::MergePeer {
+                peer_id: "remote-a".into(),
+                doc_id,
+                scope_nonce: Some(5),
+            },
+        ];
+        for msg in cases {
+            assert_eq!(requested_scope_nonce(&msg), Some(Some(5)));
+        }
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
     }
 

@@ -82,3 +82,93 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<(Option<u64>, &'static s
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::requested_scope_nonce;
+    use deve_core::models::{DocId, Op};
+    use deve_core::protocol::ClientMessage;
+
+    #[test]
+    fn extracts_scope_nonce_from_core_scoped_messages() {
+        let doc_id = DocId::new();
+        let cases = [
+            (
+                ClientMessage::OpenDoc {
+                    doc_id,
+                    request_id: 1,
+                    scope_nonce: Some(11),
+                },
+                "open doc",
+            ),
+            (
+                ClientMessage::RequestHistory {
+                    doc_id,
+                    request_id: 2,
+                    scope_nonce: Some(11),
+                },
+                "document history",
+            ),
+            (
+                ClientMessage::Edit {
+                    doc_id,
+                    op: Op::Insert {
+                        pos: 0,
+                        content: "x".into(),
+                    },
+                    client_id: 1,
+                    client_op_id: 2,
+                    scope_nonce: Some(11),
+                },
+                "edit",
+            ),
+            (
+                ClientMessage::ListDocs {
+                    request_id: "docs".into(),
+                    scope_nonce: Some(11),
+                },
+                "document list",
+            ),
+            (
+                ClientMessage::ListShadows {
+                    request_id: "shadows".into(),
+                    scope_nonce: Some(11),
+                },
+                "shadow list",
+            ),
+            (
+                ClientMessage::ListRepos {
+                    request_id: "repos".into(),
+                    scope_nonce: Some(11),
+                },
+                "repo list",
+            ),
+            (
+                ClientMessage::Search {
+                    request_id: "search".into(),
+                    query: "abc".into(),
+                    limit: 10,
+                    scope_nonce: Some(11),
+                },
+                "search",
+            ),
+            (
+                ClientMessage::DeletePeer {
+                    peer_id: "peer-a".into(),
+                    scope_nonce: Some(11),
+                },
+                "delete peer",
+            ),
+            (
+                ClientMessage::RequestKey {
+                    scope_nonce: Some(11),
+                },
+                "request key",
+            ),
+        ];
+        for (msg, scope_name) in cases {
+            assert_eq!(requested_scope_nonce(&msg), Some((Some(11), scope_name)));
+        }
+        assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    }
+}

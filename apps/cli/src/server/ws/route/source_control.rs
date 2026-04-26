@@ -108,20 +108,65 @@ mod tests {
 
     #[test]
     fn extracts_scope_nonce_from_source_control_messages() {
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::GetChanges {
+        let target = || ScPathTarget::from_path("notes/a.md");
+        let cases = [
+            ClientMessage::GetChanges {
                 request_id: "req-1".into(),
                 scope_nonce: Some(7),
-            }),
-            Some(Some(7))
-        );
-        assert_eq!(
-            requested_scope_nonce(&ClientMessage::StageFile {
-                target: ScPathTarget::from_path("notes/a.md"),
-                scope_nonce: Some(9),
-            }),
-            Some(Some(9))
-        );
+            },
+            ClientMessage::StageFile {
+                target: target(),
+                scope_nonce: Some(7),
+            },
+            ClientMessage::StageFiles {
+                targets: vec![target()],
+                scope_nonce: Some(7),
+            },
+            ClientMessage::UnstageFile {
+                target: target(),
+                scope_nonce: Some(7),
+            },
+            ClientMessage::UnstageFiles {
+                targets: vec![target()],
+                scope_nonce: Some(7),
+            },
+            ClientMessage::DiscardFile {
+                target: target(),
+                scope_nonce: Some(7),
+            },
+            ClientMessage::Commit {
+                message: "msg".into(),
+                scope_nonce: Some(7),
+            },
+            ClientMessage::GetCommitHistory {
+                request_id: "req-2".into(),
+                limit: 10,
+                scope_nonce: Some(7),
+            },
+            ClientMessage::GetDocDiff {
+                request_id: "req-3".into(),
+                target: target(),
+                scope_nonce: Some(7),
+            },
+            ClientMessage::GetCommitDiff {
+                request_id: "req-4".into(),
+                commit_a: None,
+                commit_b: "head".into(),
+                scope_nonce: Some(7),
+            },
+            ClientMessage::ResolveConflict {
+                target: target(),
+                resolution: ConflictResolution::KeepLedger,
+                scope_nonce: Some(7),
+            },
+            ClientMessage::CommitAndPush {
+                message: "msg".into(),
+                scope_nonce: Some(7),
+            },
+        ];
+        for msg in cases {
+            assert_eq!(requested_scope_nonce(&msg), Some(Some(7)));
+        }
         assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
     }
 
