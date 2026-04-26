@@ -85,7 +85,7 @@ mod tests {
     use crate::server::session::PendingMergeConflict;
     use crate::server::sync_hello_test_support::{build_state, unicast_channel};
     use deve_core::models::{DocId, PeerId};
-    use deve_core::protocol::{ClientMessage, MergeConflictAction, ServerMessage};
+    use deve_core::protocol::{ClientMessage, MergeConflictAction, ServerErrorCode, ServerMessage};
     use tokio::time::{Duration, timeout};
 
     #[test]
@@ -163,6 +163,66 @@ mod tests {
             other => panic!("expected MergeComplete, got {other:?}"),
         }
         assert!(session.pending_merge_conflict.is_none());
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn resolve_merge_conflict_rejects_stale_scope_without_consuming_pending()
+    -> anyhow::Result<()> {
+        let (_dir, state, repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let doc_id = DocId::new();
+        let mut session = crate::server::session::WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(17));
+        session.pending_merge_conflict = Some(PendingMergeConflict {
+            repo_id,
+            repo_name: "notes".into(),
+            branch: Some(PeerId::new("remote-a")),
+            doc_id,
+            scope_nonce: Some(17),
+            local_content: "local".into(),
+            incoming_content: "incoming".into(),
+        });
+
+        route_merge(
+            &state,
+            &ch,
+            &mut session,
+            ClientMessage::ResolveMergeConflict {
+                doc_id,
+                action: MergeConflictAction::AcceptIncoming,
+                result_content: None,
+                scope_nonce: Some(16),
+            },
+        )
+        .await;
+
+        match timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("protocol error")
+        {
+            ServerMessage::ProtocolError {
+                error, scope_nonce, ..
+            } => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(scope_nonce, Some(16));
+                assert!(
+                    error
+                        .detail
+                        .as_deref()
+                        .expect("detail")
+                        .contains("merge control scope nonce is stale")
+                );
+            }
+            other => panic!("expected ProtocolError, got {other:?}"),
+        }
+        let pending = session
+            .pending_merge_conflict
+            .as_ref()
+            .expect("pending conflict should remain");
+        assert_eq!(pending.doc_id, doc_id);
+        assert_eq!(pending.scope_nonce, Some(17));
         Ok(())
     }
 }
