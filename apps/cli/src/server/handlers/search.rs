@@ -169,10 +169,16 @@ fn classify_search_error(detail: &str) -> ServerErrorCode {
 
 #[cfg(all(test, feature = "search"))]
 mod tests {
-    use super::{classify_search_error, score_match, search_scope_documents};
+    use super::{classify_search_error, handle_search, score_match, search_scope_documents};
+    use crate::server::AppState;
+    use crate::server::channel::DualChannel;
     use crate::server::edit_state_test_support::{edit_harness, seed_doc_with_content};
     use crate::server::repo_scope::ResolvedRepo;
-    use deve_core::protocol::ServerErrorCode;
+    use crate::server::session::WsSession;
+    use deve_core::protocol::{ServerErrorCode, ServerMessage};
+    use deve_core::search::SearchService;
+    use std::sync::Arc;
+    use tokio::sync::mpsc;
 
     #[test]
     fn classifies_search_index_corruption_as_storage_persist_failed() {
@@ -237,5 +243,104 @@ mod tests {
             1
         );
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn handler_returns_structured_error_when_runtime_search_is_disabled() -> anyhow::Result<()>
+    {
+        let h = edit_harness(false)?;
+        let (ch, mut rx) = test_channel(&h.state);
+        let mut session = session_for_repo("default", h.default_repo_id);
+
+        handle_search(
+            &h.state,
+            &ch,
+            &mut session,
+            "search-1".into(),
+            "needle".into(),
+            10,
+            Some(44),
+        )
+        .await;
+
+        match rx.recv().await {
+            Some(ServerMessage::ProtocolError {
+                error, scope_nonce, ..
+            }) => {
+                assert_eq!(error.code, ServerErrorCode::RequestFailed);
+                assert_eq!(
+                    error.detail.as_deref(),
+                    Some("Search feature disabled for current runtime profile")
+                );
+                assert_eq!(scope_nonce, Some(44));
+            }
+            other => panic!("expected ProtocolError, got {:?}", other),
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn handler_emits_repo_scoped_search_results() -> anyhow::Result<()> {
+        let h = edit_harness(false)?;
+        let doc_id = seed_doc_with_content(&h.state, "default", "notes/search.md", "Needle body")?;
+        let state = search_enabled_state(&h.state)?;
+        let (ch, mut rx) = test_channel(&state);
+        let mut session = session_for_repo("default", h.default_repo_id);
+
+        handle_search(
+            &state,
+            &ch,
+            &mut session,
+            "search-1".into(),
+            "needle".into(),
+            10,
+            Some(44),
+        )
+        .await;
+
+        match rx.recv().await {
+            Some(ServerMessage::SearchResults {
+                request_id,
+                repo_id,
+                branch,
+                scope_nonce,
+                results,
+            }) => {
+                assert_eq!(request_id, "search-1");
+                assert_eq!(repo_id, Some(h.default_repo_id));
+                assert_eq!(branch, None);
+                assert_eq!(scope_nonce, Some(44));
+                assert_eq!(
+                    results,
+                    vec![(doc_id.to_string(), "notes/search.md".into(), 1.0)]
+                );
+            }
+            other => panic!("expected SearchResults, got {:?}", other),
+        }
+        Ok(())
+    }
+
+    fn session_for_repo(repo_name: &str, repo_id: uuid::Uuid) -> WsSession {
+        let mut session = WsSession::new();
+        session.switch_repo(repo_name.into(), Some(repo_id));
+        session
+    }
+
+    fn test_channel(state: &Arc<AppState>) -> (DualChannel, mpsc::Receiver<ServerMessage>) {
+        let (tx, rx) = mpsc::channel(8);
+        (DualChannel::new(state.tx.clone(), tx), rx)
+    }
+
+    fn search_enabled_state(source: &Arc<AppState>) -> anyhow::Result<Arc<AppState>> {
+        Ok(Arc::new(AppState {
+            repo: source.repo.clone(),
+            sync_manager: source.sync_manager.clone(),
+            tx: source.tx.clone(),
+            plugins: Vec::new(),
+            sync_engine: source.sync_engine.clone(),
+            tree_manager: source.tree_manager.clone(),
+            search_service: Some(SearchService::new_in_memory()?),
+            identity_key: source.identity_key.clone(),
+        }))
     }
 }
