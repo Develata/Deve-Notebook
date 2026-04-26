@@ -27,21 +27,27 @@
   assertions:
     - ui_assert: ai_mode_eq "plan"
     - ui_assert: plugin_call_not_sent_for_slash_command true
+    - ui_assert: chat_apply_buttons_hidden true
     - log_not_contains_any: ["tool call", "mcp", "skill", "spawn subprocess"]
     - ui_assert: markdown_unchanged true
 
 - case_id: AI-003
-  goal: `/build` 进入原生 BUILD 模式，并保持 Markdown 写入受控。
+  goal: `/build` 进入原生 BUILD 模式，并仅通过受控 Apply 修改当前 Markdown。
   preconditions:
     - 聊天面板可用
     - 当前 Markdown 文档可写
   steps:
     - ui_type: "/build"
     - ui_submit: true
+    - assistant_message_contains_code_block: true
+    - ui_click: "Apply"
   assertions:
     - ui_assert: ai_mode_eq "build"
     - ui_assert: plugin_call_not_sent_for_slash_command true
-    - ui_assert: current_markdown_unchanged_until_controlled_apply true
+    - ui_assert: chat_apply_buttons_visible_for_assistant_code_blocks true
+    - ws_assert: ClientMessage.Edit_sent true
+    - ws_assert: edit_scope_nonce_eq_current true
+    - ui_assert: current_markdown_changed_by_controlled_apply true
     - log_not_contains_any: ["mcp", "skill", "spawn subprocess"]
 
 - case_id: AI-004

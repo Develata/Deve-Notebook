@@ -1,6 +1,7 @@
 // apps/web/src/components/chat/message_list.rs
 use crate::components::chat::empty_state::EmptyState;
 use crate::components::chat::message_item::MessageItem;
+use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::{Locale, t};
 use base64::Engine;
@@ -13,6 +14,7 @@ use wasm_bindgen::JsCast;
 pub fn MessageList(
     messages: ReadSignal<Vec<ChatMessage>>,
     is_streaming: ReadSignal<bool>,
+    session_mode: ReadSignal<ChatSessionMode>,
     send_example: Callback<String>,
     on_apply: Callback<String>,
     #[prop(optional)] mobile: bool,
@@ -37,6 +39,9 @@ pub fn MessageList(
     });
 
     let on_click = move |ev: web_sys::MouseEvent| {
+        if session_mode.get_untracked() != ChatSessionMode::Build {
+            return;
+        }
         let mut el = ev
             .target()
             .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
@@ -66,7 +71,7 @@ pub fn MessageList(
                     <For
                         each=move || messages.get()
                         key=|msg| msg.req_id.clone().unwrap_or_else(|| msg.content.chars().take(32).collect())
-                        children=move |msg| view! { <MessageItem msg=msg mobile=mobile /> }
+                        children=move |msg| view! { <MessageItem msg=msg session_mode=session_mode mobile=mobile /> }
                     />
                 }.into_any()
             }}

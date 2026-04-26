@@ -45,6 +45,15 @@
 - `Immediate Result`: 只切换本地 Native `PLAN` / `BUILD` 会话模式，不切换 backend，不发起 plugin call
 - `Application Entry`: `apps/web/src/components/chat/slash_commands.rs`, `apps/web/src/components/chat/actions_send.rs`
 
+### `op.ai.chat.apply-controlled-markdown`
+
+- `Name`: `Apply Controlled Markdown Edit`
+- `Surface`: `chat-panel`
+- `Trigger`: 在 BUILD 模式下点击 assistant code block 的 `Apply`
+- `Preconditions`: 当前 session mode 为 `BUILD`，当前文档可写，repo writer ready，local scope nonce 稳定
+- `Immediate Result`: 通过现有 `ClientMessage::Edit` 管道把 code block 作为受控 Markdown delta 追加到当前文档
+- `Application Entry`: `apps/web/src/components/chat/message_list.rs`, `apps/web/src/components/chat/actions_apply.rs`
+
 ### `op.ai.chat.receive-stream`
 
 - `Name`: `Receive AI Stream`
@@ -61,3 +70,4 @@
 - `ai_mode` / backend 仍表示 `Native AI` 或 `Trusted CLI`；`PLAN` / `BUILD` 是独立的
   Native 会话模式，当前随后续 prompt 作为 `chat_mode` context 传入。
 - `/build` 本身不直接改写 Markdown；任何 Markdown 写入必须走后续受控 apply / edit 路径。
+- `Apply` 只在 BUILD 模式下为 assistant code block 显示；PLAN 模式不得暴露可写入口。

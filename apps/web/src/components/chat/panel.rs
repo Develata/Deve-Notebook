@@ -98,6 +98,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             <MessageList
                 messages=messages
                 is_streaming=is_streaming
+                session_mode=session_mode
                 send_example=send_example
                 on_apply=on_apply
                 mobile=mobile

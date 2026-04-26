@@ -5,7 +5,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use pulldown_cmark::{CodeBlockKind, Event, LinkType, Options, Parser, Tag, TagEnd, html};
 
-pub fn render_markdown(source: &str, apply_label: &str) -> String {
+pub fn render_markdown(source: &str, apply_label: Option<&str>) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -77,22 +77,30 @@ pub fn render_markdown(source: &str, apply_label: &str) -> String {
     out
 }
 
-fn render_code_block(code: &str, lang: &str, apply_label: &str) -> String {
+fn render_code_block(code: &str, lang: &str, apply_label: Option<&str>) -> String {
     let escaped = escape_html(code);
-    let encoded = STANDARD.encode(code.as_bytes());
     let lang_class = if lang.is_empty() {
         "".to_string()
     } else {
         format!("language-{}", lang)
     };
 
-    format!(
-        "<div class=\"markdown-code-block\"><div class=\"code-toolbar\"><button class=\"apply-code\" data-code=\"{}\">{}</button></div><pre><code class=\"{}\">{}</code></pre></div>",
-        encoded,
-        escape_html(apply_label),
-        lang_class,
-        escaped
-    )
+    match apply_label {
+        Some(label) => {
+            let encoded = STANDARD.encode(code.as_bytes());
+            format!(
+                "<div class=\"markdown-code-block\"><div class=\"code-toolbar\"><button class=\"apply-code\" data-code=\"{}\">{}</button></div><pre><code class=\"{}\">{}</code></pre></div>",
+                encoded,
+                escape_html(label),
+                lang_class,
+                escaped
+            )
+        }
+        None => format!(
+            "<div class=\"markdown-code-block\"><pre><code class=\"{}\">{}</code></pre></div>",
+            lang_class, escaped
+        ),
+    }
 }
 
 fn escape_html(input: &str) -> String {
@@ -127,4 +135,27 @@ fn render_link_open(out: &mut String, url: &str, title: &str, _link_type: LinkTy
         out.push('"');
     }
     out.push('>');
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_markdown;
+
+    #[test]
+    fn code_block_omits_apply_button_without_label() {
+        let html = render_markdown("```md\nhello\n```", None);
+
+        assert!(!html.contains("apply-code"));
+        assert!(!html.contains("data-code"));
+        assert!(html.contains("hello"));
+    }
+
+    #[test]
+    fn code_block_includes_apply_button_with_label() {
+        let html = render_markdown("```md\nhello\n```", Some("Apply"));
+
+        assert!(html.contains("apply-code"));
+        assert!(html.contains("data-code"));
+        assert!(html.contains(">Apply</button>"));
+    }
 }

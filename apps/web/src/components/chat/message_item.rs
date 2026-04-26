@@ -1,4 +1,5 @@
 // apps/web/src/components/chat/message_item.rs
+use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::{Locale, t};
 use crate::utils::markdown::render_markdown;
@@ -24,7 +25,11 @@ fn handle_link_click(ev: web_sys::MouseEvent) {
 }
 
 #[component]
-pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl IntoView {
+pub fn MessageItem(
+    msg: ChatMessage,
+    session_mode: ReadSignal<ChatSessionMode>,
+    #[prop(optional)] mobile: bool,
+) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let is_user = msg.role == "user";
     let content = msg.content.clone();
@@ -35,7 +40,11 @@ pub fn MessageItem(msg: ChatMessage, #[prop(optional)] mobile: bool) -> impl Int
             t::chat::assistant(locale.get())
         }
     };
-    let content_html = move || render_markdown(&content, t::chat::apply(locale.get()));
+    let content_html = move || {
+        let apply_label = (!is_user && session_mode.get() == ChatSessionMode::Build)
+            .then(|| t::chat::apply(locale.get()));
+        render_markdown(&content, apply_label)
+    };
     let ts_text = {
         let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(msg.ts_ms as f64));
         format!("{:02}:{:02}", date.get_hours(), date.get_minutes())
