@@ -7,7 +7,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 8
+- Soft warnings reviewed: 7
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -23,7 +23,6 @@ next-touch refactoring rather than arbitrary line-count slicing.
 | `crates/core/src/ledger/append_validate.rs` | 345 | Ledger append validation is a single invariant boundary. | Keep; extract only repeated validators. |
 | `crates/core/src/ledger/merge/engine.rs` | 286 | Merge engine state machine is cohesive. | Keep unless new phases add distinct ownership. |
 | `crates/core/src/ledger/metadata.rs` | 254 | Slightly above threshold; metadata surface is still compact. | Keep. |
-| `crates/core/src/sync/engine/manual_test.rs` | 290 | Manual sync scenario test with shared fixtures. | Keep unless fixture duplication emerges. |
 | `crates/core/src/sync/mod.rs` | 328 | Public sync facade plus module wiring; current size is acceptable. | Consider moving facade helpers if new APIs are added. |
 | `crates/core/src/sync/repo_scoped.rs` | 262 | Repo-scoped sync logic is cohesive and barely above threshold. | Keep. |
 | `crates/core/tests/shadow_atomic_apply_test.rs` | 261 | End-to-end shadow atomicity scenario; contiguous context is useful. | Keep. |
@@ -51,3 +50,8 @@ soft-warning list by splitting sync transfer coverage into request/nonce,
 push-source, and snapshot-source modules:
 `sync_transfer_scope_test.rs`, `sync_transfer_push_test.rs`, and
 `sync_transfer_snapshot_test.rs`.
+
+`crates/core/src/sync/engine/manual_test.rs` was removed from the soft-warning list
+by moving manual snapshot merge coverage into
+`crates/core/src/sync/engine/manual_snapshot_test.rs`. The parent test module
+keeps shared crypto/engine fixtures and non-snapshot manual merge coverage.
