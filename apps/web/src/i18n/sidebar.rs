@@ -117,8 +117,8 @@ pub fn switch_repository(locale: Locale) -> &'static str {
 
 pub fn switch_branch_hint(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Switch Branch (Ctrl+Shift+L)",
-        Locale::Zh => "切换分支 (Ctrl+Shift+L)",
+        Locale::En => "Switch Branch (Ctrl+Shift+K)",
+        Locale::Zh => "切换分支 (Ctrl+Shift+K)",
     }
 }
 

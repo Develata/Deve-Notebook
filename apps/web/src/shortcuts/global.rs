@@ -7,6 +7,7 @@
 //!
 //! - `Ctrl+P`: 打开/关闭文件搜索
 //! - `Ctrl+Shift+P`: 打开/关闭命令面板
+//! - `Ctrl+Shift+K`: 打开/关闭分支切换器
 
 #![allow(dead_code)] // 快捷键系统模块预留
 
@@ -25,6 +26,8 @@ pub mod ids {
     pub const GO_TO_FILE: &str = "global.go_to_file";
     /// 打开/关闭命令面板
     pub const COMMAND_PALETTE: &str = "global.command_palette";
+    /// 打开/关闭分支切换器
+    pub const BRANCH_SWITCHER: &str = "global.branch_switcher";
 }
 
 /// 全局快捷键按键组合
@@ -39,6 +42,11 @@ pub mod combos {
     /// Ctrl+Shift+P
     pub fn command_palette() -> KeyCombo {
         KeyCombo::new("p", true, true, false)
+    }
+
+    /// Ctrl+Shift+K
+    pub fn branch_switcher() -> KeyCombo {
+        KeyCombo::new("k", true, true, false)
     }
 }
 

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+fail() {
+  echo "network-baseline-check: $*" >&2
+  exit 1
+}
+
+check_contains() {
+  local file="$1"
+  local pattern="$2"
+  rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file" \
+    || fail "missing '$pattern' in $file"
+}
+
+check_absent() {
+  local file="$1"
+  local pattern="$2"
+  if rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file"; then
+    fail "forbidden '$pattern' in $file"
+  fi
+}
+
+# NET-001: reconnect UI and write gate must distinguish network states.
+check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Connecting);"
+check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Disconnected);"
+check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Connected | ConnectionStatus::Unauthorized"
+check_contains apps/web/src/hooks/use_core/write_gate_logic.rs "ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline)"
+check_contains apps/web/src/hooks/use_core/write_gate_logic.rs "ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting)"
+
+# NET-002: production path is same-origin /ws; localhost fallbacks are debug-only.
+check_contains apps/web/src/api/connection_urls.rs "format!(\"{}://{}/ws\", ws_scheme, host)"
+check_contains apps/web/src/api/connection_urls.rs "if cfg!(debug_assertions)"
+check_contains apps/web/src/api/connection_urls.rs "ws_port"
+check_absent apps/web/src/api/connection_urls.rs "Scanning ports"
+
+# NET-003: role endpoint remains public and exposes the main/proxy route contract.
+check_contains apps/cli/src/server/router.rs ".route(\"/api/node/role\", get(node_role_http::role))"
+check_contains apps/cli/src/server/router.rs "public = Router::new()"
+check_contains apps/cli/src/server/node_role_http.rs "\"role\": r.role"
+check_contains apps/cli/src/server/node_role_http.rs "\"ws_port\": r.ws_port"
+check_contains apps/cli/src/server/node_role_http.rs "\"main_port\": r.main_port"
+
+# NET-004: frame protocol is versioned binary by default, with legacy JSON debug-gated.
+check_contains crates/core/src/protocol/frame.rs "pub const WS_PROTOCOL_VERSION: u16 = 2;"
+check_contains crates/core/src/protocol/frame.rs "pub const WS_FRAME_MAGIC: &[u8] = b\"DEVEWSF2\";"
+check_contains crates/core/src/protocol/frame.rs "missing WS frame magic"
+check_contains apps/cli/src/server/ws/receive.rs "WsFrameFormat::LegacyJsonText"
+check_contains apps/cli/src/server/ws/receive.rs "DEVE_ALLOW_LEGACY_WS_JSON"
+check_contains apps/cli/src/server/ws/receive.rs "DEVE_ENV"
+
+echo "network-baseline-check: ok"

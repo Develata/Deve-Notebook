@@ -8,6 +8,7 @@
     - 未设置 AUTH_SECRET 或 AUTH_PASS
   steps:
     - run: deve serve
+    - run: scripts/check-auth-baseline.sh
   assertions:
     - exit_code_not_eq: 0
     - log_contains: "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
@@ -20,6 +21,7 @@
     - 未设置 AUTH_SECRET
   steps:
     - run: deve serve
+    - run: scripts/check-auth-baseline.sh
   assertions:
     - exit_code_eq: 0
     - log_contains: "WARNING: Development mode with default credentials"
@@ -30,6 +32,8 @@
     - HTTPS_ENABLED=true
   steps:
     - run: curl -i -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"secret\"}"
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_cli auth -- --nocapture
   assertions:
     - header_contains: "Set-Cookie: token=...; Secure; SameSite=Strict; HttpOnly"
 
@@ -40,6 +44,7 @@
     - ALLOWED_ORIGINS="https://app.deve.com"
   steps:
     - run: curl -I -H "Origin: http://localhost:8080" http://localhost:3000/api/node/role
+    - run: scripts/check-auth-baseline.sh
   assertions:
     - header_not_contains: "Access-Control-Allow-Origin: *"
 
@@ -49,6 +54,8 @@
     - 请求携带 token_csrf 或 token_backup cookie
   steps:
     - run: curl -b "token_csrf=bad" http://localhost:3000/api/auth/me
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_cli auth -- --nocapture
   assertions:
     - http_status_eq: 401
 
@@ -59,6 +66,7 @@
   steps:
     - browser_disable_local_storage: true
     - browser_open: "/"
+    - run: cargo test -p deve_web auth_probe -- --nocapture
   assertions:
     - ui_assert: app_running true
     - log_contains: "WARNING: localStorage unavailable, falling back to memory"
@@ -69,6 +77,7 @@
     - 登录态存在
   steps:
     - run: curl -X POST http://127.0.0.1:3000/api/write -H "Origin: http://evil" -d "x=1"
+    - run: scripts/check-auth-baseline.sh
   assertions:
     - http_status_in: [401, 403]
 
@@ -78,6 +87,8 @@
     - 登录接口可访问
   steps:
     - run: powershell -Command "1..50 | % { curl -s -X POST http://127.0.0.1:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"bad\"}' }"
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_cli auth -- --nocapture
   assertions:
     - http_status_in: [429]
 
@@ -87,6 +98,8 @@
     - 登录成功获得 JWT
   steps:
     - run: deve auth decode-jwt --token <jwt>
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_core auth -- --nocapture
   assertions:
     - jwt_claims_eq: ["sub", "iat", "exp", "ver"]
 
@@ -96,6 +109,8 @@
     - 无有效 Token
   steps:
     - ws_connect: "ws://127.0.0.1:3000/ws"
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_cli ws::tests::unauthorized_ws_response_is_structured_json -- --nocapture
   assertions:
     - ws_connection_denied true
     - http_status_eq: 401
@@ -108,6 +123,9 @@
   steps:
     - run: curl -s -X POST http://127.0.0.1:3000/api/auth/logout
     - browser_wait_ws_event: true
+    - run: scripts/check-auth-baseline.sh
+    - run: scripts/check-auth-unauthorized-state.sh
+    - run: cargo test -p deve_web status_summary -- --nocapture
   assertions:
     - ui_assert: login_screen_visible true
     - ui_assert: overlay_text_not_eq "Reconnecting..."
@@ -118,6 +136,8 @@
     - 无有效 Token
   steps:
     - run: curl -i http://127.0.0.1:3000/api/auth/status
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_cli auth -- --nocapture
   assertions:
     - http_status_eq: 200
     - json_field_eq: ["authenticated", false]

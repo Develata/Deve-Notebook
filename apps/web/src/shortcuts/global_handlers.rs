@@ -25,6 +25,19 @@ pub(super) fn handle_global_shortcut(
         return;
     }
 
+    if is_ctrl && shift && key == "k" {
+        ev.prevent_default();
+        ev.stop_propagation();
+
+        if show_search.get() && search_mode.get() == "@" {
+            set_show_search.set(false);
+        } else {
+            set_search_mode.set("@".to_string());
+            set_show_search.set(true);
+        }
+        return;
+    }
+
     if is_ctrl && !shift && key == "p" {
         ev.prevent_default();
         ev.stop_propagation();

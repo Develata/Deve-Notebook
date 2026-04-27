@@ -7,6 +7,8 @@
     - 已连接 WS
   steps:
     - net_block_ws: true
+    - run: scripts/check-network-baseline.sh
+    - run: cargo test -p deve_web write_gate -- --nocapture
   assertions:
     - ui_assert: overlay_text "Reconnecting..."
     - ui_assert: editing_disabled true
@@ -17,6 +19,7 @@
     - 生产环境部署
   steps:
     - browser_open: "/"
+    - run: scripts/check-network-baseline.sh
   assertions:
     - ws_url_eq: "/ws"
     - log_not_contains: "Scanning ports"
@@ -28,6 +31,7 @@
   steps:
     - ws_connect: "relative /ws"
     - run: curl http://127.0.0.1/api/node/role
+    - run: scripts/check-network-baseline.sh
   assertions:
     - ws_connect_success: true
     - stdout_contains: "role"
@@ -38,6 +42,9 @@
     - Server-to-Server 与 Client-Server 连接已建立
   steps:
     - net_capture: true
+    - run: scripts/check-network-baseline.sh
+    - run: cargo test -p deve_core frame -- --nocapture
+    - run: cargo test -p deve_cli receive -- --nocapture
   assertions:
     - packet_format_eq: ["server", "versioned-bincode"]
     - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug"]

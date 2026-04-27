@@ -14,6 +14,8 @@
     - run: deve export --help
     - run: deve verify-p2p --help
     - run: deve seed --help
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli main -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 
@@ -23,6 +25,7 @@
     - 应用已运行
   steps:
     - ui_keypress: "Ctrl+Shift+P"
+    - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: command_palette_visible true
 
@@ -32,6 +35,7 @@
     - 应用已运行
   steps:
     - ui_keypress: "Ctrl+P"
+    - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: quick_open_visible true
 
@@ -41,6 +45,7 @@
     - 应用已运行
   steps:
     - ui_keypress: "Ctrl+Shift+K"
+    - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: branch_switcher_visible true
 
@@ -57,6 +62,7 @@
     - ui_assert: ai_mode_eq "build"
     - ui_type: "/agents"
     - ui_submit: true
+    - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: ai_mode_eq "plan"
 
@@ -68,6 +74,7 @@
     - run: deve init --help
     - run: deve scan --help
     - run: deve watch --dry-run
+    - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - exit_code_all_eq: 0
 
@@ -78,6 +85,8 @@
   steps:
     - run: deve serve --help
     - run: deve serve --dev --dry-run --port 3001
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli commands::serve::tests -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 
@@ -114,6 +123,8 @@
     - run: deve dump --help
     - run: deve export --help
     - run: deve export --format markdown --allow-degraded-projection --help
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli export -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 
@@ -128,6 +139,8 @@
     - run: deve node-check --projection --help
     - run: deve recover --help
     - run: deve repair --help
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli node_check -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 
@@ -137,6 +150,8 @@
     - 未设置 DEVE_PROFILE
   steps:
     - run: deve config print
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - stdout_contains: "profile = 'standard'"
 
@@ -146,6 +161,8 @@
     - config.toml 可写
   steps:
     - run: deve config set ui.sidebar_width 300
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
 ```

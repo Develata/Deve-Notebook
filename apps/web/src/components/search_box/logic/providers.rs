@@ -119,7 +119,7 @@ fn full_text_results(
 #[cfg(test)]
 mod tests {
     use super::full_text_results;
-    use crate::i18n::Locale;
+    use crate::i18n::{Locale, t};
 
     #[test]
     fn full_text_results_parse_doc_ids() {
@@ -150,6 +150,9 @@ mod tests {
             vec![(doc_id.to_string(), "notes/rust.md".into(), 1.0)],
             Locale::Zh,
         );
-        assert_eq!(results[0].detail.as_deref(), Some("全文匹配"));
+        assert_eq!(
+            results[0].detail.as_deref(),
+            Some(t::search::full_text_match(Locale::Zh))
+        );
     }
 }

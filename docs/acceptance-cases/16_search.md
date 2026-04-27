@@ -17,6 +17,8 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - ui_open_search: true
     - ui_type: "?needle"
     - wait_for_ws: "SearchResults"
+    - run: scripts/check-search-baseline.sh
+    - run: cargo test -p deve_cli --features search search -- --nocapture
   assertions:
     - ws_assert: SearchResults.request_id_matches_pending true
     - ws_assert: SearchResults.repo_id_eq_current true
@@ -37,6 +39,9 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - ui_open_search: true
     - ui_type: "?needle"
     - wait_for_ws: "ProtocolError"
+    - run: scripts/check-search-baseline.sh
+    - run: cargo test -p deve_cli search -- --nocapture
+    - run: cargo test -p deve_web message_protocol -- --nocapture
   assertions:
     - ws_assert: ProtocolError.code_eq "RequestFailed"
     - ws_assert: ProtocolError.scope_nonce_eq_current true
@@ -54,6 +59,8 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - inject_ws: SearchResults with stale repo_id
     - inject_ws: SearchResults with stale branch
     - inject_ws: SearchResults with stale scope_nonce
+    - run: scripts/check-search-baseline.sh
+    - run: cargo test -p deve_web message_dispatch_gate -- --nocapture
   assertions:
     - ui_assert: search_results_unchanged true
     - ui_assert: current_doc_unchanged true
