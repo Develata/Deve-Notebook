@@ -7,7 +7,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 12
+- Soft warnings reviewed: 11
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -20,7 +20,6 @@ next-touch refactoring rather than arbitrary line-count slicing.
 | File | Lines | Assessment | Next action |
 |---|---:|---|---|
 | `apps/cli/src/server/handlers/merge/peer_apply.rs` | 257 | Cohesive peer-apply flow; just over the soft threshold. | Keep until next merge-handler edit. |
-| `apps/cli/src/server/handlers/search.rs` | 388 | Handler plus feature-gated tests make this the clearest cleanup candidate. | Extract tests or handler helpers on the next search change. |
 | `apps/cli/src/server/sync_transfer_scope_test.rs` | 334 | Scenario test where keeping setup and assertions together improves reviewability. | Keep unless duplicate setup grows. |
 | `apps/cli/src/server/ws/receive_test.rs` | 299 | Protocol scenario test; splitting now would add indirection without reducing coupling. | Keep unless more WS receive cases are added. |
 | `crates/core/src/config.rs` | 261 | Central config schema and parsing are cohesive; only slightly above the threshold. | Keep; split only if settings domains diverge. |
@@ -32,8 +31,9 @@ next-touch refactoring rather than arbitrary line-count slicing.
 | `crates/core/src/sync/repo_scoped.rs` | 262 | Repo-scoped sync logic is cohesive and barely above threshold. | Keep. |
 | `crates/core/tests/shadow_atomic_apply_test.rs` | 261 | End-to-end shadow atomicity scenario; contiguous context is useful. | Keep. |
 
-## Follow-Up Candidate
+## Completed Cleanup
 
-The only near-term refactor candidate is `apps/cli/src/server/handlers/search.rs`.
-If search behavior changes again, prefer moving its test modules into a sibling
-`search_test.rs` or extracting request parsing helpers before adding more cases.
+`apps/cli/src/server/handlers/search.rs` was removed from the soft-warning list by
+moving its feature-gated tests into `apps/cli/src/server/handlers/search_test.rs`.
+The production handler now stays focused on request handling, scope resolution,
+result shaping, and error classification.
