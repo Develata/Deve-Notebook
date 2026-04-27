@@ -7,7 +7,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 11
+- Soft warnings reviewed: 10
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -19,7 +19,6 @@ next-touch refactoring rather than arbitrary line-count slicing.
 
 | File | Lines | Assessment | Next action |
 |---|---:|---|---|
-| `apps/cli/src/server/handlers/merge/peer_apply.rs` | 257 | Cohesive peer-apply flow; just over the soft threshold. | Keep until next merge-handler edit. |
 | `apps/cli/src/server/sync_transfer_scope_test.rs` | 334 | Scenario test where keeping setup and assertions together improves reviewability. | Keep unless duplicate setup grows. |
 | `apps/cli/src/server/ws/receive_test.rs` | 299 | Protocol scenario test; splitting now would add indirection without reducing coupling. | Keep unless more WS receive cases are added. |
 | `crates/core/src/config.rs` | 261 | Central config schema and parsing are cohesive; only slightly above the threshold. | Keep; split only if settings domains diverge. |
@@ -37,3 +36,9 @@ next-touch refactoring rather than arbitrary line-count slicing.
 moving its feature-gated tests into `apps/cli/src/server/handlers/search_test.rs`.
 The production handler now stays focused on request handling, scope resolution,
 result shaping, and error classification.
+
+`apps/cli/src/server/handlers/merge/peer_apply.rs` was removed from the
+soft-warning list by moving its merge-conflict emission regression test into
+`apps/cli/src/server/handlers/merge/peer_apply_test.rs`. The production file now
+stays focused on peer merge apply, conflict emission, and completion broadcast
+helpers.
