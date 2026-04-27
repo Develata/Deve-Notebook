@@ -34,7 +34,7 @@
 ## 3. Trusted Agent Bridge：为什么保留接口位？
 
 *   **历史管理**：内置 sqlite/json 历史状态机，支持 `/plan` 和 `/build` 等模式。
-*   **工具支持 (Tools & MCP)**：只适用于用户明确信任外部 CLI 的部署，不是 Native AI 的默认能力。
+*   **工具支持 (Skills + controlled CLI)**：只适用于用户明确信任外部 CLI 的部署，不是 Native AI 的默认能力；MCP 不再作为产品运行时方向。
 *   **Skills (自定义技能)**：只能由外部 CLI 自己管理，Deve-Notebook 当前不内建 Skills 装载。
 *   **Token 优化**：滑动窗口和上下文合并已经做到极致。
 *   **外部 CLI 内存参考**：opencode ~50-100 MB/次，zeroclaw ~15-30 MB/次，均为按需启动。
@@ -48,7 +48,7 @@ Native AI Chat 可暂由内置 Rhai 插件 (`plugins/ai-chat/`) 承载实现，�
     - 读取当前 Markdown / 显式选择上下文
     - 系统提示词注入当前编辑文件上下文
 *   **不做的事 (Out of Scope)**：
-    - 不默认启用 MCP / Skills / source-control 写入
+    - 不实现 MCP runtime，不默认启用 Skills / source-control 写入
     - 不做历史持久化、不做复杂 Agent 状态机
     - 不做 Token 滑动窗口优化
 *   **资源开销**：Rhai Engine ~2-4 MB，脚本轻量，零额外 crate 依赖

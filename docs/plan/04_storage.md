@@ -90,7 +90,6 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/local/<repo_name>.redb`
 - `ledger/remotes/<peer_name>/<repo_name>.redb`
 - `ledger/.host/identity.key`
-- `ledger/.host/mcp.json`
 - `ledger/backups/<repo_name>-<timestamp>.redb`
 
 ### 3.2 Repo Runtime Layout

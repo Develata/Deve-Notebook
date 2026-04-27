@@ -6,7 +6,7 @@
 
 ## Current Execution Queue
 
-本队列按当前项目方向重新排序：先补 P0 根基，再补 P1 产品可用主线，然后把 Desktop/Mobile 与 Graph 提上日程，最后处理 P2 运维与体验补强。AI Chat 只保持最小可用；MCP 不进入当前实现路线，仅保留文档警戒，避免后续再次误规划为默认能力。
+本队列按当前项目方向重新排序：先补 P0 根基，再补 P1 产品可用主线，然后把 Desktop/Mobile 与 Graph 提上日程，最后处理 P2 运维与体验补强。AI Chat 只保持最小可用；MCP 不进入产品实现路线，相关需求由 Skills + 受控 CLI 工具调用替代。
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:-----|:-----|:------|:-----|:---------|
@@ -22,7 +22,7 @@
 
 ### MCP Direction
 
-MCP 不作为当前或近期主线实现。当前判断是：MCP 趋势性不足，且很多用途可被 “Skills 调用受控 CLI 工具 / Trusted CLI path” 替代。文档中保留 MCP 提及，只作为历史警戒与 future guardrail，防止将来重复企划；不得把 MCP 解读为当前 TODO、默认 AI 能力或插件平台方向。
+MCP 直接不做。当前判断是：MCP 趋势性不足，且主要用途可被 “Skills 调用受控 CLI 工具 / Trusted CLI path” 替代。文档中若保留 MCP 提及，只作为“为什么不做”的历史记录；不得把 MCP 解读为当前 TODO、future TODO、默认 AI 能力或插件平台方向。
 
 ## Legacy Branch Overview
 

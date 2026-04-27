@@ -12,7 +12,7 @@
 > AI Chat 已提升为第 10 章的原生产品能力，不再视为插件主线。
 > 仓库中已存在的 Rhai/plugin-host 代码是外围兼容运行时，必须按本章边界约束；它不代表插件安装器、插件市场或默认启用的扩展主线已经成立。
 > 本章当前保留两类未来扩展：**Trusted External Agent Runtime** 与 **Calculation Runtime**。
-> MCP 不作为当前插件/运行时方向；若未来重新评估，只能作为新的独立 proposal，而不能从本章自动推导为待实现项。
+> MCP 不作为 Deve-Notebook 插件/运行时方向；当前由 Skills + 受控 CLI 工具调用替代，不再规划 MCP runtime。
 
 ## 1. Chapter Status (章节状态)
 
@@ -24,9 +24,9 @@
     - Calculation Runtime 的实际执行器
     - MCP runtime、MCP server 管理或 MCP tool loop
 
-### MCP Boundary
+### MCP Retirement Boundary
 
-MCP 相关入口当前冻结为“历史警戒 / future guardrail”。当前更合理的扩展路线是 Skills 调用受控 CLI 工具，或第 10 章定义的 Trusted CLI path；这两者都必须保持显式启用、资源约束、默认只读与 fail-closed。任何 MCP 企划不得复用现有 Rhai/plugin-host 边界直接落地，也不得绕过 Native AI Chat 的 read-first 默认策略。
+MCP 相关入口当前只作为“为什么不做”的历史记录保留。当前扩展路线是 Skills 调用受控 CLI 工具，或第 10 章定义的 Trusted CLI path；这两者都必须保持显式启用、资源约束、默认只读与 fail-closed。任何 MCP 企划不得复用现有 Rhai/plugin-host 边界落地，也不得绕过 Native AI Chat 的 read-first 默认策略。
 
 ## 2. Existing Rhai Plugin Host Boundary {#plugin-runtime-boundary}
 

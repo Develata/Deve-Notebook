@@ -78,7 +78,7 @@
 *   `BUILD`：
     - 允许直接修改当前 Markdown。
     - 允许调用受控的程序执行路径来完成 Markdown 修改。
-    - 不等于开放 MCP / Skills / 任意 shell。
+    - 不等于 MCP、开放 Skills 或任意 shell；MCP 不属于当前命令体系。
 *   `agents`：
     - 仅作用于原生 `PLAN / BUILD` 两种聊天模式。
     - 不负责切换 `native / trusted-cli` 后端。
