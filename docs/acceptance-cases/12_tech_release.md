@@ -62,4 +62,13 @@
     - run: cargo audit
   assertions:
     - exit_code_all_eq: 0
+
+- case_id: REL-004
+  goal: 当前运行与测试入口文档和实现边界保持一致。
+  preconditions:
+    - docs/dev-runbook.md 可读
+  steps:
+    - run: scripts/check-dev-runbook-baseline.sh
+  assertions:
+    - exit_code_eq: 0
 ```
