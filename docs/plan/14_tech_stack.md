@@ -29,10 +29,11 @@
 | **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
 | **AI Chat**  | **OpenAI-compatible SSE** | Planned (Native) | 第一方最小 chat 能力，读取 Markdown + 对话。 |
 | **Trusted External Agent** | **External CLI Bridge** | Planned (Trusted Only) | 外部 CLI Agent 桥接，可选、默认关闭。 |
+| **MCP**      | **No active runtime**   | Frozen / Guardrail | 当前不投入 MCP runtime；相关需求优先由 Skills 调用受控 CLI 工具或 Trusted CLI path 承载。 |
 | **Graph**    | **d3-force + Pixi.js**   | Planned           | 高性能图谱渲染 (Web Canvas).        |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
-| **Build**    | **Tauri v2**             | Planned           | 跨平台外壳 (Mobile/Desktop)。       |
+| **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
 ## 2. Markdown Compatibility Checklist

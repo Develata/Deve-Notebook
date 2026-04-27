@@ -12,6 +12,7 @@
 > AI 能力是 Deve-Notebook 的**第一方原生产品层**，不再归入插件章节。
 > 当前主线是**最小原生 AI Chat**；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
 > 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用，且当前 release **MAY** 完全不提供该能力。
+> MCP 不作为当前或近期 AI 路线投入；保留文档提及只是为了防止 future planning 再次误把 MCP 当成默认能力。
 
 ## 1. Scope (目标与范围)
 
@@ -21,10 +22,18 @@
     - **Native Modes**：原生支持 `PLAN` / `BUILD` 两种聊天模式。
     - **Trusted External Agent Bridge**：仅作为高级可选模式预留，不视为当前发布主线。
 *   **明确不在当前范围内（Out of Scope for Now）**：
-    - 原生 MCP 集成
+    - 原生 MCP 集成；当前方向是由 Skills / 受控 CLI 工具调用替代这类扩展需求
     - 原生 Skills 装载
     - 原生复杂 Agent 自治状态机（多代理协作、长链自主规划、无限工具循环）
     - 原生 Source Control 写入自动化
+
+### MCP Direction Freeze
+
+MCP 当前不是 Deve-Notebook 的实现趋势，也不进入 Native AI Chat 的 roadmap。原因是它会扩大 host/tool 边界，而当前更可控的方向是：
+
+1. Native AI Chat 保持 read-first、最小可用。
+2. 若需要外部能力，优先通过用户显式启用的 Trusted CLI path 或未来 Skills 调用受控 CLI 工具完成。
+3. MCP 相关文字只作为历史 guardrail 保留，避免后续重复提出“默认 MCP 集成”企划；除非重新通过 P0/P1 安全边界评审，否则不得新增 MCP runtime、MCP server 管理或 MCP tool loop。
 
 ## 2. Native AI Chat {#native-ai-chat-runtime}
 
