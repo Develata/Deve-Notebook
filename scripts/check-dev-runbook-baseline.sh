@@ -35,6 +35,7 @@ contains "$RUNBOOK" 'scripts/check-ai-baseline.sh'
 contains "$RUNBOOK" 'scripts/check-source-control-baseline.sh'
 contains "$RUNBOOK" 'scripts/check-dev-runbook-baseline.sh'
 contains "$RUNBOOK" 'scripts/check-ws-structured-errors.sh'
+contains "$RUNBOOK" 'scripts/check-release-baseline.sh'
 contains "$RUNBOOK" 'scripts/check-architecture-registry.sh'
 contains "$RUNBOOK" 'scripts/plan-coverage.sh'
 

@@ -71,4 +71,13 @@
     - run: scripts/check-dev-runbook-baseline.sh
   assertions:
     - exit_code_eq: 0
+
+- case_id: REL-005
+  goal: Docker、Compose 与 release workflow 保持当前 embedded frontend 单二进制发布边界。
+  preconditions:
+    - Dockerfile、docker-compose.yml、.github/workflows/release.yml 可读
+  steps:
+    - run: scripts/check-release-baseline.sh
+  assertions:
+    - exit_code_eq: 0
 ```

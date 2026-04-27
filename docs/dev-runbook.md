@@ -157,6 +157,7 @@ scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-dev-runbook-baseline.sh
 scripts/check-ws-structured-errors.sh
+scripts/check-release-baseline.sh
 scripts/check-architecture-registry.sh
 scripts/plan-coverage.sh
 ```
