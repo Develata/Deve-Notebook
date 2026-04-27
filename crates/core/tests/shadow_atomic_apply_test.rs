@@ -10,6 +10,62 @@ fn new_repo() -> (TempDir, RepoManager) {
     (dir, repo)
 }
 
+fn timestamp(seq: u64) -> i64 {
+    i64::try_from(seq).expect("test seq fits i64")
+}
+
+fn create_dir(peer_id: &PeerId, node_id: NodeId, name: &str, seq: u64) -> LedgerEntry {
+    LedgerEntry::new_structure(
+        StructureOp::CreateDir {
+            node_id,
+            parent_id: None,
+            name: name.into(),
+        },
+        timestamp(seq),
+        peer_id.clone(),
+        seq,
+    )
+}
+
+fn create_file(
+    peer_id: &PeerId,
+    doc_id: DocId,
+    parent_id: Option<NodeId>,
+    name: &str,
+    seq: u64,
+) -> LedgerEntry {
+    LedgerEntry::new_structure(
+        StructureOp::CreateFile {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id,
+            parent_id,
+            name: name.into(),
+        },
+        timestamp(seq),
+        peer_id.clone(),
+        seq,
+    )
+}
+
+fn rename_node(
+    peer_id: &PeerId,
+    node_id: NodeId,
+    doc_id: Option<DocId>,
+    new_name: &str,
+    seq: u64,
+) -> LedgerEntry {
+    LedgerEntry::new_structure(
+        StructureOp::RenameNode {
+            node_id,
+            doc_id,
+            new_name: new_name.into(),
+        },
+        timestamp(seq),
+        peer_id.clone(),
+        seq,
+    )
+}
+
 #[test]
 fn append_remote_structure_batch_updates_shadow_projection() {
     let (_dir, repo) = new_repo();
@@ -18,27 +74,8 @@ fn append_remote_structure_batch_updates_shadow_projection() {
     let dir_id = NodeId::new();
     let doc_id = DocId::new();
     let entries = vec![
-        LedgerEntry::new_structure(
-            StructureOp::CreateDir {
-                node_id: dir_id,
-                parent_id: None,
-                name: "notes".into(),
-            },
-            1,
-            peer_id.clone(),
-            1,
-        ),
-        LedgerEntry::new_structure(
-            StructureOp::CreateFile {
-                node_id: NodeId::from_doc_id(doc_id),
-                doc_id,
-                parent_id: Some(dir_id),
-                name: "remote.md".into(),
-            },
-            2,
-            peer_id.clone(),
-            2,
-        ),
+        create_dir(&peer_id, dir_id, "notes", 1),
+        create_file(&peer_id, doc_id, Some(dir_id), "remote.md", 2),
     ];
 
     assert_eq!(
@@ -68,28 +105,8 @@ fn failed_remote_structure_batch_rolls_back_projection_and_ledger() {
     let first_doc = DocId::new();
     let second_doc = DocId::new();
     let entries = vec![
-        LedgerEntry::new_structure(
-            StructureOp::CreateFile {
-                node_id: NodeId::from_doc_id(first_doc),
-                doc_id: first_doc,
-                parent_id: None,
-                name: "dup.md".into(),
-            },
-            1,
-            peer_id.clone(),
-            1,
-        ),
-        LedgerEntry::new_structure(
-            StructureOp::CreateFile {
-                node_id: NodeId::from_doc_id(second_doc),
-                doc_id: second_doc,
-                parent_id: None,
-                name: "dup.md".into(),
-            },
-            2,
-            peer_id.clone(),
-            2,
-        ),
+        create_file(&peer_id, first_doc, None, "dup.md", 1),
+        create_file(&peer_id, second_doc, None, "dup.md", 2),
     ];
 
     let err = repo
@@ -111,27 +128,8 @@ fn create_dir_cannot_replace_existing_file_path() {
     let repo_id = Uuid::new_v4();
     let doc_id = DocId::new();
     let entries = vec![
-        LedgerEntry::new_structure(
-            StructureOp::CreateFile {
-                node_id: NodeId::from_doc_id(doc_id),
-                doc_id,
-                parent_id: None,
-                name: "same".into(),
-            },
-            1,
-            peer_id.clone(),
-            1,
-        ),
-        LedgerEntry::new_structure(
-            StructureOp::CreateDir {
-                node_id: NodeId::new(),
-                parent_id: None,
-                name: "same".into(),
-            },
-            2,
-            peer_id.clone(),
-            2,
-        ),
+        create_file(&peer_id, doc_id, None, "same", 1),
+        create_dir(&peer_id, NodeId::new(), "same", 2),
     ];
 
     let err = repo
@@ -157,27 +155,8 @@ fn remote_rename_cannot_replace_existing_dir_path() {
         &peer_id,
         &repo_id,
         &[
-            LedgerEntry::new_structure(
-                StructureOp::CreateDir {
-                    node_id: dir_id,
-                    parent_id: None,
-                    name: "taken".into(),
-                },
-                1,
-                peer_id.clone(),
-                1,
-            ),
-            LedgerEntry::new_structure(
-                StructureOp::CreateFile {
-                    node_id: NodeId::from_doc_id(doc_id),
-                    doc_id,
-                    parent_id: None,
-                    name: "free.md".into(),
-                },
-                2,
-                peer_id.clone(),
-                2,
-            ),
+            create_dir(&peer_id, dir_id, "taken", 1),
+            create_file(&peer_id, doc_id, None, "free.md", 2),
         ],
     )
     .expect("seed tree");
@@ -186,14 +165,11 @@ fn remote_rename_cannot_replace_existing_dir_path() {
         .append_remote_op(
             &peer_id,
             &repo_id,
-            &LedgerEntry::new_structure(
-                StructureOp::RenameNode {
-                    node_id: NodeId::from_doc_id(doc_id),
-                    doc_id: Some(doc_id),
-                    new_name: "taken".into(),
-                },
-                3,
-                peer_id.clone(),
+            &rename_node(
+                &peer_id,
+                NodeId::from_doc_id(doc_id),
+                Some(doc_id),
+                "taken",
                 3,
             ),
         )
@@ -213,43 +189,15 @@ fn remote_dir_rename_updates_shadow_doc_paths() {
         &peer_id,
         &repo_id,
         &[
-            LedgerEntry::new_structure(
-                StructureOp::CreateDir {
-                    node_id: dir_id,
-                    parent_id: None,
-                    name: "notes".into(),
-                },
-                1,
-                peer_id.clone(),
-                1,
-            ),
-            LedgerEntry::new_structure(
-                StructureOp::CreateFile {
-                    node_id: NodeId::from_doc_id(doc_id),
-                    doc_id,
-                    parent_id: Some(dir_id),
-                    name: "remote.md".into(),
-                },
-                2,
-                peer_id.clone(),
-                2,
-            ),
+            create_dir(&peer_id, dir_id, "notes", 1),
+            create_file(&peer_id, doc_id, Some(dir_id), "remote.md", 2),
         ],
     )
     .expect("seed remote tree");
     repo.append_remote_op(
         &peer_id,
         &repo_id,
-        &LedgerEntry::new_structure(
-            StructureOp::RenameNode {
-                node_id: dir_id,
-                doc_id: None,
-                new_name: "archive".into(),
-            },
-            3,
-            peer_id.clone(),
-            3,
-        ),
+        &rename_node(&peer_id, dir_id, None, "archive", 3),
     )
     .expect("rename remote dir");
 

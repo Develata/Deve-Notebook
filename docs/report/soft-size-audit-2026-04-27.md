@@ -7,7 +7,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 7
+- Soft warnings reviewed: 6
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -25,7 +25,6 @@ next-touch refactoring rather than arbitrary line-count slicing.
 | `crates/core/src/ledger/metadata.rs` | 254 | Slightly above threshold; metadata surface is still compact. | Keep. |
 | `crates/core/src/sync/mod.rs` | 328 | Public sync facade plus module wiring; current size is acceptable. | Consider moving facade helpers if new APIs are added. |
 | `crates/core/src/sync/repo_scoped.rs` | 262 | Repo-scoped sync logic is cohesive and barely above threshold. | Keep. |
-| `crates/core/tests/shadow_atomic_apply_test.rs` | 261 | End-to-end shadow atomicity scenario; contiguous context is useful. | Keep. |
 
 ## Completed Cleanup
 
@@ -55,3 +54,8 @@ push-source, and snapshot-source modules:
 by moving manual snapshot merge coverage into
 `crates/core/src/sync/engine/manual_snapshot_test.rs`. The parent test module
 keeps shared crypto/engine fixtures and non-snapshot manual merge coverage.
+
+`crates/core/tests/shadow_atomic_apply_test.rs` was removed from the
+soft-warning list without splitting the file. Repeated remote structure operation
+constructors were collapsed into local helpers so the five atomic shadow-apply
+integration scenarios remain contiguous.
