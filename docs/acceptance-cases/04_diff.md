@@ -109,6 +109,7 @@
     - run: deve sc-status --repo default
     - run: scripts/check-source-control-smoke-hygiene.sh
     - run: cargo test -p deve_cli sc_status -- --nocapture
+    - run: cargo test -p deve_cli clean_source_control_smoke_fixture -- --nocapture
   assertions:
     - stdout_contains: "sc_status[default]: staged="
     - exit_code_all_eq: 0
