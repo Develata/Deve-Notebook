@@ -8,6 +8,7 @@
 
 mod actions_card;
 mod health_card;
+mod runtime_card;
 mod storage_card;
 mod sync_card;
 
@@ -18,6 +19,7 @@ use leptos::prelude::*;
 
 use self::actions_card::ActionsCard;
 use self::health_card::HealthCard;
+use self::runtime_card::RuntimeCard;
 use self::storage_card::StorageCard;
 use self::sync_card::SyncCard;
 
@@ -56,13 +58,19 @@ pub fn Dashboard() -> impl IntoView {
                     {move || match ctx.metrics.get() {
                         Some(m) => view! {
                             <div class="space-y-3">
+                                <RuntimeCard runtime_summary=core.ws.node_role />
                                 <HealthCard metrics=m.clone() />
                                 <SyncCard metrics=m.clone() />
                                 <StorageCard metrics=m.clone() />
                                 <ActionsCard />
                             </div>
                         }.into_any(),
-                        None => view! { <ActionsCard /> }.into_any(),
+                        None => view! {
+                            <div class="space-y-3">
+                                <RuntimeCard runtime_summary=core.ws.node_role />
+                                <ActionsCard />
+                            </div>
+                        }.into_any(),
                     }}
                 </div>
             </div>

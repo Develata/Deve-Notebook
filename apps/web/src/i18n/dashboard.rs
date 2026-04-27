@@ -67,6 +67,27 @@ pub fn server_health(locale: Locale) -> &'static str {
     }
 }
 
+pub fn runtime_info(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Runtime Info",
+        Locale::Zh => "运行信息",
+    }
+}
+
+pub fn runtime_shape(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Shape",
+        Locale::Zh => "形态",
+    }
+}
+
+pub fn runtime_waiting(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Waiting for runtime info...",
+        Locale::Zh => "等待运行信息...",
+    }
+}
+
 pub fn cpu(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "CPU",

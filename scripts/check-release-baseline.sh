@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# REL-005 keeps Docker, compose, and release workflow surfaces aligned with
-# the current single-binary embedded-frontend release baseline.
+# REL-005/REL-006 keep Docker, compose, release workflow, and runtime
+# visibility surfaces aligned with the current release baseline.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -78,7 +78,18 @@ contains "scripts/smoke-docker-release.sh" "docker build -t"
 contains "scripts/smoke-docker-release.sh" "docker run -d"
 contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/node/role"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-005"
+contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-006"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
+contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
+contains "docs/features/15_release.md" "版本、profile、环境和交付形态"
+contains "apps/cli/src/server/node_role_http.rs" '"version": r.version'
+contains "apps/cli/src/server/node_role_http.rs" '"profile": r.profile'
+contains "apps/cli/src/server/node_role_http.rs" '"delivery": r.delivery'
+contains "apps/cli/src/server/node_role_http.rs" '"environment": r.environment'
+contains "apps/cli/src/server/static_files.rs" '"embedded-frontend"'
+contains "apps/web/src/api/connection_role.rs" "format_node_role_summary"
+contains "apps/web/src/components/dashboard/runtime_card.rs" "RuntimeCard"
+contains "apps/web/src/components/settings.rs" 'env!("CARGO_PKG_VERSION")'
 
 echo "release-baseline-check: ok"

@@ -18,6 +18,10 @@ pub(super) fn fallback<S: Clone + Send + Sync + 'static>() -> Option<Router<S>> 
     Some(Router::new().fallback_service(tower::service_fn(serve_asset)))
 }
 
+pub(super) fn has_index_asset() -> bool {
+    asset_for_path("/index.html").is_some()
+}
+
 async fn serve_asset(req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let response = asset_for_path(req.uri().path())
         .map(asset_response)

@@ -33,7 +33,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                             <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-2">{move || t::settings::about(locale.get())}</h3>
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-secondary">{move || t::settings::version(locale.get())}</span>
-                                <span class="font-mono text-primary">"0.5.0-alpha"</span>
+                                <span class="font-mono text-primary">{env!("CARGO_PKG_VERSION")}</span>
                             </div>
                         </div>
 

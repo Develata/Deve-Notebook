@@ -79,4 +79,16 @@
     - run: scripts/check-release-baseline.sh
   assertions:
     - exit_code_eq: 0
+
+- case_id: REL-006
+  goal: 当前运行实例暴露可理解的版本、profile、环境与交付形态。
+  preconditions:
+    - 后端 `/api/node/role` 可访问
+    - Web dashboard 可打开
+  steps:
+    - run: scripts/check-release-baseline.sh
+    - chrome_mcp: open dashboard
+  assertions:
+    - json_fields_present: ["version", "profile", "delivery", "environment"]
+    - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]
 ```

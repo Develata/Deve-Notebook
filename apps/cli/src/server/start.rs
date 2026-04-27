@@ -31,6 +31,10 @@ pub async fn start_server(
         role: "main".into(),
         ws_port: port,
         main_port: port,
+        version: env!("CARGO_PKG_VERSION").into(),
+        profile: profile_label(profile).into(),
+        delivery: static_files::delivery_shape().into(),
+        environment: node_role::runtime_environment(),
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
@@ -105,6 +109,13 @@ pub(super) fn build_sync_engine(
     sync_mode: SyncMode,
 ) -> Arc<repo_scoped::RepoScopedSyncEngine> {
     Arc::new(RepoScopedSyncEngine::new(peer_id, repo, sync_mode))
+}
+
+fn profile_label(profile: AppProfile) -> &'static str {
+    match profile {
+        AppProfile::Standard => "standard",
+        AppProfile::LowSpec => "low-spec",
+    }
 }
 
 pub async fn start_plugin_host_only(

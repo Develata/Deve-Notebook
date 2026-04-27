@@ -49,6 +49,20 @@ pub fn validate_static_dir_override() -> Result<()> {
     validate_static_root(&dir)
 }
 
+pub fn delivery_shape() -> &'static str {
+    let dir = resolve_static_dir();
+    if validate_static_root(&dir).is_ok() {
+        if std::env::var_os(ENV_STATIC_DIR).is_some() {
+            return "static-dir-override";
+        }
+        return "static-dir";
+    }
+    if super::static_files_embed::has_index_asset() {
+        return "embedded-frontend";
+    }
+    "api-only"
+}
+
 fn validate_static_root(dir: &std::path::Path) -> Result<()> {
     match dir.try_exists() {
         Ok(true) => {}
@@ -164,5 +178,17 @@ mod tests {
             err.to_string().contains("Configured static index missing")
                 || err.to_string().contains("index.html")
         );
+    }
+
+    #[test]
+    fn delivery_shape_reports_static_override_when_valid() {
+        let _guard = env_guard();
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("index.html"), "<html></html>").expect("write index");
+        unsafe { std::env::set_var(ENV_STATIC_DIR, dir.path()) };
+
+        assert_eq!(delivery_shape(), "static-dir-override");
+
+        unsafe { std::env::remove_var(ENV_STATIC_DIR) };
     }
 }

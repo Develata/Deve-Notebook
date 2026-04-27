@@ -100,6 +100,10 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         role: "proxy".into(),
         ws_port: plugin_port,
         main_port,
+        version: env!("CARGO_PKG_VERSION").into(),
+        profile: "proxy".into(),
+        delivery: "plugin-host-proxy".into(),
+        environment: crate::server::node_role::runtime_environment(),
     });
     server::start_plugin_host_only(plugins, plugin_port).await
 }
