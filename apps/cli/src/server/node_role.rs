@@ -33,7 +33,7 @@ impl RepoHealthSummary {
         }
     }
 
-    pub fn from_counts(local_total: usize, degraded: usize) -> Self {
+    pub fn from_degraded_count(local_total: usize, degraded: usize) -> Self {
         let healthy = local_total.saturating_sub(degraded);
         let status = if degraded > 0 { "degraded" } else { "healthy" };
         Self {

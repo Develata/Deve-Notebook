@@ -42,7 +42,7 @@ mod tests {
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
-            repo_health: node_role::RepoHealthSummary::from_counts(2, 1),
+            repo_health: node_role::RepoHealthSummary::from_degraded_count(2, 1),
         });
 
         assert_eq!(payload["role"], "main");

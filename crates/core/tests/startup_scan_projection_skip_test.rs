@@ -79,6 +79,11 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             .expect("healthy repos"),
         vec![String::from("main")]
     );
+    assert_eq!(
+        sync.degraded_local_repo_names_for_execution()
+            .expect("degraded repos"),
+        vec![String::from("wiki")]
+    );
     assert!(
         repo.list_pending_fs_in_local_repo("wiki")
             .unwrap()

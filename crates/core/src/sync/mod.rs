@@ -300,6 +300,15 @@ impl SyncManager {
             .collect())
     }
 
+    pub fn degraded_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
+        Ok(self
+            .repo
+            .list_local_repo_names_for_execution()?
+            .into_iter()
+            .filter(|repo_name| self.is_projection_degraded(repo_name))
+            .collect())
+    }
+
     fn replace_projection_degraded(&self, repo_names: &[String]) {
         self.projection_health.replace_degraded(repo_names);
     }

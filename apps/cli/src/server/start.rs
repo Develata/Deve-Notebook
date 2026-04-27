@@ -122,14 +122,16 @@ fn repo_health_summary(
     repo: &RepoManager,
     sync_manager: &deve_core::sync::SyncManager,
 ) -> node_role::RepoHealthSummary {
-    match sync_manager.healthy_local_repo_names_for_execution() {
-        Ok(healthy) => {
-            let healthy_count = healthy.len();
-            let total = repo
-                .list_local_repo_names_for_execution()
-                .map(|repos| repos.len())
-                .unwrap_or(healthy_count);
-            node_role::RepoHealthSummary::from_counts(total, total.saturating_sub(healthy_count))
+    let local_total = match repo.list_local_repo_names_for_execution() {
+        Ok(repos) => repos.len(),
+        Err(err) => {
+            tracing::warn!("Failed to list repos for node role health: {}", err);
+            return node_role::RepoHealthSummary::unknown();
+        }
+    };
+    match sync_manager.degraded_local_repo_names_for_execution() {
+        Ok(degraded) => {
+            node_role::RepoHealthSummary::from_degraded_count(local_total, degraded.len())
         }
         Err(err) => {
             tracing::warn!("Failed to summarize repo health for node role: {}", err);

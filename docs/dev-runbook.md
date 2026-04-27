@@ -154,8 +154,9 @@ skip instead of failing the baseline.
 
 `repo_health.status=degraded` means at least one local repo was skipped for
 projection execution while the server stayed available for other healthy repos.
-Use `node-check --projection --repo <repo>` or protected
-`/api/admin/projection-check` for repo-specific details.
+The public endpoint intentionally exposes aggregate counts only. Use
+`node-check --projection --repo <repo>` or protected `/api/admin/projection-check`
+for repo-specific details.
 
 ## Chrome MCP Smoke
 
