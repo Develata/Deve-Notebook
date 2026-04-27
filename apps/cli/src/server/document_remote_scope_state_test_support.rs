@@ -35,7 +35,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> 
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key,
         }),
         test_id,
@@ -64,7 +64,7 @@ pub(super) fn build_single_repo_state() -> anyhow::Result<(TempDir, Arc<AppState
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key,
         }),
         repo_id,

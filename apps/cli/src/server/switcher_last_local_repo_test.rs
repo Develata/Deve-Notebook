@@ -51,7 +51,7 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
         )),
         tree_manager: Arc::new(RepoTreeRegistry::new()),
         #[cfg(feature = "search")]
-        search_service: None,
+        search_available: false,
         identity_key,
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(32);

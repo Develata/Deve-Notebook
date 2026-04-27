@@ -51,11 +51,12 @@ pub async fn start_server(
     prewarm::spawn_prewarm(repo.clone());
 
     #[cfg(feature = "search")]
-    let search_service = if profile == deve_core::config::AppProfile::LowSpec {
+    let search_available = if profile == deve_core::config::AppProfile::LowSpec {
         tracing::info!("LowSpec profile: search service disabled");
-        None
+        false
     } else {
-        Some(setup::load_search_service(&host_dir)?)
+        tracing::info!("Search baseline scan enabled");
+        true
     };
 
     let key_pair = security::load_or_generate_identity_key(&host_dir)?;
@@ -74,7 +75,7 @@ pub async fn start_server(
         sync_engine,
         tree_manager,
         #[cfg(feature = "search")]
-        search_service,
+        search_available,
         identity_key: key_pair,
     });
 

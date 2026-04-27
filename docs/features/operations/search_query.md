@@ -60,7 +60,8 @@
 ## Notes
 
 - `search/query` 是全文搜索链，不替代 Quick Open 的本地文件候选过滤。
-- `SearchService` 是可选能力 gate；当前可验收能力不依赖完整 Tantivy 索引已完成。
+- `search_available` 是当前 CLI runtime 的轻量能力 gate；当前可验收能力不依赖完整
+  Tantivy 索引已完成，也不在启动路径初始化 Tantivy 索引。
 - 搜索结果必须保持 repo scope 绑定，不能接受过期 request、旧 repo、旧 branch 或旧 scope 返回。
 - 搜索读取 ledger 重建内容，而不是直接读取当前磁盘文件文本；当 workspace 文件与 ledger
   存在漂移时，搜索结果以当前 repo ledger projection 为准。

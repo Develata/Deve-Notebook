@@ -44,7 +44,7 @@ pub(super) fn build_state_with_mode(
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key,
         }),
         repo_id,

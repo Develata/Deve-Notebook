@@ -8,9 +8,6 @@ use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-
-#[cfg(feature = "search")]
-use deve_core::search::SearchService;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -23,6 +20,6 @@ pub struct AppState {
     /// Repo-scoped 文件树状态。
     pub tree_manager: Arc<RepoTreeRegistry>,
     #[cfg(feature = "search")]
-    pub search_service: Option<SearchService>,
+    pub search_available: bool,
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
 }

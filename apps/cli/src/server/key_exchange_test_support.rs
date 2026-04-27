@@ -40,7 +40,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> 
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key: security::load_or_generate_identity_key(&host_dir)?,
         }),
         repo_id,

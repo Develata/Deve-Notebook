@@ -49,7 +49,7 @@ pub(crate) fn app_state_with_tree(
         )),
         tree_manager,
         #[cfg(feature = "search")]
-        search_service: None,
+        search_available: false,
         identity_key,
     }))
 }

@@ -37,7 +37,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key,
         }),
         test_id,

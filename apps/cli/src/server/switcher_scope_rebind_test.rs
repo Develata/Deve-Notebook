@@ -39,7 +39,7 @@ async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
         )),
         tree_manager: Arc::new(RepoTreeRegistry::new()),
         #[cfg(feature = "search")]
-        search_service: None,
+        search_available: false,
         identity_key,
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);

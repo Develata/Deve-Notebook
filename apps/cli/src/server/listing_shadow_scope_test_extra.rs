@@ -33,7 +33,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key,
         }),
     ))

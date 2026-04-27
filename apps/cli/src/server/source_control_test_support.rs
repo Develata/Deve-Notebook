@@ -44,7 +44,7 @@ impl ProxyHarness {
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
         });
         let mut auth_config = AuthConfig::dev_default()?;

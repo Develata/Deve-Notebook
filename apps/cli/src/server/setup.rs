@@ -4,8 +4,6 @@
 use anyhow::{Context, Result, anyhow};
 use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::protocol::ServerMessage;
-#[cfg(feature = "search")]
-use deve_core::search::SearchService;
 
 use axum::http::{Method, header};
 use std::sync::Arc;
@@ -92,13 +90,6 @@ pub(super) fn load_mcp_manager(ledger_dir: &std::path::Path) -> Result<McpManage
     Ok(manager)
 }
 
-#[cfg(feature = "search")]
-pub(super) fn load_search_service(host_dir: &std::path::Path) -> Result<SearchService> {
-    let index_path = host_dir.join("search-index");
-    SearchService::new_on_disk(&index_path)
-        .with_context(|| format!("Failed to initialize search service at {:?}", index_path))
-}
-
 /// 启动每个本地 repo 的 watcher。
 pub(super) fn start_file_watchers(
     sync_manager: Arc<deve_core::sync::SyncManager>,
@@ -130,8 +121,6 @@ fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "search")]
-    use super::load_search_service;
     use super::{
         allowed_origins_from_env, load_mcp_manager, validate_file_watcher_startup,
         write_main_port_hint,
@@ -188,23 +177,5 @@ mod tests {
         };
         unsafe { std::env::remove_var("ALLOWED_ORIGINS") };
         assert!(err.to_string().contains("Invalid CORS origin"));
-    }
-
-    #[cfg(feature = "search")]
-    #[test]
-    fn load_search_service_fails_closed_when_index_path_is_file() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let host_dir = dir.path().join(".host");
-        std::fs::create_dir_all(&host_dir).expect("host dir");
-        std::fs::write(host_dir.join("search-index"), "not-a-dir").expect("index file");
-
-        let err = match load_search_service(&host_dir) {
-            Ok(_) => panic!("broken search index path must fail"),
-            Err(err) => err,
-        };
-        assert!(
-            err.to_string()
-                .contains("Failed to initialize search service")
-        );
     }
 }

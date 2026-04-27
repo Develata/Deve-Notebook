@@ -1,7 +1,8 @@
 # Search Acceptance Cases
 
 这些用例覆盖全文搜索的当前可验收能力。当前实现是 repo-scoped baseline scan；
-Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
+Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项，也不应在当前 CLI
+baseline 启动路径初始化索引服务。
 
 - case_id: SEARCH-001
   goal: Standard + `search` feature 下全文搜索返回当前 repo scope 的结果。
@@ -27,6 +28,7 @@ Tantivy 增量索引仍是 future optimization，不作为本文件阻塞项。
     - ws_assert: SearchResults.results_contain_doc_path "expected.md"
     - ui_assert: search_results_contain_doc_path "expected.md"
     - ui_assert: search_result_detail_contains "Full-text match"
+    - runtime_assert: no_tantivy_index_startup_for_baseline true
   notes:
     - 当前 baseline payload 为 `(doc_id, path, score)`，UI 不承诺显示正文 snippet 或 query highlight。
 

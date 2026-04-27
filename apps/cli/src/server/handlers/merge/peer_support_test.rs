@@ -26,7 +26,7 @@ fn app_state(repo: Arc<RepoManager>, vault: PathBuf) -> Arc<AppState> {
         )),
         tree_manager: Arc::new(RepoTreeRegistry::new()),
         #[cfg(feature = "search")]
-        search_service: None,
+        search_available: false,
         identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
     })
 }

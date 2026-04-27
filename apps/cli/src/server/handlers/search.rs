@@ -31,7 +31,7 @@ pub async fn handle_search(
     limit: u32,
     scope_nonce: Option<u64>,
 ) {
-    if state.search_service.is_none() {
+    if !state.search_available {
         ch.send_protocol_error_with_scope_nonce(
             ServerError::with_detail(
                 ServerErrorCode::RequestFailed,

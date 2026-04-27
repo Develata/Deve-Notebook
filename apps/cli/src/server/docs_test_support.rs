@@ -49,7 +49,7 @@ pub(crate) fn docs_harness() -> anyhow::Result<DocsHarness> {
             )),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
-            search_service: None,
+            search_available: false,
             identity_key,
         }),
         repo_id,

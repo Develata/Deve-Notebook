@@ -7,7 +7,6 @@ mod feature_enabled {
     use crate::server::repo_scope::ResolvedRepo;
     use crate::server::session::WsSession;
     use deve_core::protocol::{ServerErrorCode, ServerMessage};
-    use deve_core::search::SearchService;
     use std::sync::Arc;
     use tokio::sync::mpsc;
 
@@ -114,7 +113,7 @@ mod feature_enabled {
     async fn handler_emits_repo_scoped_search_results() -> anyhow::Result<()> {
         let h = edit_harness(false)?;
         let doc_id = seed_doc_with_content(&h.state, "default", "notes/search.md", "Needle body")?;
-        let state = search_enabled_state(&h.state)?;
+        let state = search_enabled_state(&h.state);
         let (ch, mut rx) = test_channel(&state);
         let mut session = session_for_repo("default", h.default_repo_id);
 
@@ -162,17 +161,17 @@ mod feature_enabled {
         (DualChannel::new(state.tx.clone(), tx), rx)
     }
 
-    fn search_enabled_state(source: &Arc<AppState>) -> anyhow::Result<Arc<AppState>> {
-        Ok(Arc::new(AppState {
+    fn search_enabled_state(source: &Arc<AppState>) -> Arc<AppState> {
+        Arc::new(AppState {
             repo: source.repo.clone(),
             sync_manager: source.sync_manager.clone(),
             tx: source.tx.clone(),
             plugins: Vec::new(),
             sync_engine: source.sync_engine.clone(),
             tree_manager: source.tree_manager.clone(),
-            search_service: Some(SearchService::new_in_memory()?),
+            search_available: true,
             identity_key: source.identity_key.clone(),
-        }))
+        })
     }
 }
 

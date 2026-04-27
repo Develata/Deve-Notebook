@@ -36,7 +36,7 @@ fn build_state() -> anyhow::Result<(
         )),
         tree_manager: Arc::new(RepoTreeRegistry::new()),
         #[cfg(feature = "search")]
-        search_service: None,
+        search_available: false,
         identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
     });
     let peer_id = PeerId::new("peer-a");
