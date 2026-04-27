@@ -15,6 +15,14 @@ check_contains() {
     || fail "missing '$pattern' in $file"
 }
 
+check_absent() {
+  local file="$1"
+  local pattern="$2"
+  if rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file"; then
+    fail "unexpected '$pattern' in $file"
+  fi
+}
+
 # CLI command surface.
 check_contains apps/cli/src/main.rs "Init {"
 check_contains apps/cli/src/main.rs "Scan,"
@@ -35,6 +43,9 @@ check_contains apps/cli/src/commands/config.rs "parse_whitelisted_value"
 check_contains apps/cli/src/commands/config.rs "\"ui.sidebar_width\""
 check_contains apps/cli/src/commands/config.rs "\"ai.mode\""
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
+check_contains docs/plan/13_settings.md "server-backed Settings API 与统一 GUI"
+check_contains docs/plan/13_settings.md "仍是 future work"
+check_absent apps/cli/src/server/router.rs "/api/settings"
 
 # UI command surfaces remain reachable through the shortcut layer.
 check_contains apps/web/src/shortcuts/global.rs "Ctrl+P"

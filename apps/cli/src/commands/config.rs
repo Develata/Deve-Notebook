@@ -203,10 +203,19 @@ mod tests {
     fn set_rejects_unknown_key() {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = dir.path().join("config.toml");
+        let original = "profile = \"standard\"\n";
+        std::fs::write(&path, original).expect("seed config");
 
         let err = set_in_file(&path, "unknown.key", "1").expect_err("reject key");
-
         assert!(err.to_string().contains("Unsupported config key"));
+
+        let err =
+            set_in_file(&path, "server.settings.api_enabled", "true").expect_err("reject future");
+        assert!(err.to_string().contains("Unsupported config key"));
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("read config"),
+            original
+        );
     }
 
     #[test]

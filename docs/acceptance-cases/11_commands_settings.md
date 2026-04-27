@@ -165,4 +165,15 @@
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
+
+- case_id: SET-003
+  goal: Server-backed Settings API 仍按 future 边界处理。
+  preconditions:
+    - docs/plan/13_settings.md 仍标记 Settings API 为 future work
+  steps:
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli config -- --nocapture
+  assertions:
+    - route_absent: "/api/settings"
+    - unsupported_key_rejected: "server.settings.api_enabled"
 ```
