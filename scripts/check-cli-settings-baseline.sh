@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# SET-007: server-backed Settings API remains a future boundary; current
+# settings mutation is config.toml-only.
+
 fail() {
   echo "cli-settings-baseline-check: $*" >&2
   exit 1
