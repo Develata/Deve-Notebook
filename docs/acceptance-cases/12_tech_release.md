@@ -91,5 +91,6 @@
     - chrome_mcp: open dashboard
   assertions:
     - json_fields_present: ["version", "profile", "delivery", "environment"]
+    - json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]
     - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]
 ```

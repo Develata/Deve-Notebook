@@ -29,7 +29,7 @@
 ### 2. 版本与升级预期
 
 - 用户应能知道当前运行的大致版本或构建来源。
-- 当前 `/api/node/role` 与 Web dashboard 应暴露只读运行摘要，包括版本、profile、环境和交付形态。
+- 当前 `/api/node/role` 与 Web dashboard 应暴露只读运行摘要，包括版本、profile、环境、交付形态和 repo health 聚合状态。
 - 升级后核心数据与核心工作流不应无提示地断裂。
 
 ### 3. 运行环境提示
@@ -37,6 +37,7 @@
 - 部署者应能分辨当前是本地开发、服务器部署还是容器化运行。
 - 不同运行环境的差异不应混淆成产品功能差异。
 - 生产服务器/容器运行必须显式提供 `AUTH_SECRET` 和 `AUTH_PASS`；本地开发应使用 `deve serve --dev` 或 `DEVE_ENV=development`。
+- degraded repo 必须被显示为运行状态，而不是伪装为全局启动失败或静默健康。
 
 ## 非目标
 

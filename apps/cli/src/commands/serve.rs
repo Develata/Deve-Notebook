@@ -104,6 +104,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         profile: "proxy".into(),
         delivery: "plugin-host-proxy".into(),
         environment: crate::server::node_role::runtime_environment(),
+        repo_health: crate::server::node_role::RepoHealthSummary::unknown(),
     });
     server::start_plugin_host_only(plugins, plugin_port).await
 }

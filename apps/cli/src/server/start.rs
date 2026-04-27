@@ -35,6 +35,7 @@ pub async fn start_server(
         profile: profile_label(profile).into(),
         delivery: static_files::delivery_shape().into(),
         environment: node_role::runtime_environment(),
+        repo_health: node_role::RepoHealthSummary::unknown(),
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
@@ -50,6 +51,7 @@ pub async fn start_server(
         vault_path.clone(),
     )?);
     sync_manager.scan()?;
+    node_role::update_repo_health(repo_health_summary(repo.as_ref(), sync_manager.as_ref()));
     host::set_sync_manager(sync_manager.clone())?;
 
     prewarm::spawn_prewarm(repo.clone());
@@ -115,6 +117,26 @@ fn profile_label(profile: AppProfile) -> &'static str {
     match profile {
         AppProfile::Standard => "standard",
         AppProfile::LowSpec => "low-spec",
+    }
+}
+
+fn repo_health_summary(
+    repo: &RepoManager,
+    sync_manager: &deve_core::sync::SyncManager,
+) -> node_role::RepoHealthSummary {
+    match sync_manager.healthy_local_repo_names_for_execution() {
+        Ok(healthy) => {
+            let healthy_count = healthy.len();
+            let total = repo
+                .list_local_repo_names_for_execution()
+                .map(|repos| repos.len())
+                .unwrap_or(healthy_count);
+            node_role::RepoHealthSummary::from_counts(total, total.saturating_sub(healthy_count))
+        }
+        Err(err) => {
+            tracing::warn!("Failed to summarize repo health for node role: {}", err);
+            node_role::RepoHealthSummary::unknown()
+        }
     }
 }
 

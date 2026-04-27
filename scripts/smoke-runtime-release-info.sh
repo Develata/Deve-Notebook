@@ -58,6 +58,21 @@ for key in ["ws_port", "main_port"]:
         print(f"runtime-release-info-smoke: invalid port field {key}", file=sys.stderr)
         sys.exit(1)
 
+repo_health = payload.get("repo_health")
+if not isinstance(repo_health, dict):
+    print("runtime-release-info-smoke: missing repo_health object", file=sys.stderr)
+    sys.exit(1)
+
+if repo_health.get("status") not in {"healthy", "degraded", "unknown"}:
+    print("runtime-release-info-smoke: invalid repo_health.status", file=sys.stderr)
+    sys.exit(1)
+
+for key in ["local_total", "healthy", "degraded"]:
+    value = repo_health.get(key)
+    if not isinstance(value, int) or value < 0:
+        print(f"runtime-release-info-smoke: invalid repo_health.{key}", file=sys.stderr)
+        sys.exit(1)
+
 if payload["delivery"] not in allowed_delivery:
     print(
         f"runtime-release-info-smoke: unsupported delivery {payload['delivery']}",
@@ -67,7 +82,8 @@ if payload["delivery"] not in allowed_delivery:
 
 summary = (
     f"{payload['role']} v{payload['version']} "
-    f"{payload['profile']} {payload['delivery']} {payload['environment']}"
+    f"{payload['profile']} {payload['delivery']} {payload['environment']} "
+    f"repos:{repo_health['status']}({repo_health['degraded']}/{repo_health['local_total']})"
 )
 print(f"runtime-release-info-smoke: ok: {summary}")
 PY

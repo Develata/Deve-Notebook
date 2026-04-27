@@ -123,6 +123,15 @@ services:
 *   **Optimization**: 使用 `cargo-chef` 缓存依赖构建层。
 *   **Frontend Delivery**: runtime image ships a single `deve_cli` binary with embedded frontend static assets; runtime no longer requires `/app/static` or `DEVE_STATIC_DIR` for normal Docker deployment.
 
+### 5.4 Runtime Observability
+
+The public `/api/node/role` endpoint is the lightweight release/runtime shape
+surface for smoke tests and operators. It must expose version, profile,
+delivery shape, environment, ports, and aggregated repo health counts. Degraded
+repo details remain behind CLI/admin diagnostics; the public endpoint reports
+only aggregate counts so operators can see degraded startup without leaking repo
+names or corruption details.
+
 ## 6. Checklist for Release (发布清单)
 
 发布前 (Pre-flight Check) 必须确认：

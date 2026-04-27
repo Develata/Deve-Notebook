@@ -23,6 +23,7 @@ fn format_node_role_summary(json: &serde_json::Value) -> String {
     let profile = str_field(json, "profile", "unknown-profile");
     let delivery = str_field(json, "delivery", "unknown-delivery");
     let environment = str_field(json, "environment", "unknown-env");
+    let repo_health = format_repo_health(json);
 
     let role_text = if role == "proxy" && main_port > 0 {
         format!("proxy -> {} (ws:{})", main_port, ws_port)
@@ -32,13 +33,29 @@ fn format_node_role_summary(json: &serde_json::Value) -> String {
         role.to_string()
     };
     format!(
-        "{} | v{} | {} | {} | {}",
-        role_text, version, profile, delivery, environment
+        "{} | v{} | {} | {} | {} | repos:{}",
+        role_text, version, profile, delivery, environment, repo_health
     )
 }
 
 fn str_field<'a>(json: &'a serde_json::Value, key: &str, fallback: &'a str) -> &'a str {
     json.get(key).and_then(|v| v.as_str()).unwrap_or(fallback)
+}
+
+fn format_repo_health(json: &serde_json::Value) -> String {
+    let Some(repo_health) = json.get("repo_health") else {
+        return "unknown".into();
+    };
+    let status = str_field(repo_health, "status", "unknown");
+    let total = repo_health
+        .get("local_total")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let degraded = repo_health
+        .get("degraded")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    format!("{} ({}/{})", status, degraded, total)
 }
 
 #[cfg(test)]
@@ -55,12 +72,18 @@ mod tests {
             "version": "0.0.1",
             "profile": "standard",
             "delivery": "embedded-frontend",
-            "environment": "development"
+            "environment": "development",
+            "repo_health": {
+                "status": "healthy",
+                "local_total": 1,
+                "healthy": 1,
+                "degraded": 0
+            }
         }));
 
         assert_eq!(
             summary,
-            "main (ws:3001) | v0.0.1 | standard | embedded-frontend | development"
+            "main (ws:3001) | v0.0.1 | standard | embedded-frontend | development | repos:healthy (0/1)"
         );
     }
 
@@ -78,7 +101,28 @@ mod tests {
 
         assert_eq!(
             summary,
-            "proxy -> 3001 (ws:3002) | v0.0.1 | proxy | plugin-host-proxy | production"
+            "proxy -> 3001 (ws:3002) | v0.0.1 | proxy | plugin-host-proxy | production | repos:unknown"
         );
+    }
+
+    #[test]
+    fn formats_degraded_repo_health() {
+        let summary = format_node_role_summary(&json!({
+            "role": "main",
+            "ws_port": 3001,
+            "main_port": 3001,
+            "version": "0.0.1",
+            "profile": "standard",
+            "delivery": "embedded-frontend",
+            "environment": "development",
+            "repo_health": {
+                "status": "degraded",
+                "local_total": 2,
+                "healthy": 1,
+                "degraded": 1
+            }
+        }));
+
+        assert!(summary.contains("repos:degraded (1/2)"));
     }
 }

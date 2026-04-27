@@ -146,10 +146,16 @@ DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
 ```
 
 The script checks `role`, `version`, `profile`, `delivery`, `environment`,
-`ws_port`, and `main_port` from `/api/node/role`. Use
+`ws_port`, `main_port`, and the aggregated `repo_health` object from
+`/api/node/role`. Use
 `DEVE_RUNTIME_BASE_URL=http://127.0.0.1:<port>` when testing a non-default port.
 Without `DEVE_RUNTIME_SMOKE_REQUIRED=1`, an unavailable local server reports a
 skip instead of failing the baseline.
+
+`repo_health.status=degraded` means at least one local repo was skipped for
+projection execution while the server stayed available for other healthy repos.
+Use `node-check --projection --repo <repo>` or protected
+`/api/admin/projection-check` for repo-specific details.
 
 ## Chrome MCP Smoke
 

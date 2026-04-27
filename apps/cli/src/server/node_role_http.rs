@@ -19,6 +19,12 @@ fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
         "profile": r.profile,
         "delivery": r.delivery,
         "environment": r.environment,
+        "repo_health": {
+            "status": r.repo_health.status,
+            "local_total": r.repo_health.local_total,
+            "healthy": r.repo_health.healthy,
+            "degraded": r.repo_health.degraded,
+        },
     })
 }
 
@@ -36,6 +42,7 @@ mod tests {
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
+            repo_health: node_role::RepoHealthSummary::from_counts(2, 1),
         });
 
         assert_eq!(payload["role"], "main");
@@ -43,5 +50,9 @@ mod tests {
         assert_eq!(payload["profile"], "standard");
         assert_eq!(payload["delivery"], "embedded-frontend");
         assert_eq!(payload["environment"], "development");
+        assert_eq!(payload["repo_health"]["status"], "degraded");
+        assert_eq!(payload["repo_health"]["local_total"], 2);
+        assert_eq!(payload["repo_health"]["healthy"], 1);
+        assert_eq!(payload["repo_health"]["degraded"], 1);
     }
 }
