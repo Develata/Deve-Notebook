@@ -103,6 +103,24 @@ Structure Facts before expecting scan, watcher, export, or source-control paths
 to treat that repo as healthy. The server should continue serving other healthy
 repos.
 
+## Source Control Smoke Hygiene
+
+Source Control state lives in Deve's ledger/staging tables, not in Git's working
+tree. `git status` can be clean while the app still has staged or unstaged
+Source Control entries.
+
+Before running browser commit/stage smoke tests, inspect the target repo:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- sc-status --repo <repo>
+```
+
+The command is read-only. It prints separate `staged` and `unstaged` counts so a
+dirty dev fixture is visible before the UI test starts. Do not make acceptance
+cases depend on the checked-in local `default` ledger being clean; use a seeded
+temporary repo for exact counts, or assert only that Source Control loads and
+reports its current state.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -135,6 +153,7 @@ scripts/check-cli-settings-baseline.sh
 scripts/check-search-baseline.sh
 scripts/check-ai-baseline.sh
 scripts/check-source-control-baseline.sh
+scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-dev-runbook-baseline.sh
 scripts/check-ws-structured-errors.sh

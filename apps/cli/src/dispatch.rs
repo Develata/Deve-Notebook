@@ -52,6 +52,9 @@ pub async fn run(
         Some(Commands::Recover { repo }) => {
             commands::recover::run(ledger_dir, vault_path, repo, config.snapshot_depth)?
         }
+        Some(Commands::ScStatus { repo }) => {
+            commands::sc_status::run(ledger_dir, repo.as_deref(), config.snapshot_depth)?
+        }
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(ledger_dir, peer, repo, config.snapshot_depth)?

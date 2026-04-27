@@ -98,6 +98,11 @@ pub(crate) enum Commands {
         #[arg(long)]
         repo: Option<String>,
     },
+    /// Print source-control staged and unstaged counts
+    ScStatus {
+        #[arg(long)]
+        repo: Option<String>,
+    },
     /// Repair known local corruption from backups and quarantine invalid shadows
     Repair {
         #[arg(long, default_value = "Vault_old/vault")]

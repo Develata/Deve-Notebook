@@ -100,4 +100,16 @@
     - ui_assert: command_palette_git_sync_absent true
     - ui_assert: command_palette_git_commit_absent true
     - ui_assert: command_palette_git_push_absent true
+
+- case_id: DIFF-010
+  goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。
+  preconditions:
+    - CLI 可用
+  steps:
+    - run: deve sc-status --repo default
+    - run: scripts/check-source-control-smoke-hygiene.sh
+    - run: cargo test -p deve_cli sc_status -- --nocapture
+  assertions:
+    - stdout_contains: "sc_status[default]: staged="
+    - exit_code_all_eq: 0
 ```
