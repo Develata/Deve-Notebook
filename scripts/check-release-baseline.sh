@@ -72,7 +72,13 @@ contains ".env.example" "AUTH_SECRET=replace-with-at-least-32-random-bytes"
 contains ".env.example" 'AUTH_PASS=$argon2id$v=19$m=65536,t=3,p=1$...'
 contains "docs/plan/15_release.md" 'runtime image ships a single `deve_cli` binary with embedded frontend static assets'
 contains "docs/features/15_release.md" 'Docker/Server 当前主通道是单个 `deve_cli` 二进制'
+contains "docs/dev-runbook.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
+contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_SMOKE_REQUIRED"
+contains "scripts/smoke-docker-release.sh" "docker build -t"
+contains "scripts/smoke-docker-release.sh" "docker run -d"
+contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/node/role"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-005"
+contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 
 echo "release-baseline-check: ok"

@@ -46,8 +46,7 @@
     - AUTH_SECRET 已设置为 32 字节以上随机字符串
     - AUTH_PASS 已设置为 Argon2 PHC 密码哈希
   steps:
-    - run: docker run -d --name deve-server -p 3001:3001 -v $(pwd)/data:/data -e DEVE_LEDGER_DIR=/data/ledger -e DEVE_VAULT_PATH=/data/vault -e AUTH_SECRET -e AUTH_PASS ghcr.io/develata/deve-notebook:latest
-    - run: curl -I http://127.0.0.1:3001/api/node/role
+    - run: DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
   assertions:
     - http_status_eq: 200
 

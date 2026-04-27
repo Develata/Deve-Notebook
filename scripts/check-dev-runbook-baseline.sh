@@ -38,6 +38,8 @@ contains "$RUNBOOK" 'scripts/check-ws-structured-errors.sh'
 contains "$RUNBOOK" 'scripts/check-release-baseline.sh'
 contains "$RUNBOOK" 'scripts/check-architecture-registry.sh'
 contains "$RUNBOOK" 'scripts/plan-coverage.sh'
+contains "$RUNBOOK" 'DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh'
+contains "$RUNBOOK" 'scripts/smoke-docker-release.sh'
 
 contains "$ACCEPTANCE" 'case_id: REL-004'
 contains "$ACCEPTANCE" 'scripts/check-dev-runbook-baseline.sh'

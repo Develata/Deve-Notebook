@@ -121,6 +121,21 @@ cases depend on the checked-in local `default` ledger being clean; use a seeded
 temporary repo for exact counts, or assert only that Source Control loads and
 reports its current state.
 
+## Docker Release Smoke
+
+After enabling Docker Desktop WSL integration or another Docker-compatible
+runtime, run:
+
+```bash
+DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
+```
+
+The script builds the local Dockerfile, starts the image with production
+`AUTH_SECRET` / `AUTH_PASS` material, waits for
+`http://127.0.0.1:3001/api/node/role`, then removes the smoke container and
+temporary data directory. Without `DEVE_DOCKER_SMOKE_REQUIRED=1`, a machine that
+does not provide Docker reports a skip instead of failing the local baseline.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -160,6 +175,7 @@ scripts/check-ws-structured-errors.sh
 scripts/check-release-baseline.sh
 scripts/check-architecture-registry.sh
 scripts/plan-coverage.sh
+scripts/smoke-docker-release.sh
 ```
 
 Use full-suite checks as release/final verification, not as the default inner
