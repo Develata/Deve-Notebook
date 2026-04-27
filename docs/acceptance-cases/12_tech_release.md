@@ -86,6 +86,7 @@
     - 后端 `/api/node/role` 可访问
     - Web dashboard 可打开
   steps:
+    - run: DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
     - run: scripts/check-release-baseline.sh
     - chrome_mcp: open dashboard
   assertions:

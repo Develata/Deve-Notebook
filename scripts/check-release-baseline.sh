@@ -80,6 +80,7 @@ contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/n
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-005"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-006"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
 contains "docs/features/15_release.md" "版本、profile、环境和交付形态"
@@ -91,5 +92,8 @@ contains "apps/cli/src/server/static_files.rs" '"embedded-frontend"'
 contains "apps/web/src/api/connection_role.rs" "format_node_role_summary"
 contains "apps/web/src/components/dashboard/runtime_card.rs" "RuntimeCard"
 contains "apps/web/src/components/settings.rs" 'env!("CARGO_PKG_VERSION")'
+contains "scripts/smoke-runtime-release-info.sh" "/api/node/role"
+contains "scripts/smoke-runtime-release-info.sh" "DEVE_RUNTIME_SMOKE_REQUIRED"
+contains "scripts/smoke-runtime-release-info.sh" "allowed_delivery"
 
 echo "release-baseline-check: ok"

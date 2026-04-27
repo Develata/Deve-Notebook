@@ -136,6 +136,21 @@ The script builds the local Dockerfile, starts the image with production
 temporary data directory. Without `DEVE_DOCKER_SMOKE_REQUIRED=1`, a machine that
 does not provide Docker reports a skip instead of failing the local baseline.
 
+## Runtime Release Info Smoke
+
+With a local backend already running, validate the public runtime/release shape
+endpoint:
+
+```bash
+DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
+```
+
+The script checks `role`, `version`, `profile`, `delivery`, `environment`,
+`ws_port`, and `main_port` from `/api/node/role`. Use
+`DEVE_RUNTIME_BASE_URL=http://127.0.0.1:<port>` when testing a non-default port.
+Without `DEVE_RUNTIME_SMOKE_REQUIRED=1`, an unavailable local server reports a
+skip instead of failing the baseline.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -175,6 +190,7 @@ scripts/check-ws-structured-errors.sh
 scripts/check-release-baseline.sh
 scripts/check-architecture-registry.sh
 scripts/plan-coverage.sh
+scripts/smoke-runtime-release-info.sh
 scripts/smoke-docker-release.sh
 ```
 
