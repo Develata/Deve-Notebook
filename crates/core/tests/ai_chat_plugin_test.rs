@@ -43,7 +43,6 @@ mod tests {
         assert!(!caps.allow_search);
         assert!(!caps.allow_project_tree);
         assert!(!caps.allow_skill);
-        assert!(!caps.allow_mcp);
     }
 
     #[test]

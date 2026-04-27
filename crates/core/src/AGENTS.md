@@ -25,7 +25,6 @@ Root source of the core library. Declares all public modules and gates backend-o
 |-----------|---------|
 | `context/` | Context engine (tree context) |
 | `ledger/` | Ledger storage — the heart of the system |
-| `mcp/` | MCP client integration |
 | `models/` | Data model types and serialization |
 | `plugin/` | Plugin system and Rhai runtime |
 | `protocol/` | WebSocket message definitions |
@@ -42,7 +41,7 @@ Root source of the core library. Declares all public modules and gates backend-o
 
 ### Working In This Directory
 
-- Backend-only: `ledger`, `mcp`, `vfs`, `watcher`, `search`.
+- Backend-only: `ledger`, `vfs`, `watcher`, `search`.
 - Cross-platform: `models`, `protocol`, `state`, `source_control`, `sync`, `tree`, `utils`, `plugin`, `security`, `skill`, `context`.
 
 <!-- MANUAL: -->

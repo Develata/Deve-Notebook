@@ -12,7 +12,6 @@ pub mod channel;
 include!("test_modules.rs");
 mod error_classify;
 pub mod handlers;
-pub mod mcp;
 pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;

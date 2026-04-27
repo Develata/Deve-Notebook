@@ -4,7 +4,7 @@
 # cli
 
 ## Purpose
-The `deve_cli` crate is the Axum-based HTTP/WebSocket server binary for Deve-Notebook. It serves as the Local Hub and Backend Server, providing CLI commands (init, scan, watch, dump, serve, export, repair, seed, verify-p2p, node-check) and an Axum server with REST API endpoints, WebSocket real-time collaboration, plugin hosting via Rhai, MCP integration, and OpenAI-compatible AI chat streaming. It depends on `deve_core` for all domain logic including the ledger, sync engine, CRDT operations, and security primitives.
+The `deve_cli` crate is the Axum-based HTTP/WebSocket server binary for Deve-Notebook. It serves as the Local Hub and Backend Server, providing CLI commands (init, scan, watch, dump, serve, export, repair, seed, verify-p2p, node-check) and an Axum server with REST API endpoints, WebSocket real-time collaboration, plugin hosting via Rhai, agent bridge integration, and OpenAI-compatible AI chat streaming. It depends on `deve_core` for all domain logic including the ledger, sync engine, CRDT operations, and security primitives.
 
 ## Key Files
 | File | Description |

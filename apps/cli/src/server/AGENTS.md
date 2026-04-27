@@ -11,7 +11,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 |------|-------------|
 | `mod.rs` | `AppState` struct definition, `start_server()` and `start_plugin_host_only()` entry points |
 | `router.rs` | Axum router construction: protected routes (JWT), public routes, login, static fallback |
-| `setup.rs` | Server init helpers: CORS config, MCP loading, file watcher spawn, port hint writing |
+| `setup.rs` | Server init helpers: CORS config, file watcher spawn, port hint writing |
 | `session.rs` | Per-WebSocket-connection session state (`WsSession`): scope nonce, branch, repo, rate limiting |
 | `session_scope.rs` | Session-level scope binding helpers (switch_branch, switch_repo, clear_active_db) |
 | `channel.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
@@ -73,7 +73,6 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `ai_chat/` | OpenAI-compatible streaming chat integration |
 | `agent_bridge/` | Bridge to external AI CLI tools |
 | `channel_test/` | Integration tests for channel delivery guarantees |
-| `mcp/` | Model Context Protocol client executors (stdio, HTTP, SSE) |
 
 ## For AI Agents
 

@@ -44,8 +44,6 @@ pub struct Capability {
     #[serde(default)]
     pub allow_skill: bool,
     #[serde(default)]
-    pub allow_mcp: bool,
-    #[serde(default)]
     pub allow_project_tree: bool,
 }
 
@@ -144,11 +142,6 @@ impl Capability {
     /// Check if skill access is allowed. (检查技能权限)
     pub fn check_skill(&self) -> bool {
         self.allow_skill
-    }
-
-    /// Check if MCP access is allowed. (检查 MCP 权限)
-    pub fn check_mcp(&self) -> bool {
-        self.allow_mcp
     }
 
     /// Check if project tree access is allowed. (检查项目树权限)

@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Host API functions exposed to Rhai plugin scripts. Provides file system access, git operations, note manipulation, search, MCP integration, and utility functions within a sandboxed path guard.
+Host API functions exposed to Rhai plugin scripts. Provides file system access, git operations, note manipulation, search, skill execution, chat, and utility functions within a sandboxed path guard.
 
 ## Key Files
 
@@ -18,7 +18,6 @@ Host API functions exposed to Rhai plugin scripts. Provides file system access, 
 | `note.rs` | Note manipulation API |
 | `search.rs` | Search API for plugins |
 | `chat.rs` | Chat API for plugins |
-| `mcp.rs` | MCP tool invocation |
 | `skill.rs` | Skill execution API |
 | `path_guard.rs` | Path guard — constrains plugin file access to vault |
 | `util.rs` | Utility functions |

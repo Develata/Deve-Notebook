@@ -19,7 +19,7 @@ Built-in Native AI chat compatibility plugin providing streaming LLM conversatio
 ### Working In This Directory
 
 - This is Rhai code, not Rust. Rhai syntax resembles JavaScript with some Rust influences.
-- The plugin communicates with the host via registered API functions (see `crates/core/src/plugin/runtime/host/`), but default Native AI must not expose file, source-control, MCP, or skill tools.
+- The plugin communicates with the host via registered API functions (see `crates/core/src/plugin/runtime/host/`), but default Native AI must not expose file, source-control, shell, or skill tools. MCP runtime is not supported.
 - Public PluginCall access is `chat` only; helper/config/tool functions must remain server-side/internal.
 - Streaming responses use the chat stream API defined in the plugin runtime.
 

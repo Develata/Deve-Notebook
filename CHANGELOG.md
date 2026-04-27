@@ -16,6 +16,9 @@
 ### Changed
 - **Rust 1.85+**: 升级最低要求以支持 Edition 2024
 
+### Removed
+- **MCP runtime**: 移除产品内 MCP manager、client executor、plugin host tool 入口；后续工具扩展走 Skills + controlled CLI / Trusted CLI path。
+
 ## [0.1.0] - 2026-03-05
 
 ### Added
@@ -27,5 +30,4 @@
 - **国际化**: 手工 i18n 系统（中/英双语全覆盖）
 - **文件树**: 增量更新 TreeManager + 前端实时同步
 - **搜索**: Tantivy 全文搜索（可选 feature）
-- **MCP**: 外部工具集成协议
 - **AI Context Injection**: 选中代码自动注入 AI 上下文

@@ -1,8 +1,7 @@
 // apps/cli/src/server/setup.rs
-//! 服务器启动辅助: CORS 配置、MCP 加载、文件监视器
+//! 服务器启动辅助: CORS 配置、文件监视器
 
 use anyhow::{Context, Result, anyhow};
-use deve_core::mcp::{McpManager, McpServerConfig};
 use deve_core::protocol::ServerMessage;
 
 use axum::http::{Method, header};
@@ -69,27 +68,6 @@ pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Res
         .with_context(|| format!("Failed to write main port hint: {:?}", hint_path))
 }
 
-pub(super) fn load_mcp_manager(ledger_dir: &std::path::Path) -> Result<McpManager> {
-    let mut manager = McpManager::new();
-    let cfg_path = deve_core::utils::notegit::host_mcp_config_path(ledger_dir);
-    match cfg_path.try_exists() {
-        Ok(true) => {}
-        Ok(false) => return Ok(manager),
-        Err(err) => {
-            return Err(err).with_context(|| format!("Failed to stat MCP config {:?}", cfg_path));
-        }
-    }
-
-    let content = std::fs::read_to_string(&cfg_path)
-        .with_context(|| format!("Failed to read MCP config {:?}", cfg_path))?;
-
-    let configs: Vec<McpServerConfig> = serde_json::from_str(&content)
-        .with_context(|| format!("Invalid MCP config {:?}", cfg_path))?;
-
-    super::mcp::register_mcp_servers(&mut manager, configs);
-    Ok(manager)
-}
-
 /// 启动每个本地 repo 的 watcher。
 pub(super) fn start_file_watchers(
     sync_manager: Arc<deve_core::sync::SyncManager>,
@@ -121,10 +99,7 @@ fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        allowed_origins_from_env, load_mcp_manager, validate_file_watcher_startup,
-        write_main_port_hint,
-    };
+    use super::{allowed_origins_from_env, validate_file_watcher_startup, write_main_port_hint};
 
     #[test]
     fn write_main_port_hint_fails_closed_when_parent_is_not_directory() {
@@ -152,20 +127,6 @@ mod tests {
                 || err.to_string().contains("canonicalize")
                 || err.to_string().contains("No such file")
         );
-    }
-
-    #[test]
-    fn load_mcp_manager_fails_closed_on_invalid_config() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let cfg_path = deve_core::utils::notegit::host_mcp_config_path(dir.path());
-        std::fs::create_dir_all(cfg_path.parent().expect("config parent")).expect("mkdir parent");
-        std::fs::write(&cfg_path, "{ invalid json").expect("write bad config");
-
-        let err = match load_mcp_manager(dir.path()) {
-            Ok(_) => panic!("invalid mcp config must fail closed"),
-            Err(err) => err,
-        };
-        assert!(err.to_string().contains("Invalid MCP config"));
     }
 
     #[test]

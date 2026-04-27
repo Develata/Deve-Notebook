@@ -21,7 +21,3 @@ pub fn host_dir(ledger_root: &Path) -> PathBuf {
 pub fn host_keys_dir(ledger_root: &Path) -> PathBuf {
     host_dir(ledger_root).join("keys")
 }
-
-pub fn host_mcp_config_path(ledger_root: &Path) -> PathBuf {
-    host_dir(ledger_root).join("mcp.json")
-}

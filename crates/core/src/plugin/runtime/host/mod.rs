@@ -23,8 +23,6 @@ mod fs;
 #[cfg(not(target_arch = "wasm32"))]
 mod git;
 #[cfg(not(target_arch = "wasm32"))]
-mod mcp;
-#[cfg(not(target_arch = "wasm32"))]
 mod note;
 #[cfg(not(target_arch = "wasm32"))]
 mod path_guard;
@@ -42,8 +40,6 @@ use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::traits::Repository;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::mcp::McpManager;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::sync::SyncManager;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, OnceLock};
@@ -52,8 +48,6 @@ use std::sync::{Arc, OnceLock};
 static REPOSITORY: OnceLock<Arc<dyn Repository>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
 static REPO_MANAGER: OnceLock<Arc<RepoManager>> = OnceLock::new();
-#[cfg(not(target_arch = "wasm32"))]
-static MCP_MANAGER: OnceLock<Arc<McpManager>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
 static SYNC_MANAGER: OnceLock<Arc<SyncManager>> = OnceLock::new();
 
@@ -69,13 +63,6 @@ pub fn set_repo_manager(repo: Arc<RepoManager>) -> Result<(), anyhow::Error> {
     REPO_MANAGER
         .set(repo)
         .map_err(|_| anyhow::anyhow!("RepoManager already set"))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn set_mcp_manager(manager: Arc<McpManager>) -> Result<(), anyhow::Error> {
-    MCP_MANAGER
-        .set(manager)
-        .map_err(|_| anyhow::anyhow!("McpManager already set"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -102,11 +89,6 @@ pub(crate) fn repo_manager() -> Result<Arc<RepoManager>, anyhow::Error> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn mcp_manager() -> Option<Arc<McpManager>> {
-    MCP_MANAGER.get().cloned()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn sync_manager() -> Result<Arc<SyncManager>, anyhow::Error> {
     SYNC_MANAGER
         .get()
@@ -130,8 +112,6 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
         util::register_util_api(engine, caps.clone());
         skill::register_skill_api(engine, caps.clone());
         search::register_search_api(engine, caps.clone());
-        let manager = mcp_manager().unwrap_or_else(|| Arc::new(McpManager::new()));
-        mcp::register_mcp_api(engine, caps.clone(), manager);
     }
 
     // 通用 API (跨平台)

@@ -71,7 +71,7 @@ impl ToolResult {
 /// Built-in tools available to Native AI.
 ///
 /// Current contract: no default tools. Native AI must not silently gain file,
-/// source-control, MCP, or skill authority through this list.
+/// source-control, shell, or skill authority through this list.
 pub fn builtin_tools() -> Vec<ToolDefinition> {
     Vec::new()
 }
