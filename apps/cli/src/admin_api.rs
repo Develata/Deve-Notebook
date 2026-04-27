@@ -33,6 +33,8 @@ pub struct ProjectionCheckResponse {
     pub issue_code: Option<String>,
     pub issue_detail: Option<String>,
     pub rebuild_supported: bool,
+    #[serde(default)]
+    pub repair_hint: String,
 }
 
 impl ProjectionCheckResponse {
@@ -47,6 +49,7 @@ impl ProjectionCheckResponse {
             issue_code,
             issue_detail,
             rebuild_supported: diagnostic.rebuild_supported,
+            repair_hint: diagnostic.repair_hint.to_string(),
         }
     }
 }

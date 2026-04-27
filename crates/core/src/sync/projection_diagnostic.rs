@@ -11,6 +11,7 @@ pub struct ProjectionDiagnostic {
     pub status: ProjectionDiagnosticStatus,
     pub issue: Option<ProjectionDiagnosticIssue>,
     pub rebuild_supported: bool,
+    pub repair_hint: &'static str,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,6 +33,7 @@ pub(super) fn diagnose(repo: &RepoManager, repo_name: &str) -> Result<Projection
             status: ProjectionDiagnosticStatus::Healthy,
             issue: None,
             rebuild_supported: true,
+            repair_hint: "projection authority is healthy; rebuild is available if workspace files need regeneration",
         }),
         Err(err) if materialize::is_broken_structure_projection_error(&err) => {
             let detail = err.to_string();
@@ -43,6 +45,7 @@ pub(super) fn diagnose(repo: &RepoManager, repo_name: &str) -> Result<Projection
                     detail,
                 }),
                 rebuild_supported: false,
+                repair_hint: "Structure Facts authority is corrupt; projection rebuild is unsupported, inspect ledger/backups before repair",
             })
         }
         Err(err) => Err(err),

@@ -70,6 +70,39 @@ If `AUTH_SECRET` or `AUTH_PASS` is missing, startup must exit non-zero with the
 production auth error. For local testing, use `--dev` rather than weakening this
 production boundary.
 
+## Projection Health
+
+Startup can skip a local repo when its Structure Facts authority cannot build a
+safe tree projection. This is a repo-local degraded state, not a global server
+startup failure.
+
+Use read-only diagnostics first:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- node-check --projection --repo <repo>
+```
+
+Important fields:
+
+- `status=healthy`: projection authority can be used.
+- `status=authority_corrupt`: Structure Facts are corrupt.
+- `rebuild_supported=false`: `repair --rebuild-projection` must not rewrite this
+  authority automatically.
+- `issue_code=missing_parent`: a node references a parent that is absent from
+  Structure Facts.
+- `repair_hint`: operator-facing next step for the diagnostic class.
+
+For rebuild-supported projection drift, use:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- repair --repo <repo> --rebuild-projection
+```
+
+For `authority_corrupt` repos, inspect ledger/backups and restore authoritative
+Structure Facts before expecting scan, watcher, export, or source-control paths
+to treat that repo as healthy. The server should continue serving other healthy
+repos.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -102,6 +135,7 @@ scripts/check-cli-settings-baseline.sh
 scripts/check-search-baseline.sh
 scripts/check-ai-baseline.sh
 scripts/check-source-control-baseline.sh
+scripts/check-dev-data-health-baseline.sh
 scripts/check-dev-runbook-baseline.sh
 scripts/check-ws-structured-errors.sh
 scripts/check-architecture-registry.sh

@@ -109,6 +109,7 @@ fn print_projection_reports(reports: &[ProjectionCheckResponse]) -> Result<()> {
             "projection_check[{}]: status={} rebuild_supported={}",
             report.repo_name, report.status, report.rebuild_supported
         );
+        println!("repair_hint: {}", report.repair_hint);
         if let Some(code) = &report.issue_code {
             println!("issue_code: {}", code);
         }

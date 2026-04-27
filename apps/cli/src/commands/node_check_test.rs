@@ -62,5 +62,6 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
     assert_eq!(reports[0].status, "authority_corrupt");
     assert_eq!(reports[0].issue_code.as_deref(), Some("missing_parent"));
     assert!(!reports[0].rebuild_supported);
+    assert!(reports[0].repair_hint.contains("rebuild is unsupported"));
     Ok(())
 }

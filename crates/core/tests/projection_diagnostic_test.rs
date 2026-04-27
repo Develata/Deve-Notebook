@@ -43,6 +43,7 @@ fn projection_diagnostic_reports_missing_parent_as_authority_corrupt() {
         ProjectionDiagnosticStatus::AuthorityCorrupt
     );
     assert!(!diagnostic.rebuild_supported);
+    assert!(diagnostic.repair_hint.contains("rebuild is unsupported"));
     let issue = diagnostic.issue.expect("authority issue");
     assert_eq!(issue.code, "missing_parent");
     assert!(issue.detail.contains("missing parent"));

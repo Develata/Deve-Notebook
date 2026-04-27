@@ -23,6 +23,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-cli-settings-baseline.sh` | Verifies CLI command surface, `config.toml` settings mutation, and shortcut entry contracts |
 | `check-ai-baseline.sh` | Verifies Native AI slash modes, planned palette command boundaries, and trusted-cli default-off gates |
 | `check-source-control-baseline.sh` | Verifies Source Control panel commit/publish boundaries and planned Git palette commands |
+| `check-dev-data-health-baseline.sh` | Verifies projection health diagnostics expose repair hints and fail-closed authority corruption boundaries |
 | `check-dev-runbook-baseline.sh` | Verifies current startup, auth, frontend, Chrome MCP, search, and verification runbook boundaries |
 
 ## For AI Agents
