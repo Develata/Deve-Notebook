@@ -1,4 +1,4 @@
-use super::collect_projection_reports;
+use super::{collect_projection_reports, print_projection_reports};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, StructureOp};
@@ -63,5 +63,12 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
     assert_eq!(reports[0].issue_code.as_deref(), Some("missing_parent"));
     assert!(!reports[0].rebuild_supported);
     assert!(reports[0].repair_hint.contains("rebuild is unsupported"));
+    let err =
+        print_projection_reports(&reports).expect_err("authority corruption must fail closed");
+    assert!(
+        err.to_string()
+            .contains("projection check failed closed: Structure Facts authority corrupt")
+    );
+    assert!(err.to_string().contains("default:missing_parent"));
     Ok(())
 }

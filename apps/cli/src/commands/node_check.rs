@@ -5,7 +5,7 @@
 use crate::admin_api::{NodeCheckResponse, ProjectionCheckResponse};
 use crate::commands::live_proxy;
 use crate::commands::repo_arg::resolve_local_repo_args;
-use anyhow::Result;
+use anyhow::{Result, bail};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::node_check::{check_node_consistency, repair_missing_nodes};
 use deve_core::sync::SyncManager;
@@ -104,6 +104,7 @@ fn print_reports(reports: &[NodeCheckResponse]) -> Result<()> {
 }
 
 fn print_projection_reports(reports: &[ProjectionCheckResponse]) -> Result<()> {
+    let mut authority_corrupt = Vec::new();
     for report in reports {
         println!(
             "projection_check[{}]: status={} rebuild_supported={}",
@@ -116,8 +117,25 @@ fn print_projection_reports(reports: &[ProjectionCheckResponse]) -> Result<()> {
         if let Some(detail) = &report.issue_detail {
             println!("issue_detail: {}", detail);
         }
+        if report.status == "authority_corrupt" {
+            authority_corrupt.push(authority_corrupt_summary(report));
+        }
+    }
+    if !authority_corrupt.is_empty() {
+        bail!(
+            "projection check failed closed: Structure Facts authority corrupt in {} repo(s): {}",
+            authority_corrupt.len(),
+            authority_corrupt.join(", ")
+        );
     }
     Ok(())
+}
+
+fn authority_corrupt_summary(report: &ProjectionCheckResponse) -> String {
+    match report.issue_code.as_deref() {
+        Some(code) => format!("{}:{}", report.repo_name, code),
+        None => report.repo_name.clone(),
+    }
 }
 
 #[cfg(test)]
