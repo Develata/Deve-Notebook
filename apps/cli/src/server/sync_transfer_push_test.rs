@@ -1,0 +1,178 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
+use super::handlers::sync::handle_sync_push;
+use super::sync_transfer_scope_test_support::{
+    append_local_doc, bound_session, build_state, build_state_with_mode,
+    encrypted_insert_for_author, recv_protocol_error, unicast_channel,
+};
+use deve_core::config::SyncMode;
+use deve_core::ledger::range;
+use deve_core::models::PeerId;
+use deve_core::protocol::ServerErrorCode;
+use deve_core::security::EncryptedOp;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn manual_sync_push_buffers_without_applying_remote_ops() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state_with_mode(SyncMode::Manual)?;
+    let peer = PeerId::new("peer-a");
+    let (ch, _rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(peer.clone()), Some(31));
+    session.set_requested_sync_sources([peer.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        peer.clone(),
+        repo_id,
+        vec![EncryptedOp {
+            doc_id: None,
+            seq: 1,
+            ciphertext: vec![1, 2, 3],
+            nonce: vec![0; 12],
+        }],
+    )
+    .await;
+
+    let pending = state
+        .sync_engine
+        .with_strict_engine(repo_id, |engine| engine.pending_ops_count())?;
+    assert_eq!(pending, 1);
+    assert_eq!(state.repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_uses_message_source_peer_for_shadow_write() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let relay_peer = PeerId::new("relay-peer");
+    let source_peer = PeerId::new("origin-peer");
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let (ch, _rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(relay_peer.clone()), Some(41));
+    session.set_requested_sync_sources([source_peer.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        vec![op],
+    )
+    .await;
+
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 1);
+    assert_eq!(state.repo.get_shadow_max_seq(&relay_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_does_not_pollute_transport_or_local_ledger() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    append_local_doc(&state)?;
+    let local_before = state
+        .repo
+        .run_on_local_repo(state.repo.local_repo_name(), range::get_max_seq)?;
+    let relay_peer = PeerId::new("relay-peer");
+    let malicious_source = PeerId::new("malicious-source");
+    let op = encrypted_insert_for_author(&state, repo_id, &malicious_source, 1)?;
+    let (ch, _rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(relay_peer.clone()), Some(41));
+    session.set_requested_sync_sources([malicious_source.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        malicious_source.clone(),
+        repo_id,
+        vec![op],
+    )
+    .await;
+
+    assert_eq!(state.repo.get_shadow_max_seq(&malicious_source, &repo_id)?, 1);
+    assert_eq!(state.repo.get_shadow_max_seq(&relay_peer, &repo_id)?, 0);
+    assert_eq!(
+        state
+            .repo
+            .run_on_local_repo(state.repo.local_repo_name(), range::get_max_seq)?,
+        local_before
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_rejects_envelope_seq_mismatch() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let source_peer = PeerId::new("origin-peer");
+    let mut op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    op.seq = 2;
+    let (ch, _rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(source_peer.clone()), Some(41));
+    session.set_requested_sync_sources([source_peer.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        vec![op],
+    )
+    .await;
+
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_rejects_unrequested_authenticated_source() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let source_peer = PeerId::new("origin-peer");
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(source_peer.clone()), Some(42));
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        vec![op],
+    )
+    .await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_rejects_unrequested_relay_source() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let relay_peer = PeerId::new("relay-peer");
+    let source_peer = PeerId::new("origin-peer");
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(relay_peer), Some(42));
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        vec![op],
+    )
+    .await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}

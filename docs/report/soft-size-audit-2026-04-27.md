@@ -7,7 +7,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 9
+- Soft warnings reviewed: 8
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -19,7 +19,6 @@ next-touch refactoring rather than arbitrary line-count slicing.
 
 | File | Lines | Assessment | Next action |
 |---|---:|---|---|
-| `apps/cli/src/server/sync_transfer_scope_test.rs` | 334 | Scenario test where keeping setup and assertions together improves reviewability. | Keep unless duplicate setup grows. |
 | `crates/core/src/config.rs` | 261 | Central config schema and parsing are cohesive; only slightly above the threshold. | Keep; split only if settings domains diverge. |
 | `crates/core/src/ledger/append_validate.rs` | 345 | Ledger append validation is a single invariant boundary. | Keep; extract only repeated validators. |
 | `crates/core/src/ledger/merge/engine.rs` | 286 | Merge engine state machine is cohesive. | Keep unless new phases add distinct ownership. |
@@ -46,3 +45,9 @@ helpers.
 moving WS frame and legacy text protocol cases into
 `apps/cli/src/server/ws/receive_frame_test.rs`. The original file now keeps the
 shared receive fixture plus control-scope and rate-limit coverage.
+
+`apps/cli/src/server/sync_transfer_scope_test.rs` was removed from the
+soft-warning list by splitting sync transfer coverage into request/nonce,
+push-source, and snapshot-source modules:
+`sync_transfer_scope_test.rs`, `sync_transfer_push_test.rs`, and
+`sync_transfer_snapshot_test.rs`.
