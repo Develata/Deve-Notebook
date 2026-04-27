@@ -21,6 +21,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-network-baseline.sh` | Verifies NET-001..NET-004 reconnect, `/ws`, node role, and WS frame baseline contracts |
 | `check-search-baseline.sh` | Verifies current Search scope, feature-gate, stale-result, and future-index boundaries |
 | `check-cli-settings-baseline.sh` | Verifies CLI command surface, `config.toml` settings mutation, and shortcut entry contracts |
+| `check-ai-baseline.sh` | Verifies Native AI slash modes, planned palette command boundaries, and trusted-cli default-off gates |
 
 ## For AI Agents
 

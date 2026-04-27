@@ -10,6 +10,7 @@
     - ui_open: ai_chat
     - ui_type: "Summarize this markdown file"
     - ui_submit: true
+    - run: scripts/check-ai-baseline.sh
   assertions:
     - ui_assert: chat_response_visible true
     - ui_assert: chat_response_mentions_current_doc true
@@ -24,6 +25,9 @@
     - ui_submit: true
     - ui_type: "How should we restructure this markdown?"
     - ui_submit: true
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web slash_commands -- --nocapture
+    - run: cargo test -p deve_cli ai_chat -- --nocapture
   assertions:
     - ui_assert: ai_mode_eq "plan"
     - ui_assert: plugin_call_not_sent_for_slash_command true
@@ -42,6 +46,8 @@
     - ui_submit: true
     - assistant_message_contains_code_block: true
     - ui_click: "Apply"
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_cli ai_chat -- --nocapture
   assertions:
     - ui_assert: ai_mode_eq "build"
     - ui_assert: plugin_call_not_sent_for_slash_command true
@@ -60,6 +66,8 @@
   steps:
     - server_call: native_ai_chat_stream_with_tools
     - server_receive: provider_tool_call_delta
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_cli ai_chat -- --nocapture
   assertions:
     - server_assert: request_tools_rejected_before_provider_call true
     - server_assert: provider_tool_calls_rejected true
@@ -76,6 +84,8 @@
     - ui_submit: true
     - ui_type: "/agents"
     - ui_submit: true
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web slash_commands -- --nocapture
   assertions:
     - ui_assert_sequence:
         - ai_mode_eq "plan"
@@ -90,6 +100,8 @@
     - 未显式启用 trusted-cli
   steps:
     - ui_open: settings
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_cli agent_bridge -- --nocapture
   assertions:
     - ui_assert: ai_backend_option_visible "native"
     - ui_assert: ai_backend_option_disabled "trusted-cli"
@@ -104,6 +116,8 @@
     - ui_set: "ai.mode" = "trusted-cli"
     - ui_type: "hello"
     - ui_submit: true
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_cli agent_bridge -- --nocapture
   assertions:
     - ui_assert: chat_error_visible true
     - ui_assert: ai_backend_eq "native"
