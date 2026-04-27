@@ -85,4 +85,19 @@
   assertions:
     - ui_assert: snapshot_first true
     - ui_assert: search_disabled_until_prefetch_complete true
+
+- case_id: DIFF-009
+  goal: Source Control 当前入口与 Git Command Palette 计划项保持分层。
+  preconditions:
+    - Source Control 面板可用
+  steps:
+    - run: scripts/check-source-control-baseline.sh
+    - run: cargo test -p deve_cli source_control -- --nocapture
+    - run: cargo test -p deve_web commit_write_block -- --nocapture
+  assertions:
+    - ui_assert: source_control_commit_available true
+    - ui_assert: source_control_commit_and_push_available true
+    - ui_assert: command_palette_git_sync_absent true
+    - ui_assert: command_palette_git_commit_absent true
+    - ui_assert: command_palette_git_push_absent true
 ```
