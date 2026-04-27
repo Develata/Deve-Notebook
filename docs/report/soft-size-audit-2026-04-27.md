@@ -7,7 +7,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 10
+- Soft warnings reviewed: 9
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -20,7 +20,6 @@ next-touch refactoring rather than arbitrary line-count slicing.
 | File | Lines | Assessment | Next action |
 |---|---:|---|---|
 | `apps/cli/src/server/sync_transfer_scope_test.rs` | 334 | Scenario test where keeping setup and assertions together improves reviewability. | Keep unless duplicate setup grows. |
-| `apps/cli/src/server/ws/receive_test.rs` | 299 | Protocol scenario test; splitting now would add indirection without reducing coupling. | Keep unless more WS receive cases are added. |
 | `crates/core/src/config.rs` | 261 | Central config schema and parsing are cohesive; only slightly above the threshold. | Keep; split only if settings domains diverge. |
 | `crates/core/src/ledger/append_validate.rs` | 345 | Ledger append validation is a single invariant boundary. | Keep; extract only repeated validators. |
 | `crates/core/src/ledger/merge/engine.rs` | 286 | Merge engine state machine is cohesive. | Keep unless new phases add distinct ownership. |
@@ -42,3 +41,8 @@ soft-warning list by moving its merge-conflict emission regression test into
 `apps/cli/src/server/handlers/merge/peer_apply_test.rs`. The production file now
 stays focused on peer merge apply, conflict emission, and completion broadcast
 helpers.
+
+`apps/cli/src/server/ws/receive_test.rs` was removed from the soft-warning list by
+moving WS frame and legacy text protocol cases into
+`apps/cli/src/server/ws/receive_frame_test.rs`. The original file now keeps the
+shared receive fixture plus control-scope and rate-limit coverage.
