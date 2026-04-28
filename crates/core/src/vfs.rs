@@ -1,5 +1,7 @@
 // crates\core\src
 //! # 虚拟文件系统
+//! plan_ref:
+//!   - 04_storage#watcher-contract
 //!
 //! 本模块提供 `Vfs` 结构体用于管理 vault 目录。
 //!

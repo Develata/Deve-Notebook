@@ -1,4 +1,8 @@
 // apps\cli\src\bin
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!   - 07_diff_logic#source-control-runtime
+
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};

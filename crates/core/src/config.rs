@@ -1,5 +1,8 @@
 // crates\core\src
 //! # 核心配置模块 (Core Configuration)
+//! plan_ref:
+//!   - 13_settings#configuration-settings
+//!   - 10_ai_agent#trusted-agent-bridge
 //!
 //! **架构作用**:
 //! 本模块负责处理应用的所有运行时配置，包括环境变量加载和默认值回退。
