@@ -21,6 +21,7 @@
 pub mod config;
 pub mod context;
 pub mod error;
+pub mod graph;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;
 pub mod merge;
