@@ -1,36 +1,21 @@
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 
 pub fn compare_message(locale: Locale, base_label: &str, target_label: &str) -> String {
-    match locale {
-        Locale::En => format!("Comparing {base_label} -> {target_label}."),
-        Locale::Zh => format!("正在比较 {base_label} -> {target_label}。"),
-    }
+    t::source_control::history_compare_message(locale, base_label, target_label)
 }
 
 pub fn base_selected_message(locale: Locale, base_label: &str) -> String {
-    match locale {
-        Locale::En => format!("Base {base_label} selected. Click another commit to compare."),
-        Locale::Zh => format!("已选择基准提交 {base_label}。点击另一条提交即可比较。"),
-    }
+    t::source_control::history_base_selected_message(locale, base_label)
 }
 
 pub fn selected_target_message(locale: Locale, target_label: &str) -> String {
-    match locale {
-        Locale::En => format!("Selected {target_label}. Use it as the comparison base?"),
-        Locale::Zh => format!("已选择提交 {target_label}。要把它设为比较基准吗？"),
-    }
+    t::source_control::history_selected_target_message(locale, target_label)
 }
 
 pub fn clear_label(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Clear",
-        Locale::Zh => "清除",
-    }
+    t::source_control::clear_label(locale)
 }
 
 pub fn use_as_base_label(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Use as Base",
-        Locale::Zh => "设为基准",
-    }
+    t::source_control::use_as_base_label(locale)
 }

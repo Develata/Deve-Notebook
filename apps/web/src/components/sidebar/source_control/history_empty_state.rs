@@ -1,5 +1,5 @@
 use crate::components::sidebar::source_control::history_compare_logic::short_commit_id;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 
 pub fn no_diff_message(
     locale: Locale,
@@ -9,16 +9,10 @@ pub fn no_diff_message(
     if let Some(base_commit_id) = compare_base_commit_id {
         let base = short_commit_id(base_commit_id);
         let target = short_commit_id(target_commit_id);
-        return match locale {
-            Locale::En => format!("No file-level diff available between {base} and {target}."),
-            Locale::Zh => format!("提交 {base} 与 {target} 之间没有可展示的文件级差异。"),
-        };
+        return t::source_control::no_diff_between_commits(locale, &base, &target);
     }
 
-    match locale {
-        Locale::En => "No file-level diff available for this commit.".to_string(),
-        Locale::Zh => "这个提交没有可展示的文件级差异。".to_string(),
-    }
+    t::source_control::no_diff_for_commit(locale)
 }
 
 #[cfg(test)]

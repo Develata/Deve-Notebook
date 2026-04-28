@@ -86,6 +86,158 @@ pub fn handshaking_repo_hint(locale: Locale) -> &'static str {
     }
 }
 
+pub fn diff_unavailable(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Diff unavailable",
+        Locale::Zh => "无法显示差异",
+    }
+}
+
+pub fn deleted_change_no_doc_diff(locale: Locale, path: &str) -> String {
+    match locale {
+        Locale::En => format!(
+            "No diff is available for deleted change {path} because it has no document identity."
+        ),
+        Locale::Zh => format!("删除变更 {path} 没有文档身份，因此当前无法生成可显示的差异。"),
+    }
+}
+
+pub fn legacy_commit_unprojectable(locale: Locale, commit: Option<&str>) -> String {
+    match (locale, commit) {
+        (Locale::En, Some(commit)) => format!(
+            "Commit {commit} contains legacy content without structure projection, so Deve-Note cannot reconstruct a path-safe diff."
+        ),
+        (Locale::Zh, Some(commit)) => format!(
+            "提交 {commit} 包含缺少结构投影的旧内容，Deve-Note 无法安全重建带路径语义的差异。"
+        ),
+        (Locale::En, None) => {
+            "This legacy commit contains content without structure projection, so Deve-Note cannot reconstruct a path-safe diff.".to_string()
+        }
+        (Locale::Zh, None) => {
+            "该旧提交包含缺少结构投影的内容，Deve-Note 无法安全重建带路径语义的差异。".to_string()
+        }
+    }
+}
+
+pub fn stage_files_before_commit(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Stage files before trying to commit.",
+        Locale::Zh => "请先暂存文件，再执行提交。",
+    }
+}
+
+pub fn refresh_change_list(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Refresh the change list and try again.",
+        Locale::Zh => "请刷新更改列表后再试。",
+    }
+}
+
+pub fn selected_item_unavailable(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "The selected Source Control item is no longer available.",
+        Locale::Zh => "当前选中的源代码管理条目已不存在。",
+    }
+}
+
+pub fn loading_commit_diff(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Loading commit diff...",
+        Locale::Zh => "正在加载提交差异...",
+    }
+}
+
+pub fn counterpart_staged_badge(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "IDX",
+        Locale::Zh => "暂存区",
+    }
+}
+
+pub fn counterpart_working_tree_badge(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "WT",
+        Locale::Zh => "工作区",
+    }
+}
+
+pub fn counterpart_staged_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Also present in Staged Changes",
+        Locale::Zh => "对应改动也存在于暂存区",
+    }
+}
+
+pub fn counterpart_working_tree_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Also modified in Working Directory",
+        Locale::Zh => "对应改动也存在于工作区",
+    }
+}
+
+pub fn history_compare_message(locale: Locale, base_label: &str, target_label: &str) -> String {
+    match locale {
+        Locale::En => format!("Comparing {base_label} -> {target_label}."),
+        Locale::Zh => format!("正在比较 {base_label} -> {target_label}。"),
+    }
+}
+
+pub fn history_base_selected_message(locale: Locale, base_label: &str) -> String {
+    match locale {
+        Locale::En => format!("Base {base_label} selected. Click another commit to compare."),
+        Locale::Zh => format!("已选择基准提交 {base_label}。点击另一条提交即可比较。"),
+    }
+}
+
+pub fn history_selected_target_message(locale: Locale, target_label: &str) -> String {
+    match locale {
+        Locale::En => format!("Selected {target_label}. Use it as the comparison base?"),
+        Locale::Zh => format!("已选择提交 {target_label}。要把它设为比较基准吗？"),
+    }
+}
+
+pub fn clear_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Clear",
+        Locale::Zh => "清除",
+    }
+}
+
+pub fn use_as_base_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Use as Base",
+        Locale::Zh => "设为基准",
+    }
+}
+
+pub fn loading_history(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Loading history...",
+        Locale::Zh => "正在加载历史记录...",
+    }
+}
+
+pub fn no_commit_history(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No commit history yet on this branch.",
+        Locale::Zh => "这个分支上还没有提交历史。",
+    }
+}
+
+pub fn no_diff_between_commits(locale: Locale, base: &str, target: &str) -> String {
+    match locale {
+        Locale::En => format!("No file-level diff available between {base} and {target}."),
+        Locale::Zh => format!("提交 {base} 与 {target} 之间没有可展示的文件级差异。"),
+    }
+}
+
+pub fn no_diff_for_commit(locale: Locale) -> String {
+    match locale {
+        Locale::En => "No file-level diff available for this commit.".to_string(),
+        Locale::Zh => "这个提交没有可展示的文件级差异。".to_string(),
+    }
+}
+
 pub fn changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Changes",
@@ -281,6 +433,30 @@ mod tests {
         assert_eq!(
             handshaking_repo_hint(Locale::Zh),
             "当前仓库仍在协商写入权限，请稍后再试。"
+        );
+    }
+
+    #[test]
+    fn source_control_notice_copy_is_localized() {
+        assert_eq!(diff_unavailable(Locale::Zh), "无法显示差异");
+        assert_eq!(
+            deleted_change_no_doc_diff(Locale::En, "old.md"),
+            "No diff is available for deleted change old.md because it has no document identity."
+        );
+        assert_eq!(refresh_change_list(Locale::Zh), "请刷新更改列表后再试。");
+    }
+
+    #[test]
+    fn source_control_history_copy_is_localized() {
+        assert_eq!(loading_commit_diff(Locale::Zh), "正在加载提交差异...");
+        assert_eq!(counterpart_staged_badge(Locale::Zh), "暂存区");
+        assert_eq!(
+            history_compare_message(Locale::En, "abc1234", "def5678"),
+            "Comparing abc1234 -> def5678."
+        );
+        assert_eq!(
+            no_diff_between_commits(Locale::En, "abc1234", "def5678"),
+            "No file-level diff available between abc1234 and def5678."
         );
     }
 }

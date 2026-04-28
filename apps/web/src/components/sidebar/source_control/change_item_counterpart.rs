@@ -1,4 +1,4 @@
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,20 +25,16 @@ pub fn find_counterpart_kind(
 }
 
 pub fn counterpart_badge_text(kind: CounterpartKind, locale: Locale) -> &'static str {
-    match (kind, locale) {
-        (CounterpartKind::Staged, Locale::En) => "IDX",
-        (CounterpartKind::Staged, Locale::Zh) => "暂存区",
-        (CounterpartKind::WorkingTree, Locale::En) => "WT",
-        (CounterpartKind::WorkingTree, Locale::Zh) => "工作区",
+    match kind {
+        CounterpartKind::Staged => t::source_control::counterpart_staged_badge(locale),
+        CounterpartKind::WorkingTree => t::source_control::counterpart_working_tree_badge(locale),
     }
 }
 
 pub fn counterpart_badge_title(kind: CounterpartKind, locale: Locale) -> &'static str {
-    match (kind, locale) {
-        (CounterpartKind::Staged, Locale::En) => "Also present in Staged Changes",
-        (CounterpartKind::Staged, Locale::Zh) => "对应改动也存在于暂存区",
-        (CounterpartKind::WorkingTree, Locale::En) => "Also modified in Working Directory",
-        (CounterpartKind::WorkingTree, Locale::Zh) => "对应改动也存在于工作区",
+    match kind {
+        CounterpartKind::Staged => t::source_control::counterpart_staged_title(locale),
+        CounterpartKind::WorkingTree => t::source_control::counterpart_working_tree_title(locale),
     }
 }
 

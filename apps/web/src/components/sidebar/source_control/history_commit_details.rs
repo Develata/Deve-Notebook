@@ -1,7 +1,7 @@
 use crate::components::sidebar::source_control::history_diff_row::HistoryDiffRow;
 use crate::components::sidebar::source_control::history_empty_state::no_diff_message;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use deve_core::source_control::CommitFileDiff;
 use leptos::prelude::*;
 
@@ -19,10 +19,7 @@ pub fn HistoryCommitDetails(
             if commit_diff_request_id.get().is_some() {
                 view! {
                     <div class="py-1 text-[12px] text-muted">
-                        {match locale.get() {
-                            Locale::En => "Loading commit diff...",
-                            Locale::Zh => "正在加载提交差异...",
-                        }}
+                        {move || t::source_control::loading_commit_diff(locale.get())}
                     </div>
                 }
                 .into_any()

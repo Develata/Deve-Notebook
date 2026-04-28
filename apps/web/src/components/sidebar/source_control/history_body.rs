@@ -1,7 +1,7 @@
 use crate::components::sidebar::source_control::history_compare_banner::HistoryCompareBanner;
 use crate::components::sidebar::source_control::history_timeline::HistoryTimeline;
 use crate::hooks::use_core::SourceControlContext;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
@@ -30,20 +30,14 @@ pub fn HistoryBody(
                 if history_loading.get() {
                     view! {
                         <div class="px-6 pt-2 text-[12px] text-muted">
-                            {match locale.get() {
-                                Locale::En => "Loading history...",
-                                Locale::Zh => "正在加载历史记录...",
-                            }}
+                            {move || t::source_control::loading_history(locale.get())}
                         </div>
                     }
                     .into_any()
                 } else if core.commit_history.get().is_empty() && core.notice.get().is_none() {
                     view! {
                         <div class="px-6 pt-2 text-[12px] text-muted">
-                            {match locale.get() {
-                                Locale::En => "No commit history yet on this branch.",
-                                Locale::Zh => "这个分支上还没有提交历史。",
-                            }}
+                            {move || t::source_control::no_commit_history(locale.get())}
                         </div>
                     }
                     .into_any()
