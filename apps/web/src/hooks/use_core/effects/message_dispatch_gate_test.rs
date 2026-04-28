@@ -1,3 +1,4 @@
+use super::super::message_dispatch_runtime::handle_search_results_message;
 use super::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results, accepts_unscoped_update,
 };
@@ -80,6 +81,36 @@ fn rejects_search_results_when_request_id_is_stale() {
         "fresh",
         Some(repo_id),
         Some(PeerId::new("remote")),
+        Some(11),
+        signals
+    ));
+}
+
+#[test]
+fn accepted_search_results_clear_pending_request() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    let repo_id = uuid::Uuid::new_v4();
+    signals.set_search_request_id.set(Some("search-1".into()));
+    signals.set_current_scope_nonce.set(11);
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+    handle_search_results_message(
+        "search-1".into(),
+        Some(repo_id),
+        None,
+        Some(11),
+        vec![("doc-1".into(), "notes/a.md".into(), 1.0)],
+        signals,
+    );
+
+    assert_eq!(signals.search_request_id.get_untracked(), None);
+    assert_eq!(signals.search_results.get_untracked().len(), 1);
+    assert!(!accepts_search_results(
+        "search-1",
+        Some(repo_id),
+        None,
         Some(11),
         signals
     ));

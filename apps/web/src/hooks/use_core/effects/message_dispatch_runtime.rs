@@ -47,5 +47,6 @@ pub fn handle_search_results_message(
     if !accepts_search_results(&request_id, repo_id, branch, scope_nonce, signals) {
         return;
     }
+    signals.set_search_request_id.set(None);
     signals.set_search_results.set(results);
 }

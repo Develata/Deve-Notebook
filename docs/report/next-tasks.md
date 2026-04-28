@@ -1,7 +1,7 @@
 # 剩余工作分支规划 (Next Tasks — Branch Decomposition)
 
 > **生成日期**: 2026-02-28
-> **更新日期**: 2026-04-27
+> **更新日期**: 2026-04-28
 > **当前权威队列**: 以 “Current Execution Queue” 为准；下方旧 Branch A-E 仅保留为历史分支拆解参考。
 
 ## Current Execution Queue
@@ -19,6 +19,10 @@
 | 7 | P3-10 Desktop / Mobile Native Track | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future Tauri shell | Desktop/Mobile 逐步进入路线图；先明确 adapter、embedded service、offline/readiness 边界，再实现 native packaging |
 | 8 | P3-13 Graph / Knowledge Visualization | P3-13 | future graph data model, `docs/plan/14_tech_stack.md` | 等 repo/search/metadata 数据稳定后再实现；不得反向污染 ledger authority |
 | 9 | P2 Runtime / Release / UI Debt | P2 | `.github/`, `scripts/`, `docs/plan/15_release.md`, `apps/web/src/hooks/use_core/`, `apps/web/src/i18n/` | runtime observability、release smoke、CoreSignals 收敛、i18n allowlist debt 逐步清理 |
+
+### Current Status Notes
+
+- 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
 
 ### MCP Direction
 
