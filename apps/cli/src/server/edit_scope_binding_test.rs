@@ -1,5 +1,5 @@
 use super::{
-    edit_message_test_support::{recv_edit_rejected, send_insert},
+    edit_message_test_support::{recv_edit_rejected, send_insert, send_insert_with_scope},
     edit_state_test_support::{
         edit_harness, seed_doc_with_content, unicast_channel, writer_browser_session,
     },
@@ -38,5 +38,25 @@ async fn edit_clears_stale_remote_readonly_binding_before_checks() -> anyhow::Re
     assert!(session.bound_repo_id.is_none());
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.writer_identity.is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn edit_rejects_stale_message_scope_at_writer_gate() -> anyhow::Result<()> {
+    let h = edit_harness(false)?;
+    let doc_id = seed_doc_with_content(&h.state, "default", "notes/a.md", "hello")?;
+    let op_count_before = h.state.repo.get_local_ops(doc_id)?.len();
+    let (ch, mut uni_rx) = unicast_channel(&h.state);
+    let mut session = writer_browser_session("default", h.default_repo_id, 42);
+
+    send_insert_with_scope(&h.state, &ch, &mut session, doc_id, 5, Some(41)).await;
+
+    let (scope_nonce, rejected_doc_id, client_op_id, error) =
+        recv_edit_rejected(&mut uni_rx).await;
+    assert_eq!(scope_nonce, Some(41));
+    assert_eq!(rejected_doc_id, doc_id);
+    assert_eq!(client_op_id, 9);
+    assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+    assert_eq!(h.state.repo.get_local_ops(doc_id)?.len(), op_count_before);
     Ok(())
 }

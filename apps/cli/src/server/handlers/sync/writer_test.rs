@@ -89,13 +89,27 @@ fn rejects_browser_writer_with_stale_remote_readonly_binding() {
 fn rejects_browser_writer_on_remote_branch_and_clears_stale_writer() {
     let repo_id = new_repo_id();
     let (mut session, _, peer_id) = browser_session(repo_id);
-    session.set_writer_identity(repo_id, peer_id.clone());
+    session.set_writer_identity(repo_id, peer_id.clone(), 9);
     session.switch_branch(Some("remote".into()));
 
     let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
 
     assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
     assert_sync_cleared(&session);
+}
+
+#[test]
+fn writer_identity_requires_matching_repo_and_scope_nonce() {
+    let (mut session, repo_id, peer_id) = browser_session(new_repo_id());
+    session.set_writer_identity(repo_id, peer_id.clone(), 9);
+
+    assert_eq!(session.writer_peer_id_for(&repo_id, Some(9)), Some(peer_id));
+    assert_eq!(session.writer_peer_id_for(&repo_id, Some(8)), None);
+    assert_eq!(session.writer_peer_id_for(&repo_id, None), None);
+    assert_eq!(
+        session.writer_peer_id_for(&uuid::Uuid::new_v4(), Some(9)),
+        None
+    );
 }
 
 fn browser_session(repo_id: RepoId) -> (WsSession, RepoId, PeerId) {

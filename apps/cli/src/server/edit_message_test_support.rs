@@ -3,7 +3,10 @@
 //!   - 06_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, handlers::document::handle_edit, session::WsSession,
+    AppState,
+    channel::DualChannel,
+    handlers::document::{EditRequest, handle_edit},
+    session::WsSession,
 };
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ServerError, ServerMessage};
@@ -17,17 +20,32 @@ pub(crate) async fn send_insert(
     doc_id: DocId,
     pos: u32,
 ) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    send_insert_with_scope(state, ch, session, doc_id, pos, scope_nonce).await;
+}
+
+pub(crate) async fn send_insert_with_scope(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    doc_id: DocId,
+    pos: u32,
+    scope_nonce: Option<u64>,
+) {
     handle_edit(
         state,
         ch,
         session,
-        doc_id,
-        Op::Insert {
-            pos,
-            content: "!".into(),
+        EditRequest {
+            doc_id,
+            op: Op::Insert {
+                pos,
+                content: "!".into(),
+            },
+            client_id: 7,
+            client_op_id: 9,
+            scope_nonce,
         },
-        7,
-        9,
     )
     .await;
 }

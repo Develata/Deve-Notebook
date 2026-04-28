@@ -9,4 +9,5 @@ use deve_core::models::{PeerId, RepoId};
 pub struct WriterIdentity {
     pub peer_id: PeerId,
     pub repo_id: RepoId,
+    pub scope_nonce: u64,
 }

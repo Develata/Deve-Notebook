@@ -45,7 +45,7 @@ async fn browser_sync_hello_rejects_stale_bound_repo_and_writer_identity() -> an
     let mut session = browser_session(repo_id, &remote);
     let stale_repo_id = uuid::Uuid::new_v4();
     session.bind_repo(stale_repo_id);
-    session.set_writer_identity(stale_repo_id, remote.peer_id());
+    session.set_writer_identity(stale_repo_id, remote.peer_id(), 9);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 

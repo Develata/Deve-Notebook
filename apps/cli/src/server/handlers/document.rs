@@ -25,16 +25,21 @@ use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, Op};
 use std::sync::Arc;
 
+pub struct EditRequest {
+    pub doc_id: DocId,
+    pub op: Op,
+    pub client_id: u64,
+    pub client_op_id: u64,
+    pub scope_nonce: Option<u64>,
+}
+
 pub async fn handle_edit(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    doc_id: DocId,
-    op: Op,
-    client_id: u64,
-    client_op_id: u64,
+    request: EditRequest,
 ) {
-    edit::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await;
+    edit::handle_edit(state, ch, session, request).await;
 }
 
 pub async fn handle_request_history(

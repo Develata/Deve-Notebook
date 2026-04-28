@@ -22,7 +22,7 @@ async fn sync_hello_rejects_non_browser_active_branch_peer_mismatch() -> anyhow:
     session.set_authenticated(current_peer.peer_id());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(3);
-    session.set_writer_identity(repo_id, current_peer.peer_id());
+    session.set_writer_identity(repo_id, current_peer.peer_id(), 3);
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 

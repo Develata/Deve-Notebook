@@ -34,14 +34,21 @@ impl WsSession {
         self.bound_repo_id = Some(repo_id);
     }
 
-    pub fn set_writer_identity(&mut self, repo_id: RepoId, peer_id: PeerId) {
-        self.writer_identity = Some(WriterIdentity { peer_id, repo_id });
+    pub fn set_writer_identity(&mut self, repo_id: RepoId, peer_id: PeerId, scope_nonce: u64) {
+        self.writer_identity = Some(WriterIdentity {
+            peer_id,
+            repo_id,
+            scope_nonce,
+        });
     }
 
-    pub fn writer_peer_id_for(&self, repo_id: &RepoId) -> Option<PeerId> {
+    pub fn writer_peer_id_for(&self, repo_id: &RepoId, scope_nonce: Option<u64>) -> Option<PeerId> {
         self.writer_identity
             .as_ref()
             .filter(|writer| &writer.repo_id == repo_id)
+            .filter(|writer| {
+                writer_scope_matches(self.browser_session, scope_nonce, writer.scope_nonce)
+            })
             .map(|writer| writer.peer_id.clone())
     }
 
@@ -148,6 +155,17 @@ impl WsSession {
             handle.branch.as_ref() == branch && active_db_matches_scope(handle, repo_name, repo_id)
         })
     }
+}
+
+fn writer_scope_matches(
+    is_browser_session: bool,
+    requested_scope_nonce: Option<u64>,
+    writer_scope_nonce: u64,
+) -> bool {
+    if is_browser_session {
+        return requested_scope_nonce == Some(writer_scope_nonce);
+    }
+    requested_scope_nonce.is_none_or(|scope_nonce| scope_nonce == writer_scope_nonce)
 }
 
 pub(super) fn active_db_matches_scope(

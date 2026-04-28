@@ -100,10 +100,7 @@ async fn ws_endpoint_rejects_legacy_binary_without_magic() -> anyhow::Result<()>
     match recv_server_message(&mut ws).await? {
         ServerMessage::ProtocolError { error, .. } => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
-            assert_eq!(
-                error.detail.as_deref(),
-                Some("Invalid bincode client message")
-            );
+            assert_eq!(error.detail.as_deref(), Some("missing WS frame magic"));
         }
         other => panic!("expected legacy binary ProtocolError, got {other:?}"),
     }

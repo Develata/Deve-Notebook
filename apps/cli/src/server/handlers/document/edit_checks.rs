@@ -39,16 +39,18 @@ pub(super) fn writer_peer_id(
     ch: &DualChannel,
     scope_nonce: Option<u64>,
 ) -> Option<PeerId> {
-    session.writer_peer_id_for(repo_id).or_else(|| {
-        reject_edit(
-            ch,
-            scope_nonce,
-            doc_id,
-            client_op_id,
-            ServerError::new(ServerErrorCode::SyncPeerUnauthenticated),
-        );
-        None
-    })
+    session
+        .writer_peer_id_for(repo_id, scope_nonce)
+        .or_else(|| {
+            reject_edit(
+                ch,
+                scope_nonce,
+                doc_id,
+                client_op_id,
+                ServerError::new(ServerErrorCode::SyncPeerUnauthenticated),
+            );
+            None
+        })
 }
 
 #[allow(clippy::too_many_arguments)]

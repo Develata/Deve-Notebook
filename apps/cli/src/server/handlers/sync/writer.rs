@@ -19,7 +19,7 @@ pub(super) fn handle(
 ) {
     match validate(session, repo_id, &peer_id, scope_nonce) {
         Ok(()) => {
-            session.set_writer_identity(repo_id, peer_id.clone());
+            session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce);
             ch.unicast(ServerMessage::WriteReady {
                 peer_id,
                 repo_id,

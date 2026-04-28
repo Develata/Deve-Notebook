@@ -38,8 +38,22 @@ pub(super) async fn route_scoped_core(
             op,
             client_id,
             client_op_id,
-            ..
-        } => document::handle_edit(state, ch, session, doc_id, op, client_id, client_op_id).await,
+            scope_nonce,
+        } => {
+            document::handle_edit(
+                state,
+                ch,
+                session,
+                document::EditRequest {
+                    doc_id,
+                    op,
+                    client_id,
+                    client_op_id,
+                    scope_nonce,
+                },
+            )
+            .await
+        }
         ClientMessage::ListDocs { request_id, .. } => {
             listing::handle_list_docs(state, ch, session, Some(request_id), None).await
         }

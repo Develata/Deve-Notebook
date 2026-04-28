@@ -115,6 +115,6 @@ pub(crate) fn writer_browser_session(
     session.mark_browser_session();
     session.set_scope_nonce(Some(scope_nonce));
     session.switch_repo(repo_name.into(), Some(repo_id));
-    session.set_writer_identity(repo_id, PeerId::new("writer"));
+    session.set_writer_identity(repo_id, PeerId::new("writer"), scope_nonce);
     session
 }

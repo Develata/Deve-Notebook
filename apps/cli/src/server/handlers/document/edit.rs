@@ -4,10 +4,10 @@
 //! Applies browser edit requests through the document authority bridge.
 
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
-use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
+use super::EditRequest;
 use super::edit_apply::append_client_edit;
 use super::edit_checks::{confirm_existing_client_op, reject_missing_doc, writer_peer_id};
 use super::edit_support::{reject_edit, resolve_edit_scope};
@@ -16,12 +16,15 @@ pub(super) async fn handle_edit(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    doc_id: DocId,
-    op: Op,
-    client_id: u64,
-    client_op_id: u64,
+    request: EditRequest,
 ) {
-    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let EditRequest {
+        doc_id,
+        op,
+        client_id,
+        client_op_id,
+        scope_nonce,
+    } = request;
     let Some(scope) = resolve_edit_scope(state, ch, session, scope_nonce, doc_id, client_op_id)
     else {
         return;
