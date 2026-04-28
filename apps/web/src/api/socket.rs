@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
+
 use self::socket_message::decode_socket_message;
 pub use self::socket_types::{SocketCloseInfo, SocketEvent, SocketMessage};
 use futures::channel::mpsc::{UnboundedReceiver, unbounded};

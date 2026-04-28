@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
+
 pub fn derive_writer_client_id(peer_id: &str) -> u64 {
     let mut hash = 0xcbf29ce484222325u64;
     for byte in peer_id.as_bytes() {

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!
+
 use gloo_net::http::Request;
 use leptos::prelude::*;
 

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
+
 use self::decode::{decode_binary_message, decode_text_message};
 use super::ConnectionStatus;
 use super::socket::{SocketEvent, SocketMessage};

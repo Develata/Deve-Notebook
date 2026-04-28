@@ -1,4 +1,7 @@
 // apps\web\src\api
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
 //! # 重连退避策略
 //!
 //! 本模块提供 WebSocket 重连的指数退避策略。

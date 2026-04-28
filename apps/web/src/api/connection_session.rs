@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 09_auth#unauthorized-disconnected-ui
+//!
+
 use super::super::ConnectionStatus;
 use super::super::incoming::handle_socket_event;
 use super::super::output::{is_write_message, send_or_requeue};

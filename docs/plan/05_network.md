@@ -400,7 +400,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `apps/cli/src/server/handlers/sync/`
 - `apps/cli/src/server/repo_scope*.rs`
 
-### 12.4 Web Runtime
+### 12.4 Web Runtime {#web-ws-runtime}
 
 - `apps/web/src/hooks/use_core/effects/handshake*.rs`
 - `apps/web/src/hooks/use_core/effects/message_sync*.rs`

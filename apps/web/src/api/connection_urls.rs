@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
+
 use super::connection::DEV_WS_PORT;
 
 pub(super) fn build_same_origin_ws_url() -> String {

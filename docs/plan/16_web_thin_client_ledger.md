@@ -64,7 +64,7 @@ State_auth = L_confirmed
 
 ## 4. Protocol Contract
 
-### 4.1 Edit Intent
+### 4.1 Edit Intent {#web-edit-intent}
 
 `ClientMessage::Edit` MUST 携带：
 
