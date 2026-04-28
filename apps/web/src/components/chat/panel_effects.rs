@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 05_network#web-ws-runtime
+//!
 use crate::hooks::use_core::CoreState;
 use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;

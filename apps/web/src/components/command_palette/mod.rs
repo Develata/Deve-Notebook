@@ -1,4 +1,8 @@
 // apps\web\src\components\command_palette
+//! plan_ref:
+//!   - 12_commands#command-palette-shortcuts
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! CommandPalette 组件 (CommandPalette Component)
 //!
 //! 一个可搜索的命令面板，用于快速执行操作（仅限命令，不包括文件搜索）。

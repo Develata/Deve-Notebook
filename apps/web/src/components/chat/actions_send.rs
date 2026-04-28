@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;

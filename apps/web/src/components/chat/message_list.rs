@@ -1,4 +1,7 @@
 // apps/web/src/components/chat/message_list.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use crate::components::chat::empty_state::EmptyState;
 use crate::components::chat::message_item::MessageItem;
 use crate::components::chat::slash_commands::ChatSessionMode;

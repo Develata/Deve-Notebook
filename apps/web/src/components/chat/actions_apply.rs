@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};

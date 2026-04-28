@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 12_commands#command-palette-shortcuts
+//!
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_send;

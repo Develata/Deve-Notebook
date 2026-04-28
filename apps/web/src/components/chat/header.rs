@@ -1,4 +1,7 @@
 // apps/web/src/components/chat/header.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::components::icons::*;
 use crate::hooks::use_core::ChatContext;

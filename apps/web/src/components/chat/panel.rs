@@ -1,4 +1,8 @@
 // apps/web/src/components/chat/panel.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::chat::actions::{
     make_on_apply, make_send_example, make_send_message, make_send_text,
 };

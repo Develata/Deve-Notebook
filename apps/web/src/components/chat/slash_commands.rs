@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 10_ai_agent#trusted-agent-bridge
+//!
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChatSessionMode {
     Plan,

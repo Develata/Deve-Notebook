@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 12_commands#command-palette-shortcuts
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use super::types::Command;
 use crate::components::icons::{ArrowRight, Search, Zap};
 use crate::i18n::{Locale, t};
