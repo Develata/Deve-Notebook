@@ -73,6 +73,26 @@ for key in ["local_total", "healthy", "degraded"]:
         print(f"runtime-release-info-smoke: invalid repo_health.{key}", file=sys.stderr)
         sys.exit(1)
 
+if repo_health["healthy"] + repo_health["degraded"] != repo_health["local_total"]:
+    print("runtime-release-info-smoke: repo_health counts do not add up", file=sys.stderr)
+    sys.exit(1)
+
+if repo_health["status"] == "healthy" and repo_health["degraded"] != 0:
+    print("runtime-release-info-smoke: healthy repo_health has degraded repos", file=sys.stderr)
+    sys.exit(1)
+
+if repo_health["status"] == "degraded" and repo_health["degraded"] == 0:
+    print("runtime-release-info-smoke: degraded repo_health has no degraded repos", file=sys.stderr)
+    sys.exit(1)
+
+if repo_health["status"] == "unknown" and (
+    repo_health["local_total"] != 0
+    or repo_health["healthy"] != 0
+    or repo_health["degraded"] != 0
+):
+    print("runtime-release-info-smoke: unknown repo_health must use zero counts", file=sys.stderr)
+    sys.exit(1)
+
 if payload["delivery"] not in allowed_delivery:
     print(
         f"runtime-release-info-smoke: unsupported delivery {payload['delivery']}",

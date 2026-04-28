@@ -22,6 +22,7 @@
 
 ### Current Status Notes
 
+- 2026-04-28: P0 Authority / Repo Health / Repair 已加固 runtime `repo_health` 聚合不变量：`degraded` 计数按 `local_total` clamp，`healthy + degraded == local_total`，REL-006 smoke 会拒绝不一致的状态/计数组合。
 - 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
 - 2026-04-28: P1 Search Baseline 已补 SearchResults scope-switch 直接回归：repo/branch switch pending 时即使 `request_id / repo_id / branch / scope_nonce` 字段匹配，也必须丢弃结果，避免切换过程污染新 scope。
 - 2026-04-28: P1 Search Baseline 已补 search handler 边界回归：空 query 与 `limit=0` 不报错、不丢 scope，返回带 `request_id / repo_id / branch / scope_nonce` 的空 `SearchResults`。

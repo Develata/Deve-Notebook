@@ -37,7 +37,8 @@ impl RepoHealthSummary {
     }
 
     pub fn from_degraded_count(local_total: usize, degraded: usize) -> Self {
-        let healthy = local_total.saturating_sub(degraded);
+        let degraded = degraded.min(local_total);
+        let healthy = local_total - degraded;
         let status = if degraded > 0 { "degraded" } else { "healthy" };
         Self {
             status: status.into(),
@@ -97,5 +98,62 @@ fn default_node_role() -> NodeRole {
         delivery: "unknown".into(),
         environment: runtime_environment(),
         repo_health: RepoHealthSummary::unknown(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RepoHealthSummary;
+
+    #[test]
+    fn unknown_repo_health_uses_zero_counts() {
+        assert_eq!(
+            RepoHealthSummary::unknown(),
+            RepoHealthSummary {
+                status: "unknown".into(),
+                local_total: 0,
+                healthy: 0,
+                degraded: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn from_degraded_count_reports_healthy_without_degraded_repos() {
+        assert_eq!(
+            RepoHealthSummary::from_degraded_count(2, 0),
+            RepoHealthSummary {
+                status: "healthy".into(),
+                local_total: 2,
+                healthy: 2,
+                degraded: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn from_degraded_count_reports_degraded_repos() {
+        assert_eq!(
+            RepoHealthSummary::from_degraded_count(2, 1),
+            RepoHealthSummary {
+                status: "degraded".into(),
+                local_total: 2,
+                healthy: 1,
+                degraded: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn from_degraded_count_clamps_degraded_count_to_local_total() {
+        assert_eq!(
+            RepoHealthSummary::from_degraded_count(2, 3),
+            RepoHealthSummary {
+                status: "degraded".into(),
+                local_total: 2,
+                healthy: 0,
+                degraded: 2,
+            }
+        );
     }
 }

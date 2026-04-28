@@ -99,6 +99,7 @@ contains "apps/cli/src/server/node_role_http.rs" '"profile": r.profile'
 contains "apps/cli/src/server/node_role_http.rs" '"delivery": r.delivery'
 contains "apps/cli/src/server/node_role_http.rs" '"environment": r.environment'
 contains "apps/cli/src/server/node_role_http.rs" '"repo_health":'
+contains "apps/cli/src/server/node_role.rs" "from_degraded_count_clamps_degraded_count_to_local_total"
 contains "apps/cli/src/server/start.rs" "repo_health_summary"
 contains "apps/cli/src/server/static_files.rs" '"embedded-frontend"'
 contains "apps/web/src/api/connection_role.rs" "format_node_role_summary"
@@ -109,5 +110,7 @@ contains "scripts/smoke-runtime-release-info.sh" "/api/node/role"
 contains "scripts/smoke-runtime-release-info.sh" "DEVE_RUNTIME_SMOKE_REQUIRED"
 contains "scripts/smoke-runtime-release-info.sh" "allowed_delivery"
 contains "scripts/smoke-runtime-release-info.sh" "repo_health"
+contains "scripts/smoke-runtime-release-info.sh" "repo_health counts do not add up"
+contains "scripts/smoke-runtime-release-info.sh" "unknown repo_health must use zero counts"
 
 echo "release-baseline-check: ok"
