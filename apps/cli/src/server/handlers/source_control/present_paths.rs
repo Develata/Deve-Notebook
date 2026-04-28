@@ -26,6 +26,7 @@ pub fn collapse_rename_candidates(entries: Vec<ChangeEntry>) -> Vec<ChangeEntry>
         .collect()
 }
 
+#[cfg(test)]
 pub fn expand_related_paths(entries: &[ChangeEntry], path: &str) -> Vec<String> {
     let path = normalized(path);
     let Some(current) = entries.iter().find(|entry| normalized(&entry.path) == path) else {

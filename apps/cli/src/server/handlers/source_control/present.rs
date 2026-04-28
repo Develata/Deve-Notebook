@@ -6,7 +6,9 @@ mod paths;
 #[path = "present_resolve.rs"]
 mod resolve;
 
-pub use paths::{collapse_rename_candidates, expand_related_paths};
+pub use paths::collapse_rename_candidates;
+#[cfg(test)]
+pub use paths::expand_related_paths;
 pub(crate) use resolve::resolve_target_path_strict;
 
 #[cfg(test)]

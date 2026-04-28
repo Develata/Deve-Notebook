@@ -83,5 +83,7 @@ check_contains apps/cli/src/server/source_control_http_status_test.rs "ServerErr
 check_contains apps/cli/src/server/handlers/source_control/present_resolve.rs "matched multiple doc rename successors"
 check_contains apps/cli/src/server/handlers/source_control/present_resolve_extra_test.rs "resolve_target_fails_closed_when_doc_id_has_multiple_rename_successors"
 check_contains apps/cli/src/server/handlers/source_control/present_resolve_extra_test.rs "resolve_target_fails_closed_when_doc_id_matches_exact_and_successor"
+check_contains apps/cli/src/server/handlers/source_control/service/target.rs "current_entry(entries, resolved)"
+check_contains apps/cli/src/server/handlers/source_control/service/target_related_test.rs "related_targets_keep_resolved_doc_id_when_old_path_is_reused"
 
 echo "source-control-baseline-check: ok"

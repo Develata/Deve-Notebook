@@ -2,8 +2,9 @@
 //!   - 07_diff_logic#source-control-runtime
 
 use crate::server::handlers::source_control::present;
+use deve_core::models::DocId;
 use deve_core::protocol::{ScPathTarget, ServerError, ServerErrorCode};
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use deve_core::utils::path::to_forward_slash;
 use std::collections::HashSet;
 
@@ -38,19 +39,15 @@ pub fn related_targets(
         }),
         path,
     };
-    let mut targets = vec![];
-    for path in present::expand_related_paths(entries, &resolved.path) {
-        let doc_id = entries
-            .iter()
-            .find(|entry| to_forward_slash(&entry.path) == path)
-            .and_then(|entry| entry.doc_id)
-            .or(resolved.doc_id);
-        let candidate = ScPathTarget { path, doc_id };
-        if !targets.contains(&candidate) {
-            targets.push(candidate);
-        }
-    }
-    Ok(targets)
+    related_paths(entries, &resolved)?
+        .into_iter()
+        .map(|path| {
+            Ok(ScPathTarget {
+                doc_id: resolved.doc_id,
+                path,
+            })
+        })
+        .collect()
 }
 
 pub fn resolve_target(
@@ -121,6 +118,85 @@ fn target_exists(entries: &[ChangeEntry], target: &ScPathTarget) -> bool {
                 None => entry.doc_id.is_none(),
             }
     })
+}
+
+fn related_paths(entries: &[ChangeEntry], resolved: &ScPathTarget) -> super::ScResult<Vec<String>> {
+    let current = current_entry(entries, resolved)?;
+    let mut paths = vec![to_forward_slash(&resolved.path)];
+    if let Some(old_path) = current.renamed_from.as_ref() {
+        paths.push(to_forward_slash(old_path));
+    } else if current.status == ChangeStatus::Deleted
+        && let Some(doc_id) = current.doc_id
+        && let Some(added) = unique_added_rename_successor(entries, doc_id, &current.path)?
+    {
+        paths.push(to_forward_slash(&added.path));
+    }
+    paths.sort();
+    paths.dedup();
+    Ok(paths)
+}
+
+fn current_entry<'a>(
+    entries: &'a [ChangeEntry],
+    resolved: &ScPathTarget,
+) -> super::ScResult<&'a ChangeEntry> {
+    let path = to_forward_slash(&resolved.path);
+    let matches = entries
+        .iter()
+        .filter(|entry| {
+            to_forward_slash(&entry.path) == path
+                && match resolved.doc_id {
+                    Some(doc_id) => entry.doc_id == Some(doc_id),
+                    None => entry.doc_id.is_none(),
+                }
+        })
+        .collect::<Vec<_>>();
+    unique_match(matches, "current source control target", &path)
+}
+
+fn unique_added_rename_successor<'a>(
+    entries: &'a [ChangeEntry],
+    doc_id: DocId,
+    old_path: &str,
+) -> super::ScResult<Option<&'a ChangeEntry>> {
+    let old_path = to_forward_slash(old_path);
+    let matches = entries
+        .iter()
+        .filter(|entry| {
+            entry.status == ChangeStatus::Added
+                && entry.doc_id == Some(doc_id)
+                && entry.renamed_from.as_deref().map(to_forward_slash) == Some(old_path.clone())
+        })
+        .collect::<Vec<_>>();
+    if matches.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(unique_match(
+        matches,
+        "source control rename successor",
+        &old_path,
+    )?))
+}
+
+fn unique_match<'a>(
+    matches: Vec<&'a ChangeEntry>,
+    label: &str,
+    path: &str,
+) -> super::ScResult<&'a ChangeEntry> {
+    match matches.as_slice() {
+        [entry] => Ok(*entry),
+        [] => Err(ServerError::with_detail(
+            ServerErrorCode::ScConflictTargetMissing,
+            format!(
+                "Source control target not found in current change set: {}",
+                path
+            ),
+        )),
+        _ => Err(ServerError::with_detail(
+            ServerErrorCode::StorageConflict,
+            format!("Ambiguous {}: {}", label, path),
+        )),
+    }
 }
 
 #[cfg(test)]

@@ -79,6 +79,7 @@
 - 2026-04-28: P0 Source Control Core Path 已把执行级 local repo selector 解析改为 fail-closed：`repo_id + repo_name` 同时出现但解析到不同本地 repo 时直接返回 `Repo selector mismatch`，不再 UUID-first 忽略 stale name。
 - 2026-04-28: P0 Source Control Core Path 已补 HTTP status selector mismatch 验收：`/api/sc/status` 收到不一致的 `repo_id + repo_name` 时返回 `ScRepoContextInvalid`，确保 server HTTP 边界继承 core fail-closed 语义。
 - 2026-04-28: P0 Source Control Core Path 已收紧 server presentation target 解析：带 `doc_id` 的目标若同时命中 exact live entry 与 rename successor，或命中多个 rename successor，直接作为 ambiguous target fail-closed。
+- 2026-04-28: P0 Source Control Core Path 已修正 server write related target 扩展：stage/unstage 的 rename pair 扩展按已解析 `doc_id` 精确选取 related entries，不再用裸 path 二次查找导致同路径复用时错绑其他文档。
 
 ### MCP Direction
 
