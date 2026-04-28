@@ -59,5 +59,8 @@ check_contains apps/web/src/shortcuts/global_handlers.rs "set_search_mode.set(\"
 check_contains apps/web/src/components/command_palette/mod.rs "CommandPalette"
 check_contains apps/web/src/components/branch_switcher/mod.rs "BranchSwitcher"
 check_contains apps/web/src/i18n/sidebar.rs "Switch Branch (Ctrl+Shift+K)"
+check_contains apps/web/src/components/settings.rs "current_boundary_desc"
+check_contains apps/web/src/i18n/settings.rs "deve config set"
+check_contains apps/web/src/i18n/settings.rs "config.toml"
 
 echo "cli-settings-baseline-check: ok"

@@ -38,6 +38,24 @@ pub fn language(locale: Locale) -> &'static str {
     }
 }
 
+pub fn current_boundary(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Current Settings Boundary",
+        Locale::Zh => "当前设置边界",
+    }
+}
+
+pub fn current_boundary_desc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "This panel applies runtime/local UI feedback. Persistent runtime config is still updated with `deve config set` in config.toml."
+        }
+        Locale::Zh => {
+            "此面板只提供运行时/本地 UI 反馈。持久运行时配置仍通过 `deve config set` 写入 config.toml。"
+        }
+    }
+}
+
 pub fn hybrid_mode(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Hybrid Editing",
@@ -112,5 +130,19 @@ pub fn trusted_cli_backend(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Trusted CLI",
         Locale::Zh => "受信任 CLI",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Locale, current_boundary_desc};
+
+    #[test]
+    fn boundary_copy_mentions_config_toml_and_cli_set() {
+        for locale in [Locale::En, Locale::Zh] {
+            let text = current_boundary_desc(locale);
+            assert!(text.contains("config.toml"));
+            assert!(text.contains("deve config set"));
+        }
     }
 }

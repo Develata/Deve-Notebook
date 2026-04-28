@@ -23,6 +23,7 @@
 ### Current Status Notes
 
 - 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
+- 2026-04-28: P1 Settings Current Boundary 已补 UI 边界提示：Settings 面板明确说明当前只提供运行时/本地 UI 反馈，持久运行时配置仍通过 `deve config set` 写入 `config.toml`；baseline 脚本已检查该边界，server-backed Settings API 仍不进入当前验收。
 
 ### MCP Direction
 

@@ -74,6 +74,16 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         // AI 后端设置
                         <AiBackendSection locale=locale />
 
+                        // 当前设置边界
+                        <div class="bg-sidebar p-4 rounded-lg border border-default">
+                            <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-2">
+                                {move || t::settings::current_boundary(locale.get())}
+                            </h3>
+                            <p class="text-xs text-muted leading-relaxed">
+                                {move || t::settings::current_boundary_desc(locale.get())}
+                            </p>
+                        </div>
+
                         // 混合模式占位符
                         <div class="opacity-50 pointer-events-none grayscale">
                              <div class="flex items-center justify-between">
