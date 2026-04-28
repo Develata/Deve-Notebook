@@ -51,7 +51,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                     }
                                     on:click=move |_| locale.set(Locale::En)
                                 >
-                                    "English"
+                                    {t::settings::english_language_label()}
                                 </button>
                                 <button
                                     class=move || {
@@ -63,7 +63,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                     }
                                     on:click=move |_| locale.set(Locale::Zh)
                                 >
-                                    "中文"
+                                    {t::settings::chinese_language_label()}
                                 </button>
                             </div>
                         </div>

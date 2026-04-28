@@ -38,6 +38,14 @@ pub fn language(locale: Locale) -> &'static str {
     }
 }
 
+pub fn english_language_label() -> &'static str {
+    "English"
+}
+
+pub fn chinese_language_label() -> &'static str {
+    "中文"
+}
+
 pub fn current_boundary(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Current Settings Boundary",
@@ -135,7 +143,7 @@ pub fn trusted_cli_backend(locale: Locale) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{Locale, current_boundary_desc};
+    use super::{Locale, chinese_language_label, current_boundary_desc, english_language_label};
 
     #[test]
     fn boundary_copy_mentions_config_toml_and_cli_set() {
@@ -144,5 +152,11 @@ mod tests {
             assert!(text.contains("config.toml"));
             assert!(text.contains("deve config set"));
         }
+    }
+
+    #[test]
+    fn language_buttons_use_self_labels() {
+        assert_eq!(english_language_label(), "English");
+        assert_eq!(chinese_language_label(), "中文");
     }
 }

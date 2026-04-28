@@ -4,5 +4,3 @@
 #   - Exact grep hit relative to repo root: path:line:text.
 #   - New hardcoded CJK strings under apps/web/src/components are blocking.
 #   - Remove entries by moving copy into apps/web/src/i18n facade modules.
-
-apps/web/src/components/settings.rs:66:                                    "中文"
