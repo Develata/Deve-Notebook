@@ -43,9 +43,12 @@ check_contains apps/cli/src/dispatch.rs "ConfigAction::Set { key, value } => com
 check_contains apps/cli/src/commands/config.rs "const CONFIG_FILE: &str = \"config.toml\";"
 check_contains apps/cli/src/commands/config.rs "toml::to_string_pretty(config)"
 check_contains apps/cli/src/commands/config.rs "parse_whitelisted_value"
+check_contains apps/cli/src/commands/config.rs "supported_config_keys_match_settings_plan_tables"
 check_contains apps/cli/src/commands/config.rs "\"ui.sidebar_width\""
 check_contains apps/cli/src/commands/config.rs "\"ai.mode\""
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
+check_contains docs/plan/13_settings.md '运行模式预设: `standard` (默认), `low-spec` (低配).'
+check_absent docs/plan/13_settings.md '`debug` (调试)'
 check_contains docs/plan/13_settings.md "server-backed Settings API 与统一 GUI"
 check_contains docs/plan/13_settings.md "仍是 future work"
 check_absent apps/cli/src/server/router.rs "/api/settings"

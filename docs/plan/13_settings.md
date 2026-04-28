@@ -21,7 +21,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | 变量名 (Key)                     | 默认值 (Default) | 说明 (Description)                                                  |
 | :------------------------------- | :--------------- | :------------------------------------------------------------------ |
 | **System Core**                  |                  |                                                                     |
-| `DEVE_PROFILE`                   | `standard`       | 运行模式预设: `standard` (默认), `low-spec` (低配), `debug` (调试). |
+| `DEVE_PROFILE`                   | `standard`       | 运行模式预设: `standard` (默认), `low-spec` (低配). |
 | `DEVE_LEDGER_DIR`                | `ledger`         | 账本存储目录；Docker/runtime 推荐设为 `/data/ledger`。              |
 | `DEVE_VAULT_PATH`                | `vault`          | 投影库根目录；Docker/runtime 推荐设为 `/data/vault`。               |
 | `DEVE_SYNC_MODE`                 | `auto`           | 同步模式: `auto` 或 `manual`。                                      |

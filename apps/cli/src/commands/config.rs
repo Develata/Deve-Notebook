@@ -8,6 +8,32 @@ use toml::Value;
 use toml::value::Table;
 
 const CONFIG_FILE: &str = "config.toml";
+#[cfg(test)]
+const SUPPORTED_CONFIG_KEYS: &[&str] = &[
+    "ai.agent_bridge.enabled",
+    "ai.agent_bridge.timeout_ms",
+    "ai.agent_bridge.trusted",
+    "ai.mode",
+    "ai.native_enabled",
+    "concurrency",
+    "ledger_dir",
+    "merge_strategy",
+    "profile",
+    "snapshot_depth",
+    "sync_mode",
+    "ui.locale",
+    "ui.outer_gutter",
+    "ui.outline_visible",
+    "ui.outline_width",
+    "ui.recent_commands_count",
+    "ui.recent_docs_count",
+    "ui.right_panel_width",
+    "ui.sidebar_visible",
+    "ui.sidebar_width",
+    "ui.statusbar_visible",
+    "ui.theme",
+    "vault_path",
+];
 
 pub fn print(config: &deve_core::config::Config) -> anyhow::Result<()> {
     let output = toml::to_string_pretty(config).context("Failed to render config")?;
@@ -127,6 +153,11 @@ fn value_kind(key: &str) -> anyhow::Result<ValueKind> {
     }
 }
 
+#[cfg(test)]
+fn supported_config_keys() -> &'static [&'static str] {
+    SUPPORTED_CONFIG_KEYS
+}
+
 enum ValueKind {
     String { choices: &'static [&'static str] },
     Bool,
@@ -172,8 +203,9 @@ fn validate_config(output: &str) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::set_in_file;
+    use super::{set_in_file, supported_config_keys};
     use deve_core::config::{AppProfile, Config};
+    use std::collections::BTreeSet;
 
     #[test]
     fn set_core_key_writes_runtime_config() {
@@ -243,5 +275,48 @@ mod tests {
             std::fs::read_to_string(&path).expect("read config"),
             original
         );
+    }
+
+    #[test]
+    fn supported_config_keys_match_settings_plan_tables() {
+        let docs = include_str!("../../../../docs/plan/13_settings.md");
+        let documented = extract_documented_config_keys(docs);
+        let supported = supported_config_keys()
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(documented, supported);
+    }
+
+    fn extract_documented_config_keys(docs: &str) -> BTreeSet<&str> {
+        let mut keys = BTreeSet::new();
+        let mut in_config_section = false;
+        for line in docs.lines() {
+            if line.starts_with("## 3.") {
+                break;
+            }
+            if line.starts_with("### 2.") {
+                in_config_section = true;
+                continue;
+            }
+            if !in_config_section || !line.starts_with('|') {
+                continue;
+            }
+            let Some(first_cell) = line.split('|').nth(1).map(str::trim) else {
+                continue;
+            };
+            if !first_cell.starts_with('`') {
+                continue;
+            }
+            for key in first_cell.split("<br>").flat_map(|cell| cell.split('/')) {
+                let key = key.trim().trim_matches('`');
+                if key.starts_with("DEVE_") || key.is_empty() {
+                    continue;
+                }
+                keys.insert(key);
+            }
+        }
+        keys
     }
 }

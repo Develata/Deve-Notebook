@@ -27,6 +27,7 @@
 - 2026-04-28: P1 Search Baseline 已补 search handler 边界回归：空 query 与 `limit=0` 不报错、不丢 scope，返回带 `request_id / repo_id / branch / scope_nonce` 的空 `SearchResults`。
 - 2026-04-28: P1 Search Baseline 已补 baseline scan 排序/截断回归：结果按 score 降序、同分按 path 升序，limit 在排序后截断，确保 path match 优先于 content-only match。
 - 2026-04-28: P1 Settings Current Boundary 已补 UI 边界提示：Settings 面板明确说明当前只提供运行时/本地 UI 反馈，持久运行时配置仍通过 `deve config set` 写入 `config.toml`；baseline 脚本已检查该边界，server-backed Settings API 仍不进入当前验收。
+- 2026-04-28: P1 Settings Current Boundary 已补 `deve config set` allowlist 与 `13_settings.md` config.toml key 表一致性测试；同步移除未实现的 `DEVE_PROFILE=debug` 文档表述，当前只承诺 `standard / low-spec`。
 - 2026-04-28: P1 Native AI Chat Minimum 已补当前 Markdown 上下文与 PLAN/BUILD prompt 边界：前端向 Native AI Chat 传递有界当前正文，ai-chat 插件将当前文件、正文、selection、模式写入 system prompt；默认仍不开放 workspace/source-control/shell/MCP/skill 执行能力。
 - 2026-04-28: P1 Native AI Chat Minimum 已把 `/plan`、`/build`、`/agents` slash command 的本地消费路径抽成可单测合同：slash command 只切换 Native `PLAN/BUILD` session mode，不切换 backend，不发起 plugin call。
 - 2026-04-28: P1 Native AI Chat Minimum 已补 BUILD Apply UI gate 的可测合同：assistant code block 的 Apply 标签与点击消费仅在 Native `BUILD` session mode 启用，`PLAN` 与 user message 不暴露写入口。
