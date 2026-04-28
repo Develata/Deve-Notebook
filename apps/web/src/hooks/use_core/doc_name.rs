@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!
 use std::collections::HashSet;
 
 pub fn next_untitled_doc_name<'a, I>(paths: I) -> String

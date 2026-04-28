@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::types::CoreState;

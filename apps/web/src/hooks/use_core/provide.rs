@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 //! 子上下文提供入口。
 
 #[path = "provide_branch.rs"]

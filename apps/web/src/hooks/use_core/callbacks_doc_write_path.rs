@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;

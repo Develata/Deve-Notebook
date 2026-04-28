@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation, guard_navigation};
 use crate::hooks::use_core::pending::PendingLocalEdits;
 use deve_core::models::DocId;

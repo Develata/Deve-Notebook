@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!
 use leptos::prelude::*;
 
 /// 系统指标快照 (来自服务端 SystemMetrics 推送)

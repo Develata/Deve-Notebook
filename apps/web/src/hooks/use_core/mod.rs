@@ -1,4 +1,8 @@
 // apps/web/src/hooks/use_core/mod.rs
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # Core State Hook (核心状态钩子)
 //!
 //! 管理前端全局核心状态，并把 WebLightPeer 的浏览器存储分层接入 UI。

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 15_release#runtime-observability
+//!
 use crate::api::WsService;
 use leptos::prelude::{Get, Signal};
 

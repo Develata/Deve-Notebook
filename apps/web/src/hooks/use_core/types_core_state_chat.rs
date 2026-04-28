@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use super::core_state::CoreState;
 use super::shared::ChatMessage;
 use leptos::prelude::Update;

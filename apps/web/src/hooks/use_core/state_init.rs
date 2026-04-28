@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 //! `CoreSignals` 初始化工厂。
 
 #[path = "state_init/build.rs"]

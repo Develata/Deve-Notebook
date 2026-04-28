@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, ReadSignal};

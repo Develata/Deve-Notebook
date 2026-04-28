@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
 use super::{SyncStatusKind, derive_sync_status};
 use crate::api::ConnectionStatus;
 

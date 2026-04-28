@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;

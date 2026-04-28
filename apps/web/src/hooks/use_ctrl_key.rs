@@ -1,4 +1,7 @@
 // apps/web/src/hooks/use_ctrl_key.rs
+//! plan_ref:
+//!   - 13_settings#keyboard-shortcuts
+//!
 //! Global Ctrl/Meta key state management for link navigation.
 //!
 //! This hook monitors keydown/keyup events and toggles `is-ctrl-pressed`

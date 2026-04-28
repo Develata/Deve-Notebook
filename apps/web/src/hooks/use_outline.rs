@@ -1,4 +1,7 @@
 // apps/web/src/hooks/use_outline.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! Persistent Outline visibility state management.
 //!
 //! This hook manages the Outline panel visibility with LocalStorage persistence.

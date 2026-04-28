@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use super::super::contexts::EditorContext;
 use super::super::types::CoreState;
 

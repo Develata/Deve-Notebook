@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::storage::DegradedSyncMode;
 use deve_core::models::PeerId;
 use deve_core::tree::FileNode;

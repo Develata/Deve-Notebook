@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static NEXT_SWITCH_NONCE: AtomicU64 = AtomicU64::new(1);

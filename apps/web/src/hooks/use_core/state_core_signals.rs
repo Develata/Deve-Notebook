@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::editor::EditorStats;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::{DocId, PeerId};

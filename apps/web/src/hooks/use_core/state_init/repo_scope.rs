@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#browser-storage-layering
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::storage::DegradedSyncMode;
 use deve_core::models::PeerId;
 use leptos::prelude::*;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#browser-storage-layering
+//!   - 06_repository#repo-scope-runtime
+//!
 //! 浏览器存储初始化运行时。
 
 use crate::storage::identity::StoredPeerIdentity;

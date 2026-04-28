@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 use super::super::callbacks::{MiscRequestSignals, SearchScopeSignals};
 use super::super::callbacks_sc::{SourceControlRequestSignals, SourceControlScopeSignals};
 use super::super::callbacks_scope::LocalScopeSignals;

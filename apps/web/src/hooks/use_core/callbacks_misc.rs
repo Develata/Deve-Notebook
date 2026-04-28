@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;

@@ -1,4 +1,7 @@
 // apps/web/src/hooks/use_layout.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! Layout Hook for resizable sidebar, chat panel, and outer gutter widths.
 
 use self::use_layout_resize::{

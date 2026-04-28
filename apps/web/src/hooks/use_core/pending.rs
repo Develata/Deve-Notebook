@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use deve_core::models::{DocId, Op};
 use std::collections::HashMap;
 

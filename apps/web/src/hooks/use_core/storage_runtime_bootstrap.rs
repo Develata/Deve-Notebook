@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#browser-storage-layering
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::storage::DegradedSyncMode;
 use crate::storage::identity::{
     StoredPeerIdentity, load_or_create_identity, load_repo_metadata, probe_capabilities,

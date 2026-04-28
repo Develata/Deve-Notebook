@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 use std::collections::HashMap;

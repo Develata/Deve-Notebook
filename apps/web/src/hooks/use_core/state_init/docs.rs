@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!
 use crate::editor::EditorStats;
 use deve_core::models::DocId;
 use leptos::prelude::*;
