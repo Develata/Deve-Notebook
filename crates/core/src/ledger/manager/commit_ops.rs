@@ -1,4 +1,10 @@
 // crates/core/src/ledger/manager/commit_ops.rs
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!   - 04_storage#projection-contract
+//!
 //! # 提交时 Ledger Facts 生成逻辑
 //!
 //! 实现三阶段工作流的提交核心：读磁盘内容 → 对比快照 → 生成 Ledger Facts → 追加 Ledger。

@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!   - 04_storage#projection-contract
+//!
 use crate::ledger::RepoManager;
 use crate::source_control::changes;
 use crate::sync::reconcile;

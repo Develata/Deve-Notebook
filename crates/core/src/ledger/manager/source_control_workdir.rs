@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#projection-contract
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # Source Control 工作区辅助
 //!
 //! Invariants:

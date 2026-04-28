@@ -49,6 +49,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 Docs CRUD server handler plan_ref：create/delete/rename/copy/path validation/node target/file register 绑定 document authority bridge、repo scope、tree projection、internal path normalization 与 watcher refresh 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/cli/src/server` 剩余运行时入口 plan_ref：admin/listing/repo/search/key-exchange/document/shadow/source-control proxy/recovery support 绑定各自 authority、repo-scope、search、backup/export、WS 与 source-control proxy 合同，使 CLI server runtime 缺失项收敛到 0。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger 顶层基础批次 plan_ref：database/schema/init/cache 绑定 facts partition 与 repo runtime layout，ops/listing/snapshot/range 绑定 document authority、tree projection、repo catalog 与 sync range 查询合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger manager source-control 批次 plan_ref：source-control API/query/target/workdir/commit path 绑定 source-control runtime、repo selector、internal path normalization、facts partition、document authority 与 projection 合同。
 
 ### MCP Direction
 

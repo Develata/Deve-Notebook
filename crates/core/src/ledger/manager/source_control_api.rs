@@ -1,4 +1,8 @@
 // crates/core/src/ledger/manager/source_control_api.rs
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-selector-resolution-contract
+//!
 //! # Source Control API 实现 (RepoManager)
 
 use crate::ledger::RepoManager;
