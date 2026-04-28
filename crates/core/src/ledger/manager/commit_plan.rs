@@ -16,6 +16,7 @@ pub(super) struct CommitTarget {
     pub path: String,
     pub doc_id: Option<DocId>,
     pub delete_only: bool,
+    pub has_rename_evidence: bool,
 }
 
 pub(super) fn build_targets(staged: Vec<(String, StagedEntry)>) -> Vec<CommitTarget> {
@@ -42,12 +43,16 @@ fn resolve_group(entries: Vec<(String, StagedEntry)>) -> CommitTarget {
         .iter()
         .find(|(_, entry)| entry.status != ChangeStatus::Deleted);
     let (path, entry) = live.unwrap_or(&entries[0]);
+    let has_delete_side = entries
+        .iter()
+        .any(|(_, entry)| entry.status == ChangeStatus::Deleted);
     CommitTarget {
         path: path.clone(),
         doc_id: entry.doc_id,
         delete_only: entries
             .iter()
             .all(|(_, entry)| entry.status == ChangeStatus::Deleted),
+        has_rename_evidence: has_delete_side || entry.renamed_from.is_some(),
     }
 }
 
@@ -82,5 +87,6 @@ mod tests {
         assert_eq!(targets.len(), 1);
         assert_eq!(targets[0].path, "notes/b.md");
         assert!(!targets[0].delete_only);
+        assert!(targets[0].has_rename_evidence);
     }
 }

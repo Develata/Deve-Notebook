@@ -89,5 +89,9 @@ check_contains crates/core/src/ledger/manager/source_control_workdir.rs "workdir
 check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused"
 check_contains apps/cli/src/server/handlers/source_control/diff_remote_content.rs "Remote document target path mismatch"
 check_contains apps/cli/src/server/handlers/source_control/diff_remote_test_extra.rs "remote_diff_rejects_doc_id_path_mismatch"
+check_contains crates/core/src/ledger/manager/commit_ops.rs "preflight_staged_upsert_identity"
+check_contains crates/core/src/ledger/manager/commit_ops.rs "lacks rename evidence"
+check_contains crates/core/tests/source_control_commit_apply_error_test.rs "commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc"
+check_contains crates/core/tests/source_control_commit_apply_error_test.rs "commit_staged_rejects_upsert_move_without_rename_evidence"
 
 echo "source-control-baseline-check: ok"

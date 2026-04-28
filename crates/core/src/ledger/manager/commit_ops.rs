@@ -17,6 +17,7 @@ use crate::ledger::RepoManager;
 use crate::ledger::manager::commit_plan;
 use crate::ledger::range;
 use crate::source_control::{CommitInfo, commits, staging};
+use crate::utils::path::to_forward_slash;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
@@ -89,6 +90,40 @@ impl RepoManager {
             let disk_path = self.local_repo_workspace_path(repo_name, &target.path)?;
             std::fs::read_to_string(&disk_path)
                 .with_context(|| format!("Failed to read staged workspace file {:?}", disk_path))?;
+            self.preflight_staged_upsert_identity(repo_name, target)?;
+        }
+        Ok(())
+    }
+
+    fn preflight_staged_upsert_identity(
+        &self,
+        repo_name: &str,
+        target: &commit_plan::CommitTarget,
+    ) -> Result<()> {
+        let Some(doc_id) = target.doc_id else {
+            return Ok(());
+        };
+        if let Some(bound_doc_id) = self.get_tracked_docid_in_local_repo(repo_name, &target.path)?
+            && bound_doc_id != doc_id
+        {
+            anyhow::bail!(
+                "source control upsert target path mismatch: staged path {} is bound to {}, but staged doc is {}",
+                target.path,
+                bound_doc_id,
+                doc_id
+            );
+        }
+        let Some(meta) = self.get_file_meta_for_doc_in_local_repo(repo_name, doc_id)? else {
+            return Ok(());
+        };
+        let current_path = to_forward_slash(&meta.path);
+        if current_path != target.path && !target.has_rename_evidence {
+            anyhow::bail!(
+                "source control upsert target path mismatch: doc {} is at {}, staged path {} lacks rename evidence",
+                doc_id,
+                current_path,
+                target.path
+            );
         }
         Ok(())
     }
