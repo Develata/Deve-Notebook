@@ -23,9 +23,6 @@ pub(super) fn resolve_change_path(
         if let Some(resolved) = resolve_from_entries(&entries, &path, Some(doc_id)) {
             return Ok(resolved);
         }
-        if let Some(canonical) = resolve_canonical_path(repo, repo_name, doc_id)? {
-            return Ok(canonical);
-        }
         return Err(anyhow!(
             "Source control target not resolved for doc {} at {}",
             doc_id,
@@ -46,16 +43,6 @@ pub(super) fn resolve_change_path(
         "Source control target not resolved for path {}",
         path
     ))
-}
-
-fn resolve_canonical_path(
-    repo: &RepoManager,
-    repo_name: &str,
-    doc_id: DocId,
-) -> Result<Option<String>> {
-    Ok(repo
-        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
-        .map(|meta| to_forward_slash(&meta.path)))
 }
 
 fn pending_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
@@ -128,13 +115,7 @@ fn resolve_for_doc<'a>(
                     .as_ref()
                     .is_some_and(|old_path| to_forward_slash(old_path) == path)
         })
-        .or_else(|| {
-            entries
-                .iter()
-                .find(|entry| entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted)
-        })
         .or(exact)
-        .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
 }
 
 fn resolve_without_doc_id<'a>(entries: &'a [ChangeEntry], path: &str) -> Option<&'a ChangeEntry> {

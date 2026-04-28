@@ -150,6 +150,25 @@ fn doc_target_prefers_exact_deleted_half_of_rename_pair() {
 }
 
 #[test]
+fn doc_target_rejects_unrelated_same_doc_live_entry() {
+    let doc_id = DocId(uuid::Uuid::nil());
+    let entries = vec![PendingFsEntry {
+        path: "notes/live.md".into(),
+        renamed_from: None,
+        doc_id: Some(doc_id),
+        change_type: ChangeStatus::Modified,
+        content_hash: String::new(),
+        detected_at: 1,
+        has_conflict: false,
+    }];
+
+    assert!(
+        select_entry_for_doc(entries, "notes/requested.md", doc_id).is_none(),
+        "doc_id target must not fall back to an arbitrary live entry for the same doc"
+    );
+}
+
+#[test]
 fn get_for_target_fails_closed_when_exact_path_and_rename_successor_conflict() {
     let (_dir, db) = new_db();
     pending_fs::upsert(

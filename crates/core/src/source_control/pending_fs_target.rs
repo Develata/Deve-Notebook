@@ -67,12 +67,6 @@ fn select_entry_for_doc(
         })
         .cloned()
         .or(exact)
-        .or_else(|| {
-            entries
-                .iter()
-                .find(|entry| entry.doc_id == Some(doc_id) && entry.status_is_live())
-                .cloned()
-        })
 }
 
 fn select_entry_without_doc(

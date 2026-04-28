@@ -75,14 +75,7 @@ fn select_entry_for_doc(
                 && entry.renamed_from.as_deref().map(to_forward_slash) == Some(path.to_string())
         })
         .cloned()
-        .or_else(|| {
-            entries
-                .iter()
-                .find(|(_, entry)| {
-                    entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted
-                })
-                .cloned()
-        })
+        .or(exact)
 }
 
 fn select_entry_without_doc(

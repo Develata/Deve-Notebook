@@ -1,4 +1,4 @@
-use super::{get_staged_for_target, select_entry_without_doc};
+use super::{get_staged_for_target, select_entry_for_doc, select_entry_without_doc};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
@@ -129,6 +129,27 @@ fn fails_closed_when_path_only_target_matches_tracked_entries() {
     assert!(
         err.to_string()
             .contains("Ambiguous staged target: notes/old.md")
+    );
+}
+
+#[test]
+fn doc_target_rejects_unrelated_same_doc_live_entry() {
+    let doc_id = DocId(uuid::Uuid::nil());
+    let entries = vec![(
+        "notes/live.md".into(),
+        StagedEntry {
+            timestamp: 1,
+            doc_id: Some(doc_id),
+            status: ChangeStatus::Modified,
+            content_hash: String::new(),
+            has_conflict: false,
+            renamed_from: None,
+        },
+    )];
+
+    assert!(
+        select_entry_for_doc(entries, "notes/requested.md", doc_id).is_none(),
+        "doc_id target must not fall back to an arbitrary staged entry for the same doc"
     );
 }
 

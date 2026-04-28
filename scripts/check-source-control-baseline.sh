@@ -67,4 +67,11 @@ check_contains apps/cli/src/server/handlers/source_control/diff_remote.rs "doc_i
 check_contains apps/web/src/hooks/use_core/diff_session.rs "pub doc_id: Option<DocId>"
 check_contains apps/web/src/hooks/use_core/effects_sc_apply.rs "apply_doc_diff_preserves_doc_identity"
 
+# Doc-id source-control targets are strict: exact path or rename successor only.
+check_absent crates/core/src/ledger/manager/source_control_target_lookup.rs "resolve_canonical_path"
+check_contains crates/core/src/ledger/manager/source_control_target_lookup_test.rs "resolve_from_entries_rejects_unrelated_same_doc_live_entry"
+check_contains crates/core/src/source_control/pending_fs_target_test.rs "doc_target_rejects_unrelated_same_doc_live_entry"
+check_contains crates/core/src/source_control/staging_target_test.rs "doc_target_rejects_unrelated_same_doc_live_entry"
+check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set"
+
 echo "source-control-baseline-check: ok"

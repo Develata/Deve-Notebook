@@ -20,7 +20,7 @@ fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
 }
 
 #[test]
-fn workdir_diff_target_falls_back_to_canonical_projection_path_for_doc_id() {
+fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set() {
     let (dir, repo) = new_repo();
     write_workspace_file(&dir, "notes/a.md", "hello");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -50,11 +50,12 @@ fn workdir_diff_target_falls_back_to_canonical_projection_path_for_doc_id() {
         path: "stale/a.md".into(),
         doc_id: Some(doc_id),
     };
-    let (path, old_content, new_content) = repo
+    let err = repo
         .workdir_diff_inputs_for_target_in_local_repo(repo.local_repo_name(), &target)
-        .expect("diff inputs");
+        .expect_err("stale doc target must fail closed");
 
-    assert_eq!(path, "notes/a.md");
-    assert_eq!(old_content, "hello");
-    assert_eq!(new_content, "hello");
+    assert!(
+        err.to_string()
+            .contains("Source control target not resolved")
+    );
 }

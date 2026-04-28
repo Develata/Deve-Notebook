@@ -71,6 +71,23 @@ fn resolve_from_entries_prefers_live_successor_over_exact_deleted_doc_path() {
 }
 
 #[test]
+fn resolve_from_entries_rejects_unrelated_same_doc_live_entry() {
+    let doc_id = DocId(uuid::Uuid::nil());
+    let entries = vec![ChangeEntry {
+        path: "notes/live.md".into(),
+        renamed_from: None,
+        doc_id: Some(doc_id),
+        status: ChangeStatus::Modified,
+        has_conflict: false,
+    }];
+
+    assert_eq!(
+        resolve_from_entries(&entries, "notes/requested.md", Some(doc_id)),
+        None
+    );
+}
+
+#[test]
 fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
     let old_doc = DocId(uuid::Uuid::nil());
     let new_doc = DocId(uuid::Uuid::from_u128(1));
