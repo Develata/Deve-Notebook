@@ -1,4 +1,9 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 04_storage#repo-runtime-layout
+//!   - 06_repository#repo-catalog-contract
+//!
 //! # 仓库管理器初始化模块 (RepoManager Initialization)
 //!
 //! 处理 RepoManager 的初始化逻辑，包括目录结构创建和数据库表初始化。

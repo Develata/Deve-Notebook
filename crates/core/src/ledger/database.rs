@@ -1,4 +1,9 @@
 // crates/core/src/ledger/database.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 04_storage#repo-runtime-layout
+//!   - 06_repository#repo-catalog-contract
+//!
 //! # 数据库访问模块 (Database Access)
 //!
 //! 提供获取数据库引用的方法，供会话级锁定使用。

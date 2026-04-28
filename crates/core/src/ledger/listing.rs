@@ -1,4 +1,10 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+//!   - 06_repository#repo-catalog-contract
+//!
 //! # Repository Listing (仓库列表查询)
 //!
 //! 提供 `RepoListing` trait，扩展 `RepoManager` 的列表查询能力。

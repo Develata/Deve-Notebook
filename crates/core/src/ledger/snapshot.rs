@@ -1,4 +1,8 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 04_storage#facts-partition
+//!
 //! # 快照模块 (Snapshot Management)
 //!
 //! 管理文档快照的存储与自动清理。

@@ -1,4 +1,9 @@
 // crates/core/src/ledger/ops.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!
 //! # 操作日志模块 (Operations Log)
 //!
 //! 对外保持 `crate::ledger::ops::*` 接口稳定，

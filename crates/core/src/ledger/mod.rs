@@ -1,4 +1,9 @@
 // crates/core/src/ledger/mod.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 04_storage#repo-runtime-layout
+//!   - 06_repository#repo-catalog-contract
+//!
 //! # 仓库管理器 (Repository Manager)
 //!
 //! 本模块实现 P2P Git-Flow 架构中的"三位一体隔离" (Trinity Isolation)。

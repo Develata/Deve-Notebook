@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+
 use super::validate;
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use crate::models::LedgerEntry;

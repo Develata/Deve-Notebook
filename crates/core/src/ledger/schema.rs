@@ -1,4 +1,8 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 04_storage#repo-runtime-layout
+
 use redb::{MultimapTableDefinition, TableDefinition};
 
 // DocId (u128) -> Path String

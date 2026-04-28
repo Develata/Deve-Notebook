@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+
 use anyhow::{Context, Result, anyhow};
 use std::path::Path;
 use std::time::SystemTime;

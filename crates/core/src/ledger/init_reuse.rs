@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 06_repository#repo-catalog-contract
+
 use super::RepoInfo;
 
 /// 判定 `init()` 在遇到同名 `.redb` 时是否可以安全复用现有物理库。
