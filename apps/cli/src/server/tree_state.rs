@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+//!
 //! Repo-scoped 目录树注册表。
 //!
 //! Invariants:

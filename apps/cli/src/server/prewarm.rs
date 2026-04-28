@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::models::DocId;

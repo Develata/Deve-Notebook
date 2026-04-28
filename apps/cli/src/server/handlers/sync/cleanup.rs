@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
 use crate::server::session::WsSession;
 
 pub(super) fn clear_remote_unbound_state(session: &mut WsSession) {

@@ -1,4 +1,7 @@
 // apps/cli/src/server/rate_limit.rs
+//! plan_ref:
+//!   - 09_auth#auth-rate-limiting
+//!
 //! # Per-IP 速率限制中间件
 //!
 //! **架构作用**:

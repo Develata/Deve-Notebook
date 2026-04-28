@@ -1,4 +1,7 @@
 // apps/cli/src/server/node_role.rs
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!
 //! # Node Role State
 
 use std::sync::{Arc, OnceLock, RwLock};

@@ -1,4 +1,6 @@
 // apps/cli/src/server/node_role_http.rs
+//! plan_ref:
+//!   - 15_release#runtime-observability
 
 use axum::Json;
 use axum::response::IntoResponse;

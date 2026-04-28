@@ -1,4 +1,12 @@
 // apps/cli/src/server/router.rs
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 09_auth#auth-http-endpoints
+//!   - 09_auth#jwt-cookie-contract
+//!   - 09_auth#auth-rate-limiting
+//!   - 09_auth#security-headers
+//!   - 08_ui_design_01_web#single-binary-distribution
+//!
 //! # 路由构建模块
 //!
 //! 负责 Axum Router 的组装：认证路由、公开路由、中间件层叠。

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::{models::RepoId, sync::engine::SyncEngine};
 use std::sync::Arc;

@@ -1,4 +1,8 @@
 // apps/cli/src/server/security.rs
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 05_network#server-ws-runtime
+//!
 //! # 安全密钥管理模块
 //!
 //! 管理宿主 Identity Key 的加载与生成。
