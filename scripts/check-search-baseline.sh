@@ -38,6 +38,7 @@ check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate.rs "sco
 check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate.rs "repo_id.map(|id| id.to_string()) == signals.current_repo_id.get_untracked()"
 check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate.rs "branch == signals.active_branch.get_untracked()"
 check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate.rs "signals.search_request_id.get_untracked().as_deref() == Some(request_id)"
+check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate_test.rs "rejects_search_results_while_scope_switch_is_pending"
 
 check_contains apps/web/src/hooks/use_core/effects/message_protocol.rs "signals.set_search_results.set(Vec::new());"
 check_contains apps/web/src/i18n/search.rs "Search unavailable"

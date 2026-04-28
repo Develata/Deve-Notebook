@@ -87,6 +87,39 @@ fn rejects_search_results_when_request_id_is_stale() {
 }
 
 #[test]
+fn rejects_search_results_while_scope_switch_is_pending() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    let repo_id = uuid::Uuid::new_v4();
+    signals.set_search_request_id.set(Some("fresh".into()));
+    signals.set_current_scope_nonce.set(11);
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+
+    signals.set_pending_repo_switch.set(Some("other".into()));
+    assert!(!accepts_search_results(
+        "fresh",
+        Some(repo_id),
+        None,
+        Some(11),
+        signals
+    ));
+
+    signals.set_pending_repo_switch.set(None);
+    signals
+        .set_pending_branch_switch
+        .set(Some(PendingBranchTarget::Local));
+    assert!(!accepts_search_results(
+        "fresh",
+        Some(repo_id),
+        None,
+        Some(11),
+        signals
+    ));
+}
+
+#[test]
 fn accepted_search_results_clear_pending_request() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
