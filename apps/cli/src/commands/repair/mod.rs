@@ -48,12 +48,19 @@ pub fn run(
         quarantined_md_dirs,
         restored,
         rebuild_report.rebuilt,
-        rebuild_report.authority_corrupt
+        rebuild_report.authority_corrupt.len()
     );
-    if rebuild_report.authority_corrupt > 0 {
+    if !rebuild_report.authority_corrupt.is_empty() {
+        let corrupt_summary = rebuild_report
+            .authority_corrupt
+            .iter()
+            .map(|item| format!("{}:{}", item.repo_name, item.code))
+            .collect::<Vec<_>>()
+            .join(", ");
         bail!(
-            "repair: {} repo(s) have corrupted Structure Facts authority; projection rebuild skipped",
-            rebuild_report.authority_corrupt
+            "repair: {} repo(s) have corrupted Structure Facts authority; projection rebuild skipped: {}",
+            rebuild_report.authority_corrupt.len(),
+            corrupt_summary
         );
     }
     Ok(())

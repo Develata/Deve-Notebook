@@ -8,7 +8,14 @@ use deve_core::sync::{ProjectionDiagnosticStatus, SyncManager};
 #[derive(Debug, Default)]
 pub(super) struct RebuildReport {
     pub rebuilt: usize,
-    pub authority_corrupt: usize,
+    pub authority_corrupt: Vec<AuthorityCorruption>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct AuthorityCorruption {
+    pub repo_name: String,
+    pub code: String,
+    pub detail: String,
 }
 
 pub(super) fn rebuild_repos(
@@ -19,8 +26,9 @@ pub(super) fn rebuild_repos(
     for repo_name in repo_names {
         let diagnostic = sync_manager.diagnose_projection_local_repo(repo_name)?;
         if diagnostic.status == ProjectionDiagnosticStatus::AuthorityCorrupt {
-            print_authority_corruption(repo_name, &diagnostic);
-            report.authority_corrupt += 1;
+            let corruption = authority_corruption(repo_name, &diagnostic);
+            print_authority_corruption(&corruption);
+            report.authority_corrupt.push(corruption);
             continue;
         }
         sync_manager.rebuild_projection_local_repo(repo_name)?;
@@ -30,19 +38,35 @@ pub(super) fn rebuild_repos(
     Ok(report)
 }
 
-fn print_authority_corruption(repo_name: &str, diagnostic: &deve_core::sync::ProjectionDiagnostic) {
+fn authority_corruption(
+    repo_name: &str,
+    diagnostic: &deve_core::sync::ProjectionDiagnostic,
+) -> AuthorityCorruption {
     let (code, detail) = diagnostic
         .issue
         .as_ref()
-        .map(|issue| (issue.code.as_str(), issue.detail.as_str()))
-        .unwrap_or(("structure_authority", "unknown Structure Facts corruption"));
+        .map(|issue| (issue.code.clone(), issue.detail.clone()))
+        .unwrap_or_else(|| {
+            (
+                "structure_authority".into(),
+                "unknown Structure Facts corruption".into(),
+            )
+        });
+    AuthorityCorruption {
+        repo_name: repo_name.to_string(),
+        code,
+        detail,
+    }
+}
+
+fn print_authority_corruption(corruption: &AuthorityCorruption) {
     println!(
         "repair: projection authority corrupt repo={} code={} detail={}",
-        repo_name, code, detail
+        corruption.repo_name, corruption.code, corruption.detail
     );
     println!(
         "repair: skip projection rebuild for repo {}; rebuild cannot modify Structure Facts authority",
-        repo_name
+        corruption.repo_name
     );
 }
 

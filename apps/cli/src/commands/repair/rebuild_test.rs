@@ -61,6 +61,13 @@ fn rebuild_repos_reports_authority_corrupt_without_rebuild() -> anyhow::Result<(
     let report = rebuild_repos(&sync, &[String::from("default")])?;
 
     assert_eq!(report.rebuilt, 0);
-    assert_eq!(report.authority_corrupt, 1);
+    assert_eq!(report.authority_corrupt.len(), 1);
+    assert_eq!(report.authority_corrupt[0].repo_name, "default");
+    assert_eq!(report.authority_corrupt[0].code, "missing_parent");
+    assert!(
+        report.authority_corrupt[0]
+            .detail
+            .contains("missing parent")
+    );
     Ok(())
 }
