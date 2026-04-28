@@ -9,7 +9,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 10
+- Soft warnings reviewed: 11
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -26,6 +26,7 @@ next-touch refactoring rather than arbitrary line-count slicing.
 | `crates/core/src/graph/mod.rs` | 352 | Read-only graph projection is currently one compact authority-free baseline; splitting now would scatter a small algorithm across files. | Keep; split model/parser/projection only when graph visualization gains a larger renderer-facing API. |
 | `crates/core/src/ledger/append_validate.rs` | 350 | Ledger append validation is a single invariant boundary. | Keep; extract only repeated validators. |
 | `crates/core/src/ledger/database.rs` | 254 | Database cache/open/handle logic is one storage access boundary and barely above the threshold. | Keep. |
+| `crates/core/src/ledger/manager/source_control_path_target.rs` | 290 | Source-control path target promotion keeps path-only wrapper semantics, tracked/docless delete handling, and local regression tests in one boundary. Splitting now would separate the invariants from the tests that guard them. | Keep; split helper tests only if this boundary gains unrelated source-control operations. |
 | `crates/core/src/ledger/merge/engine.rs` | 290 | Merge engine state machine is cohesive. | Keep unless new phases add distinct ownership. |
 | `crates/core/src/ledger/metadata.rs` | 259 | Slightly above threshold; metadata surface is still compact. | Keep. |
 | `crates/core/src/sync/mod.rs` | 337 | Public sync facade plus module wiring; current size is acceptable. | Consider moving facade helpers if new APIs are added. |
