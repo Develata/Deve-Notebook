@@ -55,7 +55,21 @@ pub(super) fn plan_delete(
 ) -> Result<Option<StructuredCommitTarget>> {
     let path = to_forward_slash(path);
     let doc_id = match doc_id_hint {
-        Some(doc_id) => Some(doc_id),
+        Some(doc_id) => {
+            let meta = repo
+                .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+                .ok_or_else(|| anyhow!("source control delete target doc not found: {}", doc_id))?;
+            let current_path = to_forward_slash(&meta.path);
+            if current_path != path {
+                return Err(anyhow!(
+                    "source control delete target path mismatch: doc {} is at {}, staged path {}",
+                    doc_id,
+                    current_path,
+                    path
+                ));
+            }
+            Some(doc_id)
+        }
         None => repo.get_tracked_docid_in_local_repo(repo_name, &path)?,
     };
     Ok(doc_id.map(|doc_id| StructuredCommitTarget {

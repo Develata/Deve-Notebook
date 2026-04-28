@@ -23,11 +23,7 @@ pub fn take_for_target(db: &Database, target: &ScPathTarget) -> Result<Option<Pe
 }
 
 fn resolve_for_doc(db: &Database, path: &str, doc_id: DocId) -> Result<Option<PendingFsEntry>> {
-    if let Some(entry) = select_entry(list_for_doc(db, doc_id)?, path, Some(doc_id))? {
-        return Ok(Some(entry));
-    }
-    let exact = super::get(db, path)?;
-    Ok(exact.filter(|entry| entry.doc_id.is_none() && entry.change_type != ChangeStatus::Added))
+    select_entry(list_for_doc(db, doc_id)?, path, Some(doc_id))
 }
 
 fn resolve_without_doc(db: &Database, path: &str) -> Result<Option<PendingFsEntry>> {

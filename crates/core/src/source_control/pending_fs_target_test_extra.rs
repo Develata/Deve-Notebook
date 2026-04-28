@@ -5,7 +5,7 @@ use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs;
 
 #[test]
-fn doc_target_finds_exact_docless_delete_by_path() {
+fn doc_target_rejects_exact_docless_delete_by_path() {
     let (_dir, db) = new_db();
     let doc_id = DocId(uuid::Uuid::new_v4());
     pending_fs::upsert(
@@ -29,15 +29,15 @@ fn doc_target_finds_exact_docless_delete_by_path() {
             path: "notes/a.md".into(),
         },
     )
-    .expect("doc target lookup should succeed")
-    .expect("exact docless delete should resolve");
-    assert_eq!(entry.path, "notes/a.md");
-    assert_eq!(entry.change_type, ChangeStatus::Deleted);
-    assert_eq!(entry.doc_id, None);
+    .expect("doc target lookup should succeed");
+    assert!(
+        entry.is_none(),
+        "doc_id target must not fall back to docless delete"
+    );
 }
 
 #[test]
-fn doc_target_finds_exact_docless_modified_by_path() {
+fn doc_target_rejects_exact_docless_modified_by_path() {
     let (_dir, db) = new_db();
     let doc_id = DocId(uuid::Uuid::new_v4());
     pending_fs::upsert(
@@ -61,9 +61,9 @@ fn doc_target_finds_exact_docless_modified_by_path() {
             path: "notes/a.md".into(),
         },
     )
-    .expect("doc target lookup should succeed")
-    .expect("exact docless modify should resolve");
-    assert_eq!(entry.path, "notes/a.md");
-    assert_eq!(entry.change_type, ChangeStatus::Modified);
-    assert_eq!(entry.doc_id, None);
+    .expect("doc target lookup should succeed");
+    assert!(
+        entry.is_none(),
+        "doc_id target must not fall back to docless modify"
+    );
 }

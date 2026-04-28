@@ -11,7 +11,7 @@ use crate::ledger::RepoManager;
 use crate::ledger::manager::commit_plan;
 use crate::ledger::range;
 use crate::source_control::{CommitInfo, commits, staging};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 impl RepoManager {
@@ -43,6 +43,7 @@ impl RepoManager {
         }
         let mut targets = commit_plan::build_targets(staged);
         targets.sort_by_key(|target| target.delete_only);
+        self.preflight_staged_commit_targets(repo_name, &targets)?;
 
         let doc_count = targets.len() as u32;
         for target in &targets {
@@ -71,5 +72,18 @@ impl RepoManager {
             message
         );
         Ok(commit)
+    }
+
+    fn preflight_staged_commit_targets(
+        &self,
+        repo_name: &str,
+        targets: &[commit_plan::CommitTarget],
+    ) -> Result<()> {
+        for target in targets.iter().filter(|target| !target.delete_only) {
+            let disk_path = self.local_repo_workspace_path(repo_name, &target.path)?;
+            std::fs::read_to_string(&disk_path)
+                .with_context(|| format!("Failed to read staged workspace file {:?}", disk_path))?;
+        }
+        Ok(())
     }
 }
