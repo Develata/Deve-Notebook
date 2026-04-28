@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::components::sidebar::source_control::history_body::HistoryBody;
 use crate::hooks::use_core::SourceControlContext;
 use crate::hooks::use_core::source_control_notice::is_deleted_no_doc_id_notice;

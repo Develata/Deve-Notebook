@@ -1,4 +1,8 @@
 // apps\web\src\components\sidebar\source_control
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 //! # ChangeItem 组件 (变更条目组件)
 //!
 //! 渲染单个文件变更条目，包含文件图标、名称、路径和状态标记。

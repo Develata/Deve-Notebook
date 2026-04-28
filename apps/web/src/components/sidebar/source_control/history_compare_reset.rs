@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
 use deve_core::source_control::CommitInfo;
 
 pub fn should_reset_compare_state(

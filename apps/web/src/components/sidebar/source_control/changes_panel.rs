@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::components::icons::{ChevronRight, Plus, RefreshCw};
 use crate::components::sidebar::source_control::changes::Changes;
 use crate::components::sidebar::source_control::commit::Commit;

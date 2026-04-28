@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use deve_core::source_control::CommitInfo;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

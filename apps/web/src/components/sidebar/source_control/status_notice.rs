@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 15_release#runtime-observability
+//!
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, bottom_bar, source_control as sc};
 use leptos::prelude::*;

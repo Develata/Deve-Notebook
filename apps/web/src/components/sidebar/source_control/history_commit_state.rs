@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HistoryCommitVisualState {
     Idle,

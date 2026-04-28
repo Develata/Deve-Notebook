@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::icons::{Plus, RotateCcw};
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};

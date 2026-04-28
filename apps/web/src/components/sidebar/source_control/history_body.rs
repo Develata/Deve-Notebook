@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use crate::components::sidebar::source_control::history_compare_banner::HistoryCompareBanner;
 use crate::components::sidebar::source_control::history_timeline::HistoryTimeline;
 use crate::hooks::use_core::SourceControlContext;

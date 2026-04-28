@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
 use crate::components::icons::{AlertTriangle, FileText};
 use crate::components::sidebar::source_control::change_item_counterpart::{
     counterpart_badge_text, counterpart_badge_title, find_counterpart_kind,

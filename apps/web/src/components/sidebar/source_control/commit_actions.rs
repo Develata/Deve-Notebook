@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::icons::{Check, ChevronDown, Upload};
 use crate::components::sidebar::source_control::status_notice::blocked_title as blocked_status_title;
 use crate::hooks::use_core::write_gate::RepoWriteBlock;

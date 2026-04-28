@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 15_release#runtime-observability
+//!
 use crate::components::sidebar::source_control::error_notice_copy as copy;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteBlock;

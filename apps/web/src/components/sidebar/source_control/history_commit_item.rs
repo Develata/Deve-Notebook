@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
 use crate::components::sidebar::source_control::history_commit_details::HistoryCommitDetails;
 use crate::components::sidebar::source_control::history_commit_state::{
     HistoryCommitVisualState, history_commit_row_class, resolve_history_commit_visual_state,

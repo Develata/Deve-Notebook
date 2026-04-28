@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::components::icons::MoreHorizontal;
 use crate::components::sidebar::source_control::context_menu::SectionMenu;
 use crate::i18n::{Locale, t};

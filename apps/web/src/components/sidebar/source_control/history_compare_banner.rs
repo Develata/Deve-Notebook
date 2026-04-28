@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 #[path = "history_compare_banner_copy.rs"]
 mod copy;
 

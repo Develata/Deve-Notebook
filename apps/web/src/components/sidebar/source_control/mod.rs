@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 pub mod change_item;
 pub mod change_item_actions;
 pub mod change_item_conflict_actions;

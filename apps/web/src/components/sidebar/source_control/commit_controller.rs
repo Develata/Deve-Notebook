@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::sidebar::source_control::commit_ai::{
     build_generate_callback, sync_generated_commit_message,
 };

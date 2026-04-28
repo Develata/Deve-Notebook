@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use crate::components::icons::Sparkles;
 use crate::components::sidebar::source_control::status_notice::{
     blocked_hint as blocked_status_hint, blocked_title as blocked_status_title,

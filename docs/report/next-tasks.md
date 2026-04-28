@@ -59,6 +59,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` 壳层批次 plan_ref：activity bar、bottom bar、dashboard、desktop/main layout、branch switcher、dropdown、icons 与 layout context 绑定 web layout persistence、runtime observability、repo scope、native AI chat 与 source-control runtime 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` AI chat 与 command palette 批次 plan_ref：chat panel/actions/drop/selection/status 绑定 native AI chat、trusted bridge、document authority 与 web edit intent，command palette 绑定 command-palette shortcuts、repo scope 与 web layout 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/diff_view` 批次 plan_ref：diff model/cache/fold/navigation/split/unified/viewport/conflict actions 绑定 source-control runtime、large document runtime、web layout、runtime observability 与 web edit intent 合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/sidebar/source_control` 批次 plan_ref：change item/stage/unstage/conflict/commit/history/repositories/status/error notice 绑定 source-control runtime、repo scope、document authority、web edit intent、native AI chat 与 runtime observability 合同。
 
 ### MCP Direction
 

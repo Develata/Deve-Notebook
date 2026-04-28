@@ -1,4 +1,8 @@
 // apps/web/src/components/sidebar/source_control/context_menu.rs
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 //! # Source Control Context Menu
 //!
 //! Dropdown menu to toggle section visibility (repos, changes, graph).

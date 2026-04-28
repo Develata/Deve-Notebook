@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use crate::hooks::use_core::{ChatContext, ChatMessage, SourceControlContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

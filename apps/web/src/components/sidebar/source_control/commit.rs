@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::sidebar::source_control::commit_actions::CommitActions;
 use crate::components::sidebar::source_control::commit_controller::use_commit_controller;
 use crate::components::sidebar::source_control::commit_message_box::CommitMessageBox;

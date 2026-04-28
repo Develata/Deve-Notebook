@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!
 use crate::i18n::{Locale, t};
 
 pub fn compare_message(locale: Locale, base_label: &str, target_label: &str) -> String {

@@ -1,4 +1,8 @@
 // apps\web\src\components\sidebar\source_control
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 //! # UnstagedSection 组件 (工作区组件)
 //!
 //! 渲染工作区 (Unstaged Changes) 的文件列表。
