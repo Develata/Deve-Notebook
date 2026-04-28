@@ -18,6 +18,7 @@
 //! - `command_palette`: 命令面板翻译
 //! - `search`: 搜索框翻译
 //! - `source_control`: 版本控制面板翻译
+//! - `time`: 时间与相对时间翻译
 
 pub mod bottom_bar;
 pub mod chat;
@@ -36,6 +37,7 @@ pub mod server_error;
 pub mod settings;
 pub mod sidebar;
 pub mod source_control;
+pub mod time;
 
 /// 语言枚举
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]

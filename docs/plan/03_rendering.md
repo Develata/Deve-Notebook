@@ -130,7 +130,7 @@ EditorBufferChanged
 5. link / image containers
 6. emphasis / italic / strike
 
-### 4.3 Whitelist Rule
+### 4.3 Whitelist Rule {#markdown-render-whitelist}
 
 rendering 层只能实现 plan 明确允许的 Markdown 子集。
 

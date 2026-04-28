@@ -90,7 +90,7 @@ pub fn HistoryCommitItem(
                 </div>
                 <div class="flex items-center gap-2 text-[11px] text-muted">
                     <span class="font-mono bg-hover px-1 rounded text-secondary">{short_commit_id(&commit.id)}</span>
-                    <span>{format_relative(commit.timestamp)}</span>
+                    <span>{move || format_relative(commit.timestamp, locale.get())}</span>
                     <Show when=move || visual_state.get() == HistoryCommitVisualState::Base>
                         <span class="ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium bg-accent/15 text-accent">
                             {move || source_control::history_base_badge(locale.get())}
