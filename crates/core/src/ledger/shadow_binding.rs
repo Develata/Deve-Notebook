@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-scope-runtime
+//!
 use anyhow::Result;
 
 use super::{RepoInfo, RepoManager};

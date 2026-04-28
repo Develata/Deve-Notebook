@@ -1,4 +1,9 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#projection-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # 元数据映射模块 (Metadata Mapping)
 //!
 //! 管理 Path/DocId/Inode 之间的映射关系。

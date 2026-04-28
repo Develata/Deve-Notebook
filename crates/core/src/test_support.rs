@@ -1,3 +1,5 @@
+//! plan_ref: infra
+//!
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use crate::ledger::{REPO_METADATA, RepoInfo, RepoManager};

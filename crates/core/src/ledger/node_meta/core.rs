@@ -1,4 +1,9 @@
 // crates/core/src/ledger/node_meta/core.rs
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#projection-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # Node 元数据核心操作
 
 use super::split_path;

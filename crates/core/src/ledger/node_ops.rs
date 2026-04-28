@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 06_repository#tree-projection-contract
+//!
 use crate::ledger::ops;
 use crate::ledger::schema::{LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};
 use crate::models::{LedgerEntry, PeerId, StructureOp, deserialize_ledger_entry};

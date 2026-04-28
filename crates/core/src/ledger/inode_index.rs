@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#watcher-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # Watcher Identity Index
 //!
 //! `inode -> doc_id` 只服务于 watcher 的稳定身份识别，

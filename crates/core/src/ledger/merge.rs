@@ -1,4 +1,8 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!
 // ---------------------------------------------------------------
 // 模块：三路合并引擎（模块入口）
 // 作用：拆分 merge 子模块并对外导出

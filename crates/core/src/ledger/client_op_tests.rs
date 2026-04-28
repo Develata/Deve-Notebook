@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use super::*;
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
 use crate::models::{DocId, LedgerEntry, PeerId};

@@ -51,6 +51,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger 顶层基础批次 plan_ref：database/schema/init/cache 绑定 facts partition 与 repo runtime layout，ops/listing/snapshot/range 绑定 document authority、tree projection、repo catalog 与 sync range 查询合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger manager source-control 批次 plan_ref：source-control API/query/target/workdir/commit path 绑定 source-control runtime、repo selector、internal path normalization、facts partition、document authority 与 projection 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger manager repo/runtime 批次 plan_ref：RepoManager core/types/repository/repo_db/workspace/metadata/maintenance/ops/snapshot/merge 绑定 repo catalog、repo scope、repo runtime layout、tree projection、watcher、facts partition 与 document authority 合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已收尾 `crates/core` 剩余 ledger plan_ref：facts validation、node metadata、shadow repo、merge engine、source-control facade、traits、snapshot verify 与 test support 均绑定对应 facts/projection/repo-scope/source-control/web-edit 或 infra 合同，使 `crates/core` 缺失项收敛到 0。
 
 ### MCP Direction
 

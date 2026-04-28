@@ -1,4 +1,8 @@
 // crates\core\src\ledger\merge\diff.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!
 // ---------------------------------------------------------------
 // 模块：差异编辑工具
 // 作用：把 dissimilar diff 转换为可合并的编辑序列

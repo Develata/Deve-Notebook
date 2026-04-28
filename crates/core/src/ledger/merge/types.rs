@@ -1,4 +1,8 @@
 // crates\core\src\ledger\merge\types.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!
 // ---------------------------------------------------------------
 // 模块：三路合并类型定义
 // 作用：为合并引擎提供统一的数据结构

@@ -1,4 +1,8 @@
 // crates\core\src\ledger\merge\engine.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!
 // ---------------------------------------------------------------
 // 模块：三路合并引擎
 // 作用：执行 LCA 计算、状态重建与 3-Way Merge

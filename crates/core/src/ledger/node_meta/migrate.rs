@@ -1,4 +1,8 @@
 // crates/core/src/ledger/node_meta/migrate.rs
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#projection-contract
+//!
 //! # Node 元数据迁移/查询
 
 use crate::ledger::schema::{INODE_TO_NODEID, NODEID_TO_META, PATH_TO_NODEID};

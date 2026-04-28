@@ -1,4 +1,10 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-scope-runtime
+//!   - 04_storage#repo-runtime-layout
+//!   - 04_storage#facts-partition
+//!
 //! # 影子库管理模块 (Shadow DB Manager)
 //!
 //! 管理远端影子库 (Store C) 的加载、查询和操作。

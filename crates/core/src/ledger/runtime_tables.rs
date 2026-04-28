@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 04_storage#facts-partition
+//!   - 07_diff_logic#source-control-runtime
+//!
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
 use crate::models::deserialize_ledger_entry;
 use anyhow::{Result, anyhow};

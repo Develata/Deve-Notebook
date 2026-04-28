@@ -1,4 +1,9 @@
 // crates/core/src/ledger/traits.rs
+//! plan_ref:
+//!   - 06_repository#repo-selector-resolution-contract
+//!   - 06_repository#repo-scope-runtime
+//!   - 07_diff_logic#source-control-runtime
+//!
 //! # Repository Trait
 
 use crate::models::{DocId, RepoId};

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 04_storage#projection-contract
+//!   - 06_repository#tree-projection-contract
+//!
 use crate::models::{
     DocId, LedgerEntry, LedgerEvent, NodeId, NodeKind, NodeMeta, StructureOp,
     deserialize_ledger_entry,

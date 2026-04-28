@@ -1,4 +1,9 @@
 // crates\core\src\ledger\shadow
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-scope-runtime
+//!   - 04_storage#facts-partition
+//!
 //! # 影子库访问层 (Shadow Access)
 //!
 //! **架构作用**:

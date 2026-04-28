@@ -1,4 +1,8 @@
 // crates/core/src/ledger/node_check.rs
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#projection-contract
+//!
 //! # Node 一致性检查 (Node Consistency Check)
 //!
 //! 校验 Doc 表与 Node 表的路径一致性。

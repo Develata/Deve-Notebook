@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-scope-runtime
+//!   - 04_storage#facts-partition
+//!   - 06_repository#tree-projection-contract
+//!
 use anyhow::Result;
 
 use super::RepoManager;

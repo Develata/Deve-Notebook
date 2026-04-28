@@ -1,4 +1,9 @@
 // crates\core\src\ledger
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#watcher-contract
+//!   - 04_storage#repo-runtime-layout
+//!
 //! # Source Control 集成 (RepoManager 扩展)
 //!
 //! 为 RepoManager 提供 Source Control 功能的便捷方法。
