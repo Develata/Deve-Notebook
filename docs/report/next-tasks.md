@@ -69,6 +69,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已完成 REL-006 本地 runtime smoke：`deve_cli serve --dev --port 3101` 暴露 `/api/node/role`，`scripts/smoke-runtime-release-info.sh` 通过；Chrome MCP 登录 dev dashboard 后可见 `embedded-frontend | development | repos:degraded (1/2)` runtime shape。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已尝试 REL-002 Docker release smoke：`DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh` 在沙箱内外均因 `docker daemon is not reachable` 阻塞；该项当前为宿主环境阻塞，非代码验收失败。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已新增 `docs/report/release-smoke-status-2026-04-28.md` 作为 release smoke 状态快照：通过项、Docker 环境阻塞项与后续复跑条件已从任务流水中抽出，避免 `next-tasks` 继续承载过多验收日志。
+- 2026-04-28: P0 Authority / Repo Health / Repair 已补 `deve repair --check` 修复动作预检：不执行 shadow quarantine、path fix、backup restore 或 projection rebuild；对当前 degraded `test` repo 实测输出 `authority_corrupt / missing_parent` 并 fail-closed，提示 repair steps 必须保持禁用直到 authority 恢复。
 
 ### MCP Direction
 

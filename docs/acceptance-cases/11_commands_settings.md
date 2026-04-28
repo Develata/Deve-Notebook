@@ -139,9 +139,11 @@
     - run: deve node-check --projection --help
     - run: deve recover --help
     - run: deve repair --help
+    - run: deve repair --check --help
     - run: scripts/check-dev-data-health-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli node_check -- --nocapture
+    - run: cargo test -p deve_cli repair_check -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 

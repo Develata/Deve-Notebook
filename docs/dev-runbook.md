@@ -76,10 +76,11 @@ Startup can skip a local repo when its Structure Facts authority cannot build a
 safe tree projection. This is a repo-local degraded state, not a global server
 startup failure.
 
-Use read-only diagnostics first:
+Use diagnostics first:
 
 ```bash
 cargo run -p deve_cli --bin deve_cli -- node-check --projection --repo <repo>
+cargo run -p deve_cli --bin deve_cli -- repair --check --repo <repo>
 ```
 
 Important fields:
@@ -91,6 +92,12 @@ Important fields:
 - `issue_code=missing_parent`: a node references a parent that is absent from
   Structure Facts.
 - `repair_hint`: operator-facing next step for the diagnostic class.
+
+`repair --check` is a repair-step preflight. It does not execute the repair
+subcommand's mutating steps: shadow quarantine, repo-prefixed path rewrite,
+backup restore, or projection table rebuild. Like other CLI diagnostics, startup
+may still initialize or repair repo catalog metadata; run it against a copy if
+byte-for-byte immutability is required.
 
 For rebuild-supported projection drift, use:
 

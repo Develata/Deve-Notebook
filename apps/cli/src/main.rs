@@ -107,6 +107,9 @@ pub(crate) enum Commands {
     },
     /// Repair known local corruption from backups and quarantine invalid shadows
     Repair {
+        /// Run repair readiness checks without executing repair steps
+        #[arg(long)]
+        check: bool,
         #[arg(long, default_value = "Vault_old/vault")]
         backup: PathBuf,
         #[arg(long)]

@@ -75,6 +75,7 @@ pub async fn run(
             repo,
         )?,
         Some(Commands::Repair {
+            check,
             backup,
             repo,
             paths,
@@ -82,11 +83,14 @@ pub async fn run(
         }) => commands::repair::run(
             ledger_dir,
             vault_path,
-            &backup,
             config.snapshot_depth,
-            repo.as_deref(),
-            &paths,
-            rebuild_projection,
+            commands::repair::RepairOptions {
+                backup_root: &backup,
+                target_repo: repo.as_deref(),
+                paths: &paths,
+                rebuild_projection,
+                check,
+            },
         )?,
         Some(Commands::Config { action }) => match action {
             ConfigAction::Print => commands::config::print(config)?,
