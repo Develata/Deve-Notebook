@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#backup-export
+//!   - 06_repository#tree-projection-contract
+//!   - 12_commands#cli-commands
+
 use deve_core::models::{DocId, LedgerEntry, NodeId, NodeMeta};
 use deve_core::sync::{ProjectionDiagnostic, ProjectionDiagnosticStatus};
 use serde::{Deserialize, Serialize};

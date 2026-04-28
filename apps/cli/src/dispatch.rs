@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 12_commands#cli-commands
+
 use crate::commands;
 use crate::{Commands, ConfigAction};
 use std::path::{Path, PathBuf};

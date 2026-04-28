@@ -1,5 +1,8 @@
 // apps\web\src
 //! # Deve-Note Web 应用
+//! plan_ref:
+//!   - 08_ui_design_01_web#single-binary-distribution
+//!   - 05_network#web-ws-runtime
 //!
 //! 这是 Deve-Note 的 WebAssembly 前端，使用 Leptos 框架构建。
 //!

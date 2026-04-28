@@ -1,5 +1,7 @@
 // apps\cli\src
 //! # Deve-Note 命令行应用
+//! plan_ref:
+//!   - 12_commands#cli-commands
 //!
 //! **架构作用**:
 //! 这是 Deve-Note 的命令行入口，提供 Local Hub 和 Backend Server 功能。
