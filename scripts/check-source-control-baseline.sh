@@ -78,5 +78,7 @@ check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs 
 check_absent crates/core/src/ledger/manager/locator.rs "ignored stale repo_name"
 check_contains crates/core/src/ledger/manager/locator.rs "select_local_repo_name_for_execution(&candidates)"
 check_contains crates/core/tests/local_repo_selector_heal_test.rs "resolve_local_repo_name_for_execution_rejects_selector_mismatch"
+check_contains apps/cli/src/server/source_control_http_status_test.rs "test_http_status_rejects_selector_mismatch"
+check_contains apps/cli/src/server/source_control_http_status_test.rs "ServerErrorCode::ScRepoContextInvalid"
 
 echo "source-control-baseline-check: ok"
