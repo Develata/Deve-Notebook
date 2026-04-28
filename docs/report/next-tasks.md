@@ -25,6 +25,7 @@
 - 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
 - 2026-04-28: P1 Search Baseline 已补 SearchResults scope-switch 直接回归：repo/branch switch pending 时即使 `request_id / repo_id / branch / scope_nonce` 字段匹配，也必须丢弃结果，避免切换过程污染新 scope。
 - 2026-04-28: P1 Search Baseline 已补 search handler 边界回归：空 query 与 `limit=0` 不报错、不丢 scope，返回带 `request_id / repo_id / branch / scope_nonce` 的空 `SearchResults`。
+- 2026-04-28: P1 Search Baseline 已补 baseline scan 排序/截断回归：结果按 score 降序、同分按 path 升序，limit 在排序后截断，确保 path match 优先于 content-only match。
 - 2026-04-28: P1 Settings Current Boundary 已补 UI 边界提示：Settings 面板明确说明当前只提供运行时/本地 UI 反馈，持久运行时配置仍通过 `deve config set` 写入 `config.toml`；baseline 脚本已检查该边界，server-backed Settings API 仍不进入当前验收。
 - 2026-04-28: P1 Native AI Chat Minimum 已补当前 Markdown 上下文与 PLAN/BUILD prompt 边界：前端向 Native AI Chat 传递有界当前正文，ai-chat 插件将当前文件、正文、selection、模式写入 system prompt；默认仍不开放 workspace/source-control/shell/MCP/skill 执行能力。
 - 2026-04-28: P1 Native AI Chat Minimum 已把 `/plan`、`/build`、`/agents` slash command 的本地消费路径抽成可单测合同：slash command 只切换 Native `PLAN/BUILD` session mode，不切换 backend，不发起 plugin call。

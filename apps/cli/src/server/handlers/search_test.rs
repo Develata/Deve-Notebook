@@ -75,6 +75,32 @@ mod feature_enabled {
         Ok(())
     }
 
+    #[test]
+    fn scope_search_orders_by_score_then_path_before_limit() -> anyhow::Result<()> {
+        let h = edit_harness(false)?;
+        let path_match =
+            seed_doc_with_content(&h.state, "default", "notes/needle-alpha.md", "plain")?;
+        seed_doc_with_content(&h.state, "default", "notes/b.md", "needle")?;
+        seed_doc_with_content(&h.state, "default", "notes/a.md", "needle")?;
+        let scope = ResolvedRepo {
+            repo_id: h.default_repo_id,
+            repo_name: "default".into(),
+            branch: None,
+        };
+
+        let results = search_scope_documents(&h.state, &scope, "needle", 3)?;
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].0, path_match.to_string());
+        assert_eq!(results[0].1, "notes/needle-alpha.md");
+        assert_eq!(results[1].1, "notes/a.md");
+        assert_eq!(results[2].1, "notes/b.md");
+
+        let limited = search_scope_documents(&h.state, &scope, "needle", 1)?;
+        assert_eq!(limited.len(), 1);
+        assert_eq!(limited[0].0, path_match.to_string());
+        Ok(())
+    }
+
     #[tokio::test]
     async fn handler_returns_structured_error_when_runtime_search_is_disabled() -> anyhow::Result<()>
     {
