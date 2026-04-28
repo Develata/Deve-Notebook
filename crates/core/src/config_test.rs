@@ -6,7 +6,21 @@ static CWD_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn test_default_config() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_AI__MODE", None),
+        ("DEVE_AI__NATIVE_ENABLED", None),
+        ("DEVE_AI__AGENT_BRIDGE__ENABLED", None),
+        ("DEVE_AI__AGENT_BRIDGE__TRUSTED", None),
+        ("AGENT_CLI_PATH", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let old_cwd = std::env::current_dir().expect("cwd");
+    std::env::set_current_dir(dir.path()).expect("set cwd");
+
     let config = Config::load();
+
+    std::env::set_current_dir(old_cwd).expect("restore cwd");
     assert!(!config.ledger_dir.is_empty());
     assert_eq!(config.ai.mode, "native");
     assert!(config.ai.native_enabled);

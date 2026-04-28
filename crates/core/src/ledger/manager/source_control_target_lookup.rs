@@ -23,6 +23,12 @@ pub(super) fn resolve_change_path(
         if let Some(resolved) = resolve_from_entries(&entries, &path, Some(doc_id)) {
             return Ok(resolved);
         }
+        if repo
+            .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+            .is_some_and(|meta| to_forward_slash(&meta.path) == path)
+        {
+            return Ok(path);
+        }
         return Err(anyhow!(
             "Source control target not resolved for doc {} at {}",
             doc_id,
