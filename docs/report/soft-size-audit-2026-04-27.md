@@ -1,5 +1,7 @@
 # Soft Size Audit 2026-04-27
 
+Updated: 2026-04-28
+
 This report records the current `scripts/plan-coverage.sh` single-file size warnings.
 It is non-authoritative and does not override `AGENTS.md`; it only explains why no
 mechanical split was applied in this acceptance-alignment batch.
@@ -7,7 +9,7 @@ mechanical split was applied in this acceptance-alignment batch.
 ## Result
 
 - Hard fuse violations: 0
-- Soft warnings reviewed: 6
+- Soft warnings reviewed: 10
 - Decision: do not split files solely to satisfy the soft threshold.
 
 `AGENTS.md` defines files over roughly 250 lines as architecture review warnings and
@@ -19,12 +21,16 @@ next-touch refactoring rather than arbitrary line-count slicing.
 
 | File | Lines | Assessment | Next action |
 |---|---:|---|---|
-| `crates/core/src/config.rs` | 261 | Central config schema and parsing are cohesive; only slightly above the threshold. | Keep; split only if settings domains diverge. |
-| `crates/core/src/ledger/append_validate.rs` | 345 | Ledger append validation is a single invariant boundary. | Keep; extract only repeated validators. |
-| `crates/core/src/ledger/merge/engine.rs` | 286 | Merge engine state machine is cohesive. | Keep unless new phases add distinct ownership. |
-| `crates/core/src/ledger/metadata.rs` | 254 | Slightly above threshold; metadata surface is still compact. | Keep. |
-| `crates/core/src/sync/mod.rs` | 328 | Public sync facade plus module wiring; current size is acceptable. | Consider moving facade helpers if new APIs are added. |
-| `crates/core/src/sync/repo_scoped.rs` | 262 | Repo-scoped sync logic is cohesive and barely above threshold. | Keep. |
+| `apps/web/src/i18n/source_control.rs` | 465 | Source Control translation facade is intentionally centralized so component code cannot drift into hardcoded strings. | Keep; split by domain only if Source Control i18n grows beyond the hard fuse or repeated groups emerge. |
+| `crates/core/src/config.rs` | 264 | Central config schema and parsing are cohesive; only slightly above the threshold. | Keep; split only if settings domains diverge. |
+| `crates/core/src/graph/mod.rs` | 352 | Read-only graph projection is currently one compact authority-free baseline; splitting now would scatter a small algorithm across files. | Keep; split model/parser/projection only when graph visualization gains a larger renderer-facing API. |
+| `crates/core/src/ledger/append_validate.rs` | 350 | Ledger append validation is a single invariant boundary. | Keep; extract only repeated validators. |
+| `crates/core/src/ledger/database.rs` | 254 | Database cache/open/handle logic is one storage access boundary and barely above the threshold. | Keep. |
+| `crates/core/src/ledger/merge/engine.rs` | 290 | Merge engine state machine is cohesive. | Keep unless new phases add distinct ownership. |
+| `crates/core/src/ledger/metadata.rs` | 259 | Slightly above threshold; metadata surface is still compact. | Keep. |
+| `crates/core/src/sync/mod.rs` | 337 | Public sync facade plus module wiring; current size is acceptable. | Consider moving facade helpers if new APIs are added. |
+| `crates/core/src/sync/repo_scoped.rs` | 265 | Repo-scoped sync logic is cohesive and barely above threshold. | Keep. |
+| `crates/core/tests/commit_diff_node_projection_test.rs` | 270 | Integration scenarios share fixture state; keeping them together preserves projection/metadata poisoning context. | Keep unless new scenarios create independent fixture families. |
 
 ## Completed Cleanup
 
