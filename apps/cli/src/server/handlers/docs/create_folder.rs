@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#watcher-contract
+//!
 //! 目录创建逻辑。
 
 use super::checked_existing_is_dir;

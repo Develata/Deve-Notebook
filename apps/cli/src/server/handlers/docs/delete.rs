@@ -1,4 +1,11 @@
 // apps/cli/src/server/handlers/docs/delete.rs
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#watcher-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # 删除文档处理器
 
 use super::errors;

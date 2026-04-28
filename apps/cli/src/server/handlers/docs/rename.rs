@@ -1,4 +1,11 @@
 // apps/cli/src/server/handlers/docs/rename.rs
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#watcher-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # 重命名/移动文档处理器
 
 use super::errors;

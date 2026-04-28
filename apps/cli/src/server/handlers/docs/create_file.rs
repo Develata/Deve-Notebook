@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#watcher-contract
+//!
 //! 文件创建逻辑。
 
 use super::checked_exists;

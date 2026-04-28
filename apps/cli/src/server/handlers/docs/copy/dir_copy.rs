@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#watcher-contract
+
 use super::super::errors;
 use super::copy_dir_on_disk;
 use crate::server::repo_scope::run_on_resolved_local_repo;

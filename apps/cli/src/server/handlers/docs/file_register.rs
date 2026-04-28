@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+
 use super::checked_exists;
 use crate::server::AppState;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path};

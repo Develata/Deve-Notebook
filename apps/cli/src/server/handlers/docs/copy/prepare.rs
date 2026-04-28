@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#internal-path-normalization
+
 use super::super::copy::normalize_copy_dest_path;
 use super::super::node_target::resolve_node_target;
 use super::super::{checked_exists, errors, validate_file_path, validate_folder_path};

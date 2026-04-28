@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#watcher-contract
+
 use super::errors;
 use super::node_helpers::broadcast_incremental_tree_deltas;
 use super::notify_fs_refresh;

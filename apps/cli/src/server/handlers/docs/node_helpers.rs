@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+//!
 //! # Docs 视图刷新辅助逻辑
 //!
 //! Invariants:

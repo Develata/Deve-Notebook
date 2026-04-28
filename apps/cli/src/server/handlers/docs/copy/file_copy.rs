@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+
 use super::super::errors;
 use super::prepare::CopyPaths;
 use crate::server::handlers::docs::file_register::create_file_from_content;

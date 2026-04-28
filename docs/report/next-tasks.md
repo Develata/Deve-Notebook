@@ -46,6 +46,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/sync` plan_ref：SyncEngine/vector/transfer/manual buffer 绑定 network sync runtime，repo-scoped registry 绑定 repo scope runtime，watcher pending/scan/dir guard 绑定 watcher contract，projection/rebuild/reconcile/snapshot policy 绑定 projection contract。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/cli/src/server` 第一批 plan_ref：channel/sync handler 绑定 server WS runtime，tree registry 绑定 repo scope 与 tree projection，rate limit/router/security/setup 绑定 auth 与 runtime 边界，metrics/node role 绑定 release observability。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 Source Control server handler 剩余入口 plan_ref：HTTP query/mutation、WS changes/staging/discard/conflict、repo scope resolver、service write 与 error facade 均绑定 source-control runtime，并按需绑定 repo scope、watcher 或 repo runtime layout。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 Docs CRUD server handler plan_ref：create/delete/rename/copy/path validation/node target/file register 绑定 document authority bridge、repo scope、tree projection、internal path normalization 与 watcher refresh 合同。
 
 ### MCP Direction
 

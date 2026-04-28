@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 03_rendering#document-authority-bridge
+
 use super::errors;
 use crate::server::channel::DualChannel;
 use deve_core::protocol::doc_file_op_errors as path_err;
