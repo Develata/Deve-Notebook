@@ -61,6 +61,49 @@ fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set()
 }
 
 #[test]
+fn workdir_diff_target_accepts_current_projection_path_without_change_entry() {
+    let (dir, repo) = new_repo();
+    write_workspace_file(&dir, "notes/a.md", "hello");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("hello"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed add");
+    repo.stage_pending("notes/a.md").expect("stage add");
+    repo.commit_staged("initial").expect("commit add");
+
+    let doc_id = repo
+        .get_docid("notes/a.md")
+        .expect("lookup")
+        .expect("doc id");
+    write_workspace_file(&dir, "notes/a.md", "world");
+
+    let (path, old_content, new_content) = repo
+        .workdir_diff_inputs_for_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget {
+                path: "notes/a.md".into(),
+                doc_id: Some(doc_id),
+            },
+        )
+        .expect("current projection target should resolve without pending row");
+
+    assert_eq!(path, "notes/a.md");
+    assert_eq!(old_content, "hello");
+    assert_eq!(new_content, "world");
+}
+
+#[test]
 fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
     let (dir, repo) = new_repo();
     write_workspace_file(&dir, "notes/a.md", "A");

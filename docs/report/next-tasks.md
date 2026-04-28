@@ -84,6 +84,7 @@
 - 2026-04-28: P0 Source Control Core Path 已收紧 remote diff `doc_id + path` 校验：远端 diff target 携带 `doc_id` 时必须与该文档当前投影路径一致，不再只验证 doc 存在后继续使用请求 path。
 - 2026-04-28: P0 Source Control Core Path 已补 commit upsert identity preflight：Added/Modified/Renamed staged target 携带 `doc_id` 时，目标 path 不得绑定其他 doc；若要移动既有 doc，staging 必须提供 delete-side 或 `renamed_from` 证据，失败时 ledger/staging 保持不变。
 - 2026-04-28: P0 Source Control Core Path 已明确 docless exact delete legacy 策略：仅 `Deleted + doc_id=None` 可在 path wrapper 层保持 path-only，commit delete planning 仍必须通过 node projection 解析 identity；docless non-delete tracked entry 会被提升为 tracked identity 并在后续算子 fail-closed。
+- 2026-04-28: P0 Source Control Core Path 已完成最终回归收口：本地 `doc_id + path` workdir diff target 在无 pending/staged 变更行时只允许命中同一 doc 的当前 node projection path；stale path 继续 fail-closed。`cargo test` 全仓库、Source Control 过滤套件、Source Control baseline 与 plan/architecture/release baseline 均通过。
 
 ### MCP Direction
 
