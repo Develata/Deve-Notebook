@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+
 use std::path::{Path, PathBuf};
 
 pub fn repo_dir(repo_root: &Path) -> PathBuf {

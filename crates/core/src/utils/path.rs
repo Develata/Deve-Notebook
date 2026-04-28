@@ -1,5 +1,7 @@
 // crates\core\src\utils
 //! # 跨平台路径工具
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
 //!
 //! 本模块提供跨平台文件路径处理工具。
 //!

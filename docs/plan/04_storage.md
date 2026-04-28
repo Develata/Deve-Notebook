@@ -92,7 +92,7 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/.host/identity.key`
 - `ledger/backups/<repo_name>-<timestamp>.redb`
 
-### 3.2 Repo Runtime Layout
+### 3.2 Repo Runtime Layout {#repo-runtime-layout}
 
 - `vault/<repo_name>/.notegit/`
   - repo keys
@@ -149,7 +149,7 @@ Workspace_r = P_r ⊕ D_r
   - 浏览器 MUST 视为新 light peer。
   - 任何旧的 peer metadata、pending browser cache、repo-scoped trust state 都不得被猜测恢复。
 
-### 3.5 Internal Path Normalization
+### 3.5 Internal Path Normalization {#internal-path-normalization}
 
 - 所有持久化到 ledger、projection table、side table、sync payload 的路径字符串 MUST 统一为 forward slash。
 - 规范化边界：
