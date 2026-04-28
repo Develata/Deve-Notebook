@@ -1,4 +1,7 @@
 // apps\web\src\components
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # UI 组件模块 (UI Components Module)
 //!
 //! 包含 Web 应用程序的所有 Leptos UI 组件。

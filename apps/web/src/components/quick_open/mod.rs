@@ -1,4 +1,8 @@
 // apps\web\src\components\quick_open
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 12_commands#command-palette-shortcuts
+//!
 //! # Quick Open Module (快速打开模块)
 //!
 //! 提供文件搜索功能，支持模糊匹配和 MRU (Most Recently Used) 列表。

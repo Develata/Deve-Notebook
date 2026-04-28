@@ -1,4 +1,7 @@
 // apps/web/src/components/outline_render/katex.rs
+//! plan_ref:
+//!   - 03_rendering#markdown-render-whitelist
+//!
 //! # KaTeX Helpers
 
 use js_sys::{Function, Object, Reflect};

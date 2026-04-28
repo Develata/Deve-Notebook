@@ -1,4 +1,8 @@
 // apps/web/src/components/outline_render/parse.rs
+//! plan_ref:
+//!   - 03_rendering#markdown-render-whitelist
+//!   - 03_rendering#document-authority-bridge
+//!
 //! # Outline Inline Parser
 
 use super::scan::{find_math_close, find_next_char, find_style_close};

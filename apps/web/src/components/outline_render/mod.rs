@@ -1,4 +1,8 @@
 // apps/web/src/components/outline_render/mod.rs
+//! plan_ref:
+//!   - 03_rendering#markdown-render-whitelist
+//!   - 03_rendering#document-authority-bridge
+//!
 //! # Outline Inline Renderer
 //!
 //! Render inline math/code/styles for outline items.

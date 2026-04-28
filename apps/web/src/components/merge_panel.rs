@@ -1,4 +1,8 @@
 // apps\web\src\components
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # MergePanel 组件 (MergePanel Component)
 //!
 //! 显示同步模式切换按钮和手动合并时的待处理操作。

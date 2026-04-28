@@ -1,4 +1,8 @@
 // apps\web\src\components
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 03_rendering#large-document-runtime
+//!
 //! # PlaybackController 组件 (PlaybackController Component)
 //!
 //! 历史回放控制器，允许用户拖动滑块查看文档的历史版本。

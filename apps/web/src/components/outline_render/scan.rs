@@ -1,4 +1,8 @@
 // apps/web/src/components/outline_render/scan.rs
+//! plan_ref:
+//!   - 03_rendering#markdown-render-whitelist
+//!   - 03_rendering#document-authority-bridge
+//!
 //! Shared inline scan helpers for outline parsing.
 
 pub fn find_next_char(text: &str, start: usize, target: char) -> Option<usize> {

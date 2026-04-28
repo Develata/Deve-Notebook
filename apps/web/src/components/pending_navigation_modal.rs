@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

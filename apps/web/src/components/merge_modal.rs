@@ -1,4 +1,8 @@
 // apps\web\src\components
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 //! # MergeModal 组件 (MergeModal Component)
 //!
 //! 手动合并模式下用于审核和合并待处理操作的模态对话框。
