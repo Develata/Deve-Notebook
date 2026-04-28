@@ -59,6 +59,7 @@ pub(super) fn run_connected_handshake_cycle(
         maybe_mode.as_ref().map(|_| ()),
         maybe_identity.as_ref().map(|id| id.repo_id.as_str()),
         branch.as_ref(),
+        current_scope_nonce,
     ) else {
         let Some(restore_key) = restore_bootstrap_key(
             &endpoint,

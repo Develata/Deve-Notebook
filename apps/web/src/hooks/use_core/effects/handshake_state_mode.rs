@@ -6,15 +6,16 @@ pub(in super::super) fn handshake_mode_key(
     degraded: Option<()>,
     repo_id: Option<&str>,
     branch: Option<&PeerId>,
+    scope_nonce: u64,
 ) -> Option<String> {
     degraded
-        .map(|_| format!("{endpoint}::degraded"))
+        .map(|_| format!("{endpoint}::degraded::{scope_nonce}"))
         .or_else(|| {
             repo_id.map(|repo_id| {
                 let branch_key = branch
                     .map(PeerId::to_string)
                     .unwrap_or_else(|| "local".to_string());
-                format!("{endpoint}::{repo_id}::{branch_key}")
+                format!("{endpoint}::{repo_id}::{branch_key}::{scope_nonce}")
             })
         })
 }

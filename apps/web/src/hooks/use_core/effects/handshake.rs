@@ -19,8 +19,9 @@ pub(super) fn handshake_mode_key(
     degraded: Option<()>,
     repo_id: Option<&str>,
     branch: Option<&deve_core::models::PeerId>,
+    scope_nonce: u64,
 ) -> Option<String> {
-    self::handshake_state::handshake_mode_key(endpoint, degraded, repo_id, branch)
+    self::handshake_state::handshake_mode_key(endpoint, degraded, repo_id, branch, scope_nonce)
 }
 #[cfg(test)]
 pub(super) fn restore_bootstrap_key(

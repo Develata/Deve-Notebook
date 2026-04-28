@@ -14,17 +14,36 @@ fn restore_runs_only_on_clean_reconnect_edge() {
 
 #[test]
 fn handshake_mode_key_distinguishes_local_and_shadow_scope() {
-    let local = handshake_mode_key("ws://a", None, Some("repo-1"), None);
-    let shadow = handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")));
+    let local = handshake_mode_key("ws://a", None, Some("repo-1"), None, 7);
+    let shadow = handshake_mode_key(
+        "ws://a",
+        None,
+        Some("repo-1"),
+        Some(&PeerId::new("peer-a")),
+        7,
+    );
     assert_ne!(local, shadow);
 }
 
 #[test]
+fn handshake_mode_key_distinguishes_scope_nonce_generations() {
+    let old_scope = handshake_mode_key("ws://a", None, Some("repo-1"), None, 7);
+    let new_scope = handshake_mode_key("ws://a", None, Some("repo-1"), None, 8);
+    assert_ne!(old_scope, new_scope);
+}
+
+#[test]
 fn suspended_mode_key_does_not_collide_with_active_scope_keys() {
-    let local = handshake_mode_key("ws://a", None, Some("repo-1"), None)
+    let local = handshake_mode_key("ws://a", None, Some("repo-1"), None, 7)
         .expect("local scope should have handshake mode key");
-    let shadow = handshake_mode_key("ws://a", None, Some("repo-1"), Some(&PeerId::new("peer-a")))
-        .expect("shadow scope should have handshake mode key");
+    let shadow = handshake_mode_key(
+        "ws://a",
+        None,
+        Some("repo-1"),
+        Some(&PeerId::new("peer-a")),
+        7,
+    )
+    .expect("shadow scope should have handshake mode key");
     let suspended = suspended_handshake_mode_key("ws://a");
     assert_ne!(suspended, local);
     assert_ne!(suspended, shadow);
