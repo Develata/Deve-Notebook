@@ -1,3 +1,9 @@
+> Superseded note (2026-04-28): 本文件是旧 server gap raw scan，只保留作 forensic input，
+> 不再作为 active TODO。WS auth structured error、sync vector wire contract、identity key
+> owner-only permission、login audit `timestamp/user_agent`、CORS wildcard fail-closed 与 dev-only
+> warning 已由后续代码和 `code-review-2026-04-28.md` / `p1-security-hardening-status-2026-04-28.md`
+> 覆盖。下表中的相反断言按历史快照理解。
+
 | Plan §Section | Clause (one line) | Code Location | Status | Evidence |
 |---|---|---|---|---|
 | `05_network.md §Mobile P2P Strategy` | Foreground Participation: iOS/Android 客户端在前台运行时 **MUST** 作为完整 P2P Peer 参与 Gossip、握手与增量同步。 | — | ❌ missing | `rg -n "iOS|Android|mobile|foreground" apps/cli/src/server` returned no matches relevant to mobile foreground P2P behavior. |

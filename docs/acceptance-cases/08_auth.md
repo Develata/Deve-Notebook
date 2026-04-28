@@ -24,7 +24,7 @@
     - run: scripts/check-auth-baseline.sh
   assertions:
     - exit_code_eq: 0
-    - log_contains: "WARNING: Development mode with default credentials"
+    - log_contains: "WARNING: development-only auth defaults active"
 
 - case_id: AUTH-003
   goal: Cookie Secure 策略 (H1 收口)。
@@ -47,6 +47,7 @@
     - run: scripts/check-auth-baseline.sh
   assertions:
     - header_not_contains: "Access-Control-Allow-Origin: *"
+    - config_assert: ALLOWED_ORIGINS="*" fails closed with "Wildcard CORS origin is forbidden"
 
 - case_id: AUTH-005
   goal: 精确 Cookie 名称匹配 (M1 收口)。

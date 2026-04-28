@@ -4,7 +4,12 @@
 //!   - 09_auth#jwt-cookie-contract
 //!   - 09_auth#password-hashing
 
-use axum::{Extension, Json, extract::ConnectInfo, http::StatusCode, response::IntoResponse};
+use axum::{
+    Extension, Json,
+    extract::ConnectInfo,
+    http::{HeaderMap, StatusCode, header},
+    response::IntoResponse,
+};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -19,9 +24,13 @@ pub async fn login(
     Extension(config): Extension<Arc<AuthConfig>>,
     Extension(guard): Extension<Arc<BruteForceGuard>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(body): Json<LoginRequest>,
 ) -> impl IntoResponse {
     let ip = addr.ip();
+    let user_agent = headers
+        .get(header::USER_AGENT)
+        .and_then(|value| value.to_str().ok());
     if guard.is_blocked(&ip) {
         tracing::warn!(ip = %ip, "Login blocked (brute force)");
         return reject(StatusCode::TOO_MANY_REQUESTS, AuthErrorCode::RateLimited);
@@ -29,7 +38,7 @@ pub async fn login(
 
     if body.username != config.username {
         guard.record_failure(&ip);
-        log_login(false, &ip, &body.username);
+        log_login(false, &ip, &body.username, user_agent);
         return reject(StatusCode::UNAUTHORIZED, AuthErrorCode::InvalidPassword);
     }
 
@@ -45,12 +54,12 @@ pub async fn login(
     };
     if !ok {
         guard.record_failure(&ip);
-        log_login(false, &ip, &body.username);
+        log_login(false, &ip, &body.username, user_agent);
         return reject(StatusCode::UNAUTHORIZED, AuthErrorCode::InvalidPassword);
     }
 
     guard.record_success(&ip);
-    log_login(true, &ip, &body.username);
+    log_login(true, &ip, &body.username, user_agent);
     match jwt::issue_token(&config.secret, config.token_version) {
         Ok(token) => (
             StatusCode::OK,

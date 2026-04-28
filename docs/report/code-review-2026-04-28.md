@@ -7,13 +7,12 @@
 
 当前项目骨架已经明显干净于 2026-04-08 的旧 gap 报告描述。核心权威路径、repo-scoped
 server runtime、Web thin client 写入门禁、Source Control 身份路径、Search baseline、
-Settings 当前边界、Native AI 最小能力、Graph 只读投影、i18n facade 与 release runtime
-smoke 路径均已实现或明确降级为 future。
+Settings 当前边界、Native AI 最小能力、Graph 只读投影、i18n facade、P0 sync/browser
+storage contract、P1 auth/security hardening 与 release runtime smoke 路径均已实现或明确降级为
+future。
 
 剩余风险不再是“基础框架缺失”，而是合同精度与平台扩展：
 
-- sync wire shape 仍使用 range request，而不是显式 `{ repo_id, known_vector }` 请求对象；
-  snapshot 消息也没有命名的 `server_vector` 字段。
 - WebCrypto / IndexedDB 当前更接近 capability probe 与 metadata/vector store，还不是完整的浏览器私钥权威模型。
 - mobile native、desktop native packaging、graph visualization rendering、relay trust boundary 与若干 rendering 细节仍属于 future/partial。
 - `baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` 存在大量过时断言，不能继续作为 active TODO 使用。
@@ -39,8 +38,7 @@ smoke 路径均已实现或明确降级为 future。
 
 当前缺口 / 风险：
 
-- `crates/core/src/sync/protocol.rs` 仍把 `SyncRequest` 建模为 `{ peer_id, repo_id, range }`；若 plan §05 继续要求显式 `known_vector`，这是实际 plan/code gap。
-- Snapshot transfer 暴露 repo 与 ops，但没有显式 `server_vector` 字段。需要实现该字段，或修订 plan 说明 `SyncHello.vector` 是当前 vector carrier。
+- Sync vector wire contract 已显式化：`DEVEWSF3`、`known_vector` 与 `server_vector` 均已进入协议与测试。
 - path normalization 仍有手写 `replace('\\', "/")`，包括 `plugin/manifest.rs`。这是小但明确的跨平台路径卫生问题。
 - soft-size warning 仍有若干项，但已由 `soft-size-audit-2026-04-27.md` 说明；当前没有 hard fuse violation。
 
@@ -60,7 +58,7 @@ smoke 路径均已实现或明确降级为 future。
 
 当前缺口 / 风险：
 
-- release 前仍值得补一批小安全项：identity key 权限、登录审计 `User-Agent`、生产 CORS origin 强约束、dev CORS warning 文案。
+- 小安全批次已补齐：`identity.key` 权限校正为 owner-only、登录审计包含 `timestamp/user_agent`、`ALLOWED_ORIGINS=*` fail-closed、dev-only auth/CORS warning 文案已显式化。
 - Docker release smoke 被宿主 docker daemon 阻塞，不是代码失败；应继续作为环境阻塞项记录。
 - `server/mod.rs` 已从旧报告的大文件问题变成紧凑 module index；后续应保持这个边界。
 
@@ -116,6 +114,7 @@ smoke 路径均已实现或明确降级为 future。
 ## 下一优先级
 
 1. P1：补小安全批次。覆盖 key-file permissions、login audit fields、production CORS origin、dev CORS warning wording。
+   状态：已完成，详见 `p1-security-hardening-status-2026-04-28.md`。
 2. P1：清理 path normalization 偏离。优先 core/server/web boundary wrappers，不改变已存储路径语义。
 3. P1/P2：推进 Git ecosystem mirror bridge plan-to-code。
 4. P1/P2：把 rendering plan 拆成 current acceptance 与 future editor hybrid-rendering。

@@ -125,7 +125,7 @@ pub(super) fn load_auth_config() -> AuthConfig {
         Ok(cfg) => {
             if using_dev_defaults {
                 tracing::warn!(
-                    "WARNING: Development mode with default credentials (set AUTH_SECRET and AUTH_PASS for production)"
+                    "WARNING: development-only auth defaults active; production requires AUTH_SECRET and AUTH_PASS"
                 );
             } else {
                 tracing::info!("Auth config loaded from env (user={})", cfg.username);

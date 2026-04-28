@@ -1,6 +1,7 @@
 // apps/cli/src/server/setup.rs
 //! plan_ref:
 //!   - 04_storage#watcher-contract
+//!   - 09_auth#cors
 //!   - 09_auth#security-headers
 //!   - 15_release#runtime-observability
 //!
@@ -18,7 +19,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 pub(super) fn build_cors_layer(_port: u16) -> Result<CorsLayer> {
     let origins = allowed_origins_from_env()?;
     if is_development() && !origins.is_empty() {
-        tracing::warn!("WARNING: CORS development allow list active");
+        tracing::warn!(
+            "WARNING: development-only CORS allow list active; never use this as production origin policy"
+        );
     }
 
     Ok(CorsLayer::new()
@@ -42,8 +45,13 @@ fn allowed_origins_from_env() -> Result<Vec<axum::http::HeaderValue>> {
     origins
         .split(',')
         .map(str::trim)
-        .filter(|origin| !origin.is_empty() && *origin != "*")
+        .filter(|origin| !origin.is_empty())
         .map(|origin| {
+            if origin == "*" {
+                return Err(anyhow!(
+                    "Wildcard CORS origin is forbidden; set explicit ALLOWED_ORIGINS"
+                ));
+            }
             let uri: axum::http::Uri = origin
                 .parse()
                 .with_context(|| format!("Invalid CORS origin {}", origin))?;
@@ -105,6 +113,9 @@ fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{allowed_origins_from_env, validate_file_watcher_startup, write_main_port_hint};
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn write_main_port_hint_fails_closed_when_parent_is_not_directory() {
@@ -136,6 +147,7 @@ mod tests {
 
     #[test]
     fn allowed_origins_from_env_fails_closed_on_invalid_origin() {
+        let _guard = ENV_LOCK.lock().expect("env lock");
         unsafe { std::env::set_var("ALLOWED_ORIGINS", "http://valid.test,\ninvalid") };
         let err = match allowed_origins_from_env() {
             Ok(_) => panic!("invalid cors origin must fail closed"),
@@ -143,5 +155,37 @@ mod tests {
         };
         unsafe { std::env::remove_var("ALLOWED_ORIGINS") };
         assert!(err.to_string().contains("Invalid CORS origin"));
+    }
+
+    #[test]
+    fn allowed_origins_from_env_fails_closed_on_wildcard_origin() {
+        let _guard = ENV_LOCK.lock().expect("env lock");
+        unsafe { std::env::set_var("ALLOWED_ORIGINS", "*") };
+        let err = match allowed_origins_from_env() {
+            Ok(_) => panic!("wildcard cors origin must fail closed"),
+            Err(err) => err,
+        };
+        unsafe { std::env::remove_var("ALLOWED_ORIGINS") };
+        assert!(
+            err.to_string()
+                .contains("Wildcard CORS origin is forbidden")
+        );
+    }
+
+    #[test]
+    fn allowed_origins_from_env_accepts_explicit_origin() {
+        let _guard = ENV_LOCK.lock().expect("env lock");
+        unsafe {
+            std::env::set_var(
+                "ALLOWED_ORIGINS",
+                "https://app.deve.com,http://127.0.0.1:3000",
+            )
+        };
+        let origins = allowed_origins_from_env().expect("explicit origins should parse");
+        unsafe { std::env::remove_var("ALLOWED_ORIGINS") };
+
+        assert_eq!(origins.len(), 2);
+        assert_eq!(origins[0], "https://app.deve.com");
+        assert_eq!(origins[1], "http://127.0.0.1:3000");
     }
 }

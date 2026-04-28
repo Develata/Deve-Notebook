@@ -197,7 +197,7 @@ WsConnecting
 - 当前是 owner-only / single-user model
 - localhost anonymous mode 只能是显式 dev 开关
 
-### 6.2 CORS
+### 6.2 CORS {#cors}
 
 - production：必须白名单
 - development：可放宽到 localhost / 127.0.0.1
@@ -234,7 +234,7 @@ WsConnecting
 - `Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`
   - `script-src 'unsafe-inline'` is a current compatibility allowance for Trunk/WASM bootstrapping and local boot glue only; remote script origins remain forbidden.
 
-### 6.6 Audit
+### 6.6 Audit {#audit}
 
 - 登录成功 / 失败必须记录结构化日志
 - 至少包含：
@@ -243,12 +243,12 @@ WsConnecting
   - timestamp
   - user-agent（若可得）
 
-### 6.7 Key and File Permissions
+### 6.7 Key and File Permissions {#key-and-file-permissions}
 
 - 宿主机上的 `identity.key` / auth secret material 文件权限 MUST 为 owner-only。
 - 浏览器端不得导出 peer private key 或 session material 到 localStorage / URL / logs。
 
-### 6.8 Localhost / Dev Policy
+### 6.8 Localhost / Dev Policy {#localhost-dev-policy}
 
 - `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 只能显式开启。
 - 仅允许 `localhost` / `127.0.0.1` 的本地开发场景使用。

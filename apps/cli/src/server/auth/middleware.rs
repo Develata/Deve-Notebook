@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 09_auth#jwt-cookie-contract
 //!   - 09_auth#auth-rate-limiting
+//!   - 09_auth#localhost-dev-policy
 //!
 //! # JWT Cookie 认证中间件
 //!
@@ -20,11 +21,13 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 use crate::server::rate_limit::RateLimiter;
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, LoginResponse};
 use deve_core::security::auth::{config::AuthConfig, jwt};
+
+static AUTH_BYPASS_WARNING: Once = Once::new();
 
 /// JWT 认证中间件
 ///
@@ -41,6 +44,7 @@ pub async fn auth_middleware(
 ) -> Response {
     // localhost 免密策略
     if config.allow_anonymous_localhost && is_localhost(&addr.ip()) {
+        warn_dev_auth_bypass_once();
         let anonymous_claims = deve_core::security::Claims {
             sub: config.username.clone(),
             iat: 0,
@@ -73,6 +77,14 @@ pub async fn auth_middleware(
             unauthorized(AuthErrorCode::TokenExpired)
         }
     }
+}
+
+fn warn_dev_auth_bypass_once() {
+    AUTH_BYPASS_WARNING.call_once(|| {
+        tracing::warn!(
+            "WARNING: development-only anonymous localhost auth bypass active; never enable in production"
+        );
+    });
 }
 
 pub async fn login_rate_limit_middleware(
