@@ -110,7 +110,7 @@ Workspace_r = P_r ⊕ D_r
 - 同一 branch 下，同名但不同 repo identity 的 `.redb` 文件 MUST 自动重命名。
 - 物理文件名冲突不得改变逻辑 repo identity。
 
-### 3.4 Browser Storage Layering
+### 3.4 Browser Storage Layering {#browser-storage-layering}
 
 浏览器端分层存储属于本章约束的一部分：
 

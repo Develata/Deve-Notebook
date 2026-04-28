@@ -98,7 +98,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 *   `PLAN / BUILD` 是 Native AI Chat 的会话模式，不是单独的配置后端键。
 *   Settings 中的后端切换与 Chat 内的 `/plan /build /agents` 必须明确分离，避免混淆“后端”与“模式”。
 
-## 3. Keyboard Shortcuts (快捷键)
+## 3. Keyboard Shortcuts (快捷键) {#keyboard-shortcuts}
 
 | 场景 (Scope)          | 快捷键 (Mac / Win)             | 命令 (Command)                          |
 | :-------------------- | :----------------------------- | :-------------------------------------- |
@@ -111,3 +111,8 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | **Version Control**   | `Cmd+S` / `Ctrl+S`             | **Save**: 保存当前文件 (触发 Diff 计算) |
 |                       | `Cmd+Enter` / `Ctrl+Enter`     | **Commit**: 提交暂存区的更改            |
 |                       | `Cmd+A` / `Ctrl+A`             | **Select All**: 全选当前文件            |
+
+## 4. Browser UI Preferences {#browser-ui-prefs}
+
+浏览器本地 UI 偏好仅保存主题、布局、语言、最近命令等无害状态。`localStorage` 不可用时可以退回内存态，
+但不得把 repo authority、session secret、peer private key 或业务事实写入该层。

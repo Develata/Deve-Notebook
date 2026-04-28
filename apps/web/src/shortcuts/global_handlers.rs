@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 12_commands#command-palette-shortcuts
+//!   - 13_settings#keyboard-shortcuts
+
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 

@@ -1,4 +1,6 @@
 //! 浏览器存储分层模块。
+//! plan_ref:
+//!   - 04_storage#browser-storage-layering
 //!
 //! 本模块落实 WebLightPeer 的四层信任模型：`localStorage` 仅保存 UI 偏好，
 //! `IndexedDB` 保存 repo 级元数据与离线缓存，`WebCrypto` 持有不可导出的私钥材料。

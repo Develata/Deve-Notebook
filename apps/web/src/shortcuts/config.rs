@@ -1,5 +1,8 @@
 // apps\web\src\shortcuts
 //! # 快捷键配置 (Shortcut Config)
+//! plan_ref:
+//!   - 13_settings#keyboard-shortcuts
+//!   - 13_settings#browser-ui-prefs
 //!
 //! 用户自定义快捷键配置，支持 localStorage 持久化。
 

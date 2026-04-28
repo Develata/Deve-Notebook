@@ -95,7 +95,7 @@ Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
 *   `display`: `standalone` (隐藏浏览器 UI)。
 *   `theme_color`: `#1e1e1e` (匹配 Dark Mode)。
 
-## 6. Resizable Layout
+## 6. Resizable Layout {#web-layout-persistence}
 
 *   **Scope**: 左侧 Sidebar 与主编辑区之间、主编辑区与右侧面板之间。
 *   **Constraints**:

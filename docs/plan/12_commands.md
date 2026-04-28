@@ -30,7 +30,7 @@
 *   `deve config print`: 输出当前有效运行时配置。
 *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
 
-## 2. Command Palette
+## 2. Command Palette {#command-palette-shortcuts}
 
 *   **Global Shortcuts**:
     *   `Cmd+Shift+P` / `Ctrl+Shift+P`: 呼出 Command Palette (指令导航)。
