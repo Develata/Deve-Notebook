@@ -118,5 +118,6 @@ pub(super) fn assert_runtime_binding_cleared(session: &WsSession) {
     assert!(session.active_repo.is_none());
     assert!(session.get_active_db().is_none());
     assert!(session.authenticated_peer_id.is_none());
+    assert!(session.writer_identity.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
 }
