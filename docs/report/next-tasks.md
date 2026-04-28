@@ -25,6 +25,7 @@
 - 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
 - 2026-04-28: P1 Settings Current Boundary 已补 UI 边界提示：Settings 面板明确说明当前只提供运行时/本地 UI 反馈，持久运行时配置仍通过 `deve config set` 写入 `config.toml`；baseline 脚本已检查该边界，server-backed Settings API 仍不进入当前验收。
 - 2026-04-28: P1 Native AI Chat Minimum 已补当前 Markdown 上下文与 PLAN/BUILD prompt 边界：前端向 Native AI Chat 传递有界当前正文，ai-chat 插件将当前文件、正文、selection、模式写入 system prompt；默认仍不开放 workspace/source-control/shell/MCP/skill 执行能力。
+- 2026-04-28: P1 Native AI Chat Minimum 已把 `/plan`、`/build`、`/agents` slash command 的本地消费路径抽成可单测合同：slash command 只切换 Native `PLAN/BUILD` session mode，不切换 backend，不发起 plugin call。
 - 2026-04-28: P3-10 Desktop/Mobile Native Track 已补当前 native adapter 边界：Desktop/Mobile docs 明确 Web responsive shell 是当前可验收映射，Tauri packaging 仍为 future；adapter 第一阶段仅负责内嵌服务、endpoint/session 注入与 readiness/offline 事件，不得重定义 core/server authority。
 - 2026-04-28: P3-13 Graph / Knowledge Visualization 已补 core 只读 projection baseline：`deve_core::graph` 从 repo-scoped docs 派生节点、已解析边与未解析链接，支持 wikilink / markdown `.md` link 与路径归一化；不读取/写入 ledger、metadata、workspace、search 或 source-control 状态，d3/Pixi 渲染仍是 future。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已把 native/graph 新基线纳入 dev runbook、release workflow 与 release baseline 检查，新增 `scripts/check-graph-baseline.sh` 防止 graph projection 漂移成 ledger/workspace authority path。

@@ -23,6 +23,12 @@ pub enum SlashCommand {
     Agents,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ConsumedSlashCommand {
+    pub next_mode: ChatSessionMode,
+    pub send_plugin_call: bool,
+}
+
 pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
     match input.trim().to_ascii_lowercase().as_str() {
         "/plan" => Some(SlashCommand::Plan),
@@ -43,9 +49,23 @@ pub fn apply_slash_command(current: ChatSessionMode, command: SlashCommand) -> C
     }
 }
 
+pub fn consume_slash_command(
+    input: &str,
+    current: ChatSessionMode,
+) -> Option<ConsumedSlashCommand> {
+    let command = parse_slash_command(input)?;
+    Some(ConsumedSlashCommand {
+        next_mode: apply_slash_command(current, command),
+        send_plugin_call: false,
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ChatSessionMode, SlashCommand, apply_slash_command, parse_slash_command};
+    use super::{
+        ChatSessionMode, ConsumedSlashCommand, SlashCommand, apply_slash_command,
+        consume_slash_command, parse_slash_command,
+    };
 
     #[test]
     fn parses_mode_slash_commands_case_insensitively() {
@@ -64,6 +84,28 @@ mod tests {
         assert_eq!(
             apply_slash_command(ChatSessionMode::Build, SlashCommand::Agents),
             ChatSessionMode::Plan
+        );
+    }
+
+    #[test]
+    fn slash_commands_are_consumed_without_plugin_call() {
+        assert_eq!(
+            consume_slash_command("/plan", ChatSessionMode::Build),
+            Some(ConsumedSlashCommand {
+                next_mode: ChatSessionMode::Plan,
+                send_plugin_call: false,
+            })
+        );
+        assert_eq!(
+            consume_slash_command("/build", ChatSessionMode::Plan),
+            Some(ConsumedSlashCommand {
+                next_mode: ChatSessionMode::Build,
+                send_plugin_call: false,
+            })
+        );
+        assert_eq!(
+            consume_slash_command("/unknown", ChatSessionMode::Plan),
+            None
         );
     }
 }

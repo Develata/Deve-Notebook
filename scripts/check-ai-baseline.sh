@@ -40,9 +40,10 @@ check_contains apps/web/src/components/chat/slash_commands.rs "\"/plan\" => Some
 check_contains apps/web/src/components/chat/slash_commands.rs "\"/build\" => Some(SlashCommand::Build)"
 check_contains apps/web/src/components/chat/slash_commands.rs "\"/agents\" => Some(SlashCommand::Agents)"
 check_contains apps/web/src/components/chat/slash_commands.rs "agents_toggles_only_native_session_modes"
+check_contains apps/web/src/components/chat/slash_commands.rs "slash_commands_are_consumed_without_plugin_call"
 check_absent apps/web/src/components/chat/slash_commands.rs "agent-bridge"
 check_absent apps/web/src/components/chat/slash_commands.rs "trusted-cli"
-check_contains apps/web/src/components/chat/actions_send.rs "if let Some(command) = parse_slash_command(&msg)"
+check_contains apps/web/src/components/chat/actions_send.rs "if let Some(command) = consume_slash_command(&msg"
 check_contains apps/web/src/components/chat/actions_send.rs "core.on_plugin_call"
 
 # Native AI remains read-first. BUILD mode may expose controlled apply, not tools/shell/MCP.

@@ -6,9 +6,7 @@ use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 
-use crate::components::chat::slash_commands::{
-    ChatSessionMode, apply_slash_command, parse_slash_command,
-};
+use crate::components::chat::slash_commands::{ChatSessionMode, consume_slash_command};
 
 const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
 
@@ -26,11 +24,11 @@ pub fn make_send_text(
         if msg.is_empty() || is_streaming.get() {
             return;
         }
-        if let Some(command) = parse_slash_command(&msg) {
-            let next_mode = apply_slash_command(session_mode.get_untracked(), command);
-            set_session_mode.set(next_mode);
+        if let Some(command) = consume_slash_command(&msg, session_mode.get_untracked()) {
+            debug_assert!(!command.send_plugin_call);
+            set_session_mode.set(command.next_mode);
             if let Some(cb) = on_mode_change.as_ref() {
-                cb.run(next_mode);
+                cb.run(command.next_mode);
             }
             return;
         }
