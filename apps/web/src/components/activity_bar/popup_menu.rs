@@ -5,7 +5,7 @@
 
 use super::types::SidebarView;
 use crate::components::icons::Pin;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
@@ -35,7 +35,7 @@ pub fn ViewPopupMenu(
                         view! {
                             <button
                                 class="rounded-md p-1.5 text-accent hover:bg-hover"
-                                title="Unpin"
+                                title=move || t::common::unpin(locale.get())
                                 on:click=move |_| toggle_pin.run(item)
                             >
                                 <Pin class="w-3.5 h-3.5"/>
@@ -45,7 +45,7 @@ pub fn ViewPopupMenu(
                         view! {
                             <button
                                 class="rounded-md p-1.5 text-muted hover:bg-hover hover:text-primary"
-                                title="Pin"
+                                title=move || t::common::pin(locale.get())
                                 on:click=move |_| toggle_pin.run(item)
                             >
                                 <Pin class="w-3.5 h-3.5"/>

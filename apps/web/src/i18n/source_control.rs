@@ -21,6 +21,13 @@ pub fn repositories(locale: Locale) -> &'static str {
     }
 }
 
+pub fn no_repo_selected(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No repo selected",
+        Locale::Zh => "尚未选择仓库",
+    }
+}
+
 pub fn changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Changes",
@@ -193,5 +200,16 @@ pub fn history_target_badge(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Target",
         Locale::Zh => "目标",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_repo_selected_is_localized() {
+        assert_eq!(no_repo_selected(Locale::En), "No repo selected");
+        assert_eq!(no_repo_selected(Locale::Zh), "尚未选择仓库");
     }
 }

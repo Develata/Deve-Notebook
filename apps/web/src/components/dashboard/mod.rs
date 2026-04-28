@@ -31,7 +31,7 @@ pub fn Dashboard() -> impl IntoView {
     let repo_name = Signal::derive(move || {
         core.current_repo
             .get()
-            .unwrap_or_else(|| "No repo selected".to_string())
+            .unwrap_or_else(|| t::dashboard::no_repo_selected(locale.get()).to_string())
     });
     let doc_count = Signal::derive(move || core.docs.get().len());
 
@@ -48,7 +48,7 @@ pub fn Dashboard() -> impl IntoView {
                                 {move || repo_name.get()}
                             </h2>
                             <p class="mt-2 text-sm text-secondary">
-                                {move || format!("{} docs in current repo", doc_count.get())}
+                                {move || t::dashboard::docs_in_current_repo(locale.get(), doc_count.get())}
                             </p>
                             <p class="mt-3 text-sm text-muted">
                                 {move || t::dashboard::waiting_metrics(locale.get())}

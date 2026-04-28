@@ -14,10 +14,7 @@ pub(crate) fn blocked_title(locale: Locale, block: RepoWriteBlock) -> String {
             Locale::En => "Switching scope...".to_string(),
             Locale::Zh => "切换作用域中...".to_string(),
         },
-        RepoWriteBlock::NoRepo => match locale {
-            Locale::En => "No repo selected".to_string(),
-            Locale::Zh => "尚未选择仓库".to_string(),
-        },
+        RepoWriteBlock::NoRepo => sc::no_repo_selected(locale).to_string(),
     }
 }
 

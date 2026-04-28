@@ -28,6 +28,20 @@ pub fn read_only_mode(locale: Locale) -> &'static str {
     }
 }
 
+pub fn pin(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Pin",
+        Locale::Zh => "固定",
+    }
+}
+
+pub fn unpin(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unpin",
+        Locale::Zh => "取消固定",
+    }
+}
+
 pub fn tab(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Tab",
@@ -183,5 +197,18 @@ pub fn pending_navigation_continue(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Leave View",
         Locale::Zh => "继续切换",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pin_actions_are_localized() {
+        assert_eq!(pin(Locale::En), "Pin");
+        assert_eq!(pin(Locale::Zh), "固定");
+        assert_eq!(unpin(Locale::En), "Unpin");
+        assert_eq!(unpin(Locale::Zh), "取消固定");
     }
 }

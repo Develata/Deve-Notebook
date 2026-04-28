@@ -1,6 +1,6 @@
 use crate::components::activity_bar::SidebarView;
 use crate::components::icons::Pin;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
 
@@ -71,7 +71,13 @@ pub(super) fn LeftDrawerMoreMenu(
                                             "text-muted active:bg-hover"
                                         }
                                     )
-                                    title=move || if pinned.get() { "Unpin" } else { "Pin" }
+                                    title=move || {
+                                        if pinned.get() {
+                                            t::common::unpin(locale.get())
+                                        } else {
+                                            t::common::pin(locale.get())
+                                        }
+                                    }
                                     on:click=move |ev| {
                                         ev.stop_propagation();
                                         toggle_pin(item);

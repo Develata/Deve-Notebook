@@ -5,6 +5,7 @@ use crate::components::icons::PanelLeft;
 use crate::components::layout_context::EditorContentContext;
 use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_outline::use_outline;
+use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
@@ -49,6 +50,7 @@ pub fn Editor(
     let playback_version = state.playback_version;
     let content = state.content;
     let core = expect_context::<EditorContext>();
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let doc_version = core.doc_version;
     let ws = use_context::<WsService>().expect("WsService should be provided");
     provide_context(EditorContentContext { content });
@@ -81,7 +83,7 @@ pub fn Editor(
                     {move || if !embedded && playback_version.get() < doc_version.get() {
                         view! {
                             <div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
-                                "Spectator Mode (Read Only)"
+                                {move || t::common::spectator_status(locale.get())}
                             </div>
                         }.into_any()
                     } else {
@@ -92,7 +94,7 @@ pub fn Editor(
                              <button
                                 on:click=move |_| on_toggle_outline.run(())
                                 class="absolute top-2 right-4 z-50 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
-                                title="Toggle Outline"
+                                title=move || t::header::toggle_outline(locale.get())
                              >
                                 <PanelLeft class="w-5 h-5"/>
                              </button>

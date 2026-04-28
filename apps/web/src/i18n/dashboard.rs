@@ -18,6 +18,20 @@ pub fn waiting_metrics(locale: Locale) -> &'static str {
     }
 }
 
+pub fn no_repo_selected(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No repo selected",
+        Locale::Zh => "尚未选择仓库",
+    }
+}
+
+pub fn docs_in_current_repo(locale: Locale, count: usize) -> String {
+    match locale {
+        Locale::En => format!("{count} docs in current repo"),
+        Locale::Zh => format!("当前仓库 {count} 篇文档"),
+    }
+}
+
 pub fn quick_actions(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Quick Actions",
@@ -127,5 +141,21 @@ pub fn ops_processed(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Ops Processed",
         Locale::Zh => "已处理操作",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dashboard_repo_summary_is_localized() {
+        assert_eq!(no_repo_selected(Locale::En), "No repo selected");
+        assert_eq!(no_repo_selected(Locale::Zh), "尚未选择仓库");
+        assert_eq!(
+            docs_in_current_repo(Locale::En, 3),
+            "3 docs in current repo"
+        );
+        assert_eq!(docs_in_current_repo(Locale::Zh, 3), "当前仓库 3 篇文档");
     }
 }
