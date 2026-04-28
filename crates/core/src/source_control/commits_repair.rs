@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 07_diff_logic#source-control-runtime
+
 use anyhow::Result;
 use redb::{Database, ReadableTable, TableError};
 

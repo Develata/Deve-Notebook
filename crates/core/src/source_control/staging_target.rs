@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 07_diff_logic#source-control-runtime
+
 use super::{StagedEntry, list_staged_entries, list_staged_entries_for_doc, take_staged};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;

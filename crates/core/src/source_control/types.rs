@@ -1,5 +1,8 @@
 ﻿// crates\core\src\source_control
 //! # Source Control 类型定义
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 07_diff_logic#source-control-runtime
 //!
 //! 定义版本控制相关的数据结构，用于暂存区和提交历史。
 

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 04_storage#watcher-contract
+//!   - 07_diff_logic#source-control-runtime
+
 use super::{PendingFsEntry, list_all, list_for_doc, remove};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;

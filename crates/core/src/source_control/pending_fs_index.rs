@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 04_storage#watcher-contract
+
 use crate::ledger::schema::PENDING_FS_DOC_INDEX;
 use crate::models::DocId;
 use anyhow::Result;
