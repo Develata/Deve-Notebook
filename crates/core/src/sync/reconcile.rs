@@ -1,4 +1,7 @@
 // crates\core\src\sync
+//! plan_ref:
+//!   - 04_storage#projection-contract
+
 use crate::ledger::RepoManager;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use crate::state;

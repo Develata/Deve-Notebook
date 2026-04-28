@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+
 #[derive(Clone, Copy, Debug)]
 pub struct SnapshotPolicy {
     pub min_interval: u64,

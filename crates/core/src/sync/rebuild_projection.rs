@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+//!   - 06_repository#tree-projection-contract
+
 use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;

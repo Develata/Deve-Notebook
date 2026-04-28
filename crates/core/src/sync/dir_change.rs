@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#watcher-contract
+
 use super::SyncManager;
 use crate::models::RepoId;
 use anyhow::Result;

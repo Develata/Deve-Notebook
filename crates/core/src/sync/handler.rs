@@ -1,4 +1,7 @@
 //! # 文件系统事件处理器 (FS Event Handler)
+//! plan_ref:
+//!   - 04_storage#watcher-contract
+//!   - 07_diff_logic#source-control-runtime
 //!
 //! Invariants:
 //! - Watcher 传入的路径必须先被解析为 `(repo_name, repo_id, repo_path)`。

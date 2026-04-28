@@ -1,5 +1,7 @@
 // crates\core\src\sync
 //! # 同步缓冲模块 (Sync Buffer)
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
 //!
 //! **架构作用**:
 //! 管理 Manual 模式下的待处理操作队列。

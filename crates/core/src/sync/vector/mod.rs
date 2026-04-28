@@ -1,5 +1,7 @@
 // crates\core\src\sync\vector
 //! # 版本向量模块 (Version Vector)
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
 //!
 //! **架构作用**:
 //! 定义用于追踪 P2P 数据一致性状态的逻辑时钟向量。

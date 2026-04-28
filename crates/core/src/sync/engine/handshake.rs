@@ -1,4 +1,7 @@
 // crates\core\src\sync\engine
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+
 use super::SyncEngine;
 use crate::config::SyncMode;
 use crate::models::{PeerId, RepoId};

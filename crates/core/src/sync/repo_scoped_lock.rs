@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
 use super::RepoScopedSyncEngine;
 use crate::models::RepoId;
 use crate::sync::engine::SyncEngine;

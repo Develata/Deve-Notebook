@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+//!   - 07_diff_logic#source-control-runtime
+
 use super::{SyncManager, projection_io};
 use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeStatus, pending_fs};

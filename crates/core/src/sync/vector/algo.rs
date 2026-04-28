@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+
 use super::{INLINE_CAP, VersionVector, VvDiffResult};
 use crate::models::PeerId;
 use smallvec::SmallVec;

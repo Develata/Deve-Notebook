@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+//!   - 04_storage#watcher-contract
+
 pub(crate) struct PersistGuard {
     inner: crate::sync::watcher::suppressor::WriteSuppressor,
 }

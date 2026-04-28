@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+
 use super::{SnapshotPolicy, SyncManager, rebuild};
 use crate::models::DocId;
 use anyhow::{Result, anyhow};

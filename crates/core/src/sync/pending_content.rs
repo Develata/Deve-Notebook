@@ -1,4 +1,7 @@
 //! # Pending 内容同步辅助
+//! plan_ref:
+//!   - 04_storage#watcher-contract
+//!   - 07_diff_logic#source-control-runtime
 //!
 //! Invariants:
 //! - Watcher 只能依据当前 Ledger projection 与磁盘内容比较，决定清理或更新 pending。
