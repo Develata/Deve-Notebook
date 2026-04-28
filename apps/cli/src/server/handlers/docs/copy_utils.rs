@@ -3,6 +3,7 @@
 //!
 //! Iterative copy helpers for docs copy operations.
 
+use deve_core::utils::path::path_to_forward_slash;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -106,7 +107,7 @@ fn relative_path_under_base(base: &Path, path: &Path) -> io::Result<String> {
             format!("docs copy traversal escaped base {:?}: {:?}", base, path),
         )
     })?;
-    Ok(rel.to_string_lossy().replace('\\', "/"))
+    Ok(path_to_forward_slash(rel))
 }
 
 #[cfg(test)]

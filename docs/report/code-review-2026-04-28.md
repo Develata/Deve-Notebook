@@ -39,7 +39,7 @@ future。
 当前缺口 / 风险：
 
 - Sync vector wire contract 已显式化：`DEVEWSF3`、`known_vector` 与 `server_vector` 均已进入协议与测试。
-- path normalization 仍有手写 `replace('\\', "/")`，包括 `plugin/manifest.rs`。这是小但明确的跨平台路径卫生问题。
+- path normalization 偏离已收口：runtime forward-slash normalization 统一走 `deve_core::utils::path`，`plugin/manifest.rs`、docs copy helper 与 Web file-op path helper 已补测试。
 - soft-size warning 仍有若干项，但已由 `soft-size-audit-2026-04-27.md` 说明；当前没有 hard fuse violation。
 
 ### Server / CLI (`apps/cli`)
@@ -110,12 +110,14 @@ future。
 - “MCP 是当前或 future 产品 runtime”已过时；MCP runtime 退役，不应重新引入。
 - “Sync vector wire contract 未关闭”已过时；`DEVEWSF3` 已显式携带 `known_vector/server_vector`。
 - “Browser storage degraded write boundary 未关闭”已过时；Web storage capability、degraded read-only 与 write classification 已有 targeted tests。
+- “运行时路径归一化仍有手写 `replace('\\', "/")`”已过时；runtime forward-slash normalization 已集中到 `deve_core::utils::path`。
 
 ## 下一优先级
 
 1. P1：补小安全批次。覆盖 key-file permissions、login audit fields、production CORS origin、dev CORS warning wording。
    状态：已完成，详见 `p1-security-hardening-status-2026-04-28.md`。
 2. P1：清理 path normalization 偏离。优先 core/server/web boundary wrappers，不改变已存储路径语义。
+   状态：已完成，详见 `p1-path-normalization-status-2026-04-28.md`。
 3. P1/P2：推进 Git ecosystem mirror bridge plan-to-code。
 4. P1/P2：把 rendering plan 拆成 current acceptance 与 future editor hybrid-rendering。
 5. P3-10：把 Desktop/Mobile native adapter 从文档边界推进到 decision-complete 的实现计划。

@@ -1,5 +1,6 @@
 ﻿// crates\core\src\plugin
 //! plan_ref:
+//!   - 04_storage#internal-path-normalization
 //!   - 17_plugins#plugin-runtime-boundary
 //!
 //! # Plugin Manifest & Capabilities (插件清单与能力)
@@ -16,6 +17,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+
+use crate::utils::path::path_to_forward_slash;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PluginManifest {
@@ -54,7 +57,7 @@ impl Capability {
     /// - 仅做词法层 `.` / `..` 规约，不访问文件系统。
     /// - `C:\Notes\file.md` 与 `C:/Notes/file.md` 必须收敛到同一前缀语义。
     fn normalize_path(path: &Path) -> String {
-        let raw = path.to_string_lossy().replace('\\', "/");
+        let raw = path_to_forward_slash(path);
         let (prefix, absolute, rest) = match raw.as_bytes() {
             [drive, b':', b'/', ..] if drive.is_ascii_alphabetic() => {
                 (raw[..2].to_string(), true, &raw[3..])
@@ -110,7 +113,7 @@ impl Capability {
     }
 
     /// Check if a path is allowed for reading.
-    /// Manually normalizes the path to prevent traversal.
+    /// Lexically normalizes the path to prevent traversal.
     pub fn check_read(&self, path: &Path) -> bool {
         let path = Self::normalize_path(path);
         self.allow_fs_read
@@ -120,7 +123,7 @@ impl Capability {
     }
 
     /// Check if a path is allowed for writing.
-    /// Manually normalizes the path to prevent traversal.
+    /// Lexically normalizes the path to prevent traversal.
     pub fn check_write(&self, path: &Path) -> bool {
         let path = Self::normalize_path(path);
         self.allow_fs_write

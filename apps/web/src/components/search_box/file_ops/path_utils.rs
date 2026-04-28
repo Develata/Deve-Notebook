@@ -6,13 +6,14 @@
 
 use deve_core::models::DocId;
 use deve_core::protocol::doc_file_op_errors as path_err;
+use deve_core::utils::path::{path_to_forward_slash, to_forward_slash};
 use std::collections::HashSet;
 use std::path::Path;
 
 const MAX_DEPTH: usize = 10;
 
 pub fn normalize_doc_path(raw: &str) -> String {
-    let normalized = raw.replace('\\', "/");
+    let normalized = to_forward_slash(raw);
     if normalized.ends_with('/') {
         return normalized;
     }
@@ -23,7 +24,7 @@ pub fn normalize_doc_path(raw: &str) -> String {
 }
 
 pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
-    let normalized = raw.replace('\\', "/");
+    let normalized = to_forward_slash(raw);
     let path = normalized.trim();
     if path.is_empty() {
         return Some(path_err::INVALID_EMPTY_PATH);
@@ -58,7 +59,7 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
 pub(super) fn finalize_dst(src: &str, dst_raw: &str) -> String {
     // 移除光标占位符 `|` (由 build_prefill_command 生成)
     let dst_clean = dst_raw.replace('|', "");
-    let dst_norm = dst_clean.replace('\\', "/");
+    let dst_norm = to_forward_slash(&dst_clean);
 
     // 如果清理后为空，返回空字符串 (无效目标)
     if dst_norm.trim().is_empty() {
@@ -78,13 +79,13 @@ pub(super) fn finalize_dst(src: &str, dst_raw: &str) -> String {
 pub(super) fn collect_dirs(docs: &[(DocId, String)]) -> Vec<String> {
     let mut dirs = HashSet::new();
     for (_, path) in docs.iter() {
-        let normalized = path.replace('\\', "/");
+        let normalized = to_forward_slash(path);
         let mut current = Path::new(&normalized);
         while let Some(parent) = current.parent() {
             if parent.as_os_str().is_empty() {
                 break;
             }
-            let dir = parent.to_string_lossy().replace('\\', "/");
+            let dir = path_to_forward_slash(parent);
             dirs.insert(format!("{}/", dir));
             current = parent;
         }
@@ -124,5 +125,30 @@ pub(super) fn format_dir_arg_with_cursor(dir: &str) -> (String, usize) {
     } else {
         let text = dir.to_string();
         (text.clone(), text.len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn normalize_doc_path_uses_shared_forward_slash_policy() {
+        assert_eq!(normalize_doc_path("folder\\note"), "folder/note.md");
+        assert_eq!(normalize_doc_path("folder\\note.md"), "folder/note.md");
+        assert_eq!(normalize_doc_path("folder\\"), "folder/");
+    }
+
+    #[test]
+    fn collect_dirs_uses_shared_forward_slash_policy() {
+        let docs = vec![(DocId(Uuid::new_v4()), "folder\\nested\\note.md".to_string())];
+
+        let dirs = collect_dirs(&docs);
+
+        assert_eq!(
+            dirs,
+            vec!["folder/".to_string(), "folder/nested/".to_string()]
+        );
     }
 }

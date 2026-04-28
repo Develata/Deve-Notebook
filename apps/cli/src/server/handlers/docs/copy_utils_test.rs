@@ -5,6 +5,7 @@
 
 use super::*;
 use std::fs;
+use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
@@ -66,6 +67,16 @@ fn test_collect_dirs_fails_closed_when_dir_escapes_base() {
 
     let err = collect_dirs(&dir, &tmp.path().join("other")).expect_err("base mismatch must fail");
     assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+}
+
+#[test]
+fn relative_path_under_base_normalizes_mixed_separators() {
+    let base = Path::new("vault");
+    let path = Path::new("vault/notes\\daily.md");
+
+    let rel = relative_path_under_base(base, path).unwrap();
+
+    assert_eq!(rel, "notes/daily.md");
 }
 
 #[test]
