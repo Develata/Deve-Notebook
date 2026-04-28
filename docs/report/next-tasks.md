@@ -64,6 +64,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web 普通 `sidebar` 批次 plan_ref：explorer/tree/item/action/path utils/repo switcher/sidebar menu 绑定 tree projection、repo scope、repo selector、document authority、path normalization、web edit intent 与 web layout 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已给 `08_ui_design_03_mobile.md` 增加 mobile current/native、responsive layout、interaction anchors，并补 web `components/mobile_layout` 批次 plan_ref：drawers/header/footer/gesture/content/chat sheet/toolbar 绑定 Mobile responsive shell、当前 native boundary、interaction design、repo scope、document authority 与 runtime observability 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` 最后 misc 批次 plan_ref：merge modal/panel、outline/outline render、pending navigation、playback、quick open、settings、spectator overlay 与 components facade 绑定对应 WS runtime、document authority、markdown whitelist、search/command、settings 与 web edit intent 合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 release workflow 质量门槛验证：修复全量 clippy 暴露的 test/web hygiene 问题，`cargo clippy --all-targets --all-features -- -D warnings`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`、plan coverage、release/architecture/native/graph baseline 均通过。
 
 ### MCP Direction
 

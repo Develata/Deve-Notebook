@@ -76,7 +76,7 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
             },
         )
         .expect_err("doc_id miss must not fall back to path-only pending");
-    let pending = repo.run_on_local_repo("default", |db| pending_fs::list_all(db))?;
+    let pending = repo.run_on_local_repo("default", pending_fs::list_all)?;
 
     assert!(err.to_string().contains("Path is not in pending_fs_ops"));
     assert_eq!(pending.len(), 1);

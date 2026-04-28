@@ -20,7 +20,7 @@ pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
             if deleted_no_doc_id_path(notice).is_some() =>
         {
             let path = deleted_no_doc_id_path(notice).unwrap_or_default();
-            sc::deleted_change_no_doc_diff(locale, &path)
+            sc::deleted_change_no_doc_diff(locale, path)
         }
         deve_core::protocol::ServerErrorCode::ScCommitDiffUnprojectable => {
             let commit = notice
