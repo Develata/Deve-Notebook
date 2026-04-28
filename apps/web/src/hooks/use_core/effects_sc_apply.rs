@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::storage::DegradedSyncMode;

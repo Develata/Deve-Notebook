@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use leptos::prelude::Set;
 
 use super::super::effects_sc_apply::{

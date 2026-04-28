@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use std::collections::HashSet;

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};

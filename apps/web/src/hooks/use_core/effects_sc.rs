@@ -1,4 +1,8 @@
 //! Source Control 消息分发。
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
 
 #[path = "effects_sc_context.rs"]
 mod context;

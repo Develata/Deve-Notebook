@@ -1,4 +1,7 @@
 //! Diff 会话线协议对象。
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#document-authority-bridge
 //!
 //! Invariants:
 //! - `path` 必须是非空规范化路径。

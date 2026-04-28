@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};

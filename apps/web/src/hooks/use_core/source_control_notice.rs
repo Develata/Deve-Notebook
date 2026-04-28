@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 09_auth#unauthorized-handling
+//!
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
