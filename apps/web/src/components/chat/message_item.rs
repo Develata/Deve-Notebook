@@ -9,6 +9,13 @@ use crate::utils::markdown::render_markdown;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
+pub(crate) fn should_show_apply_label(
+    is_user_message: bool,
+    session_mode: ChatSessionMode,
+) -> bool {
+    !is_user_message && session_mode == ChatSessionMode::Build
+}
+
 /// Handles click events on markdown content.
 /// Prevents link navigation unless Ctrl/Meta key is pressed.
 fn handle_link_click(ev: web_sys::MouseEvent) {
@@ -44,7 +51,7 @@ pub fn MessageItem(
         }
     };
     let content_html = move || {
-        let apply_label = (!is_user && session_mode.get() == ChatSessionMode::Build)
+        let apply_label = should_show_apply_label(is_user, session_mode.get())
             .then(|| t::chat::apply(locale.get()));
         render_markdown(&content, apply_label)
     };
@@ -86,5 +93,18 @@ pub fn MessageItem(
                 <div class="mt-1 text-[10px] text-muted text-right">{ts_text}</div>
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_show_apply_label;
+    use crate::components::chat::slash_commands::ChatSessionMode;
+
+    #[test]
+    fn apply_label_is_build_only_for_assistant_messages() {
+        assert!(!should_show_apply_label(false, ChatSessionMode::Plan));
+        assert!(should_show_apply_label(false, ChatSessionMode::Build));
+        assert!(!should_show_apply_label(true, ChatSessionMode::Build));
     }
 }

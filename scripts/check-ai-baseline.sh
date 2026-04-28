@@ -45,6 +45,8 @@ check_absent apps/web/src/components/chat/slash_commands.rs "agent-bridge"
 check_absent apps/web/src/components/chat/slash_commands.rs "trusted-cli"
 check_contains apps/web/src/components/chat/actions_send.rs "if let Some(command) = consume_slash_command(&msg"
 check_contains apps/web/src/components/chat/actions_send.rs "core.on_plugin_call"
+check_contains apps/web/src/components/chat/message_item.rs "apply_label_is_build_only_for_assistant_messages"
+check_contains apps/web/src/components/chat/message_list.rs "apply_click_is_consumed_only_in_build_mode"
 
 # Native AI remains read-first. BUILD mode may expose controlled apply, not tools/shell/MCP.
 check_contains docs/features/operations/ai_chat.md "Native AI 默认拒绝请求侧"

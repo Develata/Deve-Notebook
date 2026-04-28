@@ -13,6 +13,10 @@ use leptos::html;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
+pub(crate) fn should_consume_apply_click(session_mode: ChatSessionMode) -> bool {
+    session_mode == ChatSessionMode::Build
+}
+
 #[component]
 pub fn MessageList(
     messages: ReadSignal<Vec<ChatMessage>>,
@@ -42,7 +46,7 @@ pub fn MessageList(
     });
 
     let on_click = move |ev: web_sys::MouseEvent| {
-        if session_mode.get_untracked() != ChatSessionMode::Build {
+        if !should_consume_apply_click(session_mode.get_untracked()) {
             return;
         }
         let mut el = ev
@@ -91,5 +95,17 @@ pub fn MessageList(
 
             <div node_ref=messages_end_ref></div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_consume_apply_click;
+    use crate::components::chat::slash_commands::ChatSessionMode;
+
+    #[test]
+    fn apply_click_is_consumed_only_in_build_mode() {
+        assert!(!should_consume_apply_click(ChatSessionMode::Plan));
+        assert!(should_consume_apply_click(ChatSessionMode::Build));
     }
 }
