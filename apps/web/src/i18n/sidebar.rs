@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # I18n Sidebar Module (侧边栏翻译)
 
 use super::Locale;

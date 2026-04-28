@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 11_i18n#i18n-error-code-catalog
+//!
+
 use super::Locale;
 use deve_core::protocol::ServerErrorCode;
 

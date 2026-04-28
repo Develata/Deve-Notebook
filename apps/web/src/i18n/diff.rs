@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
+
 use super::Locale;
 
 pub fn title(locale: Locale) -> &'static str {

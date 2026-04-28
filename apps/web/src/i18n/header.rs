@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # I18n Header Module (头部翻译)
 //!
 //! 包含顶部导航栏相关的翻译字符串。

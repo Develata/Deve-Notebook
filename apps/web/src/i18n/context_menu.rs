@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # I18n Context Menu Module (右键菜单翻译)
 //!
 //! 文件树右键菜单项的翻译字符串。

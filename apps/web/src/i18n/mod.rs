@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-facade-contract
+//!
 //! # Internationalization Module (国际化模块)
 //!
 //! **架构作用**:

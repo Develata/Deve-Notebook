@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # I18n Dashboard Module (仪表盘翻译)
 //!
 //! 包含服务器仪表盘相关的翻译字符串。

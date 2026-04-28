@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # Extensions I18n
 
 use super::Locale;

@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # I18n Merge Module (合并翻译)
 //!
 //! 手动合并模式、待处理操作面板相关翻译。

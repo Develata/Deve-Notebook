@@ -1,4 +1,7 @@
 //! 登录页与认证错误文案。
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!   - 11_i18n#i18n-error-code-catalog
 
 use super::Locale;
 use deve_core::protocol::auth::AuthErrorCode;

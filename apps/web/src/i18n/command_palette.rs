@@ -1,4 +1,7 @@
 // apps\web\src\i18n
+//! plan_ref:
+//!   - 11_i18n#i18n-keys-reference
+//!
 //! # I18n Command Palette Module (命令面板翻译)
 
 #![allow(dead_code)] // 翻译字符串按需使用
