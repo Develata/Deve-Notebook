@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use super::line_render::LineRender;
 use super::model::split_fold::SplitRow;
 use crate::i18n::{Locale, t};

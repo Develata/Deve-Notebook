@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#large-document-runtime
+//!
 use super::super::super::cache::{DiffLines, build_key, cache_get, cache_put};
 use super::super::super::model::{DiffAlgorithm, compute_diff_with_meta};
 

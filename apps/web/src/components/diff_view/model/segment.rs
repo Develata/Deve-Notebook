@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#large-document-runtime
+//!
 use super::myers_fallback::apply_lines_diff;
 use super::patience::anchors;
 use super::{LineKind, LineView};

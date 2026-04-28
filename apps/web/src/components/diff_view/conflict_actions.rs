@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::hooks::use_core::diff_session::MergeConflictSession;
 use crate::i18n::{Locale, t};
 use deve_core::protocol::MergeConflictAction;

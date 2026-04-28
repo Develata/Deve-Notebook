@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use super::model::{CHUNK_SIZE, LINE_HEIGHT_PX, LineKind, UnifiedLine};
 
 #[derive(Clone, Copy, PartialEq, Eq)]

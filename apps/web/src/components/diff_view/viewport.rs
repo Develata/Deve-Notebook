@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#large-document-runtime
+//!
 use super::model::hunk_fold::UnifiedRow;
 use super::unified::{ChunkWindow, slice_lines};
 use leptos::html;

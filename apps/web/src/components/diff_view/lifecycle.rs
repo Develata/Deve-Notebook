@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#large-document-runtime
+//!
 use super::anchor::{ScrollAnchor, active_container, capture_anchor, restore_anchor};
 use super::navigation::should_ignore_shortcut;
 use super::state::ComputePhase;

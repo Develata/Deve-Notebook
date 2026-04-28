@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#large-document-runtime
+//!
 use std::collections::HashMap;
 
 /// 基于 Patience 锚点提取的行索引对。

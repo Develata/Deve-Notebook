@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 15_release#runtime-observability
+//!
 use super::super::metrics::{create_metrics_state, elapsed_ms, now_ms, record_cache_sample};
 use super::super::model::to_unified;
 use super::{ComputePhase, DiffComputeState};

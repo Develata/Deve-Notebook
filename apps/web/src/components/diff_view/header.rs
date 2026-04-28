@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::icons::X;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

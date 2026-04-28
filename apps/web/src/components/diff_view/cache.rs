@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 03_rendering#large-document-runtime
+//!
 use super::model::DiffAlgorithm;
 use super::model::LineView;
 use std::cell::RefCell;
