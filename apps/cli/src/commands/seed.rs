@@ -1,5 +1,9 @@
 // apps/cli/src/commands/seed.rs
 //! # Seed 命令
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!   - 12_commands#cli-commands
 //!
 //! 将 Local Repo 的所有操作复制到指定 Peer 的 Shadow Repo。
 //!

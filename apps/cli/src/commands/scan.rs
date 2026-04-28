@@ -1,4 +1,8 @@
 // apps\cli\src\commands
+//! plan_ref:
+//!   - 04_storage#watcher-contract
+//!   - 12_commands#cli-commands
+
 use deve_core::ledger::RepoManager;
 use std::path::Path;
 use std::sync::Arc;

@@ -1,4 +1,9 @@
 // apps\cli\src\commands
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+//!   - 12_commands#cli-commands
+//!   - 13_settings#configuration-settings
+
 use deve_core::ledger::RepoManager;
 use std::path::{Path, PathBuf};
 

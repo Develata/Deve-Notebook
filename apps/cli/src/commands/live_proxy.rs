@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 12_commands#cli-commands
+//!   - 15_release#runtime-observability
+
 use crate::admin_api::{DumpResponse, ExportEntry, NodeCheckResponse, ProjectionCheckResponse};
 use anyhow::{Context, Result, anyhow};
 use reqwest::Client;

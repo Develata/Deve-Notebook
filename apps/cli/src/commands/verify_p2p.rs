@@ -1,5 +1,9 @@
 // apps\cli\src\commands
 //! # P2P 验证命令
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!   - 12_commands#cli-commands
 //!
 //! **架构作用**:
 //! 模拟多节点环境，验证 P2P 同步协议、Shadow Repo 隔离和 CRDT 合并逻辑的正确性。

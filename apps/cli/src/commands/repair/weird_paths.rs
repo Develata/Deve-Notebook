@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 06_repository#tree-projection-contract
+//!   - 12_commands#cli-commands
+
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::pending_fs;

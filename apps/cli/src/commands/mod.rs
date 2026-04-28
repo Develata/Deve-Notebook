@@ -1,5 +1,7 @@
 // apps\cli\src\commands
 //! CLI 子命令模块
+//! plan_ref:
+//!   - 12_commands#cli-commands
 //!
 //! 包含所有 CLI 支持的子命令实现。
 pub mod config;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-selector-resolution-contract
+//!   - 12_commands#cli-commands
+
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 

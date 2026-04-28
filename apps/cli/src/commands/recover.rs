@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+//!   - 12_commands#cli-commands
+
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;

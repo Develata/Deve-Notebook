@@ -1,4 +1,10 @@
 // apps\cli\src\commands
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 08_ui_design_01_web#single-binary-distribution
+//!   - 12_commands#cli-commands
+//!   - 15_release#runtime-observability
+
 use crate::server;
 use deve_core::config::{AppProfile, SyncMode};
 use deve_core::plugin::runtime::host;
