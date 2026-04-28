@@ -75,6 +75,7 @@ fn create_block_reason(core: &CoreState) -> Option<&'static str> {
             is_spectator: core.is_spectator,
             handshake_ready: core.handshake_ready,
             current_repo_id: core.current_repo_id,
+            current_scope_nonce: core.current_scope_nonce,
             active_branch: core.active_branch,
             pending_branch_switch: core.pending_branch_switch,
             pending_repo_switch: core.pending_repo_switch,

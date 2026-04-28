@@ -36,8 +36,10 @@ pub fn setup_playback_effect(ctx: PlaybackEffectCtx) {
             ctx.core.handshake_ready.get_untracked(),
             ctx.core.pending_branch_switch.get_untracked().is_some(),
             ctx.core.pending_repo_switch.get_untracked().is_some(),
-            ctx.ws
-                .writer_ready_for(ctx.core.current_repo_id.get_untracked().as_deref()),
+            ctx.ws.writer_ready_for(
+                ctx.core.current_repo_id.get_untracked().as_deref(),
+                Some(ctx.core.current_scope_nonce.get_untracked()),
+            ),
         ));
     });
 }

@@ -65,7 +65,10 @@ pub fn Editor(
         let switching =
             core.pending_branch_switch.get().is_some() || core.pending_repo_switch.get().is_some();
         let handshake_ready = core.handshake_ready.get();
-        let writer_ready = ws.writer_ready_repo_id.get() == core.current_repo_id.get();
+        let writer_ready = ws.writer_ready_for(
+            core.current_repo_id.get().as_deref(),
+            Some(core.current_scope_nonce.get()),
+        );
         let should_readonly =
             spectator || is_pb || loading || switching || !handshake_ready || !writer_ready;
         ffi::set_read_only(should_readonly);

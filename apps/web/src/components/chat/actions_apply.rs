@@ -20,10 +20,10 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             show_apply_block(&core, "no active document");
             return;
         };
-        if !core
-            .ws
-            .writer_ready_for(core.current_repo_id.get_untracked().as_deref())
-        {
+        if !core.ws.writer_ready_for(
+            core.current_repo_id.get_untracked().as_deref(),
+            Some(core.current_scope_nonce.get_untracked()),
+        ) {
             let message = t::server_error::message(
                 locale.get_untracked(),
                 ServerErrorCode::SyncPeerUnauthenticated,
@@ -43,13 +43,6 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             pos,
             content: code.into(),
         };
-        let Some(client_id) = core
-            .ws
-            .writer_client_id_for(core.current_repo_id.get_untracked().as_deref())
-        else {
-            show_apply_block(&core, "writer client id unavailable");
-            return;
-        };
         let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
             current_repo_id: core.current_repo_id,
             current_scope_nonce: core.current_scope_nonce,
@@ -58,6 +51,13 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             pending_repo_switch: core.pending_repo_switch,
         }) else {
             show_apply_block(&core, "local repo scope is not stable");
+            return;
+        };
+        let Some(client_id) = core.ws.writer_client_id_for(
+            core.current_repo_id.get_untracked().as_deref(),
+            Some(scope_nonce),
+        ) else {
+            show_apply_block(&core, "writer client id unavailable");
             return;
         };
         let client_op_id = next_client_op_id();

@@ -15,6 +15,7 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
     let active_branch_for_text = signals.active_branch;
     let handshake_ready_for_text = signals.handshake_ready;
     let current_repo_id_for_text = signals.current_repo_id;
+    let current_scope_nonce_for_text = signals.current_scope_nonce;
     let current_repo_for_text = signals.current_repo;
     let pending_repo_switch_for_text = signals.pending_repo_switch;
     let pending_branch_switch_for_text = signals.pending_branch_switch;
@@ -32,7 +33,10 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
             active_branch_for_text.get().is_some(),
             degraded_for_text.get().is_some(),
             handshake_ready_for_text.get(),
-            ws_for_text.writer_ready_for(current_repo_id_for_text.get().as_deref()),
+            ws_for_text.writer_ready_for(
+                current_repo_id_for_text.get().as_deref(),
+                Some(current_scope_nonce_for_text.get()),
+            ),
             current_repo_id_for_text.get().as_deref(),
             current_repo_for_text.get().as_deref(),
             pending_repo_switch_for_text.get().as_deref(),

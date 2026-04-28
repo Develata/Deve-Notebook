@@ -22,7 +22,7 @@ pub fn handle_write_ready_message(
         return;
     }
     signals.set_handshake_ready.set(true);
-    ws.mark_writer_ready(repo_id, peer_id.as_str());
+    ws.mark_writer_ready(repo_id, scope_nonce, peer_id.as_str());
 }
 
 pub fn handle_ack_message(

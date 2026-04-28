@@ -52,5 +52,8 @@ check_contains apps/cli/src/server/ws/receive_frame_test.rs "Some(\"missing WS f
 check_contains apps/cli/src/server/ws/receive.rs "WsFrameFormat::LegacyJsonText"
 check_contains apps/cli/src/server/ws/receive.rs "DEVE_ALLOW_LEGACY_WS_JSON"
 check_contains apps/cli/src/server/ws/receive.rs "DEVE_ENV"
+check_contains apps/web/src/api/service.rs "writer_ready_scope_nonce"
+check_contains apps/web/src/api/service.rs "writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>)"
+check_contains apps/web/src/hooks/use_core/effects/message_dispatch_write.rs "ws.mark_writer_ready(repo_id, scope_nonce, peer_id.as_str())"
 
 echo "network-baseline-check: ok"

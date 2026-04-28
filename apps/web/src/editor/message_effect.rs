@@ -63,7 +63,10 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
         for (seq, msg) in ws.messages_since(last_msg_seq.get_untracked()) {
             let ctx = sync::context::SyncContext {
                 doc_id,
-                client_id: ws.writer_client_id_for(core.current_repo_id.get_untracked().as_deref()),
+                client_id: ws.writer_client_id_for(
+                    core.current_repo_id.get_untracked().as_deref(),
+                    Some(core.current_scope_nonce.get_untracked()),
+                ),
                 session_generation: session_generation.clone(),
                 ready_generation: ready_generation.clone(),
                 buffered_live_ops: buffered_live_ops.clone(),

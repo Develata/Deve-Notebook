@@ -24,8 +24,10 @@ pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
             core.active_branch.get().is_some(),
             core.is_spectator.get() && core.active_branch.get().is_none(),
             core.handshake_ready.get(),
-            core.ws
-                .writer_ready_for(core.current_repo_id.get().as_deref()),
+            core.ws.writer_ready_for(
+                core.current_repo_id.get().as_deref(),
+                Some(core.current_scope_nonce.get()),
+            ),
             core.current_repo_id.get().as_deref(),
             core.current_repo.get().as_deref(),
             core.pending_repo_switch.get().as_deref(),

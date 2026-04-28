@@ -9,10 +9,10 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::GetUntracked;
 
 pub(super) fn resend_pending_edits_if_ready(ctx: &SyncContext) {
-    if !ctx
-        .ws
-        .writer_ready_for(ctx.current_repo_id.get_untracked().as_deref())
-    {
+    if !ctx.ws.writer_ready_for(
+        ctx.current_repo_id.get_untracked().as_deref(),
+        Some(ctx.current_scope_nonce.get_untracked()),
+    ) {
         return;
     }
     resend_pending_edits(ctx);

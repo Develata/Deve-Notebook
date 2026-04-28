@@ -71,6 +71,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已新增 `docs/report/release-smoke-status-2026-04-28.md` 作为 release smoke 状态快照：通过项、Docker 环境阻塞项与后续复跑条件已从任务流水中抽出，避免 `next-tasks` 继续承载过多验收日志。
 - 2026-04-28: P0 Authority / Repo Health / Repair 已补 `deve repair --check` 修复动作预检：不执行 shadow quarantine、path fix、backup restore 或 projection rebuild；对当前 degraded `test` repo 实测输出 `authority_corrupt / missing_parent` 并 fail-closed，提示 repair steps 必须保持禁用直到 authority 恢复。
 - 2026-04-28: P0 WS / Repo-Scoped Protocol / Write Readiness 已加固 WS frame missing-magic 结构化错误：缺失 `DEVEWSF2` 的 binary frame 继续走 `ProtocolError(ServerError)`，并稳定暴露 `missing WS frame magic` detail，避免 legacy raw bincode/binary JSON 与普通损坏帧混淆。
+- 2026-04-28: P0 WS / Repo-Scoped Protocol / Write Readiness 已把前端 writer-ready 从 repo-only gate 提升为 `repo_id + scope_nonce` gate：`WriteReady` 接收、编辑器写入、pending resend、AI apply 与状态栏均要求当前 scope nonce 匹配，避免同 repo stale scope 误开放写入。
 
 ### MCP Direction
 

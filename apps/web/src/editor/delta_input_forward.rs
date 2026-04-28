@@ -11,13 +11,6 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Update};
 
 pub(super) fn forward_deltas(ctx: &DeltaInputCtx, deltas: Vec<Delta>) -> bool {
-    let Some(client_id) = ctx
-        .ws
-        .writer_client_id_for(ctx.current_repo_id.get_untracked().as_deref())
-    else {
-        leptos::logging::warn!("Delta ignored: writer client id unavailable.");
-        return false;
-    };
     let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
         current_repo_id: ctx.current_repo_id,
         current_scope_nonce: ctx.current_scope_nonce,
@@ -26,6 +19,13 @@ pub(super) fn forward_deltas(ctx: &DeltaInputCtx, deltas: Vec<Delta>) -> bool {
         pending_repo_switch: ctx.pending_repo_switch,
     }) else {
         leptos::logging::warn!("Delta ignored: local scope nonce unavailable.");
+        return false;
+    };
+    let Some(client_id) = ctx.ws.writer_client_id_for(
+        ctx.current_repo_id.get_untracked().as_deref(),
+        Some(scope_nonce),
+    ) else {
+        leptos::logging::warn!("Delta ignored: writer client id unavailable.");
         return false;
     };
     for delta in deltas {

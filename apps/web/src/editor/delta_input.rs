@@ -39,9 +39,10 @@ pub fn build_on_delta(ctx: DeltaInputCtx) -> Closure<dyn FnMut(String)> {
                 return;
             }
         };
-        let writer_ready = ctx
-            .ws
-            .writer_ready_for(ctx.current_repo_id.get_untracked().as_deref());
+        let writer_ready = ctx.ws.writer_ready_for(
+            ctx.current_repo_id.get_untracked().as_deref(),
+            Some(ctx.current_scope_nonce.get_untracked()),
+        );
         let can_forward = can_send_delta(
             ctx.is_playback.get_untracked(),
             ctx.pending_branch_switch.get_untracked().is_some(),
