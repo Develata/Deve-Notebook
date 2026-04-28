@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use super::super::state::CoreSignals;
 use super::message_control_runtime_repo::{
     clear_repo_scoped_runtime, request_repo_list, request_repo_sync_state,

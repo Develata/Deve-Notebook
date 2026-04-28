@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::storage::identity::{StoredPeerIdentity, note_handshake, save_repo_vector};
 use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::ClientMessage;

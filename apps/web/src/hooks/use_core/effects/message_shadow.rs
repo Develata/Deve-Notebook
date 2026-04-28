@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::api::WsService;
 use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, Set, Update};

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!
 use deve_core::protocol::ServerMessage;
 
 use super::super::state::CoreSignals;

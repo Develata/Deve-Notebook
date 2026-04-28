@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
 use crate::hooks::use_core::state::CoreSignals;
 use deve_core::models::{DocId, PeerId, RepoId};
 use leptos::prelude::{GetUntracked, Set};

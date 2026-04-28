@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 //! 前端 repo-scoped 请求/响应门禁。
 //!
 //! Invariants:

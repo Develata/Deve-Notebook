@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#tree-projection-contract
+//!
 use deve_core::protocol::ServerMessage;
 
 use super::super::super::state::CoreSignals;

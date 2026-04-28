@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::hooks::use_core::state::CoreSignals;
 use leptos::prelude::{Set, Update};
 

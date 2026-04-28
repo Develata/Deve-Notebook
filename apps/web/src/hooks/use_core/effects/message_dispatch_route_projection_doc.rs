@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!
 use deve_core::protocol::ServerMessage;
 
 use super::super::super::state::CoreSignals;

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!
 use crate::hooks::use_core::apply::apply_tree_delta;
 use crate::hooks::use_core::state::CoreSignals;
 use deve_core::models::{PeerId, RepoId};

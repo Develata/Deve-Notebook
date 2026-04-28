@@ -53,6 +53,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger manager repo/runtime 批次 plan_ref：RepoManager core/types/repository/repo_db/workspace/metadata/maintenance/ops/snapshot/merge 绑定 repo catalog、repo scope、repo runtime layout、tree projection、watcher、facts partition 与 document authority 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已收尾 `crates/core` 剩余 ledger plan_ref：facts validation、node metadata、shadow repo、merge engine、source-control facade、traits、snapshot verify 与 test support 均绑定对应 facts/projection/repo-scope/source-control/web-edit 或 infra 合同，使 `crates/core` 缺失项收敛到 0。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core` source-control 批次 plan_ref：read/write callbacks、scope target、diff session、message dispatch、ack/list handling、state reset、notice 与 context provider 绑定 source-control runtime、web WS runtime、repo scope 与 web edit intent 合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core/effects` handshake/message runtime 批次 plan_ref：WS handshake、repo scope bootstrap、message dispatch/routing、projection apply、runtime sync、shadow/scope gate 绑定 web WS runtime、repo-scope runtime、document authority 与 tree projection 合同。
 
 ### MCP Direction
 

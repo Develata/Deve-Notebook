@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!
 #[path = "message_projection_doc.rs"]
 mod message_projection_doc;
 #[path = "message_projection_tree.rs"]
