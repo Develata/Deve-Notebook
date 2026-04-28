@@ -41,6 +41,11 @@ jobs:
 
       - name: Check architecture registry
         run: scripts/check-architecture-registry.sh
+
+      - name: Check native and graph baselines
+        run: |
+          scripts/check-native-track-boundary.sh
+          scripts/check-graph-baseline.sh
       
       - name: Run tests
         run: cargo test --locked

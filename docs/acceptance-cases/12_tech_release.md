@@ -77,6 +77,8 @@
     - Dockerfile、docker-compose.yml、.github/workflows/release.yml 可读
   steps:
     - run: scripts/check-release-baseline.sh
+    - run: scripts/check-native-track-boundary.sh
+    - run: scripts/check-graph-baseline.sh
   assertions:
     - exit_code_eq: 0
 

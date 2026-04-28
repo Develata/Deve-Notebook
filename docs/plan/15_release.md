@@ -39,7 +39,7 @@
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
-    1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, `cargo test --locked`.
+    1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native/graph boundary scripts, `cargo test --locked`.
     2.  **Docker Build**: Dockerfile frontend stage runs `npm run build` for editor assets and `trunk build --release` for Leptos/WASM output.
     3.  **Embed Frontend**: Dockerfile backend stage copies `apps/web/dist` before `cargo build --release --package deve_cli`, so the CLI build script embeds frontend assets into the binary.
     4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
