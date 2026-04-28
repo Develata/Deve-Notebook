@@ -4,6 +4,7 @@
 //!   - 03_rendering#document-authority-bridge
 //!
 //! Invariants:
+//! - `doc_id` 是 diff 的稳定文档身份；历史/兼容消息允许为空。
 //! - `path` 必须是非空规范化路径。
 //! - `display_path` 仅用于 UI 标题；默认等于 `path`，重命名视图可覆盖。
 //! - `old_content` 与 `new_content` 必须来源于同一文件快照对。
@@ -14,6 +15,7 @@ use deve_core::protocol::{ClientMessage, MergeConflictAction};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DiffSessionWire {
+    pub doc_id: Option<DocId>,
     pub path: String,
     pub display_path: String,
     pub old_content: String,
@@ -68,6 +70,7 @@ impl DiffSessionWire {
         new_content: String,
     ) -> Self {
         Self {
+            doc_id: None,
             path,
             display_path,
             old_content,
@@ -81,6 +84,11 @@ impl DiffSessionWire {
         self.merge_conflict = Some(merge_conflict);
         self
     }
+
+    pub fn with_doc_id(mut self, doc_id: Option<DocId>) -> Self {
+        self.doc_id = doc_id;
+        self
+    }
 }
 
 #[cfg(test)]
@@ -92,6 +100,7 @@ mod tests {
     #[test]
     fn defaults_display_path_to_canonical_path() {
         let session = DiffSessionWire::new("notes/new.md".into(), "old".into(), "new".into());
+        assert_eq!(session.doc_id, None);
         assert_eq!(session.path, "notes/new.md");
         assert_eq!(session.display_path, "notes/new.md");
     }
@@ -122,6 +131,14 @@ mod tests {
         assert_eq!(merge.doc_id, doc_id);
         assert_eq!(merge.result_content, "base");
         assert_eq!(merge.actions.len(), 1);
+    }
+
+    #[test]
+    fn can_attach_doc_identity() {
+        let doc_id = DocId::new();
+        let session = DiffSessionWire::new("notes/a.md".into(), "old".into(), "new".into())
+            .with_doc_id(Some(doc_id));
+        assert_eq!(session.doc_id, Some(doc_id));
     }
 
     #[test]

@@ -131,6 +131,7 @@ mod tests {
         let (_request_id, set_request_id) = signal(Some("doc-diff-req".to_string()));
         let (notice, set_notice) = signal(None);
         let (diff_content, set_diff_content) = signal(Some(DiffSessionWire {
+            doc_id: None,
             path: "note.md".into(),
             display_path: "note.md".into(),
             old_content: "before".into(),

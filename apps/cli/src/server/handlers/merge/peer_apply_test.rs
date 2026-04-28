@@ -70,6 +70,7 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
             repo_id: Some(actual_repo),
             branch,
             scope_nonce,
+            doc_id: actual_doc_id,
             path,
             old_content,
             new_content,
@@ -77,6 +78,7 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
             assert_eq!(actual_repo, repo_id);
             assert_eq!(branch.as_ref().map(PeerId::as_str), Some("remote-a"));
             assert_eq!(scope_nonce, Some(7));
+            assert_eq!(actual_doc_id, Some(doc_id));
             assert_eq!(path, "docs/a.md");
             assert_eq!(old_content, "local");
             assert_eq!(new_content, "remote");

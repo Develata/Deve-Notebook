@@ -44,9 +44,9 @@ pub async fn handle_get_doc_diff(
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
-    let (normalized, old_content, new_content) = match state
+    let (doc_id, normalized, old_content, new_content) = match state
         .repo
-        .workdir_diff_inputs_for_target_in_local_repo(&scope.repo_name, &target)
+        .workdir_diff_payload_for_target_in_local_repo(&scope.repo_name, &target)
     {
         Ok(payload) => payload,
         Err(e) => {
@@ -63,6 +63,7 @@ pub async fn handle_get_doc_diff(
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         scope_nonce,
+        doc_id,
         path: normalized,
         old_content,
         new_content,

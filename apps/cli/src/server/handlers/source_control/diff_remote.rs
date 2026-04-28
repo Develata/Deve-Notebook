@@ -79,6 +79,7 @@ pub(super) async fn handle_remote_diff(
         repo_id: Some(scope.repo_id),
         branch: scope.branch.clone(),
         scope_nonce,
+        doc_id: Some(doc_id),
         path,
         old_content,
         new_content,

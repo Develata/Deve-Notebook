@@ -73,6 +73,7 @@ pub(crate) fn handle_sc_list_message(
             repo_id,
             branch,
             scope_nonce,
+            doc_id,
             path,
             old_content,
             new_content,
@@ -90,7 +91,7 @@ pub(crate) fn handle_sc_list_message(
             }
             ctx.set_notice.set(None);
             ctx.set_doc_diff_request_id.set(None);
-            apply_doc_diff(path, old_content, new_content, ctx.set_diff);
+            apply_doc_diff(*doc_id, path, old_content, new_content, ctx.set_diff);
             true
         }
         ServerMessage::MergeConflict {
@@ -116,6 +117,7 @@ pub(crate) fn handle_sc_list_message(
                     current_content.clone(),
                     incoming_content.clone(),
                 )
+                .with_doc_id(Some(*doc_id))
                 .with_merge_conflict(MergeConflictSession {
                     doc_id: *doc_id,
                     result_content: result_content.clone(),

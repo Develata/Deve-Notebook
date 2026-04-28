@@ -27,6 +27,7 @@ fn clear_repo_scoped_state_resets_source_control_view() {
     let (history_request_id, set_history_request_id) = signal(Some("history-req".to_string()));
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("doc-req".to_string()));
     let (diff, set_diff) = signal(Some(DiffSessionWire {
+        doc_id: None,
         path: "a.md".into(),
         display_path: "a.md".into(),
         old_content: "old".into(),

@@ -59,10 +59,21 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<(String, String, String)> {
+        let (_, path, old_content, new_content) =
+            self.workdir_diff_payload_for_target_in_local_repo(repo_name, target)?;
+        Ok((path, old_content, new_content))
+    }
+
+    pub fn workdir_diff_payload_for_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &ScPathTarget,
+    ) -> Result<(Option<DocId>, String, String, String)> {
         let path = source_control_target_lookup::resolve_change_path(self, repo_name, target)?;
         let (old_content, new_content) =
             self.workdir_diff_inputs_in_local_repo(repo_name, &path)?;
-        Ok((path, old_content, new_content))
+        let doc_id = self.resolve_workdir_doc_id_in_local_repo(repo_name, &path)?;
+        Ok((doc_id, path, old_content, new_content))
     }
 
     pub(crate) fn resolve_canonical_doc_id_in_local_repo(

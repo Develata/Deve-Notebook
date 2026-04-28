@@ -6,6 +6,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::storage::DegradedSyncMode;
+use deve_core::models::DocId;
 use leptos::prelude::*;
 
 use super::effects_sc_feedback::show_file_op_feedback;
@@ -20,22 +21,29 @@ pub(super) struct FsRefreshSignals {
 }
 
 pub(super) fn apply_doc_diff(
+    doc_id: Option<DocId>,
     path: &str,
     old_content: &str,
     new_content: &str,
     set_diff: WriteSignal<Option<DiffSessionWire>>,
 ) {
     leptos::logging::log!("收到 Diff: {}", path);
-    set_diff.set(Some(DiffSessionWire::new(
-        path.to_string(),
-        old_content.to_string(),
-        new_content.to_string(),
-    )));
+    set_diff.set(Some(
+        DiffSessionWire::new(
+            path.to_string(),
+            old_content.to_string(),
+            new_content.to_string(),
+        )
+        .with_doc_id(doc_id),
+    ));
     let ranges =
         deve_core::source_control::line_diff::compute_line_ranges(old_content, new_content);
+    #[cfg(target_arch = "wasm32")]
     if let Ok(json) = serde_json::to_string(&ranges) {
         crate::editor::ffi::update_gutter_diff(&json);
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = ranges;
 }
 
 pub(super) fn refresh_after_fs_change(
@@ -91,4 +99,23 @@ pub(super) fn refresh_after_commit(
         limit: 50,
         scope_nonce: Some(current_scope_nonce),
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apply_doc_diff;
+    use deve_core::models::DocId;
+    use leptos::prelude::{GetUntracked, signal};
+
+    #[test]
+    fn apply_doc_diff_preserves_doc_identity() {
+        let (diff, set_diff) = signal(None);
+        let doc_id = DocId::new();
+
+        apply_doc_diff(Some(doc_id), "notes/a.md", "old", "new", set_diff);
+
+        let session = diff.get_untracked().expect("diff session");
+        assert_eq!(session.doc_id, Some(doc_id));
+        assert_eq!(session.path, "notes/a.md");
+    }
 }

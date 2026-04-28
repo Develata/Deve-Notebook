@@ -89,11 +89,13 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
 
     match uni_rx.recv().await {
         Some(ServerMessage::DocDiff {
+            doc_id: actual_doc_id,
             path,
             old_content,
             new_content,
             ..
         }) => {
+            assert_eq!(actual_doc_id, Some(doc_id));
             assert_eq!(path, "notes/b.md");
             assert_eq!(old_content, "hello");
             assert_eq!(new_content, "hello renamed");

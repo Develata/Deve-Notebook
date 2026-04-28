@@ -11,14 +11,14 @@ fail() {
 check_contains() {
   local file="$1"
   local pattern="$2"
-  rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file" \
+  rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file" \
     || fail "missing '$pattern' in $file"
 }
 
 check_absent() {
   local file="$1"
   local pattern="$2"
-  if rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file"; then
+  if rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file"; then
     fail "unexpected '$pattern' in $file"
   fi
 }
@@ -56,5 +56,15 @@ check_contains docs/plan/07_diff_logic.md "canonical targets"
 check_contains crates/core/src/source_control/types.rs "pub doc_id: Option<DocId>"
 check_contains crates/core/src/source_control/commit_diff.rs "doc_id: Some(doc_id)"
 check_contains crates/core/tests/commit_diff_node_projection_test.rs "assert_eq!(diffs[0].doc_id, Some(doc_id));"
+
+# Live doc diff responses must also preserve canonical document identity.
+check_contains docs/plan/07_diff_logic.md "- \`DocDiff\`"
+check_contains docs/plan/07_diff_logic.md "  - \`doc_id\`"
+check_contains crates/core/src/protocol/server.rs "DocDiff {"
+check_contains crates/core/src/protocol/server.rs "#[serde(default)] doc_id: Option<DocId>"
+check_contains apps/cli/src/server/handlers/source_control/diff.rs "workdir_diff_payload_for_target_in_local_repo"
+check_contains apps/cli/src/server/handlers/source_control/diff_remote.rs "doc_id: Some(doc_id)"
+check_contains apps/web/src/hooks/use_core/diff_session.rs "pub doc_id: Option<DocId>"
+check_contains apps/web/src/hooks/use_core/effects_sc_apply.rs "apply_doc_diff_preserves_doc_identity"
 
 echo "source-control-baseline-check: ok"
