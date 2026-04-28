@@ -27,11 +27,15 @@ pub enum ClientMessage {
     },
     SyncRequest {
         repo_id: crate::models::RepoId,
+        #[serde(default)]
+        known_vector: VersionVector,
         requests: Vec<(PeerId, (u64, u64))>,
     },
     SyncSnapshotRequest {
         peer_id: PeerId,
         repo_id: crate::models::RepoId,
+        #[serde(default)]
+        known_vector: VersionVector,
     },
     SyncPush {
         peer_id: PeerId,
@@ -41,6 +45,8 @@ pub enum ClientMessage {
     SyncPushSnapshot {
         peer_id: PeerId,
         repo_id: crate::models::RepoId,
+        #[serde(default)]
+        server_vector: VersionVector,
         ops: Vec<EncryptedOp>,
     },
     Edit {

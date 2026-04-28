@@ -84,3 +84,37 @@ impl std::error::Error for StorageError {}
 
 /// 浏览器存储结果类型别名。
 pub type StorageResult<T> = Result<T, StorageError>;
+
+#[cfg(test)]
+mod tests {
+    use super::StorageCapabilities;
+
+    #[test]
+    fn storage_capabilities_allow_full_sync_when_identity_stack_exists() {
+        let caps = StorageCapabilities {
+            webcrypto: true,
+            indexed_db: true,
+            local_storage: true,
+            ed25519: true,
+        };
+
+        assert_eq!(caps.degraded_mode(), None);
+    }
+
+    #[test]
+    fn store_011_storage_capabilities_degrade_to_read_only_without_identity_stack() {
+        // STORE-011: browser storage authority boundary.
+        let caps = StorageCapabilities {
+            webcrypto: true,
+            indexed_db: false,
+            local_storage: true,
+            ed25519: true,
+        };
+
+        let mode = caps.degraded_mode().expect("missing IndexedDB degrades");
+        assert!(mode.reason.contains("IndexedDB=false"));
+        assert!(mode.banner_text().contains("只读同步模式"));
+        assert!(mode.banner_text().contains("禁止 Peer 注册"));
+        assert!(mode.banner_text().contains("SyncPush"));
+    }
+}

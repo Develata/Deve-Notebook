@@ -116,4 +116,17 @@
     - run: deve path normalize "folder\\sub\\a.md"
   assertions:
     - stdout_eq: "folder/sub/a.md"
+
+- case_id: STORE-011
+  goal: Browser storage authority boundary。
+  preconditions:
+    - WebLightPeer 运行在浏览器环境
+  steps:
+    - run: cargo test -p deve_web storage_capabilities -- --nocapture
+    - run: cargo test -p deve_web output_write_classification -- --nocapture
+  assertions:
+    - WebCrypto_Ed25519_key_extractable_false: true
+    - IndexedDB_missing_enters_DegradedSyncMode: true
+    - degraded_mode_blocks_RegisterWriter_and_SyncPush: true
+    - degraded_mode_allows_read_and_snapshot_pull: true
 ```

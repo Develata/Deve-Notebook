@@ -5,7 +5,7 @@ use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
     WsHarness, connect_harness, recv_server_message, send_client_message,
 };
-use deve_core::models::PeerId;
+use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 use tokio::net::TcpStream;
@@ -126,6 +126,7 @@ async fn expect_reject(
 fn sync_request(repo_id: uuid::Uuid) -> ClientMessage {
     ClientMessage::SyncRequest {
         repo_id,
+        known_vector: VersionVector::new(),
         requests: vec![],
     }
 }

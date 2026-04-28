@@ -54,11 +54,13 @@ async fn snapshot_request_exports_requested_shadow_source() -> anyhow::Result<()
         Some(deve_core::protocol::ServerMessage::SyncPushSnapshot {
             peer_id,
             scope_nonce,
+            server_vector,
             ops,
             ..
         }) => {
             assert_eq!(peer_id, source_peer);
             assert_eq!(scope_nonce, 47);
+            assert_eq!(server_vector.get(&source_peer), 1);
             assert_eq!(ops.len(), 1);
         }
         other => panic!("expected SyncPushSnapshot, got {:?}", other),

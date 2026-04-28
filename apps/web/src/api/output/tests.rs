@@ -1,6 +1,7 @@
 use super::enqueue_with_limit;
 use super::is_write_message;
 use super::prepare_queue_for_new_connection;
+use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::ClientMessage;
 use deve_core::protocol::ScPathTarget;
 use std::collections::VecDeque;
@@ -66,7 +67,23 @@ fn output_write_classification_distinguishes_reads_from_writes() {
         target: ScPathTarget::from_path("note.md"),
         scope_nonce: Some(1),
     }));
+    assert!(is_write_message(&ClientMessage::RegisterWriter {
+        peer_id: PeerId::new("browser-peer"),
+        repo_id: uuid::Uuid::nil(),
+        scope_nonce: 1,
+    }));
+    assert!(is_write_message(&ClientMessage::SyncPushSnapshot {
+        peer_id: PeerId::new("browser-peer"),
+        repo_id: uuid::Uuid::nil(),
+        server_vector: VersionVector::new(),
+        ops: vec![],
+    }));
     assert!(!is_write_message(&ClientMessage::Ping));
+    assert!(!is_write_message(&ClientMessage::SyncRequest {
+        repo_id: uuid::Uuid::nil(),
+        known_vector: VersionVector::new(),
+        requests: vec![],
+    }));
     assert!(!is_write_message(&ClientMessage::ListRepos {
         request_id: "repos".into(),
         scope_nonce: Some(1),

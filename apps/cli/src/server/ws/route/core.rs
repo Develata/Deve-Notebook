@@ -52,17 +52,22 @@ async fn route_unscoped_core(
             switcher::handle_switch_repo(state, ch, session, name, Some(repo_id), switch_nonce)
                 .await;
         }
-        ClientMessage::SyncSnapshotRequest { peer_id, repo_id } => {
+        ClientMessage::SyncSnapshotRequest {
+            peer_id, repo_id, ..
+        } => {
             sync::handle_sync_snapshot_request(state, ch, session, peer_id, repo_id).await;
         }
         ClientMessage::SyncPushSnapshot {
             peer_id,
             repo_id,
             ops,
+            ..
         } => {
             sync::handle_sync_push_snapshot(state, ch, session, peer_id, repo_id, ops).await;
         }
-        ClientMessage::SyncRequest { repo_id, requests } => {
+        ClientMessage::SyncRequest {
+            repo_id, requests, ..
+        } => {
             sync::handle_sync_request(state, ch, session, repo_id, requests).await;
         }
         ClientMessage::SyncPush {

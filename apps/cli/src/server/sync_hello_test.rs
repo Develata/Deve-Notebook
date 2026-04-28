@@ -5,10 +5,11 @@
 use super::handlers::sync::handle_sync_hello;
 use super::sync_hello_test_support::{
     block_shadow_peer_dir, build_state, collect_unicast_messages, empty_session,
-    recv_protocol_error, signed_hello_for_repo, signed_hello_for_scope, unicast_channel,
+    recv_protocol_error, signed_hello, signed_hello_for_repo, signed_hello_for_scope,
+    unicast_channel,
 };
 use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{DocId, LedgerEntry, Op};
+use deve_core::models::{DocId, LedgerEntry, Op, VersionVector};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 
@@ -92,6 +93,53 @@ async fn sync_hello_response_refreshes_vector_from_ledger_heads() -> anyhow::Res
         .expect("sync hello response");
 
     assert_eq!(response_vector.get(&state.identity_key.peer_id()), 1);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_followup_request_carries_known_vector() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let local_peer = state.identity_key.peer_id();
+    let doc_id = DocId::new();
+    state.repo.append_generated_op_in_local_repo(
+        state.repo.local_repo_name(),
+        doc_id,
+        local_peer.clone(),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "local".into(),
+                },
+                1,
+                local_peer.clone(),
+                seq,
+                None,
+                None,
+            )
+        },
+    )?;
+
+    let remote = IdentityKeyPair::generate();
+    let mut remote_vector = VersionVector::new();
+    remote_vector.update(remote.peer_id(), 3);
+    let mut hello = signed_hello(&remote, &remote_vector);
+    hello.repo_id = repo_id;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut rx).await?;
+    let known_vector = messages
+        .iter()
+        .find_map(|msg| match msg {
+            ServerMessage::SyncRequest { known_vector, .. } => Some(known_vector),
+            _ => None,
+        })
+        .expect("sync request follow-up");
+
+    assert_eq!(known_vector.get(&local_peer), 1);
     Ok(())
 }
 

@@ -161,7 +161,7 @@ Git mirror 是 planned first-class bridge，而不是 authority 替代品：
 - `Cookie 可用，但 IndexedDB 不可用`
   - 进入 `DegradedSyncMode`。
   - UI MUST 只读。
-  - 禁止 `SyncPush`、pending write enqueue、repo-scoped durable cache。
+  - 禁止 `RegisterWriter`、`SyncPush`、pending write enqueue、repo-scoped durable cache。
 - `Cookie 可用，IndexedDB 可用，但 WebCrypto key 缺失`
   - 必须重新生成 repo-scoped key 并重新注册 browser peer。
   - 旧 browser peer identity 与旧 cache MUST 视为不可恢复。
@@ -469,7 +469,7 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - 只适用于浏览器 light peer 的 storage/runtime 缺失场景。
 - 允许 session 存在。
-- 不允许 authority write、pending write、`SyncPush`。
+- 不允许 authority write、pending write、`RegisterWriter`、`SyncPush`。
 - 必须显式暴露给 network/runtime 层，不得伪装成完整 online writable 状态。
 
 ## 10. Forbidden Patterns

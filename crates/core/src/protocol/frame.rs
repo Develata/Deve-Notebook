@@ -9,10 +9,10 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 2;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
+pub const WS_PROTOCOL_VERSION: u16 = 3;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
-pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF2";
+pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
 pub const MISSING_WS_FRAME_MAGIC: &str = "missing WS frame magic";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

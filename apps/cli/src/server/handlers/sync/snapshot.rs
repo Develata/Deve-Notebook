@@ -51,13 +51,16 @@ pub(super) async fn handle_request(
     };
 
     let Some(snapshot) = engine::with_strict(state, ch, repo_id, scope, |engine| {
-        engine.get_snapshot_for_sync(&request)
+        let server_vector = engine.version_vector().clone();
+        engine
+            .get_snapshot_for_sync(&request)
+            .map(|response| (server_vector, response))
     }) else {
         return;
     };
 
     match snapshot {
-        Ok(response) => {
+        Ok((server_vector, response)) => {
             let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope)
             else {
                 return;
@@ -72,6 +75,7 @@ pub(super) async fn handle_request(
                 repo_id: response.repo_id,
                 scope_nonce: delivery_scope_nonce,
                 branch: session.active_branch.clone(),
+                server_vector,
                 ops: response.ops,
             });
         }

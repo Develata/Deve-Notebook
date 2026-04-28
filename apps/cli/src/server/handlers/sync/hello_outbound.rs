@@ -22,8 +22,15 @@ pub(super) fn send(
     scope: Option<u64>,
     scope_nonce: u64,
 ) {
-    send_requests(ch, session, repo_id, result.to_request);
-    send_snapshot_requests(ch, result.snapshot_requests);
+    let known_vector = engine.version_vector().clone();
+    send_requests(
+        ch,
+        session,
+        repo_id,
+        known_vector.clone(),
+        result.to_request,
+    );
+    send_snapshot_requests(ch, known_vector, result.snapshot_requests);
     send_pushes(
         ch,
         session,
@@ -39,6 +46,7 @@ fn send_requests(
     ch: &DualChannel,
     session: &WsSession,
     repo_id: RepoId,
+    known_vector: deve_core::models::VersionVector,
     requests: Vec<deve_core::sync::protocol::SyncRequest>,
 ) {
     if requests.is_empty() {
@@ -47,6 +55,7 @@ fn send_requests(
     ch.unicast(ServerMessage::SyncRequest {
         repo_id,
         branch: session.active_branch.clone(),
+        known_vector,
         requests: requests
             .into_iter()
             .map(|req| (req.peer_id, req.range))
@@ -56,12 +65,14 @@ fn send_requests(
 
 fn send_snapshot_requests(
     ch: &DualChannel,
+    known_vector: deve_core::models::VersionVector,
     requests: Vec<deve_core::sync::protocol::SyncSnapshotRequest>,
 ) {
     for req in requests {
         ch.unicast(ServerMessage::SyncSnapshotRequest {
             peer_id: req.peer_id,
             repo_id: req.repo_id,
+            known_vector: known_vector.clone(),
         });
     }
 }

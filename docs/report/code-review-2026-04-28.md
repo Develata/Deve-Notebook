@@ -32,7 +32,7 @@ smoke 路径均已实现或明确降级为 future。
 - Ledger-first authority 清晰：ledger schema、append validation、projection、node metadata、source-control side tables 与 repo manager 按职责拆分。
 - Watcher 已实现：`sync/watcher/` 具备 backend trait、debounced events、pre-arm scan、repo-scoped dispatch 与 watcher tests。旧报告中“没有真实 watcher backend”的断言已过时。
 - Source Control 有独立 core surface 与 ledger-manager 集成；diff/commit target 已能携带稳定 `doc_id`，stale path 处理已收紧，docless exact-delete legacy 边界已明确。
-- Protocol frame 已版本化为 `DEVEWSF2`；缺失 binary magic 走结构化 decode error，legacy JSON 显式 gate。
+- Protocol frame 已版本化为 `DEVEWSF3`；缺失 binary magic 走结构化 decode error，legacy JSON 显式 gate。
 - Graph projection 是只读派生层，不写 ledger、workspace、search 或 source-control state。
 - Search feature-gated，并有 in-memory/on-disk service 边界。
 - tracked 代码中没有产品 MCP runtime。MCP 在 plan/docs 中只保留为退役说明或 Chrome MCP 浏览器验收工具语义。
@@ -81,7 +81,6 @@ smoke 路径均已实现或明确降级为 future。
 当前缺口 / 风险：
 
 - rendering plan 在源码层仍需重新验收：chat Markdown 有简单 code toolbar；editor hybrid rendering 细节要单独按 plan §03 判定 current/future。
-- WebCrypto / IndexedDB 目前不是完整浏览器私钥 authority 模型；`extractable: false`、degraded SyncPush/write blocking 仍需明确实现或修订 plan。
 - mobile 当前是 responsive Web shell，不是 full native offline app；native service startup、random loopback port、IPC fallback、secure storage、crash recovery、key rotation 均未实现。
 - UI 中仍有 ad hoc utility colors 与 z-index。此项是 P2 设计债，不是 P0 blocker。
 
@@ -111,16 +110,17 @@ smoke 路径均已实现或明确降级为 future。
 - “Locale 只用 `Locale::default()`”已过时；已实现 stored/browser detection。
 - “server/mod.rs 是大边界文件”已过时；现在是紧凑 module index。
 - “MCP 是当前或 future 产品 runtime”已过时；MCP runtime 退役，不应重新引入。
+- “Sync vector wire contract 未关闭”已过时；`DEVEWSF3` 已显式携带 `known_vector/server_vector`。
+- “Browser storage degraded write boundary 未关闭”已过时；Web storage capability、degraded read-only 与 write classification 已有 targeted tests。
 
 ## 下一优先级
 
-1. P0：关闭 sync vector wire contract。实现显式 `known_vector/server_vector`，或修订 plan §05 接受当前 `SyncHello.vector + range request` 设计。
-2. P0：完成 browser storage authority boundary。覆盖 WebCrypto key generation、IndexedDB 可用性语义、degraded read-only 与 SyncPush/write blocking。
-3. P1：补小安全批次。覆盖 key-file permissions、login audit fields、production CORS origin、dev CORS warning wording。
-4. P1：清理 path normalization 偏离。优先 core/server/web boundary wrappers，不改变已存储路径语义。
-5. P1/P2：把 rendering plan 拆成 current acceptance 与 future editor hybrid-rendering。
-6. P3-10：把 Desktop/Mobile native adapter 从文档边界推进到 decision-complete 的实现计划。
-7. P3-13：Graph visualization 继续保持 read-only projection 消费者，不反向写 authority state。
+1. P1：补小安全批次。覆盖 key-file permissions、login audit fields、production CORS origin、dev CORS warning wording。
+2. P1：清理 path normalization 偏离。优先 core/server/web boundary wrappers，不改变已存储路径语义。
+3. P1/P2：推进 Git ecosystem mirror bridge plan-to-code。
+4. P1/P2：把 rendering plan 拆成 current acceptance 与 future editor hybrid-rendering。
+5. P3-10：把 Desktop/Mobile native adapter 从文档边界推进到 decision-complete 的实现计划。
+6. P3-13：Graph visualization 继续保持 read-only projection 消费者，不反向写 authority state。
 
 ## 建议验证门槛
 

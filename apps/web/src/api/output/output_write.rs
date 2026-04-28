@@ -22,6 +22,7 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
             | ClientMessage::DeleteDoc { .. }
             | ClientMessage::CopyDoc { .. }
             | ClientMessage::MoveDoc { .. }
+            | ClientMessage::RegisterWriter { .. }
             | ClientMessage::SyncPush { .. }
             | ClientMessage::SyncPushSnapshot { .. }
             | ClientMessage::Commit { .. }

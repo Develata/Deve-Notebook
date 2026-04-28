@@ -1,4 +1,5 @@
 use super::*;
+use crate::models::{PeerId, VersionVector};
 
 #[test]
 fn client_binary_frame_roundtrips() {
@@ -65,4 +66,70 @@ fn unsupported_version_is_rejected() {
         decode_server_binary(&bytes),
         Err(ProtocolFrameError::UnsupportedVersion { .. })
     ));
+}
+
+#[test]
+fn sync_vector_fields_roundtrip_in_current_binary_frame() {
+    let repo_id = uuid::Uuid::new_v4();
+    let peer = PeerId::new("peer-a");
+    let mut vector = VersionVector::new();
+    vector.update(peer.clone(), 7);
+
+    let client = ClientMessage::SyncRequest {
+        repo_id,
+        known_vector: vector.clone(),
+        requests: vec![(peer.clone(), (1, 8))],
+    };
+    let decoded_client = decode_client_binary(&encode_client_binary(&client).unwrap()).unwrap();
+    match decoded_client {
+        ClientMessage::SyncRequest { known_vector, .. } => {
+            assert_eq!(known_vector, vector);
+        }
+        other => panic!("expected SyncRequest, got {other:?}"),
+    }
+
+    let server = ServerMessage::SyncPushSnapshot {
+        peer_id: peer.clone(),
+        repo_id,
+        scope_nonce: 3,
+        branch: Some(peer.clone()),
+        server_vector: vector.clone(),
+        ops: vec![],
+    };
+    let decoded_server = decode_server_binary(&encode_server_binary(&server).unwrap()).unwrap();
+    match decoded_server {
+        ServerMessage::SyncPushSnapshot { server_vector, .. } => {
+            assert_eq!(server_vector, vector);
+        }
+        other => panic!("expected SyncPushSnapshot, got {other:?}"),
+    }
+}
+
+#[test]
+fn sync_vector_fields_default_for_legacy_json_debug_frames() {
+    let repo_id = uuid::Uuid::new_v4();
+    let client_request = format!(r#"{{"SyncRequest":{{"repo_id":"{repo_id}","requests":[]}}}}"#);
+    match serde_json::from_str::<ClientMessage>(&client_request).unwrap() {
+        ClientMessage::SyncRequest { known_vector, .. } => {
+            assert_eq!(known_vector, VersionVector::new());
+        }
+        other => panic!("expected SyncRequest, got {other:?}"),
+    }
+
+    let peer = PeerId::new("peer-a");
+    let server_snapshot = serde_json::json!({
+        "SyncPushSnapshot": {
+            "peer_id": peer,
+            "repo_id": repo_id,
+            "scope_nonce": 9,
+            "branch": null,
+            "ops": []
+        }
+    });
+    match serde_json::from_value::<ServerMessage>(server_snapshot).unwrap() {
+        ServerMessage::SyncPushSnapshot { server_vector, .. } => {
+            assert_eq!(server_vector, VersionVector::new());
+        }
+        other => panic!("expected SyncPushSnapshot, got {other:?}"),
+    }
 }

@@ -48,8 +48,8 @@
   assertions:
     - packet_format_eq: ["server", "versioned-bincode"]
     - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug"]
-    - binary_packet_magic_eq: "DEVEWSF2"
-    - versioned_packet_protocol_version_eq: 2
+    - binary_packet_magic_eq: "DEVEWSF3"
+    - versioned_packet_protocol_version_eq: 3
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
     - reject_binary_without_magic: true
@@ -89,13 +89,14 @@
   preconditions:
     - Repo A 中本地 VC 大于远端，SyncHello 已绑定当前 sync scope
   steps:
-    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", requests: [["peer-a", [4, 7]]] }
+    - ws_send: { type: "SyncRequest", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { peer: "web-light-peer", seq: 3 }, requests: [["peer-a", [4, 7]]] }
     - run: cargo test -p deve_cli non_browser_sync_request_uses_bound_sync_scope_nonce_for_push -- --nocapture
     - run: cargo test -p deve_cli sync_request_preserves_requested_source_peer_in_push -- --nocapture
     - run: cargo test -p deve_cli ws_sync_request -- --nocapture
   assertions:
     - ws_receive_contains: { type: "SyncPush", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
     - sync_push_peer_id_eq_requested_source: true
+    - new_sync_request_frames_include_known_vector: true
     - wrong_or_unbound_repo_returns_structured_protocol_error: true
 
 - case_id: NET-008
@@ -103,12 +104,12 @@
   preconditions:
     - 增量同步不可继续，当前 peer/source 已由握手或 offer 流程授权
   steps:
-    - ws_send: { type: "SyncSnapshotRequest", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111" }
+    - ws_send: { type: "SyncSnapshotRequest", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { peer: "web-light-peer", seq: 3 } }
     - run: cargo test -p deve_cli non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_exports_requested_shadow_source -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
-    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "peer-a", scope_nonce: 1 }
+    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "peer-a", scope_nonce: 1, server_vector: "present" }
     - sync_push_snapshot_peer_id_eq_requested_source: true
     - unoffered_source_returns_structured_protocol_error: true
 

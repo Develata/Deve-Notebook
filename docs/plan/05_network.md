@@ -107,12 +107,13 @@
 
 ### 4.2 Serialization
 
-- WebSocket 二进制帧必须使用 `DEVEWSF2` magic header + `protocol_version` + bincode payload。
-- 当前 `protocol_version = 2`；任何 breaking schema change 必须 bump 该版本，并同步更新收发端兼容窗口。
+- WebSocket 二进制帧必须使用 `DEVEWSF3` magic header + `protocol_version` + bincode payload。
+- 当前 `protocol_version = 3`；任何 breaking schema change 必须 bump 该版本，并同步更新收发端兼容窗口。
 - server-to-server 与 server-to-client 默认 versioned bincode frame。
 - browser client-to-server 优先 versioned bincode frame，保留 text-frame versioned JSON 调试入口。
 - legacy JSON text 仅允许显式 development/debug 兼容开关，不属于生产默认 runtime 合同。
-- legacy raw bincode / binary JSON 不属于当前兼容合同，runtime 必须拒绝缺失 `DEVEWSF2` magic 的二进制帧。
+- legacy JSON debug frame 缺少 `known_vector` / `server_vector` 时只能按空向量兼容解析；新发送的 sync frame 必须显式携带这些字段。
+- legacy raw bincode / binary JSON 不属于当前兼容合同，runtime 必须拒绝缺失 `DEVEWSF3` magic 的二进制帧。
 - runtime 必须能拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
 ### 4.3 Core Message Families
@@ -156,6 +157,7 @@
   - required:
     - `repo_id`
     - `known_vector`
+    - `requests`
 - `SyncPush`
   - required:
     - `repo_id`
@@ -164,8 +166,10 @@
     - `encrypted_payload`
 - `SyncSnapshotRequest`
   - required:
+    - `source_peer_id`
     - `repo_id`
     - `known_vector`
+  - optional:
     - `reason`
 - `SyncPushSnapshot`
   - required:
@@ -173,6 +177,7 @@
     - `source_peer_id`
     - `server_vector`
     - `payload`
+  - optional:
     - `snapshot_kind`
 - 所有 sync message 的 `repo_id` 都是 routing 主键；缺失时必须结构化拒绝。
 
