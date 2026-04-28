@@ -265,7 +265,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
   - 当前工程蓝图允许其作为派生 projection 存在，但不得替代 source-first 主编辑链。
   - 任何 rich-text preview engine 接入都必须继续服从 confirmed+pending buffer 单一真值。
 
-## 7. Large Document Strategy
+## 7. Large Document Strategy {#large-document-runtime}
 
 - 首屏优先
 - virtual render

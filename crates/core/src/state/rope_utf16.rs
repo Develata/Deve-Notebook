@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+
 use ropey::Rope;
 
 pub(super) struct Utf16IndexCache {

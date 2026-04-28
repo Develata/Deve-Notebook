@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+
 use crate::models::Op;
 
 use super::utf16::{add_utf16_pos, utf16_len};

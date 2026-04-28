@@ -50,7 +50,7 @@ Workspace_r = P_r ⊕ D_r
 - `P_r`：规范 projection
 - `D_r`：已被系统跟踪的 workspace 偏差
 
-### 2.3 Facts Partition
+### 2.3 Facts Partition {#facts-partition}
 
 - `Content Facts`
   - 面向 `DocId`

@@ -40,6 +40,12 @@
 
 当前已实现部分只包括 `deve_core::graph` 的只读 projection baseline：它从当前 repo docs 派生节点、已解析边与未解析链接，不读取或写入 ledger authority、workspace、search index 或 source-control runtime。d3-force / Pixi.js 等高性能 Web 渲染仍是 future renderer，不属于当前验收阻塞项。
 
+### 1.2 Search Baseline {#search-baseline}
+
+当前 repo-scoped baseline search 必须保持可禁用、可降级。`search` feature 下允许保留 Tantivy service
+作为 Standard profile 的可选索引实现；低配模式不得依赖常驻重型索引，后续增量索引优化不得反向污染
+ledger authority 或 repo scope gate。
+
 ## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。

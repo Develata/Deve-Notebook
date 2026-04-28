@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 17_plugins#skills-cli-extension-boundary
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

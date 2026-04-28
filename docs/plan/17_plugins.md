@@ -24,7 +24,7 @@
     - Calculation Runtime 的实际执行器
     - MCP runtime、MCP server 管理或 MCP tool loop
 
-### MCP Retirement Boundary
+### MCP Retirement Boundary {#skills-cli-extension-boundary}
 
 MCP 相关文字当前只作为“为什么不做”的历史记录保留。当前扩展路线是 Skills 调用受控 CLI 工具，或第 10 章定义的 Trusted CLI path；这两者都必须保持显式启用、资源约束、默认只读与 fail-closed。任何 MCP 企划不得复用 Rhai/plugin-host 边界落地，也不得绕过 Native AI Chat 的 read-first 默认策略。
 

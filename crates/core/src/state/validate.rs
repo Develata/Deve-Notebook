@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+
 use crate::models::{LedgerEntry, Op};
 
 use super::utf16::utf16_len;

@@ -1,5 +1,6 @@
 // crates\core\src
 //! Deve-Note 统一错误处理模块
+//! plan_ref: infra
 //!
 //! 本模块提供自定义错误类型 `DeveError` 及结果别名，保证全项目错误处理的一致性。
 //!

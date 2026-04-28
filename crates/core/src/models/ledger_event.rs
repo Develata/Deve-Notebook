@@ -1,4 +1,6 @@
 //! # 账本事件模型
+//! plan_ref:
+//!   - 04_storage#facts-partition
 //!
 //! Invariants:
 //! - `ContentOp` 只描述文本内容变化。

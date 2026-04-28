@@ -37,6 +37,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/shortcuts` 与 `apps/web/src/storage` plan_ref，并同步 `04_storage.md`、`08_ui_design_01_web.md`、`12_commands.md`、`13_settings.md` 与 `docs/plan/AGENTS.md` 的稳定 anchors；下一轮继续从低耦合 Web runtime/support 模块向高耦合 hooks/components 收敛。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/utils` plan_ref，并把 Source Control history 的相对时间文案迁到 `i18n::time` facade，避免 util 层继续生成固定中文 UI 文案；Markdown renderer 绑定到渲染白名单 anchor。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/utils` plan_ref：路径规范化绑定 `04_storage#internal-path-normalization`，`.notegit` helpers 绑定 repo runtime layout，纯哈希/模块入口标记为 infra。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 core 小模块 plan_ref：`models` 绑定 facts partition，`state` 绑定 document authority / UTF-16 runtime，`search` 绑定 feature-gated search baseline，`skill` 绑定 MCP 退役后的 Skills + 受控 CLI 扩展边界；`lib.rs/error.rs` 标记为 infra。
 
 ### MCP Direction
 

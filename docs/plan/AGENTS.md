@@ -79,7 +79,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | Anchor | Plan 位置 | 语义 |
 |---|---|---|
 | `03_rendering#markdown-render-whitelist` | `### 4.3 Whitelist Rule` | Markdown 渲染白名单、HTML 过滤与安全链接边界 |
+| `03_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
 | `03_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
+| `04_storage#facts-partition` | `### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
 | `04_storage#projection-contract` | `## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
 | `04_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `04_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
@@ -111,8 +113,10 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `13_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
 | `13_settings#keyboard-shortcuts` | `## 3. Keyboard Shortcuts` | 用户可见快捷键映射合同 |
 | `13_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
+| `14_tech_stack#search-baseline` | `### 1.2 Search Baseline` | repo-scoped baseline search、可禁用索引与 Tantivy feature-gated 实现 |
 | `15_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
 | `16_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
+| `17_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `17_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)

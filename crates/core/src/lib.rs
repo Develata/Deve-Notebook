@@ -1,5 +1,6 @@
 // crates\core\src
 //! # Deve-Note 核心库
+//! plan_ref: infra
 //!
 //! 本 crate 包含 Deve-Note 的核心业务逻辑，是一个实时协作文档编辑器。
 //! 它是平台无关的，可被 CLI 后端和 WebAssembly 前端共同使用。
