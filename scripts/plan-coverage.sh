@@ -24,6 +24,17 @@ FUSE_LINES=500
 SOFT_LINES=250
 ALLOWLIST="$ROOT/scripts/plan-coverage-allowlist.txt"
 I18N_ALLOWLIST="$ROOT/scripts/i18n-coverage-allowlist.txt"
+I18N_CJK_SCAN_DIRS=("$ROOT/apps/web/src/components")
+I18N_EXACT_SCAN_DIRS=("$ROOT/apps/web/src/components" "$ROOT/apps/web/src/editor")
+I18N_FORBIDDEN_ENGLISH_LITERALS=(
+  '"Pin"'
+  '"Unpin"'
+  '"Toggle Outline"'
+  '"Spectator Mode (Read Only)"'
+  '"No repo selected"'
+  'docs in current repo'
+  'Up/Down to navigate'
+)
 
 is_allowlisted() {
   local rel="$1"
@@ -235,7 +246,25 @@ if [ -d "$ROOT/apps/web/src/components" ]; then
       i18n_leaks=$((i18n_leaks + 1))
       blocking=$((blocking + 1))
     fi
-  done < <(grep -rnP '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' "$ROOT/apps/web/src/components" --include='*.rs' 2>/dev/null || true)
+  done < <(grep -rnP --include='*.rs' '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' "${I18N_CJK_SCAN_DIRS[@]}" 2>/dev/null || true)
+
+  # Exact regression guard for English literals already migrated to t::*.
+  # A broad English detector is too noisy for class names and protocol strings;
+  # this targeted list blocks the UI copy leaks found by the current gap scan.
+  for literal in "${I18N_FORBIDDEN_ENGLISH_LITERALS[@]}"; do
+    while IFS= read -r hit; do
+      echo "$hit" | grep -qE '(//|t::|tr!|L10n|plan_ref|include_str!|r#")' && continue
+      rel_hit="${hit#$ROOT/}"
+      if is_i18n_allowlisted "$rel_hit"; then
+        log "i18n-allowlisted: $rel_hit"
+        i18n_allowlisted=$((i18n_allowlisted + 1))
+      else
+        err "i18n-leak: $rel_hit"
+        i18n_leaks=$((i18n_leaks + 1))
+        blocking=$((blocking + 1))
+      fi
+    done < <(grep -rnF --include='*.rs' "$literal" "${I18N_EXACT_SCAN_DIRS[@]}" 2>/dev/null || true)
+  done
 fi
 log "i18n leaks (blocking): $i18n_leaks"
 log "i18n allowlisted debt: $i18n_allowlisted"

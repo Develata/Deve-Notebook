@@ -29,6 +29,7 @@
 - 2026-04-28: P3-13 Graph / Knowledge Visualization 已补 core 只读 projection baseline：`deve_core::graph` 从 repo-scoped docs 派生节点、已解析边与未解析链接，支持 wikilink / markdown `.md` link 与路径归一化；不读取/写入 ledger、metadata、workspace、search 或 source-control 状态，d3/Pixi 渲染仍是 future。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已把 native/graph 新基线纳入 dev runbook、release workflow 与 release baseline 检查，新增 `scripts/check-graph-baseline.sh` 防止 graph projection 漂移成 ledger/workspace authority path。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已完成一批小范围 i18n 收口：Dashboard repo 摘要、Activity/Mobile Pin/Unpin title、Editor outline/spectator 文案、Source Control no-repo notice 均改为 `t::*` facade，并补对应 i18n 单测。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已加固 `scripts/plan-coverage.sh` i18n 回归门禁：对已迁移的英文 UI 文案做精确回归扫描；同时修正 graph plan_ref anchor 与 Source Control status notice 的剩余 i18n 漏点，使 plan coverage 阻塞项回到 0。
 
 ### MCP Direction
 

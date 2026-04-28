@@ -10,49 +10,21 @@ pub(crate) fn blocked_title(locale: Locale, block: RepoWriteBlock) -> String {
         RepoWriteBlock::SnapshotLoading => bottom_bar::snapshot_loading(locale).to_string(),
         RepoWriteBlock::ReadOnly => bottom_bar::read_only(locale).to_string(),
         RepoWriteBlock::HandshakingRepo => bottom_bar::handshaking_repo(locale).to_string(),
-        RepoWriteBlock::ScopeSwitching => match locale {
-            Locale::En => "Switching scope...".to_string(),
-            Locale::Zh => "切换作用域中...".to_string(),
-        },
+        RepoWriteBlock::ScopeSwitching => sc::scope_switching(locale).to_string(),
         RepoWriteBlock::NoRepo => sc::no_repo_selected(locale).to_string(),
     }
 }
 
 pub(crate) fn blocked_hint(locale: Locale, block: RepoWriteBlock) -> &'static str {
     match block {
-        RepoWriteBlock::SessionExpired => match locale {
-            Locale::En => "Sign in again before staging, discarding, or committing changes.",
-            Locale::Zh => "请重新登录后再暂存、放弃或提交更改。",
-        },
-        RepoWriteBlock::Offline => match locale {
-            Locale::En => {
-                "Wait for the connection to recover before changing Source Control state."
-            }
-            Locale::Zh => "请等待连接恢复后再修改源代码管理状态。",
-        },
-        RepoWriteBlock::Reconnecting => match locale {
-            Locale::En => {
-                "The client is reconnecting. Source Control actions will resume automatically."
-            }
-            Locale::Zh => "客户端正在重连，源代码管理操作会在恢复后自动可用。",
-        },
-        RepoWriteBlock::SnapshotLoading => match locale {
-            Locale::En => "Wait for the current repo snapshot to finish loading.",
-            Locale::Zh => "请等待当前仓库快照加载完成。",
-        },
+        RepoWriteBlock::SessionExpired => sc::session_expired_hint(locale),
+        RepoWriteBlock::Offline => sc::offline_hint(locale),
+        RepoWriteBlock::Reconnecting => sc::reconnecting_hint(locale),
+        RepoWriteBlock::SnapshotLoading => sc::snapshot_loading_hint(locale),
         RepoWriteBlock::ReadOnly => sc::remote_branch_readonly_hint(locale),
-        RepoWriteBlock::ScopeSwitching => match locale {
-            Locale::En => "Wait for the repo or branch switch to finish before editing changes.",
-            Locale::Zh => "请等待仓库或分支切换完成后再修改更改列表。",
-        },
-        RepoWriteBlock::NoRepo => match locale {
-            Locale::En => "Select an active repo before using Source Control actions.",
-            Locale::Zh => "请先选择激活仓库，再使用源代码管理操作。",
-        },
-        RepoWriteBlock::HandshakingRepo => match locale {
-            Locale::En => "This repo is still negotiating writer access. Try again in a moment.",
-            Locale::Zh => "当前仓库仍在协商写入权限，请稍后再试。",
-        },
+        RepoWriteBlock::ScopeSwitching => sc::scope_switching_hint(locale),
+        RepoWriteBlock::NoRepo => sc::no_repo_hint(locale),
+        RepoWriteBlock::HandshakingRepo => sc::handshaking_repo_hint(locale),
     }
 }
 

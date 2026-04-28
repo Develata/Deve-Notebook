@@ -28,6 +28,64 @@ pub fn no_repo_selected(locale: Locale) -> &'static str {
     }
 }
 
+pub fn scope_switching(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switching scope...",
+        Locale::Zh => "切换作用域中...",
+    }
+}
+
+pub fn session_expired_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Sign in again before staging, discarding, or committing changes.",
+        Locale::Zh => "请重新登录后再暂存、放弃或提交更改。",
+    }
+}
+
+pub fn offline_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Wait for the connection to recover before changing Source Control state.",
+        Locale::Zh => "请等待连接恢复后再修改源代码管理状态。",
+    }
+}
+
+pub fn reconnecting_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "The client is reconnecting. Source Control actions will resume automatically."
+        }
+        Locale::Zh => "客户端正在重连，源代码管理操作会在恢复后自动可用。",
+    }
+}
+
+pub fn snapshot_loading_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Wait for the current repo snapshot to finish loading.",
+        Locale::Zh => "请等待当前仓库快照加载完成。",
+    }
+}
+
+pub fn scope_switching_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Wait for the repo or branch switch to finish before editing changes.",
+        Locale::Zh => "请等待仓库或分支切换完成后再修改更改列表。",
+    }
+}
+
+pub fn no_repo_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Select an active repo before using Source Control actions.",
+        Locale::Zh => "请先选择激活仓库，再使用源代码管理操作。",
+    }
+}
+
+pub fn handshaking_repo_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "This repo is still negotiating writer access. Try again in a moment.",
+        Locale::Zh => "当前仓库仍在协商写入权限，请稍后再试。",
+    }
+}
+
 pub fn changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Changes",
@@ -211,5 +269,18 @@ mod tests {
     fn no_repo_selected_is_localized() {
         assert_eq!(no_repo_selected(Locale::En), "No repo selected");
         assert_eq!(no_repo_selected(Locale::Zh), "尚未选择仓库");
+    }
+
+    #[test]
+    fn source_control_blocking_hints_are_localized() {
+        assert_eq!(scope_switching(Locale::Zh), "切换作用域中...");
+        assert_eq!(
+            session_expired_hint(Locale::En),
+            "Sign in again before staging, discarding, or committing changes."
+        );
+        assert_eq!(
+            handshaking_repo_hint(Locale::Zh),
+            "当前仓库仍在协商写入权限，请稍后再试。"
+        );
     }
 }

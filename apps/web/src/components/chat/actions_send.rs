@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn markdown_context_is_bounded_on_char_boundaries() {
-        let content = "中".repeat(MAX_CHAT_CONTEXT_CHARS + 3);
+        let content = "é".repeat(MAX_CHAT_CONTEXT_CHARS + 3);
         let bounded = truncate_markdown_context(content);
         assert_eq!(bounded.chars().count(), MAX_CHAT_CONTEXT_CHARS);
     }

@@ -36,6 +36,10 @@
 | **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
+### 1.1 Graph Visualization {#graph-visualization}
+
+当前已实现部分只包括 `deve_core::graph` 的只读 projection baseline：它从当前 repo docs 派生节点、已解析边与未解析链接，不读取或写入 ledger authority、workspace、search index 或 source-control runtime。d3-force / Pixi.js 等高性能 Web 渲染仍是 future renderer，不属于当前验收阻塞项。
+
 ## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。
