@@ -80,5 +80,8 @@ check_contains crates/core/src/ledger/manager/locator.rs "select_local_repo_name
 check_contains crates/core/tests/local_repo_selector_heal_test.rs "resolve_local_repo_name_for_execution_rejects_selector_mismatch"
 check_contains apps/cli/src/server/source_control_http_status_test.rs "test_http_status_rejects_selector_mismatch"
 check_contains apps/cli/src/server/source_control_http_status_test.rs "ServerErrorCode::ScRepoContextInvalid"
+check_contains apps/cli/src/server/handlers/source_control/present_resolve.rs "matched multiple doc rename successors"
+check_contains apps/cli/src/server/handlers/source_control/present_resolve_extra_test.rs "resolve_target_fails_closed_when_doc_id_has_multiple_rename_successors"
+check_contains apps/cli/src/server/handlers/source_control/present_resolve_extra_test.rs "resolve_target_fails_closed_when_doc_id_matches_exact_and_successor"
 
 echo "source-control-baseline-check: ok"
