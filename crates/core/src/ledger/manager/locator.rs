@@ -180,30 +180,14 @@ impl RepoManager {
     }
 
     /// Invariants:
-    /// - 执行级本地 repo 解析在已拿到 `RepoUUID` 时必须优先采用 UUID。
-    /// - `repo_name` 仅作为缺失 UUID 时的回退与诊断信息，不得反向覆盖已解析 UUID。
+    /// - 执行级本地 repo 解析必须保证 `RepoUUID` 与 `repo_name` 指向同一 repo。
+    /// - `repo_name` 仅作为缺失 UUID 时的回退与诊断信息，不得覆盖或被 UUID 静默覆盖。
     pub fn resolve_local_repo_name_for_execution(
         &self,
         repo_id: Option<RepoId>,
         repo_name: Option<&str>,
     ) -> Result<String> {
         let candidates = self.resolve_local_repo_candidates_with_repair(repo_id, repo_name)?;
-        if let Some(from_id) = candidates.by_id {
-            if let Some(from_name) = candidates.by_name
-                && from_name != from_id
-            {
-                let repo_id_label = repo_id
-                    .map(|repo_id| repo_id.to_string())
-                    .unwrap_or_else(|| "<missing>".to_string());
-                tracing::warn!(
-                    "UUID-first local repo resolution ignored stale repo_name: repo_id={}, stale_name={}, resolved_name={}",
-                    repo_id_label,
-                    from_name,
-                    from_id
-                );
-            }
-            return Ok(from_id);
-        }
         self.select_local_repo_name_for_execution(&candidates)
     }
 }

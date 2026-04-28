@@ -74,4 +74,9 @@ check_contains crates/core/src/source_control/pending_fs_target_test.rs "doc_tar
 check_contains crates/core/src/source_control/staging_target_test.rs "doc_target_rejects_unrelated_same_doc_live_entry"
 check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set"
 
+# Local repo execution selectors must fail closed on repo_id/repo_name mismatch.
+check_absent crates/core/src/ledger/manager/locator.rs "ignored stale repo_name"
+check_contains crates/core/src/ledger/manager/locator.rs "select_local_repo_name_for_execution(&candidates)"
+check_contains crates/core/tests/local_repo_selector_heal_test.rs "resolve_local_repo_name_for_execution_rejects_selector_mismatch"
+
 echo "source-control-baseline-check: ok"

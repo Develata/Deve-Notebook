@@ -76,6 +76,7 @@
 - 2026-04-28: P0 Source Control Core Path 已把 `CommitFileDiff` 从 path-only 输出提升为携带 `doc_id` 的 canonical target：commit diff 仍保留兼容的 `path/previous_path` display 字段，但 rename/path-reuse 场景可由稳定文档身份绑定 diff session。
 - 2026-04-28: P0 Source Control Core Path 已把 live `DocDiff` 响应提升为携带 `doc_id` 的 canonical target：本地 diff 从 resolved path 回查文档身份，remote diff 与 merge fallback 直接回传已解析身份，前端 `DiffSessionWire` 保留该身份。
 - 2026-04-28: P0 Source Control Core Path 已收紧 source-control target resolution：带 `doc_id` 的 pending/staged/live diff target 只允许 exact path 或 `renamed_from` successor，不再回退任意同文档 live entry 或 canonical projection path，避免 stale path 静默命中错误变更。
+- 2026-04-28: P0 Source Control Core Path 已把执行级 local repo selector 解析改为 fail-closed：`repo_id + repo_name` 同时出现但解析到不同本地 repo 时直接返回 `Repo selector mismatch`，不再 UUID-first 忽略 stale name。
 
 ### MCP Direction
 
