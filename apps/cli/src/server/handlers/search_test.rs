@@ -150,6 +150,41 @@ mod feature_enabled {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn handler_returns_scoped_empty_results_for_blank_query_and_zero_limit()
+    -> anyhow::Result<()> {
+        let h = edit_harness(false)?;
+        seed_doc_with_content(&h.state, "default", "notes/search.md", "Needle body")?;
+        let state = search_enabled_state(&h.state);
+        let (ch, mut rx) = test_channel(&state);
+        let mut session = session_for_repo("default", h.default_repo_id);
+
+        handle_search(
+            &state,
+            &ch,
+            &mut session,
+            "blank-query".into(),
+            "   ".into(),
+            10,
+            Some(44),
+        )
+        .await;
+        assert_scoped_empty_results(&mut rx, "blank-query", h.default_repo_id, Some(44)).await;
+
+        handle_search(
+            &state,
+            &ch,
+            &mut session,
+            "zero-limit".into(),
+            "needle".into(),
+            0,
+            Some(45),
+        )
+        .await;
+        assert_scoped_empty_results(&mut rx, "zero-limit", h.default_repo_id, Some(45)).await;
+        Ok(())
+    }
+
     fn session_for_repo(repo_name: &str, repo_id: uuid::Uuid) -> WsSession {
         let mut session = WsSession::new();
         session.switch_repo(repo_name.into(), Some(repo_id));
@@ -159,6 +194,30 @@ mod feature_enabled {
     fn test_channel(state: &Arc<AppState>) -> (DualChannel, mpsc::Receiver<ServerMessage>) {
         let (tx, rx) = mpsc::channel(8);
         (DualChannel::new(state.tx.clone(), tx), rx)
+    }
+
+    async fn assert_scoped_empty_results(
+        rx: &mut mpsc::Receiver<ServerMessage>,
+        expected_request_id: &str,
+        expected_repo_id: uuid::Uuid,
+        expected_scope_nonce: Option<u64>,
+    ) {
+        match rx.recv().await {
+            Some(ServerMessage::SearchResults {
+                request_id,
+                repo_id,
+                branch,
+                scope_nonce,
+                results,
+            }) => {
+                assert_eq!(request_id, expected_request_id);
+                assert_eq!(repo_id, Some(expected_repo_id));
+                assert_eq!(branch, None);
+                assert_eq!(scope_nonce, expected_scope_nonce);
+                assert!(results.is_empty());
+            }
+            other => panic!("expected empty SearchResults, got {:?}", other),
+        }
     }
 
     fn search_enabled_state(source: &Arc<AppState>) -> Arc<AppState> {

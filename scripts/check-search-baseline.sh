@@ -29,6 +29,7 @@ check_contains apps/cli/src/server/handlers/search.rs "branch: scope.branch.clon
 check_contains apps/cli/src/server/handlers/search.rs "scope_nonce"
 check_contains apps/cli/src/server/handlers/search.rs "Search feature disabled for current runtime profile"
 check_contains apps/cli/src/server/handlers/search.rs "Search feature not enabled"
+check_contains apps/cli/src/server/handlers/search_test.rs "handler_returns_scoped_empty_results_for_blank_query_and_zero_limit"
 check_contains apps/cli/src/server/state.rs "pub search_available: bool"
 check_contains apps/cli/src/server/start.rs "Search baseline scan enabled"
 check_absent apps/cli/src/server/start.rs "load_search_service"
