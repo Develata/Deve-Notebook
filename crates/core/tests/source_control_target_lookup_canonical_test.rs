@@ -59,3 +59,86 @@ fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set()
             .contains("Source control target not resolved")
     );
 }
+
+#[test]
+fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
+    let (dir, repo) = new_repo();
+    write_workspace_file(&dir, "notes/a.md", "A");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("A"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed a");
+    repo.stage_pending("notes/a.md").expect("stage a");
+    repo.commit_staged("commit a").expect("commit a");
+    let doc_a = repo
+        .get_docid("notes/a.md")
+        .expect("lookup a")
+        .expect("doc a");
+
+    write_workspace_file(&dir, "notes/b.md", "B");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/b.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("B"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed b");
+    repo.stage_pending("notes/b.md").expect("stage b");
+    repo.commit_staged("commit b").expect("commit b");
+    let doc_b = repo
+        .get_docid("notes/b.md")
+        .expect("lookup b")
+        .expect("doc b");
+
+    assert_ne!(doc_a, doc_b);
+    write_workspace_file(&dir, "notes/a.md", "B changed");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_b),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("B changed"),
+                detected_at: 3,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed reused path modification");
+
+    let (doc_id, path, old_content, new_content) = repo
+        .workdir_diff_payload_for_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget {
+                path: "notes/a.md".into(),
+                doc_id: Some(doc_b),
+            },
+        )
+        .expect("payload should preserve requested doc identity");
+
+    assert_eq!(doc_id, Some(doc_b));
+    assert_eq!(path, "notes/a.md");
+    assert_eq!(old_content, "B");
+    assert_eq!(new_content, "B changed");
+}

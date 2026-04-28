@@ -85,5 +85,7 @@ check_contains apps/cli/src/server/handlers/source_control/present_resolve_extra
 check_contains apps/cli/src/server/handlers/source_control/present_resolve_extra_test.rs "resolve_target_fails_closed_when_doc_id_matches_exact_and_successor"
 check_contains apps/cli/src/server/handlers/source_control/service/target.rs "current_entry(entries, resolved)"
 check_contains apps/cli/src/server/handlers/source_control/service/target_related_test.rs "related_targets_keep_resolved_doc_id_when_old_path_is_reused"
+check_contains crates/core/src/ledger/manager/source_control_workdir.rs "workdir_diff_inputs_for_resolved_target"
+check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused"
 
 echo "source-control-baseline-check: ok"
