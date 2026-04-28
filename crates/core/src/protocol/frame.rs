@@ -13,6 +13,7 @@ pub const WS_PROTOCOL_VERSION: u16 = 2;
 pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
 pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF2";
+pub const MISSING_WS_FRAME_MAGIC: &str = "missing WS frame magic";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WsFrameFormat {
@@ -164,7 +165,7 @@ fn decode_required_binary_frame<T: DeserializeOwned>(
     bytes: &[u8],
 ) -> Result<T, ProtocolFrameError> {
     let payload = framed_payload(bytes)
-        .ok_or_else(|| ProtocolFrameError::Decode("missing WS frame magic".to_string()))?;
+        .ok_or_else(|| ProtocolFrameError::Decode(MISSING_WS_FRAME_MAGIC.to_string()))?;
     decode_bincode(payload)
 }
 

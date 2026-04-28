@@ -36,6 +36,7 @@ async fn browser_invalid_bincode_uses_current_scope_nonce_when_sync_scope_is_sta
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.detail.as_deref(), Some("missing WS frame magic"));
             assert_eq!(scope_nonce, Some(17));
         }
         other => panic!("expected scoped ProtocolError, got {:?}", other),

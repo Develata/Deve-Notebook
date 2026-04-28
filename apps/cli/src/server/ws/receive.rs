@@ -11,7 +11,8 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::protocol::frame::{
-    ProtocolFrameError, WsFrameFormat, decode_client_binary, decode_client_json_with_format,
+    MISSING_WS_FRAME_MAGIC, ProtocolFrameError, WsFrameFormat, decode_client_binary,
+    decode_client_json_with_format,
 };
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -144,6 +145,7 @@ fn invalid_client_message(detail: impl Into<String>) -> ServerError {
 fn error_detail(error: &ProtocolFrameError, fallback: &'static str) -> String {
     match error {
         ProtocolFrameError::UnsupportedVersion { .. } => error.to_string(),
+        ProtocolFrameError::Decode(detail) if detail == MISSING_WS_FRAME_MAGIC => detail.clone(),
         ProtocolFrameError::Decode(_) => fallback.to_string(),
     }
 }
