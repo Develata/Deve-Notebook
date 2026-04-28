@@ -12,6 +12,10 @@
 
 本章定义类 Git 工作流在 Deve-Note 中的工程实现合同。
 
+术语边界：本章的 `stage / commit / diff / merge` 是 Source Control 交互语义，
+不是 Git object store、Git index 或 `.git/` 目录的 authority 承诺。核心
+authority 仍是 ledger facts 与 commit anchors。
+
 本章只处理三类问题：
 
 1. 工作区差异如何从文件系统事件进入 `pending_fs_ops`。
@@ -24,6 +28,11 @@
 
 - 本章定义的 diff / merge 仅适用于同一逻辑 repo。
 - `RepoId` 不一致时，任何自动 merge 都必须视为 undefined behavior 并 fail-closed。
+- Core Source Control MUST NOT 通过 Git CLI、`.git/objects`、Git index 或 Git refs
+  判定 Deve commit 是否成立。
+- Git mirror 是一等生态桥接层，但只能作为 projection export/import/publish 适配层；
+  导入必须生成 Deve ledger facts，导出不得反向改写 ledger authority。
+- Git index 只允许在 mirror update 的最后提交阶段使用，MUST NOT 替代 Deve staging。
 
 ## 2. Authoritative Entities
 
@@ -53,6 +62,24 @@
 - 文本差异最终必须收敛为 `Content Facts`。
 - rename / move / create / delete 最终必须收敛为 `Structure Facts`。
 - `pending_fs_ops`、`staging`、`diff cache` 都不是 authority。
+- Git mirror commit 不是 authority；它只是已确认 Deve commit 的外部生态映射。
+
+### 2.3.1 Git Mirror Lifecycle
+
+Git mirror 生命周期必须挂在 Source Control authority 之后：
+
+```text
+DeveStaged
+  -> DeveLedgerCommit
+  -> ProjectionPersisted
+  -> GitMirrorQueued
+  -> GitMirrorCommitted | GitMirrorOutOfSync
+```
+
+- `DeveLedgerCommit` 一旦成功，不得因为 Git mirror 失败而回滚。
+- `GitMirrorOutOfSync` 必须能被 `status` / `repair` / retry 路径观测。
+- 外部 Git 操作造成的工作区变化进入 `pending_fs_ops` 或显式 `GitImportRequested`，
+  不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。
 
 ### 2.4 Diff Identity Model
 

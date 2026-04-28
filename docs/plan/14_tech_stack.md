@@ -33,6 +33,7 @@
 | **Graph**    | **Core read-only projection + d3-force/Pixi.js future renderer** | Verified (Projection Baseline) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；高性能 Web Canvas 渲染仍是 future。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Planned (P1/P2) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层，支持 export/import/push/status，但不得成为 ledger/source-control 真相。 |
 | **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
@@ -45,6 +46,21 @@
 当前 repo-scoped baseline search 必须保持可禁用、可降级。`search` feature 下允许保留 Tantivy service
 作为 Standard profile 的可选索引实现；低配模式不得依赖常驻重型索引，后续增量索引优化不得反向污染
 ledger authority 或 repo scope gate。
+
+### 1.3 Git Ecosystem Mirror Bridge {#git-ecosystem-bridge}
+
+Deve 的核心版本管理是 ledger-backed Source Control，不复用 Git object store、Git
+index、Git refs 或 `.git/` 目录作为 authority。Git 生态作为 planned first-class
+mirror bridge：projection export、受控 import、backup/publish、远程托管与 release
+交付。
+
+该 bridge 的工程边界：
+
+- `.notegit/` 与 ledger/source-control tables 是唯一业务真相。
+- `.git/` 可以与 `.notegit/` 共存，repo-local `.gitignore` 必须忽略 `.notegit/`。
+- Git mirror 以 Deve commit/projection 为粒度同步，不镜像 `.notegit/` 的内部 side-table 操作。
+- Git mirror failure 只产生 `GitMirrorOutOfSync` 与 retry/repair 需求，不回滚 Deve commit。
+- 任何 Git import 都必须生成 Deve ledger facts；任何 Git export 都不得反向改写 ledger authority。
 
 ## 2. Markdown Compatibility Checklist
 

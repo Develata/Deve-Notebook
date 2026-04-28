@@ -13,10 +13,11 @@
 | 2 | Browser storage / degraded write boundary | P0 | `apps/web/src/storage/`, `apps/web/src/hooks/use_core/`, `docs/plan/04_storage.md`, `docs/plan/16_web_thin_client_ledger.md` | WebCrypto/IndexedDB capability、私钥语义、degraded read-only、SyncPush/write blocking 可测试且有文档边界。 |
 | 3 | Security hardening small batch | P1 | `apps/cli/src/server/auth/`, `apps/cli/src/server/security.rs`, `apps/cli/src/server/setup.rs`, `docs/plan/09_auth.md` | key-file permissions、login audit fields、production CORS origin、dev CORS warning text 与 plan 对齐。 |
 | 4 | Path normalization cleanup | P1 | `crates/core/src/plugin/manifest.rs`, server/web path wrappers, `deve_core::utils::path` | 手写 slash replacement 被移除或在边界 wrapper 中明确豁免；不改变已存储路径语义。 |
-| 5 | Rendering current/future split | P1/P2 | `docs/plan/03_rendering.md`, `docs/features/03_rendering.md`, `apps/web/src/editor/`, `apps/web/src/utils/markdown.rs` | 当前可验收 rendering 行为与 future hybrid-rendering 分离；partial feature 不再被描述成 complete。 |
-| 6 | Desktop / Mobile native adapter plan | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future native shell | 实现前先把 minimal adapter 职责定清楚：embedded service、readiness/offline events、endpoint/session injection。 |
-| 7 | Graph visualization next step | P3-13 | `crates/core/src/graph/`, future graph UI | read-only projection 不反向污染 ledger/search/source-control；visualization 只消费 projection。 |
-| 8 | Docker release smoke rerun | P2 | Docker host environment, `scripts/smoke-docker-release.sh` | Docker daemon 可用后重跑；环境阻塞继续与代码失败分开记录。 |
+| 5 | Git ecosystem mirror bridge plan-to-code | P1/P2 | `docs/plan/04_storage.md`, `docs/plan/07_diff_logic.md`, `docs/plan/12_commands.md`, future `crates/core/src/git_bridge/`, future CLI git commands | `.notegit/` 与 `.git/` 共存；`.gitignore` 忽略 `.notegit/`；watcher 忽略 `.git/`；Deve commit 可镜像为 Git commit；失败进入 `GitMirrorOutOfSync`；外部 Git 变化只能 import。 |
+| 6 | Rendering current/future split | P1/P2 | `docs/plan/03_rendering.md`, `docs/features/03_rendering.md`, `apps/web/src/editor/`, `apps/web/src/utils/markdown.rs` | 当前可验收 rendering 行为与 future hybrid-rendering 分离；partial feature 不再被描述成 complete。 |
+| 7 | Desktop / Mobile native adapter plan | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future native shell | 实现前先把 minimal adapter 职责定清楚：embedded service、readiness/offline events、endpoint/session injection。 |
+| 8 | Graph visualization next step | P3-13 | `crates/core/src/graph/`, future graph UI | read-only projection 不反向污染 ledger/search/source-control；visualization 只消费 projection。 |
+| 9 | Docker release smoke rerun | P2 | Docker host environment, `scripts/smoke-docker-release.sh` | Docker daemon 可用后重跑；环境阻塞继续与代码失败分开记录。 |
 
 ## 最近完成基线
 

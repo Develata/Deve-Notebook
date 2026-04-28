@@ -104,6 +104,26 @@ Workspace_r = P_r ⊕ D_r
 
 - `.notegit/` MUST 被 watcher 忽略。
 - `.notegit/` 可以随 repo 备份，但 MUST NOT 被跨 repo 复用。
+- `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
+
+### 3.2.1 Git Mirror Boundary
+
+Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存：
+
+- `.notegit/` 是 Deve-owned authority/runtime 目录，保存 ledger-aware workflow state。
+- `.git/` 是 Git ecosystem mirror 目录，用于复用 Git 工具链、远程托管、审计、备份与发布生态。
+- repo-local `.gitignore` MUST 忽略 `.notegit/`，避免 Git mirror 泄漏 Deve runtime state。
+- watcher / scan / sync MUST 忽略 `.notegit/` 与 `.git/` 的内部路径。
+- Deve core MUST NOT 使用 `.git/` 作为 repo authority、runtime side table 或 hidden metadata 目录。
+- `.git/` 不得参与 ledger fold、repo scope 解析、stage/commit authority 或 repair。
+
+Git mirror 是 planned first-class bridge，而不是 authority 替代品：
+
+- Deve ledger commit 成功并持久化 projection 后，系统 MAY queue Git mirror update。
+- Git mirror update MAY 执行 `git add -A` 与 Git commit，并在 commit message / notes / trailer 中记录 `Deve-Commit-Id`、`ledger_seq`、`repo_id` 等映射。
+- Git mirror 失败 MUST NOT rollback 已成功的 Deve ledger commit；系统必须标记 `GitMirrorOutOfSync`，并提供 retry / repair / status 可观测路径。
+- 外部 `git checkout/reset/pull/rebase` 造成的工作区变化只能进入 pending/import 路径，MUST NOT 自动反向改写 ledger authority。
+- Git import 必须生成 Deve ledger facts；Git export 不得反向改写 ledger authority。
 
 ### 3.3 Collision Rules
 

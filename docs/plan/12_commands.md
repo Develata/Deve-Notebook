@@ -37,10 +37,15 @@
     *   `Cmd+P` / `Ctrl+P`: 呼出 Quick Open (文件跳转)。
     *   `Cmd+Shift+K` / `Ctrl+Shift+K`: 呼出 branch 切换。
 
-*   **Git / Version Control**:
-    *   `Git: Sync`: 同步 (Pull & Push).
-    *   `Git: Commit`: 提交更改.
-    *   `Git: Push`: 推送至远程.
+*   **Source Control / Git-like Workflow**:
+    *   `Source Control: Sync`: 同步 Deve repo-scoped changes.
+    *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
+    *   `Source Control: Push`: 推送 Deve source-control state；若启用 Git mirror，可触发 mirror publish。
+    *   `Git: Status`: 查看 `.git` mirror 是否存在、是否落后、是否 `GitMirrorOutOfSync`。
+    *   `Git: Export Mirror`: 将当前 projection 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
+    *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit。
+    *   `Git: Push Mirror`: 将 Git mirror 推送到远端；不得绕过 Deve authority。
+    *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.
@@ -50,8 +55,8 @@
 *   **Current implemented subset**:
     *   Command Palette 当前覆盖 Open / Settings / Toggle Language / Switch Peer /
         Establish Branch / Merge Peer / Toggle AI Chat（条件可见）。
-    *   Git Sync / Commit / Push 与 AI Retry / Backend / PLAN / BUILD 面板命令仍属于
-        Planned / Optional，除非后续验收用例绑定到具体实现。
+    *   Source Control Sync / Commit / Push、Git mirror commands 与 AI Retry / Backend /
+        PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。
