@@ -98,6 +98,30 @@ mod tests {
     }
 
     #[test]
+    fn test_system_prompt_includes_current_markdown_and_mode_boundary() {
+        let plugin = load_ai_chat();
+        let context = serde_json::json!({
+            "current_file": "notes/today.md",
+            "current_markdown": "# Today\n\n- ship Native AI Chat minimum",
+            "chat_mode": "build",
+            "selection": {"text": "ship Native AI Chat minimum"}
+        });
+        let context = rhai::serde::to_dynamic(&context).expect("context to dynamic");
+
+        let result = plugin
+            .call("build_system_prompt", vec![context])
+            .expect("build prompt");
+        let prompt = result.into_string().expect("prompt string");
+
+        assert!(prompt.contains("Current file: notes/today.md"));
+        assert!(prompt.contains("BUILD mode"));
+        assert!(prompt.contains("Current markdown content"));
+        assert!(prompt.contains("ship Native AI Chat minimum"));
+        assert!(prompt.contains("do not execute workspace"));
+        assert!(prompt.contains("Selected text"));
+    }
+
+    #[test]
     fn test_chat_without_api_key_returns_error() {
         let plugin = load_ai_chat();
         // 调用 chat 时没有 API key 应返回错误消息 (不 panic)

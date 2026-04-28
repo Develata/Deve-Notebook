@@ -1,10 +1,12 @@
-use crate::editor::ffi::try_get_editor_selection;
+use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 
 use crate::components::chat::slash_commands::{
     ChatSessionMode, apply_slash_command, parse_slash_command,
 };
+
+const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
 
 pub fn make_send_text(
     core: CoreState,
@@ -49,10 +51,16 @@ pub fn make_send_text(
                     .map(|(_, path)| path.clone())
             })
             .unwrap_or_default();
+        let current_markdown = if current_doc_path.is_empty() {
+            String::new()
+        } else {
+            truncate_markdown_context(getEditorContent())
+        };
         let sel_json = try_get_editor_selection().unwrap_or_else(|| "null".to_string());
         let selection = serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
         let context = serde_json::json!({
             "current_file": current_doc_path,
+            "current_markdown": current_markdown,
             "selection": selection,
             "chat_mode": session_mode.get_untracked().as_str(),
         });
@@ -61,6 +69,13 @@ pub fn make_send_text(
         core.on_plugin_call
             .run((req_id, plugin_id, "chat".to_string(), args));
     })
+}
+
+fn truncate_markdown_context(content: String) -> String {
+    let Some((end, _)) = content.char_indices().nth(MAX_CHAT_CONTEXT_CHARS) else {
+        return content;
+    };
+    content[..end].to_string()
 }
 
 pub fn make_send_example(
@@ -87,4 +102,22 @@ pub fn make_send_message(
         set_input.set(String::new());
         send_text.run(msg);
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAX_CHAT_CONTEXT_CHARS, truncate_markdown_context};
+
+    #[test]
+    fn markdown_context_is_bounded_on_char_boundaries() {
+        let content = "中".repeat(MAX_CHAT_CONTEXT_CHARS + 3);
+        let bounded = truncate_markdown_context(content);
+        assert_eq!(bounded.chars().count(), MAX_CHAT_CONTEXT_CHARS);
+    }
+
+    #[test]
+    fn markdown_context_keeps_short_content() {
+        let content = "# Note\n\nbody".to_string();
+        assert_eq!(truncate_markdown_context(content.clone()), content);
+    }
 }

@@ -58,6 +58,15 @@ fn build_system_prompt(context) {
     if ctx["current_file"] != () && ctx["current_file"] != "" {
         system += "\n\nCurrent file: " + ctx["current_file"];
     }
+    if ctx["chat_mode"] == "plan" {
+        system += "\n\nPLAN mode: analyze the note, propose a concise implementation plan, and do not claim to edit files or call tools.";
+    } else if ctx["chat_mode"] == "build" {
+        system += "\n\nBUILD mode: provide concrete code-oriented guidance and patches for the user to review; do not execute workspace, source-control, shell, MCP, or skill actions.";
+    }
+    if ctx["current_markdown"] != () && ctx["current_markdown"] != "" {
+        let markdown = ctx["current_markdown"];
+        system += "\n\nCurrent markdown content:\n```markdown\n" + markdown + "\n```";
+    }
     if ctx["selection"] != () && ctx["selection"]["text"] != () {
         let sel_text = ctx["selection"]["text"];
         system += "\n\nSelected text:\n```\n" + sel_text + "\n```";
