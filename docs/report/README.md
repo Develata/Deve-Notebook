@@ -17,11 +17,12 @@ Most files here are **non-authoritative**. They record what an audit believed at
 2. Prefer the newest dated baseline when comparing reports.
 3. Re-check code and `architecture-diff.md` before acting on any reported gap.
 4. Do not copy old report assertions into plan or operation docs without revalidation.
-5. In `next-tasks.md`, only `Current Execution Queue` and `Current Status Notes` are active. The legacy branch section is retained only as a short migration note.
+5. `next-tasks.md` 中只有 `当前执行队列` 是 active；已完成实现历史应进入 dated reports。
 
 ## Current Baseline
 
-- Latest broad baseline: `baseline-2026-04-08.md`
+- Latest broad code-review baseline: `code-review-2026-04-28.md`
+- Previous broad baseline: `baseline-2026-04-08.md` (historical only)
 - Latest release smoke status: `release-smoke-status-2026-04-28.md`
 - Latest file cohesion audit: `soft-size-audit-2026-04-27.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
@@ -33,6 +34,16 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - `release-smoke-status-*`: release/runtime smoke status snapshots
 - `*-audit-*`: historical audit notes
 - `next-tasks.md`: current execution queue plus compact legacy migration notes
+
+## Archived 2026-04-08 Gap Inputs
+
+`baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` 现在只作为归档证据。
+它们仍可解释若干实现批次为何启动，但其中大量结论已被
+`code-review-2026-04-28.md` 与当前代码覆盖。
+
+已知过时断言包括：Watcher backend 缺失、WS Unauthorized 为 plain text、
+Agent Bridge 默认拉起 CLI、locale detection 缺失、`server/mod.rs` 过大，以及
+MCP 可作为产品 runtime 方向。
 
 ## Retired In 2026-04-28 Cleanup
 

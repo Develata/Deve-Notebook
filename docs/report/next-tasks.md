@@ -1,115 +1,44 @@
-# 剩余工作分支规划 (Next Tasks — Branch Decomposition)
+# 当前下一步任务
 
-> **生成日期**: 2026-02-28
-> **更新日期**: 2026-04-28
-> **当前权威队列**: 以 “Current Execution Queue” 为准；下方旧 Branch A-E 仅保留为历史分支拆解参考。
+> 更新日期：2026-04-28
+>
+> 本文件只记录 active execution queue。已完成的实现历史应进入 dated reports，例如
+> `code-review-2026-04-28.md` 与 `release-smoke-status-2026-04-28.md`。
 
-## Current Execution Queue
-
-本队列按当前项目方向重新排序：先补 P0 根基，再补 P1 产品可用主线，然后把 Desktop/Mobile 与 Graph 提上日程，最后处理 P2 运维与体验补强。AI Chat 只保持最小可用；MCP 不进入产品实现路线，相关需求由 Skills + 受控 CLI 工具调用替代。
+## 当前执行队列
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
-|:-----|:-----|:------|:-----|:---------|
-| 1 | P0 Authority / Repo Health / Repair | P0 | `crates/core/src/ledger/`, `crates/core/src/sync/`, `apps/cli/src/commands/{node_check,repair}.rs` | authority 不被 projection 反写污染；degraded repo 显式可观测；repair/node-check fail-closed |
-| 2 | P0 WS / Repo-Scoped Protocol / Write Readiness | P0 | `crates/core/src/protocol/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/` | `repo_id / branch / scope_nonce / writer_ready` 全路径稳定；结构化错误覆盖 auth/ws/write gate |
-| 3 | P0 Source Control Core Path | P0 | `crates/core/src/source_control/`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc*` | Stage / Commit / Diff / Merge / Discard 走 Node-first、doc_id-first、fail-closed；server handler 不散落 authority 逻辑 |
-| 4 | P1 Search Baseline | P1 | `crates/core/src/search/`, `apps/cli/src/server/handlers/search.rs`, `apps/web/src/components/search_box/` | 当前 repo-scoped baseline search 稳定；低配模式可禁用；Tantivy 增量索引仍为 future optimization |
-| 5 | P1 Settings Current Boundary | P1 | `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings*` | 继续只承诺 `config.toml + config print/set + UI runtime feedback`；server-backed Settings API 不进入当前验收 |
-| 6 | P1 Native AI Chat Minimum | P1 | `apps/cli/src/server/ai_chat/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs` | 保持“读当前 Markdown + chat + PLAN/BUILD 最小模式”；不默认启用 MCP / Skills / Source Control 写入 |
-| 7 | P3-10 Desktop / Mobile Native Track | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future Tauri shell | Desktop/Mobile 逐步进入路线图；先明确 adapter、embedded service、offline/readiness 边界，再实现 native packaging |
-| 8 | P3-13 Graph / Knowledge Visualization | P3-13 | future graph data model, `docs/plan/14_tech_stack.md` | 等 repo/search/metadata 数据稳定后再实现；不得反向污染 ledger authority |
-| 9 | P2 Runtime / Release / UI Debt | P2 | `.github/`, `scripts/`, `docs/plan/15_release.md`, `apps/web/src/hooks/use_core/`, `apps/web/src/i18n/` | runtime observability、release smoke、CoreSignals 收敛、i18n allowlist debt 逐步清理 |
+|:--|:--|:--|:--|:--|
+| 1 | Sync vector wire contract | P0 | `docs/plan/05_network.md`, `crates/core/src/sync/protocol.rs`, `crates/core/src/protocol/{client,server}.rs`, WS sync handlers | 实现显式 `known_vector/server_vector`，或修订 plan 接受 `SyncHello.vector + range requests` 作为当前合同。 |
+| 2 | Browser storage / degraded write boundary | P0 | `apps/web/src/storage/`, `apps/web/src/hooks/use_core/`, `docs/plan/04_storage.md`, `docs/plan/16_web_thin_client_ledger.md` | WebCrypto/IndexedDB capability、私钥语义、degraded read-only、SyncPush/write blocking 可测试且有文档边界。 |
+| 3 | Security hardening small batch | P1 | `apps/cli/src/server/auth/`, `apps/cli/src/server/security.rs`, `apps/cli/src/server/setup.rs`, `docs/plan/09_auth.md` | key-file permissions、login audit fields、production CORS origin、dev CORS warning text 与 plan 对齐。 |
+| 4 | Path normalization cleanup | P1 | `crates/core/src/plugin/manifest.rs`, server/web path wrappers, `deve_core::utils::path` | 手写 slash replacement 被移除或在边界 wrapper 中明确豁免；不改变已存储路径语义。 |
+| 5 | Rendering current/future split | P1/P2 | `docs/plan/03_rendering.md`, `docs/features/03_rendering.md`, `apps/web/src/editor/`, `apps/web/src/utils/markdown.rs` | 当前可验收 rendering 行为与 future hybrid-rendering 分离；partial feature 不再被描述成 complete。 |
+| 6 | Desktop / Mobile native adapter plan | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future native shell | 实现前先把 minimal adapter 职责定清楚：embedded service、readiness/offline events、endpoint/session injection。 |
+| 7 | Graph visualization next step | P3-13 | `crates/core/src/graph/`, future graph UI | read-only projection 不反向污染 ledger/search/source-control；visualization 只消费 projection。 |
+| 8 | Docker release smoke rerun | P2 | Docker host environment, `scripts/smoke-docker-release.sh` | Docker daemon 可用后重跑；环境阻塞继续与代码失败分开记录。 |
 
-### Current Status Notes
+## 最近完成基线
 
-- 2026-04-28: P0 Authority / Repo Health / Repair 已加固 runtime `repo_health` 聚合不变量：`degraded` 计数按 `local_total` clamp，`healthy + degraded == local_total`，REL-006 smoke 会拒绝不一致的状态/计数组合。
-- 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
-- 2026-04-28: P1 Search Baseline 已补 SearchResults scope-switch 直接回归：repo/branch switch pending 时即使 `request_id / repo_id / branch / scope_nonce` 字段匹配，也必须丢弃结果，避免切换过程污染新 scope。
-- 2026-04-28: P1 Search Baseline 已补 search handler 边界回归：空 query 与 `limit=0` 不报错、不丢 scope，返回带 `request_id / repo_id / branch / scope_nonce` 的空 `SearchResults`。
-- 2026-04-28: P1 Search Baseline 已补 baseline scan 排序/截断回归：结果按 score 降序、同分按 path 升序，limit 在排序后截断，确保 path match 优先于 content-only match。
-- 2026-04-28: P1 Settings Current Boundary 已补 UI 边界提示：Settings 面板明确说明当前只提供运行时/本地 UI 反馈，持久运行时配置仍通过 `deve config set` 写入 `config.toml`；baseline 脚本已检查该边界，server-backed Settings API 仍不进入当前验收。
-- 2026-04-28: P1 Settings Current Boundary 已补 `deve config set` allowlist 与 `13_settings.md` config.toml key 表一致性测试；同步移除未实现的 `DEVE_PROFILE=debug` 文档表述，当前只承诺 `standard / low-spec`。
-- 2026-04-28: P1 Settings Current Boundary 已补 `ai.mode=trusted-cli` runtime fallback 回归：缺少 `AGENT_CLI_PATH` 或路径不是绝对路径时必须回退 `native`，只有 enabled/trusted/absolute path 全满足时保留 `trusted-cli`。
-- 2026-04-28: P1 Native AI Chat Minimum 已补当前 Markdown 上下文与 PLAN/BUILD prompt 边界：前端向 Native AI Chat 传递有界当前正文，ai-chat 插件将当前文件、正文、selection、模式写入 system prompt；默认仍不开放 workspace/source-control/shell/MCP/skill 执行能力。
-- 2026-04-28: P1 Native AI Chat Minimum 已把 `/plan`、`/build`、`/agents` slash command 的本地消费路径抽成可单测合同：slash command 只切换 Native `PLAN/BUILD` session mode，不切换 backend，不发起 plugin call。
-- 2026-04-28: P1 Native AI Chat Minimum 已补 BUILD Apply UI gate 的可测合同：assistant code block 的 Apply 标签与点击消费仅在 Native `BUILD` session mode 启用，`PLAN` 与 user message 不暴露写入口。
-- 2026-04-28: P1 Native AI Chat Minimum 已补 BUILD Apply 写入路径合同：受控 Apply 生成追加到当前 Markdown 末尾的 UTF-16 `Op::Insert`，超出 `u32` 位置范围 fail-closed，最终 `ClientMessage::Edit` 必须携带当前 `scope_nonce`。
-- 2026-04-28: P3-10 Desktop/Mobile Native Track 已补当前 native adapter 边界：Desktop/Mobile docs 明确 Web responsive shell 是当前可验收映射，Tauri packaging 仍为 future；adapter 第一阶段仅负责内嵌服务、endpoint/session 注入与 readiness/offline 事件，不得重定义 core/server authority。
-- 2026-04-28: P3-13 Graph / Knowledge Visualization 已补 core 只读 projection baseline：`deve_core::graph` 从 repo-scoped docs 派生节点、已解析边与未解析链接，支持 wikilink / markdown `.md` link 与路径归一化；不读取/写入 ledger、metadata、workspace、search 或 source-control 状态，d3/Pixi 渲染仍是 future。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已把 native/graph 新基线纳入 dev runbook、release workflow 与 release baseline 检查，新增 `scripts/check-graph-baseline.sh` 防止 graph projection 漂移成 ledger/workspace authority path。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已完成一批小范围 i18n 收口：Dashboard repo 摘要、Activity/Mobile Pin/Unpin title、Editor outline/spectator 文案、Source Control no-repo notice 均改为 `t::*` facade，并补对应 i18n 单测。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已加固 `scripts/plan-coverage.sh` i18n 回归门禁：对已迁移的英文 UI 文案做精确回归扫描；同时修正 graph plan_ref anchor 与 Source Control status notice 的剩余 i18n 漏点，使 plan coverage 阻塞项回到 0。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已把 Source Control 错误提示、历史记录提示、counterpart badge 与 diff empty-state 文案集中迁入 `t::source_control::*`，组件侧 i18n allowlist debt 从 22 降到 1；剩余 `"中文"` 为语言选择器自指标签。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已把 Settings 语言选择器的自指语言标签也迁入 `t::settings::*`，`scripts/plan-coverage.sh` 的 i18n allowlisted debt 降到 0。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 i18n locale detection/current preference：启动时优先读取本地 `deve.ui.locale`，其次读取浏览器 `navigator.language`，只接受当前已支持的 `en-* / zh-*` 语言并对不支持标签回退 `en-US`；Settings 与 Command Palette 语言切换会写回本地偏好。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `11_i18n.md` 稳定 anchors，并给 `apps/web/src/i18n/**` 当前 facade 模块补齐 plan_ref；`scripts/plan-coverage.sh --summary-missing-plan-ref` 中 i18n 目录 missing plan_ref 从 17 降到 0。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/api` WebSocket/API runtime 小批次 plan_ref，并在 `05_network.md`、`15_release.md`、`16_web_thin_client_ledger.md` 补稳定 anchors；全仓 missing plan_ref 从 622 降到 612。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/shortcuts` 与 `apps/web/src/storage` plan_ref，并同步 `04_storage.md`、`08_ui_design_01_web.md`、`12_commands.md`、`13_settings.md` 与 `docs/plan/AGENTS.md` 的稳定 anchors；下一轮继续从低耦合 Web runtime/support 模块向高耦合 hooks/components 收敛。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/utils` plan_ref，并把 Source Control history 的相对时间文案迁到 `i18n::time` facade，避免 util 层继续生成固定中文 UI 文案；Markdown renderer 绑定到渲染白名单 anchor。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/utils` plan_ref：路径规范化绑定 `04_storage#internal-path-normalization`，`.notegit` helpers 绑定 repo runtime layout，纯哈希/模块入口标记为 infra。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 core 小模块 plan_ref：`models` 绑定 facts partition，`state` 绑定 document authority / UTF-16 runtime，`search` 绑定 feature-gated search baseline，`skill` 绑定 MCP 退役后的 Skills + 受控 CLI 扩展边界；`lib.rs/error.rs` 标记为 infra。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 CLI/Web 顶层入口 plan_ref：CLI `main/dispatch/admin_api/dump_support` 绑定 command/diagnostic/export 边界，Web `main.rs` 绑定 single-binary Web shell 与 WS runtime 入口。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补剩余 core/app 单点入口 plan_ref：`config` 绑定 Settings 与 Trusted CLI fallback，`context` 绑定 plugin-host 能力边界，`vfs` 绑定 watcher inode 抽象，`mock_divergence` 绑定 repo scope/source-control 测试边界。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/protocol` 与 `crates/core/src/security` plan_ref：协议消息/结构化错误绑定 WS runtime 与 Web thin-client 写意图，HTTP auth 类型绑定 auth endpoint/session/unauthorized 合同，安全 key/cipher/storage 绑定 repo runtime layout 与 sync runtime，纯哈希原语标记为 infra。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/cli/src/commands` plan_ref：命令模块绑定 `12_commands`，scan/watch 绑定 watcher，recover/repair/export 绑定 projection/backup/repair，repo arg 绑定 UUID-first selector，serve/live proxy 绑定 server runtime 与 runtime observability。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/source_control` plan_ref：pending/staging/commit side tables 绑定 repo runtime layout，target resolution 绑定路径规范化与 source-control runtime，commit diff 绑定 tree projection 与稳定身份 diff 约束。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/sync` plan_ref：SyncEngine/vector/transfer/manual buffer 绑定 network sync runtime，repo-scoped registry 绑定 repo scope runtime，watcher pending/scan/dir guard 绑定 watcher contract，projection/rebuild/reconcile/snapshot policy 绑定 projection contract。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/cli/src/server` 第一批 plan_ref：channel/sync handler 绑定 server WS runtime，tree registry 绑定 repo scope 与 tree projection，rate limit/router/security/setup 绑定 auth 与 runtime 边界，metrics/node role 绑定 release observability。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 Source Control server handler 剩余入口 plan_ref：HTTP query/mutation、WS changes/staging/discard/conflict、repo scope resolver、service write 与 error facade 均绑定 source-control runtime，并按需绑定 repo scope、watcher 或 repo runtime layout。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 Docs CRUD server handler plan_ref：create/delete/rename/copy/path validation/node target/file register 绑定 document authority bridge、repo scope、tree projection、internal path normalization 与 watcher refresh 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/cli/src/server` 剩余运行时入口 plan_ref：admin/listing/repo/search/key-exchange/document/shadow/source-control proxy/recovery support 绑定各自 authority、repo-scope、search、backup/export、WS 与 source-control proxy 合同，使 CLI server runtime 缺失项收敛到 0。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger 顶层基础批次 plan_ref：database/schema/init/cache 绑定 facts partition 与 repo runtime layout，ops/listing/snapshot/range 绑定 document authority、tree projection、repo catalog 与 sync range 查询合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger manager source-control 批次 plan_ref：source-control API/query/target/workdir/commit path 绑定 source-control runtime、repo selector、internal path normalization、facts partition、document authority 与 projection 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 ledger manager repo/runtime 批次 plan_ref：RepoManager core/types/repository/repo_db/workspace/metadata/maintenance/ops/snapshot/merge 绑定 repo catalog、repo scope、repo runtime layout、tree projection、watcher、facts partition 与 document authority 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已收尾 `crates/core` 剩余 ledger plan_ref：facts validation、node metadata、shadow repo、merge engine、source-control facade、traits、snapshot verify 与 test support 均绑定对应 facts/projection/repo-scope/source-control/web-edit 或 infra 合同，使 `crates/core` 缺失项收敛到 0。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core` source-control 批次 plan_ref：read/write callbacks、scope target、diff session、message dispatch、ack/list handling、state reset、notice 与 context provider 绑定 source-control runtime、web WS runtime、repo scope 与 web edit intent 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core/effects` handshake/message runtime 批次 plan_ref：WS handshake、repo scope bootstrap、message dispatch/routing、projection apply、runtime sync、shadow/scope gate 绑定 web WS runtime、repo-scope runtime、document authority 与 tree projection 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core` 剩余核心批次 plan_ref：tree delta apply、doc/sync/switch callbacks、CoreSignals state assembly/init、browser storage runtime、write gate 与 status context 绑定 tree projection、document authority、web edit intent、repo scope、web WS runtime 与 runtime observability 合同，使 hooks 缺失项收敛到组件/编辑器之外。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `editor` 批次 plan_ref：CodeMirror FFI/hook、delta input、open scope、prefetch/playback、request key、sync decrypt/dispatch/history/live/snapshot/scope 绑定 large document runtime、document authority、web edit intent、web WS runtime 与 repo scope 合同，使 editor 缺失项收敛到 0。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` 壳层批次 plan_ref：activity bar、bottom bar、dashboard、desktop/main layout、branch switcher、dropdown、icons 与 layout context 绑定 web layout persistence、runtime observability、repo scope、native AI chat 与 source-control runtime 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` AI chat 与 command palette 批次 plan_ref：chat panel/actions/drop/selection/status 绑定 native AI chat、trusted bridge、document authority 与 web edit intent，command palette 绑定 command-palette shortcuts、repo scope 与 web layout 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/diff_view` 批次 plan_ref：diff model/cache/fold/navigation/split/unified/viewport/conflict actions 绑定 source-control runtime、large document runtime、web layout、runtime observability 与 web edit intent 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/sidebar/source_control` 批次 plan_ref：change item/stage/unstage/conflict/commit/history/repositories/status/error notice 绑定 source-control runtime、repo scope、document authority、web edit intent、native AI chat 与 runtime observability 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/search_box` 批次 plan_ref：search providers、command routing、file op parser/results、selection、write-gate feedback 与 sheet UI 绑定 search baseline、command palette、repo scope、path normalization、web edit intent 与 web layout 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web 普通 `sidebar` 批次 plan_ref：explorer/tree/item/action/path utils/repo switcher/sidebar menu 绑定 tree projection、repo scope、repo selector、document authority、path normalization、web edit intent 与 web layout 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已给 `08_ui_design_03_mobile.md` 增加 mobile current/native、responsive layout、interaction anchors，并补 web `components/mobile_layout` 批次 plan_ref：drawers/header/footer/gesture/content/chat sheet/toolbar 绑定 Mobile responsive shell、当前 native boundary、interaction design、repo scope、document authority 与 runtime observability 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` 最后 misc 批次 plan_ref：merge modal/panel、outline/outline render、pending navigation、playback、quick open、settings、spectator overlay 与 components facade 绑定对应 WS runtime、document authority、markdown whitelist、search/command、settings 与 web edit intent 合同。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补 release workflow 质量门槛验证：修复全量 clippy 暴露的 test/web hygiene 问题，`cargo clippy --all-targets --all-features -- -D warnings`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`、plan coverage、release/architecture/native/graph baseline 均通过。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已补完整 release test gate：`cargo test --locked` 全仓库通过；同时修复 path-only source-control 删除提交在 docless exact delete 下被过早提升为 doc target 的回归，并稳定 watcher create/modify/delete 测试的 debounce 边界。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已完成 REL-006 本地 runtime smoke：`deve_cli serve --dev --port 3101` 暴露 `/api/node/role`，`scripts/smoke-runtime-release-info.sh` 通过；Chrome MCP 登录 dev dashboard 后可见 `embedded-frontend | development | repos:degraded (1/2)` runtime shape。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已尝试 REL-002 Docker release smoke：`DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh` 在沙箱内外均因 `docker daemon is not reachable` 阻塞；该项当前为宿主环境阻塞，非代码验收失败。
-- 2026-04-28: P2 Runtime / Release / UI Debt 已新增 `docs/report/release-smoke-status-2026-04-28.md` 作为 release smoke 状态快照：通过项、Docker 环境阻塞项与后续复跑条件已从任务流水中抽出，避免 `next-tasks` 继续承载过多验收日志。
-- 2026-04-28: P0 Authority / Repo Health / Repair 已补 `deve repair --check` 修复动作预检：不执行 shadow quarantine、path fix、backup restore 或 projection rebuild；对当前 degraded `test` repo 实测输出 `authority_corrupt / missing_parent` 并 fail-closed，提示 repair steps 必须保持禁用直到 authority 恢复。
-- 2026-04-28: P0 WS / Repo-Scoped Protocol / Write Readiness 已加固 WS frame missing-magic 结构化错误：缺失 `DEVEWSF2` 的 binary frame 继续走 `ProtocolError(ServerError)`，并稳定暴露 `missing WS frame magic` detail，避免 legacy raw bincode/binary JSON 与普通损坏帧混淆。
-- 2026-04-28: P0 WS / Repo-Scoped Protocol / Write Readiness 已把前端 writer-ready 从 repo-only gate 提升为 `repo_id + scope_nonce` gate：`WriteReady` 接收、编辑器写入、pending resend、AI apply 与状态栏均要求当前 scope nonce 匹配，避免同 repo stale scope 误开放写入。
-- 2026-04-28: P0 WS / Repo-Scoped Protocol / Write Readiness 已把服务端 `WriterIdentity` 同步提升为 `repo_id + scope_nonce` gate：writer registration 写入 scope nonce，edit authority 使用 `Edit` 消息携带的 scope nonce 取 writer peer，避免服务端 stale writer identity 被 repo-only 或 session-current scope 复用。
-- 2026-04-28: P0 Source Control Core Path 已把 `CommitFileDiff` 从 path-only 输出提升为携带 `doc_id` 的 canonical target：commit diff 仍保留兼容的 `path/previous_path` display 字段，但 rename/path-reuse 场景可由稳定文档身份绑定 diff session。
-- 2026-04-28: P0 Source Control Core Path 已把 live `DocDiff` 响应提升为携带 `doc_id` 的 canonical target：本地 diff 从 resolved path 回查文档身份，remote diff 与 merge fallback 直接回传已解析身份，前端 `DiffSessionWire` 保留该身份。
-- 2026-04-28: P0 Source Control Core Path 已收紧 source-control target resolution：带 `doc_id` 的 pending/staged/live diff target 只允许 exact path 或 `renamed_from` successor，不再回退任意同文档 live entry 或 canonical projection path，避免 stale path 静默命中错误变更。
-- 2026-04-28: P0 Source Control Core Path 已把执行级 local repo selector 解析改为 fail-closed：`repo_id + repo_name` 同时出现但解析到不同本地 repo 时直接返回 `Repo selector mismatch`，不再 UUID-first 忽略 stale name。
-- 2026-04-28: P0 Source Control Core Path 已补 HTTP status selector mismatch 验收：`/api/sc/status` 收到不一致的 `repo_id + repo_name` 时返回 `ScRepoContextInvalid`，确保 server HTTP 边界继承 core fail-closed 语义。
-- 2026-04-28: P0 Source Control Core Path 已收紧 server presentation target 解析：带 `doc_id` 的目标若同时命中 exact live entry 与 rename successor，或命中多个 rename successor，直接作为 ambiguous target fail-closed。
-- 2026-04-28: P0 Source Control Core Path 已修正 server write related target 扩展：stage/unstage 的 rename pair 扩展按已解析 `doc_id` 精确选取 related entries，不再用裸 path 二次查找导致同路径复用时错绑其他文档。
-- 2026-04-28: P0 Source Control Core Path 已修正本地 workdir diff payload 的身份保持：target 已携带 `doc_id` 时，diff 左侧投影与响应 `doc_id` 使用该已验证身份，不再按 resolved path 重新回查 canonical doc。
-- 2026-04-28: P0 Source Control Core Path 已收紧 remote diff `doc_id + path` 校验：远端 diff target 携带 `doc_id` 时必须与该文档当前投影路径一致，不再只验证 doc 存在后继续使用请求 path。
-- 2026-04-28: P0 Source Control Core Path 已补 commit upsert identity preflight：Added/Modified/Renamed staged target 携带 `doc_id` 时，目标 path 不得绑定其他 doc；若要移动既有 doc，staging 必须提供 delete-side 或 `renamed_from` 证据，失败时 ledger/staging 保持不变。
-- 2026-04-28: P0 Source Control Core Path 已明确 docless exact delete legacy 策略：仅 `Deleted + doc_id=None` 可在 path wrapper 层保持 path-only，commit delete planning 仍必须通过 node projection 解析 identity；docless non-delete tracked entry 会被提升为 tracked identity 并在后续算子 fail-closed。
-- 2026-04-28: P0 Source Control Core Path 已完成最终回归收口：本地 `doc_id + path` workdir diff target 在无 pending/staged 变更行时只允许命中同一 doc 的当前 node projection path；stale path 继续 fail-closed。`cargo test` 全仓库、Source Control 过滤套件、Source Control baseline 与 plan/architecture/release baseline 均通过。
+- P0 repo health、`repair --check`、WS structured errors、writer-ready `repo_id + scope_nonce`、Source Control doc identity hardening 已记录在 `code-review-2026-04-28.md`。
+- P1 search、settings current boundary、Native AI Chat minimum、graph projection、i18n cleanup、plan_ref sweeps 已记录在 `code-review-2026-04-28.md`。
+- Release/runtime smoke 与 Docker daemon blocker 已记录在 `release-smoke-status-2026-04-28.md`。
+- File cohesion 与 line-count policy 已记录在 `soft-size-audit-2026-04-27.md`。
 
-### MCP Direction
+## MCP 方向
 
-MCP 直接不做。当前判断是：MCP 趋势性不足，且主要用途可被 “Skills 调用受控 CLI 工具 / Trusted CLI path” 替代。文档中若保留 MCP 提及，只作为“为什么不做”的历史记录；不得把 MCP 解读为当前 TODO、future TODO、默认 AI 能力或插件平台方向。
+产品 MCP runtime 已退役。当前扩展方向是 Skills 加显式 trusted controlled CLI path。docs 中的 MCP 只允许表示退役说明，或表示 Chrome MCP 浏览器手工验收工具。
 
-## Legacy Branch Overview
+除非重新打开 plan，不要新增 MCP runtime、MCP server management、MCP tool loop 或 MCP-backed Native AI capability。
 
-2026-02-28 的旧 Branch A-E 拆解已退役。它曾用于把 UI token、dashboard、E2EE、plugin 与进度同步拆成并行分支；当前已经被上方 `Current Execution Queue` 替代。
+## 旧分支概览
 
-保留的历史结论只有这些：
+2026-02-28 的 Branch A-E 拆解已退役。不要恢复旧 checkbox 作为 active TODO。
 
-- 旧 A：UI token、图标与组件目录问题已并入当前 P2 Runtime / Release / UI Debt；不得照旧引入 `lucide-leptos` 或大范围目录重构，必须先按当前 `docs/plan/08_ui_design*.md` 与实际代码重新验收。
-- 旧 B：Dashboard 已被当前 runtime observability、`/api/node/role` 与 release smoke 路线替代；不得再按旧 `/api/metrics` 设计新增独立权威面。
-- 旧 C：E2EE/WebCrypto/IndexedDB 相关内容拆分到当前 Web thin-client、安全与 Desktop/Mobile native track；低配只读、WebCrypto 私钥与离线能力仍需按当前 plan 重新定界。
-- 旧 D：插件与 AI 已收缩为 Rhai/Native AI Chat 最小可用；MCP 与通用 AI provider marketplace 不进入当前路线。
-- 旧 E：文档进度同步已完成且被 `docs/report/README.md` 与当前队列替代；旧 `deve-note current/gaps/schedule` 和 `schedules/` 快照已删除。
+历史映射：
 
-后续新增工作必须写入 `Current Execution Queue` 或对应 `docs/plan/` / `docs/features/operations/`，不要恢复旧 Branch A-E 的逐项清单。
+- 旧 A UI token/component 工作并入 P2 UI/design debt。
+- 旧 B dashboard 工作由 runtime observability 与 `/api/node/role` 替代。
+- 旧 C E2EE/WebCrypto/IndexedDB 工作并入 browser storage boundary。
+- 旧 D plugin/AI 收缩为 Rhai plugin host 与 Native AI Chat minimum；MCP 退役。
+- 旧 E docs sync 由 dated baselines 与当前短队列替代。
