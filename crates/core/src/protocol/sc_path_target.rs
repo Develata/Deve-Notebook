@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 07_diff_logic#source-control-runtime
+
 use crate::models::DocId;
 use serde::{Deserialize, Serialize};
 

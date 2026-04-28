@@ -1,5 +1,9 @@
 // crates\core\src\protocol
 //! # WebSocket Protocol (通信协议)
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 05_network#web-ws-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
 //!
 //! **架构作用**:
 //! 定义客户端与服务端之间的 WebSocket 通信消息格式。

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#repo-runtime-layout
+
 use super::{IdentityKeyPair, RepoKey};
 use anyhow::{Result, anyhow};
 use std::path::Path;

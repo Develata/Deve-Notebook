@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+
 pub const DESTINATION_MUST_DIFFER: &str = "Destination must differ from source";
 pub const DESTINATION_PATH_REQUIRED: &str = "Destination path required";
 pub const DEPTH_LIMIT_EXCEEDED: &str = "Directory depth limit exceeded";

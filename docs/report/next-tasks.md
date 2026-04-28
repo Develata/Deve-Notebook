@@ -40,6 +40,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 core 小模块 plan_ref：`models` 绑定 facts partition，`state` 绑定 document authority / UTF-16 runtime，`search` 绑定 feature-gated search baseline，`skill` 绑定 MCP 退役后的 Skills + 受控 CLI 扩展边界；`lib.rs/error.rs` 标记为 infra。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 CLI/Web 顶层入口 plan_ref：CLI `main/dispatch/admin_api/dump_support` 绑定 command/diagnostic/export 边界，Web `main.rs` 绑定 single-binary Web shell 与 WS runtime 入口。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补剩余 core/app 单点入口 plan_ref：`config` 绑定 Settings 与 Trusted CLI fallback，`context` 绑定 plugin-host 能力边界，`vfs` 绑定 watcher inode 抽象，`mock_divergence` 绑定 repo scope/source-control 测试边界。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 `crates/core/src/protocol` 与 `crates/core/src/security` plan_ref：协议消息/结构化错误绑定 WS runtime 与 Web thin-client 写意图，HTTP auth 类型绑定 auth endpoint/session/unauthorized 合同，安全 key/cipher/storage 绑定 repo runtime layout 与 sync runtime，纯哈希原语标记为 infra。
 
 ### MCP Direction
 

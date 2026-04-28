@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 09_auth#unauthorized-handling
+//!   - 16_web_thin_client_ledger#web-edit-intent
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

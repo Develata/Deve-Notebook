@@ -1,5 +1,6 @@
 // crates\core\src\security
 //! # 哈希计算 (Hashing)
+//! plan_ref: infra
 //!
 //! **功能**:
 //! 提供统一的 Hash 算法 (SHA256) 接口，用于从公钥派生 PeerID，或计算内容指纹。

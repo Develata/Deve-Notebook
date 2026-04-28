@@ -1,4 +1,8 @@
 //! HTTP 认证协议共享类型。
+//! plan_ref:
+//!   - 09_auth#auth-http-endpoints
+//!   - 09_auth#session-probe-policy
+//!   - 09_auth#unauthorized-handling
 //!
 //! Invariants:
 //! - 登录相关 HTTP 端点只返回结构化 JSON，不返回自然语言错误。

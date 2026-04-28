@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 17_plugins#plugin-runtime-boundary
+//!   - 17_plugins#skills-cli-extension-boundary
+
 use serde::{Deserialize, Serialize};
 
 /// Permission Action

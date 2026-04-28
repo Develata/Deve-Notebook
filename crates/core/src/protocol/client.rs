@@ -1,5 +1,8 @@
 // crates\core\src\protocol
 //! 客户端 WebSocket 消息协议。
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
 
 use crate::models::{DocId, Op, PeerId, VersionVector};
 use crate::protocol::ScPathTarget;
