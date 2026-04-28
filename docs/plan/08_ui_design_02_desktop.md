@@ -15,6 +15,16 @@
 
 > **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
+## 0. Current Native Boundary (2026-04-28)
+
+当前代码状态：
+
+*   Web 端 Desktop responsive shell 已存在，并作为 Desktop 交互规范的当前可验收映射。
+*   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
+*   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
+*   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
+*   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
+
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。

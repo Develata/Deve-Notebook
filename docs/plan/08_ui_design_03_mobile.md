@@ -15,6 +15,16 @@
 
 > **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
+## 0. Current Native Boundary (2026-04-28)
+
+当前代码状态：
+
+*   Web 端 Mobile responsive shell 已存在，并作为 Mobile 交互规范的当前可验收映射。
+*   Tauri v2 Mobile packaging、系统权限桥接、推送、原生文件选择器与应用商店分发仍是 future work；当前仓库不得把这些视为已实现能力。
+*   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
+*   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
+*   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
+
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。

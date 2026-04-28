@@ -25,6 +25,7 @@
 - 2026-04-28: P1 Search Baseline 已补前端 SearchResults 生命周期闭环：结果必须通过 `request_id / repo_id / branch / scope_nonce` gate，接受后清空 pending search request，避免后续无关 `ProtocolError` 被误归类为 search notice；默认无 search feature 与 `--features search` 后端路径均已通过定向测试。
 - 2026-04-28: P1 Settings Current Boundary 已补 UI 边界提示：Settings 面板明确说明当前只提供运行时/本地 UI 反馈，持久运行时配置仍通过 `deve config set` 写入 `config.toml`；baseline 脚本已检查该边界，server-backed Settings API 仍不进入当前验收。
 - 2026-04-28: P1 Native AI Chat Minimum 已补当前 Markdown 上下文与 PLAN/BUILD prompt 边界：前端向 Native AI Chat 传递有界当前正文，ai-chat 插件将当前文件、正文、selection、模式写入 system prompt；默认仍不开放 workspace/source-control/shell/MCP/skill 执行能力。
+- 2026-04-28: P3-10 Desktop/Mobile Native Track 已补当前 native adapter 边界：Desktop/Mobile docs 明确 Web responsive shell 是当前可验收映射，Tauri packaging 仍为 future；adapter 第一阶段仅负责内嵌服务、endpoint/session 注入与 readiness/offline 事件，不得重定义 core/server authority。
 
 ### MCP Direction
 
