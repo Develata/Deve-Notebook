@@ -18,13 +18,16 @@ mod tests {
     }
 
     fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus, content: &str) {
+        let doc_id = repo
+            .get_tracked_docid_in_local_repo(repo.local_repo_name(), path)
+            .expect("resolve tracked doc id for pending seed");
         repo.run_on_local_repo(repo.local_repo_name(), |db| {
             pending_fs::upsert(
                 db,
                 &PendingFsEntry {
                     path: path.into(),
                     renamed_from: None,
-                    doc_id: None,
+                    doc_id,
                     change_type: status,
                     content_hash: pending_fs::content_hash(content),
                     detected_at: 1,
