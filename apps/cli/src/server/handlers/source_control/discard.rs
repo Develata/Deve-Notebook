@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#watcher-contract
+//!
 //! # 放弃工作区偏差
 //!
 //! Discard 只恢复工作区，不改写 Ledger 历史。

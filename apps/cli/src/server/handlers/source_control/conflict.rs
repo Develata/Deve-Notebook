@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#watcher-contract
+//!
 //! # 冲突解决处理器 (Conflict Resolution Handler)
 //!
 //! 处理 FS vs Ledger 冲突的用户决策。

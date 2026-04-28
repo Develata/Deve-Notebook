@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+
 use crate::server::repo_scope::{
     ResolvedRepo, bootstrap_local_repo, resolve_session_repo_and_sync,
     stale_unbound_remote_scope_detail,

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#repo-runtime-layout
+
 use super::super::errors::{self, ScOp};
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::protocol::ScPathTarget;
